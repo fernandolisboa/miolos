@@ -299,7 +299,6 @@ andem
 andes
 andor
 andou
-andre
 aneis
 anela
 anele
@@ -442,7 +441,6 @@ arrie
 arrio
 arroz
 artes
-artur
 asila
 asile
 asilo
@@ -687,7 +685,6 @@ benzi
 benzo
 beque
 berco
-berna
 berra
 berre
 berro
@@ -696,7 +693,6 @@ bicai
 bicam
 bicar
 bicas
-bicha
 bicho
 bicos
 bicou
@@ -1000,7 +996,6 @@ cavou
 ceado
 ceais
 ceamo
-ceara
 ceava
 cedam
 cedas
@@ -1012,7 +1007,6 @@ cedeu
 cedia
 cedro
 ceeis
-ceemo
 cegai
 cegam
 cegar
@@ -1046,7 +1040,6 @@ cerro
 certa
 certo
 cervo
-cesar
 cesio
 cessa
 cesse
@@ -1077,8 +1070,6 @@ chiai
 chiam
 chiar
 chias
-chica
-chico
 chiei
 chiem
 chies
@@ -1624,7 +1615,6 @@ edite
 edito
 educa
 educo
-egito
 eguas
 eiras
 eixos
@@ -2203,7 +2193,6 @@ geamo
 geara
 geava
 geeis
-geemo
 geiam
 geias
 geiem
@@ -2269,7 +2258,6 @@ gloso
 gnomo
 godos
 goela
-goias
 golas
 golea
 goles
@@ -2502,7 +2490,6 @@ jacas
 janta
 jante
 janto
-japao
 jarda
 jarra
 jarro
@@ -2523,9 +2510,7 @@ jejua
 jejue
 jejum
 jejuo
-jesus
 jinga
-joana
 jogai
 jogam
 jogar
@@ -2534,7 +2519,6 @@ jogos
 jogou
 jogue
 joias
-jorge
 jorra
 jorre
 jorro
@@ -2892,8 +2876,6 @@ mapea
 marca
 marco
 mares
-maria
-mario
 marra
 marta
 masca
@@ -3484,7 +3466,6 @@ pareo
 pares
 paria
 parir
-paris
 pariu
 parou
 parta
@@ -3507,7 +3488,6 @@ patio
 patos
 patua
 paula
-paulo
 pausa
 pauta
 paute
@@ -3529,7 +3509,6 @@ pedir
 pedis
 pediu
 pedra
-pedro
 pegai
 pegam
 pegar
@@ -3603,7 +3582,6 @@ piais
 piamo
 piano
 piara
-piaui
 piava
 picai
 picam
@@ -4219,7 +4197,6 @@ rural
 rusga
 russa
 russo
-saara
 sabao
 sabei
 sabem
@@ -4404,7 +4381,6 @@ sinas
 sinos
 sinta
 sinto
-siria
 sirio
 siris
 sirva
@@ -4502,7 +4478,6 @@ sosia
 sotao
 soube
 sousa
-souza
 sovai
 sovam
 sovar
@@ -5007,7 +4982,6 @@ vacas
 vacuo
 vadea
 vades
-vadia
 vadie
 vadio
 vagai
@@ -5173,7 +5147,6 @@ vidre
 vidro
 vieis
 viela
-viena
 viera
 vieza
 vigas

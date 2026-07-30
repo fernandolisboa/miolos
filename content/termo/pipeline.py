@@ -1,36 +1,66 @@
 #!/usr/bin/env python3
-"""Build Termo word lists from IME-USP br.ispell wordlist + FrequencyWords pt_BR."""
+"""Build Termo word lists from IME-USP br.ispell wordlist + FrequencyWords pt_BR.
+
+Run from anywhere: paths resolve relative to this file. Source files are
+downloaded into sources/ on first run (~10 MB); delete them to force a
+re-fetch. Outputs: validation.txt, canonical-map.csv, candidates.tsv
+(intermediate, gitignored), rejected-lexicon-sample.txt.
+"""
+import os
 import re
-import sys
 import unicodedata
+import urllib.request
 from collections import defaultdict
 
-BASE = "/tmp/claude-1000/-home-ferna-projects-miolos/eb4d6adc-8c6f-40c0-91b6-6dea0f6b90c4/scratchpad/termo"
+BASE = os.path.dirname(os.path.abspath(__file__))
+
+SOURCES = {
+    "br-utf8.txt": "https://www.ime.usp.br/~pf/dicios/br-utf8.txt",
+    "pt_br_full.txt": "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/pt_br/pt_br_full.txt",
+}
 
 ROMAN_RE = re.compile(r"^m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$")
 NORM_RE = re.compile(r"^[a-z]{5}$")
 
-# Slurs / heavy obscenities excluded even from the guess (validation) list.
-# Mild vulgarity stays guessable. Keys are NORMALIZED forms.
+# Slurs and heavy obscenities excluded even from the guess (validation) list.
+# Mild vulgarity stays guessable. Entries are NORMALIZED 5-letter forms.
 BLOCKLIST = {
-    "viado",   # homophobic slur
-    "cuzao",   # heavy obscenity (cuzão)
-    "foder", "fodeu", "fodam", "fodia", "fodes", "fodas", "fodido"[:5],  # fodid ->
-    "porra",   # heavy obscenity
-    "putos", "putas",  # heavy obscenity in plural usage
-    "bucet",   # stem safety (won't match 5 letters anyway)
-    "xotas", "xanas",
-    "caceta",
-    "bosta",   # scatological
-    "merda",   # scatological
-    "mijar", "mijou", "mijei", "mijam",  # scatological verb forms
-    "cagar", "cagou", "cagam", "caguei"[:5], "cagao",  # scatological
-    "pirok", "piroc",  # stems, safety
-    "rabao",
-    "sacan",
-    "boquet",
+    # slurs
+    "viado", "bicha", "vadia",
+    # heavy obscenity
+    "cuzao", "porra", "putos", "putas", "bosta", "merda",
+    "foder", "fodeu", "fodam", "fodia", "fodes", "fodas",
+    # scatological verb forms
+    "mijar", "mijou", "mijei", "mijam",
+    "cagar", "cagou", "cagam", "cague", "cagao",
 }
-BLOCKLIST = {w for w in BLOCKLIST if len(w) == 5}
+
+# Lowercase duplicates of proper nouns that exist in the source lexicon; the
+# capitalized-lemma filter cannot see them. Only names/places with no
+# common-noun or verb-form reading are listed. Deliberately kept out of this
+# list because a legitimate reading exists: "silva" (bramble), "bento"
+# (blessed), "marta" (the marten), "rosa" (the flower), "edite" / "tomas"
+# (verb forms). "ceara" (pluperfect of cear) is sacrificed to kill the state.
+PROPER_NOUN_DUPLICATES = {
+    "jesus", "maria", "paulo", "pedro", "paris", "japao", "egito", "viena",
+    "piaui", "ceara", "goias", "souza", "saara", "siria", "cesar", "mario",
+    "andre", "artur", "chico", "chica", "jorge", "joana", "berna",
+}
+
+# Corrupted entries in the source lexicon: truncated duplicates of "-eemos"
+# subjunctive forms (the source has both "ceemos" and the non-word "ceemo").
+SOURCE_CORRUPTION = {"ceemo", "geemo"}
+
+assert all(len(w) == 5 for w in BLOCKLIST | PROPER_NOUN_DUPLICATES | SOURCE_CORRUPTION)
+
+
+def fetch_sources() -> None:
+    os.makedirs(f"{BASE}/sources", exist_ok=True)
+    for name, url in SOURCES.items():
+        path = f"{BASE}/sources/{name}"
+        if not os.path.exists(path):
+            print(f"downloading {url} ...")
+            urllib.request.urlretrieve(url, path)
 
 
 def normalize(word: str) -> str:
@@ -39,6 +69,7 @@ def normalize(word: str) -> str:
 
 
 def main() -> None:
+    fetch_sources()
     rejected = []  # (word, reason)
 
     # ---- base lexicon ----
@@ -59,9 +90,7 @@ def main() -> None:
             norm = normalize(w)
             if not NORM_RE.fullmatch(norm):
                 # length or foreign character; only sample interesting near-misses
-                if 4 <= len(norm) <= 6 and len(norm) != 5:
-                    pass  # not 5 letters: uninteresting, skip silently
-                elif len(norm) == 5:
+                if len(norm) == 5:
                     rejected.append((w, "non a-z after normalization"))
                 continue
             if set(w) <= set("mdclxvi") and ROMAN_RE.fullmatch(w):
@@ -69,6 +98,12 @@ def main() -> None:
                 continue
             if norm in BLOCKLIST:
                 rejected.append((w, "blocklist (slur/heavy obscenity)"))
+                continue
+            if norm in PROPER_NOUN_DUPLICATES:
+                rejected.append((w, "proper-noun (lowercase duplicate)"))
+                continue
+            if norm in SOURCE_CORRUPTION:
+                rejected.append((w, "source corruption (truncated form)"))
                 continue
             canon_by_norm[norm].add(w)
 
@@ -116,13 +151,15 @@ def main() -> None:
             f.write(f"{s}\t{norm}\t{canon}\t{'|'.join(forms)}\n")
     print(f"candidates with freq>0: {len(scored)} (top 2500 written)")
 
-    # ---- rejected sample ----
+    # ---- mechanical rejected sample (lexicon stage only) ----
+    # The richer rejected-sample.txt is a hand-assembled audit record from the
+    # curation pass, not a script output; this file is the reproducible part.
     import random
     random.seed(42)
     by_reason = defaultdict(list)
     for w, r in rejected:
         by_reason[r].append(w)
-    with open(f"{BASE}/rejected-sample.txt", "w", encoding="utf-8") as f:
+    with open(f"{BASE}/rejected-lexicon-sample.txt", "w", encoding="utf-8") as f:
         for reason in sorted(by_reason):
             pool = by_reason[reason]
             take = random.sample(pool, min(30, len(pool)))
