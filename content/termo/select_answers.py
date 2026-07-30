@@ -4,7 +4,9 @@ frequency, top 400 kept. Picks were made word-by-word against the answer
 constraints (common contemporary pt-BR, lemma-preferred, no proper nouns,
 no loanwords not naturalized, no obscenity, variety of POS and patterns)."""
 
-BASE = "/tmp/claude-1000/-home-ferna-projects-miolos/eb4d6adc-8c6f-40c0-91b6-6dea0f6b90c4/scratchpad/termo"
+import os
+
+BASE = os.path.dirname(os.path.abspath(__file__))
 
 PICKS = """
 muito agora entao sobre assim nunca ainda antes menos quase desde longe perto

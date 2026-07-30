@@ -18,10 +18,11 @@ exactly as with the grid-game generators.
 | File | Contents |
 |---|---|
 | `answers.csv` | 400 daily-answer words. Header `canonical,normalized`. Canonical is the correct pt-BR spelling (lowercase, accents/ç kept); normalized matches `^[a-z]{5}$`. |
-| `validation.txt` | 5,337 accepted-guess words, one normalized 5-letter word per line, sorted, unique. Superset of every `answers.csv` normalized form. |
+| `validation.txt` | 5,310 accepted-guess words, one normalized 5-letter word per line, sorted, unique. Superset of every `answers.csv` normalized form. |
 | `canonical-map.csv` | Header `normalized,canonical`. One row per validation word, mapping it to a canonical accented display form. When several accented words share a normalized form (e.g. `sabia`/`sábia`), the most frequent one in the subtitle corpus is the canonical; all colliding spellings remain guessable through the single normalized entry. |
-| `rejected-sample.txt` | 107 examples of rejected words with the constraint that rejected each (tab-separated). Covers both lexicon-stage and answer-curation-stage rejections. |
-| `pipeline.py`, `select_answers.py` | The scripts that produced everything above (deterministic; `candidates.tsv` is an intermediate). |
+| `rejected-sample.txt` | 107 examples of rejected words with the constraint that rejected each (tab-separated). **Hand-assembled audit record from the curation pass** — the answer-stage rejections come from model judgment, which no script reproduces. |
+| `rejected-lexicon-sample.txt` | The mechanical, reproducible counterpart: a seeded random sample of lexicon-stage rejections, written by `pipeline.py` on every run. |
+| `pipeline.py`, `select_answers.py` | The scripts that produce the three data files above (deterministic; run from anywhere, sources auto-download; `candidates.tsv` and `sources/` are gitignored intermediates). |
 
 ## Sources and licenses
 
@@ -51,9 +52,13 @@ Raw source downloads are not committed; the URLs above are the record, and
    marks (this also turns ç into c). Keep entries whose normalized form matches
    `^[a-z]{5}$`.
 2. **Lexicon-stage exclusions**: capitalized lemmas (proper nouns), entries with
-   hyphens/spaces/apostrophes/periods, roman numerals, and a blocklist of slurs,
+   hyphens/spaces/apostrophes/periods, roman numerals, a blocklist of slurs,
    heavy obscenities and scatological verbs (normalized forms; mild vulgarity
-   stays guessable).
+   stays guessable), a curated list of **lowercase proper-noun duplicates** the
+   capitalization filter cannot see (`maria`, `paris`, `japao`… — words with a
+   legitimate common-noun or verb reading like `silva`, `bento`, `marta`,
+   `edite`, `tomas`, `rosa` are deliberately kept), and two corrupted source
+   tokens (`ceemo`, `geemo` — truncated `-eemos` subjunctives).
 3. **`validation.txt`** = all surviving normalized forms, sorted and deduplicated.
 4. **`canonical-map.csv`** = for each normalized form, the colliding canonical
    spelling with the highest OpenSubtitles frequency (alphabetical tiebreak).
@@ -103,11 +108,12 @@ curation pass (see `rejected-sample.txt`).
 - Duplicate normalized forms in answers: **0**
 - Every answer's normalized form present in `validation.txt`: **yes (400/400)**
 - Every answer's canonical form normalizes exactly to its normalized form: **yes**
-- `validation.txt`: **5,337 lines**, unique, sorted, all matching `^[a-z]{5}$`
-- `canonical-map.csv`: **5,337 rows**, covers the validation set exactly; every
+- `validation.txt`: **5,310 lines**, unique, sorted, all matching `^[a-z]{5}$`
+- `canonical-map.csv`: **5,310 rows**, covers the validation set exactly; every
   canonical normalizes back to its key
 - Normalized forms with more than one canonical spelling (sabia/sábia-style
-  collisions): **522** (max: `calca` ← `calca`/`calça`/`calcá`/`calçá`)
+  collisions): **520** (largest groups are 4-way ties: `calca`, `forca`,
+  `troca`)
 
 ## Known limitations
 
@@ -119,9 +125,13 @@ curation pass (see `rejected-sample.txt`).
   accepts more because it expands the full hunspell affix table. Swapping in a
   fully unmunched hunspell expansion later would only add rows, never break
   existing ones.
-- The obscenity blocklist is minimal and hand-made (13 normalized forms
-  excluded from validation); it was not audited against a comprehensive pt-BR
-  profanity corpus.
+- The obscenity/slur blocklist is hand-made (24 normalized forms, including the
+  slur-strength `bicha` and `vadia`, of which 16 actually occur in the source
+  lexicon and are excluded from validation); it was not
+  audited against a comprehensive pt-BR profanity corpus.
+- The lowercase proper-noun-duplicate list is likewise curated, not exhaustive:
+  rarer names present in the source lexicon as lowercase entries may remain
+  guessable. Answers are unaffected — all 400 were reviewed individually.
 - "Average Brazilian adult recognizes instantly" was applied by model judgment,
   not by a measurable test; frequency rank (≥ ~5,400 subtitle occurrences) is
   the verifiable proxy.
