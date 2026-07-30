@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F7F2E9}a{color:#211D19}a:hover{color:#4E6B52}</style>
+</helmet>
+<div style="width:1440px;height:900px;background:#F7F2E9;background-image:radial-gradient(rgba(33,29,25,0.06) 1px, transparent 1px);background-size:26px 26px;color:#211D19;font-family:'Instrument Sans',sans-serif;box-sizing:border-box;padding:44px 80px;display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <a href="#" style="text-decoration:none;font-size:14px;font-weight:600">← Hoje</a>
+    <span style="font-family:'Fraunces',serif;font-style:italic;font-size:24px;font-weight:600;transform:rotate(-1deg)">Miolos</span>
+    <span style="font-size:13px;color:#6E6659">30 de julho de 2026</span>
+  </div>
+  <div style="display:flex;flex:1;padding-top:32px;gap:72px">
+    <div style="width:330px;display:flex;flex-direction:column">
+      <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#4E6B52">Lógica · caderno nº 214</div>
+      <div style="font-family:'Fraunces',serif;font-size:54px;font-weight:550;line-height:1;margin-top:12px">Binairo</div>
+      <div style="font-size:15px;line-height:1.6;color:#6E6659;margin-top:18px;text-wrap:pretty">Preencha a grade com zeros e uns. Cada linha e coluna tem quatro de cada, nunca três iguais seguidos, e nenhuma linha se repete.</div>
+      <div style="background:#FBF7EF;border:1px solid #D8D0C2;border-radius:6px;box-shadow:4px 4px 0 rgba(78,107,82,0.22);margin-top:30px;padding:20px 22px;transform:rotate(-0.5deg);display:flex;flex-direction:column;gap:16px;position:relative">
+        <div style="position:absolute;top:-10px;left:32px;width:64px;height:20px;background:rgba(78,107,82,0.32);transform:rotate(-3deg);border-radius:2px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#4E6B52">Tempo</span>
+          <span style="font-family:'Fraunces',serif;font-size:30px;font-weight:500;font-variant-numeric:tabular-nums">04:32</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#4E6B52">Progresso</span>
+          <span style="font-size:14px;color:#6E6659;font-variant-numeric:tabular-nums">{{ filled }} de 64 células</span>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <a href="#" style="display:inline-flex;align-items:center;justify-content:center;background:#4E6B52;color:#F7F2E9;text-decoration:none;font-size:14px;font-weight:600;padding:14px 0;border-radius:6px;box-shadow:3px 3px 0 rgba(78,107,82,0.25)">Usar dica — 1 disponível</a>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="background:#FBF7EF;border:1px solid #D8D0C2;border-radius:6px;box-shadow:6px 6px 0 rgba(78,107,82,0.2);padding:16px;transform:rotate(0.4deg)">
+        <div style="display:grid;grid-template-columns:repeat(8, 52px);grid-auto-rows:52px;gap:4px">
+          <sc-for list="{{ cells }}" as="c" hint-placeholder-count="64">
+            <div style="background:{{ c.bg }};border:1.5px solid {{ c.line }};border-radius:5px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:23px;font-variant-numeric:tabular-nums;color:{{ c.color }};font-weight:{{ c.weight }}">{{ c.t }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:30px;align-items:center">
+        <a href="#" style="width:64px;height:52px;display:flex;align-items:center;justify-content:center;background:#FBF7EF;border:1.5px solid #4E6B52;border-radius:6px;box-shadow:3px 3px 0 rgba(78,107,82,0.22);font-family:'Fraunces',serif;font-size:24px;text-decoration:none;color:#4E6B52;font-weight:600">0</a>
+        <a href="#" style="width:64px;height:52px;display:flex;align-items:center;justify-content:center;background:#FBF7EF;border:1.5px solid #4E6B52;border-radius:6px;box-shadow:3px 3px 0 rgba(78,107,82,0.22);font-family:'Fraunces',serif;font-size:24px;text-decoration:none;color:#4E6B52;font-weight:600">1</a>
+        <a href="#" style="height:52px;padding:0 22px;display:flex;align-items:center;justify-content:center;background:#FBF7EF;border:1.5px solid #D8D0C2;border-radius:6px;box-shadow:3px 3px 0 rgba(33,29,25,0.1);font-size:14px;text-decoration:none;color:#6E6659">apagar</a>
+        <span style="font-size:13px;color:#6E6659;margin-left:12px">ou clique na célula para alternar</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  renderVals() {
+    const rows = ["01.0.ii.","i.0.1o.1",".o110.i0","1io..10.","0.io1..i",".1.i0o1.","i0o.1.0i","..10.i.o"];
+    const cells = []; let filled = 0;
+    for (const r of rows) for (const ch of r) {
+      if (ch === '.') { cells.push({t:'', color:'#211D19', weight:400, bg:'#F7F2E9', line:'#D8D0C2'}); continue; }
+      filled++;
+      if (ch === '0' || ch === '1') cells.push({t:ch, color:'#211D19', weight:600, bg:'#F1EADD', line:'#D8D0C2'});
+      else cells.push({t: ch === 'o' ? '0' : '1', color:'#4E6B52', weight:500, bg:'#F7F2E9', line:'rgba(78,107,82,0.5)'});
+    }
+    return { cells, filled };
+  }
+}
+</script>
+</body>
+</html>

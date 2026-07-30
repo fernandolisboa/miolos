@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F7F2E9}a{color:#211D19}a:hover{color:#9E3B2F}</style>
+</helmet>
+<div style="width:390px;height:844px;background:#F7F2E9;background-image:radial-gradient(rgba(33,29,25,0.06) 1px, transparent 1px);background-size:24px 24px;color:#211D19;font-family:'Instrument Sans',sans-serif;box-sizing:border-box;padding:26px 20px 0;display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div style="font-family:'Fraunces',serif;font-style:italic;font-size:28px;font-weight:600;transform:rotate(-1deg)">Miolos</div>
+      <div style="font-family:'Fraunces',serif;font-size:19px;font-weight:450;margin-top:8px;line-height:1.25">quinta-feira,<br>30 de julho de 2026</div>
+      <div style="font-size:12px;color:#6E6659;margin-top:5px;font-variant-numeric:tabular-nums">2 de 4 concluídos</div>
+    </div>
+    <div style="background:#F7F2E9;border:1.5px solid #9E3B2F;border-radius:6px;box-shadow:3px 3px 0 rgba(158,59,47,0.25);padding:12px 16px;transform:rotate(2deg);text-align:center">
+      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:#9E3B2F;line-height:1;font-variant-numeric:tabular-nums">12</div>
+      <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#9E3B2F;margin-top:4px">dias</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px;margin-top:26px">
+    <sc-for list="{{ games }}" as="g" hint-placeholder-count="4">
+      <div style="background:#FBF7EF;border:1px solid #D8D0C2;border-radius:6px;box-shadow:4px 4px 0 {{ g.shadow }};padding:16px 18px;display:flex;align-items:center;gap:12px;transform:rotate({{ g.rot }});position:relative;min-height:48px">
+        <div style="position:absolute;top:-9px;left:26px;width:54px;height:18px;background:{{ g.tape }};transform:rotate({{ g.tapeRot }});border-radius:2px"></div>
+        <div style="flex:1">
+          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:{{ g.accent }}">{{ g.kicker }}</div>
+          <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:550;margin-top:2px">{{ g.name }}</div>
+        </div>
+        <sc-if value="{{ g.done }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:13px;color:#6E6659;font-variant-numeric:tabular-nums">{{ g.result }}</span>
+            <span style="border:1.5px solid {{ g.accent }};color:{{ g.accent }};font-size:10px;letter-spacing:0.12em;text-transform:uppercase;padding:4px 9px;border-radius:6px;transform:rotate(-3deg)">Feito</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ g.pending }}" hint-placeholder-val="{{ false }}">
+          <a href="#" style="display:inline-flex;align-items:center;justify-content:center;background:{{ g.accent }};color:#F7F2E9;text-decoration:none;font-size:14px;font-weight:600;padding:12px 20px;border-radius:6px">Jogar</a>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:flex;justify-content:center;gap:28px;margin-top:26px">
+    <a href="#" style="font-family:'Fraunces',serif;font-size:15px;font-weight:550;text-decoration:none;border-bottom:2px solid #D8D0C2;padding:8px 0 3px">Arquivo</a>
+    <a href="#" style="font-family:'Fraunces',serif;font-size:15px;font-weight:550;text-decoration:none;border-bottom:2px solid #D8D0C2;padding:8px 0 3px">Modo livre</a>
+    <a href="#" style="font-family:'Fraunces',serif;font-size:15px;font-weight:550;text-decoration:none;border-bottom:2px solid #D8D0C2;padding:8px 0 3px">Estatísticas</a>
+  </div>
+  <div style="flex:1"></div>
+  <div style="border:1px dashed #D8D0C2;border-radius:6px;margin-bottom:20px;height:64px;display:flex;align-items:center;justify-content:center;background:#F7F2E9">
+    <span style="font-family:monospace;font-size:10px;color:#6E6659;text-align:center">faixa de promoção própria —<br>dormente no lançamento (ADR-0006)</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+  renderVals() {
+    const raw = [
+      {kicker:'Palavras', name:'Termo', accent:'#C08A1E', rot:'-0.4deg', tapeRot:'-3deg', done:true, result:'4/6'},
+      {kicker:'Números', name:'Sudoku', accent:'#2E4E7E', rot:'0.4deg', tapeRot:'2deg', done:true, result:'07:12'},
+      {kicker:'Imagem', name:'Nonogram', accent:'#B5563C', rot:'-0.3deg', tapeRot:'-2deg', done:false},
+      {kicker:'Lógica', name:'Binairo', accent:'#4E6B52', rot:'0.4deg', tapeRot:'3deg', done:false}
+    ];
+    const hex2rgba = (h,a) => { const n = parseInt(h.slice(1),16); return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`; };
+    return { games: raw.map(g => ({...g, pending: !g.done, shadow: hex2rgba(g.accent, 0.22), tape: hex2rgba(g.accent, 0.32)})) };
+  }
+}
+</script>
+</body>
+</html>

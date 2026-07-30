@@ -1,0 +1,58 @@
+/* Miolos — "Ateliê" direction tokens (light theme) — for packages/ui */
+:root {
+  /* paper and ink */
+  --paper-desk: #F7F2E9;
+  --paper-card: #FBF7EF;
+  --paper-tint: #F1EADD;
+  --ink: #211D19;
+  --ink-2: #6E6659;
+  --line: #D8D0C2;
+  --line-soft: #E4DCCB;
+
+  /* accents */
+  --accent-app: #9E3B2F;      /* sealing-wax red: streak, promo */
+  --accent-termo: #C08A1E;    /* mustard */
+  --accent-sudoku: #2E4E7E;   /* ink-blue */
+  --accent-nonogram: #B5563C; /* terracotta */
+  --accent-binairo: #4E6B52;  /* moss-green */
+
+  /* typography */
+  --font-display: 'Fraunces', serif;
+  --font-ui: 'Instrument Sans', sans-serif;
+  --text-kicker: 600 11px/1 var(--font-ui);        /* + uppercase + ls .16em */
+  --text-body: 400 14px/1.5 var(--font-ui);
+  --text-button: 600 14px/1 var(--font-ui);
+  --text-card-title: 550 30px/1.1 var(--font-display);
+  --text-screen-title: 550 54px/1 var(--font-display);
+  --text-numeral-lg: 600 44px/1 var(--font-display); /* + tabular-nums */
+
+  /* shape */
+  --radius: 6px;
+  --radius-cell: 5px;
+  --radius-tape: 2px;
+
+  /* hard shadows (blur 0) — color = rgba(accent, .2–.3) */
+  --shadow-sm: 3px 3px 0;
+  --shadow-md: 4px 4px 0;
+  --shadow-lg: 6px 6px 0;
+
+  /* desk texture */
+  --texture-dots: radial-gradient(rgba(33,29,25,0.06) 1px, transparent 1px);
+  --texture-dots-size: 26px 26px; /* 24px on mobile */
+
+  /* spacing (4pt scale) */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 32px;
+  --space-11: 44px; --space-12: 48px;
+
+  /* motion — "ink that settles" */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+  --ease-settle: cubic-bezier(0.2, 0.8, 0.3, 1.05);
+
+  /* misc */
+  --touch-target-min: 44px;
+  --rotate-card-max: 2.4deg;
+}
+/* Mandatory on grids, timers and statistics: font-variant-numeric: tabular-nums */
