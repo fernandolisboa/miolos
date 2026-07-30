@@ -24,7 +24,7 @@ The archive also has a property it did not have on native: **it is indexable**. 
 
 **Free play never touches the streak, the statistics distributions, or the medals.** If generated puzzles fed the Termo distribution, the shared-comparison number would become meaningless and the daily would lose the scarcity that makes streaks work.
 
-**Termo is excluded from free play initially.** The grid games are generator-driven and effectively infinite. Termo answers come from a hand-curated, finite pt-BR word list; spending it on free play would burn the scarcest content on the least valuable mode.
+**Termo is excluded from free play initially.** The grid games are generator-driven and effectively infinite. Termo answers come from a finite, curated pt-BR word list (AI-curated since [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md); this line originally said "hand-curated"); spending it on free play would burn the scarcest content on the least valuable mode.
 
 **Free play depends on the generators**, so it lands in M2 at the earliest — not M0.
 

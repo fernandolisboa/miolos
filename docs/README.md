@@ -36,6 +36,7 @@ Current:
 | `design/002-brief-design-direction.md` | Visual direction brief, feeds the Claude Design exploration |
 | `research/003-research-universal-rn-web.md` | Whether universal Expo Router + react-native-web fits this product |
 | `research/004-research-web-native-code-sharing.md` | Two UIs sharing a core, and the universal styling systems |
+| `research/005-research-miolos-name-check.md` | "Miolos" domain + INPI check (2026-07-30 snapshot); sources the Android-share figure |
 
 ## Language
 
