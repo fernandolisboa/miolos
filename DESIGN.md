@@ -49,7 +49,7 @@ Accents carry identity, not meaning alone — every state they mark is also carr
 - **Streak stamp card**: 1.5px `#9E3B2F` border, hard shadow in lacre 0.25, rotated 2deg, Fraunces tabular numeral.
 - **Puzzle grid**: cells 52px desktop / 38px mobile, gap 4px/3px, wrapped in a paper card with hard accent shadow; given cells on tinted paper with ink numerals wt 600, player cells on desk paper with accent numerals wt 500.
 - **Histogram**: 6 buckets, today's bucket solid accent + bold label, others `rgba(accent, 0.25)`, 3px top radius.
-- **Promo strip** (`AdSlot` seam): dormant at launch, dimensions reserved (64px on mobile) so activation is a paint, never a reflow; dismissible; only first-party creative, italic "do Miolos" lead-in (ADR-0006).
+- **Promo strip** (`AdSlot` seam): dormant at launch, dimensions reserved per placement so activation is a paint, never a reflow — 64px on the mobile hub (F2's annotated dormant slot), 60px on the desktop hub (measured from F1's filled sample: 1px top hairline + 16px/24px vertical padding + one 19px text line); dismissible; only first-party creative, italic "do Miolos" lead-in (ADR-0006).
 
 ## Anti-references (law)
 

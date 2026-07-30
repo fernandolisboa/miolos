@@ -24,7 +24,7 @@ From the design brief (`docs/design/002-brief-design-direction.md`, section 5), 
 
 > Gradiente roxo/azul; glassmorphism; card dentro de card; texto cinza sobre fundo colorido; tile arredondado com ícone acima de todo heading; dark mode preto-puro com neon; mascote; emoji decorativo; sombra difusa em tudo; Inter.
 
-In English: purple/blue gradients; glassmorphism; card-inside-card; grey text on colored backgrounds; rounded icon-above-heading tiles; pure-black dark mode with neon; mascots; decorative emoji; diffuse shadows everywhere; Inter as a brand font (extended in `DESIGN.md` to DM Sans, Poppins, Montserrat, Roboto). Beyond the brief: no gamification chrome — no XP, levels, loot boxes, currency or global rankings exist in the product (ADR-0006), so the interface never borrows their visual language.
+In English: purple/blue gradients; glassmorphism; card-inside-card; grey text on colored backgrounds; rounded icon-above-heading tiles; pure-black dark mode with neon; mascots; decorative emoji; diffuse shadows everywhere; Inter as a brand font — and the brief's typography section (section 4) extends the brand-font ban to DM Sans, Poppins, Montserrat and Roboto, carried into `DESIGN.md`. Beyond the brief: no gamification chrome — no XP, levels, loot boxes, currency or global rankings exist in the product (ADR-0006), so the interface never borrows their visual language.
 
 ## Design Principles
 

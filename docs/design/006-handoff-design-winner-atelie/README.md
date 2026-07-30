@@ -4,7 +4,10 @@
 > |---|---|
 > | Files `F1 Hoje Desktop.dc.html` … `F6 Conclusao Mobile.dc.html` | Renamed to kebab-case on import: `f1-hoje-desktop.dc.html` … `f6-conclusao-mobile.dc.html` (repo filename convention). Content unchanged. |
 > | `DESIGN.md` ("drop-in draft for the repo") | Adopted as the **living** root [`DESIGN.md`](../../../DESIGN.md), written in English per the repo language rule, with the brief's section 5 anti-references verbatim. The pt-BR draft is kept here as the snapshot. |
-> | `tokens.css` ("token sheet for packages/ui") | Living copy landed at [`packages/ui/tokens.css`](../../../packages/ui/tokens.css). The copy here is the snapshot. |
+> | `tokens.css` ("token sheet for packages/ui") | Living copy landed at [`packages/ui/tokens.css`](../../../packages/ui/tokens.css), with its comments translated to English (repo language rule for living code; values byte-identical). The copy here is the snapshot. |
+> | F1's streak stamp label "dias seguidos" | Domain-term drift: `CONTEXT.md` fixes the user-visible pt-BR term as **"sequência"** (which F5/F6 already use — "12 dias de sequência"). At implementation, the streak label follows `CONTEXT.md`, not F1. |
+> | This bundle's `DESIGN.md`, "Anti-referências (lei)" | The draft's list slightly paraphrases brief section 5 (drops "todo", "mode", "em tudo"). The **root** `DESIGN.md` carries the section 5 text verbatim and is the binding version. |
+> | "Variação F" | The brief's section 7 prescribed three variations (A/B/C); the exploration actually ran ten (A–J) across three rounds in the Claude Design project before Fernando picked F. The extra rounds are recorded only in that project, not in this repo. |
 
 # Handoff: Miolos — Sistema visual "Ateliê" (vencedor da exploração)
 
