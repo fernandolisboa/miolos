@@ -1,0 +1,107 @@
+Aires	lexicon-reject: proper noun (capitalized lemma)
+Alair	lexicon-reject: proper noun (capitalized lemma)
+Alceu	lexicon-reject: proper noun (capitalized lemma)
+Algol	lexicon-reject: proper noun (capitalized lemma)
+Aline	lexicon-reject: proper noun (capitalized lemma)
+Amapá	lexicon-reject: proper noun (capitalized lemma)
+André	lexicon-reject: proper noun (capitalized lemma)
+Artur	lexicon-reject: proper noun (capitalized lemma)
+Aécio	lexicon-reject: proper noun (capitalized lemma)
+Bruno	lexicon-reject: proper noun (capitalized lemma)
+Carla	lexicon-reject: proper noun (capitalized lemma)
+Ceará	lexicon-reject: proper noun (capitalized lemma)
+Dafne	lexicon-reject: proper noun (capitalized lemma)
+Edite	lexicon-reject: proper noun (capitalized lemma)
+Elisa	lexicon-reject: proper noun (capitalized lemma)
+Goiás	lexicon-reject: proper noun (capitalized lemma)
+Intel	lexicon-reject: proper noun (capitalized lemma)
+Japão	lexicon-reject: proper noun (capitalized lemma)
+Jesus	lexicon-reject: proper noun (capitalized lemma)
+Jobim	lexicon-reject: proper noun (capitalized lemma)
+Jorge	lexicon-reject: proper noun (capitalized lemma)
+Kazuo	lexicon-reject: proper noun (capitalized lemma)
+Lauro	lexicon-reject: proper noun (capitalized lemma)
+Linda	lexicon-reject: proper noun (capitalized lemma)
+Norte	lexicon-reject: proper noun (capitalized lemma)
+Paris	lexicon-reject: proper noun (capitalized lemma)
+Paula	lexicon-reject: proper noun (capitalized lemma)
+Peano	lexicon-reject: proper noun (capitalized lemma)
+Piauí	lexicon-reject: proper noun (capitalized lemma)
+Santo	lexicon-reject: proper noun (capitalized lemma)
+Silva	lexicon-reject: proper noun (capitalized lemma)
+Suíça	lexicon-reject: proper noun (capitalized lemma)
+Terra	lexicon-reject: proper noun (capitalized lemma)
+VARIG	lexicon-reject: proper noun (capitalized lemma)
+Vênus	lexicon-reject: proper noun (capitalized lemma)
+Ávila	lexicon-reject: proper noun (capitalized lemma)
+Épiro	lexicon-reject: proper noun (capitalized lemma)
+Érica	lexicon-reject: proper noun (capitalized lemma)
+Érico	lexicon-reject: proper noun (capitalized lemma)
+Órion	lexicon-reject: proper noun (capitalized lemma)
+viado	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+cuzao	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+porra	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+bosta	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+merda	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+foder	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+fodeu	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+fodam	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+fodia	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+fodas	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+cagar	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+cagou	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+mijar	lexicon-reject: blocklist (slur / heavy obscenity / scatological) - normalized form
+vadia	answer-reject (stays valid as guess unless blocklisted): derogatory toward women
+bunda	answer-reject (stays valid as guess unless blocklisted): primary reading scatological/body slang
+bicha	answer-reject (stays valid as guess unless blocklisted): slur reading in pt-BR (valid guess: also means queue/creature)
+veado	answer-reject (stays valid as guess unless blocklisted): slur reading in pt-BR (valid guess: also the animal)
+pinto	answer-reject (stays valid as guess unless blocklisted): vulgar slang reading (valid guess: also chick/surname)
+tesão	answer-reject (stays valid as guess unless blocklisted): primary reading sexual
+gozar	answer-reject (stays valid as guess unless blocklisted): sexual slang reading
+seios	answer-reject (stays valid as guess unless blocklisted): sexualized body part + plural
+sêmen	answer-reject (stays valid as guess unless blocklisted): sexual/clinical
+urina	answer-reject (stays valid as guess unless blocklisted): scatological/clinical
+pênis	answer-reject (stays valid as guess unless blocklisted): anatomical/clinical
+útero	answer-reject (stays valid as guess unless blocklisted): clinical jargon
+motel	answer-reject (stays valid as guess unless blocklisted): adult connotation in Brazilian usage
+judeu	answer-reject (stays valid as guess unless blocklisted): ethnicity word, excluded from answers by editorial choice
+negro	answer-reject (stays valid as guess unless blocklisted): race word, excluded from answers by editorial choice
+paris	answer-reject (stays valid as guess unless blocklisted): proper noun (lowercase in subtitle corpus)
+jesus	answer-reject (stays valid as guess unless blocklisted): proper noun
+maria	answer-reject (stays valid as guess unless blocklisted): proper noun
+lucas	answer-reject (stays valid as guess unless blocklisted): proper noun
+pedro	answer-reject (stays valid as guess unless blocklisted): proper noun
+china	answer-reject (stays valid as guess unless blocklisted): proper noun
+egito	answer-reject (stays valid as guess unless blocklisted): proper noun
+japão	answer-reject (stays valid as guess unless blocklisted): proper noun
+índia	answer-reject (stays valid as guess unless blocklisted): proper noun
+viena	answer-reject (stays valid as guess unless blocklisted): proper noun
+césar	answer-reject (stays valid as guess unless blocklisted): proper noun
+paula	answer-reject (stays valid as guess unless blocklisted): proper noun
+jorge	answer-reject (stays valid as guess unless blocklisted): proper noun
+judas	answer-reject (stays valid as guess unless blocklisted): proper noun
+natal	answer-reject (stays valid as guess unless blocklisted): primary reading Natal (Christmas/city), proper noun
+tinha	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+havia	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+fosse	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+foram	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+ficou	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+achei	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+matou	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+falei	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+podia	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+soube	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+houve	answer-reject (stays valid as guess unless blocklisted): inflected form, lemma preferred
+todos	answer-reject (stays valid as guess unless blocklisted): function word, weak answer
+essas	answer-reject (stays valid as guess unless blocklisted): demonstrative, weak answer
+deles	answer-reject (stays valid as guess unless blocklisted): contraction de+eles, weak answer
+disso	answer-reject (stays valid as guess unless blocklisted): contraction de+isso, weak answer
+daqui	answer-reject (stays valid as guess unless blocklisted): contraction de+aqui, weak answer
+horas	answer-reject (stays valid as guess unless blocklisted): plural, lemma preferred
+olhos	answer-reject (stays valid as guess unless blocklisted): plural, lemma preferred
+fotos	answer-reject (stays valid as guess unless blocklisted): plural, lemma preferred
+meses	answer-reject (stays valid as guess unless blocklisted): plural, lemma preferred
+vezes	answer-reject (stays valid as guess unless blocklisted): plural, lemma preferred
+casas	answer-reject (stays valid as guess unless blocklisted): plural, lemma preferred
+armas	answer-reject (stays valid as guess unless blocklisted): plural, lemma preferred
+super	answer-reject (stays valid as guess unless blocklisted): prefix/loan usage, not a standalone lemma answer
