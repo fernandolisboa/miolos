@@ -17,7 +17,7 @@ The design direction is editorial rather than arcade: a well-printed puzzle sect
 | **M0 — Foundation** | Monorepo, CI, pre-commit, Next.js web app with a base theme, anonymous auth, initial Drizzle schema |
 | **M1 — Binairo end to end** | Generator + validator, publishing cron running in production with a multi-day buffer ([ADR-0010](./docs/adr/0010-publication-is-time-driven-published-at-plus-buffer.md)), polished screen, persisted completion, working streak, magic-link email recovery ([ADR-0003](./docs/adr/0003-anonymous-first-identity-with-email-recovery.md)) with the minimal LGPD package ([ADR-0012](./docs/adr/0012-minimal-lgpd-ships-with-email-attach.md)), PWA manifest. Proves the whole architecture. |
 | **M2 — Catalogue** | Sudoku → Nonogram → Termo, plus client-generated free play on the grid games ([ADR-0011](./docs/adr/0011-free-play-is-generated-on-the-client.md)) and the Termo word-list validation harness ([ADR-0015](./docs/adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)) |
-| **M3 — Retention** | Stats, medals, Perfect Day, service worker + streak notifications (web push + email), archive routes, PostHog |
+| **M3 — Retention** | Stats, medals, Dia Perfeito, service worker + streak notifications (web push + email), archive routes, PostHog |
 | **M4 — Web launch** | Onboarding, settings, full LGPD review, Open Graph share cards, SEO, production |
 | **Post-launch** | Native iOS and Android, social login, monetization activation, crosswords v1.1 |
 
@@ -47,7 +47,7 @@ Canonical domain: **`miolos.app`** (registered, managed in Vercel), with the API
 | Document | What it's for |
 |---|---|
 | [`docs/handoffs/001-handoff-project-foundation.md`](./docs/handoffs/001-handoff-project-foundation.md) | **The source of truth**, plus an amendment table listing every point an ADR supersedes |
-| [`docs/adr/`](./docs/adr/) | Architecture decisions. Seven so far; each records the alternatives rejected and why |
+| [`docs/adr/`](./docs/adr/) | Architecture decisions. Fifteen so far; each records the alternatives rejected and why |
 | [`docs/design/002-brief-design-direction.md`](./docs/design/002-brief-design-direction.md) | Visual direction, palette and typography candidates, the design exploration process |
 | [`docs/research/`](./docs/research/) | Primary-source research behind the decisions |
 | [`CLAUDE.md`](./CLAUDE.md) | How agents work in this repo — mandatory implementation flow and verification gates |
