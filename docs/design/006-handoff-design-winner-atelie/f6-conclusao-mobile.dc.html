@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F7F2E9}a{color:#211D19}a:hover{color:#4E6B52}</style>
+</helmet>
+<div style="width:390px;height:844px;background:#F7F2E9;background-image:radial-gradient(rgba(33,29,25,0.06) 1px, transparent 1px);background-size:24px 24px;color:#211D19;font-family:'Instrument Sans',sans-serif;box-sizing:border-box;padding:20px 18px 24px;display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;min-height:44px">
+    <a href="#" style="text-decoration:none;font-size:14px;font-weight:600;padding:10px 10px 10px 0">← Hoje</a>
+    <span style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#4E6B52">Lógica · nº 214</span>
+    <span style="font-size:13px;color:#6E6659">30 jul</span>
+  </div>
+  <div style="background:#FBF7EF;border:1px solid #D8D0C2;border-radius:6px;box-shadow:5px 5px 0 rgba(78,107,82,0.22);padding:22px;margin-top:10px;transform:rotate(-0.5deg);position:relative">
+    <div style="position:absolute;top:-10px;left:30px;width:58px;height:19px;background:rgba(78,107,82,0.32);transform:rotate(-4deg);border-radius:2px"></div>
+    <div style="display:flex;align-items:center;gap:18px">
+      <div style="width:108px;height:108px;border:3px solid #4E6B52;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#4E6B52;transform:rotate(-6deg);flex-shrink:0">
+        <span style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase">Concluído</span>
+        <span style="font-family:'Fraunces',serif;font-size:28px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums">06:47</span>
+        <span style="font-family:'Fraunces',serif;font-style:italic;font-size:11px">sem dicas</span>
+      </div>
+      <div style="flex:1">
+        <div style="font-family:'Fraunces',serif;font-size:27px;font-weight:550">Binairo</div>
+        <div style="font-size:13px;color:#6E6659;margin-top:6px;line-height:1.5">melhor: <span style="font-variant-numeric:tabular-nums;font-weight:600;color:#211D19">03:58</span><br>média: <span style="font-variant-numeric:tabular-nums;font-weight:600;color:#211D19">07:20</span></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:6px;margin-top:18px;height:56px">
+      <sc-for list="{{ bars }}" as="b" hint-placeholder-count="6">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:100%;height:{{ b.h }};background:{{ b.color }};border-radius:2px 2px 0 0"></div>
+          <span style="font-size:10px;color:{{ b.labelColor }};font-variant-numeric:tabular-nums;font-weight:{{ b.w }}">{{ b.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-family:'Fraunces',serif;font-style:italic;font-size:13px;color:#6E6659;margin-top:12px">hoje você foi mais rápido que a sua média.</div>
+  </div>
+  <div style="background:#FBF7EF;border:1.5px solid #9E3B2F;border-radius:6px;box-shadow:3px 3px 0 rgba(158,59,47,0.25);padding:16px 20px;margin-top:20px;transform:rotate(0.8deg);display:flex;align-items:center;gap:16px;position:relative">
+    <div style="position:absolute;top:-9px;right:24px;width:46px;height:15px;background:rgba(158,59,47,0.3);transform:rotate(4deg);border-radius:2px"></div>
+    <span style="font-family:'Fraunces',serif;font-size:38px;font-weight:600;color:#9E3B2F;line-height:1;font-variant-numeric:tabular-nums">12</span>
+    <span style="font-size:13px;color:#9E3B2F;line-height:1.4">dias de sequência — <span style="font-family:'Fraunces',serif;font-style:italic">mantida por hoje.</span></span>
+  </div>
+  <div style="background:#FBF7EF;border:1px solid #D8D0C2;border-radius:6px;box-shadow:3px 3px 0 #D8D0C2;padding:16px 18px;margin-top:16px;transform:rotate(-0.4deg)">
+    <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#6E6659">O dia até agora — falta um</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <div style="flex:1;text-align:center;background:rgba(192,138,30,0.1);border-radius:6px;padding:9px 0"><div style="font-size:12px;font-weight:600;color:#C08A1E">Termo</div><div style="font-size:11px;color:#6E6659;font-variant-numeric:tabular-nums">4/6</div></div>
+      <div style="flex:1;text-align:center;background:rgba(46,78,126,0.1);border-radius:6px;padding:9px 0"><div style="font-size:12px;font-weight:600;color:#2E4E7E">Sudoku</div><div style="font-size:11px;color:#6E6659;font-variant-numeric:tabular-nums">07:12</div></div>
+      <div style="flex:1;text-align:center;background:rgba(78,107,82,0.1);border-radius:6px;padding:9px 0"><div style="font-size:12px;font-weight:600;color:#4E6B52">Binairo</div><div style="font-size:11px;color:#6E6659;font-variant-numeric:tabular-nums">06:47</div></div>
+      <div style="flex:1;text-align:center;border:1.5px dashed #D8D0C2;border-radius:6px;padding:9px 0"><div style="font-size:12px;font-weight:600;color:#6E6659">Nono.</div><div style="font-size:11px;color:#6E6659">falta</div></div>
+    </div>
+  </div>
+  <div style="flex:1"></div>
+  <a href="#" style="display:flex;align-items:center;justify-content:center;background:#B5563C;color:#F7F2E9;text-decoration:none;font-size:15px;font-weight:600;height:52px;border-radius:6px;box-shadow:3px 3px 0 rgba(181,86,60,0.25)">Fechar o dia — jogar Nonogram</a>
+  <div style="display:flex;gap:12px;margin-top:12px">
+    <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;background:#211D19;color:#F7F2E9;text-decoration:none;font-size:14px;font-weight:600;height:48px;border-radius:6px">Compartilhar</a>
+    <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;background:#FBF7EF;border:1px solid #D8D0C2;color:#211D19;text-decoration:none;font-size:14px;font-weight:600;height:48px;border-radius:6px;box-sizing:border-box">Estatísticas</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+  renderVals() {
+    const data = [
+      {label:'<4', h:16, today:false},
+      {label:'4–5', h:26, today:false},
+      {label:'5–6', h:40, today:false},
+      {label:'6–7', h:52, today:true},
+      {label:'7–9', h:32, today:false},
+      {label:'>9', h:13, today:false}
+    ];
+    const bars = data.map(b => ({label:b.label, h:b.h+'px', color: b.today ? '#4E6B52' : 'rgba(78,107,82,0.25)', labelColor: b.today ? '#4E6B52' : '#6E6659', w: b.today ? 700 : 400}));
+    return { bars };
+  }
+}
+</script>
+</body>
+</html>

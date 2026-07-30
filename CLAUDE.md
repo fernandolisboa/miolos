@@ -95,11 +95,11 @@ Vetoes, not gaps. Do not propose working around them.
 
 ## Design
 
-Direction is editorial/paper, detailed in [`docs/design/002-brief-design-direction.md`](./docs/design/002-brief-design-direction.md).
+Direction is editorial/paper, detailed in [`docs/design/002-brief-design-direction.md`](./docs/design/002-brief-design-direction.md). The Claude Design exploration is done and the winner is chosen: **variation F "Ateliê"** — paper on paper, hard single-color offset shadows, washi tape per game, subtle static rotations.
 
-The sequence is fixed: throwaway web exploration in Claude Design (three radical variations of the "Hoje" screen plus Binairo in play) → pick a winner → `/impeccable init` records it as `PRODUCT.md` + `DESIGN.md` → tokens land in `packages/ui` → later screens are designed just-in-time per milestone against that system.
+The system is recorded (issue #11): `PRODUCT.md` + `DESIGN.md` at the repo root are the living design context (`/impeccable` reads them), tokens live in `packages/ui/tokens.css`, and the six high-fidelity reference frames are snapshotted in [`docs/design/006-handoff-design-winner-atelie/`](./docs/design/006-handoff-design-winner-atelie/) — open them in a browser with `support.js` beside them; they are visual specs, never production code. The anti-references in section 5 of the brief are in `DESIGN.md` verbatim as hard rules.
 
-**Do not run `/impeccable init` before a winner exists.** Initialising against a placeholder produces a `DESIGN.md` describing nothing, and every later `/impeccable` run inherits that vagueness. After the winner is chosen, the anti-references in section 5 of the brief go into `DESIGN.md` verbatim as hard rules.
+Later screens (Sudoku, Nonogram, Termo, archive, free play, stats, settings, onboarding) are designed just-in-time per milestone against that system.
 
 ## Commits and branches
 
