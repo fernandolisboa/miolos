@@ -33,7 +33,7 @@ Searched live via pePI (`https://busca.inpi.gov.br/pePI/`), anonymous session, d
 
 ## Reading
 
-- **Domain:** `miolos.app.br` is free and cheap; `miolos.com.br` has a realistic chance of dropping within months. → [ADR-0013](../adr/0013-canonical-domain-and-pt-br-routes.md): register `.app.br` now, monitor `.com.br`.
+- **Domain:** `miolos.app` and `miolos.app.br` were free; `miolos.com.br` has a realistic chance of dropping within months. → [ADR-0013](../adr/0013-canonical-domain-and-pt-br-routes.md): Fernando bought `miolos.app` the same day (registered inside Vercel); `.com.br` monitored as a future redirect.
 - **Trademark:** *using* "Miolos" commercially is low-risk — every prior holder sits in an unrelated niche (dev tooling, teachers' services, publishing, wine) and none operates a consumer game. *Registering* it in 9/41/42 faces genuine citation risk: INPI's own June 2026 decision treated bare "MIOLO" in class 41 as confusable with "MIOLO BIRÔ", and Brazilian practice treats singular/plural as near-identical. Registration is deferred and is not a launch gate.
 - **Genuinely unknowable without counsel / a manual INPI session:** whether the 930435230 appeal succeeds; how an examiner would weigh "MIOLOS" for a games-only specification against the education-oriented class-41 marks; whether the `.com.br` holder renews late.
 

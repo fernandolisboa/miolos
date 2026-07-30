@@ -40,7 +40,7 @@ A future native client is a separate UI consuming the same packages; its shape i
 
 Backend is thin: Neon (Postgres) + Drizzle. A cron generates candidates, a validator approves them, approved puzzles land in `daily_puzzles` as a multi-day pre-published buffer — visibility is the time predicate `published_at <= now()`, never a job side-effect ([ADR-0010](./docs/adr/0010-publication-is-time-driven-published-at-plus-buffer.md)). Streaks are computed server-side; the day turns at midnight `America/Sao_Paulo` for everyone, and nothing unpublished is ever sent to the client.
 
-Canonical domain: **`miolos.app.br`**, with the API at `api.miolos.app.br` ([ADR-0013](./docs/adr/0013-canonical-domain-and-pt-br-routes.md)). Public routes are pt-BR (`/arquivo/...`).
+Canonical domain: **`miolos.app`** (registered, managed in Vercel), with the API at `api.miolos.app` ([ADR-0013](./docs/adr/0013-canonical-domain-and-pt-br-routes.md)). Public routes are pt-BR (`/arquivo/...`).
 
 ## Documentation
 
@@ -69,7 +69,7 @@ Canonical domain: **`miolos.app.br`**, with the API at `api.miolos.app.br` ([ADR
 | [0010](./docs/adr/0010-publication-is-time-driven-published-at-plus-buffer.md) | Publication is time-driven: `published_at` plus a pre-generated buffer; no archive backfill |
 | [0011](./docs/adr/0011-free-play-is-generated-on-the-client.md) | Free play is generated on the client |
 | [0012](./docs/adr/0012-minimal-lgpd-ships-with-email-attach.md) | Minimal LGPD ships with email attach; recovery and reminder consent are separate |
-| [0013](./docs/adr/0013-canonical-domain-and-pt-br-routes.md) | Canonical domain `miolos.app.br`; public routes in pt-BR |
+| [0013](./docs/adr/0013-canonical-domain-and-pt-br-routes.md) | Canonical domain `miolos.app`; public routes in pt-BR |
 | [0014](./docs/adr/0014-apps-web-reads-the-database-directly-for-public-pages.md) | `apps/web` reads the database directly for public pages only |
 | [0015](./docs/adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md) | The Termo word list is AI-curated under mechanical constraints; matching is accent-insensitive |
 
