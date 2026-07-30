@@ -19,6 +19,10 @@
 > | **Todo conteúdo é grátis**: diário, arquivo histórico e modo livre | "arquivo histórico … inventário premium futuro"; corte "sem modo livre" | [ADR-0005](../adr/0005-all-content-is-free.md) |
 > | Monetização: **sem moeda virtual** (veto reafirmado); veto de banner **restringido a criativo de terceiros** — promoção in-layout própria é permitida; dicas por rewarded ad em lote, expirando à meia-noite | Vetos originais mantidos, escopo detalhado | [ADR-0006](../adr/0006-monetization-convenience-not-access.md) |
 > | `apps/web` e `apps/api` **separados**; o cliente nativo futuro consome o `apps/api` | Arquitetura (`apps/api` como "API + cron; futura versão web") | [ADR-0007](../adr/0007-separate-web-and-api-apps.md) |
+> | "Completar" definido por modo: **só conclusão no próprio dia alimenta a streak**; arquivo nunca repara; Termo perdido é "jogado", não "concluído" | Recompensas ("completar 1 dos 4 mantém", sem regra para arquivo) | [ADR-0008](../adr/0008-completion-and-streak-semantics-across-play-modes.md) |
+> | **LGPD mínima (política de privacidade + consentimentos separados de recuperação e lembrete) sai junto com o e-mail, no M1**; revisão completa continua no M4 | Milestones (privacidade/LGPD inteira no M4) | [ADR-0012](../adr/0012-minimal-lgpd-ships-with-email-attach.md) |
+> | **Lista de palavras do Termo é curada por IA sob restrições mecânicas**, não curadoria manual do dono | M2 ("curadoria … é trabalho não-técnico") e pendência não-técnica 3 | [ADR-0015](../adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md) |
+> | Pendência 1 (registro.br + INPI) **resolvida**: domínio canônico `miolos.app.br`; "MIOLOS" nunca depositado no INPI; registro de marca adiado | Pendências não-técnicas 1 | [ADR-0013](../adr/0013-canonical-domain-and-pt-br-routes.md) |
 >
 > O mapa de milestones atualizado vive no [README](../../README.md), que é documento vivo. As invariantes de produto e engenharia vivem no [CLAUDE.md](../../CLAUDE.md).
 
