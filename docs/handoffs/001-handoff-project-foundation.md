@@ -13,11 +13,12 @@
 > | O que mudou | Onde estava | ADR |
 > |---|---|---|
 > | **Web é a plataforma de lançamento**, nativo vem depois | Milestones (M4 Android primeiro); "futura versão web" | [ADR-0001](../adr/0001-web-is-the-launch-platform.md) |
-> | UI web em **React/Next.js puro**, não react-native-web; `packages/ui` é tokens, não componentes | Arquitetura (`apps/mobile` Expo como cliente principal) | [ADR-0002](../adr/0002-plain-react-web-ui-not-universal-rn-web.md) |
+> | UI web em **React/Next.js puro**, não react-native-web; `packages/ui` é tokens, não componentes | Arquitetura (`apps/mobile` Expo como cliente principal) e Design (motion via Reanimated, que é só RN) | [ADR-0002](../adr/0002-plain-react-web-ui-not-universal-rn-web.md) |
 > | Anonymous-first mantido, **e-mail anexado a partir de streak ≥ 5** com magic link | Auth (device → JWT, social login pós-lançamento) | [ADR-0003](../adr/0003-anonymous-first-identity-with-email-recovery.md) |
 > | **Nada não publicado chega ao cliente** — cache só do dia corrente | "cache dos próximos 2–3 dias de puzzles" | [ADR-0004](../adr/0004-no-unpublished-puzzle-reaches-the-client.md) |
 > | **Todo conteúdo é grátis**: diário, arquivo histórico e modo livre | "arquivo histórico … inventário premium futuro"; corte "sem modo livre" | [ADR-0005](../adr/0005-all-content-is-free.md) |
-> | Monetização: **sem moeda virtual e sem banner de terceiros** (vetos reafirmados); dicas por rewarded ad em lote, expirando à meia-noite | Vetos originais mantidos, escopo detalhado | [ADR-0006](../adr/0006-monetization-convenience-not-access.md) |
+> | Monetização: **sem moeda virtual** (veto reafirmado); veto de banner **restringido a criativo de terceiros** — promoção in-layout própria é permitida; dicas por rewarded ad em lote, expirando à meia-noite | Vetos originais mantidos, escopo detalhado | [ADR-0006](../adr/0006-monetization-convenience-not-access.md) |
+> | `apps/web` e `apps/api` **separados**; o cliente nativo futuro consome o `apps/api` | Arquitetura (`apps/api` como "API + cron; futura versão web") | [ADR-0007](../adr/0007-separate-web-and-api-apps.md) |
 >
 > O mapa de milestones atualizado vive no [README](../../README.md), que é documento vivo. As invariantes de produto e engenharia vivem no [CLAUDE.md](../../CLAUDE.md).
 

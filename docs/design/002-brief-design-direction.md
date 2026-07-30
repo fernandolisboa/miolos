@@ -72,7 +72,7 @@ Acento neutro do app (streak, botões primários fora dos jogos): a tinta mesma,
 ### Motion (para especificar, não para o mockup)
 
 - Metáfora: **tinta que assenta** — 150–250ms, easing com leve settle, sem bounce exagerado
-- Todo feedback visual pareia com haptic (peça encaixa, célula confirma, streak acende)
+- Todo feedback visual pareia com haptic **onde houver suporte** (Vibration API; ausente no desktop e no iOS Safari) — no desktop o feedback é só visual, e a tela não pode depender do haptic para comunicar estado
 - Celebração de conclusão: contida e memorável (o carimbo, o traço que se completa) — nunca chuva de confete genérica
 
 ## 5. Anti-referências (proibições duras — colar em todo prompt)
@@ -81,11 +81,11 @@ Gradiente roxo/azul; glassmorphism; card dentro de card; texto cinza sobre fundo
 
 ## 6. Telas do escopo de exploração
 
-1. **Hoje (hub)** — a tela de abertura: data em destaque, os 4 puzzles do dia com estado (feito/não feito), streak visível, acesso a estatísticas. É a tela que define o app.
+1. **Hoje (hub)** — a tela de abertura: data em destaque, os 4 puzzles do dia com estado (feito/não feito), streak visível, acesso a estatísticas, **entrada para o arquivo histórico e para o modo livre** (ambos são features de lançamento — [ADR-0005](../adr/0005-all-content-is-free.md)), e **espaço reservado para uma faixa dispensável de promoção própria** ([ADR-0006](../adr/0006-monetization-convenience-not-access.md) — dormente no lançamento, mas o layout precisa comportá-la sem reflow). É a tela que define o app.
 2. **Binairo em jogo** — grade 8×8, controles de célula, timer discreto, botão de dica.
 3. **Conclusão** — tempo, streak atualizado, distribuição/stat do jogo, compartilhar.
 
-(As demais telas — Sudoku, Nonogram, Termo, stats, ajustes, onboarding — são desenhadas just-in-time nos milestones, contra o sistema vencedor.)
+(As demais telas — Sudoku, Nonogram, Termo, índice do arquivo, modo livre, stats, ajustes, onboarding — são desenhadas just-in-time nos milestones, contra o sistema vencedor.)
 
 ## 7. As 3 variações a pedir (radicalmente diferentes, dentro da direção)
 

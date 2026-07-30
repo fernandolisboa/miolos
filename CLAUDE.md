@@ -24,11 +24,11 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See [`docs/agents/d
 
 Development runs in phases. Each phase is a fresh session, started by pasting the previous phase's kickoff prompt.
 
-1. **Spec** — `/to-spec`, using the founding handoff as its input.
+1. **Spec** — `/to-spec`, using the founding handoff **plus every ADR in `docs/adr/`** as its input. The handoff alone is pre-amendment and would produce a spec for the wrong product.
 2. **Tickets** — `/to-tickets`, slicing the spec into tracer-bullet vertical slices with explicit blocking edges, published to GitHub Issues.
 3. **Development** — per issue, the eight-step flow below.
 
-Once `CONTEXT.md` and ADRs exist, `/grill-with-docs` runs on every new plan. `/wayfinder` is reserved for large foggy blocks (pt-BR crosswords, monetization activation, a web version) — not for ordinary tickets.
+Once `CONTEXT.md` and ADRs exist, `/grill-with-docs` runs on every new plan. `/wayfinder` is reserved for large foggy blocks (pt-BR crosswords, monetization activation, the native clients) — not for ordinary tickets.
 
 Select the right skill automatically during development — `/tdd`, `/diagnosing-bugs`, `/code-review`, `/request-refactor-plan`, `/run` — without Fernando naming it.
 
@@ -53,7 +53,7 @@ Fernando reviews pull requests, not code. That only works if the machine — not
 
 **Evidence rule.** Never report a step as passing without pasting the real command output. "Should pass", "looks correct" and "I've verified" are not results. An agent that cannot run the check reports that it could not run it.
 
-**Mechanical gate.** A PR merges only when all of these are green, with output shown:
+**Mechanical gate.** A PR merges only when all of these are green, with output shown. Each gate binds from the ticket that introduces it — an M0 PR is not blocked by a checker that does not exist yet, but no PR may remove or weaken one that does:
 
 - `pnpm typecheck` — `strict: true`, no `any` without a comment justifying it, no `@ts-ignore` without a written reason
 - `pnpm lint`
@@ -73,12 +73,12 @@ Vetoes, not gaps. Do not propose working around them.
 
 - **`packages/games` takes zero React Native and zero Node dependencies.** This is the architectural invariant of the project. Pure TypeScript, deterministic, seed in → puzzle out.
 - **Dates and streaks are always `America/Sao_Paulo`**, midnight fixed for every user, no local-timezone rollover. The client clock is never a source of truth for a streak — streaks are computed server-side.
-- **No unpublished puzzle ever reaches the client** ([ADR-0004](./docs/adr/0004-no-unpublished-puzzle-reaches-the-client.md)). No prefetching future days. Local validation is a responsiveness affordance, never a source of truth.
-- **All puzzle content is free** ([ADR-0005](./docs/adr/0005-all-content-is-free.md)) — daily, archive and free play. Nothing is ever gated behind payment.
+- **No unpublished puzzle ever reaches the client** ([ADR-0004](./docs/adr/0004-no-unpublished-puzzle-reaches-the-client.md)). No future-dated puzzle **content** in any response or prefetched payload — including RSC payloads, which is not the framework default. Prefetching tomorrow's shell (route, layout, fonts) is permitted. Local validation is a responsiveness affordance, never a source of truth.
+- **All puzzle content is free** ([ADR-0005](./docs/adr/0005-all-content-is-free.md)) — daily, archive and free play. Access to the daily is never sold. Future revenue, if any, comes from new content (premium game types, seasons), never from gating what v1 ships.
 - **Free play never touches the streak, the statistics distributions, or the medals.** Termo is excluded from free play while the word list is hand-curated.
-- **No virtual currency, no accumulable balance, no XP, levels, loot boxes or global ranking** in v1 ([ADR-0006](./docs/adr/0006-monetization-convenience-not-access.md)). Hint grants are session state expiring at rollover.
-- **No third-party banner, ever.** In-layout promotion is allowed only when the creative is ours. No ads SDK in v1 at all — ship the dormant seams instead: `<AdSlot placement="…"/>` rendering nothing, remote feature flags, `entitlements: string[]` (an array, never a boolean).
-- **`packages/ui` holds tokens and primitives, not components** ([ADR-0002](./docs/adr/0002-plain-react-web-ui-not-universal-rn-web.md)).
+- **No virtual currency, no accumulable balance, no XP, levels, loot boxes or global ranking** in v1 ([ADR-0006](./docs/adr/0006-monetization-convenience-not-access.md)). Hint grants expire at the next `America/Sao_Paulo` rollover and are recorded server-side against user and day — not browser `sessionStorage`, and not a persisted balance.
+- **No third-party banner, ever.** In-layout promotion is allowed only when the creative is ours. No ads SDK in v1 at all — ship the dormant seams instead: `<AdSlot placement="…"/>` rendering nothing **but reserving its final dimensions** (`min-height`/`aspect-ratio` per placement, transparent) so activation is a paint, not a reflow, remote feature flags, `entitlements: string[]` (an array, never a boolean).
+- **`packages/ui` holds tokens and primitives, never a cross-platform component abstraction** ([ADR-0002](./docs/adr/0002-plain-react-web-ui-not-universal-rn-web.md)). A primitive is a value or a pure value-returning function with no JSX. Shared **web** components are allowed there once a second consumer exists; until then they live in `apps/web`.
 - **pt-BR only in v1**, with strings externalised for i18n from the start. No content in other languages.
 - **One push notification type only** — streak at risk, opt-in requested after a 3-day streak. No marketing push.
 - **No session replay** in telemetry.
@@ -123,7 +123,7 @@ Pre-issue implementation plans go to `docs/plans/` under the same numbering. Bot
 
 ## When in doubt
 
-- Product or scope question → the founding handoff. It is the final word.
+- Product or scope question → the founding handoff, as amended by the table at its top. Where an ADR supersedes it, the ADR is the final word; everywhere else the handoff is.
 - Recorded technical decision → `docs/adr/`.
 - Domain term → `CONTEXT.md`. Use its vocabulary in issue titles, test names and proposals; don't drift to synonyms.
 - New technical decision of any weight → propose an ADR before implementing, even a short one.

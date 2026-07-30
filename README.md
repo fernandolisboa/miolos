@@ -6,16 +6,16 @@ Four games in v1, in build order: **Binairo**, **Sudoku**, **Nonogram**, **Termo
 
 The design direction is editorial rather than arcade: a well-printed puzzle section, not a mobile game. Typography leads, paper is warm, celebrations are restrained.
 
-**All puzzle content is free** — the daily, the archive, and infinite auto-generated free play. Nothing is ever behind a paywall.
+**All puzzle content is free** — the daily, the archive, and infinite auto-generated free play. Access to the daily is never sold.
 
 ## Status
 
-**Pre-M0.** The repository holds the founding documents, six architecture decisions and the agent workflow configuration. No application code exists yet.
+**Pre-M0.** The repository holds the founding documents, seven architecture decisions and the agent workflow configuration. No application code exists yet.
 
 | Milestone | Scope |
 |---|---|
 | **M0 — Foundation** | Monorepo, CI, pre-commit, Next.js web app with a base theme, anonymous auth, initial Drizzle schema |
-| **M1 — Binairo end to end** | Generator + validator, publishing cron, polished screen, persisted completion, working streak. Proves the whole architecture. |
+| **M1 — Binairo end to end** | Generator + validator, publishing cron running in production, polished screen, persisted completion, working streak, magic-link email recovery ([ADR-0003](./docs/adr/0003-anonymous-first-identity-with-email-recovery.md)). Proves the whole architecture. |
 | **M2 — Catalogue** | Sudoku → Nonogram → Termo, plus free play on the grid games |
 | **M3 — Retention** | Stats, medals, Perfect Day, streak notifications (web push + email), archive routes, PostHog |
 | **M4 — Web launch** | Onboarding, settings, LGPD, Open Graph share cards, SEO, production |
@@ -30,7 +30,7 @@ pnpm + Turborepo monorepo:
 | Package | Purpose |
 |---|---|
 | `apps/web` | Next.js (React) — the launch client. Plain React, **not** react-native-web ([ADR-0002](./docs/adr/0002-plain-react-web-ui-not-universal-rn-web.md)). |
-| `apps/api` | Next.js — API plus the publishing cron. *Whether this stays separate from `apps/web` or merges into it is an open M0 decision.* |
+| `apps/api` | Next.js — API plus the publishing cron. Deliberately separate from `apps/web` ([ADR-0007](./docs/adr/0007-separate-web-and-api-apps.md)). |
 | `packages/games` | Generator / solver / validator per game. **Pure TypeScript: zero React Native or Node dependencies.** Deterministic, seed → puzzle. |
 | `packages/core` | Shared types, Zod contracts, streak and medal rules |
 | `packages/db` | Drizzle schema and migrations |
@@ -45,7 +45,7 @@ Backend is thin: Neon (Postgres) + Drizzle. A cron generates candidates, a valid
 | Document | What it's for |
 |---|---|
 | [`docs/handoffs/001-handoff-project-foundation.md`](./docs/handoffs/001-handoff-project-foundation.md) | **The source of truth**, plus an amendment table listing every point an ADR supersedes |
-| [`docs/adr/`](./docs/adr/) | Architecture decisions. Six so far; each records the alternatives rejected and why |
+| [`docs/adr/`](./docs/adr/) | Architecture decisions. Seven so far; each records the alternatives rejected and why |
 | [`docs/design/002-brief-design-direction.md`](./docs/design/002-brief-design-direction.md) | Visual direction, palette and typography candidates, the design exploration process |
 | [`docs/research/`](./docs/research/) | Primary-source research behind the decisions |
 | [`CLAUDE.md`](./CLAUDE.md) | How agents work in this repo — mandatory implementation flow and verification gates |
@@ -61,6 +61,7 @@ Backend is thin: Neon (Postgres) + Drizzle. A cron generates candidates, a valid
 | [0004](./docs/adr/0004-no-unpublished-puzzle-reaches-the-client.md) | No unpublished puzzle reaches the client |
 | [0005](./docs/adr/0005-all-content-is-free.md) | All content free: daily, archive, free play |
 | [0006](./docs/adr/0006-monetization-convenience-not-access.md) | Monetize convenience, never access. No currency, no third-party banner |
+| [0007](./docs/adr/0007-separate-web-and-api-apps.md) | `apps/web` and `apps/api` stay separate |
 
 ## Development
 

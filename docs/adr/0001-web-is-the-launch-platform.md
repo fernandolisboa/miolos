@@ -1,6 +1,7 @@
 # ADR-0001 — Web is the launch platform
 
 **Status:** Accepted — 2026-07-29
+**Superseded in part by:** [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md) (identity), [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md) (offline caching)
 **Supersedes:** the milestone sequencing in [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md), which placed a web version after the Android launch.
 
 ## Context
@@ -12,7 +13,7 @@ Two things argued for moving it to the front:
 - **Distribution.** The cultural comparable in Brazil, Termo, spread through shared links in a browser. App-store installation suppresses exactly that mechanic. A daily puzzle is a link-shaped product.
 - **Solo-developer cycle time.** Web has no store review, no build queue, no beta track, no store listing paperwork, and no multi-day turnaround to ship a fix. Shipping to real users months earlier makes the eventual mobile app better, not worse.
 
-The strongest counter-argument was retention: the streak is the spine of the product and depends on a "streak at risk" push notification, which is weak on iOS Safari. Research (see [`docs/research/004-research-web-native-code-sharing.md`](../research/004-research-web-native-code-sharing.md)) found the Web Push API covers this requirement on the platforms that matter at launch, retiring most of that risk. It remains the weakest point of this decision.
+The strongest counter-argument was retention: the streak is the spine of the product and depends on a "streak at risk" push notification, which is weak on iOS Safari. Research (see [`docs/research/004-research-web-native-code-sharing.md`](../research/004-research-web-native-code-sharing.md)) found that Web Push covers the entire v1 notification requirement **on Android and desktop, and on iOS 16.4+ only for home-screen-installed apps**. The ADR-0001 decision therefore rests on Brazil's Android-dominant smartphone share — a load-bearing figure that is **not yet sourced in this repo and should be cited before M3 planning**. Requiring an iOS user to install the PWA reintroduces exactly the friction web-first was chosen to escape. This remains the weakest point of this decision.
 
 ## Decision
 
@@ -24,12 +25,13 @@ Everything the founding handoff locks about the *product* — the four games and
 
 - The milestone map is rewritten: M0's foundation targets web, and "M4 — Android launch" becomes a web launch with native moving after it. Expo and EAS leave M0.
 - Server-side streak computation becomes more important, not less: a browser client is even less trustworthy as a clock than a phone.
-- Anonymous-first identity has to be reconsidered. "Device → JWT" on the web means a cookie or `localStorage` entry, which a user can clear — and losing a streak that way is a product-level failure. **Open question, not yet decided.**
-- Offline support for the next 2–3 days of puzzles becomes a service worker / PWA concern rather than a native cache.
+- Anonymous-first identity had to be reconsidered. "Device → JWT" on the web means a cookie or `localStorage` entry, which a user can clear — and losing a streak that way is a product-level failure. **Resolved by [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md).**
+- Offline support becomes a service worker / PWA concern rather than a native cache. Its scope was then narrowed by **[ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md)**: today's puzzle only, never a future day. No milestone yet owns the PWA manifest and service worker — they gate both push and offline, and need one.
 - Per-day, per-game URLs and Open Graph share cards become launch features rather than nice-to-haves, since they are the distribution mechanism.
 
 ## Follow-ups
 
-- Resolve web anonymous identity and streak durability.
-- Resolve the push/retention model on web, including the installed-PWA requirement on iOS.
-- Amend the founding handoff's milestone section once the remaining grilling questions are settled.
+- ~~Resolve web anonymous identity and streak durability.~~ → [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md)
+- ~~Amend the founding handoff's milestone section.~~ → amendment table at the top of the handoff
+- **Open:** the push/retention model on web, including the installed-PWA requirement on iOS, and the Android-share figure the decision rests on.
+- **Open:** which milestone owns the PWA manifest and service worker.

@@ -17,7 +17,7 @@ Read them for the current state of the project. They are edited in place.
 
 ## Sequenced artifacts (numbered)
 
-Handoffs, briefs, plans and specs are **snapshots of a point in time**, not living specs. They are never rewritten to stay current; a newer one supersedes an older one. The number tells you the order they were created and used.
+Handoffs, briefs, plans and specs are **snapshots of a point in time**, not living specs. Their bodies are never rewritten to stay current: a newer document supersedes an older one, and where a decision changes part of one, an **amendment table is prepended** pointing at the ADR that supersedes it. Never edit the body to match a later decision. The number tells you the order they were created and used.
 
 ```
 NNN[-issue-<n>]-<type>-<slug>.md
@@ -32,9 +32,11 @@ Current:
 
 | File | Type |
 |---|---|
-| `handoffs/001-handoff-project-foundation.md` | Founding handoff — **the source of truth for the whole project** |
+| `handoffs/001-handoff-project-foundation.md` | Founding handoff — **the source of truth**, as amended by the table at its top |
 | `design/002-brief-design-direction.md` | Visual direction brief, feeds the Claude Design exploration |
+| `research/003-research-universal-rn-web.md` | Whether universal Expo Router + react-native-web fits this product |
+| `research/004-research-web-native-code-sharing.md` | Two UIs sharing a core, and the universal styling systems |
 
 ## Language
 
-English for filenames, new documents, code and commits. pt-BR for user-facing product content, and for the two founding documents above, which stay exactly as they were written.
+English for filenames, new documents, code and commits. pt-BR for user-facing product content, and for the two founding documents above, whose **bodies** stay as written — corrections are appended as an amendment table, never edited inline.

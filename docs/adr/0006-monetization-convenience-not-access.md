@@ -2,19 +2,19 @@
 
 **Status:** Accepted — 2026-07-29
 **Depends on:** [ADR-0005](./0005-all-content-is-free.md)
-**Upholds:** three vetoes in [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md), after each was explicitly reconsidered and re-affirmed.
+**Upholds:** two vetoes in [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md) (virtual currency, accumulable balance) and **narrows a third** — the banner veto now covers third-party creative specifically. Each was explicitly reconsidered, not deferred to.
 
 ## Context
 
 With all content free ([ADR-0005](./0005-all-content-is-free.md)), the question is what — if anything — is ever sold. A virtual coin currency for hints, funded by purchase or by rewarded ads, plus a small dismissible banner shown once or twice a day, was proposed and considered seriously.
 
-Three handoff vetoes were at stake: *"Proibido: moeda virtual…"*, *"Sem saldo acumulável"*, and *"Banner: nunca."* All three are upheld, for reasons below rather than by deference.
+Three handoff vetoes were at stake: *"Proibido: moeda virtual…"*, *"Sem saldo acumulável"*, and *"Banner: nunca."* The first two are upheld unchanged. The third is **narrowed**: third-party banners remain forbidden, while an in-layout promo whose creative is ours becomes permitted. Reasons below, rather than deference.
 
 ## Decision
 
 The principle: **monetize convenience, never access.** No puzzle is ever behind a payment.
 
-**No virtual currency, and no accumulable balance.** Extra hints are earned by a rewarded ad, batched and session-scoped: one ad grants three hints, valid for that day, expiring at the `America/Sao_Paulo` midnight rollover. No wallet, no balance, no ledger.
+**No virtual currency, and no accumulable balance.** Extra hints are earned by a rewarded ad, batched and day-scoped: one ad grants three hints, valid for that day, expiring at the `America/Sao_Paulo` midnight rollover. No wallet, no balance, no ledger.
 
 **No third-party banner, ever.** The already-planned model stands: an interstitial after puzzle completion with a frequency cap, plus rewarded opt-in. A single-purchase entitlement (~R$ 10) removes ads.
 
@@ -44,8 +44,8 @@ The planned interstitial-plus-rewarded model earns more, sits outside the layout
 
 ## Consequences
 
-- **M0 builds these seams and no others:** `entitlements: string[]` (an array, never a boolean), remote feature flags, and an `<AdSlot placement="…"/>` component that renders nothing.
+- **M0 builds these seams and no others:** `entitlements: string[]` (an array, never a boolean), remote feature flags, and an `<AdSlot placement="…"/>` component that renders nothing **but reserves its final dimensions** per placement (`min-height`/`aspect-ratio`, transparent). A slot that occupies no space would insert layout when activated — reproducing exactly the layout shift this ADR disqualifies banners for. Activation must be a paint, not a reflow.
 - **No wallet or transaction ledger in the schema.** This is the concrete saving from rejecting currency.
-- Hint grants are session state expiring at rollover, not persisted balance.
+- Hint grants expire at the next `America/Sao_Paulo` rollover and are recorded **server-side** against user and day — not browser `sessionStorage` (which dies with the tab, a different lifetime) and not a persisted balance. Server-side matters if any curated medal ever depends on "solved without hints".
 - Revenue at launch is zero by design. If it ever needs to be non-zero, the levers are ad removal, new premium game types, or seasons — never access to the daily.
 - A deliberately ridiculous medal for a caught cheater remains available as **a curated medal**, which the handoff already allows. It is not an anti-cheat system, and no detection infrastructure is being built for a rank that v1 does not have.
