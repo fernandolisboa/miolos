@@ -1,8 +1,8 @@
 # Miolos
 
-Daily-puzzle mobile app in pt-BR — Termo-like, Sudoku, Nonogram, Binairo. One fresh puzzle per game per day, identical for every user, published by the server. Streak is the core mechanic. Solo developer, agent-driven workflow, largely driven from a phone.
+Daily-puzzle **web app** in pt-BR — Termo-like, Sudoku, Nonogram, Binairo. One fresh puzzle per game per day, identical for every user, published by the server. Streak is the core mechanic. Native iOS and Android follow the web launch. Solo developer, agent-driven workflow, largely driven from a phone.
 
-**Source of truth: [`docs/handoffs/001-handoff-project-foundation.md`](./docs/handoffs/001-handoff-project-foundation.md).** Every locked product, architecture and scope decision lives there. If this file, a ticket, an ADR or a plan contradicts it, the handoff wins — surface the contradiction to Fernando rather than silently picking a side.
+**Source of truth: [`docs/handoffs/001-handoff-project-foundation.md`](./docs/handoffs/001-handoff-project-foundation.md)**, as amended by the ADRs in [`docs/adr/`](./docs/adr/). The handoff is a snapshot, not a living document: where an ADR supersedes it, the ADR wins, and the handoff's amendment table lists every such point. Everywhere else the handoff is final. If this file, a ticket or a plan contradicts either, surface the contradiction to Fernando rather than silently picking a side.
 
 **Language.** English for code, filenames, commits, PRs and every document written from here on. pt-BR for user-facing product content, and for the two founding documents, which stay as written.
 
@@ -72,14 +72,26 @@ Fernando reviews pull requests, not code. That only works if the machine — not
 Vetoes, not gaps. Do not propose working around them.
 
 - **`packages/games` takes zero React Native and zero Node dependencies.** This is the architectural invariant of the project. Pure TypeScript, deterministic, seed in → puzzle out.
-- **Dates and streaks are always `America/Sao_Paulo`**, midnight fixed for every user, no local-timezone rollover. The device clock is never a source of truth for a streak — streaks are computed server-side.
-- **No virtual currency, XP, levels, loot boxes or global ranking** in v1.
-- **Banner ads: never.** No ads SDK in v1 at all. Ship the dormant seams instead — `<AdSlot placement="…"/>` rendering nothing, remote feature flags, `entitlements: string[]` (an array, never a boolean).
-- **The daily puzzle is free forever.** The historical archive, themes and advanced stats are the future premium inventory.
+- **Dates and streaks are always `America/Sao_Paulo`**, midnight fixed for every user, no local-timezone rollover. The client clock is never a source of truth for a streak — streaks are computed server-side.
+- **No unpublished puzzle ever reaches the client** ([ADR-0004](./docs/adr/0004-no-unpublished-puzzle-reaches-the-client.md)). No prefetching future days. Local validation is a responsiveness affordance, never a source of truth.
+- **All puzzle content is free** ([ADR-0005](./docs/adr/0005-all-content-is-free.md)) — daily, archive and free play. Nothing is ever gated behind payment.
+- **Free play never touches the streak, the statistics distributions, or the medals.** Termo is excluded from free play while the word list is hand-curated.
+- **No virtual currency, no accumulable balance, no XP, levels, loot boxes or global ranking** in v1 ([ADR-0006](./docs/adr/0006-monetization-convenience-not-access.md)). Hint grants are session state expiring at rollover.
+- **No third-party banner, ever.** In-layout promotion is allowed only when the creative is ours. No ads SDK in v1 at all — ship the dormant seams instead: `<AdSlot placement="…"/>` rendering nothing, remote feature flags, `entitlements: string[]` (an array, never a boolean).
+- **`packages/ui` holds tokens and primitives, not components** ([ADR-0002](./docs/adr/0002-plain-react-web-ui-not-universal-rn-web.md)).
 - **pt-BR only in v1**, with strings externalised for i18n from the start. No content in other languages.
 - **One push notification type only** — streak at risk, opt-in requested after a 3-day streak. No marketing push.
 - **No session replay** in telemetry.
 - Generated images (Nano Banana) are for outside the runtime only — icon, store listing, key art. Inside the app: SVG, Skia, or code.
+
+## Dependencies
+
+**Use current versions. Default to latest stable; never go below active LTS.** This is a security posture, not a preference — being behind is how known vulnerabilities get shipped, and the volume of disclosed supply-chain issues makes staleness an active liability rather than a neutral choice.
+
+- When adding a dependency, check the actual current version rather than recalling one. Training data lags reality.
+- Never pin to an older major "for stability" without an ADR saying why.
+- Prefer fewer dependencies. The cheapest vulnerability to patch is the one you never installed.
+- Keep the lockfile committed, and treat a dependency bump as ordinary work rather than a special event.
 
 ## Design
 

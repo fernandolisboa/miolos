@@ -4,6 +4,23 @@
 **Origem:** sessão de grilling completa (12 perguntas resolvidas) que fundou todas as decisões abaixo. Nada aqui está em aberto salvo indicação contrária.
 **Próximo passo esperado:** `/to-spec` usando este documento como insumo → `/to-tickets` → `/implement` do M0.
 
+---
+
+> ## ⚠️ Emendas — 2026-07-29
+>
+> Este documento continua sendo a fonte da verdade para **tudo que não está listado abaixo**. Ele é um snapshot: não foi reescrito. As decisões que o alteraram estão nos ADRs, que prevalecem sobre o texto original nos pontos indicados.
+>
+> | O que mudou | Onde estava | ADR |
+> |---|---|---|
+> | **Web é a plataforma de lançamento**, nativo vem depois | Milestones (M4 Android primeiro); "futura versão web" | [ADR-0001](../adr/0001-web-is-the-launch-platform.md) |
+> | UI web em **React/Next.js puro**, não react-native-web; `packages/ui` é tokens, não componentes | Arquitetura (`apps/mobile` Expo como cliente principal) | [ADR-0002](../adr/0002-plain-react-web-ui-not-universal-rn-web.md) |
+> | Anonymous-first mantido, **e-mail anexado a partir de streak ≥ 5** com magic link | Auth (device → JWT, social login pós-lançamento) | [ADR-0003](../adr/0003-anonymous-first-identity-with-email-recovery.md) |
+> | **Nada não publicado chega ao cliente** — cache só do dia corrente | "cache dos próximos 2–3 dias de puzzles" | [ADR-0004](../adr/0004-no-unpublished-puzzle-reaches-the-client.md) |
+> | **Todo conteúdo é grátis**: diário, arquivo histórico e modo livre | "arquivo histórico … inventário premium futuro"; corte "sem modo livre" | [ADR-0005](../adr/0005-all-content-is-free.md) |
+> | Monetização: **sem moeda virtual e sem banner de terceiros** (vetos reafirmados); dicas por rewarded ad em lote, expirando à meia-noite | Vetos originais mantidos, escopo detalhado | [ADR-0006](../adr/0006-monetization-convenience-not-access.md) |
+>
+> O mapa de milestones atualizado vive no [README](../../README.md), que é documento vivo. As invariantes de produto e engenharia vivem no [CLAUDE.md](../../CLAUDE.md).
+
 ## O produto
 
 Miolos: app mobile (Android + iOS) de puzzles diários em pt-BR. Modelo "diário curado" estilo NYT Games: um puzzle novo de cada jogo por dia, o mesmo para todos os usuários, publicado pelo servidor. Streak como mecânica central. Dev solo (Fernando), workflow agêntico via Claude Code, majoritariamente do mobile.
