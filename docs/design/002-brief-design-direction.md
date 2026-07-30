@@ -12,6 +12,8 @@
 
 **Miolos** é um app de puzzles diários em português (Termo-like, Sudoku, Nonogram, Binairo): todo dia, um puzzle novo de cada jogo, o mesmo para todo o Brasil. Ritual de 10 minutos, streak como coluna vertebral. Público: adultos que querem um passatempo inteligente e bonito — não "mais um joguinho".
 
+**Plataforma de lançamento: web** (ver [ADR-0001](../adr/0001-web-is-the-launch-platform.md)). Nativo vem depois. O design é feito para o navegador — desktop e mobile web — não para um app nativo portado.
+
 ## 2. Direção: Editorial / Papel
 
 A sensação-alvo: **um caderno de passatempos impresso com capricho** — seção de jogos de um grande jornal, não um app de arcade. Tipografia é a protagonista. Calor de papel, tinta que assenta, celebrações contidas e táteis.
@@ -58,6 +60,7 @@ Acento neutro do app (streak, botões primários fora dos jogos): a tinta mesma,
 - **UI/sans (corpo, grades, botões):** Instrument Sans (alternativas: Schibsted Grotesk, Familjen Grotesk)
 - **Obrigatório:** numerais tabulares (`tnum`) em toda grade, timer e estatística
 - **Proibido:** Inter, DM Sans, Poppins, Montserrat, Roboto como fonte de marca
+- **Nota de portabilidade:** eixos de fonte variável funcionam na web, mas o React Native **não** suporta `fontVariationSettings` ([ADR-0002](../adr/0002-plain-react-web-ui-not-universal-rn-web.md)). Explorar com variáveis à vontade; o cliente nativo futuro usará instâncias estáticas nos pesos escolhidos. `tabular-nums` funciona nas duas plataformas.
 
 ### Forma e espaço
 
@@ -90,11 +93,50 @@ Gradiente roxo/azul; glassmorphism; card dentro de card; texto cinza sobre fundo
 - **B — "Caderno":** textura de papel sutil, acentos por jogo mais presentes, cantos suaves, calor máximo — quase artesanal, sem virar infantil.
 - **C — "Editorial moderno":** flat e geométrico, serifa só em displays grandes, espaço em branco generoso, o mais contemporâneo dos três (Puzzmo-meets-NYT).
 
-Pedir as três **da tela "Hoje" + Binairo em jogo**, lado a lado, mesmos dados fictícios (streak 12, dois puzzles feitos). Escolher, mesclar se necessário, e só então refinar a vencedora com ajustes granulares (comandos da Impeccable: `bolder`, `quieter`, `typeset`, `colorize`).
+### Como pedir: 3 rodadas separadas, 4 artefatos cada
+
+**Uma variação por sessão.** Não peça as três de uma vez: num lote grande a qualidade cai no meio do caminho e o desktop da variação A deixa de combinar com o mobile da variação A — que é exatamente a comparação que interessa.
+
+Cada rodada entrega quatro artefatos:
+
+| # | Tela | Viewport |
+|---|---|---|
+| 1 | Hoje | desktop 1440×900 |
+| 2 | Hoje | mobile web 390×844 |
+| 3 | Binairo em jogo | desktop 1440×900 |
+| 4 | Binairo em jogo | mobile web 390×844 |
+
+Os **mesmos dados fictícios** nos doze artefatos, senão a comparação não vale: streak de 12 dias, dois dos quatro puzzles do dia concluídos.
+
+**Só tema claro nesta rodada.** Dark mode é requisito de lançamento, mas entra depois, aplicado só à vencedora — dobrar os artefatos aqui atrapalha a escolha em vez de informá-la.
+
+Depois: escolher, mesclar se necessário, e só então refinar a vencedora com ajustes granulares (comandos da Impeccable: `bolder`, `quieter`, `typeset`, `colorize`).
 
 ## 8. Prompt-base para o Claude Design (colar junto com as seções acima)
 
-> Você vai desenhar telas mobile (390×844) para o Miolos seguindo o brief acima. Gere a variação [A/B/C] das telas "Hoje" e "Binairo em jogo". Respeite as proibições da seção 5 como regras invioláveis. Tipografia é a protagonista; use os candidatos da seção 4 (Google Fonts). Todo texto em pt-BR. Não invente features fora do brief. Entregue como HTML/CSS estático de alta fidelidade — isto é um spec visual, não código de produção.
+Rodar três vezes, uma por variação, trocando só a letra.
+
+> Você vai desenhar telas de **web app** para o Miolos seguindo o brief acima. A web é a plataforma de lançamento — não é um app nativo portado para o navegador.
+>
+> Gere a **variação [A/B/C]** da seção 7 em **quatro artefatos**:
+>
+> 1. "Hoje" — desktop, 1440×900
+> 2. "Hoje" — mobile web, 390×844
+> 3. "Binairo em jogo" — desktop, 1440×900
+> 4. "Binairo em jogo" — mobile web, 390×844
+>
+> Regras invioláveis:
+>
+> - As proibições da seção 5 valem como lei. Nenhuma exceção, nem "só um detalhe".
+> - Tipografia é a protagonista. Use os candidatos da seção 4 via Google Fonts, com eixos variáveis, e `font-variant-numeric: tabular-nums` em toda grade, timer e estatística.
+> - **O desktop não é o mobile esticado.** Use a largura de verdade: estrutura em colunas, margens generosas, fios e réguas como elemento gráfico, salto tipográfico maior. Uma coluna estreita centralizada em 1440px é falha, não escolha.
+> - **O mobile não é o desktop espremido.** Redesenhe a hierarquia para a tela pequena; não encolha a do desktop.
+> - Os quatro artefatos são o **mesmo sistema** — mesmas fontes, mesma escala, mesma paleta, mesmos raios. O que muda é a composição, não a identidade.
+> - Mesmos dados fictícios nos quatro: streak de 12 dias, dois dos quatro puzzles do dia concluídos, data de hoje por extenso em pt-BR.
+> - Só tema claro nesta rodada.
+> - Todo texto em pt-BR. Não invente features fora do brief.
+>
+> Entregue como HTML/CSS estático de alta fidelidade, um arquivo por artefato. Isto é um spec visual, não código de produção.
 
 ## 9. Depois da vencedora
 
