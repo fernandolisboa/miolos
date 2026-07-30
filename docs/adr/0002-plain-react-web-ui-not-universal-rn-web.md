@@ -28,7 +28,7 @@ Separately, Puzzmo — named in this project's own design brief as an inspiratio
 
 The web app is **plain React on Next.js**. `packages/games`, `packages/core` and a **tokens-first** `packages/ui` are shared; UI components are not.
 
-`packages/ui` holds tokens and primitives — colour, type scale, spacing, radii, durations — not components. Visual identity stays consistent across platforms by construction; only layout is reimplemented.
+`packages/ui` holds tokens and primitives — colour, type scale, spacing, radii, durations. A primitive is a value or a pure value-returning function with no JSX. What is forbidden is a **cross-platform component abstraction**, not components as such: shared *web* components may live there once a second consumer exists, and until then they live in `apps/web`. Visual identity stays consistent across platforms by construction; only layout is reimplemented.
 
 No universal styling system is adopted. Tamagui's style-prop allowlist excludes `fontVariationSettings` and `fontVariantNumeric`, reachable only through a raw-style escape hatch that bypasses its compiler; Unistyles is the strongest of them but amounts to two style implementations in one file; StyleX has the full CSS surface and is web-only.
 
@@ -36,8 +36,8 @@ No universal styling system is adopted. Tamagui's style-prop allowlist excludes 
 
 - Next.js `ImageResponse` gives per-day, per-game Open Graph share cards natively — the distribution mechanic from ADR-0001.
 - Full CSS is available: variable font axes, `font-variant-numeric: tnum`, `text-wrap`, container queries, real `prefers-color-scheme` dark mode.
-- **The native UI will be a separate implementation.** Evidence suggests this is far cheaper than feared — Puzzmo's entire iOS app is ~3k lines of Swift, roughly 0.5% of their TypeScript, with zero duplicated UI, because the portable artefact is a headless runtime contract rather than shared components. `packages/games` is already a stronger version of that contract. The shape of the native client is deliberately left open.
-- If this is wrong, the reversal is the cheap direction: RN → web is mechanical and documented (one engineer converted hundreds of components in ~6 weeks). Web → RN is the lossy direction.
+- **The native UI will be a separate implementation.** Evidence suggests this is far cheaper than feared — Puzzmo's entire iOS app is ~3k lines of Swift, half of it a natively-implemented game — the shell alone is roughly 0.5% of their ~280k lines of TypeScript, with zero duplicated UI, because the portable artefact is a headless runtime contract rather than shared components. `packages/games` is already a stronger version of that contract. The shape of the native client is deliberately left open.
+- **On reversal risk.** The reversal this decision could face is web → universal RN, which is the *lossy* direction — so this is not a cheap decision to undo, and an earlier draft of this ADR claimed otherwise in error. What makes it safe is different: the future Miolos actually faces is "ship native", and from a real PWA that is a thin native shell, which does not require reversing this decision at all. Entering the lossy direction requires first deciding a universal codebase is worth having, which the research rejects.
 - **React Native has no `fontVariationSettings`** — both proposals remain open and unimplemented. Variable font axes are unavailable on native under *any* architecture, so a future native client needs static instances of Fraunces at chosen weights. This constrains the design brief, not just the code. `fontVariant: ['tabular-nums']` does work cross-platform, so the tabular-numerals mandate survives.
 
 ## Confidence
