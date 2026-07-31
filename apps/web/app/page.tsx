@@ -15,19 +15,32 @@ const gameAccents: Record<(typeof gameOrder)[number], string> = {
 };
 
 function todayInSaoPaulo(): { weekday: string; rest: string } {
-  const formatted = new Intl.DateTimeFormat(locale, {
+  const parts = new Intl.DateTimeFormat(locale, {
     dateStyle: "full",
     timeZone: "America/Sao_Paulo",
-  }).format(new Date());
-  // "sexta-feira, 31 de julho de 2026" — split so mobile can break the
-  // line after the weekday comma, per the reference frames.
-  const commaIndex = formatted.indexOf(",");
-  if (commaIndex === -1) {
-    return { weekday: formatted, rest: "" };
+  }).formatToParts(new Date());
+  // "sexta-feira, 31 de julho de 2026" — split on the typed weekday part
+  // (not a comma guess) so mobile can break the line after the weekday,
+  // per the reference frames.
+  const weekdayIndex = parts.findIndex((part) => part.type === "weekday");
+  const weekdayPart = parts[weekdayIndex];
+  if (!weekdayPart) {
+    return {
+      weekday: parts.map((part) => part.value).join(""),
+      rest: "",
+    };
   }
+  // The literal after the weekday is ", " — its comma stays on the weekday
+  // line; the whitespace becomes the gap between the two rendered spans.
+  const separator = parts[weekdayIndex + 1];
+  const separatorIsLiteral = separator?.type === "literal";
   return {
-    weekday: formatted.slice(0, commaIndex + 1),
-    rest: formatted.slice(commaIndex + 1).trim(),
+    weekday: `${weekdayPart.value}${separatorIsLiteral ? separator.value.trim() : ""}`,
+    rest: parts
+      .slice(weekdayIndex + (separatorIsLiteral ? 2 : 1))
+      .map((part) => part.value)
+      .join("")
+      .trim(),
   };
 }
 

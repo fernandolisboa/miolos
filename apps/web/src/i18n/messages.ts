@@ -15,7 +15,8 @@ export const messages = {
     streak: {
       label: "sequência",
       // Screen-reader copy is composed here, never in a component.
-      aria: (count: number) => `${count} sequência`,
+      aria: (count: number) =>
+        `sequência de ${count} ${count === 1 ? "dia" : "dias"}`,
     },
     games: {
       termo: {
