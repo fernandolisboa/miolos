@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import "@miolos/ui/tokens.css";
 import "./globals.css";
 
+import { SessionBootstrap } from "../src/components/session-bootstrap";
 import { locale, messages } from "../src/i18n";
 
 const fraunces = Fraunces({
@@ -38,7 +39,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang={locale}
       className={`${fraunces.variable} ${instrumentSans.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <SessionBootstrap />
+        {children}
+      </body>
     </html>
   );
 }
