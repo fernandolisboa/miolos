@@ -1,8 +1,9 @@
-# ADR-0022: Opaque session tokens in a `sessions` table
+# ADR-0022 — Opaque session tokens in a `sessions` table
 
-Status: Accepted
-Date: 2026-07-31
-Relates to: ADR-0003 (anonymous-first identity), ADR-0009 (account merge), ADR-0012 (minimal LGPD), ADR-0013 (canonical domain), ADR-0014 (data-access split)
+**Status:** Accepted — 2026-07-31
+**Depends on:** [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0012](./0012-minimal-lgpd-ships-with-email-attach.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md)
+
+*Numbering note: 0019–0021 were reserved by in-flight game-engine streams when this ADR was written; 0022 was the next free number.*
 
 ## Context
 
@@ -33,8 +34,10 @@ An **opaque random session token in a `sessions` table** — no JWT.
 - **Sliding lifetime, no server-side hard expiry in M0.** Every successful
   resolve re-emits `Set-Cookie`, restarting the 400-day window. HttpOnly
   server-set cookies are exempt from Safari ITP's 7-day cap. `last_seen_at`
-  is bumped only when more than 1 hour stale (one conditional DB-side
-  update), so hot paths stay write-free; a session is *stale* when
+  is bumped only when more than 1 hour stale (the UPDATE statement is sent
+  only when the selected value already looks stale, and its DB-side
+  predicate is the race guard), so a fresh resolve is a single query and
+  writes nothing; a session is *stale* when
   `last_seen_at` is over 400 days old — a future prune cron may delete stale
   rows, not this ticket.
 - **Cross-site mint guard.** `POST /session` rejects with 403 — no
@@ -73,3 +76,35 @@ forgeable and enumerable.
 - Concurrent cookieless requests may each mint a user; the browser keeps the
   last `Set-Cookie` and the loser rows are unreferenced orphans. The hard
   guarantee is: same cookie → same user, always.
+- **Consent columns are timestamp-only in M0, a narrowing of ADR-0012's
+  "per-consent flag plus timestamp".** `users.recovery_consent_at` /
+  `users.reminder_consent_at` carry NULL = not consented (reminders default
+  off structurally) and a timestamp = consented at that moment; the flag is
+  derivable, the timestamp is the evidence. What timestamp-only cannot
+  represent is the *withdrawal* moment — withdrawing nulls the column and
+  loses when it happened. The columns are unused until the email-attach
+  ticket (ADR-0012 ties consent capture to attach), which adds the explicit
+  per-consent flag — making withdrawal timestamps representable — if an
+  audit trail is needed. Additive, cheap, and no data exists to migrate
+  before then.
+- **The origin guard fails open without `WEB_ORIGIN`.** When the env var is
+  unset, the `Origin`-mismatch arm is disabled and only
+  `Sec-Fetch-Site: cross-site` blocks — which pre-16.4 Safari never sends.
+  In practice an unset prod value is self-announcing (no CORS grant, so the
+  web bootstrap cannot work at all), and the route logs a loud error once
+  per instance when `NODE_ENV=production` and `WEB_ORIGIN` is missing. A
+  hard startup assertion was rejected because previews legitimately run
+  without a `WEB_ORIGIN` grant.
+- **Never host untrusted content on a `miolos.app` subdomain.** With
+  `Domain=miolos.app`, any sibling subdomain can plant a `miolos_session`
+  cookie (session fixation: the attacker mints a valid token via curl and
+  fixes it onto victims, who then silently ride the attacker's identity).
+  Same primitive as the accepted shared-Domain cookie-overwrite risk; the
+  mitigation is operational — vendor/status/preview subdomains must never
+  serve third-party-controlled content.
+- **`COOKIE_DOMAIN` is set-once.** Toggling it after real cookies exist
+  makes browsers hold both a host-only and a `Domain` cookie under the same
+  name; the api resolves whichever the browser sends first and can never
+  evict the other form — a sticky, browser-order-dependent identity. Set it
+  before first production traffic and do not change it; if it ever must
+  change, the resolve path has to expire the other variant explicitly.
