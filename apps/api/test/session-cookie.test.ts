@@ -13,6 +13,7 @@ describe("buildSessionCookie", () => {
 
   it("serializes the local-dev shape: no Domain, no Secure", () => {
     vi.stubEnv("COOKIE_DOMAIN", undefined);
+    vi.stubEnv("NODE_ENV", "test"); // explicit: the no-Secure branch needs non-production
     expect(buildSessionCookie("tok")).toBe(
       `${SESSION_COOKIE_NAME}=tok; Path=/; Max-Age=34560000; HttpOnly; SameSite=Lax`,
     );

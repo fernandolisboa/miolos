@@ -8,29 +8,38 @@ import { eq, sessions, sql, users, type Db } from "@miolos/db";
  * is the structural AC-5 guarantee.
  */
 
+const STALE_AFTER_MS = 60 * 60 * 1000; // 1 hour, mirrors the SQL predicate
+
 /**
  * Look up a session by token hash. On a hit, bump `last_seen_at` only when
  * it is more than 1 hour stale (plan 009 D6): staleness granularity is
- * days, so hourly precision is free and hot-path resolves stay write-free.
+ * days, so hourly precision is free and a fresh resolve is a single query.
+ * The JS comparison below is only a send-gate for the UPDATE statement
+ * (each statement is its own neon-http round trip); the DB-side predicate
+ * remains the actual guard, so no JS-constructed date ever appears in a
+ * query and clock skew can at worst delay a bump by one resolve — harmless
+ * at day granularity.
  */
 export async function resolveSession(
   db: Db,
   tokenHash: string,
 ): Promise<SessionResponse | undefined> {
   const rows = await db
-    .select({ userId: sessions.userId })
+    .select({ userId: sessions.userId, lastSeenAt: sessions.lastSeenAt })
     .from(sessions)
     .where(eq(sessions.tokenHash, tokenHash));
   const row = rows[0];
   if (!row) {
     return undefined;
   }
-  await db
-    .update(sessions)
-    .set({ lastSeenAt: sql`now()` })
-    .where(
-      sql`${sessions.tokenHash} = ${tokenHash} and ${sessions.lastSeenAt} < now() - interval '1 hour'`,
-    );
+  if (Date.now() - row.lastSeenAt.getTime() >= STALE_AFTER_MS) {
+    await db
+      .update(sessions)
+      .set({ lastSeenAt: sql`now()` })
+      .where(
+        sql`${sessions.tokenHash} = ${tokenHash} and ${sessions.lastSeenAt} < now() - interval '1 hour'`,
+      );
+  }
   return { userId: row.userId, created: false };
 }
 

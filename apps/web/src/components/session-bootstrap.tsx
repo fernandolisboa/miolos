@@ -27,10 +27,20 @@ export function SessionBootstrap() {
 }
 
 async function bootstrapSession(): Promise<void> {
+  // Loud, not silent: without the var the fetch would hit the relative URL
+  // "undefined/session" and the catch below would swallow the failure —
+  // identity would never mint on a misconfigured build.
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) {
+    console.error(
+      "NEXT_PUBLIC_API_URL is unset: session bootstrap skipped, no identity will be minted",
+    );
+    return;
+  }
   try {
     // Deliberately body-less: the POST stays a CORS "simple request", so
     // the hot path needs no preflight.
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/session`, {
+    const response = await fetch(`${apiUrl}/session`, {
       method: "POST",
       credentials: "include",
     });

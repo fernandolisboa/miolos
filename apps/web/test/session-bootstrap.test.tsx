@@ -71,6 +71,21 @@ describe("SessionBootstrap", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("skips the fetch and logs loudly when NEXT_PUBLIC_API_URL is unset", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const SessionBootstrap = await freshSessionBootstrap();
+    render(<SessionBootstrap />);
+    await flushMicrotasks();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
+
   it("swallows a network failure: an offline first paint must not break the page", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("offline"));
     vi.stubGlobal("fetch", fetchMock);

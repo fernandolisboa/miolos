@@ -30,6 +30,9 @@ export const users = pgTable("users", {
   recoveryConsentAt: timestamptz("recovery_consent_at"),
   reminderConsentAt: timestamptz("reminder_consent_at"),
   createdAt: timestamptz("created_at").notNull().defaultNow(),
+  // No trigger or $onUpdate maintains this column: any future UPDATE of a
+  // users row must set it explicitly (to DB-side now()). Nothing updates
+  // users yet; the first writer is the email-attach ticket.
   updatedAt: timestamptz("updated_at").notNull().defaultNow(),
 });
 

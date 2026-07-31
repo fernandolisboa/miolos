@@ -1,8 +1,17 @@
 import { sessionResponseSchema } from "@miolos/core";
-import { eq, sessions, users } from "@miolos/db";
+import { eq, sessions, sql, users } from "@miolos/db";
 import { createTestDb } from "@miolos/db/testing";
 import { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { OPTIONS, POST } from "../app/session/route";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
@@ -33,7 +42,12 @@ function cookieTokenOf(response: Response): string {
   const match = setCookie?.match(
     new RegExp(`^${SESSION_COOKIE_NAME}=([^;]+);`),
   );
-  if (!match?.[1]) throw new Error(`no session token in: ${String(setCookie)}`);
+  if (!match?.[1]) {
+    // Redact the cookie value: even throwaway PGlite tokens never reach a
+    // log — "no raw token in any log" holds to the letter.
+    const redacted = String(setCookie).replace(/=[^;]+/, "=<redacted>");
+    throw new Error(`no session token in: ${redacted}`);
+  }
   return match[1];
 }
 
@@ -42,12 +56,23 @@ async function mintedBody(response: Response) {
   return sessionResponseSchema.parse(await response.json());
 }
 
-beforeEach(async () => {
+// One PGlite (WASM Postgres boot + migration replay ~1s) per FILE, not per
+// test: per-test isolation comes from truncating both tables instead —
+// sessions follows users via the FK cascade. Cuts the suite from ~12s to
+// roughly the cost of one boot.
+beforeAll(async () => {
   ctx = await createTestDb();
 });
 
-afterEach(async () => {
+beforeEach(async () => {
+  await ctx.db.execute(sql`truncate table users cascade`);
+});
+
+afterEach(() => {
   vi.unstubAllEnvs();
+});
+
+afterAll(async () => {
   await ctx.close();
 });
 
@@ -84,11 +109,15 @@ describe("POST /session", () => {
     expect(withDomain).toContain("Secure");
 
     vi.stubEnv("COOKIE_DOMAIN", undefined);
+    vi.stubEnv("NODE_ENV", "test"); // explicit: the no-Secure branch needs non-production
     const local = (await POST(postRequest())).headers.get("set-cookie");
     expect(local).not.toContain("Domain=");
     expect(local).not.toContain("Secure");
 
     vi.stubEnv("NODE_ENV", "production");
+    // Keep the guard-degradation warning out of test output: production
+    // with WEB_ORIGIN set is the configured shape.
+    vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
     const preview = (await POST(postRequest())).headers.get("set-cookie");
     expect(preview).toContain("Secure");
     expect(preview).not.toContain("Domain=");
@@ -223,7 +252,10 @@ describe("POST /session", () => {
     expect(row!.createdAt.getFullYear()).toBeGreaterThan(2020);
   });
 
-  it("generates monotone DB-default timestamps across sequential mints (AC 5)", async () => {
+  // Named for what it proves: timestamps are DB-populated Dates that never
+  // decrease. Strict monotonicity is unprovable on PGlite, whose now()
+  // follows the host JS clock (see the PR's AC-5 honesty note).
+  it("stores DB-populated, non-decreasing created_at across sequential mints (AC 5)", async () => {
     const first = await mintedBody(await POST(postRequest()));
     const second = await mintedBody(await POST(postRequest()));
 
