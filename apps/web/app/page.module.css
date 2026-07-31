@@ -289,7 +289,9 @@
   }
 
   .kicker {
-    font-size: 10px;
+    /* F2 draws these at 10px; 11px is the legibility floor the
+       impeccable-detect gate enforces for functional text. */
+    font-size: 11px;
     letter-spacing: 0.14em;
   }
 
