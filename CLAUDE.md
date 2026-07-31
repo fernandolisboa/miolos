@@ -30,7 +30,7 @@ Development runs in phases. Each phase is a fresh session, started by pasting th
 
 Once `CONTEXT.md` and ADRs exist, `/grill-with-docs` runs on every new plan. `/wayfinder` is reserved for large foggy blocks (pt-BR crosswords, monetization activation, the native clients) — not for ordinary tickets.
 
-Select the right skill automatically during development — `/tdd`, `/diagnosing-bugs`, `/code-review`, `/request-refactor-plan`, `/run` — without Fernando naming it.
+Select the right skill automatically during development — `/implement`, `/tdd`, `/diagnosing-bugs`, `/code-review`, `/request-refactor-plan`, `/run` — without Fernando naming it.
 
 ## Mandatory implementation flow (eight steps)
 
@@ -40,7 +40,7 @@ Select the right skill automatically during development — `/tdd`, `/diagnosing
 2. **Plan** — produce the implementation plan.
 3. **Review the plan** — validate correctness, name the adjustments needed.
 4. **Fix the plan** — if the review found anything.
-5. **Implement** — real code, TDD at the agreed seams. Spawn parallel subagents where the work genuinely splits.
+5. **Implement** — real code, driven with the `/implement` skill: TDD at the agreed seams, typecheck and single test files run regularly while working, the full suite once at the end. Spawn parallel subagents where the work genuinely splits. The skill is a tool inside this step, not a substitute for the flow — its own trailing code review and commit never replace steps 6–8.
 6. **Code review** — spawn **multiple** specialised reviewers in parallel, one lens each: correctness and bugs; security; quality and maintainability; performance; adherence to the ADRs and `CONTEXT.md`; adherence to the originating issue.
 7. **Fix** — apply the review findings.
 8. **Validate and close** — only with everything green (tests, lint, types, reviews satisfied): merge the PR and close the issue.
