@@ -15,9 +15,11 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
+// Normal only: nothing renders Instrument Sans italic, and the italic face
+// would preload ~32 KB on every first view.
 const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
-  style: ["normal", "italic"],
+  style: ["normal"],
   variable: "--font-instrument-sans",
   display: "swap",
 });

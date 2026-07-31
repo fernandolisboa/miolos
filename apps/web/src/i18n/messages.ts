@@ -12,7 +12,11 @@ export const messages = {
     wordmark: "Miolos",
     completedOfTotal: (done: number, total: number) =>
       `${done} de ${total} concluídos`,
-    streak: { label: "sequência" },
+    streak: {
+      label: "sequência",
+      // Screen-reader copy is composed here, never in a component.
+      aria: (count: number) => `${count} sequência`,
+    },
     games: {
       termo: {
         kicker: "Palavras",
@@ -37,7 +41,11 @@ export const messages = {
     },
     playCta: "Jogar hoje",
     playCtaShort: "Jogar",
-    links: { archive: "Arquivo", freePlay: "Modo livre", stats: "Estatísticas" },
+    links: {
+      archive: "Arquivo",
+      freePlay: "Modo livre",
+      stats: "Estatísticas",
+    },
   },
 } as const;
 

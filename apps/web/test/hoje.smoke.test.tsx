@@ -15,6 +15,9 @@ describe("Hoje page", () => {
       screen.getByText(messages.hoje.completedOfTotal(0, 4)),
     ).toBeInTheDocument();
     expect(screen.getByText(messages.hoje.streak.label)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(messages.hoje.streak.aria(0)),
+    ).toBeInTheDocument();
   });
 
   it("renders all four game cards pending, with copy from the messages module", () => {

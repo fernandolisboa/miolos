@@ -28,6 +28,7 @@ a:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* keep in sync with page.module.css breakpoint */
 @media (max-width: 768px) {
   body {
     background-size: 24px 24px;

@@ -44,12 +44,12 @@ export default function HojePage() {
             {date.weekday} <span className={styles.dateRest}>{date.rest}</span>
           </p>
           <p className={`${styles.metaLine} tabular-nums`}>
-            {messages.hoje.completedOfTotal(0, 4)}
+            {messages.hoje.completedOfTotal(0, gameOrder.length)}
           </p>
         </div>
         <div
           className={styles.streakStamp}
-          aria-label={`${streakCount} ${messages.hoje.streak.label}`}
+          aria-label={messages.hoje.streak.aria(streakCount)}
         >
           <div aria-hidden className={`${styles.streakNumeral} tabular-nums`}>
             {streakCount}
@@ -69,7 +69,9 @@ export default function HojePage() {
           >
             <div aria-hidden className={styles.tape} />
             <div className={styles.cardBody}>
-              <p className={styles.kicker}>{messages.hoje.games[game].kicker}</p>
+              <p className={styles.kicker}>
+                {messages.hoje.games[game].kicker}
+              </p>
               <h2 className={styles.cardTitle}>
                 {messages.hoje.games[game].name}
               </h2>

@@ -53,10 +53,10 @@
 }
 
 .streakNumeral {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 44px;
-  line-height: 1;
+  font: var(--text-numeral-lg);
+  /* After the shorthand: `font:` resets font-variant-numeric, and the token
+     comment mandates tabular-nums. */
+  font-variant-numeric: tabular-nums;
   color: var(--accent-app);
 }
 
@@ -84,6 +84,8 @@
   background: var(--paper-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  /* 5px 5px 0 is intentional: the F1 frame draws the desktop card shadow
+     between --shadow-md and --shadow-lg; no token carries that value. */
   box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
@@ -252,7 +254,8 @@
     gap: var(--space-3);
     min-height: 48px;
     padding: var(--space-4) 18px;
-    box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+    box-shadow: var(--shadow-md)
+      color-mix(in srgb, var(--accent) 22%, transparent);
   }
 
   .card:nth-child(1) {
