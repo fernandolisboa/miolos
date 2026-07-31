@@ -56,6 +56,11 @@ export default tseslint.config(
       next: {
         rootDir: ["apps/web", "apps/api"],
       },
+      // Explicit version: eslint-plugin-react@7's auto-detection calls the
+      // ESLint ≤9 API context.getFilename and crashes under ESLint 10.
+      react: {
+        version: "19.2.8",
+      },
     },
   },
   {
