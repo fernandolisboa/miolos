@@ -8,7 +8,7 @@ No founding document names a test runner, but the mechanical gate depends on one
 
 ## Decision
 
-- **Vitest** is the single test runner for every workspace: native TS/ESM (no transform config), per-workspace `vitest.config.ts`, `environment: 'node'` by default and `environment: 'jsdom'` where the DOM is under test, engines matching Node 24.
+- **Vitest** is the single test runner for every workspace: native TS/ESM (no transform config), `environment: 'node'` by default and `environment: 'jsdom'` where the DOM is under test, engines matching Node 24. A workspace carries a `vitest.config.ts` only where the defaults don't suffice (today: `apps/web`, for jsdom + plugin-react + RTL cleanup). **`packages/games` must NOT have one**: importing `vitest/config` pulls vite's `.d.ts` (which references `@types/node`) into the package's `types: []` program, silently defeating the purity typecheck backstop — discovered when the negative typecheck test unexpectedly passed.
 - **fast-check** is the property-based testing library, entering as a devDependency of `packages/games` only. The seeded-PRNG property test in #14 sets the prior art for the generator invariants that bind from #16 (unique solution, solvability, seed → puzzle determinism).
 
 ## Rejected
