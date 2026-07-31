@@ -1,0 +1,15 @@
+pnpm-lock.yaml
+.next/
+.turbo/
+coverage/
+next-env.d.ts
+packages/ui/tokens.css
+docs/
+content/
+.claude/
+CLAUDE.md
+CONTEXT.md
+DESIGN.md
+PRODUCT.md
+README.md
+NEXT-SESSION.md

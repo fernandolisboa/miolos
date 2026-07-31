@@ -38,6 +38,7 @@ Current:
 | `research/004-research-web-native-code-sharing.md` | Two UIs sharing a core, and the universal styling systems |
 | `research/005-research-miolos-name-check.md` | "Miolos" domain + INPI check (2026-07-30 snapshot); sources the Android-share figure |
 | `design/006-handoff-design-winner-atelie/` | Handoff bundle of the winning design direction (F "Ateliê"): six `.dc.html` reference frames + `support.js` + token sheet. Snapshot — the living files are root `PRODUCT.md`, `DESIGN.md` and `packages/ui/tokens.css` |
+| `plans/007-issue-14-plan-monorepo-foundation.md` | Implementation plan for #14 (monorepo foundation) |
 
 ## Language
 

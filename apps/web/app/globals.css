@@ -1,0 +1,36 @@
+/* App-level wiring by cascade override — tokens.css itself is never edited.
+   next/font emits hashed family names into --font-fraunces /
+   --font-instrument-sans; the composite --text-* shorthands in tokens.css
+   reference --font-display / --font-ui lazily, so they pick this up. */
+:root {
+  --font-display: var(--font-fraunces), serif;
+  --font-ui: var(--font-instrument-sans), sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--paper-desk);
+  background-image: var(--texture-dots);
+  background-size: var(--texture-dots-size);
+  color: var(--ink);
+  font: var(--text-body);
+}
+
+a {
+  color: var(--ink);
+}
+
+a:hover {
+  color: var(--accent-app);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* keep in sync with page.module.css breakpoint */
+@media (max-width: 768px) {
+  body {
+    background-size: 24px 24px;
+  }
+}

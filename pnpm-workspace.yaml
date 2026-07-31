@@ -1,0 +1,23 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+# pnpm 11's spelling of what the plan called onlyBuiltDependencies; approved
+# via `pnpm approve-builds` on first install.
+# - sharp: native libvips bindings backing next/image
+# - unrs-resolver: native resolver used by the eslint-config-next toolchain
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+# Exact versions newer than pnpm 11's release-age cooldown at install time,
+# integrity-locked in pnpm-lock.yaml. Prune once they have aged past it.
+minimumReleaseAgeExclude:
+  - "@turbo/darwin-64@2.10.8"
+  - "@turbo/darwin-arm64@2.10.8"
+  - "@turbo/linux-64@2.10.8"
+  - "@turbo/linux-arm64@2.10.8"
+  - "@turbo/windows-64@2.10.8"
+  - "@turbo/windows-arm64@2.10.8"
+  - lint-staged@17.3.0
+  - turbo@2.10.8
+  - "@types/react-dom@19.2.4"
+  - "@types/react@19.2.18"
