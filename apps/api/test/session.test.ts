@@ -294,7 +294,7 @@ describe("POST /session", () => {
 });
 
 describe("OPTIONS /session", () => {
-  it("answers preflight with 204 and the credentialed CORS grant", async () => {
+  it("answers preflight with 204 and the credentialed CORS grant", () => {
     vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
     const response = OPTIONS();
     expect(response.status).toBe(204);
