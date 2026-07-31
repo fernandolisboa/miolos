@@ -1,0 +1,7 @@
+# Generated word-data module: collapsed in GitHub PR diffs. Regenerate with
+# `pnpm --filter @miolos/games generate:termo`; byte-pinned by the harness.
+packages/games/src/termo/words.generated.ts linguist-generated=true
+
+# Termo content artifacts are LF-only: the codegen and the word-list harness
+# reject CRLF loudly, so pin the working-tree encoding too.
+content/termo/* text eol=lf

@@ -7,20 +7,7 @@ import {
   type TileState,
 } from "../../src/termo/evaluate";
 import { normalizeWord } from "../../src/termo/normalize";
-
-const PTBR_ALPHABET = "abcdefghijklmnopqrstuvwxyzáéíóúâêôãõàç";
-const AZ_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
-
-const ptbrWord = fc.string({
-  unit: fc.constantFrom(...PTBR_ALPHABET),
-  minLength: 5,
-  maxLength: 5,
-});
-const azWord = fc.string({
-  unit: fc.constantFrom(...AZ_ALPHABET),
-  minLength: 5,
-  maxLength: 5,
-});
+import { azWord, ptbrWord } from "./arbitraries";
 
 const TILE_STATES: readonly TileState[] = ["correct", "present", "absent"];
 
@@ -70,7 +57,7 @@ describe("evaluateGuess", () => {
         const marked = new Map<string, number>();
         for (let i = 0; i < WORD_LENGTH; i += 1) {
           if (tiles[i] !== "absent") {
-            const letter = normalizedGuess[i] as string;
+            const letter = normalizedGuess.charAt(i);
             marked.set(letter, (marked.get(letter) ?? 0) + 1);
           }
         }

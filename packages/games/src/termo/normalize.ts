@@ -2,7 +2,8 @@
  * THE single normalization function for Termo (per the games module-boundary
  * convention, ADR pending with #16). Lowercase → Unicode NFD → strip
  * combining marks (category Mn). ç→c falls out of NFD (c + U+0327).
- * Mirrors content/termo/pipeline.py:66-68 — Python filters Mn only, hence
+ * Mirrors the normalize() function in content/termo/pipeline.py — Python
+ * filters Mn only, hence
  * \p{Mn}, not \p{M}, for exact parity; the word-list harness round-trips
  * every canonical form in content/termo through this function to pin the
  * two implementations together mechanically.

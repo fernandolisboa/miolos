@@ -12,7 +12,9 @@ export type TileStates = readonly [
 
 export const WORD_LENGTH = 5;
 
-const SHAPE = /^[a-z]{5}$/;
+// Built from WORD_LENGTH so the shape check and the RangeError message that
+// interpolates WORD_LENGTH can never disagree.
+const SHAPE = new RegExp(`^[a-z]{${String(WORD_LENGTH)}}$`);
 
 /**
  * Evaluate a guess against an answer, Termo-style. Accent-insensitive: both

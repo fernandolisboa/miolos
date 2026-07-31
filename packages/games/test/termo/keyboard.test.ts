@@ -6,14 +6,7 @@ import {
   deriveKeyboardState,
   type EvaluatedGuess,
 } from "../../src/termo/keyboard";
-
-const AZ_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
-
-const azWord = fc.string({
-  unit: fc.constantFrom(...AZ_ALPHABET),
-  minLength: 5,
-  maxLength: 5,
-});
+import { azWord } from "./arbitraries";
 
 const TILE_STATES: readonly TileState[] = ["correct", "present", "absent"];
 

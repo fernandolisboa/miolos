@@ -46,6 +46,20 @@ function readAnswersCsv(): AnswerRow[] {
   });
 }
 
+/** Returns every value that appears more than once, so failures name the offending word(s). */
+function findDuplicates(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.push(value);
+    } else {
+      seen.add(value);
+    }
+  }
+  return duplicates;
+}
+
 /** canonical-map.csv header is `normalized,canonical`. */
 function readCanonicalMap(): { normalized: string; canonical: string }[] {
   const [header, ...rows] = readLines("canonical-map.csv");
@@ -70,7 +84,8 @@ describe("termo word-list harness (ADR-0015)", () => {
   it("no two answers share a normalized form", () => {
     // ADR-0015: sabia/sábia/sabiá is one slot.
     const normalized = readAnswersCsv().map((row) => row.normalized);
-    expect(new Set(normalized).size).toBe(ANSWER_COUNT);
+    expect(normalized).toHaveLength(ANSWER_COUNT);
+    expect(findDuplicates(normalized)).toEqual([]);
   });
 
   it("every answer normalized form is in the validation dictionary", () => {
@@ -91,7 +106,7 @@ describe("termo word-list harness (ADR-0015)", () => {
   it("validation.txt is sorted, unique, and every word matches ^[a-z]{5}$", () => {
     const words = readLines("validation.txt");
     expect(words).toHaveLength(VALIDATION_COUNT);
-    expect(new Set(words).size).toBe(VALIDATION_COUNT);
+    expect(findDuplicates(words)).toEqual([]);
     expect([...words].sort()).toEqual(words);
     for (const word of words) {
       expect(word).toMatch(NORMALIZED_SHAPE);
