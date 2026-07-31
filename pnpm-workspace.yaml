@@ -3,9 +3,11 @@ packages:
   - "packages/*"
 # pnpm 11's spelling of what the plan called onlyBuiltDependencies; approved
 # via `pnpm approve-builds` on first install.
+# - esbuild: platform-binary install script, pulled in by drizzle-kit
 # - sharp: native libvips bindings backing next/image
 # - unrs-resolver: native resolver used by the eslint-config-next toolchain
 allowBuilds:
+  esbuild: true
   sharp: true
   unrs-resolver: true
 # Exact versions newer than pnpm 11's release-age cooldown at install time,
