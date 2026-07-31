@@ -12,3 +12,11 @@ Thumbs.db
 
 # Agent and tooling artifacts
 .playwright-mcp/
+
+# Build outputs and caches
+.next/
+.turbo/
+dist/
+coverage/
+*.tsbuildinfo
+.vercel
