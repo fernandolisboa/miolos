@@ -5,10 +5,12 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./binairo": "./src/binairo/index.ts"
+    "./binairo": "./src/binairo/index.ts",
+    "./termo": "./src/termo/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "generate:termo": "node scripts/generate-termo-words.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json && tsc -p scripts/tsconfig.json",
     "test": "vitest run"
   },
   "devDependencies": {
