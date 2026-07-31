@@ -8,7 +8,7 @@
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "typecheck": { "dependsOn": ["^typecheck"] },
-    "test": {},
+    "test": { "dependsOn": ["^build"] },
     "dev": { "cache": false, "persistent": true }
   }
 }

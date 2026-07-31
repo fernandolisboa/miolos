@@ -13,15 +13,18 @@ const packageDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = join(packageDir, "src");
 
 function listSourceFiles(): string[] {
+  // Every TS flavor tsc can compile: a `.mts`/`.cts` file slipping the
+  // filter was a proven evasion vector (step 6 review).
   return readdirSync(srcDir, { withFileTypes: true, recursive: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".ts"))
+    .filter((entry) => entry.isFile() && /\.(ts|tsx|mts|cts)$/.test(entry.name))
     .map((entry) => join(entry.parentPath, entry.name));
 }
 
 function importSpecifiers(source: string): string[] {
   const patterns = [
-    // import ... from "x"; export ... from "x";
-    /(?:^|[^\w$])(?:import|export)\s[^"'`]*?from\s*["']([^"']+)["']/g,
+    // import ... from "x"; export ... from "x". `\b` (not `\s`) after the
+    // keyword: `import{x}from"y"` is valid TS and must not slip through.
+    /(?:^|[^\w$])(?:import|export)\b[^"'`]*?from\s*["']([^"']+)["']/g,
     // side-effect import "x";
     /(?:^|[^\w$])import\s*["']([^"']+)["']/g,
     // dynamic import("x")
@@ -60,6 +63,26 @@ describe("packages/games purity", () => {
 
   it("has source files to check", () => {
     expect(listSourceFiles().length).toBeGreaterThan(0);
+  });
+
+  it("never uses dynamic import() or require() in src/**, in any form", () => {
+    // Computed specifiers — import("node" + ":fs") — defeat any regex that
+    // expects a quoted literal (proven evasion, step 6 review). Games has no
+    // legitimate dynamic imports at all, so ban the tokens outright.
+    const offenders: string[] = [];
+    const dynamicTokens = /(?:^|[^\w$.])(?:import|require)\s*\(/g;
+    for (const file of listSourceFiles()) {
+      const source = readFileSync(file, "utf8");
+      for (const match of source.matchAll(dynamicTokens)) {
+        offenders.push(
+          `${relative(packageDir, file)} -> ${match[0].trim()} at index ${match.index}`,
+        );
+      }
+    }
+    expect(
+      offenders,
+      "games source must not contain import(...) or require(...) in any form",
+    ).toEqual([]);
   });
 
   it("imports only relative specifiers in src/**", () => {
