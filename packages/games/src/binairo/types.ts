@@ -20,9 +20,11 @@ export type BinairoTier = 1 | 2;
 
 /**
  * A generated daily puzzle. `givens` is shippable to the client;
- * `solution` is server-side only (ADR-0004) — callers ship givens without
- * the solution by destructuring, the sibling fields make the separation
- * structural.
+ * `solution` is server-side only (ADR-0004). The type separates the two
+ * as sibling fields so callers can ship givens without the solution by
+ * destructuring — but serializing the whole object ships the solution, so
+ * the actual stripping is enforced at the #17 server boundary (a Zod
+ * response schema without `solution`), not by this type.
  */
 export interface BinairoPuzzle {
   readonly size: typeof BINAIRO_SIZE;

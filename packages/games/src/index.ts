@@ -1,2 +1,2 @@
 export { createSeededRandom, type SeededRandom } from "./random";
-export { WEEKDAYS, type Weekday } from "./weekday";
+export { isWeekday, WEEKDAYS, type Weekday } from "./weekday";

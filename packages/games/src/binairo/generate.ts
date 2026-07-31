@@ -1,5 +1,6 @@
 import { createSeededRandom } from "../random";
 import type { SeededRandom } from "../random";
+import { isWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
 import { seededPermutation, toSolvedGrid } from "./internal";
 import { countBinairoSolutions } from "./solve";
@@ -67,7 +68,8 @@ function fillFrom(
  * seed domain is uint32 — larger inputs alias via `seed >>> 0`. Uniqueness
  * is true by construction: every clue removal is re-proved by the counting
  * solver. Throws BinairoGenerationError after
- * BINAIRO_MAX_GENERATION_ATTEMPTS derived-seed attempts.
+ * BINAIRO_MAX_GENERATION_ATTEMPTS derived-seed attempts, and a RangeError
+ * when `weekday` is outside 1..7 at runtime (untyped boundaries).
  */
 export function generateBinairo(options: {
   seed: number;
@@ -75,6 +77,11 @@ export function generateBinairo(options: {
 }): BinairoPuzzle {
   const seed = options.seed >>> 0;
   const { weekday } = options;
+  if (!isWeekday(weekday)) {
+    throw new RangeError(
+      `weekday must be an integer in 1..7 (ISO 8601), got ${String(weekday)}`,
+    );
+  }
   const criteria = BINAIRO_WEEKDAY_CRITERIA[weekday];
   const seedRng = createSeededRandom(seed);
   const cellCount = BINAIRO_SIZE * BINAIRO_SIZE;

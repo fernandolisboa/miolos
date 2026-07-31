@@ -15,6 +15,8 @@ import type { BinairoGrid, BinairoSolvedGrid, BinairoTier } from "./types";
  * enough to decide unsolvable / unique / ambiguous). Propagate-then-branch
  * DFS; propagation runs tier 1 only (plan §3.3 latitude — propagation
  * strength affects speed, never the count), branching is fixed row-major.
+ * Grids larger than BINAIRO_SIZE per side throw a RangeError (DFS cost
+ * bound); smaller even sizes are accepted for test fixtures.
  */
 export function countBinairoSolutions(givens: BinairoGrid, limit = 2): number {
   if (!Number.isInteger(limit) || limit < 1) {
@@ -52,7 +54,11 @@ function countFrom(state: SolverState, limit: number): number {
   return found;
 }
 
-/** First solution in fixed search order, or null when none exists. */
+/**
+ * First solution in fixed search order, or null when none exists. Same
+ * size contract as countBinairoSolutions: side ≤ BINAIRO_SIZE or
+ * RangeError.
+ */
 export function solveBinairo(givens: BinairoGrid): BinairoSolvedGrid | null {
   const state = stateFromGrid(givens);
   if (state === null) {
@@ -94,7 +100,8 @@ export interface BinairoGrade {
  * the tier-1 fixpoint completes the grid, tier 2 if the tier-1+2 fixpoint
  * does, tier 3 otherwise (branching required). Soundness: every technique
  * is a forced deduction under rules 1–4, so a tier-T completion is a proof
- * of tier-T solvability.
+ * of tier-T solvability. Same size contract as countBinairoSolutions:
+ * side ≤ BINAIRO_SIZE or RangeError.
  */
 export function gradeBinairo(givens: BinairoGrid): BinairoGrade {
   const count = countBinairoSolutions(givens, 2);

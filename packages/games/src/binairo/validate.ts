@@ -1,3 +1,4 @@
+import { isWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
 import { isValidBinairoSolution } from "./constraints";
 import { gradeBinairo } from "./solve";
@@ -57,7 +58,9 @@ export type BinairoValidationResult =
  * The approval gate #17's publishing cron calls. Fixed to the daily 8×8.
  * Collects every applicable rejection reason; approves only a uniquely
  * solvable puzzle inside the weekday's tier and givens bands. Tier 3
- * (guessing) always rejects as too-hard.
+ * (guessing) always rejects as too-hard. Throws a RangeError when
+ * `weekday` is outside 1..7 at runtime (untyped boundaries) — Zod parsing
+ * at the #17 boundary remains the caller's duty.
  */
 export function validateBinairo(
   candidate: {
@@ -66,6 +69,11 @@ export function validateBinairo(
   },
   weekday: Weekday,
 ): BinairoValidationResult {
+  if (!isWeekday(weekday)) {
+    throw new RangeError(
+      `weekday must be an integer in 1..7 (ISO 8601), got ${String(weekday)}`,
+    );
+  }
   const cellCount = BINAIRO_SIZE * BINAIRO_SIZE;
   const { givens, solution } = candidate;
   if (

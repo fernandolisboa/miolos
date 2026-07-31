@@ -1,4 +1,5 @@
 import type { SeededRandom } from "../random";
+import { BINAIRO_SIZE } from "./types";
 import type { BinairoGrid, BinairoSolvedGrid } from "./types";
 
 /**
@@ -41,7 +42,11 @@ export function intAt(values: readonly number[], index: number): number {
 
 /**
  * Side length of a row-major square grid; rejects non-square or odd sides
- * (Binairo balance needs an even side).
+ * (Binairo balance needs an even side) and sides above BINAIRO_SIZE. The
+ * cap bounds the exponential DFS and its recursion depth: without it a
+ * huge attacker-supplied grid reaching a solver entry point is CPU/stack
+ * exhaustion instead of a typed error. Sub-daily sizes (4×4, 6×6) stay
+ * accepted for hand-enumerable test fixtures.
  */
 export function sideLength(cellCount: number): number {
   const n = Math.sqrt(cellCount);
@@ -49,6 +54,9 @@ export function sideLength(cellCount: number): number {
     throw new RangeError(
       `grid must be square with an even side, got ${cellCount} cells`,
     );
+  }
+  if (n > BINAIRO_SIZE) {
+    throw new RangeError(`grid side must be at most ${BINAIRO_SIZE}, got ${n}`);
   }
   return n;
 }

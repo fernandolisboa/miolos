@@ -1,4 +1,4 @@
-import { cellAt, sideLength, toCellStates } from "./internal";
+import { cellAt, intAt, sideLength, toCellStates } from "./internal";
 import type { CellState } from "./internal";
 import type { BinairoGrid, BinairoSolvedGrid } from "./types";
 
@@ -24,7 +24,8 @@ function lineIndices(n: number, isRow: boolean, line: number): number[] {
 
 /**
  * All rule violations in a partial grid. Empty cells never violate;
- * a complete grid with no violations satisfies rules 2–4.
+ * a complete grid with no violations satisfies rules 2–4. Side length is
+ * capped at BINAIRO_SIZE (RangeError above it), matching the solver.
  */
 export function findBinairoViolations(
   grid: BinairoGrid,
@@ -40,12 +41,10 @@ export function findBinairoViolations(
       // Rule 2 — no run of three identical digits.
       for (let start = 0; start + 2 < n; start += 1) {
         const window = indices.slice(start, start + 3);
-        const values = window.map((index) => cellAt(cells, index));
-        const first = values[0];
+        const first = cellAt(cells, intAt(window, 0));
         if (
-          first !== undefined &&
           first !== -1 &&
-          values.every((value) => value === first)
+          window.every((index) => cellAt(cells, index) === first)
         ) {
           violations.push({ rule: "run", cells: window });
         }
@@ -70,15 +69,9 @@ export function findBinairoViolations(
         complete.push({ line, indices, values });
       }
     }
-    for (let i = 0; i < complete.length; i += 1) {
-      for (let j = i + 1; j < complete.length; j += 1) {
-        const a = complete[i];
-        const b = complete[j];
-        if (
-          a !== undefined &&
-          b !== undefined &&
-          a.values.every((value, k) => value === b.values[k])
-        ) {
+    for (const [i, a] of complete.entries()) {
+      for (const b of complete.slice(i + 1)) {
+        if (a.values.every((value, k) => value === b.values[k])) {
           violations.push({
             rule: "duplicate-line",
             cells: [...a.indices, ...b.indices],

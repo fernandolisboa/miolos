@@ -24,8 +24,10 @@ describe("generateBinairo", () => {
   it("P1 — generated puzzles are valid, unique, solvable and on-ramp", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
-        // Not throwing simultaneously proves the criteria table is
-        // achievable over the whole seed domain (a cap error fails here).
+        // Not throwing is sampled evidence that the criteria table is
+        // achievable (a cap error fails here loudly). Unlike solvable /
+        // unique / deterministic, achievability has no construction-level
+        // proof: "prove" is reserved for those three.
         const puzzle = generateBinairo({ seed, weekday });
         const criteria = BINAIRO_WEEKDAY_CRITERIA[weekday];
 
