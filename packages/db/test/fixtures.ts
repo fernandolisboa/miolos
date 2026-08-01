@@ -2,8 +2,8 @@
  * Test fixtures for the db suites. Each content fixture satisfies its
  * game's daily-content schema STRUCTURALLY (that is all the wall parses —
  * rule validity is the engine's concern, proven in packages/games); no
- * @miolos/games dependency here, and #23 keeps it that way (plan 018 §15,
- * T-DB-S1).
+ * @miolos/games dependency here, and #23 and #25 keep it that way (plan
+ * 018 §15, plan 020 §8, T-DB-S1/T-DB-S6).
  */
 
 export function binairoContentFixture(): Record<string, unknown> {
@@ -44,5 +44,62 @@ export function sudokuContentFixture(): Record<string, unknown> {
     givens,
     solution,
     clueCount: givens.filter((value) => value !== 0).length,
+  };
+}
+
+/**
+ * A 5x5 bitmap — Monday's size class. The top row is deliberately empty so
+ * the fixture exercises the `[]` run list an all-empty line produces
+ * (nonogram/types.ts:10: NEVER `[0]`).
+ */
+const NONOGRAM_PICTURE = [".....", "..#..", ".###.", "#####", ".###."];
+
+/** Run lengths of one line, left→right / top→bottom. `[]` when nothing is filled. */
+function runLengths(line: readonly boolean[]): number[] {
+  const runs: number[] = [];
+  let current = 0;
+  for (const filled of line) {
+    if (filled) {
+      current += 1;
+    } else if (current > 0) {
+      runs.push(current);
+      current = 0;
+    }
+  }
+  if (current > 0) {
+    runs.push(current);
+  }
+  return runs;
+}
+
+export function nonogramContentFixture(): Record<string, unknown> {
+  const size = NONOGRAM_PICTURE.length;
+  const solution = NONOGRAM_PICTURE.map((row) =>
+    [...row].map((cell) => cell === "#"),
+  );
+  const columns = Array.from({ length: size }, (_, column) =>
+    solution.map((row) => row[column] === true),
+  );
+  // `game` is the asymmetry: nonogram is the ONLY engine whose puzzle object
+  // carries one (nonogram/types.ts:33), and a fixture without it fails the
+  // strict content parse inside the wall (plan 020 N2).
+  return {
+    game: "nonogram",
+    seed: 987_654,
+    weekday: 1,
+    size,
+    clues: {
+      size,
+      // Derived, never hand-written: a literal clue list is free to drift
+      // out of agreement with the bitmap above.
+      rows: solution.map((row) => runLengths(row)),
+      cols: columns.map((column) => runLengths(column)),
+    },
+    reveal: {
+      motifId: "fixture-diamond",
+      name: "Losango",
+      mirrored: false,
+      solution,
+    },
   };
 }

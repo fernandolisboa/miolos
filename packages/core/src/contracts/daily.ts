@@ -118,22 +118,133 @@ export const dailySudokuResponseSchema = z.strictObject({
 
 export type DailySudokuResponse = z.infer<typeof dailySudokuResponseSchema>;
 
-/** The extension point M2 games join (#25/#27). */
+/**
+ * The four size classes the weekday ramp can produce
+ * (`NONOGRAM_WEEKDAY_CRITERIA`, packages/games/src/nonogram/difficulty.ts:31-41).
+ * ONE definition, three consumers: the daily content and the daily response
+ * here, and the web play record (plan 020 §14.1) — the `sudokuDigitSchema`
+ * precedent (daily.ts:53-59), so only one place can drift. A literal union,
+ * never `z.number().int()`: a fifth size class is exactly the content-shape
+ * drift ADR-0024 wants to fail closed on.
+ */
+export const nonogramSizeSchema = z.union([
+  z.literal(5),
+  z.literal(8),
+  z.literal(10),
+  z.literal(15),
+]);
+
+export type NonogramSize = z.infer<typeof nonogramSizeSchema>;
+
+/**
+ * One line's run lengths. `positive()` is load-bearing: an all-empty line is
+ * `[]`, NEVER `[0]` (nonogram/types.ts:10, clues.ts:22 — "the UI renders
+ * '0'"), so a stored `[0]` is drift, not data.
+ */
+const nonogramClueLineSchema = z.array(z.number().int().positive());
+
+/**
+ * Mirrors `NonogramClues` exactly, its nested `size` included — the wire
+ * value is directly assignable to the engine's `NonogramClues`, so the client
+ * hands `daily.clues` straight to `solveNonogram` with no reshaping at the
+ * one boundary where reshaping goes wrong. The `.refine` is what a fixed
+ * `.length(64)` is for binairo: the DIMENSION check. Rule validity (runs that
+ * fit, clues that match a bitmap) belongs to `validateNonogram`, never here —
+ * a second, divergent validator is how the two drift.
+ */
+const nonogramCluesSchema = z
+  .strictObject({
+    size: nonogramSizeSchema,
+    rows: z.array(nonogramClueLineSchema),
+    cols: z.array(nonogramClueLineSchema),
+  })
+  .refine((c) => c.rows.length === c.size && c.cols.length === c.size, {
+    message: "clue line counts must equal size",
+  });
+
+/** Mirrors `NonogramReveal` exactly. The whole object is withheld from every default read (ADR-0033). */
+const nonogramRevealSchema = z.strictObject({
+  motifId: z.string(),
+  name: z.string(),
+  mirrored: z.boolean(),
+  solution: z.array(z.array(z.boolean())),
+});
+
+/**
+ * Server-side shape of `daily_puzzles.content` for nonogram — mirrors
+ * `NonogramPuzzle` (nonogram/types.ts:32-41) exactly, `game` INCLUDED:
+ * unlike `BinairoPuzzle` and `SudokuPuzzle`, the nonogram engine writes a
+ * `game: "nonogram"` field (generate.ts:48). Omitting it from this
+ * strictObject fails every pre-insert parse and drains the buffer (plan 020
+ * N2). Strict for the same fail-closed reason `binairoDailyContentSchema`
+ * is, with the same operational corollaries (:17-24).
+ */
+export const nonogramDailyContentSchema = z
+  .strictObject({
+    game: z.literal("nonogram"),
+    seed: z.number().int().nonnegative(),
+    weekday: z.number().int().min(1).max(7),
+    size: nonogramSizeSchema,
+    clues: nonogramCluesSchema,
+    reveal: nonogramRevealSchema,
+  })
+  .refine((c) => c.size === c.clues.size, {
+    message: "size disagrees with clues.size",
+  })
+  .refine(
+    (c) =>
+      c.reveal.solution.length === c.size &&
+      c.reveal.solution.every((row) => row.length === c.size),
+    { message: "reveal.solution must be size x size" },
+  );
+
+export type NonogramDailyContent = z.infer<typeof nonogramDailyContentSchema>;
+
+/**
+ * The public daily-nonogram projection. Four keys, and ADR-0033 is why there
+ * is no fifth: no `reveal` in any form, no `seed` (engines are deterministic
+ * — a seed IS the solution), no `weekday` (the client derives it from the
+ * date). `size` ships redundantly with `clues.size` because the wire value
+ * must be assignable to the engine's `NonogramClues`; the refine is what
+ * stops the two from disagreeing.
+ */
+export const dailyNonogramResponseSchema = z
+  .strictObject({
+    game: z.literal("nonogram"),
+    date: isoDateString,
+    size: nonogramSizeSchema,
+    clues: nonogramCluesSchema,
+  })
+  .refine((d) => d.size === d.clues.size, {
+    message: "size disagrees with clues.size",
+  });
+
+export type DailyNonogramResponse = z.infer<typeof dailyNonogramResponseSchema>;
+
+/**
+ * The extension point the last M2 game joins (#27).
+ *
+ * A refined `strictObject` is a legal option here and `.refine()` preserves
+ * `.shape` — both measured against the installed zod 4.4.3, and both FALSE
+ * in zod 3. A zod major bump re-runs that two-line probe before anything
+ * else (plan 020 §7.2).
+ */
 export const dailyPuzzleResponseSchema = z.discriminatedUnion("game", [
   dailyBinairoResponseSchema,
+  dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
 ]);
 
 export type DailyPuzzleResponse = z.infer<typeof dailyPuzzleResponseSchema>;
 
 /**
- * The games `stripDailyContent` can actually project. NOT `Game`: nonogram
- * and termo still throw `DailyProjectionUnsupportedError`, so a reader
- * typed over `Game` would type `getTodayDaily(db, "nonogram")` as
- * `Promise<undefined>` — `Extract<DailyPuzzleResponse, { game: "nonogram" }>`
- * is `never` — while it 500s at runtime the moment a nonogram row exists.
- * #25/#27 widen this in the same PR that adds their projection, which is
- * the same fail-closed extension property the cron contracts have.
+ * The games `stripDailyContent` can actually project. NOT `Game`: termo
+ * still throws `DailyProjectionUnsupportedError`, so a reader typed over
+ * `Game` would type `getTodayDaily(db, "termo")` as `Promise<undefined>`
+ * — `Extract<DailyPuzzleResponse, { game: "termo" }>` is `never` — while
+ * it 500s at runtime the moment a termo row exists. #27 widens this in the
+ * same PR that adds its projection, which is the same fail-closed
+ * extension property the cron contracts have.
  */
 export type ProjectedGame = DailyPuzzleResponse["game"];
 
@@ -167,8 +278,16 @@ export class DailyProjectionUnsupportedError extends Error {
  * | -------- | ----------------------------- | ------------------------------------------------------------------------------- | -------------------- |
  * | binairo  | `game, date, size, givens`    | `solution`, `seed`, `weekday`, `givensCount`, `requiredTier`                     | #17 (this file)      |
  * | sudoku   | `game, date, givens, tier`    | `solution`, `seed`, `clueCount`                                                  | #23 (this file)      |
- * | nonogram | `game, date, size, clues`     | entire `reveal` (`motifId`, `name`, `mirrored`, `solution` — identity spoils), `seed`, `weekday` | #25 (throws until)   |
+ * | nonogram | `game, date, size, clues`     | entire `reveal` (`motifId`, `name`, `mirrored`, `solution`), `seed`, `weekday` | #25 (this file)      |
  * | termo    | `game, date` only             | the answer word, in any field; guesses are judged server-side                    | #27 (throws until)   |
+ *
+ * The nonogram row is a PRODUCT withhold, not a confidentiality one
+ * (ADR-0033). `solveNonogram(clues)` recovers the bitmap in under a
+ * millisecond by construction (ADR-0021 decision 3), so the picture's shape
+ * is client-derivable and the strip protects nothing about it. What it
+ * withholds is the curated `name`, which is NOT derivable from the clues,
+ * and casual inspection of the rest — ADR-0027's own words, never a
+ * security claim.
  *
  * `seed` is withheld for EVERY game: engines are deterministic, so a seed
  * is the solution.
@@ -197,7 +316,15 @@ export function stripDailyContent(
         tier: parsed.tier,
       });
     }
-    case "nonogram":
+    case "nonogram": {
+      const parsed = nonogramDailyContentSchema.parse(content);
+      return dailyNonogramResponseSchema.parse({
+        game: "nonogram",
+        date,
+        size: parsed.size,
+        clues: parsed.clues,
+      });
+    }
     case "termo":
       throw new DailyProjectionUnsupportedError(game);
   }

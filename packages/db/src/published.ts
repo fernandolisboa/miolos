@@ -53,13 +53,13 @@ function wallPredicate(game: Game, date?: string): SQL | undefined {
  * members, an un-narrowed return type forces every page to branch on a
  * discriminator it already knows (plan 018 S11).
  *
- * `ProjectedGame`, NOT `Game`, and that is load-bearing: nonogram and
- * termo have no projection yet, so `Extract<DailyPuzzleResponse,
- * { game: "nonogram" }>` is `never` and a `Game`-keyed reader would type
- * `getTodayDaily(db, "nonogram")` as `Promise<undefined>` while
- * `stripDailyContent` throws for it at runtime. #25/#27 widen
- * `ProjectedGame` in the same PR that adds their projection; until then
- * the call does not compile.
+ * `ProjectedGame`, NOT `Game`, and that is load-bearing: termo has no
+ * projection yet, so `Extract<DailyPuzzleResponse, { game: "termo" }>` is
+ * `never` and a `Game`-keyed reader would type
+ * `getTodayDaily(db, "termo")` as `Promise<undefined>` while
+ * `stripDailyContent` throws for it at runtime. #27 widens `ProjectedGame`
+ * in the same PR that adds its projection; until then the call does not
+ * compile.
  */
 export async function getTodayDaily<G extends ProjectedGame>(
   db: Db,

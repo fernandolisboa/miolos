@@ -10,7 +10,11 @@ import {
 } from "../src/published";
 import { dailyPuzzles } from "../src/schema";
 import { createTestDb } from "../src/testing";
-import { binairoContentFixture, sudokuContentFixture } from "./fixtures";
+import {
+  binairoContentFixture,
+  nonogramContentFixture,
+  sudokuContentFixture,
+} from "./fixtures";
 
 // THE AC-1 WALL SUITE (issue #17, seam 3, ADR-0004/0010/0024). Future
 // rows invisible through every reader, kill switch respected, boundary
@@ -30,25 +34,36 @@ afterAll(async () => {
   await ctx.close();
 });
 
+/** The projected games, each with the content fixture the wall parses. */
+const CONTENT_FIXTURES: Readonly<
+  Record<"binairo" | "nonogram" | "sudoku", () => Record<string, unknown>>
+> = {
+  binairo: binairoContentFixture,
+  nonogram: nonogramContentFixture,
+  sudoku: sudokuContentFixture,
+};
+
 /**
  * Raw seeding writes on purpose: the wall under test must not seed itself.
  * `game` defaults to binairo so every #17 test above reads unchanged; #23
- * passes "sudoku" and gets the matching content fixture (plan 018 §15).
+ * passes "sudoku" and #25 "nonogram", each getting the matching content
+ * fixture (plan 018 §15, plan 020 §8). The two-game ternary became a
+ * lookup at #25 — a third arm would have been the point where the ternary
+ * stopped being readable.
  */
 async function insertRow(options: {
   date: string;
   publishedAt: ReturnType<typeof sql>;
   killedAt?: ReturnType<typeof sql>;
   seed?: number;
-  game?: "binairo" | "sudoku";
+  game?: keyof typeof CONTENT_FIXTURES;
 }): Promise<void> {
   const game = options.game ?? "binairo";
   await ctx.db.insert(dailyPuzzles).values({
     game,
     date: options.date,
     seed: options.seed ?? 1,
-    content:
-      game === "sudoku" ? sudokuContentFixture() : binairoContentFixture(),
+    content: CONTENT_FIXTURES[game](),
     publishedAt: options.publishedAt,
     killedAt: options.killedAt,
   });
@@ -335,6 +350,151 @@ describe("the wall holds for the second game (#23, plan 018 §6.5)", () => {
       expect(fromDate?.game, shape).toBe("sudoku");
       expect(fromToday?.tier, shape).toBe(3);
       expect(fromDate?.tier, shape).toBe(3);
+    }
+  });
+});
+
+describe("the wall holds for the third game (#25, plan 020 §8)", () => {
+  it("T-DB-S6: a future-dated nonogram row is invisible, and so is a killed one", async () => {
+    const today = await saoPauloToday();
+    await insertRow({
+      game: "nonogram",
+      date: today,
+      publishedAt: sql`now() + interval '1 day'`,
+    });
+    await insertRow({
+      game: "nonogram",
+      date: "2026-07-31",
+      publishedAt: sql`now() - interval '1 hour'`,
+      killedAt: sql`now()`,
+      seed: 2,
+    });
+    expect(await getTodayDaily(ctx.db, "nonogram")).toBeUndefined();
+    expect(await getPublishedDaily(ctx.db, "nonogram", today)).toBeUndefined();
+    expect(
+      await getPublishedDaily(ctx.db, "nonogram", "2026-07-31"),
+    ).toBeUndefined();
+    // Same predicate, same answer for the solution-bearing reader.
+    expect(
+      await getPublishedDailyWithSolution(ctx.db, "nonogram", today),
+    ).toBeUndefined();
+  });
+
+  it("T-DB-S7: a published nonogram row projects to exactly {game,date,size,clues}", async () => {
+    await insertRow({
+      game: "nonogram",
+      date: "2026-08-01",
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    const daily = await getPublishedDaily(ctx.db, "nonogram", "2026-08-01");
+    expect(daily).toBeDefined();
+    expect(Object.keys(daily ?? {}).sort()).toEqual([
+      "clues",
+      "date",
+      "game",
+      "size",
+    ]);
+    expect(daily?.date).toBe("2026-08-01");
+    // `clues` only type-checks because the reader is narrowed to the game it
+    // was asked for — on the un-narrowed union this line is a compile error.
+    expect(daily?.size).toBe(5);
+    expect(daily?.clues.rows).toHaveLength(5);
+    expect(daily?.clues.cols).toHaveLength(5);
+    // ADR-0033: the whole reveal is withheld, so the identity keys the strip
+    // drops are the ones FORBIDDEN_DAILY_KEYS now names.
+    const keys = collectKeys(daily);
+    for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+      expect(keys.has(forbidden)).toBe(false);
+    }
+  });
+
+  it("T-DB-S8: a game-scoped read never returns another game's row for the same date", async () => {
+    const today = await saoPauloToday();
+    await insertRow({
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    await insertRow({
+      game: "sudoku",
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+      seed: 2,
+    });
+    expect(await getTodayDaily(ctx.db, "nonogram")).toBeUndefined();
+    expect(await getPublishedDaily(ctx.db, "nonogram", today)).toBeUndefined();
+
+    await insertRow({
+      game: "nonogram",
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+      seed: 3,
+    });
+    // All three games live on the same date: each read answers with its own.
+    expect((await getTodayDaily(ctx.db, "nonogram"))?.game).toBe("nonogram");
+    expect((await getTodayDaily(ctx.db, "binairo"))?.game).toBe("binairo");
+    expect((await getTodayDaily(ctx.db, "sudoku"))?.game).toBe("sudoku");
+    expect((await getPublishedDaily(ctx.db, "nonogram", today))?.game).toBe(
+      "nonogram",
+    );
+    expect((await getPublishedDaily(ctx.db, "binairo", today))?.game).toBe(
+      "binairo",
+    );
+    expect((await getPublishedDaily(ctx.db, "sudoku", today))?.game).toBe(
+      "sudoku",
+    );
+  });
+
+  it("T-DB-S9: the narrowing is machine-checked — every seeded shape returns nonogram at runtime", async () => {
+    const today = await saoPauloToday();
+    const companions: readonly (readonly [string, () => Promise<void>])[] = [
+      ["no companion row", () => Promise.resolve()],
+      [
+        "a live binairo row for the same date",
+        () =>
+          insertRow({
+            date: today,
+            publishedAt: sql`now() - interval '1 hour'`,
+            seed: 2,
+          }),
+      ],
+      [
+        "a killed binairo row for the same date",
+        () =>
+          insertRow({
+            date: today,
+            publishedAt: sql`now() - interval '1 hour'`,
+            killedAt: sql`now()`,
+            seed: 3,
+          }),
+      ],
+      [
+        "a future-dated binairo row for the same date",
+        () =>
+          insertRow({
+            date: today,
+            publishedAt: sql`now() + interval '1 day'`,
+            seed: 4,
+          }),
+      ],
+    ];
+
+    for (const [shape, seedCompanion] of companions) {
+      await ctx.db.execute(sql`truncate table daily_puzzles`);
+      // The companion goes in FIRST, deliberately — same reason as T-DB-S4:
+      // the readers take `limit(1)` with no ORDER BY, so a game-blind
+      // predicate would hand back the binairo row by insertion order.
+      await seedCompanion();
+      await insertRow({
+        game: "nonogram",
+        date: today,
+        publishedAt: sql`now() - interval '1 hour'`,
+      });
+      const fromToday = await getTodayDaily(ctx.db, "nonogram");
+      const fromDate = await getPublishedDaily(ctx.db, "nonogram", today);
+      expect(fromToday?.game, shape).toBe("nonogram");
+      expect(fromDate?.game, shape).toBe("nonogram");
+      expect(fromToday?.clues.size, shape).toBe(5);
+      expect(fromDate?.clues.size, shape).toBe(5);
     }
   });
 });

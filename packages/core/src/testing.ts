@@ -7,14 +7,23 @@
 
 /**
  * Keys that must never appear at ANY depth of a client-facing daily
- * payload. #25/#27 extend this list with their games' solution-adjacent
- * fields (the nonogram reveal's identity, the termo answer) when their
- * projections land.
+ * payload. #27 extends this list with termo's answer when its projection
+ * lands.
  *
  * `clueCount` is sudoku's, added by #23: it appears in no shipped payload,
  * so every landed scan kept passing unchanged — adding it is what makes
  * the scan meaningful for the game whose content actually carries it
  * (plan 018 S22).
+ *
+ * TWO HALVES, not one. Every consumer scans KEYS (`collectKeys` below),
+ * and `apps/web`'s two page suites additionally assert
+ * `expect(renderToStaticMarkup(element)).not.toContain(forbidden)`. So a
+ * member of this list is also a SUBSTRING banned from those pages'
+ * rendered HTML — for `"name"` that means no lowercase `name` anywhere in
+ * `/binairo`'s, `/sudoku`'s or `/nonogram`'s markup, a `<meta name>`, an
+ * `<input name>` and a lowercase `name*` CSS-module local included
+ * (ADR-0033, plan 020 §7.7). Adding a member is a standing constraint on
+ * every future daily payload AND on that markup.
  */
 export const FORBIDDEN_DAILY_KEYS = [
   "solution",
@@ -22,6 +31,13 @@ export const FORBIDDEN_DAILY_KEYS = [
   "reveal",
   "answer",
   "clueCount",
+  // #25 (ADR-0033): the nonogram reveal's identity. `name` is a GENERIC key
+  // and that is deliberate — no daily payload has ever carried one, and this
+  // decision is the reason none may. A future payload that genuinely needs a
+  // `name` renames its field or amends this list with a written reason.
+  "motifId",
+  "name",
+  "mirrored",
 ] as const;
 
 /** Every key at any depth of a JSON-shaped value (the leak-scan probe). */
