@@ -25,7 +25,7 @@ Accents carry identity, not meaning alone — every state they mark is also carr
 
 - Display: **Fraunces** (variable; `ital`, `opsz`, `wght`). Italic is the app's human voice. Weights 450–600.
 - UI: **Instrument Sans** 400–700.
-- `font-variant-numeric: tabular-nums` is mandatory on every grid, timer and statistic.
+- Numerals that must align in a column — every grid, timer, statistic and histogram — use **Instrument Sans** with `font-variant-numeric: tabular-nums` (measured: every digit 6.609375px, spread 0). Fraunces has **no tabular figures** — no OpenType feature tag responds on it at all, so `tabular-nums` on the display face is a no-op and its digits keep a ~2.2px spread. Fraunces numerals are for the single, non-aligning kind: a streak stamp, a board cell holding one centred glyph ([ADR-0036](./docs/adr/0036-aligning-numerals-use-instrument-sans-not-fraunces.md)).
 - Kickers: 10–11px, uppercase, letter-spacing 0.14–0.16em — a deliberate brand system, used for game categories, not as a generic section eyebrow.
 - Banned as brand fonts: Inter, DM Sans, Poppins, Montserrat, Roboto.
 - Portability: variable-font axes are web-only; the future native client uses static instances of the chosen weights (ADR-0002). `tabular-nums` works on both.
