@@ -1,6 +1,8 @@
 import type { SessionResponse } from "@miolos/core";
 import { eq, sessions, sql, users, type Db } from "@miolos/db";
 
+import { hashSessionToken } from "./token";
+
 /**
  * Session service (ADR-0022). Takes the db, returns plain data — no
  * Response construction here. Every timestamp is DB-side (`now()`,
@@ -63,4 +65,26 @@ export async function mintSession(
   }
   await db.insert(sessions).values({ tokenHash, userId: user.id });
   return { userId: user.id, created: true };
+}
+
+/**
+ * Resolve the caller's user id for a WRITE (plan 017 D14). Deliberately
+ * never mints: minting on a write would create a phantom user from any
+ * stray POST, and identity is minted exactly once, by POST /session
+ * (ADR-0022). `undefined` means "no caller" — the route answers 401 and
+ * the offline queue keeps the completion pending.
+ *
+ * Takes the raw cookie value rather than a NextRequest, so this module
+ * stays framework-free like the rest of it; hashing lives here so no
+ * caller ever has to remember that the table stores only the hash.
+ */
+export async function requireUserId(
+  db: Db,
+  token: string | undefined,
+): Promise<string | undefined> {
+  if (!token) {
+    return undefined;
+  }
+  const resolved = await resolveSession(db, await hashSessionToken(token));
+  return resolved?.userId;
 }
