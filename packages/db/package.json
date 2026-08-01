@@ -13,6 +13,7 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@miolos/core": "workspace:*",
     "@neondatabase/serverless": "1.1.0",
     "drizzle-orm": "0.45.2"
   },
@@ -20,6 +21,8 @@
     "@electric-sql/pglite": "0.5.4",
     "@types/node": "26.1.2",
     "drizzle-kit": "0.31.10",
-    "typescript": "6.0.3"
+    "fast-check": "4.9.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
   }
 }
