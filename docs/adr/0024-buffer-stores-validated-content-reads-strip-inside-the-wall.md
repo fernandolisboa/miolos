@@ -78,3 +78,27 @@ table around the helper.
   contract schema in the same PR.
 - #18 inherits two named duties: the apps/web ESLint ban, and judging
   completions through `getPublishedDailyWithSolution` only.
+
+## Amendment — 2026-07-31 (PR #54 step-6 review; append-only)
+
+- **The wall covers query capability, not just named exports.** The root
+  `createDb` builds its drizzle client over a narrowed relational-query
+  schema (`users`, `sessions` only), so `db.query.dailyPuzzles` /
+  `db.query.remoteConfig` do not exist on a root-entry client. The
+  full-schema factory `createPublishingDb` lives on
+  `@miolos/db/publishing`. A fourth tripwire (T-DB-9d) pins the root
+  client's `db.query` keys.
+- **Known residual:** the root entry re-exports drizzle's `sql` (session
+  prior art) and every db handle carries `.execute()`, so raw string SQL
+  against `daily_puzzles` remains physically reachable from the root
+  entry. Typing a table name into an SQL string is a deliberate act, not
+  the accident this wall targets. The named #18 ESLint duty is extended:
+  besides banning `@miolos/db/publishing` imports in `apps/web`, it must
+  flag `daily_puzzles`/`remote_config` string literals in `apps/web`
+  source.
+- **Accepted for v1: no rate limiting on the public reads.**
+  `GET /daily/<game>` and `GET /buffer-depth` are unauthenticated,
+  uncached (`force-dynamic`) and unthrottled; each request costs a Neon
+  round-trip. No content is at risk and Vercel + Neon absorb casual
+  abuse — a recorded cost/availability posture, to be revisited only on a
+  real traffic incident.
