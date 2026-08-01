@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./binairo": "./src/binairo/index.ts",
     "./termo": "./src/termo/index.ts"
   },
   "scripts": {
