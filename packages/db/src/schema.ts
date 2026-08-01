@@ -1,10 +1,11 @@
-import { GAMES } from "@miolos/core";
+import { COMPLETION_OUTCOMES, GAMES, HINT_GRANT_SOURCES } from "@miolos/core";
 import { sql } from "drizzle-orm";
 import {
   bigint,
   check,
   date,
   index,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -111,6 +112,104 @@ export const dailyPuzzles = pgTable(
       "daily_puzzles_game_check",
       sql`${t.game} in ('binairo', 'sudoku', 'nonogram', 'termo')`,
     ),
+  ],
+);
+
+/**
+ * Completion rows (ADR-0008, ADR-0026). One row per (user, puzzle),
+ * written ONCE — a loss followed by an archive replay does not reopen the
+ * daily, and the composite PK is what makes "exactly once" mechanical
+ * rather than a code convention (plan 017 D15).
+ *
+ * - `date` is the PUZZLE's America/Sao_Paulo calendar day, string mode so
+ *   no JS Date mangles it through a timezone. Never the completion
+ *   instant's day.
+ * - `completed_at` is the DB clock at insert (`defaultNow()`); no
+ *   JS-constructed date ever appears in an insert, and no client-supplied
+ *   instant is accepted anywhere in the path (plan 017 D16/D19).
+ * - "On time" is DERIVED, never stored:
+ *     (completed_at at time zone 'America/Sao_Paulo')::date = date
+ *   ADR-0009 recomputes streaks from these rows on merge, so the
+ *   derivation must stay the definition. A denormalized column would be a
+ *   cache; there is no cache.
+ * - `outcome` accommodates 'lost' from day one so #27 (Termo) attaches
+ *   rather than migrates. Binairo only ever writes 'won'.
+ * - `elapsed_ms` and `hints_used` are player statistics, not authority:
+ *   they come from the client and are range-checked at the contract
+ *   boundary. `hints_used` is where the ADR-0006 free hint is recorded —
+ *   there is no balance anywhere (plan 017 D21) — and it is SELF-REPORTED,
+ *   so it can never back a "solved without hints" medal (ADR-0027).
+ * - ADR-0009 merge duty: the PK makes re-pointing rows a CONFLICT
+ *   operation. The merge re-points with
+ *   `ON CONFLICT (user_id, game, date) DO NOTHING` after ordering the
+ *   source rows by `completed_at`, so the surviving row is the EARLIEST
+ *   completion and a merge can never downgrade on-time to late.
+ *
+ * EXTENSION POINT: #23/#25/#27 write through the same table and route;
+ * no schema change is expected.
+ */
+export const completions = pgTable(
+  "completions",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    game: text("game", { enum: GAMES }).notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    completedAt: timestamptz("completed_at").notNull().defaultNow(),
+    outcome: text("outcome", { enum: COMPLETION_OUTCOMES }).notNull(),
+    elapsedMs: integer("elapsed_ms").notNull(),
+    hintsUsed: integer("hints_used").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.game, t.date] }),
+    check(
+      "completions_game_check",
+      sql`${t.game} in ('binairo', 'sudoku', 'nonogram', 'termo')`,
+    ),
+    check("completions_outcome_check", sql`${t.outcome} in ('won', 'lost')`),
+    check("completions_elapsed_ms_check", sql`${t.elapsedMs} >= 0`),
+    check("completions_hints_used_check", sql`${t.hintsUsed} >= 0`),
+    // The PK covers (user_id) and (user_id, game); the streak recompute and
+    // "the day so far" both read (user_id, date) across games.
+    index("completions_user_date_idx").on(t.userId, t.date),
+  ],
+);
+
+/**
+ * Day-scoped hint grants (ADR-0006, ADR-0027) — DORMANT in v1: no ads SDK
+ * ships, so nothing writes a row. The GRANT-EVENT schema exists now so the
+ * rewarded-ad ticket attaches rather than migrates; that ticket still adds
+ * its own CONSUMPTION record, which v1 deliberately does not model
+ * (plan 017 §11).
+ *
+ * This is deliberately NOT a wallet, balance or ledger:
+ * - rows are APPEND-ONLY records of a grant event; nothing ever decrements;
+ * - `grantedHintsToday` is `sum(hints) where date = SP-today`, so a grant
+ *   EXPIRES structurally when the day key falls behind — no expiry job, no
+ *   TTL column, no carry-over across days;
+ * - the v1 free hint is per-puzzle and writes no row at all (D21); it is
+ *   recorded on `completions.hints_used`.
+ * A future column named like a balance (`hints_remaining`, `credits`, …)
+ * would violate ADR-0006; test/user.test.ts pins this table's column set
+ * exactly so such a column fails the suite.
+ */
+export const hintGrants = pgTable(
+  "hint_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: date("date", { mode: "string" }).notNull(), // the SP day it is valid for
+    source: text("source", { enum: HINT_GRANT_SOURCES }).notNull(),
+    hints: integer("hints").notNull(),
+    grantedAt: timestamptz("granted_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check("hint_grants_source_check", sql`${t.source} in ('rewarded-ad')`),
+    check("hint_grants_hints_check", sql`${t.hints} > 0 and ${t.hints} <= 10`),
+    index("hint_grants_user_date_idx").on(t.userId, t.date),
   ],
 );
 

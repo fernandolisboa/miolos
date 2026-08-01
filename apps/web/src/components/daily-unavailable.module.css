@@ -1,0 +1,126 @@
+/* The no-puzzle screen — paper on paper, same system as Hoje and the two
+   Binairo screens. Every rule is anchored on a local class: Next compiles
+   CSS Modules in css-loader's `pure` mode, so a bare type selector either
+   fails the build or leaks globally (plan 017 risk 15). */
+
+.page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) 80px;
+}
+
+/* Per-screen hover accent — anchored on .page, never a bare `a:hover`. */
+.page a:hover {
+  color: var(--accent-binairo);
+}
+
+.card {
+  position: relative;
+  box-sizing: border-box;
+  max-width: 560px;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg)
+    color-mix(in srgb, var(--accent-binairo) 22%, transparent);
+  padding: var(--space-12);
+  /* Static rotation, never animated (DESIGN.md). */
+  transform: rotate(-0.5deg);
+}
+
+/* Tape geometry from the reference frames F5:23 — Hoje's shipped .tape is
+   CENTRED, so copying it produces a visibly wrong tape here. */
+.tape {
+  position: absolute;
+  top: -12px;
+  left: 60px;
+  width: 78px;
+  height: 24px;
+  border-radius: var(--radius-tape);
+  background: color-mix(in srgb, var(--accent-binairo) 32%, transparent);
+  transform: rotate(-4deg);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 34px;
+  line-height: 1.15;
+}
+
+.body {
+  margin: var(--space-4) 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.cta {
+  display: inline-block;
+  margin-top: var(--space-7);
+  background: var(--accent-binairo);
+  color: var(--paper-desk);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent-binairo) 25%, transparent);
+  padding: 14px 26px;
+  font: var(--text-button);
+  text-decoration: none;
+  transition:
+    transform var(--duration-fast) var(--ease-settle),
+    box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+/* The element slides 1px toward its shadow and the shadow shrinks by the
+   same 1px (DESIGN.md, verbatim). */
+.cta:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0
+    color-mix(in srgb, var(--accent-binairo) 25%, transparent);
+}
+
+.cta:hover {
+  /* The solid CTA keeps its paper ink on hover: the global accent hover
+     would make the label vanish into its own background. */
+  color: var(--paper-desk);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* 20px, not the frames' 16px: impeccable's body-text-viewport-edge fires
+     on a >40-char <p> whose rect.left < 16, and 16.0 tips red on a
+     sub-pixel of layout rounding. Hoje ships 20px for the same reason. */
+  .page {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .card {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .title {
+    font-size: 27px;
+  }
+
+  .body {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .tape {
+    top: -10px;
+    left: 30px;
+    width: 58px;
+    height: 19px;
+  }
+}

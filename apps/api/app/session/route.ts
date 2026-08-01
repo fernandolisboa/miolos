@@ -7,7 +7,10 @@ import {
   buildSessionCookie,
   SESSION_COOKIE_NAME,
 } from "../../src/session/cookie";
-import { isCrossSiteMint } from "../../src/session/origin-guard";
+import {
+  isCrossSiteWrite,
+  warnIfGuardDegraded,
+} from "../../src/session/origin-guard";
 import { mintSession, resolveSession } from "../../src/session/service";
 import {
   generateSessionToken,
@@ -16,24 +19,6 @@ import {
 
 // Never statically cached: every request must hit the session table.
 export const dynamic = "force-dynamic";
-
-// Once-per-instance loud misconfiguration signal: without WEB_ORIGIN the
-// origin guard fails open to Sec-Fetch-Site-only (which pre-16.4 Safari
-// never sends) — see ADR-0022. Not a throw: previews legitimately run
-// without a WEB_ORIGIN grant. The message carries no request data.
-let warnedMissingWebOrigin = false;
-function warnIfGuardDegraded(): void {
-  if (
-    !warnedMissingWebOrigin &&
-    process.env.NODE_ENV === "production" &&
-    !process.env.WEB_ORIGIN
-  ) {
-    warnedMissingWebOrigin = true;
-    console.error(
-      "WEB_ORIGIN is unset in production: the cross-site mint guard is degraded to Sec-Fetch-Site-only (ADR-0022)",
-    );
-  }
-}
 
 export function OPTIONS(): Response {
   return preflightResponse();
@@ -48,7 +33,7 @@ export function OPTIONS(): Response {
 export async function POST(request: NextRequest): Promise<Response> {
   warnIfGuardDegraded();
   if (
-    isCrossSiteMint(
+    isCrossSiteWrite(
       {
         secFetchSite: request.headers.get("sec-fetch-site"),
         origin: request.headers.get("origin"),

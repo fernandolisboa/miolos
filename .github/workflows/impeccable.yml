@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         # For deployment_status, GITHUB_SHA is the deployed commit (GitHub docs),
         # so the default checkout gives us the PR's own .impeccable/config.json.
-      - name: preflight — assert preview reachable through bypass
+      - name: preflight — assert every scanned route reachable through bypass
         # Guards the gate's proven silent-green paths: impeccable detect exits 0
         # on an empty or unreachable URL, and a rotated/empty secret would scan
         # the Vercel SSO page instead of the app. Fail loudly on all of them
@@ -54,14 +54,34 @@ jobs:
           # jar the redirect chain ends on vercel.com/login even with a valid
           # secret). Puppeteer holds cookies natively.
           jar=$(mktemp)
-          code_and_url=$(curl -sSL -c "$jar" -b "$jar" -o /dev/null -w '%{http_code} %{url_effective}' \
-            "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true")
+          # EVERY path the detect steps below scan, not just "/". Asserting the
+          # root alone was itself a silent-green path: "/" reads no database,
+          # while /binairo and /binairo/concluido are the only db-backed routes
+          # in the repo — so a missing, rotated or unmigrated DATABASE_URL let
+          # the preflight pass and the scanner then found nothing on a Next 500
+          # page and exited 0. ADR-0028's Consequences name that risk verbatim;
+          # this loop is what turns it from a human curl into a machine gate
+          # (step 6 finding
+          # impeccable-preflight-does-not-cover-the-two-db-backed-urls-it-added).
+          # Keep this list and the two detect invocations below in step.
+          status=0
+          for path in "/" "/binairo" "/binairo/concluido"; do
+            # `|| true` because the job shell runs with `-e`: a connection
+            # failure would otherwise abort the loop before the other paths are
+            # reported. curl still writes "000 <url>" through -w, which the case
+            # below rejects, so nothing can pass by failing to connect.
+            code_and_url=$(curl -sSL -c "$jar" -b "$jar" -o /dev/null -w '%{http_code} %{url_effective}' \
+              "$DEPLOYMENT_URL$path?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true") || true
+            echo "preflight $path: $code_and_url"
+            # All paths are reported before failing: one round-trip tells us
+            # whether the whole preview is down or only the db-backed routes.
+            case "$code_and_url" in
+              "200 $DEPLOYMENT_URL"*) ;;
+              *) echo "preview not reachable through bypass at $path (need HTTP 200 on the deployment host) — refusing to scan"; status=1 ;;
+            esac
+          done
           rm -f "$jar"
-          echo "preflight: $code_and_url"
-          case "$code_and_url" in
-            "200 $DEPLOYMENT_URL"*) ;;
-            *) echo "preview not reachable through bypass (need HTTP 200 on the deployment host) — refusing to scan"; exit 1 ;;
-          esac
+          test "$status" -eq 0 || exit 1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6 — version comes from packageManager
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -87,6 +107,13 @@ jobs:
           path: ~/.cache/puppeteer
           key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: impeccable detect — desktop 1440x900
+        # detect takes a POSITIONAL URL LIST and does not crawl: every screen
+        # that must be scanned is named here, in BOTH viewport steps, and every
+        # URL carries its own bypass query string (the cookie is set by the
+        # first one, but a scan that starts on a 401 would silently pass — the
+        # preflight comment above records why detect exiting 0 is not evidence).
+        # Same masking properties as the preflight: the secret is only ever
+        # appended to a host already allowlisted to *.vercel.app there.
         id: desktop
         env:
           DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
@@ -94,6 +121,8 @@ jobs:
         run: >-
           pnpm exec impeccable detect
           "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/binairo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           --viewport 1440x900
       - name: impeccable detect — mobile 390x844
         # Run even when desktop found regressions (one round-trip shows both
@@ -106,4 +135,6 @@ jobs:
         run: >-
           pnpm exec impeccable detect
           "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/binairo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           --viewport 390x844

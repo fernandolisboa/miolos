@@ -1,5 +1,7 @@
+import Link from "next/link";
+
 import { AdSlot } from "../src/components/ad-slot";
-import { locale, messages } from "../src/i18n";
+import { locale, messages, routes } from "../src/i18n";
 import styles from "./page.module.css";
 
 // The date must be today's (America/São Paulo), not build-day's.
@@ -92,14 +94,25 @@ export default function HojePage() {
                 {messages.hoje.games[game].description}
               </p>
             </div>
-            {/* Placeholder anchor without href: the game routes do not exist
-                yet, and a dead href would be fake navigation. */}
-            <a className={styles.cta}>
-              <span className={styles.ctaLong}>{messages.hoje.playCta}</span>
-              <span className={styles.ctaShort}>
-                {messages.hoje.playCtaShort}
-              </span>
-            </a>
+            {/* Binairo is the first daily with a real play route (#18,
+                ADR-0028). The other three keep the placeholder anchor
+                WITHOUT an href: their routes do not exist yet, and a dead
+                href would be fake navigation. */}
+            {game === "binairo" ? (
+              <Link className={styles.cta} href={routes.binairo}>
+                <span className={styles.ctaLong}>{messages.hoje.playCta}</span>
+                <span className={styles.ctaShort}>
+                  {messages.hoje.playCtaShort}
+                </span>
+              </Link>
+            ) : (
+              <a className={styles.cta}>
+                <span className={styles.ctaLong}>{messages.hoje.playCta}</span>
+                <span className={styles.ctaShort}>
+                  {messages.hoje.playCtaShort}
+                </span>
+              </a>
+            )}
           </article>
         ))}
       </section>

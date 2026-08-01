@@ -1,3 +1,11 @@
+export {
+  COMPLETION_OUTCOMES,
+  completionOutcomeSchema,
+  HINT_GRANT_SOURCES,
+  hintGrantSourceSchema,
+  type CompletionOutcome,
+  type HintGrantSource,
+} from "./completion";
 export { hasEntitlement, type Entitlements } from "./entitlements";
 export {
   defaultFeatureFlags,
@@ -24,6 +32,7 @@ export {
   DailyProjectionUnsupportedError,
   dailyBinairoResponseSchema,
   dailyPuzzleResponseSchema,
+  isoDateString,
   stripDailyContent,
   type BinairoDailyContent,
   type DailyBinairoResponse,
@@ -35,3 +44,14 @@ export {
   type BufferDepthResponse,
   type CronPublishResponse,
 } from "./contracts/cron";
+export {
+  apiErrorResponseSchema,
+  binairoCompletionRequestSchema,
+  calendarDateString,
+  completionRequestSchema,
+  completionResponseSchema,
+  type ApiErrorResponse,
+  type BinairoCompletionRequest,
+  type CompletionRequest,
+  type CompletionResponse,
+} from "./contracts/completion";
