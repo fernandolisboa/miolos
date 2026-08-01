@@ -50,6 +50,7 @@ Current:
 | `plans/016-issue-43-plan-dependabot.md` | Implementation plan for #43 (Dependabot for SHA-pinned actions) |
 | `plans/017-issue-18-plan-play-the-daily-binairo.md` | Implementation plan for #18 (play the daily Binairo: play and conclusion screens, write-once completions, dormant hint grants, the apps/web db wall) |
 | `plans/018-issue-23-plan-daily-sudoku-end-to-end.md` | Implementation plan for #23 (daily Sudoku end to end: the shared `apps/web/src/play/` layer, the Sudoku buffer and screen, device-local day state and conclusion chaining) |
+| `handoffs/019-handoff-m2-nonogram-and-termo.md` | Session handoff for M2's remaining two games — #25 (daily Nonogram) and #27 (daily Termo): the shared play layer's real API and its honest limits, every extension point, and the decisions each game must make |
 
 ## Language
 
