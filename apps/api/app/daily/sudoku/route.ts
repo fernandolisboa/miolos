@@ -13,9 +13,16 @@ export const dynamic = "force-dynamic";
  * route, not a `[game]` dynamic segment (plan 018 S14): a dynamic segment
  * would save 33 lines and buy an untrusted `params.game` reaching
  * `eq(dailyPuzzles.game, …)` plus a 500-on-unimplemented-game hazard, since
- * `/daily/nonogram` would resolve, reach `stripDailyContent` and throw
- * `DailyProjectionUnsupportedError` uncaught. A literal route simply does
- * not exist and Next 404s for free. Revisit at #25, when there are three.
+ * an unimplemented game's path would resolve, reach `stripDailyContent` and
+ * throw `DailyProjectionUnsupportedError` uncaught. A literal route simply
+ * does not exist and Next 404s for free.
+ *
+ * REVISITED AT #25 with three games and kept literal: a `[game]` segment
+ * would still put an untrusted `params.game` in front of the wall, and
+ * `/daily/termo` would still resolve, reach `stripDailyContent` and throw
+ * uncaught. Three literal files cost ~75 lines total and 404 for free.
+ * Revisit again only if a game is ever added whose projection exists at
+ * build time.
  *
  * The daily is public content (ADR-0005): no auth, no cookies, no
  * credentialed CORS. Miss → 404 with an empty body: no on-demand

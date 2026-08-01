@@ -14,6 +14,7 @@ import {
   effectiveThreshold,
   TopUpAbortedError,
   topUpBinairoBuffer,
+  topUpNonogramBuffer,
   topUpSudokuBuffer,
   type TopUpResult,
 } from "../../../src/publishing/service";
@@ -49,14 +50,15 @@ type CronGame = keyof CronPublishResponse["games"];
 
 /**
  * One game's top-up, fault-isolated. This try/catch is a decision, not a
- * detail: neither top-up catches anything but its own `*GenerationError`,
- * so `insertDailyPuzzle`, `bufferDepth`, `todaySaoPaulo` and the
- * derived-weekday `RangeError` all propagate. With two games composed
+ * detail: no top-up catches anything but its own `*GenerationError`, so
+ * `insertDailyPuzzle`, `bufferDepth`, `todaySaoPaulo` and the
+ * derived-weekday `RangeError` all propagate. With three games composed
  * serially and no isolation, ONE game's transient Neon blip silently stops
- * the OTHER game's buffer from being topped up — and against
- * `BUFFER_ALERT_THRESHOLD = 4` on a default depth of 7 the victim drains
+ * every LATER game's buffer from being topped up — and against
+ * `BUFFER_ALERT_THRESHOLD = 4` on a default depth of 7 each victim drains
  * one day per occurrence and pages only after three-plus consecutive days
- * (plan 018 §7.2).
+ * (plan 018 §7.2). The drain arithmetic is per game and unchanged by the
+ * third one.
  *
  * The result on a throw is still the run that happened, not a zeroed one:
  * `depth` is re-read from the database, and `generated`/`failures` are the
@@ -100,10 +102,14 @@ async function runTopUp(
  * alerting reads GET /buffer-depth (AC 3; cron exit codes are not the
  * signal).
  *
- * The top-ups run SERIALLY in a fixed order, binairo first: Neon
- * round-trips dominate, so concurrency buys nothing and doubles connection
- * pressure, and running the cheap game first means a sudoku CPU overrun can
- * never starve it (plan 018 §7.2).
+ * The top-ups run SERIALLY in a fixed COST-ASCENDING order — binairo
+ * (~7 ms) → nonogram (~34-80 ms) → sudoku (~150 ms) per cold week: Neon
+ * round-trips dominate, so concurrency buys nothing and multiplies
+ * connection pressure, and running the games cheapest-first means a CPU
+ * overrun in an expensive one can never starve a cheaper one (plan 018
+ * §7.2, plan 020 P7). It is the principle that fixes the order, not the
+ * shape of the list: appending each new game last would keep the diff
+ * smaller and is exactly what this rule refuses.
  */
 export async function GET(request: NextRequest): Promise<Response> {
   if (!isAuthorized(request.headers.get("authorization"))) {
@@ -116,6 +122,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       db,
       "binairo",
       topUpBinairoBuffer,
+      config.bufferDepth,
+    ),
+    nonogram: await runTopUp(
+      db,
+      "nonogram",
+      topUpNonogramBuffer,
       config.bufferDepth,
     ),
     sudoku: await runTopUp(db, "sudoku", topUpSudokuBuffer, config.bufferDepth),

@@ -6,9 +6,11 @@ import {
   calendarDateString,
   completionRequestSchema,
   completionResponseSchema,
+  nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
   type BinairoCompletionRequest,
   type CompletionResponse,
+  type NonogramCompletionRequest,
   type SudokuCompletionRequest,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
@@ -39,6 +41,32 @@ const validSudoku: SudokuCompletionRequest = {
   game: "sudoku",
   date: "2026-08-01",
   grid: sudokuGrid,
+  elapsedMs: 272_000,
+  hintsUsed: 1,
+};
+
+/**
+ * The four legal board areas. A nonogram is the first game whose board size
+ * changes daily, so unlike binairo's 64 and sudoku's 81 there is no single
+ * legal length — the SET is the contract (plan 020 P4).
+ */
+const NONOGRAM_SIZES = [5, 8, 10, 15] as const;
+
+/**
+ * A rule-irrelevant but well-typed picture bitmap — the schema checks shape,
+ * never nonogram rules. `1` = filled, `0` = crossed or untouched
+ * indistinguishably (ADR-0032).
+ */
+function nonogramGrid(size: number): NonogramCompletionRequest["grid"] {
+  return Array.from({ length: size * size }, (_unused, index): 0 | 1 =>
+    index % 3 === 0 ? 1 : 0,
+  );
+}
+
+const validNonogram: NonogramCompletionRequest = {
+  game: "nonogram",
+  date: "2026-08-01",
+  grid: nonogramGrid(5),
   elapsedMs: 272_000,
   hintsUsed: 1,
 };
@@ -112,13 +140,134 @@ describe("binairoCompletionRequestSchema", () => {
     ).toBe(true);
   });
 
-  // Rewritten from `game: "sudoku"` at #23 (plan 018 T-CORE-S6): with sudoku
-  // in the union that body would still be rejected, but for the wrong reason
-  // — a 64-cell 0/1 grid is not a valid sudoku — i.e. a test proving nothing.
-  // `nonogram` is the game the union genuinely does not carry.
-  it("rejects a game the union does not carry yet (#25/#27 widen it)", () => {
+  // Retargeted twice, each time at the game the union genuinely does not
+  // carry: `sudoku` at #18, `nonogram` at #23, and now `termo` at #25. The
+  // retarget is not tidying — with nonogram in the union this assertion was
+  // ACTIVELY FALSE against it, because a 64-cell 0/1 body IS a legal 8x8
+  // nonogram submission (plan 020 N31). Termo has no grid at all (#27).
+  it("rejects a game the union does not carry yet (#27 widens it)", () => {
     expect(
-      completionRequestSchema.safeParse({ ...valid, game: "nonogram" }).success,
+      completionRequestSchema.safeParse({ ...valid, game: "termo" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("nonogramCompletionRequestSchema", () => {
+  // T-CORE-S13 (plan 020 §19).
+  it.each(NONOGRAM_SIZES)(
+    "parses and round-trips a %i-class submission",
+    (size) => {
+      const body = { ...validNonogram, grid: nonogramGrid(size) };
+      expect(nonogramCompletionRequestSchema.parse(body)).toEqual(body);
+      expect(completionRequestSchema.parse(body)).toEqual(body);
+    },
+  );
+
+  it("rejects an extra key (strictObject — a smuggled field never reaches the route)", () => {
+    const smuggled = {
+      ...validNonogram,
+      userId: "3f8e9a2c-1b4d-4e6f-8a9b-0c1d2e3f4a5b",
+    };
+    expect(nonogramCompletionRequestSchema.safeParse(smuggled).success).toBe(
+      false,
+    );
+    expect(completionRequestSchema.safeParse(smuggled).success).toBe(false);
+  });
+
+  it("rejects a `size` key — there is no size on the wire (P4)", () => {
+    // A `size` field would be a second place for the client to lie and would
+    // still not be authoritative: the STORED row's solution decides the size.
+    const withSize = { ...validNonogram, size: 5 };
+    expect(nonogramCompletionRequestSchema.safeParse(withSize).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a 63-length grid — 63 is no board's area", () => {
+    const short = { ...validNonogram, grid: nonogramGrid(8).slice(0, 63) };
+    expect(nonogramCompletionRequestSchema.safeParse(short).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects an 81-length grid — sudoku's area is not a nonogram's", () => {
+    // The sharpest case: 81 is a perfect square and a legal length for the
+    // OTHER square-boarded game, so a length-free array would accept it.
+    const sudokuShaped = {
+      ...validNonogram,
+      grid: Array.from({ length: 81 }, (_unused, index): 0 | 1 =>
+        index % 2 === 0 ? 0 : 1,
+      ),
+    };
+    expect(
+      nonogramCompletionRequestSchema.safeParse(sudokuShaped).success,
+    ).toBe(false);
+  });
+
+  it("rejects a null cell (a submission is a COMPLETE picture, never a partial one)", () => {
+    // `null` is the client's "undecided"; it never crosses the wire, because
+    // a finished picture has no undecided cell left in it (ADR-0032).
+    const withHole = {
+      ...validNonogram,
+      grid: [null, ...validNonogram.grid.slice(1)],
+    };
+    expect(nonogramCompletionRequestSchema.safeParse(withHole).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a non-0/1 cell — a cross is 0 on the wire, never a third value", () => {
+    const threeState = {
+      ...validNonogram,
+      grid: [2, ...validNonogram.grid.slice(1)],
+    };
+    expect(nonogramCompletionRequestSchema.safeParse(threeState).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects hintsUsed: 2 — v1 grants exactly one free hint per puzzle (plan 017 D21)", () => {
+    expect(
+      nonogramCompletionRequestSchema.safeParse({
+        ...validNonogram,
+        hintsUsed: 2,
+      }).success,
+    ).toBe(false);
+    expect(
+      nonogramCompletionRequestSchema.safeParse({
+        ...validNonogram,
+        hintsUsed: 0,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a negative, an over-cap and a non-integer elapsedMs", () => {
+    expect(
+      nonogramCompletionRequestSchema.safeParse({
+        ...validNonogram,
+        elapsedMs: -1,
+      }).success,
+    ).toBe(false);
+    expect(
+      nonogramCompletionRequestSchema.safeParse({
+        ...validNonogram,
+        elapsedMs: 86_400_001,
+      }).success,
+    ).toBe(false);
+    expect(
+      nonogramCompletionRequestSchema.safeParse({
+        ...validNonogram,
+        elapsedMs: 1.5,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects the impossible date the shape regex alone accepts", () => {
+    expect(
+      nonogramCompletionRequestSchema.safeParse({
+        ...validNonogram,
+        date: "2026-02-30",
+      }).success,
     ).toBe(false);
   });
 });
@@ -294,6 +443,16 @@ describe("the completion request carries no instant (plan 017 D19)", () => {
 
   it("sudoku's key set is exactly the five audited fields", () => {
     expect(Object.keys(sudokuCompletionRequestSchema.shape).sort()).toEqual([
+      "date",
+      "elapsedMs",
+      "game",
+      "grid",
+      "hintsUsed",
+    ]);
+  });
+
+  it("nonogram's key set is exactly the five audited fields — no `size` (P4)", () => {
+    expect(Object.keys(nonogramCompletionRequestSchema.shape).sort()).toEqual([
       "date",
       "elapsedMs",
       "game",

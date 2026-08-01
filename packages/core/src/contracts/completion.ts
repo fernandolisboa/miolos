@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { completionOutcomeSchema } from "../completion";
 import { gameSchema } from "../game";
-import { isoDateString, sudokuDigitSchema } from "./daily";
+import { isoDateString, nonogramSizeSchema, sudokuDigitSchema } from "./daily";
 
 /**
  * A calendar-VALID 'YYYY-MM-DD'. `isoDateString` checks shape only, which
@@ -41,8 +41,8 @@ const submittedCellSchema = z.union([z.literal(0), z.literal(1)]);
  * silently dropped, which is what makes the no-timestamp guarantee above
  * structural instead of conventional.
  *
- * EXTENSION POINT: #25/#27 add their variants to the union; the
- * discriminator is `game`.
+ * EXTENSION POINT: #27 adds its variant to the union; the discriminator is
+ * `game`.
  */
 export const binairoCompletionRequestSchema = z.strictObject({
   game: z.literal("binairo"),
@@ -84,8 +84,74 @@ export type SudokuCompletionRequest = z.infer<
   typeof sudokuCompletionRequestSchema
 >;
 
+/**
+ * The four legal board areas — 5², 8², 10², 15²
+ * (packages/games/src/nonogram/difficulty.ts:31-41). A nonogram is the first
+ * game whose board size changes daily, so the fixed `.length(64)`/`.length(81)`
+ * that proves "this submission is a COMPLETE board" for the other two is
+ * unavailable; the legal SET is the contract.
+ *
+ * DERIVED, never hand-written: `nonogramSizeSchema` is "ONE definition, three
+ * consumers" (contracts/daily.ts), and a second literal list in the same
+ * package would be a fourth definition of the same fact, free to drift the
+ * day a fifth size class lands. Verified against the installed zod 4.4.3 that
+ * a `z.union` of literals exposes `.options` and each option its `.value`:
+ * `[5, 8, 10, 15] -> [25, 64, 100, 225]`.
+ *
+ * Deliberately NOT a `size` key plus a cross-check (plan 020 P4): `size`
+ * would be a second place for the client to lie, would make this the only
+ * union member with six keys (breaking the audited five-field tripwire in
+ * completion-contract.test.ts), and would still not be authoritative — the
+ * STORED row's solution decides the size, and the route checks the submitted
+ * length against it before comparing a single cell.
+ */
+const NONOGRAM_CELL_COUNTS: readonly number[] = nonogramSizeSchema.options.map(
+  (option) => option.value ** 2,
+);
+
+/**
+ * A submitted nonogram is the PICTURE BITMAP: 1 where the cell is filled,
+ * 0 everywhere else. A player may finish having crossed every empty cell,
+ * having crossed none, or any mixture — a cross is a client-side annotation
+ * that never crosses the wire, so all three finishes produce the IDENTICAL
+ * body (ADR-0032). `submittedCellSchema` is binairo's, reused: the "COMPLETE
+ * grid" invariant is the same one.
+ *
+ * The three `grid` members do NOT generalize into `z.array(z.number())`
+ * (:70-73) and the nonogram member does not generalize the other two: a
+ * length-free array would let a binairo client post 225 cells and a nonogram
+ * client post 63.
+ *
+ * THIS is the genuinely untrusted array, named here rather than left
+ * implicit: the play record's `entries` come off the player's own
+ * `localStorage`, but this `grid` is what an anonymous client POSTs. The
+ * `.refine` below runs AFTER zod has parsed every element — measured against
+ * the installed 4.4.3, `{success:false, ms:35, elementChecksRun:1000000}` on
+ * a 10^6-element array — so a length constraint is a REJECTION rule, never an
+ * allocation bound. That is the identical exposure the shipped
+ * `.length(64)`/`.length(81)` members already carry, so nothing regresses
+ * with this member. If the exposure is ever worth closing it is closed once,
+ * for all three members, upstream of the route — not by a per-game refine.
+ */
+export const nonogramCompletionRequestSchema = z.strictObject({
+  game: z.literal("nonogram"),
+  date: calendarDateString,
+  grid: z
+    .array(submittedCellSchema)
+    .refine((g) => NONOGRAM_CELL_COUNTS.includes(g.length), {
+      message: "grid length must be 25, 64, 100 or 225",
+    }),
+  elapsedMs: z.number().int().min(0).max(86_400_000),
+  hintsUsed: z.number().int().min(0).max(1),
+});
+
+export type NonogramCompletionRequest = z.infer<
+  typeof nonogramCompletionRequestSchema
+>;
+
 export const completionRequestSchema = z.discriminatedUnion("game", [
   binairoCompletionRequestSchema,
+  nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
 ]);
 

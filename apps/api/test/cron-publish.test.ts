@@ -1,6 +1,7 @@
 import {
   binairoDailyContentSchema,
   cronPublishResponseSchema,
+  nonogramDailyContentSchema,
   sudokuDailyContentSchema,
 } from "@miolos/core";
 import { sql } from "@miolos/db";
@@ -13,6 +14,7 @@ import {
 import { createTestDb } from "@miolos/db/testing";
 import { isWeekday } from "@miolos/games";
 import { validateBinairo } from "@miolos/games/binairo";
+import { validateNonogram } from "@miolos/games/nonogram";
 import { sudokuCriteriaForWeekday, validateSudoku } from "@miolos/games/sudoku";
 import { NextRequest } from "next/server";
 import {
@@ -98,12 +100,18 @@ async function rowsFor(game: string): Promise<DailyPuzzleRow[]> {
 // (plan 018 §15).
 //
 // Every `it` that triggers a top-up carries its OWN 30_000, and the
-// arithmetic is: a run now generates a full week for TWO games, and the
+// arithmetic is: a run now generates a full week for THREE games, and the
 // sudoku week always contains one tier-5 Sunday board (121 ms mean /
-// 346 ms max locally, plan 018 §19.6). Measured here, the heaviest test
-// (a cold two-game top-up, T-API-S1) costs 1 557 ms locally and the tests
-// that run the cron twice cost ~1 100 ms; at CI's ~4x that is ~6.2 s —
-// comfortably inside 30_000 and comfortably OUTSIDE vitest's 5 000 ms
+// 346 ms max locally, plan 018 §19.6). Nonogram adds ~34 ms once to build
+// all seven memoized pools plus well under 1 ms of generation per week
+// (0.0354 ms Mon 5x5 to 0.1902 ms Sun 15x15), so the third game moves the
+// total by a rounding error and the sudoku week still dominates — which is
+// why the constants below are unchanged rather than raised. Re-measured at
+// #25: run alone, three times, the heaviest `it` landed at 436, 620 and
+// 1 572 ms and the file at 9.6 s; run inside the full parallel `pnpm test`
+// the heaviest was 2 789 ms and the file 16.0 s. The spread is sudoku's
+// fresh random seeds and runner contention, not nonogram. At CI's ~4x the
+// worst of those is ~11 s — inside 30_000 and far OUTSIDE vitest's 5 000 ms
 // default, which is the flake commit 271a935 already paid for once.
 beforeAll(async () => {
   ctx = await createTestDb();
@@ -156,13 +164,14 @@ describe("GET /cron/publish auth (fail-closed, D15)", () => {
 });
 
 describe("GET /cron/publish top-up", () => {
-  it("T-API-S1: tops an empty database up to depth 7 for BOTH games, with validated, correctly-dated content", async () => {
+  it("T-API-S1: tops an empty database up to depth 7 for ALL THREE games, with validated, correctly-dated content", async () => {
     const response = await authorizedRun();
     expect(response.status).toBe(200);
     const body = cronPublishResponseSchema.parse(await response.json());
     expect(body).toEqual({
       games: {
         binairo: { generated: 7, depth: 7, failures: [], error: null },
+        nonogram: { generated: 7, depth: 7, failures: [], error: null },
         sudoku: { generated: 7, depth: 7, failures: [], error: null },
       },
     });
@@ -188,6 +197,23 @@ describe("GET /cron/publish top-up", () => {
       expect(row.seed).toBe(content.seed);
     }
 
+    const nonogramRows = await rowsFor("nonogram");
+    expect(nonogramRows.map((row) => row.date).sort()).toEqual(expectedDates);
+    for (const row of nonogramRows) {
+      const content = nonogramDailyContentSchema.parse(row.content);
+      const weekday = isoWeekdayOf(row.date);
+      expect(content.weekday).toBe(weekday);
+      if (!isWeekday(weekday)) {
+        throw new Error(`unreachable: bad weekday for ${row.date}`);
+      }
+      // validateNonogram takes ONE argument and derives its criteria from the
+      // puzzle's own weekday, so the narrowing above is what ties the verdict
+      // to the DATE rather than to the puzzle itself.
+      const verdict = validateNonogram({ ...content, weekday });
+      expect(verdict.ok).toBe(true);
+      expect(row.seed).toBe(content.seed);
+    }
+
     const sudokuRows = await rowsFor("sudoku");
     expect(sudokuRows.map((row) => row.date).sort()).toEqual(expectedDates);
     for (const row of sudokuRows) {
@@ -207,19 +233,21 @@ describe("GET /cron/publish top-up", () => {
     }
   }, 30_000);
 
-  it("T-API-S2: a second run generates nothing for either game (idempotent reconciliation)", async () => {
+  it("T-API-S2: a second run generates nothing for any game (idempotent reconciliation)", async () => {
     await authorizedRun();
     const response = await authorizedRun();
     expect(response.status).toBe(200);
     const body = cronPublishResponseSchema.parse(await response.json());
     expect(body.games.binairo.generated).toBe(0);
     expect(body.games.binairo.depth).toBe(7);
+    expect(body.games.nonogram.generated).toBe(0);
+    expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.generated).toBe(0);
     expect(body.games.sudoku.depth).toBe(7);
-    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(14);
+    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(21);
   }, 30_000);
 
-  it("T-API-S3: tops up a partial buffer of both games, existing rows untouched (D14)", async () => {
+  it("T-API-S3: tops up a partial buffer of every game, existing rows untouched (D14)", async () => {
     await authorizedRun();
     const today = await todaySaoPaulo(ctx.db);
     const removed = [addDays(today, 2), addDays(today, 5)];
@@ -237,11 +265,13 @@ describe("GET /cron/publish top-up", () => {
     const body = cronPublishResponseSchema.parse(await response.json());
     expect(body.games.binairo.generated).toBe(2);
     expect(body.games.binairo.depth).toBe(7);
+    expect(body.games.nonogram.generated).toBe(2);
+    expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.generated).toBe(2);
     expect(body.games.sudoku.depth).toBe(7);
 
     const after = await ctx.db.select().from(dailyPuzzles);
-    expect(after).toHaveLength(14);
+    expect(after).toHaveLength(21);
     for (const row of after) {
       const snapshot = before.get(`${row.game}:${row.date}`);
       if (snapshot !== undefined) {
@@ -268,6 +298,7 @@ describe("GET /cron/publish top-up", () => {
     expect(response.status).toBe(500);
     const body = cronPublishResponseSchema.parse(await response.json());
     expect(body.games.binairo.depth).toBe(3);
+    expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.depth).toBe(7);
   }, 30_000);
 
@@ -284,7 +315,25 @@ describe("GET /cron/publish top-up", () => {
     expect(response.status).toBe(500);
     const body = cronPublishResponseSchema.parse(await response.json());
     expect(body.games.binairo.depth).toBe(7);
+    expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.depth).toBe(3);
+  }, 30_000);
+
+  it("T-API-S4: 500 when NONOGRAM alone sits below the effective threshold", async () => {
+    // The third game inherits the same per-game gate: a healthy binairo and a
+    // healthy sudoku must never mask a drained nonogram.
+    await authorizedRun();
+    const today = await todaySaoPaulo(ctx.db);
+    await ctx.db.execute(
+      sql`update daily_puzzles set killed_at = now()
+            where game = 'nonogram' and date <= ${addDays(today, 3)}`,
+    );
+    const response = await authorizedRun();
+    expect(response.status).toBe(500);
+    const body = cronPublishResponseSchema.parse(await response.json());
+    expect(body.games.binairo.depth).toBe(7);
+    expect(body.games.nonogram.depth).toBe(3);
+    expect(body.games.sudoku.depth).toBe(7);
   }, 30_000);
 
   it("T-API-S4: a tuned-low depth is healthy for both games, not alarming (A3)", async () => {
@@ -294,6 +343,12 @@ describe("GET /cron/publish top-up", () => {
     const body = cronPublishResponseSchema.parse(await response.json());
     // 2 >= min(4, 2) — healthy by design, for every game.
     expect(body.games.binairo).toEqual({
+      generated: 2,
+      depth: 2,
+      failures: [],
+      error: null,
+    });
+    expect(body.games.nonogram).toEqual({
       generated: 2,
       depth: 2,
       failures: [],
@@ -311,6 +366,7 @@ describe("GET /cron/publish top-up", () => {
     await ctx.db.insert(remoteConfig).values({ key: "bufferDepth", value: 3 });
     await authorizedRun();
     expect(await rowsFor("binairo")).toHaveLength(3);
+    expect(await rowsFor("nonogram")).toHaveLength(3);
     expect(await rowsFor("sudoku")).toHaveLength(3);
   }, 30_000);
 
@@ -331,6 +387,12 @@ describe("GET /cron/publish top-up", () => {
       depth: 0,
       failures: [],
     });
+    expect(body.games.nonogram).toEqual({
+      generated: 7,
+      depth: 7,
+      failures: [],
+      error: null,
+    });
     expect(body.games.sudoku).toEqual({
       generated: 7,
       depth: 7,
@@ -338,6 +400,44 @@ describe("GET /cron/publish top-up", () => {
       error: null,
     });
     expect(await rowsFor("binairo")).toHaveLength(0);
+    expect(await rowsFor("nonogram")).toHaveLength(7);
+    expect(await rowsFor("sudoku")).toHaveLength(7);
+  }, 30_000);
+
+  it("T-API-S21: the NONOGRAM top-up throwing never drains the other two", async () => {
+    // The third game rides `runTopUp` unchanged — it is per-game and
+    // game-generic — so this is the proof that wiring it in bought the same
+    // isolation the other two have, and not a new single point of failure
+    // sitting between them in the serial order (plan 020 §9.2).
+    insertFailures.add("nonogram");
+
+    const response = await authorizedRun();
+
+    expect(response.status).toBe(500);
+    const body = cronPublishResponseSchema.parse(await response.json());
+    // The ORIGINAL failure, never `TopUpAbortedError`'s own message.
+    expect(body.games.nonogram.error).toContain(
+      "insert sabotaged for nonogram",
+    );
+    expect(body.games.nonogram).toMatchObject({
+      generated: 0,
+      depth: 0,
+      failures: [],
+    });
+    expect(body.games.binairo).toEqual({
+      generated: 7,
+      depth: 7,
+      failures: [],
+      error: null,
+    });
+    expect(body.games.sudoku).toEqual({
+      generated: 7,
+      depth: 7,
+      failures: [],
+      error: null,
+    });
+    expect(await rowsFor("nonogram")).toHaveLength(0);
+    expect(await rowsFor("binairo")).toHaveLength(7);
     expect(await rowsFor("sudoku")).toHaveLength(7);
   }, 30_000);
 
@@ -380,9 +480,12 @@ describe("GET /cron/publish top-up", () => {
       const parsed: unknown = JSON.parse(line);
       logged.push(parsed);
     }
-    expect(logged).toHaveLength(2);
-    // Order is fixed: the cheap game first, so a sudoku CPU overrun can
-    // never starve binairo (plan 018 §7.2).
+    expect(logged).toHaveLength(3);
+    // Order is fixed and COST-ASCENDING — binairo (~7 ms) → nonogram
+    // (~34-80 ms) → sudoku (~150 ms) — so a CPU overrun in an expensive game
+    // can never starve a cheaper one (plan 020 P7). Appending the new game
+    // last would have left these indices untouched; that is a smaller diff,
+    // not a principle.
     expect(logged[0]).toMatchObject({
       event: "cron-publish",
       game: "binairo",
@@ -391,6 +494,13 @@ describe("GET /cron/publish top-up", () => {
       failures: [],
     });
     expect(logged[1]).toMatchObject({
+      event: "cron-publish",
+      game: "nonogram",
+      generated: 7,
+      depth: 7,
+      failures: [],
+    });
+    expect(logged[2]).toMatchObject({
       event: "cron-publish",
       game: "sudoku",
       generated: 7,

@@ -64,10 +64,12 @@ export {
   calendarDateString,
   completionRequestSchema,
   completionResponseSchema,
+  nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
   type ApiErrorResponse,
   type BinairoCompletionRequest,
   type CompletionRequest,
   type CompletionResponse,
+  type NonogramCompletionRequest,
   type SudokuCompletionRequest,
 } from "./contracts/completion";

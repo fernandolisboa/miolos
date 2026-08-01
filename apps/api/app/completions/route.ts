@@ -3,6 +3,7 @@ import {
   binairoDailyContentSchema,
   completionRequestSchema,
   completionResponseSchema,
+  nonogramDailyContentSchema,
   sudokuDailyContentSchema,
   type CompletionRequest,
 } from "@miolos/core";
@@ -74,7 +75,7 @@ function completionResponse(
  * route and keyed on `CompletionRequest["game"]`, not `Game`: Termo has no
  * grid (#27), so a core-level "get the solution" abstraction would be wrong
  * within two tickets. Exhaustive over the request union's discriminator, so
- * #25/#27 get a compile error here instead of a silent fallthrough — and
+ * #27 gets a compile error here instead of a silent fallthrough — and
  * without it a sudoku row would reach `binairoDailyContentSchema.parse`,
  * throw a ZodError and 500 the route the moment the request union widened.
  *
@@ -87,6 +88,18 @@ function storedSolution(
   switch (game) {
     case "binairo":
       return binairoDailyContentSchema.parse(content).solution;
+    case "nonogram":
+      // `NonogramReveal.solution` is [row][col] booleans — the picture itself
+      // (nonogram/types.ts:5-6,29). The judge compares a FLAT numeric grid, so
+      // flatten row-major and map true -> 1. That mapping is the wire contract
+      // (ADR-0032): 1 = filled, 0 = not filled. A crossed cell and an
+      // untouched cell are both 0 BY CONSTRUCTION, so a player who crossed
+      // every empty cell and one who crossed none post the identical body —
+      // there is no leniency here to get wrong, and no third state ever
+      // reaches the server.
+      return nonogramDailyContentSchema
+        .parse(content)
+        .reveal.solution.flatMap((row) => row.map((cell) => (cell ? 1 : 0)));
     case "sudoku":
       return sudokuDailyContentSchema.parse(content).solution;
   }
@@ -192,6 +205,21 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const solution = storedSolution(body.game, row.content);
+
+  // Binairo pins .length(64) and sudoku .length(81), so for those two the
+  // request schema already proves this and the check can never fire. A
+  // nonogram grid is 25/64/100/225 cells and the STORED row decides which,
+  // so the wire length is checked against THIS row's solution: the loop below
+  // iterates `solution.entries()`, and without this a LONGER grid whose
+  // prefix matched would score zero mismatches and be recorded (plan 020 N7).
+  // Comparing two lengths reveals nothing about the picture, so this sits
+  // outside the constant-work comparison deliberately. 422, not 400: the body
+  // is well-formed, it just is not this puzzle — and `TERMINAL_STATUSES`
+  // already treats 422 as terminal, so the client record settles rather than
+  // retrying forever.
+  if (body.grid.length !== solution.length) {
+    return errorResponse(422, "grid-mismatch");
+  }
 
   // Constant-work comparison — every cell is examined even after the first
   // mismatch. Neither grid game has a secret worth a timing channel, but
