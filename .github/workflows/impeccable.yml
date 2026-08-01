@@ -1,0 +1,49 @@
+name: Impeccable
+
+permissions:
+  contents: read
+
+on:
+  deployment_status:
+
+jobs:
+  detect:
+    # Only successful web previews. Environment string uses an EN DASH (U+2013),
+    # exactly as vercel[bot] creates it: "Preview – miolos-web". Production
+    # deployments ("Production – …") and the api project are filtered out here.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Preview – miolos-web'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        # For deployment_status, GITHUB_SHA is the deployed commit (GitHub docs),
+        # so the default checkout gives us the PR's own .impeccable/config.json.
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6 — version comes from packageManager
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm exec puppeteer browsers install chrome
+      - name: impeccable detect — desktop 1440x900
+        env:
+          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: >-
+          pnpm exec impeccable detect
+          "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          --viewport 1440x900
+      - name: impeccable detect — mobile 390x844
+        env:
+          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: >-
+          pnpm exec impeccable detect
+          "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          --viewport 390x844
