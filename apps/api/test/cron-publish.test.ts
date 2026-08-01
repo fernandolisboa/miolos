@@ -9,6 +9,7 @@ import {
   todaySaoPaulo,
 } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
+import { isWeekday } from "@miolos/games";
 import { validateBinairo } from "@miolos/games/binairo";
 import { NextRequest } from "next/server";
 import {
@@ -113,10 +114,10 @@ describe("GET /cron/publish top-up", () => {
       const content = binairoDailyContentSchema.parse(row.content);
       const weekday = isoWeekdayOf(row.date);
       expect(content.weekday).toBe(weekday);
-      const verdict = validateBinairo(
-        content,
-        weekday as 1 | 2 | 3 | 4 | 5 | 6 | 7,
-      );
+      if (!isWeekday(weekday)) {
+        throw new Error(`unreachable: bad weekday for ${row.date}`);
+      }
+      const verdict = validateBinairo(content, weekday);
       expect(verdict.approved).toBe(true);
       expect(row.seed).toBe(content.seed);
     }
