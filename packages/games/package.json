@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./binairo": "./src/binairo/index.ts",
     "./nonogram": "./src/nonogram/index.ts",
+    "./sudoku": "./src/sudoku/index.ts",
     "./termo": "./src/termo/index.ts"
   },
   "scripts": {
