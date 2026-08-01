@@ -1,0 +1,56 @@
+# Buffer-depth alerting (issue #17 AC 3): reads the DB-derived depth via
+# the public /buffer-depth endpoint — never cron exit codes — and pages
+# by opening/bumping a `buffer-alert` GitHub issue (the notification
+# channel for a solo phone-driven operator). Zero marketplace actions on
+# purpose: nothing to SHA-pin (#41 convention satisfied by construction);
+# curl/jq/gh are preinstalled on ubuntu-latest and gh works checkout-free.
+name: Buffer alert
+permissions:
+  issues: write
+on:
+  schedule:
+    # After the 06:00-06:59 UTC publish-cron window (Hobby-plan jitter).
+    - cron: "30 7 * * *"
+  workflow_dispatch:
+    inputs:
+      force_shallow:
+        description: "Treat the response as shallow regardless of the flag (end-to-end alert drill)"
+        type: boolean
+        default: false
+env:
+  API_ORIGIN: https://api.miolos.app
+  REPO: fernandolisboa/miolos
+jobs:
+  check-depth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read buffer depth
+        # -fsS: an HTTP error fails the job — a red scheduled run is
+        # itself a notification.
+        run: |
+          raw="$(curl -fsS "$API_ORIGIN/buffer-depth")"
+          # GITHUB_ENV is line-oriented: a newline in the body would smuggle
+          # extra NAME=value lines into later steps (env-var injection from
+          # the polled endpoint). jq re-serializes the FIRST JSON document
+          # onto exactly one line and fails the job on non-JSON, so only
+          # validated compact JSON is ever persisted.
+          body="$(printf '%s' "$raw" | jq -cen 'input')"
+          echo "buffer-depth response: $body"
+          echo "BODY=$body" >> "$GITHUB_ENV"
+          echo "SHALLOW=$(printf '%s' "$body" | jq -r .shallow)" >> "$GITHUB_ENV"
+      - name: Open or bump the alert issue
+        if: env.SHALLOW == 'true' || inputs.force_shallow == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          depths="$(printf '%s' "$BODY" | jq -c .depths)"
+          existing="$(gh issue list -R "$REPO" --label buffer-alert --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" -R "$REPO" --body "Buffer still shallow: \`$BODY\`"
+          else
+            gh issue create -R "$REPO" --label buffer-alert \
+              --title "Buffer shallow: $depths" \
+              --body "GET /buffer-depth reported: \`$BODY\`
+
+          The daily buffer is below the effective alert threshold (or this is a forced drill run). Check the publish cron's recent runs on Vercel and docs/adr/0024 for the operational semantics."
+          fi

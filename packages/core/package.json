@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -14,6 +15,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@miolos/games": "workspace:*",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
   }

@@ -1,4 +1,17 @@
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { GAMES } from "@miolos/core";
+import { sql } from "drizzle-orm";
+import {
+  bigint,
+  check,
+  date,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 /**
  * All timestamps are timestamptz with DB-side defaults — the database clock
@@ -55,3 +68,60 @@ export const sessions = pgTable(
   },
   (t) => [index("sessions_user_id_idx").on(t.userId)],
 );
+
+/**
+ * The daily-puzzle buffer (ADR-0010): pre-generated, pre-validated,
+ * future-dated rows — "the buffer rows are precisely the 'unpublished
+ * content' ADR-0004 protects. They exist server-side only." Every read
+ * goes through the wall in `published.ts` (`published_at <= now() AND
+ * killed_at IS NULL`); the raw table is exported only from
+ * `@miolos/db/publishing` (ADR-0024, plan 014 D16).
+ *
+ * - Composite PK (game, date): the ON CONFLICT idempotency anchor for the
+ *   cron's top-up, the "one puzzle per game per day" product statement in
+ *   schema form, and the covering index for the hot read (D11).
+ * - `date` is the America/Sao_Paulo calendar day, string mode so no JS
+ *   Date ever mangles it through a timezone.
+ * - `seed` is a random uint32 chosen at generation time (D2) — bigint
+ *   because Postgres integer is signed-31-bit. Never derived from
+ *   (game, date): a derivable seed makes future dailies precomputable.
+ * - `content` is the full validated engine output INCLUDING the solution
+ *   (D1); rows are immutable once inserted (D14) and reads strip inside
+ *   the wall.
+ * - `published_at` is the SP midnight of `date` as an instant, derived
+ *   DB-side in the INSERT expression (D8) — Postgres tzdata owns the
+ *   conversion; no JS-constructed date ever appears in an insert.
+ * - `killed_at` is the kill switch (null = alive), set via sql`now()`
+ *   only — the timestamp is the evidence (ADR-0022 style).
+ */
+export const dailyPuzzles = pgTable(
+  "daily_puzzles",
+  {
+    game: text("game", { enum: GAMES }).notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    seed: bigint("seed", { mode: "number" }).notNull(),
+    content: jsonb("content").notNull(),
+    publishedAt: timestamptz("published_at").notNull(),
+    killedAt: timestamptz("killed_at"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.game, t.date] }),
+    check(
+      "daily_puzzles_game_check",
+      sql`${t.game} in ('binairo', 'sudoku', 'nonogram', 'termo')`,
+    ),
+  ],
+);
+
+/**
+ * Remote config (ADR-0025): key/jsonb rows merged and Zod-parsed through
+ * `remoteConfigSchema` (@miolos/core), in-code defaults when empty.
+ * First tunable: bufferDepth (7). Tuning is one INSERT/UPDATE — no
+ * deploy. Reachable only via `@miolos/db/publishing` (ADR-0024).
+ */
+export const remoteConfig = pgTable("remote_config", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+});
