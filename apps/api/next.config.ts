@@ -7,7 +7,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@miolos/core"],
+  transpilePackages: ["@miolos/core", "@miolos/db"],
   poweredByHeader: false,
   headers: () =>
     Promise.resolve([
