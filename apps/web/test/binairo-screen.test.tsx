@@ -835,7 +835,9 @@ describe("re-entering a finished day (T-WEB-9c)", () => {
 
     // The stamp's own composed label, not `getByText`: the day card repeats
     // the same time in the Binairo chip.
-    const stamped = messages.games.binairo.conclusion.stampAria(
+    const stamped = messages.conclusion.stampAria(
+      messages.games.binairo.conclusion.title,
+
       formatElapsed(record.elapsedMs),
       record.hintsUsed,
     );

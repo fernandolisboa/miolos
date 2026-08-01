@@ -662,7 +662,9 @@ describe("closing the grid (T-WEB-S29)", () => {
 
     const { container } = render(<SudokuScreen daily={DAILY} />);
 
-    const stamped = messages.games.sudoku.conclusion.stampAria(
+    const stamped = messages.conclusion.stampAria(
+      messages.games.sudoku.conclusion.title,
+
       formatElapsed(record.elapsedMs),
       record.hintsUsed,
     );

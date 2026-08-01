@@ -106,7 +106,11 @@ describe("the stamp (T-WEB-17)", () => {
 
     expect(
       screen.getByLabelText(
-        messages.games.binairo.conclusion.stampAria(ELAPSED, 0),
+        messages.conclusion.stampAria(
+          messages.games.binairo.conclusion.title,
+          ELAPSED,
+          0,
+        ),
       ),
     ).toBeInTheDocument();
     expect(
@@ -439,7 +443,11 @@ describe("the record snapshot is keyed on {game, date} (T-WEB-S20)", () => {
       />,
     );
     expect(screen.getByRole("img")).toHaveAccessibleName(
-      messages.games.binairo.conclusion.stampAria(ELAPSED, 0),
+      messages.conclusion.stampAria(
+        messages.games.binairo.conclusion.title,
+        ELAPSED,
+        0,
+      ),
     );
     binairo.unmount();
 
@@ -453,7 +461,11 @@ describe("the record snapshot is keyed on {game, date} (T-WEB-S20)", () => {
 
     const stamp = screen.getByRole("img");
     expect(stamp).toHaveAccessibleName(
-      messages.games.sudoku.conclusion.stampAria(SUDOKU_ELAPSED, 0),
+      messages.conclusion.stampAria(
+        messages.games.sudoku.conclusion.title,
+        SUDOKU_ELAPSED,
+        0,
+      ),
     );
     expect(stamp.textContent).toContain(SUDOKU_ELAPSED);
     expect(stamp.textContent).not.toContain(ELAPSED);
