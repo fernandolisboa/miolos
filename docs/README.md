@@ -43,6 +43,7 @@ Current:
 | `plans/009-issue-15-plan-anonymous-identity.md` | Implementation plan for #15 (anonymous identity: users/sessions schema, `POST /session`, web bootstrap) |
 | `plans/010-issue-16-plan-binairo-engine.md` | Implementation plan for #16 (Binairo engine) |
 | `plans/011-issue-22-plan-sudoku-engine.md` | Implementation plan for #22 (Sudoku engine) |
+| `plans/012-issue-24-plan-nonogram-engine.md` | Implementation plan for #24 (Nonogram engine) |
 | `plans/013-issue-26-plan-termo-engine.md` | Implementation plan for #26 (Termo engine and word-list harness) |
 
 ## Language
