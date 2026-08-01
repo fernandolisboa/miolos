@@ -24,7 +24,7 @@
           "https://miolos-*.vercel.app/**"
         ],
         "createdAt": "2026-08-01T01:24:34.610Z",
-        "reason": "By-design: termo kicker accent-termo #c08a1e on paper-card matches the winning Atelie frames byte-identically (PR #40 dismissal). Value-level ignore impossible: impeccable extracts no value for this rule. Residual risk accepted: new low-contrast findings on scanned app pages pass green."
+        "reason": "By-design: termo kicker accent-termo #c08a1e on paper-card matches the winning Atelie frames byte-identically (PR #40 dismissal). Value-level ignore impossible: impeccable extracts no value for this rule. Residual risk accepted: new low-contrast findings on scanned app pages pass green. Narrow back to value-level when impeccable ships value extraction for this rule — tracked in #51."
       },
       {
         "rule": "cream-palette",
@@ -35,7 +35,7 @@
           "https://miolos-*.vercel.app/**"
         ],
         "createdAt": "2026-08-01T01:24:42.392Z",
-        "reason": "By-design: cream page background (paper-bg token) is the recorded Atelie design direction (DESIGN.md, docs/design/002). Value-level ignore impossible: impeccable extracts no value for this rule. Residual risk accepted: palette-rule findings on scanned app pages pass green."
+        "reason": "By-design: cream page background (paper-bg token) is the recorded Atelie design direction (DESIGN.md, docs/design/002; PR #40 dismissal). Value-level ignore impossible: impeccable extracts no value for this rule. Residual risk accepted: palette-rule findings on scanned app pages pass green. Narrow back to value-level when impeccable ships value extraction for this rule — tracked in #51."
       }
     ]
   }
