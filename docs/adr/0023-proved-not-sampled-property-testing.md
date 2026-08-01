@@ -1,4 +1,4 @@
-# 0021 — Generator invariants: the "proved, not sampled" test pattern
+# 0023 — Generator invariants: the "proved, not sampled" test pattern
 
 Status: accepted
 Date: 2026-07-31
