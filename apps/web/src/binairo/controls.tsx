@@ -26,32 +26,32 @@ export function Controls({
       <button
         type="button"
         className={`${styles.control} ${styles.controlDigit}${paintingZero ? ` ${styles.controlDigitActive}` : ""}`}
-        aria-label={messages.binairo.controls.zeroAria}
+        aria-label={messages.games.binairo.play.controls.zeroAria}
         aria-pressed={paintingZero}
         onClick={() => onToggleMode({ kind: "paint", value: 0 })}
       >
-        {messages.binairo.controls.zero}
+        {messages.games.binairo.play.controls.zero}
       </button>
       <button
         type="button"
         className={`${styles.control} ${styles.controlDigit}${paintingOne ? ` ${styles.controlDigitActive}` : ""}`}
-        aria-label={messages.binairo.controls.oneAria}
+        aria-label={messages.games.binairo.play.controls.oneAria}
         aria-pressed={paintingOne}
         onClick={() => onToggleMode({ kind: "paint", value: 1 })}
       >
-        {messages.binairo.controls.one}
+        {messages.games.binairo.play.controls.one}
       </button>
       <button
         type="button"
         className={`${styles.control} ${styles.controlErase}${erasing ? ` ${styles.controlEraseActive}` : ""}`}
-        aria-label={messages.binairo.controls.eraseAria}
+        aria-label={messages.games.binairo.play.controls.eraseAria}
         aria-pressed={erasing}
         onClick={() => onToggleMode({ kind: "erase" })}
       >
-        {messages.binairo.controls.erase}
+        {messages.games.binairo.play.controls.erase}
       </button>
       <span className={styles.affordance}>
-        {messages.binairo.controls.affordance}
+        {messages.games.binairo.play.controls.affordance}
       </span>
     </div>
   );

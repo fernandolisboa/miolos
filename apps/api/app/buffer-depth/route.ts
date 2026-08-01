@@ -14,16 +14,26 @@ export const dynamic = "force-dynamic";
  * scheduled poller reads `shallow`, never the HTTP status; cron exit
  * codes are explicitly not the signal. `threshold` is the effective one:
  * min(BUFFER_ALERT_THRESHOLD, configured depth) (plan 014 A3).
+ *
+ * `shallow` is the OR ACROSS GAMES (plan 018 S16). The failure mode this
+ * shape exists to prevent is specific and silent: reporting `depths.sudoku`
+ * while deriving `shallow` from binairo alone would REPORT a drained sudoku
+ * buffer and never PAGE on it, because
+ * `.github/workflows/buffer-alert.yml` reads `jq -r .shallow` and nothing
+ * else.
  */
 export async function GET(): Promise<Response> {
   const db = getDb();
   const config = await getRemoteConfig(db);
-  const binairo = await bufferDepth(db, "binairo");
+  const depths = {
+    binairo: await bufferDepth(db, "binairo"),
+    sudoku: await bufferDepth(db, "sudoku"),
+  };
   const threshold = effectiveThreshold(config.bufferDepth);
   const body = bufferDepthResponseSchema.parse({
-    depths: { binairo },
+    depths,
     threshold,
-    shallow: binairo < threshold,
+    shallow: Object.values(depths).some((depth) => depth < threshold),
   });
   return Response.json(body, { headers: corsHeaders() });
 }

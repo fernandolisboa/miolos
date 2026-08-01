@@ -25,7 +25,7 @@ export function TimerReadout({
     <span
       className={className}
       role="timer"
-      aria-label={messages.binairo.timerAria(formatted)}
+      aria-label={messages.play.timerAria(formatted)}
     >
       {formatted}
     </span>

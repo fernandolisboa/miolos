@@ -1,20 +1,16 @@
 /**
- * The React seam over the pure reducer (plan 017 §8.3, §9): timer
- * lifecycle, persistence and the sync triggers. Everything decidable
- * without React already lives in `state.ts`, `hint.ts`, `play-record.ts`
- * and `sync.ts` — this file only wires them to mount, to the document's
- * visibility and to the player's pointer.
+ * The React seam over the pure reducer (plan 017 §8.3, §9): the solution
+ * memo, the input callbacks and the game-specific half of the lifecycle's
+ * contract. Everything decidable without React lives in `state.ts` and the
+ * shared `../play/*` modules; everything a play screen does that is not
+ * gameplay lives in `usePlayLifecycle` (ADR-0029, plan 018 §5.4).
  *
- * Two rules hold throughout, and both are load-bearing:
- * - **Nothing here runs during render** (D28). `localStorage` is read once,
- *   in the mount effect; `Date.now()` appears only inside effects and event
- *   handlers, never in a value the first paint depends on. That is what
- *   makes the server snapshot and the first client paint identical.
- * - **The record is written by exactly one function**, `buildRecord`, so
- *   the queue's shape cannot drift between the "still playing" write and
- *   the "solved" one (§9.1).
+ * The one rule that survives the extraction unchanged: **nothing here runs
+ * during render** (D28). `localStorage` is read once, in the lifecycle's
+ * mount effect; `Date.now()` appears only inside effects and event
+ * handlers, never in a value the first paint depends on.
  */
-import type { DailyPuzzleResponse } from "@miolos/core";
+import type { DailyBinairoResponse } from "@miolos/core";
 import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
 import {
   useCallback,
@@ -25,25 +21,23 @@ import {
   useState,
 } from "react";
 
-import type { BinairoHint } from "./hint";
-import { nextHint } from "./hint";
+import type { Hint } from "../play/grid-hint";
+import { nextHint } from "../play/grid-hint";
+import type { BinairoPlayRecord } from "../play/play-record";
+import { countFilled } from "../play/progress";
+import { elapsedMs } from "../play/timer";
+import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import {
-  prunePlayRecords,
-  readPlayRecord,
-  writePlayRecord,
-  type PlayRecord,
-} from "./play-record";
-import {
-  elapsedMs,
   initPlayState,
   isSolvedGrid,
   playReducer,
   type CellValue,
   type PaintMode,
   type PlayState,
-  type TimerState,
 } from "./state";
-import { flushPendingCompletions, startCompletionSync } from "./sync";
+
+/** The hint this game reveals — a cell value, so `0 | 1`. */
+export type BinairoHint = Hint<CellValue>;
 
 /** Everything the play composition needs, and nothing it does not. */
 export interface BinairoPlay {
@@ -63,7 +57,7 @@ export interface BinairoPlay {
   readonly revealHint: () => void;
 }
 
-export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
+export function useBinairoPlay(daily: DailyBinairoResponse): BinairoPlay {
   const [state, dispatch] = useReducer(playReducer, daily, initPlayState);
   const [hintKind, setHintKind] = useState<BinairoHint["kind"] | null>(null);
 
@@ -74,13 +68,7 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
     stateRef.current = state;
   });
 
-  // A day that was already finished before this mount must never re-post:
-  // the row is write-once server-side (D15), and re-queueing it would
-  // resurrect a `pendingSync` the flush already settled (§12.3 re-entry).
-  const restoredConcluded = useRef(false);
-  const queued = useRef(false);
-
-  const { date, givens, entries, timer, status, hydrated } = state;
+  const { givens, entries, timer, status } = state;
   const hintsUsed = state.hint.used;
   const elapsed = elapsedMs(timer, state.now);
   const filled = countFilled(givens, entries);
@@ -90,157 +78,18 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
   // assumed away: it simply means no hint is available.
   const solution = useMemo(() => solveBinairo(givens), [givens]);
 
-  // The grid is closed AND the clock is frozen. Gating the conclusion on
-  // both is what keeps the stamp from rendering a time that the pause
-  // dispatch below is about to correct by up to one tick.
-  const solvedAndFrozen = status === "solved" && timer.runningSince === null;
-
-  useEffect(() => {
-    const record = readPlayRecord(date);
-    restoredConcluded.current = record?.concluded === true;
-    dispatch({ type: "restore", record, now: Date.now() });
-    // The SERVER's date is the pruning boundary (ADR-0010): pruning against
-    // a wrong client clock would delete a queue that was about to flush.
-    prunePlayRecords(date);
-
-    // "On mount of either route" is one of the five sync triggers (§9.2);
-    // `online` and `visibilitychange` come with it. The conclusion registers
-    // the same set for the bookmarked route — the module-level guards in
-    // sync.ts make the overlap free.
-    const stopSync = startCompletionSync();
-
-    if (record?.concluded === true) {
-      // A finished day never restarts its clock, and never invites a replay.
-      return stopSync;
-    }
-
-    const pause = () => dispatch({ type: "pause", now: Date.now() });
-    const resume = () => dispatch({ type: "resume", now: Date.now() });
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        resume();
-      } else {
-        pause();
-      }
-    };
-    const onHide = () => {
-      // Persist here rather than waiting for the effect below: a real
-      // navigation away may never run another effect, and the record is the
-      // only copy of the session. `playReducer` is pure, so computing the
-      // paused snapshot and dispatching the same action cannot diverge.
-      const now = Date.now();
-      const paused = playReducer(stateRef.current, { type: "pause", now });
-      stateRef.current = paused;
-      dispatch({ type: "pause", now });
-      if (paused.hydrated && paused.status === "playing") {
-        persistUnlessConcluded(toRecord(paused, now));
-      }
-    };
-    // `pageshow` without a paired `visibilitychange` is the bfcache case: on
-    // the common iOS back-navigation an unpaired timer would stay paused for
-    // the rest of the session and under-report the whole remaining play time.
-    // Gated exactly like the initial resume below, for the same reason: a
-    // document that LOADS hidden (a Cmd/middle-click from Hoje) gets a
-    // `pageshow` with no `visibilitychange` behind it, and an ungated
-    // handler would count every minute until the player opens the tab —
-    // permanently, because `completions` is write-once (ADR-0026, finding
-    // `pageshow-resumes-timer-in-a-hidden-tab`). A bfcache restore is
-    // visible by definition, so the case this listener exists for is
-    // untouched.
-    const onShow = () => {
-      if (
-        document.visibilityState === "visible" &&
-        stateRef.current.status === "playing"
-      ) {
-        resume();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pagehide", onHide);
-    window.addEventListener("pageshow", onShow);
-    // Derived, not assumed: resuming a tab the player cannot see would count
-    // time they never spent.
-    if (document.visibilityState === "visible") {
-      resume();
-    }
-
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pagehide", onHide);
-      window.removeEventListener("pageshow", onShow);
-      stopSync();
-    };
-  }, [date]);
-
-  // `tick` only nudges a re-render — the displayed value always comes from
-  // `elapsedMs(timer, now)` — so a throttled background tab cannot drift it.
-  // It stops the moment the grid closes: a frozen clock has nothing to say.
-  useEffect(() => {
-    if (!hydrated || status !== "playing") {
-      return;
-    }
-    const interval = setInterval(
-      () => dispatch({ type: "tick", now: Date.now() }),
-      1000,
-    );
-    return () => clearInterval(interval);
-  }, [hydrated, status]);
-
-  // Freeze the clock on the transition. The reducer cannot do it itself:
-  // `tap` carries no `now`, and a reducer may never read one (§8.1).
-  useEffect(() => {
-    if (status === "solved" && timer.runningSince !== null) {
-      dispatch({ type: "pause", now: Date.now() });
-    }
-  }, [status, timer]);
-
-  // Persist on every entry change, on pause and on resume (§9.1). Solved
-  // states are excluded on purpose: the write below is their single,
-  // final one, and re-running this effect afterwards would resurrect a
-  // `pendingSync` that the flush had already settled.
-  useEffect(() => {
-    if (!hydrated || status !== "playing") {
-      return;
-    }
-    persistUnlessConcluded(
-      buildRecord({
-        date,
-        givens,
-        entries,
-        timer,
-        hintsUsed,
-        solved: false,
-        now: Date.now(),
-      }),
-    );
-  }, [hydrated, status, date, givens, entries, timer, hintsUsed]);
-
-  // The completion, written once and handed to the queue (§9.2). The record
-  // carries the solved MERGED grid, so the flush needs neither the givens
-  // nor a mounted board — which is what makes "syncs on reconnect" true.
-  useEffect(() => {
-    if (!solvedAndFrozen || restoredConcluded.current || queued.current) {
-      return;
-    }
-    queued.current = true;
-    const completion = buildRecord({
-      date,
-      givens,
-      entries,
-      timer,
-      hintsUsed,
-      solved: true,
-      now: Date.now(),
-    });
-    writePlayRecord(completion);
-    // Handed to the flush directly, not left for it to find: where
-    // `localStorage` is unavailable (DOM storage off in an Android WebView,
-    // site data blocked) `writePlayRecord` is a no-op and the queue reads
-    // back empty, so the completion would never be posted at all — the day
-    // lost for the streak while the conclusion claimed it was saved
-    // (finding `completion-lost-when-localstorage-is-unavailable`).
-    void flushPendingCompletions(completion);
-  }, [solvedAndFrozen, date, givens, entries, timer, hintsUsed]);
+  usePlayLifecycle({
+    game: "binairo",
+    state,
+    reduce: playReducer,
+    dispatch,
+    buildRecord,
+    // `state.now` is deliberately NOT here (plan 018 §5.4, landmine 21):
+    // `tick` returns a new state object every second while these three keep
+    // their identities, so including it would write a readPlayRecord + Zod
+    // parse + JSON.stringify + setItem cycle once a second.
+    persistDeps: [givens, entries, hintsUsed],
+  });
 
   const tapCell = useCallback((index: number) => {
     dispatch({ type: "tap", index });
@@ -265,9 +114,10 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
     if (current.hint.used >= current.hint.free || current.status === "solved") {
       return;
     }
-    // `nextHint` is deterministic (hint.ts), so selecting here and letting
-    // the reducer select again cannot disagree. Reading the kind matters:
-    // once the cell is revealed, a correction and a fill are indistinguishable.
+    // `nextHint` is deterministic (grid-hint.ts), so selecting here and
+    // letting the reducer select again cannot disagree. Reading the kind
+    // matters: once the cell is revealed, a correction and a fill are
+    // indistinguishable.
     const hint = nextHint(solution, current.givens, current.entries);
     if (hint === null) {
       return;
@@ -290,19 +140,6 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
   };
 }
 
-function countFilled(
-  givens: BinairoGrid,
-  entries: readonly CellValue[],
-): number {
-  let filled = 0;
-  for (const [index, given] of givens.entries()) {
-    if ((given ?? entries[index] ?? null) !== null) {
-      filled += 1;
-    }
-  }
-  return filled;
-}
-
 function sameMode(current: PaintMode, next: PaintMode): boolean {
   if (current.kind !== next.kind) {
     return false;
@@ -313,65 +150,36 @@ function sameMode(current: PaintMode, next: PaintMode): boolean {
 }
 
 /**
- * Persist, unless the stored record for that day is already a completion.
- * BOTH writers go through here, because both write the same key and neither
- * is rarer than the other: a second mounted /binairo is still `playing`, so
- * its next entry change AND the `pagehide` its own "voltar" link fires would
- * each overwrite the record another tab has queued — clearing `pendingSync`
- * and dropping the solved `grid`, i.e. the only copy of a completion the
- * server has not acknowledged yet (findings
- * `in-progress-write-clobbers-a-queued-completion` and
- * `pagehide-write-still-clobbers-a-queued-completion`).
+ * The one place a Binairo `PlayRecord` is constructed (§9.1), handed to the
+ * lifecycle hook so both the in-progress write and the closing one go
+ * through it. `grid` is written only for a solved board, because that is the
+ * only shape the completion POST accepts and the only one the flush can
+ * rebuild a body from. `elapsedMs` is clamped by `writePlayRecord`, never
+ * rejected — a rejecting cap would discard a player's grid rather than a
+ * suspicious number.
+ *
+ * `closed` rather than `solved`: the lifecycle's terminal predicate is "the
+ * game is CLOSED" (ADR-0029 consequence (e)). For Binairo the two coincide,
+ * because its `status` union has no `lost`.
  */
-function persistUnlessConcluded(record: PlayRecord): void {
-  if (readPlayRecord(record.date)?.concluded === true) {
-    return;
-  }
-  writePlayRecord(record);
-}
-
-/** `buildRecord` from a whole state — the `pagehide` path's shorthand. */
-function toRecord(state: PlayState, now: number): PlayRecord {
-  return buildRecord({
-    date: state.date,
-    givens: state.givens,
-    entries: state.entries,
-    timer: state.timer,
-    hintsUsed: state.hint.used,
-    solved: state.status === "solved",
-    now,
-  });
-}
-
-/**
- * The one place a `PlayRecord` is constructed (§9.1). `grid` is written
- * only for a solved board, because that is the only shape the completion
- * POST accepts and the only one the flush can rebuild a body from.
- * `elapsedMs` is clamped by `writePlayRecord`, never rejected — a rejecting
- * cap would discard a player's grid rather than a suspicious number.
- */
-function buildRecord(input: {
-  readonly date: string;
-  readonly givens: BinairoGrid;
-  readonly entries: readonly CellValue[];
-  readonly timer: TimerState;
-  readonly hintsUsed: number;
-  readonly solved: boolean;
-  readonly now: number;
-}): PlayRecord {
-  const merged: BinairoGrid = input.givens.map(
-    (given, index) => given ?? input.entries[index] ?? null,
+function buildRecord(
+  state: PlayState,
+  now: number,
+  closed: boolean,
+): BinairoPlayRecord {
+  const merged: BinairoGrid = state.givens.map(
+    (given, index) => given ?? state.entries[index] ?? null,
   );
   return {
     v: 1,
     game: "binairo",
-    date: input.date,
-    entries: [...input.entries],
-    grid: input.solved && isSolvedGrid(merged) ? [...merged] : undefined,
-    elapsedMs: elapsedMs(input.timer, input.now),
-    hintsUsed: input.hintsUsed,
-    concluded: input.solved,
-    pendingSync: input.solved,
+    date: state.date,
+    entries: [...state.entries],
+    grid: closed && isSolvedGrid(merged) ? [...merged] : undefined,
+    elapsedMs: elapsedMs(state.timer, now),
+    hintsUsed: state.hint.used,
+    concluded: closed,
+    pendingSync: closed,
     syncOutcome: "pending",
   };
 }

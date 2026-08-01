@@ -22,10 +22,20 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-/** A stylesheet under `apps/web/src/binairo/`, comments stripped. */
-export function stylesheet(name: string): string {
+/**
+ * A stylesheet anywhere under `apps/web/`, by its repo-relative path,
+ * comments stripped.
+ *
+ * The path argument is not decoration: CSS Modules hash class names PER
+ * FILE, so the play screen's rules now live in two sheets (the shared
+ * `src/play/screen.module.css` and each game's own board module) and the
+ * assertions below have to read whichever one actually declares the rule
+ * (plan 018 §5.5). It also unlocks `app/page.module.css`, which the previous
+ * `src/binairo/`-only resolver could not reach at all.
+ */
+export function stylesheet(relativePath: string): string {
   return stripComments(
-    readFileSync(path.join(here, "..", "src", "binairo", name), "utf8"),
+    readFileSync(path.join(here, "..", relativePath), "utf8"),
   );
 }
 

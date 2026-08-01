@@ -80,6 +80,14 @@
   display: flex;
   flex-direction: column;
   min-height: 250px;
+  /* ONE reserved box for the card's action area, read by both `.cta` and
+     `.done` so they are identical by construction rather than by measurement
+     (plan 018 §11.3). 38px is `.cta`'s own computed desktop height:
+     var(--space-3) 12px padding + the 14px `--text-button` line box + 12px.
+     The done state is a structurally different element — an outlined stamp
+     chip plus a tabular result — so without this the card would change height
+     the moment a game is finished. */
+  --cta-box-min-height: 38px;
   padding: var(--space-11) var(--space-6) var(--space-6);
   background: var(--paper-card);
   border: 1px solid var(--line);
@@ -155,6 +163,7 @@
   align-items: center;
   justify-content: center;
   margin-top: var(--space-4);
+  min-height: var(--cta-box-min-height);
   padding: var(--space-3) 0;
   background: var(--accent);
   color: var(--paper-desk);
@@ -165,9 +174,9 @@
      hrefs land. */
 }
 
-/* Binairo's CTA is the only live one so far (#18); the attribute selector
-   is what keeps the pointer off the three placeholders without a second
-   class. */
+/* Only a game with a play route gets an href — Binairo (#18) and Sudoku
+   (#23) today, per `playRoutes`. The attribute selector is what keeps the
+   pointer off the remaining placeholders without a second class. */
 .cta[href] {
   cursor: pointer;
 }
@@ -177,6 +186,41 @@
 }
 
 .ctaShort {
+  display: none;
+}
+
+/* The done state (DESIGN.md "Game card"): an outlined "Feito" stamp chip plus
+   the tabular result, in the same reserved box as the pending button. It is a
+   link where F1 draws an inert span (deviation 12) — the chip and the result
+   are visually unchanged. */
+.done {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  min-height: var(--cta-box-min-height);
+  text-decoration: none;
+}
+
+.doneChip {
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 5px var(--space-3);
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  /* A stamp, pressed slightly crooked — the system's static rotation, never
+     an animation (DESIGN.md). */
+  transform: rotate(-3deg);
+}
+
+.doneResult {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.doneResultShort {
   display: none;
 }
 
@@ -265,6 +309,9 @@
     padding: var(--space-4) 18px;
     box-shadow: var(--shadow-md)
       color-mix(in srgb, var(--accent) 22%, transparent);
+    /* Re-pointed once, so the touch-target floor reaches the done state too:
+       both action variants read this one property (§11.3). */
+    --cta-box-min-height: var(--touch-target-min);
   }
 
   .card:nth-child(1) {
@@ -321,7 +368,6 @@
   .cta {
     margin-top: 0;
     padding: var(--space-3) var(--space-5);
-    min-height: var(--touch-target-min);
     min-width: var(--touch-target-min);
   }
 
@@ -330,6 +376,36 @@
   }
 
   .ctaShort {
+    display: inline;
+  }
+
+  /* F2:36-38 puts the result BEFORE the chip on the mobile row; the DOM keeps
+     the desktop order so the accessible name (composed in the messages
+     module) never depends on a media query. */
+  .done {
+    flex-direction: row-reverse;
+    /* F2:36 draws 10px; snapped to the 8px token, the same way the mobile
+       card's own gap is. */
+    gap: var(--space-2);
+    margin-top: 0;
+  }
+
+  .doneChip {
+    /* F2:38's tighter box (4px 9px). Its 10px type is deliberately NOT
+       taken: 11px is the legibility floor for functional text, the same rule
+       the kicker follows above. */
+    padding: var(--space-1) 9px;
+  }
+
+  .doneResult {
+    font-size: 13px;
+  }
+
+  .doneResultLong {
+    display: none;
+  }
+
+  .doneResultShort {
     display: inline;
   }
 

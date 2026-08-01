@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { completionOutcomeSchema } from "../completion";
 import { gameSchema } from "../game";
-import { isoDateString } from "./daily";
+import { isoDateString, sudokuDigitSchema } from "./daily";
 
 /**
  * A calendar-VALID 'YYYY-MM-DD'. `isoDateString` checks shape only, which
@@ -41,7 +41,7 @@ const submittedCellSchema = z.union([z.literal(0), z.literal(1)]);
  * silently dropped, which is what makes the no-timestamp guarantee above
  * structural instead of conventional.
  *
- * EXTENSION POINT: #23/#25/#27 add their variants to the union; the
+ * EXTENSION POINT: #25/#27 add their variants to the union; the
  * discriminator is `game`.
  */
 export const binairoCompletionRequestSchema = z.strictObject({
@@ -56,8 +56,37 @@ export type BinairoCompletionRequest = z.infer<
   typeof binairoCompletionRequestSchema
 >;
 
+/**
+ * A submitted sudoku is COMPLETE — `0` means "empty" in `SudokuGrid`, so
+ * it is excluded here for exactly the reason `null` is excluded from
+ * binairo's. `sudokuDigitSchema` is imported from `./daily`, never
+ * re-declared (plan 018 §6.1/C6).
+ *
+ * `elapsedMs`/`hintsUsed` carry binairo's bounds unchanged and must stay
+ * identical — one free hint per puzzle is a product rule, not a per-game
+ * one. `date` is `calendarDateString`, never `isoDateString`: it is
+ * client-supplied.
+ *
+ * The two `grid` members do NOT generalize into `z.array(z.number())`:
+ * that would let a binairo client post a `7` and a sudoku client post a
+ * `0`, destroying the "a submission is a COMPLETE grid" invariant both
+ * schemas exist to enforce.
+ */
+export const sudokuCompletionRequestSchema = z.strictObject({
+  game: z.literal("sudoku"),
+  date: calendarDateString,
+  grid: z.array(sudokuDigitSchema).length(81),
+  elapsedMs: z.number().int().min(0).max(86_400_000),
+  hintsUsed: z.number().int().min(0).max(1),
+});
+
+export type SudokuCompletionRequest = z.infer<
+  typeof sudokuCompletionRequestSchema
+>;
+
 export const completionRequestSchema = z.discriminatedUnion("game", [
   binairoCompletionRequestSchema,
+  sudokuCompletionRequestSchema,
 ]);
 
 export type CompletionRequest = z.infer<typeof completionRequestSchema>;

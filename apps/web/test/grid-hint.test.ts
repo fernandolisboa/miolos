@@ -5,9 +5,10 @@ import {
 } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
-import { nextHint } from "../src/binairo/hint";
+import { nextHint } from "../src/play/grid-hint";
 
-// T-WEB-10/T-WEB-11 (plan 017 §15). `nextHint` is pure and deterministic,
+// T-WEB-10/T-WEB-11, carried forward as T-WEB-S9/S10's binairo half
+// (plan 018 §15). `nextHint` is pure and deterministic,
 // so it is proved directly rather than through the button. Table-driven,
 // deliberately: ADR-0017 scopes fast-check to packages/games and this
 // ticket adds no test dependency.

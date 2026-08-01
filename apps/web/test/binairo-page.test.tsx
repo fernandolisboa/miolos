@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   dailyBinairoResponseSchema,
-  type DailyPuzzleResponse,
+  type DailyBinairoResponse,
 } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { generateBinairo } from "@miolos/games/binairo";
@@ -26,7 +26,7 @@ import { messages } from "../src/i18n";
 
 const PUZZLE = generateBinairo({ seed: 20_260_730, weekday: 3 });
 
-const DAILY: DailyPuzzleResponse = {
+const DAILY: DailyBinairoResponse = {
   game: "binairo",
   date: "2026-07-30",
   size: 8,
@@ -109,8 +109,8 @@ describe("/binairo (T-WEB-3)", () => {
 
     const markup = renderToStaticMarkup(await play.default());
 
-    expect(markup).toContain(messages.binairo.unavailable.title);
-    expect(markup).toContain(messages.binairo.unavailable.cta);
+    expect(markup).toContain(messages.games.binairo.play.unavailable.title);
+    expect(markup).toContain(messages.games.binairo.play.unavailable.cta);
   });
 
   it("passes the wall's projection and nothing else across the RSC boundary", async () => {
@@ -194,7 +194,7 @@ describe("/binairo/concluido (T-WEB-4b)", () => {
 
     const markup = renderToStaticMarkup(await conclusion.default());
 
-    expect(markup).toContain(messages.binairo.unavailable.title);
+    expect(markup).toContain(messages.games.binairo.play.unavailable.title);
   });
 });
 
