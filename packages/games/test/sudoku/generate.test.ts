@@ -55,9 +55,10 @@ describe("generateSudoku / generateDailySudoku", () => {
       }),
       { seed: FC_SEED, numRuns: 100 },
     );
-    // Explicit timeout: Sundays cost ~140 ms mean (spike-measured); the pin
-    // lives here because ADR-0017 forbids a vitest config.
-  }, 60000);
+    // CI runners run ~3-4x slower than dev machines; local P1 ~18s → allow
+    // 4x + margin (60s timed out twice on GitHub's 2-core runner); numRuns
+    // floor per ADR-0023. In-file pin because ADR-0017 forbids a vitest config.
+  }, 240_000);
 
   it("P1 — pinned regression: the literal expected puzzle for a fixed seed", () => {
     const puzzle = generateDailySudoku({
@@ -89,7 +90,9 @@ describe("generateSudoku / generateDailySudoku", () => {
       }),
       { seed: FC_SEED, numRuns: 100 },
     );
-  }, 60000);
+    // CI runners run ~3-4x slower than dev machines; local P2 ~9s → allow
+    // 4x + the same margin as P1; numRuns floor per ADR-0023.
+  }, 240_000);
 
   it("P3 — weekday ramp / approval on every instance", () => {
     fc.assert(
