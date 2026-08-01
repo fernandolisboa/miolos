@@ -133,7 +133,7 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
       stateRef.current = paused;
       dispatch({ type: "pause", now });
       if (paused.hydrated && paused.status === "playing") {
-        writePlayRecord(toRecord(paused, now));
+        persistUnlessConcluded(toRecord(paused, now));
       }
     };
     // `pageshow` without a paired `visibilitychange` is the bfcache case: on
@@ -202,16 +202,7 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
     if (!hydrated || status !== "playing") {
       return;
     }
-    // Never over a settled or queued completion. A second mounted /binairo
-    // is still `playing`, and its next entry change would otherwise
-    // overwrite the record another tab already queued — clearing
-    // `pendingSync` and dropping the solved `grid`, i.e. the only copy of a
-    // completion the server has not acknowledged yet (finding
-    // `in-progress-write-clobbers-a-queued-completion`).
-    if (readPlayRecord(date)?.concluded === true) {
-      return;
-    }
-    writePlayRecord(
+    persistUnlessConcluded(
       buildRecord({
         date,
         givens,
@@ -319,6 +310,24 @@ function sameMode(current: PaintMode, next: PaintMode): boolean {
   return current.kind === "paint" && next.kind === "paint"
     ? current.value === next.value
     : true;
+}
+
+/**
+ * Persist, unless the stored record for that day is already a completion.
+ * BOTH writers go through here, because both write the same key and neither
+ * is rarer than the other: a second mounted /binairo is still `playing`, so
+ * its next entry change AND the `pagehide` its own "voltar" link fires would
+ * each overwrite the record another tab has queued — clearing `pendingSync`
+ * and dropping the solved `grid`, i.e. the only copy of a completion the
+ * server has not acknowledged yet (findings
+ * `in-progress-write-clobbers-a-queued-completion` and
+ * `pagehide-write-still-clobbers-a-queued-completion`).
+ */
+function persistUnlessConcluded(record: PlayRecord): void {
+  if (readPlayRecord(record.date)?.concluded === true) {
+    return;
+  }
+  writePlayRecord(record);
 }
 
 /** `buildRecord` from a whole state — the `pagehide` path's shorthand. */

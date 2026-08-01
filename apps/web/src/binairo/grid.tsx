@@ -43,6 +43,19 @@ export function Grid({
   const lastIndex = useRef<number | null>(null);
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    // Primary button only, and before any ref is touched. A stroke that
+    // never opens leaves `dragging.current` false, so `onPointerUp` below
+    // no-ops on its own guard and a right- or middle-click writes nothing
+    // (finding `right-button-pointerup-writes-a-cell`). It used to be
+    // impossible: the browser fires `auxclick`, not `click`, for a
+    // non-primary button, so the cell's own handler was never reached —
+    // resolving the tap on `pointerup` is what made the button matter.
+    // NOT `isPrimary`: a single touch contact reports `button === 0` and
+    // `isPrimary === true`, and a pen contacting with the barrel button
+    // held still reports `button === 0`, so touch and pen are untouched.
+    if (event.button !== 0) {
+      return;
+    }
     dragged.current = false;
     tapped.current = false;
     dragging.current = painting;

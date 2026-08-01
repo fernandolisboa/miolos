@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BinairoScreen } from "../src/binairo/binairo-screen";
+import styles from "../src/binairo/binairo-screen.module.css";
 import {
   playRecordKey,
   readPlayRecord,
@@ -150,6 +151,52 @@ function solveByClicking(container: HTMLElement): void {
       fireEvent.click(cellAt(container, index));
     }
   }
+}
+
+/** A CSS Module class, refused rather than silently `undefined`. */
+function className(local: string): string {
+  const generated = styles[local];
+  if (generated === undefined) {
+    throw new Error(`binairo-screen.module.css has no .${local}`);
+  }
+  return generated;
+}
+
+/**
+ * Every class the stylesheet places in one of `.page`'s named grid areas —
+ * read off the CSS rather than listed here, so a new area added to `PlayView`
+ * puts itself under the skeleton tripwire below without anyone remembering to.
+ */
+const GRID_AREA_CLASSES = [
+  ...stylesheet("binairo-screen.module.css").matchAll(
+    /^\.(\w+)[^{]*\{([^}]*)\}/gm,
+  ),
+]
+  .filter(([, , body]) => /(?:^|;)\s*grid-area\s*:/.test(body ?? ""))
+  .map(([, local]) => local ?? "");
+
+/** The readouts the skeleton reserves with a blank line box rather than a value. */
+const BLANK_READOUTS = [
+  "timerBar",
+  "timerCard",
+  "progressBar",
+  "progressCard",
+] as const;
+
+/** `PlaySkeleton`'s blank — one line box in the readout's own font. */
+const BLANK = "\u00a0";
+
+/** Server markup as a DOM, so it can be queried the way a browser would. */
+function parsed(markup: string): HTMLElement {
+  const host = document.createElement("div");
+  host.innerHTML = markup;
+  return host;
+}
+
+function occupantsIn(root: HTMLElement): string[] {
+  return GRID_AREA_CLASSES.filter(
+    (local) => root.querySelector(`.${className(local)}`) !== null,
+  );
 }
 
 function concludedRecord(overrides: Partial<PlayRecord> = {}): PlayRecord {
@@ -439,6 +486,34 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
   });
 
+  it("writes nothing when a non-primary button opens the stroke", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+    enterPaintMode();
+    const grid = gridOf(container);
+
+    // A trackpad two-finger tap, a right-click or a middle-click. Resolving
+    // the tap on `pointerup` made this reachable for the first time: the
+    // browser fires `auxclick`, not `click`, for a non-primary button, so
+    // the cell's own handler was never in its path (finding
+    // `right-button-pointerup-writes-a-cell`). A single touch contact
+    // reports `button === 0`, so touch keeps taking the path above.
+    fireEvent.pointerDown(grid, {
+      clientX: FIRST_EMPTY,
+      clientY: 0,
+      pointerId: 1,
+      button: 2,
+    });
+    fireEvent.pointerUp(grid, {
+      clientX: FIRST_EMPTY,
+      clientY: 0,
+      pointerId: 1,
+      button: 2,
+    });
+
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
+  });
+
   it("still writes on a keyboard activation after a paint drag", () => {
     const [a, b, c, d] = playableQuad();
     const { container } = render(<BinairoScreen daily={DAILY} />);
@@ -611,6 +686,28 @@ describe("a second tab still playing (T-WEB-9f)", () => {
       grid: [...PUZZLE.solution],
     });
   });
+
+  it("never overwrites one on the way out of the page either", () => {
+    render(<BinairoScreen daily={DAILY} />);
+    writePlayRecord(
+      concludedRecord({ pendingSync: true, syncOutcome: "pending" }),
+    );
+
+    // `pagehide` is the OTHER writer of this key, through a far more common
+    // door than an entry change: the screen's own "voltar" link, a reload, a
+    // tab close and a bfcache entry all fire it, and `toRecord` reports a
+    // still-playing mount as `concluded: false, grid: undefined` (finding
+    // `pagehide-write-still-clobbers-a-queued-completion`).
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+
+    expect(readPlayRecord(DATE)).toMatchObject({
+      concluded: true,
+      pendingSync: true,
+      grid: [...PUZZLE.solution],
+    });
+  });
 });
 
 describe("re-entering a finished day (T-WEB-9c)", () => {
@@ -672,14 +769,63 @@ describe("the first paint (T-WEB-9d)", () => {
     expect(markup).not.toContain(messages.conclusao.stampLabel);
   });
 
-  it("keeps the givens off the wire until the record can be read", () => {
+  it("paints no cell before the record has been read", () => {
     const markup = renderToStaticMarkup(<BinairoScreen daily={DAILY} />);
 
-    // The screen's identity still paints immediately — only the record-derived
-    // half waits, so hydration is a paint and never a reflow.
+    // The screen's identity still paints immediately; only the values read
+    // off the record wait. This says NOTHING about the wire and must not be
+    // read as an ADR-0004 guard: `daily` is a prop of a "use client"
+    // component, so the givens travel in the same response's RSC payload.
+    // The wall that keeps a puzzle off the client is `getTodayDaily`'s
+    // solution strip, asserted where it lives (finding
+    // `givens-off-the-wire-is-false`).
     expect(markup).toContain(messages.binairo.title);
     expect(markup).toContain(messages.binairo.rules);
     expect(markup).not.toContain("data-cell-index");
+  });
+
+  it("reserves every box the play shell occupies, so nothing moves", () => {
+    // jsdom has no layout, so this is the tripwire and not the measurement:
+    // the board card jumped upward 71.7px at 390x844 and 41.0px at 1440x900
+    // because `.board` is a centred flex column and the mobile `hint` row is
+    // `auto`, so an absent control row and an absent hint bar hand their
+    // height to the board as an OFFSET. The pixels were measured in Chrome
+    // and live in the PR body; what is pinned here is that the skeleton and
+    // the hydrated screen occupy the same boxes (finding
+    // `play-skeleton-is-not-at-final-dimensions`).
+    const skeleton = parsed(
+      renderToStaticMarkup(<BinairoScreen daily={DAILY} />),
+    );
+    const { container: hydrated } = render(<BinairoScreen daily={DAILY} />);
+
+    // Anti-vacuity: `GRID_AREA_CLASSES` is read off the CSS with a regex, and
+    // an empty list would make the comparison below pass on nothing.
+    expect(occupantsIn(hydrated)).toEqual(
+      expect.arrayContaining(["board", "hint", "statsCard"]),
+    );
+    expect(occupantsIn(skeleton)).toEqual(occupantsIn(hydrated));
+    // Not a grid area, and the largest single contributor: `.controls` sits
+    // INSIDE `.board`, so its absence re-centres the card by half its height.
+    expect(skeleton.querySelector(`.${className("controls")}`)).not.toBeNull();
+  });
+
+  it("reserves them without a value, a control or a tab stop", () => {
+    const skeleton = parsed(
+      renderToStaticMarkup(<BinairoScreen daily={DAILY} />),
+    );
+
+    // The boxes are reserved; what fills them is not. A no-break space is
+    // what gives a blank readout its line box, so the card it sits in is the
+    // height it will be after hydration rather than a collapsed one.
+    for (const readout of BLANK_READOUTS) {
+      expect(
+        skeleton.querySelector(`.${className(readout)}`)?.textContent,
+      ).toBe(BLANK);
+    }
+    // The only tab stop in the whole skeleton is the way back out.
+    expect(
+      skeleton.querySelectorAll("button, a[href], [tabindex]"),
+    ).toHaveLength(1);
   });
 });
 

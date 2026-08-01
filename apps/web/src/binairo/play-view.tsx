@@ -10,6 +10,16 @@ import type { BinairoPlay } from "./use-binairo-play";
 const TOTAL_CELLS = 64;
 
 /**
+ * A readout placeholder's content. An EMPTY element has no line box at all
+ * and collapses to zero height, so a blank clock would make the card it sits
+ * in shorter than the one hydration puts there. A no-break space is one line
+ * box in the element's own font — the reserved height therefore tracks a
+ * token change by construction, where a hard-coded pixel value would not
+ * (finding `play-skeleton-is-not-at-final-dimensions`).
+ */
+const BLANK_READOUT = "\u00a0";
+
+/**
  * The /binairo play composition (plan 017 §12.2), recreated from
  * f3-binairo-desktop and f4-binairo-mobile. One CSS grid with named areas
  * carries both viewports out of one DOM: `display: contents` cannot move a
@@ -120,9 +130,29 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
  * "a beat of nothing" beats a wrong first paint); this is the same trade on
  * the play route.
  *
- * The placeholder board reuses `.gridCard`, `.grid` and `.cell`, so it is
- * the real board's size on every viewport by construction and hydration is
- * a paint rather than a reflow.
+ * What waits is the VALUES, never the boxes. Every occupant of `.page`'s
+ * grid — the stats card, the hint bar — and the control row inside `.board`
+ * is reserved here at its shipped size, because `.board` is a centred flex
+ * column and the mobile `hint` row is `auto`: dropping either turns the
+ * freed height into an offset and the largest element on the screen jumps
+ * upward the instant the mount effect runs (finding
+ * `play-skeleton-is-not-at-final-dimensions`, measured at −71.7px on a
+ * 390×844 phone, held for ~1.6s on a throttled connection). With them
+ * reserved, `.gridCard`'s bounding-box top is identical in the JS-disabled
+ * paint and in the settled page at 1440×900, 390×844 and 320×640.
+ *
+ * The placeholders are `aria-hidden` divs, never buttons: a focusable
+ * control with no handler behind it is worse than none, and the board's own
+ * placeholder reuses `.gridCard`, `.grid` and `.cell` so its size comes from
+ * the shipped rules by construction rather than from a copied number.
+ *
+ * One thing does still move, and it is named here rather than glossed: on
+ * mobile `.topBar` is `justify-content: space-between`, the clock's box is
+ * blank because its VALUE is the record's, and a blank box is 4.4px wide
+ * against `00:00`'s 56.9px — so `.barKicker` beside it settles ~25px left.
+ * Pinning that would take a hard-coded `min-width` on the shipped rule, for
+ * an 11px label; the board, the stats card, the hint bar and the control row
+ * all land on the same pixel in both paints.
  */
 export function PlaySkeleton({ date }: { readonly date: string }) {
   return (
@@ -138,6 +168,9 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
         <span className={styles.wordmark}>{messages.brand.wordmark}</span>
         <span className={styles.barKicker}>{messages.binairo.kicker}</span>
         <span className={styles.topDate}>{formatLongDate(date)}</span>
+        <span aria-hidden className={styles.timerBar}>
+          {BLANK_READOUT}
+        </span>
       </header>
 
       <div className={styles.titleBlock}>
@@ -146,8 +179,39 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
             impeccable's two rules anchor on `h1.previousElementSibling`. */}
         <div className={styles.titleRow}>
           <h1 className={styles.title}>{messages.binairo.title}</h1>
+          <span aria-hidden className={styles.progressBar}>
+            {BLANK_READOUT}
+          </span>
         </div>
         <p className={styles.rules}>{messages.binairo.rules}</p>
+      </div>
+
+      {/* The desktop sidebar card. Its two rows are what give it its height,
+          so they are here in full — with the STATIC labels, which say what
+          the card is, and blank readouts where the record's numbers go. */}
+      <div aria-hidden className={styles.statsCard}>
+        <div className={styles.tape} />
+        <div className={styles.statRow}>
+          <span className={styles.statLabel}>
+            {messages.binairo.timerLabel}
+          </span>
+          <span className={styles.timerCard}>{BLANK_READOUT}</span>
+        </div>
+        <div className={styles.statRow}>
+          <span className={styles.statLabel}>
+            {messages.binairo.progressLabel}
+          </span>
+          <span className={styles.progressCard}>{BLANK_READOUT}</span>
+        </div>
+      </div>
+
+      {/* Blank rather than labelled: which of the two hint labels applies is
+          read off the record, and the bar is the same 44px/50px either way. */}
+      <div
+        aria-hidden
+        className={`${styles.hint} ${styles.hintUsed} ${styles.placeholder}`}
+      >
+        {BLANK_READOUT}
       </div>
 
       <section className={styles.board}>
@@ -160,6 +224,31 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
               />
             ))}
           </div>
+        </div>
+        {/* Labelled, unlike the readouts above: the control row shows the
+            mode, `PaintMode` is never persisted, and `initPlayState` always
+            starts in cycle — so this row is the ONE piece of play chrome
+            that owes the record nothing and can paint complete. Divs, so
+            nothing here is focusable or announced before it works. */}
+        <div aria-hidden className={styles.controls}>
+          <div
+            className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
+          >
+            {messages.binairo.controls.zero}
+          </div>
+          <div
+            className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
+          >
+            {messages.binairo.controls.one}
+          </div>
+          <div
+            className={`${styles.control} ${styles.controlErase} ${styles.placeholder}`}
+          >
+            {messages.binairo.controls.erase}
+          </div>
+          <span className={styles.affordance}>
+            {messages.binairo.controls.affordance}
+          </span>
         </div>
       </section>
     </main>

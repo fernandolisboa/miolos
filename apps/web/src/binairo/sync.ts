@@ -216,9 +216,15 @@ function buildBody(record: PlayRecord): string | undefined {
     game: record.game,
     date: record.date,
     grid: record.grid,
-    // Already bounded by `playRecordSchema` on read; clamped again so the
-    // invariant is local to the thing that depends on it.
-    elapsedMs: Math.min(record.elapsedMs, ELAPSED_CAP_MS),
+    // Clamped at BOTH ends, and not merely re-stating what the schema
+    // already proved on read: `memoryQueue` holds a record that never
+    // reached the store, so on the very devices the fallback exists for
+    // (DOM storage off) `buildBody` is the FIRST bound this number meets.
+    // A backwards wall-clock step makes it negative, `min(0)` in the
+    // request contract then fails the parse, and the flush would drop an
+    // intact completion as "no solved grid to post" (finding
+    // `memory-queue-record-bypasses-the-two-sided-clamp`).
+    elapsedMs: Math.min(Math.max(record.elapsedMs, 0), ELAPSED_CAP_MS),
     hintsUsed: record.hintsUsed,
   });
   return parsed.success ? JSON.stringify(parsed.data) : undefined;

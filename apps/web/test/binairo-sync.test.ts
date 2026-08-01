@@ -275,6 +275,42 @@ describe("flushPendingCompletions", () => {
     }
   });
 
+  it("clamps a backwards clock step on the memory-queue path too", async () => {
+    // The store's own clamp is two-sided, but a handed record never reaches
+    // it when `localStorage` throws: `memoryQueue` keeps the object verbatim
+    // and `buildBody` is the FIRST bound the number meets. Clamped on one
+    // side only, `elapsedMs: z.number().int().min(0)` failed the request
+    // parse, `buildBody` returned `undefined`, and the flush dropped an
+    // intact completion with "has no solved grid to post" — permanently, on
+    // exactly the devices the fallback exists for (finding
+    // `memory-queue-record-bypasses-the-two-sided-clamp`).
+    const original = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("access denied", "SecurityError");
+      },
+    });
+    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+
+    try {
+      const { flushPendingCompletions } = await freshSync();
+      // An NTP correction mid-session: `now - runningSince` goes negative.
+      await flushPendingCompletions(pendingRecord({ elapsedMs: -3_600_000 }));
+
+      const [call] = completionCalls(fetchMock);
+      expect(call).toBeDefined();
+      const init = requestInitSchema.parse(call?.[1]);
+      expect(
+        binairoCompletionRequestSchema.parse(JSON.parse(init.body)),
+      ).toMatchObject({ grid: SOLVED_GRID, elapsedMs: 0 });
+    } finally {
+      if (original !== undefined) {
+        Object.defineProperty(window, "localStorage", original);
+      }
+    }
+  });
+
   it("keeps a handed completion queued in memory when the network fails", async () => {
     const original = Object.getOwnPropertyDescriptor(window, "localStorage");
     Object.defineProperty(window, "localStorage", {

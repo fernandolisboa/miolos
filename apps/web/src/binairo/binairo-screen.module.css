@@ -319,9 +319,9 @@
 
 /* The pre-hydration placeholder cell (finding
    `binairo-reload-flashes-a-blank-board-over-a-finished-day`). Colour only:
-   every dimension still comes from .cell and .grid above, so the skeleton is
-   the real board's size on every viewport and hydration is a paint rather
-   than a reflow. Static — DESIGN.md has no shimmer. */
+   every dimension still comes from .cell and .grid above, so the placeholder
+   board is the real board's size on every viewport by construction. Static —
+   DESIGN.md has no shimmer. */
 .cellSkeleton {
   background: var(--paper-tint);
   border-color: color-mix(in srgb, var(--line) 55%, transparent);
@@ -441,6 +441,19 @@
   font-size: 13px;
   color: var(--ink-2);
   text-align: center;
+}
+
+/* ── pre-hydration placeholders ──────────────────────────────────────── */
+
+/* The skeleton's hint bar and control row borrow .hint / .control so their
+   boxes are the shipped size by construction — but those rules also carry
+   `cursor: pointer` and a 1px press, and an inert box that presses is a lie
+   the player can see. `pointer-events: none` retires both at once, and it
+   has to sit AFTER .hint and .control here: same specificity, later wins
+   (finding `play-skeleton-is-not-at-final-dimensions`). */
+.placeholder {
+  cursor: default;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
