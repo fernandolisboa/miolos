@@ -45,6 +45,7 @@ Current:
 | `plans/011-issue-22-plan-sudoku-engine.md` | Implementation plan for #22 (Sudoku engine) |
 | `plans/012-issue-24-plan-nonogram-engine.md` | Implementation plan for #24 (Nonogram engine) |
 | `plans/013-issue-26-plan-termo-engine.md` | Implementation plan for #26 (Termo engine and word-list harness) |
+| `plans/016-issue-43-plan-dependabot.md` | Implementation plan for #43 (Dependabot for SHA-pinned actions) |
 
 ## Language
 
