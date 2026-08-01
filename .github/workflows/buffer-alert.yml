@@ -28,7 +28,13 @@ jobs:
         # -fsS: an HTTP error fails the job — a red scheduled run is
         # itself a notification.
         run: |
-          body="$(curl -fsS "$API_ORIGIN/buffer-depth")"
+          raw="$(curl -fsS "$API_ORIGIN/buffer-depth")"
+          # GITHUB_ENV is line-oriented: a newline in the body would smuggle
+          # extra NAME=value lines into later steps (env-var injection from
+          # the polled endpoint). jq re-serializes the FIRST JSON document
+          # onto exactly one line and fails the job on non-JSON, so only
+          # validated compact JSON is ever persisted.
+          body="$(printf '%s' "$raw" | jq -cen 'input')"
           echo "buffer-depth response: $body"
           echo "BODY=$body" >> "$GITHUB_ENV"
           echo "SHALLOW=$(printf '%s' "$body" | jq -r .shallow)" >> "$GITHUB_ENV"
