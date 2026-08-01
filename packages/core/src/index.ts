@@ -32,16 +32,24 @@ export {
   DailyProjectionUnsupportedError,
   dailyBinairoResponseSchema,
   dailyPuzzleResponseSchema,
+  dailySudokuResponseSchema,
   isoDateString,
   stripDailyContent,
+  sudokuDailyContentSchema,
+  sudokuDigitSchema,
   type BinairoDailyContent,
   type DailyBinairoResponse,
   type DailyPuzzleResponse,
+  type DailySudokuResponse,
+  type ProjectedGame,
+  type SudokuDailyContent,
 } from "./contracts/daily";
 export {
   bufferDepthResponseSchema,
+  cronPublishGameResultSchema,
   cronPublishResponseSchema,
   type BufferDepthResponse,
+  type CronPublishGameResult,
   type CronPublishResponse,
 } from "./contracts/cron";
 export {
@@ -50,8 +58,10 @@ export {
   calendarDateString,
   completionRequestSchema,
   completionResponseSchema,
+  sudokuCompletionRequestSchema,
   type ApiErrorResponse,
   type BinairoCompletionRequest,
   type CompletionRequest,
   type CompletionResponse,
+  type SudokuCompletionRequest,
 } from "./contracts/completion";

@@ -1,18 +1,24 @@
 "use client";
 
+import type { Game } from "@miolos/core";
 import Link from "next/link";
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 
 import {
   formatElapsed,
   formatLongDate,
   formatShortDate,
   messages,
+  playRoutes,
   routes,
+  type Route,
 } from "../i18n";
+import { accentVar } from "./accent";
 import styles from "./conclusion-view.module.css";
-import { readPlayRecord, type PlayRecord } from "./play-record";
+import { useDayState, type DayEntry } from "./day-state";
 import { startCompletionSync } from "./sync";
+import type { ConclusionCopy } from "./types";
+import { useRecordSnapshot } from "./use-record-snapshot";
 
 /** The four dailies, in the order Hoje lists them. */
 const DAY_GAMES = ["termo", "sudoku", "nonogram", "binairo"] as const;
@@ -33,10 +39,15 @@ export interface ConclusionResult {
 
 /**
  * The conclusion composition (plan 017 §12.3), recreated from
- * f5-conclusao-desktop and f6-conclusao-mobile. One component, two mount
- * points: swapped in place on `/binairo` when the grid closes, and rendered
- * under its own server segment at `/binairo/concluido` for a bookmark, a
- * reload and `impeccable detect` (D26/D27).
+ * f5-conclusao-desktop and f6-conclusao-mobile, and SHARED by every game
+ * (ADR-0029). One component, two mount points per game: swapped in place on
+ * `/<jogo>` when the grid closes, and rendered under its own server segment
+ * at `/<jogo>/concluido` for a bookmark, a reload and `impeccable detect`
+ * (D26/D27).
+ *
+ * `game` selects the record to read and the accent to paint; `copy` is the
+ * game's own conclusion bundle. Everything else it renders comes from
+ * `messages.conclusion`, which is shared chrome (plan 018 S19).
  *
  * `date` is the SERVER's day, resolved from the wall by the page shell — the
  * client clock never selects which record is read (CONTEXT.md "Rollover").
@@ -49,26 +60,36 @@ export interface ConclusionResult {
  * dead link). §12.3 carries the full table.
  */
 export function ConclusionView({
+  game,
   date,
+  copy,
   result,
 }: {
+  readonly game: Game;
   readonly date: string;
+  readonly copy: ConclusionCopy;
   readonly result?: ConclusionResult;
 }) {
-  const snapshot = useSyncExternalStore(
-    subscribeToRecord,
-    useCallback(() => readSnapshot(date), [date]),
-    serverSnapshot,
-  );
+  const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
   const record = snapshot.hydrated ? snapshot.record : undefined;
+  // What THIS DEVICE knows about the rest of the day (ADR-0031). It can only
+  // understate — a game solved on another device reads `falta` here, which
+  // is stated in the plan rather than hidden, and is the same answer a cold
+  // profile gets.
+  const dayState = useDayState(date);
 
   useEffect(() => {
-    // "On mount of either route" (§9.2). On `/binairo` the play hook has
+    // "On mount of either route" (§9.2). On `/<jogo>` the play hook has
     // already registered the same set; sync.ts's module-level guards make
-    // the overlap free.
+    // the overlap free — and they only can because there is exactly ONE
+    // sync module for every game (ADR-0029, plan 018 S1).
     return startCompletionSync();
   }, [date]);
+
+  // Set on every branch's root, because the shared stylesheet reads
+  // `var(--accent)` throughout (plan 018 §5.2 edit 1).
+  const accent = { "--accent": accentVar(game) };
 
   const stored = record?.concluded === true ? record : undefined;
   // The record wins when it has one: on `recorded: false` the flush writes
@@ -93,9 +114,10 @@ export function ConclusionView({
     return (
       <main
         className={`${styles.page} ${styles.pageEmpty}`}
+        style={accent}
         data-conclusion-state="skeleton"
       >
-        <ConclusionTopBar date={date} />
+        <ConclusionTopBar date={date} kicker={copy.kicker} />
         <div className={styles.emptyBody}>
           <div aria-hidden className={styles.skeletonCard} />
         </div>
@@ -107,9 +129,10 @@ export function ConclusionView({
     return (
       <main
         className={`${styles.page} ${styles.pageEmpty}`}
+        style={accent}
         data-conclusion-state="empty"
       >
-        <ConclusionTopBar date={date} />
+        <ConclusionTopBar date={date} kicker={copy.kicker} />
         <div className={styles.emptyBody}>
           <article className={styles.emptyCard}>
             <div aria-hidden className={styles.tape} />
@@ -117,15 +140,16 @@ export function ConclusionView({
                 play-view.tsx; the same two impeccable rules anchor on
                 `h1.previousElementSibling` here. */}
             <div className={styles.titleRow}>
-              <h1 className={styles.emptyTitle}>
-                {messages.conclusao.notYet.title}
-              </h1>
+              <h1 className={styles.emptyTitle}>{copy.notYet.title}</h1>
             </div>
             <p className={styles.emptyBodyText}>
-              {messages.conclusao.notYet.body}
+              {messages.conclusion.notYet.body}
             </p>
-            <Link className={styles.emptyCta} href={routes.binairo}>
-              {messages.conclusao.notYet.cta}
+            <Link
+              className={styles.emptyCta}
+              href={playRoutes[game] ?? routes.home}
+            >
+              {copy.notYet.cta}
             </Link>
           </article>
         </div>
@@ -135,18 +159,33 @@ export function ConclusionView({
 
   const elapsed = formatElapsed(stamp.elapsedMs);
 
+  // The game being celebrated is proved done by the stamp itself, which is
+  // exactly what the record may not say yet: on the in-place swap the record
+  // still in storage is the last PLAYING one (plan 017 D26), and where
+  // `localStorage` throws there will never be another. Reading this off the
+  // records alone would print `falta` next to a "Concluído" stamp AND chain
+  // the CTA straight back into the grid the player just closed. Monotone
+  // safety is unaffected — this can only mark a game done, and on live proof
+  // (ADR-0031).
+  const dayEntry = (dayGame: Game): DayEntry =>
+    dayGame === game
+      ? { concluded: true, elapsedMs: stamp.elapsedMs }
+      : dayState[dayGame];
+  const next = nextPendingDaily(dayEntry);
+
   return (
     <main
       className={`${styles.page} ${styles.pageResult}`}
+      style={accent}
       data-conclusion-state="result"
     >
-      <ConclusionTopBar date={date} />
+      <ConclusionTopBar date={date} kicker={copy.kicker} />
 
       <article className={styles.resultCard}>
         <div aria-hidden className={styles.tape} />
-        <p className={styles.cardKicker}>{messages.conclusao.kicker}</p>
+        <p className={styles.cardKicker}>{copy.kicker}</p>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>{messages.conclusao.title}</h1>
+          <h1 className={styles.title}>{copy.title}</h1>
         </div>
         <div className={styles.stampRow}>
           {/* One composite announcement rather than three fragments: ARIA
@@ -156,72 +195,122 @@ export function ConclusionView({
           <div
             className={styles.stamp}
             role="img"
-            aria-label={messages.conclusao.stampAria(elapsed, stamp.hintsUsed)}
+            aria-label={messages.conclusion.stampAria(
+              copy.title,
+              elapsed,
+              stamp.hintsUsed,
+            )}
           >
             <span aria-hidden className={styles.stampLabel}>
-              {messages.conclusao.stampLabel}
+              {messages.conclusion.stampLabel}
             </span>
             <span aria-hidden className={styles.stampTime}>
               {elapsed}
             </span>
             <span aria-hidden className={styles.stampHints}>
-              {messages.conclusao.hints(stamp.hintsUsed)}
+              {messages.conclusion.hints(stamp.hintsUsed)}
             </span>
           </div>
         </div>
         {syncOutcome === "pending" && (
-          <p className={styles.sync}>{messages.conclusao.sync.pending}</p>
+          <p className={styles.sync}>{messages.conclusion.sync.pending}</p>
         )}
         {syncOutcome === "rejected" && (
           // Not cosmetic: without it the stamp would stand while the server
           // holds no completion, making the client's own verdict the
           // user-visible authority on the day (ADR-0004, §9.2).
-          <p className={styles.sync}>{messages.conclusao.sync.rejected}</p>
+          <p className={styles.sync}>{messages.conclusion.sync.rejected}</p>
         )}
       </article>
 
       <aside className={styles.side}>
         <section className={styles.dayCard}>
           <p className={styles.dayCardTitle}>
-            {messages.conclusao.dayCard.title}
+            {messages.conclusion.dayCard.title}
           </p>
           <div className={styles.chips}>
-            {DAY_GAMES.map((game) => (
-              <DayChip key={game} game={game} elapsed={elapsed} />
+            {DAY_GAMES.map((dayGame) => (
+              <DayChip key={dayGame} game={dayGame} entry={dayEntry(dayGame)} />
             ))}
           </div>
         </section>
-        {/* Solid ink, not a game accent: in this system a per-game accent IS
-            that game's identity (DESIGN.md), and this CTA goes to Hoje.
-            F5's own non-game button treatment; --accent-nonogram is reserved
-            for when #25 makes it point at Nonogram (deviation 9). */}
-        <Link className={styles.cta} href={routes.home}>
-          {messages.conclusao.cta}
-        </Link>
+        {next === undefined ? (
+          /* Solid ink, not a game accent: in this system a per-game accent IS
+             that game's identity (DESIGN.md), and this CTA goes to Hoje.
+             F5's own non-game button treatment. */
+          <Link className={styles.cta} href={routes.home}>
+            {messages.conclusion.ctaHome}
+          </Link>
+        ) : (
+          /* …and by the same rule, a CTA that goes to a game wears THAT
+             game's accent — F5:66's own treatment for this exact button
+             (plan 018 S21, deviation 11). `--accent` is set on the element
+             rather than the root so the rest of the screen keeps the accent
+             of the game being celebrated. */
+          <Link
+            className={`${styles.cta} ${styles.ctaNext}`}
+            style={{ "--accent": accentVar(next.game) }}
+            href={next.route}
+          >
+            {messages.conclusion.ctaNext(messages.games[next.game].name)}
+          </Link>
+        )}
         {/* href-less, matching Hoje's shipped secondary links: the stats
             screen arrives with #29 and a dead href would be fake
             navigation. */}
-        <a className={styles.secondaryLink}>{messages.conclusao.stats}</a>
+        <a className={styles.secondaryLink}>{messages.conclusion.stats}</a>
       </aside>
     </main>
   );
 }
 
-function ConclusionTopBar({ date }: { readonly date: string }) {
+/**
+ * The first daily this device can still play today, in the day's order — AC
+ * 3's "the conclusion chains to the next pending daily" (plan 018 S21).
+ *
+ * Written as a loop rather than a `find` because the route has to come out
+ * NARROWED: `playRoutes` is partial until #25/#27 land, and Next's typed
+ * `Link href` refuses a possibly-undefined value. A game with no play route
+ * is skipped rather than offered — chaining to a route that does not exist
+ * would be a 404 at the end of the one celebration screen the product has.
+ *
+ * Understating is safe here for the same reason it is on the hub: the worst
+ * a stale `pending` does is offer a game the player already solved on another
+ * device, and `/<jogo>` restores straight into its conclusion (ADR-0031).
+ */
+function nextPendingDaily(
+  entryOf: (game: Game) => DayEntry,
+): { readonly game: Game; readonly route: Route } | undefined {
+  for (const candidate of DAY_GAMES) {
+    const route = playRoutes[candidate];
+    if (route !== undefined && !entryOf(candidate).concluded) {
+      return { game: candidate, route };
+    }
+  }
+  return undefined;
+}
+
+function ConclusionTopBar({
+  date,
+  kicker,
+}: {
+  readonly date: string;
+  readonly kicker: string;
+}) {
   return (
     <header className={styles.topBar}>
       <Link
         className={styles.back}
         href={routes.home}
-        aria-label={messages.conclusao.backAria}
+        aria-label={messages.conclusion.backAria}
       >
-        {messages.conclusao.back}
+        {messages.conclusion.back}
       </Link>
       {/* Two nodes per viewport, one hidden by a media query: F5 centres the
           italic wordmark and puts the kicker inside the card, F6 centres the
           kicker in the bar and its card has none (§12.3). */}
       <span className={styles.wordmark}>{messages.brand.wordmark}</span>
-      <span className={styles.barKicker}>{messages.conclusao.kicker}</span>
+      <span className={styles.barKicker}>{kicker}</span>
       <span className={styles.topDateLong}>{formatLongDate(date)}</span>
       <span className={styles.topDateShort}>{formatShortDate(date)}</span>
     </header>
@@ -229,19 +318,24 @@ function ConclusionTopBar({ date }: { readonly date: string }) {
 }
 
 /**
- * One "O dia até agora" chip. Binairo is the only game with a play route in
- * this ticket, so the other three are honestly `falta` rather than fake
- * results — and together with the CTA they are the AC's "points to the next
- * pending daily" (§12.3).
+ * One "O dia até agora" chip, read from THIS DEVICE's day state (ADR-0031,
+ * plan 018 §11.4). A game with no local concluded record is honestly
+ * `falta` rather than a fake result — and together with the CTA the chips
+ * are the AC's "points to the next pending daily" (plan 017 §12.3).
  */
 function DayChip({
   game,
-  elapsed,
+  entry,
 }: {
   readonly game: (typeof DAY_GAMES)[number];
-  readonly elapsed: string;
+  readonly entry: DayEntry;
 }) {
-  const done = game === "binairo";
+  // Narrowed through the value rather than through `concluded`, so no
+  // non-null assertion is needed and a `{concluded: true}` entry that
+  // somehow lost its duration degrades to `falta` instead of rendering
+  // "undefined" (`DayEntry.elapsedMs` is optional by type, §11.2).
+  const elapsedMs = entry.concluded ? entry.elapsedMs : undefined;
+  const done = elapsedMs !== undefined;
   return (
     <div
       className={`${styles.chip} ${done ? styles.chipDone : styles.chipMissing}`}
@@ -250,94 +344,20 @@ function DayChip({
         <>
           {/* A distinct mobile string, never a runtime truncation. */}
           <span className={`${styles.chipName} ${styles.chipNameLong}`}>
-            {messages.conclusao.dayCard.games.nonogram}
+            {messages.conclusion.dayCard.games.nonogram}
           </span>
           <span className={`${styles.chipName} ${styles.chipNameShort}`}>
-            {messages.conclusao.dayCard.games.nonogramShort}
+            {messages.conclusion.dayCard.games.nonogramShort}
           </span>
         </>
       ) : (
         <span className={styles.chipName}>
-          {messages.conclusao.dayCard.games[game]}
+          {messages.conclusion.dayCard.games[game]}
         </span>
       )}
       <span className={styles.chipValue}>
-        {done ? elapsed : messages.conclusao.dayCard.missing}
+        {done ? formatElapsed(elapsedMs) : messages.conclusion.dayCard.missing}
       </span>
     </div>
-  );
-}
-
-/**
- * `localStorage` is an external store, and sync.ts settles the record from
- * outside React — so the view subscribes to it rather than copying it into
- * component state in a mount effect. Three things fall out of that:
- *
- * - the pre-hydration paint is free and exact (D28): the server snapshot is
- *   a constant that says "not read yet", so the server markup and the first
- *   client paint agree on the skeleton and neither can flash the
- *   "ainda não concluído" card;
- * - a settled sync reaches the card without a notifier sync.ts does not
- *   have;
- * - nothing re-renders while nothing the card shows has changed, because
- *   `readSnapshot` hands back the cached object in that case.
- */
-type RecordSnapshot =
-  | { readonly hydrated: false }
-  | { readonly hydrated: true; readonly record: PlayRecord | undefined };
-
-const SERVER_SNAPSHOT: RecordSnapshot = { hydrated: false };
-
-const serverSnapshot = (): RecordSnapshot => SERVER_SNAPSHOT;
-
-/**
- * The snapshot cache the store contract requires: `getSnapshot` has to
- * return a referentially stable value or `useSyncExternalStore` loops
- * forever, and a fresh `JSON.parse` never is. Module-level because the
- * store it caches is — one browser has one `localStorage`.
- */
-let cachedSnapshot:
-  { readonly date: string; readonly snapshot: RecordSnapshot } | undefined;
-
-function readSnapshot(date: string): RecordSnapshot {
-  const next = readPlayRecord(date);
-  const cached = cachedSnapshot;
-  if (
-    cached?.date === date &&
-    cached.snapshot.hydrated &&
-    sameToTheReader(cached.snapshot.record, next)
-  ) {
-    return cached.snapshot;
-  }
-  const snapshot: RecordSnapshot = { hydrated: true, record: next };
-  cachedSnapshot = { date, snapshot };
-  return snapshot;
-}
-
-/**
- * A 1 s poll, because sync.ts exposes no notifier and `storage` fires only
- * in OTHER tabs. It costs one read and one parse per second and, thanks to
- * the cache above, zero re-renders while the record stands still.
- */
-function subscribeToRecord(onStoreChange: () => void): () => void {
-  const interval = setInterval(onStoreChange, 1000);
-  window.addEventListener("storage", onStoreChange);
-  return () => {
-    clearInterval(interval);
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-/** Everything the conclusion actually renders from a record. */
-function sameToTheReader(
-  previous: PlayRecord | undefined,
-  next: PlayRecord | undefined,
-): boolean {
-  return (
-    previous?.concluded === next?.concluded &&
-    previous?.pendingSync === next?.pendingSync &&
-    previous?.syncOutcome === next?.syncOutcome &&
-    previous?.elapsedMs === next?.elapsedMs &&
-    previous?.hintsUsed === next?.hintsUsed
   );
 }

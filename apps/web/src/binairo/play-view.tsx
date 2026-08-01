@@ -1,11 +1,21 @@
 import Link from "next/link";
 
 import { formatLongDate, messages, routes } from "../i18n";
+import { accentVar } from "../play/accent";
+import screen from "../play/screen.module.css";
+import { TimerReadout } from "../play/timer-readout";
 import styles from "./binairo-screen.module.css";
 import { Controls } from "./controls";
 import { Grid } from "./grid";
-import { TimerReadout } from "./timer-readout";
 import type { BinairoPlay } from "./use-binairo-play";
+
+/**
+ * The shared layout's per-screen accent, set inline because
+ * `play/screen.module.css` reads `var(--accent)` throughout (plan 018 §5.2).
+ * The four geometry properties ride on `.pageBinairo` instead — a class this
+ * module owns, so no cascade order is involved (§12.2).
+ */
+const ACCENT = { "--accent": accentVar("binairo") };
 
 const TOTAL_CELLS = 64;
 
@@ -21,33 +31,41 @@ const BLANK_READOUT = "\u00a0";
 
 /**
  * The /binairo play composition (plan 017 §12.2), recreated from
- * f3-binairo-desktop and f4-binairo-mobile. One CSS grid with named areas
- * carries both viewports out of one DOM: `display: contents` cannot move a
- * node across subtrees (`.statsCard` is a grid item, `.topBar` its
- * sibling), so the readouts that appear in different places on the two
- * layouts exist twice and the module hides one of each pair.
+ * f3-binairo-desktop and f4-binairo-mobile. The chrome comes from the shared
+ * `play/screen.module.css` (ADR-0029): one CSS grid with named areas carries
+ * both viewports out of one DOM, because `display: contents` cannot move a
+ * node across subtrees (`.statsCard` is a grid item, `.topBar` its sibling)
+ * — so the readouts that appear in different places on the two layouts exist
+ * twice and the sheet hides one of each pair. Only the board and the control
+ * row are this game's own.
  */
 export function PlayView({ play }: { readonly play: BinairoPlay }) {
   const { state } = play;
 
   return (
-    <main className={styles.page} data-play-state="playing">
-      <header className={styles.topBar}>
+    <main
+      className={`${screen.page} ${styles.pageBinairo}`}
+      style={ACCENT}
+      data-play-state="playing"
+    >
+      <header className={screen.topBar}>
         <Link
-          className={styles.back}
+          className={screen.back}
           href={routes.home}
-          aria-label={messages.binairo.backAria}
+          aria-label={messages.play.backAria}
         >
-          {messages.binairo.back}
+          {messages.play.back}
         </Link>
-        <span className={styles.wordmark}>{messages.brand.wordmark}</span>
-        <span className={styles.barKicker}>{messages.binairo.kicker}</span>
-        <span className={styles.topDate}>{formatLongDate(state.date)}</span>
-        <TimerReadout className={styles.timerBar} elapsedMs={play.elapsed} />
+        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
+        <span className={screen.barKicker}>
+          {messages.games.binairo.kicker}
+        </span>
+        <span className={screen.topDate}>{formatLongDate(state.date)}</span>
+        <TimerReadout className={screen.timerBar} elapsedMs={play.elapsed} />
       </header>
 
-      <div className={styles.titleBlock}>
-        <p className={styles.titleKicker}>{messages.binairo.kicker}</p>
+      <div className={screen.titleBlock}>
+        <p className={screen.titleKicker}>{messages.games.binairo.kicker}</p>
         {/* The <h1> is the FIRST element child of .titleRow, and the kicker
             is a sibling of the WRAPPER, never of the heading. That is not
             styling: impeccable's hero-eyebrow-chip and kicker-above-heading
@@ -55,30 +73,31 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
             on their first guard when it is null (plan 017 §12.2, verified
             against node_modules/impeccable/cli/engine/rules/checks.mjs).
             Do not "simplify" the wrapper away. */}
-        <div className={styles.titleRow}>
-          <h1 className={styles.title}>{messages.binairo.title}</h1>
-          <span className={styles.progressBar}>
-            {messages.binairo.progressShort(play.filled, TOTAL_CELLS)}
+        <div className={screen.titleRow}>
+          <h1 className={screen.title}>{messages.games.binairo.play.title}</h1>
+          <span className={screen.progressBar}>
+            {messages.games.binairo.play.progressShort(
+              play.filled,
+              TOTAL_CELLS,
+            )}
           </span>
         </div>
-        <p className={styles.rules}>{messages.binairo.rules}</p>
+        <p className={screen.rules}>{messages.games.binairo.play.rules}</p>
       </div>
 
-      <div className={styles.statsCard}>
+      <div className={screen.statsCard}>
         {/* Decoration with nothing to announce. */}
-        <div aria-hidden className={styles.tape} />
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>
-            {messages.binairo.timerLabel}
-          </span>
-          <TimerReadout className={styles.timerCard} elapsedMs={play.elapsed} />
+        <div aria-hidden className={screen.tape} />
+        <div className={screen.statRow}>
+          <span className={screen.statLabel}>{messages.play.timerLabel}</span>
+          <TimerReadout className={screen.timerCard} elapsedMs={play.elapsed} />
         </div>
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>
-            {messages.binairo.progressLabel}
+        <div className={screen.statRow}>
+          <span className={screen.statLabel}>
+            {messages.play.progressLabel}
           </span>
-          <span className={styles.progressCard}>
-            {messages.binairo.progressLong(play.filled, TOTAL_CELLS)}
+          <span className={screen.progressCard}>
+            {messages.games.binairo.play.progressLong(play.filled, TOTAL_CELLS)}
           </span>
         </div>
       </div>
@@ -87,17 +106,17 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
           focusable and keeps announcing why it does nothing (§10.5). */}
       <button
         type="button"
-        className={`${styles.hint}${play.hintReady ? "" : ` ${styles.hintUsed}`}`}
+        className={`${screen.hint}${play.hintReady ? "" : ` ${screen.hintUsed}`}`}
         aria-disabled={!play.hintReady}
         onClick={play.revealHint}
       >
         {play.hintReady
-          ? messages.binairo.hint.available
-          : messages.binairo.hint.used}
+          ? messages.games.binairo.play.hint.available
+          : messages.games.binairo.play.hint.used}
       </button>
 
-      <section className={styles.board}>
-        <div className={styles.gridCard}>
+      <section className={screen.board}>
+        <div className={screen.gridCard}>
           <Grid
             givens={state.givens}
             entries={state.entries}
@@ -110,8 +129,8 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
         </div>
         <Controls paint={state.paint} onToggleMode={play.toggleMode} />
         {play.hintKind !== null && (
-          <p className={styles.hintExplain}>
-            {messages.binairo.hint.explain[play.hintKind]}
+          <p className={screen.hintExplain}>
+            {messages.games.binairo.play.hint.explain[play.hintKind]}
           </p>
         )}
       </section>
@@ -156,52 +175,56 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
  */
 export function PlaySkeleton({ date }: { readonly date: string }) {
   return (
-    <main className={styles.page} data-play-state="skeleton">
-      <header className={styles.topBar}>
+    <main
+      className={`${screen.page} ${styles.pageBinairo}`}
+      style={ACCENT}
+      data-play-state="skeleton"
+    >
+      <header className={screen.topBar}>
         <Link
-          className={styles.back}
+          className={screen.back}
           href={routes.home}
-          aria-label={messages.binairo.backAria}
+          aria-label={messages.play.backAria}
         >
-          {messages.binairo.back}
+          {messages.play.back}
         </Link>
-        <span className={styles.wordmark}>{messages.brand.wordmark}</span>
-        <span className={styles.barKicker}>{messages.binairo.kicker}</span>
-        <span className={styles.topDate}>{formatLongDate(date)}</span>
-        <span aria-hidden className={styles.timerBar}>
+        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
+        <span className={screen.barKicker}>
+          {messages.games.binairo.kicker}
+        </span>
+        <span className={screen.topDate}>{formatLongDate(date)}</span>
+        <span aria-hidden className={screen.timerBar}>
           {BLANK_READOUT}
         </span>
       </header>
 
-      <div className={styles.titleBlock}>
-        <p className={styles.titleKicker}>{messages.binairo.kicker}</p>
+      <div className={screen.titleBlock}>
+        <p className={screen.titleKicker}>{messages.games.binairo.kicker}</p>
         {/* The same structural wrapper as in PlayView — see the note there:
             impeccable's two rules anchor on `h1.previousElementSibling`. */}
-        <div className={styles.titleRow}>
-          <h1 className={styles.title}>{messages.binairo.title}</h1>
-          <span aria-hidden className={styles.progressBar}>
+        <div className={screen.titleRow}>
+          <h1 className={screen.title}>{messages.games.binairo.play.title}</h1>
+          <span aria-hidden className={screen.progressBar}>
             {BLANK_READOUT}
           </span>
         </div>
-        <p className={styles.rules}>{messages.binairo.rules}</p>
+        <p className={screen.rules}>{messages.games.binairo.play.rules}</p>
       </div>
 
       {/* The desktop sidebar card. Its two rows are what give it its height,
           so they are here in full — with the STATIC labels, which say what
           the card is, and blank readouts where the record's numbers go. */}
-      <div aria-hidden className={styles.statsCard}>
-        <div className={styles.tape} />
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>
-            {messages.binairo.timerLabel}
-          </span>
-          <span className={styles.timerCard}>{BLANK_READOUT}</span>
+      <div aria-hidden className={screen.statsCard}>
+        <div className={screen.tape} />
+        <div className={screen.statRow}>
+          <span className={screen.statLabel}>{messages.play.timerLabel}</span>
+          <span className={screen.timerCard}>{BLANK_READOUT}</span>
         </div>
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>
-            {messages.binairo.progressLabel}
+        <div className={screen.statRow}>
+          <span className={screen.statLabel}>
+            {messages.play.progressLabel}
           </span>
-          <span className={styles.progressCard}>{BLANK_READOUT}</span>
+          <span className={screen.progressCard}>{BLANK_READOUT}</span>
         </div>
       </div>
 
@@ -209,13 +232,13 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
           read off the record, and the bar is the same 44px/50px either way. */}
       <div
         aria-hidden
-        className={`${styles.hint} ${styles.hintUsed} ${styles.placeholder}`}
+        className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}
       >
         {BLANK_READOUT}
       </div>
 
-      <section className={styles.board}>
-        <div aria-hidden className={styles.gridCard}>
+      <section className={screen.board}>
+        <div aria-hidden className={screen.gridCard}>
           <div className={styles.grid}>
             {Array.from({ length: TOTAL_CELLS }, (_unused, index) => (
               <div
@@ -234,20 +257,20 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
           <div
             className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
           >
-            {messages.binairo.controls.zero}
+            {messages.games.binairo.play.controls.zero}
           </div>
           <div
             className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
           >
-            {messages.binairo.controls.one}
+            {messages.games.binairo.play.controls.one}
           </div>
           <div
             className={`${styles.control} ${styles.controlErase} ${styles.placeholder}`}
           >
-            {messages.binairo.controls.erase}
+            {messages.games.binairo.play.controls.erase}
           </div>
           <span className={styles.affordance}>
-            {messages.binairo.controls.affordance}
+            {messages.games.binairo.play.controls.affordance}
           </span>
         </div>
       </section>

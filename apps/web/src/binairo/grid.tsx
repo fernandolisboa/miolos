@@ -187,7 +187,11 @@ export function Grid({
               className={`${styles.cell} ${styles.cellGiven}`}
               data-cell-index={index}
               aria-disabled="true"
-              aria-label={messages.binairo.cellGivenAria(row, column, given)}
+              aria-label={messages.games.binairo.play.cellGivenAria(
+                row,
+                column,
+                given,
+              )}
             >
               {given}
             </div>
@@ -209,8 +213,12 @@ export function Grid({
             // red, and that sentence — so colour is still never the sole one.
             aria-label={
               invalid
-                ? messages.binairo.cellInvalidAria(row, column, value)
-                : messages.binairo.cellAria(row, column, value)
+                ? messages.games.binairo.play.cellInvalidAria(
+                    row,
+                    column,
+                    value,
+                  )
+                : messages.games.binairo.play.cellAria(row, column, value)
             }
             onClick={(event) => {
               // A drag has already applied every cell it crossed and a paint

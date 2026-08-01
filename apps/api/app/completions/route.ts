@@ -3,6 +3,8 @@ import {
   binairoDailyContentSchema,
   completionRequestSchema,
   completionResponseSchema,
+  sudokuDailyContentSchema,
+  type CompletionRequest,
 } from "@miolos/core";
 import {
   getPublishedDailyWithSolution,
@@ -65,6 +67,29 @@ function completionResponse(
     completionResponseSchema.parse({ ...record, recorded }),
     { headers: corsHeaders({ credentials: true }) },
   );
+}
+
+/**
+ * The stored solution for a submitted game. Deliberately LOCAL to this
+ * route and keyed on `CompletionRequest["game"]`, not `Game`: Termo has no
+ * grid (#27), so a core-level "get the solution" abstraction would be wrong
+ * within two tickets. Exhaustive over the request union's discriminator, so
+ * #25/#27 get a compile error here instead of a silent fallthrough — and
+ * without it a sudoku row would reach `binairoDailyContentSchema.parse`,
+ * throw a ZodError and 500 the route the moment the request union widened.
+ *
+ * jsonb is untyped at the boundary: parsed, never cast.
+ */
+function storedSolution(
+  game: CompletionRequest["game"],
+  content: unknown,
+): readonly number[] {
+  switch (game) {
+    case "binairo":
+      return binairoDailyContentSchema.parse(content).solution;
+    case "sudoku":
+      return sudokuDailyContentSchema.parse(content).solution;
+  }
 }
 
 /** `application/json`, parameters allowed (`; charset=utf-8`). */
@@ -166,12 +191,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     return errorResponse(404, "no-puzzle");
   }
 
-  // jsonb is untyped at the boundary: parsed, never cast.
-  const { solution } = binairoDailyContentSchema.parse(row.content);
+  const solution = storedSolution(body.game, row.content);
 
   // Constant-work comparison — every cell is examined even after the first
-  // mismatch. Binairo has no secret worth a timing channel, but this route
-  // and its request union are the extension point #27 (Termo) attaches to,
+  // mismatch. Neither grid game has a secret worth a timing channel, but
+  // this route and its request union are the extension point #27 attaches to,
   // where the answer word IS the product's one secret. This repo has
   // already engineered timing-sensitive comparisons out twice
   // (cron/publish/route.ts, session/token.ts) and does not reintroduce one
@@ -183,7 +207,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   }
   if (mismatches > 0) {
-    // No row is written: for Binairo a wrong grid is not a game outcome
+    // No row is written: for a grid game a wrong grid is not a game outcome
     // (ADR-0008 keeps `lost` Termo-only), it is a client bug or tampering.
     return errorResponse(422, "grid-mismatch");
   }

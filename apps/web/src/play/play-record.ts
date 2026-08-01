@@ -1,8 +1,8 @@
 /**
- * The local play record (plan 017 D13/D18): in-flight state for today's
- * grid AND the sync queue for its completion. There is exactly one record
- * per (game, date), and its natural key is the same key that makes the
- * completion POST idempotent — so no second store exists.
+ * The local play record (plan 017 D13/D18, ADR-0029): in-flight state for
+ * today's grid AND the sync queue for its completion. There is exactly one
+ * record per (game, date), and its natural key is the same key that makes
+ * the completion POST idempotent — so no second store exists.
  *
  * It is NEVER a source of truth. Streaks, statistics and the completion
  * instant all come from the server; the record carries a duration and no
@@ -13,15 +13,20 @@
  * available in the mount effect, and no schema machinery is warranted.
  * ADR-0001's follow-up already places in-flight state here.
  */
-import { isoDateString } from "@miolos/core";
+import { isoDateString, sudokuDigitSchema, type Game } from "@miolos/core";
 import { z } from "zod";
 
 const STORAGE_PREFIX = "miolos:play:";
 
-/** One day in milliseconds — the cap on a recorded session (see below). */
-const ELAPSED_CAP_MS = 86_400_000;
+/**
+ * One day in milliseconds — the cap on a recorded session (see below), and
+ * the same bound the completion contract carries. Exported because
+ * `sync.ts` clamps against it on the memory-queue path; it used to be
+ * declared once here and once there (plan 018 §5.2).
+ */
+export const ELAPSED_CAP_MS = 86_400_000;
 
-export const playRecordKey = (game: "binairo", date: string) =>
+export const playRecordKey = (game: Game, date: string) =>
   `${STORAGE_PREFIX}${game}:${date}`;
 
 /**
@@ -32,8 +37,13 @@ export const playRecordKey = (game: "binairo", date: string) =>
  * `v: 1` is the version escape hatch — an unparseable or wrong-version
  * record is DISCARDED, never migrated. A migration path would be code that
  * runs once in the app's life and is never exercised again.
+ *
+ * `v` STAYS 1 across the whole union (plan 018 S17, ADR-0029 consequence
+ * (d)): bumping it discards every stored record on deploy, and a discarded
+ * record with `pendingSync: true` is the only copy of a completion the
+ * server has not acknowledged — a lost streak day.
  */
-export const playRecordSchema = z.strictObject({
+export const binairoPlayRecordSchema = z.strictObject({
   v: z.literal(1),
   game: z.literal("binairo"),
   date: isoDateString,
@@ -59,6 +69,41 @@ export const playRecordSchema = z.strictObject({
   /** Terminal disposition of the sync, for the conclusion's discreet line. */
   syncOutcome: z.enum(["pending", "recorded", "rejected"]),
 });
+
+export type BinairoPlayRecord = z.infer<typeof binairoPlayRecordSchema>;
+
+/**
+ * The sudoku member (plan 018 §9.1). Identical to the binairo member in
+ * every field the board does not own, and different only where it does: 81
+ * cells, `null` for empty and 1–9 for a written digit — the engine's `0`
+ * sentinel never reaches this type (plan 018 S6). `sudokuDigitSchema` comes
+ * from `@miolos/core` and is never re-declared: one definition, three
+ * consumers (the daily contract, the completion request and this).
+ */
+export const sudokuPlayRecordSchema = z.strictObject({
+  v: z.literal(1),
+  game: z.literal("sudoku"),
+  date: isoDateString,
+  entries: z.array(z.union([sudokuDigitSchema, z.null()])).length(81),
+  /** The SOLVED MERGED grid — see the binairo member for why it is stored. */
+  grid: z.array(sudokuDigitSchema).length(81).optional(),
+  elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+  hintsUsed: z.number().int().min(0).max(1),
+  concluded: z.boolean(),
+  pendingSync: z.boolean(),
+  syncOutcome: z.enum(["pending", "recorded", "rejected"]),
+});
+
+export type SudokuPlayRecord = z.infer<typeof sudokuPlayRecordSchema>;
+
+/**
+ * EXTENSION POINT: #25/#27 add their members here; the discriminator is
+ * `game`, exactly as it is on the wire contracts.
+ */
+export const playRecordSchema = z.discriminatedUnion("game", [
+  binairoPlayRecordSchema,
+  sudokuPlayRecordSchema,
+]);
 
 export type PlayRecord = z.infer<typeof playRecordSchema>;
 
@@ -105,12 +150,22 @@ function parseAt(store: Storage, key: string): PlayRecord | undefined {
   return parsed.success ? parsed.data : undefined;
 }
 
-/** The record for the SERVER's date, or `undefined` on absence or garbage. */
-export function readPlayRecord(date: string): PlayRecord | undefined {
+/**
+ * The record at (`game`, the SERVER's date), or `undefined` on absence, on
+ * garbage, or on a record whose own `game` does not match the key it was
+ * found under — a hand-edited store must never feed a 64-cell binairo
+ * record into an 81-cell sudoku grid (plan 018 S17, landmine 3).
+ */
+export function readPlayRecord(
+  game: Game,
+  date: string,
+): PlayRecord | undefined {
   const store = storage();
-  return store === undefined
-    ? undefined
-    : parseAt(store, playRecordKey("binairo", date));
+  if (store === undefined) {
+    return undefined;
+  }
+  const record = parseAt(store, playRecordKey(game, date));
+  return record?.game === game ? record : undefined;
 }
 
 /**
@@ -147,7 +202,12 @@ export function writePlayRecord(record: PlayRecord): void {
   }
 }
 
-/** Every record still awaiting a completion POST — the queue, in full. */
+/**
+ * Every record still awaiting a completion POST — the queue, in full, and
+ * deliberately GAME-BLIND. That is exactly why `sync.ts` can be one module
+ * for every game, and why it MUST be (ADR-0029, plan 018 S1): two copies
+ * over this one queue would each POST and each settle the other's records.
+ */
 export function listPendingRecords(): PlayRecord[] {
   const store = storage();
   if (store === undefined) {

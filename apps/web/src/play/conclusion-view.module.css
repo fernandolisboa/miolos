@@ -1,9 +1,13 @@
-/* The conclusion — desktop-first per f5-conclusao-desktop, mobile per
-   f6-conclusao-mobile, with the scope table of plan 017 §12.3 applied: the
+/* The conclusion — SHARED by every game (ADR-0029, plan 018 §5.2).
+   Desktop-first per f5-conclusao-desktop, mobile per f6-conclusao-mobile,
+   with the scope table of plan 017 §12.3 applied: the
    streak card, best/average/solved, the histogram, the closing italic line
    and the share button are all out of this ticket, so the desktop
    composition is redesigned within the system rather than left as an empty
    rectangle at 48px padding.
+
+   Every accent here is `var(--accent)`, set inline on the root from
+   `play/accent.ts` — one sheet, four games (plan 018 §5.2 edit 1).
 
    Every rule is anchored on a local class: Next compiles CSS Modules in
    css-loader's `pure` mode, so a bare type selector either fails the build
@@ -18,7 +22,7 @@
 /* Per-screen hover accent — anchored on .page, never a bare `a:hover`
    (plan 017 §12.5). */
 .page a:hover {
-  color: var(--accent-binairo);
+  color: var(--accent);
 }
 
 /* Two columns at F5's 1.3 : 1, the result card left and the day card, CTA
@@ -90,7 +94,7 @@
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent-binairo);
+  color: var(--accent);
 }
 
 .topDateShort {
@@ -108,7 +112,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg)
-    color-mix(in srgb, var(--accent-binairo) 22%, transparent);
+    color-mix(in srgb, var(--accent) 22%, transparent);
   padding: var(--space-12);
   /* Static rotation, never animated (DESIGN.md). */
   transform: rotate(-0.5deg);
@@ -123,7 +127,7 @@
   width: 78px;
   height: 24px;
   border-radius: var(--radius-tape);
-  background: color-mix(in srgb, var(--accent-binairo) 32%, transparent);
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
   transform: rotate(-4deg);
 }
 
@@ -132,7 +136,7 @@
   font: var(--text-kicker);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent-binairo);
+  color: var(--accent);
 }
 
 /* Structural, not cosmetic: the wrapper makes `h1.previousElementSibling`
@@ -167,9 +171,9 @@
   flex-shrink: 0;
   width: 150px;
   height: 150px;
-  border: 3px solid var(--accent-binairo);
+  border: 3px solid var(--accent);
   border-radius: 50%;
-  color: var(--accent-binairo);
+  color: var(--accent);
   animation: stamp-settle var(--duration-slow) var(--ease-settle) both;
 }
 
@@ -259,7 +263,7 @@
 }
 
 .chipDone {
-  background: color-mix(in srgb, var(--accent-binairo) 10%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 /* The dashed border is the second carrier of "not done", so the state never
@@ -277,7 +281,7 @@
 }
 
 .chipDone .chipName {
-  color: var(--accent-binairo);
+  color: var(--accent);
 }
 
 .chipNameShort {
@@ -308,15 +312,35 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-.cta:hover {
-  /* The solid CTA keeps its paper ink on hover: the per-screen accent hover
-     would make the label vanish into its own background. */
+/* ANCHORED ON `.page`, and the extra class is the whole point (finding
+   `chaining-cta-label-vanishes-on-hover`): the solid CTA keeps its paper ink
+   on hover, but a bare `.cta:hover` (0,2,0) loses the cascade to
+   `.page a:hover` (0,2,1) above, and the label would resolve to the SAME
+   `--accent` as `.ctaNext`'s background — an invisible label at 1:1 contrast
+   for as long as the pointer is on it. (0,3,0) wins, and `.ctaNext` inherits
+   this colour because it declares none of its own. */
+.page .cta:hover {
   color: var(--paper-desk);
 }
 
 .cta:active {
   transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 var(--line);
+}
+
+/* The chaining variant (plan 018 S21): when the CTA points at a game it wears
+   THAT game's accent, which the component sets as `--accent` on this element
+   — F5:66 draws exactly this button in the destination game's colour, and F6
+   gives it the accent-tinted hard shadow. Paper-on-accent is the same pair
+   the hub's four play buttons already ship. */
+.ctaNext {
+  background: var(--accent);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.ctaNext:active {
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .secondaryLink {
@@ -350,7 +374,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg)
-    color-mix(in srgb, var(--accent-binairo) 22%, transparent);
+    color-mix(in srgb, var(--accent) 22%, transparent);
   padding: var(--space-12);
   transform: rotate(-0.5deg);
 }
@@ -375,11 +399,11 @@
   display: inline-block;
   margin-top: var(--space-7);
   padding: 14px 26px;
-  background: var(--accent-binairo);
+  background: var(--accent);
   color: var(--paper-desk);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm)
-    color-mix(in srgb, var(--accent-binairo) 25%, transparent);
+    color-mix(in srgb, var(--accent) 25%, transparent);
   font: var(--text-button);
   text-decoration: none;
   transition:
@@ -387,14 +411,15 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-.emptyCta:hover {
+/* Same cascade, same fix: this one is on `.pageEmpty`, and its background is
+   the accent too — it lost to `.page a:hover` on `main` as well. */
+.page .emptyCta:hover {
   color: var(--paper-desk);
 }
 
 .emptyCta:active {
   transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0
-    color-mix(in srgb, var(--accent-binairo) 25%, transparent);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* A beat of blank paper before the record is read — no pulse, nothing that
@@ -409,7 +434,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg)
-    color-mix(in srgb, var(--accent-binairo) 22%, transparent);
+    color-mix(in srgb, var(--accent) 22%, transparent);
   transform: rotate(-0.5deg);
 }
 
@@ -425,8 +450,13 @@
   }
 }
 
-/* ≤1040px — single column, and the top bar swaps to F6's members. */
-@media (max-width: 1040px) {
+/* ≤1140px — single column, and the top bar swaps to F6's members. This
+   conclusion's own hard minimum is 1040 (it has no board), but the fold has
+   to match the play screen's: the top bar swaps MEMBERS at it, so two
+   different folds would change the bar's character mid-session when
+   navigating /<jogo> → /<jogo>/concluido at 1100px. One shared layer, one
+   fold; the cost is folding ~100px early (plan 018 §12.2, T3). */
+@media (max-width: 1140px) {
   .pageResult {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;

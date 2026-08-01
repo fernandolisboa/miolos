@@ -1,7 +1,19 @@
 import Link from "next/link";
 
-import { messages, routes } from "../i18n";
+import { routes } from "../i18n";
 import styles from "./daily-unavailable.module.css";
+
+/**
+ * The copy this screen renders. Structural rather than
+ * `Messages["games"]["binairo"]["play"]["unavailable"]`: every game's block
+ * has the same three keys (plan 018 §13.2) and pinning the type to one of
+ * them would make the prop game-specific again.
+ */
+export interface DailyUnavailableCopy {
+  readonly title: string;
+  readonly body: string;
+  readonly cta: string;
+}
 
 /**
  * The pt-BR screen for a day with no published puzzle (plan 014 D13):
@@ -10,10 +22,15 @@ import styles from "./daily-unavailable.module.css";
  * generates on demand and never shows an unpublished board (ADR-0004), so
  * this is the honest answer rather than a fallback puzzle.
  *
- * EXTENSION POINT: #23/#25/#27 pass their own game's copy in; today
- * Binairo is the only daily play route, so the copy is read directly.
+ * The copy arrives as a prop (plan 018 §13.3): #23 made Sudoku the second
+ * daily play route, so the screen can no longer read one game's block
+ * directly. #25/#27 pass their own.
  */
-export function DailyUnavailable() {
+export function DailyUnavailable({
+  copy,
+}: {
+  readonly copy: DailyUnavailableCopy;
+}) {
   return (
     <main className={styles.page}>
       <article className={styles.card}>
@@ -23,10 +40,10 @@ export function DailyUnavailable() {
             hero-eyebrow-chip and kicker-above-heading rules both anchor on
             `h1.previousElementSibling`, and both return early when it is
             null (plan 017 §12.2). Do not add a kicker above it. */}
-        <h1 className={styles.title}>{messages.binairo.unavailable.title}</h1>
-        <p className={styles.body}>{messages.binairo.unavailable.body}</p>
+        <h1 className={styles.title}>{copy.title}</h1>
+        <p className={styles.body}>{copy.body}</p>
         <Link className={styles.cta} href={routes.home}>
-          {messages.binairo.unavailable.cta}
+          {copy.cta}
         </Link>
       </article>
     </main>

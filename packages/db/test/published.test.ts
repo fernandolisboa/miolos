@@ -10,7 +10,7 @@ import {
 } from "../src/published";
 import { dailyPuzzles } from "../src/schema";
 import { createTestDb } from "../src/testing";
-import { binairoContentFixture } from "./fixtures";
+import { binairoContentFixture, sudokuContentFixture } from "./fixtures";
 
 // THE AC-1 WALL SUITE (issue #17, seam 3, ADR-0004/0010/0024). Future
 // rows invisible through every reader, kill switch respected, boundary
@@ -30,21 +30,40 @@ afterAll(async () => {
   await ctx.close();
 });
 
-/** Raw seeding writes on purpose: the wall under test must not seed itself. */
+/**
+ * Raw seeding writes on purpose: the wall under test must not seed itself.
+ * `game` defaults to binairo so every #17 test above reads unchanged; #23
+ * passes "sudoku" and gets the matching content fixture (plan 018 §15).
+ */
 async function insertRow(options: {
   date: string;
   publishedAt: ReturnType<typeof sql>;
   killedAt?: ReturnType<typeof sql>;
   seed?: number;
+  game?: "binairo" | "sudoku";
 }): Promise<void> {
+  const game = options.game ?? "binairo";
   await ctx.db.insert(dailyPuzzles).values({
-    game: "binairo",
+    game,
     date: options.date,
     seed: options.seed ?? 1,
-    content: binairoContentFixture(),
+    content:
+      game === "sudoku" ? sudokuContentFixture() : binairoContentFixture(),
     publishedAt: options.publishedAt,
     killedAt: options.killedAt,
   });
+}
+
+/**
+ * The DB clock's America/Sao_Paulo calendar day — the same expression
+ * `wallPredicate` uses when `date` is omitted, so a `getTodayDaily` test
+ * can name the date it seeded without consulting the JS clock (ADR-0010).
+ */
+async function saoPauloToday(): Promise<string> {
+  const rows = await ctx.db.execute(
+    sql`select ((now() at time zone 'America/Sao_Paulo')::date)::text as today`,
+  );
+  return String(rows.rows[0]?.["today"]);
 }
 
 describe("the published-predicate wall", () => {
@@ -183,6 +202,143 @@ describe("the published-predicate wall", () => {
   });
 });
 
+describe("the wall holds for the second game (#23, plan 018 §6.5)", () => {
+  it("T-DB-S1: a future-dated sudoku row is invisible, and so is a killed one", async () => {
+    const today = await saoPauloToday();
+    await insertRow({
+      game: "sudoku",
+      date: today,
+      publishedAt: sql`now() + interval '1 day'`,
+    });
+    await insertRow({
+      game: "sudoku",
+      date: "2026-07-31",
+      publishedAt: sql`now() - interval '1 hour'`,
+      killedAt: sql`now()`,
+      seed: 2,
+    });
+    expect(await getTodayDaily(ctx.db, "sudoku")).toBeUndefined();
+    expect(await getPublishedDaily(ctx.db, "sudoku", today)).toBeUndefined();
+    expect(
+      await getPublishedDaily(ctx.db, "sudoku", "2026-07-31"),
+    ).toBeUndefined();
+    // Same predicate, same answer for the solution-bearing reader.
+    expect(
+      await getPublishedDailyWithSolution(ctx.db, "sudoku", today),
+    ).toBeUndefined();
+  });
+
+  it("T-DB-S2: a published sudoku row projects to exactly {game,date,givens,tier}", async () => {
+    await insertRow({
+      game: "sudoku",
+      date: "2026-08-01",
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    const daily = await getPublishedDaily(ctx.db, "sudoku", "2026-08-01");
+    expect(daily).toBeDefined();
+    expect(Object.keys(daily ?? {}).sort()).toEqual([
+      "date",
+      "game",
+      "givens",
+      "tier",
+    ]);
+    expect(daily?.date).toBe("2026-08-01");
+    // `tier` only type-checks because the reader is narrowed to the game it
+    // was asked for — on the un-narrowed union this line is a compile error,
+    // which is what made this test red before src/published.ts changed.
+    expect(daily?.tier).toBe(3);
+    expect(daily?.givens).toHaveLength(81);
+    const keys = collectKeys(daily);
+    for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+      expect(keys.has(forbidden)).toBe(false);
+    }
+  });
+
+  it("T-DB-S3: a game-scoped read never returns another game's row for the same date", async () => {
+    const today = await saoPauloToday();
+    await insertRow({
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    expect(await getTodayDaily(ctx.db, "sudoku")).toBeUndefined();
+    expect(await getPublishedDaily(ctx.db, "sudoku", today)).toBeUndefined();
+
+    await insertRow({
+      game: "sudoku",
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+      seed: 2,
+    });
+    expect((await getTodayDaily(ctx.db, "sudoku"))?.game).toBe("sudoku");
+    expect((await getTodayDaily(ctx.db, "binairo"))?.game).toBe("binairo");
+    expect((await getPublishedDaily(ctx.db, "sudoku", today))?.game).toBe(
+      "sudoku",
+    );
+    expect((await getPublishedDaily(ctx.db, "binairo", today))?.game).toBe(
+      "binairo",
+    );
+  });
+
+  it("T-DB-S4: the narrowing is machine-checked — every seeded shape returns sudoku at runtime", async () => {
+    const today = await saoPauloToday();
+    // The enumerated row shapes a sudoku read can meet. The src narrowing
+    // is an `as` restating what stripDailyContent already proved; this loop
+    // is the proof, taken on the real value rather than on the type.
+    const companions: readonly (readonly [string, () => Promise<void>])[] = [
+      ["no companion row", () => Promise.resolve()],
+      [
+        "a live binairo row for the same date",
+        () =>
+          insertRow({
+            date: today,
+            publishedAt: sql`now() - interval '1 hour'`,
+            seed: 2,
+          }),
+      ],
+      [
+        "a killed binairo row for the same date",
+        () =>
+          insertRow({
+            date: today,
+            publishedAt: sql`now() - interval '1 hour'`,
+            killedAt: sql`now()`,
+            seed: 3,
+          }),
+      ],
+      [
+        "a future-dated binairo row for the same date",
+        () =>
+          insertRow({
+            date: today,
+            publishedAt: sql`now() + interval '1 day'`,
+            seed: 4,
+          }),
+      ],
+    ];
+
+    for (const [shape, seedCompanion] of companions) {
+      await ctx.db.execute(sql`truncate table daily_puzzles`);
+      // The companion goes in FIRST, deliberately: the readers take
+      // `limit(1)` with no ORDER BY, so a game-blind predicate would hand
+      // back the binairo row by insertion order and the assertions below
+      // would go red. Seeding sudoku first made this test pass under a
+      // mutation that deleted `eq(dailyPuzzles.game, game)`.
+      await seedCompanion();
+      await insertRow({
+        game: "sudoku",
+        date: today,
+        publishedAt: sql`now() - interval '1 hour'`,
+      });
+      const fromToday = await getTodayDaily(ctx.db, "sudoku");
+      const fromDate = await getPublishedDaily(ctx.db, "sudoku", today);
+      expect(fromToday?.game, shape).toBe("sudoku");
+      expect(fromDate?.game, shape).toBe("sudoku");
+      expect(fromToday?.tier, shape).toBe(3);
+      expect(fromDate?.tier, shape).toBe(3);
+    }
+  });
+});
+
 describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", () => {
   it("T-DB-9a: the wall module exports exactly the audited set", async () => {
     const published = await import("../src/published");
@@ -231,5 +387,51 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     const { createDb } = await import("../src/client");
     const db = createDb("postgresql://tripwire:tripwire@localhost:5432/x");
     expect(Object.keys(db.query).sort()).toEqual(["sessions", "users"]);
+  });
+
+  it("T-DB-S5: #23 added no runtime export to any package entry", async () => {
+    // The generic wall (plan 018 S11) is a SIGNATURE change: two readers
+    // become generic in `game` and nothing is added to the surface. T-DB-9a
+    // through T-DB-9e compare Object.keys() per module and are blind to a
+    // signature, which is the point — they come out of this ticket
+    // byte-identical (plan 018 §19.5). This asserts the same property once
+    // across every package.json subpath, so a sudoku-specific helper added
+    // to ANY entry fails here even if someone "fixed" a per-module list.
+    const entries = await Promise.all([
+      import("../src/index"),
+      import("../src/publishing"),
+      import("../src/testing"),
+      import("../src/user"),
+    ]);
+    const surface = entries.flatMap((entry) => Object.keys(entry));
+    expect([...new Set(surface)].sort()).toEqual([
+      "SAO_PAULO_TIME_ZONE",
+      "bufferDepth",
+      "completions",
+      "createDb",
+      "createPublishingDb",
+      "createTestDb",
+      "dailyPuzzles",
+      "eq",
+      "getCompletion",
+      "getPublishedDaily",
+      "getPublishedDailyWithSolution",
+      "getRemoteConfig",
+      "getTodayDaily",
+      "grantHints",
+      "grantedHintsToday",
+      "hintGrants",
+      "insertDailyPuzzle",
+      "listBufferedDates",
+      "recordCompletion",
+      "remoteConfig",
+      "sessions",
+      "sql",
+      "todaySaoPaulo",
+      "users",
+    ]);
+    // A duplicate across two entries would be hidden by the Set above, so
+    // pin the count too: 24 distinct names, 24 exports.
+    expect(surface).toHaveLength(24);
   });
 });

@@ -1,4 +1,4 @@
-import { dailyPuzzleResponseSchema } from "@miolos/core";
+import { dailyBinairoResponseSchema } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { eq, sql } from "@miolos/db";
 import {
@@ -62,7 +62,10 @@ describe("GET /daily/binairo", () => {
     await seedDate(today);
     const response = await GET();
     expect(response.status).toBe(200);
-    const body = dailyPuzzleResponseSchema.parse(await response.json());
+    // Narrowed from the union deliberately: with `sudoku` in
+    // `dailyPuzzleResponseSchema` a union parse would ACCEPT a mismatched row
+    // on this path and lose a defence-in-depth assertion (plan 018 §7.4).
+    const body = dailyBinairoResponseSchema.parse(await response.json());
     expect(body.game).toBe("binairo");
     expect(body.date).toBe(today);
     expect(body.size).toBe(8);

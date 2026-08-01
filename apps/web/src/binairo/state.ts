@@ -11,7 +11,7 @@
  * - `violating` and `status` are DERIVED from the merged grid and are
  *   recomputed on every entry change, never patched incrementally.
  */
-import type { DailyPuzzleResponse } from "@miolos/core";
+import type { DailyBinairoResponse } from "@miolos/core";
 import {
   findBinairoViolations,
   isValidBinairoSolution,
@@ -20,8 +20,10 @@ import {
   type BinairoSolvedGrid,
 } from "@miolos/games/binairo";
 
-import { nextHint } from "./hint";
-import type { PlayRecord } from "./play-record";
+import { nextHint } from "../play/grid-hint";
+import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
+import { applyTimerAction } from "../play/timer";
+import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 
 /** What a player may put in a cell. Mirrors BinairoCell; `null` = empty. */
 export type CellValue = BinairoCell;
@@ -33,66 +35,37 @@ export type PaintMode =
   | { readonly kind: "erase" };
 
 /**
- * Count-up timer. Elapsed is DERIVED from a running-segment start, never
- * accumulated by a tick (D10) — a throttled background tab cannot drift a
- * clock it does not increment.
+ * `status` narrows `PlayCore`'s three-member union to the two Binairo has:
+ * `lost` is Termo-only (ADR-0008), and the lifecycle's terminal predicate is
+ * `status !== "playing"`, which coincides with `=== "solved"` here.
  */
-export interface TimerState {
-  readonly accumulatedMs: number;
-  /** Client epoch ms of the current running segment, or null while paused. */
-  readonly runningSince: number | null;
-}
-
-export interface HintState {
-  /** One free hint per puzzle (D21). Not a balance, not a grant. */
-  readonly free: 1;
-  readonly used: number;
-  /** The cell the hint filled, for the highlight. */
-  readonly lastIndex: number | null;
-}
-
-export interface PlayState {
-  /** The SERVER's date for this puzzle — never a client-computed today. */
-  readonly date: string;
+export interface PlayState extends PlayCore {
   readonly givens: BinairoGrid;
   /** 64 entries; always null at a given's index. */
   readonly entries: readonly CellValue[];
   readonly paint: PaintMode;
-  readonly timer: TimerState;
   readonly hint: HintState;
   /** Recomputed on every entry change (D11); presentation only. */
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
-  readonly pendingSync: boolean;
-  /**
-   * The clock reference the readout renders against, moved by `tick`,
-   * `pause`, `resume` and `restore`. It lives in state precisely so no
-   * component reads `Date.now()` during render (D28); `0` in the server
-   * snapshot makes the first paint deterministic.
-   */
-  readonly now: number;
-  /** false until the mount effect has run. Gates every record-derived render (D28). */
-  readonly hydrated: boolean;
 }
 
 export type PlayAction =
-  | {
-      readonly type: "restore";
-      readonly record: PlayRecord | undefined;
-      readonly now: number;
-    }
+  | LifecycleAction
   | { readonly type: "tap"; readonly index: number }
   /** Drag; applies in paint/erase modes only. */
   | { readonly type: "paint-over"; readonly index: number }
   | { readonly type: "set-mode"; readonly mode: PaintMode }
   | { readonly type: "use-hint"; readonly solution: BinairoSolvedGrid }
-  | { readonly type: "tick"; readonly now: number }
-  | { readonly type: "pause"; readonly now: number }
-  | { readonly type: "resume"; readonly now: number }
   | { readonly type: "mark-synced" };
 
-/** The deterministic server snapshot: givens only, 00:00, hydrated: false (D28). */
-export function initPlayState(daily: DailyPuzzleResponse): PlayState {
+/**
+ * The deterministic server snapshot: givens only, 00:00, hydrated: false
+ * (D28). Takes `DailyBinairoResponse`, never the union (plan 018 S11) —
+ * `daily.givens` on the union is `BinairoGrid | readonly (0..9)[]` and is
+ * not a binairo grid.
+ */
+export function initPlayState(daily: DailyBinairoResponse): PlayState {
   const givens: BinairoGrid = daily.givens;
   const entries: readonly CellValue[] = givens.map(() => null);
   const derived = derive(givens, entries);
@@ -159,39 +132,15 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
     }
 
     case "tick":
-      // Only nudges a re-render: the displayed value always comes from
-      // `elapsedMs(timer, now)`, so a tick can never accumulate.
-      return { ...state, now: action.now };
-
     case "pause":
-      // Idempotent, and load-bearing: `visibilitychange → hidden` followed
-      // by `pagehide` fires twice on a real navigation away, and a second
-      // pause would fold the same segment in twice.
-      if (state.timer.runningSince === null) {
-        return { ...state, now: action.now };
-      }
-      return {
-        ...state,
-        timer: {
-          accumulatedMs: elapsedMs(state.timer, action.now),
-          runningSince: null,
-        },
-        now: action.now,
-      };
-
     case "resume":
-      // Idempotent, and load-bearing: a second resume would overwrite
-      // `runningSince` and silently discard every millisecond since the
-      // previous one — exactly the drift D10 exists to prevent. Double
-      // resumes are ordinary (StrictMode, a `visible` with no preceding
-      // `hidden`, a bfcache restore firing both pageshow and
-      // visibilitychange).
-      if (state.timer.runningSince !== null) {
-        return { ...state, now: action.now };
-      }
+      // Both idempotence guards live in `play/timer.ts` now, and it returns
+      // the SAME timer object whenever the clock does not move — which is
+      // what keeps `timer` out of the persist effect's re-runs (plan 018
+      // §5.4). `now` always moves, so this is always a new state.
       return {
         ...state,
-        timer: { ...state.timer, runningSince: action.now },
+        timer: applyTimerAction(state.timer, action),
         now: action.now,
       };
 
@@ -213,14 +162,6 @@ export function mergedGrid(state: PlayState): BinairoGrid {
  */
 export function isSolvedGrid(grid: BinairoGrid): grid is BinairoSolvedGrid {
   return grid.every((cell) => cell !== null);
-}
-
-/** accumulatedMs + (runningSince === null ? 0 : now - runningSince). */
-export function elapsedMs(timer: TimerState, now: number): number {
-  return (
-    timer.accumulatedMs +
-    (timer.runningSince === null ? 0 : now - timer.runningSince)
-  );
 }
 
 function mergeGrid(
@@ -328,7 +269,7 @@ function restore(
   record: PlayRecord | undefined,
   now: number,
 ): PlayState {
-  if (record === undefined) {
+  if (!isBinairoRecord(record)) {
     return { ...state, now, hydrated: true };
   }
   const derived = derive(state.givens, record.entries);
@@ -341,4 +282,17 @@ function restore(
     now,
     hydrated: true,
   };
+}
+
+/**
+ * The record union's binairo member, or nothing. `readPlayRecord` already
+ * discards a record whose `game` disagrees with the key it was found under
+ * (plan 018 S17), so this branch is unreachable in practice — it exists
+ * because the reducer takes the whole union and an 81-cell sudoku `entries`
+ * array must never reach `derive`.
+ */
+function isBinairoRecord(
+  record: PlayRecord | undefined,
+): record is BinairoPlayRecord {
+  return record?.game === "binairo";
 }

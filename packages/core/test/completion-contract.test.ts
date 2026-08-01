@@ -6,8 +6,10 @@ import {
   calendarDateString,
   completionRequestSchema,
   completionResponseSchema,
+  sudokuCompletionRequestSchema,
   type BinairoCompletionRequest,
   type CompletionResponse,
+  type SudokuCompletionRequest,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
 
@@ -21,6 +23,22 @@ const valid: BinairoCompletionRequest = {
   game: "binairo",
   date: "2026-08-01",
   grid,
+  elapsedMs: 272_000,
+  hintsUsed: 1,
+};
+
+const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+
+/** Rule-irrelevant but well-typed 81 digits — the schema checks shape, never sudoku rules. */
+const sudokuGrid: SudokuCompletionRequest["grid"] = Array.from(
+  { length: 81 },
+  (_unused, index) => DIGITS[index % 9] ?? 1,
+);
+
+const validSudoku: SudokuCompletionRequest = {
+  game: "sudoku",
+  date: "2026-08-01",
+  grid: sudokuGrid,
   elapsedMs: 272_000,
   hintsUsed: 1,
 };
@@ -94,9 +112,93 @@ describe("binairoCompletionRequestSchema", () => {
     ).toBe(true);
   });
 
-  it("rejects a game the union does not carry yet (#23/#25/#27 widen it)", () => {
+  // Rewritten from `game: "sudoku"` at #23 (plan 018 T-CORE-S6): with sudoku
+  // in the union that body would still be rejected, but for the wrong reason
+  // — a 64-cell 0/1 grid is not a valid sudoku — i.e. a test proving nothing.
+  // `nonogram` is the game the union genuinely does not carry.
+  it("rejects a game the union does not carry yet (#25/#27 widen it)", () => {
     expect(
-      completionRequestSchema.safeParse({ ...valid, game: "sudoku" }).success,
+      completionRequestSchema.safeParse({ ...valid, game: "nonogram" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("sudokuCompletionRequestSchema", () => {
+  // T-CORE-S5 (plan 018 §15).
+  it("parses and round-trips a valid submission", () => {
+    expect(sudokuCompletionRequestSchema.parse(validSudoku)).toEqual(
+      validSudoku,
+    );
+    expect(completionRequestSchema.parse(validSudoku)).toEqual(validSudoku);
+  });
+
+  it("rejects an extra key (strictObject — a smuggled field never reaches the route)", () => {
+    const smuggled = {
+      ...validSudoku,
+      userId: "3f8e9a2c-1b4d-4e6f-8a9b-0c1d2e3f4a5b",
+    };
+    expect(sudokuCompletionRequestSchema.safeParse(smuggled).success).toBe(
+      false,
+    );
+    expect(completionRequestSchema.safeParse(smuggled).success).toBe(false);
+  });
+
+  it("rejects an 80-length grid", () => {
+    const short = { ...validSudoku, grid: sudokuGrid.slice(0, 80) };
+    expect(sudokuCompletionRequestSchema.safeParse(short).success).toBe(false);
+  });
+
+  it("rejects a 0 cell (a submission is a COMPLETE grid, never a partial one)", () => {
+    // 0 is `SudokuGrid`'s empty sentinel, so it is excluded here for exactly
+    // the reason `null` is excluded from binairo's.
+    const withHole = { ...validSudoku, grid: [0, ...sudokuGrid.slice(1)] };
+    expect(sudokuCompletionRequestSchema.safeParse(withHole).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a negative, an over-cap and a non-integer elapsedMs", () => {
+    expect(
+      sudokuCompletionRequestSchema.safeParse({ ...validSudoku, elapsedMs: -1 })
+        .success,
+    ).toBe(false);
+    expect(
+      sudokuCompletionRequestSchema.safeParse({
+        ...validSudoku,
+        elapsedMs: 86_400_001,
+      }).success,
+    ).toBe(false);
+    expect(
+      sudokuCompletionRequestSchema.safeParse({
+        ...validSudoku,
+        elapsedMs: 86_400_000,
+      }).success,
+    ).toBe(true);
+    expect(
+      sudokuCompletionRequestSchema.safeParse({
+        ...validSudoku,
+        elapsedMs: 1.5,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects hintsUsed: 2 — v1 grants exactly one free hint per puzzle (plan 017 D21)", () => {
+    expect(
+      sudokuCompletionRequestSchema.safeParse({ ...validSudoku, hintsUsed: 2 })
+        .success,
+    ).toBe(false);
+    expect(
+      sudokuCompletionRequestSchema.safeParse({ ...validSudoku, hintsUsed: 0 })
+        .success,
+    ).toBe(true);
+  });
+
+  it("rejects the impossible date the shape regex alone accepts", () => {
+    expect(
+      sudokuCompletionRequestSchema.safeParse({
+        ...validSudoku,
+        date: "2026-02-30",
+      }).success,
     ).toBe(false);
   });
 });
@@ -182,6 +284,16 @@ describe("the completion request carries no instant (plan 017 D19)", () => {
 
   it("binairo's key set is exactly the five audited fields", () => {
     expect(Object.keys(binairoCompletionRequestSchema.shape).sort()).toEqual([
+      "date",
+      "elapsedMs",
+      "game",
+      "grid",
+      "hintsUsed",
+    ]);
+  });
+
+  it("sudoku's key set is exactly the five audited fields", () => {
+    expect(Object.keys(sudokuCompletionRequestSchema.shape).sort()).toEqual([
       "date",
       "elapsedMs",
       "game",

@@ -1,6 +1,6 @@
 /**
- * Deferred completion sync (plan 017 §9.2, AC 3). The local play record IS
- * the queue (D18): there is exactly one pending item per (game, date), and
+ * Deferred completion sync (plan 017 §9.2, AC 3/AC 4). The local play record
+ * IS the queue (D18): there is exactly one pending item per (game, date), and
  * its natural key is the same key that makes `POST /completions`
  * idempotent, so no second store and no dedup logic exist.
  *
@@ -8,22 +8,29 @@
  * The body is built from `record.grid` alone, so a flush needs neither the
  * givens nor a rendered board (§9.1), which is what makes "syncs on
  * reconnect" true on a cold mount, on an `online` event and on
- * /binairo/concluido.
+ * /<jogo>/concluido.
+ *
+ * THIS MODULE IS EXACTLY ONE MODULE, for every game, and that is a
+ * correctness constraint rather than a tidiness one (ADR-0029, plan 018
+ * S1/S18): the guards below are module-level and the queue they guard
+ * (`listPendingRecords()`) is game-blind, so a second copy mounted in the
+ * same SPA session would double every POST and settle the other copy's
+ * records out from under it.
  */
 import {
-  binairoCompletionRequestSchema,
+  completionRequestSchema,
   completionResponseSchema,
 } from "@miolos/core";
 
 import { ensureSession } from "../session/bootstrap";
 import {
+  ELAPSED_CAP_MS,
   listPendingRecords,
   writePlayRecord,
+  type BinairoPlayRecord,
   type PlayRecord,
+  type SudokuPlayRecord,
 } from "./play-record";
-
-/** One day in milliseconds — the contract's own bound on `elapsedMs`. */
-const ELAPSED_CAP_MS = 86_400_000;
 
 /**
  * Statuses a retry can never turn into an acceptance: the body was
@@ -165,9 +172,9 @@ async function syncRecord(
 ): Promise<boolean> {
   const body = buildBody(record);
   if (body === undefined) {
-    // Unbuildable: there is no grid to judge, and no retry can create one.
+    // Unbuildable: there is no result to judge, and no retry can create one.
     console.error(
-      `completion for ${record.game} ${record.date} has no solved grid to post; dropping it from the queue`,
+      `completion for ${record.game} ${record.date} has no submittable result to post; dropping it from the queue`,
     );
     settle(record, "rejected");
     return false;
@@ -207,12 +214,47 @@ async function syncRecord(
  * The POST body, built from the record ALONE (§9.2) and parsed before it
  * leaves — the request contract is a boundary, so it is validated rather
  * than trusted. `undefined` means the record cannot produce one.
+ *
+ * This switch is the module's ONLY per-game branch, and it is deliberate
+ * (plan 018 S18, ADR-0029 consequence (f)): a grid body is a grid body, but
+ * Termo's completion request carries GUESSES, not a grid (#27) — so it adds
+ * a non-grid case HERE rather than a second sync module, which S1 rejects
+ * on the correctness argument at the top of this file.
  */
 function buildBody(record: PlayRecord): string | undefined {
+  switch (record.game) {
+    case "binairo":
+    case "sudoku":
+      return gridBody(record);
+    default: {
+      // A new member of `playRecordSchema` with no case here is a RED
+      // TYPECHECK, never a dropped completion (finding
+      // `buildbody-switch-fails-open-for-a-new-game`). Falling off the end
+      // returns `undefined`, which `syncRecord` reads as "no result to post"
+      // and answers with `settle(record, "rejected")` — permanently clearing
+      // `pendingSync`, so #25's Nonogram would silently lose the day for the
+      // streak. TS cannot catch that on its own: `string | undefined` is a
+      // legitimate return here (`gridBody` on a record with no grid), so
+      // TS2366 never fires. This assignment is what fails instead — the same
+      // guarantee `storedSolution` gets for free in
+      // apps/api/app/completions/route.ts, where the return type excludes
+      // undefined. An unhandled game throws, keeping the record queued
+      // rather than settling it.
+      const unhandled: never = record;
+      throw new Error(
+        `no completion body builder for ${JSON.stringify(unhandled)}`,
+      );
+    }
+  }
+}
+
+function gridBody(
+  record: BinairoPlayRecord | SudokuPlayRecord,
+): string | undefined {
   if (record.grid === undefined) {
     return undefined;
   }
-  const parsed = binairoCompletionRequestSchema.safeParse({
+  const parsed = completionRequestSchema.safeParse({
     game: record.game,
     date: record.date,
     grid: record.grid,

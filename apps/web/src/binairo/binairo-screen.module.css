@@ -1,271 +1,38 @@
-/* The /binairo play screen — desktop-first per f3-binairo-desktop, mobile
-   per f4-binairo-mobile. Every rule is anchored on a local class: Next
-   compiles CSS Modules in css-loader's `pure` mode, so a bare type selector
-   (`a:hover`, `button`) either fails the build or leaks globally
-   (plan 017 risk 15). Rotations are static transforms, never animation. */
+/* The /binairo BOARD and input row — everything the shared play layout in
+   `../play/screen.module.css` deliberately does not own (ADR-0029, plan 018
+   §5.2). Geometry per f3-binairo-desktop and f4-binairo-mobile.
 
-/* >1040px — F3. 80 + 330 + 72 + (8×52 + 7×4 + 2×16 + 2) + 80 = 1040px is
-   the hard minimum this composition needs. Below it the fixed 52px cells
-   cannot shrink, so the two-column layout overflows — and neither scanned
-   viewport (1440×900, 390×844) is in that band, so CI would never catch it.
+   Every rule is anchored on a local class: Next compiles CSS Modules in
+   css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
+   either fails the build or leaks globally (plan 017 risk 15). */
 
-   Named areas rather than `display: contents`: the reflow has to move the
-   timer and the progress readout ACROSS subtrees (.statsCard is a child of
-   the sidebar column, .topBar its sibling), which `display: contents`
-   cannot do. Both readouts therefore exist twice and one of each pair is
-   hidden per viewport — the shipped .ctaLong/.ctaShort precedent. */
-.page {
-  box-sizing: border-box;
-  min-height: 100dvh;
-  display: grid;
-  grid-template-columns: 330px 1fr;
-  column-gap: 72px;
-  grid-template-rows: auto auto auto 1fr auto;
-  grid-template-areas:
-    "bar   bar"
-    "title board"
-    "stats board"
-    "free  board"
-    "hint  board";
-  padding: var(--space-11) 80px;
-}
+/* The per-game half of the shared layout, carried on the SAME element as
+   `screen.page` (plan 018 §12.2). Custom properties, never a redeclared
+   `.gridCard`: CSS Modules hash class names per file, so a same-name rule in
+   two modules resolves by stylesheet injection order, which Next does not
+   guarantee (landmine 24). Only one module ever sets each property, so there
+   is no conflicting declaration and no cascade-order dependency.
 
-/* Per-screen hover accent — anchored on .page, never a bare `a:hover`,
-   which would turn Hoje's hover green (plan 017 §12.5). */
-.page a:hover {
-  color: var(--accent-binairo);
-}
-
-/* ── top bar ─────────────────────────────────────────────────────────── */
-
-.topBar {
-  grid-area: bar;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.back {
-  font: var(--text-button);
-  text-decoration: none;
-}
-
-.wordmark {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 24px;
-  font-weight: 600;
-  transform: rotate(-1deg);
-}
-
-.topDate {
-  font-size: 13px;
-  color: var(--ink-2);
-}
-
-/* Mobile-only members of the top bar; the media queries below swap them in. */
-.barKicker,
-.timerBar,
-.progressBar {
-  display: none;
-}
-
-.barKicker {
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent-binairo);
-}
-
-.timerBar {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── title block ─────────────────────────────────────────────────────── */
-
-.titleBlock {
-  grid-area: title;
-  padding-top: 32px;
-}
-
-.titleKicker {
-  margin: 0;
-  font: var(--text-kicker);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--accent-binairo);
-}
-
-/* The wrapper is structural, not cosmetic: it makes
-   `h1.previousElementSibling` null, which is what stands impeccable's
-   hero-eyebrow-chip and kicker-above-heading rules down (§12.2). */
-.titleRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-}
-
-.title {
-  margin: 0;
-  font: var(--text-screen-title);
-}
-
-.progressBar {
-  font-size: 13px;
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
-}
-
-.rules {
-  margin: 18px 0 0;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--ink-2);
-  text-wrap: pretty;
-}
-
-/* ── stats card ──────────────────────────────────────────────────────── */
-
-.statsCard {
-  position: relative;
-  grid-area: stats;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  margin-top: 30px;
-  padding: var(--space-5) 22px;
-  background: var(--paper-card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md)
-    color-mix(in srgb, var(--accent-binairo) 22%, transparent);
-  transform: rotate(-0.5deg);
-}
-
-/* Tape geometry from F3:27 — Hoje's shipped .tape is CENTRED, so copying
-   it produces a visibly wrong tape here. */
-.tape {
-  position: absolute;
-  top: -10px;
-  left: 32px;
-  width: 64px;
-  height: 20px;
-  border-radius: var(--radius-tape);
-  background: color-mix(in srgb, var(--accent-binairo) 32%, transparent);
-  transform: rotate(-3deg);
-}
-
-.statRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.statLabel {
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent-binairo);
-}
-
-.timerCard {
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.progressCard {
-  font-size: 14px;
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── hint ────────────────────────────────────────────────────────────── */
-
-/* The "free" grid row between .stats and .hint is a 1fr spacer with no
-   element in it — that is what pins the button to the bottom of the
-   sidebar, as F3 draws it. */
-.hint {
-  grid-area: hint;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  /* Horizontal padding is visually inert on a full-width, centre-aligned
-     button — but impeccable's `cramped-padding` reads computed padding, and
-     a 14px label flush against a filled boundary is exactly its shape (1).
-     F3 draws `padding: 14px 0`; the inline value is the frame's, the block
-     value is ours. Verified against the rule at 1440x900. */
-  padding: 14px var(--space-5);
-  background: var(--accent-binairo);
-  color: var(--paper-desk);
-  border: 1.5px solid var(--accent-binairo);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm)
-    color-mix(in srgb, var(--accent-binairo) 25%, transparent);
-  font: var(--text-button);
-  cursor: pointer;
-  transition:
-    transform var(--duration-fast) var(--ease-settle),
-    box-shadow var(--duration-fast) var(--ease-settle);
-}
-
-/* Pressed = the element slides 1px toward its shadow and the shadow shrinks
-   by the same 1px (DESIGN.md, verbatim). --shadow-sm is 3px, hence 2px. */
-.hint:active {
-  transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0
-    color-mix(in srgb, var(--accent-binairo) 25%, transparent);
-}
-
-/* Exhausted / unavailable (§10.5, undrawn in the frames). Three carriers —
-   fill, border and label — so the state survives grayscale. */
-.hintUsed {
-  background: var(--paper-card);
-  border: 1.5px solid var(--line);
-  color: var(--ink-2);
-  box-shadow: none;
-  cursor: default;
-}
-
-.hintUsed:active {
-  transform: none;
-  box-shadow: none;
-}
-
-.hint:focus-visible {
-  outline: 2px solid var(--accent-binairo);
-  outline-offset: 2px;
+   These are Binairo's shipped values, which the shared sheet also carries as
+   its fallbacks — the extraction is behaviour-free. */
+.pageBinairo {
+  --grid-card-rot: 0.4deg;
+  --stats-card-rot: -0.5deg;
+  --tape-rot: -3deg;
+  /* The mobile board at its DESIGN.md:50 size: 8×38 + 7×3 cells + 2×10 card
+     padding + 2×1 border. It is a CAP, not a width (finding
+     `board-overflows-horizontally-below-369px`) — the fixed 38px columns plus
+     this screen's 20px page padding needed 387px of viewport, so every width
+     under ~369px scrolled the whole document sideways and under ~357px the
+     last board columns were off-screen. The board and the control row under
+     it both read it, so they stay the same width across the whole band.
+     Declared unconditionally rather than inside the mobile query, because it
+     is only ever READ there and a per-game class cannot open a media query
+     the shared sheet owns. */
+  --board-mobile-max: 347px;
 }
 
 /* ── board ───────────────────────────────────────────────────────────── */
-
-.board {
-  grid-area: board;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding-top: 32px;
-}
-
-.gridCard {
-  background: var(--paper-card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg)
-    color-mix(in srgb, var(--accent-binairo) 20%, transparent);
-  padding: var(--space-4);
-  transform: rotate(0.4deg);
-}
 
 .grid {
   display: grid;
@@ -436,141 +203,37 @@
   color: var(--ink-2);
 }
 
-.hintExplain {
-  margin: var(--space-4) 0 0;
-  font-size: 13px;
-  color: var(--ink-2);
-  text-align: center;
-}
-
 /* ── pre-hydration placeholders ──────────────────────────────────────── */
 
-/* The skeleton's hint bar and control row borrow .hint / .control so their
-   boxes are the shipped size by construction — but those rules also carry
-   `cursor: pointer` and a 1px press, and an inert box that presses is a lie
-   the player can see. `pointer-events: none` retires both at once, and it
-   has to sit AFTER .hint and .control here: same specificity, later wins
-   (finding `play-skeleton-is-not-at-final-dimensions`). */
+/* This module's own copy of the shared sheet's `.placeholder` (plan 018
+   §12.2): the skeleton's control row borrows `.control`, and a class hashed
+   in `../play/screen.module.css` cannot override one hashed here — the two
+   would resolve by injection order (landmine 24). It has to sit AFTER
+   .control: same specificity, later wins (finding
+   `play-skeleton-is-not-at-final-dimensions`). */
 .placeholder {
   cursor: default;
   pointer-events: none;
 }
 
+/* This module's own reduced-motion block, for the same hashing reason: the
+   shared sheet's block covers `.hint` and cannot reach these classes.
+   DESIGN.md makes a reduced-motion alternative law, so leaving it implicit
+   would silently drop it. */
 @media (prefers-reduced-motion: reduce) {
   .cell,
-  .control,
-  .hint {
+  .control {
     transition: none;
   }
 }
 
-/* ≤1040px — single column, desktop type, 52px cells:
-   8×52 + 7×4 + 32 padding + 2 border = 478px, comfortable at any width
-   ≥ 520px. The sidebar's card folds into the top bar and the title row. */
-@media (max-width: 1040px) {
-  .page {
-    grid-template-columns: 1fr;
-    column-gap: 0;
-    grid-template-rows: auto auto 1fr auto;
-    grid-template-areas:
-      "bar"
-      "title"
-      "board"
-      "hint";
-  }
-
-  .topBar {
-    min-height: var(--touch-target-min);
-  }
-
-  .back {
-    padding: 10px 10px 10px 0;
-  }
-
-  .statsCard,
-  .wordmark,
-  .topDate,
-  .titleKicker {
-    display: none;
-  }
-
-  .barKicker,
-  .timerBar,
-  .progressBar {
-    display: block;
-  }
-
-  .titleBlock {
-    padding-top: 10px;
-  }
-
-  .board {
-    padding-top: var(--space-4);
-  }
-
-  .hint {
-    margin-top: 14px;
-    /* F4 draws a 50px bar. Expressed as padding + min-height rather than a
-       fixed height so the computed vertical padding is non-zero: with
-       box-sizing border-box, 14px line + 2×16px + 3px border = 49px, and
-       min-height pins the frame's 50px exactly. Same reason as the desktop
-       rule above. */
-    padding: var(--space-4) var(--space-5);
-    min-height: 50px;
-    height: auto;
-  }
-}
-
-/* ≤768px — F4's type and cell step-down only. Page padding is 20px, not
-   F4's 16px: impeccable's body-text-viewport-edge fires on a >40-char <p>
-   whose rect.left < 16, and the mobile rules paragraph (deviation 2) lands
-   exactly on 16.0 — one sub-pixel of layout rounding tips it red. Hoje
-   ships 20px for the same reason. */
+/* ≤768px — F4's cell step-down. `.page`'s padding, `.title`, `.rules` and
+   `.gridCard` are the shared sheet's in this band. */
 @media (max-width: 768px) {
-  .page {
-    padding: var(--space-5) var(--space-5) var(--space-6);
-    /* The mobile board at its DESIGN.md:50 size: 8×38 + 7×3 cells + 2×10
-       card padding + 2×1 border. It is a CAP, not a width (finding
-       `board-overflows-horizontally-below-369px`) — the fixed 38px columns
-       plus this screen's 20px page padding needed 387px of viewport, so
-       every width under ~369px scrolled the whole document sideways and
-       under ~357px the last board columns were off-screen. The board and
-       the control row under it both read it, so they stay the same width
-       across the whole band. */
-    --board-mobile-max: 347px;
-  }
-
-  .title {
-    font-size: 34px;
-  }
-
-  .rules {
-    margin-top: var(--space-3);
-    font-size: 13px;
-    line-height: 1.5;
-  }
-
-  .gridCard {
-    box-sizing: border-box;
-    /* .board is `align-items: center`, so the card is shrink-to-fit by
-       default. `width: 100%` + a cap makes the board FLUID instead: 347px
-       (38px cells) at 390 and above, the page's own width below that. Width
-       rather than `align-self: stretch`, because .board is a COLUMN flex
-       container — its cross axis is the horizontal one, where stretch and a
-       centring margin fight each other. */
-    width: 100%;
-    max-width: var(--board-mobile-max);
-    padding: 10px;
-    /* 5px 5px 0 is intentional: F4 draws the mobile board shadow between
-       --shadow-md and --shadow-lg; no token carries that value. */
-    box-shadow: 5px 5px 0
-      color-mix(in srgb, var(--accent-binairo) 20%, transparent);
-  }
-
   /* Fractional tracks with a square cell rather than 38px hard-coded: the
-     cap above pins 38px at 390 and up, and a 320px phone gets ~29px cells —
-     still clear of WCAG 2.5.8's 24px minimum — instead of a board wider
-     than the viewport. */
+     cap on `.pageBinairo` pins 38px at 390 and up, and a 320px phone gets
+     ~29px cells — still clear of WCAG 2.5.8's 24px minimum — instead of a
+     board wider than the viewport. */
   .grid {
     grid-template-columns: repeat(8, minmax(0, 1fr));
     grid-auto-rows: auto;
@@ -582,13 +245,13 @@
     font-size: 18px;
   }
 
-  /* The same width-and-cap as .gridCard, and for the same reason: shrink-to-
-     fit inside .board meant the `flex` ratios below were resolved against a
-     max-content row, so the digit buttons came out 43.5px and 38px wide —
-     under PRODUCT.md:39's ≥44px touch target, on the game's primary input
-     (finding `mobile-controls-shrink-to-fit-and-sub-44px-targets`). Capped
-     rather than merely full-width so the row keeps matching the board across
-     the whole band, not only at 390. */
+  /* The same width-and-cap as the shared .gridCard, and for the same reason:
+     shrink-to-fit inside .board meant the `flex` ratios below were resolved
+     against a max-content row, so the digit buttons came out 43.5px and 38px
+     wide — under PRODUCT.md:39's ≥44px touch target, on the game's primary
+     input (finding `mobile-controls-shrink-to-fit-and-sub-44px-targets`).
+     Capped rather than merely full-width so the row keeps matching the board
+     across the whole band, not only at 390. */
   .controls {
     box-sizing: border-box;
     width: 100%;

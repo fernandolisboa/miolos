@@ -1,4 +1,4 @@
-import type { DailyPuzzleResponse } from "@miolos/core";
+import type { DailyBinairoResponse } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -6,12 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BinairoScreen } from "../src/binairo/binairo-screen";
 import styles from "../src/binairo/binairo-screen.module.css";
+import sharedStyles from "../src/play/screen.module.css";
 import {
   playRecordKey,
   readPlayRecord,
   writePlayRecord,
-  type PlayRecord,
-} from "../src/binairo/play-record";
+  type BinairoPlayRecord,
+} from "../src/play/play-record";
 import { formatElapsed, messages } from "../src/i18n";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
 
@@ -28,11 +29,11 @@ const sync = vi.hoisted(() => ({
   // The argument is echoed back rather than dropped: the solved effect hands
   // the completion it just built to the flush, and that is what the queue
   // falls back on where `localStorage` is unavailable.
-  flushPendingCompletions: vi.fn((record?: PlayRecord) =>
+  flushPendingCompletions: vi.fn((record?: BinairoPlayRecord) =>
     Promise.resolve(record),
   ),
 }));
-vi.mock("../src/binairo/sync", () => sync);
+vi.mock("../src/play/sync", () => sync);
 
 // D26's guarantee is that the conclusion needs NO navigation — so the
 // router is mocked purely to prove it is never asked to do anything.
@@ -48,7 +49,7 @@ const GIVENS_COUNT = PUZZLE.givens.filter((cell) => cell !== null).length;
 const FIRST_EMPTY = PUZZLE.givens.findIndex((cell) => cell === null);
 const FIRST_GIVEN = PUZZLE.givens.findIndex((cell) => cell !== null);
 
-const DAILY: DailyPuzzleResponse = {
+const DAILY: DailyBinairoResponse = {
   game: "binairo",
   date: DATE,
   size: 8,
@@ -153,27 +154,57 @@ function solveByClicking(container: HTMLElement): void {
   }
 }
 
-/** A CSS Module class, refused rather than silently `undefined`. */
+/** The two sheets the play screen is now split across (plan 018 §5.5). */
+const GAME_CSS = stylesheet("src/binairo/binairo-screen.module.css");
+const SHARED_CSS = stylesheet("src/play/screen.module.css");
+
+/** Does this sheet DECLARE `.local` — not `.localSomething`? */
+function declares(css: string, local: string): boolean {
+  return new RegExp(`(?:^|[\\s,])\\.${local}(?![\\w-])`, "m").test(css);
+}
+
+/**
+ * A CSS Module class, refused rather than silently wrong. Which sheet to ask
+ * is decided from the CSS TEXT, not by a lookup: CSS Modules hash per file,
+ * and the test runner hands back a per-module proxy that answers EVERY key
+ * with a hashed name — so `styles[local] ?? shared[local]` would return the
+ * game module's hash for a class only the shared sheet declares, and every
+ * `querySelector` below would silently miss (plan 018 §5.5, landmine 24).
+ * The game module wins where both declare a name, exactly as the cascade
+ * cannot.
+ */
 function className(local: string): string {
-  const generated = styles[local];
+  const generated = declares(GAME_CSS, local)
+    ? styles[local]
+    : declares(SHARED_CSS, local)
+      ? sharedStyles[local]
+      : undefined;
   if (generated === undefined) {
-    throw new Error(`binairo-screen.module.css has no .${local}`);
+    throw new Error(
+      `neither binairo-screen.module.css nor play/screen.module.css declares .${local}`,
+    );
   }
   return generated;
 }
 
 /**
- * Every class the stylesheet places in one of `.page`'s named grid areas —
+ * Every class the stylesheets place in one of `.page`'s named grid areas —
  * read off the CSS rather than listed here, so a new area added to `PlayView`
  * puts itself under the skeleton tripwire below without anyone remembering to.
+ *
+ * The UNION over both sheets, deduped (plan 018 §5.5): every `grid-area`
+ * block (`.topBar`, `.titleBlock`, `.statsCard`, `.hint`, `.board`) moved to
+ * the shared layout module, so reading the game module alone would yield
+ * `[]` and the anti-vacuity assertion below would silently pass on nothing.
  */
 const GRID_AREA_CLASSES = [
-  ...stylesheet("binairo-screen.module.css").matchAll(
-    /^\.(\w+)[^{]*\{([^}]*)\}/gm,
+  ...new Set(
+    [GAME_CSS, SHARED_CSS]
+      .flatMap((sheet) => [...sheet.matchAll(/^\.(\w+)[^{]*\{([^}]*)\}/gm)])
+      .filter(([, , body]) => /(?:^|;)\s*grid-area\s*:/.test(body ?? ""))
+      .map(([, local]) => local ?? ""),
   ),
-]
-  .filter(([, , body]) => /(?:^|;)\s*grid-area\s*:/.test(body ?? ""))
-  .map(([, local]) => local ?? "");
+];
 
 /** The readouts the skeleton reserves with a blank line box rather than a value. */
 const BLANK_READOUTS = [
@@ -199,7 +230,9 @@ function occupantsIn(root: HTMLElement): string[] {
   );
 }
 
-function concludedRecord(overrides: Partial<PlayRecord> = {}): PlayRecord {
+function concludedRecord(
+  overrides: Partial<BinairoPlayRecord> = {},
+): BinairoPlayRecord {
   return {
     v: 1,
     game: "binairo",
@@ -231,7 +264,9 @@ describe("the rules blurb (T-WEB-5)", () => {
   it("states rule 4 for rows AND columns, on every viewport", () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
 
-    expect(screen.getByText(messages.binairo.rules)).toBeInTheDocument();
+    expect(
+      screen.getByText(messages.games.binairo.play.rules),
+    ).toBeInTheDocument();
     // Deliberate literal tripwire: F3 says only "nenhuma linha se repete",
     // and ADR-0020 rule 4 covers both axes (deviation 1). Shipping the
     // frame's wording would teach a rule the engine does not enforce.
@@ -254,7 +289,7 @@ describe("the board and its readouts (T-WEB-6)", () => {
     expect(givenCell).toHaveAttribute("aria-disabled", "true");
     expect(givenCell).toHaveAttribute(
       "aria-label",
-      messages.binairo.cellGivenAria(
+      messages.games.binairo.play.cellGivenAria(
         Math.floor(FIRST_GIVEN / 8) + 1,
         (FIRST_GIVEN % 8) + 1,
         given,
@@ -270,13 +305,17 @@ describe("the board and its readouts (T-WEB-6)", () => {
     // removes it from the accessibility tree), which jsdom cannot evaluate
     // because it has no media queries (plan 017 §12.2).
     expect(
-      screen.getAllByLabelText(messages.binairo.timerAria("00:00")),
+      screen.getAllByLabelText(messages.play.timerAria("00:00")),
     ).toHaveLength(2);
     expect(
-      screen.getByText(messages.binairo.progressShort(GIVENS_COUNT, 64)),
+      screen.getByText(
+        messages.games.binairo.play.progressShort(GIVENS_COUNT, 64),
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(messages.binairo.progressLong(GIVENS_COUNT, 64)),
+      screen.getByText(
+        messages.games.binairo.play.progressLong(GIVENS_COUNT, 64),
+      ),
     ).toBeInTheDocument();
   });
 
@@ -325,7 +364,7 @@ describe("tap-to-cycle (T-WEB-7)", () => {
     // (ADR-0018, finding `adr-0018-aria-label-composed-in-component`).
     expect(cellAt(container, second)).toHaveAttribute(
       "aria-label",
-      messages.binairo.cellInvalidAria(
+      messages.games.binairo.play.cellInvalidAria(
         Math.floor(second / 8) + 1,
         (second % 8) + 1,
         0,
@@ -341,7 +380,9 @@ describe("tap-to-cycle (T-WEB-7)", () => {
 
     expect(cellAt(container, FIRST_GIVEN).textContent).toBe(before);
     expect(
-      screen.getByText(messages.binairo.progressLong(GIVENS_COUNT, 64)),
+      screen.getByText(
+        messages.games.binairo.play.progressLong(GIVENS_COUNT, 64),
+      ),
     ).toBeInTheDocument();
   });
 });
@@ -349,7 +390,9 @@ describe("tap-to-cycle (T-WEB-7)", () => {
 describe("paint mode (T-WEB-8)", () => {
   it("is sticky, writes directly, and toggles back off", () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
-    const zero = screen.getByLabelText(messages.binairo.controls.zeroAria);
+    const zero = screen.getByLabelText(
+      messages.games.binairo.play.controls.zeroAria,
+    );
 
     expect(zero).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(zero);
@@ -367,7 +410,9 @@ describe("paint mode (T-WEB-8)", () => {
     fireEvent.click(cellAt(container, FIRST_EMPTY));
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
 
-    fireEvent.click(screen.getByLabelText(messages.binairo.controls.eraseAria));
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.eraseAria),
+    );
     fireEvent.click(cellAt(container, FIRST_EMPTY));
 
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
@@ -379,7 +424,9 @@ describe("the drag path (T-WEB-8b)", () => {
     const [a, b, c] = playableQuad();
     const { container } = render(<BinairoScreen daily={DAILY} />);
     stubElementFromPoint(container);
-    fireEvent.click(screen.getByLabelText(messages.binairo.controls.oneAria));
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.oneAria),
+    );
     const grid = gridOf(container);
 
     fireEvent.pointerDown(grid, { clientX: a, clientY: 0, pointerId: 1 });
@@ -417,7 +464,9 @@ describe("the drag path (T-WEB-8b)", () => {
 // the browser produces and pin the handler that has to resolve it.
 describe("a single tap in paint mode (T-WEB-8c)", () => {
   function enterPaintMode(): void {
-    fireEvent.click(screen.getByLabelText(messages.binairo.controls.zeroAria));
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.zeroAria),
+    );
   }
 
   it("writes the cell from pointerup, without waiting for a click", () => {
@@ -469,7 +518,9 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
     stubElementFromPoint(container);
     fireEvent.click(cellAt(container, FIRST_EMPTY));
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
-    fireEvent.click(screen.getByLabelText(messages.binairo.controls.eraseAria));
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.eraseAria),
+    );
     const grid = gridOf(container);
 
     fireEvent.pointerDown(grid, {
@@ -518,7 +569,9 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
     const [a, b, c, d] = playableQuad();
     const { container } = render(<BinairoScreen daily={DAILY} />);
     stubElementFromPoint(container);
-    fireEvent.click(screen.getByLabelText(messages.binairo.controls.oneAria));
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.oneAria),
+    );
     const grid = gridOf(container);
 
     fireEvent.pointerDown(grid, { clientX: a, clientY: 0, pointerId: 1 });
@@ -542,7 +595,9 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
     const [a, b, c, d] = playableQuad();
     const { container } = render(<BinairoScreen daily={DAILY} />);
     stubElementFromPoint(container);
-    fireEvent.click(screen.getByLabelText(messages.binairo.controls.oneAria));
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.oneAria),
+    );
     const grid = gridOf(container);
 
     // Finger 1 opens the stroke and crosses two cells.
@@ -570,7 +625,9 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
     const [a, b] = playableQuad();
     const { container } = render(<BinairoScreen daily={DAILY} />);
     stubElementFromPoint(container);
-    fireEvent.click(screen.getByLabelText(messages.binairo.controls.oneAria));
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.oneAria),
+    );
     const grid = gridOf(container);
 
     // The hazard scoping introduces: a stroke that never closes would latch
@@ -590,23 +647,29 @@ describe("the one free hint (T-WEB-9)", () => {
   it("fills exactly one cell, then renders the exhausted variant", () => {
     render(<BinairoScreen daily={DAILY} />);
 
-    fireEvent.click(screen.getByText(messages.binairo.hint.available));
+    fireEvent.click(
+      screen.getByText(messages.games.binairo.play.hint.available),
+    );
 
     expect(
-      screen.getByText(messages.binairo.progressLong(GIVENS_COUNT + 1, 64)),
+      screen.getByText(
+        messages.games.binairo.play.progressLong(GIVENS_COUNT + 1, 64),
+      ),
     ).toBeInTheDocument();
-    const exhausted = screen.getByText(messages.binairo.hint.used);
+    const exhausted = screen.getByText(messages.games.binairo.play.hint.used);
     expect(exhausted).toHaveAttribute("aria-disabled", "true");
     // The one-line explanation names which case fired (§10.2). An empty
     // fixture grid has no contradiction yet, so it is always a fill.
     expect(
-      screen.getByText(messages.binairo.hint.explain.fill),
+      screen.getByText(messages.games.binairo.play.hint.explain.fill),
     ).toBeInTheDocument();
 
     fireEvent.click(exhausted);
 
     expect(
-      screen.getByText(messages.binairo.progressLong(GIVENS_COUNT + 1, 64)),
+      screen.getByText(
+        messages.games.binairo.play.progressLong(GIVENS_COUNT + 1, 64),
+      ),
     ).toBeInTheDocument();
   });
 });
@@ -621,7 +684,9 @@ describe("closing the grid (T-WEB-9b)", () => {
       "data-conclusion-state",
       "result",
     );
-    expect(screen.getByText(messages.conclusao.stampLabel)).toBeInTheDocument();
+    expect(
+      screen.getByText(messages.conclusion.stampLabel),
+    ).toBeInTheDocument();
     expect(container.querySelector("[data-cell-index]")).toBeNull();
     // The offline guarantee (D26): a force-dynamic route with no service
     // worker is unreachable offline, so the conclusion never navigates.
@@ -658,10 +723,10 @@ describe("closing the grid (T-WEB-9b)", () => {
     // off it told an online player their result was stuck (findings
     // `pending-sync-line-on-the-happy-path` / `sync-pending-line-on-happy-path`).
     expect(
-      screen.queryByText(messages.conclusao.sync.pending),
+      screen.queryByText(messages.conclusion.sync.pending),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByText(messages.conclusao.sync.rejected),
+      screen.queryByText(messages.conclusion.sync.rejected),
     ).not.toBeInTheDocument();
   });
 });
@@ -690,7 +755,7 @@ describe("the count-up clock's visibility rules (T-WEB-9e)", () => {
     });
 
     expect(
-      screen.getAllByLabelText(messages.binairo.timerAria("00:00")),
+      screen.getAllByLabelText(messages.play.timerAria("00:00")),
     ).toHaveLength(2);
   });
 
@@ -707,7 +772,7 @@ describe("the count-up clock's visibility rules (T-WEB-9e)", () => {
     // The iOS back-navigation this listener exists for: a restore is visible
     // by definition, so gating it costs nothing.
     expect(
-      screen.getAllByLabelText(messages.binairo.timerAria("00:05")),
+      screen.getAllByLabelText(messages.play.timerAria("00:05")),
     ).toHaveLength(2);
   });
 });
@@ -727,7 +792,7 @@ describe("a second tab still playing (T-WEB-9f)", () => {
     // `in-progress-write-clobbers-a-queued-completion`).
     fireEvent.click(cellAt(container, FIRST_EMPTY));
 
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       concluded: true,
       pendingSync: true,
       grid: [...PUZZLE.solution],
@@ -749,7 +814,7 @@ describe("a second tab still playing (T-WEB-9f)", () => {
       window.dispatchEvent(new Event("pagehide"));
     });
 
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       concluded: true,
       pendingSync: true,
       grid: [...PUZZLE.solution],
@@ -770,7 +835,9 @@ describe("re-entering a finished day (T-WEB-9c)", () => {
 
     // The stamp's own composed label, not `getByText`: the day card repeats
     // the same time in the Binairo chip.
-    const stamped = messages.conclusao.stampAria(
+    const stamped = messages.conclusion.stampAria(
+      messages.games.binairo.conclusion.title,
+
       formatElapsed(record.elapsedMs),
       record.hintsUsed,
     );
@@ -807,13 +874,13 @@ describe("the first paint (T-WEB-9d)", () => {
     // `binairo-reload-flashes-a-blank-board-over-a-finished-day`).
     expect(markup).not.toContain("00:00");
     expect(markup).not.toContain(
-      messages.binairo.progressLong(GIVENS_COUNT, 64),
+      messages.games.binairo.play.progressLong(GIVENS_COUNT, 64),
     );
-    expect(markup).not.toContain(messages.binairo.hint.available);
+    expect(markup).not.toContain(messages.games.binairo.play.hint.available);
     expect(markup).not.toContain("<button");
     // Not the conclusion either, even though a concluded record is sitting
     // in storage: nothing record-derived may reach the first paint.
-    expect(markup).not.toContain(messages.conclusao.stampLabel);
+    expect(markup).not.toContain(messages.conclusion.stampLabel);
   });
 
   it("paints no cell before the record has been read", () => {
@@ -826,8 +893,8 @@ describe("the first paint (T-WEB-9d)", () => {
     // The wall that keeps a puzzle off the client is `getTodayDaily`'s
     // solution strip, asserted where it lives (finding
     // `givens-off-the-wire-is-false`).
-    expect(markup).toContain(messages.binairo.title);
-    expect(markup).toContain(messages.binairo.rules);
+    expect(markup).toContain(messages.games.binairo.play.title);
+    expect(markup).toContain(messages.games.binairo.play.rules);
     expect(markup).not.toContain("data-cell-index");
   });
 
@@ -886,8 +953,10 @@ describe("the first paint (T-WEB-9d)", () => {
  * measurement: the live numbers live in the PR body.
  */
 describe("the mobile board and controls (layout tripwires)", () => {
-  const CSS = stylesheet("binairo-screen.module.css");
+  const CSS = GAME_CSS;
   const MOBILE = bodyOf(CSS, "@media (max-width: 768px)");
+  /** The shared layout's own mobile block — `.gridCard` lives there now. */
+  const SHARED_MOBILE = bodyOf(SHARED_CSS, "@media (max-width: 768px)");
   /** `.page`'s own horizontal padding in this band, both sides. */
   const PAGE_PADDING = 2 * token("--space-5");
   /** The narrowest phone the layout has to survive. */
@@ -900,7 +969,7 @@ describe("the mobile board and controls (layout tripwires)", () => {
     // were unreachable. CLAUDE.md: the page body must never scroll
     // horizontally.
     const grid = bodyOf(MOBILE, ".grid");
-    const card = bodyOf(MOBILE, ".gridCard");
+    const card = bodyOf(SHARED_MOBILE, ".gridCard");
 
     expect(decl(grid, "grid-template-columns")).not.toMatch(/\d+px/);
     expect(decl(grid, "grid-template-columns")).toBe(
@@ -914,9 +983,13 @@ describe("the mobile board and controls (layout tripwires)", () => {
   });
 
   it("keeps the cap at DESIGN.md's 38px cells and inside a 390px viewport", () => {
-    const cap = pixels(decl(bodyOf(MOBILE, ".page"), "--board-mobile-max"));
+    // `--board-mobile-max` is declared on the game's own page class now, not
+    // inside the shared mobile `.page` block: a per-game class cannot open a
+    // media query the shared sheet owns, and it is only ever READ there
+    // (plan 018 §12.2/§5.5).
+    const cap = pixels(decl(bodyOf(CSS, ".pageBinairo"), "--board-mobile-max"));
     const gap = pixels(decl(bodyOf(MOBILE, ".grid"), "gap"));
-    const padding = pixels(decl(bodyOf(MOBILE, ".gridCard"), "padding"));
+    const padding = pixels(decl(bodyOf(SHARED_MOBILE, ".gridCard"), "padding"));
     // .gridCard's `1px solid var(--line)`, from the rule outside the query.
     const border = 1;
 
@@ -944,7 +1017,7 @@ describe("the mobile board and controls (layout tripwires)", () => {
     // fiction, which is exactly how the defect got in.
     expect(decl(controls, "width")).toBe("100%");
 
-    const cap = pixels(decl(bodyOf(MOBILE, ".page"), "--board-mobile-max"));
+    const cap = pixels(decl(bodyOf(CSS, ".pageBinairo"), "--board-mobile-max"));
     const row = Math.min(cap, NARROWEST_VIEWPORT - PAGE_PADDING);
     const free = row - 2 * pixels(decl(controls, "gap"));
     const digit = Number(decl(bodyOf(MOBILE, ".controlDigit"), "flex"));

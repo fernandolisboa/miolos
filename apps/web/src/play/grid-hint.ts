@@ -1,7 +1,8 @@
 /**
- * The one free hint (ADR-0006, ADR-0027, plan 017 §10). Pure selection: the
- * solution comes from `solveBinairo(givens)` at the call site, so the whole
- * hint works offline (AC 3) and no hint endpoint exists.
+ * The one free hint for a GRID game (ADR-0006, ADR-0027, ADR-0029, plan 018
+ * §10.2). Pure selection: the solution comes from the engine's own solver at
+ * the call site, so the whole hint works offline (AC 4) and no hint endpoint
+ * exists.
  *
  * Why computing it on the client is compatible with ADR-0004, recorded so
  * nobody rebuilds the argument wrong: today's board is PUBLISHED, its
@@ -11,16 +12,18 @@
  * Stripping `solution` from the payload protects UNPUBLISHED content, which
  * is ADR-0004's actual scope; it is not, and must never be argued to be, a
  * confidentiality boundary for a published puzzle.
+ *
+ * The module is named `grid-hint`, not `hint`, because that argument is
+ * scoped to games whose solution is recoverable from the published givens.
+ * Termo's answer is never on the wire (`packages/core`'s strip table gives
+ * its public projection as `game, date` only) and its guesses are judged
+ * server-side, so #27 inherits neither this module nor ADR-0027's reasoning
+ * and decides its hint separately (ADR-0029 consequence (g)).
  */
-import type {
-  BinairoCell,
-  BinairoGrid,
-  BinairoSolvedGrid,
-} from "@miolos/games/binairo";
 
-export interface BinairoHint {
+export interface Hint<T> {
   readonly index: number;
-  readonly value: 0 | 1;
+  readonly value: T;
   /** `correction` unblocks a wrong entry; `fill` reveals an empty cell. */
   readonly kind: "correction" | "fill";
 }
@@ -35,13 +38,19 @@ export interface BinairoHint {
  * behind, where filling one more correct cell leaves the contradiction in
  * place. Givens are never candidates in either branch — they cannot be
  * wrong and they cannot be empty.
+ *
+ * `T` is UNCONSTRAINED, deliberately: the body uses only `!== null` and
+ * `!==` equality — nothing numeric — so `T extends number` would pre-exclude
+ * a future letter game for no reason the algorithm has. `null` is the empty
+ * cell in all three arrays, so Binairo passes its cells natively and Sudoku
+ * passes its engine grid through `playableGivens`/`solutionDigits`.
  */
-export function nextHint(
-  solution: BinairoSolvedGrid,
-  givens: BinairoGrid,
-  entries: readonly BinairoCell[],
-): BinairoHint | null {
-  let firstEmpty: BinairoHint | null = null;
+export function nextHint<T>(
+  solution: readonly T[],
+  givens: readonly (T | null)[],
+  entries: readonly (T | null)[],
+): Hint<T> | null {
+  let firstEmpty: Hint<T> | null = null;
 
   for (let index = 0; index < givens.length; index += 1) {
     if (givens[index] !== null) {

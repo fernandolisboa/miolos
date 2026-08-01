@@ -1,9 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import type { Game } from "@miolos/core";
+import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ConclusionView } from "../src/binairo/conclusion-view";
-import { writePlayRecord, type PlayRecord } from "../src/binairo/play-record";
+import { ConclusionView } from "../src/play/conclusion-view";
+import {
+  writePlayRecord,
+  type BinairoPlayRecord,
+  type SudokuPlayRecord,
+} from "../src/play/play-record";
+import { useRecordSnapshot } from "../src/play/use-record-snapshot";
 import { formatElapsed, messages, routes } from "../src/i18n";
 import { bodyOf, decl, stylesheet } from "./css-source";
 
@@ -16,13 +22,19 @@ const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
   flushPendingCompletions: vi.fn(() => Promise.resolve()),
 }));
-vi.mock("../src/binairo/sync", () => sync);
+vi.mock("../src/play/sync", () => sync);
 
 const DATE = "2026-07-30";
 const ELAPSED_MS = 407_000;
 const ELAPSED = formatElapsed(ELAPSED_MS);
+// A second, DIFFERENT duration: the day card's chips must each read their
+// own game's record, which a shared value could not prove (T-WEB-S18).
+const SUDOKU_ELAPSED_MS = 512_000;
+const SUDOKU_ELAPSED = formatElapsed(SUDOKU_ELAPSED_MS);
 
-function concluded(overrides: Partial<PlayRecord> = {}): PlayRecord {
+function concluded(
+  overrides: Partial<BinairoPlayRecord> = {},
+): BinairoPlayRecord {
   return {
     v: 1,
     game: "binairo",
@@ -40,6 +52,41 @@ function concluded(overrides: Partial<PlayRecord> = {}): PlayRecord {
   };
 }
 
+const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+
+function concludedSudoku(
+  overrides: Partial<SudokuPlayRecord> = {},
+): SudokuPlayRecord {
+  return {
+    v: 1,
+    game: "sudoku",
+    date: DATE,
+    entries: Array.from({ length: 81 }, () => null),
+    grid: Array.from({ length: 9 }, () => DIGITS).flat(),
+    elapsedMs: SUDOKU_ELAPSED_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+/**
+ * The "O dia até agora" card, scoped — the stamp renders the same duration
+ * string in the same document, so an unscoped `getByText(ELAPSED)` would
+ * pass on the wrong node.
+ */
+function dayCard(): HTMLElement {
+  const card = screen
+    .getByText(messages.conclusion.dayCard.title)
+    .closest("section");
+  if (card === null) {
+    throw new Error("the day card is not inside a <section>");
+  }
+  return card;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
@@ -49,30 +96,56 @@ describe("the stamp (T-WEB-17)", () => {
   it("renders the real elapsed time and the hint line, from the messages module", () => {
     writePlayRecord(concluded());
 
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     expect(
-      screen.getByLabelText(messages.conclusao.stampAria(ELAPSED, 0)),
+      screen.getByLabelText(
+        messages.conclusion.stampAria(
+          messages.games.binairo.conclusion.title,
+          ELAPSED,
+          0,
+        ),
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByText(messages.conclusao.stampLabel)).toBeInTheDocument();
-    expect(screen.getByText(messages.conclusao.hints(0))).toBeInTheDocument();
+    expect(
+      screen.getByText(messages.conclusion.stampLabel),
+    ).toBeInTheDocument();
+    expect(screen.getByText(messages.conclusion.hints(0))).toBeInTheDocument();
   });
 
   it("follows hintsUsed for the italic line under the time", () => {
     writePlayRecord(concluded({ hintsUsed: 1 }));
 
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
-    expect(screen.getByText(messages.conclusao.hints(1))).toBeInTheDocument();
+    expect(screen.getByText(messages.conclusion.hints(1))).toBeInTheDocument();
     expect(
-      screen.queryByText(messages.conclusao.hints(0)),
+      screen.queryByText(messages.conclusion.hints(0)),
     ).not.toBeInTheDocument();
   });
 
   it("keeps the <h1> the first element child of its wrapper", () => {
     writePlayRecord(concluded());
 
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     // The 52px h1 here would fire impeccable's hero-eyebrow-chip, and
     // `<article>` does not exempt that rule — so the wrapper is structural
@@ -85,7 +158,13 @@ describe("the stamp (T-WEB-17)", () => {
   it("never uses the frames' streak labels (amendment table: sequência)", () => {
     writePlayRecord(concluded());
 
-    const { container } = render(<ConclusionView date={DATE} />);
+    const { container } = render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     expect(container.textContent).not.toContain("dias seguidos");
   });
@@ -95,39 +174,318 @@ describe("the day card and the CTA (T-WEB-18)", () => {
   it("shows Binairo done and the other three honestly missing", () => {
     writePlayRecord(concluded());
 
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     expect(
-      screen.getByText(messages.conclusao.dayCard.title),
+      screen.getByText(messages.conclusion.dayCard.title),
     ).toBeInTheDocument();
     // Three `falta` chips: no other game has a play route yet, and a fake
     // result would be worse than an honest gap (§12.3).
     expect(
-      screen.getAllByText(messages.conclusao.dayCard.missing),
+      screen.getAllByText(messages.conclusion.dayCard.missing),
     ).toHaveLength(3);
     // Two nonogram labels — the short one is a distinct string, never a
     // runtime truncation; the media query hides one.
     expect(
-      screen.getByText(messages.conclusao.dayCard.games.nonogram),
+      screen.getByText(messages.conclusion.dayCard.games.nonogram),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(messages.conclusao.dayCard.games.nonogramShort),
+      screen.getByText(messages.conclusion.dayCard.games.nonogramShort),
     ).toBeInTheDocument();
   });
 
   it("points the CTA at Hoje and leaves the statistics link dead", () => {
+    // Every playable daily done, which is the only state that still ends the
+    // day at Hoje now that the CTA chains (plan 018 S21 supersedes plan 017
+    // §12.3's CTA row and its deviation 9).
     writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku());
 
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     expect(
-      screen.getByText(messages.conclusao.cta).closest("a"),
+      screen.getByText(messages.conclusion.ctaHome).closest("a"),
     ).toHaveAttribute("href", routes.home);
     // #29 owns the statistics screen; Hoje's shipped links are href-less
     // for the same reason.
     expect(
-      screen.getByText(messages.conclusao.stats).closest("a"),
+      screen.getByText(messages.conclusion.stats).closest("a"),
     ).not.toHaveAttribute("href");
+  });
+});
+
+/**
+ * AC 3's "conclusion chains to the next pending daily" (plan 018 S21/§11.4).
+ * The destination is the first game in the day's order that is playable and
+ * that this device has not finished — device-local and monotone-safe, so it
+ * can only ever offer a game again, never hide one (ADR-0031).
+ */
+describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
+  it("offers the next playable game, in the day's order", () => {
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    expect(
+      screen
+        .getByText(messages.conclusion.ctaNext(messages.games.sudoku.name))
+        .closest("a"),
+    ).toHaveAttribute("href", routes.sudoku);
+    expect(
+      screen.queryByText(messages.conclusion.ctaHome),
+    ).not.toBeInTheDocument();
+  });
+
+  it("takes the DESTINATION game's accent, not the celebrated game's", () => {
+    // "A per-game accent IS that game's identity" (DESIGN.md), so a button
+    // that goes to Sudoku wears Sudoku's ink-blue even on Binairo's screen —
+    // F5:66's own treatment for a game-destination button.
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const cta = screen
+      .getByText(messages.conclusion.ctaNext(messages.games.sudoku.name))
+      .closest("a");
+    expect(cta?.style.getPropertyValue("--accent")).toBe(
+      "var(--accent-sudoku)",
+    );
+  });
+
+  it("never chains back to the game whose stamp is on screen", () => {
+    // The in-place swap again: the record in storage is the last PLAYING one,
+    // so a CTA read off the records alone would send the player straight back
+    // into the grid they just closed.
+    writePlayRecord(concludedSudoku({ concluded: false, grid: undefined }));
+
+    render(
+      <ConclusionView
+        game="sudoku"
+        date={DATE}
+        copy={messages.games.sudoku.conclusion}
+        result={{ elapsedMs: SUDOKU_ELAPSED_MS, hintsUsed: 0 }}
+      />,
+    );
+
+    expect(
+      screen
+        .getByText(messages.conclusion.ctaNext(messages.games.binairo.name))
+        .closest("a"),
+    ).toHaveAttribute("href", routes.binairo);
+  });
+
+  it("falls back to Hoje when every playable daily is done", () => {
+    writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku());
+
+    render(
+      <ConclusionView
+        game="sudoku"
+        date={DATE}
+        copy={messages.games.sudoku.conclusion}
+      />,
+    );
+
+    const cta = screen.getByText(messages.conclusion.ctaHome).closest("a");
+    expect(cta).toHaveAttribute("href", routes.home);
+    // Solid ink, not an accent: this one goes to Hoje, which is no game's
+    // identity.
+    expect(cta?.style.getPropertyValue("--accent")).toBe("");
+  });
+});
+
+describe("the day card reads per-game records (T-WEB-S18)", () => {
+  it("shows this device's binairo time and an honest falta for the rest", () => {
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const chips = within(dayCard());
+    expect(chips.getByText(ELAPSED)).toBeInTheDocument();
+    expect(
+      chips.getAllByText(messages.conclusion.dayCard.missing),
+    ).toHaveLength(3);
+  });
+
+  it("shows each concluded game's OWN time, never the current game's", () => {
+    writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku());
+
+    // Rendered from the BINAIRO conclusion: the sudoku chip's duration can
+    // only come from the sudoku record, which is what makes this the
+    // per-game read and not a repeat of the stamp (plan 018 §11.4).
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const chips = within(dayCard());
+    expect(chips.getByText(ELAPSED)).toBeInTheDocument();
+    expect(chips.getByText(SUDOKU_ELAPSED)).toBeInTheDocument();
+    expect(
+      chips.getAllByText(messages.conclusion.dayCard.missing),
+    ).toHaveLength(2);
+  });
+
+  it("counts the game being celebrated as done before its record is written", () => {
+    // The in-place swap on /binairo (plan 017 D26): React runs the child's
+    // mount effect before the parent's, so the record still in storage is
+    // the last PLAYING one — and where `localStorage` throws there will
+    // never be another. The chip for the game whose stamp is on screen must
+    // therefore come from the stamp, or the celebration screen would tell
+    // the player the game they just solved is still missing.
+    writePlayRecord(concluded({ concluded: false, grid: undefined }));
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+        result={{ elapsedMs: ELAPSED_MS, hintsUsed: 0 }}
+      />,
+    );
+
+    const chips = within(dayCard());
+    expect(chips.getByText(ELAPSED)).toBeInTheDocument();
+    expect(
+      chips.getAllByText(messages.conclusion.dayCard.missing),
+    ).toHaveLength(3);
+  });
+
+  it("understates rather than guesses: another device's solve reads falta", () => {
+    // ADR-0031's monotone property, at the surface that renders it. A player
+    // who solved Sudoku elsewhere sees `falta` here; the opposite mistake
+    // would be visible and wrong.
+    writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku({ concluded: false }));
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const chips = within(dayCard());
+    expect(chips.queryByText(SUDOKU_ELAPSED)).not.toBeInTheDocument();
+    expect(
+      chips.getAllByText(messages.conclusion.dayCard.missing),
+    ).toHaveLength(3);
+  });
+});
+
+/**
+ * The snapshot cache is module-level — one browser has one `localStorage` —
+ * so with two conclusion routes live in one SPA session `/binairo/concluido
+ * → /sudoku/concluido` on the same day is a real navigation, and a cache
+ * keyed on `date` alone would hand the second route the first one's record
+ * (plan 018 §19.4, landmine 4).
+ */
+describe("the record snapshot is keyed on {game, date} (T-WEB-S20)", () => {
+  function RecordProbe({
+    game,
+    date,
+  }: {
+    readonly game: Game;
+    readonly date: string;
+  }) {
+    const snapshot = useRecordSnapshot(game, date);
+    return (
+      <output>
+        {snapshot.hydrated ? (snapshot.record?.game ?? "none") : "not read"}
+      </output>
+    );
+  }
+
+  it("stamps each conclusion with its own game's record", () => {
+    writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku());
+
+    const binairo = render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+    expect(screen.getByRole("img")).toHaveAccessibleName(
+      messages.conclusion.stampAria(
+        messages.games.binairo.conclusion.title,
+        ELAPSED,
+        0,
+      ),
+    );
+    binairo.unmount();
+
+    render(
+      <ConclusionView
+        game="sudoku"
+        date={DATE}
+        copy={messages.games.sudoku.conclusion}
+      />,
+    );
+
+    const stamp = screen.getByRole("img");
+    expect(stamp).toHaveAccessibleName(
+      messages.conclusion.stampAria(
+        messages.games.sudoku.conclusion.title,
+        SUDOKU_ELAPSED,
+        0,
+      ),
+    );
+    expect(stamp.textContent).toContain(SUDOKU_ELAPSED);
+    expect(stamp.textContent).not.toContain(ELAPSED);
+  });
+
+  it("never hands the second game the first game's record", () => {
+    // The two records agree on every field the conclusion RENDERS, so a
+    // date-only key would return the cached binairo snapshot here and no
+    // rendered string would give it away. The record's own `game` is what
+    // makes the miskey observable at all.
+    writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku({ elapsedMs: ELAPSED_MS }));
+
+    const first = render(<RecordProbe game="binairo" date={DATE} />);
+    expect(screen.getByRole("status")).toHaveTextContent("binairo");
+    first.unmount();
+
+    render(<RecordProbe game="sudoku" date={DATE} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("sudoku");
   });
 });
 
@@ -135,28 +493,40 @@ describe("the sync line (T-WEB-19)", () => {
   it("says the result is queued while it is still pending", () => {
     writePlayRecord(concluded({ pendingSync: true, syncOutcome: "pending" }));
 
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     expect(
-      screen.getByText(messages.conclusao.sync.pending),
+      screen.getByText(messages.conclusion.sync.pending),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(messages.conclusao.sync.rejected),
+      screen.queryByText(messages.conclusion.sync.rejected),
     ).not.toBeInTheDocument();
   });
 
   it("says so when the server refused it, and drops the pending line", () => {
     writePlayRecord(concluded({ syncOutcome: "rejected" }));
 
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     // Not cosmetic: without this line the stamp would stand while the
     // server holds no completion (ADR-0004, §9.2).
     expect(
-      screen.getByText(messages.conclusao.sync.rejected),
+      screen.getByText(messages.conclusion.sync.rejected),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(messages.conclusao.sync.pending),
+      screen.queryByText(messages.conclusion.sync.pending),
     ).not.toBeInTheDocument();
   });
 
@@ -179,46 +549,64 @@ describe("the sync line (T-WEB-19)", () => {
 
     render(
       <ConclusionView
+        game="binairo"
         date={DATE}
+        copy={messages.games.binairo.conclusion}
         result={{ elapsedMs: ELAPSED_MS, hintsUsed: 0 }}
       />,
     );
 
-    expect(screen.getByText(messages.conclusao.stampLabel)).toBeInTheDocument();
     expect(
-      screen.queryByText(messages.conclusao.sync.pending),
+      screen.getByText(messages.conclusion.stampLabel),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.conclusion.sync.pending),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByText(messages.conclusao.sync.rejected),
+      screen.queryByText(messages.conclusion.sync.rejected),
     ).not.toBeInTheDocument();
   });
 
   it("says nothing once the completion is recorded", () => {
     writePlayRecord(concluded());
 
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     expect(
-      screen.queryByText(messages.conclusao.sync.pending),
+      screen.queryByText(messages.conclusion.sync.pending),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByText(messages.conclusao.sync.rejected),
+      screen.queryByText(messages.conclusion.sync.rejected),
     ).not.toBeInTheDocument();
   });
 });
 
 describe("no record for the server's day (T-WEB-20)", () => {
   it("explains the bookmark rather than redirecting it away", () => {
-    render(<ConclusionView date={DATE} />);
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     expect(
-      screen.getByText(messages.conclusao.notYet.title),
+      screen.getByText(messages.games.binairo.conclusion.notYet.title),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(messages.conclusao.notYet.body),
+      screen.getByText(messages.conclusion.notYet.body),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(messages.conclusao.notYet.cta).closest("a"),
+      screen
+        .getByText(messages.games.binairo.conclusion.notYet.cta)
+        .closest("a"),
     ).toHaveAttribute("href", routes.binairo);
   });
 
@@ -229,11 +617,19 @@ describe("no record for the server's day (T-WEB-20)", () => {
     // takes the server snapshot, so this markup is exactly what the client
     // hydrates against. Flashing "ainda não concluído" and then swapping to
     // a completed stamp would be worse than a beat of nothing (D28).
-    const markup = renderToStaticMarkup(<ConclusionView date={DATE} />);
+    const markup = renderToStaticMarkup(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
 
     expect(markup).toContain('data-conclusion-state="skeleton"');
-    expect(markup).not.toContain(messages.conclusao.notYet.title);
-    expect(markup).not.toContain(messages.conclusao.stampLabel);
+    expect(markup).not.toContain(
+      messages.games.binairo.conclusion.notYet.title,
+    );
+    expect(markup).not.toContain(messages.conclusion.stampLabel);
     expect(markup).not.toContain(ELAPSED);
   });
 });
@@ -245,7 +641,7 @@ describe("no record for the server's day (T-WEB-20)", () => {
  * are the tripwires that keep the fixes.
  */
 describe("the conclusion's layout (tripwires)", () => {
-  const CSS = stylesheet("conclusion-view.module.css");
+  const CSS = stylesheet("src/play/conclusion-view.module.css");
 
   it("keeps the grid's block-axis alignment off the shared top-bar rule", () => {
     // finding `conclusion-topbar-collapses-in-flex-column`: `align-self` is
@@ -267,11 +663,27 @@ describe("the conclusion's layout (tripwires)", () => {
     // height as row gaps — the declared 16px rendered as 51px on a 390×667
     // and 140px on a 390×932, so the composition changed per device.
     const stacked = bodyOf(
-      bodyOf(CSS, "@media (max-width: 1040px)"),
+      bodyOf(CSS, "@media (max-width: 1140px)"),
       ".pageResult",
     );
 
     expect(decl(stacked, "grid-template-rows")).toBe("auto auto auto");
     expect(decl(stacked, "align-content")).toBe("start");
+  });
+
+  it("keeps every solid CTA's label off its own background on hover", () => {
+    // finding `chaining-cta-label-vanishes-on-hover`: `.page a:hover`
+    // (0,2,1) sets `color: var(--accent)`, and `.ctaNext` paints that same
+    // `--accent` as its background — so a bare `.cta:hover` (0,2,0) loses
+    // the cascade and the chaining CTA's label goes 1:1 against itself under
+    // the pointer. Anchoring the hover on `.page` (0,3,0) wins it back.
+    // `impeccable detect` never exercises hover, so this is the only gate.
+    for (const cta of ["cta", "emptyCta"]) {
+      expect(decl(bodyOf(CSS, `.page .${cta}:hover`), "color")).toBe(
+        "var(--paper-desk)",
+      );
+      // And the losing form is gone rather than merely outranked.
+      expect(CSS).not.toMatch(new RegExp(`^\\s*\\.${cta}:hover`, "m"));
+    }
   });
 });

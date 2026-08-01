@@ -1,12 +1,21 @@
-import { binairoCompletionRequestSchema } from "@miolos/core";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  binairoCompletionRequestSchema,
+  completionRequestSchema,
+  sudokuCompletionRequestSchema,
+} from "@miolos/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
   readPlayRecord,
   writePlayRecord,
-  type PlayRecord,
-} from "../src/binairo/play-record";
+  type BinairoPlayRecord,
+  type SudokuPlayRecord,
+} from "../src/play/play-record";
 
 // T-WEB-16 / T-WEB-16b (plan 017 §15). The flush is proved with NO play
 // screen mounted: the record IS the queue (D18), so seeding localStorage
@@ -17,12 +26,41 @@ import {
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
 
-const SOLVED_GRID: NonNullable<PlayRecord["grid"]> = Array.from(
+const SOLVED_GRID: NonNullable<BinairoPlayRecord["grid"]> = Array.from(
   { length: 64 },
   (_unused, index) => (index % 2 === 0 ? 0 : 1),
 );
 
-function pendingRecord(overrides: Partial<PlayRecord> = {}): PlayRecord {
+/**
+ * The sudoku queue item: 81 digits and no zero, because `0` means EMPTY in
+ * the engine grid and a submission is a COMPLETE board. Built by repeating
+ * the digit row rather than by asserting a type — the repo bans `as` in
+ * tests, and this shape is the schema's own.
+ */
+const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+const SOLVED_DIGITS: NonNullable<SudokuPlayRecord["grid"]> = Array.from(
+  { length: 9 },
+  () => DIGITS,
+).flat();
+
+function pendingSudokuRecord(): SudokuPlayRecord {
+  return {
+    v: 1,
+    game: "sudoku",
+    date: DATE,
+    entries: Array.from({ length: 81 }, () => null),
+    grid: SOLVED_DIGITS,
+    elapsedMs: 411_000,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: true,
+    syncOutcome: "pending",
+  };
+}
+
+function pendingRecord(
+  overrides: Partial<BinairoPlayRecord> = {},
+): BinairoPlayRecord {
   return {
     v: 1,
     game: "binairo",
@@ -101,7 +139,7 @@ function sessionCalls(fetchMock: ReturnType<typeof stubFetch>) {
 /** Module state (the in-flight guard, the re-mint latch) is per-import. */
 async function freshSync() {
   vi.resetModules();
-  return await import("../src/binairo/sync");
+  return await import("../src/play/sync");
 }
 
 async function settle() {
@@ -174,7 +212,7 @@ describe("flushPendingCompletions", () => {
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       pendingSync: false,
       syncOutcome: "recorded",
     });
@@ -192,7 +230,7 @@ describe("flushPendingCompletions", () => {
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       elapsedMs: 195_000,
       hintsUsed: 0,
       pendingSync: false,
@@ -214,7 +252,7 @@ describe("flushPendingCompletions", () => {
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       pendingSync: true,
       syncOutcome: "pending",
     });
@@ -349,6 +387,52 @@ describe("flushPendingCompletions", () => {
     }
   });
 
+  it("posts one record of EACH game, once each — the one-module property (T-WEB-S12)", async () => {
+    // `listPendingRecords()` is game-blind by design, and this module's
+    // guards are module-level: if the extraction had left a second copy of
+    // sync.ts behind, each copy would post BOTH records and settle the
+    // other's (ADR-0029, plan 018 S1). One module, two records, two POSTs.
+    writePlayRecord(pendingRecord());
+    writePlayRecord(pendingSudokuRecord());
+    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+
+    // Parsed against the request union, never cast — `JSON.parse` hands back
+    // `any`, and a body that reached the wrong branch of `buildBody` fails
+    // right here.
+    const bodies = completionCalls(fetchMock).map((call) => {
+      const raw: unknown = JSON.parse(requestInitSchema.parse(call[1]).body);
+      return completionRequestSchema.parse(raw);
+    });
+    expect(bodies).toHaveLength(2);
+    expect(
+      binairoCompletionRequestSchema.parse(
+        bodies.find((body) => body.game === "binairo"),
+      ),
+    ).toEqual({
+      game: "binairo",
+      date: DATE,
+      grid: SOLVED_GRID,
+      elapsedMs: 272_000,
+      hintsUsed: 1,
+    });
+    expect(
+      sudokuCompletionRequestSchema.parse(
+        bodies.find((body) => body.game === "sudoku"),
+      ),
+    ).toEqual({
+      game: "sudoku",
+      date: DATE,
+      grid: SOLVED_DIGITS,
+      elapsedMs: 411_000,
+      hintsUsed: 0,
+    });
+    expect(readPlayRecord("sudoku", DATE)?.pendingSync).toBe(false);
+    expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(false);
+  });
+
   it("does nothing when there is nothing queued", async () => {
     const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
 
@@ -369,7 +453,7 @@ describe("flushPendingCompletions", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalled();
-    expect(readPlayRecord(DATE)?.pendingSync).toBe(true);
+    expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(true);
     errorSpy.mockRestore();
   });
 
@@ -383,7 +467,7 @@ describe("flushPendingCompletions", () => {
 
     expect(completionCalls(fetchMock)).toHaveLength(0);
     expect(errorSpy).toHaveBeenCalled();
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       pendingSync: false,
       syncOutcome: "rejected",
     });
@@ -402,7 +486,7 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
       const { flushPendingCompletions } = await freshSync();
       await flushPendingCompletions();
 
-      expect(readPlayRecord(DATE)).toMatchObject({
+      expect(readPlayRecord("binairo", DATE)).toMatchObject({
         pendingSync: false,
         syncOutcome: "rejected",
       });
@@ -418,7 +502,7 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       pendingSync: true,
       syncOutcome: "pending",
     });
@@ -436,7 +520,7 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     // One mint before the first POST, one re-mint after the 401.
     expect(sessionCalls(fetchMock)).toHaveLength(2);
     expect(completionCalls(fetchMock)).toHaveLength(2);
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       pendingSync: true,
       syncOutcome: "pending",
     });
@@ -459,7 +543,7 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       pendingSync: false,
       syncOutcome: "recorded",
     });
@@ -485,13 +569,13 @@ describe("startCompletionSync", () => {
     const { startCompletionSync } = await freshSync();
     const stop = startCompletionSync();
     await settle();
-    expect(readPlayRecord(DATE)?.pendingSync).toBe(true);
+    expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(true);
 
     online = true;
     window.dispatchEvent(new Event("online"));
     await settle();
 
-    expect(readPlayRecord(DATE)).toMatchObject({
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
       pendingSync: false,
       syncOutcome: "recorded",
     });
@@ -536,11 +620,44 @@ describe("startCompletionSync", () => {
     status = 200;
     await vi.advanceTimersByTimeAsync(5_000);
     expect(completionCalls(fetchMock)).toHaveLength(3);
-    expect(readPlayRecord(DATE)?.syncOutcome).toBe("recorded");
+    expect(readPlayRecord("binairo", DATE)?.syncOutcome).toBe("recorded");
 
     // Terminal: the ladder is cancelled, not merely exhausted.
     await vi.advanceTimersByTimeAsync(120_000);
     expect(completionCalls(fetchMock)).toHaveLength(3);
     stop();
+  });
+});
+
+/**
+ * The one per-game branch in the module, and the one place a new game can
+ * fail OPEN (finding `buildbody-switch-fails-open-for-a-new-game`).
+ *
+ * The guarantee is a COMPILE-TIME one and `pnpm typecheck` is what enforces
+ * it: `PlayRecord` has exactly two members today, both handled, so no runtime
+ * input can reach the default — a test that manufactured one would have to
+ * cast, which is precisely the lie the guard exists to prevent. What this
+ * reads instead is the source, the way `./css-source.ts` reads a stylesheet:
+ * the tripwire cannot be deleted silently, and the note travels with it.
+ */
+describe("the extension point #25/#27 widen", () => {
+  it("makes an unhandled game a compile error, not a dropped completion", () => {
+    // `path` rather than `new URL(..., import.meta.url)`: the jsdom
+    // environment's own `URL` resolves the relative specifier against the
+    // document's http base, not against the module.
+    const source = readFileSync(
+      path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "src",
+        "play",
+        "sync.ts",
+      ),
+      "utf8",
+    );
+
+    expect(source).toMatch(
+      /switch \(record\.game\)[\s\S]*?default: \{[\s\S]*?const unhandled: never = record;/,
+    );
   });
 });

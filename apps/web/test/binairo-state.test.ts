@@ -1,10 +1,10 @@
-import type { DailyPuzzleResponse } from "@miolos/core";
+import type { DailyBinairoResponse } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
-import type { PlayRecord } from "../src/binairo/play-record";
+import type { BinairoPlayRecord } from "../src/play/play-record";
+import { elapsedMs } from "../src/play/timer";
 import {
-  elapsedMs,
   initPlayState,
   isSolvedGrid,
   mergedGrid,
@@ -16,7 +16,7 @@ import {
 // no DOM, no clock — so the whole gameplay state machine is covered by
 // plain unit tests and the screens stay thin (D6).
 
-const EMPTY_GIVENS: DailyPuzzleResponse["givens"] = Array.from(
+const EMPTY_GIVENS: DailyBinairoResponse["givens"] = Array.from(
   { length: 64 },
   () => null,
 );
@@ -27,9 +27,9 @@ const EMPTY_GIVENS: DailyPuzzleResponse["givens"] = Array.from(
  * assertion needs a real solution instead.
  */
 function daily(
-  givens: DailyPuzzleResponse["givens"] = EMPTY_GIVENS,
+  givens: DailyBinairoResponse["givens"] = EMPTY_GIVENS,
   date = "2026-07-30",
-): DailyPuzzleResponse {
+): DailyBinairoResponse {
   return { game: "binairo", date, size: 8, givens };
 }
 
@@ -42,7 +42,7 @@ function tap(state: PlayState, ...indices: number[]): PlayState {
 
 const REAL_PUZZLE = generateBinairo({ seed: 20_260_730, weekday: 3 });
 
-function record(overrides: Partial<PlayRecord> = {}): PlayRecord {
+function record(overrides: Partial<BinairoPlayRecord> = {}): BinairoPlayRecord {
   return {
     v: 1,
     game: "binairo",
@@ -329,7 +329,7 @@ describe("timer (D10, §8.3, T-WEB-14)", () => {
 
 describe("restore (T-WEB-14b)", () => {
   it("maps every field of a record and recomputes the derived ones", () => {
-    const entries: PlayRecord["entries"] = Array.from(
+    const entries: BinairoPlayRecord["entries"] = Array.from(
       { length: 64 },
       () => null,
     );

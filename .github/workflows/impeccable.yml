@@ -56,21 +56,35 @@ jobs:
           jar=$(mktemp)
           # EVERY path the detect steps below scan, not just "/". Asserting the
           # root alone was itself a silent-green path: "/" reads no database,
-          # while /binairo and /binairo/concluido are the only db-backed routes
-          # in the repo — so a missing, rotated or unmigrated DATABASE_URL let
-          # the preflight pass and the scanner then found nothing on a Next 500
-          # page and exited 0. ADR-0028's Consequences name that risk verbatim;
-          # this loop is what turns it from a human curl into a machine gate
-          # (step 6 finding
+          # while the four game routes are db-backed — so a missing, rotated or
+          # unmigrated DATABASE_URL let the preflight pass and the scanner then
+          # found nothing on a Next 500 page and exited 0. ADR-0028's
+          # Consequences name that risk verbatim; this loop is what turns it
+          # from a human curl into a machine gate (step 6 finding
           # impeccable-preflight-does-not-cover-the-two-db-backed-urls-it-added).
           # Keep this list and the two detect invocations below in step.
+          #
+          # A 200 is NOT the property that matters, and on a db-backed route it
+          # is the failure mode: with no published puzzle for today, /sudoku
+          # renders the "ainda não chegou" card at HTTP 200 and detect would
+          # scan that instead of the Sudoku screen and pass green (plan 018
+          # §12.8). So each game route also has to prove it rendered the thing
+          # we are about to scan, through the data attribute its own view sets
+          # (play-view.tsx / conclusion-view.tsx). "/" needs no marker: it reads
+          # no database, so reachable and rendered are the same property there.
           status=0
-          for path in "/" "/binairo" "/binairo/concluido"; do
+          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido"; do
+            case "$path" in
+              */concluido) marker='data-conclusion-state=' ;;
+              "/") marker='' ;;
+              *) marker='data-play-state=' ;;
+            esac
+            body=$(mktemp)
             # `|| true` because the job shell runs with `-e`: a connection
             # failure would otherwise abort the loop before the other paths are
             # reported. curl still writes "000 <url>" through -w, which the case
             # below rejects, so nothing can pass by failing to connect.
-            code_and_url=$(curl -sSL -c "$jar" -b "$jar" -o /dev/null -w '%{http_code} %{url_effective}' \
+            code_and_url=$(curl -sSL -c "$jar" -b "$jar" -o "$body" -w '%{http_code} %{url_effective}' \
               "$DEPLOYMENT_URL$path?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true") || true
             echo "preflight $path: $code_and_url"
             # All paths are reported before failing: one round-trip tells us
@@ -79,6 +93,14 @@ jobs:
               "200 $DEPLOYMENT_URL"*) ;;
               *) echo "preview not reachable through bypass at $path (need HTTP 200 on the deployment host) — refusing to scan"; status=1 ;;
             esac
+            # The body is only ever grepped, never echoed: it is fetched with
+            # the bypass secret in the query string and printing it would put
+            # the response in the log.
+            if [ -n "$marker" ] && ! grep -q "$marker" "$body"; then
+              echo "preflight $path: no $marker in the response — the screen we are about to scan did not render (no published puzzle for today, or a db-backed failure) — refusing to scan"
+              status=1
+            fi
+            rm -f "$body"
           done
           rm -f "$jar"
           test "$status" -eq 0 || exit 1
@@ -123,6 +145,8 @@ jobs:
           "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/binairo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/sudoku/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           --viewport 1440x900
       - name: impeccable detect — mobile 390x844
         # Run even when desktop found regressions (one round-trip shows both
@@ -137,4 +161,6 @@ jobs:
           "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/binairo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/sudoku/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           --viewport 390x844

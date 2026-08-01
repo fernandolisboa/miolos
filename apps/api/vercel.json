@@ -1,4 +1,7 @@
 {
   "ignoreCommand": "npx turbo-ignore",
-  "crons": [{ "path": "/cron/publish", "schedule": "0 6 * * *" }]
+  "crons": [{ "path": "/cron/publish", "schedule": "0 6 * * *" }],
+  "functions": {
+    "app/cron/publish/route.ts": { "maxDuration": 60 }
+  }
 }

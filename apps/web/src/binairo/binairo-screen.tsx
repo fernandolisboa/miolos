@@ -1,8 +1,9 @@
 "use client";
 
-import type { DailyPuzzleResponse } from "@miolos/core";
+import type { DailyBinairoResponse } from "@miolos/core";
 
-import { ConclusionView } from "./conclusion-view";
+import { messages } from "../i18n";
+import { ConclusionView } from "../play/conclusion-view";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useBinairoPlay } from "./use-binairo-play";
 
@@ -17,11 +18,16 @@ import { useBinairoPlay } from "./use-binairo-play";
  * The page shell passes the wall's solution-free projection and nothing
  * else (D4): the RSC payload physically cannot carry what this component
  * never received.
+ *
+ * The prop is `DailyBinairoResponse`, never the union (plan 018 S11): a
+ * per-game component that took `DailyPuzzleResponse` and narrowed
+ * internally would carry a branch that cannot happen, which is the branch
+ * the narrowing exists to delete.
  */
 export function BinairoScreen({
   daily,
 }: {
-  readonly daily: DailyPuzzleResponse;
+  readonly daily: DailyBinairoResponse;
 }) {
   const play = useBinairoPlay(daily);
 
@@ -45,7 +51,9 @@ export function BinairoScreen({
   ) {
     return (
       <ConclusionView
+        game="binairo"
         date={daily.date}
+        copy={messages.games.binairo.conclusion}
         result={{
           elapsedMs: play.elapsed,
           hintsUsed: play.state.hint.used,

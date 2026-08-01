@@ -1,4 +1,4 @@
-import { dailyPuzzleResponseSchema } from "@miolos/core";
+import { dailyBinairoResponseSchema } from "@miolos/core";
 import { getTodayDaily } from "@miolos/db";
 
 import { corsHeaders } from "../../../src/cors";
@@ -25,8 +25,10 @@ export async function GET(): Promise<Response> {
   }
   // Defense in depth: the wall already returns a schema-shaped
   // projection; the HTTP boundary independently re-parses it (two Zod
-  // gates, one per enforcement point).
-  return Response.json(dailyPuzzleResponseSchema.parse(daily), {
+  // gates, one per enforcement point). Narrowed from the union to the
+  // BINAIRO member: with `sudoku` in `dailyPuzzleResponseSchema` a union
+  // parse would now ACCEPT a sudoku row on this path (plan 018 §7.4).
+  return Response.json(dailyBinairoResponseSchema.parse(daily), {
     headers: corsHeaders(),
   });
 }

@@ -7,15 +7,21 @@
 
 /**
  * Keys that must never appear at ANY depth of a client-facing daily
- * payload. #23/#25/#27 extend this list with their games'
- * solution-adjacent fields (e.g. sudoku clue metadata, the termo answer)
- * when their projections land.
+ * payload. #25/#27 extend this list with their games' solution-adjacent
+ * fields (the nonogram reveal's identity, the termo answer) when their
+ * projections land.
+ *
+ * `clueCount` is sudoku's, added by #23: it appears in no shipped payload,
+ * so every landed scan kept passing unchanged — adding it is what makes
+ * the scan meaningful for the game whose content actually carries it
+ * (plan 018 S22).
  */
 export const FORBIDDEN_DAILY_KEYS = [
   "solution",
   "seed",
   "reveal",
   "answer",
+  "clueCount",
 ] as const;
 
 /** Every key at any depth of a JSON-shaped value (the leak-scan probe). */
