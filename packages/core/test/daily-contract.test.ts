@@ -97,10 +97,15 @@ describe("binairoDailyContentSchema", () => {
   });
 
   it("rejects a content payload missing the solution (shape mirror, not a subset)", () => {
-    const { solution: _solution, ...withoutSolution } = generateBinairo({
-      seed: 7,
-      weekday: 5,
-    });
+    const puzzle = generateBinairo({ seed: 7, weekday: 5 });
+    const withoutSolution = {
+      size: puzzle.size,
+      seed: puzzle.seed,
+      weekday: puzzle.weekday,
+      givens: puzzle.givens,
+      givensCount: puzzle.givensCount,
+      requiredTier: puzzle.requiredTier,
+    };
     expect(binairoDailyContentSchema.safeParse(withoutSolution).success).toBe(
       false,
     );

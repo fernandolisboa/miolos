@@ -13,6 +13,7 @@
   "dependencies": {
     "@miolos/core": "workspace:*",
     "@miolos/db": "workspace:*",
+    "@miolos/games": "workspace:*",
     "next": "16.2.12",
     "react": "19.2.8",
     "react-dom": "19.2.8"
