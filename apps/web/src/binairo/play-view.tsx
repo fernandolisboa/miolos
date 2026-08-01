@@ -21,7 +21,7 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
   const { state } = play;
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} data-play-state="playing">
       <header className={styles.topBar}>
         <Link
           className={styles.back}
@@ -104,6 +104,63 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
             {messages.binairo.hint.explain[play.hintKind]}
           </p>
         )}
+      </section>
+    </main>
+  );
+}
+
+/**
+ * The pre-hydration paint (§12.2, finding
+ * `binairo-reload-flashes-a-blank-board-over-a-finished-day`). Everything
+ * the board, the clock, the progress readout and the hint button show is
+ * DERIVED FROM THE RECORD, and the record cannot be read before the mount
+ * effect — so painting them first renders a day the player already finished
+ * as an empty board with a live hint button and a 00:00 clock, for as long
+ * as hydration takes. The conclusion route already made this trade (D28:
+ * "a beat of nothing" beats a wrong first paint); this is the same trade on
+ * the play route.
+ *
+ * The placeholder board reuses `.gridCard`, `.grid` and `.cell`, so it is
+ * the real board's size on every viewport by construction and hydration is
+ * a paint rather than a reflow.
+ */
+export function PlaySkeleton({ date }: { readonly date: string }) {
+  return (
+    <main className={styles.page} data-play-state="skeleton">
+      <header className={styles.topBar}>
+        <Link
+          className={styles.back}
+          href={routes.home}
+          aria-label={messages.binairo.backAria}
+        >
+          {messages.binairo.back}
+        </Link>
+        <span className={styles.wordmark}>{messages.brand.wordmark}</span>
+        <span className={styles.barKicker}>{messages.binairo.kicker}</span>
+        <span className={styles.topDate}>{formatLongDate(date)}</span>
+      </header>
+
+      <div className={styles.titleBlock}>
+        <p className={styles.titleKicker}>{messages.binairo.kicker}</p>
+        {/* The same structural wrapper as in PlayView — see the note there:
+            impeccable's two rules anchor on `h1.previousElementSibling`. */}
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>{messages.binairo.title}</h1>
+        </div>
+        <p className={styles.rules}>{messages.binairo.rules}</p>
+      </div>
+
+      <section className={styles.board}>
+        <div aria-hidden className={styles.gridCard}>
+          <div className={styles.grid}>
+            {Array.from({ length: TOTAL_CELLS }, (_unused, index) => (
+              <div
+                key={index}
+                className={`${styles.cell} ${styles.cellSkeleton}`}
+              />
+            ))}
+          </div>
+        </div>
       </section>
     </main>
   );

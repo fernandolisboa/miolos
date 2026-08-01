@@ -129,7 +129,13 @@ export function writePlayRecord(record: PlayRecord): void {
   }
   const clamped: PlayRecord = {
     ...record,
-    elapsedMs: Math.min(record.elapsedMs, ELAPSED_CAP_MS),
+    // Clamped at BOTH ends, where the schema validates both: a backward
+    // wall-clock step (an NTP correction, a device clock change) makes
+    // `now - runningSince` negative, and a negative `elapsedMs` written
+    // verbatim is discarded by the very next parse — losing the player's
+    // in-progress grid, or a completion the queue can then never find
+    // (finding `elapsedms-clamp-is-one-sided`).
+    elapsedMs: Math.min(Math.max(record.elapsedMs, 0), ELAPSED_CAP_MS),
   };
   try {
     store.setItem(

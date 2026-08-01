@@ -69,6 +69,17 @@ const SOURCE_PATH = "apps/web/src/eslint-probe.ts";
 const APP_PATH = "apps/web/app/eslint-probe.ts";
 const TEST_PATH = "apps/web/test/eslint-probe.test.ts";
 
+// The plain-JS extensions. apps/web/tsconfig.json sets `allowJs` with `checkJs`
+// off and next.config.ts overrides no `pageExtensions`, so a `.jsx` under app/
+// is a real, typechecking route — and before the step 6 finding
+// web-db-wall-glob-misses-js-jsx-mjs the wall's `{ts,tsx,mts,cts}` globs saw
+// none of these. T-LINT-9/T-LINT-10 keep the extension list from being
+// narrowed back silently, the way T-LINT-7/T-LINT-8 pin the source/test split.
+const SOURCE_JS_PATH = "apps/web/src/eslint-probe.js";
+const APP_JSX_PATH = "apps/web/app/eslint-probe.jsx";
+const SOURCE_MJS_PATH = "apps/web/src/eslint-probe.mjs";
+const SOURCE_CJS_PATH = "apps/web/src/eslint-probe.cjs";
+
 describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   it("T-LINT-1: importing @miolos/db/publishing is restricted", async () => {
     const messages = await lintProbe(
@@ -138,6 +149,51 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     expect(ruleIds(messages)).toContain("no-restricted-imports");
   });
 
+  it("T-LINT-3c: a relative path into packages/db/src is restricted", async () => {
+    // Step 6 finding web-db-wall-has-no-relative-path-ban: the bare-specifier
+    // groups match none of this, so `completions` and `hint_grants` were one
+    // `../` away from apps/web — falsifying plan 017 D17.
+    const deep = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { completions } from "../../../packages/db/src/schema";',
+        "",
+        "export const table = completions;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(deep)).toContain("no-restricted-imports");
+
+    // The directory itself resolves to its index too.
+    const index = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { createDb } from "../../../packages/db/src";',
+        "",
+        "export const make = createDb;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(index)).toContain("no-restricted-imports");
+  });
+
+  it("T-LINT-3d: `users` and `sessions` are banned by name off the root entry", async () => {
+    // Step 6 finding root-entry-users-and-sessions-are-importable-from-apps-web:
+    // `db.select().from(users)` needs neither `sql` nor `eq`, so restricting
+    // only those two left every user row — and every session token hash — one
+    // import away from an RSC payload.
+    const messages = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { users, sessions } from "@miolos/db";',
+        "",
+        "export const identity = { users, sessions };",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(messages)).toContain("no-restricted-imports");
+  });
+
   it("T-LINT-4: dynamic import of a server-internal subpath is restricted, at SOURCE and test paths", async () => {
     const banned = [
       "export async function load() {",
@@ -168,6 +224,68 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
       "",
     ].join("\n");
     expect(await lintProbe(SOURCE_PATH, allowed)).toEqual([]);
+  });
+
+  it("T-LINT-4b: a COMPUTED dynamic import specifier is restricted at every apps/web path", async () => {
+    // Step 6 finding dynamic-import-selector-misses-computed-specifiers: the
+    // literal selector of T-LINT-4 sees only a plain string, so both of these
+    // linted clean while resolving at runtime to the very module the wall
+    // exists to keep out.
+    const templateLiteral = [
+      "export async function load() {",
+      "  return await import(`@miolos/db/publishing`);",
+      "}",
+      "",
+    ].join("\n");
+    const concatenated = [
+      'const specifier = "@miolos/db/" + "publishing";',
+      "export async function load() {",
+      "  return await import(specifier);",
+      "}",
+      "",
+    ].join("\n");
+
+    // All three paths, for the same flat-config reason as T-LINT-4: the
+    // source-only object REPLACES the rule's configuration rather than merging
+    // it, so the selector has to be listed in both arrays.
+    for (const path of [SOURCE_PATH, APP_PATH, TEST_PATH]) {
+      expect(ruleIds(await lintProbe(path, templateLiteral))).toContain(
+        "no-restricted-syntax",
+      );
+      expect(ruleIds(await lintProbe(path, concatenated))).toContain(
+        "no-restricted-syntax",
+      );
+    }
+
+    // Matching on `source` rather than on "any non-Literal child" is what makes
+    // this safe: ImportExpression also carries the options argument, and an
+    // import attribute must not be mistaken for a computed specifier.
+    const withAttributes = [
+      "export async function load() {",
+      '  return await import("./data.json", { with: { type: "json" } });',
+      "}",
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(SOURCE_PATH, withAttributes))).toEqual([]);
+  });
+
+  it("T-LINT-4c: require() is banned at every apps/web path", async () => {
+    // no-restricted-imports never sees require(), so covering `.cjs` in the
+    // wall globs would leave CommonJS as an open door (step 6 finding
+    // web-db-wall-glob-misses-js-jsx-mjs). apps/web is `"type": "module"` and
+    // calls require() nowhere, so the whole call is banned.
+    const source = [
+      'const publishing = require("@miolos/db/publishing");',
+      "",
+      "export const read = publishing;",
+      "",
+    ].join("\n");
+
+    for (const path of [SOURCE_PATH, APP_PATH, TEST_PATH]) {
+      expect(ruleIds(await lintProbe(path, source))).toContain(
+        "no-restricted-syntax",
+      );
+    }
   });
 
   it("T-LINT-8: the import bans still fire under apps/web/test/**", async () => {
@@ -245,6 +363,77 @@ describe("apps/web db wall — table-name literals (ADR-0024 amendment)", () => 
       ["export const query = `select * from remote_config`;", ""].join("\n"),
     );
     expect(wallHits(template)).toEqual([]);
+  });
+});
+
+describe("apps/web db wall — extension coverage (step 6: js/jsx/mjs/cjs)", () => {
+  it("T-LINT-9: the import bans fire at .js, .jsx and .mjs paths, and require() at .cjs", async () => {
+    const banned = [
+      'import { getPublishedDailyWithSolution } from "@miolos/db/publishing";',
+      "",
+      "export const read = getPublishedDailyWithSolution;",
+      "",
+    ].join("\n");
+
+    for (const path of [SOURCE_JS_PATH, APP_JSX_PATH, SOURCE_MJS_PATH]) {
+      expect(ruleIds(await lintProbe(path, banned))).toContain(
+        "no-restricted-imports",
+      );
+    }
+
+    // `.cjs` is parsed as CommonJS, so its door is require(), not import.
+    const commonJs = [
+      'const publishing = require("@miolos/db/publishing");',
+      "",
+      "module.exports = publishing;",
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(SOURCE_CJS_PATH, commonJs))).toContain(
+      "no-restricted-syntax",
+    );
+  });
+
+  it("T-LINT-9b: a .jsx file is linted at all, JSX syntax included", async () => {
+    // The hole under T-LINT-9 was worse than a silent wall: eslint-config-next's
+    // repo-wide globs are force-scoped to `{ts,tsx}`, so nothing in the repo
+    // named `.jsx` and ESLint skipped the file with "File ignored because no
+    // matching configuration was supplied" — a green lint on an unlinted route.
+    // A rule from js.configs.recommended firing is the proof the file is reached.
+    const redeclared = [
+      "var a = 1;",
+      "var a = 2;",
+      "export default a;",
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(APP_JSX_PATH, redeclared))).toContain(
+      "no-redeclare",
+    );
+
+    // And JSX itself must parse: without ecmaFeatures.jsx the file dies at the
+    // first `<`, which would report the wall as silent for the wrong reason.
+    const jsx = [
+      "export default function Probe() {",
+      '  return <div className="probe">ok</div>;',
+      "}",
+      "",
+    ].join("\n");
+    expect(await lintProbe(APP_JSX_PATH, jsx)).toEqual([]);
+  });
+
+  it("T-LINT-10: the table-literal bans fire at .js, .jsx and .mjs paths too", async () => {
+    for (const path of [SOURCE_JS_PATH, APP_JSX_PATH, SOURCE_MJS_PATH]) {
+      const stringLiteral = await lintProbe(
+        path,
+        ['export const table = "daily_puzzles";', ""].join("\n"),
+      );
+      expect(ruleIds(stringLiteral)).toContain("no-restricted-syntax");
+
+      const template = await lintProbe(
+        path,
+        ["export const query = `select * from remote_config`;", ""].join("\n"),
+      );
+      expect(ruleIds(template)).toContain("no-restricted-syntax");
+    }
   });
 });
 

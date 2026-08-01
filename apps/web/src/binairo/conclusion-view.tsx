@@ -75,7 +75,16 @@ export function ConclusionView({
   // the server's authoritative values back into it, and the conclusion must
   // never show a time the server does not hold (§9.2).
   const stamp: ConclusionResult | undefined = stored ?? result;
-  const syncOutcome = record?.syncOutcome ?? "pending";
+  // Read from the CONCLUDED record only, and `undefined` says nothing at
+  // all. On the in-place swap the record still in storage is the last
+  // PLAYING one — written with `syncOutcome: "pending"` before this
+  // completion existed — so defaulting to "pending" told a perfectly online
+  // player, on the one celebration screen the product has, that their
+  // result was stranded on their device (findings
+  // `pending-sync-line-on-the-happy-path` / `sync-pending-line-on-happy-path`).
+  // Offline the line still arrives, one poll tick later, which is strictly
+  // better than a false claim on every successful solve.
+  const syncOutcome = stored?.syncOutcome;
 
   if (!hydrated) {
     // A beat of nothing, never the "ainda não concluído" card: flashing it

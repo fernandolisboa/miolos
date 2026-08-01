@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConclusionView } from "../src/binairo/conclusion-view";
 import { writePlayRecord, type PlayRecord } from "../src/binairo/play-record";
 import { formatElapsed, messages, routes } from "../src/i18n";
+import { bodyOf, decl, stylesheet } from "./css-source";
 
 // T-WEB-17..T-WEB-20 (plan 017 §15). The conclusion is the same component
 // in two places — swapped in place on /binairo when the grid closes (D26)
@@ -159,6 +160,39 @@ describe("the sync line (T-WEB-19)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("says nothing while the only record is the still-playing one", () => {
+    // The in-place swap on /binairo: the child's mount effect runs before
+    // the parent's, so the record in storage at this render is the last
+    // PLAYING write — `concluded: false`, and a `syncOutcome` that predates
+    // this completion entirely. Reading the offline sentence off it told a
+    // perfectly online player their result was stranded on their device, on
+    // the one celebration screen the product has (findings
+    // `pending-sync-line-on-the-happy-path` / `sync-pending-line-on-happy-path`).
+    writePlayRecord(
+      concluded({
+        concluded: false,
+        grid: undefined,
+        pendingSync: false,
+        syncOutcome: "pending",
+      }),
+    );
+
+    render(
+      <ConclusionView
+        date={DATE}
+        result={{ elapsedMs: ELAPSED_MS, hintsUsed: 0 }}
+      />,
+    );
+
+    expect(screen.getByText(messages.conclusao.stampLabel)).toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.conclusao.sync.pending),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.conclusao.sync.rejected),
+    ).not.toBeInTheDocument();
+  });
+
   it("says nothing once the completion is recorded", () => {
     writePlayRecord(concluded());
 
@@ -201,5 +235,43 @@ describe("no record for the server's day (T-WEB-20)", () => {
     expect(markup).not.toContain(messages.conclusao.notYet.title);
     expect(markup).not.toContain(messages.conclusao.stampLabel);
     expect(markup).not.toContain(ELAPSED);
+  });
+});
+
+/**
+ * The two conclusion layout defects, read off the stylesheet as TEXT — see
+ * the note in `./css-source` for why a layout rule cannot be asserted any
+ * other way in jsdom. Both were measured in a real browser at step 6; these
+ * are the tripwires that keep the fixes.
+ */
+describe("the conclusion's layout (tripwires)", () => {
+  const CSS = stylesheet("conclusion-view.module.css");
+
+  it("keeps the grid's block-axis alignment off the shared top-bar rule", () => {
+    // finding `conclusion-topbar-collapses-in-flex-column`: `align-self` is
+    // the block axis in `.pageResult`'s grid but the CROSS (horizontal) axis
+    // in `.pageEmpty`'s flex column, so on the shared rule `start` collapsed
+    // the "ainda não concluído" and skeleton headers to fit-content — 261.8px
+    // inside a 1280px content box — while §12.3 asks for a header "identical
+    // to the populated one".
+    expect(decl(bodyOf(CSS, ".topBar"), "align-self")).toBeUndefined();
+    expect(decl(bodyOf(CSS, ".pageResult .topBar"), "align-self")).toBe(
+      "start",
+    );
+  });
+
+  it("packs the stacked result rows to the start instead of stretching them", () => {
+    // finding `mobile-conclusion-rows-stretch-instead-of-row-gap`: three
+    // `auto` rows on a `min-height: 100dvh` page default to
+    // `align-content: normal` = stretch, which spent the leftover viewport
+    // height as row gaps — the declared 16px rendered as 51px on a 390×667
+    // and 140px on a 390×932, so the composition changed per device.
+    const stacked = bodyOf(
+      bodyOf(CSS, "@media (max-width: 1040px)"),
+      ".pageResult",
+    );
+
+    expect(decl(stacked, "grid-template-rows")).toBe("auto auto auto");
+    expect(decl(stacked, "align-content")).toBe("start");
   });
 });

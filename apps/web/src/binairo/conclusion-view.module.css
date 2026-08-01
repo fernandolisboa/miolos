@@ -49,6 +49,16 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+/* Grid-only, never on the shared rule: `align-self: start` is the BLOCK axis
+   in .pageResult's grid but the CROSS (horizontal) axis in .pageEmpty's flex
+   column, so as a shared declaration it collapsed the empty and skeleton
+   headers to fit-content — 261.8px inside a 1280px content box at 1440, and
+   the three members bunched left instead of spread (finding
+   `conclusion-topbar-collapses-in-flex-column`). §12.3 asks for a header
+   "identical to the populated one". */
+.pageResult .topBar {
   align-self: start;
 }
 
@@ -426,6 +436,14 @@
       "side";
     column-gap: 0;
     align-items: start;
+    /* Three `auto` rows on a `min-height: 100dvh` page default to
+       `align-content: normal` = stretch, which inflates every track with the
+       leftover viewport height: the declared 16px row-gap rendered as 51px
+       on a 390×667, 110px on a 390×844 and 140px on a 390×932, so the
+       composition changed character per device (finding
+       `mobile-conclusion-rows-stretch-instead-of-row-gap`). The slack now
+       falls once, after the last row. */
+    align-content: start;
   }
 
   .topBar {

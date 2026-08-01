@@ -199,7 +199,12 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 14px 0;
+  /* Horizontal padding is visually inert on a full-width, centre-aligned
+     button — but impeccable's `cramped-padding` reads computed padding, and
+     a 14px label flush against a filled boundary is exactly its shape (1).
+     F3 draws `padding: 14px 0`; the inline value is the frame's, the block
+     value is ours. Verified against the rule at 1440x900. */
+  padding: 14px var(--space-5);
   background: var(--accent-binairo);
   color: var(--paper-desk);
   border: 1.5px solid var(--accent-binairo);
@@ -312,6 +317,17 @@
   font-weight: 500;
 }
 
+/* The pre-hydration placeholder cell (finding
+   `binairo-reload-flashes-a-blank-board-over-a-finished-day`). Colour only:
+   every dimension still comes from .cell and .grid above, so the skeleton is
+   the real board's size on every viewport and hydration is a paint rather
+   than a reflow. Static — DESIGN.md has no shimmer. */
+.cellSkeleton {
+  background: var(--paper-tint);
+  border-color: color-mix(in srgb, var(--line) 55%, transparent);
+  cursor: default;
+}
+
 /* Undrawn in the frames — designed here (deviation 10). --accent-app is
    scoped to "streak, promo" in DESIGN.md, so using the sealing-wax red as
    the error colour is a third role: it is the only red in the palette, and
@@ -346,6 +362,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Non-zero on both axes for the same `cramped-padding` reason as .hint.
+     These are border-box, fixed-size, flex-centred buttons, so padding only
+     shrinks the content box — the frames' 64×52 / 52px geometry below is
+     untouched and the label stays optically centred. */
+  padding: var(--space-2) var(--space-3);
   background: var(--paper-card);
   border-radius: var(--radius);
   cursor: pointer;
@@ -385,7 +406,8 @@
 
 .controlErase {
   height: 52px;
-  padding: 0 22px;
+  /* F3:51's inline 22px; the block value comes from .control (8px). */
+  padding-inline: 22px;
   border: 1.5px solid var(--line);
   color: var(--ink-2);
   font-family: var(--font-ui);
@@ -475,8 +497,14 @@
 
   .hint {
     margin-top: 14px;
-    padding: 0;
-    height: 50px;
+    /* F4 draws a 50px bar. Expressed as padding + min-height rather than a
+       fixed height so the computed vertical padding is non-zero: with
+       box-sizing border-box, 14px line + 2×16px + 3px border = 49px, and
+       min-height pins the frame's 50px exactly. Same reason as the desktop
+       rule above. */
+    padding: var(--space-4) var(--space-5);
+    min-height: 50px;
+    height: auto;
   }
 }
 
@@ -488,6 +516,15 @@
 @media (max-width: 768px) {
   .page {
     padding: var(--space-5) var(--space-5) var(--space-6);
+    /* The mobile board at its DESIGN.md:50 size: 8×38 + 7×3 cells + 2×10
+       card padding + 2×1 border. It is a CAP, not a width (finding
+       `board-overflows-horizontally-below-369px`) — the fixed 38px columns
+       plus this screen's 20px page padding needed 387px of viewport, so
+       every width under ~369px scrolled the whole document sideways and
+       under ~357px the last board columns were off-screen. The board and
+       the control row under it both read it, so they stay the same width
+       across the whole band. */
+    --board-mobile-max: 347px;
   }
 
   .title {
@@ -501,6 +538,15 @@
   }
 
   .gridCard {
+    box-sizing: border-box;
+    /* .board is `align-items: center`, so the card is shrink-to-fit by
+       default. `width: 100%` + a cap makes the board FLUID instead: 347px
+       (38px cells) at 390 and above, the page's own width below that. Width
+       rather than `align-self: stretch`, because .board is a COLUMN flex
+       container — its cross axis is the horizontal one, where stretch and a
+       centring margin fight each other. */
+    width: 100%;
+    max-width: var(--board-mobile-max);
     padding: 10px;
     /* 5px 5px 0 is intentional: F4 draws the mobile board shadow between
        --shadow-md and --shadow-lg; no token carries that value. */
@@ -508,17 +554,32 @@
       color-mix(in srgb, var(--accent-binairo) 20%, transparent);
   }
 
+  /* Fractional tracks with a square cell rather than 38px hard-coded: the
+     cap above pins 38px at 390 and up, and a 320px phone gets ~29px cells —
+     still clear of WCAG 2.5.8's 24px minimum — instead of a board wider
+     than the viewport. */
   .grid {
-    grid-template-columns: repeat(8, 38px);
-    grid-auto-rows: 38px;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-auto-rows: auto;
     gap: 3px;
   }
 
   .cell {
+    aspect-ratio: 1;
     font-size: 18px;
   }
 
+  /* The same width-and-cap as .gridCard, and for the same reason: shrink-to-
+     fit inside .board meant the `flex` ratios below were resolved against a
+     max-content row, so the digit buttons came out 43.5px and 38px wide —
+     under PRODUCT.md:39's ≥44px touch target, on the game's primary input
+     (finding `mobile-controls-shrink-to-fit-and-sub-44px-targets`). Capped
+     rather than merely full-width so the row keeps matching the board across
+     the whole band, not only at 390. */
   .controls {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: var(--board-mobile-max);
     gap: 10px;
     margin-top: var(--space-5);
   }
@@ -533,7 +594,10 @@
   .controlErase {
     flex: 1;
     height: 60px;
-    padding: 0;
+    /* F4:37 gives `apagar` no inline padding of its own at 390 — it is a
+       flex child sized by its ratio. Fall back to .control's 12px rather
+       than zero, so the computed padding stays non-zero on both axes. */
+    padding-inline: var(--space-3);
   }
 
   .affordance {

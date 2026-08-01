@@ -110,6 +110,25 @@ describe("readPlayRecord / writePlayRecord", () => {
     expect(readPlayRecord("2026-07-30")?.elapsedMs).toBe(86_400_000);
   });
 
+  it("clamps a NEGATIVE elapsedMs too, so a clock step back cannot void the record", () => {
+    // `Date.now()` is not monotonic: an NTP correction or a device clock
+    // change makes `now - runningSince` negative, and the schema validates
+    // both bounds — so a one-sided clamp writes a value the very next read
+    // discards, taking the player's grid (and any queued completion) with it
+    // (finding `elapsedms-clamp-is-one-sided`).
+    writePlayRecord(
+      record({
+        elapsedMs: -3_600_000,
+        grid: SOLVED_GRID,
+        concluded: true,
+        pendingSync: true,
+      }),
+    );
+
+    expect(readPlayRecord("2026-07-30")?.elapsedMs).toBe(0);
+    expect(listPendingRecords()).toHaveLength(1);
+  });
+
   it("swallows a storage failure: a full quota must not break play", () => {
     const setItem = vi
       .spyOn(Storage.prototype, "setItem")

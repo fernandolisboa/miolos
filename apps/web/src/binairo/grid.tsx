@@ -37,11 +37,14 @@ export function Grid({
 }) {
   const dragging = useRef(false);
   const dragged = useRef(false);
+  /** True once `onPointerUp` has already applied this stroke's tap. */
+  const tapped = useRef(false);
   const startIndex = useRef<number | null>(null);
   const lastIndex = useRef<number | null>(null);
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     dragged.current = false;
+    tapped.current = false;
     dragging.current = painting;
     const index = cellIndexAt(event.clientX, event.clientY);
     startIndex.current = index;
@@ -84,12 +87,39 @@ export function Grid({
     dragging.current = false;
   };
 
+  /**
+   * A tap in paint/erase mode is resolved HERE, never by the cell's `click`
+   * (finding `paint-mode-tap-dead-under-pointer-capture`). `onPointerDown`
+   * takes pointer capture on this container, and the browser then retargets
+   * the trailing `click` to the container too — so the cell button's own
+   * handler is never in that event's propagation path and a stationary tap
+   * would write nothing at all. Issue #18 asks for "tap-to-cycle plus a
+   * paint mode"; without this, paint and erase are drag-only.
+   *
+   * Both latches below are set here and cleared by the NEXT `pointerdown`,
+   * so the state a `click` reads always belongs to the stroke that produced
+   * it.
+   */
+  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = startIndex.current;
+    if (
+      dragging.current &&
+      !dragged.current &&
+      start !== null &&
+      cellIndexAt(event.clientX, event.clientY) === start
+    ) {
+      tapped.current = true;
+      onTap(start);
+    }
+    endDrag();
+  };
+
   return (
     <div
       className={styles.grid}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
+      onPointerUp={onPointerUp}
       onPointerCancel={endDrag}
     >
       {givens.map((given, index) => {
@@ -119,20 +149,23 @@ export function Grid({
             // The plan's cell table asks for aria-invalid here; ARIA does not
             // support it on role=button and `jsx-a11y/role-supports-aria-props`
             // reds the lint gate, so the violation rides in the composed
-            // accessible name instead. Three carriers remain — the doubled
-            // hairline, the red, and this sentence — so colour is still never
-            // the sole one.
+            // accessible name instead — composed in messages.ts, never here
+            // (ADR-0018). Three carriers remain — the doubled hairline, the
+            // red, and that sentence — so colour is still never the sole one.
             aria-label={
               invalid
-                ? `${messages.binairo.cellAria(row, column, value)} — ${messages.binairo.cellInvalidAria}`
+                ? messages.binairo.cellInvalidAria(row, column, value)
                 : messages.binairo.cellAria(row, column, value)
             }
-            onClick={() => {
-              // A drag has already applied every cell it crossed, and the
-              // browser fires a trailing `click` on the release target; in
-              // paint mode `tap` TOGGLES, so honouring it would undo the
-              // stroke's first cell. Keyboard activation never sets this.
-              if (dragged.current) {
+            onClick={(event) => {
+              // A drag has already applied every cell it crossed and a paint
+              // tap was already applied on `pointerup`; the browser fires a
+              // trailing `click` on top of both, and in paint mode `tap`
+              // TOGGLES, so honouring it would undo what the stroke wrote.
+              // `detail` is 0 for a keyboard activation and >= 1 for a
+              // pointer one, so Enter/Space still writes while a latch is up
+              // (finding `drag-flag-kills-keyboard-cell-entry`).
+              if (event.detail > 0 && (dragged.current || tapped.current)) {
                 return;
               }
               onTap(index);

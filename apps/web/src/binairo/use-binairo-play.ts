@@ -139,9 +139,25 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
     // `pageshow` without a paired `visibilitychange` is the bfcache case: on
     // the common iOS back-navigation an unpaired timer would stay paused for
     // the rest of the session and under-report the whole remaining play time.
+    // Gated exactly like the initial resume below, for the same reason: a
+    // document that LOADS hidden (a Cmd/middle-click from Hoje) gets a
+    // `pageshow` with no `visibilitychange` behind it, and an ungated
+    // handler would count every minute until the player opens the tab —
+    // permanently, because `completions` is write-once (ADR-0026, finding
+    // `pageshow-resumes-timer-in-a-hidden-tab`). A bfcache restore is
+    // visible by definition, so the case this listener exists for is
+    // untouched.
+    const onShow = () => {
+      if (
+        document.visibilityState === "visible" &&
+        stateRef.current.status === "playing"
+      ) {
+        resume();
+      }
+    };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onHide);
-    window.addEventListener("pageshow", resume);
+    window.addEventListener("pageshow", onShow);
     // Derived, not assumed: resuming a tab the player cannot see would count
     // time they never spent.
     if (document.visibilityState === "visible") {
@@ -151,7 +167,7 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onHide);
-      window.removeEventListener("pageshow", resume);
+      window.removeEventListener("pageshow", onShow);
       stopSync();
     };
   }, [date]);
@@ -186,6 +202,15 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
     if (!hydrated || status !== "playing") {
       return;
     }
+    // Never over a settled or queued completion. A second mounted /binairo
+    // is still `playing`, and its next entry change would otherwise
+    // overwrite the record another tab already queued — clearing
+    // `pendingSync` and dropping the solved `grid`, i.e. the only copy of a
+    // completion the server has not acknowledged yet (finding
+    // `in-progress-write-clobbers-a-queued-completion`).
+    if (readPlayRecord(date)?.concluded === true) {
+      return;
+    }
     writePlayRecord(
       buildRecord({
         date,
@@ -207,18 +232,23 @@ export function useBinairoPlay(daily: DailyPuzzleResponse): BinairoPlay {
       return;
     }
     queued.current = true;
-    writePlayRecord(
-      buildRecord({
-        date,
-        givens,
-        entries,
-        timer,
-        hintsUsed,
-        solved: true,
-        now: Date.now(),
-      }),
-    );
-    void flushPendingCompletions();
+    const completion = buildRecord({
+      date,
+      givens,
+      entries,
+      timer,
+      hintsUsed,
+      solved: true,
+      now: Date.now(),
+    });
+    writePlayRecord(completion);
+    // Handed to the flush directly, not left for it to find: where
+    // `localStorage` is unavailable (DOM storage off in an Android WebView,
+    // site data blocked) `writePlayRecord` is a no-op and the queue reads
+    // back empty, so the completion would never be posted at all — the day
+    // lost for the streak while the conclusion claimed it was saved
+    // (finding `completion-lost-when-localstorage-is-unavailable`).
+    void flushPendingCompletions(completion);
   }, [solvedAndFrozen, date, givens, entries, timer, hintsUsed]);
 
   const tapCell = useCallback((index: number) => {

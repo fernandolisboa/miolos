@@ -79,21 +79,33 @@ rows exist in production:
    is allowed to have. This is ADR-0024's surface rule applied to the first
    write surface: mechanical, not conventional.
 
-6. **A write may only target SP-today or SP-yesterday.** The wall read is
-   `and`-ed with
-   `date >= (now() at time zone 'America/Sao_Paulo')::date - 1`. Without a
-   lower bound any client could write a `won` completion for every past
-   daily — permanently, since decision 1 never reopens a row — and a stale
-   local record would flush as a completion the player never played. One day
-   of slack is what keeps decision 7 from losing legitimate rows.
+6. **A write may only target SP-today or SP-yesterday, bounded in the route
+   and not in SQL.** `POST /completions` reads `todaySaoPaulo(db)` — the
+   database clock, never `new Date()` — and rejects
+   `body.date < today - ACCEPTED_DAYS_BACK` with `404` *before* the wall
+   read. `getPublishedDailyWithSolution` deliberately keeps no lower bound
+   of its own: the wall predicate answers *"may this row be shown at all"*
+   (published, unkilled, not future), which is a different question from
+   *"may this caller claim this day"*, and `getTodayDaily` and
+   `getPublishedDaily` share that predicate and must not inherit a
+   write-side bound. **The lever the archive ticket (#31) widens is
+   therefore the route constant `ACCEPTED_DAYS_BACK`, not `wallPredicate`** —
+   widening the predicate instead would leave the route's own bound in force
+   and 404 every archive write before the widened SQL is ever consulted.
+   Without a lower bound any client could write a `won` completion for every
+   past daily — permanently, since decision 1 never reopens a row — and a
+   stale local record would flush as a completion the player never played.
+   One day of slack is what keeps decision 7 from losing legitimate rows.
 
 7. **A completion synced after the rollover derives as late** — the window
    decisions 3 and 6 open together, stated rather than discovered. Solve at
    23:58 offline, reconnect at 00:05, and `completed_at` is the server write
    instant, so the day derives `on_time: false`. This contradicts issue
    #18's own *"a connection drop mid-puzzle never costs the day"* and is
-   **escalated to Fernando** rather than resolved by the agent (plan 017
-   §16). It ships as written pending his call; the alternative — deriving
+   **escalated to Fernando as issue
+   [#58](https://github.com/fernandolisboa/miolos/issues/58)** rather than
+   resolved by the agent (plan 017 §16). It ships as written pending his
+   call; the alternative — deriving
    against `greatest(completed_at, puzzle_day_start)` within a bounded
    grace, or clamping a client attestation into `[now() - grace, now()]` —
    is an additive change to the derivation expression and its tests, and it
@@ -143,15 +155,17 @@ rows exist in production:
   `import "server-only"` so a `"use client"` module cannot walk around any
   of it. A **second, independent** enforcement point was designed — a
   least-privilege `miolos_web` Neon role holding `usage on schema public`
-  and `select on daily_puzzles` and nothing else — and is **deferred to a
-  follow-up issue** (plan 017 §5.3, §20). It is deferred because
+  and `select on daily_puzzles` and nothing else — and is **deferred to
+  issue [#59](https://github.com/fernandolisboa/miolos/issues/59)** (plan
+  017 §5.3, §20). It is deferred because
   `DATABASE_URL` on the `miolos-web` Vercel project is managed by the
   Neon–Vercel integration across Production, Preview and Development;
   hand-overwriting it risks a silent re-sync reverting the credential, which
   would make a "two independent enforcement points" claim quietly false
-  while reading as true — worse than not making it. Until that issue lands,
-  the database grant is **not** a second layer, and no reviewer should read
-  one into this ADR.
+  while reading as true — worse than not making it. Until #59 lands, the
+  database grant is **not** a second layer, and no reviewer should read one
+  into this ADR; #59's own acceptance criteria require this ADR to be
+  amended only once the grant is live.
 - **ADR-0022's flood-mint posture is falsified and restated.** That ADR
   accepted an unthrottled mint *"because flood-minted rows are unreferenced
   and harmless"*. They are no longer unreferenced: a minted user can now
@@ -166,13 +180,15 @@ rows exist in production:
   (which adds a grant write), whichever comes first.
 - **The late-by-sync window is real and unresolved** (decision 7). Whatever
   Fernando decides, the schema, the route and the client are identical under
-  both options — so this ADR does not block on it, and the follow-up issue
-  is filed before merge rather than after.
-- **The archive ticket (#31) widens decision 6 deliberately**, with its own
-  tests and its own `late` semantics (ADR-0008). Widening it accidentally —
-  by removing the bound while "fixing" a date test — reopens the whole past
-  calendar to forged completions, so the bound carries its reason in the
-  route's own comments as well as here.
+  both options — so this ADR does not block on it, and the decision is
+  [#58](https://github.com/fernandolisboa/miolos/issues/58), filed before
+  merge rather than after and carrying both options in full.
+- **The archive ticket (#31) widens decision 6's route constant
+  deliberately**, with its own tests and its own `late` semantics
+  (ADR-0008). Widening it accidentally — by removing the bound while
+  "fixing" a date test — reopens the whole past calendar to forged
+  completions, so the bound carries its reason in the route's own comments
+  as well as here.
 - **#23 / #25 / #27 attach rather than migrate.** `outcome` accommodates
   `'lost'` from day one for Termo, `game` is the request union's
   discriminator, and the route is game-generic; the grid games are expected

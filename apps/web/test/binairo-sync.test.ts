@@ -230,6 +230,89 @@ describe("flushPendingCompletions", () => {
     expect(completionCalls(fetchMock)).toHaveLength(1);
   });
 
+  it("posts the completion it was handed even with no usable localStorage", async () => {
+    // An Android WebView with DOM storage off (the default) throws on the
+    // property itself, so `writePlayRecord` is a silent no-op and the queue
+    // reads back EMPTY: without the in-memory fallback the flush returns
+    // before it ever reaches `ensureSession`, no POST is ever issued on any
+    // trigger, and the day is lost for the streak while the conclusion
+    // claims the result is safe on the device (finding
+    // `completion-lost-when-localstorage-is-unavailable`).
+    const original = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("access denied", "SecurityError");
+      },
+    });
+    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+
+    try {
+      const { flushPendingCompletions } = await freshSync();
+      await flushPendingCompletions(pendingRecord());
+
+      const [call] = completionCalls(fetchMock);
+      expect(call).toBeDefined();
+      const init = requestInitSchema.parse(call?.[1]);
+      expect(
+        binairoCompletionRequestSchema.parse(JSON.parse(init.body)),
+      ).toEqual({
+        game: "binairo",
+        date: DATE,
+        grid: SOLVED_GRID,
+        elapsedMs: 272_000,
+        hintsUsed: 1,
+      });
+
+      // And settled, so no later trigger re-posts a completion the server
+      // has already answered (D15).
+      await flushPendingCompletions();
+      expect(completionCalls(fetchMock)).toHaveLength(1);
+    } finally {
+      if (original !== undefined) {
+        Object.defineProperty(window, "localStorage", original);
+      }
+    }
+  });
+
+  it("keeps a handed completion queued in memory when the network fails", async () => {
+    const original = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("access denied", "SecurityError");
+      },
+    });
+    let online = false;
+    const fetchMock = vi.fn((input: unknown) => {
+      if (String(input).endsWith("/session")) {
+        return Promise.resolve(
+          jsonResponse(200, { userId: crypto.randomUUID(), created: true }),
+        );
+      }
+      return online
+        ? Promise.resolve(jsonResponse(200, okBody()))
+        : Promise.reject(new TypeError("offline"));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const { flushPendingCompletions } = await freshSync();
+      await flushPendingCompletions(pendingRecord());
+
+      // The reconnect is the whole point of AC 3: the record is the only
+      // copy, and here the store is not holding it.
+      online = true;
+      await flushPendingCompletions();
+
+      expect(completionCalls(fetchMock)).toHaveLength(2);
+    } finally {
+      if (original !== undefined) {
+        Object.defineProperty(window, "localStorage", original);
+      }
+    }
+  });
+
   it("does nothing when there is nothing queued", async () => {
     const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
 

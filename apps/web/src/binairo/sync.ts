@@ -47,8 +47,48 @@ let reminted = false;
 let retryStep = 0;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
-/** POST every pending record; terminal statuses clear `pendingSync`. */
-export async function flushPendingCompletions(): Promise<void> {
+/**
+ * The fallback queue for a device with no usable `localStorage` — DOM
+ * storage off in an Android WebView, site data blocked. `writePlayRecord`
+ * is a silent no-op there and `listPendingRecords()` reads back empty, so
+ * without this a solved board would never be posted AT ALL and the day
+ * would be lost for the streak (finding
+ * `completion-lost-when-localstorage-is-unavailable`). It is a fallback,
+ * not a second queue: the record is dropped from it the moment the sync
+ * settles, and the store still wins on a key collision.
+ */
+const memoryQueue = new Map<string, PlayRecord>();
+
+const queueKey = (record: PlayRecord) => `${record.game}:${record.date}`;
+
+/**
+ * The queue as this flush sees it: the durable records first, plus anything
+ * the store could not hold. A stale memory copy of a record the store has
+ * already settled costs one extra POST, which the route answers
+ * idempotently — the alternative is dropping a completion.
+ */
+function pendingQueue(): PlayRecord[] {
+  const stored = listPendingRecords();
+  const storedKeys = new Set(stored.map(queueKey));
+  return [
+    ...stored,
+    ...[...memoryQueue.values()].filter(
+      (record) => !storedKeys.has(queueKey(record)),
+    ),
+  ];
+}
+
+/**
+ * POST every pending record; terminal statuses clear `pendingSync`.
+ * `record` is the completion the caller has just built — passing it makes
+ * the flush independent of whether the store accepted the write.
+ */
+export async function flushPendingCompletions(
+  record?: PlayRecord,
+): Promise<void> {
+  if (record?.pendingSync === true) {
+    memoryQueue.set(queueKey(record), record);
+  }
   if (flushing) {
     // The POST is idempotent, so a duplicate flush is free — but a
     // concurrent one would double the requests for nothing.
@@ -56,7 +96,7 @@ export async function flushPendingCompletions(): Promise<void> {
   }
   flushing = true;
   try {
-    const pending = listPendingRecords();
+    const pending = pendingQueue();
     if (pending.length === 0) {
       cancelRetries();
       return;
@@ -238,6 +278,10 @@ async function acceptResponse(
 }
 
 function settle(record: PlayRecord, outcome: "recorded" | "rejected"): void {
+  // The fallback queue is dropped here and nowhere else: a settled record
+  // is one the server has answered, and re-posting it on the next trigger
+  // would be the resurrection D15 exists to prevent.
+  memoryQueue.delete(queueKey(record));
   writePlayRecord({ ...record, pendingSync: false, syncOutcome: outcome });
 }
 

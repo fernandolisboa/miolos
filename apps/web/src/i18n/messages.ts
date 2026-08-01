@@ -8,6 +8,13 @@
 // screens drift apart.
 const wordmark = "Miolos";
 
+// Hoisted so the invalid-cell name can be COMPOSED here rather than joined
+// in grid.tsx with a separator no editor of this module can see (ADR-0018:
+// `Messages` is the migration contract, so every user-facing string has to
+// be expressible from it). Row and column are 1-based for a reader.
+const cellAria = (row: number, column: number, value: 0 | 1 | null) =>
+  `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
+
 export const messages = {
   meta: {
     title: "Miolos — quatro jogos por dia",
@@ -87,12 +94,13 @@ export const messages = {
       affordance: "ou clique na célula para alternar",
     },
     // Every aria-* string is composed here, never in a component (the
-    // hoje.streak.aria precedent). Row and column are 1-based for a reader.
-    cellAria: (row: number, column: number, value: 0 | 1 | null) =>
-      `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`,
+    // hoje.streak.aria precedent) — including the invalid variant's join.
+    cellAria,
     cellGivenAria: (row: number, column: number, value: 0 | 1) =>
       `linha ${row}, coluna ${column}: ${value}, célula fixa`,
-    cellInvalidAria: "esta célula quebra uma regra",
+    /** The whole accessible name of a rule-breaking cell, separator included. */
+    cellInvalidAria: (row: number, column: number, value: 0 | 1 | null) =>
+      `${cellAria(row, column, value)} — esta célula quebra uma regra`,
     hint: {
       available: "Usar dica — 1 disponível",
       used: "Dica usada",
