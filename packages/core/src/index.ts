@@ -9,3 +9,7 @@ export {
   apiRootResponseSchema,
   type ApiRootResponse,
 } from "./contracts/api-root";
+export {
+  sessionResponseSchema,
+  type SessionResponse,
+} from "./contracts/session";
