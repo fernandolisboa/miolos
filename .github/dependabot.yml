@@ -1,0 +1,13 @@
+# Keeps the SHA-pinned actions in .github/workflows fresh (follow-up to PR #42):
+# Dependabot preserves pin-by-SHA and maintains the trailing `# vN` version comments.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"
