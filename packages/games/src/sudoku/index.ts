@@ -5,7 +5,6 @@
  */
 export type { Weekday } from "../weekday";
 export {
-  SudokuGenerationError,
   type SudokuApprovalCriteria,
   type SudokuGrade,
   type SudokuGrid,
@@ -22,7 +21,12 @@ export {
 } from "./criteria";
 export {
   SUDOKU_MAX_GENERATION_ATTEMPTS,
+  SudokuGenerationError,
   generateDailySudoku,
   generateSudoku,
-  isSudokuApproved,
 } from "./generate";
+export {
+  validateSudoku,
+  type SudokuRejectionReason,
+  type SudokuValidationResult,
+} from "./validate";

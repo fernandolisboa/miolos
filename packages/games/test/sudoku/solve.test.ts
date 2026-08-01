@@ -57,6 +57,20 @@ describe("countSudokuSolutions / solveSudoku", () => {
     expect(solveSudoku(grid)).toBeNull();
   });
 
+  it("counts 0 for a column duplicate (discriminates the column mask)", () => {
+    // Indices 0 and 27 share column 0 but neither row nor box.
+    const grid = EMPTY_GRID.map((v, i) => (i === 0 || i === 27 ? 5 : v));
+    expect(countSudokuSolutions(grid, 2)).toBe(0);
+    expect(solveSudoku(grid)).toBeNull();
+  });
+
+  it("counts 0 for a box duplicate (discriminates the box mask)", () => {
+    // Indices 0 and 10 share box 0 but neither row nor column.
+    const grid = EMPTY_GRID.map((v, i) => (i === 0 || i === 10 ? 5 : v));
+    expect(countSudokuSolutions(grid, 2)).toBe(0);
+    expect(solveSudoku(grid)).toBeNull();
+  });
+
   it("counts 0 for a legal-so-far but unsolvable grid (search path)", () => {
     // Premises: duplicate-free, 9 givens (digits 1-8 in row 0 plus the 9
     // at (2,8) — the plan's construction, which it miscounted as 10), and
@@ -88,7 +102,10 @@ describe("countSudokuSolutions / solveSudoku", () => {
   it("produces solved full grids from the seeded fill path", () => {
     fc.assert(
       fc.property(seedArb, (seed) => {
-        const puzzle = generateSudoku(seed, SUDOKU_TIER_CRITERIA[1]);
+        const puzzle = generateSudoku({
+          seed,
+          criteria: SUDOKU_TIER_CRITERIA[1],
+        });
         expect(isSudokuSolved(puzzle.solution)).toBe(true);
       }),
       { seed: FC_SEED, numRuns: 25 },

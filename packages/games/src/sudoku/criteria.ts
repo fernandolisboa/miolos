@@ -1,3 +1,4 @@
+import { isWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
 import type { SudokuApprovalCriteria, SudokuTier } from "./types";
 
@@ -43,7 +44,7 @@ export const SUDOKU_WEEKDAY_CRITERIA: Readonly<
 export function sudokuCriteriaForWeekday(
   weekday: Weekday,
 ): SudokuApprovalCriteria {
-  if (!Number.isInteger(weekday) || weekday < 1 || weekday > 7) {
+  if (!isWeekday(weekday)) {
     throw new RangeError(
       `weekday must be an integer 1-7 (ISO 8601, Monday=1), got ${String(weekday)}`,
     );

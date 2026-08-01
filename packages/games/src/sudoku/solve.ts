@@ -131,6 +131,12 @@ export function countSolutionsInternal(
  * Number of solutions, counting stops early at `limit` (default 2, must be
  * a positive integer). countSudokuSolutions(g, 2) === 1 is the uniqueness
  * predicate used by the property tests and the generator.
+ *
+ * `limit` bounds total work: a sparse grid has astronomically many
+ * completions (the empty grid ~6.7e21), so a large limit is effectively
+ * unbounded synchronous search. Never derive `limit` from untrusted input
+ * (same duty as the Binairo grid-size bound; downstream note for #23/#17)
+ * — no legitimate uniqueness check needs more than a small constant.
  */
 export function countSudokuSolutions(givens: SudokuGrid, limit = 2): number {
   assertSudokuGrid(givens);

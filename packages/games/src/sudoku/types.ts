@@ -1,5 +1,3 @@
-import type { Weekday } from "../weekday";
-
 /** Difficulty tier, 1 (easiest) … 5 (hardest). See the grader ladder in grade.ts. */
 export type SudokuTier = 1 | 2 | 3 | 4 | 5;
 
@@ -42,40 +40,3 @@ export interface SudokuApprovalCriteria {
   readonly minClues: number;
   readonly maxClues: number;
 }
-
-/**
- * Thrown when no approved puzzle is found within the attempt cap.
- * Fully deterministic — the same (seed, criteria, maxAttempts) either always
- * returns the same puzzle or always throws with the same fields. With the
- * default cap and the shipped criteria tables this error is practically
- * unreachable (measured: residual risk ≈ 5e-7 per seed for tier 5, lower for
- * the rest); it signals a generation bug or hand-rolled impossible criteria.
- * Pipeline #17 must catch it and alert — never publish a fallback puzzle
- * silently.
- */
-export class SudokuGenerationError extends Error {
-  /** The normalized (uint32) base seed generation started from. */
-  readonly seed: number;
-  /** The exact criteria object the caller passed in. */
-  readonly criteria: SudokuApprovalCriteria;
-  /** Number of attempts consumed (=== the effective maxAttempts). */
-  readonly attempts: number;
-
-  constructor(
-    seed: number,
-    criteria: SudokuApprovalCriteria,
-    attempts: number,
-  ) {
-    super(
-      `No approved Sudoku found for seed ${String(seed)} with criteria ` +
-        `{ tier: ${String(criteria.tier)}, minClues: ${String(criteria.minClues)}, ` +
-        `maxClues: ${String(criteria.maxClues)} } after ${String(attempts)} attempts`,
-    );
-    this.name = "SudokuGenerationError";
-    this.seed = seed;
-    this.criteria = criteria;
-    this.attempts = attempts;
-  }
-}
-
-export type { Weekday };

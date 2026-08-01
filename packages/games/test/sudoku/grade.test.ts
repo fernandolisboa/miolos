@@ -20,9 +20,14 @@ const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
 
-// Engine-generated literal puzzles, one per detection rule. Each is asserted
-// to grade exactly its tier AND to fire the named technique (via the
-// gradeInternal trace), per plan §5.2.
+// Engine-generated literal puzzles, one per detection rule (plan §5.2),
+// produced with the engine during implementation and pinned as literals.
+// No unchecked trust rides on how each was found: the test below fully
+// re-verifies every fixture (exact tier AND the named technique firing in
+// the gradeInternal trace). To regenerate after a ladder change: scan
+// generateSudoku over seeds and keep the first puzzle per rule whose
+// gradeInternal(...).techniques trace fires it at the target tier, then
+// pin the new literals here.
 const TECHNIQUE_FIXTURES: readonly {
   readonly technique: SudokuTechnique;
   readonly tier: SudokuTier;
@@ -159,7 +164,7 @@ describe("gradeSudoku", () => {
     // wiring mistakes cheaply.
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
-        const puzzle = generateDailySudoku(seed, weekday);
+        const puzzle = generateDailySudoku({ seed, weekday });
         expect(solveSudoku(puzzle.givens)).toEqual(puzzle.solution);
       }),
       { seed: FC_SEED, numRuns: 25 },
@@ -172,7 +177,7 @@ describe("gradeSudoku", () => {
     const weekdays: readonly Weekday[] = [1, 4, 7];
     for (const seed of [11, 22, 33]) {
       for (const weekday of weekdays) {
-        const puzzle = generateDailySudoku(seed, weekday);
+        const puzzle = generateDailySudoku({ seed, weekday });
         expect(gradeInternal([...puzzle.givens]).solved).toEqual(
           puzzle.solution,
         );

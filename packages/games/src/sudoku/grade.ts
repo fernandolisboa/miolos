@@ -85,6 +85,8 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
   const nakedSingle = (): boolean => {
     for (let i = 0; i < 81; i += 1) {
       if (val[i]! === 0 && POPCOUNT[cand[i]!]! === 1) {
+        // 32 - clz32(mask) = index of the highest set bit = the digit;
+        // valid only because popcount === 1 (that bit is the only one).
         place(i, 32 - Math.clz32(cand[i]!));
         techniques.add("nakedSingle");
         return true;

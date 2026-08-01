@@ -26,10 +26,11 @@ export const TWO_SOLUTION_GRID: SudokuGrid = FULL_GRID.map((v, i) =>
 );
 
 /**
- * Legal-so-far but unsolvable 10-given grid (search-path zero-solution
- * fixture): row 0 holds digits 1–8 in columns 0–7 with (0,8) empty, and
- * digit 9 sits at (2,8). Cell (0,8) then has zero candidates while the
- * grid is duplicate-free. Premises asserted in solve.test.ts.
+ * Legal-so-far but unsolvable 9-given grid (search-path zero-solution
+ * fixture; plan 011 miscounted this construction as 10): row 0 holds
+ * digits 1–8 in columns 0–7 with (0,8) empty, and digit 9 sits at (2,8).
+ * Cell (0,8) then has zero candidates while the grid is duplicate-free.
+ * Premises asserted in solve.test.ts.
  */
 export const UNSOLVABLE_LEGAL_GRID: SudokuGrid = (() => {
   const grid = new Array<number>(81).fill(0);

@@ -9,19 +9,20 @@ import {
   generateSudoku,
   getSudokuConflicts,
   gradeSudoku,
-  isSudokuApproved,
   isSudokuSolved,
   sudokuCriteriaForWeekday,
+  validateSudoku,
   type SudokuApprovalCriteria,
   type Weekday,
 } from "../../src/sudoku/index";
 
 // Every fc.assert in test/sudoku/** pins { seed: FC_SEED, numRuns } so the
 // sampled puzzle-seed set is identical on every CI run (plan §5, review B2).
-// numRuns values are the plan's §5.5 budget; if the suite ever blows its
-// 90 s ceiling, reduce IN THIS ORDER and never below: P2 50 → 40, the
-// grade.test.ts cross-check 25 → 15, P1 25 → 15. Never crank numRuns up —
-// rigor comes from per-instance verification, not sample size.
+// Run counts follow ADR-0023: 100 is the FLOOR for the main determinism (P1)
+// and validity (P2) properties — never reduce those below 100. If the suite
+// ever blows its 90 s ceiling, the budget levers are, in order: P3 35 → 25,
+// the grade.test.ts cross-check 25 → 15, then a numRuns floor amendment
+// proposed against ADR-0023 — never a silent reduction.
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
@@ -47,18 +48,21 @@ describe("generateSudoku / generateDailySudoku", () => {
   it("P1 — determinism: same (seed, weekday) yields deep-equal puzzles", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
-        const first = generateDailySudoku(seed, weekday);
-        const second = generateDailySudoku(seed, weekday);
+        const first = generateDailySudoku({ seed, weekday });
+        const second = generateDailySudoku({ seed, weekday });
         expect(second).toEqual(first);
       }),
-      { seed: FC_SEED, numRuns: 25 },
+      { seed: FC_SEED, numRuns: 100 },
     );
     // Explicit timeout: Sundays cost ~140 ms mean (spike-measured); the pin
     // lives here because ADR-0017 forbids a vitest config.
   }, 60000);
 
   it("P1 — pinned regression: the literal expected puzzle for a fixed seed", () => {
-    const puzzle = generateDailySudoku(PINNED_SEED, PINNED_WEEKDAY);
+    const puzzle = generateDailySudoku({
+      seed: PINNED_SEED,
+      weekday: PINNED_WEEKDAY,
+    });
     expect(puzzle.givens).toEqual(PINNED_GIVENS);
     expect(puzzle.solution).toEqual(PINNED_SOLUTION);
     expect(puzzle.tier).toBe(3);
@@ -69,7 +73,7 @@ describe("generateSudoku / generateDailySudoku", () => {
   it("P2 — solvability + uniqueness + integrity on every instance", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
-        const puzzle = generateDailySudoku(seed, weekday);
+        const puzzle = generateDailySudoku({ seed, weekday });
         for (let i = 0; i < 81; i += 1) {
           const given = puzzle.givens[i]!;
           expect(given === 0 || given === puzzle.solution[i]).toBe(true);
@@ -82,7 +86,7 @@ describe("generateSudoku / generateDailySudoku", () => {
         expect(countSudokuSolutions(puzzle.givens, 2)).toBe(1);
         expect(getSudokuConflicts(puzzle.givens)).toEqual([]);
       }),
-      { seed: FC_SEED, numRuns: 50 },
+      { seed: FC_SEED, numRuns: 100 },
     );
   }, 60000);
 
@@ -90,12 +94,16 @@ describe("generateSudoku / generateDailySudoku", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
         const criteria = sudokuCriteriaForWeekday(weekday);
-        const puzzle = generateDailySudoku(seed, weekday);
+        const puzzle = generateDailySudoku({ seed, weekday });
         expect(gradeSudoku(puzzle.givens)).toBe(criteria.tier);
         expect(puzzle.tier).toBe(criteria.tier);
         expect(puzzle.clueCount).toBeGreaterThanOrEqual(criteria.minClues);
         expect(puzzle.clueCount).toBeLessThanOrEqual(criteria.maxClues);
-        expect(isSudokuApproved(puzzle, criteria)).toBe(true);
+        expect(validateSudoku(puzzle, criteria)).toEqual({
+          approved: true,
+          tier: criteria.tier,
+          clueCount: puzzle.clueCount,
+        });
       }),
       { seed: FC_SEED, numRuns: 35 },
     );
@@ -106,9 +114,9 @@ describe("generateSudoku / generateDailySudoku", () => {
     for (const seed of [7, 77, 777]) {
       for (const weekday of weekdays) {
         const criteria = sudokuCriteriaForWeekday(weekday);
-        const puzzle = generateDailySudoku(seed, weekday);
+        const puzzle = generateDailySudoku({ seed, weekday });
         expect(gradeSudoku(puzzle.givens)).toBe(criteria.tier);
-        expect(isSudokuApproved(puzzle, criteria)).toBe(true);
+        expect(validateSudoku(puzzle, criteria).approved).toBe(true);
       }
     }
   }, 60000);
@@ -124,7 +132,7 @@ describe("generateSudoku / generateDailySudoku", () => {
     const seed = 424242;
     let caught: unknown;
     try {
-      generateSudoku(seed, impossible, { maxAttempts: 2 });
+      generateSudoku({ seed, criteria: impossible, maxAttempts: 2 });
     } catch (error) {
       caught = error;
     }
@@ -141,7 +149,7 @@ describe("generateSudoku / generateDailySudoku", () => {
     // Deterministic failure: an identical call throws with deep-equal fields.
     let again: unknown;
     try {
-      generateSudoku(seed, impossible, { maxAttempts: 2 });
+      generateSudoku({ seed, criteria: impossible, maxAttempts: 2 });
     } catch (error) {
       again = error;
     }
@@ -152,15 +160,15 @@ describe("generateSudoku / generateDailySudoku", () => {
     expect(typedAgain.message).toBe(typed.message);
   });
 
-  it("threads options.maxAttempts through generateDailySudoku", () => {
+  it("threads maxAttempts through generateDailySudoku", () => {
     // Pinned literal seed chosen so the branch taken is fixed: seed 0's
     // first Sunday attempt does NOT pass approval, so a cap of 1 throws.
-    expect(() => generateDailySudoku(0, 7, { maxAttempts: 1 })).toThrow(
-      SudokuGenerationError,
-    );
+    expect(() =>
+      generateDailySudoku({ seed: 0, weekday: 7, maxAttempts: 1 }),
+    ).toThrow(SudokuGenerationError);
     let caught: unknown;
     try {
-      generateDailySudoku(0, 7, { maxAttempts: 1 });
+      generateDailySudoku({ seed: 0, weekday: 7, maxAttempts: 1 });
     } catch (error) {
       caught = error;
     }
@@ -173,59 +181,111 @@ describe("generateSudoku / generateDailySudoku", () => {
 
   it("rejects invalid weekdays, criteria, and maxAttempts", () => {
     // 0 is exactly the Date#getDay() Sunday trap the ISO encoding catches.
-    expect(() => generateDailySudoku(1, 0 as Weekday)).toThrow(RangeError);
-    expect(() => generateDailySudoku(1, 8 as Weekday)).toThrow(RangeError);
-    expect(() => generateDailySudoku(1, 1.5 as Weekday)).toThrow(RangeError);
     expect(() =>
-      generateSudoku(1, { tier: 0 as never, minClues: 30, maxClues: 50 }),
+      generateDailySudoku({ seed: 1, weekday: 0 as Weekday }),
     ).toThrow(RangeError);
     expect(() =>
-      generateSudoku(1, { tier: 1, minClues: 16, maxClues: 50 }),
+      generateDailySudoku({ seed: 1, weekday: 8 as Weekday }),
     ).toThrow(RangeError);
     expect(() =>
-      generateSudoku(1, { tier: 1, minClues: 40, maxClues: 30 }),
+      generateDailySudoku({ seed: 1, weekday: 1.5 as Weekday }),
     ).toThrow(RangeError);
     expect(() =>
-      generateSudoku(1, { tier: 1, minClues: 36, maxClues: 82 }),
+      generateSudoku({
+        seed: 1,
+        criteria: { tier: 0 as never, minClues: 30, maxClues: 50 },
+      }),
     ).toThrow(RangeError);
     expect(() =>
-      generateSudoku(
-        1,
-        { tier: 1, minClues: 36, maxClues: 56 },
-        { maxAttempts: 0 },
-      ),
+      generateSudoku({
+        seed: 1,
+        criteria: { tier: 1, minClues: 16, maxClues: 50 },
+      }),
+    ).toThrow(RangeError);
+    expect(() =>
+      generateSudoku({
+        seed: 1,
+        criteria: { tier: 1, minClues: 40, maxClues: 30 },
+      }),
+    ).toThrow(RangeError);
+    expect(() =>
+      generateSudoku({
+        seed: 1,
+        criteria: { tier: 1, minClues: 36, maxClues: 82 },
+      }),
+    ).toThrow(RangeError);
+    expect(() =>
+      generateSudoku({
+        seed: 1,
+        criteria: { tier: 1, minClues: 36, maxClues: 56 },
+        maxAttempts: 0,
+      }),
     ).toThrow(RangeError);
   });
 
   it("returns frozen puzzles (deep, including the composed object)", () => {
-    const puzzle = generateDailySudoku(5, 1);
+    const puzzle = generateDailySudoku({ seed: 5, weekday: 1 });
     expect(Object.isFrozen(puzzle)).toBe(true);
     expect(Object.isFrozen(puzzle.givens)).toBe(true);
     expect(Object.isFrozen(puzzle.solution)).toBe(true);
   });
 });
 
-describe("isSudokuApproved", () => {
-  it("rejects a puzzle whose fields lie about the grid", () => {
+describe("validateSudoku", () => {
+  it("rejects a puzzle whose fields lie about the grid, naming the reasons", () => {
     const criteria = sudokuCriteriaForWeekday(1);
-    const puzzle = generateDailySudoku(5, 1);
-    expect(isSudokuApproved(puzzle, criteria)).toBe(true);
-    // Wrong criteria tier for the actual grade fails.
-    expect(isSudokuApproved(puzzle, sudokuCriteriaForWeekday(7))).toBe(false);
+    const puzzle = generateDailySudoku({ seed: 5, weekday: 1 });
+    expect(validateSudoku(puzzle, criteria)).toEqual({
+      approved: true,
+      tier: puzzle.tier,
+      clueCount: puzzle.clueCount,
+    });
+    // Wrong criteria tier for the actual grade fails on both grade and the
+    // declared tier field.
+    const wrongTier = validateSudoku(puzzle, sudokuCriteriaForWeekday(7));
+    expect(wrongTier.approved).toBe(false);
+    if (!wrongTier.approved) {
+      expect(wrongTier.reasons).toContain("too-easy");
+      expect(wrongTier.reasons).toContain("tier-mismatch");
+    }
     // A lying clueCount fails.
-    expect(
-      isSudokuApproved(
-        { ...puzzle, clueCount: puzzle.clueCount + 1 },
-        criteria,
-      ),
-    ).toBe(false);
+    const lyingCount = validateSudoku(
+      { ...puzzle, clueCount: puzzle.clueCount + 1 },
+      criteria,
+    );
+    expect(lyingCount.approved).toBe(false);
+    if (!lyingCount.approved) {
+      expect(lyingCount.reasons).toEqual(["clue-count-mismatch"]);
+    }
+    // A lying tier field fails even when the grid itself satisfies criteria.
+    const lyingTier = validateSudoku({ ...puzzle, tier: 5 }, criteria);
+    expect(lyingTier.approved).toBe(false);
+    if (!lyingTier.approved) {
+      expect(lyingTier.reasons).toEqual(["tier-mismatch"]);
+    }
     // Givens contradicting the solution fail.
     const firstGivenIndex = puzzle.givens.findIndex((v) => v !== 0);
     const corrupted = puzzle.givens.map((v, i) =>
       i === firstGivenIndex ? (v % 9) + 1 : v,
     );
-    expect(isSudokuApproved({ ...puzzle, givens: corrupted }, criteria)).toBe(
-      false,
+    const contradicted = validateSudoku(
+      { ...puzzle, givens: corrupted },
+      criteria,
     );
+    expect(contradicted.approved).toBe(false);
+    if (!contradicted.approved) {
+      expect(contradicted.reasons).toContain("givens-contradict-solution");
+    }
+    // A malformed grid is a rejection reason, not a throw (Binairo shape).
+    expect(
+      validateSudoku(
+        { ...puzzle, givens: new Array<number>(80).fill(0) },
+        criteria,
+      ),
+    ).toEqual({ approved: false, reasons: ["malformed-grid"] });
+    // Out-of-domain criteria are a caller bug: throw, never a rejection.
+    expect(() =>
+      validateSudoku(puzzle, { tier: 1, minClues: 16, maxClues: 50 }),
+    ).toThrow(RangeError);
   });
 });
