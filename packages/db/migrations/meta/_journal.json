@@ -15,6 +15,13 @@
       "when": 1785547820443,
       "tag": "0001_parallel_frightful_four",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785564882514,
+      "tag": "0002_living_senator_kelly",
+      "breakpoints": true
     }
   ]
 }
