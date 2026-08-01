@@ -48,6 +48,7 @@ Current:
 | `plans/014-issue-17-plan-publication-pipeline.md` | Implementation plan for #17 (publication pipeline: buffer, cron, published-predicate wall) |
 | `plans/015-issue-39-plan-impeccable-ci.md` | Implementation plan for #39 (impeccable detect against Vercel preview deployments in CI) |
 | `plans/016-issue-43-plan-dependabot.md` | Implementation plan for #43 (Dependabot for SHA-pinned actions) |
+| `plans/017-issue-18-plan-play-the-daily-binairo.md` | Implementation plan for #18 (play the daily Binairo: play and conclusion screens, write-once completions, dormant hint grants, the apps/web db wall) |
 
 ## Language
 
