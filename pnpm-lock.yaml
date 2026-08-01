@@ -134,6 +134,9 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
+      '@miolos/games':
+        specifier: workspace:*
+        version: link:../games
       typescript:
         specifier: 6.0.3
         version: 6.0.3
