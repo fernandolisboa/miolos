@@ -302,8 +302,10 @@ export const MOTIFS_15: ReadonlyArray<Motif> = [
     ],
   },
   {
-    id: "beetle-car",
-    name: "Fusca",
+    // Generic rounded-silhouette car; named generically ("no brands",
+    // ADR-0021 — "Fusca" was rejected as a trademarked model name).
+    id: "round-car",
+    name: "Carro redondinho",
     size: 15,
     mirrorable: true,
     rows: [

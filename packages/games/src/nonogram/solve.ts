@@ -1,9 +1,13 @@
-import type { CellState, NonogramClues, SolveResult } from "./types";
+import type {
+  NonogramCellState,
+  NonogramClues,
+  NonogramSolveResult,
+} from "./types";
 
 export interface LineSolveResult {
   readonly contradiction: boolean;
   /** The line after forcing; same reference semantics as the input (new array). */
-  readonly states: ReadonlyArray<CellState>;
+  readonly states: ReadonlyArray<NonogramCellState>;
 }
 
 /**
@@ -17,7 +21,7 @@ export interface LineSolveResult {
  * of the public barrel.
  */
 export function solveLine(
-  states: ReadonlyArray<CellState>,
+  states: ReadonlyArray<NonogramCellState>,
   runs: ReadonlyArray<number>,
 ): LineSolveResult {
   const n = states.length;
@@ -130,7 +134,9 @@ export function solveLine(
     }
   }
 
-  const next: CellState[] = new Array<CellState>(n).fill("unknown");
+  const next: NonogramCellState[] = new Array<NonogramCellState>(n).fill(
+    "unknown",
+  );
   for (let i = 0; i < n; i += 1) {
     const filled = canBeFilled[i] === true;
     const empty = canBeEmpty[i] === true;
@@ -150,17 +156,55 @@ export function solveLine(
 }
 
 /**
+ * Largest supported grid side. The shipped size classes are 5/8/10/15
+ * (Sat/Sun cap the ramp at 15); the guard bounds solver CPU/memory against
+ * untyped callers rather than encoding a gameplay rule.
+ */
+const MAX_SOLVE_SIZE = 15;
+
+/**
+ * Structural well-formedness of a clue set: integer size within the
+ * supported bound, exactly `size` row and column clue lines, every run a
+ * positive integer. Feasibility (runs fitting the line) is the solver's
+ * job — an infeasible but well-formed clue set is a "contradiction", not
+ * a malformed input.
+ */
+export function isWellFormedClues(clues: NonogramClues): boolean {
+  const n = clues.size;
+  if (!Number.isInteger(n) || n < 1 || n > MAX_SOLVE_SIZE) {
+    return false;
+  }
+  if (clues.rows.length !== n || clues.cols.length !== n) {
+    return false;
+  }
+  const wellFormedLine = (runs: ReadonlyArray<number>): boolean =>
+    runs.every((run) => Number.isInteger(run) && run >= 1);
+  return clues.rows.every(wellFormedLine) && clues.cols.every(wellFormedLine);
+}
+
+/**
  * Full-grid fixpoint (plan §3.2): rows 0..n-1 then columns 0..n-1 per sweep,
  * Gauss–Seidel style (deductions visible immediately within the sweep;
  * deterministic because the order is fixed), with dirty-line skipping. Ends
  * "solved" when no unknowns remain, "stuck" at a fixpoint with unknowns,
  * "contradiction" when some line becomes infeasible.
+ *
+ * Input contract: `clues` bound total CPU/memory, so the entry throws a
+ * typed RangeError on structurally malformed or oversized clue sets
+ * (non-integer/out-of-bound size, jagged line counts, non-positive runs).
+ * Anything crossing a trust boundary must still be Zod-parsed before it
+ * reaches this engine (CLAUDE.md boundary rule).
  */
-export function solveNonogram(clues: NonogramClues): SolveResult {
+export function solveNonogram(clues: NonogramClues): NonogramSolveResult {
+  if (!isWellFormedClues(clues)) {
+    throw new RangeError(
+      `malformed nonogram clues: size must be an integer in 1..${String(MAX_SOLVE_SIZE)} with size-length row/column clue lists of positive integer runs`,
+    );
+  }
   const n = clues.size;
-  const grid: CellState[][] = [];
+  const grid: NonogramCellState[][] = [];
   for (let r = 0; r < n; r += 1) {
-    grid.push(new Array<CellState>(n).fill("unknown"));
+    grid.push(new Array<NonogramCellState>(n).fill("unknown"));
   }
   const rowDirty: boolean[] = new Array<boolean>(n).fill(true);
   const colDirty: boolean[] = new Array<boolean>(n).fill(true);
@@ -181,7 +225,9 @@ export function solveNonogram(clues: NonogramClues): SolveResult {
     return determined;
   };
 
-  const finish = (status: SolveResult["status"]): SolveResult => ({
+  const finish = (
+    status: NonogramSolveResult["status"],
+  ): NonogramSolveResult => ({
     status,
     grid,
     passes,
@@ -223,7 +269,7 @@ export function solveNonogram(clues: NonogramClues): SolveResult {
         continue;
       }
       colDirty[c] = false;
-      const column: CellState[] = [];
+      const column: NonogramCellState[] = [];
       for (const row of grid) {
         column.push(row[c] ?? "unknown");
       }
@@ -266,6 +312,6 @@ export function solveNonogram(clues: NonogramClues): SolveResult {
  * Mechanical human-effort proxy (plan §3.2): more propagation sweeps and a
  * thinner first-pass fill both mean more work. Higher = harder.
  */
-export function effortScore(result: SolveResult): number {
+export function effortScore(result: NonogramSolveResult): number {
   return result.passes + (1 - result.firstPassFill);
 }

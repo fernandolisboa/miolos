@@ -2,19 +2,20 @@
 // deterministic: no dates, no timezones, no Math.random — the caller
 // (publishing cron, free play) supplies seed and weekday.
 export { deriveClues } from "./clues";
-export { WEEKDAY_CRITERIA } from "./difficulty";
-export { generateNonogram } from "./generate";
+export { NONOGRAM_WEEKDAY_CRITERIA } from "./difficulty";
+export { NONOGRAM_MAX_GENERATION_ATTEMPTS, generateNonogram } from "./generate";
 export { effortScore, solveNonogram } from "./solve";
 export { NonogramGenerationError } from "./types";
 export { validateNonogram } from "./validate";
 export type { Weekday } from "../weekday";
 export type {
-  CellState,
-  DifficultyCriteria,
+  NonogramApprovalCriteria,
+  NonogramCellState,
   NonogramClues,
   NonogramPuzzle,
+  NonogramRejectionReason,
   NonogramReveal,
   NonogramSolution,
-  SolveResult,
-  ValidationResult,
+  NonogramSolveResult,
+  NonogramValidationResult,
 } from "./types";

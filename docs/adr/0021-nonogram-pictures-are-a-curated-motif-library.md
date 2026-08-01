@@ -78,7 +78,12 @@ scores so the partition is stable:
 
 Recalibrate by the same rule whenever the library grows enough to move a
 class median; the harness fails loudly if a band ever dips below
-`MIN_POOL`.
+`MIN_POOL`. The calibration is executable, not prose:
+`packages/games/test/nonogram/calibration.test.ts` recomputes each class's
+effort distribution, prints the observed gap around each threshold, and
+fails if a threshold ever sits on an observed score or a band dips below
+`MIN_POOL` — recalibrating is re-running that file and moving the
+threshold into the printed gap nearest the class median.
 
 ## Consequences
 

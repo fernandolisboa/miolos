@@ -1,8 +1,9 @@
+import { isWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
 import { deriveClues } from "./clues";
 import { MOTIFS, motifBitmap, type Motif } from "./motifs";
 import { effortScore, solveNonogram } from "./solve";
-import type { DifficultyCriteria, NonogramSolution } from "./types";
+import type { NonogramApprovalCriteria, NonogramSolution } from "./types";
 
 /** Every weekday pool must hold at least this many effective entries. */
 export const MIN_POOL = 14;
@@ -27,7 +28,9 @@ export const T15 = 3.12;
  * whole 5×5 class) → Sunday = 7 (hardest, 15×15 hard band). Size is the
  * dominant axis; within a shared class the effort band orders the days.
  */
-export const WEEKDAY_CRITERIA: Readonly<Record<Weekday, DifficultyCriteria>> = {
+export const NONOGRAM_WEEKDAY_CRITERIA: Readonly<
+  Record<Weekday, NonogramApprovalCriteria>
+> = {
   1: { size: 5, minEffort: 0, maxEffort: Number.POSITIVE_INFINITY },
   2: { size: 8, minEffort: 0, maxEffort: T8 },
   3: { size: 8, minEffort: T8, maxEffort: Number.POSITIVE_INFINITY },
@@ -54,14 +57,20 @@ const poolCache = new Map<Weekday, ReadonlyArray<PoolEntry>>();
  * Effective entries for a weekday: every motif of the weekday's size class
  * (plus the mirrored variant of every `mirrorable` motif) whose measured
  * solver effort falls inside the weekday's band. Pure derivation from
- * constant data, memoized on first use.
+ * constant data, memoized on first use. Throws a RangeError when `weekday`
+ * is outside 1..7 at runtime (untyped boundaries).
  */
 export function weekdayPool(weekday: Weekday): ReadonlyArray<PoolEntry> {
+  if (!isWeekday(weekday)) {
+    throw new RangeError(
+      `weekday must be an integer in 1..7 (ISO 8601), got ${String(weekday)}`,
+    );
+  }
   const cached = poolCache.get(weekday);
   if (cached !== undefined) {
     return cached;
   }
-  const criteria = WEEKDAY_CRITERIA[weekday];
+  const criteria = NONOGRAM_WEEKDAY_CRITERIA[weekday];
   const pool: PoolEntry[] = [];
   for (const motif of MOTIFS) {
     if (motif.size !== criteria.size) {

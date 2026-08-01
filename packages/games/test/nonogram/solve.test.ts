@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { deriveClues } from "../../src/nonogram/clues";
 import { solveLine, solveNonogram } from "../../src/nonogram/solve";
-import type { CellState } from "../../src/nonogram/types";
+import type { NonogramCellState } from "../../src/nonogram/types";
 
 function bitmap(rows: readonly string[]): boolean[][] {
   return rows.map((row) => [...row].map((ch) => ch === "#"));
 }
 
 function gridToStrings(
-  grid: ReadonlyArray<ReadonlyArray<CellState>>,
+  grid: ReadonlyArray<ReadonlyArray<NonogramCellState>>,
 ): string[] {
   return grid.map((row) =>
     row
@@ -18,8 +18,8 @@ function gridToStrings(
   );
 }
 
-const unknowns = (n: number): CellState[] =>
-  new Array<CellState>(n).fill("unknown");
+const unknowns = (n: number): NonogramCellState[] =>
+  new Array<NonogramCellState>(n).fill("unknown");
 
 describe("solveLine", () => {
   it("forces the overlap of clue [8] on a 10-line (cells 2–7)", () => {
@@ -42,7 +42,7 @@ describe("solveLine", () => {
   it("completes a line from partial knowledge", () => {
     // Clue [3] on a 5-line with the middle cell known filled and cell 0
     // known empty: run must sit within 1..4 and cover cell 2.
-    const states: CellState[] = [
+    const states: NonogramCellState[] = [
       "empty",
       "unknown",
       "filled",

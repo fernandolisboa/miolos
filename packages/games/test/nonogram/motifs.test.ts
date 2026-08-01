@@ -4,7 +4,7 @@ import { WEEKDAYS } from "../../src/weekday";
 import { deriveClues } from "../../src/nonogram/clues";
 import {
   MIN_POOL,
-  WEEKDAY_CRITERIA,
+  NONOGRAM_WEEKDAY_CRITERIA,
   mirrorH,
   weekdayPool,
 } from "../../src/nonogram/difficulty";
@@ -60,9 +60,11 @@ describe("motif library shape", () => {
     }
   });
 
-  it("stays roughly inside the 30–65% density guideline (warning only)", () => {
-    // Deliberately not a hard gate (plan §4): solvability is the gate,
-    // density is a diagnostic for the next authoring pass.
+  it("stays roughly inside the 30–65% density guideline (ratcheted)", () => {
+    // Deliberately not a hard per-motif gate (plan §4): solvability is the
+    // gate, density is a diagnostic. Ratcheted so the outlier set can only
+    // shrink silently — growing it is a visible, consciously-bumped change.
+    const DENSITY_OUTLIER_RATCHET = 34;
     const outliers: string[] = [];
     for (const motif of MOTIFS) {
       const filled = motifBitmap(motif).flat().filter(Boolean).length;
@@ -73,10 +75,10 @@ describe("motif library shape", () => {
     }
     if (outliers.length > 0) {
       console.warn(
-        `density guideline outliers (not a failure): ${outliers.join(", ")}`,
+        `density guideline outliers (diagnostic): ${outliers.join(", ")}`,
       );
     }
-    expect(true).toBe(true);
+    expect(outliers.length).toBeLessThanOrEqual(DENSITY_OUTLIER_RATCHET);
   });
 });
 
@@ -123,8 +125,8 @@ describe("class floors and weekday pools", () => {
 describe("weekday criteria structure", () => {
   it("is monotone Mon→Sun: size never decreases, band rank orders shared classes", () => {
     for (let index = 1; index < WEEKDAYS.length; index += 1) {
-      const previous = WEEKDAY_CRITERIA[WEEKDAYS[index - 1] ?? 1];
-      const current = WEEKDAY_CRITERIA[WEEKDAYS[index] ?? 1];
+      const previous = NONOGRAM_WEEKDAY_CRITERIA[WEEKDAYS[index - 1] ?? 1];
+      const current = NONOGRAM_WEEKDAY_CRITERIA[WEEKDAYS[index] ?? 1];
       expect(current.size).toBeGreaterThanOrEqual(previous.size);
       if (current.size === previous.size) {
         // Same class: the later weekday is the hard band.
@@ -140,15 +142,15 @@ describe("weekday criteria structure", () => {
       [6, 7],
     ];
     for (const [easyDay, hardDay] of pairs) {
-      const easy = WEEKDAY_CRITERIA[easyDay];
-      const hard = WEEKDAY_CRITERIA[hardDay];
+      const easy = NONOGRAM_WEEKDAY_CRITERIA[easyDay];
+      const hard = NONOGRAM_WEEKDAY_CRITERIA[hardDay];
       expect(easy.size).toBe(hard.size);
       expect(easy.minEffort).toBe(0);
       expect(easy.maxEffort).toBe(hard.minEffort);
       expect(hard.maxEffort).toBe(Number.POSITIVE_INFINITY);
     }
     // Monday covers its whole class.
-    const monday = WEEKDAY_CRITERIA[1];
+    const monday = NONOGRAM_WEEKDAY_CRITERIA[1];
     expect(monday.size).toBe(5);
     expect(monday.minEffort).toBe(0);
     expect(monday.maxEffort).toBe(Number.POSITIVE_INFINITY);

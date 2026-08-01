@@ -26,7 +26,12 @@ import type { NonogramSolution } from "./types";
  * - Density guideline 30–65% is a warning-level diagnostic, not a gate.
  */
 export interface Motif {
-  /** Unique kebab-case English id: "anchor". */
+  /**
+   * Unique kebab-case English id: "anchor". Ids are globally unique across
+   * size classes, so when a subject recurs in a larger class the larger
+   * entry takes a `-big` suffix (e.g. "owl" 8×8 vs "owl-big" 15×15) —
+   * never numeric suffixes or reordered words.
+   */
   readonly id: string;
   /** pt-BR display name: "Âncora". */
   readonly name: string;

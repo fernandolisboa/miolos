@@ -1,6 +1,6 @@
 import type { Weekday } from "../weekday";
 
-export type CellState = "filled" | "empty" | "unknown";
+export type NonogramCellState = "filled" | "empty" | "unknown";
 
 /** [row][col], true = filled. The solution grid IS the picture. */
 export type NonogramSolution = ReadonlyArray<ReadonlyArray<boolean>>;
@@ -40,16 +40,21 @@ export interface NonogramPuzzle {
   readonly reveal: NonogramReveal;
 }
 
-export interface SolveResult {
+export interface NonogramSolveResult {
   readonly status: "solved" | "stuck" | "contradiction";
-  readonly grid: ReadonlyArray<ReadonlyArray<CellState>>;
+  readonly grid: ReadonlyArray<ReadonlyArray<NonogramCellState>>;
   /** Full sweeps that made progress (plan §3.2). */
   readonly passes: number;
   /** Fraction of cells determined after sweep 1, in [0, 1]. */
   readonly firstPassFill: number;
 }
 
-export interface DifficultyCriteria {
+/**
+ * The validator's approval criteria for one weekday (spec: "critério de
+ * aprovação do validador"). Sibling engines share the noun: Binairo's
+ * `BinairoApprovalCriteria`, Sudoku's `SudokuApprovalCriteria`.
+ */
+export interface NonogramApprovalCriteria {
   readonly size: number;
   /** Inclusive lower bound: entry qualifies iff minEffort <= score. 0 for easy bands. */
   readonly minEffort: number;
@@ -61,10 +66,29 @@ export interface DifficultyCriteria {
   readonly maxEffort: number;
 }
 
-export interface ValidationResult {
+/**
+ * Machine-greppable rejection reason codes pushed by `validateNonogram`.
+ * A literal union (mirroring `BinairoRejectionReason`) so consumers can
+ * exhaustively switch on reasons and a typo in a new code is a compile error.
+ */
+export type NonogramRejectionReason =
+  | "weekday-out-of-range"
+  | "solution-dimensions-mismatch"
+  | "size-field-mismatch"
+  | "size-out-of-criteria"
+  | "clues-malformed"
+  | "clues-solution-mismatch"
+  | "not-line-solvable"
+  | "solved-grid-differs-from-solution"
+  | "effort-out-of-band"
+  | "reveal-name-empty"
+  | "reveal-motif-unknown"
+  | "reveal-solution-motif-mismatch";
+
+export interface NonogramValidationResult {
   readonly ok: boolean;
   /** Machine-greppable reason codes. */
-  readonly failures: ReadonlyArray<string>;
+  readonly failures: ReadonlyArray<NonogramRejectionReason>;
 }
 
 export class NonogramGenerationError extends Error {
