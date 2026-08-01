@@ -33,6 +33,11 @@ const cellAria = (row: number, column: number, value: 0 | 1 | null) =>
 const cellAriaSudoku = (row: number, column: number, value: number | null) =>
   `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
 
+// "sem dicas" / "com 1 dica" — hoisted because both the stamp's visible
+// suffix and its composed accessible name need it, and the two must never be
+// able to disagree.
+const hintsUsed = (used: number) => (used === 0 ? "sem dicas" : "com 1 dica");
+
 export const messages = {
   meta: {
     title: "Miolos — quatro jogos por dia",
@@ -87,7 +92,19 @@ export const messages = {
     back,
     backAria,
     stampLabel: "Concluído",
-    hints: (used: number) => (used === 0 ? "sem dicas" : "com 1 dica"),
+    hints: hintsUsed,
+    /**
+     * The stamp's whole accessible name, composed here rather than per game
+     * (ADR-0018). Shared chrome and NOT part of `games.<game>.conclusion`
+     * for a mechanical reason: that bundle is a prop passed from a server
+     * component into `<ConclusionView/>`, which is `"use client"`, and React
+     * refuses to serialize a function across the RSC boundary — a per-game
+     * `stampAria` there is an SSR 500, not a type error. `ConclusionCopy` is
+     * data-only; every conclusion string that needs a runtime value is
+     * composed from this object, which the client component imports directly.
+     */
+    stampAria: (game: string, elapsed: string, hints: number) =>
+      `${game} concluído em ${elapsed}, ${hintsUsed(hints)}`,
     sync: {
       pending:
         "Resultado guardado neste aparelho — sincroniza quando a conexão voltar.",
@@ -176,8 +193,6 @@ export const messages = {
       conclusion: {
         title: "Sudoku",
         kicker: "Números",
-        stampAria: (elapsed: string, hints: number) =>
-          `Sudoku concluído em ${elapsed}, ${hints === 0 ? "sem dicas" : "com 1 dica"}`,
         notYet: {
           title: "Você ainda não concluiu o Sudoku de hoje.",
           cta: "Jogar o Sudoku de hoje",
@@ -238,8 +253,6 @@ export const messages = {
       conclusion: {
         title: "Binairo",
         kicker: "Lógica",
-        stampAria: (elapsed: string, hints: number) =>
-          `Binairo concluído em ${elapsed}, ${hints === 0 ? "sem dicas" : "com 1 dica"}`,
         notYet: {
           title: "Você ainda não concluiu o Binairo de hoje.",
           cta: "Jogar o Binairo de hoje",

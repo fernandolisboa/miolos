@@ -69,11 +69,21 @@ export type LifecycleAction =
  * i.e. `messages.games.<game>.conclusion`. Everything else the conclusion
  * renders comes from `messages.conclusion`, which is shared chrome and is
  * read from the module directly.
+ *
+ * PLAIN DATA ONLY — never a function, however tempting. This bundle is a
+ * prop handed from the `/<jogo>/concluido` **server** page to
+ * `<ConclusionView/>`, which is `"use client"`, so it crosses the RSC
+ * boundary and React serializes it. A function member does not fail
+ * typecheck, does not fail a component test that renders the view directly,
+ * and throws "Functions cannot be passed directly to Client Components" the
+ * first time the route is server-rendered — an HTTP 500 nothing but an SSR
+ * test can see (`test/route-ssr.test.tsx`). Any string that needs a runtime
+ * value is composed in `messages.conclusion`, which the client component
+ * imports rather than receives.
  */
 export interface ConclusionCopy {
   readonly title: string;
   readonly kicker: string;
-  readonly stampAria: (elapsed: string, hints: number) => string;
   readonly notYet: {
     readonly title: string;
     readonly cta: string;

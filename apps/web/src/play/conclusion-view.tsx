@@ -195,7 +195,11 @@ export function ConclusionView({
           <div
             className={styles.stamp}
             role="img"
-            aria-label={copy.stampAria(elapsed, stamp.hintsUsed)}
+            aria-label={messages.conclusion.stampAria(
+              copy.title,
+              elapsed,
+              stamp.hintsUsed,
+            )}
           >
             <span aria-hidden className={styles.stampLabel}>
               {messages.conclusion.stampLabel}
