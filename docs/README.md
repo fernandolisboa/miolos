@@ -46,6 +46,7 @@ Current:
 | `plans/012-issue-24-plan-nonogram-engine.md` | Implementation plan for #24 (Nonogram engine) |
 | `plans/013-issue-26-plan-termo-engine.md` | Implementation plan for #26 (Termo engine and word-list harness) |
 | `plans/014-issue-17-plan-publication-pipeline.md` | Implementation plan for #17 (publication pipeline: buffer, cron, published-predicate wall) |
+| `plans/015-issue-39-plan-impeccable-ci.md` | Implementation plan for #39 (impeccable detect against Vercel preview deployments in CI) |
 | `plans/016-issue-43-plan-dependabot.md` | Implementation plan for #43 (Dependabot for SHA-pinned actions) |
 
 ## Language

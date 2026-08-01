@@ -1,0 +1,109 @@
+name: Impeccable
+
+permissions:
+  contents: read
+
+on:
+  deployment_status:
+
+jobs:
+  detect:
+    # Only successful web previews. Environment string uses an EN DASH (U+2013),
+    # exactly as vercel[bot] creates it: "Preview – miolos-web". Production
+    # deployments ("Production – …") and the api project are filtered out here.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Preview – miolos-web'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        # For deployment_status, GITHUB_SHA is the deployed commit (GitHub docs),
+        # so the default checkout gives us the PR's own .impeccable/config.json.
+      - name: preflight — assert preview reachable through bypass
+        # Guards the gate's proven silent-green paths: impeccable detect exits 0
+        # on an empty or unreachable URL, and a rotated/empty secret would scan
+        # the Vercel SSO page instead of the app. Fail loudly on all of them
+        # BEFORE paying for install + Chrome. Host is allowlisted to *.vercel.app
+        # before the secret is ever appended to an event-supplied URL.
+        # Masking note: Actions masks the secret verbatim; Vercel bypass secrets
+        # are alphanumeric so URL-encoding is the identity transformation. If the
+        # secret format ever gains URL-encodable characters, re-check that the
+        # encoded variant cannot leak unmasked in logs.
+        env:
+          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          test -n "$DEPLOYMENT_URL" || { echo "deployment_status.target_url is empty — refusing to scan"; exit 1; }
+          test -n "$BYPASS" || { echo "VERCEL_AUTOMATION_BYPASS_SECRET is empty — refusing to scan"; exit 1; }
+          host="${DEPLOYMENT_URL#https://}"; host="${host%%[/?#]*}"
+          case "$host" in
+            *[!a-zA-Z0-9.-]*) echo "target_url host contains forbidden characters — refusing to append the bypass secret"; exit 1 ;;
+          esac
+          case "$DEPLOYMENT_URL" in
+            https://*) ;;
+            *) echo "target_url is not https — refusing to append the bypass secret"; exit 1 ;;
+          esac
+          case "$host" in
+            *.vercel.app) ;;
+            *) echo "target_url host is not *.vercel.app — refusing to append the bypass secret"; exit 1 ;;
+          esac
+          # Same bypass mechanism detect uses: query params + cookie. The flow is
+          # 302 + Set-Cookie back to the clean URL, so curl needs a cookie jar to
+          # land 200 on the deployment host (verified empirically: without the
+          # jar the redirect chain ends on vercel.com/login even with a valid
+          # secret). Puppeteer holds cookies natively.
+          jar=$(mktemp)
+          code_and_url=$(curl -sSL -c "$jar" -b "$jar" -o /dev/null -w '%{http_code} %{url_effective}' \
+            "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true")
+          rm -f "$jar"
+          echo "preflight: $code_and_url"
+          case "$code_and_url" in
+            "200 $DEPLOYMENT_URL"*) ;;
+            *) echo "preview not reachable through bypass (need HTTP 200 on the deployment host) — refusing to scan"; exit 1 ;;
+          esac
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6 — version comes from packageManager
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        id: chrome-cache
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          # Any lockfile change busts the exact key, but Chrome only actually
+          # changes on a puppeteer bump — the prefix restore plus puppeteer's
+          # idempotent install makes unrelated-dependency busts near-free.
+          restore-keys: |
+            puppeteer-chrome-${{ runner.os }}-
+      - run: pnpm exec puppeteer browsers install chrome
+      # Save immediately after install (not as a post step) so a red detect run —
+      # the hot path during a fix loop — still leaves the cache warm.
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        if: ${{ steps.chrome-cache.outputs.cache-hit != 'true' }}
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: impeccable detect — desktop 1440x900
+        id: desktop
+        env:
+          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: >-
+          pnpm exec impeccable detect
+          "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          --viewport 1440x900
+      - name: impeccable detect — mobile 390x844
+        # Run even when desktop found regressions (one round-trip shows both
+        # viewports' findings), but only if desktop actually started — a
+        # preflight/setup failure must not reach a detect invocation.
+        if: ${{ !cancelled() && steps.desktop.outcome != 'skipped' }}
+        env:
+          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: >-
+          pnpm exec impeccable detect
+          "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          --viewport 390x844
