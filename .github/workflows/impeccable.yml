@@ -87,6 +87,13 @@ jobs:
           path: ~/.cache/puppeteer
           key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: impeccable detect — desktop 1440x900
+        # detect takes a POSITIONAL URL LIST and does not crawl: every screen
+        # that must be scanned is named here, in BOTH viewport steps, and every
+        # URL carries its own bypass query string (the cookie is set by the
+        # first one, but a scan that starts on a 401 would silently pass — the
+        # preflight comment above records why detect exiting 0 is not evidence).
+        # Same masking properties as the preflight: the secret is only ever
+        # appended to a host already allowlisted to *.vercel.app there.
         id: desktop
         env:
           DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
@@ -94,6 +101,8 @@ jobs:
         run: >-
           pnpm exec impeccable detect
           "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/binairo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           --viewport 1440x900
       - name: impeccable detect — mobile 390x844
         # Run even when desktop found regressions (one round-trip shows both
@@ -106,4 +115,6 @@ jobs:
         run: >-
           pnpm exec impeccable detect
           "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/binairo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           --viewport 390x844
