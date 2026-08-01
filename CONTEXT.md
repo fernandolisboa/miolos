@@ -21,7 +21,14 @@ The ubiquitous language. Issue titles, test names, proposals and specs use these
 | **Merge** | — | Two anonymous accounts joining under one email: union of completions, dedupe per puzzle keeping the earliest, everything derived recomputed ([ADR-0009](./docs/adr/0009-account-merge-recomputes-from-the-union-of-completions.md)). |
 | **Entitlement** | — | A string in `entitlements: string[]` (never a boolean). Dormant in v1. |
 | **Normalized form** | — | A word after Unicode-decompose, strip combining marks, `ç`→`c`. Termo matching is accent-insensitive; tiles reveal the **canonical form** (correct accented spelling) on completion ([ADR-0015](./docs/adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)). |
+| **Motif** | — | An entry in the Nonogram picture library inside `packages/games`. Server-side only: never user-facing, and neither its name nor its id ever reaches a client payload. |
+| **Reveal** | — | The withheld part of a Nonogram daily — which motif it is and how it is oriented. Stripped from every published projection; the client is served clues only. |
+| **Picture** | Figura | What a solved Nonogram grid paints. The client-rendered payoff, shown on the conclusion screen. |
+| **Filled** | Preenchida | A Nonogram cell the player painted: `filled`, encoded `1` on the wire. The filled set is what a completion is judged on. |
+| **Crossed** | Marcada | A Nonogram cell the player ruled out: `crossed`, encoded `0`. Notation for the player, never a claim about the picture. |
+| **Empty** | Vazia | An undecided Nonogram cell: `empty`, encoded `null` client-side. |
+| **Clues** | Números | The run lengths on a Nonogram's row and column rails: `clues`, whose entries are `runs`. Never *dicas* or *pistas* — a **dica** is the one free hint. |
 
 **Games** (v1, build order): **Binairo**, **Sudoku**, **Nonogram**, **Termo** — "Termo" is the product's name for its Termo-like game; don't call it Wordle.
 
-**Terms to avoid:** "win streak" (streaks count completions, not wins — except that a lost Termo alone doesn't complete); "coins/points/XP" (vetoed concepts, [ADR-0006](./docs/adr/0006-monetization-convenience-not-access.md)); "premium content" (nothing is gated, [ADR-0005](./docs/adr/0005-all-content-is-free.md)).
+**Terms to avoid:** "win streak" (streaks count completions, not wins — except that a lost Termo alone doesn't complete); "coins/points/XP" (vetoed concepts, [ADR-0006](./docs/adr/0006-monetization-convenience-not-access.md)); "premium content" (nothing is gated, [ADR-0005](./docs/adr/0005-all-content-is-free.md)); "Picross", "Griddler", "Hanjie", "paint-by-numbers" (the game is **Nonogram**); *dica* or *pista* for a Nonogram's clue rails (those are **números**; *dica* is the hint).
