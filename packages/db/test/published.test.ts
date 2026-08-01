@@ -1,3 +1,4 @@
+import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { sql } from "drizzle-orm";
 import fc from "fast-check";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -9,7 +10,7 @@ import {
 } from "../src/published";
 import { dailyPuzzles } from "../src/schema";
 import { createTestDb } from "../src/testing";
-import { binairoContentFixture, collectKeys } from "./fixtures";
+import { binairoContentFixture } from "./fixtures";
 
 // THE AC-1 WALL SUITE (issue #17, seam 3, ADR-0004/0010/0024). Future
 // rows invisible through every reader, kill switch respected, boundary
@@ -153,7 +154,7 @@ describe("the published-predicate wall", () => {
     const daily = await getPublishedDaily(ctx.db, "binairo", "2026-08-01");
     expect(daily).toBeDefined();
     const keys = collectKeys(daily);
-    for (const forbidden of ["solution", "seed", "reveal", "answer"]) {
+    for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
     }
   });

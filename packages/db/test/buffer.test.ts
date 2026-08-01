@@ -27,7 +27,12 @@ afterAll(async () => {
 
 /** Pure date math for seeding relative to SP-today (test-local; the api app has its own). */
 function addDaysLocal(date: string, days: number): string {
-  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  // Runtime-guarded parse (apps/api partsOf pattern) — no bare tuple cast.
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) {
+    throw new RangeError(`expected 'YYYY-MM-DD', got ${JSON.stringify(date)}`);
+  }
+  const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 

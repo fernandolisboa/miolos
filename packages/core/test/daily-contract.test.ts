@@ -8,26 +8,9 @@ import {
   dailyPuzzleResponseSchema,
   stripDailyContent,
 } from "../src/index";
+import { collectKeys } from "../src/testing";
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
-
-/** Every key at any depth of a JSON-shaped value (the leak-scan probe). */
-function collectKeys(
-  value: unknown,
-  into: Set<string> = new Set(),
-): Set<string> {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectKeys(item, into);
-    }
-  } else if (value !== null && typeof value === "object") {
-    for (const [key, nested] of Object.entries(value)) {
-      into.add(key);
-      collectKeys(nested, into);
-    }
-  }
-  return into;
-}
 
 describe("stripDailyContent (binairo)", () => {
   it("output strict-parses and carries no solution/seed, real engine output, all 7 weekdays", () => {

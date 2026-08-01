@@ -21,21 +21,3 @@ export function binairoContentFixture(): Record<string, unknown> {
     requiredTier: 2,
   };
 }
-
-/** Every key at any depth of a JSON-shaped value (the leak-scan probe). */
-export function collectKeys(
-  value: unknown,
-  into: Set<string> = new Set(),
-): Set<string> {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectKeys(item, into);
-    }
-  } else if (value !== null && typeof value === "object") {
-    for (const [key, nested] of Object.entries(value)) {
-      into.add(key);
-      collectKeys(nested, into);
-    }
-  }
-  return into;
-}

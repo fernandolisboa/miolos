@@ -1,4 +1,5 @@
 import { dailyPuzzleResponseSchema } from "@miolos/core";
+import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { eq, sql } from "@miolos/db";
 import {
   dailyPuzzles,
@@ -42,24 +43,6 @@ afterAll(async () => {
   await ctx.close();
 });
 
-/** Every key at any depth of a JSON-shaped value (the leak-scan probe). */
-function collectKeys(
-  value: unknown,
-  into: Set<string> = new Set(),
-): Set<string> {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectKeys(item, into);
-    }
-  } else if (value !== null && typeof value === "object") {
-    for (const [key, nested] of Object.entries(value)) {
-      into.add(key);
-      collectKeys(nested, into);
-    }
-  }
-  return into;
-}
-
 async function seedDate(date: string, seed = 7): Promise<void> {
   const weekday = isoWeekdayOf(date);
   if (!isWeekday(weekday)) {
@@ -91,7 +74,7 @@ describe("GET /daily/binairo", () => {
     const response = await GET();
     const raw: unknown = await response.json();
     const keys = collectKeys(raw);
-    for (const forbidden of ["solution", "seed", "reveal", "answer"]) {
+    for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
     }
   });
