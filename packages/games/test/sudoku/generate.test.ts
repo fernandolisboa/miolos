@@ -27,8 +27,9 @@ const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
 
-// Pinned regression literal: generateDailySudoku(123456789, 4) — Thursday,
-// tier 3. Catches cross-version drift of the whole pipeline loudly.
+// Pinned regression literal: generateDailySudoku({ seed: 123456789,
+// weekday: 4 }) — Thursday, tier 3. Catches cross-version drift of the
+// whole pipeline loudly.
 const PINNED_SEED = 123456789;
 const PINNED_WEEKDAY: Weekday = 4;
 const PINNED_GIVENS: readonly number[] = [
