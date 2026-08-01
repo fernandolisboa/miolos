@@ -7,7 +7,7 @@ import { dailyPuzzles } from "./schema";
 
 /**
  * Cron-side buffer accessors — NOT part of the public wall. Reachable
- * only through `@miolos/db/publishing` (ADR-0024 D16), never from the
+ * only through `@miolos/db/publishing` (ADR-0024, plan 014 D16), never from the
  * root entry: client-serving code cannot import this module by
  * construction, not by reviewer vigilance. Rows are immutable once
  * inserted (D14) — nothing here updates or deletes.

@@ -88,7 +88,8 @@ export async function getPublishedDaily(
  * Full row including the solution, for judging completions (#18). Same
  * predicate: only PUBLISHED, unkilled rows — the buffer module is the
  * sole reader of unpublished rows. Exported ONLY from
- * `@miolos/db/publishing` (ADR-0024 D16), never from the root entry.
+ * `@miolos/db/publishing` (ADR-0024, plan 014 D16), never from the root
+ * entry.
  */
 export async function getPublishedDailyWithSolution(
   db: Db,

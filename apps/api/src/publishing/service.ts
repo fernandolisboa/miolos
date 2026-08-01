@@ -61,6 +61,10 @@ function randomUint32(): number {
  * insert with ON CONFLICT DO NOTHING. Retries with a new seed on
  * generation/validation misses; a date that exhausts its budget lands in
  * `failures` and the run continues — it never aborts.
+ *
+ * EXTENSION POINT: per-game by name on purpose — #23/#25/#27 add their
+ * own top-up alongside and widen the cron/buffer-depth contracts
+ * (packages/core/src/contracts/cron.ts) in the same PR.
  */
 export async function topUpBinairoBuffer(
   db: Db,

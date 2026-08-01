@@ -1,5 +1,5 @@
 // Root entry: the wall + prior art, and nothing that can bypass the wall
-// (ADR-0024 D16). Schema exports stay NAMED — `daily_puzzles` and
+// (ADR-0024, plan 014 D16). Schema exports stay NAMED — `daily_puzzles` and
 // `remote_config` never leak through this barrel; they live on
 // `@miolos/db/publishing` with the buffer writers and the
 // solution-bearing reader. The export list is pinned exactly by the

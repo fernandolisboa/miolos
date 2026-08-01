@@ -29,7 +29,7 @@ import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 // Seam 4: the route invoked as a function, PGlite running the committed
 // migrations underneath, and the ONLY mock is src/db. Raw-table seeding
 // imports come from @miolos/db/publishing — the root entry deliberately
-// does not export them (ADR-0024 D16).
+// does not export them (ADR-0024, plan 014 D16).
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({

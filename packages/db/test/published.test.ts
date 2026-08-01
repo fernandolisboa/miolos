@@ -172,7 +172,10 @@ describe("the published-predicate wall", () => {
           const visible =
             (await getPublishedDaily(ctx.db, "binairo", "2026-08-01")) !==
             undefined;
-          return visible === offsetSeconds <= 0;
+          // Named intermediate: Prettier strips the clarifying parens from
+          // `visible === (offsetSeconds <= 0)`, so spell the biconditional out.
+          const shouldBeVisible = offsetSeconds <= 0;
+          return visible === shouldBeVisible;
         },
       ),
       { numRuns: 30 },
@@ -180,7 +183,7 @@ describe("the published-predicate wall", () => {
   });
 });
 
-describe("surface tripwires (ADR-0024 D16 — the mechanical wall)", () => {
+describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", () => {
   it("T-DB-9a: the wall module exports exactly the audited set", async () => {
     const published = await import("../src/published");
     expect(Object.keys(published).sort()).toEqual([
