@@ -537,6 +537,53 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
 
     expect(cellAt(container, d).textContent).toBe("1");
   });
+
+  it("keeps painting when a second finger touches and lifts mid-stroke", () => {
+    const [a, b, c, d] = playableQuad();
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+    fireEvent.click(screen.getByLabelText(messages.binairo.controls.oneAria));
+    const grid = gridOf(container);
+
+    // Finger 1 opens the stroke and crosses two cells.
+    fireEvent.pointerDown(grid, { clientX: a, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(grid, { clientX: b, clientY: 0, pointerId: 1 });
+
+    // A second contact lands and lifts — a palm, the holding thumb, a second
+    // finger. Every handler is scoped to the pointer that opened the stroke
+    // (finding `grid-stroke-state-is-not-scoped-to-a-pointerid`); without
+    // that scoping this `pointerup` ran `endDrag()` and finger 1's remaining
+    // cells were silently dropped, with nothing on screen to say so.
+    fireEvent.pointerDown(grid, { clientX: d, clientY: 0, pointerId: 2 });
+    fireEvent.pointerUp(grid, { clientX: d, clientY: 0, pointerId: 2 });
+
+    // Finger 1 carries on.
+    fireEvent.pointerMove(grid, { clientX: c, clientY: 0, pointerId: 1 });
+    fireEvent.pointerUp(grid, { clientX: c, clientY: 0, pointerId: 1 });
+
+    for (const index of [a, b, c]) {
+      expect(cellAt(container, index).textContent).toBe("1");
+    }
+  });
+
+  it("reopens after a stroke whose pointer never lifts", () => {
+    const [a, b] = playableQuad();
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+    fireEvent.click(screen.getByLabelText(messages.binairo.controls.oneAria));
+    const grid = gridOf(container);
+
+    // The hazard scoping introduces: a stroke that never closes would latch
+    // the board dead. `lostpointercapture` fires whenever capture ends for
+    // any reason, so the next stroke always opens.
+    fireEvent.pointerDown(grid, { clientX: a, clientY: 0, pointerId: 1 });
+    fireEvent.lostPointerCapture(grid, { pointerId: 1 });
+
+    fireEvent.pointerDown(grid, { clientX: b, clientY: 0, pointerId: 2 });
+    fireEvent.pointerUp(grid, { clientX: b, clientY: 0, pointerId: 2 });
+
+    expect(cellAt(container, b).textContent).toBe("1");
+  });
 });
 
 describe("the one free hint (T-WEB-9)", () => {

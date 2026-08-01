@@ -41,6 +41,18 @@ export function Grid({
   const tapped = useRef(false);
   const startIndex = useRef<number | null>(null);
   const lastIndex = useRef<number | null>(null);
+  /**
+   * The pointer that opened the current stroke, or null when none is open.
+   * Every handler below is scoped to it (finding
+   * `grid-stroke-state-is-not-scoped-to-a-pointerid`): without this, a
+   * second contact anywhere on the board — a palm, the holding thumb, a
+   * deliberate second finger — ends the stroke the first finger is still
+   * drawing, and every cell it goes on to cross writes nothing, with no
+   * visual signal that input stopped. Verified in Chrome with real
+   * multi-touch: a second finger tapping a given cell mid-drag silently
+   * dropped the last two cells of a four-cell stroke.
+   */
+  const strokePointer = useRef<number | null>(null);
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     // Primary button only, and before any ref is touched. A stroke that
@@ -56,6 +68,13 @@ export function Grid({
     if (event.button !== 0) {
       return;
     }
+    // A stroke is already open: this is a second contact, and it must not
+    // touch the first one's state. Returning here leaves every latch and
+    // index belonging to the pointer that opened the stroke.
+    if (strokePointer.current !== null) {
+      return;
+    }
+    strokePointer.current = event.pointerId;
     dragged.current = false;
     tapped.current = false;
     dragging.current = painting;
@@ -74,7 +93,7 @@ export function Grid({
   };
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) {
+    if (!dragging.current || event.pointerId !== strokePointer.current) {
       return;
     }
     // Required, not defensive: under pointer capture — and on touch
@@ -98,6 +117,23 @@ export function Grid({
 
   const endDrag = () => {
     dragging.current = false;
+    strokePointer.current = null;
+  };
+
+  /**
+   * Scoped end: only the pointer that opened the stroke may close it.
+   *
+   * The safety net against the obvious hazard — a stroke whose `pointerup`
+   * never arrives would latch the board dead — is `onLostPointerCapture` on
+   * the container, which the browser fires whenever capture ends for ANY
+   * reason (release, cancel, the element leaving the document). A stroke can
+   * therefore never outlive its own pointer.
+   */
+  const endStroke = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerId !== strokePointer.current) {
+      return;
+    }
+    endDrag();
   };
 
   /**
@@ -114,6 +150,11 @@ export function Grid({
    * it.
    */
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    // A second contact lifting must not resolve — or end — the first
+    // contact's stroke.
+    if (event.pointerId !== strokePointer.current) {
+      return;
+    }
     const start = startIndex.current;
     if (
       dragging.current &&
@@ -133,7 +174,8 @@ export function Grid({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={endDrag}
+      onPointerCancel={endStroke}
+      onLostPointerCapture={endStroke}
     >
       {givens.map((given, index) => {
         const row = Math.floor(index / COLUMNS) + 1;
