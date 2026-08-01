@@ -15,6 +15,7 @@ import {
 } from "../src/play/play-record";
 import { formatElapsed, messages } from "../src/i18n";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
+import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 // T-WEB-5..T-WEB-9d (plan 017 §15). UI composition is not TDD-shaped, so
 // these are smoke tests written after the screens; every assertion goes
@@ -56,29 +57,10 @@ const DAILY: DailyBinairoResponse = {
   givens: [...PUZZLE.givens],
 };
 
-// jsdom implements no layout, so `elementFromPoint` does not exist on the
-// document at all and `vi.spyOn` has nothing to replace. Define it once here
-// so the drag tests can stub it and `restoreAllMocks` can put it back.
-Object.defineProperty(document, "elementFromPoint", {
-  configurable: true,
-  writable: true,
-  value: () => null,
-});
-
-// jsdom implements neither pointer capture nor the click retargeting a real
-// browser does under it. Stubbing the method at least keeps grid.tsx on the
-// path every browser takes instead of its `catch` branch; the retargeting
-// itself is NOT simulated, so the tap tests below pin the HANDLER's logic
-// (a paint tap is resolved on `pointerup`, and the trailing click cannot
-// double-apply it) rather than the browser behaviour that makes it
-// necessary — that half was reproduced in Chrome.
-for (const method of ["setPointerCapture", "releasePointerCapture"] as const) {
-  Object.defineProperty(Element.prototype, method, {
-    configurable: true,
-    writable: true,
-    value: () => undefined,
-  });
-}
+// The stroke scaffolding jsdom does not provide (`./pointer`, plan 020 §19):
+// `elementFromPoint`, which does not exist on the document at all, and the
+// two pointer-capture methods.
+installPointerStubs();
 
 function cellAt(container: HTMLElement, index: number): HTMLElement {
   const cell = container.querySelector<HTMLElement>(
@@ -96,18 +78,6 @@ function gridOf(container: HTMLElement): HTMLElement {
     throw new Error("the grid container is missing");
   }
   return grid;
-}
-
-/**
- * `elementFromPoint` is the ONLY way to know which cell a pointer is over:
- * with pointer capture — and on touch generally — `pointerenter` never fires
- * on the cells being crossed (§8.2). The stub maps clientX straight to a
- * cell index.
- */
-function stubElementFromPoint(container: HTMLElement): void {
-  vi.spyOn(document, "elementFromPoint").mockImplementation((x: number) =>
-    container.querySelector(`[data-cell-index="${x}"]`),
-  );
 }
 
 /** The cells to cross, plus one the stroke never touches. */
