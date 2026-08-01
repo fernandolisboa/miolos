@@ -17,6 +17,9 @@ export {
   listBufferedDates,
   todaySaoPaulo,
 } from "./buffer";
+// Full-schema client (relational-query access to daily_puzzles) — the
+// root entry's createDb is deliberately narrowed to users/sessions.
+export { createPublishingDb } from "./client";
 export {
   getPublishedDailyWithSolution,
   type DailyPuzzleRow,

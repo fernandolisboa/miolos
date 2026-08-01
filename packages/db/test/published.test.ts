@@ -208,6 +208,7 @@ describe("surface tripwires (ADR-0024 D16 — the mechanical wall)", () => {
     const publishing = await import("../src/publishing");
     expect(Object.keys(publishing).sort()).toEqual([
       "bufferDepth",
+      "createPublishingDb",
       "dailyPuzzles",
       "getPublishedDailyWithSolution",
       "getRemoteConfig",
@@ -216,5 +217,15 @@ describe("surface tripwires (ADR-0024 D16 — the mechanical wall)", () => {
       "remoteConfig",
       "todaySaoPaulo",
     ]);
+  });
+
+  it("T-DB-9d: the root client's relational-query surface is the wall-safe subset", async () => {
+    // The wall must hold for QUERY CAPABILITY, not just named exports:
+    // `db.query.dailyPuzzles.findMany()` on a root-entry client would read
+    // solution-bearing unpublished rows without any /publishing import.
+    // neon() performs no I/O at construction — the URL is a dummy.
+    const { createDb } = await import("../src/client");
+    const db = createDb("postgresql://tripwire:tripwire@localhost:5432/x");
+    expect(Object.keys(db.query).sort()).toEqual(["sessions", "users"]);
   });
 });
