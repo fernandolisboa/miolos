@@ -532,6 +532,57 @@ describe("the keyboard model (T-WEB-S28)", () => {
     ).toHaveLength(TOTAL_CELLS - 1);
   });
 
+  it("selects the cell a Tab lands on, so the writing keys are not a silent no-op", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+
+    // A Tab into the board reaches its ONE tab stop, which before any
+    // interaction is cell 0 while `selected` is still null. Focus is the
+    // whole gesture here: no click, no Enter, no arrow key — and the caret
+    // `:focus-visible` paints has to be a caret that can write (finding
+    // `sudoku-tab-into-board-shows-a-caret-that-cannot-write`).
+    // `act` because a bare `.focus()` is not one of testing-library's events:
+    // the focus handler's dispatch would otherwise sit unflushed.
+    const entry = caretIndex(container);
+    act(() => {
+      cellAt(container, entry).focus();
+    });
+    expect(cellAt(container, entry).className).toContain(
+      className("cellSelected"),
+    );
+
+    // The keys the keypad's affordance advertises, dispatched AT the focused
+    // cell so they reach the board's single listener the way a real keypress
+    // does, rather than at the container.
+    const empty = cellAt(container, FIRST_EMPTY);
+    act(() => {
+      empty.focus();
+    });
+    fireEvent.keyDown(empty, { key: "7" });
+    expect(empty.textContent).toBe("7");
+    fireEvent.keyDown(empty, { key: "Backspace" });
+    expect(empty.textContent).toBe("");
+  });
+
+  it("puts DOM focus on the cell the pointer selected", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const cell = cellAt(container, FIRST_EMPTY);
+
+    fireEvent.click(cell);
+
+    // jsdom's click does not move focus, which is exactly what WebKit does
+    // with a `<button>` — so this passes only because the cell focuses
+    // itself. Without it Safari's `activeElement` stays `<body>`, the
+    // roving-focus effect returns at its guard, and no key ever reaches the
+    // board again (finding
+    // `pointer-selection-does-not-focus-the-board-on-webkit`). jsdom cannot
+    // prove the WebKit half; it proves the code path that removes the
+    // dependency on the browser's own click-to-focus behaviour.
+    expect(cell).toHaveFocus();
+    expect(caretIndex(container)).toBe(FIRST_EMPTY);
+    fireEvent.keyDown(cell, { key: "4" });
+    expect(cell.textContent).toBe("4");
+  });
+
   it("moves the caret with the arrows and clamps at all four edges", () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
     const board = boardOf();

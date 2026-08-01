@@ -60,7 +60,10 @@ export function Board({
   const boardRef = useRef<HTMLDivElement>(null);
 
   // The roving tab stop: the selected cell, or the first one when the caret
-  // has not appeared yet. Exactly one cell is ever tabbable.
+  // has not appeared yet. Exactly one cell is ever tabbable — and the moment
+  // that cell receives focus it BECOMES the selection (`onFocus` below), so
+  // the tab stop and the reducer's `selected` never disagree once the player
+  // has arrived.
   const tabbable = selected ?? 0;
 
   useLayoutEffect(() => {
@@ -158,7 +161,31 @@ export function Board({
             // rather than in `aria-invalid`, which ARIA does not support on
             // role=button and `jsx-a11y/role-supports-aria-props` reds.
             aria-label={cellAria(row + 1, column + 1, given, value, invalid)}
-            onClick={() => onSelect(index)}
+            // FOCUS IS THE ONLY WRITER OF THE SELECTION (ADR-0030 decision
+            // 5, finding `sudoku-tab-into-board-shows-a-caret-that-cannot-write`).
+            // A Tab into the board lands on the roving tab stop, which
+            // before any interaction is cell 0 while `selected` is still
+            // null: the accent caret is painted there by `:focus-visible`,
+            // yet every writing key is swallowed by `preventDefault` and
+            // then dropped by the reducer's null-selection guard. Focus
+            // selecting closes that gap at the source.
+            //
+            // It cannot loop with the layout effect above: the effect only
+            // ever focuses `selected`, and re-selecting the index already
+            // selected returns the SAME state object (state.ts `select`),
+            // which `useReducer` bails out of.
+            onFocus={() => onSelect(index)}
+            // A pointer press is unambiguously a request to put the caret
+            // here — but WebKit does not focus a `<button>` on click, so on
+            // Safari (macOS, iOS, iPadOS) `document.activeElement` stays
+            // `<body>`, the effect above returns at its guard, and the
+            // board's single keydown listener never sees a key again
+            // (finding `pointer-selection-does-not-focus-the-board-on-webkit`).
+            // Focusing from the click routes the pointer through the same
+            // door as the keyboard: this fires `onFocus`, which selects.
+            onClick={(event) => {
+              event.currentTarget.focus();
+            }}
           >
             {value}
           </button>

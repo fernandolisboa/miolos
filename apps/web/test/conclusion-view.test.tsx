@@ -670,4 +670,20 @@ describe("the conclusion's layout (tripwires)", () => {
     expect(decl(stacked, "grid-template-rows")).toBe("auto auto auto");
     expect(decl(stacked, "align-content")).toBe("start");
   });
+
+  it("keeps every solid CTA's label off its own background on hover", () => {
+    // finding `chaining-cta-label-vanishes-on-hover`: `.page a:hover`
+    // (0,2,1) sets `color: var(--accent)`, and `.ctaNext` paints that same
+    // `--accent` as its background — so a bare `.cta:hover` (0,2,0) loses
+    // the cascade and the chaining CTA's label goes 1:1 against itself under
+    // the pointer. Anchoring the hover on `.page` (0,3,0) wins it back.
+    // `impeccable detect` never exercises hover, so this is the only gate.
+    for (const cta of ["cta", "emptyCta"]) {
+      expect(decl(bodyOf(CSS, `.page .${cta}:hover`), "color")).toBe(
+        "var(--paper-desk)",
+      );
+      // And the losing form is gone rather than merely outranked.
+      expect(CSS).not.toMatch(new RegExp(`^\\s*\\.${cta}:hover`, "m"));
+    }
+  });
 });

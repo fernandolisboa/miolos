@@ -312,9 +312,14 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-.cta:hover {
-  /* The solid CTA keeps its paper ink on hover: the per-screen accent hover
-     would make the label vanish into its own background. */
+/* ANCHORED ON `.page`, and the extra class is the whole point (finding
+   `chaining-cta-label-vanishes-on-hover`): the solid CTA keeps its paper ink
+   on hover, but a bare `.cta:hover` (0,2,0) loses the cascade to
+   `.page a:hover` (0,2,1) above, and the label would resolve to the SAME
+   `--accent` as `.ctaNext`'s background — an invisible label at 1:1 contrast
+   for as long as the pointer is on it. (0,3,0) wins, and `.ctaNext` inherits
+   this colour because it declares none of its own. */
+.page .cta:hover {
   color: var(--paper-desk);
 }
 
@@ -406,7 +411,9 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-.emptyCta:hover {
+/* Same cascade, same fix: this one is on `.pageEmpty`, and its background is
+   the accent too — it lost to `.page a:hover` on `main` as well. */
+.page .emptyCta:hover {
   color: var(--paper-desk);
 }
 

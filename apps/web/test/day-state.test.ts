@@ -74,8 +74,11 @@ describe("readDayState (T-WEB-S14)", () => {
   it("reads every game the hub lists, so a missing key cannot be a missing tile", () => {
     const state = readDayState(DATE);
 
-    // Exhaustive by construction: `Record<Game, DayEntry>` is what #25/#27
-    // widen by adding a key, never a branch at a call site.
+    // TOTAL by construction: `Record<Game, DayEntry>` cannot lose a key
+    // without failing the typecheck. #25/#27 do not widen it — `GAMES` has
+    // held all four games from day one — so what this pins is the map, not a
+    // tripwire for those tickets (finding
+    // `day-state-exhaustiveness-tripwire-cannot-fire-for-25-27`).
     expect(Object.keys(state).sort()).toEqual(
       ["binairo", "nonogram", "sudoku", "termo"].sort(),
     );

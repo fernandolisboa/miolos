@@ -49,9 +49,17 @@ const NOTHING_DONE: Readonly<Record<Game, DayEntry>> = {
  * This device's day state for the SERVER's `date` — never a client-computed
  * today (CONTEXT.md "Rollover").
  *
- * Spelled out game by game rather than folded over `GAMES`: the return type
- * is the exhaustiveness check, so #25/#27 adding a game is a compile error
- * here instead of a silently missing tile.
+ * Spelled out game by game rather than folded over `GAMES` so the return
+ * type keeps the map TOTAL over `Game`: a key dropped from this literal does
+ * not compile, which is what makes a missing tile impossible.
+ *
+ * It is NOT a tripwire for #25/#27, and calling it one would promise a
+ * safety net nobody has: `GAMES` has carried all four games since day one
+ * (packages/core/src/game.ts), so those tickets add no key here and nothing
+ * in this file can go red for them. `entryFor` is game-generic and already
+ * serves them. The member they do have to add is `playRecordSchema`'s — that
+ * union is where the compile error waits (finding
+ * `day-state-exhaustiveness-tripwire-cannot-fire-for-25-27`).
  */
 export function readDayState(date: string): Readonly<Record<Game, DayEntry>> {
   return {

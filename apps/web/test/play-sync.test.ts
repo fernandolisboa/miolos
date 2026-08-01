@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import {
   binairoCompletionRequestSchema,
   completionRequestSchema,
@@ -622,5 +626,38 @@ describe("startCompletionSync", () => {
     await vi.advanceTimersByTimeAsync(120_000);
     expect(completionCalls(fetchMock)).toHaveLength(3);
     stop();
+  });
+});
+
+/**
+ * The one per-game branch in the module, and the one place a new game can
+ * fail OPEN (finding `buildbody-switch-fails-open-for-a-new-game`).
+ *
+ * The guarantee is a COMPILE-TIME one and `pnpm typecheck` is what enforces
+ * it: `PlayRecord` has exactly two members today, both handled, so no runtime
+ * input can reach the default — a test that manufactured one would have to
+ * cast, which is precisely the lie the guard exists to prevent. What this
+ * reads instead is the source, the way `./css-source.ts` reads a stylesheet:
+ * the tripwire cannot be deleted silently, and the note travels with it.
+ */
+describe("the extension point #25/#27 widen", () => {
+  it("makes an unhandled game a compile error, not a dropped completion", () => {
+    // `path` rather than `new URL(..., import.meta.url)`: the jsdom
+    // environment's own `URL` resolves the relative specifier against the
+    // document's http base, not against the module.
+    const source = readFileSync(
+      path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "src",
+        "play",
+        "sync.ts",
+      ),
+      "utf8",
+    );
+
+    expect(source).toMatch(
+      /switch \(record\.game\)[\s\S]*?default: \{[\s\S]*?const unhandled: never = record;/,
+    );
   });
 });

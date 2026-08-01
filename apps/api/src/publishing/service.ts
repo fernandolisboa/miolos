@@ -32,6 +32,34 @@ export interface TopUpResult {
 }
 
 /**
+ * A top-up that wrote rows and THEN threw, carrying out the counters that
+ * would otherwise die with the rejected promise (finding
+ * `cron-generated-understated-on-partial-failure`).
+ *
+ * The partial write is real, not hypothetical: `insertDailyPuzzle` is one
+ * autocommitted statement and no transaction spans the loop, so a run that
+ * covered offsets 0-2 and then hit a transient Neon error has three durable
+ * rows — and `generated: 0` in the response body and in the
+ * `{event:"cron-publish"}` log line would be a state that never existed.
+ *
+ * This changes NOTHING about which errors propagate, which is the whole
+ * point of §7.2/C2's propagate-and-isolate design: the original failure is
+ * the `cause`, the wrapper is rethrown immediately, and the loop still
+ * aborts rather than retrying against a dead database.
+ */
+export class TopUpAbortedError extends Error {
+  constructor(
+    readonly partial: Pick<TopUpResult, "generated" | "failures">,
+    cause: unknown,
+  ) {
+    super(`top-up aborted after generating ${partial.generated} row(s)`, {
+      cause,
+    });
+    this.name = "TopUpAbortedError";
+  }
+}
+
+/**
  * Depth below which the buffer counts as shallow (plan 014 D12). A code
  * constant, not a remote tunable — bufferDepth is the tunable AC 4
  * names; this can become one later if operating shows the need
@@ -86,70 +114,79 @@ export async function topUpBinairoBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  const today = await todaySaoPaulo(db);
-  const existing = new Set(await listBufferedDates(db, "binairo", today));
+  // Hoisted OUT of the try so a throw can still report them (see
+  // `TopUpAbortedError`); the loop below is unchanged.
   let generated = 0;
   const failures: { date: string; reason: string }[] = [];
+  try {
+    const today = await todaySaoPaulo(db);
+    const existing = new Set(await listBufferedDates(db, "binairo", today));
 
-  // `depth` is already 1..30-clamped by remoteConfigSchema (ADR-0025) —
-  // loop bounds never come from unclamped input.
-  for (let offset = 0; offset < depth; offset += 1) {
-    const target = addDays(today, offset);
-    if (existing.has(target)) {
-      continue;
-    }
-    const weekday = isoWeekdayOf(target);
-    if (!isWeekday(weekday)) {
-      // Unreachable by construction, but the engines demand the guard at
-      // untyped boundaries (sudoku generate.ts TSDoc duty).
-      throw new RangeError(`derived weekday out of range for ${target}`);
-    }
-
-    let covered = false;
-    let lastReason = "no attempt made";
-    for (let attempt = 0; attempt < MAX_SEED_RETRIES_PER_DATE; attempt += 1) {
-      const seed = randomUint32();
-      let puzzle;
-      try {
-        puzzle = generateBinairo({ seed, weekday });
-      } catch (error) {
-        if (error instanceof BinairoGenerationError) {
-          lastReason = error.message;
-          continue;
-        }
-        throw error;
-      }
-      const verdict = validateBinairo(puzzle, weekday);
-      if (!verdict.approved) {
-        lastReason = `validator rejected: ${verdict.reasons.join(", ")}`;
+    // `depth` is already 1..30-clamped by remoteConfigSchema (ADR-0025) —
+    // loop bounds never come from unclamped input.
+    for (let offset = 0; offset < depth; offset += 1) {
+      const target = addDays(today, offset);
+      if (existing.has(target)) {
         continue;
       }
-      const content = binairoDailyContentSchema.safeParse(puzzle);
-      if (!content.success) {
-        // Deterministic shape drift — retrying other seeds cannot fix it.
-        // Fail closed for this date; the buffer drains and the alert fires.
-        lastReason = `content schema rejected: ${content.error.message}`;
+      const weekday = isoWeekdayOf(target);
+      if (!isWeekday(weekday)) {
+        // Unreachable by construction, but the engines demand the guard at
+        // untyped boundaries (sudoku generate.ts TSDoc duty).
+        throw new RangeError(`derived weekday out of range for ${target}`);
+      }
+
+      let covered = false;
+      let lastReason = "no attempt made";
+      for (let attempt = 0; attempt < MAX_SEED_RETRIES_PER_DATE; attempt += 1) {
+        const seed = randomUint32();
+        let puzzle;
+        try {
+          puzzle = generateBinairo({ seed, weekday });
+        } catch (error) {
+          if (error instanceof BinairoGenerationError) {
+            lastReason = error.message;
+            continue;
+          }
+          throw error;
+        }
+        const verdict = validateBinairo(puzzle, weekday);
+        if (!verdict.approved) {
+          lastReason = `validator rejected: ${verdict.reasons.join(", ")}`;
+          continue;
+        }
+        const content = binairoDailyContentSchema.safeParse(puzzle);
+        if (!content.success) {
+          // Deterministic shape drift — retrying other seeds cannot fix it.
+          // Fail closed for this date; the buffer drains and the alert fires.
+          lastReason = `content schema rejected: ${content.error.message}`;
+          break;
+        }
+        const inserted = await insertDailyPuzzle(db, {
+          game: "binairo",
+          date: target,
+          seed,
+          content: content.data,
+        });
+        if (inserted) {
+          generated += 1;
+        }
+        // A lost ON CONFLICT race still means the date is covered.
+        covered = true;
         break;
       }
-      const inserted = await insertDailyPuzzle(db, {
-        game: "binairo",
-        date: target,
-        seed,
-        content: content.data,
-      });
-      if (inserted) {
-        generated += 1;
+      if (!covered) {
+        failures.push({ date: target, reason: lastReason });
       }
-      // A lost ON CONFLICT race still means the date is covered.
-      covered = true;
-      break;
     }
-    if (!covered) {
-      failures.push({ date: target, reason: lastReason });
-    }
-  }
 
-  return { generated, depth: await bufferDepth(db, "binairo"), failures };
+    return { generated, depth: await bufferDepth(db, "binairo"), failures };
+  } catch (thrown) {
+    // The trailing `bufferDepth` read is inside the try on purpose: it can
+    // throw AFTER a full week was written, which is the case that most
+    // understates the run.
+    throw new TopUpAbortedError({ generated, failures }, thrown);
+  }
 }
 
 /**
@@ -205,88 +242,94 @@ export async function topUpSudokuBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  const today = await todaySaoPaulo(db);
-  const existing = new Set(await listBufferedDates(db, "sudoku", today));
+  // Hoisted OUT of the try so a throw can still report them (see
+  // `TopUpAbortedError`); the loop below is unchanged.
   let generated = 0;
   const failures: { date: string; reason: string }[] = [];
-  let runBudget = MAX_SUDOKU_SEED_RETRIES_PER_RUN;
+  try {
+    const today = await todaySaoPaulo(db);
+    const existing = new Set(await listBufferedDates(db, "sudoku", today));
+    let runBudget = MAX_SUDOKU_SEED_RETRIES_PER_RUN;
 
-  // `depth` is already 1..30-clamped by remoteConfigSchema (ADR-0025) —
-  // loop bounds never come from unclamped input.
-  for (let offset = 0; offset < depth; offset += 1) {
-    const target = addDays(today, offset);
-    // Covered dates are checked FIRST, so a healthy buffer never spends the
-    // run budget and a single hole is always filled.
-    if (existing.has(target)) {
-      continue;
-    }
-    if (runBudget <= 0) {
-      failures.push({ date: target, reason: RUN_BUDGET_EXHAUSTED });
-      continue;
-    }
-    const weekday = isoWeekdayOf(target);
-    if (!isWeekday(weekday)) {
-      // Unreachable by construction, but the engines demand the guard at
-      // untyped boundaries (sudoku generate.ts TSDoc duty).
-      throw new RangeError(`derived weekday out of range for ${target}`);
-    }
-    // validateSudoku takes CRITERIA, not a weekday; generateDailySudoku
-    // does its own lookup, so this is the one place the table is read here.
-    const criteria = sudokuCriteriaForWeekday(weekday);
+    // `depth` is already 1..30-clamped by remoteConfigSchema (ADR-0025) —
+    // loop bounds never come from unclamped input.
+    for (let offset = 0; offset < depth; offset += 1) {
+      const target = addDays(today, offset);
+      // Covered dates are checked FIRST, so a healthy buffer never spends the
+      // run budget and a single hole is always filled.
+      if (existing.has(target)) {
+        continue;
+      }
+      if (runBudget <= 0) {
+        failures.push({ date: target, reason: RUN_BUDGET_EXHAUSTED });
+        continue;
+      }
+      const weekday = isoWeekdayOf(target);
+      if (!isWeekday(weekday)) {
+        // Unreachable by construction, but the engines demand the guard at
+        // untyped boundaries (sudoku generate.ts TSDoc duty).
+        throw new RangeError(`derived weekday out of range for ${target}`);
+      }
+      // validateSudoku takes CRITERIA, not a weekday; generateDailySudoku
+      // does its own lookup, so this is the one place the table is read here.
+      const criteria = sudokuCriteriaForWeekday(weekday);
 
-    let covered = false;
-    let lastReason = "no attempt made";
-    for (
-      let attempt = 0;
-      attempt < MAX_SUDOKU_SEED_RETRIES_PER_DATE && runBudget > 0;
-      attempt += 1
-    ) {
-      // Every path below either covers the date or spends exactly one unit
-      // of the run budget. That exhaustiveness is what makes the ~8 s run
-      // bound a property of the code rather than of a probability.
-      const seed = randomUint32();
-      let puzzle;
-      try {
-        puzzle = generateDailySudoku({ seed, weekday });
-      } catch (error) {
-        if (error instanceof SudokuGenerationError) {
-          lastReason = error.message;
+      let covered = false;
+      let lastReason = "no attempt made";
+      for (
+        let attempt = 0;
+        attempt < MAX_SUDOKU_SEED_RETRIES_PER_DATE && runBudget > 0;
+        attempt += 1
+      ) {
+        // Every path below either covers the date or spends exactly one unit
+        // of the run budget. That exhaustiveness is what makes the ~8 s run
+        // bound a property of the code rather than of a probability.
+        const seed = randomUint32();
+        let puzzle;
+        try {
+          puzzle = generateDailySudoku({ seed, weekday });
+        } catch (error) {
+          if (error instanceof SudokuGenerationError) {
+            lastReason = error.message;
+            runBudget -= 1;
+            continue;
+          }
+          throw error;
+        }
+        const verdict = validateSudoku(puzzle, criteria);
+        if (!verdict.approved) {
+          lastReason = `validator rejected: ${verdict.reasons.join(", ")}`;
           runBudget -= 1;
           continue;
         }
-        throw error;
-      }
-      const verdict = validateSudoku(puzzle, criteria);
-      if (!verdict.approved) {
-        lastReason = `validator rejected: ${verdict.reasons.join(", ")}`;
-        runBudget -= 1;
-        continue;
-      }
-      const content = sudokuDailyContentSchema.safeParse(puzzle);
-      if (!content.success) {
-        // Deterministic shape drift — retrying other seeds cannot fix it.
-        // Fail closed for this date; the buffer drains and the alert fires.
-        lastReason = `content schema rejected: ${content.error.message}`;
-        runBudget -= 1;
+        const content = sudokuDailyContentSchema.safeParse(puzzle);
+        if (!content.success) {
+          // Deterministic shape drift — retrying other seeds cannot fix it.
+          // Fail closed for this date; the buffer drains and the alert fires.
+          lastReason = `content schema rejected: ${content.error.message}`;
+          runBudget -= 1;
+          break;
+        }
+        const inserted = await insertDailyPuzzle(db, {
+          game: "sudoku",
+          date: target,
+          seed,
+          content: content.data,
+        });
+        if (inserted) {
+          generated += 1;
+        }
+        // A lost ON CONFLICT race still means the date is covered.
+        covered = true;
         break;
       }
-      const inserted = await insertDailyPuzzle(db, {
-        game: "sudoku",
-        date: target,
-        seed,
-        content: content.data,
-      });
-      if (inserted) {
-        generated += 1;
+      if (!covered) {
+        failures.push({ date: target, reason: lastReason });
       }
-      // A lost ON CONFLICT race still means the date is covered.
-      covered = true;
-      break;
     }
-    if (!covered) {
-      failures.push({ date: target, reason: lastReason });
-    }
-  }
 
-  return { generated, depth: await bufferDepth(db, "sudoku"), failures };
+    return { generated, depth: await bufferDepth(db, "sudoku"), failures };
+  } catch (thrown) {
+    throw new TopUpAbortedError({ generated, failures }, thrown);
+  }
 }

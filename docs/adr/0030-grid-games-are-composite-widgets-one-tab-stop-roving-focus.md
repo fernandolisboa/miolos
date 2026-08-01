@@ -73,11 +73,19 @@ is available" buys us.
 
 5. **Selection and focus are one concept, enforced mechanically.** The
    selected-cell style and `:focus-visible` share a **single CSS
-   declaration block**, so the two cannot drift apart in a later edit;
-   the roving `tabindex` already guarantees the focused cell is the
-   selected one. A layout effect moves DOM focus after a selection
-   change **only when focus is already inside the board**, so a control
-   elsewhere on the page cannot steal the caret.
+   declaration block**, so the two cannot drift apart in a later edit.
+   The binding itself runs in both directions, and the roving `tabindex`
+   is not it: on its own it names cell 0 as the tab stop while nothing
+   is selected, which is a caret that cannot write. So **a cell that
+   receives focus selects itself** (`onFocus` is the only writer of the
+   selection), and **a pointer press focuses the cell it selected** —
+   explicitly, because WebKit does not focus a `<button>` on click and
+   would otherwise leave the board's keyboard contract dead after a tap.
+   A layout effect closes the loop the other way, moving DOM focus after
+   a selection change **only when focus is already inside the board**,
+   so a control elsewhere on the page cannot steal the caret. Selecting
+   the cell already selected returns the same state, so the effect and
+   the focus handler cannot trade renders.
 
 6. **The caret is an additive carrier.** It is drawn as an `outline`
    inset inside the cell's own border, while the cell's chromatic state

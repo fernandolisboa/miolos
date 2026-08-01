@@ -226,6 +226,25 @@ function buildBody(record: PlayRecord): string | undefined {
     case "binairo":
     case "sudoku":
       return gridBody(record);
+    default: {
+      // A new member of `playRecordSchema` with no case here is a RED
+      // TYPECHECK, never a dropped completion (finding
+      // `buildbody-switch-fails-open-for-a-new-game`). Falling off the end
+      // returns `undefined`, which `syncRecord` reads as "no result to post"
+      // and answers with `settle(record, "rejected")` — permanently clearing
+      // `pendingSync`, so #25's Nonogram would silently lose the day for the
+      // streak. TS cannot catch that on its own: `string | undefined` is a
+      // legitimate return here (`gridBody` on a record with no grid), so
+      // TS2366 never fires. This assignment is what fails instead — the same
+      // guarantee `storedSolution` gets for free in
+      // apps/api/app/completions/route.ts, where the return type excludes
+      // undefined. An unhandled game throws, keeping the record queued
+      // rather than settling it.
+      const unhandled: never = record;
+      throw new Error(
+        `no completion body builder for ${JSON.stringify(unhandled)}`,
+      );
+    }
   }
 }
 

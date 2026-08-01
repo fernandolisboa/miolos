@@ -343,6 +343,21 @@ describe("status", () => {
   });
 });
 
+describe("select", () => {
+  const initial = initSudokuPlayState(daily());
+
+  it("returns the SAME state when the caret does not move", () => {
+    const at = play(initial, { type: "select", index: 40 });
+
+    // Focus is what dispatches `select` (board.tsx) and the roving-focus
+    // layout effect focuses `selected` after every change, so re-selecting
+    // the cell already selected has to be a genuine no-op — otherwise the
+    // two trade a render on every arrow key.
+    expect(sudokuPlayReducer(at, { type: "select", index: 40 })).toBe(at);
+    expect(sudokuPlayReducer(at, { type: "select", index: 41 })).not.toBe(at);
+  });
+});
+
 describe("move-selection", () => {
   const initial = initSudokuPlayState(daily());
 

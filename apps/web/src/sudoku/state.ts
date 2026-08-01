@@ -130,7 +130,14 @@ export function sudokuPlayReducer(
       return restore(state, action.record, action.now);
 
     case "select":
-      return { ...state, selected: action.index };
+      // The SAME state when the caret does not move, exactly like
+      // `clear-cell` below — and here it is load-bearing rather than a
+      // saving: focus is what dispatches `select` (board.tsx), while the
+      // roving-focus layout effect focuses `selected` after every change,
+      // so the two would otherwise trade a render on every arrow key.
+      return state.selected === action.index
+        ? state
+        : { ...state, selected: action.index };
 
     case "move-selection":
       return { ...state, selected: moved(state.selected, action) };

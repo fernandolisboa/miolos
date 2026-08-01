@@ -12,6 +12,7 @@ import type { NextRequest } from "next/server";
 import { getDb } from "../../../src/db";
 import {
   effectiveThreshold,
+  TopUpAbortedError,
   topUpBinairoBuffer,
   topUpSudokuBuffer,
   type TopUpResult,
@@ -56,6 +57,10 @@ type CronGame = keyof CronPublishResponse["games"];
  * `BUFFER_ALERT_THRESHOLD = 4` on a default depth of 7 the victim drains
  * one day per occurrence and pages only after three-plus consecutive days
  * (plan 018 §7.2).
+ *
+ * The result on a throw is still the run that happened, not a zeroed one:
+ * `depth` is re-read from the database, and `generated`/`failures` are the
+ * counters the top-up carried out on `TopUpAbortedError`.
  */
 async function runTopUp(
   db: Db,
@@ -71,7 +76,19 @@ async function runTopUp(
     // threshold gate below still sees this game's real coverage. If that
     // read throws too the database is gone: 0 forces the 500 and the alert.
     const depth = await bufferDepth(db, game).catch(() => 0);
-    return { generated: 0, depth, failures: [], error: String(thrown) };
+    // A throw does NOT mean nothing was written: there is no transaction
+    // around the loop, so the rows inserted before it are durable, and
+    // `TopUpAbortedError` is what carries their count out of the rejected
+    // promise (finding `cron-generated-understated-on-partial-failure`).
+    // `error` stays the ORIGINAL failure — never the wrapper's own message,
+    // which is the operator's only string here.
+    const aborted = thrown instanceof TopUpAbortedError ? thrown : undefined;
+    return {
+      generated: aborted?.partial.generated ?? 0,
+      depth,
+      failures: aborted?.partial.failures ?? [],
+      error: String(aborted ? aborted.cause : thrown),
+    };
   }
 }
 

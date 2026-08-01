@@ -38,8 +38,12 @@ let ctx: Awaited<ReturnType<typeof createTestDb>>;
 // Per-game insert sabotage for the fault-isolation test (plan 018 §7.2). A
 // Set rather than a mutable string keeps the mock free of `as`, and the
 // module is spread from the ACTUAL one so every other export stays real.
-const { insertFailures } = vi.hoisted(() => ({
+const { insertFailures, insertFailAfter } = vi.hoisted(() => ({
   insertFailures: new Set<string>(),
+  // The PARTIAL sabotage: this many inserts succeed for that game, every one
+  // after it rejects — the only way to reach a run that wrote durable rows
+  // and then threw (T-API-S15b).
+  insertFailAfter: new Map<string, number>(),
 }));
 
 vi.mock("../src/db", () => ({
@@ -56,6 +60,13 @@ vi.mock("@miolos/db/publishing", async (importOriginal) => {
       const [, row] = args;
       if (insertFailures.has(row.game)) {
         return Promise.reject(new Error(`insert sabotaged for ${row.game}`));
+      }
+      const budget = insertFailAfter.get(row.game);
+      if (budget !== undefined) {
+        if (budget <= 0) {
+          return Promise.reject(new Error(`insert sabotaged for ${row.game}`));
+        }
+        insertFailAfter.set(row.game, budget - 1);
       }
       return actual.insertDailyPuzzle(...args);
     },
@@ -109,6 +120,7 @@ beforeEach(async () => {
   await ctx.db.execute(sql`truncate table daily_puzzles`);
   await ctx.db.execute(sql`truncate table remote_config`);
   insertFailures.clear();
+  insertFailAfter.clear();
   logLines.length = 0;
   vi.stubEnv("CRON_SECRET", SECRET);
 });
@@ -327,6 +339,37 @@ describe("GET /cron/publish top-up", () => {
     });
     expect(await rowsFor("binairo")).toHaveLength(0);
     expect(await rowsFor("sudoku")).toHaveLength(7);
+  }, 30_000);
+
+  it("T-API-S15b: a top-up that wrote rows and then threw reports the rows it wrote", async () => {
+    // Three dates covered, then the fourth insert rejects and propagates out
+    // of both loops. Nothing rolls the first three back — `insertDailyPuzzle`
+    // is one autocommitted statement and no transaction spans the loop — so
+    // reporting `generated: 0` would describe a state that never existed
+    // (finding `cron-generated-understated-on-partial-failure`).
+    insertFailAfter.set("binairo", 3);
+
+    const response = await authorizedRun();
+
+    expect(response.status).toBe(500);
+    const body = cronPublishResponseSchema.parse(await response.json());
+    expect(body.games.binairo).toMatchObject({
+      generated: 3,
+      depth: 3,
+      failures: [],
+    });
+    // The ORIGINAL failure, not the wrapper that carried the counters.
+    expect(body.games.binairo.error).toContain("insert sabotaged for binairo");
+    expect(await rowsFor("binairo")).toHaveLength(3);
+    // The other game is untouched, and the log line the operator queries
+    // carries the same number the body does.
+    expect(body.games.sudoku.generated).toBe(7);
+    const binairoLine: unknown = JSON.parse(logLines[0] ?? "null");
+    expect(binairoLine).toMatchObject({
+      event: "cron-publish",
+      game: "binairo",
+      generated: 3,
+    });
   }, 30_000);
 
   it("T-API-S8: one structured log line per game, in the shape the log query reads", async () => {
