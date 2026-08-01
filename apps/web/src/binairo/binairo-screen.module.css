@@ -1,0 +1,542 @@
+/* The /binairo play screen — desktop-first per f3-binairo-desktop, mobile
+   per f4-binairo-mobile. Every rule is anchored on a local class: Next
+   compiles CSS Modules in css-loader's `pure` mode, so a bare type selector
+   (`a:hover`, `button`) either fails the build or leaks globally
+   (plan 017 risk 15). Rotations are static transforms, never animation. */
+
+/* >1040px — F3. 80 + 330 + 72 + (8×52 + 7×4 + 2×16 + 2) + 80 = 1040px is
+   the hard minimum this composition needs. Below it the fixed 52px cells
+   cannot shrink, so the two-column layout overflows — and neither scanned
+   viewport (1440×900, 390×844) is in that band, so CI would never catch it.
+
+   Named areas rather than `display: contents`: the reflow has to move the
+   timer and the progress readout ACROSS subtrees (.statsCard is a child of
+   the sidebar column, .topBar its sibling), which `display: contents`
+   cannot do. Both readouts therefore exist twice and one of each pair is
+   hidden per viewport — the shipped .ctaLong/.ctaShort precedent. */
+.page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 330px 1fr;
+  column-gap: 72px;
+  grid-template-rows: auto auto auto 1fr auto;
+  grid-template-areas:
+    "bar   bar"
+    "title board"
+    "stats board"
+    "free  board"
+    "hint  board";
+  padding: var(--space-11) 80px;
+}
+
+/* Per-screen hover accent — anchored on .page, never a bare `a:hover`,
+   which would turn Hoje's hover green (plan 017 §12.5). */
+.page a:hover {
+  color: var(--accent-binairo);
+}
+
+/* ── top bar ─────────────────────────────────────────────────────────── */
+
+.topBar {
+  grid-area: bar;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.back {
+  font: var(--text-button);
+  text-decoration: none;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 600;
+  transform: rotate(-1deg);
+}
+
+.topDate {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* Mobile-only members of the top bar; the media queries below swap them in. */
+.barKicker,
+.timerBar,
+.progressBar {
+  display: none;
+}
+
+.barKicker {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-binairo);
+}
+
+.timerBar {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── title block ─────────────────────────────────────────────────────── */
+
+.titleBlock {
+  grid-area: title;
+  padding-top: 32px;
+}
+
+.titleKicker {
+  margin: 0;
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-binairo);
+}
+
+/* The wrapper is structural, not cosmetic: it makes
+   `h1.previousElementSibling` null, which is what stands impeccable's
+   hero-eyebrow-chip and kicker-above-heading rules down (§12.2). */
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font: var(--text-screen-title);
+}
+
+.progressBar {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.rules {
+  margin: 18px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* ── stats card ──────────────────────────────────────────────────────── */
+
+.statsCard {
+  position: relative;
+  grid-area: stats;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: 30px;
+  padding: var(--space-5) 22px;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent-binairo) 22%, transparent);
+  transform: rotate(-0.5deg);
+}
+
+/* Tape geometry from F3:27 — Hoje's shipped .tape is CENTRED, so copying
+   it produces a visibly wrong tape here. */
+.tape {
+  position: absolute;
+  top: -10px;
+  left: 32px;
+  width: 64px;
+  height: 20px;
+  border-radius: var(--radius-tape);
+  background: color-mix(in srgb, var(--accent-binairo) 32%, transparent);
+  transform: rotate(-3deg);
+}
+
+.statRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.statLabel {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-binairo);
+}
+
+.timerCard {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressCard {
+  font-size: 14px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── hint ────────────────────────────────────────────────────────────── */
+
+/* The "free" grid row between .stats and .hint is a 1fr spacer with no
+   element in it — that is what pins the button to the bottom of the
+   sidebar, as F3 draws it. */
+.hint {
+  grid-area: hint;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 0;
+  background: var(--accent-binairo);
+  color: var(--paper-desk);
+  border: 1.5px solid var(--accent-binairo);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent-binairo) 25%, transparent);
+  font: var(--text-button);
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-settle),
+    box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+/* Pressed = the element slides 1px toward its shadow and the shadow shrinks
+   by the same 1px (DESIGN.md, verbatim). --shadow-sm is 3px, hence 2px. */
+.hint:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0
+    color-mix(in srgb, var(--accent-binairo) 25%, transparent);
+}
+
+/* Exhausted / unavailable (§10.5, undrawn in the frames). Three carriers —
+   fill, border and label — so the state survives grayscale. */
+.hintUsed {
+  background: var(--paper-card);
+  border: 1.5px solid var(--line);
+  color: var(--ink-2);
+  box-shadow: none;
+  cursor: default;
+}
+
+.hintUsed:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.hint:focus-visible {
+  outline: 2px solid var(--accent-binairo);
+  outline-offset: 2px;
+}
+
+/* ── board ───────────────────────────────────────────────────────────── */
+
+.board {
+  grid-area: board;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 32px;
+}
+
+.gridCard {
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg)
+    color-mix(in srgb, var(--accent-binairo) 20%, transparent);
+  padding: var(--space-4);
+  transform: rotate(0.4deg);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(8, 52px);
+  grid-auto-rows: 52px;
+  gap: 4px;
+  /* Scoped to the board so a paint drag never fights the page scroll, and
+     the rest of the screen still scrolls normally (§8.2). */
+  touch-action: none;
+}
+
+.cell {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  background: var(--paper-desk);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-cell);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-settle);
+}
+
+.cell:active {
+  transform: translate(1px, 1px);
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--accent-binairo);
+  outline-offset: 2px;
+}
+
+.cellGiven {
+  background: var(--paper-tint);
+  font-weight: 600;
+  cursor: default;
+}
+
+.cellEntered {
+  border-color: color-mix(in srgb, var(--accent-binairo) 50%, transparent);
+  color: var(--accent-binairo);
+  font-weight: 500;
+}
+
+/* Undrawn in the frames — designed here (deviation 10). --accent-app is
+   scoped to "streak, promo" in DESIGN.md, so using the sealing-wax red as
+   the error colour is a third role: it is the only red in the palette, and
+   it is paired with aria-invalid and a doubled hairline so colour is never
+   the sole carrier. */
+.cellViolating {
+  border-color: var(--accent-app);
+  color: var(--accent-app);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1.5px var(--accent-app);
+}
+
+/* Undrawn — the revealed cell settles in over --duration-fast. */
+.cellHinted {
+  background: color-mix(in srgb, var(--accent-binairo) 10%, var(--paper-desk));
+  border-color: var(--accent-binairo);
+  color: var(--accent-binairo);
+  font-weight: 600;
+}
+
+/* ── controls ────────────────────────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: 30px;
+}
+
+.control {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-card);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-settle),
+    box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--accent-binairo);
+  outline-offset: 2px;
+}
+
+.controlDigit {
+  width: 64px;
+  height: 52px;
+  border: 1.5px solid var(--accent-binairo);
+  color: var(--accent-binairo);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent-binairo) 22%, transparent);
+}
+
+.controlDigit:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0
+    color-mix(in srgb, var(--accent-binairo) 22%, transparent);
+}
+
+/* Paint-active inverts (undrawn): the button becomes the ink it paints. */
+.controlDigitActive {
+  background: var(--accent-binairo);
+  color: var(--paper-desk);
+}
+
+.controlErase {
+  height: 52px;
+  padding: 0 22px;
+  border: 1.5px solid var(--line);
+  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  /* Ink-tinted, NOT accent-tinted: a recorded exception to DESIGN.md's
+     "hard shadow rgba(accent, .2–.3)". It is the one shadow in the whole
+     frame set that is neutral (F3:51, F4:37), because `apagar` is a neutral
+     control rather than a game-accent one. */
+  box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.controlErase:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.controlEraseActive {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
+  color: var(--paper-desk);
+}
+
+.affordance {
+  margin-left: var(--space-3);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.hintExplain {
+  margin: var(--space-4) 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell,
+  .control,
+  .hint {
+    transition: none;
+  }
+}
+
+/* ≤1040px — single column, desktop type, 52px cells:
+   8×52 + 7×4 + 32 padding + 2 border = 478px, comfortable at any width
+   ≥ 520px. The sidebar's card folds into the top bar and the title row. */
+@media (max-width: 1040px) {
+  .page {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas:
+      "bar"
+      "title"
+      "board"
+      "hint";
+  }
+
+  .topBar {
+    min-height: var(--touch-target-min);
+  }
+
+  .back {
+    padding: 10px 10px 10px 0;
+  }
+
+  .statsCard,
+  .wordmark,
+  .topDate,
+  .titleKicker {
+    display: none;
+  }
+
+  .barKicker,
+  .timerBar,
+  .progressBar {
+    display: block;
+  }
+
+  .titleBlock {
+    padding-top: 10px;
+  }
+
+  .board {
+    padding-top: var(--space-4);
+  }
+
+  .hint {
+    margin-top: 14px;
+    padding: 0;
+    height: 50px;
+  }
+}
+
+/* ≤768px — F4's type and cell step-down only. Page padding is 20px, not
+   F4's 16px: impeccable's body-text-viewport-edge fires on a >40-char <p>
+   whose rect.left < 16, and the mobile rules paragraph (deviation 2) lands
+   exactly on 16.0 — one sub-pixel of layout rounding tips it red. Hoje
+   ships 20px for the same reason. */
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-5) var(--space-5) var(--space-6);
+  }
+
+  .title {
+    font-size: 34px;
+  }
+
+  .rules {
+    margin-top: var(--space-3);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .gridCard {
+    padding: 10px;
+    /* 5px 5px 0 is intentional: F4 draws the mobile board shadow between
+       --shadow-md and --shadow-lg; no token carries that value. */
+    box-shadow: 5px 5px 0
+      color-mix(in srgb, var(--accent-binairo) 20%, transparent);
+  }
+
+  .grid {
+    grid-template-columns: repeat(8, 38px);
+    grid-auto-rows: 38px;
+    gap: 3px;
+  }
+
+  .cell {
+    font-size: 18px;
+  }
+
+  .controls {
+    gap: 10px;
+    margin-top: var(--space-5);
+  }
+
+  .controlDigit {
+    flex: 1.4;
+    width: auto;
+    height: 60px;
+    font-size: 26px;
+  }
+
+  .controlErase {
+    flex: 1;
+    height: 60px;
+    padding: 0;
+  }
+
+  .affordance {
+    display: none;
+  }
+}

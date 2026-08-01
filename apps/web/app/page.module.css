@@ -165,6 +165,13 @@
      hrefs land. */
 }
 
+/* Binairo's CTA is the only live one so far (#18); the attribute selector
+   is what keeps the pointer off the three placeholders without a second
+   class. */
+.cta[href] {
+  cursor: pointer;
+}
+
 .cta:hover {
   color: var(--paper-desk);
 }

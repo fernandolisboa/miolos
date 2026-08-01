@@ -7,7 +7,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@miolos/ui", "@miolos/core"],
+  // Workspace packages ship TypeScript source, so Next compiles them here.
+  // `@miolos/db` is server-only in practice (src/db.ts carries the
+  // `server-only` guard) and `@miolos/games` ships the Binairo solver the
+  // hint and the local validation need on the client (ADR-0027).
+  transpilePackages: [
+    "@miolos/ui",
+    "@miolos/core",
+    "@miolos/db",
+    "@miolos/games",
+  ],
   poweredByHeader: false,
   headers: () =>
     Promise.resolve([
