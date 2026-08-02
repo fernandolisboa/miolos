@@ -142,12 +142,20 @@
   flex: 1;
 }
 
+/* One kicker per game card, each with its own `--accent` — so this rule was a
+   LIVE AA failure on the Termo card before ADR-0041, not a future one.
+   Mustard #C08A1E (L 0.29477163) on `--paper-card` #FBF7EF (L 0.93262753) is
+   (0.93262753 + 0.05) / (0.29477163 + 0.05) = **2.8501:1** at 11px, against
+   PRODUCT.md's 4.5 floor, and 2.8501:1 is the ceiling over the whole paper
+   family. `--ink-2` #6E6659 (L 0.13539008) on card is (0.93262753 + 0.05) /
+   (0.13539008 + 0.05) = **5.3003:1**. The accent stays on each card's washi
+   tape and hard shadow, which are shapes. */
 .kicker {
   margin: 0;
   font: var(--text-kicker);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 .cardTitle {
@@ -172,13 +180,18 @@
   padding: var(--space-3) 0;
   background: var(--accent);
   /* Per card, from the same `play/accent.ts` pair `page.tsx` already sets
-     `--accent` from, with the shipped desk ink as the fallback. Only the
-     Nonogram card moves: desk on terracotta is 4.318:1, an AA failure at
-     14px/600, and `--paper-card` is 4.506:1 (step-6 finding ISS-A2 — the same
-     one-token remedy as `nonogram-board.module.css:461-463`). The other three
-     cards resolve to `var(--paper-desk)` and are unchanged to the byte —
-     including Termo, whose 2.731:1 no paper token can rescue and which #68
-     carries as a palette decision. */
+     `--accent` from, with the shipped desk ink as the fallback. Two of the
+     four cards move. Nonogram: desk on terracotta is 4.318:1, an AA failure
+     at 14px/600, and `--paper-card` is 4.5063:1 (step-6 finding ISS-A2 — the
+     same one-token remedy as `nonogram-board.module.css:461-463`). Termo:
+     desk on mustard is **2.7311:1** and card would be **2.8501:1**, the
+     ceiling over the whole paper family, so no paper rescues it — this is
+     #68's headline row, and ADR-0041 closes it by widening the property's
+     range from "a paper token" to "an ink legible on this accent". `--ink`
+     #211D19 (L 0.01272250) ON mustard #C08A1E (L 0.29477163) is
+     (0.29477163 + 0.05) / (0.01272250 + 0.05) = **5.4968:1**. Sudoku
+     (7.5113:1) and Binairo (5.3066:1) keep `var(--paper-desk)` and are
+     unchanged to the byte. */
   color: var(--ink-on-accent, var(--paper-desk));
   font: var(--text-button);
   border-radius: var(--radius);
@@ -215,11 +228,18 @@
   text-decoration: none;
 }
 
+/* The RING keeps the accent and the WORD does not (ADR-0041 decisions 1 and
+   5). The ring outlines "Feito" beside a tabular result, which carries the
+   whole message, so WCAG 1.4.11's decorative exemption applies and the ring's
+   **2.8501:1** on card paper (mustard L 0.29477163 against `--paper-card`
+   L 0.93262753) is written down rather than left to be rediscovered. The text
+   was that same 2.8501:1 at 11px and is now `--ink` #211D19 (L 0.01272250):
+   (0.93262753 + 0.05) / (0.01272250 + 0.05) = **15.6663:1**. */
 .doneChip {
   border: 1.5px solid var(--accent);
   border-radius: var(--radius);
   padding: 5px var(--space-3);
-  color: var(--accent);
+  color: var(--ink);
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;

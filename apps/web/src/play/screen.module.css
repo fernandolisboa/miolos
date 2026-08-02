@@ -51,9 +51,30 @@
 }
 
 /* Per-screen hover accent — anchored on .page, never a bare `a:hover`,
-   which would turn Hoje's hover green (plan 017 §12.5). */
+   which would turn Hoje's hover green (plan 017 §12.5).
+
+   ADR-0041: the accent moved off the WORD and onto a rule under it. The word
+   is `--ink` #211D19 on `--paper-desk` #F7F2E9 — L 0.01272250 and 0.89161610,
+   so (0.89161610 + 0.05) / (0.01272250 + 0.05) = **15.0124:1**. The state's
+   carrier is the underline's PRESENCE, not its hue.
+
+   ACCEPTED EXCEPTION, with its ratio rather than a claim of compliance: the
+   2px mustard rule is `--accent-termo` #C08A1E (L 0.29477163) on desk paper,
+   (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1**, below WCAG
+   1.4.11's 3:1 non-text floor. Accepted on two grounds, neither of which is
+   "it complies" — hover is a POINTER-ONLY affordance that duplicates what the
+   link already carries at 15.0124:1 and is not a state a user must perceive
+   to operate the control; and a solid band appearing where there was none is
+   a change of GEOMETRY, so the state survives greyscale. `:focus-visible`,
+   which 2.4.7 and 1.4.11 do govern, is `--ink` and rests on none of this.
+   This line may not be cited to put a mustard rule under a STATE-BEARING
+   boundary. */
 .page a:hover {
-  color: var(--accent);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 /* ── top bar ─────────────────────────────────────────────────────────── */
@@ -91,11 +112,18 @@
   display: none;
 }
 
+/* `--ink-2`, not `--accent` (ADR-0041): this sheet is SHARED, so the kicker
+   renders in whichever accent the game supplies, and mustard #C08A1E on
+   `--paper-desk` is (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1**
+   at 11px/400 — an AA failure against PRODUCT.md's 4.5 floor. `--ink-2`
+   #6E6659 (L 0.13539008) is (0.89161610 + 0.05) / (0.13539008 + 0.05) =
+   **5.0791:1**. The kicker stays a kicker on typography alone — 11px,
+   uppercase, 0.14em — which is PRODUCT.md principle 1. */
 .barKicker {
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 .timerBar {
@@ -112,12 +140,14 @@
   padding-top: 32px;
 }
 
+/* Same conversion, same arithmetic as `.barKicker` above: mustard on desk
+   paper is **2.7311:1** at 11px/600, `--ink-2` is **5.0791:1** (ADR-0041). */
 .titleKicker {
   margin: 0;
   font: var(--text-kicker);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 /* The wrapper is structural, not cosmetic: it makes
@@ -189,11 +219,17 @@
   justify-content: space-between;
 }
 
+/* On CARD paper, not desk, so the arithmetic differs from the two kickers
+   above (ADR-0041). Mustard #C08A1E on `--paper-card` #FBF7EF (L 0.93262753)
+   is (0.93262753 + 0.05) / (0.29477163 + 0.05) = **2.8501:1** — the ceiling
+   over the whole paper family, which is why no paper token was ever going to
+   rescue it. `--ink-2` #6E6659 on card is (0.93262753 + 0.05) /
+   (0.13539008 + 0.05) = **5.3003:1**. */
 .statLabel {
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 .timerCard {
