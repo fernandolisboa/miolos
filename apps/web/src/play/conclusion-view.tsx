@@ -13,7 +13,7 @@ import {
   routes,
   type Route,
 } from "../i18n";
-import { accentVar } from "./accent";
+import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { startCompletionSync } from "./sync";
@@ -95,8 +95,9 @@ export function ConclusionView({
   }, [date]);
 
   // Set on every branch's root, because the shared stylesheet reads
-  // `var(--accent)` throughout (plan 018 §5.2 edit 1).
-  const accent = { "--accent": accentVar(game) };
+  // `var(--accent)` and `var(--ink-on-accent, …)` throughout (plan 018 §5.2
+  // edit 1). The pair travels together — see `accent.ts`.
+  const accent = accentVars(game);
 
   const stored = record?.concluded === true ? record : undefined;
   // The record wins when it has one: on `recorded: false` the flush writes
@@ -270,12 +271,15 @@ export function ConclusionView({
         ) : (
           /* …and by the same rule, a CTA that goes to a game wears THAT
              game's accent — F5:66's own treatment for this exact button
-             (plan 018 S21, deviation 11). `--accent` is set on the element
+             (plan 018 S21, deviation 11). The pair is set on the element
              rather than the root so the rest of the screen keeps the accent
-             of the game being celebrated. */
+             of the game being celebrated — and so the LABEL follows the fill
+             it is painted on rather than the page it sits on, which is what
+             makes this button legible when it chains to Nonogram from the
+             shipped binairo and sudoku conclusions (step-6 finding ISS-A2). */
           <Link
             className={`${styles.cta} ${styles.ctaNext}`}
-            style={{ "--accent": accentVar(next.game) }}
+            style={accentVars(next.game)}
             href={next.route}
           >
             {messages.conclusion.ctaNext(messages.games[next.game].name)}

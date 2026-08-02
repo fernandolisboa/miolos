@@ -2,7 +2,7 @@ import type { SudokuTier } from "@miolos/games/sudoku";
 import Link from "next/link";
 
 import { formatLongDate, messages, routes } from "../i18n";
-import { accentVar } from "../play/accent";
+import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
 import { TimerReadout } from "../play/timer-readout";
 import { Board, BoardSkeleton } from "./board";
@@ -11,16 +11,18 @@ import styles from "./sudoku-board.module.css";
 import type { SudokuPlay } from "./use-sudoku-play";
 
 /**
- * The shared layout's per-screen accent, set inline because
- * `play/screen.module.css` reads `var(--accent)` throughout (plan 018 §5.2).
- * Ink-blue #2E4E7E: 7.84:1 on card paper and 7.51:1 on desk paper, but only
- * 2.00:1 against `--ink` — which is why the given/entered distinction leans
- * on the tint and the weight delta as well (§12.5).
+ * The shared layout's per-screen accent AND the ink that sits on an accent
+ * fill, set inline because `play/screen.module.css` reads both throughout
+ * (plan 018 §5.2). Ink-blue #2E4E7E: 7.84:1 on card paper and 7.51:1 on desk
+ * paper, but only 2.00:1 against `--ink` — which is why the given/entered
+ * distinction leans on the tint and the weight delta as well (§12.5). It
+ * resolves `--ink-on-accent` to the same `var(--paper-desk)` this screen has
+ * always painted, so #25's ISS-A2 fix leaves it unchanged to the byte.
  *
  * The four geometry properties ride on `.pageSudoku` instead — a class this
  * module owns, so no cascade order is involved (§12.2).
  */
-const ACCENT = { "--accent": accentVar("sudoku") };
+const ACCENT = accentVars("sudoku");
 
 const TOTAL_CELLS = 81;
 

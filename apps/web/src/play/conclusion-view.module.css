@@ -398,8 +398,10 @@
    on hover, but a bare `.cta:hover` (0,2,0) loses the cascade to
    `.page a:hover` (0,2,1) above, and the label would resolve to the SAME
    `--accent` as `.ctaNext`'s background — an invisible label at 1:1 contrast
-   for as long as the pointer is on it. (0,3,0) wins, and `.ctaNext` inherits
-   this colour because it declares none of its own. */
+   for as long as the pointer is on it. (0,3,0) wins. It stays `--paper-desk`
+   rather than `--ink-on-accent`, because THIS rule's subject is the button on
+   the `--ink` fill; the accent-filled variant re-states its own label colour
+   below at (0,4,0) so no source order decides it. */
 .page .cta:hover {
   color: var(--paper-desk);
 }
@@ -413,11 +415,31 @@
    THAT game's accent, which the component sets as `--accent` on this element
    — F5:66 draws exactly this button in the destination game's colour, and F6
    gives it the accent-tinted hard shadow. Paper-on-accent is the same pair
-   the hub's four play buttons already ship. */
+   the hub's four play buttons already ship.
+
+   The label colour is therefore the DESTINATION game's, not the page's, and
+   that is the whole reason `play/accent.ts` hands `--accent` and
+   `--ink-on-accent` out together: the component sets the pair on THIS element,
+   so both override what the page root supplies. This button renders on the
+   SHIPPED binairo and sudoku conclusions whenever the day still owes a
+   nonogram, where desk on terracotta measured 4.318:1 — a regression #25
+   causes on two screens it does not otherwise touch, because before #25
+   `playRoutes` had no nonogram and this button never rendered terracotta
+   anywhere (step-6 finding ISS-A2). `--paper-card` on the same fill is
+   4.506:1; the three other accents resolve to the shipped `--paper-desk` and
+   are unchanged to the byte. */
 .ctaNext {
   background: var(--accent);
+  color: var(--ink-on-accent, var(--paper-desk));
   box-shadow: var(--shadow-sm)
     color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* (0,4,0), so it beats `.page .cta:hover` (0,3,0) above on specificity rather
+   than on source order — the hover must not drop the destination game's ink
+   back to desk on a terracotta fill. */
+.page .cta.ctaNext:hover {
+  color: var(--ink-on-accent, var(--paper-desk));
 }
 
 .ctaNext:active {
@@ -481,7 +503,11 @@
   margin-top: var(--space-7);
   padding: 14px 26px;
   background: var(--accent);
-  color: var(--paper-desk);
+  /* The page root's game, since this button goes back into the game whose
+     conclusion is being read — see `.ctaNext` above for the pair, and
+     `play/accent.ts` for the per-game values. Terracotta measured 4.318:1 on
+     desk here too (ISS-A2). */
+  color: var(--ink-on-accent, var(--paper-desk));
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm)
     color-mix(in srgb, var(--accent) 25%, transparent);
@@ -495,7 +521,7 @@
 /* Same cascade, same fix: this one is on `.pageEmpty`, and its background is
    the accent too — it lost to `.page a:hover` on `main` as well. */
 .page .emptyCta:hover {
-  color: var(--paper-desk);
+  color: var(--ink-on-accent, var(--paper-desk));
 }
 
 .emptyCta:active {

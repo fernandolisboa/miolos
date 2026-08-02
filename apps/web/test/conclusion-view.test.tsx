@@ -855,10 +855,19 @@ describe("the conclusion's layout (tripwires)", () => {
     // the cascade and the chaining CTA's label goes 1:1 against itself under
     // the pointer. Anchoring the hover on `.page` (0,3,0) wins it back.
     // `impeccable detect` never exercises hover, so this is the only gate.
-    for (const cta of ["cta", "emptyCta"]) {
-      expect(decl(bodyOf(CSS, `.page .${cta}:hover`), "color")).toBe(
-        "var(--paper-desk)",
-      );
+    //
+    // The two labels resolve differently and that is the point: `.cta` sits on
+    // the `--ink` fill and keeps desk ink, while `.emptyCta` sits on the
+    // accent and reads `--ink-on-accent` so terracotta gets card paper
+    // (step-6 finding ISS-A2 — `ink-on-accent.test.ts` is that mechanism's
+    // own gate). Both are non-accent under the pointer, which is all this
+    // finding was ever about.
+    const HOVER: Readonly<Record<string, string>> = {
+      cta: "var(--paper-desk)",
+      emptyCta: "var(--ink-on-accent, var(--paper-desk))",
+    };
+    for (const [cta, color] of Object.entries(HOVER)) {
+      expect(decl(bodyOf(CSS, `.page .${cta}:hover`), "color")).toBe(color);
       // And the losing form is gone rather than merely outranked.
       expect(CSS).not.toMatch(new RegExp(`^\\s*\\.${cta}:hover`, "m"));
     }

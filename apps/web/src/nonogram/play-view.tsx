@@ -3,7 +3,7 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import Link from "next/link";
 
 import { formatLongDate, messages, routes } from "../i18n";
-import { accentVar } from "../play/accent";
+import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
 import { TimerReadout } from "../play/timer-readout";
 import { Board, BoardSkeleton } from "./board";
@@ -12,28 +12,37 @@ import styles from "./nonogram-board.module.css";
 import type { NonogramPlay } from "./use-nonogram-play";
 
 /**
- * The shared layout's per-screen accent, set inline because
- * `play/screen.module.css` reads `var(--accent)` throughout. Terracotta
+ * The shared layout's per-screen accent AND the ink that sits on it, set
+ * inline because `play/screen.module.css` reads both throughout. Terracotta
  * #B5563C: 4.32:1 against desk paper, which is what makes the filled cell read
  * as the picture with no rule at all — and why the caret is `--ink` rather
  * than the accent, since an accent caret on a filled cell would be 1:1 (§11.6).
  *
- * 4.32:1 IS BELOW WCAG AA FOR TEXT, and that is a stated trade rather than a
- * silence (plan 020 landmine N14, step-6 round-4 finding ISS-R4-3). Setting
- * `--accent` here makes the shared chrome's `.barKicker` (11px/400) and
- * `.titleKicker` (11px/600) render at a computed **4.318:1** on
- * `--paper-desk`, on `/nonogram` and — for `.barKicker` — on
- * `/nonogram/concluido`. It is not fixed here: `play/screen.module.css` ships
- * on `main` and renders `/binairo` and `/sudoku` too, so the fix is a change
- * to two shipped screens inside a Nonogram diff, and the token pair fails
- * worse elsewhere (termo's hub CTA is 2.731:1). Carried as **#68**, with every
- * measured pair. `impeccable detect` in URL mode cannot see any of it, which
- * is exactly why the figure is written down.
+ * 4.32:1 IS BELOW WCAG AA FOR TEXT, and step-6 finding ISS-A2 measured it on
+ * six surfaces. The pair splits cleanly and only one half is fixable without a
+ * palette decision:
+ *
+ * - **Fixed here — desk ink ON a terracotta FILL.** `screen.hint` (14px/600)
+ *   measured 4.318:1; `--ink-on-accent` resolves it to `--paper-card` at
+ *   4.506:1, the identical one-token remedy `nonogram-board.module.css:461-463`
+ *   already applies to `.controlActive`. Binairo and Sudoku resolve the same
+ *   property to `--paper-desk` and are unchanged to the byte.
+ * - **Not fixed here — terracotta TEXT on desk paper.** `.barKicker`
+ *   (11px/400) and `.titleKicker` (11px/600) still render at a computed
+ *   **4.318:1**, on `/nonogram` and — for `.barKicker` — on
+ *   `/nonogram/concluido`, as does the conclusion's 17px `.chipDone .chipName`
+ *   at **3.969:1**. Only darkening `--accent-nonogram` fixes those, which
+ *   changes the Ateliê winner's chosen palette and decides Termo (2.731:1) at
+ *   the same time. That is a design decision, not a bug fix, and it is filed
+ *   with every measured figure as **#68** (plan 020 landmine N14).
+ *
+ * `impeccable detect` in URL mode cannot see any of it, which is exactly why
+ * the figures are written down.
  *
  * The geometry custom properties ride on `.pageNonogram` instead — a class
  * this module owns, so no cascade order is involved.
  */
-const ACCENT = { "--accent": accentVar("nonogram") };
+const ACCENT = accentVars("nonogram");
 
 /**
  * A readout placeholder's content. An EMPTY element has no line box at all and
