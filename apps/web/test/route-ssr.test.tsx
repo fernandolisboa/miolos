@@ -1,6 +1,6 @@
 /**
  * The SSR gate for every route `impeccable`'s preflight fetches (plan 018
- * §12.8, `.github/workflows/impeccable.yml`). One suite, five paths, and the
+ * §12.8, `.github/workflows/impeccable.yml`). One suite, every path, and the
  * two properties that job asserts against a live deployment, asserted here
  * against the page shells themselves: the route server-renders WITHOUT
  * THROWING, and the markup carries the marker attribute proving the screen we
@@ -32,9 +32,11 @@
 import {
   dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
+  dailyTermoResponseSchema,
   type DailyBinairoResponse,
   type DailyNonogramResponse,
   type DailySudokuResponse,
+  type DailyTermoResponse,
 } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
@@ -79,6 +81,16 @@ const NONOGRAM: DailyNonogramResponse = dailyNonogramResponseSchema.parse({
   date: DATE,
   size: NONOGRAM_PUZZLE.size,
   clues: NONOGRAM_PUZZLE.clues,
+});
+
+/**
+ * Termo's whole public projection: two strings, one of which is the game's own
+ * name. Parsed rather than written, so the fixture is the wall's exact
+ * key set and nothing wider (ADR-0040).
+ */
+const TERMO: DailyTermoResponse = dailyTermoResponseSchema.parse({
+  game: "termo",
+  date: DATE,
 });
 
 // `vi.mock` factories are hoisted above every const in the file, so the spies
@@ -182,6 +194,7 @@ interface RouteCase {
     | DailyBinairoResponse
     | DailyNonogramResponse
     | DailySudokuResponse
+    | DailyTermoResponse
     | undefined;
 }
 
@@ -227,6 +240,18 @@ const ROUTES: readonly RouteCase[] = [
     marker: "data-conclusion-state=",
     load: () => import("../app/nonogram/concluido/page"),
     daily: NONOGRAM,
+  },
+  {
+    path: "/termo",
+    marker: "data-play-state=",
+    load: () => import("../app/termo/page"),
+    daily: TERMO,
+  },
+  {
+    path: "/termo/concluido",
+    marker: "data-conclusion-state=",
+    load: () => import("../app/termo/concluido/page"),
+    daily: TERMO,
   },
 ];
 

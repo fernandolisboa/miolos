@@ -14,6 +14,10 @@ export const routeSlugs = {
   // An untranslated proper noun, which is what makes `/nonogram` a legal
   // pt-BR route under ADR-0028 — only the descriptive segments are pt-BR.
   nonogram: "nonogram",
+  // Likewise an untranslated proper noun: "Termo" is the product's own name
+  // for its Termo-like game (CONTEXT.md — and never "Wordle"), so the slug is
+  // the noun and `concluido` is the only pt-BR segment on the pair.
+  termo: "termo",
   conclusion: "concluido",
 } as const;
 
@@ -24,8 +28,9 @@ export type RouteSlug = keyof typeof routeSlugs;
  * Next 16's typed routes require of a `<Link href>` — a function
  * returning `string` would not typecheck.
  *
- * EXTENSION POINT: #27 adds `/<jogo>` and `/<jogo>/concluido` here, never as
- * literals at a call site. #23 added sudoku's pair, #25 nonogram's.
+ * #23 added sudoku's pair, #25 nonogram's and #27 termo's — always here, never
+ * as a literal at a call site. All four dailies are routed; a fifth game adds
+ * its pair the same way.
  */
 export const routes = {
   home: "/",
@@ -35,6 +40,8 @@ export const routes = {
   sudokuConclusion: `/${routeSlugs.sudoku}/${routeSlugs.conclusion}`,
   nonogram: `/${routeSlugs.nonogram}`,
   nonogramConclusion: `/${routeSlugs.nonogram}/${routeSlugs.conclusion}`,
+  termo: `/${routeSlugs.termo}`,
+  termoConclusion: `/${routeSlugs.termo}/${routeSlugs.conclusion}`,
 } as const;
 
 export type Route = (typeof routes)[keyof typeof routes];

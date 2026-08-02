@@ -91,20 +91,6 @@ export interface ConclusionCopy {
 }
 
 /**
- * The solved picture, for the one game whose payoff is an image (ADR-0034).
- * Plain data across the RSC boundary: a row-major bitmap, its side, and a
- * pre-composed accessible name. Never a function, never a node — the same
- * constraint ConclusionCopy carries and route-ssr.test.tsx enforces.
- *
- * Supplied ONLY by a client component that owns the local play record. A
- * server segment must never compute it: /<jogo>/concluido renders for
- * players who have NOT solved, and its RSC payload would become a spoiler
- * channel (ADR-0004, ADR-0027's rejected list, ADR-0033).
- *
- * `size` is a plain `number`, not a game's size union: this type is
- * game-blind by construction and must not name one game's shape.
- */
-/**
  * The stamp Termo renders in place of the shared label/time/hints triple
  * (#27, ADR-0043). Plain data only, following `picture` exactly; supplied
  * ONLY by a client component that owns the local play record. A game that
@@ -138,6 +124,44 @@ export interface ConclusionOutcome {
   readonly settle: boolean;
 }
 
+/**
+ * The day's word in its canonical accented spelling (#27 AC 2, ADR-0043
+ * decision 6). Three plain strings; nothing here is a function, and nothing
+ * here is composed in the component that renders it.
+ *
+ * Rendered on BOTH Termo outcomes. On a win it is not redundant: the player
+ * typed the word accent-free, so the accents are the one thing they have not
+ * seen.
+ *
+ * Supplied ONLY by a client component that owns the local play record, on
+ * `picture`'s rule exactly. A server segment must never compute it:
+ * `/termo/concluido` renders for players who have NOT finished, and a
+ * server-computed word would turn a bookmarkable page into the only spoiler
+ * channel this game has (ADR-0004, ADR-0034 decision 3, ADR-0043 decision 7).
+ */
+export interface ConclusionAnswer {
+  /** "Você acertou em 4 de 6 tentativas." | "As 6 tentativas acabaram." */
+  readonly result: string;
+  /** "A palavra de hoje era". */
+  readonly lead: string;
+  /** The accented spelling — "café". */
+  readonly canonical: string;
+}
+
+/**
+ * The solved picture, for the one game whose payoff is an image (ADR-0034).
+ * Plain data across the RSC boundary: a row-major bitmap, its side, and a
+ * pre-composed accessible name. Never a function, never a node — the same
+ * constraint ConclusionCopy carries and route-ssr.test.tsx enforces.
+ *
+ * Supplied ONLY by a client component that owns the local play record. A
+ * server segment must never compute it: /<jogo>/concluido renders for
+ * players who have NOT solved, and its RSC payload would become a spoiler
+ * channel (ADR-0004, ADR-0027's rejected list, ADR-0033).
+ *
+ * `size` is a plain `number`, not a game's size union: this type is
+ * game-blind by construction and must not name one game's shape.
+ */
 export interface ConclusionPicture {
   readonly size: number;
   /** Row-major, length size²; 1 = filled. */

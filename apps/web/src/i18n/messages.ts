@@ -322,6 +322,47 @@ export const messages = {
           cta: "Jogar o Termo de hoje",
         },
       },
+      /**
+       * The stamp's two slots and its whole accessible name, on BOTH outcomes
+       * (#27, ADR-0043 decisions 1, 3 and 5).
+       *
+       * A SIBLING of `conclusion`, never a member of it: `ConclusionCopy` is
+       * the exact shape three other games render and it is plain data crossing
+       * the RSC boundary, so a composer inside it would be an SSR 500 rather
+       * than a type error (types.ts). Same placement rule as
+       * `nonogram.reveal`. The Termo conclusion wrapper reads these and hands
+       * `<ConclusionView/>` finished strings.
+       */
+      outcome: {
+        wonLabel: "Concluído",
+        wonDetail: (used: number, max: number) => `${used}/${max}`,
+        wonAria: (used: number, max: number) =>
+          `Termo concluído em ${used} de ${max} tentativas.`,
+        lostLabel: "Jogado",
+        lostDetail: (max: number) => `X/${max}`,
+        /**
+         * ONE RULE for the whole bundle: a composer takes its numbers and
+         * renders DIGITS; it never spells one in words and never branches on a
+         * value it was handed. `max === 6 ? "seis" : String(max)` would be a
+         * runtime branch on a compile-time constant whose false arm is
+         * unreachable and untestable. Screen readers read "6" as "seis" in
+         * pt-BR, so nothing is lost, and `progressLong` sets the precedent.
+         */
+        lostAria: (max: number) =>
+          `Termo jogado: as ${max} tentativas acabaram sem acerto.`,
+      },
+      /**
+       * The day's word in its canonical accented spelling (#27 AC 2, ADR-0043
+       * decision 6), rendered on BOTH outcomes. On a win it is not redundant:
+       * the player typed the word accent-free and the accents are the thing
+       * they have not seen.
+       */
+      dayWord: {
+        won: (used: number, max: number) =>
+          `Você acertou em ${used} de ${max} tentativas.`,
+        lost: (max: number) => `As ${max} tentativas acabaram.`,
+        lead: "A palavra de hoje era",
+      },
     },
     sudoku: {
       kicker: "Números",

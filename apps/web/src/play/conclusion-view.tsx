@@ -18,6 +18,7 @@ import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { startCompletionSync } from "./sync";
 import type {
+  ConclusionAnswer,
   ConclusionCopy,
   ConclusionOutcome,
   ConclusionPicture,
@@ -68,11 +69,14 @@ export interface ConclusionResult {
  * play record. A game with no payoff passes nothing and renders exactly what
  * it rendered before the prop existed.
  *
- * `outcome` is the second, on the same rule (#27, ADR-0043). This commit
- * consumes exactly one of its fields — `state`, which decides whether the
- * game being celebrated enters the day card as *completed* or as *played*
- * (plan 022 §15.3). The stamp it also describes, and the fourth
- * `data-conclusion-state` branch it opens, arrive with the Termo screen.
+ * `outcome` is the second and `answer` the third, on the same rule (#27,
+ * ADR-0043). TWO members for one game is one more than ADR-0034 consequence
+ * (c) budgets, and the deviation is stated rather than smuggled: the two are
+ * orthogonal — `outcome` serves the win stamp and the loss stamp both and is
+ * what a game with TWO terminal states owes, while `answer` is the day's word
+ * and renders on both outcomes. Collapsing them would put a nullable word
+ * inside an outcome object and make the win branch carry a field it does not
+ * gate on. Three games pass neither and are byte-identical.
  */
 export function ConclusionView({
   game,
@@ -81,6 +85,7 @@ export function ConclusionView({
   result,
   picture,
   outcome,
+  answer,
 }: {
   readonly game: Game;
   readonly date: string;
@@ -88,6 +93,7 @@ export function ConclusionView({
   readonly result?: ConclusionResult;
   readonly picture?: ConclusionPicture;
   readonly outcome?: ConclusionOutcome;
+  readonly answer?: ConclusionAnswer;
 }) {
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
@@ -145,7 +151,20 @@ export function ConclusionView({
     );
   }
 
-  if (stamp === undefined) {
+  // THE BRANCH ORDER IS LOAD-BEARING (ADR-0043 decision 2): `!hydrated →
+  // skeleton`, `outcome?.state === "lost" → lost`, `stamp === undefined →
+  // empty`, otherwise `result`. Placed AFTER the stamp check, a lost Termo —
+  // which IS a locally-concluded record — would fall into `result` and paint
+  // a "Concluído" stamp over a loss. Checking it here also decouples the loss
+  // from `ConclusionResult`, from `record.concluded` and from `elapsedMs`
+  // entirely.
+  //
+  // AND THE GATE IS `outcome?.state === "lost"`, NEVER `outcome !==
+  // undefined`: a won Termo passes the prop too, so gating on presence would
+  // render every Termo win as a loss.
+  const lost = outcome?.state === "lost";
+
+  if (!lost && stamp === undefined) {
     return (
       <main
         className={`${styles.page} ${styles.pageEmpty}`}
@@ -177,8 +196,6 @@ export function ConclusionView({
     );
   }
 
-  const elapsed = formatElapsed(stamp.elapsedMs);
-
   // The game being celebrated is proved done by the stamp itself, which is
   // exactly what the record may not say yet: on the in-place swap the record
   // still in storage is the last PLAYING one (plan 017 D26), and where
@@ -209,7 +226,12 @@ export function ConclusionView({
   const dayEntry = (dayGame: Game): DayEntry =>
     dayGame === game
       ? outcome === undefined
-        ? { status: "completed", elapsedMs: stamp.elapsedMs }
+        ? // `stamp` is defined on every path that reaches here with no
+          // `outcome` — the guard above returned otherwise — and the optional
+          // chain is TypeScript's acknowledgement of that rather than a
+          // second possibility: it cannot narrow through `lost`, and an
+          // assertion here would be exactly the `as` this repo refuses.
+          { status: "completed", elapsedMs: stamp?.elapsedMs }
         : outcome.state === "lost"
           ? { status: "played", elapsedMs: undefined }
           : { status: "completed", elapsedMs: undefined }
@@ -220,7 +242,13 @@ export function ConclusionView({
     <main
       className={`${styles.page} ${styles.pageResult}`}
       style={accent}
-      data-conclusion-state="result"
+      // The BOARD verb, deliberately, and the day verb is not used here: this
+      // attribute's existing values are `skeleton`, `empty` and `result` —
+      // none of them a CONTEXT.md day verb either — and it mirrors
+      // `ConclusionOutcome.state`, which mirrors `TermoBoardStatus`.
+      // CONTEXT.md's *Played / Jogado* is the DAY's verb and lives where it
+      // belongs: `DayEntry.status`, the `jogado` chip, and the stamp's label.
+      data-conclusion-state={lost ? "lost" : "result"}
     >
       <ConclusionTopBar date={date} kicker={copy.kicker} />
 
@@ -231,30 +259,58 @@ export function ConclusionView({
           <h1 className={styles.title}>{copy.title}</h1>
         </div>
         <div className={styles.stampRow}>
-          {/* One composite announcement rather than three fragments: ARIA
-              does not name a generic element, and "Concluído 06:47 sem
-              dicas" read as three unrelated strings is not the sentence the
-              copy module already composes. */}
-          <div
-            className={styles.stamp}
-            role="img"
-            aria-label={messages.conclusion.stampAria(
-              copy.title,
-              elapsed,
-              stamp.hintsUsed,
-            )}
-          >
-            <span aria-hidden className={styles.stampLabel}>
-              {messages.conclusion.stampLabel}
-            </span>
-            <span aria-hidden className={styles.stampTime}>
-              {elapsed}
-            </span>
-            <span aria-hidden className={styles.stampHints}>
-              {messages.conclusion.hints(stamp.hintsUsed)}
-            </span>
-          </div>
+          {outcome === undefined ? (
+            // The `null` arm is unreachable: the guard above returns `empty`
+            // when there is no outcome and no stamp. It is a branch rather
+            // than a non-null assertion for the same reason as `dayEntry`.
+            stamp === undefined ? null : (
+              <ShippedStamp title={copy.title} stamp={stamp} />
+            )
+          ) : (
+            <OutcomeStamp outcome={outcome} />
+          )}
         </div>
+        {outcome !== undefined && (
+          /* ADR-0043 decision 10, and it is an obligation rather than a
+             nicety: this component shipped with NO live region and no focus
+             management at all, so on the in-place swap the play view unmounts,
+             focus falls to <body>, and a blind player gets nothing at the
+             product's payoff moment. The gap is inherited from three shipped
+             games; #27 closes it because ADR-0042 decision 10 already promises
+             that "the conclusion owns the terminal sentence".
+
+             The string is ALREADY COMPOSED (types.ts's plain-data rule —
+             nothing is composed here), games that pass no `outcome` render no
+             region and are byte-identical, and focus still never moves
+             programmatically: a role="status" announces without stealing the
+             caret, which is the mechanism PRODUCT.md's "nothing nags" points
+             at. That a live region MOUNTING with content is spoken is an AT
+             behaviour jsdom cannot prove; it rides the one real
+             VoiceOver/NVDA pass ADR-0042 consequence (e) already owes. */
+          <p role="status" className={styles.announcer}>
+            {outcome.aria}
+          </p>
+        )}
+        {answer !== undefined && (
+          /* The day's word (#27 AC 2, ADR-0043 decision 6), in `.pictureRow`'s
+             slot and on BOTH outcomes. UNANIMATED, deliberately: a third
+             settle would make the card busy on a win and would be the ONLY
+             motion on the screen on a loss, which reads as celebrating one.
+
+             `.dayWord` MAY NEVER BECOME A HEADING and may never take
+             `role="heading"`. `.dayWordLead` is an 11px tracked-uppercase line
+             sitting immediately above it — textbook `kicker-above-heading`
+             shape — and the two lines are legal ONLY because both that rule
+             and `hero-eyebrow-chip` anchor exclusively on `h1`–`h4` and
+             `[role="heading"]` (checks.mjs:2492). Promoting it to an `<h2>` —
+             the obvious "semantic improvement" — lights the rule up at both
+             viewports on the one card no URL-mode scan reaches. */
+          <div className={styles.dayWordRow}>
+            <p className={styles.dayWordResult}>{answer.result}</p>
+            <p className={styles.dayWordLead}>{answer.lead}</p>
+            <p className={styles.dayWord}>{answer.canonical}</p>
+          </div>
+        )}
         {picture !== undefined && (
           /* The payoff, inside the card the stamp already lives in — never a
              modal, never a full-screen takeover, never confetti (PRODUCT.md:33,
@@ -326,6 +382,89 @@ export function ConclusionView({
         <a className={styles.secondaryLink}>{messages.conclusion.stats}</a>
       </aside>
     </main>
+  );
+}
+
+/**
+ * The stamp three games have shipped since #18: a label, a duration and a
+ * hints line, announced as ONE composite sentence rather than three
+ * fragments — ARIA does not name a generic element, and "Concluído 06:47 sem
+ * dicas" read as three unrelated strings is not the sentence the copy module
+ * already composes.
+ */
+function ShippedStamp({
+  title,
+  stamp,
+}: {
+  readonly title: string;
+  readonly stamp: ConclusionResult;
+}) {
+  const elapsed = formatElapsed(stamp.elapsedMs);
+
+  return (
+    <div
+      className={styles.stamp}
+      role="img"
+      aria-label={messages.conclusion.stampAria(
+        title,
+        elapsed,
+        stamp.hintsUsed,
+      )}
+    >
+      <span aria-hidden className={styles.stampLabel}>
+        {messages.conclusion.stampLabel}
+      </span>
+      <span aria-hidden className={styles.stampTime}>
+        {elapsed}
+      </span>
+      <span aria-hidden className={styles.stampHints}>
+        {messages.conclusion.hints(stamp.hintsUsed)}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The stamp a game with TWO terminal states supplies for itself (#27,
+ * ADR-0043 decisions 3 and 5). TWO slots, not three: `label` and `detail`.
+ *
+ * On a WIN the big slot is the guess count where a grid game shows a time,
+ * and there is no hints line, because neither is honest for Termo — the clock
+ * is never rendered and "sem dicas" would present as a virtue something that
+ * was never possible (ADR-0045 decisions 3 and 4).
+ *
+ * On a LOSS the win's stamp is stepped down three ways at once and the third
+ * is the loudest: a 1.5px ring instead of 3px, `--ink-2` instead of the
+ * accent (5.3003:1 on `--paper-card`), and NO settle animation. There is no
+ * consolation flourish, no second stamp design, no mascot and no emoji — the
+ * loss equivalent of the celebration is the celebration's absence, and saying
+ * so here is what stops the next contributor from inventing one. No
+ * `.stampTime`, no hints line and no `elapsedMs` reach this component at all:
+ * a time on a game nobody won is the same lie `day-state.ts` already refuses
+ * for a part-played board.
+ *
+ * `settle` is a FIELD ON THE PROP rather than a branch on `state`, so a
+ * future game can pass `{state: "result", settle: false}` without this
+ * component learning a second rule.
+ */
+function OutcomeStamp({ outcome }: { readonly outcome: ConclusionOutcome }) {
+  const chrome = [
+    styles.stamp,
+    outcome.state === "lost" ? styles.stampLost : "",
+    outcome.settle ? "" : styles.stampStill,
+  ]
+    .filter((name) => name !== "")
+    .join(" ");
+
+  return (
+    <div className={chrome} role="img" aria-label={outcome.aria}>
+      <span aria-hidden className={styles.stampLabel}>
+        {outcome.label}
+      </span>
+      <span aria-hidden className={styles.stampGuesses}>
+        {outcome.detail}
+      </span>
+    </div>
   );
 }
 
