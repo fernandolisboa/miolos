@@ -53,6 +53,7 @@ Current:
 | `plans/018-issue-23-plan-daily-sudoku-end-to-end.md` | Implementation plan for #23 (daily Sudoku end to end: the shared `apps/web/src/play/` layer, the Sudoku buffer and screen, device-local day state and conclusion chaining) |
 | `handoffs/019-handoff-m2-nonogram-and-termo.md` | Session handoff for M2's remaining two games — #25 (daily Nonogram) and #27 (daily Termo): the shared play layer's real API and its honest limits, every extension point, and the decisions each game must make |
 | `plans/020-issue-25-plan-daily-nonogram-end-to-end.md` | Implementation plan for #25 (daily Nonogram end to end: the Nonogram buffer and its contracts, the ruled variable-size board and its three-state brush, the picture reveal in the conclusion, and completion, hint, timer and offline sync at parity) |
+| `handoffs/021-handoff-m2-termo-and-free-play.md` | Session handoff for M2's last two — #27 (daily Termo) and #28 (free play): what #25 changed in the shared play layer, where handoff 019 is now wrong, and Termo's two unresolved structural decisions (it cannot play offline, and ADR-0027's client-side hint argument does not transfer) |
 
 ## Language
 
