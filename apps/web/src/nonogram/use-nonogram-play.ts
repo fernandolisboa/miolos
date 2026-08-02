@@ -58,7 +58,15 @@ export interface NonogramPlay {
   readonly filled: number;
   /** The picture's cell count, summed from the CLUES. */
   readonly target: number;
-  /** False once the free hint is spent, the board is closed, or nothing is left. */
+  /**
+   * False when the clues did not solve, once the free hint is spent, or once
+   * the board is closed — the three terms the expression actually carries.
+   *
+   * There is deliberately NO "a hint still exists" term: `nextNonogramHint`
+   * returns null only on a board where every cell already equals the
+   * solution, and that is exactly `isPictureComplete`, which closes the board
+   * as `solved`. So the missing condition is implied by the closed one.
+   */
   readonly hintReady: boolean;
   /** Which case the last hint fired, for the one-line explanation (P18). */
   readonly hintKind: NonogramHintKind | null;

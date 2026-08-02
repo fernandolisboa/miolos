@@ -68,15 +68,30 @@ things.
    consequence (c)'s **written** trigger — *"stays in `binairo/grid.tsx`
    until #25 gives it a second consumer"* — so the extraction is a
    conditional coming true rather than a new decision. What *is* new, and
-   what this ADR owns, is the hook's one added seam: an optional
+   what this ADR owns, is the hook's added seam: an optional
    **`onStrokeEnd(index)`**, called once at `pointerup` with the cell the
    stroke ended on. That is the focus door pointer capture leaves open —
    the composite-widget boards use it to move DOM focus, and `onFocus`
    then selects, so both the pointer path and the keyboard path arrive at
-   the same single selection writer. Binairo omits it and is unchanged.
+   the same single selection writer. **Binairo omits `onStrokeEnd`**, and
+   that clause is scoped to `onStrokeEnd` alone (see the amendment below).
    The extraction lands as **move + rename in its own commit**, with the
    Binairo suite green and every assertion unchanged in *what* it asserts;
    `onStrokeEnd` is added in the commit after.
+
+   **Amended at #25's step 7 — the hook owns a SECOND thing, and it is not
+   inert for Binairo.** `usePointerStroke` also carries a window-scoped end
+   net (`armWindowEnd` / `detachWindowEnd` plus an unmount cleanup), added
+   after the extraction by step-6 finding NONO-C6 and pinned by `T-WEB-S59`
+   in `apps/web/test/pointer-stroke.test.tsx`. It closes the latch a stroke
+   leaves when pointer capture was never taken and the pointer lifts outside
+   the container: without it `strokePointer` stays set and the board writes
+   nothing for the rest of the session. Binairo's DEFAULT cycle mode passes
+   `painting: false` and never requests capture, so it takes that branch on
+   every `pointerdown` where the pre-move code returned early — a runtime
+   change to a shipped game, benign (the container's own `onPointerUp`
+   detaches first) and a fix for a latent cycle-mode latch, but a change.
+   "Binairo omits it and is unchanged" was true of `onStrokeEnd` only.
 
 3. **The clue rails are labelled `role="group"` elements inside the flat
    grid, and every cell is `aria-describedby` its two rails.** `group`

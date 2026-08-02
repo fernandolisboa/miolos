@@ -21,17 +21,17 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Verified by grep over the test tree after #25 merged (plan 020, 2026-08-01). The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 020 (#25), verified by grep over the test tree on that ticket's branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 | Area | Next free | Bare series closed at |
 |---|---|---|
 | `T-CORE` | `S15` | never used |
 | `T-DB` | `S10` | `T-DB-21` |
 | `T-API` | `S28` | `T-API-16` |
-| `T-WEB` | `S61` | `T-WEB-23` |
+| `T-WEB` | `S66` | `T-WEB-23` |
 | `T-LINT` | `S4` | `T-LINT-10` |
 
-#25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent `T-API-S27` (+ siblings `S27a`, `S27b`) on top of its range at step 7.
+#25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent `T-API-S27` (+ siblings `S27a`, `S27b`) and `T-WEB-S61…S65` on top of its range at step 7.
 
 ## Burned slots
 

@@ -63,9 +63,15 @@ every interior junction.
 
 2. **The frame and the every-5-cells group rules are 2 px `var(--ink)` on
    the same borders** — **15.01:1** on paper and **3.48:1** on a filled
-   cell, so the structure survives the picture painting over it. Both come
-   from one modulo on the cell's own index; the frame and the group rules
-   are the same rule at `index % 5 === 0`.
+   cell, so the structure survives the picture painting over it. The
+   group rules and the frame's TOP and LEFT edges come from one modulo on
+   the cell's own index — the same rule at `index % 5 === 0`, which covers
+   0 (the frame) and 5/10 (the groups). The frame's **right and bottom**
+   edges are two further per-cell borders at `column === size - 1` and
+   `row === size - 1`, and they are not optional: `size - 1` is 4, 7, 9 or
+   14, so the modulo alone would close the frame at size 5 and leave the
+   other three boards with no right or bottom edge at all. A native client
+   re-implementing this board (consequence (g)) needs all four rules.
 
 3. **Never a wrapper element** — not per row, not per group. A container
    around part of a board inside the board's card is *card dentro de card*

@@ -70,8 +70,9 @@ export function HubCardAction({
 
   if (route === undefined) {
     // No play route yet — termo alone reaches this branch today, and #27
-    // clears it by adding a key to `playRoutes`, never a branch here. The anchor keeps the card's shape without an href, because a
-    // dead href would be fake navigation.
+    // clears it by adding a key to `playRoutes`, never a branch here. The
+    // anchor keeps the card's shape without an href, because a dead href
+    // would be fake navigation.
     return (
       <a className={styles.cta}>
         <PlayLabel />

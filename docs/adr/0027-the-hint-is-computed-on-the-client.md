@@ -142,9 +142,19 @@ forced deduction)"* to this ticket.
   `.next/diagnostics/route-bundle-stats.json` — which Next 16.2.12 does
   emit, in the terminal table's absence — prints each route's delta over
   `/`, and exits non-zero over a 40 KB budget or on any forbidden marker
-  in the built chunks. Run it after `pnpm build` and paste the output;
-  a mandate with no reproducible instrument is a mandate nobody can
-  discharge twice.
+  in the built chunks. Run it as
+  `pnpm --filter @miolos/web build && pnpm --filter @miolos/web bundle-check`
+  and paste the output; a mandate with no reproducible instrument is a
+  mandate nobody can discharge twice.
+
+  **It is manual by design, and a green CI proves nothing about it.** No
+  workflow, turbo task or git hook invokes it: plan 020 §20.2 scopes it as a
+  per-PR tripwire for the route a ticket ships rather than a standing rule
+  #27 and #28 inherit, and its marker arrays hard-code pt-BR product copy
+  that as an unconditional CI step would red a build for a copy edit.
+  Automating it is a separate decision and needs that fragility designed out
+  first. Only the two shipped routes' printed deltas are informational; the
+  budget and the markers are what exit non-zero.
 - **The hint works offline**, which is what makes issue #18's offline
   acceptance criterion true end to end alongside local validation and the
   in-place conclusion

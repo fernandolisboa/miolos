@@ -81,8 +81,9 @@ export function NonogramScreen({
         // Omission, never an empty bitmap: `?? []` would supply a labelled
         // `<svg role="img">` with an empty `d` — a named graphic with no
         // graphic in it, and worse than saying nothing (the
-        // `stored?.syncOutcome === undefined` precedent at
-        // conclusion-view.tsx:98-108).
+        // `stored?.syncOutcome === undefined` precedent in
+        // `play/conclusion-view.tsx`, where `undefined` "says nothing at
+        // all").
         //
         // The `null` branch is DEFINED-UNREACHABLE, not assumed away (landmine
         // 8), and the argument is written here so nobody adds a test for a

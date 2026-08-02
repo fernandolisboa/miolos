@@ -1,6 +1,6 @@
 /**
- * The pointer-stroke machinery every dragging board shares, moved verbatim
- * out of `binairo/grid.tsx` (plan 020 §5.3, P19/P20).
+ * The pointer-stroke machinery every dragging board shares, moved out of
+ * `binairo/grid.tsx` (plan 020 §5.3, P19/P20).
  *
  * **Why it is here and why only now.** ADR-0029 consequence (b) is the
  * standing rule — *"a later contributor who wants to 'finish the job' by
@@ -12,18 +12,35 @@
  * board drags, so the condition is met and this move is the execution of a
  * decision already recorded, not a new one.
  *
- * **The move is a move.** Every comment below is the one #18 paid for, kept
- * where it was written: the primary-button guard, the pointer-id scoping,
- * the `elementFromPoint` resolution, the capture net, and the reason a tap
- * in paint mode is resolved on `pointerup` rather than by the cell's own
- * `click`. A tidy-up while moving is how those findings come back.
+ * **The move WAS a move, at commit `89d9f86`.** Every #18 comment arrived
+ * here kept where it was written: the primary-button guard, the pointer-id
+ * scoping, the `elementFromPoint` resolution, the capture net, and the reason
+ * a tap in paint mode is resolved on `pointerup` rather than by the cell's own
+ * `click`. A tidy-up while moving is how those findings come back. Read that
+ * as provenance for the relocation, not as a claim about HEAD: two decisions
+ * landed on top of it, and `endStroke`'s TSDoc below was rewritten (rather
+ * than kept) to describe them.
  *
- * **`onStrokeEnd` is the one thing here that is new**, and it is the only
- * part that is a decision rather than a relocation: ADR-0037 decision (2)
- * owns it, and the Binairo retrofit is instructed to use it rather than
- * derive a second mechanism. It exists because pointer capture retargets
- * the trailing `click` to the container, so on a board whose caret lives in
- * state a stroke would otherwise leave DOM focus where it was.
+ * **TWO things here are new**, and both are decisions rather than relocations:
+ *
+ * 1. **`onStrokeEnd`** — ADR-0037 decision (2) owns it, and the Binairo
+ *    retrofit is instructed to use it rather than derive a second mechanism.
+ *    It exists because pointer capture retargets the trailing `click` to the
+ *    container, so on a board whose caret lives in state a stroke would
+ *    otherwise leave DOM focus where it was.
+ * 2. **The window-scoped end net** (`armWindowEnd` / `detachWindowEnd` and the
+ *    unmount cleanup) — step-6 finding NONO-C6, pinned by `T-WEB-S59` in
+ *    `test/pointer-stroke.test.tsx`. It closes the latch a capture-failed
+ *    stroke leaves when its pointer lifts outside the container.
+ *
+ * Net (2) is NOT inert for Binairo, and the "behaviour-free" wording in
+ * `89d9f86`'s message is scoped to that commit rather than to this module:
+ * Binairo's default cycle mode passes `painting: false`, never requests
+ * capture, and so takes the `if (!captured) armWindowEnd()` branch on every
+ * `pointerdown`, where the pre-move code returned early and armed nothing.
+ * Nothing user-visible breaks — the container's own `onPointerUp` runs first
+ * and detaches — and it fixes a latent cycle-mode latch, but it is a runtime
+ * change to a shipped game and must not be read as one.
  */
 import {
   useEffect,
@@ -180,6 +197,13 @@ export function usePointerStroke(input: {
     // Required, not defensive: under pointer capture — and on touch
     // generally — `pointerenter` never fires on the cells being crossed, so
     // the only way to know which cell is under the pointer is to ask.
+    //
+    // It runs BEFORE the same-cell guard below, so 40 move events inside one
+    // cell still cost 42 hit tests. Whether that matters is unmeasured in a
+    // real browser (`elementFromPoint` forces a style+layout flush there, and
+    // jsdom has no layout engine to measure it with), so the guard is not
+    // reordered on a jsdom count alone — **#66** carries the trace and the
+    // rect cache it would justify.
     const index = cellIndexAt(event.clientX, event.clientY);
     if (index === null || index === lastIndex.current) {
       return;

@@ -357,7 +357,13 @@ export async function topUpSudokuBuffer(
  *   0.023 ms (Mon 5x5) and 0.181 ms (Sun 15x15);
  * - one INTERNAL attempt — what the worst-run model multiplies — is
  *   `generateNonogram`'s own cost when it succeeds first try: 0.012 ms and
- *   **0.094 ms**. A FAILING call never reaches `validateNonogram` at all.
+ *   **0.094 ms**, which already INCLUDES one `validateNonogram` round.
+ *
+ * A failing call skips the validator only when the weekday pool is empty
+ * (`generate.ts`, the `continue` on an undefined pool entry). On a non-empty
+ * pool every internal attempt builds a full puzzle and validates it before
+ * failing — which is exactly what the 0.094 ms figure measures, so the
+ * arithmetic below is unaffected either way.
  *
  * The worst-run model carries the INNER factor: "exhausting all 8 seeds"
  * means eight `generateNonogram` calls that each FAILED, and a failing call
@@ -461,7 +467,8 @@ export async function topUpNonogramBuffer(
         }
         // A TRIPWIRE, not a restoration of ADR-0010's belt and suspenders:
         // `generateNonogram` writes both fields from the same criteria table
-        // this reads (generate.ts:31,:44-52), so it is UNREACHABLE for output
+        // this reads (`generate.ts`, `NONOGRAM_WEEKDAY_CRITERIA[weekday]` and
+        // the puzzle it returns), so it is UNREACHABLE for output
         // this loop generated. It ships anyway because it is the cheapest
         // gate here and the only one that fails closed for the date on drift
         // the validator structurally cannot see — `validateNonogram(puzzle)`

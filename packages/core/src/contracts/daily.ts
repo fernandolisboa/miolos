@@ -16,8 +16,11 @@
  * critical path plus a gratuitous publication of the withheld object's shape.
  *
  * Keeping them out is what `"sideEffects": false` in this package's
- * `package.json` buys, and `apps/web/scripts/route-client-js.mjs` greps the
- * built chunks for the marker so a re-merge is caught mechanically.
+ * `package.json` buys. `apps/web/scripts/route-client-js.mjs` greps the built
+ * chunks for the marker, so a re-merge is CATCHABLE — but the script is run by
+ * hand (`pnpm build && pnpm bundle-check`, from `apps/web`) and pasted in the
+ * PR at step 8. No CI job runs it, so a green pipeline is not evidence that
+ * this split is intact.
  *
  * SO: nothing in this file may import from `./daily-content.ts`. The
  * dependency runs one way.

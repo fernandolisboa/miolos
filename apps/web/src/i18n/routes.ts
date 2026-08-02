@@ -45,8 +45,9 @@ export type Route = (typeof routes)[keyof typeof routes];
  * of it is how the hub links a game the conclusion still calls pending.
  *
  * Partial by construction: #27 adds termo's key here, never a branch at a
- * call site (ADR-0028). #23 added sudoku's, #25 nonogram's. A game with no key has no play route yet, and its card
- * keeps an href-less anchor rather than fake navigation.
+ * call site (ADR-0028). #23 added sudoku's, #25 nonogram's. A game with no
+ * key has no play route yet, and its card keeps an href-less anchor rather
+ * than fake navigation.
  */
 export const playRoutes: Readonly<Partial<Record<Game, Route>>> = {
   binairo: routes.binairo,

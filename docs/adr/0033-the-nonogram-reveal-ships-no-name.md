@@ -134,10 +134,16 @@ what it costs to deliver, on each of the three paths available?
 - **(d) The bundle tripwire stays meaningful for as long as this holds.**
   Because no motif name may reach `apps/web`, a string grep over the built
   client chunks is a real check on the engine barrel's tree-shaking. It is
-  `apps/web/scripts/route-client-js.mjs`, run after `pnpm build`, and it
-  exits non-zero rather than printing a number for a reviewer to eyeball.
-  That check dies the day a name ships — **#64** — which is a cost the
-  named-reveal ticket inherits.
+  `apps/web/scripts/route-client-js.mjs`, and it exits non-zero rather than
+  printing a number for a reviewer to eyeball. **It is run by hand** —
+  `pnpm --filter @miolos/web build && pnpm --filter @miolos/web bundle-check`,
+  at step 8, pasted in the PR. Nothing in CI invokes it, so a green pipeline
+  is not evidence that no motif name shipped; see
+  [ADR-0027](./0027-the-hint-is-computed-on-the-client.md) for why it is
+  deliberately manual. Its five motif markers are pinned from the other side
+  by `packages/games/test/nonogram/bundle-markers.test.ts`, so a grep for a
+  renamed motif cannot pass vacuously. That check dies the day a name ships —
+  **#64** — which is a cost the named-reveal ticket inherits.
 - **(e) Nothing here decides anything for Termo.** Its public projection
   is `game, date` only and its answer is judged server-side; the questions
   this ADR answers do not arise there.

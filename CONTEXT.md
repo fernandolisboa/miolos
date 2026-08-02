@@ -22,7 +22,7 @@ The ubiquitous language. Issue titles, test names, proposals and specs use these
 | **Entitlement** | — | A string in `entitlements: string[]` (never a boolean). Dormant in v1. |
 | **Normalized form** | — | A word after Unicode-decompose, strip combining marks, `ç`→`c`. Termo matching is accent-insensitive; tiles reveal the **canonical form** (correct accented spelling) on completion ([ADR-0015](./docs/adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)). |
 | **Motif** | — | An entry in the Nonogram picture library inside `packages/games`. Server-side only: never user-facing, and neither its name nor its id ever reaches a client payload. |
-| **Reveal** | — | The withheld part of a Nonogram daily — which motif it is and how it is oriented. Stripped from every published projection; the client is served clues only. |
+| **Reveal** | — | The withheld part of a Nonogram daily: which motif it is, how it is oriented, and the picture bitmap the server judges completions against — `{motifId, name, mirrored, solution}`. Stripped from every published projection; the client is served clues only and recovers the bitmap itself from them ([ADR-0033](./docs/adr/0033-the-nonogram-reveal-ships-no-name.md)). |
 | **Picture** | Figura | What a solved Nonogram grid paints. The client-rendered payoff, shown on the conclusion screen. |
 | **Filled** | Preenchida | A Nonogram cell the player painted: `filled`, encoded `1` on the wire. The filled set is what a completion is judged on. |
 | **Crossed** | Marcada | A Nonogram cell the player ruled out: `crossed`, encoded `0`. Notation for the player, never a claim about the picture. |
