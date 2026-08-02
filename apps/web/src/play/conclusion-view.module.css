@@ -20,9 +20,30 @@
 }
 
 /* Per-screen hover accent — anchored on .page, never a bare `a:hover`
-   (plan 017 §12.5). */
+   (plan 017 §12.5).
+
+   ADR-0041: the accent moved off the WORD and onto a rule under it. `--ink`
+   #211D19 (L 0.01272250) on `--paper-desk` #F7F2E9 (L 0.89161610) is
+   (0.89161610 + 0.05) / (0.01272250 + 0.05) = **15.0124:1**.
+
+   ACCEPTED EXCEPTION, stated with its ratio rather than as compliance: the
+   2px mustard rule is `--accent-termo` #C08A1E (L 0.29477163) at
+   (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1** on desk and
+   **2.8501:1** on card, below WCAG 1.4.11's 3:1 non-text floor. Hover is a
+   pointer-only affordance duplicating what the link already carries at
+   15.0124:1, and the underline's PRESENCE is a change of geometry that
+   survives greyscale. See the twin block in `screen.module.css` for the full
+   argument. `:focus-visible`, which 2.4.7 and 1.4.11 DO govern, rests on none
+   of this: this sheet declares no focus ring at all, and the shared layer's
+   only one — `screen.module.css`'s `.hint:focus-visible` — is `--ink` at
+   15.0124:1. It was `var(--accent)` at 2.7311:1 for mustard when this
+   paragraph first claimed otherwise (step-7 finding A-F1). */
 .page a:hover {
-  color: var(--accent);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 /* Two columns at F5's 1.3 : 1, the result card left and the day card, CTA
@@ -90,11 +111,28 @@
   display: none;
 }
 
+/* `--ink-2`, not `--accent` (ADR-0041). This sheet is SHARED across all four
+   conclusions, so the kicker renders in whichever accent the page root
+   supplies: mustard #C08A1E (L 0.29477163) on `--paper-desk` #F7F2E9
+   (L 0.89161610) is (0.89161610 + 0.05) / (0.29477163 + 0.05) =
+   **2.7311:1** at 11px. `--ink-2` #6E6659 (L 0.13539008) is
+   (0.89161610 + 0.05) / (0.13539008 + 0.05) = **5.0791:1**.
+
+   BRANDED — `var(--text-kicker)` at 600 with 0.16em, matching `.cardKicker`
+   below and `screen.module.css`'s own `.barKicker` (step-7 finding A-F6).
+   At <=1140px `.cardKicker` is `display: none` and this span is the only
+   thing on the screen saying which game the player just finished, while
+   `.dayCardTitle` — a generic section eyebrow, "O DIA DE HOJE" — is visible
+   at the same time. Before this, the two were identical in every property:
+   11px, 400, 0.14em, uppercase, `--ink-2`. The accent was the sole
+   differentiator and ADR-0041 took it away, so the brand system DESIGN.md's
+   typography section describes had to be carried by the weight and the
+   tracking instead. Mobile is the primary form factor. */
 .barKicker {
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 .topDateShort {
@@ -131,12 +169,18 @@
   transform: rotate(-4deg);
 }
 
+/* Inside the result card, so this one is on CARD paper (ADR-0041): mustard on
+   `--paper-card` #FBF7EF (L 0.93262753) is (0.93262753 + 0.05) /
+   (0.29477163 + 0.05) = **2.8501:1** — the ceiling over the whole paper
+   family, against a 4.5 floor. `--ink-2` on card is (0.93262753 + 0.05) /
+   (0.13539008 + 0.05) = **5.3003:1**. The accent stays on the tape directly
+   above, which is a shape. */
 .cardKicker {
   margin: 0;
   font: var(--text-kicker);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 /* Structural, not cosmetic: the wrapper makes `h1.previousElementSibling`
@@ -162,7 +206,21 @@
 }
 
 /* The completion stamp: 3px circle in the game accent, typographic content
-   only (DESIGN.md). This is the product's one celebration. */
+   only (DESIGN.md). This is the product's one celebration.
+
+   The RING keeps the accent and the WORDS do not (ADR-0041 decisions 1 and
+   5). The ring is decoration under WCAG 1.4.11: it outlines "CONCLUÍDO /
+   06:47 / sem dicas", which carries the whole message on its own, so the
+   ring's **2.8501:1** on card paper — mustard #C08A1E (L 0.29477163) against
+   `--paper-card` #FBF7EF (L 0.93262753) — is recorded here rather than left
+   to be rediscovered. The text was the same 2.8501:1 and is now `--ink`
+   #211D19 (L 0.01272250): (0.93262753 + 0.05) / (0.01272250 + 0.05) =
+   **15.6663:1**.
+
+   A uniform border never fires impeccable's `border-accent-on-rounded`:
+   `checks.mjs:47` needs a dominant edge (`w >= 2 && (maxOther <= 1 || w >=
+   maxOther*2)`), and a 3px ring on all four sides has `maxOther = 3`, so
+   `3 >= 6` is false and every side is skipped. */
 .stamp {
   display: flex;
   flex-direction: column;
@@ -173,7 +231,7 @@
   height: 150px;
   border: 3px solid var(--accent);
   border-radius: 50%;
-  color: var(--accent);
+  color: var(--ink);
   animation: stamp-settle var(--duration-slow) var(--ease-settle) both;
 }
 
@@ -350,8 +408,17 @@
   color: var(--ink-2);
 }
 
+/* The done chip's NAME, on the 10 % accent tint `.chipDone` paints above.
+   `color-mix(in srgb, var(--accent) 10%, transparent)` over card paper
+   composites to #F5ECDA for mustard (0.1x192 + 0.9x251 = 245, 0.1x138 +
+   0.9x247 = 236, 0.1x30 + 0.9x239 = 218), L 0.84465338 — so the accent on its
+   own tint was (0.84465338 + 0.05) / (0.29477163 + 0.05) = **2.5949:1**, the
+   worst of the eleven and worse than either plain paper. `--ink` #211D19
+   (L 0.01272250) on the same tint is (0.84465338 + 0.05) /
+   (0.01272250 + 0.05) = **14.2637:1** (ADR-0041). The state's carrier is the
+   tint itself plus `.chipMissing`'s dashed border, not the word's hue. */
 .chipDone .chipName {
-  color: var(--accent);
+  color: var(--ink);
 }
 
 .chipNameShort {
@@ -404,6 +471,13 @@
    below at (0,4,0) so no source order decides it. */
 .page .cta:hover {
   color: var(--paper-desk);
+  /* And the same cascade, one property later: ADR-0041 gave `.page a:hover`
+     (0,2,1) an accent underline, and `.cta`'s own `text-decoration: none` is
+     (0,1,0), so without this every filled button on this page would grow a
+     2px rule under its label under the pointer. The accent underline is a
+     LINK affordance; a button already carries its hover in the fill. (0,3,0)
+     wins, and it covers `.ctaNext` too, which also carries `.cta`. */
+  text-decoration: none;
 }
 
 .cta:active {
@@ -426,8 +500,16 @@
    causes on two screens it does not otherwise touch, because before #25
    `playRoutes` had no nonogram and this button never rendered terracotta
    anywhere (step-6 finding ISS-A2). `--paper-card` on the same fill is
-   4.506:1; the three other accents resolve to the shipped `--paper-desk` and
-   are unchanged to the byte. */
+   4.5063:1.
+
+   `--ink-on-accent` now resolves to THREE values, not two (ADR-0041 decision
+   2): `--paper-card` for nonogram, `--ink` for termo — desk on mustard is
+   2.7311:1 and no paper clears 4.5, while ink ON mustard is 5.4968:1 — and
+   the shipped `--paper-desk` for sudoku (7.5113:1) and binairo (5.3066:1),
+   which stay unchanged to the byte. This button is the reason termo's value
+   matters before `/termo` exists: it wears the DESTINATION game's accent, so
+   it renders mustard on the already-shipped binairo, sudoku and nonogram
+   conclusions the moment `playRoutes` gains a termo. */
 .ctaNext {
   background: var(--accent);
   color: var(--ink-on-accent, var(--paper-desk));
@@ -452,10 +534,46 @@
   font-weight: 550;
   font-size: 19px;
   text-decoration: none;
-  border-bottom: 2px solid var(--line);
-  padding-bottom: var(--space-1);
+  /* The rule and the gap above it are ONE 6px box, driven by a single custom
+     property, so the hover below can thicken the rule and take the pixel back
+     out of the padding. At rest that is 4px + 2px — the shipped
+     `var(--space-1)` + 2px, unchanged to the pixel. */
+  --rule-width: 2px;
+  border-bottom: var(--rule-width) solid var(--line);
+  padding-bottom: calc(6px - var(--rule-width));
   /* No cursor: pointer while the anchor is href-less; it returns when #29
      lands the statistics route. */
+}
+
+/* This link already HAS the shape ADR-0041 decision 4 asks for — a rule under
+   it — so the hover moves the accent onto that rule instead of stacking
+   `.page a:hover`'s underline beneath the border it already draws. (0,3,0)
+   beats `.page a:hover`'s (0,2,1).
+
+   And the rule GROWS, 2px -> 3px, which is the point rather than a flourish
+   (step-7 finding A-F5). Decision 4's exception is granted to "a solid 2px
+   band appearing where there was none... a change of GEOMETRY"; a bare
+   `border-bottom-color` swap has no geometry delta at all, so that rationale
+   did not transfer to it and the comment that claimed it did was false. The
+   colour delta on its own is `--line` #D8D0C2 (L 0.63605722) against mustard
+   `--accent-termo` #C08A1E (L 0.29477163) = (0.63605722 + 0.05) /
+   (0.29477163 + 0.05) = **1.9899:1**, and the hovered rule against desk paper
+   #F7F2E9 (L 0.89161610) is (0.89161610 + 0.05) / (0.29477163 + 0.05) =
+   **2.7311:1** — both under WCAG 1.4.11's 3:1. Accepted on decision 4's two
+   grounds and neither is "it complies": hover is a POINTER-ONLY affordance
+   duplicating a word already at 15.0124:1, and the extra pixel is a change of
+   geometry that survives greyscale and a user who never sees the hue. The
+   other three accents do clear 3:1 against `--line` (sudoku 5.4727:1, binairo
+   3.8664:1, nonogram 3.1462:1); mustard is the one that does not, which is
+   exactly why the geometry carrier has to be real.
+
+   The pixel comes OUT of the padding: `--rule-width` drives the border and
+   the padding together, so the link's box is 6px below its baseline in either
+   state and hovering it never reflows the column it is centred in. */
+.page .secondaryLink:hover {
+  --rule-width: 3px;
+  text-decoration: none;
+  border-bottom-color: var(--accent);
 }
 
 /* ── "ainda não concluído" and the pre-hydration skeleton ────────────── */
@@ -522,6 +640,10 @@
    the accent too — it lost to `.page a:hover` on `main` as well. */
 .page .emptyCta:hover {
   color: var(--ink-on-accent, var(--paper-desk));
+  /* Same reason as `.page .cta:hover` above — this button is on `.pageEmpty`
+     and carries no `.cta`, so it needs its own opt-out from `.page a:hover`'s
+     underline (ADR-0041). */
+  text-decoration: none;
 }
 
 .emptyCta:active {
@@ -735,7 +857,10 @@
 
   .secondaryLink {
     font-size: 15px;
-    padding-bottom: 3px;
+    /* The same one-box arithmetic as the desktop rule, at F6's tighter 5px:
+       3px + 2px at rest, 2px + 3px hovered. The shipped resting value is
+       unchanged. */
+    padding-bottom: calc(5px - var(--rule-width));
   }
 
   .emptyTitle {

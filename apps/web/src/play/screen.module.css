@@ -51,9 +51,33 @@
 }
 
 /* Per-screen hover accent — anchored on .page, never a bare `a:hover`,
-   which would turn Hoje's hover green (plan 017 §12.5). */
+   which would turn Hoje's hover green (plan 017 §12.5).
+
+   ADR-0041: the accent moved off the WORD and onto a rule under it. The word
+   is `--ink` #211D19 on `--paper-desk` #F7F2E9 — L 0.01272250 and 0.89161610,
+   so (0.89161610 + 0.05) / (0.01272250 + 0.05) = **15.0124:1**. The state's
+   carrier is the underline's PRESENCE, not its hue.
+
+   ACCEPTED EXCEPTION, with its ratio rather than a claim of compliance: the
+   2px mustard rule is `--accent-termo` #C08A1E (L 0.29477163) on desk paper,
+   (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1**, below WCAG
+   1.4.11's 3:1 non-text floor. Accepted on two grounds, neither of which is
+   "it complies" — hover is a POINTER-ONLY affordance that duplicates what the
+   link already carries at 15.0124:1 and is not a state a user must perceive
+   to operate the control; and a solid band appearing where there was none is
+   a change of GEOMETRY, so the state survives greyscale. `:focus-visible`,
+   which 2.4.7 and 1.4.11 DO govern, rests on none of this: the one focus ring
+   this layer declares is `.hint:focus-visible` below, and it is `--ink`
+   (15.0124:1). It was `var(--accent)` when this paragraph first claimed
+   otherwise — step-7 finding A-F1 — and the claim is now true because the
+   declaration moved, not because the wording did. This line may not be cited
+   to put a mustard rule under a STATE-BEARING boundary. */
 .page a:hover {
-  color: var(--accent);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 /* ── top bar ─────────────────────────────────────────────────────────── */
@@ -91,11 +115,31 @@
   display: none;
 }
 
+/* `--ink-2`, not `--accent` (ADR-0041): this sheet is SHARED, so the kicker
+   renders in whichever accent the game supplies, and mustard #C08A1E on
+   `--paper-desk` is (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1**
+   — an AA failure against PRODUCT.md's 4.5 floor. `--ink-2` #6E6659
+   (L 0.13539008) is (0.89161610 + 0.05) / (0.13539008 + 0.05) = **5.0791:1**.
+
+   And the kicker is BRANDED, `var(--text-kicker)` at 600 with 0.16em, not the
+   11px/400/0.14em it carried before (step-7 finding A-F6). Once the accent
+   left, 11px/400/0.14em/uppercase/`--ink-2` was every property of a generic
+   section eyebrow — `.statLabel` below, and `conclusion-view`'s
+   `.dayCardTitle` — and DESIGN.md's typography section makes kickers "a
+   deliberate brand system, used for game categories, not as a generic section
+   eyebrow". This is the ONLY carrier of game identity at <=1140px, where
+   `.titleKicker` is `display: none`, and mobile is the primary form factor.
+   PRODUCT.md principle 1 — identity from typography, not ornament — is what
+   the weight and the tracking are FOR; it does not survive the two treatments
+   being byte-identical. Matches `.titleKicker` below, and
+   `conclusion-view.module.css`'s own `.barKicker`, so the kicker does not
+   change character at the 1140 fold or when the player crosses
+   /<jogo> -> /<jogo>/concluido. */
 .barKicker {
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 .timerBar {
@@ -112,12 +156,14 @@
   padding-top: 32px;
 }
 
+/* Same conversion, same arithmetic as `.barKicker` above: mustard on desk
+   paper is **2.7311:1** at 11px/600, `--ink-2` is **5.0791:1** (ADR-0041). */
 .titleKicker {
   margin: 0;
   font: var(--text-kicker);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 /* The wrapper is structural, not cosmetic: it makes
@@ -189,11 +235,17 @@
   justify-content: space-between;
 }
 
+/* On CARD paper, not desk, so the arithmetic differs from the two kickers
+   above (ADR-0041). Mustard #C08A1E on `--paper-card` #FBF7EF (L 0.93262753)
+   is (0.93262753 + 0.05) / (0.29477163 + 0.05) = **2.8501:1** — the ceiling
+   over the whole paper family, which is why no paper token was ever going to
+   rescue it. `--ink-2` #6E6659 on card is (0.93262753 + 0.05) /
+   (0.13539008 + 0.05) = **5.3003:1**. */
 .statLabel {
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 .timerCard {
@@ -270,8 +322,29 @@
   box-shadow: none;
 }
 
+/* INK, not the accent, and the reason is arithmetic rather than taste
+   (step-7 finding A-F1). This is the only focus indicator the SHARED play
+   layer declares, and unlike the hover underline above it is not a
+   pointer-only affordance — it is the whole of what tells a keyboard user
+   where they are, so WCAG 2.4.7 and 1.4.11's 3:1 non-text floor both bind.
+
+   `outline-offset: 2px` puts `--paper-desk` on BOTH sides of the ring — the
+   gap inside it and the page background outside — so the ring is measured
+   against desk paper and nothing else. `var(--accent)` is per game, and
+   mustard `--accent-termo` #C08A1E (L 0.29477163) on `--paper-desk` #F7F2E9
+   (L 0.89161610) is (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1**,
+   below the floor. The accent version passed only by accident of WHICH three
+   games shipped — nonogram 4.3182:1, binairo 5.3066:1, sudoku 7.5113:1 — and
+   would have gone illegal the instant `playRoutes` gained `termo` (#27), the
+   exact trigger ADR-0041 exists for.
+
+   `--ink` #211D19 (L 0.01272250) is (0.89161610 + 0.05) /
+   (0.01272250 + 0.05) = **15.0124:1** for all four games at once.
+   `nonogram-board.module.css:444-446` already ships this identical rule for
+   its own `.control`, so this is that precedent applied, not a new idea.
+   Pinned by `apps/web/test/ink-on-accent.test.ts`. */
 .hint:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 
