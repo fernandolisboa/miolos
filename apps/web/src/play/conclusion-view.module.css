@@ -212,6 +212,62 @@
   font-size: 13px;
 }
 
+/* The picture reveal (ADR-0034), for the one game whose payoff is an image.
+   Additive to the stamp, never instead of it. The rule this answers is
+   DESIGN.md:44 ("Celebration = the stamp settling; never confetti") and
+   PRODUCT.md:33 ("Celebration is contained... Never confetti, never a modal
+   takeover") — NOT DESIGN.md:39, which is the stamp's shape spec (3px circle,
+   -6deg, typographic content only) and carries no exclusivity rule at all.
+   The positive sanction is docs/design/002-brief-design-direction.md:76, which
+   names "o traço que se completa" alongside the stamp as a contained
+   celebration.
+
+   No background, no border, no radius, no box-shadow — impeccable's
+   isCardLikeFromProps (checks.mjs:227-230 in 3.4.0; NOT :4155, which is inside
+   isCardLike, a different function) returns false on its FIRST guard when an
+   element has neither shadow nor border, so this cannot fire nested-cards, and
+   "card dentro de card" is a DESIGN.md anti-reference verbatim. Line numbers
+   belong to impeccable 3.4.0; a bump moves them.
+
+   Contrast, computed because CI is blind here (`low-contrast` is wildcard-
+   ignored on every scanned host): --accent-nonogram #B5563C on --paper-card
+   #FBF7EF = 4.51:1, against WCAG 1.4.11's 3:1 for a meaningful non-text
+   graphic. Nothing here may use --accent-app #9E3B2F, which is 1.40:1 against
+   terracotta and invisible (N13). */
+.pictureRow {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+
+.picture {
+  width: 132px;
+  height: 132px;
+  fill: var(--accent);
+  /* Exactly one mount keyframe, no repeat. The name deliberately avoids
+     /bounce|elastic|wobble|jiggle|spring/i, which impeccable's bounce-easing
+     rule matches on the animation NAME; --ease-settle's 1.05 y2 is inside the
+     rule's allowed [-0.1, 1.1] band (checks.mjs:495-499). Transform and
+     opacity only — never width/height/padding/margin, which fire
+     layout-transition. The short delay lets the stamp land first: two settles
+     at once read as a flourish, in sequence they read as ink drying. */
+  animation: picture-settle var(--duration-slow) var(--ease-settle) both;
+  animation-delay: var(--duration-fast);
+}
+
+/* -2deg is inside --rotate-card-max and deliberately unequal to the stamp's
+   -6deg, so the two do not read as one sheet. */
+@keyframes picture-settle {
+  from {
+    transform: scale(0.94) rotate(-3deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(-2deg);
+    opacity: 1;
+  }
+}
+
 .sync {
   margin: var(--space-6) 0 0;
   font-size: 13px;
@@ -444,6 +500,17 @@
     transform: rotate(-6deg);
   }
 
+  /* The keyframe's END state, never its start: standing the animation down
+     must leave the figure visible, not at `opacity: 0`. It lives in THIS
+     block rather than a new one because CSS Modules hash per file and a
+     reduced-motion block in another module could never reach `.picture`
+     (landmine 24). */
+  .picture {
+    animation: none;
+    transform: rotate(-2deg);
+    opacity: 1;
+  }
+
   .cta,
   .emptyCta {
     transition: none;
@@ -559,6 +626,17 @@
 
   .stampHints {
     font-size: 11px;
+  }
+
+  /* Inside the ONE `@media (max-width: 768px)` block this module declares, so
+     `bodyOf`'s first-match lookup cannot be handed the wrong body. */
+  .pictureRow {
+    margin-top: var(--space-4);
+  }
+
+  .picture {
+    width: 104px;
+    height: 104px;
   }
 
   .sync {

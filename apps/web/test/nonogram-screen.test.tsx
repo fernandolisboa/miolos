@@ -18,6 +18,7 @@ import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { formatElapsed, messages } from "../src/i18n";
 import { filledTarget, solutionMarks } from "../src/nonogram/engine";
 import styles from "../src/nonogram/nonogram-board.module.css";
+import { NonogramConclusion } from "../src/nonogram/nonogram-conclusion";
 import { NonogramScreen } from "../src/nonogram/nonogram-screen";
 import type { NonogramCellValue, NonogramMark } from "../src/nonogram/state";
 import {
@@ -960,6 +961,135 @@ describe("the four branches (T-WEB-S47)", () => {
 });
 
 /**
+ * The picture reveal (T-WEB-S51, plan 020 §13, ADR-0034). Two mounts, two
+ * sources, one bitmap: the play state on the in-place swap, and the concluded
+ * record on `/nonogram/concluido` — and the second is the reason the reveal
+ * survives a reload with no name, no server round trip and no new read path.
+ */
+describe("the picture reveal (T-WEB-S51)", () => {
+  /**
+   * The `d` the reveal owes for a bitmap, derived HERE from the solution
+   * rather than imported from the component — the same discipline the
+   * completion route's encoding pin follows. Row-major `M{col} {row}`, one
+   * subpath per filled cell.
+   */
+  function pathFor(size: number, cells: readonly NonogramMark[]): string {
+    return cells
+      .map((cell, index) =>
+        cell === 1
+          ? `M${String(index % size)} ${String(Math.floor(index / size))}h1v1h-1z`
+          : "",
+      )
+      .join("");
+  }
+
+  const REVEAL = messages.games.nonogram.reveal.aria;
+
+  function figure(): HTMLElement {
+    return screen.getByRole("img", { name: REVEAL });
+  }
+
+  it("hands the reveal down from the play state the moment the picture closes", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+
+    paintThePicture(container);
+
+    expect(figure()).toHaveAttribute(
+      "viewBox",
+      `0 0 ${String(SMALL.size)} ${String(SMALL.size)}`,
+    );
+    expect(figure().querySelector("path")).toHaveAttribute(
+      "d",
+      pathFor(SMALL.size, SOLUTION),
+    );
+    // Additive to the stamp, never instead of it (DESIGN.md:44). The stamp's
+    // own duration is asserted by T-WEB-S47's restore case, which is the one
+    // that can pin a time; here it would be a live clock.
+    expect(
+      screen.getByText(messages.conclusion.stampLabel),
+    ).toBeInTheDocument();
+  });
+
+  it("derives the same picture from a concluded record, with no prop at all", () => {
+    // `/nonogram/concluido`: the server segment passes only `date`, because a
+    // server-computed bitmap would put a derived solution in the RSC payload
+    // of a route players who have NOT solved also open (ADR-0034 decision 3).
+    window.localStorage.setItem(
+      playRecordKey("nonogram", DATE),
+      JSON.stringify(concludedRecord()),
+    );
+
+    render(<NonogramConclusion date={DATE} />);
+
+    expect(figure().querySelector("path")).toHaveAttribute(
+      "d",
+      pathFor(SMALL.size, SOLUTION),
+    );
+  });
+
+  it("stamps a concluded record that carries no grid, and reveals nothing", () => {
+    // A record written before this ticket, or one whose completion never
+    // closed: the stamp is honest and the figure is OMITTED, never a labelled
+    // `<svg>` with an empty `d` (CLI-5/DES-9).
+    //
+    // A DIFFERENT day from the case above, deliberately: `use-record-snapshot`
+    // caches one snapshot per `{game, date}` in a module slot and decides
+    // staleness from the five fields the stamp renders — `grid` is not among
+    // them, so a same-day re-render inside this file would be handed the
+    // previous record. That is a test-isolation constraint and not a product
+    // path: in the app the key changes with the day and `concluded` flips
+    // exactly once, from a record with no grid to one that has it.
+    const day = "2026-07-31";
+    window.localStorage.setItem(
+      playRecordKey("nonogram", day),
+      JSON.stringify(concludedRecord({ date: day, grid: undefined })),
+    );
+
+    const { container } = render(<NonogramConclusion date={day} />);
+
+    expect(
+      screen.getByLabelText(
+        messages.conclusion.stampAria(
+          messages.games.nonogram.conclusion.title,
+          formatElapsed(272_000),
+          0,
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
+  it("reveals the picture in place even where localStorage throws", () => {
+    // Safari private mode and an Android WebView with DOM storage off throw on
+    // the PROPERTY, so no record is ever written and none can ever be read.
+    // The prop is the whole reason the in-place reveal still lands — and it is
+    // the same reason `ConclusionResult` exists at all (plan 017 D26).
+    const original = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("access denied", "SecurityError");
+      },
+    });
+
+    try {
+      const { container } = render(<NonogramScreen daily={SMALL} />);
+
+      paintThePicture(container);
+
+      expect(figure().querySelector("path")).toHaveAttribute(
+        "d",
+        pathFor(SMALL.size, SOLUTION),
+      );
+    } finally {
+      if (original !== undefined) {
+        Object.defineProperty(window, "localStorage", original);
+      }
+    }
+  });
+});
+
+/**
  * The board's arithmetic, read off the stylesheet as TEXT (T-WEB-S48,
  * assertions A1–A14 plus C1).
  *
@@ -1355,5 +1485,74 @@ describe("the board geometry (T-WEB-S48)", () => {
       }
       unmount();
     }
+  });
+});
+
+/**
+ * The reveal's own CSS (T-WEB-S52, plan 020 §13.4/§13.5). It lives in the
+ * SHARED conclusion module and not in this game's, because CSS Modules hash
+ * per file and a `.picture` block declared anywhere else could never reach the
+ * node `conclusion-view.tsx` renders (landmine 24) — so this is where the
+ * contained-celebration rules become mechanical.
+ */
+describe("the picture reveal's CSS (T-WEB-S52)", () => {
+  const CONCLUSION_CSS = stylesheet("src/play/conclusion-view.module.css");
+
+  it("settles once on mount, on the tokens the design system already carries", () => {
+    const animation = decl(bodyOf(CONCLUSION_CSS, ".picture"), "animation");
+
+    expect(animation).toContain("picture-settle");
+    // The forbidden-name regex is impeccable's `bounce-easing` rule, and it
+    // matches on the animation NAME, not on the curve.
+    expect(animation).not.toMatch(/bounce|elastic|wobble|jiggle|spring/i);
+    // Exactly one mount keyframe, no repeat.
+    expect(animation).not.toMatch(/infinite|alternate/);
+    // No new bezier: `--ease-settle`'s 1.05 y2 is inside the rule's allowed
+    // [-0.1, 1.1] band, and `--duration-slow` (250 ms) sits at the top of
+    // DESIGN.md:44's 150–250 ms band.
+    expect(animation).toContain("var(--duration-slow)");
+    expect(animation).toContain("var(--ease-settle)");
+  });
+
+  it("moves paint only, so `layout-transition` cannot fire on it", () => {
+    const keyframe = bodyOf(CONCLUSION_CSS, "@keyframes picture-settle");
+    const animated = new Set(
+      [...keyframe.matchAll(/(?:^|;|\{)\s*([a-z-]+)\s*:/g)].map(
+        ([, property]) => property,
+      ),
+    );
+
+    expect(animated).toEqual(new Set(["transform", "opacity"]));
+  });
+
+  it("is not a card inside a card", () => {
+    // impeccable's `isCardLikeFromProps` returns false on its FIRST guard for
+    // an element with neither shadow nor border, and "card dentro de card" is
+    // a DESIGN.md anti-reference verbatim.
+    for (const local of [".picture", ".pictureRow"]) {
+      const body = bodyOf(CONCLUSION_CSS, local);
+      for (const property of [
+        "background",
+        "background-color",
+        "border",
+        "border-radius",
+        "box-shadow",
+      ]) {
+        expect(decl(body, property)).toBeUndefined();
+      }
+    }
+  });
+
+  it("stands the mount keyframe down for reduced motion, in the SAME module", () => {
+    const reduced = bodyOf(
+      CONCLUSION_CSS,
+      "@media (prefers-reduced-motion: reduce)",
+    );
+
+    expect(reduced).toContain(".picture");
+    expect(decl(bodyOf(reduced, ".picture"), "animation")).toBe("none");
+    // The keyframe's END state, not its start: standing the animation down
+    // must not leave the figure at `opacity: 0`.
+    expect(decl(bodyOf(reduced, ".picture"), "opacity")).toBe("1");
   });
 });

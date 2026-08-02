@@ -223,6 +223,11 @@ describe("the db surface both pages touch (T-WEB-S54)", () => {
     const element = elementSchema.parse(await conclusion.default());
 
     expect(element.props.date).toBe("2026-07-30");
-    expect(element.props.game).toBe("nonogram");
+    // `date` and NOTHING else. The game is the wrapper's own identity now
+    // (plan 020 §13.3), and the key set is the mechanical half of ADR-0034
+    // decision 3: a server-computed `picture` on this route would put a
+    // derived solution into the RSC payload of a page that also renders for
+    // players who have NOT solved.
+    expect(Object.keys(element.props).toSorted()).toEqual(["date"]);
   });
 });

@@ -7,8 +7,10 @@ import { ConclusionView } from "../src/play/conclusion-view";
 import {
   writePlayRecord,
   type BinairoPlayRecord,
+  type NonogramPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
+import type { ConclusionPicture } from "../src/play/types";
 import { useRecordSnapshot } from "../src/play/use-record-snapshot";
 import { formatElapsed, messages, routes } from "../src/i18n";
 import { bodyOf, decl, stylesheet } from "./css-source";
@@ -631,6 +633,133 @@ describe("no record for the server's day (T-WEB-20)", () => {
     );
     expect(markup).not.toContain(messages.conclusion.stampLabel);
     expect(markup).not.toContain(ELAPSED);
+  });
+});
+
+describe("the picture reveal (T-WEB-S50)", () => {
+  /**
+   * A 5×5 bitmap with a shape that is NOT transpose-symmetric, so a path
+   * emitted column-major rather than row-major would produce different
+   * coordinates and fail the first-subpath assertion rather than passing by
+   * accident.
+   */
+  const PICTURE: ConclusionPicture = {
+    size: 5,
+    // prettier-ignore
+    cells: [
+      0, 1, 1, 1, 0,
+      1, 0, 0, 0, 1,
+      1, 1, 1, 1, 1,
+      1, 0, 0, 0, 1,
+      1, 0, 0, 0, 0,
+    ],
+    label: messages.games.nonogram.reveal.aria,
+  };
+
+  const FILLED = PICTURE.cells.filter((cell) => cell === 1).length;
+
+  /** The one `<path>`'s subpaths, as the browser would read them. */
+  function subpathsOf(figure: HTMLElement): string[] {
+    const path = figure.querySelector("path");
+    if (path === null) {
+      throw new Error("the reveal renders no <path>");
+    }
+    return path.getAttribute("d")?.match(/M-?\d+ -?\d+h1v1h-1z/g) ?? [];
+  }
+
+  function nonogramRecord(): NonogramPlayRecord {
+    return {
+      v: 1,
+      game: "nonogram",
+      date: DATE,
+      size: 5,
+      entries: PICTURE.cells.map((cell) => (cell === 1 ? 1 : null)),
+      grid: [...PICTURE.cells],
+      elapsedMs: ELAPSED_MS,
+      hintsUsed: 0,
+      concluded: true,
+      pendingSync: false,
+      syncOutcome: "recorded",
+    };
+  }
+
+  it("draws one subpath per filled cell, under the caller's own name", () => {
+    writePlayRecord(nonogramRecord());
+
+    const { container } = render(
+      <ConclusionView
+        game="nonogram"
+        date={DATE}
+        copy={messages.games.nonogram.conclusion}
+        picture={PICTURE}
+      />,
+    );
+
+    const figure = screen.getByRole("img", { name: PICTURE.label });
+    expect(figure.tagName.toLowerCase()).toBe("svg");
+    expect(figure).toHaveAttribute("viewBox", "0 0 5 5");
+    // Anti-vacuity FIRST: "one subpath per filled cell" is vacuously true at
+    // zero cells, which is exactly what an `?? []` empty bitmap would render
+    // — a labelled graphic with no graphic in it (CLI-5/DES-9).
+    expect(subpathsOf(figure).length).toBeGreaterThan(0);
+    expect(subpathsOf(figure)).toHaveLength(FILLED);
+    // Row-major, and the first filled cell is (row 0, col 1) — `M{col} {row}`.
+    expect(subpathsOf(figure)[0]).toBe("M1 0h1v1h-1z");
+    // One node, never one `<rect>` per cell: a 15×15 daily carries 48–143
+    // filled cells, and every DOM-walking impeccable rule stays O(1) here.
+    expect(container.querySelectorAll("path")).toHaveLength(1);
+    expect(container.querySelectorAll("rect")).toHaveLength(0);
+  });
+
+  it("renders no figure at all when the caller supplies none", () => {
+    writePlayRecord(nonogramRecord());
+
+    const { container } = render(
+      <ConclusionView
+        game="nonogram"
+        date={DATE}
+        copy={messages.games.nonogram.conclusion}
+      />,
+    );
+
+    // The stamp still lands: the reveal is additive to it, never instead of
+    // it (DESIGN.md:44).
+    expect(
+      screen.getByRole("img", {
+        name: messages.conclusion.stampAria(
+          messages.games.nonogram.conclusion.title,
+          ELAPSED,
+          0,
+        ),
+      }),
+    ).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeNull();
+    expect(
+      screen.queryByRole("img", { name: PICTURE.label }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("leaves binairo's and sudoku's conclusions exactly as they were", () => {
+    // The widening is ONE optional prop and ONE conditional block, so a game
+    // that passes no picture renders the markup it rendered before this
+    // ticket: no figure node, and the stamp is still the only `role="img"`.
+    writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku());
+
+    for (const game of ["binairo", "sudoku"] as const) {
+      const { container, unmount } = render(
+        <ConclusionView
+          game={game}
+          date={DATE}
+          copy={messages.games[game].conclusion}
+        />,
+      );
+
+      expect(container.querySelector("svg")).toBeNull();
+      expect(container.querySelector("path")).toBeNull();
+      expect(screen.getAllByRole("img")).toHaveLength(1);
+      unmount();
+    }
   });
 });
 

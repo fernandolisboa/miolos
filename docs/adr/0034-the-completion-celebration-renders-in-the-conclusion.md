@@ -37,9 +37,10 @@ that comment forbids, or a second timer racing the first.
 
 There is a third fact about *when* the board is visible after the last
 entry, and it points the same way — but it is a React **scheduling**
-claim, it is derived from shipped code rather than measured, and jsdom
-cannot produce it. It is recorded below as PENDING and the decision is
-deliberately not built on it.
+claim, and jsdom cannot produce it. It was recorded here as PENDING while
+the screen did not exist; it has since been **measured in a real browser**
+and consequence (a) below carries the number. The decision is still not
+built on it.
 
 ## Decision
 
@@ -111,21 +112,31 @@ deliberately not built on it.
 
 ## Consequences
 
-- **(a) PENDING until measured: the one-painted-frame claim.** The
-  mechanism *predicts* that the solved board is painted for approximately
-  **one frame** — `use-play-lifecycle.ts:206-212` freezes the clock in a
-  **passive** effect (*"an entry action carries no `now`"*), which React
-  flushes after paint, and the screen's swap is gated on
-  `status !== "playing" && timer.runningSince === null` — so a 250 ms
-  board transition started there would be interrupted at ~16 ms. **That is
-  a React scheduling claim derived from shipped code, not a measured
-  number, and it is not asserted as fact here.** jsdom cannot produce it;
-  it is measured in a real browser at the build step where the screen
-  first exists. **If the board turns out to persist ≥200 ms, this ADR is
-  amended in the same PR** to add the in-place half — which is *additive*
-  to this decision rather than a reversal of it, because decision 1 rests
-  on ADR-0028:131 and `sudoku-screen.tsx:43-50` and would be unchanged
-  either way.
+- **(a) MEASURED — the solved board persists exactly one frame.** The
+  mechanism predicts it: `use-play-lifecycle.ts:206-212` freezes the clock
+  in a **passive** effect (*"an entry action carries no `now`"*), which
+  React flushes after paint, and the screen's swap is gated on
+  `status !== "playing" && timer.runningSince === null`. The prediction
+  was carried here as PENDING until the screen existed. It now has a
+  number, from **E12b**, run at build step 7 of #25 against `next dev`
+  driven by the repo's own puppeteer 25.4.0 / Chrome 151, bracketing the
+  discrete `click` that closes the board (commit N, board still in the
+  DOM — asserted, not assumed) and the `MutationObserver` that sees
+  `[data-conclusion-state="result"]` appear:
+
+  | Board | Runs | Animation frames | Delta |
+  |---|---|---|---|
+  | 5×5 (weekday 1) | 5 | **1** on every run | 11.7–12.1 ms, median 11.7 |
+  | 15×15 (weekday 7) | 3 | **1** on every run | 11.1–11.7 ms, median 11.7 |
+
+  So a `var(--duration-slow)` (250 ms) transition started on the solved
+  board would be interrupted at ~12 ms of 250, i.e. **under 5 % of it**,
+  and the ≥200 ms threshold that would have made the in-place half live is
+  missed by more than an order of magnitude. The in-place reveal stays
+  rejected and this ADR is unamended in substance — decision 1 rests on
+  ADR-0028:131 and `sudoku-screen.tsx:43-50` and would have been unchanged
+  either way, which is exactly why it was written not to depend on this
+  measurement.
 - **(b) Every game after Nonogram inherits the placement, not a new
   argument.** A game that wants a payoff moment adds an optional
   plain-data prop and a conclusion-side render; it does not reopen where

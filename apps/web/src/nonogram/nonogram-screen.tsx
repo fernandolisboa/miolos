@@ -4,7 +4,8 @@ import type { DailyNonogramResponse } from "@miolos/core";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
-import { ConclusionView } from "../play/conclusion-view";
+import { submittedCells } from "./engine";
+import { NonogramConclusion } from "./nonogram-conclusion";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useNonogramPlay } from "./use-nonogram-play";
 
@@ -69,15 +70,37 @@ export function NonogramScreen({
     play.state.status === "solved" &&
     play.state.timer.runningSince === null
   ) {
+    const cells = submittedCells(play.state.entries, play.state.size ** 2);
     return (
-      <ConclusionView
-        game="nonogram"
+      <NonogramConclusion
         date={daily.date}
-        copy={messages.games.nonogram.conclusion}
         result={{
           elapsedMs: play.elapsed,
           hintsUsed: play.state.hint.used,
         }}
+        // Omission, never an empty bitmap: `?? []` would supply a labelled
+        // `<svg role="img">` with an empty `d` — a named graphic with no
+        // graphic in it, and worse than saying nothing (the
+        // `stored?.syncOutcome === undefined` precedent at
+        // conclusion-view.tsx:98-108).
+        //
+        // The `null` branch is DEFINED-UNREACHABLE, not assumed away (landmine
+        // 8), and the argument is written here so nobody adds a test for a
+        // state the invariants forbid: `submittedCells` returns null only on
+        // `entries.length !== cells`; `initNonogramPlayState` allocates exactly
+        // size² entries and no reducer case resizes the array; `restore`
+        // rejects any record whose `size` or `entries.length` disagrees with
+        // today's board; and this branch is only reached after
+        // `isPictureComplete` iterated the full size² solution.
+        picture={
+          cells === null
+            ? undefined
+            : {
+                size: play.state.size,
+                cells: [...cells],
+                label: messages.games.nonogram.reveal.aria,
+              }
+        }
       />
     );
   }

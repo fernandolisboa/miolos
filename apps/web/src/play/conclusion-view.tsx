@@ -17,7 +17,7 @@ import { accentVar } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { startCompletionSync } from "./sync";
-import type { ConclusionCopy } from "./types";
+import type { ConclusionCopy, ConclusionPicture } from "./types";
 import { useRecordSnapshot } from "./use-record-snapshot";
 
 /** The four dailies, in the order Hoje lists them. */
@@ -58,17 +58,24 @@ export interface ConclusionResult {
  * italic line (#29, it compares against an average that does not exist) and
  * the share button (#34 — a dead share button is a broken promise, unlike a
  * dead link). §12.3 carries the full table.
+ *
+ * `picture` is the first per-game payoff payload (ADR-0034 decision 3): plain
+ * data, optional, and supplied only by a client component that owns the local
+ * play record. A game with no payoff passes nothing and renders exactly what
+ * it rendered before the prop existed.
  */
 export function ConclusionView({
   game,
   date,
   copy,
   result,
+  picture,
 }: {
   readonly game: Game;
   readonly date: string;
   readonly copy: ConclusionCopy;
   readonly result?: ConclusionResult;
+  readonly picture?: ConclusionPicture;
 }) {
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
@@ -212,6 +219,25 @@ export function ConclusionView({
             </span>
           </div>
         </div>
+        {picture !== undefined && (
+          /* The payoff, inside the card the stamp already lives in — never a
+             modal, never a full-screen takeover, never confetti (PRODUCT.md:33,
+             DESIGN.md:44). One `<svg>` and one `<path>`: a 15×15 daily carries
+             48–143 filled cells, and one node keeps every DOM-walking
+             impeccable rule O(1) here. SVG rather than a grid of divs, per
+             CLAUDE.md's "inside the app: SVG, Skia, or code". */
+          <div className={styles.pictureRow}>
+            <svg
+              className={styles.picture}
+              role="img"
+              aria-label={picture.label}
+              viewBox={`0 0 ${String(picture.size)} ${String(picture.size)}`}
+              shapeRendering="crispEdges"
+            >
+              <path d={picturePath(picture)} />
+            </svg>
+          </div>
+        )}
         {syncOutcome === "pending" && (
           <p className={styles.sync}>{messages.conclusion.sync.pending}</p>
         )}
@@ -262,6 +288,27 @@ export function ConclusionView({
       </aside>
     </main>
   );
+}
+
+/**
+ * The bitmap as ONE `<path>`'s `d`: a unit square per filled cell, in
+ * row-major order, inside a `size × size` viewBox.
+ *
+ * `M{col} {row}h1v1h-1z` — an absolute move to the cell's top-left corner and
+ * a closed unit square, so every subpath is independent and the fill rule
+ * never has to reconcile overlapping ones. Pure and module-scope, so it is
+ * testable without React and cannot close over a render.
+ */
+function picturePath(picture: ConclusionPicture): string {
+  let path = "";
+  for (const [index, cell] of picture.cells.entries()) {
+    if (cell === 1) {
+      const row = Math.floor(index / picture.size);
+      const column = index % picture.size;
+      path += `M${String(column)} ${String(row)}h1v1h-1z`;
+    }
+  }
+  return path;
 }
 
 /**
