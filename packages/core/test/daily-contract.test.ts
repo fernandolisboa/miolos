@@ -523,11 +523,26 @@ describe("nonogramDailyContentSchema", () => {
         solution: [firstRow.slice(0, -1), ...puzzle.reveal.solution.slice(1)],
       },
     };
-    expect(nonogramDailyContentSchema.safeParse(shortSolution).success).toBe(
-      false,
+    const short = nonogramDailyContentSchema.safeParse(shortSolution);
+    const ragged = nonogramDailyContentSchema.safeParse(raggedSolution);
+    expect(short.success).toBe(false);
+    expect(ragged.success).toBe(false);
+
+    // The MESSAGE, not just the verdict. `apps/web/scripts/route-client-js.mjs`
+    // greps the built client chunks for this exact string as one of its
+    // FORBIDDEN markers (ADR-0033 consequence (d)), and a `.refine` message is
+    // free-text: reword it with nothing pinning it and that grep starts
+    // asserting the absence of a string that no longer exists anywhere —
+    // passing vacuously at the one place consequence (d) has a mechanical
+    // guarantee. Its four sibling markers are schema KEYS the tests above
+    // already pin; this one had nothing (step-6 round-3 finding NONO-Q2).
+    // When it changes, change `route-client-js.mjs`'s FORBIDDEN entry in the
+    // same edit.
+    expect(short.error?.issues.map((issue) => issue.message)).toContain(
+      "reveal.solution must be size x size",
     );
-    expect(nonogramDailyContentSchema.safeParse(raggedSolution).success).toBe(
-      false,
+    expect(ragged.error?.issues.map((issue) => issue.message)).toContain(
+      "reveal.solution must be size x size",
     );
   });
 

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -147,6 +148,77 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
       ].join("\n"),
     );
     expect(ruleIds(messages)).toContain("no-restricted-imports");
+  });
+
+  it("T-LINT-3e: packages/core's client contracts never import the server-only ones", () => {
+    // The OTHER half of the same wall, and it belongs beside the lint probe
+    // rather than in `packages/core/test/`: that package compiles with
+    // `"types": []` and `lib: ES2023`, so it cannot name `node:fs` at all.
+    //
+    // Commit d5bb543 split the content schemas out of `contracts/daily.ts`
+    // because a module-scope `z.strictObject(...)` is a call the bundler
+    // cannot prove pure — so while they sat in that file every one of them,
+    // `nonogramRevealSchema`'s `motifId` / `name` / `mirrored` / `solution`
+    // key strings included, was retained in the browser chunk of all eight
+    // routes. `daily.ts`'s header states the rule as an absolute
+    // ("nothing in this file may import from ./daily-content.ts") and nothing
+    // checked it: one re-added import reinstates the regression with
+    // typecheck, lint and the whole suite green (step-6 round-3 finding
+    // `core-client-server-split-is-prose-only`).
+    //
+    // A SOURCE read, not a module-graph walk: what the bundler retains is the
+    // import, and this must keep failing for a type-only import promoted to a
+    // value one.
+    // Comments are stripped first, because BOTH file headers discuss the rule
+    // in prose and quote the very specifier they forbid — a raw match reds on
+    // the documentation instead of on an import.
+    const read = (relative: string) =>
+      readFileSync(join(repoRoot, relative), "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\/\/.*$/gm, "");
+    const client = read("packages/core/src/contracts/daily.ts");
+
+    expect(client).not.toMatch(/from\s+["']\.\/daily-content/);
+
+    // Anti-vacuity: the stripper left the code, the file is the one meant, and
+    // the dependency really does run the other way.
+    expect(client).toMatch(/export const nonogramSizeSchema/);
+    expect(read("packages/core/src/contracts/daily-content.ts")).toMatch(
+      /from\s+["']\.\/daily["']/,
+    );
+  });
+
+  it("T-LINT-3d: the server-only daily-content schemas are banned by name off @miolos/core", async () => {
+    // The client/server split commit d5bb543 landed was enforced by a comment
+    // in two file headers and a hand-run bundle grep — a single
+    // `import { stripDailyContent } from "@miolos/core"` in a `"use client"`
+    // module reinstated the regression with every gate green (step-6 round-3
+    // finding `core-client-server-split-is-prose-only`). The names are the
+    // five values `packages/core/src/index.ts` re-exports from
+    // `contracts/daily-content.ts`.
+    const messages = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { stripDailyContent } from "@miolos/core";',
+        "",
+        "export const strip = stripDailyContent;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(messages)).toContain("no-restricted-imports");
+
+    // The rest of the entry is wall-safe: the CLIENT-facing half must keep
+    // importing cleanly, or this ban would be a wall against the app itself.
+    const allowed = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { isoDateString, nonogramSizeSchema } from "@miolos/core";',
+        "",
+        "export const schemas = { isoDateString, nonogramSizeSchema };",
+        "",
+      ].join("\n"),
+    );
+    expect(wallHits(allowed)).toEqual([]);
   });
 
   it("T-LINT-3c: a relative path into packages/db/src is restricted", async () => {

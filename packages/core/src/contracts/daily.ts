@@ -23,7 +23,12 @@
  * this split is intact.
  *
  * SO: nothing in this file may import from `./daily-content.ts`. The
- * dependency runs one way.
+ * dependency runs one way, and since step-6 round 3 that is CHECKED rather
+ * than promised: `T-LINT-3e` in `apps/web/test/eslint-db-wall.test.ts` reads
+ * this file's source and reds on any `from "./daily-content"`, and `T-LINT-3d`
+ * beside it bans the five server-only names from every `apps/web` import
+ * (finding `core-client-server-split-is-prose-only`). Both live there because
+ * this package compiles with `"types": []` and cannot name `node:fs`.
  */
 import { z } from "zod";
 
@@ -103,9 +108,12 @@ export type DailySudokuResponse = z.infer<typeof dailySudokuResponseSchema>;
 /**
  * The four size classes the weekday ramp can produce
  * (`NONOGRAM_WEEKDAY_CRITERIA`, packages/games/src/nonogram/difficulty.ts:31-41).
- * ONE definition, three consumers: the daily content and the daily response
- * here, and the web play record (plan 020 §14.1) — the `sudokuDigitSchema`
- * precedent above, so only one place can drift. A literal union,
+ * ONE definition, four consumers: the daily content and the daily response
+ * here, the completion request's `NONOGRAM_CELL_COUNTS`
+ * (`contracts/completion.ts`, which derives the legal grid lengths from
+ * `.options` rather than re-listing them) and the web play record (plan 020
+ * §14.1) — the `sudokuDigitSchema` precedent above, so only one place can
+ * drift. A literal union,
  * never `z.number().int()`: a fifth size class is exactly the content-shape
  * drift ADR-0024 wants to fail closed on.
  */

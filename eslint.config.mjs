@@ -230,6 +230,37 @@ export default tseslint.config(
               message:
                 "apps/web must not build queries or touch the identity tables: read the daily through `getTodayDaily`. Raw SQL via the re-exported `sql` bypasses the published-predicate wall (ADR-0024 amendment), and every `users`/`sessions` read belongs to apps/api (ADR-0007/0014).",
             },
+            {
+              name: "@miolos/core",
+              // The SERVER-ONLY half of the daily contracts
+              // (packages/core/src/contracts/daily-content.ts). Commit d5bb543
+              // split them out because a module-scope `z.strictObject(...)` is
+              // a call the bundler cannot prove pure, so naming one of them
+              // from apps/web retains the whole module — `nonogramRevealSchema`'s
+              // `motifId` / `name` / `mirrored` / `solution` key strings
+              // included — in the browser chunk of every route. `"sideEffects":
+              // false` only drops the module while NOTHING here names it, and
+              // until now that rule was prose in two file headers and a
+              // hand-run grep (step-6 round-3 finding
+              // `core-client-server-split-is-prose-only`). Pinned by T-LINT-3d.
+              //
+              // Deliberately in THIS object rather than a new one: flat config
+              // REPLACES a rule's whole configuration when a later object sets
+              // the same rule id, so a second `no-restricted-imports` object
+              // globbed at apps/web/src|app would silently delete the
+              // `@miolos/db` wall above for exactly the files that hold the
+              // credential. apps/web/test/** is inside this glob and imports
+              // none of these names.
+              importNames: [
+                "binairoDailyContentSchema",
+                "DailyProjectionUnsupportedError",
+                "nonogramDailyContentSchema",
+                "stripDailyContent",
+                "sudokuDailyContentSchema",
+              ],
+              message:
+                "these are the SERVER-ONLY daily-content schemas (packages/core/src/contracts/daily-content.ts). apps/web receives the wall's already-stripped projection and must never name the content shape: one value import re-ships the withheld object's shape in every route's client chunk (commit d5bb543, ADR-0024/ADR-0033).",
+            },
           ],
         },
       ],
