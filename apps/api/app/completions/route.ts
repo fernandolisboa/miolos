@@ -5,6 +5,8 @@ import {
   completionResponseSchema,
   nonogramDailyContentSchema,
   sudokuDailyContentSchema,
+  termoDailyContentSchema,
+  type CompletionOutcome,
   type CompletionRequest,
 } from "@miolos/core";
 import {
@@ -16,11 +18,16 @@ import {
   recordCompletion,
   type CompletionRecord,
 } from "@miolos/db/user";
+import {
+  deriveBoardStatus,
+  evaluateGuess,
+  isValidGuess,
+} from "@miolos/games/termo";
 import type { NextRequest } from "next/server";
 
 import { corsHeaders, preflightResponse } from "../../src/cors";
 import { getDb } from "../../src/db";
-import { addDays } from "../../src/publishing/dates";
+import { ACCEPTED_DAYS_BACK, addDays } from "../../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../../src/session/cookie";
 import {
   isCrossSiteWrite,
@@ -30,19 +37,6 @@ import { requireUserId } from "../../src/session/service";
 
 // Never statically cached: every request judges against the database.
 export const dynamic = "force-dynamic";
-
-/**
- * How far back a completion may be claimed: SP-today or SP-yesterday
- * (plan 017 D29). `getPublishedDailyWithSolution` has no lower bound, so
- * without this any caller could write a `won` row for every past daily —
- * permanently, since a completion is never reopened (ADR-0026) — and a
- * stale localStorage record would flush as a day the player never played.
- * One day of slack is what keeps a post-rollover flush working (D19).
- *
- * EXTENSION POINT: #31 (archive) widens this deliberately, with its own
- * tests and its own `late` semantics (ADR-0008).
- */
-const ACCEPTED_DAYS_BACK = 1;
 
 /**
  * Every response carries the credentialed CORS grant, 4xx included (plan
@@ -71,18 +65,30 @@ function completionResponse(
 }
 
 /**
- * The stored solution for a submitted game. Deliberately LOCAL to this
- * route and keyed on `CompletionRequest["game"]`, not `Game`: Termo has no
- * grid (#27), so a core-level "get the solution" abstraction would be wrong
- * within two tickets. Exhaustive over the request union's discriminator, so
- * #27 gets a compile error here instead of a silent fallthrough — and
- * without it a sudoku row would reach `binairoDailyContentSchema.parse`,
- * throw a ZodError and 500 the route the moment the request union widened.
+ * The three games whose completion IS a grid. Termo's is a guess list, so it
+ * is excluded by type rather than by convention — `judgeTermo` is its
+ * counterpart and the route must narrow before calling either.
+ */
+type GridCompletionGame = Exclude<CompletionRequest["game"], "termo">;
+
+/**
+ * The stored solution for a submitted GRID game. Deliberately LOCAL to this
+ * route and NARROWED — never widened — because Termo has no grid: a
+ * core-level "get the solution" abstraction would be wrong, and a
+ * `readonly number[]` return has no honest Termo meaning (ADR-0038 decision
+ * 5). The `Exclude` is what makes TypeScript PROVE the route narrowed
+ * `body.game` before calling this; it is the same tripwire the old
+ * `CompletionRequest["game"]` signature was, one ticket later.
+ *
+ * Exhaustive over the narrowed union, so a fifth grid game gets a compile
+ * error here instead of a silent fallthrough — without it a sudoku row would
+ * reach `binairoDailyContentSchema.parse`, throw a ZodError and 500 the route
+ * the moment the request union widened.
  *
  * jsonb is untyped at the boundary: parsed, never cast.
  */
 function storedSolution(
-  game: CompletionRequest["game"],
+  game: GridCompletionGame,
   content: unknown,
 ): readonly number[] {
   switch (game) {
@@ -103,6 +109,116 @@ function storedSolution(
     case "sudoku":
       return sudokuDailyContentSchema.parse(content).solution;
   }
+}
+
+/**
+ * Judge a submitted GRID against the stored row: `"won"`, or `null` for a
+ * body that is not this puzzle. `null` and not a thrown error, because the
+ * caller turns it into the 422 that writes no row — for a grid game a wrong
+ * grid is not a game outcome (ADR-0008 keeps `lost` Termo-only), it is a
+ * client bug or tampering.
+ *
+ * These are the shipped lines, moved behind the narrowing branch unchanged.
+ */
+function judgeGrid(
+  body: Extract<CompletionRequest, { game: GridCompletionGame }>,
+  content: unknown,
+): CompletionOutcome | null {
+  const solution = storedSolution(body.game, content);
+
+  // Binairo pins .length(64) and sudoku .length(81), so for those two the
+  // request schema already proves this and the check can never fire. A
+  // nonogram grid is 25/64/100/225 cells and the STORED row decides which,
+  // so the wire length is checked against THIS row's solution: the loop below
+  // iterates `solution.entries()`, and without this a LONGER grid whose
+  // prefix matched would score zero mismatches and be recorded (plan 020 N7).
+  // Comparing two lengths reveals nothing about the picture, so this sits
+  // outside the constant-work comparison deliberately. The check is
+  // game-generic and must not be simplified away (ADR-0032 consequence (c)).
+  // 422, not 400: the body is well-formed, it just is not this puzzle — and
+  // `TERMINAL_STATUSES` already treats 422 as terminal, so the client record
+  // settles rather than retrying forever.
+  if (body.grid.length !== solution.length) {
+    return null;
+  }
+
+  // Constant-work comparison — every cell is examined even after the first
+  // mismatch. Neither grid game has a secret worth a timing channel, and
+  // Termo does not add one: `judgeTermo` returns its verdict in the response
+  // body, so there is nothing a clock could learn that the answer does not
+  // already state (ADR-0038's rejected list). This repo has engineered
+  // timing-sensitive comparisons out twice (cron/publish/route.ts,
+  // session/token.ts) and the loop stays as it is.
+  let mismatches = 0;
+  for (const [index, cell] of solution.entries()) {
+    if (cell !== body.grid[index]) {
+      mismatches += 1;
+    }
+  }
+  return mismatches > 0 ? null : "won";
+}
+
+/**
+ * Judge a submitted Termo GUESS LIST against the stored answer: `"won"`,
+ * `"lost"`, or `null` for a list the server refuses to score.
+ *
+ * `"lost"` becomes reachable here for the first time in the product's
+ * history. THIS IS WHERE TERMO INVERTS THE GRID RULE, and over-reading the
+ * inversion is the real risk, so both halves are stated:
+ *
+ * - `null` (→ 422 `guess-mismatch`, NO ROW) for a list that is still
+ *   `"playing"`, contains a non-word, or continues past a winning row. The
+ *   `"playing"` half is the guard that makes a client bug non-fatal: the row
+ *   is write-once (ADR-0026), so a prematurely posted loss would cost the
+ *   player the day permanently. It must not be relaxed.
+ * - `"lost"` (→ 200, a ROW) for six guesses exhausted without a win. That is
+ *   the game working, not a rejected body.
+ *
+ * The ladder is `POST /termo/guess`'s steps 8–11 — the same dictionary gate,
+ * the same "no row follows a winning row" pre-check in front of
+ * `deriveBoardStatus`, the same engine calls. The two are deliberately
+ * written where they run rather than behind a shared helper: this one
+ * discards the tiles and answers a completion, that one is the whole
+ * response. **If either changes, change both** — `apps/api/test/completions.test.ts`
+ * (T-API-S39) and `apps/api/test/termo-guess.test.ts` (T-API-S38) pin the
+ * shared cases from both sides.
+ *
+ * `outcome` is DERIVED, never read off the body: a `won`/`lost` field would
+ * be a client-asserted outcome, the same class of input as the completion
+ * instant ADR-0026 rejects outright. The honest limit is that `lost` is only
+ * as authoritative as the client's willingness to report it — the same class
+ * as `hints_used` — and both failure directions are safe: suppression grants
+ * nothing (no row = no streak day), and a fabricated win grants a streak day
+ * the player could already mint from Binairo in 0.1 ms. A Termo `lost` row
+ * may feed the player's own guess distribution and may never back a medal or
+ * an entitlement (ADR-0031 decision 6).
+ */
+function judgeTermo(
+  guesses: readonly string[],
+  content: unknown,
+): CompletionOutcome | null {
+  // jsonb is untyped at the boundary: parsed, never cast. A drifted row
+  // THROWS — the same deliberate 500 the guess route takes.
+  const answer = termoDailyContentSchema.parse(content).normalized;
+
+  if (!guesses.every((guess) => isValidGuess(guess))) {
+    return null;
+  }
+
+  // Before `deriveBoardStatus`, which throws a RangeError on a row following
+  // a winning row — reachable from a hostile body, and an uncaught RangeError
+  // here is a 500. Exact rather than conservative: `evaluateGuess` writes
+  // "correct" only where `guess.charAt(i) === answer.charAt(i)`, so all five
+  // correct ⟺ the guess EQUALS the answer, and both operands are `^[a-z]{5}$`.
+  const winAt = guesses.findIndex((guess) => guess === answer);
+  if (winAt !== -1 && winAt !== guesses.length - 1) {
+    return null;
+  }
+
+  const status = deriveBoardStatus(
+    guesses.map((guess) => evaluateGuess(guess, answer)),
+  );
+  return status === "playing" ? null : status;
 }
 
 /** `application/json`, parameters allowed (`; charset=utf-8`). */
@@ -204,49 +320,30 @@ export async function POST(request: NextRequest): Promise<Response> {
     return errorResponse(404, "no-puzzle");
   }
 
-  const solution = storedSolution(body.game, row.content);
-
-  // Binairo pins .length(64) and sudoku .length(81), so for those two the
-  // request schema already proves this and the check can never fire. A
-  // nonogram grid is 25/64/100/225 cells and the STORED row decides which,
-  // so the wire length is checked against THIS row's solution: the loop below
-  // iterates `solution.entries()`, and without this a LONGER grid whose
-  // prefix matched would score zero mismatches and be recorded (plan 020 N7).
-  // Comparing two lengths reveals nothing about the picture, so this sits
-  // outside the constant-work comparison deliberately. 422, not 400: the body
-  // is well-formed, it just is not this puzzle — and `TERMINAL_STATUSES`
-  // already treats 422 as terminal, so the client record settles rather than
-  // retrying forever.
-  if (body.grid.length !== solution.length) {
-    return errorResponse(422, "grid-mismatch");
-  }
-
-  // Constant-work comparison — every cell is examined even after the first
-  // mismatch. Neither grid game has a secret worth a timing channel, but
-  // this route and its request union are the extension point #27 attaches to,
-  // where the answer word IS the product's one secret. This repo has
-  // already engineered timing-sensitive comparisons out twice
-  // (cron/publish/route.ts, session/token.ts) and does not reintroduce one
-  // here for a later ticket to find.
-  let mismatches = 0;
-  for (const [index, cell] of solution.entries()) {
-    if (cell !== body.grid[index]) {
-      mismatches += 1;
-    }
-  }
-  if (mismatches > 0) {
-    // No row is written: for a grid game a wrong grid is not a game outcome
-    // (ADR-0008 keeps `lost` Termo-only), it is a client bug or tampering.
-    return errorResponse(422, "grid-mismatch");
+  // The branch sits AFTER the wall read, which both paths need, and it is
+  // what proves `body.game` narrowed before either judge is called.
+  const outcome =
+    body.game === "termo"
+      ? judgeTermo(body.guesses, row.content)
+      : judgeGrid(body, row.content);
+  if (outcome === null) {
+    return errorResponse(
+      422,
+      body.game === "termo" ? "guess-mismatch" : "grid-mismatch",
+    );
   }
 
   const { record, recorded } = await recordCompletion(db, {
     userId,
     game: body.game,
     date: body.date,
-    outcome: "won",
+    outcome,
     elapsedMs: body.elapsedMs,
     hintsUsed: body.hintsUsed,
+    // Write-only in #27, and it cannot be deferred: the row is write-once
+    // (ADR-0026 decision 1), so a Termo day recorded without its count is
+    // permanently absent from the guess distribution ADR-0008 rule 3 needs.
+    guesses: body.game === "termo" ? body.guesses.length : undefined,
   });
   return completionResponse(record, recorded);
 }

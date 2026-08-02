@@ -8,10 +8,12 @@ import {
   completionResponseSchema,
   nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
+  termoCompletionRequestSchema,
   type BinairoCompletionRequest,
   type CompletionResponse,
   type NonogramCompletionRequest,
   type SudokuCompletionRequest,
+  type TermoCompletionRequest,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
 
@@ -67,6 +69,20 @@ const validNonogram: NonogramCompletionRequest = {
   game: "nonogram",
   date: "2026-08-01",
   grid: nonogramGrid(5),
+  elapsedMs: 272_000,
+  hintsUsed: 1,
+};
+
+/**
+ * The fourth member, and the first with no grid at all: the guess LIST is the
+ * only EVIDENCE of the outcome that exists, so it is what the wire carries
+ * (ADR-0038 decision 3). Normalized on the wire, so two honest players who
+ * typed "AÇÃO" and "acao" post byte-identical bodies.
+ */
+const validTermo: TermoCompletionRequest = {
+  game: "termo",
+  date: "2026-08-01",
+  guesses: ["praga", "sinal", "corte"],
   elapsedMs: 272_000,
   hintsUsed: 1,
 };
@@ -182,15 +198,119 @@ describe("binairoCompletionRequestSchema", () => {
     ).toBe(true);
   });
 
-  // Retargeted twice, each time at the game the union genuinely does not
-  // carry: `sudoku` at #18, `nonogram` at #23, and now `termo` at #25. The
-  // retarget is not tidying — with nonogram in the union this assertion was
-  // ACTIVELY FALSE against it, because a 64-cell 0/1 body IS a legal 8x8
-  // nonogram submission (plan 020 N31). Termo has no grid at all (#27).
-  it("rejects a game the union does not carry yet (#27 widens it)", () => {
+  // Retargeted THREE times, each time at the game the union genuinely does
+  // not carry: `sudoku` at #18, `nonogram` at #23, `termo` at #25 — and at
+  // #27 there is no fifth game to retarget it to, so it inverts into a
+  // POSITIVE assertion (plan 022 §11.2). The retarget was never tidying: with
+  // nonogram in the union the old form was ACTIVELY FALSE against it, because
+  // a 64-cell 0/1 body IS a legal 8x8 nonogram submission (plan 020 N31).
+  // A binairo body relabelled `termo` still fails, and now for the RIGHT
+  // reason — the termo member carries `guesses`, not `grid`.
+  it("T-CORE-S23: the union now carries termo, and a relabelled binairo body still fails", () => {
+    expect(completionRequestSchema.safeParse(validTermo).success).toBe(true);
     expect(
       completionRequestSchema.safeParse({ ...valid, game: "termo" }).success,
     ).toBe(false);
+    expect(
+      completionRequestSchema.safeParse({ ...validTermo, game: "xadrez" })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("termoCompletionRequestSchema", () => {
+  // T-CORE-S22 (plan 022 §19.3).
+  it("T-CORE-S22: parses and round-trips a six-guess submission, through the union too", () => {
+    expect(termoCompletionRequestSchema.parse(validTermo)).toEqual(validTermo);
+    const six = {
+      ...validTermo,
+      guesses: Array.from({ length: 6 }, () => "praga"),
+    };
+    expect(completionRequestSchema.parse(six)).toEqual(six);
+  });
+
+  it("T-CORE-S22: `guesses` is bounded 1..6 — the board's own bound, on the wire", () => {
+    for (const length of [1, 6]) {
+      expect(
+        termoCompletionRequestSchema.safeParse({
+          ...validTermo,
+          guesses: Array.from({ length }, () => "praga"),
+        }).success,
+        `${String(length)} guesses must parse`,
+      ).toBe(true);
+    }
+    for (const length of [0, 7]) {
+      expect(
+        termoCompletionRequestSchema.safeParse({
+          ...validTermo,
+          guesses: Array.from({ length }, () => "praga"),
+        }).success,
+        `${String(length)} guesses must fail`,
+      ).toBe(false);
+    }
+  });
+
+  it("T-CORE-S22: every guess is NORMALIZED — accents and case never reach the judge", () => {
+    for (const guess of ["CAFÉ", "café", "cafe", "cafés", "pra ga", ""]) {
+      expect(
+        termoCompletionRequestSchema.safeParse({
+          ...validTermo,
+          guesses: [guess],
+        }).success,
+        `${guess} must fail`,
+      ).toBe(false);
+    }
+  });
+
+  it("T-CORE-S22: carries NO tiles, NO outcome, NO answer and no other smuggled key", () => {
+    // Each of the three is the obvious thing to add and each would be a
+    // second place to lie about a fact the stored row owns (ADR-0038
+    // decision 3) — `outcome` in particular is the same class of
+    // client-asserted input as the completion instant ADR-0026 rejects.
+    for (const extra of [
+      { tiles: [["correct", "correct", "correct", "correct", "correct"]] },
+      { outcome: "won" },
+      { answer: "praga" },
+    ]) {
+      expect(
+        termoCompletionRequestSchema.safeParse({ ...validTermo, ...extra })
+          .success,
+      ).toBe(false);
+    }
+  });
+
+  it("T-CORE-S22: `elapsedMs`/`hintsUsed` carry binairo's bounds UNCHANGED", () => {
+    // The bound is a PRODUCT rule, not a per-game one: narrowing `hintsUsed`
+    // to `z.literal(0)` because Termo ships no hint (ADR-0045) would make a
+    // later Termo hint a contract change.
+    expect(
+      termoCompletionRequestSchema.safeParse({
+        ...validTermo,
+        elapsedMs: 86_400_000,
+        hintsUsed: 1,
+      }).success,
+    ).toBe(true);
+    for (const bad of [
+      { elapsedMs: -1 },
+      { elapsedMs: 86_400_001 },
+      { elapsedMs: 1.5 },
+      { hintsUsed: 2 },
+      { hintsUsed: -1 },
+    ]) {
+      expect(
+        termoCompletionRequestSchema.safeParse({ ...validTermo, ...bad })
+          .success,
+      ).toBe(false);
+    }
+  });
+
+  it("T-CORE-S22: `date` is calendarDateString — an impossible day and year 0 both fail", () => {
+    for (const date of ["2026-02-30", "0000-01-01"]) {
+      expect(
+        termoCompletionRequestSchema.safeParse({ ...validTermo, date }).success,
+        `${date} must fail`,
+      ).toBe(false);
+    }
   });
 });
 
@@ -518,6 +638,16 @@ describe("the completion request carries no instant (plan 017 D19)", () => {
       "elapsedMs",
       "game",
       "grid",
+      "hintsUsed",
+    ]);
+  });
+
+  it("T-CORE-S22: termo's key set is exactly the five audited fields — `guesses` where the grids carry `grid`", () => {
+    expect(Object.keys(termoCompletionRequestSchema.shape).sort()).toEqual([
+      "date",
+      "elapsedMs",
+      "game",
+      "guesses",
       "hintsUsed",
     ]);
   });

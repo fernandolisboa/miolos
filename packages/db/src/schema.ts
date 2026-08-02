@@ -160,6 +160,40 @@ export const completions = pgTable(
     outcome: text("outcome", { enum: COMPLETION_OUTCOMES }).notNull(),
     elapsedMs: integer("elapsed_ms").notNull(),
     hintsUsed: integer("hints_used").notNull().default(0),
+    /**
+     * The number of guesses a Termo completion took. NULL for every other
+     * game, and NULL is the only legal value for them (see the CHECK below).
+     *
+     * WRITE-ONLY IN #27, deliberately. `getCompletion`'s projection does not
+     * select it, so `CompletionRecord` does not grow and
+     * `completionResponseSchema.parse({ ...record, recorded })` — a
+     * `z.strictObject` at `apps/api/app/completions/route.ts` — cannot break
+     * on an unexpected key. Widening the record would have thrown on EVERY
+     * completion in the app. The statistics ticket adds the projection when
+     * it needs it (T-DB-S11 pins the omission).
+     *
+     * It could NOT be deferred to that ticket: ADR-0026 decision 1 makes the
+     * row write-once (`ON CONFLICT DO NOTHING`, never `DO UPDATE`), so a row
+     * written before the column exists can never be backfilled, and every
+     * Termo day played in between would be permanently absent from the guess
+     * distribution ADR-0008 rule 3 requires.
+     *
+     * MIGRATION `0003_omniscient_venom.sql`, and it reaches Neon BY HAND via
+     * `DATABASE_URL_UNPOOLED` — nothing in CI or Vercel runs migrations.
+     * `db:migrate` (`drizzle-kit migrate`) must NEVER be pointed at Neon: it
+     * reconciles `migrations/meta/_journal.json` against a bookkeeping table
+     * it maintains inside the target database, and every migration in this
+     * repo was applied with `psql -f`, which writes no such row. `db:generate`
+     * is the only half of the pair this repo uses.
+     *
+     * ADDING THIS COLUMN CHANGES THE SQL FOR ALL FOUR GAMES, not just termo.
+     * Drizzle builds an INSERT's column list from THIS object, never from the
+     * values object, so an un-supplied `guesses` is emitted as the keyword
+     * `default` and a bare `.returning()` selects it — measured against
+     * drizzle-orm 0.45.2. A deploy that precedes the apply therefore 500s
+     * `POST /completions` for binairo, sudoku and nonogram too (ADR-0038 (h)).
+     */
+    guesses: integer("guesses"),
   },
   (t) => [
     primaryKey({ columns: [t.userId, t.game, t.date] }),
@@ -170,6 +204,19 @@ export const completions = pgTable(
     check("completions_outcome_check", sql`${t.outcome} in ('won', 'lost')`),
     check("completions_elapsed_ms_check", sql`${t.elapsedMs} >= 0`),
     check("completions_hints_used_check", sql`${t.hintsUsed} >= 0`),
+    // An EQUALITY between two booleans, and it is stronger than the
+    // permissive `guesses is null or game = 'termo'` on purpose: it makes a
+    // termo row WITHOUT a count and a grid row WITH one both impossible.
+    // Every existing row satisfies it (`false = false`), which is what made
+    // applying the migration ahead of the deploy a provable non-event.
+    // The literal `6` is spelled out to match the CHECKs above: importing
+    // `MAX_GUESSES` would give `packages/db` a `@miolos/games` dependency it
+    // deliberately does not have, dragging the word list in with it.
+    check(
+      "completions_guesses_check",
+      sql`(${t.game} = 'termo') = (${t.guesses} is not null)
+          and (${t.guesses} is null or ${t.guesses} between 1 and 6)`,
+    ),
     // The PK covers (user_id) and (user_id, game); the streak recompute and
     // "the day so far" both read (user_id, date) across games.
     index("completions_user_date_idx").on(t.userId, t.date),

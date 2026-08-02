@@ -658,10 +658,12 @@ describe("termoDailyContentSchema", () => {
   });
 
   it("T-CORE-S18: the literal 5 is the ENGINE's WORD_LENGTH, and MAX_GUESSES is 6", () => {
-    // The dimension check, pinned to the engine rather than restated. #27's
-    // B5 commit extends this id to `TERMO_WORD_LENGTH`, `TERMO_MAX_GUESSES`
-    // and `termoTilesSchema` in `contracts/termo-guess.ts`; this half is the
-    // one the stored-content contract owes.
+    // The dimension check, pinned to the engine rather than restated. This
+    // half is the one the STORED-CONTENT contract owes; the wire's half —
+    // `TERMO_WORD_LENGTH`, `TERMO_MAX_GUESSES` and `termoTilesSchema`'s arity
+    // — carries the SAME id in `test/termo-guess-contract.test.ts`, which is
+    // the file that owns those symbols. One id, two files, on the T-API-S34
+    // precedent.
     expect(WORD_LENGTH).toBe(5);
     expect(MAX_GUESSES).toBe(6);
     expect(

@@ -28,6 +28,7 @@ export {
   type SessionResponse,
 } from "./contracts/session";
 export {
+  calendarDateString,
   dailyBinairoResponseSchema,
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
@@ -69,17 +70,30 @@ export {
   type CronPublishResponse,
 } from "./contracts/cron";
 export {
+  TERMO_MAX_GUESSES,
+  TERMO_WORD_LENGTH,
+  termoGuessRequestSchema,
+  termoGuessResponseSchema,
+  termoGuessWordSchema,
+  termoTilesSchema,
+  termoTileStateSchema,
+  type TermoGuessRequest,
+  type TermoGuessResponse,
+  type TermoTiles,
+} from "./contracts/termo-guess";
+export {
   apiErrorResponseSchema,
   binairoCompletionRequestSchema,
-  calendarDateString,
   completionRequestSchema,
   completionResponseSchema,
   nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
+  termoCompletionRequestSchema,
   type ApiErrorResponse,
   type BinairoCompletionRequest,
   type CompletionRequest,
   type CompletionResponse,
   type NonogramCompletionRequest,
   type SudokuCompletionRequest,
+  type TermoCompletionRequest,
 } from "./contracts/completion";

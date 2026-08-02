@@ -2,46 +2,16 @@ import { z } from "zod";
 
 import { completionOutcomeSchema } from "../completion";
 import { gameSchema } from "../game";
-import { isoDateString, nonogramSizeSchema, sudokuDigitSchema } from "./daily";
-
-/**
- * A calendar-VALID 'YYYY-MM-DD'. `isoDateString` checks shape only, which
- * is right for server-derived values but not for a client-supplied one:
- * "2026-02-30" passes the regex, reaches `eq(dailyPuzzles.date, date)`
- * against a Postgres `date` column, and raises 22008 — a 500 from a
- * two-character body edit. Round-tripping through UTC is the check: JS
- * rolls an impossible day over ("2026-02-30" ⇒ 2026-03-02), so a value
- * that survives the round trip is a real day on the calendar.
- *
- * THE ROUND TRIP ALONE IS NOT ENOUGH, and the exception is year 0. JS has
- * one; the proleptic Gregorian calendar Postgres implements does not — 1 BC
- * is followed by 1 AD — so `"0000-01-01"` survives the round trip verbatim
- * and `'0000-01-01'::date` still raises 22008, the very failure the
- * paragraph above says this guard exists to prevent. `POST /completions`
- * reaches the DB with the body's date BEFORE any range check, because
- * ADR-0026's idempotent short-circuit runs ahead of `ACCEPTED_DAYS_BACK`
- * (`apps/api/app/completions/route.ts`) — so year 0 was an uncaught throw,
- * i.e. a 500, on the repo's only authenticated write (step-6 round-4
- * finding `calendar-date-year-zero-500s-the-completions-route`). The floor
- * belongs HERE rather than in the route: the short-circuit's position is the
- * ADR's design and must not move.
- *
- * No upper bound is needed — the four-digit regex caps the value at 9999 and
- * Postgres accepts `9999-12-31` — and `0001-01-01` is the first value the
- * floor lets through, which is also Postgres's own first AD day.
- *
- * `"0000-00-00"` was already rejected, but for the MONTH, not the year: it
- * is an Invalid Date. That near-miss is why the gap stayed invisible, so the
- * test list pins both forms side by side.
- */
-export const calendarDateString = isoDateString.refine((value) => {
-  const parsed = new Date(`${value}T00:00:00Z`);
-  return (
-    !Number.isNaN(parsed.getTime()) &&
-    parsed.getUTCFullYear() >= 1 &&
-    parsed.toISOString().slice(0, 10) === value
-  );
-}, "not a calendar date");
+import {
+  calendarDateString,
+  isoDateString,
+  nonogramSizeSchema,
+  sudokuDigitSchema,
+} from "./daily";
+// One direction only (plan 022 §8.0): `./termo-guess.ts` must never import
+// from this module, or the two close a cycle that throws at import in every
+// `@miolos/core` consumer — and `pnpm test` does not catch it.
+import { TERMO_MAX_GUESSES, termoGuessWordSchema } from "./termo-guess";
 
 /** A submitted board is COMPLETE — `null` is a partial grid, never a completion. */
 const submittedCellSchema = z.union([z.literal(0), z.literal(1)]);
@@ -184,10 +154,50 @@ export type NonogramCompletionRequest = z.infer<
   typeof nonogramCompletionRequestSchema
 >;
 
+/**
+ * Termo's completion (#27, ADR-0038). FIVE keys, like every other member —
+ * `guesses` sits exactly where the three grid members carry `grid`.
+ *
+ * It carries the guess LIST and nothing else, because the list is the only
+ * EVIDENCE of the outcome that exists. A `won`/`lost` field would be a
+ * client-asserted outcome, the same class of input as the client-supplied
+ * completion instant ADR-0026 rejects outright; a `tiles` field would be a
+ * second place to lie about a fact the stored row owns, which is the argument
+ * that kept `size` off the nonogram member above. The server recomputes both
+ * from `guesses` and the stored answer.
+ *
+ * It does NOT achieve ADR-0032's byte-identity between two honest winners —
+ * two players who won on guess 4 guessed different words, and there is no
+ * smaller canonical form that PROVES a win. What it keeps is ADR-0032's
+ * substance: no leniency rule, no client-asserted outcome, no second place to
+ * lie. Byte-identity survives where it can — the wire is normalized, so
+ * "AÇÃO" and "acao" are the same bytes. The warrant for the extra state is
+ * that the guess SEQUENCE is itself outcome-bearing: ADR-0008 requires the
+ * fail row, and the statistics ticket's distribution is a function of the
+ * guess count.
+ *
+ * `elapsedMs`/`hintsUsed` carry binairo's bounds unchanged and must stay
+ * identical. `hintsUsed` keeps `.max(1)` even though Termo ships no hint
+ * (ADR-0045): the bound is a PRODUCT rule, not a per-game one, and narrowing
+ * it to `z.literal(0)` would make a later hint a contract change.
+ */
+export const termoCompletionRequestSchema = z.strictObject({
+  game: z.literal("termo"),
+  date: calendarDateString,
+  guesses: z.array(termoGuessWordSchema).min(1).max(TERMO_MAX_GUESSES),
+  elapsedMs: z.number().int().min(0).max(86_400_000),
+  hintsUsed: z.number().int().min(0).max(1),
+});
+
+export type TermoCompletionRequest = z.infer<
+  typeof termoCompletionRequestSchema
+>;
+
 export const completionRequestSchema = z.discriminatedUnion("game", [
   binairoCompletionRequestSchema,
   nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
+  termoCompletionRequestSchema,
 ]);
 
 export type CompletionRequest = z.infer<typeof completionRequestSchema>;

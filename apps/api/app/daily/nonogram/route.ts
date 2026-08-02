@@ -17,8 +17,10 @@ export const dynamic = "force-dynamic";
  * `DailyProjectionUnsupportedError` uncaught — died at #27, which landed the
  * fourth literal route and the last projection.
  *
- * Nothing in `apps/web` consumes this path — the web app fetches `/session`
- * and `/completions` only — and it ships anyway, because it is the operator's
+ * Nothing in `apps/web` consumes this path — the web app fetches `/session`,
+ * `/completions` and, since #27, `POST /termo/guess`, which is a user-specific
+ * READ that ADR-0014 routes here the same way — and it ships anyway, because
+ * it is the operator's
  * machine-readable check that a `killed_at` took effect. Without it two games
  * can be verified with a `curl` and the third only by scraping the web app,
  * and a `limit(1)` indexed read of already-public content is identical in

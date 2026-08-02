@@ -7,6 +7,32 @@
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
+/**
+ * How far back a completion or a guess may be claimed: SP-today or
+ * SP-yesterday (plan 017 D29). `getPublishedDailyWithSolution` has no lower
+ * bound, so without this any caller could write a `won` row for every past
+ * daily — permanently, since a completion is never reopened (ADR-0026) — and
+ * a stale localStorage record would flush as a day the player never played.
+ * One day of slack is what keeps a post-rollover flush working (D19).
+ *
+ * ONE COPY, SHARED BY BOTH ROUTES (#27, ADR-0038 decision 8). It lived in
+ * `app/completions/route.ts` until Termo needed the same window: a player
+ * mid-game at the São Paulo rollover must be able to submit guess five for
+ * yesterday's date, or Termo becomes unfinishable at midnight — while the
+ * completion route already accepts that same day. Two copies of the bound is
+ * exactly the drift ADR-0026 warns about: *"Widening it accidentally — by
+ * removing the bound while 'fixing' a date test — reopens the whole past
+ * calendar to forged completions."*
+ *
+ * This does NOT move the bound out of the route layer, which is what ADR-0026
+ * decision 6 actually requires ("in the route and not in SQL"). A module
+ * inside `apps/api/src` is still the route layer; nothing here reaches SQL.
+ *
+ * EXTENSION POINT: #31 (archive) widens this deliberately, with its own tests
+ * and its own `late` semantics (ADR-0008).
+ */
+export const ACCEPTED_DAYS_BACK = 1;
+
 function partsOf(date: string): [number, number, number] {
   const match = ISO_DATE.exec(date);
   if (!match) {
