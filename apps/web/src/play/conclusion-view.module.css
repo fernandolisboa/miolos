@@ -116,10 +116,21 @@
    supplies: mustard #C08A1E (L 0.29477163) on `--paper-desk` #F7F2E9
    (L 0.89161610) is (0.89161610 + 0.05) / (0.29477163 + 0.05) =
    **2.7311:1** at 11px. `--ink-2` #6E6659 (L 0.13539008) is
-   (0.89161610 + 0.05) / (0.13539008 + 0.05) = **5.0791:1**. */
+   (0.89161610 + 0.05) / (0.13539008 + 0.05) = **5.0791:1**.
+
+   BRANDED — `var(--text-kicker)` at 600 with 0.16em, matching `.cardKicker`
+   below and `screen.module.css`'s own `.barKicker` (step-7 finding A-F6).
+   At <=1140px `.cardKicker` is `display: none` and this span is the only
+   thing on the screen saying which game the player just finished, while
+   `.dayCardTitle` — a generic section eyebrow, "O DIA DE HOJE" — is visible
+   at the same time. Before this, the two were identical in every property:
+   11px, 400, 0.14em, uppercase, `--ink-2`. The accent was the sole
+   differentiator and ADR-0041 took it away, so the brand system DESIGN.md's
+   typography section describes had to be carried by the weight and the
+   tracking instead. Mobile is the primary form factor. */
 .barKicker {
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-2);
 }
@@ -523,20 +534,44 @@
   font-weight: 550;
   font-size: 19px;
   text-decoration: none;
-  border-bottom: 2px solid var(--line);
-  padding-bottom: var(--space-1);
+  /* The rule and the gap above it are ONE 6px box, driven by a single custom
+     property, so the hover below can thicken the rule and take the pixel back
+     out of the padding. At rest that is 4px + 2px — the shipped
+     `var(--space-1)` + 2px, unchanged to the pixel. */
+  --rule-width: 2px;
+  border-bottom: var(--rule-width) solid var(--line);
+  padding-bottom: calc(6px - var(--rule-width));
   /* No cursor: pointer while the anchor is href-less; it returns when #29
      lands the statistics route. */
 }
 
-/* This link already HAS the shape ADR-0041 decision 4 asks for — a 2px rule
-   under it — so the hover moves the accent onto that rule instead of stacking
-   `.page a:hover`'s underline beneath the border it already draws. Same
-   accepted exception and same figures as that block: the rule is 2.7311:1 on
-   desk paper, the word is `--ink` at 15.0124:1, and the state's carrier is
-   the rule's colour CHANGING from `--line` rather than the hue itself.
-   (0,3,0) beats `.page a:hover`'s (0,2,1). */
+/* This link already HAS the shape ADR-0041 decision 4 asks for — a rule under
+   it — so the hover moves the accent onto that rule instead of stacking
+   `.page a:hover`'s underline beneath the border it already draws. (0,3,0)
+   beats `.page a:hover`'s (0,2,1).
+
+   And the rule GROWS, 2px -> 3px, which is the point rather than a flourish
+   (step-7 finding A-F5). Decision 4's exception is granted to "a solid 2px
+   band appearing where there was none... a change of GEOMETRY"; a bare
+   `border-bottom-color` swap has no geometry delta at all, so that rationale
+   did not transfer to it and the comment that claimed it did was false. The
+   colour delta on its own is `--line` #D8D0C2 (L 0.63605722) against mustard
+   `--accent-termo` #C08A1E (L 0.29477163) = (0.63605722 + 0.05) /
+   (0.29477163 + 0.05) = **1.9899:1**, and the hovered rule against desk paper
+   #F7F2E9 (L 0.89161610) is (0.89161610 + 0.05) / (0.29477163 + 0.05) =
+   **2.7311:1** — both under WCAG 1.4.11's 3:1. Accepted on decision 4's two
+   grounds and neither is "it complies": hover is a POINTER-ONLY affordance
+   duplicating a word already at 15.0124:1, and the extra pixel is a change of
+   geometry that survives greyscale and a user who never sees the hue. The
+   other three accents do clear 3:1 against `--line` (sudoku 5.4727:1, binairo
+   3.8664:1, nonogram 3.1462:1); mustard is the one that does not, which is
+   exactly why the geometry carrier has to be real.
+
+   The pixel comes OUT of the padding: `--rule-width` drives the border and
+   the padding together, so the link's box is 6px below its baseline in either
+   state and hovering it never reflows the column it is centred in. */
 .page .secondaryLink:hover {
+  --rule-width: 3px;
   text-decoration: none;
   border-bottom-color: var(--accent);
 }
@@ -822,7 +857,10 @@
 
   .secondaryLink {
     font-size: 15px;
-    padding-bottom: 3px;
+    /* The same one-box arithmetic as the desktop rule, at F6's tighter 5px:
+       3px + 2px at rest, 2px + 3px hovered. The shipped resting value is
+       unchanged. */
+    padding-bottom: calc(5px - var(--rule-width));
   }
 
   .emptyTitle {

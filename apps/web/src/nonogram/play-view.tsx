@@ -28,15 +28,27 @@ import type { NonogramPlay } from "./use-nonogram-play";
  *   already applies to `.controlActive`. Binairo and Sudoku resolve the same
  *   property to `--paper-desk` and are unchanged to the byte.
  * - **Fixed by #68, not here — terracotta TEXT on desk paper.** `.barKicker`
- *   (11px/400) and `.titleKicker` (11px/600) rendered at a computed
- *   **4.318:1** on `/nonogram` and — for `.barKicker` — on
- *   `/nonogram/concluido`, as did the conclusion's 17px `.chipDone .chipName`
- *   at **3.969:1**. ADR-0041 closed all three without touching the palette:
- *   an accent may colour a shape, never a word, so the kickers are `--ink-2`
- *   (5.0791:1 on desk paper) and the chip name is `--ink` (13.8077:1 on the
- *   terracotta tint). The declarations live in the SHARED sheets — this module
- *   contributes only the `--accent` value they read (plan 020 landmine N14,
- *   dispositioned).
+ *   and `.titleKicker` rendered at a computed **4.318:1** on `/nonogram` and —
+ *   for `.barKicker` — on `/nonogram/concluido`, as did the conclusion's 17px
+ *   `.chipDone .chipName` at **3.9717:1**. ADR-0041 closed all three without
+ *   touching the palette: an accent may colour a shape, never a word, so the
+ *   kickers are `--ink-2` (5.0791:1 on desk paper) and the chip name is
+ *   `--ink` (13.8077:1 on the terracotta tint). The declarations live in the
+ *   SHARED sheets — this module contributes only the `--accent` value they
+ *   read (plan 020 landmine N14, dispositioned).
+ *
+ * **The rounding convention, stated once for the whole repo.** A composited
+ * tint is computed at 8-bit precision and ROUNDED before its luminance is
+ * taken, because that is what a browser paints: `color-mix(in srgb,
+ * var(--accent) 10%, transparent)` over `--paper-card` #FBF7EF gives
+ * (0.1x181 + 0.9x251, 0.1x86 + 0.9x247, 0.1x60 + 0.9x239) =
+ * (244.0, 230.9, 221.1) -> **#F4E7DD**, L 0.81605382 — the same arithmetic
+ * `conclusion-view.module.css`'s `.chipDone .chipName` block spells out for
+ * mustard. This line used to quote **3.969:1**, the unrounded composite's
+ * value, beside a **13.8077:1** taken from the rounded one; the rounded
+ * figure is **3.9717:1** and it is what every number in this repo now uses
+ * (step-7 finding A-F10). Neither value changes any conclusion — both are
+ * below AA, which is why the declaration moved to `--ink`.
  *
  * `impeccable detect` in URL mode cannot see any of it, which is exactly why
  * the figures are written down.

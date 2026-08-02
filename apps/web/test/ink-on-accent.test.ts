@@ -377,4 +377,59 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
       decl(bodyOf(css, ".page .secondaryLink:hover"), "border-bottom-color"),
     ).toBe("var(--accent)");
   });
+
+  it("gives the secondary link's hover a real geometry delta", () => {
+    // ADR-0041 decision 4's exception is granted to "a solid band appearing
+    // where there was none... a change of GEOMETRY". This link already HAD its
+    // rule, so a bare `border-bottom-color` swap inherited the exception's
+    // words without its substance: the state delta would be `--line` #D8D0C2
+    // (L 0.63605722) against mustard #C08A1E (L 0.29477163) =
+    // (0.63605722 + 0.05) / (0.29477163 + 0.05) = **1.9899:1** and nothing
+    // else (step-7 finding A-F5).
+    //
+    // 2px -> 3px is the delta, and the padding gives the pixel back through
+    // the same custom property, so the box is 6px below the baseline in both
+    // states and hovering never reflows the column the link is centred in.
+    const css = stylesheet("src/play/conclusion-view.module.css");
+    const rest = bodyOf(css, ".secondaryLink");
+
+    expect(decl(rest, "--rule-width")).toBe("2px");
+    expect(decl(rest, "border-bottom")).toBe(
+      "var(--rule-width) solid var(--line)",
+    );
+    expect(decl(rest, "padding-bottom")).toBe("calc(6px - var(--rule-width))");
+    expect(
+      decl(bodyOf(css, ".page .secondaryLink:hover"), "--rule-width"),
+    ).toBe("3px");
+  });
+
+  it("keeps the game kicker branded, not a generic section eyebrow", () => {
+    // ADR-0041 consequence (d) rests the whole identity argument on "an 11px
+    // uppercase 0.16em kicker" still reading as a kicker once the colour
+    // leaves. Both shared `.barKicker` rules shipped 11px/400/0.14em, which is
+    // every property of `conclusion-view`'s `.dayCardTitle` — a generic
+    // section eyebrow — so on the primary form factor the two were
+    // indistinguishable and the accent had been the only thing telling them
+    // apart. At <=1140px `.titleKicker` and `.cardKicker` are `display: none`,
+    // so `.barKicker` is the sole carrier of game identity there (step-7
+    // finding A-F6). `--text-kicker` is `600 11px/1 var(--font-ui)`.
+    for (const sheet of [
+      "src/play/screen.module.css",
+      "src/play/conclusion-view.module.css",
+    ] as const) {
+      const body = bodyOf(stylesheet(sheet), ".barKicker");
+      expect(decl(body, "font"), sheet).toBe("var(--text-kicker)");
+      expect(decl(body, "letter-spacing"), sheet).toBe("0.16em");
+    }
+
+    // ...and from the other side: the generic eyebrow stays plain, so the two
+    // treatments cannot re-converge by the eyebrow drifting up to meet them.
+    const eyebrow = bodyOf(
+      stylesheet("src/play/conclusion-view.module.css"),
+      ".dayCardTitle",
+    );
+    expect(decl(eyebrow, "font")).toBeUndefined();
+    expect(decl(eyebrow, "font-size")).toBe("11px");
+    expect(decl(eyebrow, "letter-spacing")).toBe("0.14em");
+  });
 });
