@@ -24,11 +24,16 @@
  *
  * SO: nothing in this file may import from `./daily-content.ts`. The
  * dependency runs one way, and since step-6 round 3 that is CHECKED rather
- * than promised: `T-LINT-3e` in `apps/web/test/eslint-db-wall.test.ts` reads
- * this file's source and reds on any `from "./daily-content"`, and `T-LINT-3d`
- * beside it bans the five server-only names from every `apps/web` import
- * (finding `core-client-server-split-is-prose-only`). Both live there because
- * this package compiles with `"types": []` and cannot name `node:fs`.
+ * than promised: `T-LINT-S4` in `apps/web/test/eslint-db-wall.test.ts` reads
+ * this file's source and reds on any `from "./daily-content"`; `T-LINT-S5`
+ * beside it bans the five server-only names from every `apps/web` import,
+ * `T-LINT-S6` bans the relative and dynamic paths that walked around that
+ * ban, and `T-LINT-S7` derives the name list from THIS module's exports so
+ * #27's schema cannot land unlisted (findings
+ * `core-client-server-split-is-prose-only`,
+ * `core-server-only-ban-is-bare-specifier-only`, ISS-R4-4). All four live
+ * there because this package compiles with `"types": []` and cannot name
+ * `node:fs`.
  */
 import { z } from "zod";
 

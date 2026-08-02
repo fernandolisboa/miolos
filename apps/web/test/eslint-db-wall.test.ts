@@ -150,7 +150,7 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     expect(ruleIds(messages)).toContain("no-restricted-imports");
   });
 
-  it("T-LINT-3e: packages/core's client contracts never import the server-only ones", () => {
+  it("T-LINT-S4: packages/core's client contracts never import the server-only ones", () => {
     // The OTHER half of the same wall, and it belongs beside the lint probe
     // rather than in `packages/core/test/`: that package compiles with
     // `"types": []` and `lib: ES2023`, so it cannot name `node:fs` at all.
@@ -188,14 +188,13 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
   });
 
-  it("T-LINT-3d: the server-only daily-content schemas are banned by name off @miolos/core", async () => {
+  it("T-LINT-S5: the server-only daily-content schemas are banned by name off @miolos/core", async () => {
     // The client/server split commit d5bb543 landed was enforced by a comment
     // in two file headers and a hand-run bundle grep — a single
     // `import { stripDailyContent } from "@miolos/core"` in a `"use client"`
     // module reinstated the regression with every gate green (step-6 round-3
-    // finding `core-client-server-split-is-prose-only`). The names are the
-    // five values `packages/core/src/index.ts` re-exports from
-    // `contracts/daily-content.ts`.
+    // finding `core-client-server-split-is-prose-only`). That the name list is
+    // COMPLETE is `T-LINT-S7` below; this is the red proof that it fires.
     const messages = await lintProbe(
       SOURCE_PATH,
       [
@@ -219,6 +218,116 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
       ].join("\n"),
     );
     expect(wallHits(allowed)).toEqual([]);
+  });
+
+  it("T-LINT-S6: a relative path or dynamic import into packages/core/src is restricted too", async () => {
+    // The ban above is BARE-SPECIFIER-ONLY, which is the identical hole
+    // `T-LINT-3c` closed for `@miolos/db` one ticket earlier: a relative path
+    // into the package source linted, typechecked and tested clean while
+    // re-shipping `nonogramRevealSchema`'s `motifId` / `name` / `mirrored` /
+    // `solution` key strings into every route's browser chunk (step-6 round-4
+    // finding `core-server-only-ban-is-bare-specifier-only`). The hand-run
+    // bundle tripwire WOULD have caught it, and its own header says nothing in
+    // CI invokes it — so a green suite was not evidence.
+    const deep = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { stripDailyContent } from "../../../packages/core/src/contracts/daily-content";',
+        "",
+        "export const strip = stripDailyContent;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(deep)).toContain("no-restricted-imports");
+
+    // The directory itself resolves to its index too.
+    const index = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { isoDateString } from "../../../packages/core/src";',
+        "",
+        "export const shape = isoDateString;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(index)).toContain("no-restricted-imports");
+
+    // And the dynamic form, which `no-restricted-imports` cannot see at all.
+    const dynamic = await lintProbe(
+      SOURCE_PATH,
+      [
+        "export const load = () =>",
+        '  import("../../../packages/core/src/contracts/daily-content");',
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(dynamic)).toContain("no-restricted-syntax");
+
+    // The package ENTRY is still importable for its client half — this is a
+    // path ban, not a ban on @miolos/core.
+    const allowed = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { isoDateString } from "@miolos/core";',
+        "",
+        "export const shape = isoDateString;",
+        "",
+      ].join("\n"),
+    );
+    expect(wallHits(allowed)).toEqual([]);
+  });
+
+  it("T-LINT-S7: the banned name list IS the server-only module's value exports, derived not copied", () => {
+    // `T-LINT-S5`'s config comment asserts "the names are the five values
+    // `packages/core/src/index.ts` re-exports from `contracts/daily-content.ts`"
+    // — a guarantee nothing checked. #27 adds `termoDailyContentSchema` to that
+    // module and re-exports it; forgetting the one config line would leave it
+    // importable from a `"use client"` module with typecheck, lint and the
+    // whole suite green, reinstating exactly the bundle regression commit
+    // d5bb543 exists to prevent (step-6 round-4 finding ISS-R4-4). #25 blocks
+    // #27, so this is the next ticket in the chain.
+    //
+    // Derived from the SOURCE on both sides rather than from a second hand
+    // copy: the module's own `export const|class|function` identifiers, and
+    // the `importNames` array read out of the config file.
+    const content = readFileSync(
+      join(repoRoot, "packages/core/src/contracts/daily-content.ts"),
+      "utf8",
+    );
+    const exported = [
+      ...content.matchAll(
+        /^export\s+(?:const|class|function)\s+([A-Za-z0-9_$]+)/gm,
+      ),
+    ].map(([, name]) => name);
+
+    // Anti-vacuity: the regex really did find the module's exports.
+    expect(exported).toContain("stripDailyContent");
+    expect(exported.length).toBeGreaterThanOrEqual(5);
+
+    const config = readFileSync(join(repoRoot, "eslint.config.mjs"), "utf8");
+    const banned = config
+      .slice(config.indexOf('name: "@miolos/core"'))
+      .match(/importNames:\s*\[([^\]]*)\]/)?.[1];
+    expect(
+      banned,
+      "the @miolos/core paths entry lost its importNames",
+    ).toBeDefined();
+    const bannedNames = [...(banned ?? "").matchAll(/"([A-Za-z0-9_$]+)"/g)].map(
+      ([, name]) => name,
+    );
+
+    // Every value the server-only module exports, and nothing else — a name
+    // in the ban that the module no longer exports is just as much a defect,
+    // because it reads as coverage that is not there.
+    expect([...bannedNames].sort()).toEqual([...exported].sort());
+
+    // The list is only load-bearing if `index.ts` actually re-exports it, so
+    // that the bare specifier can reach the names at all.
+    const barrel = readFileSync(
+      join(repoRoot, "packages/core/src/index.ts"),
+      "utf8",
+    );
+    expect(barrel).toMatch(/from\s+["']\.\/contracts\/daily-content["']/);
   });
 
   it("T-LINT-3c: a relative path into packages/db/src is restricted", async () => {
