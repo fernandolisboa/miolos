@@ -38,6 +38,24 @@ const cellAriaSudoku = (row: number, column: number, value: number | null) =>
 // able to disagree.
 const hintsUsed = (used: number) => (used === 0 ? "sem dicas" : "com 1 dica");
 
+// The board's dimensions in one place: the mobile progress bar and the stats
+// card render the same string, and two copies are how they drift.
+const boardSize = (size: number) => `${size} × ${size}`;
+
+// Nonogram's cell names (plan 020 §16.1): `preenchida` / `marcada` / `vazia`,
+// one spelling per concept. `vazia` is `cellAria`'s own word for a null
+// Binairo cell, so a player meets one vocabulary across three games.
+const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
+  `linha ${row}, coluna ${column}: ${
+    value === null ? "vazia" : value === 1 ? "preenchida" : "marcada"
+  }`;
+
+// An all-empty line's clue is `[]` and the UI renders "0" — the engine's own
+// contract (nonogram/types.ts:10). The rail and its label must agree, so both
+// go through here.
+const runsText = (runs: readonly number[]) =>
+  runs.length === 0 ? "0" : runs.join(", ");
+
 export const messages = {
   meta: {
     title: "Miolos — quatro jogos por dia",
@@ -203,6 +221,84 @@ export const messages = {
       kicker: "Imagem",
       name: "Nonogram",
       description: "Revele a figura escondida pelos números.",
+      play: {
+        title: "Nonogram",
+        // Every clause is a rule the engine actually enforces (the binairo
+        // deviation-1 precedent): `deriveClues` is a run-length encoding in
+        // order, with at least one empty cell between runs (clues.ts:24-36),
+        // and the completion predicate is "the picture is painted" — crossing
+        // is never required, so the blurb never asks for it.
+        rules:
+          "Os números de cada linha e de cada coluna são os blocos de células preenchidas, na ordem, com pelo menos um espaço entre eles. Preencha todos os blocos para revelar a figura.",
+        // The denominator is the PICTURE's cell count, summed from the clues
+        // — not the board's. A player finishes without crossing a single
+        // cell, so a `de size²` readout would stand at 21% at the moment
+        // they win (P13).
+        progressLong: (filled: number, total: number) =>
+          `${filled} de ${total} preenchidas`,
+        // The mobile `.progressBar` slot carries the board's size too, the
+        // way Sudoku's carries the level.
+        progressShort: (size: number, filled: number, total: number) =>
+          `${boardSize(size)} · ${filled} de ${total}`,
+        // The stats card's third row, Sudoku's `levelLabel`/`level` pair
+        // exactly: `.sizeCard` in the game's own module declares its box.
+        sizeLabel: "Tamanho",
+        size: boardSize,
+        boardAria: (size: number) => `grade do Nonogram, ${size} por ${size}`,
+        cellAria: cellAriaNonogram,
+        // "números", never "pistas" and never "dicas" — `dica` is the reserved
+        // term for the one free hint (CONTEXT.md) and reusing it would collide
+        // with the hint button in the same screen-reader pass.
+        rowCluesAria: (row: number, runs: readonly number[]) =>
+          `números da linha ${row}: ${runsText(runs)}`,
+        columnCluesAria: (column: number, runs: readonly number[]) =>
+          `números da coluna ${column}: ${runsText(runs)}`,
+        controls: {
+          fill: "preencher",
+          cross: "marcar",
+          erase: "apagar",
+          fillAria: "preencher células",
+          crossAria: "marcar células vazias",
+          eraseAria: "apagar células",
+          affordance: "ou use o teclado: 1 preenche, 2 marca, 0 apaga",
+        },
+        hint: {
+          available: "Usar dica — 1 disponível",
+          used: "Dica usada",
+          explain: {
+            // One truthful sentence for both directions: a correction may
+            // fill OR cross.
+            correction: "Corrigimos uma célula que não fecha com os números.",
+            fill: "Preenchemos uma célula da figura para você.",
+            // The defined-unreachable branch (§15.2): the selector only falls
+            // back to a cross when no undecided picture cell is left, which is
+            // a board that is already solved. It ships rather than rendering
+            // `undefined`.
+            cross: "Marcamos uma célula que fica fora da figura.",
+          },
+        },
+        unavailable: {
+          title: "O Nonogram de hoje ainda não chegou.",
+          body: "Alguma coisa saiu do lugar por aqui. Tente de novo daqui a pouco — o puzzle de hoje é o mesmo para todo mundo.",
+          cta: "Voltar para Hoje",
+        },
+      },
+      conclusion: {
+        title: "Nonogram",
+        kicker: "Imagem",
+        notYet: {
+          title: "Você ainda não concluiu o Nonogram de hoje.",
+          cta: "Jogar o Nonogram de hoje",
+        },
+      },
+      // ADR-0033: the reveal has no curated name on the client, so the
+      // accessible name DESCRIBES the figure rather than naming it. A sibling
+      // of `conclusion`, read only by the Nonogram conclusion wrapper — it may
+      // not go inside `conclusion`, which is `ConclusionCopy`'s exact shape and
+      // is rendered by two other games.
+      reveal: {
+        aria: "A figura do Nonogram de hoje, formada pelas células preenchidas da sua grade.",
+      },
     },
     binairo: {
       kicker: "Lógica",

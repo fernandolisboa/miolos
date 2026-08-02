@@ -1,0 +1,515 @@
+/* The /nonogram BOARD and BRUSH CONTROLS — everything the shared play layout
+   in `../play/screen.module.css` deliberately does not own (ADR-0029, plan
+   020 §12). There is no reference frame for this screen: §12 is its
+   just-in-time design, defensible as a sibling of f3-binairo-desktop and
+   f4-binairo-mobile within the recorded system.
+
+   Every rule is anchored on a local class: Next compiles CSS Modules in
+   css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
+   either fails the build or leaks globally (plan 017 risk 15).
+
+   Every accent here is `var(--accent)`, which `nonogram-screen`'s root sets
+   to `--accent-nonogram` (terracotta #B5563C) — the same mechanism the shared
+   sheet uses, so one screen never has two accent sources.
+
+   FILE ORDER IS LOAD-BEARING (§12.4), because `test/css-source.ts`'s `bodyOf`
+   is first-match and throws on a miss: every top-level rule first, then the
+   geometry `@media (max-width: 768px)`, then the chrome one, then
+   `@media (prefers-reduced-motion: reduce)`. There is exactly ONE top-level
+   `.cell` rule. Reordering makes an assertion read the wrong block and pass
+   vacuously.
+
+   RECORDED DESIGN-SYSTEM DEVIATIONS (§12.9), each with its arithmetic:
+     1. Cell gap 0 instead of DESIGN.md's 4px/3px — a gapped 15-class board
+        gives a 12.33px cell at 320px against a 13.203px two-digit column-clue
+        floor (measured); at gap 0 it is 14.20px and clears.
+     2. No --radius-cell on cells — at gap 0 a 5px radius notches all four
+        corners of every interior junction.
+     3. 48px and 32px cells instead of 52px at sizes 10 and 15 — 15 × 52 = 780
+        against the 545px the shared 1140px fold leaves.
+     4. Clue numerals in var(--font-ui), not Fraunces — Fraunces has NO
+        tabular figures at all (ADR-0036, measured in Chrome 151).
+     5. Board touch targets below 44px at sizes 10 and 15, and below WCAG
+        2.5.8's 24px floor at size 15 — §12.8's arithmetic and ADR-0035's
+        essential-presentation exception: the grid IS the content. The 44px
+        rule is honoured where it governs, on the chrome controls below.
+     6. No press affordance on a board cell — DESIGN.md's press is "slides 1px
+        toward its shadow"; a ruled-field cell HAS no shadow, and at gap 0 a
+        1px translate paints over its neighbour. */
+
+/* The per-game half of the shared layout, carried on the SAME element as
+   `screen.page`. Custom properties, never a redeclared `.gridCard`: CSS
+   Modules hash class names per file, so a same-name rule in two modules
+   resolves by stylesheet injection order, which Next does not guarantee
+   (landmine 24).
+
+   The three rotations are a DISTINCT signature from Binairo's (0.4/−0.5/−3)
+   and Sudoku's (−0.4/0.5/3), so three screens read as different sheets from
+   the same pad rather than as copies.
+
+   `--board-mobile-max` is declared UNCONDITIONALLY and is not optional:
+   `screen.module.css`'s `.gridCard` reads it with NO FALLBACK, so omitting it
+   here deletes the ≤768px cap in silence (N12/N34). */
+.pageNonogram {
+  --grid-card-rot: -0.7deg;
+  --stats-card-rot: 0.9deg;
+  --tape-rot: -4deg;
+  --board-mobile-max: 350px;
+}
+
+/* The mobile cap is per SIZE, not per game — carried on the SAME element as
+   `.pageNonogram` when `size === 5`, declared after it so it wins at equal
+   specificity within this one file. `.gridCard` is `width: 100%; max-width:
+   var(--board-mobile-max)` in the SHARED sheet, so a single 350px value would
+   render a 350px card around a 288px board at 390px — ~31px of dead paper
+   each side, on the one screen whose whole argument is paper that hugs its
+   board. 310 = 288 board + 2×10 padding + 2×1 border; at 320px
+   `min(310, 280)` still resolves to 280, so the 46.03px cell is unchanged.
+
+   Custom properties inherit, so on a size-5 day `.controls` below resolves
+   310px too — deliberate, and A10 checks the touch-target arithmetic for both
+   caps the page root can resolve. */
+.mobileCap5 {
+  --board-mobile-max: 310px;
+}
+
+/* ── board ───────────────────────────────────────────────────────────── */
+
+/* ONE flat grid holding the clue rails AND the cells, never a wrapper per row
+   (ADR-0035): a <div> per row would be a card inside a card — DESIGN.md's
+   anti-reference verbatim — and is also why `role="grid"` is unavailable
+   (§11.1). Every child is placed explicitly from `board.tsx`; auto-placement
+   would drop cells into the gutter tracks.
+
+   `gap: 0` is load-bearing, not tidiness: with any gap at all a 15×15 board at
+   320px gives a 12.33px cell against a 13.203px two-digit column clue
+   (measured). The rules are per-cell borders below.
+
+   `none`, not `manipulation`: this board DRAGS, and a touch drag that scrolls
+   the page instead of painting is the whole gesture lost. */
+.grid {
+  display: grid;
+  gap: 0;
+  touch-action: none;
+}
+
+/* The stats card's third row — Sudoku's `.levelCard` verbatim, rendered inside
+   the shared `screen.statRow`/`screen.statLabel` pair. It lives in the game's
+   own module for the same reason `.levelCard` does: no other game has a board
+   size on the wire. */
+.sizeCard {
+  font-size: 14px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Four explicit size classes with LITERAL templates, never
+   `repeat(var(--n), var(--cell))`: the custom-property form is legal by
+   substitution but unassertable — `decl()` would hand a test the unparsed
+   string and `pixels()` would throw, and these literals are the entire
+   mechanism by which §12's geometry is enforceable (A1, A3, A6, A7).
+
+   Fixed integral px above 768px is forced, not stylistic: `.board` is a
+   centred flex column, so `.gridCard` is shrink-to-fit, and a percentage
+   width inside a shrink-to-fit parent resolves against a max-content that a
+   grid of empty cells collapses to (the recorded failure at
+   sudoku-board.module.css:440-445). Sizes 10 and 15 share a 480px cell field
+   (10×48 = 15×32), so the two hard weekdays are physically the same sheet. */
+.size5 {
+  grid-template-columns: max-content repeat(5, 52px);
+  grid-template-rows: max-content repeat(5, 52px);
+}
+
+.size8 {
+  grid-template-columns: max-content repeat(8, 52px);
+  grid-template-rows: max-content repeat(8, 52px);
+}
+
+.size10 {
+  grid-template-columns: max-content repeat(10, 48px);
+  grid-template-rows: max-content repeat(10, 48px);
+}
+
+.size15 {
+  grid-template-columns: max-content repeat(15, 32px);
+  grid-template-rows: max-content repeat(15, 32px);
+}
+
+/* The module's ONE top-level `.cell` rule (§12.4 rule iii) — the ruled field
+   and the chromatic machinery are one block in the file, because `bodyOf` is
+   first-match and a second `.cell { … }` would be unreachable, leaving A14's
+   `transition` assertion to read a block with no `transition` and pass
+   vacuously.
+
+   Semi-transparent borders composite over the cell's OWN background
+   (backgrounds paint under borders), so the computed ratios are against the
+   fill each rule actually sits on: `--ink` at 50% resolves to #8c8881 on
+   --paper-desk = 3.16:1, clearing WCAG 1.4.11's 3:1, where a `--line` rule
+   would be 1.37:1 — a third hairline between two hairlines, not a separator.
+
+   `position: relative` so `.cellCrossed`'s pseudo-elements have a containing
+   block: without it a copied `::before` resolves against the page.
+
+   The transition is PAINT-ONLY, never width/height/padding/margin (which fire
+   impeccable's `layout-transition`) and never `transform`: at gap 0 a
+   translate paints over the neighbouring cell, which is deviation 6. */
+.cell {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 50%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--ink) 50%, transparent);
+  background: var(--paper-desk);
+  cursor: pointer;
+  /* NO border-radius. A ruled continuous field cannot carry --radius-cell:
+     with gap 0 a 5px radius notches all four corners of every interior
+     junction (deviation 2). */
+  transition:
+    background-color var(--duration-fast) var(--ease-settle),
+    box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+/* The frame AND the every-5-cells group rule in one modulo: `row % 5 === 0`
+   and `col % 5 === 0` cover index 0 (the frame) and 5/10 (the groups), so
+   size 5 gets a frame and no interior rule, which is correct.
+
+   2px `var(--ink)` = 15.01:1 on desk paper and 3.48:1 on a filled cell, so the
+   structure survives the picture. `--ink-2` was rejected at 1.18:1 on a filled
+   cell. The 1px hairline over a filled cell is 1.93:1 and therefore invisible
+   between two adjacent filled cells — correct, not a defect: a run of filled
+   cells IS one visual block, and that boundary carries no information. */
+.cellRuleTop {
+  border-top-width: 2px;
+  border-top-color: var(--ink);
+}
+
+.cellRuleLeft {
+  border-left-width: 2px;
+  border-left-color: var(--ink);
+}
+
+.cellEdgeRight {
+  border-right: 2px solid var(--ink);
+}
+
+.cellEdgeBottom {
+  border-bottom: 2px solid var(--ink);
+}
+
+/* ── chromatic cell states ───────────────────────────────────────────── */
+
+/* Exactly ONE of these per cell. `var(--accent)`, NEVER `var(--accent-nonogram)`
+   — the accent is set inline on the screen root from `play/accent.ts`, which is
+   the convention #23 argued for and the one a third game copies. Filled against
+   empty is 4.32:1, so the picture reads without any rule at all. */
+.cellFilled {
+  background: var(--accent);
+}
+
+/* The crossed mark is DRAWN, never typed: two 1.5px rules at ±45deg in
+   `var(--ink-2)` (#6E6659 on --paper-desk = 5.08:1, clearing WCAG 1.4.11's
+   3:1 for a non-text graphic). Drawing it keeps every cell's `textContent`
+   EMPTY, which puts `undersized-ui-text`, `tiny-text` and
+   `repeated-container-text` structurally out of reach at a 14px cell — and
+   the state is carried by the accessible name, so colour is never the only
+   carrier. The background is restated rather than inherited so all three
+   chromatic states read side by side and `cellClassName` has a class to emit
+   for every value. */
+.cellCrossed {
+  background: var(--paper-desk);
+}
+
+.cellCrossed::before,
+.cellCrossed::after {
+  content: "";
+  position: absolute;
+  width: 60%;
+  height: 1.5px;
+  background: var(--ink-2);
+}
+
+.cellCrossed::before {
+  transform: rotate(45deg);
+}
+
+.cellCrossed::after {
+  transform: rotate(-45deg);
+}
+
+/* The pre-hydration placeholder cell. Colour only: every dimension still comes
+   from `.cell` and `.grid`, so the placeholder board is the real board's size
+   by construction. Static — DESIGN.md has no shimmer. */
+.cellSkeleton {
+  background: var(--paper-tint);
+  cursor: default;
+}
+
+/* THE HINT. Every other channel is spent — `background` is the chromatic
+   state, all four borders carry the ruled field, `outline` is the caret — so
+   the hint takes the one channel left, an INSET RING, and it is ADDITIVE
+   against the chromatic state: the cell keeps saying filled or crossed while
+   it says "the app placed this" (ADR-0030 decision 6).
+
+   Two rules, not one, and the split is COMPLETE rather than partial:
+   `use-hint` always writes a value — fill, cross, or a correction to the
+   target — so `.cellHinted` can only ever compose with `.cellFilled` or
+   `.cellCrossed`, never with an empty cell. The ring is the INVERSE of the
+   cell's own ink, which is why one colour cannot serve both: `--ink-2` is
+   1.18:1 on terracotta and `--accent` is 1:1 on it. A copied
+   `background: color-mix(… 10% …)` would REPLACE the fill and render the day's
+   one free hint as a ~10% tint on a board where the fill IS the payload. */
+.cellFilled.cellHinted {
+  box-shadow: inset 0 0 0 2px var(--paper-desk);
+}
+
+.cellCrossed.cellHinted {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* ── the clue rails ──────────────────────────────────────────────────── */
+
+/* `max-content` grid TRACKS inside the same flat grid, so a future motif with
+   more runs shrinks the cells rather than overflowing the phone (the failure
+   mode is graceful, and the library's bound is pinned mechanically in
+   packages/games). Rejected: fixed px per size (embeds a font measurement
+   that breaks silently when the font, weight or size changes) and a
+   JS-emitted custom property (reimplements with a magic digit advance what
+   the layout engine computes exactly and for free).
+
+   NO background, NO border, NO outline, NO box-shadow on either rail:
+   `cramped-padding`'s flush branch reads computed borders and backgrounds and
+   fires on a visible boundary + padding ≤ 2 + a direct child with more than
+   four characters. Each clue number is its own 1–2 character `<span>` for the
+   same reason.
+
+   `column-gap: 2px` rather than 3px buys 4px of gutter at sizes 10 and 15,
+   which at 320px is the difference between 0.98px and 0.71px of slack over
+   the two-digit floor. One number, one band, no media query. */
+.clueRow {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  column-gap: 2px;
+  padding-inline-end: 4px;
+  min-width: 0;
+}
+
+.clueCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  row-gap: 2px;
+  padding-block-end: 4px;
+  min-width: 0;
+}
+
+/* var(--font-ui) at 600/11px with tabular-nums: EVERY digit is 6.609375px,
+   spread 0.000000 (measured, Chrome 151). Fraunces has no tabular figures at
+   all — no OpenType feature tag responds on it — so `--font-display` would
+   leave a 2.19–2.28px spread here and the clue columns would not line up
+   (ADR-0036, deviation 4). 11px is simultaneously that measurement's size and
+   `undersized-ui-text`'s floor, so it is a hard number in both directions:
+   the geometry assertions compute the gutter from it. */
+.clueNumber {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* ── the caret ───────────────────────────────────────────────────────── */
+
+/* ONE declaration block for selection AND focus, so ADR-0030 consequence (c)
+   holds mechanically rather than by discipline. INK, not the accent, and the
+   reason is arithmetic: a filled cell IS solid --accent-nonogram (#B5563C), so
+   an accent caret on it is 1:1 — invisible on exactly the cells the player is
+   working. --ink (#211D19) is 3.48:1 against a filled cell and 15.01:1 against
+   an empty one, so it carries on all three cell states.
+
+   Inset, never offset: this board runs at gap 0, and Binairo's
+   `outline-offset: 2px` paints 4px OUTSIDE the box — the defect
+   sudoku-board.module.css:189-191 names. With `outline-offset: -2px` and
+   `outline-width: 2px` the outline edge sits 2px inside the border box and
+   paints outward from it, so the caret occupies the cell's outermost 2px ring
+   and the constraint on the geometry is `cell − 2 × outline-width ≥ 6px`,
+   which at the 14.20px worst case holds with 4.20px to spare.
+
+   The consequence, accepted: while the caret is on a cell it paints over that
+   cell's own hairline, any heavy rule on the same edge, and the hint ring it
+   shares edges with. The caret is transient, singular and the stronger signal;
+   the rest is permanent and returns whole the instant focus moves. */
+.cellSelected,
+.cell:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+/* ── brush controls ──────────────────────────────────────────────────── */
+
+/* Binairo's shipped control vocabulary, not a new one: a card-shaped button
+   that INVERTS when active. Non-zero padding on BOTH axes for the same
+   `cramped-padding` reason `.control` and the shared `.hint` carry it. */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: 30px;
+}
+
+.control {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  height: 52px;
+  background: var(--paper-card);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font: var(--text-button);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 22%, transparent);
+  transition:
+    transform var(--duration-fast) var(--ease-settle),
+    box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+/* DESIGN.md's press — the element slides 1px toward its shadow and the shadow
+   shrinks by the same 1px — honoured here because a control HAS a shadow to
+   slide toward, unlike a board cell (deviation 6). --shadow-sm is 3px. */
+.control:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* THREE carriers, so the pressed brush survives greyscale: the fill inverts,
+   the label inverts, and `aria-pressed` carries it to AT. The 1.5px border is
+   NOT one of them and is deliberately not restated — `.control` already
+   resolves it to `var(--accent)`, so a `border-color: var(--accent)` here
+   would be a no-op that reads to a test (and to the next reader) as a third
+   visual carrier it is not.
+
+   `--paper-card` and not Binairo's `--paper-desk` on the inverted state: desk
+   on terracotta is 4.32:1, an AA failure for a 14px word. Binairo's shipped
+   `.controlDigitActive` gets away with desk because its label is a 24px
+   Fraunces numeral, i.e. WCAG large text at a 3:1 floor; a brush label is not.
+   Computed: label 4.51:1 unpressed and 4.51:1 pressed, border 4.51:1 in both. */
+.controlActive {
+  background: var(--accent);
+  color: var(--paper-card);
+}
+
+/* The keyboard affordance, Sudoku's placement and its mobile rule verbatim: a
+   desktop-only line, hidden on a phone that has no keyboard to afford. */
+.affordance {
+  margin-top: var(--space-3);
+  color: var(--ink-2);
+  font: var(--text-body);
+}
+
+/* ── pre-hydration placeholders ──────────────────────────────────────── */
+
+/* This module's own copy of the shared sheet's `.placeholder`: the skeleton's
+   controls borrow `.control`, and a class hashed in
+   `../play/screen.module.css` cannot override one hashed here — the two would
+   resolve by injection order (landmine 24). It has to sit AFTER `.control`:
+   same specificity, later wins. */
+.placeholder {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ≤768px, BLOCK 1 of 2 — the GEOMETRY block (§12.4 rule ii). It must come
+   before the chrome block below: `bodyOf` is first-match and throws on a miss,
+   so the assertions reach the second one only by slicing past this one, and a
+   swap would make each read the other's body. */
+@media (max-width: 768px) {
+  /* The desktop px tracks MUST be overridden here or the board is 525px wide
+     inside a 328px card.
+
+     No `max-width`/`margin-inline` here: the Monday cap is the CARD's, set by
+     `.mobileCap5` above, so the board fills its card at every size the way
+     both shipped games' boards do. */
+  .size5 {
+    grid-template-columns: max-content repeat(5, minmax(0, 1fr));
+    grid-template-rows: max-content repeat(5, auto);
+  }
+
+  .size8 {
+    grid-template-columns: max-content repeat(8, minmax(0, 1fr));
+    grid-template-rows: max-content repeat(8, auto);
+  }
+
+  .size10 {
+    grid-template-columns: max-content repeat(10, minmax(0, 1fr));
+    grid-template-rows: max-content repeat(10, auto);
+  }
+
+  .size15 {
+    grid-template-columns: max-content repeat(15, minmax(0, 1fr));
+    grid-template-rows: max-content repeat(15, auto);
+  }
+
+  /* Binairo's shipped mechanism: the rows are `auto` and the square comes from
+     the cell itself, so the fluid columns drive both axes. */
+  .cell {
+    aspect-ratio: 1;
+  }
+}
+
+/* ≤768px, BLOCK 2 of 2 — the CHROME block (§12.4 rule ii).
+
+   Three equal controls at 320px: row `min(350, 280) = 280`, minus 2 × 8px gap
+   = 264 free → 88px each, height 60px. On a size-5 day the inherited cap is
+   310px and the row reads 3 × 98px at 390px; at 320px both caps resolve to
+   280 and the arithmetic is identical. Both clear the 44px token with room.
+
+   The `width: 100%` + cap pair is not decoration — it is the fix for the
+   shipped finding `mobile-controls-shrink-to-fit-and-sub-44px-targets`:
+   without it `.board`'s column-flex cross axis resolves the ratios against a
+   max-content row and the buttons come out sub-44px. */
+@media (max-width: 768px) {
+  .controls {
+    box-sizing: border-box;
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: var(--board-mobile-max);
+    margin-top: var(--space-5);
+  }
+
+  .control {
+    flex: 1;
+    height: 60px;
+  }
+
+  .affordance {
+    display: none;
+  }
+}
+
+/* This module's own reduced-motion block: the shared sheet's covers `.hint`
+   and cannot reach these classes (landmine 24), and DESIGN.md makes a
+   reduced-motion alternative law. It is written for the transitions that
+   exist — the cell's paint-only settle and the control's press — and not for
+   animations this board deliberately does not have. */
+@media (prefers-reduced-motion: reduce) {
+  .cell,
+  .control {
+    transition: none;
+  }
+}
