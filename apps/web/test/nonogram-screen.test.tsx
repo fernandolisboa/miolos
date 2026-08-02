@@ -498,7 +498,7 @@ describe("the clue rails (T-WEB-S43)", () => {
     );
   });
 
-  it("announces each run ONCE, through the rail's label and never as bare digits (T-WEB-S64)", () => {
+  it("announces each run ONCE, through the rail's label and never as bare digits (T-WEB-S68)", () => {
     // Naming a `role="group"` supplies the group's NAME; it does not prune
     // the group's descendants. Without `aria-hidden` every clue numeral stays
     // its own text node and its own virtual-cursor stop, so a screen-reader
@@ -712,7 +712,7 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
     expect(Board).toHaveProperty("type", expect.any(Function));
   });
 
-  it("composes ONE cell label per painted cell during a drag, not size² (T-WEB-S66)", () => {
+  it("composes ONE label per painted cell during a drag — cells AND rails, not size² + 2·size (T-WEB-S66)", () => {
     // The half `Board`'s own memo cannot buy, and the reason `Cell` is
     // memoized (step-6 round-3 finding PERF-R3-1). `paint-over` allocates a
     // new `entries` array, so `Board` re-enters on every pointer move by
@@ -720,11 +720,17 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
     // 225 aria labels, and this drag would cost 225 × N compositions on the
     // game's PRIMARY gesture (ADR-0037).
     //
-    // `cellAria` is the honest probe: it is the per-cell work that scales, and
-    // it is called exactly once per rendered cell. A DOM assertion cannot see
-    // any of this — React writes no attribute when the value is unchanged, so
-    // the markup is identical either way, which is why the sibling assertion
-    // above is structural.
+    // THE RAIL COUNTERS ARE ROUND 4's ADDITION (finding PERF-R4-1). This test
+    // spied on `cellAria` alone, so it was green while the 30 clue rails were
+    // still rebuilt inline in `Board`'s body — 1230 further compositions of
+    // the same kind on the same drag, i.e. 31 × N against the N the comment
+    // claimed. It would have stayed green if the rails had grown to 60 × N.
+    //
+    // The three composers are the honest probe: they are the per-element work
+    // that scales, and each is called exactly once per rendered cell or rail.
+    // A DOM assertion cannot see any of this — React writes no attribute when
+    // the value is unchanged, so the markup is identical either way, which is
+    // why the sibling assertion above is structural.
     const { container } = render(<NonogramScreen daily={BIG} />);
     stubElementFromPoint(container);
     const board = boardOf(BIG);
@@ -732,6 +738,11 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
     const painted = 8;
 
     const cellAria = vi.spyOn(messages.games.nonogram.play, "cellAria");
+    const rowCluesAria = vi.spyOn(messages.games.nonogram.play, "rowCluesAria");
+    const columnCluesAria = vi.spyOn(
+      messages.games.nonogram.play,
+      "columnCluesAria",
+    );
 
     fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
     for (let index = 1; index < painted; index += 1) {
@@ -755,7 +766,15 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
     // O(N), with generous slack for the caret and hint rings the same stroke
     // moves. The number that must never come back is 225 × N = 1800.
     expect(cellAria.mock.calls.length).toBeLessThan(cells);
+    // The rails bail out PERMANENTLY — `clues.rows[i]` / `clues.cols[i]` keep
+    // their identity for the life of the mount — so this is exactly zero after
+    // the initial render, not merely O(N). The number that must never come
+    // back is 2 · size · N = 1200 at this stroke length.
+    expect(rowCluesAria.mock.calls.length).toBe(0);
+    expect(columnCluesAria.mock.calls.length).toBe(0);
     cellAria.mockRestore();
+    rowCluesAria.mockRestore();
+    columnCluesAria.mockRestore();
   });
 });
 

@@ -258,6 +258,31 @@ describe("select", () => {
     expect(play(selected, { type: "select", index: 6 })).toBe(selected);
     expect(play(selected, { type: "select", index: 7 })).not.toBe(selected);
   });
+
+  it("refuses an OFF-BOARD index, so the roving tab stop always matches a cell (T-WEB-S71)", () => {
+    // Step-6 round-4 finding NONO-C4-5, found by a 224 000-step randomized
+    // reducer fuzz: `select` was the ONE case that stored `action.index`
+    // unconditionally, so `selected` was the only field that could hold a
+    // value outside `0..size²-1`. The consequence is not graceful — `board.tsx`
+    // computes `tabbable = selected ?? 0`, so an off-board caret matches no
+    // cell and ADR-0030's "exactly one cell is ever tabbable" becomes ZERO:
+    // the composite widget drops off the tab order entirely.
+    const selected = play(MONDAY_STATE, { type: "select", index: 6 });
+    const cells = MONDAY_STATE.size ** 2;
+
+    for (const index of [-1, cells, cells + 1, Number.NaN]) {
+      expect(
+        play(selected, { type: "select", index }),
+        `select(${index}) escaped the board`,
+      ).toBe(selected);
+    }
+    // Both ends of the legal range still land, so the guard is a bound and
+    // not a blanket bail-out.
+    expect(play(selected, { type: "select", index: 0 }).selected).toBe(0);
+    expect(play(selected, { type: "select", index: cells - 1 }).selected).toBe(
+      cells - 1,
+    );
+  });
 });
 
 describe("move-selection", () => {
@@ -315,7 +340,7 @@ describe("move-selection", () => {
     ).toBe(0);
   });
 
-  it("returns the SAME object when the clamp leaves the caret where it was (T-WEB-S63)", () => {
+  it("returns the SAME object when the clamp leaves the caret where it was (T-WEB-S67)", () => {
     // The `select` and `set-brush` guards, for the input that actually
     // produces this one: an arrow key HELD against an edge. A 15-row board
     // makes vertical traversal 14 presses — which is why PageUp/PageDown
@@ -364,15 +389,36 @@ describe("status and pendingSync", () => {
   });
 
   it("stays playing while a cell outside the picture is painted", () => {
+    // The over-painted board NEVER closes: `isPictureComplete` is an exact
+    // match, so one extra filled cell keeps `status` at `playing` however
+    // complete the rest is.
+    //
+    // Painted BEFORE the picture is finished, deliberately. This used to
+    // start from a solved board and assert that over-painting it came back to
+    // `playing` — which is precisely the reopening the `withEntry` guard now
+    // forbids (step-6 round-4 finding NONO-C4-1), and asserting it here made
+    // the defect look like a shipped contract. The property the test is
+    // actually about is unchanged and is now measured from a board that never
+    // closed.
     const solution = solutionOf(MONDAY_STATE);
     const emptyCell = solution.indexOf(0);
-    const overpainted = nonogramPlayReducer(fillOnly(MONDAY_STATE), {
-      type: "mark-cell",
-      index: emptyCell,
-    });
+    const overpainted = fillOnly(
+      nonogramPlayReducer(MONDAY_STATE, {
+        type: "mark-cell",
+        index: emptyCell,
+      }),
+    );
 
     expect(emptyCell).toBeGreaterThanOrEqual(0);
     expect(overpainted.status).toBe("playing");
+    // Anti-vacuity: the picture really is otherwise finished, so `playing` is
+    // the over-paint's doing and not an unpainted board's.
+    expect(
+      solution.every(
+        (mark, index) => mark === 0 || overpainted.entries[index] === 1,
+      ),
+    ).toBe(true);
+    expect(overpainted.entries[emptyCell]).toBe(1);
   });
 
   it("finishes identically whether the empty cells are crossed or left alone", () => {
@@ -395,15 +441,75 @@ describe("status and pendingSync", () => {
     expect(crossedThrough.status).toBe("solved");
   });
 
-  it("latches pendingSync once, so unpainting a cell cannot un-queue the day", () => {
+  it("takes NO entry once the picture closes, so a closed board cannot reopen (T-WEB-S69)", () => {
+    // Step-6 round-4 finding NONO-C4-1. The freeze is an EFFECT, so between
+    // the commit that sets `solved` and the flush that pauses the clock the
+    // play screen is still mounted and still handling `pointermove` — and
+    // this board's primary gesture is a drag (ADR-0037), where overshooting a
+    // run by one cell past the finishing cell is how a player un-paints a
+    // just-completed picture. `derive` recomputes `status` from scratch, so
+    // that used to hand back `status: "playing"` with `runningSince` already
+    // null: a permanently frozen clock, and an `elapsedMs` written to the
+    // write-once completion row that under-reports every second after it.
+    //
+    // The assertion is IDENTITY, not just `status`: a new object would still
+    // re-render the board and fire the persist effect for a write that must
+    // not happen at all.
     const solved = fillOnly(MONDAY_STATE);
-    const undone = nonogramPlayReducer(solved, {
-      type: "mark-cell",
-      index: firstPictureCell(MONDAY_STATE),
-    });
+    const outside = solutionOf(MONDAY_STATE).indexOf(0);
+    expect(solved.status).toBe("solved");
+    expect(outside).toBeGreaterThanOrEqual(0);
 
-    expect(undone.status).toBe("playing");
-    expect(undone.pendingSync).toBe(true);
+    for (const action of [
+      { type: "mark-cell", index: firstPictureCell(MONDAY_STATE) },
+      { type: "paint-over", index: outside },
+      { type: "enter-value", value: 0 },
+      { type: "clear-cell" },
+    ] as const satisfies readonly NonogramPlayAction[]) {
+      expect(
+        nonogramPlayReducer(
+          play(solved, {
+            type: "select",
+            index: firstPictureCell(MONDAY_STATE),
+          }),
+          action,
+        ).status,
+        `${action.type} reopened a closed board`,
+      ).toBe("solved");
+    }
+
+    // The identity form on the gesture that actually produces the window.
+    expect(
+      nonogramPlayReducer(solved, { type: "paint-over", index: outside }),
+    ).toBe(solved);
+    // And the day stays queued — `pendingSync` never depended on this guard
+    // (`derive` latches it), but the pairing is what the completion needs.
+    expect(solved.pendingSync).toBe(true);
+  });
+
+  it("keeps the clock frozen once the board closes, whatever lands after (T-WEB-S70)", () => {
+    // The end-to-end shape of NONO-C4-1, at the state level: the entry action
+    // enqueued first, the freeze effect's `pause` flushed second — the order
+    // React produces when `flushPassiveEffects()` runs at the start of the
+    // render the second pointer move schedules. `use-play-lifecycle.ts`
+    // computes `closedAndFrozen = status !== "playing" && runningSince ===
+    // null`, so a board that came back `playing` disarmed the completion
+    // effect AND never re-armed the tick.
+    const running = play(fillOnly(MONDAY_STATE), { type: "resume", now: 0 });
+    const outside = solutionOf(MONDAY_STATE).indexOf(0);
+    const after = play(
+      running,
+      { type: "paint-over", index: outside },
+      { type: "pause", now: 10_000 },
+    );
+
+    expect(after.status).toBe("solved");
+    expect(after.timer.runningSince).toBeNull();
+    expect(after.timer.accumulatedMs).toBe(10_000);
+    // The predicate the lifecycle actually reads.
+    expect(
+      after.status !== "playing" && after.timer.runningSince === null,
+    ).toBe(true);
   });
 });
 

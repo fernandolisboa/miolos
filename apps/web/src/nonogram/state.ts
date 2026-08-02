@@ -29,6 +29,12 @@ import { isPictureComplete, nextNonogramHint, solutionMarks } from "./engine";
  * hint would systematically tell the player to un-cross a cell they crossed
  * correctly. The encoding works if and only if a cross ≡ the solution's
  * empty value.
+ *
+ * `Mark` here is the DECIDED-VALUE union — either mark, fill included — and
+ * is deliberately NOT the pt-BR *marcada*, which names the cross alone
+ * (`controls.cross`, CONTEXT.md's Crossed row). So `markCell` / `mark-cell` /
+ * `asMark` are the game-generic write and none of them is the cross brush
+ * (step-6 round-4 finding Q4).
  */
 export type NonogramMark = 0 | 1;
 
@@ -137,6 +143,19 @@ export function nonogramPlayReducer(
       return restore(state, action.record, action.now);
 
     case "select":
+      // An OFF-BOARD index is refused, exactly as every writing case refuses
+      // one (step-6 round-4 finding NONO-C4-5). `selected` was the only field
+      // on this state that could hold a value outside `0..size²-1`, and the
+      // failure it produces is not graceful: `board.tsx` computes
+      // `tabbable = selected ?? 0`, so an out-of-range caret matches no cell
+      // and the composite widget loses its single roving tab stop entirely —
+      // ADR-0030's "exactly one cell is ever tabbable" becomes zero, and the
+      // board is unreachable by keyboard. Unreachable today (both dispatchers
+      // carry a real index); this makes the invariant structural rather than
+      // dependent on every future dispatcher being well behaved.
+      if (cellValue(state, action.index) === undefined) {
+        return state;
+      }
       // The SAME state when the caret does not move. Load-bearing rather
       // than a saving: `onFocus` dispatches `select` while the roving-focus
       // layout effect focuses `selected`, so without the bail-out the two
@@ -276,12 +295,24 @@ function brushValue(brush: NonogramBrush): NonogramCellValue {
  * not on the board. A Nonogram has no givens, so every in-range cell is
  * theirs; returning `undefined` rather than throwing keeps a stray pointer
  * event or a hand-edited `selected` a no-op rather than a write.
+ *
+ * `Number.isInteger` rather than a bare range test: `NaN < 0` and
+ * `NaN >= length` are BOTH false, so a `NaN` index walked straight through a
+ * comparison-only guard and came back as `entries[NaN] ?? null` — a legal
+ * `null` cell value, i.e. "an undecided cell at an index that does not
+ * exist". `1.5` had the same shape. This is the one bounds check every
+ * writing case and `select` share, so it is the right place to close both.
  */
 function cellValue(
   state: NonogramPlayState,
   index: number | null,
 ): NonogramCellValue | undefined {
-  if (index === null || index < 0 || index >= state.entries.length) {
+  if (
+    index === null ||
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= state.entries.length
+  ) {
     return undefined;
   }
   return state.entries[index] ?? null;
@@ -319,6 +350,27 @@ function clamp(value: number, size: number): number {
  * because this reducer may never read a clock and an entry action
  * deliberately carries no `now`.
  *
+ * A CLOSED BOARD TAKES NO WRITE, and that guard lives here rather than in the
+ * four entry cases so a future action inherits it (step-6 round-4 finding
+ * NONO-C4-1). The window it closes is one commit wide and this board is the
+ * one that can fall into it: the freeze above is an EFFECT, so between the
+ * commit that sets `status: "solved"` and the flush that pauses the clock the
+ * play screen is still mounted (`nonogram-screen.tsx` swaps to the conclusion
+ * only on `solved` AND `runningSince === null`) and still handling
+ * `pointermove`. `derive` recomputes `status` from scratch, so one
+ * `paint-over` landing in that window used to hand back `status: "playing"`
+ * with `timer.runningSince` already null — and nothing re-dispatches `resume`
+ * without a `visibilitychange`/`pageshow`, so the clock stayed frozen for the
+ * rest of the session and the `elapsedMs` finally written to the write-once
+ * completion row under-reported every second after it. On Binairo and Sudoku
+ * leaving `solved` takes a deliberate CLEAR; here it is overshooting a run by
+ * one cell during the game's primary gesture (ADR-0037).
+ *
+ * `pendingSync` was already latched against this (`derive` never clears it),
+ * so the day was never un-queued — the clock was the casualty. The plan's
+ * §10.3 wording, which left the reducer free to leave `solved`, is superseded
+ * on this point.
+ *
  * The identity guard is NEW in this game, and it is required rather than an
  * optimisation (CLI-8): a drag dispatches `paint-over` per `pointermove`,
  * and the caller cannot bail because it does not cheaply know the current
@@ -342,6 +394,9 @@ function withEntry(
   index: number,
   value: NonogramCellValue,
 ): NonogramPlayState {
+  if (state.status !== "playing") {
+    return state;
+  }
   if ((state.entries[index] ?? null) === value) {
     return state;
   }

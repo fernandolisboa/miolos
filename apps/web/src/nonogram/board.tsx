@@ -88,7 +88,15 @@ const SIZE_CLASS = {
  * below is for: the per-cell component takes primitives and two stable
  * callbacks, so one painted cell reconciles ONE `<button>` and composes ONE
  * aria string instead of 225. Measured 2.1x on a 15×15 at 80 single-cell
- * paints, and the composition count collapses from 225×N to N.
+ * paints, and the CELL composition count collapses from 225×N to N.
+ *
+ * That sentence used to say "the composition count", unqualified, and it was
+ * only ever true of `cellAria` (step-6 round-4 finding PERF-R4-2): the 30 clue
+ * rails were still composed inline in this body, so the board's real figure
+ * for an N-cell drag was 31×N — measured 43 cell labels against 1230 rail
+ * labels on a 40-cell drag. `ColRail`/`RowRail` below are memoized for exactly
+ * that, so the whole sentence is now true of the board and not just of its
+ * cells: N compositions for an N-cell drag, rather than (size² + 2·size)×N.
  *
  * This paragraph used to say that memo "needs `consumedClick` to be
  * identity-stable — i.e. a change to the shared `usePointerStroke` that
@@ -97,8 +105,9 @@ const SIZE_CLASS = {
  * nothing but two `useRef` objects and the event's `detail`, so an
  * effect-synced ref inside THIS file makes the click wrapper stable and exact,
  * permanently, without touching the shared hook or Binairo. `T-WEB-S66` pins
- * the result — 225 × N aria compositions for an N-cell drag became N, proved
- * red at 1800 with the per-cell memo removed — so **#66**'s Scope 1 is
+ * the result — cells AND rails, since round 4 — 31 × N aria compositions for
+ * an N-cell drag became N, proved red at 1800 with the per-cell memo removed
+ * and at 1230 rail labels with the rails inline — so **#66**'s Scope 1 is
  * discharged here and its `usePointerStroke` justification must not be acted
  * on: there is no reason left to change a shipped game's shared hook for it.
  *
@@ -277,60 +286,12 @@ export const Board = memo(function Board({
       {...stroke.handlers}
     >
       {clues.cols.map((runs, column) => (
-        <div
-          key={column}
-          id={columnRailId(column)}
-          // `role="group"` is required, not cosmetic: `aria-label` on a
-          // role-less <div> is not reliably exposed, which is Binairo's
-          // undocumented defect (N16). `group` permits author naming, so the
-          // label is exposed both as the rail's own name and, through
-          // `aria-describedby`, as each cell's description. Subtree text would
-          // announce "22223" for runs `2 2 2 2 3`, which is why the label is
-          // composed in messages.ts (ADR-0018).
-          role="group"
-          aria-label={copy.columnCluesAria(column + 1, runs)}
-          className={styles.clueCol}
-          style={{ gridColumn: column + 2, gridRow: 1 }}
-        >
-          {/* NAMING THE RAIL IS NOT PRUNING ITS SUBTREE — the half the
-              comment above does not buy on its own. Each numeral would stay
-              its own `StaticText` node and its own virtual-cursor stop, so a
-              screen-reader user browsing the board linearly hears every run
-              twice: once through the composed rail label (and again through
-              every cell's `aria-describedby`), then once more as naked digits
-              with nothing saying which line they belong to — 90 extra stops
-              on a size-15 day (finding `clue-rails-announce-every-run-twice`).
-              `aria-hidden` on the numerals stops that; the rail keeps its
-              name, because an `aria-hidden` element referenced by
-              `aria-describedby` still contributes its own accessible name.
-              The skeleton's rails carry none of this: its whole subtree is
-              already inside one `aria-hidden` div. */}
-          {numbersOf(runs).map((run, at) => (
-            <span aria-hidden key={at} className={styles.clueNumber}>
-              {run}
-            </span>
-          ))}
-        </div>
+        <ColRail key={column} column={column} runs={runs} />
       ))}
 
       {clues.rows.map((runs, row) => (
         <Fragment key={row}>
-          <div
-            id={rowRailId(row)}
-            role="group"
-            aria-label={copy.rowCluesAria(row + 1, runs)}
-            className={styles.clueRow}
-            style={{ gridColumn: 1, gridRow: row + 2 }}
-          >
-            {/* `aria-hidden` for the reason spelled out on the column rail
-                above: the composed label is the rail's voice, and the numerals
-                under it would be read a second time as bare digits. */}
-            {numbersOf(runs).map((run, at) => (
-              <span aria-hidden key={at} className={styles.clueNumber}>
-                {run}
-              </span>
-            ))}
-          </div>
+          <RowRail row={row} runs={runs} />
           {Array.from({ length: size }, (_unused, column) => {
             const index = row * size + column;
             return (
@@ -356,12 +317,108 @@ export const Board = memo(function Board({
 });
 
 /**
+ * ONE column rail, memoized — the OTHER half of the drag cost `Board`'s own
+ * memo cannot reach (step-6 round-4 finding PERF-R4-1). `Cell`'s memo fixed
+ * the 225 `<button>`s and left the 30 rails inline in `Board`'s body, where
+ * every painted cell re-created them, re-ran `columnCluesAria`/`rowCluesAria`
+ * 30 times — each a `runs.join(", ")` plus a template string — and re-created
+ * ~37 `<span>` children. Measured on a 15×15: a 40-cell drag composed 43 cell
+ * labels (the memo working) against 615 + 615 rail labels. Memoizing the two
+ * rails takes that to zero and the whole board to ~N compositions for an
+ * N-cell drag; measured 1.33x on the commit itself, over four interleaved
+ * rounds, with byte-identical markup.
+ *
+ * The bail-out is PERMANENT rather than probabilistic: `clues` never changes
+ * identity for a mounted screen (`initNonogramPlayState` takes it from the
+ * wire and every reducer case spreads `...state`), so each `clues.cols[i]`
+ * keeps its identity for the life of the mount and neither prop can move.
+ * Both props are a primitive plus that stable array — the same contract
+ * `Cell` carries, and adding a prop rebuilt per render undoes it the same way.
+ */
+const ColRail = memo(function ColRail({
+  column,
+  runs,
+}: {
+  readonly column: number;
+  readonly runs: readonly number[];
+}) {
+  return (
+    <div
+      id={columnRailId(column)}
+      // `role="group"` is required, not cosmetic: `aria-label` on a
+      // role-less <div> is not reliably exposed, which is Binairo's
+      // undocumented defect (N16). `group` permits author naming, so the
+      // label is exposed both as the rail's own name and, through
+      // `aria-describedby`, as each cell's description. Subtree text would
+      // announce "22223" for runs `2 2 2 2 3`, which is why the label is
+      // composed in messages.ts (ADR-0018).
+      role="group"
+      aria-label={messages.games.nonogram.play.columnCluesAria(
+        column + 1,
+        runs,
+      )}
+      className={styles.clueCol}
+      style={{ gridColumn: column + 2, gridRow: 1 }}
+    >
+      {/* NAMING THE RAIL IS NOT PRUNING ITS SUBTREE — the half the
+          comment above does not buy on its own. Each numeral would stay
+          its own `StaticText` node and its own virtual-cursor stop, so a
+          screen-reader user browsing the board linearly hears every run
+          twice: once through the composed rail label (and again through
+          every cell's `aria-describedby`), then once more as naked digits
+          with nothing saying which line they belong to — 90 extra stops
+          on a size-15 day (finding `clue-rails-announce-every-run-twice`).
+          `aria-hidden` on the numerals stops that; the rail keeps its
+          name, because an `aria-hidden` element referenced by
+          `aria-describedby` still contributes its own accessible name.
+          The skeleton's rails carry none of this: its whole subtree is
+          already inside one `aria-hidden` div. */}
+      {numbersOf(runs).map((run, at) => (
+        <span aria-hidden key={at} className={styles.clueNumber}>
+          {run}
+        </span>
+      ))}
+    </div>
+  );
+});
+
+/** ONE row rail, memoized for the reason `ColRail` above spells out. */
+const RowRail = memo(function RowRail({
+  row,
+  runs,
+}: {
+  readonly row: number;
+  readonly runs: readonly number[];
+}) {
+  return (
+    <div
+      id={rowRailId(row)}
+      role="group"
+      aria-label={messages.games.nonogram.play.rowCluesAria(row + 1, runs)}
+      className={styles.clueRow}
+      style={{ gridColumn: 1, gridRow: row + 2 }}
+    >
+      {/* `aria-hidden` for the reason spelled out on the column rail
+          above: the composed label is the rail's voice, and the numerals
+          under it would be read a second time as bare digits. */}
+      {numbersOf(runs).map((run, at) => (
+        <span aria-hidden key={at} className={styles.clueNumber}>
+          {run}
+        </span>
+      ))}
+    </div>
+  );
+});
+
+/**
  * ONE cell, memoized — the half of the drag cost `Board`'s own memo cannot
  * reach (see its TSDoc). A `paint-over` allocates a new `entries` array, so
  * `Board` re-renders in full on every painted cell; with this, the cells whose
  * `value`, `hinted`, `selected` and `tabbable` did not move bail out, and one
- * painted cell composes ONE aria string instead of `size²`. On a 15×15 that is
- * 225 → 1 per pointer move, measured at 2.1x on the commit itself.
+ * painted cell composes ONE *cell* aria string instead of `size²`. On a 15×15
+ * that is 225 → 1 per pointer move, measured at 2.1x on the commit itself. The
+ * board's other 2·size aria strings are the clue rails, and they are
+ * `ColRail`/`RowRail`'s job — this component's guarantee is about cells.
  *
  * EVERY PROP IS A PRIMITIVE OR A STABLE CALLBACK, and that is the whole
  * contract: the two handlers come from `useCallback` in `Board` over the
