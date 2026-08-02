@@ -864,7 +864,7 @@ describe("the conclusion's layout (tripwires)", () => {
     }
   });
 
-  it("insets the concluded card's CTA on BOTH axes (T-WEB-S65)", () => {
+  it("insets the concluded card's CTA on BOTH axes (T-WEB-S65a)", () => {
     // Step-6 round-3 finding ISS-A3, the same rule and the same blind spot as
     // the chips below: `.cta` paints a filled background (`--ink`, or the
     // destination game's accent through `.ctaNext`), and at `padding: 14px 0`
@@ -885,7 +885,7 @@ describe("the conclusion's layout (tripwires)", () => {
     expect(inline).not.toBe("0px");
   });
 
-  it("insets the day-card chips on BOTH axes, at both bands (T-WEB-S65)", () => {
+  it("insets the day-card chips on BOTH axes, at both bands (T-WEB-S65b)", () => {
     // finding `chip-is-cramped-on-the-card-the-scan-cannot-see`. `.chipDone`
     // paints a background and `.chipMissing` a 1.5px dashed border, so a chip
     // with `padding: 12px 0` puts its two block children flush against a

@@ -103,7 +103,8 @@ export function useRecordSnapshot(game: Game, date: string): RecordSnapshot {
  * five of these stand still.
  *
  * That invariant is now CHECKED rather than argued: `T-WEB-S64` in
- * `test/nonogram-play.test.ts` parses every byte a full play-through persists
+ * `test/nonogram-play.test.ts` — one id, one meaning again since step-6
+ * round 4 — parses every byte a full play-through persists
  * and asserts `grid === undefined` iff `concluded` is false, on both sides.
  * A future game's `buildRecord` that breaks the lockstep goes red there.
  *

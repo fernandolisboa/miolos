@@ -87,7 +87,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("route segment configuration (T-WEB-S53)", () => {
+describe("route segment configuration (T-WEB-S53b)", () => {
   it("both segments are force-dynamic: a cached page would serve yesterday's puzzle", async () => {
     const { play, conclusion } = await loadPages();
 
@@ -121,7 +121,7 @@ describe("route segment configuration (T-WEB-S53)", () => {
   });
 });
 
-describe("/nonogram (T-WEB-S53)", () => {
+describe("/nonogram (T-WEB-S53a)", () => {
   it("passes the wall's projection and nothing else across the RSC boundary", async () => {
     spies.getTodayDaily.mockResolvedValue(DAILY);
     const { play } = await loadPages();

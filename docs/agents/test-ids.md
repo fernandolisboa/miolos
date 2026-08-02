@@ -21,17 +21,30 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 020 (#25), verified by grep over the test tree on that ticket's branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 020 (#25) **after its step-7 round 4**, re-derived by grep over the test tree on that ticket's branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+
+The grep that produces it, per area — titles only, so a cross-reference in a comment is not mistaken for an allocation:
+
+```
+grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
+```
 
 | Area | Next free | Bare series closed at |
 |---|---|---|
-| `T-CORE` | `S15` | never used |
+| `T-CORE` | `S17` | never used |
 | `T-DB` | `S10` | `T-DB-21` |
-| `T-API` | `S28` | `T-API-16` |
-| `T-WEB` | `S66` | `T-WEB-23` |
-| `T-LINT` | `S4` | `T-LINT-10` |
+| `T-API` | `S29` | `T-API-16` |
+| `T-WEB` | `S72` | `T-WEB-23` |
+| `T-LINT` | `S8` | `T-LINT-10` |
 
-#25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent `T-API-S27` (+ siblings `S27a`, `S27b`) and `T-WEB-S61…S65` on top of its range at step 7.
+#25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
+
+- at step 7 rounds 1–3 — `T-API-S27` (+ siblings `S27a`, `S27b`) and `T-WEB-S61…S66`;
+- at step 7 round 4 — `T-CORE-S15`, `T-CORE-S16`, `T-API-S28`, `T-WEB-S67…S71`, `T-LINT-S4…S7`, plus the sibling letters that split four ids which had acquired two meanings each (`T-WEB-S65a`/`S65b`, `T-WEB-S53a`/`S53b`, `T-API-S23a`/`S23b`, `T-API-S25a`/`S25b`).
+
+**The `T-WEB` row read `S66` and the spent list stopped at `S65` when this document first landed, and both were already false on the branch that shipped them** — `T-WEB-S66` was in use at `apps/web/test/nonogram-screen.test.tsx` and cited from `apps/web/src/nonogram/board.tsx`. Two lint tests were also minted as `T-LINT-3d`/`T-LINT-3e`, i.e. as new members of a series this document declares closed, which produced a `T-LINT-3d` collision with the pre-existing `users`/`sessions` assertion. Both are corrected here (step-6 round-4 findings NONO-C4-2, NONO-C4-3, Q2, Q3, `TEST-IDS-COLLISIONS`, `TEST-IDS-FRONTIER-STALE`). The lesson is the one the "re-derive it at step 8" instruction above already carries: a frontier written from memory at the end of a long ticket is wrong, and a document that ships with the code contradicting it is worse than no document.
+
+Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead.
 
 ## Burned slots
 
