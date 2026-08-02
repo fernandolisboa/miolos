@@ -17,6 +17,13 @@
  * the `elementFromPoint` resolution, the capture net, and the reason a tap
  * in paint mode is resolved on `pointerup` rather than by the cell's own
  * `click`. A tidy-up while moving is how those findings come back.
+ *
+ * **`onStrokeEnd` is the one thing here that is new**, and it is the only
+ * part that is a decision rather than a relocation: ADR-0037 decision (2)
+ * owns it, and the Binairo retrofit is instructed to use it rather than
+ * derive a second mechanism. It exists because pointer capture retargets
+ * the trailing `click` to the container, so on a board whose caret lives in
+ * state a stroke would otherwise leave DOM focus where it was.
  */
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 
@@ -48,8 +55,16 @@ export function usePointerStroke(input: {
   readonly painting: boolean;
   readonly onTap: (index: number) => void;
   readonly onPaintOver: (index: number) => void;
+  /**
+   * Called once at `pointerup` with the cell the stroke ended on. The
+   * composite-widget boards use it to move DOM focus; Binairo omits it.
+   * This is the focus door pointer capture leaves open: the browser
+   * retargets the trailing `click` to the CONTAINER, so a cell's own
+   * `onClick` focus fix never runs during a stroke (grid.tsx:139-151).
+   */
+  readonly onStrokeEnd?: (index: number) => void;
 }): PointerStroke {
-  const { painting, onTap, onPaintOver } = input;
+  const { painting, onTap, onPaintOver, onStrokeEnd } = input;
 
   const dragging = useRef(false);
   const dragged = useRef(false);
@@ -164,6 +179,12 @@ export function usePointerStroke(input: {
    * Both latches below are set here and cleared by the NEXT `pointerdown`,
    * so the state a `click` reads always belongs to the stroke that produced
    * it.
+   *
+   * `onStrokeEnd` is handed the ending cell HERE and nowhere else, after the
+   * stroke is closed: a consumer that moves DOM focus can then fire whatever
+   * focus handlers it likes against a hook that no longer has a stroke open.
+   * The end cell is read once and reused as the tap comparison, so the two
+   * can never disagree about where the pointer lifted.
    */
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     // A second contact lifting must not resolve — or end — the first
@@ -172,16 +193,23 @@ export function usePointerStroke(input: {
       return;
     }
     const start = startIndex.current;
+    const end = cellIndexAt(event.clientX, event.clientY);
     if (
       dragging.current &&
       !dragged.current &&
       start !== null &&
-      cellIndexAt(event.clientX, event.clientY) === start
+      end === start
     ) {
       tapped.current = true;
       onTap(start);
     }
     endDrag();
+    if (end !== null) {
+      // Lifting outside the board hands nothing back: there is no cell to
+      // focus, and inventing one would move the caret somewhere the player
+      // never pointed.
+      onStrokeEnd?.(end);
+    }
   };
 
   return {
