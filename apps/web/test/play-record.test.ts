@@ -216,6 +216,38 @@ describe("listPendingRecords", () => {
     expect(dates.toSorted()).toEqual(["2026-07-29", "2026-07-30"]);
     expect(window.localStorage.getItem("unrelated-key")).toBe("left alone");
   });
+
+  it("refuses a record that does not address its own key (T-WEB-S62)", () => {
+    // `readPlayRecord` already cross-checks `game` against the key; the queue
+    // owes the same on BOTH fields, and for a sharper reason. `sync.ts`
+    // settles with `writePlayRecord`, which derives the key from the RECORD —
+    // so a record sitting at today's key while carrying an older `date` is
+    // POSTed, 404s against the api's accepted-days bound, gets settled into a
+    // brand-new key, and is picked up again at this one on the next mount,
+    // every `online`, every `visibilitychange` and every rung of the retry
+    // ladder, forever (finding
+    // `pending-queue-trusts-a-record-that-does-not-address-its-own-key`). No
+    // product path writes one — this is the hand-edited store the schema is
+    // the wall against.
+    const stray = JSON.stringify(
+      record({ date: "2026-07-25", pendingSync: true }),
+    );
+    window.localStorage.setItem("miolos:play:binairo:2026-07-30", stray);
+    window.localStorage.setItem("miolos:play:sudoku:2026-07-25", stray);
+
+    expect(listPendingRecords()).toEqual([]);
+
+    // And pruning DROPS it, rather than keeping it forever the way a real
+    // pending record is kept: it can never be settled, so there is nothing
+    // to preserve.
+    prunePlayRecords("2026-07-30");
+    expect(window.localStorage.getItem("miolos:play:binairo:2026-07-30")).toBe(
+      null,
+    );
+    expect(window.localStorage.getItem("miolos:play:sudoku:2026-07-25")).toBe(
+      null,
+    );
+  });
 });
 
 describe("prunePlayRecords", () => {

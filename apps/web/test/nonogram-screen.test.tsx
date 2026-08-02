@@ -497,6 +497,39 @@ describe("the clue rails (T-WEB-S43)", () => {
       copy.cellAria(1, 1, null),
     );
   });
+
+  it("announces each run ONCE, through the rail's label and never as bare digits (T-WEB-S64)", () => {
+    // Naming a `role="group"` supplies the group's NAME; it does not prune
+    // the group's descendants. Without `aria-hidden` every clue numeral stays
+    // its own text node and its own virtual-cursor stop, so a screen-reader
+    // user hears every run twice — once through the composed label (and again
+    // through each cell's `aria-describedby`) and once as naked digits with
+    // nothing saying which line they belong to. 90 extra stops on a size-15
+    // day (finding `clue-rails-announce-every-run-twice`). Binairo and Sudoku
+    // do not have this: their digits live inside NAMED buttons.
+    const { container } = render(<NonogramScreen daily={BIG} />);
+
+    const numerals = container.querySelectorAll(
+      '[id^="nonogram-clue-"] > span',
+    );
+    // Anti-vacuity: the query must be finding the rails' numerals at all.
+    expect(numerals.length).toBeGreaterThanOrEqual(BIG.size * 2);
+    for (const numeral of numerals) {
+      expect(numeral).toHaveAttribute("aria-hidden", "true");
+      // And the digit is still PAINTED — this hides from the a11y tree, it
+      // does not blank the rail.
+      expect(numeral.textContent).toMatch(/^\d+$/);
+    }
+
+    // The rail keeps its own name, which is what makes the hiding safe: an
+    // `aria-hidden` element referenced by `aria-describedby` still
+    // contributes its accessible name.
+    const rail = container.querySelector("#nonogram-clue-row-0");
+    expect(rail).toHaveAttribute(
+      "aria-label",
+      messages.games.nonogram.play.rowCluesAria(1, BIG.clues.rows[0] ?? []),
+    );
+  });
 });
 
 describe("the brush (T-WEB-S44)", () => {

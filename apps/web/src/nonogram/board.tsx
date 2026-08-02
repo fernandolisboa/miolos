@@ -14,9 +14,15 @@ import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
 
 /**
- * The heavy rule repeats every five cells, which also produces the frame:
- * `index % GROUP === 0` covers 0 (the frame) and 5/10 (the groups), so a 5×5
- * board gets a frame and no interior rule, which is correct.
+ * The heavy rule repeats every five cells, which also produces the TOP and
+ * LEFT frame edges: `index % GROUP === 0` covers 0 (the frame) and 5/10 (the
+ * groups), so a 5×5 board gets those two frame edges and no interior rule,
+ * which is correct.
+ *
+ * The modulo cannot draw the other two: 8, 10 and 15 all have `size - 1` not
+ * divisible by 5. The right and bottom frame edges are two further per-cell
+ * borders at `column === size - 1` and `row === size - 1` — see `ruleClasses`
+ * below (ADR-0035 decision 2, as amended).
  */
 const GROUP = 5;
 
@@ -66,9 +72,20 @@ const SIZE_CLASS = {
  * MEMOIZED, and at 225 cells that is not a micro-optimisation: `state.now`
  * moves once a second for the two timer readouts, and without this every tick
  * reconciles 225 `<button>`s, 30 clue rails and 225 composed aria strings that
- * cannot have changed — measured at ~2.5 ms per tick on a 15×15, paid again
- * per cell crossed during a drag, on the interaction-latency path. The default
- * shallow compare is exactly right here: `size` and `clues` never change
+ * cannot have changed — measured at ~2.5 ms per tick on a 15×15, on the
+ * interaction-latency path.
+ *
+ * WHAT IT DOES NOT BUY: the drag. `paint-over` allocates a new `entries`
+ * array, `entries` is shallow-compared, so a stroke re-renders the WHOLE
+ * board once per painted cell by construction — measured at 41 full board
+ * renders for a 40-cell drag, 0 for ten timer ticks. Saying the memo is "paid
+ * again per cell crossed during a drag" had it backwards. Paying that down
+ * needs a memoized per-cell component, which needs `consumedClick` to be
+ * identity-stable — i.e. a change to the shared `usePointerStroke` that
+ * Binairo also consumes, out of scope for a Nonogram diff and tracked as
+ * **#66**.
+ *
+ * The default shallow compare is exactly right here: `size` and `clues` never change
  * identity for a mounted screen (`initNonogramPlayState` takes `clues` from
  * the wire and every reducer case spreads `...state`), all six callbacks are
  * `useCallback([])` in `use-nonogram-play.ts`, and the three props that do
@@ -210,8 +227,21 @@ export const Board = memo(function Board({
           className={styles.clueCol}
           style={{ gridColumn: column + 2, gridRow: 1 }}
         >
+          {/* NAMING THE RAIL IS NOT PRUNING ITS SUBTREE — the half the
+              comment above does not buy on its own. Each numeral would stay
+              its own `StaticText` node and its own virtual-cursor stop, so a
+              screen-reader user browsing the board linearly hears every run
+              twice: once through the composed rail label (and again through
+              every cell's `aria-describedby`), then once more as naked digits
+              with nothing saying which line they belong to — 90 extra stops
+              on a size-15 day (finding `clue-rails-announce-every-run-twice`).
+              `aria-hidden` on the numerals stops that; the rail keeps its
+              name, because an `aria-hidden` element referenced by
+              `aria-describedby` still contributes its own accessible name.
+              The skeleton's rails carry none of this: its whole subtree is
+              already inside one `aria-hidden` div. */}
           {numbersOf(runs).map((run, at) => (
-            <span key={at} className={styles.clueNumber}>
+            <span aria-hidden key={at} className={styles.clueNumber}>
               {run}
             </span>
           ))}
@@ -227,8 +257,11 @@ export const Board = memo(function Board({
             className={styles.clueRow}
             style={{ gridColumn: 1, gridRow: row + 2 }}
           >
+            {/* `aria-hidden` for the reason spelled out on the column rail
+                above: the composed label is the rail's voice, and the numerals
+                under it would be read a second time as bare digits. */}
             {numbersOf(runs).map((run, at) => (
-              <span key={at} className={styles.clueNumber}>
+              <span aria-hidden key={at} className={styles.clueNumber}>
                 {run}
               </span>
             ))}

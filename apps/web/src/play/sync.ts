@@ -100,6 +100,20 @@ export async function flushPendingCompletions(
   if (flushing) {
     // The POST is idempotent, so a duplicate flush is free — but a
     // concurrent one would double the requests for nothing.
+    //
+    // Arming the ladder for the record we just queued is NOT optional here,
+    // and returning bare is how a completion goes missing on a perfectly
+    // online device (finding `handed-completion-dropped-by-a-concurrent-
+    // flush`): the in-flight flush read `pendingQueue()` before this record
+    // existed, so it will not post it, and if its own records all settle it
+    // calls `cancelRetries()` — clearing the timer and resetting the step.
+    // The conclusion then shows "pendente" until a new mount, an `online` or
+    // a `visibilitychange`. `scheduleRetry` no-ops while a timer is pending
+    // and its handler re-reads the queue, so the skipped record is picked up
+    // on the first rung instead.
+    if (record?.pendingSync === true) {
+      scheduleRetry();
+    }
     return;
   }
   flushing = true;
@@ -129,7 +143,17 @@ export async function flushPendingCompletions(
       stillPending = (await syncRecord(apiUrl, record)) || stillPending;
     }
 
-    if (stillPending) {
+    // The queue is RE-READ, never inferred from `pending`. That array was
+    // built before the first `await`, so a completion handed to this flush
+    // while it was in flight is not in it — and answering "none of MY records
+    // are still pending" with `cancelRetries()` would clear the ladder the
+    // handed record just armed and strand it until a new mount, an `online`
+    // or a `visibilitychange`, with the conclusion showing "pendente" to a
+    // player who is online (finding
+    // `handed-completion-dropped-by-a-concurrent-flush`). A record that
+    // cannot be posted at all is settled by `syncRecord`, so this cannot
+    // spin: everything left here is genuinely retryable.
+    if (stillPending || pendingQueue().length > 0) {
       scheduleRetry();
     } else {
       cancelRetries();

@@ -314,6 +314,28 @@ describe("move-selection", () => {
       play(rowEnd, { type: "move-selection", rows: 0, columns: -4 }).selected,
     ).toBe(0);
   });
+
+  it("returns the SAME object when the clamp leaves the caret where it was (T-WEB-S63)", () => {
+    // The `select` and `set-brush` guards, for the input that actually
+    // produces this one: an arrow key HELD against an edge. A 15-row board
+    // makes vertical traversal 14 presses — which is why PageUp/PageDown
+    // exist — so running into a wall is ordinary, not exotic, and every
+    // repeat used to allocate a state and re-render the screen for a caret
+    // that could not move.
+    const topLeft = play(SUNDAY_STATE, { type: "select", index: 0 });
+
+    expect(
+      play(topLeft, { type: "move-selection", rows: -1, columns: 0 }),
+    ).toBe(topLeft);
+    expect(
+      play(topLeft, { type: "move-selection", rows: 0, columns: -14 }),
+    ).toBe(topLeft);
+    // Still a new state when the caret DOES move — the guard must not be a
+    // blanket bail-out.
+    expect(
+      play(topLeft, { type: "move-selection", rows: 1, columns: 0 }),
+    ).not.toBe(topLeft);
+  });
 });
 
 describe("status and pendingSync", () => {

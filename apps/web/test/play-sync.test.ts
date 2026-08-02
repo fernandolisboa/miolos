@@ -299,6 +299,74 @@ describe("flushPendingCompletions", () => {
     expect(completionCalls(fetchMock)).toHaveLength(1);
   });
 
+  it("posts a completion handed to a flush that was already running (T-WEB-S61)", async () => {
+    // The interleaving AC 3 loses to: a fast finish on a slow network, or a
+    // restored near-complete board, closes while a mount flush is still
+    // awaiting its own fetch. The in-flight flush built `pending` before this
+    // record existed, so it never posts it — and if its own records all
+    // settle it used to call `cancelRetries()`, clearing the ladder and
+    // stranding the just-finished puzzle until a new mount, an `online` or a
+    // `visibilitychange`. The player is ONLINE and the conclusion says
+    // "pendente" (finding `handed-completion-dropped-by-a-concurrent-flush`).
+    vi.useFakeTimers();
+    writePlayRecord(pendingRecord());
+
+    let release = (): void => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = () => {
+        resolve();
+      };
+    });
+    let call = 0;
+    const fetchMock = vi.fn(async (input: unknown) => {
+      if (String(input).endsWith("/session")) {
+        return jsonResponse(200, {
+          userId: crypto.randomUUID(),
+          created: true,
+        });
+      }
+      call += 1;
+      // Only the FIRST POST hangs: it is the flush that must not swallow the
+      // record handed to it while it was in the air.
+      if (call === 1) {
+        await held;
+        return jsonResponse(200, okBody());
+      }
+      return jsonResponse(200, okBody({ game: "nonogram" }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { flushPendingCompletions } = await freshSync();
+    const inFlight = flushPendingCompletions();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    // The board closes mid-flight. `writePlayRecord` is what the real caller
+    // does first, so the record is in the store AND handed over.
+    const nonogram = pendingNonogramRecord();
+    writePlayRecord(nonogram);
+    await flushPendingCompletions(nonogram);
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    release();
+    await inFlight;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(false);
+
+    // No new mount, no `online`, no `visibilitychange` — only the ladder the
+    // handed record armed. It must fire, and it must carry the nonogram.
+    await vi.advanceTimersByTimeAsync(2_000);
+    const posted = completionCalls(fetchMock).map((entry) => {
+      const init = requestInitSchema.parse(entry[1]);
+      return z.object({ game: z.string() }).parse(JSON.parse(init.body)).game;
+    });
+    expect(posted).toEqual(["binairo", "nonogram"]);
+    expect(readPlayRecord("nonogram", DATE)).toMatchObject({
+      pendingSync: false,
+      syncOutcome: "recorded",
+    });
+  });
+
   it("posts the completion it was handed even with no usable localStorage", async () => {
     // An Android WebView with DOM storage off (the default) throws on the
     // property itself, so `writePlayRecord` is a silent no-op and the queue

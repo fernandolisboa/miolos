@@ -310,10 +310,19 @@
   margin-top: 14px;
 }
 
+/* Non-zero padding on BOTH axes, and the horizontal half is a gate fix rather
+   than a taste one: `.chipDone` paints a background and `.chipMissing` a
+   1.5px dashed border, so at `padding: 12px 0` the chip's two block children
+   sat flush against a VISIBLE boundary and `impeccable detect` fired
+   `cramped-padding` five times per viewport on the concluded card — the one
+   card no URL-mode scan reaches, because a clean browser profile has no
+   concluded record and always renders the empty branch (finding
+   `chip-is-cramped-on-the-card-the-scan-cannot-see`). The text is centred and
+   far narrower than the chip, so the inset costs nothing visually. */
 .chip {
   box-sizing: border-box;
   flex: 1;
-  padding: 12px 0;
+  padding: 12px 8px;
   border-radius: var(--radius);
   text-align: center;
 }
@@ -652,8 +661,10 @@
     margin-top: 12px;
   }
 
+  /* The horizontal inset survives the mobile band for the same reason it
+     exists at all — `cramped-padding` fires at 390 and 320 too. */
   .chip {
-    padding: 9px 0;
+    padding: 9px 6px;
   }
 
   .chipName {

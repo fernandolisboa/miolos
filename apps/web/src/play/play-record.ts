@@ -292,6 +292,19 @@ export function writePlayRecord(record: PlayRecord): void {
  * deliberately GAME-BLIND. That is exactly why `sync.ts` can be one module
  * for every game, and why it MUST be (ADR-0029, plan 018 S1): two copies
  * over this one queue would each POST and each settle the other's records.
+ *
+ * Game-blind is not key-blind. A record must ADDRESS the key it was found
+ * under, the same cross-check `readPlayRecord` above makes and for a sharper
+ * reason: `sync.ts` settles a record with `writePlayRecord`, which derives
+ * the key from the RECORD, so a record sitting at a key its own
+ * `(game, date)` does not produce would be settled into a different key and
+ * left pending at this one — re-POSTed on every mount, every `online`, every
+ * `visibilitychange` and every rung of the retry ladder, forever, because a
+ * pending record is never pruned by design (finding
+ * `pending-queue-trusts-a-record-that-does-not-address-its-own-key`). No
+ * product path can produce one (`buildRecord` takes `state.date` and
+ * `writePlayRecord` derives the key), so this is the wall against the
+ * hand-edited store the schema note at the top of this file names.
  */
 export function listPendingRecords(): PlayRecord[] {
   const store = storage();
@@ -301,7 +314,10 @@ export function listPendingRecords(): PlayRecord[] {
   const pending: PlayRecord[] = [];
   for (const key of playRecordKeys(store)) {
     const record = parseAt(store, key);
-    if (record?.pendingSync === true) {
+    if (
+      record?.pendingSync === true &&
+      playRecordKey(record.game, record.date) === key
+    ) {
       pending.push(record);
     }
   }
@@ -314,6 +330,12 @@ export function listPendingRecords(): PlayRecord[] {
  * client-computed today — pruning on a wrong clock would delete a queue
  * that was about to flush. A pending record is kept forever by design: it
  * is the only copy of a completion the server has not acknowledged.
+ *
+ * The ONE exception is a record that does not address its own key. It is
+ * unsyncable by construction (see `listPendingRecords` above), so keeping it
+ * forever keeps nothing; it is dropped whatever its `pendingSync` and
+ * whatever its date. Unparseable keys are still left alone — this function
+ * owns the play namespace's records, not its garbage.
  */
 export function prunePlayRecords(keepDate: string): void {
   const store = storage();
@@ -322,7 +344,14 @@ export function prunePlayRecords(keepDate: string): void {
   }
   for (const key of playRecordKeys(store)) {
     const record = parseAt(store, key);
-    if (record !== undefined && !record.pendingSync && record.date < keepDate) {
+    if (record === undefined) {
+      continue;
+    }
+    if (playRecordKey(record.game, record.date) !== key) {
+      store.removeItem(key);
+      continue;
+    }
+    if (!record.pendingSync && record.date < keepDate) {
       store.removeItem(key);
     }
   }

@@ -863,4 +863,37 @@ describe("the conclusion's layout (tripwires)", () => {
       expect(CSS).not.toMatch(new RegExp(`^\\s*\\.${cta}:hover`, "m"));
     }
   });
+
+  it("insets the day-card chips on BOTH axes, at both bands (T-WEB-S65)", () => {
+    // finding `chip-is-cramped-on-the-card-the-scan-cannot-see`. `.chipDone`
+    // paints a background and `.chipMissing` a 1.5px dashed border, so a chip
+    // with `padding: 12px 0` puts its two block children flush against a
+    // VISIBLE boundary and `impeccable detect` fires `cramped-padding` five
+    // times per viewport.
+    //
+    // This tripwire is the ONLY gate on it. The rule needs a CONCLUDED record
+    // to render at all, and URL-mode `impeccable detect` launches a clean
+    // browser profile (ADR-0031 (e)) — so every CI scan renders the empty
+    // branch and this card is never in a scanned frame. #25's AC 2 is the
+    // first acceptance criterion that depends on it being populated.
+    for (const [scope, body] of [
+      ["top level", bodyOf(CSS, ".chip")],
+      [
+        "the mobile band",
+        bodyOf(bodyOf(CSS, "@media (max-width: 768px)"), ".chip"),
+      ],
+    ] as const) {
+      const padding = decl(body, "padding");
+      expect(padding, `${scope}: .chip declares no padding`).toBeDefined();
+      const [block, inline] = (padding ?? "").split(/\s+/);
+      expect(
+        Number.parseFloat(block ?? "0"),
+        `${scope}: block padding`,
+      ).toBeGreaterThanOrEqual(8);
+      expect(
+        Number.parseFloat(inline ?? "0"),
+        `${scope}: inline padding — a zero here is the cramped-padding red`,
+      ).toBeGreaterThanOrEqual(6);
+    }
+  });
 });

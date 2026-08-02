@@ -145,8 +145,15 @@ export function nonogramPlayReducer(
         ? state
         : { ...state, selected: action.index };
 
-    case "move-selection":
-      return { ...state, selected: moved(state.selected, action, state.size) };
+    case "move-selection": {
+      // The SAME state when the caret cannot move — the guard above, for the
+      // input that actually produces it. `moved` clamps per axis, so an arrow
+      // held against an edge, or `Home` on column 0, hands back the index it
+      // was given; without this every one of those repeats allocates a state
+      // and re-renders the screen for a caret that did not move.
+      const next = moved(state.selected, action, state.size);
+      return state.selected === next ? state : { ...state, selected: next };
+    }
 
     case "set-brush":
       // Pressing the active brush is a no-op returning the SAME state: there
