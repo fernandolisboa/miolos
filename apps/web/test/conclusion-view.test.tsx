@@ -33,6 +33,11 @@ const ELAPSED = formatElapsed(ELAPSED_MS);
 // own game's record, which a shared value could not prove (T-WEB-S18).
 const SUDOKU_ELAPSED_MS = 512_000;
 const SUDOKU_ELAPSED = formatElapsed(SUDOKU_ELAPSED_MS);
+// A third distinct duration, for the same reason: once Nonogram is playable
+// its chip is rendered beside the other two, and a value shared with either
+// would make an ambiguous match possible in any test that grows an
+// assertion on a duration later (T-WEB-S55).
+const NONOGRAM_ELAPSED_MS = 623_000;
 
 function concluded(
   overrides: Partial<BinairoPlayRecord> = {},
@@ -66,6 +71,32 @@ function concludedSudoku(
     entries: Array.from({ length: 81 }, () => null),
     grid: Array.from({ length: 9 }, () => DIGITS).flat(),
     elapsedMs: SUDOKU_ELAPSED_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+/**
+ * Nonogram's counterpart, needed from #25 onward: with `playRoutes.nonogram`
+ * live, "every playable daily is done" is a three-record state, not a
+ * two-record one (T-WEB-S55, plan 020 §17).
+ */
+function concludedNonogram(
+  overrides: Partial<NonogramPlayRecord> = {},
+): NonogramPlayRecord {
+  return {
+    v: 1,
+    game: "nonogram",
+    date: DATE,
+    size: 5,
+    entries: Array.from({ length: 25 }, () => null),
+    grid: Array.from({ length: 25 }, (_unused, index) =>
+      index % 3 === 0 ? 1 : 0,
+    ),
+    elapsedMs: NONOGRAM_ELAPSED_MS,
     hintsUsed: 0,
     concluded: true,
     pendingSync: false,
@@ -205,8 +236,11 @@ describe("the day card and the CTA (T-WEB-18)", () => {
   it("points the CTA at Hoje and leaves the statistics link dead", () => {
     // Every playable daily done, which is the only state that still ends the
     // day at Hoje now that the CTA chains (plan 018 S21 supersedes plan 017
-    // §12.3's CTA row and its deviation 9).
+    // §12.3's CTA row and its deviation 9). The set grows with `playRoutes`:
+    // #25 made Nonogram playable, so the state this test is about needs its
+    // record too, and #27 will owe Termo's (T-WEB-S55, plan 020 §17).
     writePlayRecord(concluded());
+    writePlayRecord(concludedNonogram());
     writePlayRecord(concludedSudoku());
 
     render(
@@ -282,6 +316,12 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     // The in-place swap again: the record in storage is the last PLAYING one,
     // so a CTA read off the records alone would send the player straight back
     // into the grid they just closed.
+    //
+    // The DESTINATION moves as `playRoutes` grows and is not this test's
+    // subject: the scan runs Termo (no route) → Sudoku (celebrated, and
+    // overridden as concluded) → Nonogram → Binairo, so #25 makes it stop one
+    // game earlier than it did. What is asserted either way is that Sudoku is
+    // excluded (T-WEB-S55, plan 020 §17).
     writePlayRecord(concludedSudoku({ concluded: false, grid: undefined }));
 
     render(
@@ -295,13 +335,21 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
 
     expect(
       screen
-        .getByText(messages.conclusion.ctaNext(messages.games.binairo.name))
+        .getByText(messages.conclusion.ctaNext(messages.games.nonogram.name))
         .closest("a"),
-    ).toHaveAttribute("href", routes.binairo);
+    ).toHaveAttribute("href", routes.nonogram);
+    expect(
+      screen.queryByText(
+        messages.conclusion.ctaNext(messages.games.sudoku.name),
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("falls back to Hoje when every playable daily is done", () => {
+    // Three records, for the same reason as the T-WEB-18 case above
+    // (T-WEB-S55, plan 020 §17).
     writePlayRecord(concluded());
+    writePlayRecord(concludedNonogram());
     writePlayRecord(concludedSudoku());
 
     render(

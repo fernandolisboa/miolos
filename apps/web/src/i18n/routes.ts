@@ -50,5 +50,6 @@ export type Route = (typeof routes)[keyof typeof routes];
  */
 export const playRoutes: Readonly<Partial<Record<Game, Route>>> = {
   binairo: routes.binairo,
+  nonogram: routes.nonogram,
   sudoku: routes.sudoku,
 };
