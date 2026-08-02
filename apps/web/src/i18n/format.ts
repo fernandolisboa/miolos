@@ -53,8 +53,20 @@ export function formatShortDate(isoDate: string): string {
  * appears only once there is an hour to show, so the common case stays
  * the two-field clock the frames draw.
  *
- * Rendered with `font-variant-numeric: tabular-nums` by every caller
- * (tokens.css mandates it for timers) so the digits do not jitter.
+ * THE RUNNING READOUT DOES SHIFT ON EVERY TICK, and this says so rather than
+ * claiming otherwise (ADR-0036 decision 5, issue #63). `TimerReadout`'s two
+ * live callers are `play/screen.module.css`'s `.timerBar` (20 px) and
+ * `.timerCard` (30 px), both `font-family: var(--font-display)` — Fraunces,
+ * which has NO tabular figures and responds to no OpenType feature tag, so
+ * their `font-variant-numeric: tabular-nums` is a measured no-op and the
+ * digits move by ≈6.1 px each at 30 px. The conclusion's `.stampTime` renders
+ * a frozen value, so the same face costs nothing there.
+ *
+ * This TSDoc used to assert the opposite — "rendered with tabular-nums by
+ * every caller (tokens.css mandates it for timers) so the digits do not
+ * jitter" — on the exact surfaces the ADR measures as jittering (step-6
+ * round-4 finding `ADR-0036-UNAMENDED-LINES`). The fix is a face change on
+ * two shipped screens and is #63's, not this ticket's.
  */
 export function formatElapsed(totalMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(totalMs / 1000));

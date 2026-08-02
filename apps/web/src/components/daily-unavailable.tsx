@@ -24,7 +24,7 @@ export interface DailyUnavailableCopy {
  *
  * The copy arrives as a prop (plan 018 §13.3): #23 made Sudoku the second
  * daily play route, so the screen can no longer read one game's block
- * directly. #25/#27 pass their own.
+ * directly. #25's `nonogram-screen.tsx` passes its own; #27 will pass termo's.
  */
 export function DailyUnavailable({
   copy,
@@ -36,10 +36,14 @@ export function DailyUnavailable({
       <article className={styles.card}>
         {/* The tape is decoration with no meaning to announce. */}
         <div aria-hidden className={styles.tape} />
-        {/* The <h1> is the FIRST element child on purpose: impeccable's
+        {/* Nothing with TEXT may precede the <h1>: impeccable's
             hero-eyebrow-chip and kicker-above-heading rules both anchor on
-            `h1.previousElementSibling`, and both return early when it is
-            null (plan 017 §12.2). Do not add a kicker above it. */}
+            `h1.previousElementSibling` and classify it by its content, so a
+            short line above the title reads as an unstyled eyebrow (plan 017
+            §12.2). The tape above is not null — it is the previous sibling —
+            but it is an empty decorative div with no text, which is why
+            neither rule fires; the scan is green at 1440 and 390. Do not add
+            a kicker above the title, and do not put copy in the tape. */}
         <h1 className={styles.title}>{copy.title}</h1>
         <p className={styles.body}>{copy.body}</p>
         <Link className={styles.cta} href={routes.home}>

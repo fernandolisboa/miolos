@@ -7,6 +7,7 @@ import HojePage from "../app/page";
 import { formatElapsed, messages, playRoutes, routes } from "../src/i18n";
 import {
   writePlayRecord,
+  type NonogramPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
 import { bodyOf, decl, stylesheet } from "./css-source";
@@ -37,6 +38,30 @@ function concludedSudoku(
     entries: Array.from({ length: 81 }, () => null),
     grid: Array.from({ length: 9 }, () => DIGITS).flat(),
     elapsedMs: ELAPSED_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+const NONOGRAM_ELAPSED_MS = 623_000;
+const NONOGRAM_ELAPSED = formatElapsed(NONOGRAM_ELAPSED_MS);
+
+function concludedNonogram(
+  overrides: Partial<NonogramPlayRecord> = {},
+): NonogramPlayRecord {
+  return {
+    v: 1,
+    game: "nonogram",
+    date: DATE,
+    size: 5,
+    entries: Array.from({ length: 25 }, () => null),
+    grid: Array.from({ length: 25 }, (_unused, index) =>
+      index % 3 === 0 ? 1 : 0,
+    ),
+    elapsedMs: NONOGRAM_ELAPSED_MS,
     hintsUsed: 0,
     concluded: true,
     pendingSync: false,
@@ -131,8 +156,9 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     render(<HojePage />);
 
     // Driven by the map itself rather than by a count (this replaces plan
-    // 017's `links only the Binairo card`): #25/#27 add a key to `playRoutes`
-    // and this assertion follows them without an edit.
+    // 017's `links only the Binairo card`): #23 added sudoku's key to
+    // `playRoutes` and #25 nonogram's, #27 adds termo's, and this assertion
+    // follows them without an edit.
     expect(Object.keys(playRoutes).length).toBeGreaterThan(0);
     for (const game of GAMES) {
       const cta = within(cardFor(game))
@@ -195,6 +221,42 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     expect(card.getByText(messages.hoje.playCta)).toBeInTheDocument();
     expect(
       screen.getByText(messages.hoje.completedOfTotal(0, 4)),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * The activation itself (T-WEB-S55, plan 020 §17). `playRoutes.nonogram` is
+ * the whole behavioural change #25 makes to this already-shipped screen: the
+ * card's action stops being an href-less `<a>` and becomes a `<Link>`.
+ *
+ * T-WEB-S16's first case cannot prove it. That one reads `playRoutes[game]`
+ * on both sides of its assertion, so it follows the map wherever it goes and
+ * would stay green with the key absent — which is exactly what makes it a
+ * good structural test and a useless activation test. These two name
+ * `routes.nonogram` instead.
+ */
+describe("the Nonogram tile, activated (T-WEB-S55)", () => {
+  it("gives the pending card a real href, where it had none", () => {
+    render(<HojePage />);
+
+    const cta = within(cardFor("nonogram"))
+      .getByText(messages.hoje.playCta)
+      .closest("a");
+    expect(cta).toHaveAttribute("href", routes.nonogram);
+  });
+
+  it("keeps the concluded card navigable back to its conclusion", () => {
+    writePlayRecord(concludedNonogram());
+
+    render(<HojePage />);
+
+    const link = within(cardFor("nonogram")).getByLabelText(
+      messages.hoje.doneAria(messages.games.nonogram.name, NONOGRAM_ELAPSED),
+    );
+    expect(link).toHaveAttribute("href", routes.nonogram);
+    expect(
+      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
     ).toBeInTheDocument();
   });
 });

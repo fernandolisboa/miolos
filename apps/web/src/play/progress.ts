@@ -12,6 +12,16 @@
  * every empty given and the counter reports 81 of 81 filled from the first
  * paint. Sudoku therefore passes `playableGivens(givens)` — its `0`s mapped
  * to `null` — never the raw `SudokuGrid` (plan 018 S6, landmine 22).
+ *
+ * NONOGRAM DELIBERATELY DOES NOT USE THIS, and has its own `countFilledCells`
+ * (plan 020 P13/P14). Under its encoding a cross is `0`, which is not
+ * nullish, so this function would count crosses as progress — the "amount of
+ * work performed" readout, not the "how close to done" one the shared
+ * `Progresso` slot means on the other screens. Making it compute Nonogram's
+ * readout would need two synthetic arrays: an all-`null` `givens` of length
+ * n² (a parameter Nonogram has no concept of) and a projected `entries` with
+ * `0 → null`. That is the shallow reuse ADR-0029 rejects. This paragraph
+ * exists so a later "cleanup" cannot silently reinstate the wrong meter.
  */
 export function countFilled(
   givens: readonly (number | null)[],

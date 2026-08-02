@@ -13,7 +13,12 @@
  * available in the mount effect, and no schema machinery is warranted.
  * ADR-0001's follow-up already places in-flight state here.
  */
-import { isoDateString, sudokuDigitSchema, type Game } from "@miolos/core";
+import {
+  isoDateString,
+  nonogramSizeSchema,
+  sudokuDigitSchema,
+  type Game,
+} from "@miolos/core";
 import { z } from "zod";
 
 const STORAGE_PREFIX = "miolos:play:";
@@ -25,6 +30,19 @@ const STORAGE_PREFIX = "miolos:play:";
  * declared once here and once there (plan 018 §5.2).
  */
 export const ELAPSED_CAP_MS = 86_400_000;
+
+/**
+ * The largest board area any legal Nonogram record can hold, DERIVED from
+ * `nonogramSizeSchema` rather than hand-written — the same rule
+ * `NONOGRAM_CELL_COUNTS` follows in `packages/core/src/contracts/completion.ts`
+ * for the same fact. A literal `225` here would have been the fourth hand
+ * copy of a number the size union already fixes, and it is exactly the copy
+ * that goes stale on the day a fifth size class lands (step-6 round-4
+ * finding Q1). `[5, 8, 10, 15] -> 225`.
+ */
+const MAX_NONOGRAM_CELLS = Math.max(
+  ...nonogramSizeSchema.options.map((option) => option.value ** 2),
+);
 
 export const playRecordKey = (game: Game, date: string) =>
   `${STORAGE_PREFIX}${game}:${date}`;
@@ -97,11 +115,102 @@ export const sudokuPlayRecordSchema = z.strictObject({
 export type SudokuPlayRecord = z.infer<typeof sudokuPlayRecordSchema>;
 
 /**
- * EXTENSION POINT: #25/#27 add their members here; the discriminator is
- * `game`, exactly as it is on the wire contracts.
+ * The nonogram member (#25, plan 020 §14.1). Structurally binairo's —
+ * 0/1/null cells, one optional solved `grid` — with one field neither
+ * shipped game needs: `size`. A Nonogram board is 5, 8, 10 or 15 a side
+ * depending on the weekday (difficulty.ts:31-41), so no fixed `.length()` is
+ * available and a stored record would otherwise not say which board it
+ * belongs to.
+ *
+ * `size` is a DATUM, not `Math.sqrt(entries.length)`: `sync.ts` builds the
+ * POST body from the record ALONE with no board in scope, and the
+ * conclusion's picture wrapper lays the bitmap out from it.
+ *
+ * The `superRefine` is what bounds the arrays. `writePlayRecord` does not
+ * parse on write (see the function itself, below), so the schema on READ is
+ * the only wall there is.
+ * `.max(MAX_NONOGRAM_CELLS)` is a plain length CEILING, and it is
+ * deliberately NOT sold as an allocation bound: measured against the
+ * installed zod 4.4.3, array element parsing runs BEFORE array-level checks,
+ * so `z.array(union).max(225).safeParse(new Array(1_000_000).fill(0))` parses
+ * all 1 000 000 elements first (`{success:false, ms:35, elementChecksRun:
+ * 1000000}`) and then fails the length test. The two shipped members have the
+ * identical property (`.length(64)`/`.length(81)` also iterate first), so
+ * nothing regresses here.
+ *
+ * IT IS REDUNDANT TODAY, and that is stated rather than dressed up. This
+ * paragraph used to claim the bound "refuses an absurd but internally
+ * size-consistent record that the cross-refine would accept"; no such record
+ * exists, because `size` is a four-member literal union so a size-consistent
+ * `entries` length is one of 25/64/100/225 and every one of them clears the
+ * ceiling — and when the ceiling DOES fire, the `superRefine` fires in the
+ * same parse, so it never rejects alone. That was the second false rationale
+ * on this one declaration (step-6 round-4 finding Q1, after CLI-4/SRV-6). It
+ * is kept as a belt on the largest legal board area, derived from the size
+ * union so that a fifth size class moves it automatically instead of leaving
+ * a stale literal behind.
+ *
+ * `nonogramSizeSchema` comes from @miolos/core and is never re-declared: one
+ * definition, four consumers, exactly as `sudokuDigitSchema` is.
+ *
+ * A checked object is a legal `z.discriminatedUnion` option in Zod 4 and is
+ * NOT one in Zod 3 (there it is a `ZodEffects`). Verified against the
+ * installed zod 4.4.3; a downgrade breaks this file at CONSTRUCTION time,
+ * not at parse time.
+ */
+export const nonogramPlayRecordSchema = z
+  .strictObject({
+    v: z.literal(1),
+    game: z.literal("nonogram"),
+    date: isoDateString,
+    size: nonogramSizeSchema,
+    /** 1 = preenchida, 0 = marcada, null = vazia. size² of them. */
+    entries: z
+      .array(z.union([z.literal(0), z.literal(1), z.null()]))
+      .max(MAX_NONOGRAM_CELLS),
+    /**
+     * The SUBMITTED bitmap, written the moment `status` flips to `solved`.
+     * NOT "the player's board": crossed and undecided cells are both `0`
+     * here, because the completion predicate is "the picture is painted"
+     * (ADR-0032), so on a closed board this array IS the solution.
+     */
+    grid: z
+      .array(z.union([z.literal(0), z.literal(1)]))
+      .max(MAX_NONOGRAM_CELLS)
+      .optional(),
+    elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+    hintsUsed: z.number().int().min(0).max(1),
+    concluded: z.boolean(),
+    pendingSync: z.boolean(),
+    syncOutcome: z.enum(["pending", "recorded", "rejected"]),
+  })
+  .superRefine((record, ctx) => {
+    const cells = record.size ** 2;
+    if (record.entries.length !== cells) {
+      ctx.addIssue({
+        code: "custom",
+        message: `entries must hold ${String(cells)} cells on a ${String(record.size)}×${String(record.size)} board`,
+        path: ["entries"],
+      });
+    }
+    if (record.grid !== undefined && record.grid.length !== cells) {
+      ctx.addIssue({
+        code: "custom",
+        message: `grid must hold ${String(cells)} cells on a ${String(record.size)}×${String(record.size)} board`,
+        path: ["grid"],
+      });
+    }
+  });
+
+export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
+
+/**
+ * EXTENSION POINT: #27 adds its member here; the discriminator is `game`,
+ * exactly as it is on the wire contracts.
  */
 export const playRecordSchema = z.discriminatedUnion("game", [
   binairoPlayRecordSchema,
+  nonogramPlayRecordSchema,
   sudokuPlayRecordSchema,
 ]);
 
@@ -152,9 +261,19 @@ function parseAt(store: Storage, key: string): PlayRecord | undefined {
 
 /**
  * The record at (`game`, the SERVER's date), or `undefined` on absence, on
- * garbage, or on a record whose own `game` does not match the key it was
- * found under — a hand-edited store must never feed a 64-cell binairo
- * record into an 81-cell sudoku grid (plan 018 S17, landmine 3).
+ * garbage, or on a record that does not ADDRESS the key it was found under —
+ * a hand-edited store must never feed a 64-cell binairo record into an
+ * 81-cell sudoku grid (plan 018 S17, landmine 3), nor yesterday's board into
+ * today's screen.
+ *
+ * ONE predicate, three functions: this is the same
+ * `playRecordKey(record.game, record.date) === key` test `listPendingRecords`
+ * calls "the wall against the hand-edited store" and `prunePlayRecords`
+ * deletes on. It used to check `game` alone, which left the READ path — the
+ * one every rendering consumer goes through, `/…/concluido` included, and the
+ * one route that does not prune — as the single door in this module that was
+ * game-checked but not address-checked (step-6 round-3 finding
+ * `readplayrecord-does-not-address-check-its-key`).
  */
 export function readPlayRecord(
   game: Game,
@@ -164,8 +283,11 @@ export function readPlayRecord(
   if (store === undefined) {
     return undefined;
   }
-  const record = parseAt(store, playRecordKey(game, date));
-  return record?.game === game ? record : undefined;
+  const key = playRecordKey(game, date);
+  const record = parseAt(store, key);
+  return record !== undefined && playRecordKey(record.game, record.date) === key
+    ? record
+    : undefined;
 }
 
 /**
@@ -207,6 +329,19 @@ export function writePlayRecord(record: PlayRecord): void {
  * deliberately GAME-BLIND. That is exactly why `sync.ts` can be one module
  * for every game, and why it MUST be (ADR-0029, plan 018 S1): two copies
  * over this one queue would each POST and each settle the other's records.
+ *
+ * Game-blind is not key-blind. A record must ADDRESS the key it was found
+ * under, the same cross-check `readPlayRecord` above makes and for a sharper
+ * reason: `sync.ts` settles a record with `writePlayRecord`, which derives
+ * the key from the RECORD, so a record sitting at a key its own
+ * `(game, date)` does not produce would be settled into a different key and
+ * left pending at this one — re-POSTed on every mount, every `online`, every
+ * `visibilitychange` and every rung of the retry ladder, forever, because a
+ * pending record is never pruned by design (finding
+ * `pending-queue-trusts-a-record-that-does-not-address-its-own-key`). No
+ * product path can produce one (`buildRecord` takes `state.date` and
+ * `writePlayRecord` derives the key), so this is the wall against the
+ * hand-edited store the schema note at the top of this file names.
  */
 export function listPendingRecords(): PlayRecord[] {
   const store = storage();
@@ -216,7 +351,10 @@ export function listPendingRecords(): PlayRecord[] {
   const pending: PlayRecord[] = [];
   for (const key of playRecordKeys(store)) {
     const record = parseAt(store, key);
-    if (record?.pendingSync === true) {
+    if (
+      record?.pendingSync === true &&
+      playRecordKey(record.game, record.date) === key
+    ) {
       pending.push(record);
     }
   }
@@ -229,6 +367,12 @@ export function listPendingRecords(): PlayRecord[] {
  * client-computed today — pruning on a wrong clock would delete a queue
  * that was about to flush. A pending record is kept forever by design: it
  * is the only copy of a completion the server has not acknowledged.
+ *
+ * The ONE exception is a record that does not address its own key. It is
+ * unsyncable by construction (see `listPendingRecords` above), so keeping it
+ * forever keeps nothing; it is dropped whatever its `pendingSync` and
+ * whatever its date. Unparseable keys are still left alone — this function
+ * owns the play namespace's records, not its garbage.
  */
 export function prunePlayRecords(keepDate: string): void {
   const store = storage();
@@ -237,7 +381,14 @@ export function prunePlayRecords(keepDate: string): void {
   }
   for (const key of playRecordKeys(store)) {
     const record = parseAt(store, key);
-    if (record !== undefined && !record.pendingSync && record.date < keepDate) {
+    if (record === undefined) {
+      continue;
+    }
+    if (playRecordKey(record.game, record.date) !== key) {
+      store.removeItem(key);
+      continue;
+    }
+    if (!record.pendingSync && record.date < keepDate) {
       store.removeItem(key);
     }
   }

@@ -212,6 +212,67 @@
   font-size: 13px;
 }
 
+/* The picture reveal (ADR-0034), for the one game whose payoff is an image.
+   Additive to the stamp, never instead of it. The rule this answers is
+   DESIGN.md:44 ("Celebration = the stamp settling; never confetti") and
+   PRODUCT.md:33 ("Celebration is contained... Never confetti, never a modal
+   takeover") — NOT DESIGN.md:39, which is the stamp's shape spec (3px circle,
+   -6deg, typographic content only) and carries no exclusivity rule at all.
+   The positive sanction is docs/design/002-brief-design-direction.md:76, which
+   names "o traço que se completa" alongside the stamp as a contained
+   celebration.
+
+   No background, no border, no radius, no box-shadow — impeccable's
+   isCardLikeFromProps (checks.mjs:227-230 in 3.4.0; NOT :4155, which is inside
+   isCardLike, a different function) returns false on its FIRST guard when an
+   element has neither shadow nor border, so this cannot fire nested-cards, and
+   "card dentro de card" is a DESIGN.md anti-reference verbatim. Line numbers
+   belong to impeccable 3.4.0; a bump moves them.
+
+   Contrast, computed because CI is blind here (`low-contrast` is wildcard-
+   ignored on every scanned host): --accent-nonogram #B5563C on --paper-card
+   #FBF7EF = 4.51:1, against WCAG 1.4.11's 3:1 for a meaningful non-text
+   graphic. Nothing here may use --accent-app #9E3B2F, which is 1.40:1 against
+   terracotta and invisible (N13). */
+.pictureRow {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+
+.picture {
+  width: 132px;
+  height: 132px;
+  fill: var(--accent);
+  /* Exactly one mount keyframe, no repeat. The name deliberately avoids
+     /bounce|elastic|wobble|jiggle|spring/i, which impeccable's bounce-easing
+     rule matches on the animation NAME; --ease-settle's 1.05 y2 is inside the
+     rule's allowed [-0.1, 1.1] band (checks.mjs:495-499). Transform and
+     opacity only — never width/height/padding/margin, which fire
+     layout-transition. A 150ms offset STAGGERS the two settles rather than
+     sequencing them: the stamp runs 0–250ms and the picture 150–400ms, so
+     they overlap for 100ms and the picture finishes 150ms after the stamp.
+     Two settles starting together read as a flourish; offset, they read as
+     ink drying. (The comment used to say the stamp "lands first", which the
+     numbers do not produce — step-6 round-4 finding Q8. The timing is
+     deliberate and unchanged; only the description was wrong.) */
+  animation: picture-settle var(--duration-slow) var(--ease-settle) both;
+  animation-delay: var(--duration-fast);
+}
+
+/* -2deg is inside --rotate-card-max and deliberately unequal to the stamp's
+   -6deg, so the two do not read as one sheet. */
+@keyframes picture-settle {
+  from {
+    transform: scale(0.94) rotate(-3deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(-2deg);
+    opacity: 1;
+  }
+}
+
 .sync {
   margin: var(--space-6) 0 0;
   font-size: 13px;
@@ -254,10 +315,19 @@
   margin-top: 14px;
 }
 
+/* Non-zero padding on BOTH axes, and the horizontal half is a gate fix rather
+   than a taste one: `.chipDone` paints a background and `.chipMissing` a
+   1.5px dashed border, so at `padding: 12px 0` the chip's two block children
+   sat flush against a VISIBLE boundary and `impeccable detect` fired
+   `cramped-padding` five times per viewport on the concluded card — the one
+   card no URL-mode scan reaches, because a clean browser profile has no
+   concluded record and always renders the empty branch (finding
+   `chip-is-cramped-on-the-card-the-scan-cannot-see`). The text is centred and
+   far narrower than the chip, so the inset costs nothing visually. */
 .chip {
   box-sizing: border-box;
   flex: 1;
-  padding: 12px 0;
+  padding: 12px 8px;
   border-radius: var(--radius);
   text-align: center;
 }
@@ -296,11 +366,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Non-zero padding on BOTH axes, for exactly the reason `.chip` above carries:
+   this button paints a filled background (`--ink`, or the destination game's
+   accent through `.ctaNext`), so at `padding: 14px 0` its label sat flush
+   against a VISIBLE boundary and `impeccable detect` fired `cramped-padding`
+   on the CONCLUDED conclusion at both scanned viewports — the card #25's AC 2
+   gates and the one no URL-mode scan reaches, because a clean browser profile
+   has no concluded record and always renders the empty branch (step-6 round-3
+   finding ISS-A3). Pre-existing and cross-game: binairo and sudoku render this
+   same class. The inset is visually inert — the button is a full-width flex
+   item with a centred label, which is why `.emptyCta` has carried `14px 26px`
+   all along. T-WEB-S65a is the only gate on it. */
 .cta {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 0;
+  padding: 14px var(--space-4);
   background: var(--ink);
   color: var(--paper-desk);
   border-radius: var(--radius);
@@ -317,8 +398,10 @@
    on hover, but a bare `.cta:hover` (0,2,0) loses the cascade to
    `.page a:hover` (0,2,1) above, and the label would resolve to the SAME
    `--accent` as `.ctaNext`'s background — an invisible label at 1:1 contrast
-   for as long as the pointer is on it. (0,3,0) wins, and `.ctaNext` inherits
-   this colour because it declares none of its own. */
+   for as long as the pointer is on it. (0,3,0) wins. It stays `--paper-desk`
+   rather than `--ink-on-accent`, because THIS rule's subject is the button on
+   the `--ink` fill; the accent-filled variant re-states its own label colour
+   below at (0,4,0) so no source order decides it. */
 .page .cta:hover {
   color: var(--paper-desk);
 }
@@ -332,11 +415,31 @@
    THAT game's accent, which the component sets as `--accent` on this element
    — F5:66 draws exactly this button in the destination game's colour, and F6
    gives it the accent-tinted hard shadow. Paper-on-accent is the same pair
-   the hub's four play buttons already ship. */
+   the hub's four play buttons already ship.
+
+   The label colour is therefore the DESTINATION game's, not the page's, and
+   that is the whole reason `play/accent.ts` hands `--accent` and
+   `--ink-on-accent` out together: the component sets the pair on THIS element,
+   so both override what the page root supplies. This button renders on the
+   SHIPPED binairo and sudoku conclusions whenever the day still owes a
+   nonogram, where desk on terracotta measured 4.318:1 — a regression #25
+   causes on two screens it does not otherwise touch, because before #25
+   `playRoutes` had no nonogram and this button never rendered terracotta
+   anywhere (step-6 finding ISS-A2). `--paper-card` on the same fill is
+   4.506:1; the three other accents resolve to the shipped `--paper-desk` and
+   are unchanged to the byte. */
 .ctaNext {
   background: var(--accent);
+  color: var(--ink-on-accent, var(--paper-desk));
   box-shadow: var(--shadow-sm)
     color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* (0,4,0), so it beats `.page .cta:hover` (0,3,0) above on specificity rather
+   than on source order — the hover must not drop the destination game's ink
+   back to desk on a terracotta fill. */
+.page .cta.ctaNext:hover {
+  color: var(--ink-on-accent, var(--paper-desk));
 }
 
 .ctaNext:active {
@@ -400,7 +503,11 @@
   margin-top: var(--space-7);
   padding: 14px 26px;
   background: var(--accent);
-  color: var(--paper-desk);
+  /* The page root's game, since this button goes back into the game whose
+     conclusion is being read — see `.ctaNext` above for the pair, and
+     `play/accent.ts` for the per-game values. Terracotta measured 4.318:1 on
+     desk here too (ISS-A2). */
+  color: var(--ink-on-accent, var(--paper-desk));
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm)
     color-mix(in srgb, var(--accent) 25%, transparent);
@@ -414,7 +521,7 @@
 /* Same cascade, same fix: this one is on `.pageEmpty`, and its background is
    the accent too — it lost to `.page a:hover` on `main` as well. */
 .page .emptyCta:hover {
-  color: var(--paper-desk);
+  color: var(--ink-on-accent, var(--paper-desk));
 }
 
 .emptyCta:active {
@@ -442,6 +549,17 @@
   .stamp {
     animation: none;
     transform: rotate(-6deg);
+  }
+
+  /* The keyframe's END state, never its start: standing the animation down
+     must leave the figure visible, not at `opacity: 0`. It lives in THIS
+     block rather than a new one because CSS Modules hash per file and a
+     reduced-motion block in another module could never reach `.picture`
+     (landmine 24). */
+  .picture {
+    animation: none;
+    transform: rotate(-2deg);
+    opacity: 1;
   }
 
   .cta,
@@ -561,6 +679,17 @@
     font-size: 11px;
   }
 
+  /* Inside the ONE `@media (max-width: 768px)` block this module declares, so
+     `bodyOf`'s first-match lookup cannot be handed the wrong body. */
+  .pictureRow {
+    margin-top: var(--space-4);
+  }
+
+  .picture {
+    width: 104px;
+    height: 104px;
+  }
+
   .sync {
     margin-top: var(--space-4);
   }
@@ -574,8 +703,10 @@
     margin-top: 12px;
   }
 
+  /* The horizontal inset survives the mobile band for the same reason it
+     exists at all — `cramped-padding` fires at 390 and 320 too. */
   .chip {
-    padding: 9px 0;
+    padding: 9px 6px;
   }
 
   .chipName {

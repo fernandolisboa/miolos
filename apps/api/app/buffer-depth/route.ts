@@ -27,6 +27,7 @@ export async function GET(): Promise<Response> {
   const config = await getRemoteConfig(db);
   const depths = {
     binairo: await bufferDepth(db, "binairo"),
+    nonogram: await bufferDepth(db, "nonogram"),
     sudoku: await bufferDepth(db, "sudoku"),
   };
   const threshold = effectiveThreshold(config.bufferDepth);

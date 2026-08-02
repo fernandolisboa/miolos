@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   binairoCompletionRequestSchema,
   completionRequestSchema,
+  nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
 } from "@miolos/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +15,7 @@ import {
   readPlayRecord,
   writePlayRecord,
   type BinairoPlayRecord,
+  type NonogramPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
 
@@ -42,6 +44,35 @@ const SOLVED_DIGITS: NonNullable<SudokuPlayRecord["grid"]> = Array.from(
   { length: 9 },
   () => DIGITS,
 ).flat();
+
+/**
+ * The nonogram queue item: a 5×5 board's SUBMITTED bitmap, 25 cells of 0/1.
+ * Crossed and undecided cells are both `0` here, because the completion
+ * predicate is "the picture is painted" (ADR-0032) — so on a closed board
+ * this array IS the solution, and a cross never crosses the wire.
+ */
+const SUBMITTED_PICTURE: NonNullable<NonogramPlayRecord["grid"]> = Array.from(
+  { length: 25 },
+  (_unused, index) => (index % 6 === 0 ? 1 : 0),
+);
+
+function pendingNonogramRecord(): NonogramPlayRecord {
+  return {
+    v: 1,
+    game: "nonogram",
+    date: DATE,
+    size: 5,
+    entries: Array.from({ length: 25 }, (_unused, index) =>
+      index % 6 === 0 ? 1 : null,
+    ),
+    grid: SUBMITTED_PICTURE,
+    elapsedMs: 133_000,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: true,
+    syncOutcome: "pending",
+  };
+}
 
 function pendingSudokuRecord(): SudokuPlayRecord {
   return {
@@ -268,6 +299,74 @@ describe("flushPendingCompletions", () => {
     expect(completionCalls(fetchMock)).toHaveLength(1);
   });
 
+  it("posts a completion handed to a flush that was already running (T-WEB-S61)", async () => {
+    // The interleaving AC 3 loses to: a fast finish on a slow network, or a
+    // restored near-complete board, closes while a mount flush is still
+    // awaiting its own fetch. The in-flight flush built `pending` before this
+    // record existed, so it never posts it — and if its own records all
+    // settle it used to call `cancelRetries()`, clearing the ladder and
+    // stranding the just-finished puzzle until a new mount, an `online` or a
+    // `visibilitychange`. The player is ONLINE and the conclusion says
+    // "pendente" (finding `handed-completion-dropped-by-a-concurrent-flush`).
+    vi.useFakeTimers();
+    writePlayRecord(pendingRecord());
+
+    let release = (): void => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = () => {
+        resolve();
+      };
+    });
+    let call = 0;
+    const fetchMock = vi.fn(async (input: unknown) => {
+      if (String(input).endsWith("/session")) {
+        return jsonResponse(200, {
+          userId: crypto.randomUUID(),
+          created: true,
+        });
+      }
+      call += 1;
+      // Only the FIRST POST hangs: it is the flush that must not swallow the
+      // record handed to it while it was in the air.
+      if (call === 1) {
+        await held;
+        return jsonResponse(200, okBody());
+      }
+      return jsonResponse(200, okBody({ game: "nonogram" }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { flushPendingCompletions } = await freshSync();
+    const inFlight = flushPendingCompletions();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    // The board closes mid-flight. `writePlayRecord` is what the real caller
+    // does first, so the record is in the store AND handed over.
+    const nonogram = pendingNonogramRecord();
+    writePlayRecord(nonogram);
+    await flushPendingCompletions(nonogram);
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    release();
+    await inFlight;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(false);
+
+    // No new mount, no `online`, no `visibilitychange` — only the ladder the
+    // handed record armed. It must fire, and it must carry the nonogram.
+    await vi.advanceTimersByTimeAsync(2_000);
+    const posted = completionCalls(fetchMock).map((entry) => {
+      const init = requestInitSchema.parse(entry[1]);
+      return z.object({ game: z.string() }).parse(JSON.parse(init.body)).game;
+    });
+    expect(posted).toEqual(["binairo", "nonogram"]);
+    expect(readPlayRecord("nonogram", DATE)).toMatchObject({
+      pendingSync: false,
+      syncOutcome: "recorded",
+    });
+  });
+
   it("posts the completion it was handed even with no usable localStorage", async () => {
     // An Android WebView with DOM storage off (the default) throws on the
     // property itself, so `writePlayRecord` is a silent no-op and the queue
@@ -394,6 +493,7 @@ describe("flushPendingCompletions", () => {
     // other's (ADR-0029, plan 018 S1). One module, two records, two POSTs.
     writePlayRecord(pendingRecord());
     writePlayRecord(pendingSudokuRecord());
+    writePlayRecord(pendingNonogramRecord());
     const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
@@ -406,7 +506,7 @@ describe("flushPendingCompletions", () => {
       const raw: unknown = JSON.parse(requestInitSchema.parse(call[1]).body);
       return completionRequestSchema.parse(raw);
     });
-    expect(bodies).toHaveLength(2);
+    expect(bodies).toHaveLength(3);
     expect(
       binairoCompletionRequestSchema.parse(
         bodies.find((body) => body.game === "binairo"),
@@ -429,8 +529,23 @@ describe("flushPendingCompletions", () => {
       elapsedMs: 411_000,
       hintsUsed: 0,
     });
+    // The nonogram body carries NO `size` (P4): a `size` key would be a
+    // second place for the client to lie, and the stored row's solution is
+    // what decides the size anyway. `gridBody` builds all three.
+    expect(
+      nonogramCompletionRequestSchema.parse(
+        bodies.find((body) => body.game === "nonogram"),
+      ),
+    ).toEqual({
+      game: "nonogram",
+      date: DATE,
+      grid: SUBMITTED_PICTURE,
+      elapsedMs: 133_000,
+      hintsUsed: 0,
+    });
     expect(readPlayRecord("sudoku", DATE)?.pendingSync).toBe(false);
     expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(false);
+    expect(readPlayRecord("nonogram", DATE)?.pendingSync).toBe(false);
   });
 
   it("does nothing when there is nothing queued", async () => {
@@ -634,13 +749,13 @@ describe("startCompletionSync", () => {
  * fail OPEN (finding `buildbody-switch-fails-open-for-a-new-game`).
  *
  * The guarantee is a COMPILE-TIME one and `pnpm typecheck` is what enforces
- * it: `PlayRecord` has exactly two members today, both handled, so no runtime
+ * it: `PlayRecord` has exactly three members today, both handled, so no runtime
  * input can reach the default — a test that manufactured one would have to
  * cast, which is precisely the lie the guard exists to prevent. What this
  * reads instead is the source, the way `./css-source.ts` reads a stylesheet:
  * the tripwire cannot be deleted silently, and the note travels with it.
  */
-describe("the extension point #25/#27 widen", () => {
+describe("the extension point #27 widens", () => {
   it("makes an unhandled game a compile error, not a dropped completion", () => {
     // `path` rather than `new URL(..., import.meta.url)`: the jsdom
     // environment's own `URL` resolves the relative specifier against the

@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   listPendingRecords,
   playRecordKey,
+  playRecordSchema,
   prunePlayRecords,
   readPlayRecord,
   writePlayRecord,
   type BinairoPlayRecord,
+  type NonogramPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
 
@@ -56,6 +58,39 @@ function sudokuRecord(
     game: "sudoku",
     date: "2026-07-30",
     entries: Array.from({ length: 81 }, () => null),
+    elapsedMs: 12_000,
+    hintsUsed: 0,
+    concluded: false,
+    pendingSync: false,
+    syncOutcome: "pending",
+    ...overrides,
+  };
+}
+
+/**
+ * A 5×5 nonogram board: 25 cells, `1` = preenchida, `0` = marcada, `null` =
+ * vazia (plan 020 P11). The diagonal is painted, so `entries` and `grid`
+ * differ in the one way that matters — a cross reads as `0` on the wire.
+ */
+const NONOGRAM_ENTRIES: NonogramPlayRecord["entries"] = Array.from(
+  { length: 25 },
+  (_unused, index) => (index % 6 === 0 ? 1 : null),
+);
+
+const NONOGRAM_GRID: NonNullable<NonogramPlayRecord["grid"]> = Array.from(
+  { length: 25 },
+  (_unused, index) => (index % 6 === 0 ? 1 : 0),
+);
+
+function nonogramRecord(
+  overrides: Partial<NonogramPlayRecord> = {},
+): NonogramPlayRecord {
+  return {
+    v: 1,
+    game: "nonogram",
+    date: "2026-07-30",
+    size: 5,
+    entries: NONOGRAM_ENTRIES,
     elapsedMs: 12_000,
     hintsUsed: 0,
     concluded: false,
@@ -131,6 +166,34 @@ describe("readPlayRecord / writePlayRecord", () => {
     expect(readPlayRecord("binairo", "2026-07-30")).toBeUndefined();
   });
 
+  it("refuses a record that does not ADDRESS the key it was found under (T-WEB-S63)", () => {
+    // The read path owes the same predicate as `listPendingRecords` and
+    // `prunePlayRecords`: `playRecordKey(record.game, record.date) === key`.
+    // It used to check `game` alone, so a hand-edited store could park a
+    // record dated 2026-07-01 at today's key and `/…/concluido` — which
+    // never prunes — would stamp that day's time and, for a nonogram, paint
+    // that day's picture, while the sync queue could not see it at all
+    // (step-6 round-3 finding
+    // `readplayrecord-does-not-address-check-its-key`).
+    const strayDate = JSON.stringify(
+      record({ date: "2026-07-01", concluded: true, pendingSync: true }),
+    );
+    window.localStorage.setItem("miolos:play:binairo:2026-07-30", strayDate);
+    expect(readPlayRecord("binairo", "2026-07-30")).toBeUndefined();
+
+    // The `game` half still holds, and so does the nonogram member: a
+    // 25-cell 5×5 record parked at a date it does not carry must not reach
+    // `restore` and be `derive`d against today's board.
+    const strayGame = JSON.stringify(nonogramRecord({ date: "2026-07-29" }));
+    window.localStorage.setItem("miolos:play:nonogram:2026-07-30", strayGame);
+    expect(readPlayRecord("nonogram", "2026-07-30")).toBeUndefined();
+
+    // Anti-vacuity: the identical record written through the real writer,
+    // which derives the key from the record, is readable.
+    writePlayRecord(nonogramRecord({ date: "2026-07-29" }));
+    expect(readPlayRecord("nonogram", "2026-07-29")).toBeDefined();
+  });
+
   it("clamps an over-cap elapsedMs before writing instead of rejecting it", () => {
     writePlayRecord(record({ elapsedMs: 99_999_999 }));
 
@@ -180,6 +243,38 @@ describe("listPendingRecords", () => {
 
     expect(dates.toSorted()).toEqual(["2026-07-29", "2026-07-30"]);
     expect(window.localStorage.getItem("unrelated-key")).toBe("left alone");
+  });
+
+  it("refuses a record that does not address its own key (T-WEB-S62)", () => {
+    // `readPlayRecord` already cross-checks `game` against the key; the queue
+    // owes the same on BOTH fields, and for a sharper reason. `sync.ts`
+    // settles with `writePlayRecord`, which derives the key from the RECORD —
+    // so a record sitting at today's key while carrying an older `date` is
+    // POSTed, 404s against the api's accepted-days bound, gets settled into a
+    // brand-new key, and is picked up again at this one on the next mount,
+    // every `online`, every `visibilitychange` and every rung of the retry
+    // ladder, forever (finding
+    // `pending-queue-trusts-a-record-that-does-not-address-its-own-key`). No
+    // product path writes one — this is the hand-edited store the schema is
+    // the wall against.
+    const stray = JSON.stringify(
+      record({ date: "2026-07-25", pendingSync: true }),
+    );
+    window.localStorage.setItem("miolos:play:binairo:2026-07-30", stray);
+    window.localStorage.setItem("miolos:play:sudoku:2026-07-25", stray);
+
+    expect(listPendingRecords()).toEqual([]);
+
+    // And pruning DROPS it, rather than keeping it forever the way a real
+    // pending record is kept: it can never be settled, so there is nothing
+    // to preserve.
+    prunePlayRecords("2026-07-30");
+    expect(window.localStorage.getItem("miolos:play:binairo:2026-07-30")).toBe(
+      null,
+    );
+    expect(window.localStorage.getItem("miolos:play:sudoku:2026-07-25")).toBe(
+      null,
+    );
   });
 });
 
@@ -260,11 +355,12 @@ describe("the union on `game` (T-WEB-S11)", () => {
     expect(readPlayRecord("binairo", "2026-07-30")).toBeUndefined();
   });
 
-  it("queues and prunes both games out of the one game-blind store", () => {
+  it("queues and prunes every game out of the one game-blind store", () => {
     // `listPendingRecords` is game-blind on purpose: that is what lets
     // sync.ts be exactly one module (ADR-0029, plan 018 S1).
     writePlayRecord(record({ date: "2026-07-29", pendingSync: true }));
     writePlayRecord(sudokuRecord({ date: "2026-07-29", pendingSync: true }));
+    writePlayRecord(nonogramRecord({ date: "2026-07-29", pendingSync: true }));
     writePlayRecord(
       sudokuRecord({
         date: "2026-07-28",
@@ -277,12 +373,124 @@ describe("the union on `game` (T-WEB-S11)", () => {
       listPendingRecords()
         .map((pending) => pending.game)
         .toSorted(),
-    ).toEqual(["binairo", "sudoku"]);
+    ).toEqual(["binairo", "nonogram", "sudoku"]);
 
     prunePlayRecords("2026-07-30");
 
     expect(readPlayRecord("sudoku", "2026-07-28")).toBeUndefined();
     expect(readPlayRecord("sudoku", "2026-07-29")).toBeDefined();
     expect(readPlayRecord("binairo", "2026-07-29")).toBeDefined();
+    expect(readPlayRecord("nonogram", "2026-07-29")).toBeDefined();
+  });
+});
+
+describe("the nonogram member (T-WEB-S40)", () => {
+  it("round-trips a nonogram record, `size` and `grid` included, still at v: 1", () => {
+    // `v` STAYS 1 (ADR-0029 consequence (d)): a bump discards every stored
+    // record on deploy, and a discarded record with `pendingSync: true` is
+    // the only copy of a completion the server has not acknowledged.
+    const written = nonogramRecord({
+      grid: NONOGRAM_GRID,
+      elapsedMs: 133_000,
+      hintsUsed: 1,
+      concluded: true,
+      pendingSync: true,
+    });
+    writePlayRecord(written);
+
+    const read = readPlayRecord("nonogram", "2026-07-30");
+
+    expect(read).toEqual(written);
+    // `size` is a DATUM, not `Math.sqrt(entries.length)` (P15): `sync.ts`
+    // builds the POST body from the record ALONE with no board in scope, and
+    // the conclusion's picture wrapper lays the bitmap out from it.
+    expect(read).toMatchObject({ size: 5 });
+    expect(playRecordKey("nonogram", "2026-07-30")).toBe(
+      "miolos:play:nonogram:2026-07-30",
+    );
+  });
+
+  it("rejects a size outside the four weekday classes", () => {
+    // `nonogramSizeSchema` comes from @miolos/core and is never re-declared:
+    // one definition, three consumers. A fifth size class is exactly the
+    // content-shape drift ADR-0024 wants to fail closed on.
+    window.localStorage.setItem(
+      playRecordKey("nonogram", "2026-07-30"),
+      JSON.stringify({
+        ...nonogramRecord(),
+        size: 7,
+        entries: Array.from({ length: 49 }, () => null),
+      }),
+    );
+
+    expect(readPlayRecord("nonogram", "2026-07-30")).toBeUndefined();
+  });
+
+  it("rejects entries and grid lengths that disagree with the record's own size", () => {
+    // The `superRefine` is what bounds the arrays: `writePlayRecord` does not
+    // parse on write — see `play-record.ts`'s own TSDoc — so the schema on
+    // READ is the only wall there is (P15).
+    const key = playRecordKey("nonogram", "2026-07-30");
+
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...nonogramRecord(),
+        entries: Array.from({ length: 64 }, () => null),
+      }),
+    );
+    expect(readPlayRecord("nonogram", "2026-07-30")).toBeUndefined();
+
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...nonogramRecord(),
+        grid: Array.from({ length: 64 }, () => 0),
+      }),
+    );
+    expect(readPlayRecord("nonogram", "2026-07-30")).toBeUndefined();
+
+    // The same record with a size that DOES agree parses, so the two cases
+    // above fail on the cross-check and not on something incidental.
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...nonogramRecord(),
+        size: 8,
+        entries: Array.from({ length: 64 }, () => null),
+        grid: Array.from({ length: 64 }, () => 0),
+      }),
+    );
+    expect(readPlayRecord("nonogram", "2026-07-30")).toMatchObject({ size: 8 });
+  });
+
+  it("refuses an absurd entries array on the length ceiling alone", () => {
+    // `.max(225)` is a plain length CEILING and is deliberately NOT sold as
+    // an allocation bound: measured against the installed zod 4.4.3, array
+    // element parsing runs BEFORE array-level checks. What it buys is a
+    // schema-level statement of the maximum board area that holds
+    // independently of `size` (P15, CLI-4/SRV-6).
+    const parsed = playRecordSchema.safeParse({
+      ...nonogramRecord(),
+      entries: Array.from({ length: 1_000_000 }, () => 0),
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it("leaves the two shipped members parsing exactly as they did", () => {
+    // The third member is additive: a discriminated union on `game` cannot
+    // change how the other two parse, and this is the assertion that says so
+    // out loud rather than trusting it.
+    const binairo = record({ grid: SOLVED_GRID, entries: SOLVED_GRID });
+    const sudoku = sudokuRecord({
+      grid: SOLVED_DIGITS,
+      entries: SOLVED_DIGITS,
+    });
+
+    expect(playRecordSchema.parse(binairo)).toEqual(binairo);
+    expect(playRecordSchema.parse(sudoku)).toEqual(sudoku);
+    expect(playRecordSchema.parse(binairo).v).toBe(1);
+    expect(playRecordSchema.parse(sudoku).v).toBe(1);
   });
 });

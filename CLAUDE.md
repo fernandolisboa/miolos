@@ -20,6 +20,10 @@ The five canonical triage roles, each label string equal to its name. See [`docs
 
 Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See [`docs/agents/domain.md`](./docs/agents/domain.md).
 
+### Test ids
+
+`T-<AREA>-[S]<n>[<letter>]` on every named test; a new series letter is opened only when the previous space has become ambiguous. See [`docs/agents/test-ids.md`](./docs/agents/test-ids.md) for the per-area frontier and the burned slots.
+
 ## Pipeline
 
 Development runs in phases. Each phase is a fresh session, started by pasting the previous phase's kickoff prompt.

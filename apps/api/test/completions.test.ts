@@ -1,4 +1,7 @@
-import { completionResponseSchema } from "@miolos/core";
+import {
+  completionResponseSchema,
+  nonogramDailyContentSchema,
+} from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { eq, sessions, sql, users } from "@miolos/db";
 import {
@@ -8,8 +11,9 @@ import {
 } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
-import { isWeekday } from "@miolos/games";
+import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
+import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku, type SudokuPuzzle } from "@miolos/games/sudoku";
 import { NextRequest } from "next/server";
 import {
@@ -86,8 +90,32 @@ afterAll(async () => {
 
 const WEB = "https://miolos.app";
 
-/** The two games this route can judge today — the request union's discriminator. */
-type SubmittableGame = "binairo" | "sudoku";
+/** The three games this route can judge today — the request union's discriminator. */
+type SubmittableGame = "binairo" | "nonogram" | "sudoku";
+
+/**
+ * The wire encoding, computed HERE and never imported from the route: the
+ * judge flattens `reveal.solution` row-major and maps `true → 1`, so a test
+ * that reused the route's own function would assert nothing about it
+ * (ADR-0032, plan 020 §9.3).
+ */
+function rowMajorPicture(
+  solution: ReadonlyArray<ReadonlyArray<boolean>>,
+): readonly number[] {
+  return solution.flatMap((row) => row.map((cell) => (cell ? 1 : 0)));
+}
+
+/** The same bitmap read down the columns — a legal body that is not this picture. */
+function columnMajorPicture(
+  solution: ReadonlyArray<ReadonlyArray<boolean>>,
+): readonly number[] {
+  const size = solution.length;
+  return Array.from({ length: size * size }, (_unused, index) => {
+    const row = index % size;
+    const column = Math.floor(index / size);
+    return solution[row]?.[column] === true ? 1 : 0;
+  });
+}
 
 /**
  * Sudoku generation is deterministic in (seed, weekday) and a tier-5 Sunday
@@ -135,10 +163,24 @@ async function seedDaily(
   game: SubmittableGame,
   date: string,
   seed = 7,
+  /**
+   * Nonogram only: generate for THIS weekday rather than the date's own. A
+   * nonogram's board size is a function of its weekday, and the length tests
+   * need two different sizes on ACCEPTED dates — of which there are only ever
+   * two (ACCEPTED_DAYS_BACK = 1), whose weekdays are whatever the calendar
+   * makes them. Nothing on this route reads `content.weekday`: the judge
+   * reads `reveal.solution` and the wall reads the DATE column.
+   */
+  nonogramWeekday?: Weekday,
 ): Promise<readonly number[]> {
   const weekday = isoWeekdayOf(date);
   if (!isWeekday(weekday)) {
     throw new Error(`unreachable: bad weekday for ${date}`);
+  }
+  if (game === "nonogram") {
+    const puzzle = generateNonogram(seed, nonogramWeekday ?? weekday);
+    await insertDailyPuzzle(ctx.db, { game, date, seed, content: puzzle });
+    return rowMajorPicture(puzzle.reveal.solution);
   }
   const content =
     game === "binairo"
@@ -201,9 +243,9 @@ function completionBody(init: {
 
 /**
  * One changed cell — a COMPLETE grid that is not the solution. Game-aware
- * because a submitted grid must still PARSE: binairo cells are 0/1 and a
- * sudoku cell must stay 1–9, so flipping a sudoku digit to 0 would turn the
- * 422 under test into a 400 and prove nothing.
+ * because a submitted grid must still PARSE: binairo and nonogram cells are
+ * 0/1 and a sudoku cell must stay 1–9, so flipping a sudoku digit to 0 would
+ * turn the 422 under test into a 400 and prove nothing.
  */
 function wrongGrid(
   game: SubmittableGame,
@@ -213,7 +255,7 @@ function wrongGrid(
     if (index !== 0) {
       return cell;
     }
-    return game === "binairo" ? (cell === 0 ? 1 : 0) : (cell % 9) + 1;
+    return game === "sudoku" ? (cell % 9) + 1 : cell === 0 ? 1 : 0;
   });
 }
 
@@ -496,6 +538,16 @@ describe("POST /completions", () => {
         hintsUsed: 0,
       }),
       completionBody({ game: "binairo", date: "2026-02-30", grid: solution }),
+      // Year 0000: step-6 round-4 finding
+      // `calendar-date-year-zero-500s-the-completions-route`. JS has a year 0
+      // and the proleptic Gregorian calendar Postgres implements does not, so
+      // this survived `calendarDateString`'s UTC round trip, reached
+      // `getCompletion` — ADR-0026's idempotent short-circuit runs BEFORE the
+      // `ACCEPTED_DAYS_BACK` range check that would have 404'd it — and threw
+      // 22008 out of an unhandled `select`, i.e. a 500 on the repo's only
+      // authenticated write. Whoever moves the floor out of the schema reds
+      // here as well as in `completion-contract.test.ts`.
+      completionBody({ game: "binairo", date: "0000-01-01", grid: solution }),
     ];
 
     for (const body of bodies) {
@@ -640,6 +692,10 @@ describe("POST /completions", () => {
 
     const raw: unknown = await response.json();
     const keys = collectKeys(raw);
+    // Anti-vacuity: `collectKeys` returns an empty set for any non-object
+    // input, so without this the forbidden loop passes trivially on an HTML
+    // error page (finding `api-leak-scans-have-no-anti-vacuity-assertion`).
+    expect(keys.has("outcome")).toBe(true);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
     }
@@ -975,6 +1031,294 @@ describe("POST /completions — sudoku (plan 018 §7.3)", () => {
     expect(binairoOnSudoku.status).toBe(404);
     expect(await errorOf(binairoOnSudoku)).toEqual({ error: "no-puzzle" });
 
+    // Extended at #25 with the pair that is genuinely ambiguous on the wire:
+    // an 8x8 nonogram and a binairo board are the SAME 64-cell 0/1 array, so
+    // neither body can be turned away by its own schema and only the
+    // game-scoped wall read plus `storedSolution`'s dispatch stand between
+    // them and a ZodError 500.
+    await ctx.db.execute(sql`truncate table daily_puzzles`);
+    const nonogramSolution = await seedDaily("nonogram", today, 7, 3);
+    expect(nonogramSolution).toHaveLength(64);
+    const binairoOnNonogram = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: today,
+          grid: nonogramSolution,
+        }),
+      }),
+    );
+    expect(binairoOnNonogram.status).toBe(404);
+    expect(await errorOf(binairoOnNonogram)).toEqual({ error: "no-puzzle" });
+
+    await ctx.db.execute(sql`truncate table daily_puzzles`);
+    await seedDaily("binairo", today);
+    const nonogramOnBinairo = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "nonogram",
+          date: today,
+          grid: binairoSolution,
+        }),
+      }),
+    );
+    expect(nonogramOnBinairo.status).toBe(404);
+    expect(await errorOf(nonogramOnBinairo)).toEqual({ error: "no-puzzle" });
+
     expect(await completionRows()).toHaveLength(0);
   }, 30_000);
+});
+
+/**
+ * Deliberately WITHOUT per-`it` timeouts, unlike the sudoku block above
+ * (landmine 25): nonogram generate+validate measures 0.0354 ms (Mon 5x5) to
+ * 0.1902 ms (Sun 15x15), so nothing here approaches vitest's 5 000 ms
+ * default and a copied 30_000 would be a number with no reason to exist.
+ */
+describe("POST /completions — nonogram (plan 020 §9.3)", () => {
+  it("T-API-S23a: a valid picture for today ⇒ 200, recorded, on time; the replay returns the stored row", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const picture = await seedDaily("nonogram", today);
+    const { token } = await createSession();
+    const body = completionBody({
+      game: "nonogram",
+      date: today,
+      grid: picture,
+      elapsedMs: 188_000,
+      hintsUsed: 1,
+    });
+
+    const first = await POST(completionRequest({ token, body }));
+    expect(first.status).toBe(200);
+    const firstBody = completionResponseSchema.parse(await first.json());
+    expect(firstBody).toEqual({
+      game: "nonogram",
+      date: today,
+      outcome: "won",
+      onTime: true,
+      recorded: true,
+      elapsedMs: 188_000,
+      hintsUsed: 1,
+    });
+
+    const replay = await POST(completionRequest({ token, body }));
+    expect(replay.status).toBe(200);
+    expect(completionResponseSchema.parse(await replay.json())).toEqual({
+      ...firstBody,
+      recorded: false,
+    });
+    expect(await completionRows()).toHaveLength(1);
+  });
+
+  it("T-API-S24: the encoding pin — row-major 1=filled is the ONLY body the judge accepts", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    // Wednesday's 8x8: big enough that a transpose is almost never the same
+    // bitmap, small enough to stay cheap.
+    const picture = await seedDaily("nonogram", today, 7, 3);
+    const { token } = await createSession();
+
+    const exact = await POST(
+      completionRequest({
+        token,
+        body: completionBody({ game: "nonogram", date: today, grid: picture }),
+      }),
+    );
+    expect(exact.status).toBe(200);
+    expect(await completionRows()).toHaveLength(1);
+
+    // A second identity, so every rejection below is judged rather than
+    // short-circuited by the first player's stored row.
+    const other = await createSession();
+    const firstEmpty = picture.indexOf(0);
+    const firstFilled = picture.indexOf(1);
+    if (firstEmpty === -1 || firstFilled === -1) {
+      throw new Error("unreachable: a motif has both filled and empty cells");
+    }
+
+    const overpainted = [...picture];
+    overpainted[firstEmpty] = 1;
+    const missing = [...picture];
+    missing[firstFilled] = 0;
+
+    const rows = await ctx.db.select().from(dailyPuzzles);
+    const stored = rows.find((row) => row.game === "nonogram")?.content;
+    const solution = nonogramDailyContentSchema.parse(stored).reveal.solution;
+    const transposed = columnMajorPicture(solution);
+    if (transposed.every((cell, index) => cell === picture[index])) {
+      // Anti-vacuity: a transpose-symmetric motif would make the last case
+      // assert that the CORRECT body is rejected, which would be a bug.
+      throw new Error("the chosen picture is transpose-symmetric");
+    }
+
+    for (const grid of [overpainted, missing, transposed]) {
+      const response = await POST(
+        completionRequest({
+          token: other.token,
+          body: completionBody({ game: "nonogram", date: today, grid }),
+        }),
+      );
+      expect(response.status).toBe(422);
+      expect(await errorOf(response)).toEqual({ error: "grid-mismatch" });
+    }
+    // Only the first player's row exists: no rejected body ever wrote.
+    expect(await completionRows()).toHaveLength(1);
+  });
+
+  it("T-API-S25a: a LONGER grid whose prefix matches is 422, not a recorded win (N7)", async () => {
+    // The hole the request schema structurally cannot close: binairo pins
+    // .length(64) and sudoku .length(81), but a nonogram grid is one of four
+    // lengths and the compare loop iterates the STORED solution's entries —
+    // so without the route's explicit length check a 100-cell body whose
+    // first 25 cells match a 5x5 picture scores zero mismatches.
+    const today = await todaySaoPaulo(ctx.db);
+    const monday = await seedDaily("nonogram", today, 7, 1);
+    expect(monday).toHaveLength(25);
+    const { token } = await createSession();
+
+    const padded = [...monday, ...Array.from({ length: 75 }, (): number => 0)];
+    const longer = await POST(
+      completionRequest({
+        token,
+        body: completionBody({ game: "nonogram", date: today, grid: padded }),
+      }),
+    );
+    expect(longer.status).toBe(422);
+    expect(await errorOf(longer)).toEqual({ error: "grid-mismatch" });
+    expect(await completionRows()).toHaveLength(0);
+  });
+
+  it("T-API-S25b: a SHORTER grid against a bigger stored picture is 422, no row", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    // Thursday's 10x10 stored, a 25-cell body submitted: both lengths are
+    // legal on the wire, so only the route's check can separate them.
+    const thursday = await seedDaily("nonogram", today, 7, 4);
+    expect(thursday).toHaveLength(100);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "nonogram",
+          date: today,
+          grid: thursday.slice(0, 25),
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await errorOf(response)).toEqual({ error: "grid-mismatch" });
+    expect(await completionRows()).toHaveLength(0);
+  });
+
+  it("T-API-S28: YESTERDAY's picture is judged against yesterday's stored row, at a different size", async () => {
+    // The one LEGITIMATE submission whose length differs from today's board,
+    // and the only shape binairo's `.length(64)` and sudoku's `.length(81)`
+    // structurally cannot produce: ACCEPTED_DAYS_BACK = 1 exists for D19's
+    // post-rollover flush, where a board finished offline yesterday is POSTed
+    // on today's mount by `sync.ts`. Yesterday is a different ISO weekday and
+    // a nonogram's size is a function of the weekday, so the two accepted
+    // dates almost always carry different size classes — which is exactly
+    // what the route's `body.grid.length !== solution.length` check has to be
+    // keyed on: the STORED row, never today's board. The two 422 length cases
+    // above prove it rejects; nothing proved it accepts (step-6 round-3
+    // finding NONO-C-R3-1).
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const todayPicture = await seedDaily("nonogram", today, 7, 1);
+    const yesterdayPicture = await seedDaily("nonogram", yesterday, 21, 7);
+    expect(todayPicture).toHaveLength(25);
+    expect(yesterdayPicture).toHaveLength(225);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "nonogram",
+          date: yesterday,
+          grid: yesterdayPicture,
+        }),
+      }),
+    );
+
+    const body = completionResponseSchema.parse(await response.json());
+    expect(response.status).toBe(200);
+    expect(body.recorded).toBe(true);
+    // Yesterday's daily is late by construction, whatever the wall clock —
+    // T-API-13's seam argument, for the third game.
+    expect(body.onTime).toBe(false);
+    expect(await completionRows()).toHaveLength(1);
+  });
+
+  it("T-API-S23b: a wrong picture ⇒ 422; future, killed and two-days-old ⇒ 404, never a row", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const tomorrow = addDays(today, 1);
+    const twoDaysAgo = addDays(today, -2);
+    const todayPicture = await seedDaily("nonogram", today, 7, 1);
+    const tomorrowPicture = await seedDaily("nonogram", tomorrow, 11, 1);
+    const oldPicture = await seedDaily("nonogram", twoDaysAgo, 13, 1);
+    const { token } = await createSession();
+
+    const mismatch = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "nonogram",
+          date: today,
+          grid: wrongGrid("nonogram", todayPicture),
+        }),
+      }),
+    );
+    expect(mismatch.status).toBe(422);
+    expect(await errorOf(mismatch)).toEqual({ error: "grid-mismatch" });
+
+    const future = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "nonogram",
+          date: tomorrow,
+          grid: tomorrowPicture,
+        }),
+      }),
+    );
+    expect(future.status).toBe(404);
+    expect(await errorOf(future)).toEqual({ error: "no-puzzle" });
+
+    // ACCEPTED_DAYS_BACK is unchanged at 1 (#31 is its lever).
+    const tooOld = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "nonogram",
+          date: twoDaysAgo,
+          grid: oldPicture,
+        }),
+      }),
+    );
+    expect(tooOld.status).toBe(404);
+    expect(await errorOf(tooOld)).toEqual({ error: "no-puzzle" });
+
+    await ctx.db
+      .update(dailyPuzzles)
+      .set({ killedAt: sql`now()` })
+      .where(eq(dailyPuzzles.game, "nonogram"));
+    const killed = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "nonogram",
+          date: today,
+          grid: todayPicture,
+        }),
+      }),
+    );
+    expect(killed.status).toBe(404);
+    expect(await errorOf(killed)).toEqual({ error: "no-puzzle" });
+
+    expect(await completionRows()).toHaveLength(0);
+  });
 });

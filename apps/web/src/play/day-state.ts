@@ -53,10 +53,10 @@ const NOTHING_DONE: Readonly<Record<Game, DayEntry>> = {
  * type keeps the map TOTAL over `Game`: a key dropped from this literal does
  * not compile, which is what makes a missing tile impossible.
  *
- * It is NOT a tripwire for #25/#27, and calling it one would promise a
+ * It is NOT a tripwire for #27, and calling it one would promise a
  * safety net nobody has: `GAMES` has carried all four games since day one
- * (packages/core/src/game.ts), so those tickets add no key here and nothing
- * in this file can go red for them. `entryFor` is game-generic and already
+ * (packages/core/src/game.ts), so that ticket adds no key here and nothing
+ * in this file can go red for it — as #23 and #25 already demonstrated. `entryFor` is game-generic and already
  * serves them. The member they do have to add is `playRecordSchema`'s — that
  * union is where the compile error waits (finding
  * `day-state-exhaustiveness-tripwire-cannot-fire-for-25-27`).

@@ -30,11 +30,14 @@
  *    and any class instance handed to a client component from a page shell.
  */
 import {
+  dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
   type DailyBinairoResponse,
+  type DailyNonogramResponse,
   type DailySudokuResponse,
 } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
+import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku } from "@miolos/games/sudoku";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -64,6 +67,18 @@ const SUDOKU: DailySudokuResponse = dailySudokuResponseSchema.parse({
   date: DATE,
   givens: SUDOKU_PUZZLE.givens,
   tier: SUDOKU_PUZZLE.tier,
+});
+
+// Weekday 1 is the 5×5 nonogram class (~0.0354 ms), and it runs once, at
+// module scope. Parsed rather than cast, so the fixture is the wall's exact
+// four-key projection and nothing wider.
+const NONOGRAM_PUZZLE = generateNonogram(20_260_801, 1);
+
+const NONOGRAM: DailyNonogramResponse = dailyNonogramResponseSchema.parse({
+  game: "nonogram",
+  date: DATE,
+  size: NONOGRAM_PUZZLE.size,
+  clues: NONOGRAM_PUZZLE.clues,
 });
 
 // `vi.mock` factories are hoisted above every const in the file, so the spies
@@ -163,7 +178,11 @@ interface RouteCase {
     default: () => ReactNode | Promise<ReactNode>;
   }>;
   /** What the wall answers for this route, if it reads one at all. */
-  readonly daily: DailyBinairoResponse | DailySudokuResponse | undefined;
+  readonly daily:
+    | DailyBinairoResponse
+    | DailyNonogramResponse
+    | DailySudokuResponse
+    | undefined;
 }
 
 const ROUTES: readonly RouteCase[] = [
@@ -197,6 +216,18 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/sudoku/concluido/page"),
     daily: SUDOKU,
   },
+  {
+    path: "/nonogram",
+    marker: "data-play-state=",
+    load: () => import("../app/nonogram/page"),
+    daily: NONOGRAM,
+  },
+  {
+    path: "/nonogram/concluido",
+    marker: "data-conclusion-state=",
+    load: () => import("../app/nonogram/concluido/page"),
+    daily: NONOGRAM,
+  },
 ];
 
 beforeEach(() => {
@@ -208,7 +239,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("every route the impeccable preflight fetches", () => {
+describe("every route the impeccable preflight fetches (T-WEB-S56)", () => {
   it.each(ROUTES)(
     "$path server-renders without throwing, with its marker in the pre-hydration paint",
     async ({ marker, load, daily }) => {

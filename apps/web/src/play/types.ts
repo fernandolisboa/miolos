@@ -89,3 +89,25 @@ export interface ConclusionCopy {
     readonly cta: string;
   };
 }
+
+/**
+ * The solved picture, for the one game whose payoff is an image (ADR-0034).
+ * Plain data across the RSC boundary: a row-major bitmap, its side, and a
+ * pre-composed accessible name. Never a function, never a node — the same
+ * constraint ConclusionCopy carries and route-ssr.test.tsx enforces.
+ *
+ * Supplied ONLY by a client component that owns the local play record. A
+ * server segment must never compute it: /<jogo>/concluido renders for
+ * players who have NOT solved, and its RSC payload would become a spoiler
+ * channel (ADR-0004, ADR-0027's rejected list, ADR-0033).
+ *
+ * `size` is a plain `number`, not a game's size union: this type is
+ * game-blind by construction and must not name one game's shape.
+ */
+export interface ConclusionPicture {
+  readonly size: number;
+  /** Row-major, length size²; 1 = filled. */
+  readonly cells: readonly (0 | 1)[];
+  /** Composed by the caller from its own i18n bundle. */
+  readonly label: string;
+}

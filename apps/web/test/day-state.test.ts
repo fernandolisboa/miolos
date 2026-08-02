@@ -75,9 +75,9 @@ describe("readDayState (T-WEB-S14)", () => {
     const state = readDayState(DATE);
 
     // TOTAL by construction: `Record<Game, DayEntry>` cannot lose a key
-    // without failing the typecheck. #25/#27 do not widen it — `GAMES` has
-    // held all four games from day one — so what this pins is the map, not a
-    // tripwire for those tickets (finding
+    // without failing the typecheck. #27 does not widen it — `GAMES` has
+    // held all four games from day one, as #23 and #25 already showed — so
+    // what this pins is the map, not a tripwire for that ticket (finding
     // `day-state-exhaustiveness-tripwire-cannot-fire-for-25-27`).
     expect(Object.keys(state).sort()).toEqual(
       ["binairo", "nonogram", "sudoku", "termo"].sort(),

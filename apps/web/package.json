@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "bundle-check": "node scripts/route-client-js.mjs"
   },
   "dependencies": {
     "@miolos/core": "workspace:*",

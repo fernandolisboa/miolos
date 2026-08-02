@@ -25,7 +25,7 @@ Accents carry identity, not meaning alone — every state they mark is also carr
 
 - Display: **Fraunces** (variable; `ital`, `opsz`, `wght`). Italic is the app's human voice. Weights 450–600.
 - UI: **Instrument Sans** 400–700.
-- `font-variant-numeric: tabular-nums` is mandatory on every grid, timer and statistic.
+- Numerals that must align in a column — every grid, timer, statistic and histogram — use **Instrument Sans** with `font-variant-numeric: tabular-nums` (measured: every digit 6.609375px, spread 0). Fraunces has **no tabular figures** — no OpenType feature tag responds on it at all, so `tabular-nums` on the display face is a no-op and its digits keep a ~2.2px spread. Fraunces numerals are for the single, non-aligning kind: a streak stamp, a board cell holding one centred glyph ([ADR-0036](./docs/adr/0036-aligning-numerals-use-instrument-sans-not-fraunces.md)).
 - Kickers: 10–11px, uppercase, letter-spacing 0.14–0.16em — a deliberate brand system, used for game categories, not as a generic section eyebrow.
 - Banned as brand fonts: Inter, DM Sans, Poppins, Montserrat, Roboto.
 - Portability: variable-font axes are web-only; the future native client uses static instances of the chosen weights (ADR-0002). `tabular-nums` works on both.
@@ -46,7 +46,7 @@ Accents carry identity, not meaning alone — every state they mark is also carr
 ## Components (from the winning references)
 
 - **Game card** (Hoje): card paper, 1px line border, hard shadow in the game accent at 0.22, washi tape top-center, kicker + Fraunces title + description; done state is an outlined "Feito" stamp chip (rotated −3deg) + tabular result, pending state is a solid accent button.
-- **Streak stamp card**: 1.5px `#9E3B2F` border, hard shadow in lacre 0.25, rotated 2deg, Fraunces tabular numeral.
+- **Streak stamp card**: 1.5px `#9E3B2F` border, hard shadow in lacre 0.25, rotated 2deg, Fraunces numeral — the sanctioned single, non-aligning case (ADR-0036 decision 2), so `tabular-nums` on it is inert rather than load-bearing.
 - **Puzzle grid**: cells 52px desktop / 38px mobile, gap 4px/3px, wrapped in a paper card with hard accent shadow; given cells on tinted paper with ink numerals wt 600, player cells on desk paper with accent numerals wt 500.
 - **Histogram**: 6 buckets, today's bucket solid accent + bold label, others `rgba(accent, 0.25)`, 3px top radius.
 - **Promo strip** (`AdSlot` seam): dormant at launch, dimensions reserved per placement so activation is a paint, never a reflow — 64px on the mobile hub (F2's annotated dormant slot), 60px on the desktop hub (measured from F1's filled sample: 1px top hairline + 16px/24px vertical padding + one 19px text line); dismissible; only first-party creative, italic "do Miolos" lead-in (ADR-0006).

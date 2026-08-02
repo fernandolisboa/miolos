@@ -184,3 +184,11 @@ it as a timing rule and was wrong.
   bodies — the `pageshow` gate, the two clobber guards, the two-sided
   `elapsedMs` clamp, the completion handoff — and a tidy-up while moving
   is how they come back.
+
+  **Qualified at #25's step 7:** this governs the extraction COMMIT, not
+  the extracted module's future. `usePointerStroke` gained a window-scoped
+  stroke-end net in a later commit on the same branch, which does change
+  Binairo's cycle-mode path — see
+  [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md)
+  decision 2's amendment. A later change to shared machinery is ordinary
+  work; presenting it as part of "a move" is what this line forbids.

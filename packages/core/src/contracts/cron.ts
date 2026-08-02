@@ -34,10 +34,19 @@ export type CronPublishGameResult = z.infer<typeof cronPublishGameResultSchema>;
  * preserved exactly — a new game must widen this in the same PR that wires
  * its top-up. An array of results, or a `gameSchema`-keyed record, would
  * accept anything and silently lose that (plan 018 S15).
+ *
+ * Keyed binairo → nonogram → sudoku: the cron's COST-ASCENDING run order
+ * (plan 020 P7, and `apps/api/app/cron/publish/route.ts` states the rule).
+ * It happens to read alphabetically today, and that coincidence ENDS at
+ * termo: a curated-word-list pick (ADR-0015) is not a generate-and-validate
+ * loop at all, so cost-ascending puts termo first while the alphabet puts it
+ * last. Cost-ascending is the rule that wins; #27 must not read the current
+ * order as alphabetical.
  */
 export const cronPublishResponseSchema = z.strictObject({
   games: z.strictObject({
     binairo: cronPublishGameResultSchema,
+    nonogram: cronPublishGameResultSchema,
     sudoku: cronPublishGameResultSchema,
   }),
 });
@@ -53,12 +62,12 @@ export type CronPublishResponse = z.infer<typeof cronPublishResponseSchema>;
  * `shallow`, never the HTTP status.
  *
  * EXTENSION POINT: `depths` is strict and REJECTS a game it does not
- * list — #25/#27 add their key here in the same PR that wires their
- * top-up.
+ * list — #27 adds its key here in the same PR that wires its top-up.
  */
 export const bufferDepthResponseSchema = z.strictObject({
   depths: z.strictObject({
     binairo: z.number().int().min(0),
+    nonogram: z.number().int().min(0),
     sudoku: z.number().int().min(0),
   }),
   threshold: z.number().int().positive(),

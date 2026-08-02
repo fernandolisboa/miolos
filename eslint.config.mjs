@@ -28,6 +28,27 @@ const webDynamicDbImport = {
     "apps/web is client-serving: dynamic import of the server-internal @miolos/db subpaths is banned (ADR-0024, ADR-0026).",
 };
 
+// The dynamic-import half of the deep-path bans in the `patterns` arrays
+// below. `no-restricted-imports` cannot see a dynamic specifier at all, so
+// `await import("../../../packages/core/src/contracts/daily-content")` walked
+// through the static path ban the same way the bare-specifier ban was walked
+// through by a relative path (step-6 round-4 finding
+// `core-server-only-ban-is-bare-specifier-only`). Both package sources, since
+// both are banned by path: `packages/db/src` hands out every server-internal
+// table, `packages/core/src` reaches the server-only daily-content schemas
+// whose module is retained in every route's browser chunk once named.
+//
+// It does NOT cover `(await import("@miolos/core")).stripDailyContent`: a
+// dynamic import names no exports at the AST level, and the bare entry is
+// legitimately importable for its client half. That form is left to the
+// bundle tripwire, deliberately, rather than banning the entry outright.
+const webDynamicPackageSource = {
+  selector:
+    "ImportExpression > Literal[value=/packages\\/(db|core)\\/src(\\/|$)/]",
+  message:
+    "apps/web is client-serving: dynamic import of a relative path into packages/db/src or packages/core/src is banned — it evades the deep-path import restrictions (ADR-0024, ADR-0026, ADR-0033).",
+};
+
 // Companion to webDynamicDbImport, which only sees a plain string specifier:
 // import(`@miolos/db/publishing`) and import("@miolos/db/" + "publishing")
 // walked straight through it (step 6 finding
@@ -217,6 +238,30 @@ export default tseslint.config(
               message:
                 "apps/web is client-serving: reach the db through the `@miolos/db` package entry, never by relative path into packages/db/src — the deep path hands out every server-internal table (ADR-0024, ADR-0026).",
             },
+            {
+              // The same lesson the `@miolos/db` group above learned one
+              // ticket earlier, applied to the server-only core contracts: the
+              // `paths` entry below fires on the BARE specifier only, so
+              // `import { stripDailyContent } from
+              // "../../../packages/core/src/contracts/daily-content"` linted,
+              // typechecked and tested clean while re-shipping
+              // `nonogramRevealSchema`'s `motifId` / `name` / `mirrored` /
+              // `solution` key strings into every route's browser chunk —
+              // exactly what commit d5bb543 and ADR-0033 exist to prevent
+              // (step-6 round-4 finding
+              // `core-server-only-ban-is-bare-specifier-only`). The whole
+              // package source is banned by path rather than just the one
+              // module: apps/web has the `@miolos/core` entry and never needs
+              // a relative reach into it, and a path ban that enumerates
+              // modules has to be re-checked on every new file.
+              group: [
+                "**/packages/core/src",
+                "**/packages/core/src/*",
+                "**/packages/core/src/**",
+              ],
+              message:
+                "apps/web is client-serving: reach the contracts through the `@miolos/core` package entry, never by relative path into packages/core/src — the deep path reaches the SERVER-ONLY daily-content schemas, whose module is retained in the browser chunk of every route the moment anything names it (commit d5bb543, ADR-0024/ADR-0033).",
+            },
           ],
           paths: [
             {
@@ -230,12 +275,44 @@ export default tseslint.config(
               message:
                 "apps/web must not build queries or touch the identity tables: read the daily through `getTodayDaily`. Raw SQL via the re-exported `sql` bypasses the published-predicate wall (ADR-0024 amendment), and every `users`/`sessions` read belongs to apps/api (ADR-0007/0014).",
             },
+            {
+              name: "@miolos/core",
+              // The SERVER-ONLY half of the daily contracts
+              // (packages/core/src/contracts/daily-content.ts). Commit d5bb543
+              // split them out because a module-scope `z.strictObject(...)` is
+              // a call the bundler cannot prove pure, so naming one of them
+              // from apps/web retains the whole module — `nonogramRevealSchema`'s
+              // `motifId` / `name` / `mirrored` / `solution` key strings
+              // included — in the browser chunk of every route. `"sideEffects":
+              // false` only drops the module while NOTHING here names it, and
+              // until now that rule was prose in two file headers and a
+              // hand-run grep (step-6 round-3 finding
+              // `core-client-server-split-is-prose-only`). Pinned by T-LINT-3d.
+              //
+              // Deliberately in THIS object rather than a new one: flat config
+              // REPLACES a rule's whole configuration when a later object sets
+              // the same rule id, so a second `no-restricted-imports` object
+              // globbed at apps/web/src|app would silently delete the
+              // `@miolos/db` wall above for exactly the files that hold the
+              // credential. apps/web/test/** is inside this glob and imports
+              // none of these names.
+              importNames: [
+                "binairoDailyContentSchema",
+                "DailyProjectionUnsupportedError",
+                "nonogramDailyContentSchema",
+                "stripDailyContent",
+                "sudokuDailyContentSchema",
+              ],
+              message:
+                "these are the SERVER-ONLY daily-content schemas (packages/core/src/contracts/daily-content.ts). apps/web receives the wall's already-stripped projection and must never name the content shape: one value import re-ships the withheld object's shape in every route's client chunk (commit d5bb543, ADR-0024/ADR-0033).",
+            },
           ],
         },
       ],
       "no-restricted-syntax": [
         "error",
         webDynamicDbImport,
+        webDynamicPackageSource,
         webComputedDynamicImport,
         webRequireCall,
       ],
@@ -266,6 +343,7 @@ export default tseslint.config(
         // by T-LINT-4/T-LINT-4b/T-LINT-4c against the plan's original
         // two-object shape; do not "de-duplicate" them away.
         webDynamicDbImport,
+        webDynamicPackageSource,
         webComputedDynamicImport,
         webRequireCall,
         {

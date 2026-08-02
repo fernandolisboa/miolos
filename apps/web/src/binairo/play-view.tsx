@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { formatLongDate, messages, routes } from "../i18n";
-import { accentVar } from "../play/accent";
+import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
 import { TimerReadout } from "../play/timer-readout";
 import styles from "./binairo-screen.module.css";
@@ -10,12 +10,15 @@ import { Grid } from "./grid";
 import type { BinairoPlay } from "./use-binairo-play";
 
 /**
- * The shared layout's per-screen accent, set inline because
- * `play/screen.module.css` reads `var(--accent)` throughout (plan 018 §5.2).
+ * The shared layout's per-screen accent AND the ink that sits on an accent
+ * fill, set inline because `play/screen.module.css` reads both throughout
+ * (plan 018 §5.2). Moss-green resolves `--ink-on-accent` to the same
+ * `var(--paper-desk)` this screen has always painted — 5.307:1 on `.hint`,
+ * unchanged to the byte by #25's ISS-A2 fix, which moves Nonogram only.
  * The four geometry properties ride on `.pageBinairo` instead — a class this
  * module owns, so no cascade order is involved (§12.2).
  */
-const ACCENT = { "--accent": accentVar("binairo") };
+const ACCENT = accentVars("binairo");
 
 const TOTAL_CELLS = 64;
 

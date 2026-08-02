@@ -1,5 +1,10 @@
 import { generateBinairo } from "@miolos/games/binairo";
 import {
+  generateNonogram,
+  type NonogramPuzzle,
+  type Weekday as NonogramWeekday,
+} from "@miolos/games/nonogram";
+import {
   generateDailySudoku,
   type SudokuPuzzle,
   type Weekday,
@@ -10,8 +15,10 @@ import {
   binairoDailyContentSchema,
   DailyProjectionUnsupportedError,
   dailyBinairoResponseSchema,
+  dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
   dailySudokuResponseSchema,
+  nonogramDailyContentSchema,
   stripDailyContent,
   sudokuDailyContentSchema,
 } from "../src/index";
@@ -47,6 +54,18 @@ function sudokuDaily(weekday: Weekday): SudokuPuzzle {
  */
 const SUDOKU_SWEEP_TIMEOUT_MS = 30_000;
 
+/**
+ * Real nonogram engine output for a weekday. No memo and no timeout
+ * constant, deliberately (plan 020 §19 "Timeouts"): generate+validate
+ * measures 0.0354 ms on weekday 1 (5x5) and 0.1902 ms on weekday 7 (15x15),
+ * and the one-off ~34 ms pool build is already memoized inside
+ * `difficulty.ts`, so the whole seven-weekday sweep sits three orders of
+ * magnitude under vitest's 5 000 ms default.
+ */
+function nonogramDaily(weekday: NonogramWeekday): NonogramPuzzle {
+  return generateNonogram(20_260_803 + weekday, weekday);
+}
+
 describe("stripDailyContent (binairo)", () => {
   it("output strict-parses and carries no solution/seed, real engine output, all 7 weekdays", () => {
     for (const weekday of WEEKDAYS) {
@@ -73,11 +92,9 @@ describe("stripDailyContent (binairo)", () => {
   // the projection, so the throw is no longer the contract. nonogram and
   // termo keep theirs.
 
-  it("throws DailyProjectionUnsupportedError for nonogram (fail-closed until #25)", () => {
-    expect(() => stripDailyContent("nonogram", "2026-08-03", {})).toThrow(
-      DailyProjectionUnsupportedError,
-    );
-  });
+  // The "throws for nonogram (fail-closed until #25)" case that stood here is
+  // REPLACED by `describe("stripDailyContent (nonogram)")` below — #25 lands
+  // the projection, so the throw is no longer the contract. termo keeps its.
 
   it("throws DailyProjectionUnsupportedError for termo (fail-closed until #27)", () => {
     expect(() => stripDailyContent("termo", "2026-08-03", {})).toThrow(
@@ -316,5 +333,230 @@ describe("binairoDailyContentSchema", () => {
     expect(binairoDailyContentSchema.safeParse(withoutSolution).success).toBe(
       false,
     );
+  });
+});
+
+describe("stripDailyContent (nonogram)", () => {
+  // T-CORE-S8 (plan 020 §19).
+  it("projects exactly game/date/size/clues, real engine output, all 7 weekdays", () => {
+    for (const weekday of WEEKDAYS) {
+      const puzzle = nonogramDaily(weekday);
+      const stripped = stripDailyContent("nonogram", "2026-08-03", puzzle);
+      expect(dailyPuzzleResponseSchema.parse(stripped)).toEqual(stripped);
+      expect(stripped).toEqual({
+        game: "nonogram",
+        date: "2026-08-03",
+        size: puzzle.size,
+        clues: puzzle.clues,
+      });
+      // The allowlist is the contract, so the key SET is asserted, not just
+      // the absence of the withheld ones (ADR-0024 decision 3).
+      expect(Object.keys(stripped).sort()).toEqual([
+        "clues",
+        "date",
+        "game",
+        "size",
+      ]);
+    }
+  });
+
+  // T-CORE-S9 (plan 020 §19) — the ADR-0004 leak scan for the third game,
+  // and D1's mechanical proof: the whole reveal is withheld (ADR-0033).
+  it("carries no forbidden daily key at any depth, all 7 weekdays", () => {
+    for (const weekday of WEEKDAYS) {
+      const stripped = stripDailyContent(
+        "nonogram",
+        "2026-08-03",
+        nonogramDaily(weekday),
+      );
+      const keys = collectKeys(stripped);
+      for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+        expect(keys.has(forbidden)).toBe(false);
+      }
+    }
+  });
+
+  // T-CORE-S12 (plan 020 §19), mirroring the `clueCount` meaningfulness test
+  // above. Without these three keys the scan would pass on a projection that
+  // flattened the reveal's identity to top-level fields, which is exactly the
+  // mistake `clueCount` was added to prevent at #23 (P2).
+  it("counts motifId/name/mirrored as forbidden — the scan is meaningful for nonogram", () => {
+    const forbidden: readonly string[] = FORBIDDEN_DAILY_KEYS;
+    expect(forbidden).toContain("motifId");
+    expect(forbidden).toContain("name");
+    expect(forbidden).toContain("mirrored");
+  });
+});
+
+describe("dailyNonogramResponseSchema", () => {
+  // T-CORE-S11 (plan 020 §19).
+  it("rejects a payload smuggling reveal, seed or weekday (strictObject proof)", () => {
+    const puzzle = nonogramDaily(7);
+    const base = {
+      game: "nonogram",
+      date: "2026-08-03",
+      size: puzzle.size,
+      clues: puzzle.clues,
+    };
+    const smuggled = [
+      { ...base, reveal: puzzle.reveal },
+      { ...base, seed: puzzle.seed },
+      { ...base, weekday: puzzle.weekday },
+      // The identity flattened to top-level keys — the projection shape
+      // FORBIDDEN_DAILY_KEYS' new members exist to catch (P2).
+      { ...base, name: puzzle.reveal.name },
+      { ...base, motifId: puzzle.reveal.motifId },
+      { ...base, mirrored: puzzle.reveal.mirrored },
+    ];
+    expect(dailyNonogramResponseSchema.safeParse(base).success).toBe(true);
+    expect(dailyPuzzleResponseSchema.safeParse(base).success).toBe(true);
+    for (const payload of smuggled) {
+      expect(dailyNonogramResponseSchema.safeParse(payload).success).toBe(
+        false,
+      );
+      expect(dailyPuzzleResponseSchema.safeParse(payload).success).toBe(false);
+    }
+  });
+
+  it("rejects a size that disagrees with clues.size", () => {
+    const puzzle = nonogramDaily(1);
+    const disagreeing = {
+      game: "nonogram",
+      date: "2026-08-03",
+      size: 8,
+      clues: puzzle.clues,
+    };
+    expect(dailyNonogramResponseSchema.safeParse(disagreeing).success).toBe(
+      false,
+    );
+    expect(dailyPuzzleResponseSchema.safeParse(disagreeing).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("nonogramDailyContentSchema", () => {
+  // T-CORE-S10 (plan 020 §19). The schema mirrors `NonogramPuzzle` exactly —
+  // game, seed, weekday, size, clues, reveal and nothing else.
+  it("round-trips generated puzzles, all 7 weekdays", () => {
+    for (const weekday of WEEKDAYS) {
+      const puzzle = nonogramDaily(weekday);
+      expect(nonogramDailyContentSchema.parse(puzzle)).toEqual(puzzle);
+    }
+  });
+
+  it("mirrors NonogramPuzzle's key set exactly — the round-trip alone cannot catch an added OPTIONAL field", () => {
+    expect(Object.keys(nonogramDailyContentSchema.shape).sort()).toEqual(
+      Object.keys(nonogramDaily(4)).sort(),
+    );
+  });
+
+  it("rejects a content payload with the game key removed (N2 — the field that drains the buffer)", () => {
+    // Nonogram is the only engine whose puzzle object carries `game`
+    // (nonogram/types.ts:33, written at generate.ts:48). Omitting it from
+    // this strictObject fails every pre-insert parse, drains the buffer one
+    // day per day, and fires the depth alert.
+    const puzzle = nonogramDaily(4);
+    const withoutGame = {
+      seed: puzzle.seed,
+      weekday: puzzle.weekday,
+      size: puzzle.size,
+      clues: puzzle.clues,
+      reveal: puzzle.reveal,
+    };
+    expect(nonogramDailyContentSchema.safeParse(withoutGame).success).toBe(
+      false,
+    );
+    expect(nonogramDailyContentSchema.safeParse(puzzle).success).toBe(true);
+  });
+
+  it("rejects a content payload with an unknown field (fail-closed drift, ADR-0024)", () => {
+    const drifted = { ...nonogramDaily(4), hint: "benign additive field" };
+    expect(nonogramDailyContentSchema.safeParse(drifted).success).toBe(false);
+  });
+
+  it("rejects a size that disagrees with clues.size, and a size outside the ramp", () => {
+    const puzzle = nonogramDaily(1);
+    expect(
+      nonogramDailyContentSchema.safeParse({ ...puzzle, size: 8 }).success,
+    ).toBe(false);
+    expect(
+      nonogramDailyContentSchema.safeParse({
+        ...puzzle,
+        size: 20,
+        clues: { ...puzzle.clues, size: 20 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects truncated rows and truncated cols", () => {
+    const puzzle = nonogramDaily(2);
+    const shortRows = {
+      ...puzzle,
+      clues: { ...puzzle.clues, rows: puzzle.clues.rows.slice(0, -1) },
+    };
+    const shortCols = {
+      ...puzzle,
+      clues: { ...puzzle.clues, cols: puzzle.clues.cols.slice(0, -1) },
+    };
+    expect(nonogramDailyContentSchema.safeParse(shortRows).success).toBe(false);
+    expect(nonogramDailyContentSchema.safeParse(shortCols).success).toBe(false);
+  });
+
+  it("rejects a non-square reveal.solution, short by a row and ragged by a cell", () => {
+    const puzzle = nonogramDaily(2);
+    const firstRow = puzzle.reveal.solution[0];
+    if (firstRow === undefined) {
+      throw new Error("fixture invariant: a generated solution has rows");
+    }
+    const shortSolution = {
+      ...puzzle,
+      reveal: {
+        ...puzzle.reveal,
+        solution: puzzle.reveal.solution.slice(0, -1),
+      },
+    };
+    const raggedSolution = {
+      ...puzzle,
+      reveal: {
+        ...puzzle.reveal,
+        solution: [firstRow.slice(0, -1), ...puzzle.reveal.solution.slice(1)],
+      },
+    };
+    const short = nonogramDailyContentSchema.safeParse(shortSolution);
+    const ragged = nonogramDailyContentSchema.safeParse(raggedSolution);
+    expect(short.success).toBe(false);
+    expect(ragged.success).toBe(false);
+
+    // The MESSAGE, not just the verdict. `apps/web/scripts/route-client-js.mjs`
+    // greps the built client chunks for this exact string as one of its
+    // FORBIDDEN markers (ADR-0033 consequence (d)), and a `.refine` message is
+    // free-text: reword it with nothing pinning it and that grep starts
+    // asserting the absence of a string that no longer exists anywhere —
+    // passing vacuously at the one place consequence (d) has a mechanical
+    // guarantee. Its four sibling markers are schema KEYS the tests above
+    // already pin; this one had nothing (step-6 round-3 finding NONO-Q2).
+    // When it changes, change `route-client-js.mjs`'s FORBIDDEN entry in the
+    // same edit.
+    expect(short.error?.issues.map((issue) => issue.message)).toContain(
+      "reveal.solution must be size x size",
+    );
+    expect(ragged.error?.issues.map((issue) => issue.message)).toContain(
+      "reveal.solution must be size x size",
+    );
+  });
+
+  it("rejects a [0] run — an all-empty line is [], never [0]", () => {
+    // nonogram/types.ts:10 and clues.ts:22: the UI renders "0" for an empty
+    // run list, so a stored [0] is drift, not data.
+    const puzzle = nonogramDaily(2);
+    const zeroRun = {
+      ...puzzle,
+      clues: {
+        ...puzzle.clues,
+        rows: [[0], ...puzzle.clues.rows.slice(1)],
+      },
+    };
+    expect(nonogramDailyContentSchema.safeParse(zeroRun).success).toBe(false);
   });
 });

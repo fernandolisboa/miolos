@@ -28,6 +28,7 @@ import {
   listPendingRecords,
   writePlayRecord,
   type BinairoPlayRecord,
+  type NonogramPlayRecord,
   type PlayRecord,
   type SudokuPlayRecord,
 } from "./play-record";
@@ -99,6 +100,20 @@ export async function flushPendingCompletions(
   if (flushing) {
     // The POST is idempotent, so a duplicate flush is free — but a
     // concurrent one would double the requests for nothing.
+    //
+    // Arming the ladder for the record we just queued is NOT optional here,
+    // and returning bare is how a completion goes missing on a perfectly
+    // online device (finding `handed-completion-dropped-by-a-concurrent-
+    // flush`): the in-flight flush read `pendingQueue()` before this record
+    // existed, so it will not post it, and if its own records all settle it
+    // calls `cancelRetries()` — clearing the timer and resetting the step.
+    // The conclusion then shows "pendente" until a new mount, an `online` or
+    // a `visibilitychange`. `scheduleRetry` no-ops while a timer is pending
+    // and its handler re-reads the queue, so the skipped record is picked up
+    // on the first rung instead.
+    if (record?.pendingSync === true) {
+      scheduleRetry();
+    }
     return;
   }
   flushing = true;
@@ -128,7 +143,17 @@ export async function flushPendingCompletions(
       stillPending = (await syncRecord(apiUrl, record)) || stillPending;
     }
 
-    if (stillPending) {
+    // The queue is RE-READ, never inferred from `pending`. That array was
+    // built before the first `await`, so a completion handed to this flush
+    // while it was in flight is not in it — and answering "none of MY records
+    // are still pending" with `cancelRetries()` would clear the ladder the
+    // handed record just armed and strand it until a new mount, an `online`
+    // or a `visibilitychange`, with the conclusion showing "pendente" to a
+    // player who is online (finding
+    // `handed-completion-dropped-by-a-concurrent-flush`). A record that
+    // cannot be posted at all is settled by `syncRecord`, so this cannot
+    // spin: everything left here is genuinely retryable.
+    if (stillPending || pendingQueue().length > 0) {
       scheduleRetry();
     } else {
       cancelRetries();
@@ -224,6 +249,7 @@ async function syncRecord(
 function buildBody(record: PlayRecord): string | undefined {
   switch (record.game) {
     case "binairo":
+    case "nonogram":
     case "sudoku":
       return gridBody(record);
     default: {
@@ -232,8 +258,9 @@ function buildBody(record: PlayRecord): string | undefined {
       // `buildbody-switch-fails-open-for-a-new-game`). Falling off the end
       // returns `undefined`, which `syncRecord` reads as "no result to post"
       // and answers with `settle(record, "rejected")` — permanently clearing
-      // `pendingSync`, so #25's Nonogram would silently lose the day for the
-      // streak. TS cannot catch that on its own: `string | undefined` is a
+      // `pendingSync`, so a game whose case went missing — #25's Nonogram is
+      // the one that landed under this guard — would silently lose the day for
+      // the streak. TS cannot catch that on its own: `string | undefined` is a
       // legitimate return here (`gridBody` on a record with no grid), so
       // TS2366 never fires. This assignment is what fails instead — the same
       // guarantee `storedSolution` gets for free in
@@ -248,8 +275,15 @@ function buildBody(record: PlayRecord): string | undefined {
   }
 }
 
+/**
+ * Nonogram rides here rather than adding a branch (ADR-0029 consequence (f),
+ * plan 020 §14.2): its `grid` is `(0|1)[]` exactly like binairo's, and its
+ * completion request carries the same five keys — no `size` on the wire (P4).
+ * The only per-game work was the `case` label above, and forgetting it is a
+ * RED TYPECHECK on the `never` assignment, never a dropped completion.
+ */
 function gridBody(
-  record: BinairoPlayRecord | SudokuPlayRecord,
+  record: BinairoPlayRecord | NonogramPlayRecord | SudokuPlayRecord,
 ): string | undefined {
   if (record.grid === undefined) {
     return undefined;

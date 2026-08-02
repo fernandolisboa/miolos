@@ -13,11 +13,11 @@ import {
   routes,
   type Route,
 } from "../i18n";
-import { accentVar } from "./accent";
+import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { startCompletionSync } from "./sync";
-import type { ConclusionCopy } from "./types";
+import type { ConclusionCopy, ConclusionPicture } from "./types";
 import { useRecordSnapshot } from "./use-record-snapshot";
 
 /** The four dailies, in the order Hoje lists them. */
@@ -58,17 +58,24 @@ export interface ConclusionResult {
  * italic line (#29, it compares against an average that does not exist) and
  * the share button (#34 — a dead share button is a broken promise, unlike a
  * dead link). §12.3 carries the full table.
+ *
+ * `picture` is the first per-game payoff payload (ADR-0034 decision 3): plain
+ * data, optional, and supplied only by a client component that owns the local
+ * play record. A game with no payoff passes nothing and renders exactly what
+ * it rendered before the prop existed.
  */
 export function ConclusionView({
   game,
   date,
   copy,
   result,
+  picture,
 }: {
   readonly game: Game;
   readonly date: string;
   readonly copy: ConclusionCopy;
   readonly result?: ConclusionResult;
+  readonly picture?: ConclusionPicture;
 }) {
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
@@ -88,8 +95,9 @@ export function ConclusionView({
   }, [date]);
 
   // Set on every branch's root, because the shared stylesheet reads
-  // `var(--accent)` throughout (plan 018 §5.2 edit 1).
-  const accent = { "--accent": accentVar(game) };
+  // `var(--accent)` and `var(--ink-on-accent, …)` throughout (plan 018 §5.2
+  // edit 1). The pair travels together — see `accent.ts`.
+  const accent = accentVars(game);
 
   const stored = record?.concluded === true ? record : undefined;
   // The record wins when it has one: on `recorded: false` the flush writes
@@ -212,6 +220,25 @@ export function ConclusionView({
             </span>
           </div>
         </div>
+        {picture !== undefined && (
+          /* The payoff, inside the card the stamp already lives in — never a
+             modal, never a full-screen takeover, never confetti (PRODUCT.md:33,
+             DESIGN.md:44). One `<svg>` and one `<path>`: a 15×15 daily carries
+             48–143 filled cells, and one node keeps every DOM-walking
+             impeccable rule O(1) here. SVG rather than a grid of divs, per
+             CLAUDE.md's "inside the app: SVG, Skia, or code". */
+          <div className={styles.pictureRow}>
+            <svg
+              className={styles.picture}
+              role="img"
+              aria-label={picture.label}
+              viewBox={`0 0 ${String(picture.size)} ${String(picture.size)}`}
+              shapeRendering="crispEdges"
+            >
+              <path d={picturePath(picture)} />
+            </svg>
+          </div>
+        )}
         {syncOutcome === "pending" && (
           <p className={styles.sync}>{messages.conclusion.sync.pending}</p>
         )}
@@ -244,12 +271,15 @@ export function ConclusionView({
         ) : (
           /* …and by the same rule, a CTA that goes to a game wears THAT
              game's accent — F5:66's own treatment for this exact button
-             (plan 018 S21, deviation 11). `--accent` is set on the element
+             (plan 018 S21, deviation 11). The pair is set on the element
              rather than the root so the rest of the screen keeps the accent
-             of the game being celebrated. */
+             of the game being celebrated — and so the LABEL follows the fill
+             it is painted on rather than the page it sits on, which is what
+             makes this button legible when it chains to Nonogram from the
+             shipped binairo and sudoku conclusions (step-6 finding ISS-A2). */
           <Link
             className={`${styles.cta} ${styles.ctaNext}`}
-            style={{ "--accent": accentVar(next.game) }}
+            style={accentVars(next.game)}
             href={next.route}
           >
             {messages.conclusion.ctaNext(messages.games[next.game].name)}
@@ -265,11 +295,32 @@ export function ConclusionView({
 }
 
 /**
+ * The bitmap as ONE `<path>`'s `d`: a unit square per filled cell, in
+ * row-major order, inside a `size × size` viewBox.
+ *
+ * `M{col} {row}h1v1h-1z` — an absolute move to the cell's top-left corner and
+ * a closed unit square, so every subpath is independent and the fill rule
+ * never has to reconcile overlapping ones. Pure and module-scope, so it is
+ * testable without React and cannot close over a render.
+ */
+function picturePath(picture: ConclusionPicture): string {
+  let path = "";
+  for (const [index, cell] of picture.cells.entries()) {
+    if (cell === 1) {
+      const row = Math.floor(index / picture.size);
+      const column = index % picture.size;
+      path += `M${String(column)} ${String(row)}h1v1h-1z`;
+    }
+  }
+  return path;
+}
+
+/**
  * The first daily this device can still play today, in the day's order — AC
  * 3's "the conclusion chains to the next pending daily" (plan 018 S21).
  *
  * Written as a loop rather than a `find` because the route has to come out
- * NARROWED: `playRoutes` is partial until #25/#27 land, and Next's typed
+ * NARROWED: `playRoutes` is partial until #27 lands, and Next's typed
  * `Link href` refuses a possibly-undefined value. A game with no play route
  * is skipped rather than offered — chaining to a route that does not exist
  * would be a 404 at the end of the one celebration screen the product has.

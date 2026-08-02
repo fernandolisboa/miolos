@@ -1,6 +1,6 @@
 import { AdSlot } from "../src/components/ad-slot";
 import { locale, messages } from "../src/i18n";
-import { accentVar } from "../src/play/accent";
+import { accentVars } from "../src/play/accent";
 import { HubCardAction, HubProgress } from "./hub-day-state";
 import styles from "./page.module.css";
 
@@ -106,11 +106,7 @@ export default function HojePage() {
 
       <section className={styles.games}>
         {gameOrder.map((game) => (
-          <article
-            key={game}
-            className={styles.card}
-            style={{ "--accent": accentVar(game) }}
-          >
+          <article key={game} className={styles.card} style={accentVars(game)}>
             <div aria-hidden className={styles.tape} />
             <div className={styles.cardBody}>
               <p className={styles.kicker}>{messages.games[game].kicker}</p>
@@ -121,7 +117,7 @@ export default function HojePage() {
             </div>
             {/* Done or pending, per THIS DEVICE (plan 018 §11.3, ADR-0031),
                 and linked only where a play route exists — the `playRoutes`
-                map decides, so #25/#27 add a key rather than a branch. */}
+                map decides, so #27 adds a key rather than a branch. */}
             <HubCardAction game={game} date={isoDate} />
           </article>
         ))}

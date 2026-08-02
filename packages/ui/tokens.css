@@ -24,7 +24,7 @@
   --text-button: 600 14px/1 var(--font-ui);
   --text-card-title: 550 30px/1.1 var(--font-display);
   --text-screen-title: 550 54px/1 var(--font-display);
-  --text-numeral-lg: 600 44px/1 var(--font-display); /* + tabular-nums */
+  --text-numeral-lg: 600 44px/1 var(--font-display); /* single, non-aligning numeral — tabular-nums is a no-op on Fraunces (ADR-0036) */
 
   /* shape */
   --radius: 6px;
@@ -55,4 +55,7 @@
   --touch-target-min: 44px;
   --rotate-card-max: 2.4deg;
 }
-/* Mandatory on grids, timers and statistics: font-variant-numeric: tabular-nums */
+/* Numerals that must align in a column (grids, timers, statistics, histograms):
+   var(--font-ui) + font-variant-numeric: tabular-nums. Fraunces has NO tabular
+   figures — no OpenType feature tag responds on it — so tabular-nums on
+   var(--font-display) is a no-op (ADR-0036). */

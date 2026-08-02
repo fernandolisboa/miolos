@@ -7,8 +7,10 @@ import { ConclusionView } from "../src/play/conclusion-view";
 import {
   writePlayRecord,
   type BinairoPlayRecord,
+  type NonogramPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
+import type { ConclusionPicture } from "../src/play/types";
 import { useRecordSnapshot } from "../src/play/use-record-snapshot";
 import { formatElapsed, messages, routes } from "../src/i18n";
 import { bodyOf, decl, stylesheet } from "./css-source";
@@ -31,6 +33,11 @@ const ELAPSED = formatElapsed(ELAPSED_MS);
 // own game's record, which a shared value could not prove (T-WEB-S18).
 const SUDOKU_ELAPSED_MS = 512_000;
 const SUDOKU_ELAPSED = formatElapsed(SUDOKU_ELAPSED_MS);
+// A third distinct duration, for the same reason: once Nonogram is playable
+// its chip is rendered beside the other two, and a value shared with either
+// would make an ambiguous match possible in any test that grows an
+// assertion on a duration later (T-WEB-S55).
+const NONOGRAM_ELAPSED_MS = 623_000;
 
 function concluded(
   overrides: Partial<BinairoPlayRecord> = {},
@@ -64,6 +71,32 @@ function concludedSudoku(
     entries: Array.from({ length: 81 }, () => null),
     grid: Array.from({ length: 9 }, () => DIGITS).flat(),
     elapsedMs: SUDOKU_ELAPSED_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+/**
+ * Nonogram's counterpart, needed from #25 onward: with `playRoutes.nonogram`
+ * live, "every playable daily is done" is a three-record state, not a
+ * two-record one (T-WEB-S55, plan 020 §17).
+ */
+function concludedNonogram(
+  overrides: Partial<NonogramPlayRecord> = {},
+): NonogramPlayRecord {
+  return {
+    v: 1,
+    game: "nonogram",
+    date: DATE,
+    size: 5,
+    entries: Array.from({ length: 25 }, () => null),
+    grid: Array.from({ length: 25 }, (_unused, index) =>
+      index % 3 === 0 ? 1 : 0,
+    ),
+    elapsedMs: NONOGRAM_ELAPSED_MS,
     hintsUsed: 0,
     concluded: true,
     pendingSync: false,
@@ -203,8 +236,11 @@ describe("the day card and the CTA (T-WEB-18)", () => {
   it("points the CTA at Hoje and leaves the statistics link dead", () => {
     // Every playable daily done, which is the only state that still ends the
     // day at Hoje now that the CTA chains (plan 018 S21 supersedes plan 017
-    // §12.3's CTA row and its deviation 9).
+    // §12.3's CTA row and its deviation 9). The set grows with `playRoutes`:
+    // #25 made Nonogram playable, so the state this test is about needs its
+    // record too, and #27 will owe Termo's (T-WEB-S55, plan 020 §17).
     writePlayRecord(concluded());
+    writePlayRecord(concludedNonogram());
     writePlayRecord(concludedSudoku());
 
     render(
@@ -280,6 +316,12 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     // The in-place swap again: the record in storage is the last PLAYING one,
     // so a CTA read off the records alone would send the player straight back
     // into the grid they just closed.
+    //
+    // The DESTINATION moves as `playRoutes` grows and is not this test's
+    // subject: the scan runs Termo (no route) → Sudoku (celebrated, and
+    // overridden as concluded) → Nonogram → Binairo, so #25 makes it stop one
+    // game earlier than it did. What is asserted either way is that Sudoku is
+    // excluded (T-WEB-S55, plan 020 §17).
     writePlayRecord(concludedSudoku({ concluded: false, grid: undefined }));
 
     render(
@@ -293,13 +335,21 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
 
     expect(
       screen
-        .getByText(messages.conclusion.ctaNext(messages.games.binairo.name))
+        .getByText(messages.conclusion.ctaNext(messages.games.nonogram.name))
         .closest("a"),
-    ).toHaveAttribute("href", routes.binairo);
+    ).toHaveAttribute("href", routes.nonogram);
+    expect(
+      screen.queryByText(
+        messages.conclusion.ctaNext(messages.games.sudoku.name),
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("falls back to Hoje when every playable daily is done", () => {
+    // Three records, for the same reason as the T-WEB-18 case above
+    // (T-WEB-S55, plan 020 §17).
     writePlayRecord(concluded());
+    writePlayRecord(concludedNonogram());
     writePlayRecord(concludedSudoku());
 
     render(
@@ -634,6 +684,133 @@ describe("no record for the server's day (T-WEB-20)", () => {
   });
 });
 
+describe("the picture reveal (T-WEB-S50)", () => {
+  /**
+   * A 5×5 bitmap with a shape that is NOT transpose-symmetric, so a path
+   * emitted column-major rather than row-major would produce different
+   * coordinates and fail the first-subpath assertion rather than passing by
+   * accident.
+   */
+  const PICTURE: ConclusionPicture = {
+    size: 5,
+    // prettier-ignore
+    cells: [
+      0, 1, 1, 1, 0,
+      1, 0, 0, 0, 1,
+      1, 1, 1, 1, 1,
+      1, 0, 0, 0, 1,
+      1, 0, 0, 0, 0,
+    ],
+    label: messages.games.nonogram.reveal.aria,
+  };
+
+  const FILLED = PICTURE.cells.filter((cell) => cell === 1).length;
+
+  /** The one `<path>`'s subpaths, as the browser would read them. */
+  function subpathsOf(figure: HTMLElement): string[] {
+    const path = figure.querySelector("path");
+    if (path === null) {
+      throw new Error("the reveal renders no <path>");
+    }
+    return path.getAttribute("d")?.match(/M-?\d+ -?\d+h1v1h-1z/g) ?? [];
+  }
+
+  function nonogramRecord(): NonogramPlayRecord {
+    return {
+      v: 1,
+      game: "nonogram",
+      date: DATE,
+      size: 5,
+      entries: PICTURE.cells.map((cell) => (cell === 1 ? 1 : null)),
+      grid: [...PICTURE.cells],
+      elapsedMs: ELAPSED_MS,
+      hintsUsed: 0,
+      concluded: true,
+      pendingSync: false,
+      syncOutcome: "recorded",
+    };
+  }
+
+  it("draws one subpath per filled cell, under the caller's own name", () => {
+    writePlayRecord(nonogramRecord());
+
+    const { container } = render(
+      <ConclusionView
+        game="nonogram"
+        date={DATE}
+        copy={messages.games.nonogram.conclusion}
+        picture={PICTURE}
+      />,
+    );
+
+    const figure = screen.getByRole("img", { name: PICTURE.label });
+    expect(figure.tagName.toLowerCase()).toBe("svg");
+    expect(figure).toHaveAttribute("viewBox", "0 0 5 5");
+    // Anti-vacuity FIRST: "one subpath per filled cell" is vacuously true at
+    // zero cells, which is exactly what an `?? []` empty bitmap would render
+    // — a labelled graphic with no graphic in it (CLI-5/DES-9).
+    expect(subpathsOf(figure).length).toBeGreaterThan(0);
+    expect(subpathsOf(figure)).toHaveLength(FILLED);
+    // Row-major, and the first filled cell is (row 0, col 1) — `M{col} {row}`.
+    expect(subpathsOf(figure)[0]).toBe("M1 0h1v1h-1z");
+    // One node, never one `<rect>` per cell: a 15×15 daily carries 48–143
+    // filled cells, and every DOM-walking impeccable rule stays O(1) here.
+    expect(container.querySelectorAll("path")).toHaveLength(1);
+    expect(container.querySelectorAll("rect")).toHaveLength(0);
+  });
+
+  it("renders no figure at all when the caller supplies none", () => {
+    writePlayRecord(nonogramRecord());
+
+    const { container } = render(
+      <ConclusionView
+        game="nonogram"
+        date={DATE}
+        copy={messages.games.nonogram.conclusion}
+      />,
+    );
+
+    // The stamp still lands: the reveal is additive to it, never instead of
+    // it (DESIGN.md:44).
+    expect(
+      screen.getByRole("img", {
+        name: messages.conclusion.stampAria(
+          messages.games.nonogram.conclusion.title,
+          ELAPSED,
+          0,
+        ),
+      }),
+    ).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeNull();
+    expect(
+      screen.queryByRole("img", { name: PICTURE.label }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("leaves binairo's and sudoku's conclusions exactly as they were", () => {
+    // The widening is ONE optional prop and ONE conditional block, so a game
+    // that passes no picture renders the markup it rendered before this
+    // ticket: no figure node, and the stamp is still the only `role="img"`.
+    writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku());
+
+    for (const game of ["binairo", "sudoku"] as const) {
+      const { container, unmount } = render(
+        <ConclusionView
+          game={game}
+          date={DATE}
+          copy={messages.games[game].conclusion}
+        />,
+      );
+
+      expect(container.querySelector("svg")).toBeNull();
+      expect(container.querySelector("path")).toBeNull();
+      expect(screen.getAllByRole("img")).toHaveLength(1);
+      unmount();
+    }
+  });
+});
+
 /**
  * The two conclusion layout defects, read off the stylesheet as TEXT — see
  * the note in `./css-source` for why a layout rule cannot be asserted any
@@ -678,12 +855,75 @@ describe("the conclusion's layout (tripwires)", () => {
     // the cascade and the chaining CTA's label goes 1:1 against itself under
     // the pointer. Anchoring the hover on `.page` (0,3,0) wins it back.
     // `impeccable detect` never exercises hover, so this is the only gate.
-    for (const cta of ["cta", "emptyCta"]) {
-      expect(decl(bodyOf(CSS, `.page .${cta}:hover`), "color")).toBe(
-        "var(--paper-desk)",
-      );
+    //
+    // The two labels resolve differently and that is the point: `.cta` sits on
+    // the `--ink` fill and keeps desk ink, while `.emptyCta` sits on the
+    // accent and reads `--ink-on-accent` so terracotta gets card paper
+    // (step-6 finding ISS-A2 — `ink-on-accent.test.ts` is that mechanism's
+    // own gate). Both are non-accent under the pointer, which is all this
+    // finding was ever about.
+    const HOVER: Readonly<Record<string, string>> = {
+      cta: "var(--paper-desk)",
+      emptyCta: "var(--ink-on-accent, var(--paper-desk))",
+    };
+    for (const [cta, color] of Object.entries(HOVER)) {
+      expect(decl(bodyOf(CSS, `.page .${cta}:hover`), "color")).toBe(color);
       // And the losing form is gone rather than merely outranked.
       expect(CSS).not.toMatch(new RegExp(`^\\s*\\.${cta}:hover`, "m"));
+    }
+  });
+
+  it("insets the concluded card's CTA on BOTH axes (T-WEB-S65a)", () => {
+    // Step-6 round-3 finding ISS-A3, the same rule and the same blind spot as
+    // the chips below: `.cta` paints a filled background (`--ink`, or the
+    // destination game's accent through `.ctaNext`), and at `padding: 14px 0`
+    // `impeccable detect` fired `cramped-padding` on the concluded conclusion
+    // at 1440x900 and 390x844 — the card AC 2 gates and no URL-mode scan can
+    // reach. `--space-4` is 16px (packages/ui/tokens.css); the assertion is on
+    // the DECLARATION being non-zero rather than on the token, so a future
+    // retune cannot silently return to zero.
+    const padding = decl(bodyOf(CSS, ".cta"), "padding");
+    expect(padding, ".cta declares no padding").toBeDefined();
+    const [block, inline] = (padding ?? "").split(/\s+/);
+    expect(Number.parseFloat(block ?? "0"), "block padding").toBeGreaterThan(0);
+    expect(
+      inline,
+      "inline padding — a zero here is the cramped-padding red",
+    ).toBeDefined();
+    expect(inline).not.toBe("0");
+    expect(inline).not.toBe("0px");
+  });
+
+  it("insets the day-card chips on BOTH axes, at both bands (T-WEB-S65b)", () => {
+    // finding `chip-is-cramped-on-the-card-the-scan-cannot-see`. `.chipDone`
+    // paints a background and `.chipMissing` a 1.5px dashed border, so a chip
+    // with `padding: 12px 0` puts its two block children flush against a
+    // VISIBLE boundary and `impeccable detect` fires `cramped-padding` five
+    // times per viewport.
+    //
+    // This tripwire is the ONLY gate on it. The rule needs a CONCLUDED record
+    // to render at all, and URL-mode `impeccable detect` launches a clean
+    // browser profile (ADR-0031 (e)) — so every CI scan renders the empty
+    // branch and this card is never in a scanned frame. #25's AC 2 is the
+    // first acceptance criterion that depends on it being populated.
+    for (const [scope, body] of [
+      ["top level", bodyOf(CSS, ".chip")],
+      [
+        "the mobile band",
+        bodyOf(bodyOf(CSS, "@media (max-width: 768px)"), ".chip"),
+      ],
+    ] as const) {
+      const padding = decl(body, "padding");
+      expect(padding, `${scope}: .chip declares no padding`).toBeDefined();
+      const [block, inline] = (padding ?? "").split(/\s+/);
+      expect(
+        Number.parseFloat(block ?? "0"),
+        `${scope}: block padding`,
+      ).toBeGreaterThanOrEqual(8);
+      expect(
+        Number.parseFloat(inline ?? "0"),
+        `${scope}: inline padding — a zero here is the cramped-padding red`,
+      ).toBeGreaterThanOrEqual(6);
     }
   });
 });
