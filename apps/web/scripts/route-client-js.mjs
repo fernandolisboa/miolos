@@ -18,9 +18,20 @@
  * WHY A DELTA AND NOT AN ABSOLUTE. The absolute figure is dominated by React,
  * Next's runtime and the shared app shell, none of which a game ticket
  * controls. What a game ticket controls is what its own route adds over `/`,
- * and that is what the ≤ 40 KB acceptance in §20.2 bounds. The two shipped
- * play routes are the regression controls: if binairo's and sudoku's deltas
- * move in a nonogram PR, something shared moved.
+ * and that is what the ≤ 40 KB acceptance in §20.2 bounds.
+ *
+ * WHAT THE OTHER TWO PLAY ROUTES ARE, EXACTLY. Binairo's and sudoku's deltas
+ * are PRINTED for comparison against the figures in the PR that last touched
+ * them — they are not asserted, and calling them "regression controls" was
+ * false: this script stores no baseline, so it structurally cannot compare a
+ * delta to its previous value. The only failure surface below is the 40 KB
+ * budget, which all three routes are half of. Measured across #25 the two
+ * shipped deltas moved 28.6 → 30.9 KB and 26.4 → 28.2 KB and the run printed
+ * `ok` for both, which is correct behaviour and NOT a control firing. A real
+ * control needs a committed per-route baseline; that was declined here because
+ * plan 020 §20.2 scopes this instrument to one route in one PR rather than to
+ * a standing rule #27 and #28 inherit, and a baseline file only earns its
+ * maintenance once it is a standing rule.
  *
  * WHY THE GREPS ARE HALF OF IT. A size check alone cannot see the failure
  * this exists to catch. `@miolos/games/nonogram`'s barrel re-exports
@@ -32,9 +43,18 @@
  * The POSITIVE greps exist so a scan that quietly stopped looking at the
  * right files cannot pass by finding nothing.
  *
+ * IT IS RUN BY HAND, and that is the whole of it. Nothing in CI, in
+ * `turbo.json` or in a git hook invokes this file: a green CI is NOT evidence
+ * that no motif name shipped. Plan 020 §20.2 scopes it deliberately — "a
+ * per-PR tripwire for this route, not a standing rule #27 or #28 inherit" —
+ * and its `FORBIDDEN`/`EXPECTED` arrays hard-code pt-BR product copy, which as
+ * an unconditional CI step would red a build for a copy edit. Run it at step 8
+ * and paste the output in the PR; a reviewer reading ADR-0027 or ADR-0033
+ * should read them the same way.
+ *
  * Usage, from `apps/web`, after a build:
  *
- *     pnpm build && node scripts/route-client-js.mjs
+ *     pnpm build && pnpm bundle-check
  *
  * Exits non-zero on: a route delta over budget, any forbidden marker present,
  * or any expected marker missing.
@@ -60,6 +80,13 @@ const BUDGETED = ["/binairo", "/nonogram", "/sudoku"];
  * which `packages/core/src/contracts/daily-content.ts` plus that package's
  * `"sideEffects": false` keep out of the browser. A hit on the second group
  * means the split was undone or the flag was dropped.
+ *
+ * THE FIVE MOTIF MARKERS ARE PINNED ON THE OTHER SIDE, by
+ * `packages/games/test/nonogram/bundle-markers.test.ts`. They are a copy of
+ * library content and a grep for a name nobody uses any more passes
+ * trivially — so that test asserts all five still resolve in `MOTIFS`, one per
+ * size class plus the one id. When it reds, replace the marker in BOTH files.
+ * The same two-way citation `clue-bounds.test.ts` carries for `WORST_ROW`.
  */
 const FORBIDDEN = [
   "Escada",
@@ -74,11 +101,23 @@ const FORBIDDEN = [
   "clueCount",
 ];
 
-/** Strings that MUST appear, so a scan looking at nothing cannot pass. */
+/**
+ * Strings that MUST appear, so a scan looking at nothing cannot pass.
+ *
+ * The first three are `apps/web/src/i18n/messages.ts` copy, and on their own
+ * they prove only that the scan reaches `apps/web`'s own chunks. Every motif
+ * negative above lives in `packages/games/src/nonogram/motifs-*.ts`, so the
+ * LAST entry is the control that matters: it is `solveNonogram`'s typed
+ * input-contract error (`packages/games/src/nonogram/solve.ts`), a
+ * `packages/games` string that genuinely ships, and it is what keeps the five
+ * motif negatives from going silently vacuous if workspace-package code were
+ * ever chunked somewhere the `readdirSync`/`.js` walk below does not look.
+ */
 const EXPECTED = [
   "Preenchemos uma célula da figura para você.",
   "Revele a figura escondida pelos números.",
   "Nível",
+  "malformed nonogram clues: size must be an integer in 1..",
 ];
 
 function fail(message) {
