@@ -111,6 +111,29 @@ const BUDGETED = ["/binairo", "/nonogram", "/sudoku"];
  * string on both the short and the ragged solution, naming this file as its
  * consumer. Change the message and that test reds before this grep can go
  * vacuous.
+ *
+ * THE THIRD GROUP IS #27'S, and it is a different kind of negative from the
+ * other two (ADR-0045 decision 5). `então`, `mamãe` and `época` are Termo
+ * ANSWER canonicals. Unlike a motif name, the module they live in is one
+ * `apps/web` genuinely imports: `/termo` ships `isValidGuess` on purpose,
+ * because "não está na lista" has to be instant and offline, and the
+ * validation dictionary and the 400-word answer pool are the SAME generated
+ * module. What keeps the pool out is two `/*#__PURE__*\/` annotations in
+ * `packages/games/src/termo/word-list.ts`, which typecheck, lint and the whole
+ * test suite are blind to and which ADR-0045's measurement E4 proves are
+ * fragile to their own placement. This grep is the only instrument that can
+ * see them work.
+ *
+ * The discriminator is the ACCENT: `content/termo/validation.txt` is US-ASCII,
+ * so an accented canonical can only have come from `ANSWER_CANONICALS`. The
+ * reason the pool must go is cost and strip-table integrity and it is
+ * explicitly NOT confidentiality — ADR-0027:125-131 forecloses that register,
+ * and nothing in #27 rests on the client not holding the pool.
+ *
+ * PINNED ON THE OTHER SIDE by `packages/games/test/termo/bundle-markers.test.ts`,
+ * which proves all three still spell answers, that none is a validation word,
+ * and that `zurro` below is one. When it reds, replace the marker in BOTH
+ * files.
  */
 const FORBIDDEN = [
   "Escada",
@@ -123,6 +146,9 @@ const FORBIDDEN = [
   "givensCount",
   "requiredTier",
   "clueCount",
+  "então",
+  "mamãe",
+  "época",
 ];
 
 /**
@@ -136,12 +162,21 @@ const FORBIDDEN = [
  * `packages/games` string that genuinely ships, and it is what keeps the five
  * motif negatives from going silently vacuous if workspace-package code were
  * ever chunked somewhere the `readdirSync`/`.js` walk below does not look.
+ *
+ * `zurro` IS THE CONTROL FOR THE TERMO NEGATIVES, and it is a tighter one
+ * than any of the four above could be. It is a validation word — US-ASCII,
+ * from the list `isValidGuess` MUST ship — so it lives in the very same
+ * generated module as `então`, `mamãe` and `época` and reaches the same
+ * chunk. Without it the three Termo negatives would pass on the day someone
+ * stopped shipping the word list altogether, or on the day this walk stopped
+ * reaching that chunk, while asserting the absence of nothing.
  */
 const EXPECTED = [
   "Preenchemos uma célula da figura para você.",
   "Revele a figura escondida pelos números.",
   "Nível",
   "malformed nonogram clues: size must be an integer in 1..",
+  "zurro",
 ];
 
 function fail(message) {
