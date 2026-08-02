@@ -159,13 +159,22 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
  * (`.impeccable/config.json:19-39`, #51). A green detect run is not evidence
  * for a single figure in this file. This suite is the whole automated gate.
  *
- * The five `color: var(--accent)` declarations in the PER-GAME board modules
- * (`sudoku-board.module.css:155,164,165,249`,
- * `nonogram-board.module.css:426`) are deliberately not scanned: each renders
- * exactly one accent and each already clears AA for it — sudoku's
- * `.cellEntered` 7.5113:1, its `.keypadDigit` 7.8385:1, nonogram's `.control`
- * 4.5063:1 — so converting them would be a visible change to shipped screens
- * with no defect behind it (plan 022 §16.2).
+ * The scan reads `var(--accent…)` in EVERY form, the per-game literals
+ * `var(--accent-termo)` / `var(--accent-binairo)` and the app's
+ * `var(--accent-app)` included. The `var(--accent)`-only regex it replaces
+ * was a hole the Termo module #27 adds would have walked straight through,
+ * and `app/page.module.css` — on the SHARED list below — was already through
+ * it with two `color: var(--accent-app)` declarations (step-7 finding A-F3).
+ *
+ * It is scoped to the three SHARED sheets, and that scope is the whole of
+ * ADR-0041 decision 1's exception: a shared sheet renders all four accents
+ * and therefore has to survive mustard, while a single-accent per-game
+ * board or control module renders exactly one and its ratio can simply be
+ * measured. **ADR-0041 consequence (h) enumerates all thirteen surviving
+ * accent-coloured declarations with their measured ratios** — the list lives
+ * there rather than being copied here, where the copy would go stale (the
+ * one that used to sit in this comment said "five" and named four, omitting
+ * Binairo's own four entirely — step-7 finding A-F7).
  */
 describe("accents colour shapes, never words (T-WEB-S73)", () => {
   /** The three sheets every game renders, and the only ones ADR-0041 §3 converts. */
@@ -175,19 +184,43 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     "app/page.module.css",
   ] as const;
 
-  it("declares no accent-coloured text anywhere in the shared sheets", () => {
+  /**
+   * The two declarations the scan below is allowed to see, named one by one
+   * rather than left to a hole in the regex.
+   *
+   * Both are the app accent `--accent-app` #9E3B2F (L 0.10602266) on
+   * `--paper-desk` #F7F2E9 (L 0.89161610) — `.streakStamp` paints desk paper —
+   * i.e. (0.89161610 + 0.05) / (0.10602266 + 0.05) = **6.0351:1**, clear of
+   * PRODUCT.md's 4.5 floor. `--accent-app` is one fixed hex on every screen,
+   * never per game, so it cannot become mustard the way `var(--accent)` can;
+   * that is exactly the case ADR-0041 decision 1 carves out. They are faithful
+   * to `f1-hoje-desktop.dc.html:23-24`, and the streak stamp is the app's one
+   * piece of first-party identity on the hub.
+   */
+  const ALLOWED_ACCENT_TEXT = new Set([
+    "app/page.module.css .streakNumeral",
+    "app/page.module.css .streakLabel",
+  ]);
+
+  it("declares no accent-coloured text in the shared sheets, beyond the two allowed", () => {
     // A scan, not a list, so the eleven conversions cannot be undone one at a
     // time and a twelfth site cannot be added. Anchored on a line start or a
     // `;` so `border-color:` and `text-decoration-color:` — both SHAPES, both
     // sanctioned by decision 1 — are not swept up by a substring match.
+    //
+    // `var\(--accent[a-z-]*\)` and not `var\(--accent\)`: the literal closing
+    // paren matched the shared token alone and was blind to
+    // `var(--accent-app)`, `var(--accent-termo)` and `var(--accent-binairo)`
+    // (step-7 finding A-F3).
     const offenders: string[] = [];
     for (const sheet of SHARED) {
       const css = stylesheet(sheet);
       for (const block of css.split(/^\}$/m)) {
-        if (/(?:^|;)\s*color:\s*var\(--accent\)/m.test(block)) {
-          offenders.push(
-            `${sheet} ${(/^\s*(\S.*?)\s*\{/m.exec(block) ?? [])[1] ?? "?"}`,
-          );
+        if (/(?:^|;)\s*color:\s*var\(--accent[a-z-]*\)/m.test(block)) {
+          const site = `${sheet} ${(/^\s*(\S.*?)\s*\{/m.exec(block) ?? [])[1] ?? "?"}`;
+          if (!ALLOWED_ACCENT_TEXT.has(site)) {
+            offenders.push(site);
+          }
         }
       }
     }
@@ -195,6 +228,22 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
       offenders,
       "ADR-0041: an accent may colour a shape, never a word",
     ).toEqual([]);
+  });
+
+  it("keeps the allow-list non-vacuous", () => {
+    // Two dead strings would quietly cover a future offender that happened to
+    // reuse the selector. Every entry above has to name a declaration that
+    // exists and carries the accent the exception was measured for.
+    for (const selector of [".streakNumeral", ".streakLabel"]) {
+      expect(
+        decl(bodyOf(stylesheet("app/page.module.css"), selector), "color"),
+        selector,
+      ).toBe("var(--accent-app)");
+      expect(ALLOWED_ACCENT_TEXT.has(`app/page.module.css ${selector}`)).toBe(
+        true,
+      );
+    }
+    expect(ALLOWED_ACCENT_TEXT.size).toBe(2);
   });
 
   it("paints the eleven converted sites in a neutral ink", () => {
@@ -262,8 +311,9 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // "it complies": hover is a pointer-only affordance duplicating what the
     // link already carries at 15.0124:1, and a solid band appearing where
     // there was none is a change of GEOMETRY, so the state survives
-    // greyscale. `:focus-visible`, which 2.4.7 and 1.4.11 do govern, is
-    // `--ink` everywhere and rests on none of this.
+    // greyscale. `:focus-visible`, which 2.4.7 and 1.4.11 DO govern, rests on
+    // none of this: the only one this shared layer declares is `--ink`, pinned
+    // by the assertion below.
     for (const sheet of [
       "src/play/screen.module.css",
       "src/play/conclusion-view.module.css",
@@ -273,6 +323,35 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
       expect(decl(body, "text-decoration-color"), sheet).toBe("var(--accent)");
       expect(decl(body, "text-decoration-thickness"), sheet).toBe("2px");
     }
+  });
+
+  it("paints the shared layer's one focus ring in ink, never the accent", () => {
+    // The claim the hover exception above rests on, asserted instead of
+    // stated. `.hint` is the ONLY focus indicator the shared play layer
+    // declares, and unlike hover it is not a pointer-only affordance — it is
+    // the whole of what tells a keyboard user where they are, so WCAG 1.4.11's
+    // 3:1 non-text floor and 2.4.7 both bind.
+    //
+    // `var(--accent)` here is per game and BOTH neighbours are `--paper-desk`
+    // (the 2px offset gap inside the ring, the page background outside it), so
+    // mustard #C08A1E (L 0.29477163) on desk #F7F2E9 (L 0.89161610) is
+    // (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1** — below the
+    // floor. It passed only by accident of WHICH three games shipped
+    // (nonogram 4.3182:1, binairo 5.3066:1, sudoku 7.5113:1) and would have
+    // gone red the instant #27 added `termo` to `playRoutes` — the exact
+    // trigger ADR-0041 exists for (step-7 finding A-F1).
+    //
+    // `--ink` #211D19 (L 0.01272250) is (0.89161610 + 0.05) /
+    // (0.01272250 + 0.05) = **15.0124:1** for all four.
+    // `nonogram-board.module.css:444-446` already ships this exact rule for
+    // its own `.control`, so it is a precedent rather than an invention.
+    const body = bodyOf(
+      stylesheet("src/play/screen.module.css"),
+      ".hint:focus-visible",
+    );
+
+    expect(decl(body, "outline")).toBe("2px solid var(--ink)");
+    expect(decl(body, "outline-offset")).toBe("2px");
   });
 
   it("keeps the underline off the filled buttons it would otherwise reach", () => {

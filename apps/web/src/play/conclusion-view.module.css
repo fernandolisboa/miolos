@@ -33,7 +33,11 @@
    pointer-only affordance duplicating what the link already carries at
    15.0124:1, and the underline's PRESENCE is a change of geometry that
    survives greyscale. See the twin block in `screen.module.css` for the full
-   argument. `:focus-visible` is `--ink` and rests on none of this. */
+   argument. `:focus-visible`, which 2.4.7 and 1.4.11 DO govern, rests on none
+   of this: this sheet declares no focus ring at all, and the shared layer's
+   only one — `screen.module.css`'s `.hint:focus-visible` — is `--ink` at
+   15.0124:1. It was `var(--accent)` at 2.7311:1 for mustard when this
+   paragraph first claimed otherwise (step-7 finding A-F1). */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
