@@ -122,13 +122,15 @@ export function countFilledCells(
  * True when the PICTURE is painted — the completion predicate (ADR-0032).
  *
  * Iterates the SOLUTION, which decides how a MISMATCHED `entries` array
- * reads, and the two directions are not symmetric. Too SHORT: every index
- * past the end is `undefined`, so the predicate reduces to `mark === 0` there
- * and any filled cell in the tail fails it — no shipped motif is empty past
- * cell 24, so in practice a short array reads as unfinished. Too LONG: the
- * surplus tail is never looked at, so an over-long array whose first size²
- * cells paint the picture reads as COMPLETE. Neither is a guard: the
- * structural one is `restore`'s size/length check
+ * reads. Too LONG: the surplus tail is never looked at, so an over-long array
+ * whose first size² cells paint the picture reads as COMPLETE. Too SHORT:
+ * every index past the end is `undefined`, so the predicate reduces to
+ * `mark === 0` there — which is a FALSE WIN in exactly the same way, and not
+ * "fail-closed in practice" as this paragraph used to claim. Measured over the
+ * whole shipped library, `key-antique` and `flashlight` (both orientations,
+ * 10×10) carry no filled cell past index 63, so a 64-entry array whose prefix
+ * paints the picture satisfies this predicate on a 10×10 board. Neither
+ * direction is a guard: the structural one is `restore`'s size/length check
  * (`state.ts`, `restore`), and it must stay.
  *
  * Crosses and undecided cells are both "not painted", so a player who crosses

@@ -41,10 +41,17 @@ The encoding works if and only if a cross **is** the solution's empty
 value.
 
 **What the progress meter measures.** Handoff 019:164 proposed
-`{decided} de {size²}`. Measured over 280 real dailies, a fill-only solver
-— the majority behaviour, since crossing is not required to finish —
-stands at **47 of 225 ≈ 21 %** at the instant they win. A completion meter
-that reads 21 % at victory is broken, and `messages.play.progressLabel` is
+`{decided} de {size²}`. Measured over the same 280 real dailies consequence
+(f) pins — seeds `(s * 2654435761) >>> 0` for `s ∈ 1..40` crossed with all
+seven weekdays — a fill-only solver, the majority behaviour since crossing is
+not required to finish, reads **48 of 225 ≈ 21 %** at the instant they win on
+the worst 15×15 the library can produce, **85.5 of 225 ≈ 38 %** on average at
+that size, and **≈ 48 %** averaged over all 280. (An earlier revision of this
+paragraph wrote "47 of 225", which is a board that exists nowhere: the
+library's size-15 minimum is 48 filled cells and no motif at any size carries
+exactly 47. It also presented the worst case as the typical one. Both are
+corrected here, from a re-run of the pinned population.) A completion meter
+that can read 21 % at victory is broken, and `messages.play.progressLabel` is
 one shared `"Progresso"` slot on one shared stats card, so the slot cannot
 mean "how much of the picture is done" on three screens and "how much work
 was performed" on the fourth.
@@ -121,8 +128,11 @@ was performed" on the fourth.
   two honest solvers of the same puzzle would post different bytes, and
   every future consumer of a completion row would inherit a tri-state
   board it has no use for.
-- **`{decided} de {size²}` for the meter** (handoff 019:164). Measured at
-  **21 %** for a fill-only solver at the instant they win.
+- **`{decided} de {size²}` for the meter** (handoff 019:164). Measured over
+  the population in consequence (f), a fill-only solver reads **21 % at
+  worst and 38 % on average at size 15** — ≈ 48 % over all 280 dailies — at
+  the instant they win. It is the floor that condemns it: a meter that can
+  print 21 % on a finished board is broken, whatever its mean.
 - **Counting only correct paints.** The obvious "fix" for a readout that
   can print "50 de 47", and a per-cell solution oracle: it tells the
   player which of their paints are wrong, for free, forever.

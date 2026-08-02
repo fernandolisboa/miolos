@@ -62,10 +62,19 @@ export interface NonogramPlay {
    * False when the clues did not solve, once the free hint is spent, or once
    * the board is closed — the three terms the expression actually carries.
    *
-   * There is deliberately NO "a hint still exists" term: `nextNonogramHint`
-   * returns null only on a board where every cell already equals the
-   * solution, and that is exactly `isPictureComplete`, which closes the board
-   * as `solved`. So the missing condition is implied by the closed one.
+   * There is deliberately NO "a hint still exists" term, and the argument
+   * runs from the CLOSED term rather than through an equivalence: while
+   * `status === "playing"` the picture is incomplete, so some index disagrees
+   * with the solution — a written cell that is wrong (pass 1 returns a
+   * `correction`) or an unpainted picture cell (pass 2 returns a `fill`).
+   * Either way `nextNonogramHint` is non-null, so the missing condition is
+   * implied by the closed one.
+   *
+   * The converse does NOT hold: `nextNonogramHint` returns null strictly less
+   * often than `isPictureComplete` is true. A finished picture whose empty
+   * cells are left undecided satisfies `isPictureComplete` while the hint
+   * search still hands back a cross through its `?? first` fallback — so that
+   * fallback is live in the pure function, not dead code.
    */
   readonly hintReady: boolean;
   /** Which case the last hint fired, for the one-line explanation (P18). */

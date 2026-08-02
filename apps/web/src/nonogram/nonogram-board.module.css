@@ -30,9 +30,16 @@
      4. Clue numerals in var(--font-ui), not Fraunces — Fraunces has NO
         tabular figures at all (ADR-0036, measured in Chrome 151).
      5. Board touch targets below 44px at sizes 10 and 15, and below WCAG
-        2.5.8's 24px floor at size 10 below ~369px (21.28px at 320, 28.28px
-        at 390) and at size 15 at every mobile width (18.86px at 390, 14.19px
-        at 320) — §12.8's arithmetic and ADR-0035's
+        2.5.8's 24px floor at size 10 below ~369px (21.30px at 320, 28.30px
+        at 390) and at size 15 at every mobile width (18.86px at 390, 14.20px
+        at 320) — the figures are ADR-0035 decision 7's, quoted rather than
+        recomputed, because consequence (a) makes this comment and that
+        decision ONE record and two roundings of the same measurement is how
+        a reader loses which side to trust. (They read 21.28 / 28.28 / 14.19
+        here until step-6 round 3; (258 − 45.046875)/10 = 21.295 and
+        (258 − 45.046875)/15 = 14.197, so the ADR's rounding was the correct
+        one — and deviation 1 above already said 14.20.) §12.8's arithmetic
+        and ADR-0035's
         essential-presentation exception: the grid IS the content. The 44px
         rule is honoured where it governs, on the chrome controls below.
      6. No press affordance on a board cell — DESIGN.md's press is "slides 1px

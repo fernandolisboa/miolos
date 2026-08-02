@@ -35,8 +35,13 @@ export type CronPublishGameResult = z.infer<typeof cronPublishGameResultSchema>;
  * its top-up. An array of results, or a `gameSchema`-keyed record, would
  * accept anything and silently lose that (plan 018 S15).
  *
- * Keyed binairo → nonogram → sudoku, which is simultaneously alphabetical and
- * the cron's cost-ascending run order (plan 020 P7).
+ * Keyed binairo → nonogram → sudoku: the cron's COST-ASCENDING run order
+ * (plan 020 P7, and `apps/api/app/cron/publish/route.ts` states the rule).
+ * It happens to read alphabetically today, and that coincidence ENDS at
+ * termo: a curated-word-list pick (ADR-0015) is not a generate-and-validate
+ * loop at all, so cost-ascending puts termo first while the alphabet puts it
+ * last. Cost-ascending is the rule that wins; #27 must not read the current
+ * order as alphabetical.
  */
 export const cronPublishResponseSchema = z.strictObject({
   games: z.strictObject({

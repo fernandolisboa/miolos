@@ -25,8 +25,20 @@
  * them — they are not asserted, and calling them "regression controls" was
  * false: this script stores no baseline, so it structurally cannot compare a
  * delta to its previous value. The only failure surface below is the 40 KB
- * budget, which all three routes are half of. Measured across #25 the two
- * shipped deltas moved 28.6 → 30.9 KB and 26.4 → 28.2 KB and the run printed
+ * budget, and the headroom is NOT the "half of it" an earlier version of this
+ * comment claimed: measured on this branch the three play routes come in at
+ * 28.3 / 30.9 / 34.3 KB — 71 %, 77 % and 86 % of budget — so the noisiest
+ * clean route has 5.7 KB of slack, not 20. It still discriminates against what
+ * it exists to catch (a motif-table leak is ~35 KB minified and lands around
+ * 69 KB), but nobody may budget against room that is not there. NOTE ALSO that
+ * the 40 KB threshold was calibrated in plan 020 §20.2 under a DIFFERENT
+ * measurement — clientModules ∪ rootMainFiles ∪ polyfillFiles, entryJSFiles
+ * excluded, baselines 26.5/28.6 KB — while this script enforces it through
+ * Next's own `firstLoadChunkPaths`, so §20.2's "~11 KB of headroom above the
+ * noisiest clean route" does not carry over to these figures.
+ * Measured across #25 the two
+ * shipped deltas moved 28.6 → 30.9 KB and 26.4 → 28.3 KB, unchanged by step
+ * 7's per-cell memo (which cost /nonogram 33.9 → 34.3 KB), and the run printed
  * `ok` for both, which is correct behaviour and NOT a control firing. A real
  * control needs a committed per-route baseline; that was declined here because
  * plan 020 §20.2 scopes this instrument to one route in one PR rather than to

@@ -87,7 +87,9 @@ const nonogramRevealSchema = z.strictObject({
  * `game: "nonogram"` field (generate.ts:48). Omitting it from this
  * strictObject fails every pre-insert parse and drains the buffer (plan 020
  * N2). Strict for the same fail-closed reason `binairoDailyContentSchema`
- * is, with the same operational corollaries (:17-24).
+ * is, with the same operational corollaries — see that schema's TSDoc above.
+ * (A line-number self-citation used to sit here and pointed at the import
+ * block; a reference that cannot drift when the imports grow replaces it.)
  */
 export const nonogramDailyContentSchema = z
   .strictObject({

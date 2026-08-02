@@ -156,8 +156,9 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     render(<HojePage />);
 
     // Driven by the map itself rather than by a count (this replaces plan
-    // 017's `links only the Binairo card`): #25/#27 add a key to `playRoutes`
-    // and this assertion follows them without an edit.
+    // 017's `links only the Binairo card`): #23 added sudoku's key to
+    // `playRoutes` and #25 nonogram's, #27 adds termo's, and this assertion
+    // follows them without an edit.
     expect(Object.keys(playRoutes).length).toBeGreaterThan(0);
     for (const game of GAMES) {
       const cta = within(cardFor(game))

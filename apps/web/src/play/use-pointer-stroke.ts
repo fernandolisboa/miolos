@@ -21,7 +21,8 @@
  * landed on top of it, and `endStroke`'s TSDoc below was rewritten (rather
  * than kept) to describe them.
  *
- * **TWO things here are new**, and both are decisions rather than relocations:
+ * **THREE things here are new**, and all three are decisions rather than
+ * relocations:
  *
  * 1. **`onStrokeEnd`** — ADR-0037 decision (2) owns it, and the Binairo
  *    retrofit is instructed to use it rather than derive a second mechanism.
@@ -32,15 +33,26 @@
  *    unmount cleanup) — step-6 finding NONO-C6, pinned by `T-WEB-S59` in
  *    `test/pointer-stroke.test.tsx`. It closes the latch a capture-failed
  *    stroke leaves when its pointer lifts outside the container.
+ * 3. **`onPointerUp` resolves the end cell UNCONDITIONALLY** — Binairo's
+ *    pre-move code called `cellIndexAt` inside the tap condition, after
+ *    `dragging.current` had short-circuited, so in its default cycle mode
+ *    (`painting: false`, `dragging` always false) the call never ran. Here it
+ *    runs on every `pointerup`, because the end cell is read ONCE and reused
+ *    as both the tap comparison and `onStrokeEnd`'s argument — two readings
+ *    could disagree about where the pointer lifted, and that is a correctness
+ *    property worth a `document.elementFromPoint` (see `onPointerUp` below).
  *
- * Net (2) is NOT inert for Binairo, and the "behaviour-free" wording in
- * `89d9f86`'s message is scoped to that commit rather than to this module:
+ * Nets (2) and (3) are NOT inert for Binairo, and the "behaviour-free" wording
+ * in `89d9f86`'s message is scoped to that commit rather than to this module:
  * Binairo's default cycle mode passes `painting: false`, never requests
  * capture, and so takes the `if (!captured) armWindowEnd()` branch on every
  * `pointerdown`, where the pre-move code returned early and armed nothing.
  * Nothing user-visible breaks — the container's own `onPointerUp` runs first
  * and detaches — and it fixes a latent cycle-mode latch, but it is a runtime
- * change to a shipped game and must not be read as one.
+ * change to a shipped game and must not be read as one. (3) is likewise not
+ * user-visible (Binairo passes no `onStrokeEnd`, so the value is discarded)
+ * but it is one style+layout flush per tap on a shipped game, on the
+ * interaction-latency path **#66** tracks.
  */
 import {
   useEffect,

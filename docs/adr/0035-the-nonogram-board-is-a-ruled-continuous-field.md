@@ -96,8 +96,12 @@ every interior junction.
    above.
 
 6. **The shared 1140 px fold holds.** The widest Nonogram card is
-   **559.05 px** (sizes 10 and 15) against **579 px** of board column at
-   the binding viewport, 19.95 px of margin. Honouring `DESIGN.md:50`'s
+   **559.05 px** (sizes 10 and 15) against **578 px** of board column at
+   the binding viewport — `1140 − 2×80 padding − 330 sidebar − 72 column-gap`,
+   off `play/screen.module.css`'s own grid — leaving 18.95 px of margin. (An
+   earlier revision said 579 px / 19.95 px, off by one; the conclusion is
+   unaffected and the arithmetic is the whole evidence here, so it is
+   corrected rather than left.) Honouring `DESIGN.md:50`'s
    52 px cell at 15×15 would need a 1421 px fold and would change three
    games and the conclusion, in a band **neither scanned viewport
    enters**. The 32 px cell at size 15 is the price of one fold and it is

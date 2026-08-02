@@ -102,9 +102,15 @@ export function useRecordSnapshot(game: Game, date: string): RecordSnapshot {
  * flips `concluded` to true — so a payload change never happens while all
  * five of these stand still.
  *
+ * That invariant is now CHECKED rather than argued: `T-WEB-S64` in
+ * `test/nonogram-play.test.ts` parses every byte a full play-through persists
+ * and asserts `grid === undefined` iff `concluded` is false, on both sides.
+ * A future game's `buildRecord` that breaks the lockstep goes red there.
+ *
  * A per-game payload field that can move INDEPENDENTLY of `concluded` breaks
  * that and must be added below, or its reader will be handed a stale cached
- * snapshot and render the wrong picture.
+ * snapshot and render the wrong picture. The next game owes its own copy of
+ * T-WEB-S64.
  */
 function sameToTheReader(
   previous: PlayRecord | undefined,
