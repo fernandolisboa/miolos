@@ -16,6 +16,7 @@ import {
   topUpBinairoBuffer,
   topUpNonogramBuffer,
   topUpSudokuBuffer,
+  topUpTermoBuffer,
   type TopUpResult,
 } from "../../../src/publishing/service";
 
@@ -52,13 +53,14 @@ type CronGame = keyof CronPublishResponse["games"];
  * One game's top-up, fault-isolated. This try/catch is a decision, not a
  * detail: no top-up catches anything but its own `*GenerationError`, so
  * `insertDailyPuzzle`, `bufferDepth`, `todaySaoPaulo` and the
- * derived-weekday `RangeError` all propagate. With three games composed
+ * derived-weekday `RangeError` all propagate. With four games composed
  * serially and no isolation, ONE game's transient Neon blip silently stops
  * every LATER game's buffer from being topped up — and against
  * `BUFFER_ALERT_THRESHOLD = 4` on a default depth of 7 each victim drains
  * one day per occurrence and pages only after three-plus consecutive days
  * (plan 018 §7.2). The drain arithmetic is per game and unchanged by the
- * third one.
+ * fourth one, which now runs FIRST and so has every other game downstream
+ * of it.
  *
  * The result on a throw is still the run that happened, not a zeroed one:
  * `depth` is re-read from the database, and `generated`/`failures` are the
@@ -85,11 +87,37 @@ async function runTopUp(
     // `error` stays the ORIGINAL failure — never the wrapper's own message,
     // which is the operator's only string here.
     const aborted = thrown instanceof TopUpAbortedError ? thrown : undefined;
+    // Drizzle's `DrizzleQueryError` embeds the BOUND PARAMETERS in its own
+    // message (drizzle-orm/errors.js, separator "\nparams: ", verified
+    // empirically and identical on the neon-http and pglite sessions). For
+    // termo those parameters are `{"canonical":…,"normalized":…}` for a date
+    // that may be up to 30 days in the FUTURE and is by definition
+    // unpublished — and this string goes into the /cron/publish RESPONSE
+    // BODY below and into the Vercel log line. Keep the query text, which is
+    // what an operator actually needs; drop the tail. Fixes the three grid
+    // games at the same time — a nonogram `reveal.solution` was leaking the
+    // same way (plan 022 §10.3.1, T-API-S41).
+    //
+    // LANDMINE N46: this sanitizes the MESSAGE only. `query`, `params` and
+    // `cause` are own ENUMERABLE properties of the thrown error, so a future
+    // `JSON.stringify(thrown)`, structured-log call or error-reporting SDK
+    // re-opens the channel with the answer word in it. Nothing does today.
+    // A "log the whole error for debuggability" change is the trap, and it
+    // will look like an improvement.
+    //
+    // Splitting on "\nparams:" and not on a comma: drizzle joins the params
+    // with `Array.prototype.toString()`, so commas inside a JSON payload are
+    // indistinguishable from parameter separators.
+    const cause = aborted ? aborted.cause : thrown;
+    const error =
+      cause instanceof Error
+        ? (cause.message.split("\nparams:")[0] ?? "")
+        : String(cause);
     return {
       generated: aborted?.partial.generated ?? 0,
       depth,
       failures: aborted?.partial.failures ?? [],
-      error: String(aborted ? aborted.cause : thrown),
+      error,
     };
   }
 }
@@ -102,14 +130,19 @@ async function runTopUp(
  * alerting reads GET /buffer-depth (AC 3; cron exit codes are not the
  * signal).
  *
- * The top-ups run SERIALLY in a fixed COST-ASCENDING order — binairo
- * (~7 ms) → nonogram (~34-80 ms) → sudoku (~150 ms) per cold week: Neon
- * round-trips dominate, so concurrency buys nothing and multiplies
- * connection pressure, and running the games cheapest-first means a CPU
- * overrun in an expensive one can never starve a cheaper one (plan 018
+ * The top-ups run SERIALLY in a fixed COST-ASCENDING order — termo
+ * (0.019 ms) → binairo (~7 ms) → nonogram (~34-80 ms) → sudoku (~150 ms) per
+ * cold week: Neon round-trips dominate, so concurrency buys nothing and
+ * multiplies connection pressure, and running the games cheapest-first means
+ * a CPU overrun in an expensive one can never starve a cheaper one (plan 018
  * §7.2, plan 020 P7). It is the principle that fixes the order, not the
  * shape of the list: appending each new game last would keep the diff
- * smaller and is exactly what this rule refuses.
+ * smaller and is exactly what this rule refuses — and #27 is where that
+ * stopped being hypothetical, because termo is both the last game added and
+ * the cheapest by two orders of magnitude, so its property goes FIRST.
+ *
+ * The `await` order below IS the execution order; the key order in the
+ * object literal is what the log loop and the response body inherit.
  */
 export async function GET(request: NextRequest): Promise<Response> {
   if (!isAuthorized(request.headers.get("authorization"))) {
@@ -118,6 +151,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const db = getDb();
   const config = await getRemoteConfig(db);
   const games = {
+    termo: await runTopUp(db, "termo", topUpTermoBuffer, config.bufferDepth),
     binairo: await runTopUp(
       db,
       "binairo",

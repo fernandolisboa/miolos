@@ -12,9 +12,10 @@ export const dynamic = "force-dynamic";
  * GET /daily/nonogram — today's daily through the wall (issue #25). The THIRD
  * literal route, and the answer to the question `daily/sudoku/route.ts` left
  * open: a `[game]` dynamic segment would still put an untrusted `params.game`
- * in front of the wall and would still let `/daily/termo` resolve, reach
- * `stripDailyContent` and throw `DailyProjectionUnsupportedError` uncaught
- * (plan 020 P8).
+ * in front of the wall (plan 020 P8). The second half of that argument — that
+ * `/daily/termo` would resolve, reach `stripDailyContent` and throw
+ * `DailyProjectionUnsupportedError` uncaught — died at #27, which landed the
+ * fourth literal route and the last projection.
  *
  * Nothing in `apps/web` consumes this path — the web app fetches `/session`
  * and `/completions` only — and it ships anyway, because it is the operator's

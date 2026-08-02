@@ -3,6 +3,7 @@ import {
   cronPublishResponseSchema,
   nonogramDailyContentSchema,
   sudokuDailyContentSchema,
+  termoDailyContentSchema,
 } from "@miolos/core";
 import { sql } from "@miolos/db";
 import {
@@ -16,6 +17,7 @@ import { isWeekday } from "@miolos/games";
 import { validateBinairo } from "@miolos/games/binairo";
 import { validateNonogram } from "@miolos/games/nonogram";
 import { sudokuCriteriaForWeekday, validateSudoku } from "@miolos/games/sudoku";
+import { TERMO_ANSWERS } from "@miolos/games/termo";
 import { NextRequest } from "next/server";
 import {
   afterAll,
@@ -40,13 +42,22 @@ let ctx: Awaited<ReturnType<typeof createTestDb>>;
 // Per-game insert sabotage for the fault-isolation test (plan 018 §7.2). A
 // Set rather than a mutable string keeps the mock free of `as`, and the
 // module is spread from the ACTUAL one so every other export stays real.
-const { insertFailures, insertFailAfter } = vi.hoisted(() => ({
-  insertFailures: new Set<string>(),
-  // The PARTIAL sabotage: this many inserts succeed for that game, every one
-  // after it rejects — the only way to reach a run that wrote durable rows
-  // and then threw (T-API-S15b).
-  insertFailAfter: new Map<string, number>(),
-}));
+const { insertFailures, insertFailAfter, insertBadDate, boundContent } =
+  vi.hoisted(() => ({
+    insertFailures: new Set<string>(),
+    // The PARTIAL sabotage: this many inserts succeed for that game, every one
+    // after it rejects — the only way to reach a run that wrote durable rows
+    // and then threw (T-API-S15b).
+    insertFailAfter: new Map<string, number>(),
+    // T-API-S41's sabotage, and the only one that must produce a REAL
+    // `DrizzleQueryError`: the insert is handed an unparseable date so
+    // Postgres rejects the statement with the row's `content` already bound
+    // into it. Hand-rolling the message would test the test.
+    insertBadDate: new Set<string>(),
+    // What that statement bound, so the assertion can name the exact string
+    // that must not appear in the response.
+    boundContent: new Map<string, string>(),
+  }));
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
@@ -59,9 +70,16 @@ vi.mock("@miolos/db/publishing", async (importOriginal) => {
     insertDailyPuzzle: (
       ...args: Parameters<typeof actual.insertDailyPuzzle>
     ) => {
-      const [, row] = args;
+      const [db, row] = args;
       if (insertFailures.has(row.game)) {
         return Promise.reject(new Error(`insert sabotaged for ${row.game}`));
+      }
+      if (insertBadDate.has(row.game)) {
+        boundContent.set(row.game, JSON.stringify(row.content));
+        // The real statement, the real driver, the real error class — only
+        // the date is poisoned, so `content` is bound exactly as it would be
+        // on a genuine constraint violation in production.
+        return actual.insertDailyPuzzle(db, { ...row, date: "not-a-date" });
       }
       const budget = insertFailAfter.get(row.game);
       if (budget !== undefined) {
@@ -129,6 +147,8 @@ beforeEach(async () => {
   await ctx.db.execute(sql`truncate table remote_config`);
   insertFailures.clear();
   insertFailAfter.clear();
+  insertBadDate.clear();
+  boundContent.clear();
   logLines.length = 0;
   vi.stubEnv("CRON_SECRET", SECRET);
 });
@@ -164,12 +184,13 @@ describe("GET /cron/publish auth (fail-closed, D15)", () => {
 });
 
 describe("GET /cron/publish top-up", () => {
-  it("T-API-S1: tops an empty database up to depth 7 for ALL THREE games, with validated, correctly-dated content", async () => {
+  it("T-API-S1: tops an empty database up to depth 7 for ALL FOUR games, with validated, correctly-dated content", async () => {
     const response = await authorizedRun();
     expect(response.status).toBe(200);
     const body = cronPublishResponseSchema.parse(await response.json());
     expect(body).toEqual({
       games: {
+        termo: { generated: 7, depth: 7, failures: [], error: null },
         binairo: { generated: 7, depth: 7, failures: [], error: null },
         nonogram: { generated: 7, depth: 7, failures: [], error: null },
         sudoku: { generated: 7, depth: 7, failures: [], error: null },
@@ -231,6 +252,27 @@ describe("GET /cron/publish top-up", () => {
       expect(verdict.approved).toBe(true);
       expect(row.seed).toBe(content.seed);
     }
+
+    const termoRows = await rowsFor("termo");
+    expect(termoRows.map((row) => row.date).sort()).toEqual(expectedDates);
+    const eligible = new Map(
+      TERMO_ANSWERS.map((answer) => [answer.normalized, answer.canonical]),
+    );
+    const drawn = new Set<string>();
+    for (const row of termoRows) {
+      const content = termoDailyContentSchema.parse(row.content);
+      // Membership in the curated list, and nothing weaker: a five-letter
+      // string that merely parses would satisfy the schema.
+      expect(eligible.get(content.normalized)).toBe(content.canonical);
+      drawn.add(content.normalized);
+      // Termo's `seed` column is PROVENANCE — the accepted uint32 draw — and
+      // deliberately NOT part of `content`, unlike the three engines above
+      // where `row.seed === content.seed`. It reproduces nothing (ADR-0040).
+      expect(Object.keys(content).sort()).toEqual(["canonical", "normalized"]);
+      expect(row.seed).toBeGreaterThanOrEqual(0);
+      expect(row.seed).toBeLessThan(2 ** 32);
+    }
+    expect(drawn.size).toBe(7);
   }, 30_000);
 
   it("T-API-S2: a second run generates nothing for any game (idempotent reconciliation)", async () => {
@@ -244,7 +286,9 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.generated).toBe(0);
     expect(body.games.sudoku.depth).toBe(7);
-    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(21);
+    expect(body.games.termo.generated).toBe(0);
+    expect(body.games.termo.depth).toBe(7);
+    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(28);
   }, 30_000);
 
   it("T-API-S3: tops up a partial buffer of every game, existing rows untouched (D14)", async () => {
@@ -269,9 +313,11 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.generated).toBe(2);
     expect(body.games.sudoku.depth).toBe(7);
+    expect(body.games.termo.generated).toBe(2);
+    expect(body.games.termo.depth).toBe(7);
 
     const after = await ctx.db.select().from(dailyPuzzles);
-    expect(after).toHaveLength(21);
+    expect(after).toHaveLength(28);
     for (const row of after) {
       const snapshot = before.get(`${row.game}:${row.date}`);
       if (snapshot !== undefined) {
@@ -300,6 +346,26 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.binairo.depth).toBe(3);
     expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.depth).toBe(7);
+    expect(body.games.termo.depth).toBe(7);
+  }, 30_000);
+
+  it("T-API-S34: 500 when TERMO alone sits below the effective threshold", async () => {
+    // The fourth game inherits the same per-game gate. Termo's drain is the
+    // one that can have a CONTENT cause — the word list running out — so a
+    // healthy three must never mask it (ADR-0040 consequence (f)).
+    await authorizedRun();
+    const today = await todaySaoPaulo(ctx.db);
+    await ctx.db.execute(
+      sql`update daily_puzzles set killed_at = now()
+            where game = 'termo' and date <= ${addDays(today, 3)}`,
+    );
+    const response = await authorizedRun();
+    expect(response.status).toBe(500);
+    const body = cronPublishResponseSchema.parse(await response.json());
+    expect(body.games.termo.depth).toBe(3);
+    expect(body.games.binairo.depth).toBe(7);
+    expect(body.games.nonogram.depth).toBe(7);
+    expect(body.games.sudoku.depth).toBe(7);
   }, 30_000);
 
   it("T-API-S4: 500 when SUDOKU alone sits below the effective threshold", async () => {
@@ -317,6 +383,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.binairo.depth).toBe(7);
     expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.depth).toBe(3);
+    expect(body.games.termo.depth).toBe(7);
   }, 30_000);
 
   it("T-API-S4: 500 when NONOGRAM alone sits below the effective threshold", async () => {
@@ -334,9 +401,10 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.binairo.depth).toBe(7);
     expect(body.games.nonogram.depth).toBe(3);
     expect(body.games.sudoku.depth).toBe(7);
+    expect(body.games.termo.depth).toBe(7);
   }, 30_000);
 
-  it("T-API-S4: a tuned-low depth is healthy for both games, not alarming (A3)", async () => {
+  it("T-API-S4: a tuned-low depth is healthy for every game, not alarming (A3)", async () => {
     await ctx.db.insert(remoteConfig).values({ key: "bufferDepth", value: 2 });
     const response = await authorizedRun();
     expect(response.status).toBe(200);
@@ -360,6 +428,12 @@ describe("GET /cron/publish top-up", () => {
       failures: [],
       error: null,
     });
+    expect(body.games.termo).toEqual({
+      generated: 2,
+      depth: 2,
+      failures: [],
+      error: null,
+    });
   }, 30_000);
 
   it("remote_config bufferDepth=3 generates exactly 3 rows per game (AC 4)", async () => {
@@ -368,6 +442,7 @@ describe("GET /cron/publish top-up", () => {
     expect(await rowsFor("binairo")).toHaveLength(3);
     expect(await rowsFor("nonogram")).toHaveLength(3);
     expect(await rowsFor("sudoku")).toHaveLength(3);
+    expect(await rowsFor("termo")).toHaveLength(3);
   }, 30_000);
 
   it("T-API-S15: one game throwing never drains the other's top-up", async () => {
@@ -399,9 +474,16 @@ describe("GET /cron/publish top-up", () => {
       failures: [],
       error: null,
     });
+    expect(body.games.termo).toEqual({
+      generated: 7,
+      depth: 7,
+      failures: [],
+      error: null,
+    });
     expect(await rowsFor("binairo")).toHaveLength(0);
     expect(await rowsFor("nonogram")).toHaveLength(7);
     expect(await rowsFor("sudoku")).toHaveLength(7);
+    expect(await rowsFor("termo")).toHaveLength(7);
   }, 30_000);
 
   it("T-API-S21: the NONOGRAM top-up throwing never drains the other two", async () => {
@@ -436,9 +518,95 @@ describe("GET /cron/publish top-up", () => {
       failures: [],
       error: null,
     });
+    expect(body.games.termo).toEqual({
+      generated: 7,
+      depth: 7,
+      failures: [],
+      error: null,
+    });
     expect(await rowsFor("nonogram")).toHaveLength(0);
     expect(await rowsFor("binairo")).toHaveLength(7);
     expect(await rowsFor("sudoku")).toHaveLength(7);
+    expect(await rowsFor("termo")).toHaveLength(7);
+  }, 30_000);
+
+  it("T-API-S34: the TERMO top-up throwing never drains the other three", async () => {
+    // Termo runs FIRST in the cost-ascending order, which is the position
+    // that matters most for isolation: without the per-game try/catch, a
+    // termo failure would stop all three of the others from being topped up
+    // at all — the exact inversion of the cheapest-first rule's purpose.
+    insertFailures.add("termo");
+
+    const response = await authorizedRun();
+
+    expect(response.status).toBe(500);
+    const body = cronPublishResponseSchema.parse(await response.json());
+    // The ORIGINAL failure, never `TopUpAbortedError`'s own message.
+    expect(body.games.termo.error).toContain("insert sabotaged for termo");
+    expect(body.games.termo).toMatchObject({
+      generated: 0,
+      depth: 0,
+      failures: [],
+    });
+    for (const game of ["binairo", "nonogram", "sudoku"] as const) {
+      expect(body.games[game]).toEqual({
+        generated: 7,
+        depth: 7,
+        failures: [],
+        error: null,
+      });
+      expect(await rowsFor(game)).toHaveLength(7);
+    }
+    expect(await rowsFor("termo")).toHaveLength(0);
+  }, 30_000);
+
+  it("T-API-S41: runTopUp never leaks a bound parameter into the response body", async () => {
+    // Drizzle's `DrizzleQueryError` embeds the BOUND PARAMETERS in its own
+    // message (drizzle-orm/errors.js, separator "\nparams: "), and
+    // `runTopUp` writes that string into the /cron/publish RESPONSE BODY and
+    // the Vercel log line. For termo the bound parameter is
+    // `{"canonical":…,"normalized":…}` for a date up to 30 days in the
+    // FUTURE and by definition unpublished — the one thing this ticket
+    // exists to withhold. The fix covers the three grid games at the same
+    // time, so this runs for termo AND for binairo.
+    //
+    // The error is produced by driving a genuine statement failure through
+    // the PGlite fixture, never by hand-rolling the message: a hand-rolled
+    // string would prove the assertion, not the redaction.
+    insertBadDate.add("termo");
+    insertBadDate.add("binairo");
+
+    const response = await authorizedRun();
+
+    expect(response.status).toBe(500);
+    const body = cronPublishResponseSchema.parse(await response.json());
+    const serialized = JSON.stringify(body);
+
+    for (const game of ["termo", "binairo"] as const) {
+      const error = body.games[game].error;
+      // Positive control, so the negatives below cannot pass vacuously: the
+      // operator still gets the query text, which is what they need.
+      expect(error).toContain("Failed query:");
+      expect(error).toContain("insert into");
+      // And the tail is gone — from the field AND from the whole body.
+      expect(error).not.toContain("params:");
+      const bound = boundContent.get(game);
+      expect(bound).toBeDefined();
+      expect(error).not.toContain(bound ?? "<never bound>");
+      expect(serialized).not.toContain(bound ?? "<never bound>");
+    }
+
+    // The answer word itself, named rather than inferred from the JSON blob.
+    const termoBound: unknown = JSON.parse(boundContent.get("termo") ?? "null");
+    const answer = termoDailyContentSchema.parse(termoBound);
+    expect(serialized).not.toContain(answer.canonical);
+    expect(serialized).not.toContain(answer.normalized);
+
+    // The log line the operator queries takes the SAME sanitized string.
+    for (const line of logLines) {
+      expect(line).not.toContain("params:");
+      expect(line).not.toContain(answer.normalized);
+    }
   }, 30_000);
 
   it("T-API-S15b: a top-up that wrote rows and then threw reports the rows it wrote", async () => {
@@ -461,10 +629,11 @@ describe("GET /cron/publish top-up", () => {
     // The ORIGINAL failure, not the wrapper that carried the counters.
     expect(body.games.binairo.error).toContain("insert sabotaged for binairo");
     expect(await rowsFor("binairo")).toHaveLength(3);
-    // The other game is untouched, and the log line the operator queries
-    // carries the same number the body does.
+    // The other games are untouched, and the log line the operator queries
+    // carries the same number the body does. Index 1, not 0: termo runs
+    // FIRST in the cost-ascending order (#27).
     expect(body.games.sudoku.generated).toBe(7);
-    const binairoLine: unknown = JSON.parse(logLines[0] ?? "null");
+    const binairoLine: unknown = JSON.parse(logLines[1] ?? "null");
     expect(binairoLine).toMatchObject({
       event: "cron-publish",
       game: "binairo",
@@ -480,33 +649,27 @@ describe("GET /cron/publish top-up", () => {
       const parsed: unknown = JSON.parse(line);
       logged.push(parsed);
     }
-    expect(logged).toHaveLength(3);
-    // Order is fixed and COST-ASCENDING — binairo (~7 ms) → nonogram
-    // (~34-80 ms) → sudoku (~150 ms) — so a CPU overrun in an expensive game
-    // can never starve a cheaper one (plan 020 P7). Appending the new game
-    // last would have left these indices untouched; that is a smaller diff,
-    // not a principle.
-    expect(logged[0]).toMatchObject({
-      event: "cron-publish",
-      game: "binairo",
-      generated: 7,
-      depth: 7,
-      failures: [],
-    });
-    expect(logged[1]).toMatchObject({
-      event: "cron-publish",
-      game: "nonogram",
-      generated: 7,
-      depth: 7,
-      failures: [],
-    });
-    expect(logged[2]).toMatchObject({
-      event: "cron-publish",
-      game: "sudoku",
-      generated: 7,
-      depth: 7,
-      failures: [],
-    });
+    expect(logged).toHaveLength(4);
+    // Order is fixed and COST-ASCENDING — termo (0.019 ms) → binairo (~7 ms)
+    // → nonogram (~34-80 ms) → sudoku (~150 ms) — so a CPU overrun in an
+    // expensive game can never starve a cheaper one (plan 020 P7, plan 022
+    // §10.3). #27 is the ticket that made the order stop reading
+    // alphabetically: appending termo last would have left these indices
+    // untouched, which is a smaller diff and not a principle.
+    expect(logged.map((entry) => (entry as { game: string }).game)).toEqual([
+      "termo",
+      "binairo",
+      "nonogram",
+      "sudoku",
+    ]);
+    for (const entry of logged) {
+      expect(entry).toMatchObject({
+        event: "cron-publish",
+        generated: 7,
+        depth: 7,
+        failures: [],
+      });
+    }
   }, 30_000);
 });
 
