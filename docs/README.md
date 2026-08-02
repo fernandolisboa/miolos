@@ -55,6 +55,7 @@ Current:
 | `plans/020-issue-25-plan-daily-nonogram-end-to-end.md` | Implementation plan for #25 (daily Nonogram end to end: the Nonogram buffer and its contracts, the ruled variable-size board and its three-state brush, the picture reveal in the conclusion, and completion, hint, timer and offline sync at parity) |
 | `handoffs/021-handoff-m2-termo-and-free-play.md` | Session handoff for M2's last two — #27 (daily Termo) and #28 (free play): what #25 changed in the shared play layer, where handoff 019 is now wrong, and Termo's two unresolved structural decisions (it cannot play offline, and ADR-0027's client-side hint argument does not transfer) |
 | `plans/022-issue-27-plan-daily-termo-end-to-end.md` | Implementation plan for #27 (daily Termo end to end: the answer draw and its no-repeat rule, the stateless guess route and the offline degradation, the tile board and the pt-BR keyboard, the conclusion's fourth state, and the accent rule that closes #68) |
+| `handoffs/023-issue-27-handoff-termo-mid-flight.md` | Session handoff taken mid-#27 with PR #77 open and steps 1–5 complete: what the ten commits landed, the three facts that cost that session real time (drizzle's insert column list, the `@miolos/core` ESM cycle vitest cannot see, zod's mutable tuple), the already-applied migration, and the known-deferred list step 6 must be shown |
 
 ## Language
 
