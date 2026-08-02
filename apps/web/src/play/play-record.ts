@@ -13,7 +13,12 @@
  * available in the mount effect, and no schema machinery is warranted.
  * ADR-0001's follow-up already places in-flight state here.
  */
-import { isoDateString, sudokuDigitSchema, type Game } from "@miolos/core";
+import {
+  isoDateString,
+  nonogramSizeSchema,
+  sudokuDigitSchema,
+  type Game,
+} from "@miolos/core";
 import { z } from "zod";
 
 const STORAGE_PREFIX = "miolos:play:";
@@ -97,11 +102,90 @@ export const sudokuPlayRecordSchema = z.strictObject({
 export type SudokuPlayRecord = z.infer<typeof sudokuPlayRecordSchema>;
 
 /**
- * EXTENSION POINT: #25/#27 add their members here; the discriminator is
- * `game`, exactly as it is on the wire contracts.
+ * The nonogram member (#25, plan 020 §14.1). Structurally binairo's —
+ * 0/1/null cells, one optional solved `grid` — with one field neither
+ * shipped game needs: `size`. A Nonogram board is 5, 8, 10 or 15 a side
+ * depending on the weekday (difficulty.ts:31-41), so no fixed `.length()` is
+ * available and a stored record would otherwise not say which board it
+ * belongs to.
+ *
+ * `size` is a DATUM, not `Math.sqrt(entries.length)`: `sync.ts` builds the
+ * POST body from the record ALONE with no board in scope, and the
+ * conclusion's picture wrapper lays the bitmap out from it.
+ *
+ * The `superRefine` is what bounds the arrays. `writePlayRecord` does not
+ * parse on write (:180-203), so the schema on READ is the only wall there is.
+ * `.max(225)` is a plain length CEILING, and it is deliberately NOT sold as
+ * an allocation bound: measured against the installed zod 4.4.3, array
+ * element parsing runs BEFORE array-level checks, so
+ * `z.array(union).max(225).safeParse(new Array(1_000_000).fill(0))` parses
+ * all 1 000 000 elements first (`{success:false, ms:35, elementChecksRun:
+ * 1000000}`) and then fails the length test. What `.max(225)` buys is a
+ * schema-level statement of the record's maximum board area that holds
+ * independently of `size`, so an absurd but internally size-consistent
+ * record is refused by a bound and not only by the cross-refine. The two
+ * shipped members have the identical property (`.length(64)`/`.length(81)`
+ * also iterate first), so nothing regresses here.
+ *
+ * `nonogramSizeSchema` comes from @miolos/core and is never re-declared: one
+ * definition, three consumers, exactly as `sudokuDigitSchema` is.
+ *
+ * A checked object is a legal `z.discriminatedUnion` option in Zod 4 and is
+ * NOT one in Zod 3 (there it is a `ZodEffects`). Verified against the
+ * installed zod 4.4.3; a downgrade breaks this file at CONSTRUCTION time,
+ * not at parse time.
+ */
+export const nonogramPlayRecordSchema = z
+  .strictObject({
+    v: z.literal(1),
+    game: z.literal("nonogram"),
+    date: isoDateString,
+    size: nonogramSizeSchema,
+    /** 1 = preenchida, 0 = marcada, null = vazia. size² of them. */
+    entries: z.array(z.union([z.literal(0), z.literal(1), z.null()])).max(225),
+    /**
+     * The SUBMITTED bitmap, written the moment `status` flips to `solved`.
+     * NOT "the player's board": crossed and undecided cells are both `0`
+     * here, because the completion predicate is "the picture is painted"
+     * (ADR-0032), so on a closed board this array IS the solution.
+     */
+    grid: z
+      .array(z.union([z.literal(0), z.literal(1)]))
+      .max(225)
+      .optional(),
+    elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+    hintsUsed: z.number().int().min(0).max(1),
+    concluded: z.boolean(),
+    pendingSync: z.boolean(),
+    syncOutcome: z.enum(["pending", "recorded", "rejected"]),
+  })
+  .superRefine((record, ctx) => {
+    const cells = record.size ** 2;
+    if (record.entries.length !== cells) {
+      ctx.addIssue({
+        code: "custom",
+        message: `entries must hold ${String(cells)} cells on a ${String(record.size)}×${String(record.size)} board`,
+        path: ["entries"],
+      });
+    }
+    if (record.grid !== undefined && record.grid.length !== cells) {
+      ctx.addIssue({
+        code: "custom",
+        message: `grid must hold ${String(cells)} cells on a ${String(record.size)}×${String(record.size)} board`,
+        path: ["grid"],
+      });
+    }
+  });
+
+export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
+
+/**
+ * EXTENSION POINT: #27 adds its member here; the discriminator is `game`,
+ * exactly as it is on the wire contracts.
  */
 export const playRecordSchema = z.discriminatedUnion("game", [
   binairoPlayRecordSchema,
+  nonogramPlayRecordSchema,
   sudokuPlayRecordSchema,
 ]);
 

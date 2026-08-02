@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   binairoCompletionRequestSchema,
   completionRequestSchema,
+  nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
 } from "@miolos/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +15,7 @@ import {
   readPlayRecord,
   writePlayRecord,
   type BinairoPlayRecord,
+  type NonogramPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
 
@@ -42,6 +44,35 @@ const SOLVED_DIGITS: NonNullable<SudokuPlayRecord["grid"]> = Array.from(
   { length: 9 },
   () => DIGITS,
 ).flat();
+
+/**
+ * The nonogram queue item: a 5×5 board's SUBMITTED bitmap, 25 cells of 0/1.
+ * Crossed and undecided cells are both `0` here, because the completion
+ * predicate is "the picture is painted" (ADR-0032) — so on a closed board
+ * this array IS the solution, and a cross never crosses the wire.
+ */
+const SUBMITTED_PICTURE: NonNullable<NonogramPlayRecord["grid"]> = Array.from(
+  { length: 25 },
+  (_unused, index) => (index % 6 === 0 ? 1 : 0),
+);
+
+function pendingNonogramRecord(): NonogramPlayRecord {
+  return {
+    v: 1,
+    game: "nonogram",
+    date: DATE,
+    size: 5,
+    entries: Array.from({ length: 25 }, (_unused, index) =>
+      index % 6 === 0 ? 1 : null,
+    ),
+    grid: SUBMITTED_PICTURE,
+    elapsedMs: 133_000,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: true,
+    syncOutcome: "pending",
+  };
+}
 
 function pendingSudokuRecord(): SudokuPlayRecord {
   return {
@@ -394,6 +425,7 @@ describe("flushPendingCompletions", () => {
     // other's (ADR-0029, plan 018 S1). One module, two records, two POSTs.
     writePlayRecord(pendingRecord());
     writePlayRecord(pendingSudokuRecord());
+    writePlayRecord(pendingNonogramRecord());
     const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
@@ -406,7 +438,7 @@ describe("flushPendingCompletions", () => {
       const raw: unknown = JSON.parse(requestInitSchema.parse(call[1]).body);
       return completionRequestSchema.parse(raw);
     });
-    expect(bodies).toHaveLength(2);
+    expect(bodies).toHaveLength(3);
     expect(
       binairoCompletionRequestSchema.parse(
         bodies.find((body) => body.game === "binairo"),
@@ -429,8 +461,23 @@ describe("flushPendingCompletions", () => {
       elapsedMs: 411_000,
       hintsUsed: 0,
     });
+    // The nonogram body carries NO `size` (P4): a `size` key would be a
+    // second place for the client to lie, and the stored row's solution is
+    // what decides the size anyway. `gridBody` builds all three.
+    expect(
+      nonogramCompletionRequestSchema.parse(
+        bodies.find((body) => body.game === "nonogram"),
+      ),
+    ).toEqual({
+      game: "nonogram",
+      date: DATE,
+      grid: SUBMITTED_PICTURE,
+      elapsedMs: 133_000,
+      hintsUsed: 0,
+    });
     expect(readPlayRecord("sudoku", DATE)?.pendingSync).toBe(false);
     expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(false);
+    expect(readPlayRecord("nonogram", DATE)?.pendingSync).toBe(false);
   });
 
   it("does nothing when there is nothing queued", async () => {

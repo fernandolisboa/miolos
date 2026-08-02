@@ -28,6 +28,7 @@ import {
   listPendingRecords,
   writePlayRecord,
   type BinairoPlayRecord,
+  type NonogramPlayRecord,
   type PlayRecord,
   type SudokuPlayRecord,
 } from "./play-record";
@@ -224,6 +225,7 @@ async function syncRecord(
 function buildBody(record: PlayRecord): string | undefined {
   switch (record.game) {
     case "binairo":
+    case "nonogram":
     case "sudoku":
       return gridBody(record);
     default: {
@@ -248,8 +250,15 @@ function buildBody(record: PlayRecord): string | undefined {
   }
 }
 
+/**
+ * Nonogram rides here rather than adding a branch (ADR-0029 consequence (f),
+ * plan 020 §14.2): its `grid` is `(0|1)[]` exactly like binairo's, and its
+ * completion request carries the same five keys — no `size` on the wire (P4).
+ * The only per-game work was the `case` label above, and forgetting it is a
+ * RED TYPECHECK on the `never` assignment, never a dropped completion.
+ */
 function gridBody(
-  record: BinairoPlayRecord | SudokuPlayRecord,
+  record: BinairoPlayRecord | NonogramPlayRecord | SudokuPlayRecord,
 ): string | undefined {
   if (record.grid === undefined) {
     return undefined;
