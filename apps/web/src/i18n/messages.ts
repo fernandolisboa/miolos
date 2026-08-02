@@ -56,6 +56,38 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
 const runsText = (runs: readonly number[]) =>
   runs.length === 0 ? "0" : runs.join(", ");
 
+// Termo's three tile states in pt-BR, one spelling per concept (#27). The
+// engine's identifiers are correct/present/absent; these are the words a
+// player hears. They are in CONTEXT.md's Termo rows.
+const TERMO_TILE = {
+  correct: "certa",
+  present: "na palavra",
+  absent: "fora",
+} as const;
+
+// EVERY Termo aria string spells letters in LOWERCASE, and that is a decision
+// rather than an oversight. NVDA, JAWS and VoiceOver all announce the case of
+// a single uppercase character — "maiúsculo A", six times a row, thirty times
+// a game. The visual case is CSS's job and stays there: the tiles and the keys
+// both carry `text-transform: uppercase`, so nothing on screen changes.
+
+// The whole judged row as ONE sentence, composed here and never joined in a
+// component (ADR-0018). Five one-letter spans would otherwise concatenate to
+// "CAFES" with no states at all — ADR-0037 decision 3's "22223" defect.
+const termoRowAria = (
+  row: number,
+  max: number,
+  guess: string,
+  tiles: readonly ("correct" | "present" | "absent")[],
+) =>
+  `tentativa ${row} de ${max}: ${tiles
+    .map((tile, index) => `${guess.charAt(index)} ${TERMO_TILE[tile]}`)
+    .join(", ")}`;
+
+// The letters as separate words, so a reader SPELLS "c, a, f" rather than
+// pronouncing "caf". Used by the active and held rows.
+const termoLetters = (word: string) => word.split("").join(", ");
+
 export const messages = {
   meta: {
     title: "Miolos — quatro jogos por dia",
@@ -198,6 +230,83 @@ export const messages = {
       kicker: "Palavras",
       name: "Termo",
       description: "Seis tentativas para a palavra do dia.",
+      play: {
+        title: "Termo",
+        // Every clause is a rule the engine actually enforces: WORD_LENGTH is
+        // 5, MAX_GUESSES is 6, `isValidGuess` runs against
+        // TERMO_VALIDATION_WORDS, and `normalizeWord` makes the input
+        // accent-free.
+        rules:
+          "Descubra a palavra de cinco letras em até seis tentativas. Digite sem acentos; cada tentativa precisa estar na lista de palavras aceitas.",
+        progressLong: (used: number, max: number) =>
+          `${used} de ${max} tentativas`,
+        progressShort: (used: number, max: number) => `${used} de ${max}`,
+
+        boardAria: "tabuleiro do Termo, seis tentativas de cinco letras",
+        rowAria: termoRowAria,
+        rowEmptyAria: (row: number, max: number) =>
+          `tentativa ${row} de ${max}, vazia`,
+        // The ACTIVE row's name carries the DRAFT. Without the letters a
+        // screen reader gets nothing at all between the first keypress and
+        // `enviar`: the tiles are aria-hidden, and a changed `aria-label` on
+        // a non-live element is announced by no AT.
+        rowActiveAria: (row: number, max: number, draft: string) =>
+          draft === ""
+            ? `tentativa ${row} de ${max}, sua vez`
+            : `tentativa ${row} de ${max}, escrevendo: ${termoLetters(draft)}`,
+        // The HELD row (ADR-0039 consequence (g)). "aguardando" appears
+        // exactly once in the whole product, here — it is never a visible
+        // label, because the notice line already says the same thing in the
+        // same tick.
+        rowHeldAria: (row: number, max: number, guess: string) =>
+          `tentativa ${row} de ${max}: ${termoLetters(guess)}, aguardando resposta`,
+
+        // Fired on EVERY type and EVERY erase, into the announcer. Terse on
+        // purpose: this is heard five times a word, thirty times a game.
+        letterTypedAria: (letter: string, filled: number, length: number) =>
+          `${letter}, ${filled} de ${length}`,
+        letterErasedAria: (letter: string, filled: number, length: number) =>
+          `${letter} apagada, ${filled} de ${length}`,
+
+        // AC 3, VERBATIM and lowercase — the issue quotes it that way inside
+        // quotes, so this one string does not take the sentence register the
+        // two below do. The same string is the local rejection's line AND the
+        // answer to a 422 `invalid-guess`: both mean the same thing to the
+        // player (plan 022 §13.1b).
+        notInList: "não está na lista",
+        // The held-turn and rejected-turn lines (plan 022 §11.4). Distinct in
+        // copy from `notInList`, deliberately: one is the player's mistake,
+        // the other is ours. Full sentences, matching every shipped system
+        // line.
+        offline: "Sem conexão — a tentativa vai assim que a conexão voltar.",
+        failed: "Não foi possível enviar a tentativa.",
+        // Capitalised, like every shipped CTA in this bundle.
+        retry: "Tentar de novo",
+
+        keyboard: {
+          label: "teclado",
+          enter: "enviar",
+          erase: "apagar",
+          enterAria: "enviar a tentativa",
+          eraseAria: "apagar a última letra",
+          // 26 letter keys: ONE composer, never 26 literals.
+          letterAria: (letter: string) => `letra ${letter}`,
+          letterStateAria: (
+            letter: string,
+            state: "correct" | "present" | "absent",
+          ) => `letra ${letter}: ${TERMO_TILE[state]}`,
+          // Desktop-only: a phone has no keyboard to advertise. The shape is
+          // nonogram's shipped affordance verbatim.
+          affordance:
+            "ou use o teclado: letras escrevem, Enter envia, Backspace apaga",
+        },
+
+        unavailable: {
+          title: "O Termo de hoje ainda não chegou.",
+          body: "Alguma coisa saiu do lugar por aqui. Tente de novo daqui a pouco — o puzzle de hoje é o mesmo para todo mundo.",
+          cta: "Voltar para Hoje",
+        },
+      },
       /**
        * The conclusion's copy bundle (#27, plan 022 §18.2). Plain data only —
        * it crosses the RSC boundary into `<ConclusionView/>`, and a function
