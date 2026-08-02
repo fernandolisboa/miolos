@@ -28,28 +28,34 @@ export {
   type SessionResponse,
 } from "./contracts/session";
 export {
-  binairoDailyContentSchema,
-  DailyProjectionUnsupportedError,
   dailyBinairoResponseSchema,
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
   dailySudokuResponseSchema,
   isoDateString,
-  nonogramDailyContentSchema,
   nonogramSizeSchema,
-  stripDailyContent,
-  sudokuDailyContentSchema,
   sudokuDigitSchema,
-  type BinairoDailyContent,
   type DailyBinairoResponse,
   type DailyNonogramResponse,
   type DailyPuzzleResponse,
   type DailySudokuResponse,
-  type NonogramDailyContent,
   type NonogramSize,
   type ProjectedGame,
-  type SudokuDailyContent,
 } from "./contracts/daily";
+// SERVER-ONLY, and re-exported here rather than behind a subpath because the
+// module is dropped from the client bundle by `"sideEffects": false` the
+// moment nothing in a browser chunk names one of these. Do not import any of
+// them from a client component (`./contracts/daily-content.ts` header).
+export {
+  binairoDailyContentSchema,
+  DailyProjectionUnsupportedError,
+  nonogramDailyContentSchema,
+  stripDailyContent,
+  sudokuDailyContentSchema,
+  type BinairoDailyContent,
+  type NonogramDailyContent,
+  type SudokuDailyContent,
+} from "./contracts/daily-content";
 export {
   bufferDepthResponseSchema,
   cronPublishGameResultSchema,

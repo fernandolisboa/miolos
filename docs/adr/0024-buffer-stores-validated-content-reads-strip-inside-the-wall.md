@@ -31,7 +31,7 @@ table around the helper.
    never depend on.
 3. **Default reads strip inside the wall.** Readers return a solution-free
    public projection built by allowlist pick and parsed through strict Zod
-   schemas (`packages/core/src/contracts/daily.ts`) — never by deleting a
+   schemas (`packages/core/src/contracts/daily-content.ts`) — never by deleting a
    `solution` field. Solution access is a separately named
    `getPublishedDailyWithSolution` accessor behind the same predicate.
    Content schemas are strict on purpose: engine shape drift fails the

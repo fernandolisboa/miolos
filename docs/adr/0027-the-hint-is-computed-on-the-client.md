@@ -136,6 +136,15 @@ forced deduction)"* to this ticket.
   Load JS is measured and recorded in the PR; if generation code lands in
   the bundle, the sanctioned fix is to make the existing barrel
   tree-shakeable, never a new sub-barrel and never a deep import.
+
+  **The instrument is `apps/web/scripts/route-client-js.mjs`** (landed by
+  #25). It reads Next's own per-route figure from
+  `.next/diagnostics/route-bundle-stats.json` — which Next 16.2.12 does
+  emit, in the terminal table's absence — prints each route's delta over
+  `/`, and exits non-zero over a 40 KB budget or on any forbidden marker
+  in the built chunks. Run it after `pnpm build` and paste the output;
+  a mandate with no reproducible instrument is a mandate nobody can
+  discharge twice.
 - **The hint works offline**, which is what makes issue #18's offline
   acceptance criterion true end to end alongside local validation and the
   in-place conclusion
