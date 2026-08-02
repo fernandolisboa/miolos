@@ -450,4 +450,45 @@ describe("apps/web db wall — not a blanket ban", () => {
     );
     expect(messages).toEqual([]);
   });
+
+  it("T-LINT-S3: the wall fires from apps/web/src/nonogram/**, and a clean nonogram file reports zero", async () => {
+    // #25's standing duty (ADR-0024 §5, plan 020 §18): the ticket adds a whole
+    // new directory under `apps/web/src/`, and the wall's globs are
+    // `apps/web/**` / `apps/web/src/**` — so it covers the new path BY
+    // CONSTRUCTION rather than by anyone remembering to widen a list. That is
+    // exactly the kind of claim worth a red proof: a future narrowing of the
+    // glob to a per-feature list would pass every other test in this file.
+    const nonogramPath = "apps/web/src/nonogram/eslint-probe.ts";
+
+    const bannedImport = await lintProbe(
+      nonogramPath,
+      [
+        'import { getPublishedDailyWithSolution } from "@miolos/db/publishing";',
+        "",
+        "export const read = getPublishedDailyWithSolution;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(bannedImport)).toContain("no-restricted-imports");
+
+    const tableLiteral = await lintProbe(
+      nonogramPath,
+      ['export const table = "daily_puzzles";', ""].join("\n"),
+    );
+    expect(ruleIds(tableLiteral)).toContain("no-restricted-syntax");
+
+    // And the other half: the wall is not a blanket ban on the directory. The
+    // two imports every real nonogram module makes report nothing.
+    const clean = await lintProbe(
+      nonogramPath,
+      [
+        'import { getTodayDaily } from "@miolos/db";',
+        'import { solveNonogram } from "@miolos/games/nonogram";',
+        "",
+        "export const engine = { getTodayDaily, solveNonogram };",
+        "",
+      ].join("\n"),
+    );
+    expect(clean).toEqual([]);
+  });
 });

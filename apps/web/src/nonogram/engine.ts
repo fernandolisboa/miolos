@@ -93,7 +93,7 @@ export function filledTarget(clues: NonogramClues): number {
 /**
  * Cells the player has PAINTED — the readout's numerator (P13/P14).
  *
- * The shared `countFilled` is deliberately not reused: `progress.ts:16-27`
+ * The shared `progress.ts` `countFilled` is deliberately not reused: it
  * tests `(given ?? entries[index] ?? null) !== null`, and under P11 a cross
  * is `0`, which is not nullish — so it would count crosses too and compute a
  * different readout entirely.
@@ -121,10 +121,19 @@ export function countFilledCells(
 /**
  * True when the PICTURE is painted — the completion predicate (ADR-0032).
  *
- * Iterates the SOLUTION, so a short `entries` array fails closed rather than
- * reading as a finished board. Crosses and undecided cells are both "not
- * painted", so a player who crosses every empty cell, one who crosses none,
- * and every mixture in between all finish identically.
+ * Iterates the SOLUTION, which decides how a MISMATCHED `entries` array
+ * reads, and the two directions are not symmetric. Too SHORT: every index
+ * past the end is `undefined`, so the predicate reduces to `mark === 0` there
+ * and any filled cell in the tail fails it — no shipped motif is empty past
+ * cell 24, so in practice a short array reads as unfinished. Too LONG: the
+ * surplus tail is never looked at, so an over-long array whose first size²
+ * cells paint the picture reads as COMPLETE. Neither is a guard: the
+ * structural one is `restore`'s size/length check
+ * (`state.ts`, `restore`), and it must stay.
+ *
+ * Crosses and undecided cells are both "not painted", so a player who crosses
+ * every empty cell, one who crosses none, and every mixture in between all
+ * finish identically.
  *
  * Local only. The server re-judges against the stored row (ADR-0004): this
  * verdict decides what the UI shows and nothing else.

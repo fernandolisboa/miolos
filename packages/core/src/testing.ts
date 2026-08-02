@@ -15,8 +15,9 @@
  * the scan meaningful for the game whose content actually carries it
  * (plan 018 S22).
  *
- * TWO HALVES, not one. Every consumer scans KEYS (`collectKeys` below),
- * and `apps/web`'s two page suites additionally assert
+ * TWO HALVES, not one. All ten consumers scan KEYS (`collectKeys` below),
+ * and `apps/web`'s THREE page suites — `binairo-page.test.tsx`,
+ * `sudoku-page.test.tsx`, `nonogram-page.test.tsx` — additionally assert
  * `expect(renderToStaticMarkup(element)).not.toContain(forbidden)`. So a
  * member of this list is also a SUBSTRING banned from those pages'
  * rendered HTML — for `"name"` that means no lowercase `name` anywhere in

@@ -116,8 +116,9 @@ what it costs to deliver, on each of the three paths available?
   visible pt-BR line stating the picture was revealed — rather than invent
   a name the curated library owns.
 - **(b) `"name"` is simultaneously a key ban and a substring ban, and the
-  second one will fire for an unrelated reason one day.** Two of the eight
-  consumers of `FORBIDDEN_DAILY_KEYS` run
+  second one will fire for an unrelated reason one day.** Three of the ten
+  consumers of `FORBIDDEN_DAILY_KEYS` — `apps/web/test/binairo-page.test.tsx`,
+  `sudoku-page.test.tsx` and `nonogram-page.test.tsx` — run
   `expect(markup).not.toContain(forbidden)` over `renderToStaticMarkup`
   output *as well as* scanning payload keys. So a future `<meta name>`,
   `<input name>` or a lowercase `name*` CSS-module local on a scanned play
@@ -126,14 +127,17 @@ what it costs to deliver, on each of the three paths available?
   rather than have to deduce it, and the correct response is to rename the
   markup, not to weaken the scan.
 - **(c) The strip's argument is recorded in the code it governs.** The
-  strip table's nonogram row and the branch that implements it both carry
+  strip table's nonogram row, the `case "nonogram"` branch that implements
+  it and `dailyNonogramResponseSchema`'s own TSDoc all carry
   the product-not-security wording, so a reader of either arrives at
   ADR-0027's rule rather than at a plausible-sounding security story.
 - **(d) The bundle tripwire stays meaningful for as long as this holds.**
   Because no motif name may reach `apps/web`, a string grep over the built
-  client chunks is a real check on the engine barrel's tree-shaking. That
-  check dies the day a name ships, which is a cost the named-reveal ticket
-  inherits.
+  client chunks is a real check on the engine barrel's tree-shaking. It is
+  `apps/web/scripts/route-client-js.mjs`, run after `pnpm build`, and it
+  exits non-zero rather than printing a number for a reviewer to eyeball.
+  That check dies the day a name ships — **#64** — which is a cost the
+  named-reveal ticket inherits.
 - **(e) Nothing here decides anything for Termo.** Its public projection
   is `game, date` only and its answer is judged server-side; the questions
   this ADR answers do not arise there.

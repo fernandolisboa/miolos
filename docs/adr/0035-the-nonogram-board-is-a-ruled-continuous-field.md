@@ -77,8 +77,11 @@ every interior junction.
 4. **The clue gutters are `max-content` tracks inside the same flat
    grid.** The failure mode is what chooses this: a future motif with more
    runs than today's library **shrinks the cells** rather than overflowing
-   the phone. The library's run bound is pinned by a test so that day
-   cannot arrive silently.
+   the phone. The library's run bound is pinned by
+   `packages/games/test/nonogram/clue-bounds.test.ts`, which enumerates every
+   motif and every mirrored variant through `deriveClues` and asserts the
+   per-size worst row; `apps/web/test/nonogram-screen.test.tsx`'s `WORST_ROW`
+   is its consumer, named in both files. So that day cannot arrive silently.
 
 5. **Four explicit size classes carry literal templates**: fixed cells of
    52 / 52 / 48 / 32 px above 768 px for sizes 5 / 8 / 10 / 15, and

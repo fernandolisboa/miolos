@@ -26,7 +26,7 @@ The ubiquitous language. Issue titles, test names, proposals and specs use these
 | **Picture** | Figura | What a solved Nonogram grid paints. The client-rendered payoff, shown on the conclusion screen. |
 | **Filled** | Preenchida | A Nonogram cell the player painted: `filled`, encoded `1` on the wire. The filled set is what a completion is judged on. |
 | **Crossed** | Marcada | A Nonogram cell the player ruled out: `crossed`, encoded `0`. Notation for the player, never a claim about the picture. |
-| **Empty** | Vazia | An undecided Nonogram cell: `empty`, encoded `null` client-side. |
+| **Undecided** | Vazia | A Nonogram cell the player has not decided: encoded `null` client-side, with no named constant. Avoid "empty" for it — `EMPTY_LINE` in `nonogram/board.tsx` is the all-empty CLUE line's sentinel, a different concept. |
 | **Clues** | Números | The run lengths on a Nonogram's row and column rails: `clues`, whose entries are `runs`. Never *dicas* or *pistas* — a **dica** is the one free hint. |
 
 **Games** (v1, build order): **Binairo**, **Sudoku**, **Nonogram**, **Termo** — "Termo" is the product's name for its Termo-like game; don't call it Wordle.

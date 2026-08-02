@@ -60,11 +60,15 @@ of the face that can satisfy it.
    stay on Fraunces, and `tabular-nums` on it is inert rather than
    harmful. What it may not do is carry a *column* of figures.
 
-3. **The three comment lines that state the old rule are amended in the
-   commit that lands this ADR** — `DESIGN.md:28`,
-   `packages/ui/tokens.css`'s standing rule, and the trailing
-   `/* + tabular-nums */` on `--text-numeral-lg`, which pairs a Fraunces
-   token with a feature this ADR measures as a total no-op. **No token
+3. **Every line that states the old rule is amended in the commit that
+   lands this ADR** — `DESIGN.md:28`, `packages/ui/tokens.css`'s standing
+   rule, the trailing `/* + tabular-nums */` on `--text-numeral-lg` (which
+   pairs a Fraunces token with a feature this ADR measures as a total
+   no-op), **`PRODUCT.md`'s "Numbers are always `tabular-nums`"** and
+   `DESIGN.md`'s "Fraunces tabular numeral" on the streak stamp.
+   `PRODUCT.md` matters as much as `DESIGN.md`: `CLAUDE.md` names the PAIR
+   as the living design context `/impeccable` reads, so amending one and
+   leaving the other is amending nothing. **No token
    value moves and no JSX enters `packages/ui`**; these are comments, and
    [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md)'s
    invariant is about JSX and primitives.
@@ -83,8 +87,8 @@ of the face that can satisfy it.
    `/nonogram` inherits it as a third surface because it renders the same
    shared components. Fixing it here would put an unrelated visible change
    to two shipped screens inside a Nonogram diff. It is carried as its own
-   issue, filed before #25's pull request body is written so the link is
-   real at review time.
+   issue, **#63**, filed before #25's pull request body is written so the
+   link is real at review time.
 
 ## Rejected
 

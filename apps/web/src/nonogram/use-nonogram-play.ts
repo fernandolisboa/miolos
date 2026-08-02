@@ -111,10 +111,17 @@ export function useNonogramPlay(daily: DailyNonogramResponse): NonogramPlay {
     dispatch,
     buildRecord,
     // `state.now` is deliberately NOT here (use-play-lifecycle.ts:66-69,
-    // landmine 21). `solution`, `clues` and `size` are absent for a different
-    // reason: `buildRecord` never reads them, and a dependency that cannot
-    // change the record's content does not belong in the array that means
-    // "the record's CONTENT changed".
+    // landmine 21). `solution` and `clues` are absent for a different reason:
+    // `buildRecord` never reads them, and a dependency that cannot change the
+    // record's content does not belong in the array that means "the record's
+    // CONTENT changed".
+    //
+    // `size` is a third case and the strongest of the three — `buildRecord`
+    // DOES read it, twice — so it is spelled out rather than lumped in:
+    // `state.size` comes from `daily.size` and no reducer case resizes the
+    // board, so it is fixed for the life of this mount. Binairo and Sudoku
+    // both list their board constant; if `size` ever becomes state, it joins
+    // this array in the same edit.
     persistDeps: [state.entries, state.hint.used],
   });
 

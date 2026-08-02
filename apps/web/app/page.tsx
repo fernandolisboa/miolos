@@ -121,7 +121,7 @@ export default function HojePage() {
             </div>
             {/* Done or pending, per THIS DEVICE (plan 018 §11.3, ADR-0031),
                 and linked only where a play route exists — the `playRoutes`
-                map decides, so #25/#27 add a key rather than a branch. */}
+                map decides, so #27 adds a key rather than a branch. */}
             <HubCardAction game={game} date={isoDate} />
           </article>
         ))}

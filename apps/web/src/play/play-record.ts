@@ -114,7 +114,8 @@ export type SudokuPlayRecord = z.infer<typeof sudokuPlayRecordSchema>;
  * conclusion's picture wrapper lays the bitmap out from it.
  *
  * The `superRefine` is what bounds the arrays. `writePlayRecord` does not
- * parse on write (:180-203), so the schema on READ is the only wall there is.
+ * parse on write (see the function itself, below), so the schema on READ is
+ * the only wall there is.
  * `.max(225)` is a plain length CEILING, and it is deliberately NOT sold as
  * an allocation bound: measured against the installed zod 4.4.3, array
  * element parsing runs BEFORE array-level checks, so

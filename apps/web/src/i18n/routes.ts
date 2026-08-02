@@ -44,8 +44,8 @@ export type Route = (typeof routes)[keyof typeof routes];
  * (plan 018 §11.3) and by the conclusion's chaining CTA (§11.4). Two copies
  * of it is how the hub links a game the conclusion still calls pending.
  *
- * Partial by construction: #25/#27 add a key here, never a branch at a call
- * site (ADR-0028). A game with no key has no play route yet, and its card
+ * Partial by construction: #27 adds termo's key here, never a branch at a
+ * call site (ADR-0028). #23 added sudoku's, #25 nonogram's. A game with no key has no play route yet, and its card
  * keeps an href-less anchor rather than fake navigation.
  */
 export const playRoutes: Readonly<Partial<Record<Game, Route>>> = {

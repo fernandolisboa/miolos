@@ -155,7 +155,7 @@ things.
 - **(b) The Binairo retrofit that ADR-0030 (b) says is owed now has a
   named mechanism to use.** Its pointer path must adopt `onStrokeEnd`
   rather than re-derive a second fix — that instruction is decision 2's,
-  and the retrofit issue carries it — because the cell's own `onClick`
+  and the retrofit issue, **#61**, carries it — because the cell's own `onClick`
   focus fix is unreachable under pointer capture and jsdom cannot show it.
 - **(c) The board's accessible surface is verbose, and that is
   accepted.** A cell announces its own name and then two rail

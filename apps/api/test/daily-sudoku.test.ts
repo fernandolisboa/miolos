@@ -156,4 +156,36 @@ describe("GET /daily/sudoku", () => {
     const route = await import("../app/daily/sudoku/route");
     expect(route.dynamic).toBe("force-dynamic");
   });
+  it("T-API-S27b: is PUBLIC CORS — an origin echo, never credentials", async () => {
+    // The sibling of `daily-nonogram.test.ts`'s T-API-S27, landed with it:
+    // all three public daily routes carried the TSDoc claim "no auth, no
+    // cookies, no credentialed CORS" (ADR-0005) with nothing holding it,
+    // while the two credentialed routes asserted theirs. A one-character
+    // edit — `corsHeaders({ credentials: true })` — would grant a
+    // credentialed cross-origin read with every suite green.
+    vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
+    await seedDate(await todaySaoPaulo(ctx.db));
+
+    const found = await GET();
+    expect(found.headers.get("access-control-allow-origin")).toBe(
+      "https://miolos.app",
+    );
+    expect(found.headers.has("access-control-allow-credentials")).toBe(false);
+    // `Vary: Origin` is the credentialed branch's tell — a public response is
+    // identical for every origin and must stay cacheable as one.
+    expect(found.headers.has("vary")).toBe(false);
+
+    await ctx.db.execute(sql`truncate table daily_puzzles`);
+    const missing = await GET();
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("access-control-allow-origin")).toBe(
+      "https://miolos.app",
+    );
+    expect(missing.headers.has("access-control-allow-credentials")).toBe(false);
+
+    vi.stubEnv("WEB_ORIGIN", undefined);
+    expect((await GET()).headers.has("access-control-allow-origin")).toBe(
+      false,
+    );
+  });
 });

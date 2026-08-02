@@ -92,7 +92,20 @@ export function useRecordSnapshot(game: Game, date: string): RecordSnapshot {
   );
 }
 
-/** Everything a reader of a single record actually renders from it. */
+/**
+ * The five CHROME fields every reader of a record renders from it.
+ *
+ * Deliberately not "everything a reader renders": #25's nonogram conclusion
+ * also renders `size` and `grid` (`nonogram/nonogram-conclusion.tsx`), and
+ * they are not compared here. That is safe only because of a lockstep
+ * invariant — `buildRecord` writes `grid` exclusively in the same write that
+ * flips `concluded` to true — so a payload change never happens while all
+ * five of these stand still.
+ *
+ * A per-game payload field that can move INDEPENDENTLY of `concluded` breaks
+ * that and must be added below, or its reader will be handed a stale cached
+ * snapshot and render the wrong picture.
+ */
 function sameToTheReader(
   previous: PlayRecord | undefined,
   next: PlayRecord | undefined,

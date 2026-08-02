@@ -316,7 +316,7 @@ function picturePath(picture: ConclusionPicture): string {
  * 3's "the conclusion chains to the next pending daily" (plan 018 S21).
  *
  * Written as a loop rather than a `find` because the route has to come out
- * NARROWED: `playRoutes` is partial until #25/#27 land, and Next's typed
+ * NARROWED: `playRoutes` is partial until #27 lands, and Next's typed
  * `Link href` refuses a possibly-undefined value. A game with no play route
  * is skipped rather than offered — chaining to a route that does not exist
  * would be a 404 at the end of the one celebration screen the product has.

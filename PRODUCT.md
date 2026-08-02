@@ -28,7 +28,7 @@ In English: purple/blue gradients; glassmorphism; card-inside-card; grey text on
 
 ## Design Principles
 
-1. **Typography is the protagonist.** Hierarchy, warmth and identity come from Fraunces + Instrument Sans, not from ornament. Numbers are always `tabular-nums`.
+1. **Typography is the protagonist.** Hierarchy, warmth and identity come from Fraunces + Instrument Sans, not from ornament. Numerals that must align in a column use Instrument Sans with `tabular-nums`; Fraunces numerals are the single, non-aligning kind, and `tabular-nums` on that face is a measured no-op ([ADR-0036](./docs/adr/0036-aligning-numerals-use-instrument-sans-not-fraunces.md)).
 2. **Depth is paper, not blur.** Layers read as sheets of paper: hard single-color offset shadows, hairline borders, subtle static rotations. Never a diffuse shadow.
 3. **Celebration is contained.** The reward is a rubber stamp settling into place — tactile, adult, quiet. Never confetti, never a modal takeover.
 4. **The ritual is calm.** One screen, one task; timers are discreet; nothing nags. The daily visit should feel like opening a notebook, not entering a casino.

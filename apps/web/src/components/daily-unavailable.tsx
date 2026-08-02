@@ -24,7 +24,7 @@ export interface DailyUnavailableCopy {
  *
  * The copy arrives as a prop (plan 018 §13.3): #23 made Sudoku the second
  * daily play route, so the screen can no longer read one game's block
- * directly. #25/#27 pass their own.
+ * directly. #25's `nonogram-screen.tsx` passes its own; #27 will pass termo's.
  */
 export function DailyUnavailable({
   copy,

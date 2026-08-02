@@ -148,4 +148,42 @@ describe("GET /daily/nonogram", () => {
     const route = await import("../app/daily/nonogram/route");
     expect(route.dynamic).toBe("force-dynamic");
   });
+
+  it("T-API-S27: is PUBLIC CORS — an origin echo, never credentials", async () => {
+    // The route's own TSDoc asserts "no auth, no cookies, no credentialed
+    // CORS" (ADR-0005), and until this test nothing held it: the two
+    // credentialed routes assert their headers, all three public daily routes
+    // asserted none of theirs. A one-character edit —
+    // `corsHeaders({ credentials: true })`, plausibly pasted from
+    // /completions when a fourth game's route is written — would grant a
+    // credentialed cross-origin read of the daily with every suite green.
+    vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
+    await seedDate(await todaySaoPaulo(ctx.db));
+
+    for (const response of [await GET(), await GET()]) {
+      expect(response.headers.get("access-control-allow-origin")).toBe(
+        "https://miolos.app",
+      );
+      expect(response.headers.has("access-control-allow-credentials")).toBe(
+        false,
+      );
+      // `Vary: Origin` is the credentialed branch's tell — a public response
+      // is identical for every origin and must stay cacheable as one.
+      expect(response.headers.has("vary")).toBe(false);
+    }
+
+    // And the 404 branch takes the same headers, so a miss cannot be the way
+    // in.
+    await ctx.db.execute(sql`truncate table daily_puzzles`);
+    const missing = await GET();
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("access-control-allow-origin")).toBe(
+      "https://miolos.app",
+    );
+    expect(missing.headers.has("access-control-allow-credentials")).toBe(false);
+
+    vi.stubEnv("WEB_ORIGIN", undefined);
+    const unset = await GET();
+    expect(unset.headers.has("access-control-allow-origin")).toBe(false);
+  });
 });

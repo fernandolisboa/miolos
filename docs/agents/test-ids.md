@@ -21,17 +21,17 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Verified by grep over the test tree at plan 020 (2026-08-01). The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Verified by grep over the test tree after #25 merged (plan 020, 2026-08-01). The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 | Area | Next free | Bare series closed at |
 |---|---|---|
-| `T-CORE` | `S8` | never used |
-| `T-DB` | `S6` | `T-DB-21` |
-| `T-API` | `S17` | `T-API-16` |
-| `T-WEB` | `S35` | `T-WEB-23` |
-| `T-LINT` | `S3` | `T-LINT-10` |
+| `T-CORE` | `S15` | never used |
+| `T-DB` | `S10` | `T-DB-21` |
+| `T-API` | `S28` | `T-API-16` |
+| `T-WEB` | `S61` | `T-WEB-23` |
+| `T-LINT` | `S4` | `T-LINT-10` |
 
-In flight on top of that: #25 (plan 020) reserves `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`.
+#25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent `T-API-S27` (+ siblings `S27a`, `S27b`) on top of its range at step 7.
 
 ## Burned slots
 
@@ -44,5 +44,8 @@ In flight on top of that: #25 (plan 020) reserves `T-CORE-S8…S14`, `T-DB-S6…
 | `T-DB-10`, `T-WEB-21` | plan 017 |
 | `T-WEB-S13`, `T-WEB-S32` | plan 018 whole-suite regression gates — satisfied by a green suite, so no marked `it` exists to point at |
 | `T-LINT-S1`, `T-LINT-S2` | plan 018 reserved them for the sudoku/play-path wall assertions, which never landed |
+| `T-WEB-S41` | plan 020 reserved it for "`T-WEB-S12` gains the third record"; the assertion landed inside `T-WEB-S12` itself, where it belongs |
+| `T-WEB-S46` | plan 020 reserved it for the pointer-stroke extraction's `git diff --exit-code` gate — a COMMAND, not an `it`, so there is no marker to point at (same shape as `T-WEB-S13`/`S32`) |
+| `T-WEB-S60` | tail of plan 020's `T-WEB-S35…S60` range |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.

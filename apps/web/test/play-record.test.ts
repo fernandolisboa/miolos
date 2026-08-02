@@ -368,8 +368,8 @@ describe("the nonogram member (T-WEB-S40)", () => {
 
   it("rejects entries and grid lengths that disagree with the record's own size", () => {
     // The `superRefine` is what bounds the arrays: `writePlayRecord` does not
-    // parse on write (:180-203), so the schema on READ is the only wall there
-    // is (P15).
+    // parse on write — see `play-record.ts`'s own TSDoc — so the schema on
+    // READ is the only wall there is (P15).
     const key = playRecordKey("nonogram", "2026-07-30");
 
     window.localStorage.setItem(

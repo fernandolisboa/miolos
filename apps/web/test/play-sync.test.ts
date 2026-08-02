@@ -681,13 +681,13 @@ describe("startCompletionSync", () => {
  * fail OPEN (finding `buildbody-switch-fails-open-for-a-new-game`).
  *
  * The guarantee is a COMPILE-TIME one and `pnpm typecheck` is what enforces
- * it: `PlayRecord` has exactly two members today, both handled, so no runtime
+ * it: `PlayRecord` has exactly three members today, both handled, so no runtime
  * input can reach the default — a test that manufactured one would have to
  * cast, which is precisely the lie the guard exists to prevent. What this
  * reads instead is the source, the way `./css-source.ts` reads a stylesheet:
  * the tripwire cannot be deleted silently, and the note travels with it.
  */
-describe("the extension point #25/#27 widen", () => {
+describe("the extension point #27 widens", () => {
   it("makes an unhandled game a compile error, not a dropped completion", () => {
     // `path` rather than `new URL(..., import.meta.url)`: the jsdom
     // environment's own `URL` resolves the relative specifier against the

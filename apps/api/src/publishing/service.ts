@@ -113,8 +113,9 @@ function randomUint32(): number {
  * generation/validation misses; a date that exhausts its budget lands in
  * `failures` and the run continues — it never aborts.
  *
- * EXTENSION POINT: per-game by name on purpose — #23/#25/#27 add their
- * own top-up alongside and widen the cron/buffer-depth contracts
+ * EXTENSION POINT: per-game by name on purpose — #23 and #25 added
+ * `topUpSudokuBuffer` and `topUpNonogramBuffer` alongside this one, and #27
+ * adds termo's, each widening the cron/buffer-depth contracts
  * (packages/core/src/contracts/cron.ts) in the same PR.
  */
 export async function topUpBinairoBuffer(
@@ -346,23 +347,30 @@ export async function topUpSudokuBuffer(
 
 /**
  * Per-DATE seed-retry budget for nonogram — binairo's 8, and NOT sudoku's
- * 2 + a run budget. Measured on this machine (Node 24.18.1, n=200/weekday,
- * warm pools): generate+validate is 0.0354 ms (Mon 5x5) to 0.1902 ms
- * (Sun 15x15).
+ * 2 + a run budget.
  *
- * The worst-run model carries the INNER factor too: "exhausting all 8 seeds"
+ * TWO DIFFERENT COSTS, kept apart because conflating them is how the first
+ * version of this comment came out ~2x wrong. Measured on this machine
+ * (Node 24.18.1, n=4000/weekday, warm pools):
+ *
+ * - a whole SUCCESSFUL `generateNonogram` + `validateNonogram` round is
+ *   0.023 ms (Mon 5x5) and 0.181 ms (Sun 15x15);
+ * - one INTERNAL attempt — what the worst-run model multiplies — is
+ *   `generateNonogram`'s own cost when it succeeds first try: 0.012 ms and
+ *   **0.094 ms**. A FAILING call never reaches `validateNonogram` at all.
+ *
+ * The worst-run model carries the INNER factor: "exhausting all 8 seeds"
  * means eight `generateNonogram` calls that each FAILED, and a failing call
- * runs `NONOGRAM_MAX_GENERATION_ATTEMPTS = 8` internal generate+validate
- * rounds before throwing (generate.ts:11, :34-38, :65-69) — while 0.1902 ms
- * is the cost of a SUCCESSFUL call, i.e. one internal attempt. So the
- * absolute worst run — every date uncovered at `remoteConfigSchema`'s clamp
- * ceiling of 30, every date exhausting all 8 seeds on the most expensive
- * weekday — is 30 dates x 8 seeds x 8 internal attempts x ~0.19 ms = ~186 ms,
- * plus a one-time ~34 ms to build all seven memoized pools: ~220 ms. Against
- * `maxDuration: 60` s that is 0.37%, and 1.5% even at a 4x-slower runner. A
+ * runs `NONOGRAM_MAX_GENERATION_ATTEMPTS = 8` internal attempts before
+ * throwing (generate.ts:11, :34-38, :65-69). So the absolute worst run —
+ * every date uncovered at `remoteConfigSchema`'s clamp ceiling of 30, every
+ * date exhausting all 8 seeds on the most expensive weekday — is
+ * 30 dates x 8 seeds x 8 internal attempts x ~0.094 ms = ~181 ms, plus a
+ * one-time ~30 ms to build all seven memoized pools: **~210 ms**. Against
+ * `maxDuration: 60` s that is 0.35%, and 1.4% even at a 4x-slower runner. A
  * run-scoped budget would bound something already bounded two-plus orders of
- * magnitude below the limit (contrast sudoku's ~2 s per exhausted seed,
- * :204-220).
+ * magnitude below the limit (contrast sudoku's ~2 s per exhausted seed —
+ * see `MAX_SUDOKU_SEED_RETRIES_PER_DATE` above).
  *
  * What the retries are NOT: a recovery mechanism. `weekdayPool` is memoized
  * and seed-INDEPENDENT (difficulty.ts:54,69-72), so a `NonogramGenerationError`
@@ -370,7 +378,8 @@ export async function topUpSudokuBuffer(
  * convention and a tripwire against content drift.
  *
  * A separate constant rather than the module-level `MAX_SEED_RETRIES_PER_DATE`
- * (:79-82), because that one carries binairo's comment — "the engine already
+ * near the top of this file, because that one carries binairo's comment —
+ * "the engine already
  * retries 64 attempts per seed internally" — which is FALSE for nonogram
  * (the cap is 8, generate.ts:11). Reusing it would attach a false claim to a
  * correct value. Exported so tests bind to the constant, not to a literal.

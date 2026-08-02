@@ -137,6 +137,20 @@ built on it.
   ADR-0028:131 and `sudoku-screen.tsx:43-50` and would have been unchanged
   either way, which is exactly why it was written not to depend on this
   measurement.
+
+  **How to re-derive it**, since — unlike ADR-0032 consequence (f) and
+  ADR-0033's premise, both of which are pinned by committed table-driven
+  fixtures — this one has no artifact in the tree and E12b was a throwaway
+  harness. Run `next dev`, open `/nonogram` on a day whose weekday gives
+  the board you want (1 for the 5×5, 7 for the 15×15), solve it by
+  dispatching the cell clicks in solution order, and bracket the LAST
+  click: assert the board is still in the DOM at that instant, then start
+  a `MutationObserver` on the conclusion root and stop on
+  `[data-conclusion-state="result"]`, counting
+  `requestAnimationFrame` callbacks in between. Puppeteer 25.4.0 is
+  already a dev dependency and its Chrome is in `~/.cache/puppeteer`. The
+  number this ADR rests on is the FRAME COUNT, not the millisecond delta —
+  a slower machine moves the ms and leaves the conclusion intact.
 - **(b) Every game after Nonogram inherits the placement, not a new
   argument.** A game that wants a payoff moment adds an optional
   plain-data prop and a conclusion-side render; it does not reopen where

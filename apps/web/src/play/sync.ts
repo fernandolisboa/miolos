@@ -234,8 +234,9 @@ function buildBody(record: PlayRecord): string | undefined {
       // `buildbody-switch-fails-open-for-a-new-game`). Falling off the end
       // returns `undefined`, which `syncRecord` reads as "no result to post"
       // and answers with `settle(record, "rejected")` — permanently clearing
-      // `pendingSync`, so #25's Nonogram would silently lose the day for the
-      // streak. TS cannot catch that on its own: `string | undefined` is a
+      // `pendingSync`, so a game whose case went missing — #25's Nonogram is
+      // the one that landed under this guard — would silently lose the day for
+      // the streak. TS cannot catch that on its own: `string | undefined` is a
       // legitimate return here (`gridBody` on a record with no grid), so
       // TS2366 never fires. This assignment is what fails instead — the same
       // guarantee `storedSolution` gets for free in
