@@ -262,10 +262,9 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     // whatever else happened." `HubProgress` therefore reads `completedCount`
     // and a played entry does not move it.
     //
-    // The termo CARD's own shape is not asserted here: `playRoutes.termo` is
-    // not live until the activation commit, so the card still renders the
-    // href-less anchor whatever the day state says. The meta line is the half
-    // of that split this commit CAN drive, and it is driven.
+    // The meta line is the half of that split B6 could drive with no route in
+    // `playRoutes`; the termo CARD's own shape is asserted in the activation
+    // block below, which is where the other half landed (T-WEB-S101).
     writePlayRecord(concludedSudoku());
     writePlayRecord(lostTermo());
 
@@ -336,6 +335,79 @@ describe("the Nonogram tile, activated (T-WEB-S55)", () => {
     expect(link).toHaveAttribute("href", routes.nonogram);
     expect(
       screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * #27's own copy of T-WEB-S55, which the block above says in terms is owed
+ * (plan 022 §17.2). `playRoutes.termo` is the whole behavioural change #27
+ * makes to this already-shipped screen, and Termo is the LAST of the four to
+ * be routed: the instant the key lands, `hub-day-state.tsx`'s `route ===
+ * undefined` branch is dead for every game and the front door's first card
+ * stops being an href-less `<a>`.
+ *
+ * The three cases here are the three shapes that card can now take — pending,
+ * won and lost — and the last two are the `.done`-link half of **T-WEB-S80**,
+ * which commit B6 could not drive: with no route in the map, `HubCardAction`
+ * returned the href-less anchor whatever the day state said, so B6 drove the
+ * meta-line half alone and deferred this one here. Both statuses have to be
+ * asserted, because `HubCardAction`'s guard splits on `status` and never on
+ * `elapsedMs` (plan 022 §15.3) and neither Termo shape publishes a duration:
+ * the shipped `elapsedMs !== undefined` guard would have dropped BOTH through
+ * to "Jogar hoje", on a game that can no longer be played today.
+ */
+describe("the Termo tile, activated (T-WEB-S101)", () => {
+  it("gives the pending card a real href, where it had none", () => {
+    render(<HojePage />);
+
+    const cta = within(cardFor("termo"))
+      .getByText(messages.hoje.playCta)
+      .closest("a");
+    expect(cta).toHaveAttribute("href", routes.termo);
+  });
+
+  it("renders a WON termo as a done link, with no duration (T-WEB-S80)", () => {
+    // `completedAria`, not `doneAria`: the third composer exists because a won
+    // Termo is completed and has no duration to name (ADR-0045 decision 4).
+    writePlayRecord(wonTermo());
+
+    render(<HojePage />);
+
+    const card = within(cardFor("termo"));
+    const link = card.getByLabelText(
+      messages.hoje.completedAria(messages.games.termo.name),
+    );
+    expect(link).toHaveAttribute("href", routes.termo);
+    expect(card.getByText(messages.hoje.done)).toBeInTheDocument();
+    expect(card.queryByText(messages.hoje.playCta)).not.toBeInTheDocument();
+    // No duration at all — not the record's own, not any other. `formatElapsed`
+    // output is `mm:ss`, so the absence is asserted on the shape.
+    expect(cardFor("termo").textContent).not.toMatch(/\d{2}:\d{2}/);
+    expect(
+      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+    ).toBeInTheDocument();
+  });
+
+  it("renders a LOST termo as a played link, never the play CTA (T-WEB-S80)", () => {
+    writePlayRecord(lostTermo());
+
+    render(<HojePage />);
+
+    const card = within(cardFor("termo"));
+    const link = card.getByLabelText(
+      messages.hoje.playedAria(messages.games.termo.name),
+    );
+    expect(link).toHaveAttribute("href", routes.termo);
+    // The hub's chip register is capitalised — "Jogado", against the day
+    // card's lowercase "jogado" (plan 022 §15.3).
+    expect(card.getByText(messages.hoje.played)).toBeInTheDocument();
+    expect(card.queryByText(messages.hoje.done)).not.toBeInTheDocument();
+    expect(card.queryByText(messages.hoje.playCta)).not.toBeInTheDocument();
+    expect(cardFor("termo").textContent).not.toMatch(/\d{2}:\d{2}/);
+    // And it is still not a completion.
+    expect(
+      screen.getByText(messages.hoje.completedOfTotal(0, 4)),
     ).toBeInTheDocument();
   });
 });

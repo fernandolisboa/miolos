@@ -82,10 +82,13 @@ export function HubCardAction({
   const elapsedMs = entry.status === "completed" ? entry.elapsedMs : undefined;
 
   if (route === undefined) {
-    // No play route yet — termo alone reaches this branch today, and #27
-    // clears it by adding a key to `playRoutes`, never a branch here. The
-    // anchor keeps the card's shape without an href, because a dead href
-    // would be fake navigation.
+    // DEAD FOR ALL FOUR GAMES SINCE #27 added termo's key to `playRoutes` —
+    // by adding a key, which is the whole point, never a branch here. It is
+    // kept rather than deleted because `playRoutes` is still typed `Partial`
+    // and the compiler still demands this arm; totalising the map is #75,
+    // which touches this file and `conclusion-view.tsx` together (plan 022
+    // §17.1). Until then the anchor keeps a routeless card's shape without an
+    // href, because a dead href would be fake navigation.
     return (
       <a className={styles.cta}>
         <PlayLabel />

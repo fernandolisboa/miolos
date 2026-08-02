@@ -112,6 +112,51 @@ function concludedNonogram(
 }
 
 /**
+ * Termo's two closed shapes (#27, ADR-0044), at module scope because they are
+ * needed by two suites now. With `playRoutes.termo` live and Termo FIRST in
+ * `DAY_GAMES`, "every playable daily is done" is a four-record state and every
+ * chaining assertion whose subject is another game has to close Termo out of
+ * the way first (T-WEB-S101, plan 022 §17.2) — the same growth `concludedNonogram`
+ * above records for #25.
+ *
+ * NEITHER publishes a duration: a lost Termo is *played*, and a won one's
+ * elapsed time is mostly per-guess round trips, so ADR-0045 decision 4 keeps
+ * the number off both projections.
+ */
+type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
+const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
+const WIN: Tiles = ["correct", "correct", "correct", "correct", "correct"];
+
+function wonTermo(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
+  return {
+    v: 1,
+    game: "termo",
+    date: DATE,
+    guesses: [
+      { guess: "cafes", tiles: [...MISS] },
+      { guess: "praga", tiles: [...WIN] },
+    ],
+    answer: "praga",
+    outcome: "won",
+    elapsedMs: TERMO_ELAPSED_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+const lostTermo = () =>
+  wonTermo({
+    guesses: "abcdef".split("").map((letter) => ({
+      guess: letter.repeat(5),
+      tiles: [...MISS],
+    })),
+    outcome: "lost",
+  });
+
+/**
  * The "O dia até agora" card, scoped — the stamp renders the same duration
  * string in the same document, so an unscoped `getByText(ELAPSED)` would
  * pass on the wrong node.
@@ -243,11 +288,13 @@ describe("the day card and the CTA (T-WEB-18)", () => {
     // Every playable daily done, which is the only state that still ends the
     // day at Hoje now that the CTA chains (plan 018 S21 supersedes plan 017
     // §12.3's CTA row and its deviation 9). The set grows with `playRoutes`:
-    // #25 made Nonogram playable, so the state this test is about needs its
-    // record too, and #27 will owe Termo's (T-WEB-S55, plan 020 §17).
+    // #25 made Nonogram playable and #27 Termo, so all FOUR records are the
+    // state this test is about — and with Termo routed the set is complete,
+    // so this seed stops growing (T-WEB-S101, plan 022 §17.2).
     writePlayRecord(concluded());
     writePlayRecord(concludedNonogram());
     writePlayRecord(concludedSudoku());
+    writePlayRecord(wonTermo());
 
     render(
       <ConclusionView
@@ -276,7 +323,14 @@ describe("the day card and the CTA (T-WEB-18)", () => {
  */
 describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
   it("offers the next playable game, in the day's order", () => {
+    // Two records since #27 routed Termo, and the second is what keeps this
+    // test about the ORDER: Termo is `DAY_GAMES[0]`, so with it pending the
+    // answer is Termo and the walk never has to step over anything
+    // (T-WEB-S101 asserts that state on purpose). Closing Termo out restores
+    // the subject and sharpens it — the scan now skips TWO done games,
+    // Termo and Binairo, to reach Sudoku.
     writePlayRecord(concluded());
+    writePlayRecord(wonTermo());
 
     render(
       <ConclusionView
@@ -300,7 +354,13 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     // "A per-game accent IS that game's identity" (DESIGN.md), so a button
     // that goes to Sudoku wears Sudoku's ink-blue even on Binairo's screen —
     // F5:66's own treatment for a game-destination button.
+    //
+    // Termo is closed out for the same reason as the case above, and this one
+    // deliberately keeps SUDOKU as its destination: T-WEB-S101 covers the
+    // mustard pair, and ink-blue is the one that would silently keep passing
+    // if `accentVars` were ever reduced to the celebrated game's accent.
     writePlayRecord(concluded());
+    writePlayRecord(wonTermo());
 
     render(
       <ConclusionView
@@ -324,11 +384,14 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     // into the grid they just closed.
     //
     // The DESTINATION moves as `playRoutes` grows and is not this test's
-    // subject: the scan runs Termo (no route) → Sudoku (celebrated, and
-    // overridden as concluded) → Nonogram → Binairo, so #25 makes it stop one
-    // game earlier than it did. What is asserted either way is that Sudoku is
-    // excluded (T-WEB-S55, plan 020 §17).
+    // subject: the scan runs Termo → Sudoku (celebrated, and overridden as
+    // concluded) → Nonogram → Binairo, so #25 made it stop one game earlier
+    // than it did. #27 routed Termo, which now sits FIRST and would answer
+    // the scan before it ever reaches the celebrated game — so Termo is
+    // closed out here too, and what is asserted either way is that Sudoku is
+    // excluded (T-WEB-S55, plan 020 §17; T-WEB-S101, plan 022 §17.2).
     writePlayRecord(concludedSudoku({ concluded: false, grid: undefined }));
+    writePlayRecord(wonTermo());
 
     render(
       <ConclusionView
@@ -352,11 +415,13 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
   });
 
   it("falls back to Hoje when every playable daily is done", () => {
-    // Three records, for the same reason as the T-WEB-18 case above
-    // (T-WEB-S55, plan 020 §17).
+    // FOUR records since #27, for the same reason as the T-WEB-18 case above,
+    // and the fourth is the last one this seed will ever grow: every game is
+    // routed (T-WEB-S101, plan 022 §17.2).
     writePlayRecord(concluded());
     writePlayRecord(concludedNonogram());
     writePlayRecord(concludedSudoku());
+    writePlayRecord(wonTermo());
 
     render(
       <ConclusionView
@@ -371,6 +436,68 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     // Solid ink, not an accent: this one goes to Hoje, which is no game's
     // identity.
     expect(cta?.style.getPropertyValue("--accent")).toBe("");
+  });
+});
+
+/**
+ * The other half of the activation (T-WEB-S101, plan 022 §17.2). One line in
+ * `playRoutes` changes THIS already-shipped surface too, and more sharply than
+ * the hub: `DAY_GAMES[0] === "termo"`, so from the moment the key lands
+ * `nextPendingDaily` returns Termo FIRST from every one of the three shipped
+ * conclusions whenever Termo is pending — which is every day, before the
+ * player has touched it.
+ *
+ * The accent assertion is the point of the test and not decoration. This is
+ * #25's ISS-A2 regression class with the worst accent in the palette: mustard
+ * is the one accent no paper token is legible on (desk 2.7311:1, card
+ * 2.8501:1, tint 2.5457:1, against a 4.5 floor). PR A — merged as #73,
+ * closing #68 — made `--ink-on-accent` for Termo `var(--ink)`, at 5.4968:1,
+ * and this asserts the CTA carries the pair rather than inheriting the
+ * celebrated game's ink onto Termo's fill.
+ */
+describe("the chaining CTA, re-pointed at Termo (T-WEB-S101)", () => {
+  it("offers Termo first from a shipped conclusion, and links it", () => {
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const cta = screen
+      .getByText(messages.conclusion.ctaNext(messages.games.termo.name))
+      .closest("a");
+    expect(cta).toHaveAttribute("href", routes.termo);
+    // …and Sudoku, which was this CTA's destination until the key landed, is
+    // no longer offered: Termo precedes it in the day's order.
+    expect(
+      screen.queryByText(
+        messages.conclusion.ctaNext(messages.games.sudoku.name),
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("paints it with Termo's own ink on Termo's own fill", () => {
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const cta = screen
+      .getByText(messages.conclusion.ctaNext(messages.games.termo.name))
+      .closest("a");
+    expect(cta?.style.getPropertyValue("--accent")).toBe("var(--accent-termo)");
+    // ADR-0041: `--ink` on mustard, 5.4968:1. `var(--paper-desk)` here would
+    // be 2.7311:1 on a 14px/600 label, on three shipped screens at once.
+    expect(cta?.style.getPropertyValue("--ink-on-accent")).toBe("var(--ink)");
   });
 });
 
@@ -941,39 +1068,6 @@ describe("the conclusion's layout (tripwires)", () => {
  * celebrated done before its record is written.
  */
 describe("the day card's third verb (T-WEB-S80)", () => {
-  type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
-  const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
-  const WIN: Tiles = ["correct", "correct", "correct", "correct", "correct"];
-
-  function wonTermo(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
-    return {
-      v: 1,
-      game: "termo",
-      date: DATE,
-      guesses: [
-        { guess: "cafes", tiles: [...MISS] },
-        { guess: "praga", tiles: [...WIN] },
-      ],
-      answer: "praga",
-      outcome: "won",
-      elapsedMs: TERMO_ELAPSED_MS,
-      hintsUsed: 0,
-      concluded: true,
-      pendingSync: false,
-      syncOutcome: "recorded",
-      ...overrides,
-    };
-  }
-
-  const lostTermo = () =>
-    wonTermo({
-      guesses: "abcdef".split("").map((letter) => ({
-        guess: letter.repeat(5),
-        tiles: [...MISS],
-      })),
-      outcome: "lost",
-    });
-
   /** The chip whose name is `game`, scoped so a value never matches another. */
   function chipFor(game: "termo" | "sudoku"): HTMLElement {
     const chip = within(dayCard())
@@ -1112,13 +1206,14 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
     // termo is FIRST in `DAY_GAMES`, so the conclusion of the very game the
     // player just spent would offer it as the default next daily.
     //
-    // Asserted on the CTA's LABEL rather than on `routes.termo`, which does
-    // not exist until the route segments land: `ctaNext` names its
-    // destination game, so this is the same shape the shipped "never chains
-    // back to the game whose stamp is on screen" case uses for Sudoku.
-    // `playRoutes.termo` is not live until the activation commit either, so
-    // today the loop also skips termo for want of a route; this assertion is
-    // what keeps it skipped once the route lands.
+    // Asserted on the CTA's LABEL: `ctaNext` names its destination game, so
+    // this is the same shape the shipped "never chains back to the game whose
+    // stamp is on screen" case uses for Sudoku.
+    //
+    // AND IT IS LOAD-BEARING NOW, where until the activation commit it was
+    // not: with `playRoutes.termo` live, the loop no longer skips termo for
+    // want of a route, so the `dayEntry` override is the ONLY thing keeping
+    // the player out of the game they just spent.
     render(
       <ConclusionView
         game="termo"
