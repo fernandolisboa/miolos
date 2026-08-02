@@ -37,7 +37,7 @@ In English: purple/blue gradients; glassmorphism; card-inside-card; grey text on
 ## Accessibility & Inclusion
 
 - Touch targets ≥44px everywhere; verified in the winning mobile references.
-- Body text contrast ≥4.5:1 against its paper background; game accents are used for identity, never as the only carrier of meaning (done/pending states pair color with a chip, border or label).
+- Body text contrast ≥4.5:1 against its paper background. **A game accent may colour a shape — a fill, a tape, a hard shadow, a rule, a stamp ring, a card border, a board cell — and never a word**, at any size, on any paper ([ADR-0041](./docs/adr/0041-accents-colour-shapes-never-words.md)): text on paper is `--ink` or `--ink-2`, and a label on an accent fill is `--ink-on-accent`. Accents are used for identity, never as the only carrier of meaning (done/pending states pair color with a chip, border or label).
 - `prefers-reduced-motion`: every "ink settles" animation has an instant/crossfade alternative.
 - Haptics (Vibration API) are reinforcement only, never state-bearing — desktop and iOS Safari get visual-only feedback.
 - pt-BR only in v1, with strings externalized for i18n from the start.

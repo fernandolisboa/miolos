@@ -17,9 +17,9 @@ Chosen 2026-07-30 from the Claude Design exploration (variation F "Ateliê"); hi
 | Secondary ink | `#6E6659` |
 | Lines | `#D8D0C2` (soft hairline `#E4DCCB`) |
 
-Per-game accents (tape, kicker, stamp, button): Termo mustard `#C08A1E` · Sudoku ink-blue `#2E4E7E` · Nonogram terracotta `#B5563C` · Binairo moss-green `#4E6B52`. App accent (streak, promo): sealing-wax red `#9E3B2F`.
+Per-game accents — sanctioned surfaces are **a fill, a washi tape, a hard shadow, a rule, a stamp ring, a card border, a graph bar, a board cell**; the kicker is no longer among them: Termo mustard `#C08A1E` · Sudoku ink-blue `#2E4E7E` · Nonogram terracotta `#B5563C` · Binairo moss-green `#4E6B52`. App accent (streak, promo): sealing-wax red `#9E3B2F`. **An accent may colour a shape. It may never colour a word** — no `color:` declaration on text, at any size, on any paper ([ADR-0041](./docs/adr/0041-accents-colour-shapes-never-words.md)).
 
-Accents carry identity, not meaning alone — every state they mark is also carried by a chip, border, or label.
+Accents carry identity, not meaning alone — every state they mark is also carried by a chip, border, or label. Words on paper are `--ink` or `--ink-2`; a label sitting **on** an accent fill reads `--ink-on-accent`, the ink chosen to be legible on that accent. Mustard is why the rule is absolute rather than per-token: `#C08A1E` is 2.7311:1 on desk paper and **2.8501:1 on card, the ceiling over the whole paper family** against a 4.5 floor, so no paper rescues it ([ADR-0041](./docs/adr/0041-accents-colour-shapes-never-words.md)).
 
 ## Typography
 
