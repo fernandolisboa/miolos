@@ -237,3 +237,25 @@ Per issue, all of it green with output pasted:
 - **Next plan:** `docs/plans/022-issue-27-plan-<slug>.md`.
 - **Next ADR:** `docs/adr/0038-<slug>.md` — ADRs keep their own 4-digit sequence and owe no README row. A plan and a handoff each owe one.
 - **Test ids:** see `docs/agents/test-ids.md` for the frontier, and **re-derive it by grep before allocating**.
+
+---
+
+## 11. Kickoff prompt
+
+Copy everything between the markers.
+
+--------------- BEGIN KICKOFF ---------------
+
+Continue Miolos M2. Read docs/handoffs/021-handoff-m2-termo-and-free-play.md
+in full first — section 0 says what to verify, section 2 says where the older
+handoff 019 is now wrong. Do not work from 019 without reading section 2.
+
+Work #27 (M2: Daily Termo end-to-end). #25 is merged and live.
+
+Follow CLAUDE.md's eight-step flow, each step a fresh subagent. Merge and
+close without Fernando.
+
+Every node/pnpm/npx command needs:
+  source ~/.nvm/nvm.sh && nvm use default >/dev/null &&
+
+--------------- END KICKOFF ---------------
