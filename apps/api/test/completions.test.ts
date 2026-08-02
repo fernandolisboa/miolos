@@ -1199,6 +1199,46 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(await completionRows()).toHaveLength(0);
   });
 
+  it("T-API-S26: YESTERDAY's picture is judged against yesterday's stored row, at a different size", async () => {
+    // The one LEGITIMATE submission whose length differs from today's board,
+    // and the only shape binairo's `.length(64)` and sudoku's `.length(81)`
+    // structurally cannot produce: ACCEPTED_DAYS_BACK = 1 exists for D19's
+    // post-rollover flush, where a board finished offline yesterday is POSTed
+    // on today's mount by `sync.ts`. Yesterday is a different ISO weekday and
+    // a nonogram's size is a function of the weekday, so the two accepted
+    // dates almost always carry different size classes — which is exactly
+    // what the route's `body.grid.length !== solution.length` check has to be
+    // keyed on: the STORED row, never today's board. The two 422 length cases
+    // above prove it rejects; nothing proved it accepts (step-6 round-3
+    // finding NONO-C-R3-1).
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const todayPicture = await seedDaily("nonogram", today, 7, 1);
+    const yesterdayPicture = await seedDaily("nonogram", yesterday, 21, 7);
+    expect(todayPicture).toHaveLength(25);
+    expect(yesterdayPicture).toHaveLength(225);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "nonogram",
+          date: yesterday,
+          grid: yesterdayPicture,
+        }),
+      }),
+    );
+
+    const body = completionResponseSchema.parse(await response.json());
+    expect(response.status).toBe(200);
+    expect(body.recorded).toBe(true);
+    // Yesterday's daily is late by construction, whatever the wall clock —
+    // T-API-13's seam argument, for the third game.
+    expect(body.onTime).toBe(false);
+    expect(await completionRows()).toHaveLength(1);
+  });
+
   it("T-API-S23: a wrong picture ⇒ 422; future, killed and two-days-old ⇒ 404, never a row", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const tomorrow = addDays(today, 1);

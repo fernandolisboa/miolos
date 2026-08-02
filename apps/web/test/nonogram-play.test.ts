@@ -216,6 +216,55 @@ describe("useNonogramPlay", () => {
     expect(sync.flushPendingCompletions).toHaveBeenCalledWith(record);
   });
 
+  it("writes `grid` ONLY in the write that flips `concluded` — the lockstep `use-record-snapshot` leans on (T-WEB-S64)", () => {
+    // `sameToTheReader` (play/use-record-snapshot.ts) compares five CHROME
+    // fields and NOT `size`/`grid`, which the nonogram conclusion renders.
+    // Its TSDoc argues that is safe because `buildRecord` writes `grid`
+    // exclusively in the same write that flips `concluded` — an argued
+    // invariant nothing checked, over a wrong-picture render (step-6 round-3
+    // finding NONO-Q5). This is the check. `buildRecord` is module-private,
+    // so the assertion is made where its output actually lands: on every
+    // persisted byte of a full play-through.
+    // A call-through spy, not a replacement: the writes must really land, so
+    // the lifecycle's own read-back behaves exactly as it does in play.
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+
+    const { result } = renderHook(() => useNonogramPlay(DAILY));
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    for (const index of PICTURE) {
+      act(() => {
+        result.current.markCell(index);
+      });
+    }
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    const written = setItem.mock.calls.map(([, value]) => value);
+    setItem.mockRestore();
+
+    const records = written.map((raw): NonogramPlayRecord => {
+      const parsed = playRecordSchema.parse(JSON.parse(raw));
+      if (parsed.game !== "nonogram") {
+        throw new Error(`a ${parsed.game} record on the nonogram key`);
+      }
+      return parsed;
+    });
+
+    // Anti-vacuity: both sides of the invariant were actually exercised.
+    expect(records.filter((entry) => !entry.concluded).length).toBeGreaterThan(
+      0,
+    );
+    expect(records.filter((entry) => entry.concluded).length).toBeGreaterThan(
+      0,
+    );
+
+    for (const entry of records) {
+      expect(entry.grid === undefined).toBe(!entry.concluded);
+    }
+  });
+
   it("spends the free hint once and reports which case it fired", () => {
     const { result } = renderHook(() => useNonogramPlay(DAILY));
     act(() => {

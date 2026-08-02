@@ -129,7 +129,7 @@ export type SudokuPlayRecord = z.infer<typeof sudokuPlayRecordSchema>;
  * also iterate first), so nothing regresses here.
  *
  * `nonogramSizeSchema` comes from @miolos/core and is never re-declared: one
- * definition, three consumers, exactly as `sudokuDigitSchema` is.
+ * definition, four consumers, exactly as `sudokuDigitSchema` is.
  *
  * A checked object is a legal `z.discriminatedUnion` option in Zod 4 and is
  * NOT one in Zod 3 (there it is a `ZodEffects`). Verified against the
@@ -237,9 +237,19 @@ function parseAt(store: Storage, key: string): PlayRecord | undefined {
 
 /**
  * The record at (`game`, the SERVER's date), or `undefined` on absence, on
- * garbage, or on a record whose own `game` does not match the key it was
- * found under — a hand-edited store must never feed a 64-cell binairo
- * record into an 81-cell sudoku grid (plan 018 S17, landmine 3).
+ * garbage, or on a record that does not ADDRESS the key it was found under —
+ * a hand-edited store must never feed a 64-cell binairo record into an
+ * 81-cell sudoku grid (plan 018 S17, landmine 3), nor yesterday's board into
+ * today's screen.
+ *
+ * ONE predicate, three functions: this is the same
+ * `playRecordKey(record.game, record.date) === key` test `listPendingRecords`
+ * calls "the wall against the hand-edited store" and `prunePlayRecords`
+ * deletes on. It used to check `game` alone, which left the READ path — the
+ * one every rendering consumer goes through, `/…/concluido` included, and the
+ * one route that does not prune — as the single door in this module that was
+ * game-checked but not address-checked (step-6 round-3 finding
+ * `readplayrecord-does-not-address-check-its-key`).
  */
 export function readPlayRecord(
   game: Game,
@@ -249,8 +259,11 @@ export function readPlayRecord(
   if (store === undefined) {
     return undefined;
   }
-  const record = parseAt(store, playRecordKey(game, date));
-  return record?.game === game ? record : undefined;
+  const key = playRecordKey(game, date);
+  const record = parseAt(store, key);
+  return record !== undefined && playRecordKey(record.game, record.date) === key
+    ? record
+    : undefined;
 }
 
 /**

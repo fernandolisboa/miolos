@@ -166,6 +166,34 @@ describe("readPlayRecord / writePlayRecord", () => {
     expect(readPlayRecord("binairo", "2026-07-30")).toBeUndefined();
   });
 
+  it("refuses a record that does not ADDRESS the key it was found under (T-WEB-S63)", () => {
+    // The read path owes the same predicate as `listPendingRecords` and
+    // `prunePlayRecords`: `playRecordKey(record.game, record.date) === key`.
+    // It used to check `game` alone, so a hand-edited store could park a
+    // record dated 2026-07-01 at today's key and `/…/concluido` — which
+    // never prunes — would stamp that day's time and, for a nonogram, paint
+    // that day's picture, while the sync queue could not see it at all
+    // (step-6 round-3 finding
+    // `readplayrecord-does-not-address-check-its-key`).
+    const strayDate = JSON.stringify(
+      record({ date: "2026-07-01", concluded: true, pendingSync: true }),
+    );
+    window.localStorage.setItem("miolos:play:binairo:2026-07-30", strayDate);
+    expect(readPlayRecord("binairo", "2026-07-30")).toBeUndefined();
+
+    // The `game` half still holds, and so does the nonogram member: a
+    // 25-cell 5×5 record parked at a date it does not carry must not reach
+    // `restore` and be `derive`d against today's board.
+    const strayGame = JSON.stringify(nonogramRecord({ date: "2026-07-29" }));
+    window.localStorage.setItem("miolos:play:nonogram:2026-07-30", strayGame);
+    expect(readPlayRecord("nonogram", "2026-07-30")).toBeUndefined();
+
+    // Anti-vacuity: the identical record written through the real writer,
+    // which derives the key from the record, is readable.
+    writePlayRecord(nonogramRecord({ date: "2026-07-29" }));
+    expect(readPlayRecord("nonogram", "2026-07-29")).toBeDefined();
+  });
+
   it("clamps an over-cap elapsedMs before writing instead of rejecting it", () => {
     writePlayRecord(record({ elapsedMs: 99_999_999 }));
 

@@ -392,20 +392,31 @@ function derive(
  * `selected` stays as it is — a caret is a session thing, never persisted.
  *
  * A record whose `size` or `entries.length` disagrees with TODAY's board is
- * DISCARDED, never migrated (P16/N11). `readPlayRecord` checks only that the
- * record's `game` matches the key it was found under, and the schema proves
- * `entries.length === size²` for the record's OWN size — only this compares
- * it against today's, and it is the ONLY thing that does.
+ * DISCARDED, never migrated (P16/N11). `readPlayRecord` proves the record
+ * addresses its own key and the schema proves `entries.length === size²` for
+ * the record's OWN size — only this compares it against today's, and it is
+ * the ONLY thing that does.
  *
- * The hazard is the LONG direction, not the short one. `isPictureComplete`
- * iterates the solution (`engine.ts`), so yesterday's 225-cell array reaching
- * `derive` on today's 25-cell board reads as COMPLETE the moment its first 25
- * cells happen to paint today's picture — `status` flips to `"solved"` on a
- * board the player never touched and `pendingSync` latches a completion the
- * queue then POSTs. The short direction fails closed instead, because every
- * index past the array's end reads `undefined` while the solution still has
- * filled cells there. Both are discarded here; only one of them would be a
- * false win.
+ * WHAT IT IS DEFENDING AGAINST is the hand-edited or corrupted store, the
+ * same class as `isNonogramRecord` below — NOT an ordinary day rollover.
+ * Records are keyed `miolos:play:<game>:<date>` and the mount effect reads
+ * `readPlayRecord(game, date)` with the SERVER's date, so yesterday's record
+ * lives at a different key; and a nonogram's size is a pure function of the
+ * weekday, so a same-date record always carries today's size. No product path
+ * reaches this branch, which is why the suite has to hand-build the record it
+ * reproduces the hazard with (`nonogram-state.test.ts`, the size-15 record
+ * under a Monday state). An earlier version of this paragraph motivated the
+ * guard with a cross-day carry-over the keying already prevents (step-6
+ * round-3 finding NONO-Q4); the guard is right and cheap, its reachability
+ * was overstated.
+ *
+ * The damage a mismatched array WOULD do is the LONG direction:
+ * `isPictureComplete` iterates the solution (`engine.ts`), so a 225-cell array
+ * reaching `derive` on a 25-cell board reads as COMPLETE the moment its first
+ * 25 cells happen to paint today's picture — `status` flips to `"solved"` on
+ * a board the player never touched and `pendingSync` latches a completion the
+ * queue then POSTs. The short direction is a false win too, on four shipped
+ * motif variants (see `isPictureComplete`'s TSDoc). Both are discarded here.
  */
 function restore(
   state: NonogramPlayState,
@@ -432,10 +443,10 @@ function restore(
 
 /**
  * The record union's nonogram member, or nothing. `readPlayRecord` already
- * discards a record whose `game` disagrees with the key it was found under
- * (plan 018 S17), so this branch is unreachable in practice — it exists
- * because the reducer takes the whole union and a 64-cell binairo `entries`
- * array must never reach a nonogram board.
+ * discards a record that does not address the key it was found under — `game`
+ * and `date` both (plan 018 S17) — so this branch is unreachable in practice:
+ * it exists because the reducer takes the whole union and a 64-cell binairo
+ * `entries` array must never reach a nonogram board.
  */
 function isNonogramRecord(
   record: PlayRecord | undefined,

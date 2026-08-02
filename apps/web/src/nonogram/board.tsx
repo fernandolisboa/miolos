@@ -3,9 +3,12 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import {
   Fragment,
   memo,
+  useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
 } from "react";
 
 import { messages } from "../i18n";
@@ -19,10 +22,12 @@ import type { NonogramCellValue, NonogramMark } from "./state";
  * groups), so a 5×5 board gets those two frame edges and no interior rule,
  * which is correct.
  *
- * The modulo cannot draw the other two: 8, 10 and 15 all have `size - 1` not
- * divisible by 5. The right and bottom frame edges are two further per-cell
- * borders at `column === size - 1` and `row === size - 1` — see `ruleClasses`
- * below (ADR-0035 decision 2, as amended).
+ * The modulo cannot draw the other two on ANY legal size: no member of
+ * `NonogramSize` has `size - 1` divisible by 5 (4, 7, 9, 14), the 5×5 board
+ * included. The right and bottom frame edges are therefore two further
+ * per-cell borders at `column === size - 1` and `row === size - 1`, drawn
+ * unconditionally — see `ruleClasses` below (ADR-0035 decision 2, as
+ * amended).
  */
 const GROUP = 5;
 
@@ -75,15 +80,27 @@ const SIZE_CLASS = {
  * cannot have changed — measured at ~2.5 ms per tick on a 15×15, on the
  * interaction-latency path.
  *
- * WHAT IT DOES NOT BUY: the drag. `paint-over` allocates a new `entries`
- * array, `entries` is shallow-compared, so a stroke re-renders the WHOLE
- * board once per painted cell by construction — measured at 41 full board
+ * WHAT IT DOES NOT BUY ON ITS OWN: the drag. `paint-over` allocates a new
+ * `entries` array, `entries` is shallow-compared, so a stroke re-enters this
+ * function once per painted cell by construction — measured at 41 board
  * renders for a 40-cell drag, 0 for ten timer ticks. Saying the memo is "paid
- * again per cell crossed during a drag" had it backwards. Paying that down
- * needs a memoized per-cell component, which needs `consumedClick` to be
+ * again per cell crossed during a drag" had it backwards. That is what `Cell`
+ * below is for: the per-cell component takes primitives and two stable
+ * callbacks, so one painted cell reconciles ONE `<button>` and composes ONE
+ * aria string instead of 225. Measured 2.1x on a 15×15 at 80 single-cell
+ * paints, and the composition count collapses from 225×N to N.
+ *
+ * This paragraph used to say that memo "needs `consumedClick` to be
  * identity-stable — i.e. a change to the shared `usePointerStroke` that
- * Binairo also consumes, out of scope for a Nonogram diff and tracked as
- * **#66**.
+ * Binairo also consumes". That was FALSE and it is corrected rather than
+ * softened (step-6 round-3 finding PERF-R3-1): `consumedClick` closes over
+ * nothing but two `useRef` objects and the event's `detail`, so an
+ * effect-synced ref inside THIS file makes the click wrapper stable and exact,
+ * permanently, without touching the shared hook or Binairo. `T-WEB-S66` pins
+ * the result — 225 × N aria compositions for an N-cell drag became N, proved
+ * red at 1800 with the per-cell memo removed — so **#66**'s Scope 1 is
+ * discharged here and its `usePointerStroke` justification must not be acted
+ * on: there is no reason left to change a shipped game's shared hook for it.
  *
  * The default shallow compare is exactly right here: `size` and `clues` never change
  * identity for a mounted screen (`initNonogramPlayState` takes `clues` from
@@ -168,6 +185,54 @@ export const Board = memo(function Board({
       }
     },
   });
+
+  /**
+   * `stroke.consumedClick` is a fresh arrow on every render, so passing it
+   * down would rebuild `onCellClick` per render and defeat `Cell`'s memo — the
+   * whole point of the extraction. A ref synced each commit is the same
+   * pattern `use-nonogram-play.ts` uses for `stateRef`, and it is EXACT rather
+   * than approximate here: `consumedClick` closes over `dragged` and `tapped`,
+   * two `useRef` objects whose identity never changes, plus the event's own
+   * `detail` — so every version of it behaves identically and no state can go
+   * stale behind the ref. An effect rather than a render-phase assignment
+   * because a discarded render must not write; a click can only fire from
+   * committed DOM, so the effect has always run by then.
+   *
+   * If `consumedClick` ever closes over STATE, this ref becomes a stale-read
+   * bug and the wrapper has to change with it.
+   */
+  const consumedClickRef = useRef(stroke.consumedClick);
+  useEffect(() => {
+    consumedClickRef.current = stroke.consumedClick;
+  });
+
+  const onCellFocus = useCallback(
+    (index: number) => {
+      onSelect(index);
+    },
+    [onSelect],
+  );
+
+  const onCellClick = useCallback(
+    (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
+      // WebKit does not focus a `<button>` on click, so on Safari
+      // `document.activeElement` would stay `<body>`, the roving effect would
+      // return at its guard and no key would reach the board again (finding
+      // `pointer-selection-does-not-focus-the-board-on-webkit`). Under real
+      // pointer capture this handler never runs for pointer input — the click
+      // is retargeted to the container — so this is reached only when capture
+      // FAILED; the pointer path's focus comes from `onStrokeEnd` above.
+      event.currentTarget.focus();
+      if (consumedClickRef.current(event)) {
+        // The stroke already wrote this cell; a trailing click would re-apply
+        // the brush and clear it again.
+        return;
+      }
+      // Keyboard activation (`detail === 0`) always lands here.
+      onMarkCell(index);
+    },
+    [onMarkCell],
+  );
 
   /**
    * One listener for every cell (ADR-0030 decision 3). Every key it handles is
@@ -268,68 +333,106 @@ export const Board = memo(function Board({
           </div>
           {Array.from({ length: size }, (_unused, column) => {
             const index = row * size + column;
-            const value = entries[index] ?? null;
             return (
-              <button
+              <Cell
                 key={index}
-                type="button"
-                className={cellClassName({
-                  row,
-                  column,
-                  size,
-                  value,
-                  hinted: hintIndex === index,
-                  selected: selected === index,
-                })}
-                style={{ gridColumn: column + 2, gridRow: row + 2 }}
-                data-cell-index={index}
-                tabIndex={tabbable === index ? 0 : -1}
-                // The WHOLE accessible name comes from messages.ts, separator
-                // included: it is user-facing copy, and a component is not
-                // where copy is composed (ADR-0018).
-                aria-label={copy.cellAria(row + 1, column + 1, value)}
-                // Both rails, so a nonogram is solvable by a screen reader at
-                // all. The description is verbose on purpose — carrying the
-                // clues in each cell's NAME would restate two run lists 225
-                // times and rebuild them on every entry change, and no clue
-                // association would leave the board navigable and unsolvable.
-                aria-describedby={`${rowRailId(row)} ${columnRailId(column)}`}
-                // FOCUS IS THE ONLY WRITER OF THE SELECTION (ADR-0030
-                // decision 5): a Tab into the board lands on the roving tab
-                // stop, which before any interaction is cell 0 while
-                // `selected` is still null — so without this the caret
-                // `:focus-visible` paints could not write.
-                //
-                // It cannot loop with the layout effect above: the effect only
-                // ever focuses `selected`, and re-selecting the index already
-                // selected returns the SAME state object, which `useReducer`
-                // bails out of.
-                onFocus={() => onSelect(index)}
-                onClick={(event) => {
-                  // WebKit does not focus a `<button>` on click, so on Safari
-                  // `document.activeElement` would stay `<body>`, the roving
-                  // effect would return at its guard and no key would reach
-                  // the board again (finding
-                  // `pointer-selection-does-not-focus-the-board-on-webkit`).
-                  // Under real pointer capture this handler never runs for
-                  // pointer input — the click is retargeted to the container —
-                  // so this is reached only when capture FAILED; the pointer
-                  // path's focus comes from `onStrokeEnd` above.
-                  event.currentTarget.focus();
-                  if (stroke.consumedClick(event)) {
-                    // The stroke already wrote this cell; a trailing click
-                    // would re-apply the brush and clear it again.
-                    return;
-                  }
-                  // Keyboard activation (`detail === 0`) always lands here.
-                  onMarkCell(index);
-                }}
+                index={index}
+                row={row}
+                column={column}
+                size={size}
+                value={entries[index] ?? null}
+                hinted={hintIndex === index}
+                selected={selected === index}
+                tabbable={tabbable === index}
+                onCellFocus={onCellFocus}
+                onCellClick={onCellClick}
               />
             );
           })}
         </Fragment>
       ))}
     </div>
+  );
+});
+
+/**
+ * ONE cell, memoized — the half of the drag cost `Board`'s own memo cannot
+ * reach (see its TSDoc). A `paint-over` allocates a new `entries` array, so
+ * `Board` re-renders in full on every painted cell; with this, the cells whose
+ * `value`, `hinted`, `selected` and `tabbable` did not move bail out, and one
+ * painted cell composes ONE aria string instead of `size²`. On a 15×15 that is
+ * 225 → 1 per pointer move, measured at 2.1x on the commit itself.
+ *
+ * EVERY PROP IS A PRIMITIVE OR A STABLE CALLBACK, and that is the whole
+ * contract: the two handlers come from `useCallback` in `Board` over the
+ * `useCallback([])` handlers `use-nonogram-play.ts` hands down, and
+ * `consumedClick` is reached through a ref rather than passed. Adding a prop
+ * that is rebuilt per render (an object, an array, an inline arrow) silently
+ * undoes all of it — the same warning `Board`'s own TSDoc carries, one level
+ * down.
+ *
+ * `rowRailId`/`columnRailId` and `cellClassName` are recomputed here rather
+ * than passed as strings: they are pure functions of props this component
+ * already has, and passing a composed string would move the composition back
+ * into `Board`'s render, which is exactly what this exists to avoid.
+ */
+const Cell = memo(function Cell({
+  index,
+  row,
+  column,
+  size,
+  value,
+  hinted,
+  selected,
+  tabbable,
+  onCellFocus,
+  onCellClick,
+}: {
+  readonly index: number;
+  readonly row: number;
+  readonly column: number;
+  readonly size: NonogramSize;
+  readonly value: NonogramCellValue;
+  readonly hinted: boolean;
+  /** The selection AND the roving-focus caret — one concept (ADR-0030). */
+  readonly selected: boolean;
+  /** True on the single cell carrying `tabindex="0"`. */
+  readonly tabbable: boolean;
+  readonly onCellFocus: (index: number) => void;
+  readonly onCellClick: (
+    index: number,
+    event: ReactMouseEvent<HTMLButtonElement>,
+  ) => void;
+}) {
+  const copy = messages.games.nonogram.play;
+  return (
+    <button
+      type="button"
+      className={cellClassName({ row, column, size, value, hinted, selected })}
+      style={{ gridColumn: column + 2, gridRow: row + 2 }}
+      data-cell-index={index}
+      tabIndex={tabbable ? 0 : -1}
+      // The WHOLE accessible name comes from messages.ts, separator included:
+      // it is user-facing copy, and a component is not where copy is composed
+      // (ADR-0018).
+      aria-label={copy.cellAria(row + 1, column + 1, value)}
+      // Both rails, so a nonogram is solvable by a screen reader at all. The
+      // description is verbose on purpose — carrying the clues in each cell's
+      // NAME would restate two run lists 225 times and rebuild them on every
+      // entry change, and no clue association would leave the board navigable
+      // and unsolvable.
+      aria-describedby={`${rowRailId(row)} ${columnRailId(column)}`}
+      // FOCUS IS THE ONLY WRITER OF THE SELECTION (ADR-0030 decision 5): a Tab
+      // into the board lands on the roving tab stop, which before any
+      // interaction is cell 0 while `selected` is still null — so without this
+      // the caret `:focus-visible` paints could not write.
+      //
+      // It cannot loop with `Board`'s layout effect: that effect only ever
+      // focuses `selected`, and re-selecting the index already selected
+      // returns the SAME state object, which `useReducer` bails out of.
+      onFocus={() => onCellFocus(index)}
+      onClick={(event) => onCellClick(index, event)}
+    />
   );
 });
 

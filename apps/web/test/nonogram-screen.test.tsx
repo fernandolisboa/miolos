@@ -711,6 +711,52 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
     expect(Board).toHaveProperty("$$typeof", Symbol.for("react.memo"));
     expect(Board).toHaveProperty("type", expect.any(Function));
   });
+
+  it("composes ONE cell label per painted cell during a drag, not size² (T-WEB-S66)", () => {
+    // The half `Board`'s own memo cannot buy, and the reason `Cell` is
+    // memoized (step-6 round-3 finding PERF-R3-1). `paint-over` allocates a
+    // new `entries` array, so `Board` re-enters on every pointer move by
+    // construction; without the per-cell memo each of those re-composes all
+    // 225 aria labels, and this drag would cost 225 × N compositions on the
+    // game's PRIMARY gesture (ADR-0037).
+    //
+    // `cellAria` is the honest probe: it is the per-cell work that scales, and
+    // it is called exactly once per rendered cell. A DOM assertion cannot see
+    // any of this — React writes no attribute when the value is unchanged, so
+    // the markup is identical either way, which is why the sibling assertion
+    // above is structural.
+    const { container } = render(<NonogramScreen daily={BIG} />);
+    stubElementFromPoint(container);
+    const board = boardOf(BIG);
+    const cells = BIG.size * BIG.size;
+    const painted = 8;
+
+    const cellAria = vi.spyOn(messages.games.nonogram.play, "cellAria");
+
+    fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
+    for (let index = 1; index < painted; index += 1) {
+      fireEvent.pointerMove(board, {
+        clientX: index,
+        clientY: 0,
+        pointerId: 1,
+      });
+    }
+    fireEvent.pointerUp(board, {
+      clientX: painted - 1,
+      clientY: 0,
+      pointerId: 1,
+    });
+
+    // Anti-vacuity: the stroke really painted, so a zero count would be a
+    // stalled drag rather than a perfect memo.
+    for (let index = 0; index < painted; index += 1) {
+      expect(markAt(container, index)).toBe(1);
+    }
+    // O(N), with generous slack for the caret and hint rings the same stroke
+    // moves. The number that must never come back is 225 × N = 1800.
+    expect(cellAria.mock.calls.length).toBeLessThan(cells);
+    cellAria.mockRestore();
+  });
 });
 
 describe("the four branches (T-WEB-S47)", () => {

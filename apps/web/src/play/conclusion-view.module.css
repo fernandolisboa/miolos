@@ -361,11 +361,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Non-zero padding on BOTH axes, for exactly the reason `.chip` above carries:
+   this button paints a filled background (`--ink`, or the destination game's
+   accent through `.ctaNext`), so at `padding: 14px 0` its label sat flush
+   against a VISIBLE boundary and `impeccable detect` fired `cramped-padding`
+   on the CONCLUDED conclusion at both scanned viewports — the card #25's AC 2
+   gates and the one no URL-mode scan reaches, because a clean browser profile
+   has no concluded record and always renders the empty branch (step-6 round-3
+   finding ISS-A3). Pre-existing and cross-game: binairo and sudoku render this
+   same class. The inset is visually inert — the button is a full-width flex
+   item with a centred label, which is why `.emptyCta` has carried `14px 26px`
+   all along. T-WEB-S65 is the only gate on it. */
 .cta {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 0;
+  padding: 14px var(--space-4);
   background: var(--ink);
   color: var(--paper-desk);
   border-radius: var(--radius);

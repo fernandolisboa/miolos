@@ -864,6 +864,27 @@ describe("the conclusion's layout (tripwires)", () => {
     }
   });
 
+  it("insets the concluded card's CTA on BOTH axes (T-WEB-S65)", () => {
+    // Step-6 round-3 finding ISS-A3, the same rule and the same blind spot as
+    // the chips below: `.cta` paints a filled background (`--ink`, or the
+    // destination game's accent through `.ctaNext`), and at `padding: 14px 0`
+    // `impeccable detect` fired `cramped-padding` on the concluded conclusion
+    // at 1440x900 and 390x844 — the card AC 2 gates and no URL-mode scan can
+    // reach. `--space-4` is 16px (packages/ui/tokens.css); the assertion is on
+    // the DECLARATION being non-zero rather than on the token, so a future
+    // retune cannot silently return to zero.
+    const padding = decl(bodyOf(CSS, ".cta"), "padding");
+    expect(padding, ".cta declares no padding").toBeDefined();
+    const [block, inline] = (padding ?? "").split(/\s+/);
+    expect(Number.parseFloat(block ?? "0"), "block padding").toBeGreaterThan(0);
+    expect(
+      inline,
+      "inline padding — a zero here is the cramped-padding red",
+    ).toBeDefined();
+    expect(inline).not.toBe("0");
+    expect(inline).not.toBe("0px");
+  });
+
   it("insets the day-card chips on BOTH axes, at both bands (T-WEB-S65)", () => {
     // finding `chip-is-cramped-on-the-card-the-scan-cannot-see`. `.chipDone`
     // paints a background and `.chipMissing` a 1.5px dashed border, so a chip
