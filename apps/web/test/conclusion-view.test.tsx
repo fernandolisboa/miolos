@@ -9,6 +9,7 @@ import {
   type BinairoPlayRecord,
   type NonogramPlayRecord,
   type SudokuPlayRecord,
+  type TermoPlayRecord,
 } from "../src/play/play-record";
 import type { ConclusionPicture } from "../src/play/types";
 import { useRecordSnapshot } from "../src/play/use-record-snapshot";
@@ -38,6 +39,11 @@ const SUDOKU_ELAPSED = formatElapsed(SUDOKU_ELAPSED_MS);
 // would make an ambiguous match possible in any test that grows an
 // assertion on a duration later (T-WEB-S55).
 const NONOGRAM_ELAPSED_MS = 623_000;
+// A fourth, for #27's chips. A won Termo publishes NO duration (ADR-0045
+// decision 4, plan 022 §15.3), so this value's job is to be looked for and
+// not found — which needs it to be distinct from the other three.
+const TERMO_ELAPSED_MS = 188_000;
+const TERMO_ELAPSED = formatElapsed(TERMO_ELAPSED_MS);
 
 function concluded(
   overrides: Partial<BinairoPlayRecord> = {},
@@ -925,5 +931,266 @@ describe("the conclusion's layout (tripwires)", () => {
         `${scope}: inline padding — a zero here is the cramped-padding red`,
       ).toBeGreaterThanOrEqual(6);
     }
+  });
+});
+
+/**
+ * T-WEB-S80 (plan 022 §15, ADR-0044). `DayEntry` gained CONTEXT.md's third
+ * verb, and the two consumers this file owns had to be rewritten for it: the
+ * chip's value guard, and the `dayEntry` override that marks the game being
+ * celebrated done before its record is written.
+ */
+describe("the day card's third verb (T-WEB-S80)", () => {
+  type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
+  const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
+  const WIN: Tiles = ["correct", "correct", "correct", "correct", "correct"];
+
+  function wonTermo(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
+    return {
+      v: 1,
+      game: "termo",
+      date: DATE,
+      guesses: [
+        { guess: "cafes", tiles: [...MISS] },
+        { guess: "praga", tiles: [...WIN] },
+      ],
+      answer: "praga",
+      outcome: "won",
+      elapsedMs: TERMO_ELAPSED_MS,
+      hintsUsed: 0,
+      concluded: true,
+      pendingSync: false,
+      syncOutcome: "recorded",
+      ...overrides,
+    };
+  }
+
+  const lostTermo = () =>
+    wonTermo({
+      guesses: "abcdef".split("").map((letter) => ({
+        guess: letter.repeat(5),
+        tiles: [...MISS],
+      })),
+      outcome: "lost",
+    });
+
+  /** The chip whose name is `game`, scoped so a value never matches another. */
+  function chipFor(game: "termo" | "sudoku"): HTMLElement {
+    const chip = within(dayCard())
+      .getByText(messages.conclusion.dayCard.games[game])
+      .closest("div");
+    if (chip === null) {
+      throw new Error(`the ${game} chip is not inside a <div>`);
+    }
+    return chip;
+  }
+
+  it("renders a LOST termo as `jogado`, never `falta` and never a duration", () => {
+    writePlayRecord(lostTermo());
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const chip = chipFor("termo");
+    expect(chip).toHaveTextContent(messages.conclusion.dayCard.played);
+    expect(chip).not.toHaveTextContent(messages.conclusion.dayCard.missing);
+    expect(chip.textContent).not.toContain(TERMO_ELAPSED);
+    // The third shape, not a second copy of `missing`'s.
+    expect(chip.className).toContain("chipPlayed");
+    expect(chip.className).not.toContain("chipMissing");
+    expect(chip.className).not.toContain("chipDone");
+  });
+
+  it("renders a WON termo as `feito` — the case the un-split guard failed", () => {
+    // A won Termo is COMPLETED and publishes no duration (plan 022 §15.3), so
+    // it is exactly the entry the shipped single guard — `const elapsedMs =
+    // entry.concluded ? entry.elapsedMs : undefined; const done = elapsedMs
+    // !== undefined;` — dropped straight through to `falta`, next to a game
+    // the player had just won.
+    writePlayRecord(wonTermo());
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const chip = chipFor("termo");
+    expect(chip).toHaveTextContent(messages.conclusion.dayCard.done);
+    expect(chip).not.toHaveTextContent(messages.conclusion.dayCard.missing);
+    expect(chip.textContent).not.toContain(TERMO_ELAPSED);
+    expect(chip.className).toContain("chipDone");
+  });
+
+  it("leaves a grid game's chip reading its own duration, unchanged", () => {
+    // Anti-regression for the three shipped games: `entryFor` returns
+    // `completed` WITH the record's `elapsedMs` wherever it returned
+    // `concluded: true`, so no shipped chip loses its number (ADR-0044
+    // consequence (b)).
+    writePlayRecord(concluded());
+    writePlayRecord(concludedSudoku());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const chip = chipFor("sudoku");
+    expect(chip).toHaveTextContent(SUDOKU_ELAPSED);
+    expect(chip.className).toContain("chipDone");
+  });
+
+  it("gives `played` a SOLID border, distinct from `missing`'s dashed one", () => {
+    // jsdom computes no cascade, so the shape carrier is read as stylesheet
+    // text (see ./css-source). Reusing the dashed border would make `played`
+    // and `missing` pixel-identical and the one new state invisible.
+    const CSS = stylesheet("src/play/conclusion-view.module.css");
+    const played = decl(bodyOf(CSS, ".chipPlayed"), "border");
+    const missing = decl(bodyOf(CSS, ".chipMissing"), "border");
+
+    expect(played).toBe("1.5px solid var(--line)");
+    expect(missing).toBe("1.5px dashed var(--line)");
+    expect(played).not.toBe(missing);
+  });
+});
+
+/**
+ * The `dayEntry` override, made outcome-aware (plan 022 §15.3). It exists
+ * because the game being celebrated is proved done by the STAMP, which is
+ * exactly what the record may not say yet — on the in-place swap the record
+ * still in storage is the last PLAYING one. Both obvious simplifications
+ * break, in opposite directions, and each of these two cases kills one.
+ */
+describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
+  it("marks it PLAYED with no duration, never completed with the stamp's time", () => {
+    // Kills the unconditional `{status:"completed", elapsedMs:
+    // stamp.elapsedMs}`: that shape puts a duration next to "Jogado" on the
+    // loss branch — a time on a game nobody won, the exact lie ADR-0043 and
+    // ADR-0044 exist to refuse.
+    render(
+      <ConclusionView
+        game="termo"
+        date={DATE}
+        copy={messages.games.termo.conclusion}
+        result={{ elapsedMs: TERMO_ELAPSED_MS, hintsUsed: 0 }}
+        outcome={{
+          state: "lost",
+          label: "Jogado",
+          detail: "X/6",
+          aria: "Termo jogado: as 6 tentativas acabaram sem acerto.",
+          settle: false,
+        }}
+      />,
+    );
+
+    const card = dayCard();
+    const chip = within(card)
+      .getByText(messages.conclusion.dayCard.games.termo)
+      .closest("div");
+    expect(chip).toHaveTextContent(messages.conclusion.dayCard.played);
+    // No `formatElapsed` output anywhere in the chip, and none in the whole
+    // day card for termo's row.
+    expect(chip?.textContent).not.toContain(TERMO_ELAPSED);
+    expect(chip?.className).toContain("chipPlayed");
+  });
+
+  it("still never chains the CTA back into the game just spent", () => {
+    // Kills dropping the override on the loss branch: `dayState.termo` would
+    // read `pending` (the record in storage is the last playing one), and
+    // termo is FIRST in `DAY_GAMES`, so the conclusion of the very game the
+    // player just spent would offer it as the default next daily.
+    //
+    // Asserted on the CTA's LABEL rather than on `routes.termo`, which does
+    // not exist until the route segments land: `ctaNext` names its
+    // destination game, so this is the same shape the shipped "never chains
+    // back to the game whose stamp is on screen" case uses for Sudoku.
+    // `playRoutes.termo` is not live until the activation commit either, so
+    // today the loop also skips termo for want of a route; this assertion is
+    // what keeps it skipped once the route lands.
+    render(
+      <ConclusionView
+        game="termo"
+        date={DATE}
+        copy={messages.games.termo.conclusion}
+        result={{ elapsedMs: TERMO_ELAPSED_MS, hintsUsed: 0 }}
+        outcome={{
+          state: "lost",
+          label: "Jogado",
+          detail: "X/6",
+          aria: "Termo jogado: as 6 tentativas acabaram sem acerto.",
+          settle: false,
+        }}
+      />,
+    );
+
+    const cta = screen
+      .getByText(messages.conclusion.ctaNext(messages.games.sudoku.name))
+      .closest("a");
+    expect(cta).toHaveAttribute("href", routes.sudoku);
+    expect(
+      screen.queryByText(
+        messages.conclusion.ctaNext(messages.games.termo.name),
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("marks a WON termo completed, so the CTA still moves on", () => {
+    // The other side of the same override: `outcome.state === "result"` must
+    // NOT take the played arm, or a win would enter the day card as `jogado`
+    // and drop out of "X de 4 concluídos".
+    render(
+      <ConclusionView
+        game="termo"
+        date={DATE}
+        copy={messages.games.termo.conclusion}
+        result={{ elapsedMs: TERMO_ELAPSED_MS, hintsUsed: 0 }}
+        outcome={{
+          state: "result",
+          label: "Concluído",
+          detail: "2/6",
+          aria: "Termo concluído em 2 de 6 tentativas.",
+          settle: true,
+        }}
+      />,
+    );
+
+    const chip = within(dayCard())
+      .getByText(messages.conclusion.dayCard.games.termo)
+      .closest("div");
+    expect(chip).toHaveTextContent(messages.conclusion.dayCard.done);
+    expect(chip?.className).toContain("chipDone");
+  });
+
+  it("leaves the three shipped games' overrides exactly as they were", () => {
+    // A game that passes no `outcome` renders what it rendered before the
+    // prop existed: its own chip carries the stamp's duration.
+    writePlayRecord(concluded({ concluded: false, grid: undefined }));
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+        result={{ elapsedMs: ELAPSED_MS, hintsUsed: 0 }}
+      />,
+    );
+
+    const chips = within(dayCard());
+    expect(chips.getByText(ELAPSED)).toBeInTheDocument();
+    expect(
+      chips.getAllByText(messages.conclusion.dayCard.missing),
+    ).toHaveLength(3);
   });
 });

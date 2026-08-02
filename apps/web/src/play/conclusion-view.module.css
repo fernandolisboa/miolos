@@ -400,6 +400,26 @@
   border: 1.5px dashed var(--line);
 }
 
+/* The third day state (#27, ADR-0008 decision 3, ADR-0044): a lost Termo is
+   PLAYED, never completed. A SOLID border, deliberately not `.chipMissing`'s
+   dashed one — reusing that would make `played` and `missing` pixel-identical
+   (same 1.5px dashed --line, no tint, `.chipName` unchanged), so three day
+   states would render as TWO shapes and the one new state would be invisible.
+
+   `missing` = dashed (nothing here yet); `played` = SOLID (something
+   happened, just not a completion); `done` = a tinted fill and no border at
+   all. Three border treatments, no colour involved, all three legible in
+   greyscale.
+
+   --line on --paper-card is 1.4323:1, so this border is a SHAPE carrier and
+   not a contrast one — exactly what `.chipMissing` above already is. The
+   state's 3:1 carrier is the VALUE STRING itself (`jogado` vs `falta` vs a
+   duration, --ink-2 on --paper-card at 5.3003:1); the border only tells the
+   two non-done chips apart at a glance. */
+.chipPlayed {
+  border: 1.5px solid var(--line);
+}
+
 .chipName {
   display: block;
   font-family: var(--font-display);

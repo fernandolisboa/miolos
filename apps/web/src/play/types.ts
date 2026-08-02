@@ -104,6 +104,40 @@ export interface ConclusionCopy {
  * `size` is a plain `number`, not a game's size union: this type is
  * game-blind by construction and must not name one game's shape.
  */
+/**
+ * The stamp Termo renders in place of the shared label/time/hints triple
+ * (#27, ADR-0043). Plain data only, following `picture` exactly; supplied
+ * ONLY by a client component that owns the local play record. A game that
+ * passes nothing renders exactly what it rendered before this prop existed.
+ *
+ * `state` drives `data-conclusion-state`, so ONE prop serves both Termo
+ * outcomes: a win is still "result", a loss is "lost". Termo passes it on
+ * BOTH outcomes because neither of the shipped stamp's three slots is honest
+ * here — there is no hint to have gone without (ADR-0045 decision 1), and the
+ * elapsed time is dominated by the per-guess round trip (decision 4).
+ *
+ * `settle` is false on a loss. There is no consolation flourish, no second
+ * stamp design, no mascot and no emoji: THE LOSS EQUIVALENT OF THE
+ * CELEBRATION IS THE CELEBRATION'S ABSENCE, and stating that here is what
+ * stops the next contributor from inventing one.
+ *
+ * `state` is the only field the day-state reader consults, and it does so to
+ * decide whether the game being celebrated enters the day card as *completed*
+ * or as *played* (plan 022 §15.3). `label`, `detail`, `aria` and `settle`
+ * are the stamp's own, rendered by the conclusion's fourth branch.
+ */
+export interface ConclusionOutcome {
+  readonly state: "result" | "lost";
+  /** "Concluído" | "Jogado" — composed by the caller from its own bundle. */
+  readonly label: string;
+  /** "4/6" | "X/6". */
+  readonly detail: string;
+  /** The whole composed accessible name (ADR-0018). */
+  readonly aria: string;
+  /** Whether the shared stamp-settle animation runs. False on a loss. */
+  readonly settle: boolean;
+}
+
 export interface ConclusionPicture {
   readonly size: number;
   /** Row-major, length size²; 1 = filled. */

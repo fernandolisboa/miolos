@@ -93,7 +93,8 @@ export function useRecordSnapshot(game: Game, date: string): RecordSnapshot {
 }
 
 /**
- * The five CHROME fields every reader of a record renders from it.
+ * The five CHROME fields every reader of a record renders from it, plus the
+ * one per-game payload field that moves independently of them.
  *
  * Deliberately not "everything a reader renders": #25's nonogram conclusion
  * also renders `size` and `grid` (`nonogram/nonogram-conclusion.tsx`), and
@@ -112,6 +113,18 @@ export function useRecordSnapshot(game: Game, date: string): RecordSnapshot {
  * that and must be added below, or its reader will be handed a stale cached
  * snapshot and render the wrong picture. The next game owes its own copy of
  * T-WEB-S64.
+ *
+ * TERMO IS THAT GAME (#27, ADR-0044 consequence (d)), and it is why there is
+ * a sixth term. `guesses` grows on every judged turn while all five chrome
+ * fields stand still, so the COUNT is compared here (T-WEB-S78). `answer` and
+ * `outcome` are deliberately NOT compared: the record's `superRefine` makes
+ * their lockstep with `concluded` a parse-time invariant, so neither can move
+ * on its own — the same claim nonogram's `grid` makes, now proved by a schema
+ * rather than by a `buildRecord`. Termo's own copy of T-WEB-S64 therefore
+ * asserts `answer`, never `guesses`.
+ *
+ * `-1` for a non-termo record is a value no array length can take, so the
+ * term is inert for the three shipped games.
  */
 function sameToTheReader(
   previous: PlayRecord | undefined,
@@ -122,6 +135,8 @@ function sameToTheReader(
     previous?.pendingSync === next?.pendingSync &&
     previous?.syncOutcome === next?.syncOutcome &&
     previous?.elapsedMs === next?.elapsedMs &&
-    previous?.hintsUsed === next?.hintsUsed
+    previous?.hintsUsed === next?.hintsUsed &&
+    (previous?.game === "termo" ? previous.guesses.length : -1) ===
+      (next?.game === "termo" ? next.guesses.length : -1)
   );
 }

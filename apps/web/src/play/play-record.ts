@@ -14,6 +14,7 @@
  * ADR-0001's follow-up already places in-flight state here.
  */
 import {
+  completionOutcomeSchema,
   isoDateString,
   nonogramSizeSchema,
   sudokuDigitSchema,
@@ -204,14 +205,193 @@ export const nonogramPlayRecordSchema = z
 
 export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
 
+// THIS MODULE IMPORTS NOTHING FROM `@miolos/games/termo` — not a value, and
+// not even a type. The VALUE half is load-bearing: this module is on EVERY
+// route's client graph (`day-state.ts` reads it for the hub's meta line and
+// every card's action), so a value import would put the Termo engine on `/` —
+// and, the day one of `word-list.ts`'s two `/*#__PURE__*/` annotations is lost
+// to a refactor, the word list with it (ADR-0045). The TYPE half is
+// mechanical: an `import type` with no consumer left in this file is the SAME
+// `@typescript-eslint/no-unused-vars` ERROR as an unused const, and the root
+// script is `eslint --max-warnings 0 .`.
+//
+// The three literals below are therefore RESTATED, and they are pinned to the
+// engine from `apps/web/test/termo-record.test.ts`, where a value import of
+// `@miolos/games/termo` is free (the bundle rule binds `src/`, not `test/`).
+
 /**
- * EXTENSION POINT: #27 adds its member here; the discriminator is `game`,
- * exactly as it is on the wire contracts.
+ * The engine's `TileState`, restated rather than imported — see the note
+ * above. The restatement is pinned in BOTH directions by `T-WEB-S74`, which
+ * reaches the tile type back out through this schema's own inferred type and
+ * asserts mutual assignability against the engine's union. A member added to,
+ * removed from or renamed in that union reds `pnpm typecheck` at that test
+ * rather than silently producing a record the Termo reducer cannot read.
+ */
+const tileStateSchema = z.enum(["correct", "present", "absent"]);
+
+/**
+ * `MAX_GUESSES` and `WORD_LENGTH`, restated for the same reason. Pinned by
+ * `T-WEB-S75` BEHAVIOURALLY rather than by a `typeof` assignment: with the
+ * engine's constants value-imported in the test, a `MAX_GUESSES`-long list
+ * parses and a `MAX_GUESSES + 1`-long one fails, and a `WORD_LENGTH`-letter
+ * guess parses while `WORD_LENGTH ± 1` fails. That is a stronger pin than the
+ * assignment was — it proves the schema ENFORCES the bound, not merely that
+ * it declares a matching type.
+ */
+const TERMO_MAX_GUESSES = 6;
+const TERMO_WORD_LENGTH = 5;
+
+/** A guess as the engine sees it: normalized, five letters, no accents. */
+const NORMALIZED_GUESS = /^[a-z]{5}$/;
+
+/**
+ * The termo member (#27, ADR-0044). The first member that is NOT a board, and
+ * the first whose `closed` and `solved` do not coincide.
+ *
+ * WHAT IT HOLDS: the JUDGED GUESS ROWS, and nothing in flight. A guess the
+ * server has not answered lives in reducer state and never reaches storage —
+ * a persisted unjudged row could never be filled in (the client has no answer
+ * to judge against), so a reload would find a row with no tiles that had
+ * already spent one of six attempts. Losing five typed letters to a crash is
+ * strictly better.
+ *
+ * WHY THE TILES ARE STORED. `evaluateGuess(guess, answer)` needs the answer,
+ * and termo's public projection is `game, date` only. Mid-play there is no
+ * answer in scope, so a record without tiles cannot re-render the board after
+ * a reload. This is not an optimisation.
+ *
+ * WHY `{guess, tiles}` ROWS AND NOT TWO PARALLEL ARRAYS. The paired shape is
+ * structurally the engine's `EvaluatedGuess`, so `deriveKeyboardState(record
+ * .guesses)` reads the record with no adapter. Parallel arrays need a length
+ * cross-refine and let a hand-edited store desynchronise them.
+ *
+ * WHY THE GUESSES ARE NORMALIZED. It is the form every engine call already
+ * sees, it is the form the wire carries so there is no conversion boundary,
+ * and it is the ONLY form available: `content/termo/canonical-map.csv` is
+ * harness input and does not ship, so there is no runtime way to obtain the
+ * accented spelling of an arbitrary guess.
+ *
+ * `answer` is the ANSWER's canonical accented spelling (ADR-0015), written
+ * only on the closing write. It is here rather than read off the completion
+ * response because that response is a broken channel for it: `acceptResponse`
+ * copies only `elapsedMs`/`hintsUsed`, and only on the `recorded: false`
+ * branch (sync.ts), and the replay path returns before the wall read by
+ * ADR-0026 decision 4's design. Without it, /termo/concluido cannot show the
+ * word. `.length(5)` is what this schema can honestly prove: measured, all
+ * 400 canonicals are exactly five codepoints and NFC-stable. A character
+ * class here would be a second copy of the pt-BR alphabet, free to drift.
+ *
+ * `outcome` is STORED, not derived from the tiles, and the reason is blast
+ * radius rather than bytes: `day-state.ts` reads this record to build the
+ * hub's tiles and the conclusion's day card, and it must never import a game
+ * engine (see the import note above). The derivation still has exactly one
+ * definition — the Termo reducer's `restore` discards a record whose
+ * `outcome` disagrees with `deriveBoardStatus(tiles)`, the same way
+ * `nonogram/state.ts` discards a size mismatch. STORED ON THE RECORD is not
+ * duplicated INTO THE STATE: `TermoPlayState` carries no `outcome` field — it
+ * would be a second terminal predicate beside `PlayCore.status`, which
+ * ADR-0029 consequence (e) forbids by name — so `buildRecord` writes this
+ * field from `state.status` (`solved → "won"`, `lost → "lost"`), the
+ * reducer's own `won → solved` mapping read backwards. A hand-edited
+ * `outcome` therefore buys a wrong local tile and nothing else: it never
+ * reaches the wire (`buildBody` posts the guess WORDS and lets the server
+ * judge), and ADR-0031 decision 6 forbids this state from backing any streak
+ * or medal (ADR-0044 consequence (f) states the consequence in full).
+ *
+ * `hintsUsed` keeps binairo's bound unchanged even though Termo ships no hint
+ * (ADR-0045): one free hint per puzzle is a PRODUCT rule, not a per-game one,
+ * and `.max(0)` would encode one ticket's decision into a product-level
+ * bound. `buildRecord` writes the literal 0.
+ *
+ * THE SUPERREFINE IS NOT DECORATION. Two of its four checks guard documented
+ * THROWS: `deriveBoardStatus` raises RangeError for more than MAX_GUESSES
+ * rows and for any row following an all-correct row
+ * (packages/games/src/termo/status.ts:25-36). A record violating either would
+ * crash the reducer on restore, so it has to be UNPARSEABLE rather than
+ * merely unexpected. The other two make the payload/`concluded` lockstep a
+ * PARSE-TIME invariant rather than only a tested one —
+ * `use-record-snapshot.ts` depends on it.
+ *
+ * A checked object is a legal `z.discriminatedUnion` option in Zod 4 and is
+ * NOT one in Zod 3 — the same constraint the nonogram member carries,
+ * verified against the installed zod 4.4.3.
+ */
+export const termoPlayRecordSchema = z
+  .strictObject({
+    v: z.literal(1),
+    game: z.literal("termo"),
+    date: isoDateString,
+    /** Judged rows only, oldest first. Structurally `EvaluatedGuess`. */
+    guesses: z
+      .array(
+        z.strictObject({
+          guess: z.string().regex(NORMALIZED_GUESS),
+          tiles: z.tuple([
+            tileStateSchema,
+            tileStateSchema,
+            tileStateSchema,
+            tileStateSchema,
+            tileStateSchema,
+          ]),
+        }),
+      )
+      .max(TERMO_MAX_GUESSES),
+    /** The canonical accented answer. Present IFF `concluded`. */
+    answer: z.string().length(TERMO_WORD_LENGTH).optional(),
+    /** Present IFF `concluded`. Never posted — the server judges. */
+    outcome: completionOutcomeSchema.optional(),
+    elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+    hintsUsed: z.number().int().min(0).max(1),
+    concluded: z.boolean(),
+    pendingSync: z.boolean(),
+    syncOutcome: z.enum(["pending", "recorded", "rejected"]),
+  })
+  .superRefine((record, ctx) => {
+    const wonAt = record.guesses.findIndex((row) =>
+      row.tiles.every((tile) => tile === "correct"),
+    );
+    if (wonAt !== -1 && wonAt !== record.guesses.length - 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: "no guess may follow a winning row",
+        path: ["guesses"],
+      });
+    }
+    if (record.concluded !== (record.answer !== undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "answer is written exactly when the board closes",
+        path: ["answer"],
+      });
+    }
+    if (record.concluded !== (record.outcome !== undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "outcome is written exactly when the board closes",
+        path: ["outcome"],
+      });
+    }
+    if (record.concluded && record.guesses.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "a closed board has at least one judged guess",
+        path: ["guesses"],
+      });
+    }
+  });
+
+export type TermoPlayRecord = z.infer<typeof termoPlayRecordSchema>;
+
+/**
+ * The four dailies. `v` STAYS 1 across the whole union: the termo member is
+ * purely ADDITIVE, so every binairo, sudoku and nonogram record written
+ * before #27 parses identically after it (T-WEB-S74).
  */
 export const playRecordSchema = z.discriminatedUnion("game", [
   binairoPlayRecordSchema,
   nonogramPlayRecordSchema,
   sudokuPlayRecordSchema,
+  termoPlayRecordSchema,
 ]);
 
 export type PlayRecord = z.infer<typeof playRecordSchema>;

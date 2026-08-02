@@ -91,6 +91,32 @@ export const messages = {
     doneResultShort: (elapsed: string) => elapsed,
     doneAria: (game: string, elapsed: string) =>
       `${game} concluído em ${elapsed}`,
+    /**
+     * The chip on a PLAYED game's tile (#27, ADR-0008 decision 3, ADR-0044).
+     * Capitalised, beside `done: "Feito"` — the hub's chip register. The day
+     * card's equivalent is lowercase `jogado`, because that is a tabular
+     * VALUE slot beside a duration rather than a chip, and the difference is
+     * deliberate (plan 022 §15.3).
+     */
+    played: "Jogado",
+    /**
+     * The whole accessible name of a PLAYED tile, composed here (ADR-0018).
+     * Takes NO duration: `doneAria` is `"${game} concluído em ${elapsed}"`
+     * and both halves of that sentence are false for a lost Termo.
+     */
+    playedAria: (game: string) => `${game} jogado`,
+    /**
+     * The accessible name of a COMPLETED tile that publishes no duration —
+     * a won Termo, whose elapsed time includes every per-guess round trip
+     * and is therefore never rendered (ADR-0045 decision 4).
+     *
+     * A THIRD string rather than a reuse, and both reuses are wrong in
+     * opposite directions: `doneAria` requires an elapsed this entry does
+     * not have, and `playedAria` says *jogado* about a game the player won.
+     * ADR-0018 forbids composing the fallback in the component. #29 replaces
+     * this tile's readout with `em 4/6` and may retire the string.
+     */
+    completedAria: (game: string) => `${game} concluído`,
     links: {
       archive: "Arquivo",
       freePlay: "Modo livre",
@@ -134,6 +160,20 @@ export const messages = {
     dayCard: {
       title: "O dia até agora",
       missing: "falta",
+      /**
+       * A lost Termo is PLAYED, never completed (ADR-0008 decision 3,
+       * ADR-0044). Lowercase, because this is a tabular value slot beside a
+       * duration ("06:47" / "falta") and not a chip — the hub's `played`
+       * ("Jogado") is capitalised and that difference is deliberate.
+       */
+      played: "jogado",
+      /**
+       * COMPLETED with no duration — a won Termo, whose elapsed time is
+       * meaningless for this game (ADR-0045 decision 4) and is therefore
+       * never published. Without this string the split guard in `DayChip`
+       * has nothing to print and a won Termo falls through to `falta`.
+       */
+      done: "feito",
       games: {
         termo: "Termo",
         sudoku: "Sudoku",
@@ -158,6 +198,21 @@ export const messages = {
       kicker: "Palavras",
       name: "Termo",
       description: "Seis tentativas para a palavra do dia.",
+      /**
+       * The conclusion's copy bundle (#27, plan 022 §18.2). Plain data only —
+       * it crosses the RSC boundary into `<ConclusionView/>`, and a function
+       * member there is an SSR 500 rather than a type error (types.ts).
+       * The play bundle and Termo's own `outcome`/`dayWord` siblings arrive
+       * with the screen.
+       */
+      conclusion: {
+        title: "Termo",
+        kicker: "Palavras",
+        notYet: {
+          title: "Você ainda não concluiu o Termo de hoje.",
+          cta: "Jogar o Termo de hoje",
+        },
+      },
     },
     sudoku: {
       kicker: "Números",

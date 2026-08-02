@@ -17,7 +17,11 @@ import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { startCompletionSync } from "./sync";
-import type { ConclusionCopy, ConclusionPicture } from "./types";
+import type {
+  ConclusionCopy,
+  ConclusionOutcome,
+  ConclusionPicture,
+} from "./types";
 import { useRecordSnapshot } from "./use-record-snapshot";
 
 /** The four dailies, in the order Hoje lists them. */
@@ -63,6 +67,12 @@ export interface ConclusionResult {
  * data, optional, and supplied only by a client component that owns the local
  * play record. A game with no payoff passes nothing and renders exactly what
  * it rendered before the prop existed.
+ *
+ * `outcome` is the second, on the same rule (#27, ADR-0043). This commit
+ * consumes exactly one of its fields — `state`, which decides whether the
+ * game being celebrated enters the day card as *completed* or as *played*
+ * (plan 022 §15.3). The stamp it also describes, and the fourth
+ * `data-conclusion-state` branch it opens, arrive with the Termo screen.
  */
 export function ConclusionView({
   game,
@@ -70,12 +80,14 @@ export function ConclusionView({
   copy,
   result,
   picture,
+  outcome,
 }: {
   readonly game: Game;
   readonly date: string;
   readonly copy: ConclusionCopy;
   readonly result?: ConclusionResult;
   readonly picture?: ConclusionPicture;
+  readonly outcome?: ConclusionOutcome;
 }) {
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
@@ -175,9 +187,32 @@ export function ConclusionView({
   // the CTA straight back into the grid the player just closed. Monotone
   // safety is unaffected — this can only mark a game done, and on live proof
   // (ADR-0031).
+  //
+  // OUTCOME-AWARE since #27, and both simplifications break (plan 022 §15.3).
+  // An unconditional `{status: "completed", elapsedMs: stamp.elapsedMs}` puts
+  // a duration next to "jogado" on a loss — a time on a game nobody won, the
+  // lie `day-state.ts` already refuses for a part-played board. Dropping the
+  // override on the loss branch makes this game read `pending`, and termo is
+  // FIRST in `DAY_GAMES`, so the conclusion of the game just spent would
+  // offer it as the default next daily. `outcome` is the same one prop that
+  // drives the stamp, so nothing here re-derives a verdict.
+  //
+  // THE PRESENCE OF `outcome` IS ALSO WHAT SUPPRESSES THE DURATION ON A WIN,
+  // and that is game-blind rather than a termo branch: a game supplies this
+  // prop precisely because the shared label/TIME/hints triple is not an
+  // honest stamp for it, so its elapsed time is not the day's result either.
+  // Without this, /termo's own conclusion would print `em 03:08` in the chip
+  // that `entryFor` — and therefore the hub, and every other game's
+  // conclusion — renders as `feito` (ADR-0045 decision 4, plan 022 §15.3).
+  // A game that passes no `outcome` renders exactly what it rendered before
+  // this prop existed.
   const dayEntry = (dayGame: Game): DayEntry =>
     dayGame === game
-      ? { concluded: true, elapsedMs: stamp.elapsedMs }
+      ? outcome === undefined
+        ? { status: "completed", elapsedMs: stamp.elapsedMs }
+        : outcome.state === "lost"
+          ? { status: "played", elapsedMs: undefined }
+          : { status: "completed", elapsedMs: undefined }
       : dayState[dayGame];
   const next = nextPendingDaily(dayEntry);
 
@@ -328,13 +363,18 @@ function picturePath(picture: ConclusionPicture): string {
  * Understating is safe here for the same reason it is on the hub: the worst
  * a stale `pending` does is offer a game the player already solved on another
  * device, and `/<jogo>` restores straight into its conclusion (ADR-0031).
+ *
+ * The chain is on `"pending"` ALONE, never on "not completed" (#27, ADR-0044
+ * decision 5). A lost Termo is *played*: its six guesses are spent and the
+ * CTA's own contract is "the first daily this device can still play today",
+ * so re-offering it would send the player to a board with no turns left.
  */
 function nextPendingDaily(
   entryOf: (game: Game) => DayEntry,
 ): { readonly game: Game; readonly route: Route } | undefined {
   for (const candidate of DAY_GAMES) {
     const route = playRoutes[candidate];
-    if (route !== undefined && !entryOf(candidate).concluded) {
+    if (route !== undefined && entryOf(candidate).status === "pending") {
       return { game: candidate, route };
     }
   }
@@ -381,15 +421,36 @@ function DayChip({
   readonly game: (typeof DAY_GAMES)[number];
   readonly entry: DayEntry;
 }) {
-  // Narrowed through the value rather than through `concluded`, so no
-  // non-null assertion is needed and a `{concluded: true}` entry that
-  // somehow lost its duration degrades to `falta` instead of rendering
-  // "undefined" (`DayEntry.elapsedMs` is optional by type, §11.2).
-  const elapsedMs = entry.concluded ? entry.elapsedMs : undefined;
-  const done = elapsedMs !== undefined;
+  // THE GUARD IS SPLIT, and the split is what #27 needed (plan 022 §15.3).
+  // The shipped form was `const elapsedMs = entry.concluded ? entry.elapsedMs
+  // : undefined; const done = elapsedMs !== undefined;` — one guard doing two
+  // jobs, so a COMPLETED entry with no duration fell straight through to
+  // `falta`. A won Termo is exactly that entry: it publishes no duration
+  // (ADR-0045 decision 4), so the single guard would have printed `falta`
+  // next to a game the player had just won.
+  //
+  // `done` is now the STATUS, and the duration's presence only chooses which
+  // done string to print. Narrowing through the value rather than through the
+  // status is still what keeps a non-null assertion out and stops an entry
+  // that somehow lost its duration from rendering "undefined".
+  const done = entry.status === "completed";
+  const value =
+    done && entry.elapsedMs !== undefined
+      ? formatElapsed(entry.elapsedMs)
+      : done
+        ? messages.conclusion.dayCard.done
+        : entry.status === "played"
+          ? messages.conclusion.dayCard.played
+          : messages.conclusion.dayCard.missing;
   return (
     <div
-      className={`${styles.chip} ${done ? styles.chipDone : styles.chipMissing}`}
+      className={`${styles.chip} ${
+        done
+          ? styles.chipDone
+          : entry.status === "played"
+            ? styles.chipPlayed
+            : styles.chipMissing
+      }`}
     >
       {game === "nonogram" ? (
         <>
@@ -406,9 +467,7 @@ function DayChip({
           {messages.conclusion.dayCard.games[game]}
         </span>
       )}
-      <span className={styles.chipValue}>
-        {done ? formatElapsed(elapsedMs) : messages.conclusion.dayCard.missing}
-      </span>
+      <span className={styles.chipValue}>{value}</span>
     </div>
   );
 }
