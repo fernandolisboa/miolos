@@ -31,6 +31,19 @@ const STORAGE_PREFIX = "miolos:play:";
  */
 export const ELAPSED_CAP_MS = 86_400_000;
 
+/**
+ * The largest board area any legal Nonogram record can hold, DERIVED from
+ * `nonogramSizeSchema` rather than hand-written — the same rule
+ * `NONOGRAM_CELL_COUNTS` follows in `packages/core/src/contracts/completion.ts`
+ * for the same fact. A literal `225` here would have been the fourth hand
+ * copy of a number the size union already fixes, and it is exactly the copy
+ * that goes stale on the day a fifth size class lands (step-6 round-4
+ * finding Q1). `[5, 8, 10, 15] -> 225`.
+ */
+const MAX_NONOGRAM_CELLS = Math.max(
+  ...nonogramSizeSchema.options.map((option) => option.value ** 2),
+);
+
 export const playRecordKey = (game: Game, date: string) =>
   `${STORAGE_PREFIX}${game}:${date}`;
 
@@ -116,17 +129,26 @@ export type SudokuPlayRecord = z.infer<typeof sudokuPlayRecordSchema>;
  * The `superRefine` is what bounds the arrays. `writePlayRecord` does not
  * parse on write (see the function itself, below), so the schema on READ is
  * the only wall there is.
- * `.max(225)` is a plain length CEILING, and it is deliberately NOT sold as
- * an allocation bound: measured against the installed zod 4.4.3, array
- * element parsing runs BEFORE array-level checks, so
- * `z.array(union).max(225).safeParse(new Array(1_000_000).fill(0))` parses
+ * `.max(MAX_NONOGRAM_CELLS)` is a plain length CEILING, and it is
+ * deliberately NOT sold as an allocation bound: measured against the
+ * installed zod 4.4.3, array element parsing runs BEFORE array-level checks,
+ * so `z.array(union).max(225).safeParse(new Array(1_000_000).fill(0))` parses
  * all 1 000 000 elements first (`{success:false, ms:35, elementChecksRun:
- * 1000000}`) and then fails the length test. What `.max(225)` buys is a
- * schema-level statement of the record's maximum board area that holds
- * independently of `size`, so an absurd but internally size-consistent
- * record is refused by a bound and not only by the cross-refine. The two
- * shipped members have the identical property (`.length(64)`/`.length(81)`
- * also iterate first), so nothing regresses here.
+ * 1000000}`) and then fails the length test. The two shipped members have the
+ * identical property (`.length(64)`/`.length(81)` also iterate first), so
+ * nothing regresses here.
+ *
+ * IT IS REDUNDANT TODAY, and that is stated rather than dressed up. This
+ * paragraph used to claim the bound "refuses an absurd but internally
+ * size-consistent record that the cross-refine would accept"; no such record
+ * exists, because `size` is a four-member literal union so a size-consistent
+ * `entries` length is one of 25/64/100/225 and every one of them clears the
+ * ceiling — and when the ceiling DOES fire, the `superRefine` fires in the
+ * same parse, so it never rejects alone. That was the second false rationale
+ * on this one declaration (step-6 round-4 finding Q1, after CLI-4/SRV-6). It
+ * is kept as a belt on the largest legal board area, derived from the size
+ * union so that a fifth size class moves it automatically instead of leaving
+ * a stale literal behind.
  *
  * `nonogramSizeSchema` comes from @miolos/core and is never re-declared: one
  * definition, four consumers, exactly as `sudokuDigitSchema` is.
@@ -143,7 +165,9 @@ export const nonogramPlayRecordSchema = z
     date: isoDateString,
     size: nonogramSizeSchema,
     /** 1 = preenchida, 0 = marcada, null = vazia. size² of them. */
-    entries: z.array(z.union([z.literal(0), z.literal(1), z.null()])).max(225),
+    entries: z
+      .array(z.union([z.literal(0), z.literal(1), z.null()]))
+      .max(MAX_NONOGRAM_CELLS),
     /**
      * The SUBMITTED bitmap, written the moment `status` flips to `solved`.
      * NOT "the player's board": crossed and undecided cells are both `0`
@@ -152,7 +176,7 @@ export const nonogramPlayRecordSchema = z
      */
     grid: z
       .array(z.union([z.literal(0), z.literal(1)]))
-      .max(225)
+      .max(MAX_NONOGRAM_CELLS)
       .optional(),
     elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
     hintsUsed: z.number().int().min(0).max(1),

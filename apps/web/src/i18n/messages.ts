@@ -258,7 +258,14 @@ export const messages = {
           cross: "marcar",
           erase: "apagar",
           fillAria: "preencher células",
-          crossAria: "marcar células vazias",
+          // NOT "células vazias": `vazia` is this bundle's word for the
+          // UNDECIDED state (`cellAriaNonogram` above, and CONTEXT.md's
+          // Undecided row), so "marcar células vazias" told a non-sighted
+          // player the brush marks the cells they have not decided. It marks
+          // the ones they have ruled OUT of the picture, whatever state those
+          // are in — which is the wording the hint copy 30 lines down already
+          // uses (step-6 round-4 finding Q4).
+          crossAria: "marcar células fora da figura",
           eraseAria: "apagar células",
           affordance: "ou use o teclado: 1 preenche, 2 marca, 0 apaga",
         },

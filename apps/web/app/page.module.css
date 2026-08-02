@@ -54,8 +54,13 @@
 
 .streakNumeral {
   font: var(--text-numeral-lg);
-  /* After the shorthand: `font:` resets font-variant-numeric, and the token
-     comment mandates tabular-nums. */
+  /* After the shorthand, because `font:` resets font-variant-numeric. The
+     declaration is INERT and kept deliberately: `--text-numeral-lg` is
+     ADR-0036 decision 2's sanctioned single, non-aligning Fraunces numeral,
+     and Fraunces has no tabular figures — so this changes nothing and stays
+     only so the property is not left silently reset. The token comment it
+     used to cite as "mandating" tabular-nums now says the opposite for this
+     exact token (step-6 round-4 finding ADR-0036-UNAMENDED-LINES). */
   font-variant-numeric: tabular-nums;
   color: var(--accent-app);
 }

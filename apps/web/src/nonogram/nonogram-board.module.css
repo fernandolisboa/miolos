@@ -21,12 +21,24 @@
 
    RECORDED DESIGN-SYSTEM DEVIATIONS (§12.9), each with its arithmetic:
      1. Cell gap 0 instead of DESIGN.md's 4px/3px — a gapped 15-class board
-        gives a 12.33px cell at 320px against a 13.203px two-digit column-clue
-        floor (measured); at gap 0 it is 14.20px and clears.
+        gives a 12.33px cell at 320px against a 13.34px two-digit column-clue
+        floor (measured); at gap 0 it is 14.20px and clears. The floor is the
+        RENDERED `.clueNumber` flex item — 13.336525px in the built artifact —
+        not the bare glyph advance: 2 × 6.609375px of tabular advance is
+        13.203125px, and flex-item rounding adds the other ~0.13px. The bare
+        advance was what this line quoted (step-6 round-4 finding ISS-R4-5);
+        the conclusion is unchanged, and the number is now the one the build
+        produces.
      2. No --radius-cell on cells — at gap 0 a 5px radius notches all four
         corners of every interior junction.
      3. 48px and 32px cells instead of 52px at sizes 10 and 15 — 15 × 52 = 780
-        against the 545px the shared 1140px fold leaves.
+        against the 544px the shared 1140px fold leaves: the board column is
+        1140 − 2×80 page padding − 330 sidebar − 72 column-gap = 578px
+        (ADR-0035 decision 6), and .gridCard takes 2×16 padding + 2×1 border
+        off that. 545 was a second rounding of the same figure and is
+        corrected rather than left (step-6 round-4 finding
+        ADR-0035-ARITHMETIC-DRIFT); the ADR's own 559.05-vs-578 framing
+        corroborates 544.
      4. Clue numerals in var(--font-ui), not Fraunces — Fraunces has NO
         tabular figures at all (ADR-0036, measured in Chrome 151).
      5. Board touch targets below 44px at sizes 10 and 15, and below WCAG
@@ -91,8 +103,9 @@
    would drop cells into the gutter tracks.
 
    `gap: 0` is load-bearing, not tidiness: with any gap at all a 15×15 board at
-   320px gives a 12.33px cell against a 13.203px two-digit column clue
-   (measured). The rules are per-cell borders below.
+   320px gives a 12.33px cell against a 13.34px two-digit column clue — the
+   rendered `.clueNumber` flex item, measured in the built artifact, not the
+   13.203125px bare glyph advance (ISS-R4-5). The rules are per-cell borders below.
 
    `none`, not `manipulation`: this board DRAGS, and a touch drag that scrolls
    the page instead of painting is the whole gesture lost. */
@@ -185,7 +198,7 @@
 /* The every-5-cells group rule AND the frame's top and left edges in one
    modulo: `row % 5 === 0` and `col % 5 === 0` cover index 0 (the frame) and
    5/10 (the groups), so size 5 gets those edges and no interior rule, which is
-   correct. The modulo CANNOT close the frame — `size - 1` is 7, 9 or 14 and
+   correct. The modulo CANNOT close the frame — `size - 1` is 4, 7, 9 or 14 and
    none is divisible by 5 — so `.cellEdgeRight` and `.cellEdgeBottom` below are
    two further per-cell borders, not a duplicate of these two.
 
@@ -304,7 +317,7 @@
    same reason.
 
    `column-gap: 2px` rather than 3px buys 4px of gutter at sizes 10 and 15,
-   which at 320px is the difference between 0.98px and 0.71px of slack over
+   which at 320px is the difference between 0.85px and 0.58px of slack over
    the two-digit floor. One number, one band, no media query.
 
    THE COST, recorded rather than discovered later: 2px is the only visual
@@ -316,7 +329,7 @@
    "515". Those rails are genuinely ambiguous to a sighted player at 1×–2× DPR.
    Screen readers are unaffected: `rowCluesAria` composes `runs.join(", ")`, so
    the accessible name is unambiguous whatever the gap is. Accepted because
-   3px costs 0.27px of the 0.98px slack the 320px size-15 board has left; the
+   3px costs 0.27px of the 0.85px slack the 320px size-15 board has left; the
    day that board gets more room, this goes back to 3px. */
 .clueRow {
   display: flex;

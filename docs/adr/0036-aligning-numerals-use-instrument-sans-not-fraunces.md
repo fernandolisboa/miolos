@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md)
-**Amends:** `DESIGN.md:28` — *"`font-variant-numeric: tabular-nums` is mandatory on every grid, timer and statistic."* — and `packages/ui/tokens.css`'s standing comment plus the trailing `/* + tabular-nums */` on `--text-numeral-lg`. All three state as law a rule the chosen display face cannot satisfy. They are edited in the same commit that lands this ADR; no token **value** moves.
+**Amends:** `DESIGN.md:28` — *"`font-variant-numeric: tabular-nums` is mandatory on every grid, timer and statistic."* — plus `DESIGN.md`'s "Fraunces tabular numeral" on the streak stamp, `PRODUCT.md`'s Design Principle 1 *"Numbers are always `tabular-nums`"*, `packages/ui/tokens.css`'s standing comment, the trailing `/* + tabular-nums */` on `--text-numeral-lg`, `apps/web/src/i18n/format.ts`'s `formatElapsed` TSDoc and `apps/web/app/page.module.css`'s `.streakNumeral` comment. All seven state as law — or claim as delivered — a rule the chosen display face cannot satisfy. They are edited in the same commit that lands this ADR; no token **value** moves.
 
 ## Context
 
@@ -64,11 +64,23 @@ of the face that can satisfy it.
    lands this ADR** — `DESIGN.md:28`, `packages/ui/tokens.css`'s standing
    rule, the trailing `/* + tabular-nums */` on `--text-numeral-lg` (which
    pairs a Fraunces token with a feature this ADR measures as a total
-   no-op), **`PRODUCT.md`'s "Numbers are always `tabular-nums`"** and
-   `DESIGN.md`'s "Fraunces tabular numeral" on the streak stamp.
-   `PRODUCT.md` matters as much as `DESIGN.md`: `CLAUDE.md` names the PAIR
-   as the living design context `/impeccable` reads, so amending one and
-   leaving the other is amending nothing. **No token
+   no-op), **`PRODUCT.md`'s "Numbers are always `tabular-nums`"**,
+   `DESIGN.md`'s "Fraunces tabular numeral" on the streak stamp, **and the
+   two source comments that CITE those lines** — `apps/web/src/i18n/format.ts`,
+   whose `formatElapsed` TSDoc asserted "rendered with
+   `font-variant-numeric: tabular-nums` by every caller (tokens.css mandates
+   it for timers) so the digits do not jitter", and
+   `apps/web/app/page.module.css`'s `.streakNumeral`, whose comment justified
+   its declaration with "the token comment mandates tabular-nums".
+   The two source lines are step-6 round-4's addition (finding
+   `ADR-0036-UNAMENDED-LINES`), and they are the sharper half of the duty:
+   this commit rewrote the exact token comments both of them quote, so a
+   decision-3 list that stopped at the design documents left two files
+   pointing at a rule that now says the opposite — and `format.ts` promised an
+   affirmative guarantee about the one surface decision 5 measures at ≈6.1 px
+   of jitter. `PRODUCT.md` matters as much as `DESIGN.md`: `CLAUDE.md` names
+   the PAIR as the living design context `/impeccable` reads, so amending one
+   and leaving the other is amending nothing. **No token
    value moves and no JSX enters `packages/ui`**; these are comments, and
    [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md)'s
    invariant is about JSX and primitives.

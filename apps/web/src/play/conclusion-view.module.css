@@ -249,8 +249,13 @@
      rule matches on the animation NAME; --ease-settle's 1.05 y2 is inside the
      rule's allowed [-0.1, 1.1] band (checks.mjs:495-499). Transform and
      opacity only — never width/height/padding/margin, which fire
-     layout-transition. The short delay lets the stamp land first: two settles
-     at once read as a flourish, in sequence they read as ink drying. */
+     layout-transition. A 150ms offset STAGGERS the two settles rather than
+     sequencing them: the stamp runs 0–250ms and the picture 150–400ms, so
+     they overlap for 100ms and the picture finishes 150ms after the stamp.
+     Two settles starting together read as a flourish; offset, they read as
+     ink drying. (The comment used to say the stamp "lands first", which the
+     numbers do not produce — step-6 round-4 finding Q8. The timing is
+     deliberate and unchanged; only the description was wrong.) */
   animation: picture-settle var(--duration-slow) var(--ease-settle) both;
   animation-delay: var(--duration-fast);
 }
@@ -371,7 +376,7 @@
    finding ISS-A3). Pre-existing and cross-game: binairo and sudoku render this
    same class. The inset is visually inert — the button is a full-width flex
    item with a centred label, which is why `.emptyCta` has carried `14px 26px`
-   all along. T-WEB-S65 is the only gate on it. */
+   all along. T-WEB-S65a is the only gate on it. */
 .cta {
   display: flex;
   align-items: center;

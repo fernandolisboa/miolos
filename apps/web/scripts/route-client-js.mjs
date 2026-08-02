@@ -99,6 +99,18 @@ const BUDGETED = ["/binairo", "/nonogram", "/sudoku"];
  * trivially — so that test asserts all five still resolve in `MOTIFS`, one per
  * size class plus the one id. When it reds, replace the marker in BOTH files.
  * The same two-way citation `clue-bounds.test.ts` carries for `WORST_ROW`.
+ *
+ * THE SECOND GROUP IS PINNED TOO, and the citation belongs here so a reader
+ * of this file can find it (step-6 round-4 finding Q7). Four of the five are
+ * schema KEYS — `motifId`, `givensCount`, `requiredTier`, `clueCount`, all
+ * live in `packages/core/src/contracts/daily-content.ts` — so renaming one
+ * breaks the schema loudly and the tests that parse real engine output go red
+ * with it. The fifth, `"reveal.solution must be size x size"`, is free-text
+ * `.refine` copy and had nothing behind it until step-6 round 3 (finding
+ * NONO-Q2); `packages/core/test/daily-contract.test.ts` now asserts the exact
+ * string on both the short and the ragged solution, naming this file as its
+ * consumer. Change the message and that test reds before this grep can go
+ * vacuous.
  */
 const FORBIDDEN = [
   "Escada",

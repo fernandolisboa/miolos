@@ -53,6 +53,15 @@ function worstRowPerSize(): Map<number, Bound> {
     const base = motifBitmap(motif);
     // Every variant the generator may ship, not just the authored one:
     // `weekdayPool` puts the mirrored form in the pool as its own entry.
+    //
+    // For ROW clues — all this file bounds — the mirrored pass provably
+    // CANNOT widen the result, and saying so is the point (step-6 round-4
+    // finding Q5): `mirrorH` reverses each row, so the run-length list of a
+    // mirrored row is the reverse of the original's, leaving both `chars`
+    // and `runs` invariant. It is enumerated for symmetry with `weekdayPool`
+    // and so that a future column bound — where the mirror is NOT a
+    // permutation of the same lines — inherits a loop that already walks the
+    // real pool, not because it adds coverage today.
     const bitmaps = motif.mirrorable ? [base, mirrorH(base)] : [base];
     for (const bitmap of bitmaps) {
       const bound = worst.get(motif.size) ?? { chars: 0, runs: 0 };
