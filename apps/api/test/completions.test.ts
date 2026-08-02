@@ -538,6 +538,16 @@ describe("POST /completions", () => {
         hintsUsed: 0,
       }),
       completionBody({ game: "binairo", date: "2026-02-30", grid: solution }),
+      // Year 0000: step-6 round-4 finding
+      // `calendar-date-year-zero-500s-the-completions-route`. JS has a year 0
+      // and the proleptic Gregorian calendar Postgres implements does not, so
+      // this survived `calendarDateString`'s UTC round trip, reached
+      // `getCompletion` — ADR-0026's idempotent short-circuit runs BEFORE the
+      // `ACCEPTED_DAYS_BACK` range check that would have 404'd it — and threw
+      // 22008 out of an unhandled `select`, i.e. a 500 on the repo's only
+      // authenticated write. Whoever moves the floor out of the schema reds
+      // here as well as in `completion-contract.test.ts`.
+      completionBody({ game: "binairo", date: "0000-01-01", grid: solution }),
     ];
 
     for (const body of bodies) {
@@ -682,6 +692,10 @@ describe("POST /completions", () => {
 
     const raw: unknown = await response.json();
     const keys = collectKeys(raw);
+    // Anti-vacuity: `collectKeys` returns an empty set for any non-object
+    // input, so without this the forbidden loop passes trivially on an HTML
+    // error page (finding `api-leak-scans-have-no-anti-vacuity-assertion`).
+    expect(keys.has("outcome")).toBe(true);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
     }
@@ -1064,7 +1078,7 @@ describe("POST /completions — sudoku (plan 018 §7.3)", () => {
  * default and a copied 30_000 would be a number with no reason to exist.
  */
 describe("POST /completions — nonogram (plan 020 §9.3)", () => {
-  it("T-API-S23: a valid picture for today ⇒ 200, recorded, on time; the replay returns the stored row", async () => {
+  it("T-API-S23a: a valid picture for today ⇒ 200, recorded, on time; the replay returns the stored row", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const picture = await seedDaily("nonogram", today);
     const { token } = await createSession();
@@ -1152,7 +1166,7 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(await completionRows()).toHaveLength(1);
   });
 
-  it("T-API-S25: a LONGER grid whose prefix matches is 422, not a recorded win (N7)", async () => {
+  it("T-API-S25a: a LONGER grid whose prefix matches is 422, not a recorded win (N7)", async () => {
     // The hole the request schema structurally cannot close: binairo pins
     // .length(64) and sudoku .length(81), but a nonogram grid is one of four
     // lengths and the compare loop iterates the STORED solution's entries —
@@ -1175,7 +1189,7 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(await completionRows()).toHaveLength(0);
   });
 
-  it("T-API-S25: a SHORTER grid against a bigger stored picture is 422, no row", async () => {
+  it("T-API-S25b: a SHORTER grid against a bigger stored picture is 422, no row", async () => {
     const today = await todaySaoPaulo(ctx.db);
     // Thursday's 10x10 stored, a 25-cell body submitted: both lengths are
     // legal on the wire, so only the route's check can separate them.
@@ -1199,7 +1213,7 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(await completionRows()).toHaveLength(0);
   });
 
-  it("T-API-S26: YESTERDAY's picture is judged against yesterday's stored row, at a different size", async () => {
+  it("T-API-S28: YESTERDAY's picture is judged against yesterday's stored row, at a different size", async () => {
     // The one LEGITIMATE submission whose length differs from today's board,
     // and the only shape binairo's `.length(64)` and sudoku's `.length(81)`
     // structurally cannot produce: ACCEPTED_DAYS_BACK = 1 exists for D19's
@@ -1239,7 +1253,7 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(await completionRows()).toHaveLength(1);
   });
 
-  it("T-API-S23: a wrong picture ⇒ 422; future, killed and two-days-old ⇒ 404, never a row", async () => {
+  it("T-API-S23b: a wrong picture ⇒ 422; future, killed and two-days-old ⇒ 404, never a row", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const tomorrow = addDays(today, 1);
     const twoDaysAgo = addDays(today, -2);

@@ -12,11 +12,33 @@ import { isoDateString, nonogramSizeSchema, sudokuDigitSchema } from "./daily";
  * two-character body edit. Round-tripping through UTC is the check: JS
  * rolls an impossible day over ("2026-02-30" ⇒ 2026-03-02), so a value
  * that survives the round trip is a real day on the calendar.
+ *
+ * THE ROUND TRIP ALONE IS NOT ENOUGH, and the exception is year 0. JS has
+ * one; the proleptic Gregorian calendar Postgres implements does not — 1 BC
+ * is followed by 1 AD — so `"0000-01-01"` survives the round trip verbatim
+ * and `'0000-01-01'::date` still raises 22008, the very failure the
+ * paragraph above says this guard exists to prevent. `POST /completions`
+ * reaches the DB with the body's date BEFORE any range check, because
+ * ADR-0026's idempotent short-circuit runs ahead of `ACCEPTED_DAYS_BACK`
+ * (`apps/api/app/completions/route.ts`) — so year 0 was an uncaught throw,
+ * i.e. a 500, on the repo's only authenticated write (step-6 round-4
+ * finding `calendar-date-year-zero-500s-the-completions-route`). The floor
+ * belongs HERE rather than in the route: the short-circuit's position is the
+ * ADR's design and must not move.
+ *
+ * No upper bound is needed — the four-digit regex caps the value at 9999 and
+ * Postgres accepts `9999-12-31` — and `0001-01-01` is the first value the
+ * floor lets through, which is also Postgres's own first AD day.
+ *
+ * `"0000-00-00"` was already rejected, but for the MONTH, not the year: it
+ * is an Invalid Date. That near-miss is why the gap stayed invisible, so the
+ * test list pins both forms side by side.
  */
 export const calendarDateString = isoDateString.refine((value) => {
   const parsed = new Date(`${value}T00:00:00Z`);
   return (
     !Number.isNaN(parsed.getTime()) &&
+    parsed.getUTCFullYear() >= 1 &&
     parsed.toISOString().slice(0, 10) === value
   );
 }, "not a calendar date");
@@ -40,6 +62,19 @@ const submittedCellSchema = z.union([z.literal(0), z.literal(1)]);
  * Strict, deliberately: a smuggled key fails the parse rather than being
  * silently dropped, which is what makes the no-timestamp guarantee above
  * structural instead of conventional.
+ *
+ * ONE KEY IS AN EXCEPTION, and it is recorded rather than left to be
+ * rediscovered (step-6 round-4 finding
+ * `strictobject-silently-drops-a-json-proto-key`). `JSON.parse` puts
+ * `__proto__` on the object as an OWN enumerable property, but Zod's
+ * unrecognized-key check asks `"__proto__" in shape` — true for every object
+ * literal — so a body carrying it PARSES and the key is silently dropped
+ * instead of rejected. It is harmless and the no-timestamp guarantee still
+ * holds, but for a different reason than the sentence above gives: the parsed
+ * value is a fresh object carrying only the declared keys, so no client value
+ * survives and no prototype pollution occurs — verified end to end through the
+ * real route. Every OTHER smuggled key, `constructor` included, is rejected.
+ * `T-CORE-S16` pins both halves so a Zod bump that changes either goes red.
  *
  * EXTENSION POINT: #27 adds its variant to the union; the discriminator is
  * `game`.

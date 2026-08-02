@@ -77,6 +77,10 @@ describe("GET /daily/binairo", () => {
     const response = await GET();
     const raw: unknown = await response.json();
     const keys = collectKeys(raw);
+    // Anti-vacuity: `collectKeys` returns an empty set for any non-object
+    // input, so without this the forbidden loop passes trivially on an HTML
+    // error page (finding `api-leak-scans-have-no-anti-vacuity-assertion`).
+    expect(keys.has("givens")).toBe(true);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
     }

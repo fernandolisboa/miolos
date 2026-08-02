@@ -89,6 +89,15 @@ describe("GET /daily/nonogram", () => {
     const response = await GET();
     const raw: unknown = await response.json();
     const keys = collectKeys(raw);
+    // Anti-vacuity: the scan is worthless if it walked nothing.
+    // `collectKeys` returns an EMPTY set for any non-object input — an HTML
+    // error page, `undefined`, a number — so without a positive assertion
+    // every `has(forbidden)` below passes trivially. The web page suites have
+    // carried this line since #23; the four apps/api scans did not, and this
+    // is the only machine check that the wall's nonogram projection is
+    // reveal-free on the wire (step-6 round-4 finding
+    // `api-leak-scans-have-no-anti-vacuity-assertion`).
+    expect(keys.has("clues")).toBe(true);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
     }
