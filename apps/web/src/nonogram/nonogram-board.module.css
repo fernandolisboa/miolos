@@ -254,10 +254,14 @@
    against the chromatic state: the cell keeps saying filled or crossed while
    it says "the app placed this" (ADR-0030 decision 6).
 
-   Two rules, not one, and the split is COMPLETE rather than partial:
-   `use-hint` always writes a value — fill, cross, or a correction to the
-   target — so `.cellHinted` can only ever compose with `.cellFilled` or
-   `.cellCrossed`, never with an empty cell. The ring is the INVERSE of the
+   Two rules, not one, and the split is COMPLETE rather than partial —
+   enforced by the reducer, not hoped for. `use-hint` always writes a value
+   (fill, cross, or a correction to the target), and `withEntry` CLEARS
+   `hint.lastIndex` the moment the player writes that cell again, so
+   `.cellHinted` can only ever land on a cell that still holds the hinted
+   ink. Erasing or overriding the hint drops the ring with it. If that guard
+   is ever removed, a bare `.cellHinted` rule becomes mandatory here.
+   The ring is the INVERSE of the
    cell's own ink, which is why one colour cannot serve both: `--ink-2` is
    1.18:1 on terracotta and `--accent` is 1:1 on it. A copied
    `background: color-mix(… 10% …)` would REPLACE the fill and render the day's
@@ -274,8 +278,9 @@
 
 /* `max-content` grid TRACKS inside the same flat grid, so a future motif with
    more runs shrinks the cells rather than overflowing the phone (the failure
-   mode is graceful, and the library's bound is pinned mechanically in
-   packages/games). Rejected: fixed px per size (embeds a font measurement
+   mode is graceful, and the library's bound is pinned mechanically by
+   `packages/games/test/nonogram/clue-bounds.test.ts`). Rejected: fixed px per
+   size (embeds a font measurement
    that breaks silently when the font, weight or size changes) and a
    JS-emitted custom property (reimplements with a magic digit advance what
    the layout engine computes exactly and for free).
@@ -288,7 +293,19 @@
 
    `column-gap: 2px` rather than 3px buys 4px of gutter at sizes 10 and 15,
    which at 320px is the difference between 0.98px and 0.71px of slack over
-   the two-digit floor. One number, one band, no media query. */
+   the two-digit floor. One number, one band, no media query.
+
+   THE COST, recorded rather than discovered later: 2px is the only visual
+   separator between two adjacent single-digit runs and one two-digit run, on
+   top of the tabular side bearings. Enumerated over the whole shipped library
+   (MOTIFS + mirrored, through `deriveClues`), 38 of 2601 row lines — 1.5%,
+   all at size 15 — hold adjacent runs whose concatenation is itself a legal
+   run length for that board, e.g. `[1, 1]` reading as "11" or `[5, 1, 5]` as
+   "515". Those rails are genuinely ambiguous to a sighted player at 1×–2× DPR.
+   Screen readers are unaffected: `rowCluesAria` composes `runs.join(", ")`, so
+   the accessible name is unambiguous whatever the gap is. Accepted because
+   3px costs 0.27px of the 0.98px slack the 320px size-15 board has left; the
+   day that board gets more room, this goes back to 3px. */
 .clueRow {
   display: flex;
   justify-content: flex-end;
@@ -413,12 +430,20 @@
   color: var(--paper-card);
 }
 
-/* The keyboard affordance, Sudoku's placement and its mobile rule verbatim: a
-   desktop-only line, hidden on a phone that has no keyboard to afford. */
+/* The keyboard affordance: BINAIRO's rule, not Sudoku's, and the distinction
+   is structural rather than cosmetic. Sudoku grid-places its affordance on an
+   explicit second row (`sudoku-board.module.css`, `grid-row: 2`); `.controls`
+   here is a `display: flex; align-items: center` ROW, where a top margin does
+   not start a new line — it just pushes the span down against the centred
+   buttons. Measured at 1440px, `margin-top: var(--space-3)` sat it 6px below
+   their centre line while it stayed inline to their right. `margin-left` is
+   what Binairo ships for exactly this layout, and 13px is the size both
+   shipped affordances use. Desktop-only: hidden on a phone that has no
+   keyboard to afford. */
 .affordance {
-  margin-top: var(--space-3);
+  margin-left: var(--space-3);
+  font-size: 13px;
   color: var(--ink-2);
-  font: var(--text-body);
 }
 
 /* ── pre-hydration placeholders ──────────────────────────────────────── */
@@ -478,6 +503,25 @@
    310px and the row reads 3 × 98px at 390px; at 320px both caps resolve to
    280 and the arithmetic is identical. Both clear the 44px token with room.
 
+   `min-width: 0` is what makes that arithmetic TRUE rather than aspirational,
+   and it is a shipped fix rather than a precaution: a flex item's automatic
+   minimum size is its min-content width, so `flex: 1` cannot shrink an item
+   below its own label. Measured in Chrome at 320px against the built CSS and
+   the real font: without it the row comes out 89.06 / 87.47 / 87.47 instead
+   of 88 / 88 / 88 — "preencher" refuses its share and the other two absorb
+   the deficit. Three controls the design calls equal, unequal at the
+   narrowest viewport §12 designs for, on the one size the CI mobile scan
+   (390px) never visits. A step-6 measurement against the deployed page put
+   the skew larger still (94.4 / 84.8 / 84.8); either way the direction is the
+   same and `min-width: 0` closes it.
+
+   The inline padding drops to `--space-1` in the same edit, because
+   `min-width: 0` alone would make the label spill instead: "preencher" is
+   68.4px at 600 14px, and an 88px border-box button with a 12px inset and a
+   1.5px border leaves 61px of content. 4px leaves 77px, so every label fits
+   its equal share whole rather than clipping — and 4px still clears
+   `cramped-padding`'s `≤ 2` branch, which is why it is not 0.
+
    The `width: 100%` + cap pair is not decoration — it is the fix for the
    shipped finding `mobile-controls-shrink-to-fit-and-sub-44px-targets`:
    without it `.board`'s column-flex cross axis resolves the ratios against a
@@ -494,6 +538,8 @@
 
   .control {
     flex: 1;
+    min-width: 0;
+    padding: var(--space-2) var(--space-1);
     height: 60px;
   }
 

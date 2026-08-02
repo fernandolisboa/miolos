@@ -9,7 +9,7 @@ import type {
   BinairoPlayRecord,
   NonogramPlayRecord,
 } from "../src/play/play-record";
-import { solutionMarks } from "../src/nonogram/engine";
+import { isPictureComplete, solutionMarks } from "../src/nonogram/engine";
 import {
   initNonogramPlayState,
   nonogramPlayReducer,
@@ -428,10 +428,12 @@ describe("restore (T-WEB-S37)", () => {
   });
 
   it("discards a record whose size disagrees with today's board", () => {
-    // A 25-cell array reaching `derive` on a 225-cell board would find no
-    // unpainted picture cell among the 25 it can see, flip `status` to
-    // solved on an empty board and write a completion the queue then POSTs
-    // (P16/N11). A discarded record is discarded, NEVER migrated.
+    // The HARMLESS direction, asserted anyway because the guard covers both:
+    // a 25-cell array reaching `derive` on a 225-cell board fails closed on
+    // its own — `isPictureComplete` iterates the solution, so every index past
+    // the array's end reads `undefined` against a still-filled cell. The
+    // dangerous direction is the next test's (P16/N11). A discarded record is
+    // discarded, NEVER migrated.
     const restored = play(SUNDAY_STATE, {
       type: "restore",
       record: nonogramRecord(),
@@ -444,6 +446,32 @@ describe("restore (T-WEB-S37)", () => {
     expect(restored.hint.used).toBe(0);
     expect(restored.hydrated).toBe(true);
     expect(restored.now).toBe(NOW);
+  });
+
+  it("discards a LONGER record that would otherwise read as a false win", () => {
+    // The direction that can actually latch `solved`, and the reason the size
+    // check is load-bearing rather than cosmetic. Yesterday was a 15×15 and
+    // today is a 5×5; the surplus tail is never looked at, so an array whose
+    // first 25 cells paint TODAY's picture reads as COMPLETE. The first
+    // assertion proves the hazard is real, the rest prove the guard closes it.
+    const monday = solutionOf(MONDAY_STATE);
+    const entries: NonogramCellValue[] = Array.from(
+      { length: 225 },
+      (_unused, index) => (index < 25 ? (monday[index] ?? null) : null),
+    );
+
+    expect(isPictureComplete(monday, entries)).toBe(true);
+
+    const restored = play(MONDAY_STATE, {
+      type: "restore",
+      record: nonogramRecord({ size: 15, entries }),
+      now: NOW,
+    });
+
+    expect(restored.entries).toEqual(MONDAY_STATE.entries);
+    expect(restored.status).toBe("playing");
+    expect(restored.pendingSync).toBe(false);
+    expect(restored.hydrated).toBe(true);
   });
 
   it("discards a record whose entries length disagrees with today's board", () => {

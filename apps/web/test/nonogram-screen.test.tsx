@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { formatElapsed, messages } from "../src/i18n";
+import { Board } from "../src/nonogram/board";
 import { filledTarget, solutionMarks } from "../src/nonogram/engine";
 import styles from "../src/nonogram/nonogram-board.module.css";
 import { NonogramConclusion } from "../src/nonogram/nonogram-conclusion";
@@ -662,6 +663,23 @@ describe("the stroke (T-WEB-S45)", () => {
   });
 });
 
+describe("the board's re-render budget (T-WEB-S57)", () => {
+  it("is memoized, so an unrelated tick cannot reconcile 225 cells", () => {
+    // `state.now` moves once a second for the two timer readouts, and the
+    // board's props do not move with it. Without `memo` every tick rebuilds
+    // 225 `<button>` elements, 30 rails and 225 composed aria strings that
+    // cannot have changed — measured at ~2.5 ms per tick on a 15×15, paid
+    // again per cell crossed during a drag.
+    //
+    // Asserted structurally because the cost is React's element allocation
+    // and prop diffing, which no DOM assertion can see: the cells keep their
+    // node identity across a tick either way. If this reds because `Board`
+    // was unwrapped, the fix is to re-wrap it, not to delete the assertion.
+    expect(Board).toHaveProperty("$$typeof", Symbol.for("react.memo"));
+    expect(Board).toHaveProperty("type", expect.any(Function));
+  });
+});
+
 describe("the four branches (T-WEB-S47)", () => {
   /**
    * What actually stands impeccable's two rules down, asserted rather than
@@ -1125,11 +1143,13 @@ describe("the board geometry (T-WEB-S48)", () => {
 
   /**
    * [digit chars, runs] for the worst row of each size across the whole
-   * shipped motif library. Pinned in `packages/games/test/nonogram/` — a
-   * two-way citation, because the two packages cannot import from each other
-   * and a bare "pinned there" would be a hope rather than a link. If they ever
-   * disagree, the games-side enumeration is the source of truth and this is
-   * the consumer that must be updated.
+   * shipped motif library. Pinned in
+   * `packages/games/test/nonogram/clue-bounds.test.ts` — a two-way citation,
+   * because the two packages cannot import from each other (`apps/web` may
+   * never pull `MOTIFS` into the client bundle, ADR-0033 (d)) and a bare
+   * "pinned there" would be a hope rather than a link. If they ever disagree,
+   * the games-side enumeration is the source of truth and this is the consumer
+   * that must be updated.
    */
   const WORST_ROW: Readonly<Record<NonogramSize, readonly [number, number]>> = {
     5: [3, 3],
@@ -1348,11 +1368,38 @@ describe("the board geometry (T-WEB-S48)", () => {
       const row = Math.min(cap, 320 - PAGE_PADDING);
       expect((row - 2 * gap) / 3).toBeGreaterThanOrEqual(minimum);
     }
-    expect(
-      pixels(decl(bodyOf(MOBILE_CHROME, ".control"), "height")),
-    ).toBeGreaterThanOrEqual(minimum);
+    const control = bodyOf(MOBILE_CHROME, ".control");
+    expect(pixels(decl(control, "height"))).toBeGreaterThanOrEqual(minimum);
+    // `(row - 2 * gap) / 3` above is arithmetic over CSS text, and a flex
+    // item's automatic minimum size is its MIN-CONTENT width — so without
+    // this the division is fiction: measured in Chrome at 320px against the
+    // built CSS, the row came out 89.06 / 87.47 / 87.47 rather than three
+    // 88s. jsdom cannot see it and CI's mobile scan runs at 390px, where it
+    // does not appear at all.
+    expect(decl(control, "min-width")).toBe("0");
+    // And the label has to fit the equal share it is now held to: at 88px a
+    // 12px inline inset plus the 1.5px border leaves 61px for a 68.4px word.
+    expect(decl(control, "padding")).toBe("var(--space-2) var(--space-1)");
     // A phone has no keyboard to advertise.
     expect(decl(bodyOf(MOBILE_CHROME, ".affordance"), "display")).toBe("none");
+  });
+
+  it("A10b — places the keyboard affordance the way a flex ROW allows", () => {
+    // `.controls` is `display: flex; align-items: center`, so a `margin-top`
+    // does not start a second line — it offsets the span 6px below the
+    // buttons' centre while it stays inline to their right (measured in
+    // Chrome at 1440px). Sudoku's affordance uses `margin-top` legitimately
+    // because Sudoku GRID-places it on an explicit second row; the structural
+    // precedent here is Binairo's, and this is Binairo's rule.
+    const affordance = bodyOf(GAME_CSS, ".affordance");
+    const controls = bodyOf(GAME_CSS, ".controls");
+
+    expect(decl(controls, "display")).toBe("flex");
+    expect(decl(controls, "align-items")).toBe("center");
+    expect(decl(affordance, "margin-top")).toBeUndefined();
+    expect(decl(affordance, "margin-left")).toBe("var(--space-3)");
+    // The size both shipped affordances use, and above `undersized-ui-text`.
+    expect(pixels(decl(affordance, "font-size"))).toBe(13);
   });
 
   it("A11 — carries a rotation signature no other game's board declares", () => {

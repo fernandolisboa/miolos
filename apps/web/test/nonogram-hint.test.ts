@@ -293,6 +293,40 @@ describe("the reducer's accounting", () => {
     expect(hinted.hint.free).toBe(1);
   });
 
+  it("drops the ring when the player writes the hinted cell again (T-WEB-S58)", () => {
+    // The stylesheet ships `.cellFilled.cellHinted` and `.cellCrossed.cellHinted`
+    // and NO bare `.cellHinted`, so the class may only ever land on a cell that
+    // still holds ink. Without this the default `fill` brush's one-tap clear
+    // would leave a ring class matching no rule, and crossing a cell the app
+    // FILLED would leave the ring claiming the app placed the player's mark.
+    const hinted = nonogramPlayReducer(STATE, { type: "use-hint" });
+    const index = hinted.hint.lastIndex ?? -1;
+    expect(hinted.entries[index]).toBe(1);
+
+    // Re-applying the brush's own value clears the cell (a one-tap undo).
+    const cleared = nonogramPlayReducer(hinted, { type: "mark-cell", index });
+    expect(cleared.entries[index]).toBeNull();
+    expect(cleared.hint.lastIndex).toBeNull();
+    // The spend is NOT refunded: the hint was shown.
+    expect(cleared.hint).toEqual({ free: 1, used: 1, lastIndex: null });
+
+    // Overriding it with the other mark drops the ring too.
+    const selected = nonogramPlayReducer(hinted, { type: "select", index });
+    const overridden = nonogramPlayReducer(selected, {
+      type: "enter-value",
+      value: 0,
+    });
+    expect(overridden.entries[index]).toBe(0);
+    expect(overridden.hint.lastIndex).toBeNull();
+
+    // Writing a DIFFERENT cell leaves the ring where it is.
+    const elsewhere = nonogramPlayReducer(hinted, {
+      type: "mark-cell",
+      index: index === 0 ? 1 : 0,
+    });
+    expect(elsewhere.hint.lastIndex).toBe(index);
+  });
+
   it("is a no-op once the board is closed", () => {
     const solved = solutionOf(STATE).reduce<NonogramPlayState>(
       (current, mark, index) =>

@@ -1,6 +1,12 @@
 import type { NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
-import { Fragment, useLayoutEffect, useRef, type KeyboardEvent } from "react";
+import {
+  Fragment,
+  memo,
+  useLayoutEffect,
+  useRef,
+  type KeyboardEvent,
+} from "react";
 
 import { messages } from "../i18n";
 import { usePointerStroke } from "../play/use-pointer-stroke";
@@ -56,8 +62,20 @@ const SIZE_CLASS = {
  * violation state, deliberately: a Nonogram has no local rule, so the only
  * cheap per-cell check is against the solution, and rendering that is a
  * per-cell oracle (§10.3).
+ *
+ * MEMOIZED, and at 225 cells that is not a micro-optimisation: `state.now`
+ * moves once a second for the two timer readouts, and without this every tick
+ * reconciles 225 `<button>`s, 30 clue rails and 225 composed aria strings that
+ * cannot have changed — measured at ~2.5 ms per tick on a 15×15, paid again
+ * per cell crossed during a drag, on the interaction-latency path. The default
+ * shallow compare is exactly right here: `size` and `clues` never change
+ * identity for a mounted screen (`initNonogramPlayState` takes `clues` from
+ * the wire and every reducer case spreads `...state`), all six callbacks are
+ * `useCallback([])` in `use-nonogram-play.ts`, and the three props that do
+ * move — `entries`, `selected`, `hintIndex` — are exactly when the board must
+ * re-render. Adding a prop that is rebuilt per render silently undoes this.
  */
-export function Board({
+export const Board = memo(function Board({
   size,
   clues,
   entries,
@@ -280,7 +298,7 @@ export function Board({
       ))}
     </div>
   );
-}
+});
 
 /**
  * The placeholder board (§12.2's precedent). It reuses `.grid`, the size

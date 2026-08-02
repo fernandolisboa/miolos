@@ -215,3 +215,100 @@ describe("usePointerStroke's onStrokeEnd (T-WEB-S45g)", () => {
     expect(document.activeElement).toBe(document.body);
   });
 });
+
+describe("a stroke that never took pointer capture (T-WEB-S59)", () => {
+  /**
+   * `onLostPointerCapture` is the container's net, and it can only fire when
+   * capture was acquired — which is exactly the branch `onPointerDown`'s
+   * `catch` exists for. Without a second net a stroke whose capture threw and
+   * whose pointer then lifted OUTSIDE the container leaves `strokePointer`
+   * set forever: every later `pointerdown` returns at the "a stroke is already
+   * open" guard and the board writes nothing for the rest of the session, with
+   * no visual signal at all.
+   */
+  function throwOnCapture(): void {
+    vi.spyOn(Element.prototype, "setPointerCapture").mockImplementation(() => {
+      throw new Error("pens that release early throw here");
+    });
+  }
+
+  it("still ends when the pointer lifts outside the board", () => {
+    throwOnCapture();
+    const { container } = render(<StrokeHarness />);
+    stubElementFromPoint(container);
+    const board = boardOf(container);
+
+    fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(board, { clientX: 1, clientY: 0, pointerId: 1 });
+    // The container never sees this one: with no capture the browser targets
+    // whatever is under the pointer, which is outside the board.
+    fireEvent.pointerUp(window, { clientX: 500, clientY: 500, pointerId: 1 });
+
+    // The next stroke writes, which is the whole claim.
+    fireEvent.pointerDown(board, { clientX: 5, clientY: 0, pointerId: 2 });
+    fireEvent.pointerUp(board, { clientX: 5, clientY: 0, pointerId: 2 });
+
+    expect(cellAt(container, 5).textContent).toBe("1");
+  });
+
+  it("still ends on a window pointercancel", () => {
+    throwOnCapture();
+    const { container } = render(<StrokeHarness />);
+    stubElementFromPoint(container);
+    const board = boardOf(container);
+
+    fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
+    fireEvent.pointerCancel(window, { pointerId: 1 });
+
+    fireEvent.pointerDown(board, { clientX: 6, clientY: 0, pointerId: 2 });
+    fireEvent.pointerUp(board, { clientX: 6, clientY: 0, pointerId: 2 });
+
+    expect(cellAt(container, 6).textContent).toBe("1");
+  });
+
+  it("leaves nothing on window once the stroke is closed", () => {
+    throwOnCapture();
+    const added = vi.spyOn(window, "addEventListener");
+    const removed = vi.spyOn(window, "removeEventListener");
+    const { container, unmount } = render(<StrokeHarness />);
+    stubElementFromPoint(container);
+    const board = boardOf(container);
+
+    const pointerListeners = (spy: typeof added) =>
+      spy.mock.calls.filter(([type]) => type.startsWith("pointer")).length;
+
+    fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
+    expect(pointerListeners(added)).toBe(2);
+
+    fireEvent.pointerUp(board, { clientX: 0, clientY: 0, pointerId: 1 });
+    expect(pointerListeners(removed)).toBe(2);
+
+    // And an unmount mid-stroke detaches them too.
+    fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 3 });
+    expect(pointerListeners(added)).toBe(4);
+    unmount();
+    expect(pointerListeners(removed)).toBe(4);
+  });
+
+  it("arms the same net for a board that never paints", () => {
+    // Binairo's cycle mode never requests capture at all, so it has no
+    // `lostpointercapture` to rely on either. Nothing user-visible breaks
+    // there today — the cell's own `click` still writes, because
+    // `consumedClick` stays false — so the assertion is on the net itself
+    // rather than on a symptom: `painting: false` must not opt out of it.
+    const added = vi.spyOn(window, "addEventListener");
+    const { container } = render(
+      <StrokeHarness painting={false} wired={false} />,
+    );
+    stubElementFromPoint(container);
+    const board = boardOf(container);
+
+    fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
+
+    expect(
+      added.mock.calls
+        .map(([type]) => type)
+        .filter((type) => type.startsWith("pointer")),
+    ).toStrictEqual(["pointerup", "pointercancel"]);
+  });
+});

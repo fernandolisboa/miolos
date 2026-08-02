@@ -318,7 +318,17 @@ function clamp(value: number, size: number): number {
  * value. Sudoku's and Binairo's `withEntry` allocate a new `entries` array
  * unconditionally — at 225 cells that is a fresh array and a persist-effect
  * run per move event. Binairo's absence of this guard is a latent
- * inefficiency filed as its own issue, not fixed here.
+ * inefficiency filed as #62, not fixed here.
+ *
+ * Writing the HINTED cell drops the hint ring, and that is what makes the
+ * stylesheet's claim true: `.cellHinted` ships as two rules
+ * (`.cellFilled.cellHinted`, `.cellCrossed.cellHinted`) and no bare one, so
+ * the class may only ever land on a cell that still holds ink. Without this
+ * the ring would survive the player erasing the cell — a class matching no
+ * rule — or, worse, survive the player crossing a cell the app FILLED, where
+ * the ring would go on claiming "the app placed this" over the player's own
+ * mark. The identity guard above means re-writing the same value is not a
+ * write at all, so the ring survives that.
  */
 function withEntry(
   state: NonogramPlayState,
@@ -331,7 +341,10 @@ function withEntry(
   const entries = state.entries.map((entry, at) =>
     at === index ? value : entry,
   );
-  return derive(state, entries);
+  const written = derive(state, entries);
+  return state.hint.lastIndex === index
+    ? { ...written, hint: { ...written.hint, lastIndex: null } }
+    : written;
 }
 
 /**
@@ -375,10 +388,17 @@ function derive(
  * DISCARDED, never migrated (P16/N11). `readPlayRecord` checks only that the
  * record's `game` matches the key it was found under, and the schema proves
  * `entries.length === size²` for the record's OWN size — only this compares
- * it against today's. A 25-cell array reaching `derive` on a 225-cell board
- * is not cosmetic: `isPictureComplete` would find no unpainted picture cell
- * among the 25 it can see, flip `status` to `"solved"` on an empty board and
- * write a completion the queue then POSTs.
+ * it against today's, and it is the ONLY thing that does.
+ *
+ * The hazard is the LONG direction, not the short one. `isPictureComplete`
+ * iterates the solution (`engine.ts`), so yesterday's 225-cell array reaching
+ * `derive` on today's 25-cell board reads as COMPLETE the moment its first 25
+ * cells happen to paint today's picture — `status` flips to `"solved"` on a
+ * board the player never touched and `pendingSync` latches a completion the
+ * queue then POSTs. The short direction fails closed instead, because every
+ * index past the array's end reads `undefined` while the solution still has
+ * filled cells there. Both are discarded here; only one of them would be a
+ * false win.
  */
 function restore(
   state: NonogramPlayState,

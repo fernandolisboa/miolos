@@ -25,14 +25,21 @@
  * the trailing `click` to the container, so on a board whose caret lives in
  * state a stroke would otherwise leave DOM focus where it was.
  */
-import { useRef, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 
 /**
  * The five container handlers, as ONE object so a board cannot forget
- * `onLostPointerCapture` — the net that keeps a stroke from outliving its
- * own pointer (binairo/grid.tsx:123-131).
+ * `onLostPointerCapture` — half of the net that keeps a stroke from
+ * outliving its own pointer (see `endStroke` below for the other half).
+ *
+ * Module-local on purpose: `PointerStroke` is the type a consumer would ever
+ * name, and both boards spread `{...stroke.handlers}` structurally.
  */
-export interface PointerStrokeHandlers {
+interface PointerStrokeHandlers {
   readonly onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
   readonly onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void;
   readonly onPointerUp: (e: ReactPointerEvent<HTMLDivElement>) => void;
@@ -60,7 +67,8 @@ export function usePointerStroke(input: {
    * composite-widget boards use it to move DOM focus; Binairo omits it.
    * This is the focus door pointer capture leaves open: the browser
    * retargets the trailing `click` to the CONTAINER, so a cell's own
-   * `onClick` focus fix never runs during a stroke (grid.tsx:139-151).
+   * `onClick` focus fix never runs during a stroke (see `onPointerUp`
+   * below).
    */
   readonly onStrokeEnd?: (index: number) => void;
 }): PointerStroke {
@@ -84,6 +92,41 @@ export function usePointerStroke(input: {
    * dropped the last two cells of a four-cell stroke.
    */
   const strokePointer = useRef<number | null>(null);
+  /**
+   * Detaches the window-scoped end listeners, or null when none are armed.
+   *
+   * The container's `onLostPointerCapture` is the net for a stroke that DID
+   * take pointer capture — but it can only fire when capture was acquired,
+   * which is exactly the branch the `catch` below exists for. Without a
+   * second net, a stroke whose capture threw and whose pointer then lifted
+   * OUTSIDE the container would leave `strokePointer` set forever: every
+   * later `pointerdown` returns at the "a stroke is already open" guard and
+   * the board writes nothing for the rest of the session, with no visual
+   * signal. So when capture is not held, the same guarantee is bought from
+   * `window` instead. In a browser taking capture normally this is never
+   * armed and costs nothing.
+   */
+  const detachWindowEnd = useRef<(() => void) | null>(null);
+
+  const armWindowEnd = () => {
+    const end = (native: PointerEvent) => {
+      if (native.pointerId !== strokePointer.current) {
+        return;
+      }
+      endDrag();
+    };
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    detachWindowEnd.current = () => {
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      detachWindowEnd.current = null;
+    };
+  };
+
+  // An unmount mid-stroke must not leave two listeners on `window`. The ref
+  // is read at cleanup time, so the empty dependency array is correct.
+  useEffect(() => () => detachWindowEnd.current?.(), []);
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     // Primary button only, and before any ref is touched. A stroke that
@@ -112,14 +155,21 @@ export function usePointerStroke(input: {
     const index = cellIndexAt(event.clientX, event.clientY);
     startIndex.current = index;
     lastIndex.current = index;
-    if (!painting) {
-      return;
+    let captured = false;
+    if (painting) {
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        captured = true;
+      } catch {
+        // jsdom and pens that release early both throw here; capture is an
+        // optimisation, and `elementFromPoint` resolves the cell either way.
+      }
     }
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch {
-      // jsdom and pens that release early both throw here; capture is an
-      // optimisation, and `elementFromPoint` resolves the cell either way.
+    if (!captured) {
+      // No capture means no `lostpointercapture`, so the container is no
+      // longer guaranteed to see this stroke end — Binairo's cycle mode
+      // (`painting: false`) never even asks for capture. `window` closes it.
+      armWindowEnd();
     }
   };
 
@@ -149,16 +199,20 @@ export function usePointerStroke(input: {
   const endDrag = () => {
     dragging.current = false;
     strokePointer.current = null;
+    detachWindowEnd.current?.();
   };
 
   /**
    * Scoped end: only the pointer that opened the stroke may close it.
    *
-   * The safety net against the obvious hazard — a stroke whose `pointerup`
-   * never arrives would latch the board dead — is `onLostPointerCapture` on
-   * the container, which the browser fires whenever capture ends for ANY
-   * reason (release, cancel, the element leaving the document). A stroke can
-   * therefore never outlive its own pointer.
+   * The hazard is that a stroke whose `pointerup` never reaches the container
+   * latches the board dead. TWO nets close it, and which one applies depends
+   * on whether capture was taken. With capture: `onLostPointerCapture` on the
+   * container, which the browser fires whenever capture ends for ANY reason
+   * (release, cancel, the element leaving the document). Without it — the
+   * `catch` in `onPointerDown`, and Binairo's cycle mode: the window-scoped
+   * `pointerup`/`pointercancel` pair armed by `armWindowEnd`. A stroke can
+   * therefore never outlive its own pointer either way.
    */
   const endStroke = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerId !== strokePointer.current) {
