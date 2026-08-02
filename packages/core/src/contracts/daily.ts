@@ -181,7 +181,31 @@ export const dailyNonogramResponseSchema = z
 export type DailyNonogramResponse = z.infer<typeof dailyNonogramResponseSchema>;
 
 /**
- * The extension point the last M2 game joins (#27).
+ * The public daily-termo projection: TWO keys, and that is the whole
+ * contract. The three grid games ship the inputs a player needs; a Termo
+ * player needs nothing but the date, because the board starts empty and
+ * every guess is judged server-side (ADR-0038). So this schema's job is
+ * entirely negative — `z.strictObject` with exactly `game` and `date` makes
+ * "the answer word, in any field" (the strip table, ./daily-content.ts) a
+ * PARSE FAILURE at the wall and again at the HTTP boundary, rather than a
+ * rule kept by review.
+ *
+ * It carries no content and is still a full union member: that is the only
+ * thing that widens `ProjectedGame` below, and without it
+ * `getTodayDaily(db, "termo")` cannot compile and `/daily/termo` cannot
+ * exist without reaching around the wall.
+ */
+export const dailyTermoResponseSchema = z.strictObject({
+  game: z.literal("termo"),
+  date: isoDateString,
+});
+
+export type DailyTermoResponse = z.infer<typeof dailyTermoResponseSchema>;
+
+/**
+ * All four M2 games. The extension point closed at #27 — every member of
+ * `Game` now has a projection, so this union is total and the next game to
+ * join it is one that does not exist yet.
  *
  * A refined `strictObject` is a legal option here and `.refine()` preserves
  * `.shape` — both measured against the installed zod 4.4.3, and both FALSE
@@ -192,17 +216,22 @@ export const dailyPuzzleResponseSchema = z.discriminatedUnion("game", [
   dailyBinairoResponseSchema,
   dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
+  dailyTermoResponseSchema,
 ]);
 
 export type DailyPuzzleResponse = z.infer<typeof dailyPuzzleResponseSchema>;
 
 /**
- * The games `stripDailyContent` can actually project. NOT `Game`: termo
- * still throws `DailyProjectionUnsupportedError`, so a reader typed over
- * `Game` would type `getTodayDaily(db, "termo")` as `Promise<undefined>`
- * — `Extract<DailyPuzzleResponse, { game: "termo" }>` is `never` — while
- * it 500s at runtime the moment a termo row exists. #27 widens this in the
- * same PR that adds its projection, which is the same fail-closed
- * extension property the cron contracts have.
+ * The games `stripDailyContent` can actually project. Since #27 that is
+ * every member of `Game`, so this alias and `Game` are momentarily the same
+ * set — and it is RETAINED, deliberately, as the wall's bound.
+ *
+ * It is the bound on `getTodayDaily` and `getPublishedDaily`
+ * (packages/db/src/published.ts), and what it buys is that adding a fifth
+ * game to `Game` does NOT silently make those two readers callable for it:
+ * `Extract<DailyPuzzleResponse, { game: G }>` would be `never`, so the call
+ * would not compile until the projection lands. Collapsing it to `Game`
+ * would trade a compile error for a runtime one, which is the opposite of
+ * the property it was introduced for.
  */
 export type ProjectedGame = DailyPuzzleResponse["game"];

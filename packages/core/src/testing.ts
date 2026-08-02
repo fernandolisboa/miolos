@@ -7,8 +7,10 @@
 
 /**
  * Keys that must never appear at ANY depth of a client-facing daily
- * payload. #27 extends this list with termo's answer when its projection
- * lands.
+ * payload. #27 closed the extension this sentence used to promise, and it
+ * did so in a way the promise did not anticipate: `"answer"` was ALREADY
+ * here, and what termo actually needed was the two keys its stored content
+ * is spelled with — `"canonical"` and `"normalized"` (ADR-0040).
  *
  * `clueCount` is sudoku's, added by #23: it appears in no shipped payload,
  * so every landed scan kept passing unchanged — adding it is what makes
@@ -39,6 +41,21 @@ export const FORBIDDEN_DAILY_KEYS = [
   "motifId",
   "name",
   "mirrored",
+  // #27 (ADR-0040): termo's stored content is `{canonical, normalized}` and
+  // those are the two keys that carry the answer. `"answer"` above is not
+  // enough on its own — a projection that flattened the stored shape to
+  // top-level keys would pass every scan, the exact vacuity ADR-0033
+  // decision 3 refused for `"reveal"`. T-CORE-S20 is the anti-vacuity half.
+  //
+  // `"canonical"` is a GENERIC key and Next names one: `alternates.canonical`
+  // renders `<link rel="canonical">`, and ADR-0013 makes miolos.app a
+  // canonical domain, so an SEO ticket would red the page suites' SUBSTRING
+  // half for a reason unrelated to any leak. That is the cost of the ban and
+  // it is accepted on the `"name"` precedent above; the response is to
+  // rename the markup or amend this list with a written reason, never to
+  // weaken the scan.
+  "canonical",
+  "normalized",
 ] as const;
 
 /** Every key at any depth of a JSON-shaped value (the leak-scan probe). */

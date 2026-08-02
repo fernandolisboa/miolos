@@ -32,6 +32,7 @@ export {
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
   dailySudokuResponseSchema,
+  dailyTermoResponseSchema,
   isoDateString,
   nonogramSizeSchema,
   sudokuDigitSchema,
@@ -39,6 +40,7 @@ export {
   type DailyNonogramResponse,
   type DailyPuzzleResponse,
   type DailySudokuResponse,
+  type DailyTermoResponse,
   type NonogramSize,
   type ProjectedGame,
 } from "./contracts/daily";
@@ -52,9 +54,11 @@ export {
   nonogramDailyContentSchema,
   stripDailyContent,
   sudokuDailyContentSchema,
+  termoDailyContentSchema,
   type BinairoDailyContent,
   type NonogramDailyContent,
   type SudokuDailyContent,
+  type TermoDailyContent,
 } from "./contracts/daily-content";
 export {
   bufferDepthResponseSchema,

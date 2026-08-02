@@ -9,6 +9,12 @@ import {
   type SudokuPuzzle,
   type Weekday,
 } from "@miolos/games/sudoku";
+import {
+  MAX_GUESSES,
+  normalizeWord,
+  TERMO_ANSWERS,
+  WORD_LENGTH,
+} from "@miolos/games/termo";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -18,9 +24,11 @@ import {
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
   dailySudokuResponseSchema,
+  dailyTermoResponseSchema,
   nonogramDailyContentSchema,
   stripDailyContent,
   sudokuDailyContentSchema,
+  termoDailyContentSchema,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
 
@@ -96,10 +104,26 @@ describe("stripDailyContent (binairo)", () => {
   // REPLACED by `describe("stripDailyContent (nonogram)")` below — #25 lands
   // the projection, so the throw is no longer the contract. termo keeps its.
 
-  it("throws DailyProjectionUnsupportedError for termo (fail-closed until #27)", () => {
-    expect(() => stripDailyContent("termo", "2026-08-03", {})).toThrow(
-      DailyProjectionUnsupportedError,
-    );
+  // The "throws for termo (fail-closed until #27)" case that stood here is
+  // REPLACED by `describe("stripDailyContent (termo)")` below — #27 lands the
+  // last projection, so NO game throws any more and the switch has no arm
+  // left that can. What replaces the assertion is the one below: the error
+  // class survives its last thrower.
+});
+
+describe("DailyProjectionUnsupportedError (unreachable, still exported)", () => {
+  // The class has no thrower left after #27 and is kept anyway, so this is
+  // the assertion that replaces the four "throws for <game>" cases the four
+  // projections retired one by one. Deleting it is a THREE-place break, not a
+  // tidy-up: `eslint.config.mjs`'s `importNames` bans the name from apps/web,
+  // and `T-LINT-S7` (apps/web/test/eslint-db-wall.test.ts) asserts that ban
+  // list EQUALS this module's own export set — so an unexported class reds
+  // both, plus `packages/core/src/index.ts`'s re-export.
+  it("is still exported, still an Error, and still carries the game it was built for", () => {
+    const error = new DailyProjectionUnsupportedError("termo");
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("DailyProjectionUnsupportedError");
+    expect(error.game).toBe("termo");
   });
 });
 
@@ -558,5 +582,177 @@ describe("nonogramDailyContentSchema", () => {
       },
     };
     expect(nonogramDailyContentSchema.safeParse(zeroRun).success).toBe(false);
+  });
+});
+
+describe("termoDailyContentSchema", () => {
+  // T-CORE-S17 (plan 022 §19.3). `packages/core/src` may NOT import
+  // `@miolos/games` — it is a devDependency (package.json:19) — so the
+  // schema cannot assert membership in `TERMO_ANSWERS` at the type or parse
+  // level. Membership holds by construction at the single write site
+  // (`topUpTermoBuffer` picks the frozen element and parses it directly), and
+  // THIS test is the pin: every one of the 400 curated answers is a value the
+  // stored-content contract accepts, so the write site can never draw a word
+  // the cron would then refuse to insert. The test tree may import the engine
+  // freely — `daily-contract.test.ts` already does for the other three games.
+  it("T-CORE-S17: all 400 curated answers parse, round-trip unchanged, and agree with normalizeWord", () => {
+    // Anti-vacuity: a sweep over an empty list proves nothing.
+    expect(TERMO_ANSWERS.length).toBe(400);
+    for (const answer of TERMO_ANSWERS) {
+      const parsed = termoDailyContentSchema.parse(answer);
+      expect(parsed).toEqual({
+        canonical: answer.canonical,
+        normalized: answer.normalized,
+      });
+      // The invariant the schema deliberately does NOT encode (there is no
+      // runtime path from a normalized form back to its canonical spelling,
+      // and `normalizeWord` lives in a package `src/` cannot reach). It is
+      // enforced at the single write site and proved here over the whole
+      // enumerated list — the ADR-0040 no-repeat rule keys on `normalized`,
+      // so a row whose two fields disagreed would spend the wrong answer.
+      expect(normalizeWord(answer.canonical)).toBe(answer.normalized);
+    }
+  });
+
+  it("T-CORE-S17: a 401st answer carrying an extra field fails (fail-closed drift, ADR-0024)", () => {
+    const [first] = TERMO_ANSWERS;
+    if (first === undefined) {
+      throw new Error("unreachable: TERMO_ANSWERS is empty");
+    }
+    // The shape a `TermoAnswer` field addition would produce. `strictObject`
+    // is what turns it into a drained buffer and a fired depth alert rather
+    // than a silently dropped field (ADR-0024 operational semantics).
+    expect(
+      termoDailyContentSchema.safeParse({ ...first, index: 0 }).success,
+    ).toBe(false);
+    expect(
+      termoDailyContentSchema.safeParse({ ...first, seed: 12 }).success,
+    ).toBe(false);
+    expect(
+      termoDailyContentSchema.safeParse({ ...first, game: "termo" }).success,
+    ).toBe(false);
+  });
+
+  it("T-CORE-S17: rejects a missing field and a non-ASCII normalized form", () => {
+    expect(
+      termoDailyContentSchema.safeParse({ canonical: "sarau" }).success,
+    ).toBe(false);
+    expect(
+      termoDailyContentSchema.safeParse({ normalized: "sarau" }).success,
+    ).toBe(false);
+    // `normalized` is `^[a-z]{5}$` by the word-list harness, and the ASCII
+    // guarantee is what lets `listUsedTermoAnswers` compare jsonb round-trips
+    // without worrying how a diacritic was composed.
+    expect(
+      termoDailyContentSchema.safeParse({
+        canonical: "então",
+        normalized: "então",
+      }).success,
+    ).toBe(false);
+    expect(
+      termoDailyContentSchema.safeParse({
+        canonical: "então",
+        normalized: "ENTAO",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("T-CORE-S18: the literal 5 is the ENGINE's WORD_LENGTH, and MAX_GUESSES is 6", () => {
+    // The dimension check, pinned to the engine rather than restated. #27's
+    // B5 commit extends this id to `TERMO_WORD_LENGTH`, `TERMO_MAX_GUESSES`
+    // and `termoTilesSchema` in `contracts/termo-guess.ts`; this half is the
+    // one the stored-content contract owes.
+    expect(WORD_LENGTH).toBe(5);
+    expect(MAX_GUESSES).toBe(6);
+    expect(
+      termoDailyContentSchema.safeParse({
+        canonical: "a".repeat(WORD_LENGTH),
+        normalized: "a".repeat(WORD_LENGTH),
+      }).success,
+    ).toBe(true);
+    for (const length of [WORD_LENGTH - 1, WORD_LENGTH + 1]) {
+      expect(
+        termoDailyContentSchema.safeParse({
+          canonical: "a".repeat(length),
+          normalized: "a".repeat(length),
+        }).success,
+        `length ${String(length)} must fail both fields`,
+      ).toBe(false);
+    }
+  });
+
+  it("T-CORE-S18: `.length(5)` counts JS characters, so an accented answer of five letters passes", () => {
+    // The reason the check is a LENGTH and not a pt-BR charset regex: today's
+    // 400 carry `ã`, `ç`, `é` and `ó`, and a regeneration under ADR-0015 may
+    // introduce `à`, `ô`, `õ` or `â`. A charset regex would fail every insert
+    // and drain the buffer for a benign content change.
+    const accented = TERMO_ANSWERS.filter(
+      (answer) => answer.canonical !== answer.normalized,
+    );
+    expect(accented.length).toBeGreaterThan(0);
+    for (const answer of accented) {
+      expect(termoDailyContentSchema.safeParse(answer).success).toBe(true);
+    }
+  });
+});
+
+describe("stripDailyContent (termo)", () => {
+  const CONTENT = { canonical: "então", normalized: "entao" };
+
+  // T-CORE-S19 (plan 022 §19.3).
+  it("T-CORE-S19: projects EXACTLY game/date — the whole contract is negative", () => {
+    const stripped = stripDailyContent("termo", "2026-08-03", CONTENT);
+    expect(stripped).toEqual({ game: "termo", date: "2026-08-03" });
+    expect(Object.keys(stripped).sort()).toEqual(["date", "game"]);
+    expect(dailyPuzzleResponseSchema.parse(stripped)).toEqual(stripped);
+  });
+
+  it("T-CORE-S19: carries no forbidden daily key at any depth, over all 400 answers", () => {
+    for (const answer of TERMO_ANSWERS) {
+      const stripped = stripDailyContent("termo", "2026-08-03", answer);
+      const keys = collectKeys(stripped);
+      // Anti-vacuity: the scan really did walk an object.
+      expect(keys.has("game")).toBe(true);
+      for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+        expect(keys.has(forbidden)).toBe(false);
+      }
+    }
+  });
+
+  it("T-CORE-S19: a projection carrying canonical or normalized fails the response schema", () => {
+    // `z.strictObject` is what makes "the answer word, in any field" (the
+    // strip table) a parse failure rather than a rule kept by review.
+    for (const smuggled of [
+      { game: "termo", date: "2026-08-03", canonical: "então" },
+      { game: "termo", date: "2026-08-03", normalized: "entao" },
+      { game: "termo", date: "2026-08-03", answer: "entao" },
+    ]) {
+      expect(dailyTermoResponseSchema.safeParse(smuggled).success).toBe(false);
+      expect(dailyPuzzleResponseSchema.safeParse(smuggled).success).toBe(false);
+    }
+  });
+
+  it("T-CORE-S19: a drifted content THROWS — a 200 has to mean playable", () => {
+    // With an empty projection the 200 IS the whole message, so the strict
+    // parse of `content` is the only thing that distinguishes "playable" from
+    // "a row exists". `getTodayDaily` does not catch, so this 500s rather
+    // than serving a date the game cannot be played on.
+    for (const drifted of [
+      {},
+      { canonical: "então" },
+      { canonical: "então", normalized: "entao", index: 3 },
+      { canonical: "cafe", normalized: "cafe" },
+      null,
+    ]) {
+      expect(() => stripDailyContent("termo", "2026-08-03", drifted)).toThrow();
+    }
+  });
+
+  it("T-CORE-S19: the date is projected verbatim and a malformed one fails", () => {
+    expect(stripDailyContent("termo", "2026-12-31", CONTENT)).toEqual({
+      game: "termo",
+      date: "2026-12-31",
+    });
+    expect(() => stripDailyContent("termo", "31/12/2026", CONTENT)).toThrow();
   });
 });

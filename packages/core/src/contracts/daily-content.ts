@@ -15,6 +15,7 @@ import {
   dailyBinairoResponseSchema,
   dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
+  dailyTermoResponseSchema,
   nonogramCluesSchema,
   nonogramSizeSchema,
   sudokuDigitSchema,
@@ -113,9 +114,76 @@ export const nonogramDailyContentSchema = z
 export type NonogramDailyContent = z.infer<typeof nonogramDailyContentSchema>;
 
 /**
- * Thrown by `stripDailyContent` for games whose projection is not
- * implemented yet — a throw is stronger than a strip: no leak path exists
- * at all (ADR-0024 fail-closed dispatch).
+ * Server-side shape of `daily_puzzles.content` for termo — mirrors
+ * `TermoAnswer` (packages/games/src/termo/word-list.ts) exactly and carries
+ * nothing else. Strict for the same fail-closed reason
+ * `binairoDailyContentSchema` is, with the same operational corollaries.
+ *
+ * THREE ABSENCES, each deliberate, because each is the obvious thing to add
+ * and each would be wrong (ADR-0040):
+ *
+ * - NO `index`. The word is stored, never its position in `TERMO_ANSWERS`.
+ *   The order is contractual but ADR-0015's own remedy for a bad word is to
+ *   REGENERATE the list, and a regeneration can reorder. Rows are immutable
+ *   and the buffer is up to 30 days deep (`remoteConfigSchema`'s clamp,
+ *   ADR-0025), so an index would let one content commit silently rewrite a
+ *   month of unpublished answers and retroactively change what every
+ *   archived row meant — with every gate green. Storing the word makes a
+ *   regeneration a no-op for every existing row, which is ADR-0024
+ *   decision 1's "an engine redeploy must never change a published puzzle
+ *   mid-day".
+ *
+ * - NO `seed`. The other three carry one because their ENGINES emit one and
+ *   it regenerates the puzzle. Termo's pick is a rejection draw over a
+ *   RUN-SCOPED eligible pool, so replaying the same uint32 against a
+ *   different pool yields a different word: a stored seed here would
+ *   reproduce nothing and would invite a future reader to try. The
+ *   `daily_puzzles.seed` COLUMN still receives the accepted draw — the
+ *   entropy this row was written from, and nothing more.
+ *
+ * - NO `game` literal. Nonogram's exists only because its engine writes one;
+ *   binairo's and sudoku's do not. Every read is already keyed by `game` in
+ *   SQL (published.ts's `wallPredicate`).
+ *
+ * `normalized` is stored though it is derivable, and the reason is the
+ * no-repeat rule: it is `^[a-z]{5}$` by the word-list harness
+ * (packages/games/test/termo/word-list.test.ts), so `listUsedTermoAnswers`
+ * compares pure ASCII and cannot be defeated by a jsonb round-trip that
+ * composes a diacritic differently. `canonical` is the reveal (#27 AC 2);
+ * nothing else in the runtime can recover an accented spelling, because
+ * `content/termo/canonical-map.csv` is harness input and does not ship.
+ *
+ * `.length(5)` and not a pt-BR charset regex: the DIMENSION check, matching
+ * the engine's `WORD_LENGTH` and pinned to it by T-CORE-S18. A charset regex
+ * would fail every insert if a regeneration ever introduced `à`, `ô`, `õ` or
+ * `â` — all in the domain the word-list arbitraries declare, none present in
+ * today's 400. Membership in `TERMO_ANSWERS` is the rule-validity half; it
+ * holds by construction at the single write site (`topUpTermoBuffer`) and is
+ * pinned by T-CORE-S17 over all 400, because `@miolos/games` is a DEV
+ * dependency of this package and `src/` may not import it.
+ */
+export const termoDailyContentSchema = z.strictObject({
+  canonical: z.string().length(5),
+  normalized: z.string().regex(/^[a-z]{5}$/),
+});
+
+export type TermoDailyContent = z.infer<typeof termoDailyContentSchema>;
+
+/**
+ * Thrown by `stripDailyContent` for a game whose projection is not
+ * implemented — a throw is stronger than a strip: no leak path exists at
+ * all (ADR-0024 fail-closed dispatch).
+ *
+ * UNREACHABLE SINCE #27, and kept anyway. All four games project, so the
+ * switch below has no arm left that can throw this. Three things break on
+ * its removal, none of them obvious from here: `eslint.config.mjs`'s
+ * `importNames` bans the name from `apps/web`, `T-LINT-S7`
+ * (apps/web/test/eslint-db-wall.test.ts) asserts that ban list EQUALS this
+ * module's own export set, and `packages/core/src/index.ts` re-exports it.
+ * It also stays as the landing place for a fifth game: a new `Game` member
+ * makes the switch non-exhaustive, which is a compile error rather than a
+ * use for this class — but a projection that is scaffolded before it is
+ * written has one arm to write, not a class to reinvent.
  */
 export class DailyProjectionUnsupportedError extends Error {
   readonly game: Game;
@@ -143,7 +211,7 @@ export class DailyProjectionUnsupportedError extends Error {
  * | binairo  | `game, date, size, givens`    | `solution`, `seed`, `weekday`, `givensCount`, `requiredTier`                     | #17 (this file)      |
  * | sudoku   | `game, date, givens, tier`    | `solution`, `seed`, `clueCount`                                                  | #23 (this file)      |
  * | nonogram | `game, date, size, clues`     | entire `reveal` (`motifId`, `name`, `mirrored`, `solution`), `seed`, `weekday` | #25 (this file)      |
- * | termo    | `game, date` only             | the answer word, in any field; guesses are judged server-side                    | #27 (throws until)   |
+ * | termo    | `game, date` only             | the answer word, in any field; guesses are judged server-side                    | #27 (this file)      |
  *
  * The nonogram row is a PRODUCT withhold, not a confidentiality one
  * (ADR-0033). `solveNonogram(clues)` recovers the bitmap in under a
@@ -194,7 +262,23 @@ export function stripDailyContent(
         clues: parsed.clues,
       });
     }
-    case "termo":
-      throw new DailyProjectionUnsupportedError(game);
+    case "termo": {
+      // The projection carries NOTHING from the row — the strip table's
+      // termo row, made mechanical. An answer is not a board and a guess is
+      // judged server-side (ADR-0040, ADR-0038).
+      //
+      // The content is parsed anyway, and strictly: with an empty projection
+      // the 200 IS the whole message, so it has to mean "playable", not
+      // merely "a row exists". A drifted row 500s here (getTodayDaily does
+      // not catch — published.ts) rather than serving a date the game cannot
+      // be played on. That is also the mechanism that makes a post-seeding
+      // schema change loud rather than silent (plan 022 §21.4).
+      //
+      // This is not a confidentiality boundary and must never be argued as
+      // one (ADR-0027). The answer is absent because the client has no use
+      // for it, not because we are defending it.
+      termoDailyContentSchema.parse(content);
+      return dailyTermoResponseSchema.parse({ game: "termo", date });
+    }
   }
 }
