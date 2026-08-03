@@ -144,7 +144,12 @@ describe("a judged turn (T-WEB-S83)", () => {
       "definitely not json object",
     ]) {
       stubFetch(() => jsonResponse(200, body));
-      expect(await postGuesses(DATE, GUESSES)).toEqual({ kind: "held" });
+      // `server`, never `offline`: a body we cannot read is OUR defect, and
+      // "sem conexão" would be a false claim about the player's network.
+      expect(await postGuesses(DATE, GUESSES)).toEqual({
+        kind: "held",
+        reason: "server",
+      });
     }
     expect(errors).toHaveBeenCalled();
   });
@@ -157,16 +162,53 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
     });
     const { postGuesses } = await freshClient();
 
-    expect(await postGuesses(DATE, GUESSES)).toEqual({ kind: "held" });
+    // The ONE branch that may claim "sem conexão": the fetch itself rejected.
+    expect(await postGuesses(DATE, GUESSES)).toEqual({
+      kind: "held",
+      reason: "offline",
+    });
   });
 
   it.each([500, 502, 503, 429])("HOLDS the turn on %i", async (status) => {
     // 429 is HELD and never terminal: a rate limit is not a verdict, and
     // spending one of six turns on one would be the worst possible reading.
+    //
+    // `reason: "server"` is the half T-WEB-S83 was missing (finding B-7): all
+    // four of these used to resolve to the same `held` the screen answered
+    // with "Sem conexão — a tentativa vai assim que a conexão voltar.", a
+    // factual claim about the player's network that is false here and points
+    // them at a fix that cannot help.
     stubFetch(() => jsonResponse(status, { error: "nope" }));
     const { postGuesses } = await freshClient();
 
-    expect(await postGuesses(DATE, GUESSES)).toEqual({ kind: "held" });
+    expect(await postGuesses(DATE, GUESSES)).toEqual({
+      kind: "held",
+      reason: "server",
+    });
+  });
+
+  it("says `offline` on a 5xx when the browser itself reports no connection", async () => {
+    // `navigator.onLine` is trusted in ONE direction only — false is
+    // reliable, true is not — so it can add the offline claim but never
+    // remove it.
+    stubFetch(() => jsonResponse(503, { error: "nope" }));
+    const { postGuesses } = await freshClient();
+
+    // An OWN property shadowing jsdom's prototype getter, removed again in
+    // the `finally` — `vi.restoreAllMocks` does not reach a defineProperty.
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => false,
+    });
+    try {
+      expect(await postGuesses(DATE, GUESSES)).toEqual({
+        kind: "held",
+        reason: "offline",
+      });
+    } finally {
+      Reflect.deleteProperty(navigator, "onLine");
+    }
+    expect(navigator.onLine).toBe(true);
   });
 
   it("re-mints ONCE on a 401 and re-posts silently", async () => {
@@ -192,13 +234,46 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
     );
     const { postGuesses } = await freshClient();
 
-    expect(await postGuesses(DATE, GUESSES)).toEqual({ kind: "held" });
+    expect(await postGuesses(DATE, GUESSES)).toEqual({
+      kind: "held",
+      reason: "server",
+    });
     expect(guessCalls(fetchMock)).toHaveLength(2);
 
-    // And the latch is per page load, not per call: the next turn does not
-    // re-mint again.
-    expect(await postGuesses(DATE, GUESSES)).toEqual({ kind: "held" });
+    // And the latch holds across turns: the re-mint was never CONFIRMED — the
+    // re-post 401ed too — so nothing arms a second one, and the next turn
+    // posts once and holds. Minting one identity per failed turn is the
+    // sequential form of the race finding B-1 removed.
+    expect(await postGuesses(DATE, GUESSES)).toEqual({
+      kind: "held",
+      reason: "server",
+    });
     expect(guessCalls(fetchMock)).toHaveLength(3);
+    expect(sessionCalls(fetchMock)).toHaveLength(2);
+  });
+
+  it("re-mints AGAIN for a later 401, once the first fresh identity worked", async () => {
+    // Finding B-2: the allowance used to be a module-level boolean that was
+    // never reset, so the first spent re-mint was terminal for the page load
+    // — a cookie expiring forty minutes in left the board held, `retry()`
+    // re-posting and holding again, and only a reload cleared it.
+    let phase = 0;
+    const fetchMock = stubFetch(() => {
+      phase += 1;
+      // 401, re-post OK (the identity is confirmed), then 401 again.
+      return phase === 2 || phase === 4
+        ? jsonResponse(200, judgedBody())
+        : jsonResponse(401, { error: "no-session" });
+    });
+    const { postGuesses } = await freshClient();
+
+    expect(await postGuesses(DATE, GUESSES)).toMatchObject({ kind: "judged" });
+    expect(await postGuesses(DATE, GUESSES)).toMatchObject({ kind: "judged" });
+
+    // Two turns, two 401s, two re-mints — because the first one was seen to
+    // work. Nothing here is a loop: each is one player action.
+    expect(guessCalls(fetchMock)).toHaveLength(4);
+    expect(sessionCalls(fetchMock)).toHaveLength(3);
   });
 
   it("returns `not-in-list` for a 422 whose code is `invalid-guess`", async () => {
@@ -215,6 +290,21 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
     expect(await postGuesses(DATE, GUESSES)).toEqual({
       kind: "rejected",
       reason: "not-in-list",
+    });
+  });
+
+  it("returns `refused` for a 422 whose code is `board-closed`", async () => {
+    // The pinned wire contract's second 422, and it is the OPPOSITE kind of
+    // thing from `invalid-guess`: the posted list continues past a winning
+    // row, which is a client bug or tampering and never a player outcome. It
+    // must not read as "não está na lista" — a desynced board would otherwise
+    // be told a correct word is not in the dictionary (findings A-3/B-8).
+    stubFetch(() => jsonResponse(422, { error: "board-closed" }));
+    const { postGuesses } = await freshClient();
+
+    expect(await postGuesses(DATE, GUESSES)).toEqual({
+      kind: "rejected",
+      reason: "refused",
     });
   });
 
@@ -269,7 +359,11 @@ describe("the request is parsed before it leaves", () => {
     const fetchMock = stubFetch(() => jsonResponse(200, judgedBody()));
     const { postGuesses } = await freshClient();
 
-    expect(await postGuesses(DATE, GUESSES)).toEqual({ kind: "held" });
+    // `server`: a misconfigured build is ours however good the connection is.
+    expect(await postGuesses(DATE, GUESSES)).toEqual({
+      kind: "held",
+      reason: "server",
+    });
     expect(guessCalls(fetchMock)).toHaveLength(0);
     expect(errors).toHaveBeenCalled();
   });

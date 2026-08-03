@@ -102,15 +102,25 @@ export interface ConclusionCopy {
  * here — there is no hint to have gone without (ADR-0045 decision 1), and the
  * elapsed time is dominated by the per-guess round trip (decision 4).
  *
- * `settle` is false on a loss. There is no consolation flourish, no second
- * stamp design, no mascot and no emoji: THE LOSS EQUIVALENT OF THE
- * CELEBRATION IS THE CELEBRATION'S ABSENCE, and stating that here is what
- * stops the next contributor from inventing one.
+ * THERE IS NO CONSOLATION FLOURISH on a loss: no second stamp design, no
+ * mascot and no emoji. The loss equivalent of the celebration is the
+ * celebration's absence — the settle animation simply does not run — and
+ * stating that here is what stops the next contributor from inventing one.
+ *
+ * IT IS DERIVED FROM `state`, NOT CARRIED BESIDE IT. A `settle: boolean`
+ * field lived here and every call site and every test paired `"lost"` with
+ * `false` and `"result"` with `true`; the other two combinations were
+ * unreachable and untested, and the TSDoc's motive for the field was an
+ * explicitly hypothetical future game (finding B-11). That is the same shape
+ * `messages.ts` rejects by name for `lostAria` — "a runtime branch on a
+ * compile-time constant whose false arm is unreachable and untestable". A
+ * game that genuinely wants a still `"result"` stamp adds the degree of
+ * freedom then, with a caller that exercises it.
  *
  * `state` is the only field the day-state reader consults, and it does so to
  * decide whether the game being celebrated enters the day card as *completed*
- * or as *played* (plan 022 §15.3). `label`, `detail`, `aria` and `settle`
- * are the stamp's own, rendered by the conclusion's fourth branch.
+ * or as *played* (plan 022 §15.3). `label`, `detail` and `aria` are the
+ * stamp's own, rendered by the conclusion's fourth branch.
  */
 export interface ConclusionOutcome {
   readonly state: "result" | "lost";
@@ -120,8 +130,6 @@ export interface ConclusionOutcome {
   readonly detail: string;
   /** The whole composed accessible name (ADR-0018). */
   readonly aria: string;
-  /** Whether the shared stamp-settle animation runs. False on a loss. */
-  readonly settle: boolean;
 }
 
 /**

@@ -443,15 +443,18 @@ function ShippedStamp({
  * a time on a game nobody won is the same lie `day-state.ts` already refuses
  * for a part-played board.
  *
- * `settle` is a FIELD ON THE PROP rather than a branch on `state`, so a
- * future game can pass `{state: "result", settle: false}` without this
- * component learning a second rule.
+ * `.stampStill` is DERIVED from `state` rather than read off a second field.
+ * A `settle: boolean` on the prop was speculative generality — every caller
+ * and every test paired it exactly with `state`, so its two other
+ * combinations were unreachable and untestable (finding B-11). One fact, one
+ * field.
  */
 function OutcomeStamp({ outcome }: { readonly outcome: ConclusionOutcome }) {
+  const lost = outcome.state === "lost";
   const chrome = [
     styles.stamp,
-    outcome.state === "lost" ? styles.stampLost : "",
-    outcome.settle ? "" : styles.stampStill,
+    lost ? styles.stampLost : "",
+    lost ? styles.stampStill : "",
   ]
     .filter((name) => name !== "")
     .join(" ");
@@ -494,10 +497,18 @@ function picturePath(picture: ConclusionPicture): string {
  * 3's "the conclusion chains to the next pending daily" (plan 018 S21).
  *
  * Written as a loop rather than a `find` because the route has to come out
- * NARROWED: `playRoutes` is partial until #27 lands, and Next's typed
- * `Link href` refuses a possibly-undefined value. A game with no play route
- * is skipped rather than offered — chaining to a route that does not exist
- * would be a 404 at the end of the one celebration screen the product has.
+ * NARROWED: `playRoutes` is typed `Partial<Record<Game, Route>>`, and Next's
+ * typed `Link href` refuses a possibly-undefined value. A game with no play
+ * route is skipped rather than offered — chaining to a route that does not
+ * exist would be a 404 at the end of the one celebration screen the product
+ * has.
+ *
+ * ALL FOUR GAMES ARE ROUTED SINCE #27, so the type is wider than the value
+ * and this narrowing is now dead weight rather than a live guard — #75
+ * totalises the map to `Record<Game, Route>` and deletes it, and `routes.ts`
+ * carries the same note at the declaration. Do not "simplify" it away before
+ * that ticket: the map is still declared partial, so the loop is what the
+ * type system demands today.
  *
  * Understating is safe here for the same reason it is on the hub: the worst
  * a stale `pending` does is offer a game the player already solved on another

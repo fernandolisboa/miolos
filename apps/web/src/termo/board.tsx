@@ -1,4 +1,5 @@
 import { MAX_GUESSES, WORD_LENGTH, type TileState } from "@miolos/games/termo";
+import { memo } from "react";
 
 import { messages } from "../i18n";
 import styles from "./termo-board.module.css";
@@ -67,7 +68,29 @@ export interface BoardProps {
   readonly pending: string | null;
 }
 
-export function Board({
+/**
+ * MEMOIZED, and it is a real defect fix rather than a precaution (finding
+ * B-4, the #25 precedent at `nonogram/board.tsx:121`). `usePlayLifecycle`
+ * runs `setInterval(() => dispatch({type:"tick", now: Date.now()}), 1000)`
+ * for the whole live game, and ADR-0045 decision 4 removed the only thing
+ * that tick exists to repaint — `/termo` renders no clock at all. So a player
+ * who thinks for five minutes fires 300 ticks, and without this each one
+ * re-rendered all 30 tiles: 6 row-aria compositions + 30 `tileClassName` /
+ * `letterAt` pairs, for ZERO DOM writes. ~10 200 wasted aria compositions
+ * over that game.
+ *
+ * The default shallow compare is exactly right and needs nothing else: the
+ * `tick` case spreads `...state`, so `guesses` keeps its array identity, and
+ * `activeRow`, `heldRow`, `draft` and `pending` are all primitives or null.
+ * Adding a prop that is rebuilt per render silently undoes it — the same
+ * warning `nonogram/board.tsx` carries.
+ *
+ * Measured with `T-WEB-S104`: 0 row-label compositions across ten timer
+ * ticks, proved red at 5 with the memo removed (jsdom batches the ten fake
+ * intervals into one commit, so 5 is one whole board repaint — in a browser
+ * the same ten seconds are ten).
+ */
+export const Board = memo(function Board({
   guesses,
   activeRow,
   heldRow,
@@ -115,7 +138,7 @@ export function Board({
       })}
     </div>
   );
-}
+});
 
 /**
  * The pre-hydration board (plan 022 §13.3). Thirty tiles at final size, so the

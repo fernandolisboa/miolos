@@ -1184,7 +1184,6 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
           label: "Jogado",
           detail: "X/6",
           aria: "Termo jogado: as 6 tentativas acabaram sem acerto.",
-          settle: false,
         }}
       />,
     );
@@ -1225,7 +1224,6 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
           label: "Jogado",
           detail: "X/6",
           aria: "Termo jogado: as 6 tentativas acabaram sem acerto.",
-          settle: false,
         }}
       />,
     );
@@ -1256,7 +1254,6 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
           label: "Concluído",
           detail: "2/6",
           aria: "Termo concluído em 2 de 6 tentativas.",
-          settle: true,
         }}
       />,
     );

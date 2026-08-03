@@ -17,8 +17,12 @@
  * scoped to games whose solution is recoverable from the published givens.
  * Termo's answer is never on the wire (`packages/core`'s strip table gives
  * its public projection as `game, date` only) and its guesses are judged
- * server-side, so #27 inherits neither this module nor ADR-0027's reasoning
- * and decides its hint separately (ADR-0029 consequence (g)).
+ * server-side, so #27 inherited neither this module nor ADR-0027's reasoning.
+ *
+ * DISCHARGED AT #27: ADR-0045 decision 1 decided it, and the decision is NO
+ * HINT — there is nothing to reveal that is not the answer itself. So this
+ * module keeps exactly three consumers, permanently, and a fourth game
+ * arriving is not a reason to widen it (ADR-0029 consequence (g)).
  */
 
 export interface Hint<T> {

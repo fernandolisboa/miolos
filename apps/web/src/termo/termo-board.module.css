@@ -85,16 +85,32 @@
         ring is --ink at 15.0124:1 on desk and 15.6663:1 on card, because
         mustard clears no paper. nonogram-board.module.css:400 and :445 were
         the precedent.
-     7. Two off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale":
-        the keyboard's `margin-top: 30px` and `.keyPresent`'s
-        `text-underline-offset: 3px`. The 30px is INHERITED —
-        screen.module.css:161 ships `margin-top: 30px` on `.statsCard` and
-        :146 ships `margin: 18px 0 0` on `.rules`, so the shared sheet already
-        carries off-scale vertical rhythm and matching it is what makes the
-        keyboard sit where the sidebar card sits. The 3px is a decoration
-        offset on a 17px glyph, not spacing between boxes; the BOARD's own
-        offsets are 4px at both viewports, deviation-free, precisely so the
-        scale holds where it governs.
+     7. Off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale".
+        THREE VALUES, in four kinds of place — an earlier version of this item
+        counted two and missed the gaps, which are the case the deviation
+        actually governs (step-6 finding B-13). `T-WEB-S102` now reads them
+        off the stylesheet rather than out of this prose, so the count cannot
+        drift again.
+        - `margin-top: 30px` on `.keyboard`. INHERITED — screen.module.css:161
+          ships `margin-top: 30px` on `.statsCard` and :146 ships
+          `margin: 18px 0 0` on `.rules`, so the shared sheet already carries
+          off-scale vertical rhythm and matching it is what makes the keyboard
+          sit where the sidebar card sits.
+        - `text-underline-offset: 3px`, on `.keyPresent` and on
+          `.noticeRetry`. A decoration offset on a 17px glyph, not spacing
+          between boxes; the BOARD's own offsets are 4px at both viewports,
+          deviation-free, precisely so the scale holds where it governs.
+        - `gap: 3px` on `.grid` and `.row` at <=768px. This IS spacing between
+          boxes and it is the honest half of the item. The VALUE is inherited
+          rather than invented — sudoku-board.module.css:425 and
+          binairo-screen.module.css:240 already ship a 3px mobile grid gap —
+          and it is load-bearing arithmetic: 5 x 44 + 4 x 3 + 2 x padding +
+          2 x border is exactly `--board-mobile-max`, which the desktop 4px
+          would overshoot at 320px.
+        - `padding-inline: 2px` on `.keyCommand` at <=768px, argued in full at
+          the rule itself: 11px is `undersized-ui-text`'s floor exactly, so
+          the 320px fit for `enviar`/`apagar` is bought with padding instead
+          of type size.
 
    Desktop geometry is DESIGN.md:50 verbatim — 52px cells, 4px gap — so there
    is no geometry deviation to record there. Termo is the first board narrow
@@ -418,7 +434,11 @@
   display: grid;
   grid-template-columns: repeat(20, minmax(0, 1fr));
   grid-template-rows: repeat(3, 52px);
-  gap: 8px;
+  /* The TOKEN, not the literal 8px it resolves to: the same file's mobile
+     `.keyboard` already reaches for `var(--space-1)`, and two idioms for one
+     kind of length in one stylesheet is how a token stops being the source of
+     truth (step-6 finding B-13). */
+  gap: var(--space-2);
   width: 552px;
   margin-top: 30px;
   touch-action: manipulation;

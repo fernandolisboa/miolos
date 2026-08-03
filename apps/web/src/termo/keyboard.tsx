@@ -1,5 +1,6 @@
 import type { KeyboardState, TileState } from "@miolos/games/termo";
 import {
+  memo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -146,8 +147,23 @@ export interface KeyboardProps {
  * no mode to be in. Its judged state is a fact about the game and rides in
  * the composed accessible name — `letra a` before judging, `letra a: fora`
  * after.
+ *
+ * MEMOIZED for the reason `board.tsx` spells out in full (finding B-4): the
+ * 1 Hz lifecycle tick repaints a screen with no clock on it, and without this
+ * every tick re-rendered all 28 keys — 28 `ariaFor` compositions, 28
+ * `keyClassName` calls, 28 fresh `style` objects, 84 fresh inline closures
+ * and 28 ref detach/reattach cycles (the inline `ref` arrow changes identity
+ * every render, so React nulls and re-sets all 28 → 56 Map mutations), for
+ * zero DOM writes. The same waste landed on every keystroke.
+ *
+ * All five props are referentially stable BY CONSTRUCTION, which is what
+ * makes the default shallow compare exact rather than lucky: `state` is a
+ * `useMemo([state.guesses])`, `onLetter`/`onErase` are `useCallback([])`,
+ * `onEnter` is `useCallback([arm])`, and `activeKeyRef` is a `useRef`. The
+ * roving `focused` is this component's own `useState`, so `memo` cannot
+ * stale it. Measured with `T-WEB-S104`.
  */
-export function Keyboard({
+export const Keyboard = memo(function Keyboard({
   state,
   onLetter,
   onEnter,
@@ -251,7 +267,7 @@ export function Keyboard({
       ))}
     </div>
   );
-}
+});
 
 /**
  * The pre-hydration keyboard (plan 022 §13.3). Divs rather than buttons, so

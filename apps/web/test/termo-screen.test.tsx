@@ -177,7 +177,10 @@ function judged(
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  guessClient.postGuesses.mockResolvedValue({ kind: "held" });
+  guessClient.postGuesses.mockResolvedValue({
+    kind: "held",
+    reason: "offline",
+  });
 });
 
 afterEach(() => {
@@ -290,7 +293,7 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
       { type: "pause", now: 3 },
       { type: "resume", now: 4 },
       { type: "submit" },
-      { type: "held" },
+      { type: "held", reason: "offline" },
       // THE COLLIDING PAIR: a held turn cleared by `retry`, then the verdict
       // that follows it. Under the placement that "reads natural" — clearing
       // the notice on `judged` — this last step writes the row sentence into
@@ -861,7 +864,11 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     );
     expect(decl(keyboard, "grid-template-rows")).toBe("repeat(3, 52px)");
     expect(pixels(decl(keyboard, "width"))).toBe(552);
-    expect(pixels(decl(keyboard, "gap"))).toBe(8);
+    // THE TOKEN, not the 8px literal it resolves to (finding B-13): the
+    // mobile `.keyboard` below already reaches for `var(--space-1)`, and two
+    // idioms for one kind of length in one sheet is how a token stops being
+    // the source of truth.
+    expect(decl(keyboard, "gap")).toBe("var(--space-2)");
     expect(pixels(decl(keyboard, "margin-top"))).toBe(30);
 
     const chrome = mobileChrome(css);
@@ -1097,6 +1104,43 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
       );
     }
   });
+
+  it("names every off-4pt length the STYLESHEET actually ships, not only the two the prose used to", () => {
+    // Finding B-13, and it is the half this describe structurally could not
+    // reach: everything above regexes the header comment, so the assertion was
+    // about the PROSE and never about the declarations. Deviation 7 said "two
+    // off-4pt lengths" while `.grid` and `.row` shipped `gap: 3px` at ≤768px —
+    // a third, and unlike a decoration offset it is literally spacing between
+    // boxes, the case the deviation governs.
+    //
+    // The property list is spacing plus `text-underline-offset`, which is a
+    // DISTANCE; `text-decoration-thickness` is deliberately out, because a
+    // stroke weight is not spacing on any scale. Negative lengths are out too:
+    // the only one is `.announcer`'s `margin: -1px`, the visually-hidden clip
+    // idiom, which is not a gap between anything.
+    const sheet = stylesheet("src/termo/termo-board.module.css");
+    const declarations =
+      /(?:^|[\s;{])(?:gap|row-gap|column-gap|margin(?:-[a-z]+)?|padding(?:-[a-z-]+)?|text-underline-offset)\s*:\s*([^;{}]+)/g;
+
+    const offScale = new Set<string>();
+    for (const [, value] of sheet.matchAll(declarations)) {
+      for (const [, length] of (value ?? "").matchAll(/(-?\d+)px/g)) {
+        const px = Number(length);
+        if (px > 0 && px % 4 !== 0) {
+          offScale.add(`${String(px)}px`);
+        }
+      }
+    }
+
+    // Anti-vacuity: the scan found declarations at all.
+    expect(offScale.size).toBeGreaterThan(0);
+    expect([...offScale].sort()).toEqual(["2px", "30px", "3px"]);
+
+    const deviation = (header ?? "").split(/^ {5}\d\. /gm)[7] ?? "";
+    for (const length of offScale) {
+      expect(deviation, `deviation 7 must name ${length}`).toContain(length);
+    }
+  });
 });
 
 describe("the retry button's placement and the focus order (T-WEB-S103)", () => {
@@ -1123,7 +1167,33 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
     expect(retry.parentElement).toBe(region.parentElement);
   });
 
-  it("hands the caret to the keyboard synchronously, because it is about to unmount", () => {
+  it("hands the caret to the keyboard on a KEYBOARD activation, because it is about to unmount", () => {
+    const held = playFixture({
+      pending: VALID,
+      held: true,
+      notice: copy.offline,
+    });
+
+    render(<PlayView play={held.play} />);
+    const retry = screen.getByRole("button", { name: copy.retry });
+    // `detail: 0` is Enter/Space on the button — the same test `keyboard.tsx`
+    // uses one component over.
+    fireEvent.click(retry, { detail: 0 });
+
+    expect(held.retry).toHaveBeenCalledTimes(1);
+    // A focused element that unmounts drops the caret to <body> mid-game —
+    // a 2.4.3 failure.
+    expect(document.activeElement).toBe(letterKey("q"));
+  });
+
+  it("leaves the page UNFOCUSED on a mouse click, or the physical keyboard dies", () => {
+    // Finding B-3, and it is the mirror image of the rule above. The window
+    // `keydown` listener serves the UNFOCUSED page and bails on any
+    // `INTERACTIVE_TARGET` — which every one of the 28 keys is — and the
+    // keyboard's own `onKeyDown` handles arrows and Home/End only. So focusing
+    // a key after a MOUSE click means every physical letter keypress lands on
+    // that <button> and types nothing, until the player clicks the page
+    // background with no indication why.
     const held = playFixture({
       pending: VALID,
       held: true,
@@ -1135,9 +1205,8 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
     fireEvent.click(retry, { detail: 1 });
 
     expect(held.retry).toHaveBeenCalledTimes(1);
-    // A focused element that unmounts drops the caret to <body> mid-game —
-    // a 2.4.3 failure.
-    expect(document.activeElement).toBe(letterKey("q"));
+    expect(document.activeElement).not.toBe(letterKey("q"));
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("is THREE stops at most, in document order: back → retry → the keyboard", () => {
@@ -1158,6 +1227,64 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
     expect(stops[0]?.tagName).toBe("A");
     expect(stops[1]).toBe(screen.getByRole("button", { name: copy.retry }));
     expect(stops[2]).toBe(letterKey("q"));
+  });
+});
+
+describe("the 1 Hz tick paints nothing, because there is no clock (T-WEB-S104)", () => {
+  // Finding B-4, and the #25 precedent is `nonogram/board.tsx`'s own memo
+  // (findings PERF-R4-1/R4-2). `usePlayLifecycle` runs
+  // `setInterval(() => dispatch({type:"tick", now: Date.now()}), 1000)` for
+  // the whole live game, and ADR-0045 decision 4 removed the only thing that
+  // tick exists to repaint — `/termo` renders no timer at all. Without `memo`
+  // on `Board` and `Keyboard` every tick re-rendered all 58 elements for ZERO
+  // DOM writes: a player who thinks for five minutes burns 300 ticks,
+  // ~10 200 aria compositions and ~17 400 reconciliations.
+  //
+  // The composers are the honest probe, exactly as they are for Nonogram: a
+  // DOM assertion cannot see this, because React writes no attribute when the
+  // value is unchanged and the markup is identical either way.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("composes ZERO row and key labels across ten timer ticks", () => {
+    render(<TermoScreen daily={DAILY} />);
+    // Let the mount effect's restore, the derived resume and their persists
+    // settle, so what the spies see afterwards is only what the ticks cause.
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+
+    // Anti-vacuity, half one: the interval really is armed.
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+    const rowEmptyAria = vi.spyOn(copy, "rowEmptyAria");
+    const rowActiveAria = vi.spyOn(copy, "rowActiveAria");
+    const letterAria = vi.spyOn(copy.keyboard, "letterAria");
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    // The numbers that must never come back are 5 × 10, 1 × 10 and 26 × 10.
+    expect(rowEmptyAria).not.toHaveBeenCalled();
+    expect(rowActiveAria).not.toHaveBeenCalled();
+    expect(letterAria).not.toHaveBeenCalled();
+
+    // Anti-vacuity, half two: the spies ARE wired, and a keystroke — which
+    // moves `draft` and therefore the active row — still repaints the board.
+    act(() => {
+      fireEvent.keyDown(window, { key: "a" });
+    });
+    expect(rowActiveAria).toHaveBeenCalled();
+
+    rowEmptyAria.mockRestore();
+    rowActiveAria.mockRestore();
+    letterAria.mockRestore();
   });
 });
 

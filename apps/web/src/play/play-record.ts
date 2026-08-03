@@ -18,6 +18,9 @@ import {
   isoDateString,
   nonogramSizeSchema,
   sudokuDigitSchema,
+  TERMO_MAX_GUESSES,
+  TERMO_WORD_LENGTH,
+  termoTilesSchema,
   type Game,
 } from "@miolos/core";
 import { z } from "zod";
@@ -210,36 +213,29 @@ export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
 // route's client graph (`day-state.ts` reads it for the hub's meta line and
 // every card's action), so a value import would put the Termo engine on `/` —
 // and, the day one of `word-list.ts`'s two `/*#__PURE__*/` annotations is lost
-// to a refactor, the word list with it (ADR-0045). The TYPE half is
-// mechanical: an `import type` with no consumer left in this file is the SAME
-// `@typescript-eslint/no-unused-vars` ERROR as an unused const, and the root
-// script is `eslint --max-warnings 0 .`.
+// to a refactor, the word list with it (ADR-0045).
 //
-// The three literals below are therefore RESTATED, and they are pinned to the
-// engine from `apps/web/test/termo-record.test.ts`, where a value import of
-// `@miolos/games/termo` is free (the bundle rule binds `src/`, not `test/`).
-
-/**
- * The engine's `TileState`, restated rather than imported — see the note
- * above. The restatement is pinned in BOTH directions by `T-WEB-S74`, which
- * reaches the tile type back out through this schema's own inferred type and
- * asserts mutual assignability against the engine's union. A member added to,
- * removed from or renamed in that union reds `pnpm typecheck` at that test
- * rather than silently producing a record the Termo reducer cannot read.
- */
-const tileStateSchema = z.enum(["correct", "present", "absent"]);
-
-/**
- * `MAX_GUESSES` and `WORD_LENGTH`, restated for the same reason. Pinned by
- * `T-WEB-S75` BEHAVIOURALLY rather than by a `typeof` assignment: with the
- * engine's constants value-imported in the test, a `MAX_GUESSES`-long list
- * parses and a `MAX_GUESSES + 1`-long one fails, and a `WORD_LENGTH`-letter
- * guess parses while `WORD_LENGTH ± 1` fails. That is a stronger pin than the
- * assignment was — it proves the schema ENFORCES the bound, not merely that
- * it declares a matching type.
- */
-const TERMO_MAX_GUESSES = 6;
-const TERMO_WORD_LENGTH = 5;
+// THAT ARGUMENT DOES NOT LICENSE A THIRD COPY OF THE BOUNDS, and an earlier
+// version of this block used it to (finding B-6). `@miolos/core` exports
+// `termoTilesSchema`, `TERMO_MAX_GUESSES` and `TERMO_WORD_LENGTH` from
+// `contracts/termo-guess.ts` — client-safe by design, which is why
+// `eslint.config.mjs` deliberately keeps them off `apps/web`'s ban list and
+// why `termo/guess-client.ts` already imports from there — and this module
+// imports from `@miolos/core` above regardless. So the wire contract and the
+// record contract now read ONE definition of 6, of 5 and of the tile enum,
+// and a fourth tile state cannot make them disagree silently in the field.
+//
+// MEASURED, because `play-record.ts` is on every route's client graph and a
+// gate is what the finding asked for. `pnpm build && pnpm bundle-check`, this
+// branch, clean builds either side of the whole step-7 diff: `/`'s First Load
+// JS moved 804.5 → 805.3 KB raw and 215.2 → 215.5 KB gzip, i.e. +0.8 KB raw
+// for ALL of step 7 and well inside the ~2 KB the finding set as the point at
+// which the local copies come back. It is cheap because the schemas were
+// already in `/`'s graph: `completionRequestSchema` pulls
+// `contracts/completion.ts`, which imports `termoGuessWordSchema` and
+// `TERMO_MAX_GUESSES` from `contracts/termo-guess.ts` — this import adds a
+// binding, not a module. `/termo` moved 873.7 → 874.2 KB raw over the same
+// diff.
 
 /** A guess as the engine sees it: normalized, five letters, no accents. */
 const NORMALIZED_GUESS = /^[a-z]{5}$/;
@@ -326,13 +322,11 @@ export const termoPlayRecordSchema = z
       .array(
         z.strictObject({
           guess: z.string().regex(NORMALIZED_GUESS),
-          tiles: z.tuple([
-            tileStateSchema,
-            tileStateSchema,
-            tileStateSchema,
-            tileStateSchema,
-            tileStateSchema,
-          ]),
+          // THE WIRE'S OWN TUPLE, not a copy of it. It is the same `z.tuple`
+          // shape zod 4.4.3 infers as a MUTABLE 5-tuple, so `buildRecord`'s
+          // `[...row.tiles]` spread stays exactly as written and `T-WEB-S74`'s
+          // mutual-assignability pin against the engine's union is unchanged.
+          tiles: termoTilesSchema,
         }),
       )
       .max(TERMO_MAX_GUESSES),

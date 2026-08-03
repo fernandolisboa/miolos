@@ -102,9 +102,10 @@ export function TermoConclusion({
  * no hint to have gone without (ADR-0045 decision 1) and the elapsed time is
  * dominated by the per-guess round trip (decision 4).
  *
- * `settle: false` on a loss. There is no consolation flourish, no second
- * stamp design, no mascot and no emoji: THE LOSS EQUIVALENT OF THE
- * CELEBRATION IS THE CELEBRATION'S ABSENCE.
+ * NO SETTLE ANIMATION ON A LOSS, and nothing here says so: `state: "lost"` is
+ * the whole of it, and `OutcomeStamp` derives `.stampStill` from it. There is
+ * no consolation flourish, no second stamp design, no mascot and no emoji —
+ * THE LOSS EQUIVALENT OF THE CELEBRATION IS THE CELEBRATION'S ABSENCE.
  */
 function outcomeFor(
   source: TermoOutcomeSource | undefined,
@@ -118,14 +119,12 @@ function outcomeFor(
         label: copy.outcome.wonLabel,
         detail: copy.outcome.wonDetail(source.used, MAX_GUESSES),
         aria: copy.outcome.wonAria(source.used, MAX_GUESSES),
-        settle: true,
       }
     : {
         state: "lost",
         label: copy.outcome.lostLabel,
         detail: copy.outcome.lostDetail(MAX_GUESSES),
         aria: copy.outcome.lostAria(MAX_GUESSES),
-        settle: false,
       };
 }
 

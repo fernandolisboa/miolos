@@ -2,6 +2,7 @@ import type { DailyTermoResponse } from "@miolos/core";
 import { isValidGuess, MAX_GUESSES, WORD_LENGTH } from "@miolos/games/termo";
 import { describe, expect, it } from "vitest";
 
+import { messages } from "../src/i18n";
 import type { PlayRecord, TermoPlayRecord } from "../src/play/play-record";
 import { initTermoPlayState, termoPlayReducer } from "../src/termo/state";
 import type { TermoPlayAction, TermoPlayState } from "../src/termo/types";
@@ -12,6 +13,8 @@ import type { TermoPlayAction, TermoPlayState } from "../src/termo/types";
  * `TermoBoardStatus` meets `PlayCore.status`, and the one place the record's
  * stored `outcome` is checked against the tiles.
  */
+
+const copy = messages.games.termo.play;
 
 const DATE = "2026-07-30";
 const DAILY: DailyTermoResponse = { game: "termo", date: DATE };
@@ -220,6 +223,7 @@ describe("the ordering contract (T-WEB-S82)", () => {
       termoPlayReducer(typed(ANSWER), { type: "submit" }),
       termoPlayReducer(termoPlayReducer(typed(ANSWER), { type: "submit" }), {
         type: "held",
+        reason: "offline",
       }),
       ...closed,
     ];
@@ -315,7 +319,9 @@ const EVERY_ACTION: readonly TermoPlayAction[] = [
   { type: "erase" },
   { type: "submit" },
   { type: "retry" },
-  { type: "held" },
+  { type: "held", reason: "offline" },
+  { type: "held", reason: "server" },
+  { type: "gone" },
   { type: "rejected", reason: "not-in-list" },
   { type: "rejected", reason: "refused" },
   {
@@ -390,7 +396,10 @@ describe("typing, erasing and submitting", () => {
     const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
     expect(submitted.pending).toBe(ANSWER);
 
-    const held = termoPlayReducer(submitted, { type: "held" });
+    const held = termoPlayReducer(submitted, {
+      type: "held",
+      reason: "offline",
+    });
     expect(held.held).toBe(true);
     expect(held.pending).toBe(ANSWER);
     expect(held.notice).not.toBeNull();
@@ -399,6 +408,57 @@ describe("typing, erasing and submitting", () => {
     expect(retried.held).toBe(false);
     expect(retried.pending).toBe(ANSWER);
     expect(retried.notice).toBeNull();
+  });
+
+  it("picks the held line from the REASON, never one string for all four causes (T-WEB-S106)", () => {
+    // Finding B-7. "Sem conexão — a tentativa vai assim que a conexão voltar."
+    // is a factual claim about the player's NETWORK, and it used to answer a
+    // 500, a 502, a 429 and a 401-after-the-re-mint as well as a real network
+    // failure — false in three of the four, and it points them at a fix that
+    // cannot help.
+    const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
+
+    const offline = termoPlayReducer(submitted, {
+      type: "held",
+      reason: "offline",
+    });
+    const server = termoPlayReducer(submitted, {
+      type: "held",
+      reason: "server",
+    });
+
+    expect(offline.notice).toBe(copy.offline);
+    expect(server.notice).toBe(copy.failed);
+    // Both are HELD: the turn survives either way and the retry is offered.
+    expect(offline.held).toBe(true);
+    expect(server.held).toBe(true);
+    expect(server.pending).toBe(ANSWER);
+    // And the two lines really are different strings, or the split buys
+    // nothing.
+    expect(copy.offline).not.toBe(copy.failed);
+  });
+
+  it("carries `gone` in the REDUCER, not in a second state authority beside it (T-WEB-S107)", () => {
+    // Finding B-12: `unavailable` lived in a `useState` in the hook, so this
+    // module's opening sentence — "the whole Termo gameplay state machine …
+    // as one pure reducer over one immutable value" — was not true, and
+    // `TermoScreen`'s three-way branch order could not be exercised without
+    // React.
+    const playing = hydrated();
+    expect(playing.gone).toBe(false);
+
+    // No `pending` guard: a 404 is about the DAY, not the turn, so it lands
+    // on an idle board as well as on one mid-guess.
+    expect(termoPlayReducer(playing, { type: "gone" }).gone).toBe(true);
+
+    const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
+    const gone = termoPlayReducer(submitted, { type: "gone" });
+    expect(gone.gone).toBe(true);
+    // It changes nothing else: the screen swaps wholesale, so there is no
+    // board state to unwind.
+    expect(gone.pending).toBe(ANSWER);
+    expect(gone.notice).toBe(submitted.notice);
+    expect(gone.announcement).toBe(submitted.announcement);
   });
 
   it("returns a server-rejected guess to the row it came from", () => {
@@ -429,7 +489,7 @@ describe("typing, erasing and submitting", () => {
       typed("caf"),
       typed(ANSWER),
       submitted,
-      termoPlayReducer(submitted, { type: "held" }),
+      termoPlayReducer(submitted, { type: "held", reason: "offline" }),
       termoPlayReducer(typed("zzzzz"), { type: "submit" }),
     ];
 

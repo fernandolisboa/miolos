@@ -10,6 +10,7 @@
 import type { TermoBoardStatus, TileStates } from "@miolos/games/termo";
 
 import type { LifecycleAction, PlayCore } from "../play/types";
+import type { HeldReason } from "./guess-client";
 
 /**
  * One judged row. Structurally the engine's `EvaluatedGuess`, so
@@ -45,8 +46,10 @@ export interface TermoPlayState extends PlayCore {
   /**
    * The visible line under the board. FOUR possible strings: `notInList` (a
    * local rejection AND a 422 `invalid-guess` — the same sentence, because
-   * both mean the same thing to the player), `failed` (400/403/415/other
-   * 422), `offline` (a held turn), or null.
+   * both mean the same thing to the player), `failed` (400/403/415, a 422
+   * that is not `invalid-guess` — `board-closed` included — and a turn held
+   * because of US: 5xx, 429, a 401 after the one re-mint), `offline` (a turn
+   * held because the client can SEE there is no connection), or null.
    *
    * Written ONLY by `submit` and `retry` (clearing) and by the failure
    * branches (setting) — never by `type`, `erase` or `judged`. That is what
@@ -83,6 +86,18 @@ export interface TermoPlayState extends PlayCore {
    * own `won → solved` mapping read backwards, needing no engine call.
    */
   readonly answer: string | undefined;
+  /**
+   * True once the server has told us this day is gone (a 404 from the guess
+   * route). It lives HERE rather than in a `useState` beside the reducer, and
+   * that is the whole point of this module's opening sentence (finding B-12):
+   * a second state authority would put a future "the day went away mid-turn"
+   * rule in two places, and would leave `TermoScreen`'s three-way branch
+   * order unexercisable through the reducer.
+   *
+   * Screen-level rather than gameplay, exactly like `hydrated`, `held`,
+   * `notice` and `pendingSync`, all of which the reducer already carries.
+   */
+  readonly gone: boolean;
   // NO `hint` field at all. `HintState` is a standalone interface composed by
   // each game rather than part of `PlayCore`, so Termo simply omits it and
   // `HintState.lastIndex` — "the cell the hint filled", a flat-board index
@@ -99,8 +114,16 @@ export type TermoPlayAction =
   | { readonly type: "submit" }
   /** Re-arm a held turn: the same pending guess, posted again. */
   | { readonly type: "retry" }
-  /** The turn survives — offline, 5xx, 429, or a 401 after the one re-mint. */
-  | { readonly type: "held" }
+  /**
+   * The turn survives. `reason` is on the action because the notice makes a
+   * factual claim about the player's network out of it: `offline` only when
+   * the client can actually see that (the fetch rejected, or
+   * `navigator.onLine` is false), `server` for 5xx, 429 and a 401 after the
+   * one re-mint (finding B-7).
+   */
+  | { readonly type: "held"; readonly reason: HeldReason }
+  /** The server answered 404: this day is gone and can never be judged. */
+  | { readonly type: "gone" }
   /** The server refused the WORD, not the board. The turn is not consumed. */
   | {
       readonly type: "rejected";

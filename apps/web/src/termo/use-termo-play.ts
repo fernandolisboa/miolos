@@ -25,14 +25,7 @@
  */
 import type { DailyTermoResponse } from "@miolos/core";
 import { deriveKeyboardState, type KeyboardState } from "@miolos/games/termo";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import type { TermoPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
@@ -60,6 +53,10 @@ export interface TermoPlay {
    * True once the server has told us this day is gone (404). The screen swaps
    * to the same `DailyUnavailable` view the route renders when the wall
    * returns nothing (ADR-0028 decision 4).
+   *
+   * Read straight off `state.gone`: the reducer is the ONE state authority on
+   * this screen (finding B-12), so the three-way branch `TermoScreen` makes
+   * out of it is exercisable from `termo-state.test.ts` without React.
    */
   readonly unavailable: boolean;
   readonly type: (letter: string) => void;
@@ -75,7 +72,6 @@ export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
     daily,
     initTermoPlayState,
   );
-  const [unavailable, setUnavailable] = useState(false);
 
   // Event handlers need the CURRENT state without re-registering listeners on
   // every keystroke; a ref synced each commit is the cheapest honest way.
@@ -129,7 +125,8 @@ export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
           console.error(
             `a termo verdict carried ${String(outcome.tiles.length)} rows for ${String(words.length)} guesses; the turn is held`,
           );
-          dispatch({ type: "held" });
+          // `server`, unambiguously: the response arrived and it was wrong.
+          dispatch({ type: "held", reason: "server" });
           return;
         }
         dispatch({
@@ -142,13 +139,13 @@ export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
         return;
       }
       case "held":
-        dispatch({ type: "held" });
+        dispatch({ type: "held", reason: outcome.reason });
         return;
       case "rejected":
         dispatch({ type: "rejected", reason: outcome.reason });
         return;
       case "gone":
-        setUnavailable(true);
+        dispatch({ type: "gone" });
         return;
     }
   }, []);
@@ -221,7 +218,7 @@ export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
     activeRow: live && state.pending === null ? state.guesses.length : null,
     heldRow: state.pending === null ? null : state.guesses.length,
     keyboardState,
-    unavailable,
+    unavailable: state.gone,
     type,
     erase,
     submit,

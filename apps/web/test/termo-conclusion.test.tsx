@@ -77,7 +77,6 @@ const LOST: ConclusionOutcome = {
   label: copy.outcome.lostLabel,
   detail: copy.outcome.lostDetail(MAX_GUESSES),
   aria: copy.outcome.lostAria(MAX_GUESSES),
-  settle: false,
 };
 
 const WON: ConclusionOutcome = {
@@ -85,7 +84,6 @@ const WON: ConclusionOutcome = {
   label: copy.outcome.wonLabel,
   detail: copy.outcome.wonDetail(4, MAX_GUESSES),
   aria: copy.outcome.wonAria(4, MAX_GUESSES),
-  settle: true,
 };
 
 const DAY_WORD: ConclusionAnswer = {
@@ -219,13 +217,13 @@ describe("the loss stamp (T-WEB-S97)", () => {
     expect(decl(lost, "border")).toBe("1.5px solid var(--ink-2)");
     expect(decl(lost, "color")).toBe("var(--ink-2)");
     expect(decl(lost, "animation")).toBeUndefined();
-    // Motion is a property of the OUTCOME (`settle`), not of the loss chrome,
+    // Motion is a property of the OUTCOME's `state`, not of the loss chrome,
     // and THIS is what actually stands the settle down.
     expect(decl(bodyOf(css, ".stampStill"), "animation")).toBe("none");
     expect(css.indexOf(".stampStill")).toBeGreaterThan(css.indexOf(".stamp {"));
   });
 
-  it("carries `.stampStill` on a loss and not on a win, straight off `settle`", () => {
+  it("carries `.stampStill` on a loss and not on a win, derived from `state`", () => {
     const { container: lost } = render(
       <ConclusionView
         game="termo"
@@ -290,11 +288,16 @@ describe("the day's word (T-WEB-S98)", () => {
   });
 
   it("sits below the stamp's own slot, at both viewports", () => {
+    // READ THROUGH THE COMPOSITION. `.stampGuesses` is `composes: stampTime`
+    // (finding B-10), so the element carries both class names and the sizes
+    // that govern "4/6" are `.stampTime`'s — one source of truth, and the
+    // 40/34 and 28/24 relationships this row depends on cannot drift apart.
+    expect(decl(bodyOf(css, ".stampGuesses"), "composes")).toBe("stampTime");
     expect(pixels(decl(bodyOf(css, ".dayWord"), "font-size"))).toBe(34);
-    expect(pixels(decl(bodyOf(css, ".stampGuesses"), "font-size"))).toBe(40);
+    expect(pixels(decl(bodyOf(css, ".stampTime"), "font-size"))).toBe(40);
     const mobile = bodyOf(css, "@media (max-width: 768px)");
     expect(pixels(decl(bodyOf(mobile, ".dayWord"), "font-size"))).toBe(24);
-    expect(pixels(decl(bodyOf(mobile, ".stampGuesses"), "font-size"))).toBe(28);
+    expect(pixels(decl(bodyOf(mobile, ".stampTime"), "font-size"))).toBe(28);
   });
 
   it("is a <p> and never a heading — the lead above it is `kicker-above-heading` shape", () => {

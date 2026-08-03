@@ -21,10 +21,17 @@
  *
  * It shares exactly two things with `sync.ts`: `ensureSession()`, which is
  * already a module-level shared promise and safe for a second caller, and the
- * "re-mint once per page load on a 401" rule, which needs ITS OWN boolean.
- * Duplicating a boolean is not the hazard ADR-0029 names — that argument is
- * about two copies over one localStorage queue, and a guess touches no queue
- * at all.
+ * "re-mint once per page load on a 401" rule — WHICH IS NOT DUPLICATED HERE.
+ * That rule used to live as a local boolean in each module, and the earlier
+ * version of this paragraph cleared the duplication on the grounds that a
+ * guess touches no localStorage queue. That was right about the queue and
+ * silent about the thing that actually breaks: `ensureSession` holds ONE
+ * module-level promise, a forced re-mint replaces it, and `POST /session`
+ * mints a brand-new user for any cookieless request. Two booleans that cannot
+ * see each other therefore put two cookieless mints in flight at once and let
+ * a completion be written for the identity that lost the `Set-Cookie` race
+ * (finding B-1). The allowance now lives in `session/bootstrap.ts` beside the
+ * promise it guards; this module keeps only its own decision to ASK.
  *
  * A QUEUED GUESS WOULD BE INCOHERENT: by the time a queue drained, the board
  * may have moved on, and there is no "later" for a turn the player is
@@ -38,7 +45,25 @@ import {
 } from "@miolos/core";
 import type { TermoBoardStatus, TileStates } from "@miolos/games/termo";
 
-import { ensureSession } from "../session/bootstrap";
+import {
+  confirmSession,
+  ensureSession,
+  remintSession,
+} from "../session/bootstrap";
+
+/**
+ * WHY THE TURN IS HELD, and it is on the type because the screen makes a
+ * FACTUAL CLAIM ABOUT THE PLAYER'S NETWORK out of it (finding B-7). One
+ * string — "Sem conexão — a tentativa vai assim que a conexão voltar." — used
+ * to answer 500, 502, 429 and a 401 after the one re-mint as well as a real
+ * network failure, which is false in three of those four cases and points the
+ * player at a fix that cannot help.
+ *
+ * `offline` is claimed ONLY when the client can see it: the fetch itself
+ * rejected, or `navigator.onLine` is false. Everything else is `server` —
+ * ours, not theirs.
+ */
+export type HeldReason = "offline" | "server";
 
 export type GuessOutcome =
   /** The server judged the board. `answer` is present iff it closed. */
@@ -49,7 +74,7 @@ export type GuessOutcome =
       readonly answer?: string;
     }
   /** Offline, 5xx, 429, or a 401 after the one re-mint — the turn SURVIVES. */
-  | { readonly kind: "held" }
+  | { readonly kind: "held"; readonly reason: HeldReason }
   /**
    * 400 / 403 / 415 / 422 — cleared, and the turn is NOT consumed. The REASON
    * is part of the type because the screen has to tell "that word is not in
@@ -71,16 +96,21 @@ export type GuessOutcome =
  */
 const REFUSING_STATUSES = new Set([400, 403, 415]);
 
-const HELD: GuessOutcome = { kind: "held" };
+const HELD_OFFLINE: GuessOutcome = { kind: "held", reason: "offline" };
+const HELD_SERVER: GuessOutcome = { kind: "held", reason: "server" };
 const REFUSED: GuessOutcome = { kind: "rejected", reason: "refused" };
 
 /**
- * Module-level, so it survives re-mounts — and its OWN, not `sync.ts`'s (see
- * the header). A 401 means the cookie the first mint produced is gone or
- * expired; re-minting more than once per page load would hammer the api on a
- * broken origin.
+ * A hold the client can only attribute to the server UNLESS the browser is
+ * telling it otherwise. `navigator.onLine === false` is trusted in exactly
+ * one direction — false is reliable, true is not — which is why every other
+ * hold reads as `server` rather than guessing.
  */
-let reminted = false;
+function heldByStatus(): GuessOutcome {
+  return typeof navigator !== "undefined" && !navigator.onLine
+    ? HELD_OFFLINE
+    : HELD_SERVER;
+}
 
 export async function postGuesses(
   date: string,
@@ -108,7 +138,8 @@ export async function postGuesses(
     console.error(
       "NEXT_PUBLIC_API_URL is unset: the termo guess cannot be judged, the turn is held",
     );
-    return HELD;
+    // A misconfigured build is OURS however good the player's connection is.
+    return HELD_SERVER;
   }
 
   const body = JSON.stringify(request.data);
@@ -118,15 +149,24 @@ export async function postGuesses(
   await ensureSession();
 
   let response = await post(apiUrl, body);
-  if (response?.status === 401 && !reminted) {
-    reminted = true;
-    await ensureSession({ force: true });
-    response = await post(apiUrl, body);
+  if (response?.status === 401) {
+    // The allowance is `session/bootstrap.ts`'s, not this module's — see the
+    // header. It resolves `false` when it is spent, and nothing is re-posted.
+    if (await remintSession()) {
+      response = await post(apiUrl, body);
+      if (response !== undefined && response.status !== 401) {
+        // The fresh identity works, so a cookie that expires LATER in this
+        // page load can still be re-minted — without this the first spent
+        // allowance leaves the board held until a reload (finding B-2).
+        confirmSession();
+      }
+    }
   }
 
   if (response === undefined) {
-    // Network failure. The turn is the player's and it stays theirs.
-    return HELD;
+    // Network failure. The turn is the player's and it stays theirs, and this
+    // is the ONE branch that can honestly say "sem conexão".
+    return HELD_OFFLINE;
   }
 
   if (response.ok) {
@@ -148,7 +188,7 @@ export async function postGuesses(
   // 401 after the one re-mint, 429, every 5xx, and anything unforeseen.
   // A rate limit is not a verdict, and spending one of six turns on one would
   // be the worst possible reading of it.
-  return HELD;
+  return heldByStatus();
 }
 
 /** `undefined` on a network failure — the one case that is not a status. */
@@ -192,21 +232,43 @@ async function judgement(response: Response): Promise<GuessOutcome> {
     console.error(
       "a termo guess came back 200 with a body the contract does not recognize; the turn is held",
     );
-    return HELD;
+    // A body we cannot read is OUR defect, not the player's connection.
+    return HELD_SERVER;
   }
 }
 
 /**
- * Which 422 this is. `invalid-guess` is the not-in-the-list case and routes to
- * the same sentence the local `isValidGuess` rejection renders; every other
- * code — and an unreadable body — is a system outcome and reads as one.
+ * Which 422 this is, and the two codes mean OPPOSITE things to the player.
+ *
+ * `invalid-guess` ⟺ the NEWEST guess is not in the server's validation
+ * dictionary. A legitimate player outcome — `apps/web` and `apps/api` deploy
+ * independently and ADR-0015 expects the list to be regenerated — so it routes
+ * to the same sentence the local `isValidGuess` rejection renders.
+ *
+ * `board-closed` ⟺ the posted list continues past a winning row. That is a
+ * client bug or tampering and NEVER a player outcome, so it must not read as
+ * "não está na lista" — a desynced board would otherwise be told a correct
+ * word is not in the dictionary (findings A-3/B-8). It is `refused`, which
+ * renders `copy.failed`. The route used to answer this condition with
+ * `invalid-guess` too; the distinct code is the server half of the same fix.
+ *
+ * Every other code — and an unreadable body — is a system outcome and reads as
+ * one. The `switch` is exhaustive over what the client acts on rather than a
+ * ternary, so a third code added later has one obvious place to land.
  */
 async function refusalReason(
   response: Response,
 ): Promise<"not-in-list" | "refused"> {
   try {
     const parsed = apiErrorResponseSchema.parse(await response.json());
-    return parsed.error === "invalid-guess" ? "not-in-list" : "refused";
+    switch (parsed.error) {
+      case "invalid-guess":
+        return "not-in-list";
+      case "board-closed":
+        return "refused";
+      default:
+        return "refused";
+    }
   } catch {
     return "refused";
   }

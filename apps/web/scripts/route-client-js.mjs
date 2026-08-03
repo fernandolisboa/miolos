@@ -26,11 +26,13 @@
  * false: this script stores no baseline, so it structurally cannot compare a
  * delta to its previous value. The only failure surface below is the 40 KB
  * budget, and the headroom is NOT the "half of it" an earlier version of this
- * comment claimed: measured on this branch the three play routes come in at
- * 28.3 / 30.9 / 34.3 KB — 71 %, 77 % and 86 % of budget — so the noisiest
+ * comment claimed: measured on this branch the three GRID play routes come in
+ * at 28.3 / 30.9 / 34.3 KB — 71 %, 77 % and 86 % of budget — so the noisiest
  * clean route has 5.7 KB of slack, not 20. It still discriminates against what
  * it exists to catch (a motif-table leak is ~35 KB minified and lands around
- * 69 KB), but nobody may budget against room that is not there. NOTE ALSO that
+ * 69 KB), but nobody may budget against room that is not there. `/termo` is
+ * the ONE route that does not ride the shared constant — see
+ * `PER_ROUTE_BUDGET` below, which is ADR-0045 decision 7. NOTE ALSO that
  * the 40 KB threshold was calibrated in plan 020 §20.2 under a DIFFERENT
  * measurement — clientModules ∪ rootMainFiles ∪ polyfillFiles, entryJSFiles
  * excluded, baselines 26.5/28.6 KB — while this script enforces it through
@@ -81,7 +83,34 @@ const CHUNKS = join(NEXT_DIR, "static", "chunks");
 
 /** The acceptance §20.2 sets for a play route's own client cost. */
 const MAX_DELTA_BYTES = 40 * 1024;
-const BUDGETED = ["/binairo", "/nonogram", "/sudoku"];
+
+/**
+ * ADR-0045 decision 7, discharged: "the script moves to PER-ROUTE BUDGETS,
+ * and `/termo`'s constant is set at step 8 from the measured route."
+ *
+ * `/termo` cannot ride the shared 40 KB and the shared constant must not be
+ * raised to fit it — that would un-arm the motif tripwire for the three grid
+ * routes, which is the only thing it exists for. Measured on this branch,
+ * clean build after step 7: /termo is +68.9 KB raw over `/`, against
+ * +33.0 / +36.8 / +30.4 for binairo / nonogram / sudoku. The gap is not a
+ * regression — it is the shared play-screen shell (~31 KB, in line with the
+ * three siblings) plus the Termo library floor (~37.9 KB, of which ~36.4 KB
+ * is the validation dictionary the ticket exists to ship, because "não está
+ * na lista" has to be instant and offline).
+ *
+ * 76 KB leaves 7.1 KB — ~10 % headroom: enough for ordinary copy edits, tight
+ * enough that a SECOND `packages/games` module lands it in the red. That is
+ * the failure this arms against — someone importing a value from
+ * `@miolos/games/termo` into `play-record.ts` (which `play-record.ts:207`
+ * warns about by name, because it is on every route's client graph) would
+ * pass all three FORBIDDEN accent greps and every existing budget while
+ * `/termo` grew silently.
+ */
+const PER_ROUTE_BUDGET = { "/termo": 76 * 1024 };
+
+const BUDGETED = ["/binairo", "/nonogram", "/sudoku", "/termo"];
+
+const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;
 
 /**
  * Strings that must NOT appear in any client chunk.
@@ -243,15 +272,16 @@ for (const route of BUDGETED) {
     continue;
   }
   const delta = entry.raw - home.raw;
-  if (delta > MAX_DELTA_BYTES) {
+  const budget = budgetFor(route);
+  if (delta > budget) {
     fail(
       `${route} adds ${(delta / 1024).toFixed(1)} KB over \`/\`, over the ` +
-        `${MAX_DELTA_BYTES / 1024} KB budget.`,
+        `${budget / 1024} KB budget.`,
     );
   } else {
     console.log(
       `ok    ${route} adds ${(delta / 1024).toFixed(1)} KB over \`/\` ` +
-        `(budget ${MAX_DELTA_BYTES / 1024} KB)`,
+        `(budget ${budget / 1024} KB)`,
     );
   }
 }

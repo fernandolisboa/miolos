@@ -22,7 +22,11 @@ import {
   completionResponseSchema,
 } from "@miolos/core";
 
-import { ensureSession } from "../session/bootstrap";
+import {
+  confirmSession,
+  ensureSession,
+  remintSession,
+} from "../session/bootstrap";
 import {
   ELAPSED_CAP_MS,
   listPendingRecords,
@@ -52,7 +56,6 @@ const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 60_000] as const;
 
 // Module-level, so it survives re-mounts (the session-bootstrap precedent).
 let flushing = false;
-let reminted = false;
 let retryStep = 0;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -207,12 +210,24 @@ async function syncRecord(
   }
 
   let response = await post(apiUrl, body);
-  if (response?.status === 401 && !reminted) {
-    // The cookie the first mint produced is gone or expired. Re-mint once
-    // per page load — a loop here would hammer the api on a broken origin.
-    reminted = true;
-    await ensureSession({ force: true });
-    response = await post(apiUrl, body);
+  if (response?.status === 401) {
+    // The cookie the first mint produced is gone or expired. THE ALLOWANCE IS
+    // NOT THIS MODULE'S: `remintSession()` owns it, because `termo/guess-
+    // client.ts` re-mints on the same rule and two local booleans over one
+    // shared mint promise put two cookieless `POST /session` calls in flight
+    // at once — two identities, one surviving cookie, and a completion
+    // written for the loser (finding B-1). A spent allowance resolves `false`
+    // and nothing is re-posted, which is the same request count this module
+    // made before the hoist.
+    if (await remintSession()) {
+      response = await post(apiUrl, body);
+      if (response !== undefined && response.status !== 401) {
+        // The fresh identity is serving requests, so a cookie that expires
+        // LATER in this same page load is recoverable (finding B-2). A
+        // re-post that 401s again confirms nothing and arms nothing.
+        confirmSession();
+      }
+    }
   }
 
   if (response === undefined) {

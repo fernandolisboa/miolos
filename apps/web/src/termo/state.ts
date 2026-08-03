@@ -56,6 +56,7 @@ export function initTermoPlayState(daily: DailyTermoResponse): TermoPlayState {
     pendingSync: false,
     now: 0,
     hydrated: false,
+    gone: false,
   };
 }
 
@@ -149,8 +150,27 @@ export function termoPlayReducer(
       if (state.pending === null) {
         return state;
       }
-      return { ...noticed(state, copy.offline), held: true };
+      // THE COPY IS PICKED FROM THE REASON, never from the branch that got
+      // here (finding B-7). "Sem conexão" is a factual claim about the
+      // player's network, and it used to answer a 500, a 502 and a 429 as
+      // well as a real network failure — false in three of the four cases,
+      // and it points them at a fix that cannot help. `failed` is the shipped
+      // "ours, not yours" line, and the retry button beside it says the rest.
+      return {
+        ...noticed(
+          state,
+          { offline: copy.offline, server: copy.failed }[action.reason],
+        ),
+        held: true,
+      };
     }
+
+    // The day is gone (a 404 from the guess route). Terminal for this screen:
+    // the board the player is looking at can never be judged again, so the
+    // route swaps to `DailyUnavailable`. No `pending` guard — a 404 is about
+    // the DAY, not the turn.
+    case "gone":
+      return { ...state, gone: true };
 
     case "rejected": {
       if (state.pending === null) {

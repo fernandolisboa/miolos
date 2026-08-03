@@ -245,9 +245,23 @@ export function PlayView({ play }: { readonly play: TermoPlay }) {
             <button
               type="button"
               className={styles.noticeRetry}
-              onClick={() => {
+              // `detail === 0` is a KEYBOARD activation — the same test
+              // `keyboard.tsx`'s own `onClick` already ships, and the reason
+              // is the mirror image of it (finding B-3). Handing the caret to
+              // an on-screen key after a MOUSE click would leave that
+              // `<button>` focused, and the window `keydown` listener above
+              // bails on any `INTERACTIVE_TARGET` — so every physical letter
+              // keypress would land on the focused key and type nothing, with
+              // no indication why, until the player clicked the page
+              // background. A keyboard player still needs the handoff: this
+              // button is about to unmount, and a focused element that
+              // unmounts drops the caret to <body> mid-game (a 2.4.3
+              // failure).
+              onClick={(event) => {
                 play.retry();
-                activeKeyRef.current?.focus();
+                if (event.detail === 0) {
+                  activeKeyRef.current?.focus();
+                }
               }}
             >
               {copy.retry}

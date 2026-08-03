@@ -275,14 +275,17 @@
    spelled out in the composed accessible name. `.stampTime`'s register
    exactly, because a guess count is a numeric slot in the same way a
    duration is, and 40px keeps the stamp the card's largest element (the
-   day-word row below is 34px). A separate class rather than a reuse, because
-   `.stampTime` on "4/6" would be a lie in the class name. */
+   day-word row below is 34px). A separate NAME, because `.stampTime` on "4/6"
+   would be a lie — but names and values are separable, and two
+   character-for-character identical rule bodies are not a reuse (finding
+   B-10). `composes` keeps both honest names over ONE source of truth: the
+   element carries both class names, so `.stampTime`'s ≤768px override reaches
+   it too and there is no second mobile block to forget. Change `.stampTime`'s
+   register in #29 and this moves with it, which is what the file's own
+   `.dayWord` comment depends on — the stamp must stay the card's largest
+   element, 40/34 desktop and 28/24 mobile. */
 .stampGuesses {
-  font-family: var(--font-display);
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
+  composes: stampTime;
 }
 
 /* The loss chrome (ADR-0043 decision 3), declared AFTER `.stamp` so
@@ -933,11 +936,10 @@
     letter-spacing: 0.16em;
   }
 
+  /* `.stampGuesses` needs no block of its own here: it `composes: stampTime`,
+     so the element carries both class names and this rule already governs
+     "4/6" and "X/6" as well as a duration. */
   .stampTime {
-    font-size: 28px;
-  }
-
-  .stampGuesses {
     font-size: 28px;
   }
 
