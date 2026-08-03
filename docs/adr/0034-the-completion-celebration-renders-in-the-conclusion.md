@@ -160,6 +160,30 @@ built on it.
   by a client component that owns the record, and a game with no payoff
   passes nothing. The alternative — one union-typed `payload` prop — would
   make every game's conclusion depend on every other game's shape.
+
+  **Qualified at #27 — the budget is a default, not a bound, and Termo
+  spends TWO.** The qualification is recorded here, in the file a future
+  game's author reads *before* adding a prop, rather than only in the
+  consequences of the ADR that spent the second member. `ConclusionView`
+  gains `outcome?: ConclusionOutcome` **and** `answer?: ConclusionAnswer`
+  for one game
+  ([ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md)
+  decisions 1 and 6, consequence (a)). The two are **orthogonal**, which is
+  the whole warrant: `outcome` is what a game with *two terminal states*
+  owes — it serves the win stamp and the loss stamp both — while `answer` is
+  the day's word and renders on both outcomes. Collapsing them would put a
+  nullable word inside an outcome object and make the win branch carry a
+  field it does not gate on, which is a smaller version of the union-typed
+  `payload` this consequence rejects.
+
+  What is unchanged is the **test** a new member has to pass, and it is the
+  test rather than the count that was ever load-bearing: plain data only,
+  supplied only by a client component that owns the local play record
+  (decision 3), orthogonal to every member already there, and passed by no
+  game that does not need it — three games pass none of the three shipped
+  members and render byte-identically. A second member is a claim about the
+  *game's* shape, and it has to be argued in the ADR that adds it, in those
+  terms. "One per game" stays the number to beat.
 - **(d) The reveal works offline, because the record is its source.** The
   client component that supplies the prop reads the local play record, so
   a player who finishes with no network still sees the picture, which is

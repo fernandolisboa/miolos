@@ -119,12 +119,32 @@ done would be a lie the player can catch."*
 
 4. **`DayEntry.concluded: boolean` becomes
    `DayEntry.status: "pending" | "completed" | "played"`, and `elapsedMs`
-   is set iff `status === "completed"`.** The verbs are `CONTEXT.md`'s own,
-   minus the late completion a local reader cannot see. A lost Termo carries
-   **no duration**: `DayEntry.elapsedMs`'s own contract
+   is NEVER set unless `status === "completed"`.** The verbs are
+   `CONTEXT.md`'s own, minus the late completion a local reader cannot see.
+   A lost Termo carries **no duration**: `DayEntry.elapsedMs`'s own contract
    (`apps/web/src/play/day-state.ts:26-30`) is *"publishing that as the
    day's result would put a time on a game nobody finished,"* and a lost
    Termo is exactly that.
+
+   **The rule is one-directional, and an earlier draft wrote it as a
+   biconditional — *"`elapsedMs` is set iff `status === "completed"`"* —
+   which the same PR then broke by design.** `"completed"` does not imply a
+   duration: `entryFor` returns `{status: "completed", elapsedMs: undefined}`
+   for a **won** Termo (`apps/web/src/play/day-state.ts:168-175`), because
+   [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
+   decision 4 declines to publish this game's elapsed time on any projection
+   — the number is dominated by per-guess latency and #29 replaces it with
+   `em 4/6`. So Termo withholds the duration on **both** its outcomes, not
+   only on the loss. The surviving half of the rule is the load-bearing one
+   and it is unchanged: a `"pending"` or `"played"` entry never carries a
+   duration, because that is the *false result* direction ADR-0031 decision 2
+   forbids. `"completed"` merely *permits* one. Three consumers are
+   split-guarded for exactly this — `hub-day-state.tsx:82`, `DayChip`
+   (decision 9 of
+   [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md))
+   and `conclusion-view.tsx`'s `dayEntry` — so each narrows through the
+   **value** after branching on the **status**, and nothing renders
+   `undefined`.
 
    An enum rather than a second flag, deliberately. A `closed` boolean
    beside `concluded` would fail **safe** — a consumer that forgot it reads
@@ -197,7 +217,12 @@ done would be a lie the player can catch."*
   completed" a type, and it would delete both consumers' deliberate
   value-narrowing (*"an entry that somehow lost its duration degrades to
   the pending button instead of rendering 'undefined'"*) — a defence worth
-  more than the invariant it would replace.
+  more than the invariant it would replace. Decision 4's qualification
+  makes this rejection stronger than it read when it was written: the
+  biconditional is not merely unenforced, it is **false** — a won Termo is
+  `"completed"` with no duration — so the union would have encoded an
+  invariant the same PR breaks, and the required `elapsedMs` would have
+  been a red typecheck at `entryFor`'s Termo branch.
 - **Publishing a lost Termo's elapsed time on the hub tile or the day
   chip.** A loss is not a result, and a duration beside it frames it as one.
 - **Posting `{outcome, guessCount}` instead of the guess list.** The client
@@ -241,15 +266,45 @@ done would be a lie the player can catch."*
   and for any row following an all-correct row
   (`packages/games/src/termo/status.ts:25-36`). A record violating either
   must be unparseable, or it crashes the reducer on restore. **The proof is
-  named example cases, not a property test.** The refinement has exactly
-  four branches — over-length, a win not in the last row, `outcome`
-  disagreeing with the derived status, and the well-formed case — and #27
-  enumerates all four (`T-WEB-S75`), which is a *complete* cover of a finite
-  and small domain rather than a sample of it. A property test is not merely
-  unnecessary but out of scope: [ADR-0017](./0017-vitest-and-fast-check-are-the-test-stack.md)
-  confines fast-check to *"a devDependency of `packages/games` only"*, and
-  this `superRefine` lives in `apps/web`. An earlier draft of this
-  consequence said *"#27 owes one"*; it does not.
+  named example cases, not a property test** — a *complete* cover of a
+  finite and small domain rather than a sample of it (`T-WEB-S75`). A
+  property test is not merely unnecessary but out of scope:
+  [ADR-0017](./0017-vitest-and-fast-check-are-the-test-stack.md) confines
+  fast-check to *"a devDependency of `packages/games` only"*, and this
+  `superRefine` lives in `apps/web`. An earlier draft of this consequence
+  said *"#27 owes one"*; it does not.
+
+  **The division of labour between the schema, the array bound and the
+  reducer, corrected at #27's step 6.** An earlier draft of this paragraph
+  listed the refinement's branches as *"over-length, a win not in the last
+  row, `outcome` disagreeing with the derived status, and the well-formed
+  case"* — it named one check the `superRefine` does not perform and omitted
+  two it does. This paragraph is what a future author reads to reason about
+  what a parsed record guarantees, so it states the shipped split
+  (`apps/web/src/play/play-record.ts:325-381`):
+
+  - **`superRefine`, four issue branches, all four covered by `T-WEB-S75`:**
+    a win not in the last row; `answer` present exactly when `concluded`;
+    `outcome` present exactly when `concluded`; and a closed board with zero
+    judged guesses. The last is what makes `termoBody`'s `undefined` return
+    unreachable for a legitimately closed record — and `undefined` there
+    permanently settles the record as `rejected`.
+  - **Over-length is not a refinement.** It is `.max(TERMO_MAX_GUESSES)` on
+    the array itself, alongside the five-tuple of tile states and the
+    `/^[a-z]{5}$/` guess shape. Same guarantee, one layer earlier, and
+    `T-WEB-S75` pins it behaviourally against the engine's own value-imported
+    constants.
+  - **`outcome` versus the derived status is checked in the REDUCER, not in
+    the schema**, and that is decision 3's requirement rather than an
+    omission: *"the Termo reducer's `restore` discards a record whose
+    `outcome` disagrees with `deriveBoardStatus(tiles)`"*
+    (`apps/web/src/termo/state.ts:285-288`). Putting it in the schema would
+    put a `packages/games/termo` call inside `play-record.ts`, which is on
+    every route's client graph — the exact import decision 3 exists to keep
+    out. The two placements also fail differently, and the difference is
+    wanted: a schema issue makes the record **unparseable**, so `entryFor`
+    returns `PENDING`; a reducer mismatch discards the record for **this
+    render** and leaves it on disk.
 - **(f) A tampered local `outcome` produces a false COMPLETED on this
   device, and the honest statement of that is the one ADR-0031 cares
   about.** `entryFor` (`apps/web/src/play/day-state.ts:102-108`) reads the

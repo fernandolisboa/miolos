@@ -102,8 +102,20 @@ the loss.
    **The loss equivalent of the celebration is the celebration's absence**,
    and stating that here is what stops the next contributor from inventing
    one. The big slot reads `X/6` — the genre's own notation, spelled out in
-   the composed accessible name as *"Termo jogado: as seis tentativas
-   acabaram sem acerto."*
+   the composed accessible name as *"Termo jogado: as 6 tentativas acabaram
+   sem acerto."*
+
+   **The numeral is a DIGIT, not a spelled word**, in this quote and in
+   decision 6's. An earlier draft of both wrote *"as **seis** tentativas"*;
+   the shipped composers render `as ${max}` / `As ${max}`
+   (`apps/web/src/i18n/messages.ts`), and the rule they follow is the better
+   one, stated in that module: *"a composer takes its numbers and renders
+   DIGITS; it never spells one in words and never branches on a value it was
+   handed"* — `max === 6 ? "seis" : String(max)` would be a runtime branch on
+   a compile-time constant whose false arm is unreachable and untestable.
+   Screen readers read `6` as *"seis"* in pt-BR, so nothing is lost. The
+   quotes here are corrected to the shipped strings so the ADR and the copy
+   cannot drift.
 
 4. **No time-as-achievement framing on a loss.** No `.stampTime`, no hints
    line, no `elapsedMs` anywhere in the branch. A time on a game nobody won
@@ -129,7 +141,7 @@ the loss.
 
    ```ts
    export interface ConclusionAnswer {
-     readonly result: string;    // "Você acertou em 4 de 6 tentativas." | "As seis tentativas acabaram."
+     readonly result: string;    // "Você acertou em 4 de 6 tentativas." | "As 6 tentativas acabaram."
      readonly lead: string;      // "A palavra de hoje era"
      readonly canonical: string; // "café"
    }
@@ -169,14 +181,49 @@ the loss.
    the chaining CTA skips it.** The data shape is
    [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md) decisions 4 and
    5 — `DayEntry.status: "pending" | "completed" | "played"`, `elapsedMs`
-   set iff `"completed"`, `completedCount` counting `"completed"` only, and
-   `nextPendingDaily` chaining on `"pending"` only. What this ADR decides is
-   the rendering: `DayChip`'s two values (a time, or `falta`) become three,
-   and `.chipPlayed` reuses `.chipMissing`'s 1.5px dashed border so the
-   state never rests on colour. Without the chaining change a lost Termo is
-   offered as the next pending daily forever, from every game's conclusion,
-   and — because `DAY_GAMES` puts termo first
+   never set unless `"completed"` (ADR-0044 decision 4, as qualified there),
+   `completedCount` counting `"completed"` only, and `nextPendingDaily`
+   chaining on `"pending"` only. What this ADR decides is the rendering:
+   `DayChip`'s shipped pair of values (a duration, or `falta`) grows, and
+   `.chipPlayed` carries a border treatment of its own so the state never
+   rests on colour. Without the chaining change a lost Termo is offered as
+   the next pending daily forever, from every game's conclusion, and —
+   because `DAY_GAMES` puts termo first
    (`apps/web/src/play/conclusion-view.tsx:24`) — as the **default** target.
+
+   **Corrected at #27's step 6, on two counts.** This decision was written
+   before the screen existed and got the border and the arithmetic wrong.
+   The shipped code is the correct reading of this ADR together with
+   [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md); the
+   text is what moved.
+
+   - **`.chipPlayed`'s border is SOLID, deliberately not `.chipMissing`'s
+     dashed one.** The draft required it *reuse* the dashed border, which
+     satisfies the colour rule and defeats the decision the rule serves:
+     `played` and `missing` would come out **pixel-identical** — same 1.5px
+     dashed `--line`, no tint, `.chipName` unchanged — so three day states
+     would render as **two** shapes and the one new state would be
+     invisible. What ships is three border treatments, still with no colour
+     involved and all three legible in greyscale
+     (`apps/web/src/play/conclusion-view.module.css:513-541`): `missing`
+     **dashed** (nothing here yet), `played` **solid** (something happened,
+     just not a completion), `done` a **tinted fill and no border at all**.
+     `--line` on `--paper-card` is 1.4323:1, so the border is a shape
+     carrier and not a contrast one — exactly what `.chipMissing` already
+     was. The state's 3:1 carrier is the **value string** itself (`jogado`
+     vs `falta` vs a duration, `--ink-2` on `--paper-card` at 5.3003:1); the
+     border only tells the two non-done chips apart at a glance.
+   - **Two values become FOUR, not three.** The draft counted a duration and
+     `falta` going to three. `DayChip` ships a duration, `feito`, `jogado`
+     and `falta` (`apps/web/src/play/conclusion-view.tsx:576-583`). The
+     fourth exists only because
+     [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
+     decision 4 withholds a **won** Termo's duration — a consequence this
+     decision predates — so a `completed` entry with no `elapsedMs` needs a
+     done string that is not a clock. The guard is split to match: `done` is
+     the **status** (`entry.status === "completed"`), and the duration's
+     presence only chooses *which* done string prints. A single guard doing
+     both jobs would print `falta` beside a game the player had just won.
 
 10. **The conclusion carries a `role="status"` with
     `ConclusionOutcome.aria`, and that is what makes ADR-0042 decision 10's
@@ -249,6 +296,13 @@ the loss.
   outcome object and make the win branch carry a field it does not gate on.
   There is no third member and no loss-only interface anywhere in the
   design. Three games pass neither and are byte-identical.
+
+  **Naming the deviation here is not enough, so ADR-0034 consequence (c)
+  carries the qualification in place** — the same treatment ADR-0028
+  decision 2 took on this branch, and for the same reason. A future game's
+  author reads ADR-0034 *before* adding a prop and would otherwise find only
+  the unqualified budget; a deviation recorded solely in the consequences of
+  the ADR that spent it is a correction nobody is routed to.
 - **(b) A fourth `data-conclusion-state` value exists, and CI already
   accepts it.** `.github/workflows/impeccable.yml:77-81` greps the response
   body for the attribute *name*, not a value, so `/termo/concluido`

@@ -85,10 +85,24 @@ on the Termo client.**
    [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md)
    decision 5. Recorded and rendered are two different questions:
    `elapsedMs` still goes on the wire and into the play record for every
-   Termo, won or lost, and what
+   Termo, won or lost, and what is withheld is the *`DayEntry`* duration —
+   the hub and day-card projection, not the row.
+
+   **That projection is withheld on BOTH Termo outcomes, and an earlier
+   draft of this sentence said only *"on a `played` day"*.**
    [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md) decision 4
-   withholds is the *`DayEntry`* duration on a `"played"` day — the hub and
-   day-card projection, not the row. The `.progressCard`/`.progressBar`
+   forbids a duration on a `"played"` entry — a time on a game nobody
+   finished. This decision withholds it on the **won** one as well, for its
+   own reason: the number is dominated by per-guess round trips and idle
+   time, no Termo statistic will ever reflect it, and #29 puts `em 4/6`
+   there instead. So `entryFor` returns `elapsedMs: undefined` for every
+   Termo record (`apps/web/src/play/day-state.ts:168-175`), and a
+   `"completed"` entry without a duration is a legal shape rather than a bug
+   — which is why ADR-0044 decision 4's rule reads *never set unless
+   completed*, one-directionally, and why `DayChip` branches on the status
+   before narrowing through the value
+   ([ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md)
+   decision 9). The `.progressCard`/`.progressBar`
    slots carry "tentativa N de 6", composed in Termo's own copy bundle —
    `apps/web/src/play/progress.ts`'s `countFilled` is not reused, for the
    reason that module already records about Nonogram: it would be *"the
@@ -142,8 +156,19 @@ on the Termo client.**
    whose whole delta is code, and raising it would simultaneously un-arm
    the tripwire for the three grid routes — the script's own header records
    that a motif leak is ~35 KB and lands near 69 KB. The script moves to
-   **per-route budgets**, and `/termo`'s constant is set at step 8 from the
-   measured route rather than guessed here.
+   **per-route budgets**, and `/termo`'s constant is set from the measured
+   route rather than guessed here.
+
+   **Closed at #27's step 6.** The step-6 performance review found `/termo`
+   was the heaviest route in the app and the only play route gated by
+   nothing, so the constant was set at **step 7** rather than the step 8 this
+   decision named — a review finding is the earliest honest moment, and
+   waiting would have merged the gap. `PER_ROUTE_BUDGET = { "/termo": 76 * 1024 }`
+   sits beside the unchanged 40 KB default in
+   `apps/web/scripts/route-client-js.mjs`, and `/termo` joins `BUDGETED`.
+   Measured on the merge candidate: **+68.9 KB raw / +24.1 KB gzip over `/`**,
+   which is ~9.3 % headroom — enough to absorb ordinary copy edits, tight
+   enough that a second `packages/games` module reds it.
 
 ## Rejected
 
@@ -235,8 +260,18 @@ on the Termo client.**
   ([ADR-0040](./0040-the-termo-daily-stores-the-drawn-answer.md)), so the
   binding stays live there; the annotation only permits elimination where
   nothing reads it.
-- **(i) The `/termo` route's real First Load JS is unmeasured.** Only the
-  *floor* (+37.9 KB raw / +14.4 KB gzip) was measured, by probing an
-  existing route; the screen's own code is unmeasurable until it exists,
-  which is why decision 7 leaves the per-route constant unset rather than
-  guessing it.
+- **(i) The `/termo` route's real First Load JS was unmeasured when this ADR
+  was written, and is not any more.** Only the *floor* (+37.9 KB raw /
+  +14.4 KB gzip) could be measured up front, by probing an existing route,
+  because the screen's own code is unmeasurable until it exists — which is
+  why decision 7 declined to guess the per-route constant.
+
+  **Measured at #27's step 6**, on the merge candidate: `/termo` is
+  **874.2 KB raw / 239.6 KB gzip**, i.e. **+68.9 raw / +24.1 gzip over `/`**.
+  That reconciles with the floor rather than contradicting it — the floor is
+  the *marginal* cost of the Termo library over an existing play route's
+  baseline, not a delta over `/`. +68.9 ≈ the shared play-screen shell
+  (~31 KB, in line with `/binairo`'s +33.0, `/nonogram`'s +36.8 and
+  `/sudoku`'s +30.4) plus the ~37.9 KB library floor, of which ~36.4 KB is
+  the validation dictionary the ticket exists to ship. The constant is set;
+  see decision 7's closing block.
