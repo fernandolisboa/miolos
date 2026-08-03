@@ -65,9 +65,9 @@ extension point in that route with no tripwire on it.
    ([ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md)
    decision 6). It is never delivered through the completion response,
    which parses every response through `completionResponseSchema` and
-   therefore strips unknown fields (`apps/web/src/play/sync.ts:336`) before
+   therefore strips unknown fields (`apps/web/src/play/sync.ts:401`) before
    `settle` copies only `elapsedMs` and `hintsUsed` out of it
-   (`sync.ts:349-358`) — the argument
+   (`sync.ts:411-423`) — the argument
    [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md) already makes).
 
 3. **The completion request carries `guesses` and nothing else new.** Five
@@ -109,8 +109,19 @@ extension point in that route with no tripwire on it.
    none.** Dropping it entirely there is safe and buys back nothing: a
    non-word earlier in the list cannot manufacture a win, because the win
    test is `guess === answer` and the answer is a dictionary member by
-   construction, and a client that posts junk earlier guesses only cheats
-   itself — which consequence (a) already accepts for the six-guess limit.
+   construction.
+
+   What it *does* mean, stated rather than implied: **an earlier non-word is
+   judged, and the response carries its tiles** (`T-API-S42` pins
+   `[NOT_A_WORD, <decoy>]` → 200 with `tiles.length === 2`), so a client can
+   read feedback for any `^[a-z]{5}$` string and not only for dictionary
+   words. That costs nothing this gate was protecting. The route is stateless
+   with no server-side turn accounting, so unlimited *dictionary* probing was
+   already free — consequence (a) accepts precisely that for the six-guess
+   limit — and decision 9 already disclaims this route as a confidentiality
+   boundary, so no later feature may rest on the narrower surface. **The gate
+   is not coming back**: restoring it over the accumulated list is (i) above,
+   whose failure mode is a permanently lost streak day.
 
    (ii) **The ladder is ONE module, not two copies.** It shipped written
    out in both route files under a TSDoc reading *"if either changes, change
@@ -371,7 +382,7 @@ extension point in that route with no tripwire on it.
   against a pre-migration database every `POST /completions` 500s —
   Binairo, Sudoku and Nonogram included. **Nothing "rejects" anything at
   the CHECK**: the CHECK ships in the same migration and is never reached.
-  The 500 is not in `apps/web/src/play/sync.ts:42`'s `TERMINAL_STATUSES`,
+  The 500 is not in `apps/web/src/play/sync.ts:47`'s `TERMINAL_STATUSES`,
   so those records stay `pendingSync` and replay — and because `on_time` is
   derived at read from `completed_at` (`completions.ts:55`), a replay window
   that crosses São Paulo midnight silently reclassifies every one of them as

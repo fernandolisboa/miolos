@@ -26,22 +26,28 @@
  * false: this script stores no baseline, so it structurally cannot compare a
  * delta to its previous value. The only failure surface below is the 40 KB
  * budget, and the headroom is NOT the "half of it" an earlier version of this
- * comment claimed: measured on this branch the three GRID play routes come in
- * at 28.3 / 30.9 / 34.3 KB — 71 %, 77 % and 86 % of budget — so the noisiest
- * clean route has 5.7 KB of slack, not 20. It still discriminates against what
- * it exists to catch (a motif-table leak is ~35 KB minified and lands around
- * 69 KB), but nobody may budget against room that is not there. `/termo` is
- * the ONE route that does not ride the shared constant — see
+ * comment claimed: measured on this branch after #27's step 7, the three GRID
+ * play routes come in at binairo 33.0, sudoku 30.4 and nonogram 36.8 KB —
+ * 83 %, 76 % and 92 % of budget — so the noisiest clean route has 3.2 KB of
+ * slack, not 20. (An earlier version of this paragraph quoted #25's 28.3 /
+ * 30.9 / 34.3 and a 5.7 KB slack, which overstated the room by 78 % in the one
+ * comment whose whole thesis is that overstated room is the hazard; #27's
+ * shared play-screen work moved all three.) It still discriminates against
+ * what it exists to catch (a motif-table leak is ~35 KB minified and would
+ * land /nonogram around 72 KB), but nobody may budget against room that is not
+ * there, and the figures above are the ones to re-measure rather than quote.
+ * `/termo` is the ONE route that does not ride the shared constant — see
  * `PER_ROUTE_BUDGET` below, which is ADR-0045 decision 7. NOTE ALSO that
  * the 40 KB threshold was calibrated in plan 020 §20.2 under a DIFFERENT
  * measurement — clientModules ∪ rootMainFiles ∪ polyfillFiles, entryJSFiles
  * excluded, baselines 26.5/28.6 KB — while this script enforces it through
  * Next's own `firstLoadChunkPaths`, so §20.2's "~11 KB of headroom above the
  * noisiest clean route" does not carry over to these figures.
- * Measured across #25 the two
- * shipped deltas moved 28.6 → 30.9 KB and 26.4 → 28.3 KB, unchanged by step
- * 7's per-cell memo (which cost /nonogram 33.9 → 34.3 KB), and the run printed
- * `ok` for both, which is correct behaviour and NOT a control firing. A real
+ * HISTORICALLY, across #25 — these are #25's numbers, superseded by the ones
+ * above — the two shipped deltas moved 28.6 → 30.9 KB and 26.4 → 28.3 KB,
+ * unchanged by that ticket's per-cell memo (which cost /nonogram 33.9 →
+ * 34.3 KB), and the run printed `ok` for both, which is correct behaviour and
+ * NOT a control firing. A real
  * control needs a committed per-route baseline; that was declined here because
  * plan 020 §20.2 scopes this instrument to one route in one PR rather than to
  * a standing rule #27 and #28 inherit, and a baseline file only earns its
@@ -98,12 +104,14 @@ const MAX_DELTA_BYTES = 40 * 1024;
  * is the validation dictionary the ticket exists to ship, because "não está
  * na lista" has to be instant and offline).
  *
- * 76 KB leaves 7.1 KB — ~10 % headroom: enough for ordinary copy edits, tight
+ * 76 KB leaves 7.1 KB — 9.3 % OF THE BUDGET, and the denominator is named
+ * because the same figure appears in ADR-0045:170 and two denominators for one
+ * number is how a headroom claim drifts. Enough for ordinary copy edits, tight
  * enough that a SECOND `packages/games` module lands it in the red. That is
  * the failure this arms against — someone importing a value from
- * `@miolos/games/termo` into `play-record.ts` (which `play-record.ts:207`
- * warns about by name, because it is on every route's client graph) would
- * pass all three FORBIDDEN accent greps and every existing budget while
+ * `@miolos/games/termo` into `play-record.ts` (whose `212-244` block warns
+ * about it by name, because that module is on every route's client graph)
+ * would pass all three FORBIDDEN accent greps and every existing budget while
  * `/termo` grew silently.
  */
 const PER_ROUTE_BUDGET = { "/termo": 76 * 1024 };

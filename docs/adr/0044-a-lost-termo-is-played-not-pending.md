@@ -75,7 +75,7 @@ done would be a lie the player can catch."*
    [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md)'s rejected list
    makes for the motif name: `acceptResponse` copies only `elapsedMs` and
    `hintsUsed`, and only on the `recorded: false` branch
-   (`apps/web/src/play/sync.ts:349-358`), and the replay path returns before
+   (`apps/web/src/play/sync.ts:411-423`), and the replay path returns before
    the wall read by
    [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md)
    decision 4's design. Without the record, `/termo/concluido` cannot show
@@ -281,7 +281,8 @@ done would be a lie the player can catch."*
   case"* — it named one check the `superRefine` does not perform and omitted
   two it does. This paragraph is what a future author reads to reason about
   what a parsed record guarantees, so it states the shipped split
-  (`apps/web/src/play/play-record.ts:325-381`):
+  (`apps/web/src/play/play-record.ts:318-382`, the `superRefine` itself at
+  `:350-382`):
 
   - **`superRefine`, four issue branches, all four covered by `T-WEB-S75`:**
     a win not in the last row; `answer` present exactly when `concluded`;

@@ -2,6 +2,8 @@
 
 Named tests carry an id in their `it(...)` title (or, for a whole-suite regression gate, in a file-header comment), so a plan, an ADR, a PR body and a review finding can all point at the same assertion.
 
+**`apps/web` puts its ids on `describe(...)` rather than on `it(...)`, and that is the shipped convention there**, not a defect — `git show main:apps/web/test/day-state.test.ts:61` predates every ticket that has been reviewed against this document. `packages/core`, `packages/db` and `apps/api` follow the `it(...)` rule above. Recorded at #27 because two step-6 reviewers independently raised the divergence as a finding; the two conventions are both fine, and what was missing was this sentence.
+
 ## Format
 
 ```
@@ -21,7 +23,7 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 020 (#25) **after its step-7 round 4**, re-derived by grep over the test tree on that ticket's branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 022 (#27) **after its step-7 round 2**, re-derived by grep over the merge candidate. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 The grep that produces it, per area — titles only, so a cross-reference in a comment is not mistaken for an allocation:
 
@@ -29,13 +31,13 @@ The grep that produces it, per area — titles only, so a cross-reference in a c
 grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 ```
 
-| Area | Next free | Bare series closed at |
-|---|---|---|
-| `T-CORE` | `S17` | never used |
-| `T-DB` | `S10` | `T-DB-21` |
-| `T-API` | `S29` | `T-API-16` |
-| `T-WEB` | `S73` | `T-WEB-23` |
-| `T-LINT` | `S8` | `T-LINT-10` |
+| Area | Next free | Highest in use | Bare series closed at |
+|---|---|---|---|
+| `T-CORE` | `S25` | `S24` | never used |
+| `T-DB` | `S13` | `S12` | `T-DB-21` |
+| `T-API` | `S46` | `S45` | `T-API-16` |
+| `T-WEB` | `S109` | `S108` | `T-WEB-23` |
+| `T-LINT` | `S9` | `S8` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
 
@@ -44,6 +46,11 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 - at step 7 round 5 — `T-WEB-S72`, the `--ink-on-accent` gate in `apps/web/test/ink-on-accent.test.ts` (step-6 finding ISS-A2).
 
 **The `T-WEB` row read `S66` and the spent list stopped at `S65` when this document first landed, and both were already false on the branch that shipped them** — `T-WEB-S66` was in use at `apps/web/test/nonogram-screen.test.tsx` and cited from `apps/web/src/nonogram/board.tsx`. Two lint tests were also minted as `T-LINT-3d`/`T-LINT-3e`, i.e. as new members of a series this document declares closed, which produced a `T-LINT-3d` collision with the pre-existing `users`/`sessions` assertion. Both are corrected here (step-6 round-4 findings NONO-C4-2, NONO-C4-3, Q2, Q3, `TEST-IDS-COLLISIONS`, `TEST-IDS-FRONTIER-STALE`). The lesson is the one the "re-derive it at step 8" instruction above already carries: a frontier written from memory at the end of a long ticket is wrong, and a document that ships with the code contradicting it is worse than no document.
+
+#27 (plan 022) spent `T-CORE-S17…S24`, `T-DB-S10…S12`, `T-API-S29…S45`, `T-WEB-S74…S108`, `T-LINT-S8`, and split two ids at review time:
+
+- at step 6 → step 7 round 1 — `T-API-S42`…`S44`, `T-WEB-S104`…`S107`, and the two **cross-file** spans that had acquired two meanings each, split into sibling letters: `T-CORE-S18a` (the stored-content half, `daily-contract.test.ts`) / `T-CORE-S18b` (the wire half, `termo-guess-contract.test.ts`), and `T-API-S34a` (`cron-publish.test.ts`) / `T-API-S34b` (`buffer-depth.test.ts`). Both had been minted on this branch citing each other as precedent, circularly; the rule below is what applies, and a cross-file span is what it exists to prevent.
+- at step 7 round 2 — `T-API-S45` (`test/termo-judge.test.ts`, the shared ladder's own preconditions) and `T-WEB-S108` (`test/session-remint.test.ts`, the re-mint allowance's two reset events).
 
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead.
 
@@ -61,5 +68,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-WEB-S41` | plan 020 reserved it for "`T-WEB-S12` gains the third record"; the assertion landed inside `T-WEB-S12` itself, where it belongs |
 | `T-WEB-S46` | plan 020 reserved it for the pointer-stroke extraction's `git diff --exit-code` gate — a COMMAND, not an `it`, so there is no marker to point at (same shape as `T-WEB-S13`/`S32`) |
 | `T-WEB-S60` | tail of plan 020's `T-WEB-S35…S60` range |
+| `T-WEB-S100` | plan 022 §19.6 reserved it for `test/route-ssr.test.tsx` — "both termo paths render with their marker and no function crosses the RSC boundary". The assertions landed, but **inside the existing `T-WEB-S56` describe** ("every route the impeccable preflight fetches"), which is where they belong: the two termo rows went into that suite's own `ROUTES` table. Same shape as `T-WEB-S41` |
+| `T-CORE-S6` | **predates #27.** Plan 018 reserved it for `completion-contract.test.ts` (`docs/plans/018-…:1376`); the assertion landed unmarked. Recorded here so the next re-derivation does not spend a pass re-investigating the gap |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.

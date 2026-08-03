@@ -180,8 +180,13 @@ built on it.
   test rather than the count that was ever load-bearing: plain data only,
   supplied only by a client component that owns the local play record
   (decision 3), orthogonal to every member already there, and passed by no
-  game that does not need it — three games pass none of the three shipped
-  members and render byte-identically. A second member is a claim about the
+  game that does not need it. Of the three shipped members
+  (`picture`, `outcome`, `answer` — `apps/web/src/play/conclusion-view.tsx:94-96`),
+  **two games pass none, and the third passes only `picture`**: binairo and
+  sudoku render byte-identically to what they rendered before any of the
+  three existed, and nonogram takes `picture` alone
+  (`nonogram-screen.tsx:96`, `nonogram-conclusion.tsx:68`). No game carries
+  another game's member. A second member is a claim about the
   *game's* shape, and it has to be argued in the ADR that adds it, in those
   terms. "One per game" stays the number to beat.
 - **(d) The reveal works offline, because the record is its source.** The

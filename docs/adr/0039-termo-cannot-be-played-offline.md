@@ -77,34 +77,60 @@ project's shared layer would get bent around Termo one guess at a time.
      response is *parsed, never cast* — `CLAUDE.md`'s boundary gate — and a
      parse failure is a server bug, not a verdict, so the turn is neither
      judged nor rejected. It is the one row in this list where the status
-     code says nothing, and it is exactly the direction `sync.ts:328-345`
+     code says nothing, and it is exactly the direction `sync.ts:399-410`
      already takes for the completion: *"A 200 the contract does not
      recognize is a server bug, not a player problem: keep the only copy of
      the completion queued rather than discarding it on a body we cannot
      read."* Applied to a turn, that means the guess stays in the pending
      row and is re-postable. **A live turn must survive a server bug.**
    - **429 is never terminal.** This repo emits none today — the vocabulary
-     borrowed here is `sync.ts:42`'s `TERMINAL_STATUSES = new Set([400, 403,
+     borrowed here is `sync.ts:47`'s `TERMINAL_STATUSES = new Set([400, 403,
      404, 415, 422])`, which contains no 429 — and the case exists because
      the platform firewall can emit one. Settling a live turn as "rejected"
      on a load spike would cost the player a guess.
 
 4. **`sync.ts` is NOT the vehicle for a guess, and this is a decision rather
    than an omission.** Its queue is a *completions* queue keyed on
-   `pendingSync` (`sync.ts:78-87`, posting to `/completions` at `:315`);
+   `pendingSync` (`sync.ts:82-91`, posting to `/completions` at `:380`);
    `settle(record, "rejected")` clears that flag permanently
-   (`sync.ts:362-368`), which is the opposite of what a live turn needs; its
+   (`sync.ts:427-433`), which is the opposite of what a live turn needs; its
    ladder is deliberately un-urgent (`[2_000, 5_000, 15_000, 60_000]`,
-   `sync.ts:50`) and bails in a hidden tab (`:385-390`); and its
-   module-level guards (`:53-56`) exist to keep ONE game-blind queue
+   `sync.ts:55`) and bails in a hidden tab (`:448-455`); and its
+   module-level guards (`:57-60`) exist to keep ONE game-blind queue
    coherent, so pushing a foreground turn through them would let a
    background flush reset a live retry. The guess POST is a foreground
    awaited fetch in Termo's own module, sharing only `ensureSession()` and
-   the re-mint-once-per-page-load rule — a duplicated boolean, not a second
-   sync module.
+   the re-mint-once-per-page-load rule — not a second sync module.
    [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md)
    consequence (f) is untouched: Termo still adds its `case` to `buildBody`
    for its COMPLETION.
+
+   **Corrected at #27's step 6 — the shared rule is a SHARED MINT, and the
+   "duplicated boolean" this decision prescribed is the one thing it must not
+   be.** The draft above ended *"a duplicated boolean, not a second sync
+   module"*. The second half stands; the first shipped once and was removed
+   before merge (finding B-1), because a boolean per module is not a copy of
+   a rule — it is a second, invisible authority over one shared resource.
+   `ensureSession()` holds **one** module-level promise, a forced re-mint
+   unconditionally replaces it, and `POST /session` mints a **brand-new
+   user** for any cookieless request (`apps/api/app/session/route.ts`). Two
+   booleans cannot see each other, so a stale cookie plus one unsynced
+   completion plus a live Termo turn put two cookieless mints in flight at
+   once: two identities, whichever `Set-Cookie` lands last survives, and the
+   completion is written for the one that did not — a write-once row under
+   ADR-0026 decision 1, so a permanently lost streak day through the
+   identity-overwrite class ADR-0003 names as its worst failure.
+
+   What ships is the allowance living beside the promise it guards, in
+   `apps/web/src/session/bootstrap.ts:40-41` — `reminting` (the re-mint in
+   flight, which a second caller **joins** instead of racing) and
+   `remintSpent` (the once-per-page-load allowance, re-armed by
+   `confirmSession()` when the fresh identity is seen to serve a request).
+   Both callers keep their own independent decision to **ask** —
+   `sync.ts:213-234` for the completion flush, `termo/guess-client.ts:152-166`
+   for the turn — and the **mint** stays singular. The request count is
+   unchanged; only the ambiguity is gone. A contributor "enforcing" the
+   original sentence by restoring a local boolean reopens the race in full.
 
 5. **The play record persists only judged turns.** The judged guesses and
    their server-issued tiles — which cannot be recomputed without the
@@ -191,7 +217,7 @@ project's shared layer would get bent around Termo one guess at a time.
   asserting the guess list would assert something false.
 - **(e) `buildBody`'s `undefined` return is a trap for this game.** An
   unbuildable body permanently settles a record as rejected
-  (`sync.ts:199-206`), so Termo's builder may only return `undefined` on a
+  (`sync.ts:202-210`), so Termo's builder may only return `undefined` on a
   state a closed record cannot reach.
 - **(f) The native clients inherit this whole.** A native Termo client
   re-implements the screen against this document, including the held-turn

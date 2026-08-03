@@ -27,6 +27,8 @@ import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { messages } from "../src/i18n";
 import { ConclusionView } from "../src/play/conclusion-view";
 import sharedStyles from "../src/play/screen.module.css";
+import { Board } from "../src/termo/board";
+import { Keyboard } from "../src/termo/keyboard";
 import { PlaySkeleton, PlayView } from "../src/termo/play-view";
 import { initTermoPlayState, termoPlayReducer } from "../src/termo/state";
 import styles from "../src/termo/termo-board.module.css";
@@ -1252,6 +1254,22 @@ describe("the 1 Hz tick paints nothing, because there is no clock (T-WEB-S104)",
   });
 
   it("composes ZERO row and key labels across ten timer ticks", () => {
+    // Anti-vacuity, half ZERO — the nonogram precedent's structural pin
+    // (`nonogram-screen.test.tsx`, "is memoized, so an unrelated tick cannot
+    // reconcile 225 cells"), and the two lines that close the gaps the other
+    // two halves leave (finding E-8). `vi.getTimerCount() > 0` below cannot
+    // tell the lifecycle's 1 Hz tick from `subscribeToPlayRecords`'s 1 Hz poll
+    // (`use-record-snapshot.ts`), which also runs on this screen and produces
+    // zero re-renders — so without this the test would stay green while
+    // measuring nothing if `usePlayLifecycle` ever stopped arming here. And
+    // half two below drives only the BOARD spy: a keystroke does not re-render
+    // `Keyboard` (its `state` is `useMemo([state.guesses])`), so `letterAria`
+    // is never shown to be reachable. If either of these reds because the
+    // component was unwrapped, the fix is to re-wrap it, not to delete the
+    // assertion.
+    expect(Board).toHaveProperty("$$typeof", Symbol.for("react.memo"));
+    expect(Keyboard).toHaveProperty("$$typeof", Symbol.for("react.memo"));
+
     render(<TermoScreen daily={DAILY} />);
     // Let the mount effect's restore, the derived resume and their persists
     // settle, so what the spies see afterwards is only what the ticks cause.

@@ -56,7 +56,7 @@ jobs:
           jar=$(mktemp)
           # EVERY path the detect steps below scan, not just "/". Asserting the
           # root alone was itself a silent-green path: "/" reads no database,
-          # while the six game routes are db-backed — so a missing, rotated or
+          # while the eight game routes are db-backed — so a missing, rotated or
           # unmigrated DATABASE_URL let the preflight pass and the scanner then
           # found nothing on a Next 500 page and exited 0. ADR-0028's
           # Consequences name that risk verbatim; this loop is what turns it
@@ -73,7 +73,7 @@ jobs:
           # (play-view.tsx / conclusion-view.tsx). "/" needs no marker: it reads
           # no database, so reachable and rendered are the same property there.
           status=0
-          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido"; do
+          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido"; do
             case "$path" in
               */concluido) marker='data-conclusion-state=' ;;
               "/") marker='' ;;
@@ -149,6 +149,8 @@ jobs:
           "$DEPLOYMENT_URL/sudoku/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/nonogram?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/nonogram/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/termo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/termo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           --viewport 1440x900
       - name: impeccable detect — mobile 390x844
         # Run even when desktop found regressions (one round-trip shows both
@@ -167,4 +169,6 @@ jobs:
           "$DEPLOYMENT_URL/sudoku/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/nonogram?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/nonogram/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/termo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/termo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           --viewport 390x844

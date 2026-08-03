@@ -154,10 +154,12 @@ export async function postGuesses(
     // header. It resolves `false` when it is spent, and nothing is re-posted.
     if (await remintSession()) {
       response = await post(apiUrl, body);
-      if (response !== undefined && response.status !== 401) {
+      if (response?.ok === true) {
         // The fresh identity works, so a cookie that expires LATER in this
         // page load can still be re-minted — without this the first spent
-        // allowance leaves the board held until a reload (finding B-2).
+        // allowance leaves the board held until a reload (finding B-2). `ok`
+        // and not `status !== 401`, because a 403 or a 415 is decided before
+        // `requireUserId` ever runs (finding E-7); see `confirmSession`.
         confirmSession();
       }
     }

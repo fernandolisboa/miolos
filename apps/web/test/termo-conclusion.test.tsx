@@ -72,6 +72,32 @@ function stateOf(container: HTMLElement): string | null | undefined {
     ?.getAttribute("data-conclusion-state");
 }
 
+/**
+ * `mm:ss`, the only shape `formatElapsed` produces — and the thing ADR-0045
+ * decision 4 actually withholds from a Termo conclusion.
+ *
+ * Matched against `innerHTML` rather than `textContent` so an accessible name
+ * cannot smuggle a duration past a text-only assertion: `OutcomeStamp`'s
+ * `aria-label` is an attribute, and `container.textContent` never sees it.
+ */
+const DURATION = /\d{1,2}:\d{2}/;
+
+/**
+ * The text of the stamp's BIG slot — where a grid game shows a duration and
+ * Termo shows the guess ratio (ADR-0043 decision 5).
+ *
+ * Queried by `.stampGuesses` and never by `.stampTime`'s ABSENCE, which is
+ * the assertion finding E-1 struck: `.stampGuesses { composes: stampTime; }`
+ * makes CSS Modules put BOTH class names on the shipped element, so a
+ * `.stampTime` query finds it in a browser and misses it only here, where
+ * vitest stubs CSS modules and never resolves `composes`. The guard has to
+ * pin the VALUE — no duration is rendered — not a class name the element now
+ * legitimately carries.
+ */
+function stampSlotText(container: HTMLElement): string | null | undefined {
+  return container.querySelector(`.${styles.stampGuesses ?? ""}`)?.textContent;
+}
+
 const LOST: ConclusionOutcome = {
   state: "lost",
   label: copy.outcome.lostLabel,
@@ -159,9 +185,16 @@ describe("the fourth branch (T-WEB-S96)", () => {
     );
 
     expect(container.textContent).not.toContain("03:08");
+    expect(container.innerHTML).not.toMatch(DURATION);
     expect(container.textContent).not.toContain(messages.conclusion.hints(0));
-    expect(container.querySelector(`.${styles.stampTime ?? ""}`)).toBeNull();
     expect(container.querySelector(`.${styles.stampHints ?? ""}`)).toBeNull();
+    // The positive half: the big slot exists and holds the guess ratio. A
+    // `.stampTime`-is-absent assertion would be false in a browser (see
+    // `stampSlotText`), and "no duration anywhere" is the claim decision 4
+    // makes anyway.
+    expect(stampSlotText(container)).toBe(
+      copy.outcome.wonDetail(4, MAX_GUESSES),
+    );
   });
 
   it("leaves the three shipped games byte-identical — they pass neither prop", () => {
@@ -259,10 +292,14 @@ describe("the loss stamp (T-WEB-S97)", () => {
       />,
     );
 
-    expect(container.querySelector(`.${styles.stampTime ?? ""}`)).toBeNull();
     expect(container.querySelector(`.${styles.stampHints ?? ""}`)).toBeNull();
     expect(container.textContent).not.toContain("03:08");
+    expect(container.innerHTML).not.toMatch(DURATION);
     expect(container.textContent).not.toContain(messages.conclusion.hints(0));
+    // Same shape as the win case: the loss's big slot is "X/6", and pinning
+    // the absence of `.stampTime` would assert something the composed class
+    // makes false in a browser (finding E-1).
+    expect(stampSlotText(container)).toBe(copy.outcome.lostDetail(MAX_GUESSES));
     expect(
       screen.getByText(copy.outcome.lostDetail(MAX_GUESSES)),
     ).toBeDefined();

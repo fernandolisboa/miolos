@@ -32,8 +32,8 @@ accented form revealed at the end."* ADR-0033's Rejected list already
 establishes the wrong channel for it, in terms that transfer exactly: the
 completion **response** is broken as a reveal carrier because
 `acceptResponse` copies only `elapsedMs`/`hintsUsed`, only on the
-`recorded: false` branch (`apps/web/src/play/sync.ts:349-358`), and
-`settle` writes `{...record, pendingSync, syncOutcome}` (`:362-368`) — so a
+`recorded: false` branch (`apps/web/src/play/sync.ts:411-423`), and
+`settle` writes `{...record, pendingSync, syncOutcome}` (`:427-433`) — so a
 word on the response is discarded before a reload could show it, and the
 replay path returns before the wall read, so a second visit gets a response
 with nothing to name from.
@@ -54,21 +54,21 @@ the loss.
      readonly label: string;   // "Concluído" | "Jogado"
      readonly detail: string;  // "4/6" | "X/6"
      readonly aria: string;    // the whole composed name
-     readonly settle: boolean; // the shared stamp-settle animation
    }
    ```
    `state` drives `data-conclusion-state`; `label`/`detail` are the stamp's
-   two slots; `settle` is `false` on a loss. There is **no separate loss
-   type** — an earlier draft carried a loss-only interface beside a second
-   win-stamp member, and merging them is what makes a **won** Termo
-   impossible to render as `"lost"` by an implementer who gated on the
-   prop's presence instead of its `state`. Termo passes this prop on both
-   outcomes, because neither of the shipped stamp's three slots is honest
-   for this game (decision 5). Supplied only by a client component that owns
-   the local play record — on `/termo` by the screen, on `/termo/concluido`
-   by the Termo conclusion wrapper, the same two mount points
-   `NonogramConclusion` already uses. A game that passes nothing renders
-   exactly what it rendered before the prop existed.
+   two slots; the still, unsettled stamp is **derived** from
+   `state === "lost"` rather than carried beside it (corrected below). There
+   is **no separate loss type** — an earlier draft carried a loss-only
+   interface beside a second win-stamp member, and merging them is what
+   makes a **won** Termo impossible to render as `"lost"` by an implementer
+   who gated on the prop's presence instead of its `state`. Termo passes
+   this prop on both outcomes, because neither of the shipped stamp's three
+   slots is honest for this game (decision 5). Supplied only by a client
+   component that owns the local play record — on `/termo` by the screen, on
+   `/termo/concluido` by the Termo conclusion wrapper, the same two mount
+   points `NonogramConclusion` already uses. A game that passes nothing
+   renders exactly what it rendered before the prop existed.
 
    **The attribute's value is the BOARD verb, deliberately, and the day verb
    is not used here.** `data-conclusion-state` is a render-branch marker
@@ -81,6 +81,26 @@ the loss.
    `packages/games/src/termo/status.ts:5-11` keeps the two apart on purpose
    (*"The name is TermoBoardStatus, not game/day status, to keep that line
    sharp"*), and this attribute stays on the board side of that line.
+
+   **Corrected at #27's step 6 — the interface ships FOUR members, and
+   `settle` is not one of them.** The draft above carried
+   `readonly settle: boolean` as a fifth, and decision 3 called it *"a field
+   on the prop rather than a branch in the component"*. It was deleted before
+   merge (finding B-11): every call site and every test paired `"lost"` with
+   `false` and `"result"` with `true`, so the other two combinations were
+   unreachable and untestable — the same shape
+   `apps/web/src/i18n/messages.ts:343-350` rejects by name for `lostAria`,
+   *"a runtime branch on a compile-time constant whose false arm is
+   unreachable and untestable"*. **The decision
+   the field encoded is untouched and still normative: a loss does not
+   settle.** Only the mechanism moved. `OutcomeStamp` reads
+   `const lost = outcome.state === "lost"` and composes `.stampLost` and
+   `.stampStill` from it (`apps/web/src/play/conclusion-view.tsx:452-460`),
+   which makes the pairing unfalsifiable rather than merely conventional —
+   a still `"result"` stamp is now unrepresentable instead of untested. The
+   shipped interface is `apps/web/src/play/types.ts:125-133`. A game that
+   genuinely wants that degree of freedom adds it then, with a caller that
+   exercises it.
 
 2. **The loss branch is checked BEFORE the stamp branch**, so it never
    depends on `ConclusionResult`, on `record.concluded`, or on an elapsed
@@ -96,9 +116,9 @@ the loss.
    the third step is the loudest**: a 1.5px ring instead of 3px,
    `var(--ink-2)` instead of the accent (5.3003:1 on `--paper-card`), two
    slots instead of three (`label` and `detail`), and **no `stamp-settle`
-   animation** — which is `settle: false`, a field on the prop rather than a
-   branch in the component. There is no
-   consolation flourish, no second stamp design, no mascot and no emoji.
+   animation** — which the component derives from `state === "lost"`, a
+   branch rather than a field on the prop (decision 1, as corrected). There
+   is no consolation flourish, no second stamp design, no mascot and no emoji.
    **The loss equivalent of the celebration is the celebration's absence**,
    and stating that here is what stops the next contributor from inventing
    one. The big slot reads `X/6` — the genre's own notation, spelled out in
@@ -129,9 +149,12 @@ the loss.
    this game — the clock is not rendered and "sem dicas" would present as a
    virtue something that was never possible — and hand the mechanism here.
    The mechanism is decision 1's prop, not a second one: Termo passes
-   `{ state: "result", label: "Concluído", detail: "4/6", aria, settle:
-   true }`, and the `result` branch renders `label`/`detail` in place of the
-   shipped label/time/hints triple. `ConclusionResult` is **still passed**,
+   `{ state: "result", label: "Concluído", detail: "4/6", aria }`
+   (`apps/web/src/termo/termo-conclusion.tsx:116-128`), and the win settles
+   because `state` is `"result"` — the same one field the loss branches on
+   (decision 1, as corrected). The `result` branch renders `label`/`detail`
+   in place of the shipped label/time/hints triple.
+   `ConclusionResult` is **still passed**,
    because the `result` branch gates on it; it carries the real recorded
    `elapsedMs` and `hintsUsed: 0`, and neither is rendered. Three games pass
    nothing and are byte-identical.
@@ -189,7 +212,7 @@ the loss.
    rests on colour. Without the chaining change a lost Termo is offered as
    the next pending daily forever, from every game's conclusion, and —
    because `DAY_GAMES` puts termo first
-   (`apps/web/src/play/conclusion-view.tsx:24`) — as the **default** target.
+   (`apps/web/src/play/conclusion-view.tsx:29`) — as the **default** target.
 
    **Corrected at #27's step 6, on two counts.** This decision was written
    before the screen existed and got the border and the arithmetic wrong.
@@ -205,7 +228,7 @@ the loss.
      would render as **two** shapes and the one new state would be
      invisible. What ships is three border treatments, still with no colour
      involved and all three legible in greyscale
-     (`apps/web/src/play/conclusion-view.module.css:513-541`): `missing`
+     (`apps/web/src/play/conclusion-view.module.css:521-549`): `missing`
      **dashed** (nothing here yet), `played` **solid** (something happened,
      just not a completion), `done` a **tinted fill and no border at all**.
      `--line` on `--paper-card` is 1.4323:1, so the border is a shape
@@ -215,7 +238,7 @@ the loss.
      border only tells the two non-done chips apart at a glance.
    - **Two values become FOUR, not three.** The draft counted a duration and
      `falta` going to three. `DayChip` ships a duration, `feito`, `jogado`
-     and `falta` (`apps/web/src/play/conclusion-view.tsx:576-583`). The
+     and `falta` (`apps/web/src/play/conclusion-view.tsx:586-594`). The
      fourth exists only because
      [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
      decision 4 withholds a **won** Termo's duration — a consequence this
@@ -230,8 +253,9 @@ the loss.
     "the conclusion owns the terminal sentence" TRUE.** It is not true
     today: `apps/web/src/play/conclusion-view.tsx` was read in full and has
     **no live region and no focus management** — its single `useEffect`
-    (`:89-95`) starts the completion sync and nothing else — so on the
-    in-place swap the play view unmounts, focus falls to `<body>`, and a
+    (`:89-95`, as the file stood when this was written) starts the
+    completion sync and nothing else — so on the in-place swap the play view
+    unmounts, focus falls to `<body>`, and a
     blind player gets nothing at the product's payoff moment. The gap is
     inherited from three shipped games; converting it into a false claim in
     an ADR is what is not allowed, so it is closed here rather than

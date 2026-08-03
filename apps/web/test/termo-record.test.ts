@@ -15,9 +15,20 @@ import {
  * `src/play/play-record.ts`: the bundle rule binds `src/`, and that module is
  * on every route's client graph, so importing the engine there would put the
  * Termo engine on `/` — and Termo's word list one lost purity annotation
- * behind it (ADR-0045 decision 5). The engine's three literals are therefore
- * RESTATED in the schema, and this file is what pins the restatement in both
- * directions.
+ * behind it (ADR-0045 decision 5).
+ *
+ * WHAT THE SCHEMA DOES INSTEAD IS IMPORT, NOT RESTATE. The bounds come from
+ * `@miolos/core`'s `contracts/termo-guess.ts` — `TERMO_MAX_GUESSES`,
+ * `TERMO_WORD_LENGTH`, `termoTilesSchema`, `termoGuessWordSchema` — which is
+ * client-safe by design and already on `/`'s graph, so the wire and the record
+ * read ONE definition (finding B-6; `play-record.ts`'s own header argues it at
+ * length). An earlier version of this file described a third restatement and
+ * called itself the pin for it; that design is gone.
+ *
+ * THIS FILE IS STILL THE ANTI-DRIFT PIN, and it is the only one that can be:
+ * `@miolos/core` and `@miolos/games/termo` never import each other, so nothing
+ * but a test that imports BOTH can catch the day the engine's 6, 5 or tile
+ * union stops agreeing with the contract's.
  */
 
 const DATE = "2026-07-30";
@@ -156,11 +167,13 @@ describe("the termo play record (T-WEB-S74)", () => {
   });
 
   it("pins the restated tile union against the engine's, in both directions", () => {
-    // The schema restates `TileState` rather than importing it (see the file
-    // header). The pin is a mutual assignability check reached back out
-    // through the schema's OWN inferred type, so a member added to, removed
-    // from or renamed in the engine's union reds `pnpm typecheck` HERE rather
-    // than silently producing a record the Termo reducer cannot read.
+    // The schema takes its union from `@miolos/core`'s `termoTilesSchema` and
+    // the engine declares its own; neither package imports the other (see the
+    // file header), so this is the only place they can be held together. The
+    // pin is a mutual assignability check reached back out through the
+    // schema's OWN inferred type, so a member added to, removed from or
+    // renamed on EITHER side reds `pnpm typecheck` HERE rather than silently
+    // producing a record the Termo reducer cannot read.
     type RecordTile = TermoPlayRecord["guesses"][number]["tiles"][number];
     const engineToRecord: RecordTile = "present" satisfies TileState;
     const recordToEngine: TileState = "present" satisfies RecordTile;
@@ -220,8 +233,8 @@ describe("the termo record's superRefine (T-WEB-S75)", () => {
   });
 
   it("bounds the list at MAX_GUESSES and shapes each guess at WORD_LENGTH", () => {
-    // Behavioural pins on the two restated constants, with the engine's own
-    // values value-imported here: a schema that merely DECLARED a matching
+    // Behavioural pins on the two contract constants, driven by the ENGINE's
+    // own values value-imported here: a schema that merely DECLARED a matching
     // type would pass a `typeof` assignment and fail these.
     const over = Array.from({ length: MAX_GUESSES + 1 }, () =>
       row("cafes", MISS),

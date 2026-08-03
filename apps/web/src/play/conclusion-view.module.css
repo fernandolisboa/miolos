@@ -300,17 +300,22 @@
    four sides fails both halves.
 
    IT DECLARES NO `animation`, and the absence is not what stands the settle
-   down — `.stampStill` below is, driven by `ConclusionOutcome.settle` rather
-   than by this class. Motion is a property of the OUTCOME, not of the loss
-   chrome, so a future game can ask for a still stamp on a win. */
+   down — `.stampStill` below is, applied by `OutcomeStamp` from
+   `outcome.state === "lost"` rather than by this class. Motion is a property
+   of the OUTCOME, not of the loss chrome, so the two are separable if a
+   future game ever wants a still stamp on a win. (It was briefly a
+   `ConclusionOutcome.settle` boolean; every caller and every test paired it
+   exactly with `state`, so the other two combinations were unreachable and
+   untestable and the field went — finding B-11.) */
 .stampLost {
   border: 1.5px solid var(--ink-2);
   color: var(--ink-2);
 }
 
-/* `settle: false`. The third and loudest of the loss's three steps down; also
-   the reason nothing here needs a `prefers-reduced-motion` counterpart, since
-   the shared block below already stands `.stamp` down for everyone. */
+/* Carried only when `state === "lost"`. The third and loudest of the loss's
+   three steps down; also the reason nothing here needs a
+   `prefers-reduced-motion` counterpart, since the shared block below already
+   stands `.stamp` down for everyone. */
 .stampStill {
   animation: none;
 }

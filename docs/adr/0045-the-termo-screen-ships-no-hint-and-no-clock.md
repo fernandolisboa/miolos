@@ -141,8 +141,8 @@ on the Termo client.**
 
 6. **The annotations ship with two gates, because a comment is not a
    mechanism.** `apps/web/scripts/route-client-js.mjs` gains the three
-   accented canonicals in `FORBIDDEN` (`:115`) and one validation word
-   (`zurro`) in `EXPECTED` (`:140`), so the negatives cannot go vacuous;
+   accented canonicals in `FORBIDDEN` (`:175`) and one validation word
+   (`zurro`) in `EXPECTED` (`:211`), so the negatives cannot go vacuous;
    and a new `packages/games/test/termo/bundle-markers.test.ts` proves
    those three are still in `TERMO_ANSWERS` and absent from
    `TERMO_VALIDATION_WORDS`. Two-way citation in both files, the pattern
@@ -152,12 +152,12 @@ on the Termo client.**
    `MAX_DELTA_BYTES` is not raised.** Termo's floor is +37.9 KB raw before
    one line of screen code, because ~36.4 KB of it is **content the ticket
    exists to ship**. The 40 KB constant
-   (`apps/web/scripts/route-client-js.mjs:83`) was calibrated for routes
+   (`apps/web/scripts/route-client-js.mjs:91`) was calibrated for routes
    whose whole delta is code, and raising it would simultaneously un-arm
    the tripwire for the three grid routes — the script's own header records
    that a motif leak is ~35 KB and lands near 69 KB. The script moves to
-   **per-route budgets**, and `/termo`'s constant is set from the measured
-   route rather than guessed here.
+   **per-route budgets**, and `/termo`'s constant is set at step 8 from the
+   measured route rather than guessed here.
 
    **Closed at #27's step 6.** The step-6 performance review found `/termo`
    was the heaviest route in the app and the only play route gated by
@@ -167,8 +167,11 @@ on the Termo client.**
    sits beside the unchanged 40 KB default in
    `apps/web/scripts/route-client-js.mjs`, and `/termo` joins `BUDGETED`.
    Measured on the merge candidate: **+68.9 KB raw / +24.1 KB gzip over `/`**,
-   which is ~9.3 % headroom — enough to absorb ordinary copy edits, tight
-   enough that a second `packages/games` module reds it.
+   leaving **7.1 KB under the 76 KB budget**. The headroom is stated as a
+   fraction **of the budget** — 7.1 / 76 = **9.3 %** — and
+   `route-client-js.mjs` states it the same way, so one slack figure cannot
+   be read against two different bases. Enough to absorb ordinary copy edits,
+   tight enough that a second `packages/games` module reds it.
 
 ## Rejected
 

@@ -221,10 +221,13 @@ async function syncRecord(
     // made before the hoist.
     if (await remintSession()) {
       response = await post(apiUrl, body);
-      if (response !== undefined && response.status !== 401) {
+      if (response?.ok === true) {
         // The fresh identity is serving requests, so a cookie that expires
-        // LATER in this same page load is recoverable (finding B-2). A
-        // re-post that 401s again confirms nothing and arms nothing.
+        // LATER in this same page load is recoverable (finding B-2). `ok` and
+        // not `status !== 401`: a 403 and a 415 are decided before
+        // `requireUserId`, and a 429 or a 5xx without regard to it, so none of
+        // them proves the cookie was honoured (finding E-7). The rule lives in
+        // `confirmSession`'s own TSDoc.
         confirmSession();
       }
     }

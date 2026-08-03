@@ -1,6 +1,7 @@
 import {
   deriveBoardStatus,
   evaluateGuess,
+  MAX_GUESSES,
   type TermoBoardStatus,
   type TileStates,
 } from "@miolos/games/termo";
@@ -33,13 +34,22 @@ import {
  *   day permanently.
  * - It buys nothing. A non-word EARLIER in the list cannot manufacture a
  *   win: the win test is `guess === answer` and the answer is a dictionary
- *   member by construction. A client that posts junk earlier guesses only
- *   cheats itself, which ADR-0038 consequence (a) already accepts for the
- *   six-guess limit.
+ *   member by construction.
  *
  * `POST /termo/guess` therefore checks `isValidGuess` on the NEWEST guess
  * only — the one the player just typed, the only one whose rejection is a
  * player outcome — and `POST /completions` checks none.
+ *
+ * STATED PRECISELY, because an earlier draft of this comment said the client
+ * "only cheats itself" and that is false (#27 round-2 finding D-8): an
+ * earlier non-word IS judged, and the guess route RETURNS its tiles —
+ * `T-API-S42` pins exactly that. So any `^[a-z]{5}$` string is probeable, not
+ * just dictionary words. That is an accepted cost rather than a new one: the
+ * route is stateless with no server-side turn accounting, so unlimited
+ * probing of *dictionary* words was already free under ADR-0038
+ * consequence (a), and ADR-0038 decision 9 already disclaims this route as a
+ * confidentiality boundary. The gate is not coming back — restoring it
+ * reopens the soft-lock above, whose cost is a permanently lost day.
  */
 export interface TermoJudgement {
   /** Parallel to the submitted guesses, in the submitted order. */
@@ -67,11 +77,26 @@ export interface TermoJudgement {
  * operands are `^[a-z]{5}$` (the request schemas for the guess, the word-list
  * harness for `normalized`), so this is plain ASCII equality and the check is
  * EXACT rather than conservative: it can never reject a legitimate board.
+ *
+ * THE OTHER `RangeError` IS GUARDED TOO (#27 round-2 finding G-1).
+ * `deriveBoardStatus` throws on `rows.length > MAX_GUESSES` as well as on a
+ * row after a win, and an earlier draft of this module guarded only the
+ * second — safe, because both callers cap the list at six through zod before
+ * calling, but safe by a precondition living in the callers rather than here.
+ * That is precisely what the A-2 hoist exists to end: the whole point of one
+ * judge is that its gates are in one place, so a third caller or a relaxed
+ * `.max()` cannot turn into a 500. An over-length list is `null` for the same
+ * reason a post-win row is — it does not derive a closed board — and the two
+ * callers keep naming it in their own vocabulary.
  */
 export function judgeGuessList(
   guesses: readonly string[],
   answer: string,
 ): TermoJudgement | null {
+  if (guesses.length > MAX_GUESSES) {
+    return null;
+  }
+
   const winAt = guesses.findIndex((guess) => guess === answer);
   if (winAt !== -1 && winAt !== guesses.length - 1) {
     return null;
