@@ -74,6 +74,13 @@ export async function getCompletion(
  * Never `ON CONFLICT DO UPDATE`: an upsert would bump `completed_at` and
  * silently reclassify an on-time completion as late — the one thing the
  * streak mechanic cannot survive.
+ *
+ * `guesses` is Termo's and only Termo's (#27, ADR-0038 decision 6). It is
+ * OPTIONAL here rather than a discriminated per-game input because the
+ * database is what enforces the pairing: `completions_guesses_check` is an
+ * equality, so a termo row without it and a grid row with it both fail the
+ * write. Omitted, drizzle emits the SQL keyword `default` — i.e. NULL — which
+ * is the only legal value for the other three games.
  */
 export async function recordCompletion(
   db: Db,
@@ -84,6 +91,7 @@ export async function recordCompletion(
     outcome: CompletionOutcome;
     elapsedMs: number;
     hintsUsed: number;
+    guesses?: number;
   },
 ): Promise<{ record: CompletionRecord; recorded: boolean }> {
   // Bare .returning(): on the union Db type only the no-argument overload
@@ -99,6 +107,7 @@ export async function recordCompletion(
       outcome: input.outcome,
       elapsedMs: input.elapsedMs,
       hintsUsed: input.hintsUsed,
+      guesses: input.guesses,
     })
     .onConflictDoNothing({
       target: [completions.userId, completions.game, completions.date],

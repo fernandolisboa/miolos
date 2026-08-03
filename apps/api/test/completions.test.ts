@@ -15,6 +15,7 @@ import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku, type SudokuPuzzle } from "@miolos/games/sudoku";
+import { isValidGuess, TERMO_ANSWERS } from "@miolos/games/termo";
 import { NextRequest } from "next/server";
 import {
   afterAll,
@@ -261,6 +262,65 @@ function wrongGrid(
 
 async function completionRows(): Promise<unknown[]> {
   return ctx.db.select().from(completions);
+}
+
+/**
+ * The seeded Termo answer, ACCENTED so `canonical` and `normalized` differ.
+ * Termo is the fourth game on this route and the first with no grid at all:
+ * its evidence is the guess LIST, and the outcome is DERIVED from it against
+ * the stored answer (ADR-0038).
+ */
+const TERMO_ANSWER = TERMO_ANSWERS.find(
+  (candidate) => candidate.canonical !== candidate.normalized,
+);
+
+if (TERMO_ANSWER === undefined) {
+  throw new Error("unreachable: no accented answer in TERMO_ANSWERS");
+}
+const termoAnswer = TERMO_ANSWER;
+
+/** Six dictionary words that are NOT the answer — the losing board. */
+const TERMO_DECOYS: readonly string[] = TERMO_ANSWERS.map(
+  (candidate) => candidate.normalized,
+)
+  .filter((word) => word !== termoAnswer.normalized)
+  .slice(0, 6);
+
+async function seedTermo(date: string, seed = 7): Promise<void> {
+  await insertDailyPuzzle(ctx.db, {
+    game: "termo",
+    date,
+    seed,
+    content: {
+      canonical: termoAnswer.canonical,
+      normalized: termoAnswer.normalized,
+    },
+  });
+}
+
+function termoBody(init: {
+  date: string;
+  guesses: readonly string[];
+  elapsedMs?: number;
+  hintsUsed?: number;
+}): string {
+  return JSON.stringify({
+    game: "termo",
+    date: init.date,
+    guesses: [...init.guesses],
+    elapsedMs: init.elapsedMs ?? 61_000,
+    hintsUsed: init.hintsUsed ?? 0,
+  });
+}
+
+/** The written row's `guesses`, which `getCompletion` deliberately does not project. */
+async function storedGuessCounts(): Promise<
+  { game: string; guesses: number | null }[]
+> {
+  return ctx.db
+    .select({ game: completions.game, guesses: completions.guesses })
+    .from(completions)
+    .orderBy(completions.game);
 }
 
 async function errorOf(response: Response): Promise<unknown> {
@@ -1319,6 +1379,361 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(killed.status).toBe(404);
     expect(await errorOf(killed)).toEqual({ error: "no-puzzle" });
 
+    expect(await completionRows()).toHaveLength(0);
+  });
+});
+
+describe("POST /completions — termo (#27, ADR-0038)", () => {
+  it("T-API-S39: the decoys are dictionary words and the answer is accented", () => {
+    // Anti-vacuity for everything below.
+    expect(TERMO_DECOYS).toHaveLength(6);
+    for (const word of TERMO_DECOYS) {
+      expect(isValidGuess(word), `${word} must be a dictionary word`).toBe(
+        true,
+      );
+    }
+    expect(termoAnswer.canonical).not.toBe(termoAnswer.normalized);
+  });
+
+  it("T-API-S39: a winning list records `won` with the guess COUNT, and `outcome` is no longer a literal", async () => {
+    // `outcome: "won"` was hardcoded at this route until #27. It is now the
+    // server's own re-run of `evaluateGuess` + `deriveBoardStatus` against the
+    // stored answer, so a client-asserted outcome has nowhere to enter.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: termoBody({
+          date: today,
+          guesses: [...TERMO_DECOYS.slice(0, 3), termoAnswer.normalized],
+          elapsedMs: 272_000,
+          hintsUsed: 1,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = completionResponseSchema.parse(await response.json());
+    expect(body).toEqual({
+      game: "termo",
+      date: today,
+      outcome: "won",
+      onTime: true,
+      recorded: true,
+      elapsedMs: 272_000,
+      hintsUsed: 1,
+    });
+    // The response is UNCHANGED in shape — `guesses` is write-only in #27
+    // (widening `CompletionRecord` would throw on every completion in the app
+    // through the strict `completionResponseSchema`), so the count is read
+    // back from the table directly.
+    expect(await storedGuessCounts()).toEqual([{ game: "termo", guesses: 4 }]);
+  });
+
+  it('T-API-S39: SIX exhausted guesses record `outcome: "lost"` — the first reachable loss in the product', async () => {
+    // THE INVERSION, and it is the one place Termo does not follow the grid
+    // games: a wrong grid writes nothing, six wrong Termo guesses IS the game
+    // (ADR-0038 decision 4) and closes the day.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: termoBody({ date: today, guesses: TERMO_DECOYS }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = completionResponseSchema.parse(await response.json());
+    expect(body.outcome).toBe("lost");
+    expect(body.recorded).toBe(true);
+    expect(await storedGuessCounts()).toEqual([{ game: "termo", guesses: 6 }]);
+  });
+
+  it("T-API-S39: a still-`playing` list is 422 `guess-mismatch` with NO row", async () => {
+    // The guard that makes a client bug non-fatal. The row is write-once
+    // (ADR-0026 decision 1), so a prematurely posted loss would cost the
+    // player the day permanently — this rule must not be relaxed.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    for (let length = 1; length <= 5; length += 1) {
+      const response = await POST(
+        completionRequest({
+          token,
+          body: termoBody({
+            date: today,
+            guesses: TERMO_DECOYS.slice(0, length),
+          }),
+        }),
+      );
+      expect(response.status, `${String(length)} wrong guesses`).toBe(422);
+      expect(await errorOf(response)).toEqual({ error: "guess-mismatch" });
+    }
+    expect(await completionRows()).toHaveLength(0);
+  });
+
+  it("T-API-S39: a list past a winning row is 422 `guess-mismatch`, never 500", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+    const decoy = TERMO_DECOYS[0] ?? "";
+
+    const lists = [
+      // `deriveBoardStatus` throws a RangeError on a row after a win, and an
+      // uncaught RangeError in a route handler is a 500. The explicit
+      // pre-check in front of the call — now `judgeGuessList`'s, shared with
+      // `POST /termo/guess` — is what makes this a 422.
+      [termoAnswer.normalized, decoy],
+      [decoy, termoAnswer.normalized, TERMO_DECOYS[1] ?? ""],
+      [termoAnswer.normalized, termoAnswer.normalized],
+    ];
+
+    for (const guesses of lists) {
+      const response = await POST(
+        completionRequest({ token, body: termoBody({ date: today, guesses }) }),
+      );
+      expect(response.status, guesses.join(",")).toBe(422);
+      expect(await errorOf(response)).toEqual({ error: "guess-mismatch" });
+    }
+    expect(await completionRows()).toHaveLength(0);
+  });
+
+  it("T-API-S43: a WIN whose earlier rows contain a non-word is RECORDED, not 422'd", async () => {
+    // The permanent-day-loss this exists to prevent (#27 step-7 finding A-1).
+    // The judge used to gate the whole accumulated list on `isValidGuess`, and
+    // the stateless client (ADR-0038 decision 1) re-posts every earlier guess.
+    // One word removed from validation.txt after an independent `apps/web`
+    // deploy therefore poisoned the whole list: `judgeTermo` returned `null`,
+    // the route answered 422 `guess-mismatch`, 422 is in `sync.ts`'s
+    // TERMINAL_STATUSES, so the record settled `rejected` and the day was lost
+    // for the streak on a row that ADR-0026 decision 1 can never reopen.
+    //
+    // Dropping the gate is safe because a non-word cannot manufacture a win:
+    // the win test is `guess === answer` and the answer is a dictionary member
+    // by construction. The list below wins honestly on row 3 and is recorded
+    // with the real guess count, non-word and all.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: termoBody({
+          date: today,
+          // Shaped `^[a-z]{5}$` so it PARSES, and outside the dictionary so
+          // the removed gate would have refused it.
+          guesses: [TERMO_DECOYS[0] ?? "", "zzzzz", termoAnswer.normalized],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = completionResponseSchema.parse(await response.json());
+    expect(body.outcome).toBe("won");
+    expect(body.recorded).toBe(true);
+    expect(await storedGuessCounts()).toEqual([{ game: "termo", guesses: 3 }]);
+  });
+
+  it("T-API-S43: an unfinished list is still 422 `guess-mismatch` when it contains a non-word", async () => {
+    // Anti-vacuity for the test above: dropping the dictionary gate must not
+    // relax the `"playing" → 422, no row` guard ADR-0038 consequence (c) calls
+    // the thing that makes a client bug non-fatal. A non-word is now simply an
+    // ordinary wrong guess, so the list is judged and REFUSED on its status.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: termoBody({ date: today, guesses: ["zzzzz"] }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await errorOf(response)).toEqual({ error: "guess-mismatch" });
+    expect(await completionRows()).toHaveLength(0);
+  });
+
+  it("T-API-S39: a replay of a WINNING list against a stored `lost` row returns the loss, unrecorded", async () => {
+    // The idempotent short-circuit runs BEFORE the wall read and before any
+    // judging, so ADR-0008's "a loss followed by an archive replay does not
+    // reopen the daily" is enforced by code that already existed. Proved by
+    // the judge NEVER being reached, which no status code can assert.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const lost = await POST(
+      completionRequest({
+        token,
+        body: termoBody({ date: today, guesses: TERMO_DECOYS }),
+      }),
+    );
+    expect(completionResponseSchema.parse(await lost.json()).outcome).toBe(
+      "lost",
+    );
+    judgeCalls.mockClear();
+
+    const replay = await POST(
+      completionRequest({
+        token,
+        body: termoBody({
+          date: today,
+          guesses: [termoAnswer.normalized],
+          elapsedMs: 1,
+        }),
+      }),
+    );
+
+    expect(replay.status).toBe(200);
+    const body = completionResponseSchema.parse(await replay.json());
+    expect(body.outcome).toBe("lost");
+    expect(body.recorded).toBe(false);
+    expect(body.elapsedMs).toBe(61_000);
+    expect(judgeCalls).not.toHaveBeenCalled();
+    // Still one row, and its count is the LOSS's six.
+    expect(await storedGuessCounts()).toEqual([{ game: "termo", guesses: 6 }]);
+  });
+
+  it("T-API-S39: yesterday's board is judged and recorded LATE — the rollover case", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    await seedTermo(yesterday, 21);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: termoBody({
+          date: yesterday,
+          guesses: [termoAnswer.normalized],
+        }),
+      }),
+    );
+
+    const body = completionResponseSchema.parse(await response.json());
+    expect(response.status).toBe(200);
+    expect(body.outcome).toBe("won");
+    expect(body.onTime).toBe(false);
+    expect(await storedGuessCounts()).toEqual([{ game: "termo", guesses: 1 }]);
+  });
+
+  it("T-API-S40: the grid path is UNCHANGED — all three still judge, and write a NULL count", async () => {
+    // `storedSolution` was narrowed rather than widened (ADR-0038 decision 5);
+    // the proof it still serves all three is that all three still record.
+    const today = await todaySaoPaulo(ctx.db);
+    const binairo = await seedDaily("binairo", today);
+    const sudoku = await seedDaily("sudoku", today);
+    const nonogram = await seedDaily("nonogram", today, 7, 1);
+    const { token } = await createSession();
+
+    for (const [game, grid] of [
+      ["binairo", binairo],
+      ["sudoku", sudoku],
+      ["nonogram", nonogram],
+    ] as const) {
+      const response = await POST(
+        completionRequest({
+          token,
+          body: completionBody({ game, date: today, grid }),
+        }),
+      );
+      expect(
+        completionResponseSchema.parse(await response.json()),
+      ).toMatchObject({ game, outcome: "won", recorded: true });
+    }
+    expect(await storedGuessCounts()).toEqual([
+      { game: "binairo", guesses: null },
+      { game: "nonogram", guesses: null },
+      { game: "sudoku", guesses: null },
+    ]);
+  });
+
+  it("T-API-S40: a length mismatch is still 422 `grid-mismatch`, and a binairo body against a TERMO row 404s", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const nonogram = await seedDaily("nonogram", today, 7, 1);
+    expect(nonogram).toHaveLength(25);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    // ADR-0032 consequence (c): the length check is game-generic and must not
+    // be simplified away by the narrowing.
+    const padded = [
+      ...nonogram,
+      ...Array.from({ length: 75 }, (): number => 0),
+    ];
+    const longer = await POST(
+      completionRequest({
+        token,
+        body: completionBody({ game: "nonogram", date: today, grid: padded }),
+      }),
+    );
+    expect(longer.status).toBe(422);
+    expect(await errorOf(longer)).toEqual({ error: "grid-mismatch" });
+
+    // The wall is keyed on (game, date), so a binairo body finds no binairo
+    // row for a day that only carries a termo one: 404, never a 500 from a
+    // termo `content` reaching `binairoDailyContentSchema.parse`.
+    const wrongGame = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: today,
+          grid: Array.from({ length: 64 }, (): number => 0),
+        }),
+      }),
+    );
+    expect(wrongGame.status).toBe(404);
+    expect(await errorOf(wrongGame)).toEqual({ error: "no-puzzle" });
+
+    expect(await completionRows()).toHaveLength(0);
+  });
+
+  it("T-API-S40: a termo body against a GRID row 404s, and a malformed termo body is 400", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedDaily("binairo", today);
+    const { token } = await createSession();
+
+    const noRow = await POST(
+      completionRequest({
+        token,
+        body: termoBody({ date: today, guesses: [termoAnswer.normalized] }),
+      }),
+    );
+    expect(noRow.status).toBe(404);
+    expect(await errorOf(noRow)).toEqual({ error: "no-puzzle" });
+
+    await seedTermo(today);
+    for (const body of [
+      termoBody({ date: today, guesses: [] }),
+      termoBody({ date: today, guesses: ["CAFÉ"] }),
+      termoBody({
+        date: today,
+        guesses: Array.from({ length: 7 }, () => termoAnswer.normalized),
+      }),
+      JSON.stringify({
+        game: "termo",
+        date: today,
+        guesses: [termoAnswer.normalized],
+        elapsedMs: 1,
+        hintsUsed: 0,
+        outcome: "won",
+      }),
+    ]) {
+      const response = await POST(completionRequest({ token, body }));
+      expect(response.status, body.slice(0, 70)).toBe(400);
+      expect(await errorOf(response)).toEqual({ error: "invalid-body" });
+    }
     expect(await completionRows()).toHaveLength(0);
   });
 });

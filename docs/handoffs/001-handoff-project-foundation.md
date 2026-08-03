@@ -23,6 +23,7 @@
 > | **LGPD mínima (política de privacidade + consentimentos separados de recuperação e lembrete) sai junto com o e-mail, no M1**; revisão completa continua no M4 | Milestones (privacidade/LGPD inteira no M4) | [ADR-0012](../adr/0012-minimal-lgpd-ships-with-email-attach.md) |
 > | **Lista de palavras do Termo é curada por IA sob restrições mecânicas**, não curadoria manual do dono | M2 ("curadoria … é trabalho não-técnico") e pendência não-técnica 3 | [ADR-0015](../adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md) |
 > | Pendência 1 (registro.br + INPI) **resolvida**: domínio canônico `miolos.app` (comprado, gerido na Vercel); "MIOLOS" nunca depositado no INPI; registro de marca adiado | Pendências não-técnicas 1 | [ADR-0013](../adr/0013-canonical-domain-and-pt-br-routes.md) |
+> | **A dica grátis vale só para os três jogos de grade**: o Termo não tem o que dicar (o tabuleiro é saída, não entrada — revelar uma letra é revelar 20 % do puzzle), então sai com **zero** dicas | Produto ("Dicas: 1 grátis por puzzle; extras via rewarded ad quando ads ativarem") | [ADR-0045](../adr/0045-the-termo-screen-ships-no-hint-and-no-clock.md) |
 >
 > O mapa de milestones atualizado vive no [README](../../README.md), que é documento vivo. As invariantes de produto e engenharia vivem no [CLAUDE.md](../../CLAUDE.md).
 

@@ -22,7 +22,11 @@ import {
   completionResponseSchema,
 } from "@miolos/core";
 
-import { ensureSession } from "../session/bootstrap";
+import {
+  confirmSession,
+  ensureSession,
+  remintSession,
+} from "../session/bootstrap";
 import {
   ELAPSED_CAP_MS,
   listPendingRecords,
@@ -31,6 +35,7 @@ import {
   type NonogramPlayRecord,
   type PlayRecord,
   type SudokuPlayRecord,
+  type TermoPlayRecord,
 } from "./play-record";
 
 /**
@@ -51,7 +56,6 @@ const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 60_000] as const;
 
 // Module-level, so it survives re-mounts (the session-bootstrap precedent).
 let flushing = false;
-let reminted = false;
 let retryStep = 0;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -206,12 +210,27 @@ async function syncRecord(
   }
 
   let response = await post(apiUrl, body);
-  if (response?.status === 401 && !reminted) {
-    // The cookie the first mint produced is gone or expired. Re-mint once
-    // per page load — a loop here would hammer the api on a broken origin.
-    reminted = true;
-    await ensureSession({ force: true });
-    response = await post(apiUrl, body);
+  if (response?.status === 401) {
+    // The cookie the first mint produced is gone or expired. THE ALLOWANCE IS
+    // NOT THIS MODULE'S: `remintSession()` owns it, because `termo/guess-
+    // client.ts` re-mints on the same rule and two local booleans over one
+    // shared mint promise put two cookieless `POST /session` calls in flight
+    // at once — two identities, one surviving cookie, and a completion
+    // written for the loser (finding B-1). A spent allowance resolves `false`
+    // and nothing is re-posted, which is the same request count this module
+    // made before the hoist.
+    if (await remintSession()) {
+      response = await post(apiUrl, body);
+      if (response?.ok === true) {
+        // The fresh identity is serving requests, so a cookie that expires
+        // LATER in this same page load is recoverable (finding B-2). `ok` and
+        // not `status !== 401`: a 403 and a 415 are decided before
+        // `requireUserId`, and a 429 or a 5xx without regard to it, so none of
+        // them proves the cookie was honoured (finding E-7). The rule lives in
+        // `confirmSession`'s own TSDoc.
+        confirmSession();
+      }
+    }
   }
 
   if (response === undefined) {
@@ -252,6 +271,8 @@ function buildBody(record: PlayRecord): string | undefined {
     case "nonogram":
     case "sudoku":
       return gridBody(record);
+    case "termo":
+      return termoBody(record);
     default: {
       // A new member of `playRecordSchema` with no case here is a RED
       // TYPECHECK, never a dropped completion (finding
@@ -299,6 +320,50 @@ function gridBody(
     // A backwards wall-clock step makes it negative, `min(0)` in the
     // request contract then fails the parse, and the flush would drop an
     // intact completion as "no solved grid to post" (finding
+    // `memory-queue-record-bypasses-the-two-sided-clamp`).
+    elapsedMs: Math.min(Math.max(record.elapsedMs, 0), ELAPSED_CAP_MS),
+    hintsUsed: record.hintsUsed,
+  });
+  return parsed.success ? JSON.stringify(parsed.data) : undefined;
+}
+
+/**
+ * Termo's completion body: the GUESS WORDS, oldest first, and no verdict
+ * (#27, ADR-0044 decision 7). The server re-judges them against its stored
+ * answer with `evaluateGuess`/`deriveBoardStatus` and decides won or lost
+ * itself — the client never asserts an outcome, which keeps `outcome` off the
+ * one surface ADR-0026's rejected list calls forgeable.
+ *
+ * The TILES stay on the device. They are the client's rendering state, and
+ * posting them would be a second copy of a fact the server derives — the
+ * "second place for the client to lie" ADR-0032 decision 4 refuses when it
+ * keeps `size` off the nonogram wire.
+ *
+ * TWO PLAYERS WHO BOTH WON ON GUESS 4 POST DIFFERENT BYTES, and that is a
+ * real departure from ADR-0032's canonical-body pattern rather than an
+ * oversight. It is warranted because the guess SEQUENCE is itself
+ * outcome-bearing state: ADR-0008 requires the fail row and #29's
+ * distribution is a function of the guess count. Nothing beyond the sequence
+ * is carried.
+ *
+ * IT CANNOT RETURN `undefined` FOR A LEGITIMATELY CLOSED RECORD, and that is
+ * load-bearing: `syncRecord` reads `undefined` as "no result to post" and
+ * PERMANENTLY settles the record as rejected. The record schema requires at
+ * least one judged guess when `concluded` (its `superRefine`, T-WEB-S75), so
+ * the empty-list path is unreachable and the only way here is a failed
+ * contract parse — exactly as it is for `gridBody`.
+ *
+ * A six-guess LOSS is a 200 with `outcome: "lost"`, never a 422
+ * (ADR-0044 decision 8): 422 stays in `TERMINAL_STATUSES` and keeps
+ * ADR-0032 decision 4's meaning — well-formed, but not this puzzle.
+ */
+function termoBody(record: TermoPlayRecord): string | undefined {
+  const parsed = completionRequestSchema.safeParse({
+    game: "termo",
+    date: record.date,
+    guesses: record.guesses.map((row) => row.guess),
+    // Clamped at BOTH ends for the memory-queue path, exactly as `gridBody`
+    // does and for the same reason (finding
     // `memory-queue-record-bypasses-the-two-sided-clamp`).
     elapsedMs: Math.min(Math.max(record.elapsedMs, 0), ELAPSED_CAP_MS),
     hintsUsed: record.hintsUsed,

@@ -28,10 +28,12 @@ export {
   type SessionResponse,
 } from "./contracts/session";
 export {
+  calendarDateString,
   dailyBinairoResponseSchema,
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
   dailySudokuResponseSchema,
+  dailyTermoResponseSchema,
   isoDateString,
   nonogramSizeSchema,
   sudokuDigitSchema,
@@ -39,6 +41,7 @@ export {
   type DailyNonogramResponse,
   type DailyPuzzleResponse,
   type DailySudokuResponse,
+  type DailyTermoResponse,
   type NonogramSize,
   type ProjectedGame,
 } from "./contracts/daily";
@@ -52,9 +55,11 @@ export {
   nonogramDailyContentSchema,
   stripDailyContent,
   sudokuDailyContentSchema,
+  termoDailyContentSchema,
   type BinairoDailyContent,
   type NonogramDailyContent,
   type SudokuDailyContent,
+  type TermoDailyContent,
 } from "./contracts/daily-content";
 export {
   bufferDepthResponseSchema,
@@ -65,17 +70,30 @@ export {
   type CronPublishResponse,
 } from "./contracts/cron";
 export {
+  TERMO_MAX_GUESSES,
+  TERMO_WORD_LENGTH,
+  termoGuessRequestSchema,
+  termoGuessResponseSchema,
+  termoGuessWordSchema,
+  termoTilesSchema,
+  termoTileStateSchema,
+  type TermoGuessRequest,
+  type TermoGuessResponse,
+  type TermoTiles,
+} from "./contracts/termo-guess";
+export {
   apiErrorResponseSchema,
   binairoCompletionRequestSchema,
-  calendarDateString,
   completionRequestSchema,
   completionResponseSchema,
   nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
+  termoCompletionRequestSchema,
   type ApiErrorResponse,
   type BinairoCompletionRequest,
   type CompletionRequest,
   type CompletionResponse,
   type NonogramCompletionRequest,
   type SudokuCompletionRequest,
+  type TermoCompletionRequest,
 } from "./contracts/completion";

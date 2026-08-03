@@ -47,6 +47,18 @@ revisit once links exist in the wild:
    the offline finish is impossible; without the route the screen has no
    URL, and a screen with no URL cannot be scanned by the visual gate.
 
+   **Qualified at #27 — the MECHANISM holds for Termo, the RATIONALE does
+   not.** *"Which is what makes finishing offline work with no service
+   worker"* becomes false for one of the four games: Termo's guesses are
+   judged on the server, so a Termo board cannot be finished offline at all
+   (see [ADR-0039](./0039-termo-cannot-be-played-offline.md)). Nothing in
+   this decision is amended, and the in-place swap still ships for Termo and
+   still works — the response that closes the board has already arrived by
+   the time the board is closed. What no longer generalises is the sentence
+   explaining *why* the in-place half exists. (The gate is also
+   `status !== "playing"` rather than `solved` alone, because Termo is the
+   first game with a second terminal state.)
+
 3. **Route slugs and composed paths live in `apps/web/src/i18n/routes.ts`.**
    `routeSlugs` keeps ADR-0018's English-identifier → pt-BR-slug map, and a
    sibling `routes` object composes the literal path strings so Next's typed

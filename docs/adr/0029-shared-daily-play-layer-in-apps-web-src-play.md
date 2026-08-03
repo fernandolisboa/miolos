@@ -71,10 +71,23 @@ it as a timing rule and was wrong.
    and all copy.
 
 3. **`sync.ts` is exactly one module, permanently.** Its genericity is
-   scoped to the **queue, retry ladder, re-mint and settle machinery**;
+   scoped to the **queue, retry ladder and settle machinery**;
    `buildBody` is the one per-game dispatch **inside** it. Termo's
    completion request carries guesses rather than a grid, so #27 adds a
    branch there — never a second sync module.
+
+   **Qualified at #27 — the RE-MINT left this inventory, and only the
+   inventory moved.** The list above also named the re-mint. `sync.ts` still
+   *asks* for one on a 401, but the once-per-page-load allowance and the
+   in-flight mint promise now live in `apps/web/src/session/bootstrap.ts`
+   beside the shared promise they guard. Two modules re-mint since #27 — the
+   completion flush and `termo/guess-client.ts`'s turn — and a boolean in
+   each, over one shared promise, put two cookieless `POST /session` calls in
+   flight at once, which costs the day
+   ([ADR-0039](./0039-termo-cannot-be-played-offline.md) decision 4, as
+   corrected). This decision's load is untouched: `sync.ts` is still exactly
+   one module, still owns the queue, the ladder and `settle`, and there is
+   still no second sync module.
 
 4. **The play record is a discriminated union on `game`, and `v` stays
    `1`.** Records are keyed `(game, date)`; `readPlayRecord(game, date)`

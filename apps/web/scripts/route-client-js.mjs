@@ -26,20 +26,28 @@
  * false: this script stores no baseline, so it structurally cannot compare a
  * delta to its previous value. The only failure surface below is the 40 KB
  * budget, and the headroom is NOT the "half of it" an earlier version of this
- * comment claimed: measured on this branch the three play routes come in at
- * 28.3 / 30.9 / 34.3 KB — 71 %, 77 % and 86 % of budget — so the noisiest
- * clean route has 5.7 KB of slack, not 20. It still discriminates against what
- * it exists to catch (a motif-table leak is ~35 KB minified and lands around
- * 69 KB), but nobody may budget against room that is not there. NOTE ALSO that
+ * comment claimed: measured on this branch after #27's step 7, the three GRID
+ * play routes come in at binairo 33.0, sudoku 30.4 and nonogram 36.8 KB —
+ * 83 %, 76 % and 92 % of budget — so the noisiest clean route has 3.2 KB of
+ * slack, not 20. (An earlier version of this paragraph quoted #25's 28.3 /
+ * 30.9 / 34.3 and a 5.7 KB slack, which overstated the room by 78 % in the one
+ * comment whose whole thesis is that overstated room is the hazard; #27's
+ * shared play-screen work moved all three.) It still discriminates against
+ * what it exists to catch (a motif-table leak is ~35 KB minified and would
+ * land /nonogram around 72 KB), but nobody may budget against room that is not
+ * there, and the figures above are the ones to re-measure rather than quote.
+ * `/termo` is the ONE route that does not ride the shared constant — see
+ * `PER_ROUTE_BUDGET` below, which is ADR-0045 decision 7. NOTE ALSO that
  * the 40 KB threshold was calibrated in plan 020 §20.2 under a DIFFERENT
  * measurement — clientModules ∪ rootMainFiles ∪ polyfillFiles, entryJSFiles
  * excluded, baselines 26.5/28.6 KB — while this script enforces it through
  * Next's own `firstLoadChunkPaths`, so §20.2's "~11 KB of headroom above the
  * noisiest clean route" does not carry over to these figures.
- * Measured across #25 the two
- * shipped deltas moved 28.6 → 30.9 KB and 26.4 → 28.3 KB, unchanged by step
- * 7's per-cell memo (which cost /nonogram 33.9 → 34.3 KB), and the run printed
- * `ok` for both, which is correct behaviour and NOT a control firing. A real
+ * HISTORICALLY, across #25 — these are #25's numbers, superseded by the ones
+ * above — the two shipped deltas moved 28.6 → 30.9 KB and 26.4 → 28.3 KB,
+ * unchanged by that ticket's per-cell memo (which cost /nonogram 33.9 →
+ * 34.3 KB), and the run printed `ok` for both, which is correct behaviour and
+ * NOT a control firing. A real
  * control needs a committed per-route baseline; that was declined here because
  * plan 020 §20.2 scopes this instrument to one route in one PR rather than to
  * a standing rule #27 and #28 inherit, and a baseline file only earns its
@@ -81,7 +89,36 @@ const CHUNKS = join(NEXT_DIR, "static", "chunks");
 
 /** The acceptance §20.2 sets for a play route's own client cost. */
 const MAX_DELTA_BYTES = 40 * 1024;
-const BUDGETED = ["/binairo", "/nonogram", "/sudoku"];
+
+/**
+ * ADR-0045 decision 7, discharged: "the script moves to PER-ROUTE BUDGETS,
+ * and `/termo`'s constant is set at step 8 from the measured route."
+ *
+ * `/termo` cannot ride the shared 40 KB and the shared constant must not be
+ * raised to fit it — that would un-arm the motif tripwire for the three grid
+ * routes, which is the only thing it exists for. Measured on this branch,
+ * clean build after step 7: /termo is +68.9 KB raw over `/`, against
+ * +33.0 / +36.8 / +30.4 for binairo / nonogram / sudoku. The gap is not a
+ * regression — it is the shared play-screen shell (~31 KB, in line with the
+ * three siblings) plus the Termo library floor (~37.9 KB, of which ~36.4 KB
+ * is the validation dictionary the ticket exists to ship, because "não está
+ * na lista" has to be instant and offline).
+ *
+ * 76 KB leaves 7.1 KB — 9.3 % OF THE BUDGET, and the denominator is named
+ * because the same figure appears in ADR-0045:170 and two denominators for one
+ * number is how a headroom claim drifts. Enough for ordinary copy edits, tight
+ * enough that a SECOND `packages/games` module lands it in the red. That is
+ * the failure this arms against — someone importing a value from
+ * `@miolos/games/termo` into `play-record.ts` (whose `212-244` block warns
+ * about it by name, because that module is on every route's client graph)
+ * would pass all three FORBIDDEN accent greps and every existing budget while
+ * `/termo` grew silently.
+ */
+const PER_ROUTE_BUDGET = { "/termo": 76 * 1024 };
+
+const BUDGETED = ["/binairo", "/nonogram", "/sudoku", "/termo"];
+
+const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;
 
 /**
  * Strings that must NOT appear in any client chunk.
@@ -111,6 +148,29 @@ const BUDGETED = ["/binairo", "/nonogram", "/sudoku"];
  * string on both the short and the ragged solution, naming this file as its
  * consumer. Change the message and that test reds before this grep can go
  * vacuous.
+ *
+ * THE THIRD GROUP IS #27'S, and it is a different kind of negative from the
+ * other two (ADR-0045 decision 5). `então`, `mamãe` and `época` are Termo
+ * ANSWER canonicals. Unlike a motif name, the module they live in is one
+ * `apps/web` genuinely imports: `/termo` ships `isValidGuess` on purpose,
+ * because "não está na lista" has to be instant and offline, and the
+ * validation dictionary and the 400-word answer pool are the SAME generated
+ * module. What keeps the pool out is two `/*#__PURE__*\/` annotations in
+ * `packages/games/src/termo/word-list.ts`, which typecheck, lint and the whole
+ * test suite are blind to and which ADR-0045's measurement E4 proves are
+ * fragile to their own placement. This grep is the only instrument that can
+ * see them work.
+ *
+ * The discriminator is the ACCENT: `content/termo/validation.txt` is US-ASCII,
+ * so an accented canonical can only have come from `ANSWER_CANONICALS`. The
+ * reason the pool must go is cost and strip-table integrity and it is
+ * explicitly NOT confidentiality — ADR-0027:125-131 forecloses that register,
+ * and nothing in #27 rests on the client not holding the pool.
+ *
+ * PINNED ON THE OTHER SIDE by `packages/games/test/termo/bundle-markers.test.ts`,
+ * which proves all three still spell answers, that none is a validation word,
+ * and that `zurro` below is one. When it reds, replace the marker in BOTH
+ * files.
  */
 const FORBIDDEN = [
   "Escada",
@@ -123,6 +183,9 @@ const FORBIDDEN = [
   "givensCount",
   "requiredTier",
   "clueCount",
+  "então",
+  "mamãe",
+  "época",
 ];
 
 /**
@@ -136,12 +199,21 @@ const FORBIDDEN = [
  * `packages/games` string that genuinely ships, and it is what keeps the five
  * motif negatives from going silently vacuous if workspace-package code were
  * ever chunked somewhere the `readdirSync`/`.js` walk below does not look.
+ *
+ * `zurro` IS THE CONTROL FOR THE TERMO NEGATIVES, and it is a tighter one
+ * than any of the four above could be. It is a validation word — US-ASCII,
+ * from the list `isValidGuess` MUST ship — so it lives in the very same
+ * generated module as `então`, `mamãe` and `época` and reaches the same
+ * chunk. Without it the three Termo negatives would pass on the day someone
+ * stopped shipping the word list altogether, or on the day this walk stopped
+ * reaching that chunk, while asserting the absence of nothing.
  */
 const EXPECTED = [
   "Preenchemos uma célula da figura para você.",
   "Revele a figura escondida pelos números.",
   "Nível",
   "malformed nonogram clues: size must be an integer in 1..",
+  "zurro",
 ];
 
 function fail(message) {
@@ -208,15 +280,16 @@ for (const route of BUDGETED) {
     continue;
   }
   const delta = entry.raw - home.raw;
-  if (delta > MAX_DELTA_BYTES) {
+  const budget = budgetFor(route);
+  if (delta > budget) {
     fail(
       `${route} adds ${(delta / 1024).toFixed(1)} KB over \`/\`, over the ` +
-        `${MAX_DELTA_BYTES / 1024} KB budget.`,
+        `${budget / 1024} KB budget.`,
     );
   } else {
     console.log(
       `ok    ${route} adds ${(delta / 1024).toFixed(1)} KB over \`/\` ` +
-        `(budget ${MAX_DELTA_BYTES / 1024} KB)`,
+        `(budget ${budget / 1024} KB)`,
     );
   }
 }

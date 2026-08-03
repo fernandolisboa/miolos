@@ -2,12 +2,14 @@ import {
   binairoDailyContentSchema,
   nonogramDailyContentSchema,
   sudokuDailyContentSchema,
+  termoDailyContentSchema,
 } from "@miolos/core";
 import type { Db } from "@miolos/db";
 import {
   bufferDepth,
   insertDailyPuzzle,
   listBufferedDates,
+  listUsedTermoAnswers,
   todaySaoPaulo,
 } from "@miolos/db/publishing";
 import { isWeekday } from "@miolos/games";
@@ -28,6 +30,7 @@ import {
   sudokuCriteriaForWeekday,
   validateSudoku,
 } from "@miolos/games/sudoku";
+import { TERMO_ANSWERS } from "@miolos/games/termo";
 
 import { addDays, isoWeekdayOf } from "./dates";
 
@@ -113,10 +116,11 @@ function randomUint32(): number {
  * generation/validation misses; a date that exhausts its budget lands in
  * `failures` and the run continues — it never aborts.
  *
- * EXTENSION POINT: per-game by name on purpose — #23 and #25 added
- * `topUpSudokuBuffer` and `topUpNonogramBuffer` alongside this one, and #27
- * adds termo's, each widening the cron/buffer-depth contracts
- * (packages/core/src/contracts/cron.ts) in the same PR.
+ * PER-GAME BY NAME, and the extension point is now DISCHARGED: #23, #25 and
+ * #27 added `topUpSudokuBuffer`, `topUpNonogramBuffer` and
+ * `topUpTermoBuffer` alongside this one, each widening the cron/buffer-depth
+ * contracts (packages/core/src/contracts/cron.ts) in the same PR. All four
+ * M2 games are wired; a fifth would follow the same rule.
  */
 export async function topUpBinairoBuffer(
   db: Db,
@@ -233,10 +237,13 @@ const RUN_BUDGET_EXHAUSTED = "run seed-retry budget exhausted";
 /**
  * The sudoku sibling of `topUpBinairoBuffer` — a NAMED sibling, not a
  * generic extraction (plan 018 S12). The TSDoc above sanctions per-game by
- * name explicitly, and the abstraction's later consumer would not fit it:
+ * name explicitly, and the abstraction's later consumer did not fit it:
  * Termo draws from a curated word list (ADR-0015), which is not a
- * seed → generate → weekday-validate loop. #25 corrected the other half of
- * this claim: Nonogram IS that loop
+ * seed → generate → weekday-validate loop. That claim has since become the
+ * TSDoc of a function that EXISTS — see `topUpTermoBuffer` at the bottom of
+ * this file and its four structural deltas, of which the load-bearing one is
+ * that it has no retry budget at all. #25 corrected the other half of this
+ * claim: Nonogram IS that loop
  * (`packages/games/src/nonogram/generate.ts:23-70`) — but its validator takes
  * no external weekday, so `topUpNonogramBuffer` carries an assertion the
  * other two get from their validators.
@@ -520,6 +527,253 @@ export async function topUpNonogramBuffer(
     // The trailing `bufferDepth` read is inside the try on purpose: it can
     // throw AFTER a full week was written, which is the case that most
     // understates the run.
+    throw new TopUpAbortedError({ generated, failures }, thrown);
+  }
+}
+
+/**
+ * Remaining-answer count AT OR below which the run logs a warning (ADR-0040
+ * decision 7 says "at 30 remaining", so the comparison is `<=`). NOT an alert:
+ * the alert channel is buffer depth (ADR-0010) and `buffer-alert.yml`, and
+ * this line lands in Vercel logs that nothing polls. It exists because the
+ * depth alert gives only ~3 days of runway for THIS failure mode (see
+ * `topUpTermoBuffer` delta 4), and 30 remaining is ~30 days. The real fix is
+ * issue #74, filed with this PR.
+ */
+const LOW_ANSWER_POOL_WARNING = 30;
+
+/** The one reason a termo date can go uncovered that is not schema drift. */
+const ANSWER_LIST_EXHAUSTED =
+  "answer list exhausted: every curated Termo answer is already used";
+
+/**
+ * Termination bound on the uniform draw below — NOT a seed-retry budget.
+ * `topUpTermoBuffer` has none of those and must never grow one (see its
+ * TSDoc). P(one reject) is at most 96/2^32 = 2.24e-8 for n = 400, so
+ * P(64 consecutive) is about 1e-491: this throw is unreachable, and it
+ * ships because "unreachable" is an argument, not a type.
+ */
+const MAX_UNIFORM_DRAW_ATTEMPTS = 64;
+
+/**
+ * The largest multiple of `maxExclusive` that fits in a uint32 — the accept
+ * region's exclusive upper bound. A draw < limit is accepted; anything at or
+ * above it is rejected and redrawn.
+ *
+ * EXPORTED SOLELY SO T-API-S33 CAN BIND TO THE REAL BOUNDARY. Left as a
+ * function-local, the only thing a test could do is recompute this
+ * expression and assert it equals itself — a tautology that stays green
+ * under a change to `randomUint32() % maxExclusive`, which is precisely the
+ * implementation ADR-0040 rejects. Exporting it lets the test stub draws of
+ * `limit - 1` (accepted), `limit`, `limit + 1` and `2**32 - 1` (all
+ * rejected) and assert the DECISION rather than the arithmetic.
+ *
+ * At `maxExclusive === 1` the limit is 2^32, one past the largest uint32, so
+ * the reject region is empty and every draw is accepted. That is correct and
+ * is pinned as its own case.
+ */
+export function uniformDrawLimit(maxExclusive: number): number {
+  return Math.floor(0x1_0000_0000 / maxExclusive) * maxExclusive;
+}
+
+/**
+ * A uniformly distributed index in [0, maxExclusive), plus the uint32 draw
+ * that produced it (the value written to `daily_puzzles.seed`).
+ *
+ * Rejection sampling, not `randomUint32() % maxExclusive`. The bias of the
+ * modulo is measurably nothing — 2^32 mod 400 = 96, so the worst residue is
+ * 7.08e-8 too likely and the total variation distance from uniform is
+ * 1.12e-8 — but rejection makes uniformity a CONSTRUCTION property (every
+ * accepted value maps to exactly floor(2^32 / n) uint32s) instead of a claim
+ * that has to be defended with those numbers every time someone reads it.
+ * ADR-0023 reserves "prove" for exactly that difference. Expected draws:
+ * 1.0000000224 at n = 400.
+ *
+ * NOT `createSeededRandom(...).nextInt(n)` (packages/games/src/random.ts):
+ * that is `Math.floor(next() * n)`, the same granularity bias wrapped in a
+ * splitmix32 round that adds nothing to CSPRNG output — and it would drag a
+ * DETERMINISTIC generator into the one place ADR-0024 decision 1 requires
+ * non-determinism.
+ *
+ * `nextDraw` is an INJECTION SEAM and nothing else; production never passes
+ * it. `randomUint32` is a module-local, so `vi.mock` cannot reach it the way
+ * this file's engine mocks reach `@miolos/games/*` — the parameter is what
+ * lets T-API-S33 assert the accept/reject decision at the real boundary
+ * instead of recomputing the arithmetic (plan 022 §19.5).
+ */
+export function drawUniformIndex(
+  maxExclusive: number,
+  nextDraw: () => number = randomUint32,
+): { index: number; draw: number } {
+  if (!Number.isInteger(maxExclusive) || maxExclusive <= 0) {
+    throw new RangeError(
+      `maxExclusive must be a positive integer, got ${String(maxExclusive)}`,
+    );
+  }
+  const limit = uniformDrawLimit(maxExclusive);
+  for (let attempt = 0; attempt < MAX_UNIFORM_DRAW_ATTEMPTS; attempt += 1) {
+    const draw = nextDraw();
+    if (draw < limit) {
+      return { index: draw % maxExclusive, draw };
+    }
+  }
+  throw new Error(
+    `uniform draw did not converge in ${String(MAX_UNIFORM_DRAW_ATTEMPTS)} attempts`,
+  );
+}
+
+/**
+ * The termo sibling of `topUpBinairoBuffer` — the one this file's own TSDoc
+ * said would not fit the family's shape, and it does not: "Termo draws from
+ * a curated word list (ADR-0015), which is not a seed → generate →
+ * weekday-validate loop."
+ *
+ * Everything binairo's top-up guarantees still holds: idempotent
+ * reconciliation against the DB clock's SP-today, covered dates checked
+ * FIRST, rows never touched once written (ADR-0024 D14), a fail-closed
+ * strict content parse before insert, ON CONFLICT DO NOTHING, and a run that
+ * records failures instead of aborting.
+ *
+ * FOUR STRUCTURAL DELTAS, and no others:
+ *
+ * 1. NO INNER ATTEMPT LOOP AND NO RETRY BUDGET, and that absence is
+ *    load-bearing rather than an omission. There is no generator that can
+ *    fail, no validator that can reject and no weekday ramp; the only
+ *    non-throwing failure left is deterministic schema drift, which every
+ *    sibling `break`s on. A `MAX_TERMO_SEED_RETRIES_PER_DATE` added later
+ *    "for symmetry" would guard nothing. `drawUniformIndex`'s 64-attempt cap
+ *    is a draw-termination bound, not a retry budget.
+ *
+ * 2. IT READS STORED `content` BACK — the first top-up in this package that
+ *    does. `listUsedTermoAnswers` is the no-repeat rule: 400 answers under
+ *    uniform independent picks collide with probability 0.505 inside 24 days
+ *    (birthday problem, N = 400), so without it a repeat is the norm rather
+ *    than the exception. Do not "harmonise" the read away.
+ *
+ * 3. THE POOL IS RUN-SCOPED. Built once and spliced on every successful
+ *    insert, so two dates in the SAME run cannot draw the same answer — a
+ *    collision the used-set read alone would not prevent, because it is
+ *    taken before the first write.
+ *
+ * 4. EXHAUSTION FAILS CLOSED. There is no recycling branch and adding one is
+ *    a product decision with its own ADR (ADR-0040 Rejected). When the pool
+ *    empties, every remaining uncovered date lands in `failures`, the buffer
+ *    drains one day per day, `depths.termo` falls below `effectiveThreshold`
+ *    and `buffer-alert.yml` opens the issue — the same chain nonogram's
+ *    schema-drift comment describes. Runway is only ~3 days, which is why
+ *    `LOW_ANSWER_POOL_WARNING` exists.
+ *
+ * Measured cost (Node v24.18.1, n = 2000 after 200 warm-up, pool rebuilt
+ * every iteration, TERMO_ANSWERS constructed once outside the timed loop
+ * exactly as module init does it): a cold week (depth 7, empty buffer) is
+ * 0.0193 ms of CPU; depth 7 with 350 used is 0.0338 ms; depth 30 empty is
+ * 0.0424 ms; the absolute worst run — depth 30 at remoteConfigSchema's clamp
+ * ceiling with 370 answers already used — is 0.0573 ms. Against binairo's
+ * ~7 ms this is ~360x cheaper, which is what puts termo FIRST in the cron's
+ * cost-ascending order (packages/core/src/contracts/cron.ts).
+ *
+ * The honest asymmetry, in BOTH its figures because the smaller one reads as
+ * the total: a sibling top-up costs THREE run-level Neon round trips
+ * (todaySaoPaulo, listBufferedDates, the trailing bufferDepth) plus one per
+ * insert; this one costs FOUR, because `listUsedTermoAnswers` is a read no
+ * other top-up makes. So it is +1 round trip AGAINST A SIBLING, and +4 at
+ * RUN LEVEL — the cron's fixed cost goes from 9 to 13 — against -7 ms of CPU.
+ * Cost-ascending orders by GENERATION cost — a CPU overrun must never starve
+ * a cheaper game — so termo is first on the rule as written.
+ *
+ * Determinism is not a property here, and this says so rather than leaving
+ * the absence to be read as an oversight: "same seed → same puzzle" is
+ * meaningless for termo, because the pick is `crypto.getRandomValues`-driven
+ * precisely so that it cannot be reproduced (ADR-0024 decision 1). The
+ * invariant that replaces it is "the answer stored is the answer served,
+ * forever", and its mechanism is row immutability, not a seed.
+ */
+export async function topUpTermoBuffer(
+  db: Db,
+  depth: number,
+): Promise<TopUpResult> {
+  // Hoisted OUT of the try so a throw can still report them (see
+  // `TopUpAbortedError`).
+  let generated = 0;
+  const failures: { date: string; reason: string }[] = [];
+  try {
+    const today = await todaySaoPaulo(db);
+    const existing = new Set(await listBufferedDates(db, "termo", today));
+    const used = new Set(await listUsedTermoAnswers(db));
+    const pool = TERMO_ANSWERS.filter((answer) => !used.has(answer.normalized));
+
+    // `<=`, not `<`: ADR-0040 decision 7 says the warning fires **at 30
+    // remaining**, and a strict `<` made a pool of exactly 30 silent — the
+    // one value the constant is named for (#27 step-7 finding A-4).
+    if (pool.length <= LOW_ANSWER_POOL_WARNING) {
+      // Once per RUN, not per date: this is a log line for a human reading
+      // Vercel logs, and one per uncovered date would be up to 30 copies of
+      // the same sentence.
+      console.error(
+        JSON.stringify({
+          event: "termo-answer-pool-low",
+          remaining: pool.length,
+          total: TERMO_ANSWERS.length,
+        }),
+      );
+    }
+
+    // `depth` is already 1..30-clamped by remoteConfigSchema (ADR-0025) —
+    // loop bounds never come from unclamped input.
+    for (let offset = 0; offset < depth; offset += 1) {
+      const target = addDays(today, offset);
+      if (existing.has(target)) {
+        continue;
+      }
+      if (pool.length === 0) {
+        failures.push({ date: target, reason: ANSWER_LIST_EXHAUSTED });
+        continue;
+      }
+      const { index, draw } = drawUniformIndex(pool.length);
+      const answer = pool[index];
+      if (answer === undefined) {
+        // Unreachable: `index` is in [0, pool.length). The guard exists
+        // because noUncheckedIndexedAccess is on (tsconfig.base.json) and a
+        // non-null assertion would be a worse way to say the same thing.
+        throw new RangeError(`answer pool index ${String(index)} is empty`);
+      }
+      // The frozen TERMO_ANSWERS element is parsed DIRECTLY, never a rebuilt
+      // object: that is what makes a future `TermoAnswer` field addition fail
+      // closed here instead of being silently dropped (ADR-0024).
+      const content = termoDailyContentSchema.safeParse(answer);
+      if (!content.success) {
+        // Deterministic shape drift — no other answer can fix it, and there
+        // is no retry loop to break out of. Fail closed for this date; every
+        // other date fails identically, the buffer drains and the alert
+        // fires. No answer is spent: nothing was written.
+        failures.push({
+          date: target,
+          reason: `content schema rejected: ${content.error.message}`,
+        });
+        continue;
+      }
+      const inserted = await insertDailyPuzzle(db, {
+        game: "termo",
+        date: target,
+        // Provenance only. This value REPRODUCES NOTHING: the pick is a draw
+        // over a run-scoped pool, so replaying it against a different pool
+        // yields a different word (ADR-0040 decision 3).
+        seed: draw,
+        content: content.data,
+      });
+      if (inserted) {
+        generated += 1;
+        // Spent only on a real write. A lost ON CONFLICT race means another
+        // writer covered the date with ITS answer, so ours was never used and
+        // stays eligible.
+        pool.splice(index, 1);
+      }
+    }
+
+    return { generated, depth: await bufferDepth(db, "termo"), failures };
+  } catch (thrown) {
+    // The trailing `bufferDepth` read is inside the try on purpose: it can
+    // throw AFTER a full week was written.
     throw new TopUpAbortedError({ generated, failures }, thrown);
   }
 }

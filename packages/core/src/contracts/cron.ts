@@ -35,16 +35,19 @@ export type CronPublishGameResult = z.infer<typeof cronPublishGameResultSchema>;
  * its top-up. An array of results, or a `gameSchema`-keyed record, would
  * accept anything and silently lose that (plan 018 S15).
  *
- * Keyed binairo → nonogram → sudoku: the cron's COST-ASCENDING run order
- * (plan 020 P7, and `apps/api/app/cron/publish/route.ts` states the rule).
- * It happens to read alphabetically today, and that coincidence ENDS at
- * termo: a curated-word-list pick (ADR-0015) is not a generate-and-validate
- * loop at all, so cost-ascending puts termo first while the alphabet puts it
- * last. Cost-ascending is the rule that wins; #27 must not read the current
- * order as alphabetical.
+ * Keyed termo → binairo → nonogram → sudoku: the cron's COST-ASCENDING run
+ * order (plan 020 P7, plan 022 §10.3, and `apps/api/app/cron/publish/route.ts`
+ * states the rule). It NO LONGER reads alphabetically, and that is the point
+ * — a curated-word-list pick (ADR-0015, ADR-0040) is not a
+ * generate-and-validate loop at all, measured at 0.019 ms per cold week
+ * against binairo's ~7 ms, so cost-ascending puts termo first while the
+ * alphabet would put it last. `GAMES` is now fully covered, so the
+ * strictness this schema exists for is pinned against an unknown key rather
+ * than against a fifth game (T-CORE-S24 aims at `crossword`).
  */
 export const cronPublishResponseSchema = z.strictObject({
   games: z.strictObject({
+    termo: cronPublishGameResultSchema,
     binairo: cronPublishGameResultSchema,
     nonogram: cronPublishGameResultSchema,
     sudoku: cronPublishGameResultSchema,
@@ -61,11 +64,14 @@ export type CronPublishResponse = z.infer<typeof cronPublishResponseSchema>;
  * single `bufferDepth` knob is shared by every game. The poller reads
  * `shallow`, never the HTTP status.
  *
- * EXTENSION POINT: `depths` is strict and REJECTS a game it does not
- * list — #27 adds its key here in the same PR that wires its top-up.
+ * `depths` is strict and REJECTS a game it does not list. #27 added the
+ * fourth and last v1 key in the same PR that wired its top-up, in the
+ * cron's cost-ascending order rather than alphabetically, so the two
+ * `strictObject`s in this file read the same way.
  */
 export const bufferDepthResponseSchema = z.strictObject({
   depths: z.strictObject({
+    termo: z.number().int().min(0),
     binairo: z.number().int().min(0),
     nonogram: z.number().int().min(0),
     sudoku: z.number().int().min(0),

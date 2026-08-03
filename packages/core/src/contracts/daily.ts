@@ -40,6 +40,68 @@ import { z } from "zod";
 /** 'YYYY-MM-DD' — an America/Sao_Paulo calendar day (CONTEXT.md "Daily"). */
 export const isoDateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+/**
+ * A calendar-VALID 'YYYY-MM-DD'. `isoDateString` checks shape only, which
+ * is right for server-derived values but not for a client-supplied one:
+ * "2026-02-30" passes the regex, reaches `eq(dailyPuzzles.date, date)`
+ * against a Postgres `date` column, and raises 22008 — a 500 from a
+ * two-character body edit. Round-tripping through UTC is the check: JS
+ * rolls an impossible day over ("2026-02-30" ⇒ 2026-03-02), so a value
+ * that survives the round trip is a real day on the calendar.
+ *
+ * THE ROUND TRIP ALONE IS NOT ENOUGH, and the exception is year 0. JS has
+ * one; the proleptic Gregorian calendar Postgres implements does not — 1 BC
+ * is followed by 1 AD — so `"0000-01-01"` survives the round trip verbatim
+ * and `'0000-01-01'::date` still raises 22008, the very failure the
+ * paragraph above says this guard exists to prevent. `POST /completions`
+ * reaches the DB with the body's date BEFORE any range check, because
+ * ADR-0026's idempotent short-circuit runs ahead of `ACCEPTED_DAYS_BACK`
+ * (`apps/api/app/completions/route.ts`) — so year 0 was an uncaught throw,
+ * i.e. a 500, on the repo's only authenticated write (step-6 round-4
+ * finding `calendar-date-year-zero-500s-the-completions-route`). The floor
+ * belongs HERE rather than in the route: the short-circuit's position is the
+ * ADR's design and must not move.
+ *
+ * No upper bound is needed — the four-digit regex caps the value at 9999 and
+ * Postgres accepts `9999-12-31` — and `0001-01-01` is the first value the
+ * floor lets through, which is also Postgres's own first AD day.
+ *
+ * `"0000-00-00"` was already rejected, but for the MONTH, not the year: it
+ * is an Invalid Date. That near-miss is why the gap stayed invisible, so the
+ * test list pins both forms side by side.
+ *
+ * IT LIVES HERE, BESIDE `isoDateString`, AND MOVING IT BACK IS A RUNTIME
+ * FAILURE — not a filing preference (plan 022 §8.0). It sat in
+ * `./completion.ts` until #27, where `./termo-guess.ts` needs it for the
+ * guess request AND `./completion.ts` needs `./termo-guess.ts`'s
+ * `termoGuessWordSchema` for the termo completion member. Those two edges
+ * are a two-module ESM cycle: import declarations hoist while `const`
+ * bindings stay in TDZ until their module body runs, so whichever module the
+ * loader enters first evaluates a module-scope `z.strictObject(...)` naming a
+ * binding the other has not initialised yet. Reproduced with the installed
+ * zod under real ESM: every entry point — each module AND the package barrel,
+ * i.e. every `@miolos/core` consumer — threw `ReferenceError: Cannot access
+ * 'calendarDateString' before initialization`.
+ *
+ * `pnpm test` DOES NOT CATCH IT. Under vitest's SSR transform both module
+ * bodies complete, the circular binding simply arrives as `undefined`, and
+ * `z.strictObject({ date: undefined })` is accepted at CONSTRUCTION time —
+ * the failure moves to the first `.parse()`. The check that binds is a real
+ * ESM import in a `tsx` process (plan 022 §26 probe P-b).
+ *
+ * This module imports nothing but `zod`, so the fix is a DAG by construction:
+ * `completion.ts → termo-guess.ts → daily.ts` and `completion.ts → daily.ts`.
+ * Nothing here may import from `./completion.ts` or `./termo-guess.ts`.
+ */
+export const calendarDateString = isoDateString.refine((value) => {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.getUTCFullYear() >= 1 &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}, "not a calendar date");
+
 /** Exported for `./daily-content.ts`; not part of the package's surface. */
 export const binairoCellSchema = z.union([
   z.literal(0),
@@ -181,7 +243,31 @@ export const dailyNonogramResponseSchema = z
 export type DailyNonogramResponse = z.infer<typeof dailyNonogramResponseSchema>;
 
 /**
- * The extension point the last M2 game joins (#27).
+ * The public daily-termo projection: TWO keys, and that is the whole
+ * contract. The three grid games ship the inputs a player needs; a Termo
+ * player needs nothing but the date, because the board starts empty and
+ * every guess is judged server-side (ADR-0038). So this schema's job is
+ * entirely negative — `z.strictObject` with exactly `game` and `date` makes
+ * "the answer word, in any field" (the strip table, ./daily-content.ts) a
+ * PARSE FAILURE at the wall and again at the HTTP boundary, rather than a
+ * rule kept by review.
+ *
+ * It carries no content and is still a full union member: that is the only
+ * thing that widens `ProjectedGame` below, and without it
+ * `getTodayDaily(db, "termo")` cannot compile and `/daily/termo` cannot
+ * exist without reaching around the wall.
+ */
+export const dailyTermoResponseSchema = z.strictObject({
+  game: z.literal("termo"),
+  date: isoDateString,
+});
+
+export type DailyTermoResponse = z.infer<typeof dailyTermoResponseSchema>;
+
+/**
+ * All four M2 games. The extension point closed at #27 — every member of
+ * `Game` now has a projection, so this union is total and the next game to
+ * join it is one that does not exist yet.
  *
  * A refined `strictObject` is a legal option here and `.refine()` preserves
  * `.shape` — both measured against the installed zod 4.4.3, and both FALSE
@@ -192,17 +278,22 @@ export const dailyPuzzleResponseSchema = z.discriminatedUnion("game", [
   dailyBinairoResponseSchema,
   dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
+  dailyTermoResponseSchema,
 ]);
 
 export type DailyPuzzleResponse = z.infer<typeof dailyPuzzleResponseSchema>;
 
 /**
- * The games `stripDailyContent` can actually project. NOT `Game`: termo
- * still throws `DailyProjectionUnsupportedError`, so a reader typed over
- * `Game` would type `getTodayDaily(db, "termo")` as `Promise<undefined>`
- * — `Extract<DailyPuzzleResponse, { game: "termo" }>` is `never` — while
- * it 500s at runtime the moment a termo row exists. #27 widens this in the
- * same PR that adds its projection, which is the same fail-closed
- * extension property the cron contracts have.
+ * The games `stripDailyContent` can actually project. Since #27 that is
+ * every member of `Game`, so this alias and `Game` are momentarily the same
+ * set — and it is RETAINED, deliberately, as the wall's bound.
+ *
+ * It is the bound on `getTodayDaily` and `getPublishedDaily`
+ * (packages/db/src/published.ts), and what it buys is that adding a fifth
+ * game to `Game` does NOT silently make those two readers callable for it:
+ * `Extract<DailyPuzzleResponse, { game: G }>` would be `never`, so the call
+ * would not compile until the projection lands. Collapsing it to `Game`
+ * would trade a compile error for a runtime one, which is the opposite of
+ * the property it was introduced for.
  */
 export type ProjectedGame = DailyPuzzleResponse["game"];

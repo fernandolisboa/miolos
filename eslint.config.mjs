@@ -296,12 +296,22 @@ export default tseslint.config(
               // `@miolos/db` wall above for exactly the files that hold the
               // credential. apps/web/test/** is inside this glob and imports
               // none of these names.
+              // `termoDailyContentSchema` joined at #27. The list is not
+              // maintained by hand for long: `T-LINT-S7` derives the expected
+              // set from `daily-content.ts`'s own `export const|class|function`
+              // identifiers and asserts SET EQUALITY, so a schema added there
+              // and forgotten here is a red test rather than a silent hole —
+              // and a name left here after the module stops exporting it is
+              // red too, because a ban that covers nothing reads as coverage.
+              // `contracts/termo-guess.ts`'s exports are deliberately NOT here:
+              // they are client-safe by design and apps/web imports them.
               importNames: [
                 "binairoDailyContentSchema",
                 "DailyProjectionUnsupportedError",
                 "nonogramDailyContentSchema",
                 "stripDailyContent",
                 "sudokuDailyContentSchema",
+                "termoDailyContentSchema",
               ],
               message:
                 "these are the SERVER-ONLY daily-content schemas (packages/core/src/contracts/daily-content.ts). apps/web receives the wall's already-stripped projection and must never name the content shape: one value import re-ships the withheld object's shape in every route's client chunk (commit d5bb543, ADR-0024/ADR-0033).",

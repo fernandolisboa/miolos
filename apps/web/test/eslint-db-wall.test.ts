@@ -330,6 +330,75 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     expect(barrel).toMatch(/from\s+["']\.\/contracts\/daily-content["']/);
   });
 
+  it("T-LINT-S8: the wall fires from apps/web/src/termo/**, and a clean Termo file reports nothing", async () => {
+    // #27 adds a whole new source directory to `apps/web/src`, and every glob
+    // in the wall is written against `apps/web/src/**` rather than against an
+    // enumerated list of game directories. That is a claim about the globs,
+    // not about the files, so it is asserted from the new directory itself:
+    // a `src/termo` file that reached `@miolos/db/publishing` or named a
+    // server-only content schema would ship the credential or the answer
+    // shape into the browser chunk of `/termo` (ADR-0024, ADR-0040).
+    const TERMO_PATH = "apps/web/src/termo/eslint-probe.ts";
+
+    const bare = await lintProbe(
+      TERMO_PATH,
+      [
+        'import { getPublishedDailyWithSolution } from "@miolos/db/publishing";',
+        "",
+        "export const read = getPublishedDailyWithSolution;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(bare)).toContain("no-restricted-imports");
+
+    const contentSchema = await lintProbe(
+      TERMO_PATH,
+      [
+        'import { termoDailyContentSchema } from "@miolos/core";',
+        "",
+        "export const shape = termoDailyContentSchema;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(contentSchema)).toContain("no-restricted-imports");
+
+    const relative = await lintProbe(
+      TERMO_PATH,
+      [
+        'import { dailyPuzzles } from "../../../../packages/db/src/schema";',
+        "",
+        "export const table = dailyPuzzles;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(relative)).toContain("no-restricted-imports");
+
+    const dynamic = await lintProbe(
+      TERMO_PATH,
+      [
+        "export const load = () =>",
+        '  import("../../../../packages/core/src/contracts/daily-content");',
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(dynamic)).toContain("no-restricted-syntax");
+
+    // Anti-vacuity, and the half that keeps the wall from being a wall
+    // against the game itself: the client-safe surface a Termo screen
+    // actually imports reports ZERO wall hits.
+    const clean = await lintProbe(
+      TERMO_PATH,
+      [
+        'import { isoDateString } from "@miolos/core";',
+        'import { MAX_GUESSES } from "@miolos/games/termo";',
+        "",
+        "export const shape = { isoDateString, MAX_GUESSES };",
+        "",
+      ].join("\n"),
+    );
+    expect(wallHits(clean)).toEqual([]);
+  });
+
   it("T-LINT-3c: a relative path into packages/db/src is restricted", async () => {
     // Step 6 finding web-db-wall-has-no-relative-path-ban: the bare-specifier
     // groups match none of this, so `completions` and `hint_grants` were one

@@ -17,7 +17,12 @@ import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { startCompletionSync } from "./sync";
-import type { ConclusionCopy, ConclusionPicture } from "./types";
+import type {
+  ConclusionAnswer,
+  ConclusionCopy,
+  ConclusionOutcome,
+  ConclusionPicture,
+} from "./types";
 import { useRecordSnapshot } from "./use-record-snapshot";
 
 /** The four dailies, in the order Hoje lists them. */
@@ -63,6 +68,15 @@ export interface ConclusionResult {
  * data, optional, and supplied only by a client component that owns the local
  * play record. A game with no payoff passes nothing and renders exactly what
  * it rendered before the prop existed.
+ *
+ * `outcome` is the second and `answer` the third, on the same rule (#27,
+ * ADR-0043). TWO members for one game is one more than ADR-0034 consequence
+ * (c) budgets, and the deviation is stated rather than smuggled: the two are
+ * orthogonal — `outcome` serves the win stamp and the loss stamp both and is
+ * what a game with TWO terminal states owes, while `answer` is the day's word
+ * and renders on both outcomes. Collapsing them would put a nullable word
+ * inside an outcome object and make the win branch carry a field it does not
+ * gate on. Three games pass neither and are byte-identical.
  */
 export function ConclusionView({
   game,
@@ -70,12 +84,16 @@ export function ConclusionView({
   copy,
   result,
   picture,
+  outcome,
+  answer,
 }: {
   readonly game: Game;
   readonly date: string;
   readonly copy: ConclusionCopy;
   readonly result?: ConclusionResult;
   readonly picture?: ConclusionPicture;
+  readonly outcome?: ConclusionOutcome;
+  readonly answer?: ConclusionAnswer;
 }) {
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
@@ -133,7 +151,20 @@ export function ConclusionView({
     );
   }
 
-  if (stamp === undefined) {
+  // THE BRANCH ORDER IS LOAD-BEARING (ADR-0043 decision 2): `!hydrated →
+  // skeleton`, `outcome?.state === "lost" → lost`, `stamp === undefined →
+  // empty`, otherwise `result`. Placed AFTER the stamp check, a lost Termo —
+  // which IS a locally-concluded record — would fall into `result` and paint
+  // a "Concluído" stamp over a loss. Checking it here also decouples the loss
+  // from `ConclusionResult`, from `record.concluded` and from `elapsedMs`
+  // entirely.
+  //
+  // AND THE GATE IS `outcome?.state === "lost"`, NEVER `outcome !==
+  // undefined`: a won Termo passes the prop too, so gating on presence would
+  // render every Termo win as a loss.
+  const lost = outcome?.state === "lost";
+
+  if (!lost && stamp === undefined) {
     return (
       <main
         className={`${styles.page} ${styles.pageEmpty}`}
@@ -165,8 +196,6 @@ export function ConclusionView({
     );
   }
 
-  const elapsed = formatElapsed(stamp.elapsedMs);
-
   // The game being celebrated is proved done by the stamp itself, which is
   // exactly what the record may not say yet: on the in-place swap the record
   // still in storage is the last PLAYING one (plan 017 D26), and where
@@ -175,9 +204,37 @@ export function ConclusionView({
   // the CTA straight back into the grid the player just closed. Monotone
   // safety is unaffected — this can only mark a game done, and on live proof
   // (ADR-0031).
+  //
+  // OUTCOME-AWARE since #27, and both simplifications break (plan 022 §15.3).
+  // An unconditional `{status: "completed", elapsedMs: stamp.elapsedMs}` puts
+  // a duration next to "jogado" on a loss — a time on a game nobody won, the
+  // lie `day-state.ts` already refuses for a part-played board. Dropping the
+  // override on the loss branch makes this game read `pending`, and termo is
+  // FIRST in `DAY_GAMES`, so the conclusion of the game just spent would
+  // offer it as the default next daily. `outcome` is the same one prop that
+  // drives the stamp, so nothing here re-derives a verdict.
+  //
+  // THE PRESENCE OF `outcome` IS ALSO WHAT SUPPRESSES THE DURATION ON A WIN,
+  // and that is game-blind rather than a termo branch: a game supplies this
+  // prop precisely because the shared label/TIME/hints triple is not an
+  // honest stamp for it, so its elapsed time is not the day's result either.
+  // Without this, /termo's own conclusion would print `em 03:08` in the chip
+  // that `entryFor` — and therefore the hub, and every other game's
+  // conclusion — renders as `feito` (ADR-0045 decision 4, plan 022 §15.3).
+  // A game that passes no `outcome` renders exactly what it rendered before
+  // this prop existed.
   const dayEntry = (dayGame: Game): DayEntry =>
     dayGame === game
-      ? { concluded: true, elapsedMs: stamp.elapsedMs }
+      ? outcome === undefined
+        ? // `stamp` is defined on every path that reaches here with no
+          // `outcome` — the guard above returned otherwise — and the optional
+          // chain is TypeScript's acknowledgement of that rather than a
+          // second possibility: it cannot narrow through `lost`, and an
+          // assertion here would be exactly the `as` this repo refuses.
+          { status: "completed", elapsedMs: stamp?.elapsedMs }
+        : outcome.state === "lost"
+          ? { status: "played", elapsedMs: undefined }
+          : { status: "completed", elapsedMs: undefined }
       : dayState[dayGame];
   const next = nextPendingDaily(dayEntry);
 
@@ -185,7 +242,13 @@ export function ConclusionView({
     <main
       className={`${styles.page} ${styles.pageResult}`}
       style={accent}
-      data-conclusion-state="result"
+      // The BOARD verb, deliberately, and the day verb is not used here: this
+      // attribute's existing values are `skeleton`, `empty` and `result` —
+      // none of them a CONTEXT.md day verb either — and it mirrors
+      // `ConclusionOutcome.state`, which mirrors `TermoBoardStatus`.
+      // CONTEXT.md's *Played / Jogado* is the DAY's verb and lives where it
+      // belongs: `DayEntry.status`, the `jogado` chip, and the stamp's label.
+      data-conclusion-state={lost ? "lost" : "result"}
     >
       <ConclusionTopBar date={date} kicker={copy.kicker} />
 
@@ -196,30 +259,58 @@ export function ConclusionView({
           <h1 className={styles.title}>{copy.title}</h1>
         </div>
         <div className={styles.stampRow}>
-          {/* One composite announcement rather than three fragments: ARIA
-              does not name a generic element, and "Concluído 06:47 sem
-              dicas" read as three unrelated strings is not the sentence the
-              copy module already composes. */}
-          <div
-            className={styles.stamp}
-            role="img"
-            aria-label={messages.conclusion.stampAria(
-              copy.title,
-              elapsed,
-              stamp.hintsUsed,
-            )}
-          >
-            <span aria-hidden className={styles.stampLabel}>
-              {messages.conclusion.stampLabel}
-            </span>
-            <span aria-hidden className={styles.stampTime}>
-              {elapsed}
-            </span>
-            <span aria-hidden className={styles.stampHints}>
-              {messages.conclusion.hints(stamp.hintsUsed)}
-            </span>
-          </div>
+          {outcome === undefined ? (
+            // The `null` arm is unreachable: the guard above returns `empty`
+            // when there is no outcome and no stamp. It is a branch rather
+            // than a non-null assertion for the same reason as `dayEntry`.
+            stamp === undefined ? null : (
+              <ShippedStamp title={copy.title} stamp={stamp} />
+            )
+          ) : (
+            <OutcomeStamp outcome={outcome} />
+          )}
         </div>
+        {outcome !== undefined && (
+          /* ADR-0043 decision 10, and it is an obligation rather than a
+             nicety: this component shipped with NO live region and no focus
+             management at all, so on the in-place swap the play view unmounts,
+             focus falls to <body>, and a blind player gets nothing at the
+             product's payoff moment. The gap is inherited from three shipped
+             games; #27 closes it because ADR-0042 decision 10 already promises
+             that "the conclusion owns the terminal sentence".
+
+             The string is ALREADY COMPOSED (types.ts's plain-data rule —
+             nothing is composed here), games that pass no `outcome` render no
+             region and are byte-identical, and focus still never moves
+             programmatically: a role="status" announces without stealing the
+             caret, which is the mechanism PRODUCT.md's "nothing nags" points
+             at. That a live region MOUNTING with content is spoken is an AT
+             behaviour jsdom cannot prove; it rides the one real
+             VoiceOver/NVDA pass ADR-0042 consequence (e) already owes. */
+          <p role="status" className={styles.announcer}>
+            {outcome.aria}
+          </p>
+        )}
+        {answer !== undefined && (
+          /* The day's word (#27 AC 2, ADR-0043 decision 6), in `.pictureRow`'s
+             slot and on BOTH outcomes. UNANIMATED, deliberately: a third
+             settle would make the card busy on a win and would be the ONLY
+             motion on the screen on a loss, which reads as celebrating one.
+
+             `.dayWord` MAY NEVER BECOME A HEADING and may never take
+             `role="heading"`. `.dayWordLead` is an 11px tracked-uppercase line
+             sitting immediately above it — textbook `kicker-above-heading`
+             shape — and the two lines are legal ONLY because both that rule
+             and `hero-eyebrow-chip` anchor exclusively on `h1`–`h4` and
+             `[role="heading"]` (checks.mjs:2492). Promoting it to an `<h2>` —
+             the obvious "semantic improvement" — lights the rule up at both
+             viewports on the one card no URL-mode scan reaches. */
+          <div className={styles.dayWordRow}>
+            <p className={styles.dayWordResult}>{answer.result}</p>
+            <p className={styles.dayWordLead}>{answer.lead}</p>
+            <p className={styles.dayWord}>{answer.canonical}</p>
+          </div>
+        )}
         {picture !== undefined && (
           /* The payoff, inside the card the stamp already lives in — never a
              modal, never a full-screen takeover, never confetti (PRODUCT.md:33,
@@ -295,6 +386,92 @@ export function ConclusionView({
 }
 
 /**
+ * The stamp three games have shipped since #18: a label, a duration and a
+ * hints line, announced as ONE composite sentence rather than three
+ * fragments — ARIA does not name a generic element, and "Concluído 06:47 sem
+ * dicas" read as three unrelated strings is not the sentence the copy module
+ * already composes.
+ */
+function ShippedStamp({
+  title,
+  stamp,
+}: {
+  readonly title: string;
+  readonly stamp: ConclusionResult;
+}) {
+  const elapsed = formatElapsed(stamp.elapsedMs);
+
+  return (
+    <div
+      className={styles.stamp}
+      role="img"
+      aria-label={messages.conclusion.stampAria(
+        title,
+        elapsed,
+        stamp.hintsUsed,
+      )}
+    >
+      <span aria-hidden className={styles.stampLabel}>
+        {messages.conclusion.stampLabel}
+      </span>
+      <span aria-hidden className={styles.stampTime}>
+        {elapsed}
+      </span>
+      <span aria-hidden className={styles.stampHints}>
+        {messages.conclusion.hints(stamp.hintsUsed)}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The stamp a game with TWO terminal states supplies for itself (#27,
+ * ADR-0043 decisions 3 and 5). TWO slots, not three: `label` and `detail`.
+ *
+ * On a WIN the big slot is the guess count where a grid game shows a time,
+ * and there is no hints line, because neither is honest for Termo — the clock
+ * is never rendered and "sem dicas" would present as a virtue something that
+ * was never possible (ADR-0045 decisions 3 and 4).
+ *
+ * On a LOSS the win's stamp is stepped down three ways at once and the third
+ * is the loudest: a 1.5px ring instead of 3px, `--ink-2` instead of the
+ * accent (5.3003:1 on `--paper-card`), and NO settle animation. There is no
+ * consolation flourish, no second stamp design, no mascot and no emoji — the
+ * loss equivalent of the celebration is the celebration's absence, and saying
+ * so here is what stops the next contributor from inventing one. No
+ * `.stampTime`, no hints line and no `elapsedMs` reach this component at all:
+ * a time on a game nobody won is the same lie `day-state.ts` already refuses
+ * for a part-played board.
+ *
+ * `.stampStill` is DERIVED from `state` rather than read off a second field.
+ * A `settle: boolean` on the prop was speculative generality — every caller
+ * and every test paired it exactly with `state`, so its two other
+ * combinations were unreachable and untestable (finding B-11). One fact, one
+ * field.
+ */
+function OutcomeStamp({ outcome }: { readonly outcome: ConclusionOutcome }) {
+  const lost = outcome.state === "lost";
+  const chrome = [
+    styles.stamp,
+    lost ? styles.stampLost : "",
+    lost ? styles.stampStill : "",
+  ]
+    .filter((name) => name !== "")
+    .join(" ");
+
+  return (
+    <div className={chrome} role="img" aria-label={outcome.aria}>
+      <span aria-hidden className={styles.stampLabel}>
+        {outcome.label}
+      </span>
+      <span aria-hidden className={styles.stampGuesses}>
+        {outcome.detail}
+      </span>
+    </div>
+  );
+}
+
+/**
  * The bitmap as ONE `<path>`'s `d`: a unit square per filled cell, in
  * row-major order, inside a `size × size` viewBox.
  *
@@ -320,21 +497,34 @@ function picturePath(picture: ConclusionPicture): string {
  * 3's "the conclusion chains to the next pending daily" (plan 018 S21).
  *
  * Written as a loop rather than a `find` because the route has to come out
- * NARROWED: `playRoutes` is partial until #27 lands, and Next's typed
- * `Link href` refuses a possibly-undefined value. A game with no play route
- * is skipped rather than offered — chaining to a route that does not exist
- * would be a 404 at the end of the one celebration screen the product has.
+ * NARROWED: `playRoutes` is typed `Partial<Record<Game, Route>>`, and Next's
+ * typed `Link href` refuses a possibly-undefined value. A game with no play
+ * route is skipped rather than offered — chaining to a route that does not
+ * exist would be a 404 at the end of the one celebration screen the product
+ * has.
+ *
+ * ALL FOUR GAMES ARE ROUTED SINCE #27, so the type is wider than the value
+ * and this narrowing is now dead weight rather than a live guard — #75
+ * totalises the map to `Record<Game, Route>` and deletes it, and `routes.ts`
+ * carries the same note at the declaration. Do not "simplify" it away before
+ * that ticket: the map is still declared partial, so the loop is what the
+ * type system demands today.
  *
  * Understating is safe here for the same reason it is on the hub: the worst
  * a stale `pending` does is offer a game the player already solved on another
  * device, and `/<jogo>` restores straight into its conclusion (ADR-0031).
+ *
+ * The chain is on `"pending"` ALONE, never on "not completed" (#27, ADR-0044
+ * decision 5). A lost Termo is *played*: its six guesses are spent and the
+ * CTA's own contract is "the first daily this device can still play today",
+ * so re-offering it would send the player to a board with no turns left.
  */
 function nextPendingDaily(
   entryOf: (game: Game) => DayEntry,
 ): { readonly game: Game; readonly route: Route } | undefined {
   for (const candidate of DAY_GAMES) {
     const route = playRoutes[candidate];
-    if (route !== undefined && !entryOf(candidate).concluded) {
+    if (route !== undefined && entryOf(candidate).status === "pending") {
       return { game: candidate, route };
     }
   }
@@ -381,15 +571,36 @@ function DayChip({
   readonly game: (typeof DAY_GAMES)[number];
   readonly entry: DayEntry;
 }) {
-  // Narrowed through the value rather than through `concluded`, so no
-  // non-null assertion is needed and a `{concluded: true}` entry that
-  // somehow lost its duration degrades to `falta` instead of rendering
-  // "undefined" (`DayEntry.elapsedMs` is optional by type, §11.2).
-  const elapsedMs = entry.concluded ? entry.elapsedMs : undefined;
-  const done = elapsedMs !== undefined;
+  // THE GUARD IS SPLIT, and the split is what #27 needed (plan 022 §15.3).
+  // The shipped form was `const elapsedMs = entry.concluded ? entry.elapsedMs
+  // : undefined; const done = elapsedMs !== undefined;` — one guard doing two
+  // jobs, so a COMPLETED entry with no duration fell straight through to
+  // `falta`. A won Termo is exactly that entry: it publishes no duration
+  // (ADR-0045 decision 4), so the single guard would have printed `falta`
+  // next to a game the player had just won.
+  //
+  // `done` is now the STATUS, and the duration's presence only chooses which
+  // done string to print. Narrowing through the value rather than through the
+  // status is still what keeps a non-null assertion out and stops an entry
+  // that somehow lost its duration from rendering "undefined".
+  const done = entry.status === "completed";
+  const value =
+    done && entry.elapsedMs !== undefined
+      ? formatElapsed(entry.elapsedMs)
+      : done
+        ? messages.conclusion.dayCard.done
+        : entry.status === "played"
+          ? messages.conclusion.dayCard.played
+          : messages.conclusion.dayCard.missing;
   return (
     <div
-      className={`${styles.chip} ${done ? styles.chipDone : styles.chipMissing}`}
+      className={`${styles.chip} ${
+        done
+          ? styles.chipDone
+          : entry.status === "played"
+            ? styles.chipPlayed
+            : styles.chipMissing
+      }`}
     >
       {game === "nonogram" ? (
         <>
@@ -406,9 +617,7 @@ function DayChip({
           {messages.conclusion.dayCard.games[game]}
         </span>
       )}
-      <span className={styles.chipValue}>
-        {done ? formatElapsed(elapsedMs) : messages.conclusion.dayCard.missing}
-      </span>
+      <span className={styles.chipValue}>{value}</span>
     </div>
   );
 }

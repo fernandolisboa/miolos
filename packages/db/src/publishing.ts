@@ -15,6 +15,7 @@ export {
   bufferDepth,
   insertDailyPuzzle,
   listBufferedDates,
+  listUsedTermoAnswers,
   todaySaoPaulo,
 } from "./buffer";
 // Full-schema client (relational-query access to daily_puzzles) — the

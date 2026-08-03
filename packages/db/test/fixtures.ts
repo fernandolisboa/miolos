@@ -2,8 +2,8 @@
  * Test fixtures for the db suites. Each content fixture satisfies its
  * game's daily-content schema STRUCTURALLY (that is all the wall parses —
  * rule validity is the engine's concern, proven in packages/games); no
- * @miolos/games dependency here, and #23 and #25 keep it that way (plan
- * 018 §15, plan 020 §8, T-DB-S1/T-DB-S6).
+ * @miolos/games dependency here, and #23, #25 and #27 keep it that way
+ * (plan 018 §15, plan 020 §8, plan 022 §9.3, T-DB-S1/T-DB-S6/T-DB-S12).
  */
 
 export function binairoContentFixture(): Record<string, unknown> {
@@ -102,4 +102,21 @@ export function nonogramContentFixture(): Record<string, unknown> {
       solution,
     },
   };
+}
+
+/**
+ * Termo's is the odd one out and stays deliberately hand-written: the
+ * stored content is the ANSWER WORD, so a fixture derived from
+ * `TERMO_ANSWERS` would put a real curated answer in a test file and give
+ * this package the `@miolos/games` dependency the header above refuses.
+ * `pombo`/`pombo` is a five-letter unaccented word that is NOT in the
+ * curated 400, so nothing here can be mistaken for a published answer, and
+ * `canonical === normalized` is a legal shape for any unaccented word.
+ *
+ * The accented case — where the two fields genuinely differ — is proved
+ * against the real list in `packages/core`'s T-CORE-S17, which is where the
+ * engine is importable.
+ */
+export function termoContentFixture(): Record<string, unknown> {
+  return { canonical: "pombo", normalized: "pombo" };
 }

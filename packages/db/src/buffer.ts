@@ -45,6 +45,45 @@ export async function listBufferedDates(
 }
 
 /**
+ * Every termo answer any row has ever claimed, as normalized forms — the
+ * no-repeat rule's used-set (ADR-0040). THE FIRST top-up read-back of
+ * stored `content` in this package; every sibling above and below reads
+ * dates (`listBufferedDates`) or counts (`bufferDepth`). Do not
+ * "harmonise" it away.
+ *
+ * NO date filter and NO killed_at filter, deliberately, and for a stronger
+ * reason than `listBufferedDates`' (ADR-0024 D14): a killed date's answer
+ * may already have reached players, and a past date's certainly did. An
+ * answer is spent forever, not for a window.
+ *
+ * `normalized` and not `canonical`: it is `^[a-z]{5}$` by the word-list
+ * harness (packages/games/test/termo/word-list.test.ts), so the comparison
+ * is pure ASCII and cannot be defeated by a jsonb round-trip that composes
+ * or decomposes a diacritic differently.
+ *
+ * Bounded by the word list, forever: the exhaustion rule stops writing at
+ * 400 answers, so this scans at most ~400 rows of ~50-byte content and
+ * returns ~2.4 KB, because `->>` projects server-side. No index is owed on
+ * `daily_puzzles`, which has none beyond its composite PK. Revisit only if
+ * a second game ever needs a content read-back.
+ *
+ * `->>` yields NULL for a row whose content has no `normalized` key, so the
+ * filter below is a real branch rather than a formality: it is what a
+ * hand-written or pre-schema row would take.
+ */
+export async function listUsedTermoAnswers(db: Db): Promise<string[]> {
+  const rows = await db
+    .select({
+      answer: sql<string | null>`${dailyPuzzles.content} ->> 'normalized'`,
+    })
+    .from(dailyPuzzles)
+    .where(eq(dailyPuzzles.game, "termo"));
+  return rows
+    .map((row) => row.answer)
+    .filter((answer): answer is string => answer !== null);
+}
+
+/**
  * INSERT ... ON CONFLICT (game, date) DO NOTHING. `published_at` is
  * derived DB-side in the same INSERT — the SP midnight of `date` as an
  * instant, via Postgres tzdata (D8); no JS-constructed date ever appears

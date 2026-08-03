@@ -25,7 +25,12 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<Response> {
   const db = getDb();
   const config = await getRemoteConfig(db);
+  // Keyed in the cron's cost-ascending order (termo first) so this object
+  // and `/cron/publish`'s read the same way. The order is cosmetic here —
+  // these are four independent counts — and that is exactly why it should
+  // match rather than drift.
   const depths = {
+    termo: await bufferDepth(db, "termo"),
     binairo: await bufferDepth(db, "binairo"),
     nonogram: await bufferDepth(db, "nonogram"),
     sudoku: await bufferDepth(db, "sudoku"),

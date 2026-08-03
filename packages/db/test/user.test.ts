@@ -418,4 +418,124 @@ describe("the migration's constraints (ADR-0006 guard, plan 017 §11)", () => {
     expect(await ctx.db.select().from(completions)).toHaveLength(0);
     expect(await ctx.db.select().from(hintGrants)).toHaveLength(0);
   });
+
+  /**
+   * T-DB-S11 (plan 022 §19.4) — `completions_guesses_check`, the #27
+   * migration. The CHECK is an EQUALITY between two booleans, deliberately
+   * stronger than a permissive `is null or …`: it makes a termo row WITHOUT a
+   * count and a grid row WITH one both impossible. The ten cases below are
+   * the whole truth table that matters.
+   */
+  it("T-DB-S11: `guesses` is required for termo, forbidden for the grid games, and bounded 1..6", async () => {
+    const userId = await createUser();
+
+    async function insert(
+      game: string,
+      date: string,
+      guesses: number | null,
+    ): Promise<unknown> {
+      return thrownBy(
+        ctx.db.execute(
+          sql`insert into completions (user_id, game, date, outcome, elapsed_ms, guesses)
+              values (${userId}, ${game}, ${date}, 'won', 5, ${guesses})`,
+        ),
+      );
+    }
+
+    // A termo row without a count: the write-once row (ADR-0026 decision 1)
+    // could never be backfilled, so the column is not allowed to be optional
+    // for the one game that owes it.
+    expect(messages(await insert("termo", "2026-08-01", null))).toContain(
+      "completions_guesses_check",
+    );
+    // A grid row WITH one: the count has no meaning there and a future reader
+    // of the distribution must not have to ask which rows are honest.
+    expect(messages(await insert("binairo", "2026-08-02", 3))).toContain(
+      "completions_guesses_check",
+    );
+    // The range, at both ends. 0 is not a game (a board with no guess is not
+    // a completion) and 7 is past MAX_GUESSES.
+    for (const guesses of [0, 7, -1]) {
+      expect(
+        messages(await insert("termo", "2026-08-03", guesses)),
+        `guesses = ${String(guesses)} must be rejected`,
+      ).toContain("completions_guesses_check");
+    }
+    expect(await ctx.db.select().from(completions)).toHaveLength(0);
+
+    // 1..6 accept, one row each — and a grid row with NULL accepts, which is
+    // the pre-existing shape every row on `main` already has.
+    for (const guesses of [1, 2, 3, 4, 5, 6]) {
+      expect(
+        await insert("termo", `2026-07-0${String(guesses)}`, guesses),
+        `guesses = ${String(guesses)} must be accepted`,
+      ).toBeUndefined();
+    }
+    expect(await insert("binairo", "2026-07-20", null)).toBeUndefined();
+    expect(await ctx.db.select().from(completions)).toHaveLength(7);
+  });
+
+  it("T-DB-S11: `recordCompletion` writes the count for termo and NULL for a grid game", async () => {
+    const userId = await createUser();
+
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "termo",
+      date: "2026-08-01",
+      outcome: "lost",
+      elapsedMs: 61_000,
+      hintsUsed: 0,
+      guesses: 6,
+    });
+    // Omitted entirely for a grid game — drizzle emits the SQL keyword
+    // `default` for an un-supplied column, which is NULL here. That is also
+    // why this column's migration had to reach Neon BEFORE any deploy: the
+    // column appears in the INSERT list for all four games (ADR-0038 (h)).
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "binairo",
+      date: "2026-08-01",
+      outcome: "won",
+      elapsedMs: 61_000,
+      hintsUsed: 0,
+    });
+
+    const rows = await ctx.db
+      .select({ game: completions.game, guesses: completions.guesses })
+      .from(completions)
+      .orderBy(completions.game);
+    expect(rows).toEqual([
+      { game: "binairo", guesses: null },
+      { game: "termo", guesses: 6 },
+    ]);
+  });
+
+  it("T-DB-S11: `getCompletion` does NOT project `guesses` — the record is unchanged", async () => {
+    // WRITE-ONLY in #27, and the omission is load-bearing: widening
+    // `CompletionRecord` would make `completionResponseSchema.parse({
+    // ...record, recorded })` — a `z.strictObject` at the route — throw on
+    // EVERY completion in the app. The statistics ticket adds the projection
+    // when it needs it.
+    const userId = await createUser();
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "termo",
+      date: "2026-08-01",
+      outcome: "won",
+      elapsedMs: 61_000,
+      hintsUsed: 0,
+      guesses: 4,
+    });
+
+    const record = await getCompletion(ctx.db, userId, "termo", "2026-08-01");
+    expect(record).toBeDefined();
+    expect(Object.keys(record ?? {}).sort()).toEqual([
+      "date",
+      "elapsedMs",
+      "game",
+      "hintsUsed",
+      "onTime",
+      "outcome",
+    ]);
+  });
 });

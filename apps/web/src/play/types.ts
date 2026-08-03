@@ -91,6 +91,72 @@ export interface ConclusionCopy {
 }
 
 /**
+ * The stamp Termo renders in place of the shared label/time/hints triple
+ * (#27, ADR-0043). Plain data only, following `picture` exactly; supplied
+ * ONLY by a client component that owns the local play record. A game that
+ * passes nothing renders exactly what it rendered before this prop existed.
+ *
+ * `state` drives `data-conclusion-state`, so ONE prop serves both Termo
+ * outcomes: a win is still "result", a loss is "lost". Termo passes it on
+ * BOTH outcomes because neither of the shipped stamp's three slots is honest
+ * here — there is no hint to have gone without (ADR-0045 decision 1), and the
+ * elapsed time is dominated by the per-guess round trip (decision 4).
+ *
+ * THERE IS NO CONSOLATION FLOURISH on a loss: no second stamp design, no
+ * mascot and no emoji. The loss equivalent of the celebration is the
+ * celebration's absence — the settle animation simply does not run — and
+ * stating that here is what stops the next contributor from inventing one.
+ *
+ * IT IS DERIVED FROM `state`, NOT CARRIED BESIDE IT. A `settle: boolean`
+ * field lived here and every call site and every test paired `"lost"` with
+ * `false` and `"result"` with `true`; the other two combinations were
+ * unreachable and untested, and the TSDoc's motive for the field was an
+ * explicitly hypothetical future game (finding B-11). That is the same shape
+ * `messages.ts` rejects by name for `lostAria` — "a runtime branch on a
+ * compile-time constant whose false arm is unreachable and untestable". A
+ * game that genuinely wants a still `"result"` stamp adds the degree of
+ * freedom then, with a caller that exercises it.
+ *
+ * `state` is the only field the day-state reader consults, and it does so to
+ * decide whether the game being celebrated enters the day card as *completed*
+ * or as *played* (plan 022 §15.3). `label`, `detail` and `aria` are the
+ * stamp's own, rendered by the conclusion's fourth branch.
+ */
+export interface ConclusionOutcome {
+  readonly state: "result" | "lost";
+  /** "Concluído" | "Jogado" — composed by the caller from its own bundle. */
+  readonly label: string;
+  /** "4/6" | "X/6". */
+  readonly detail: string;
+  /** The whole composed accessible name (ADR-0018). */
+  readonly aria: string;
+}
+
+/**
+ * The day's word in its canonical accented spelling (#27 AC 2, ADR-0043
+ * decision 6). Three plain strings; nothing here is a function, and nothing
+ * here is composed in the component that renders it.
+ *
+ * Rendered on BOTH Termo outcomes. On a win it is not redundant: the player
+ * typed the word accent-free, so the accents are the one thing they have not
+ * seen.
+ *
+ * Supplied ONLY by a client component that owns the local play record, on
+ * `picture`'s rule exactly. A server segment must never compute it:
+ * `/termo/concluido` renders for players who have NOT finished, and a
+ * server-computed word would turn a bookmarkable page into the only spoiler
+ * channel this game has (ADR-0004, ADR-0034 decision 3, ADR-0043 decision 7).
+ */
+export interface ConclusionAnswer {
+  /** "Você acertou em 4 de 6 tentativas." | "As 6 tentativas acabaram." */
+  readonly result: string;
+  /** "A palavra de hoje era". */
+  readonly lead: string;
+  /** The accented spelling — "café". */
+  readonly canonical: string;
+}
+
+/**
  * The solved picture, for the one game whose payoff is an image (ADR-0034).
  * Plain data across the RSC boundary: a row-major bitmap, its side, and a
  * pre-composed accessible name. Never a function, never a node — the same
