@@ -512,16 +512,12 @@ describe("POST /termo/guess — the gate ladder", () => {
 });
 
 describe("POST /termo/guess — 422 invalid-guess", () => {
-  it("T-API-S38: a word outside the validation dictionary ⇒ 422, and it never reaches the engine", async () => {
+  it("T-API-S38: the NEWEST word outside the validation dictionary ⇒ 422 invalid-guess, and it never reaches the engine", async () => {
     const today = await todaySaoPaulo(ctx.db);
     await seedTermo(today);
     const { token } = await createSession();
 
-    for (const guesses of [
-      [NOT_A_WORD],
-      [DECOYS[0] ?? "", NOT_A_WORD],
-      [NOT_A_WORD, answer.normalized],
-    ]) {
+    for (const guesses of [[NOT_A_WORD], [DECOYS[0] ?? "", NOT_A_WORD]]) {
       const response = await POST(
         guessRequest({ token, body: guessBody(today, guesses) }),
       );
@@ -531,7 +527,39 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
     expect(await completionRows()).toHaveLength(0);
   });
 
-  it("T-API-S38: a row FOLLOWING a winning row ⇒ 422, and never the 500 `deriveBoardStatus` would throw", async () => {
+  it("T-API-S42: an EARLIER non-word is judged normally — the gate is the newest guess only", async () => {
+    // The soft-lock this exists to prevent (#27 step-7 finding A-1). The route
+    // is stateless, so the client re-posts every earlier guess every turn. If
+    // the gate ran over the whole list, ONE word removed from validation.txt
+    // after an independent `apps/web` deploy would 422 every subsequent turn
+    // of a board that already contains it — the player retypes forever, and
+    // the completion POST then 422s permanently on a terminal status. Only
+    // the word just typed can honestly be handed back.
+    //
+    // An earlier non-word cannot manufacture a win either: the win test is
+    // `guess === answer` and the answer is a dictionary member, so the two
+    // cases below stay `playing` and the third still closes as a real win.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    for (const [guesses, expected] of [
+      [[NOT_A_WORD, DECOYS[0] ?? ""], "playing"],
+      [[DECOYS[0] ?? "", NOT_A_WORD, DECOYS[1] ?? ""], "playing"],
+      [[NOT_A_WORD, answer.normalized], "won"],
+    ] as const) {
+      const response = await POST(
+        guessRequest({ token, body: guessBody(today, [...guesses]) }),
+      );
+      expect(response.status, guesses.join(",")).toBe(200);
+      const body = termoGuessResponseSchema.parse(await response.json());
+      expect(body.status).toBe(expected);
+      expect(body.tiles).toHaveLength(guesses.length);
+    }
+    expect(await completionRows()).toHaveLength(0);
+  });
+
+  it("T-API-S38: a row FOLLOWING a winning row ⇒ 422 `board-closed`, and never the 500 `deriveBoardStatus` would throw", async () => {
     // `deriveBoardStatus` throws a RangeError when a winning row is followed
     // by another (status.ts:31-36), and that case is reachable from a hostile
     // body — an uncaught RangeError in a route handler is a 500. The explicit
@@ -539,6 +567,12 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
     // rather than conservative: `evaluateGuess` writes "correct" only where
     // `g.charAt(i) === a.charAt(i)`, so all-five-correct ⟺ the guess EQUALS
     // the answer.
+    //
+    // The CODE is `board-closed`, not `invalid-guess` (#27 step-7 finding
+    // A-3). This is a client bug or tampering, never a player outcome, and
+    // the old shared code told a desynced board that a correct word was not
+    // in the dictionary. `POST /completions` already named the same fact
+    // separately (`guess-mismatch`).
     const today = await todaySaoPaulo(ctx.db);
     await seedTermo(today);
     const { token } = await createSession();
@@ -553,7 +587,7 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
         guessRequest({ token, body: guessBody(today, guesses) }),
       );
       expect(response.status, guesses.join(",")).toBe(422);
-      expect(await response.json()).toEqual({ error: "invalid-guess" });
+      expect(await response.json()).toEqual({ error: "board-closed" });
     }
     expect(await completionRows()).toHaveLength(0);
   });

@@ -575,6 +575,45 @@ describe("topUpTermoBuffer", () => {
     });
   });
 
+  it("T-API-S44: the low-pool warning fires AT 30 remaining, and is silent at 31", async () => {
+    // ADR-0040 decision 7 says the top-up logs `termo-answer-pool-low` **at
+    // 30 remaining**. The guard shipped as `pool.length < 30`, so the one
+    // value the constant is named for was the one value it stayed silent for
+    // (#27 step-7 finding A-4). Both sides are asserted, because a `<=` that
+    // fired at 31 too would be the opposite error.
+    //
+    // The dates are far in the past so the spent rows neither cover a target
+    // date nor count toward `bufferDepth`, exactly as T-API-S32 does it.
+    const spendAnswers = async (count: number): Promise<void> => {
+      await ctx.db.insert(dailyPuzzles).values(
+        TERMO_ANSWERS.slice(0, count).map((answer, index) => ({
+          game: "termo" as const,
+          date: addDays("2020-01-01", index),
+          seed: index,
+          content: {
+            canonical: answer.canonical,
+            normalized: answer.normalized,
+          },
+          publishedAt: sql`now() - interval '1 year'`,
+        })),
+      );
+    };
+
+    // 400 - 369 = 31 remaining: one above the line, and silent.
+    await spendAnswers(369);
+    await topUpTermoBuffer(ctx.db, 1);
+    expect(poolWarnings).toEqual([]);
+
+    // The run above spent one more answer, so the pool is now exactly 30.
+    await topUpTermoBuffer(ctx.db, 2);
+    expect(poolWarnings).toHaveLength(1);
+    expect(JSON.parse(poolWarnings[0] ?? "null")).toEqual({
+      event: "termo-answer-pool-low",
+      remaining: 30,
+      total: 400,
+    });
+  });
+
   it("T-API-S32: an already-covered date is skipped before the pool is consulted", async () => {
     await topUpTermoBuffer(ctx.db, 7);
     const today = await todaySaoPaulo(ctx.db);

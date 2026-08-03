@@ -118,13 +118,18 @@ async function rowsFor(game: string): Promise<DailyPuzzleRow[]> {
 // (plan 018 §15).
 //
 // Every `it` that triggers a top-up carries its OWN 30_000, and the
-// arithmetic is: a run now generates a full week for THREE games, and the
+// arithmetic is: a run now generates a full week for FOUR games, and the
 // sudoku week always contains one tier-5 Sunday board (121 ms mean /
 // 346 ms max locally, plan 018 §19.6). Nonogram adds ~34 ms once to build
 // all seven memoized pools plus well under 1 ms of generation per week
-// (0.0354 ms Mon 5x5 to 0.1902 ms Sun 15x15), so the third game moves the
-// total by a rounding error and the sudoku week still dominates — which is
-// why the constants below are unchanged rather than raised. Re-measured at
+// (0.0354 ms Mon 5x5 to 0.1902 ms Sun 15x15), and TERMO adds 0.0193 ms for
+// a cold week (`service.ts`'s `topUpTermoBuffer` header, measured) plus one
+// extra Neon round trip for `listUsedTermoAnswers` — so neither the third
+// nor the fourth game moves the total by more than a rounding error and the
+// sudoku week still dominates, which is why the constants below are
+// unchanged rather than raised. Measured on this branch with four games:
+// the heaviest `it` is 970 ms and its siblings 728/708 ms, i.e. ~3 % of the
+// ceiling locally and ~13 % at CI's 4x. Re-measured at
 // #25: run alone, three times, the heaviest `it` landed at 436, 620 and
 // 1 572 ms and the file at 9.6 s; run inside the full parallel `pnpm test`
 // the heaviest was 2 789 ms and the file 16.0 s. The spread is sudoku's
@@ -349,7 +354,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.termo.depth).toBe(7);
   }, 30_000);
 
-  it("T-API-S34: 500 when TERMO alone sits below the effective threshold", async () => {
+  it("T-API-S34a: 500 when TERMO alone sits below the effective threshold", async () => {
     // The fourth game inherits the same per-game gate. Termo's drain is the
     // one that can have a CONTENT cause — the word list running out — so a
     // healthy three must never mask it (ADR-0040 consequence (f)).
@@ -530,7 +535,7 @@ describe("GET /cron/publish top-up", () => {
     expect(await rowsFor("termo")).toHaveLength(7);
   }, 30_000);
 
-  it("T-API-S34: the TERMO top-up throwing never drains the other three", async () => {
+  it("T-API-S34a: the TERMO top-up throwing never drains the other three", async () => {
     // Termo runs FIRST in the cost-ascending order, which is the position
     // that matters most for isolation: without the per-game try/catch, a
     // termo failure would stop all three of the others from being topped up

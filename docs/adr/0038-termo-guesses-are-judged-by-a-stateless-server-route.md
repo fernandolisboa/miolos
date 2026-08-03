@@ -76,17 +76,65 @@ extension point in that route with no tripwire on it.
    recomputes them), no outcome (the server decides it), no answer.
 
 4. **The server decides the outcome by re-running the engine.**
-   `isValidGuess` on every guess, then `evaluateGuess` against the stored
+   `isValidGuess` on the guess, then `evaluateGuess` against the stored
    `normalized` answer ([ADR-0040](./0040-the-termo-daily-stores-the-drawn-answer.md)
    decision 1), then `deriveBoardStatus`. `won` and `lost` are both real
-   outcomes and both write a row; a list that is still `playing`, contains
-   a non-word, or continues past a winning row is `422 guess-mismatch`
-   with **no row**, exactly as a mismatched grid is. Six guesses exhausted
-   is NOT that case — it is `outcome: "lost"`. `deriveBoardStatus` throws a
-   `RangeError` on a row following a win
-   (`packages/games/src/termo/status.ts:31-36`), so that case is checked
-   explicitly BEFORE the call, the same way ADR-0032 decision 4 puts the
-   length check before the compare loop.
+   outcomes and both write a row; a list that is still `playing` or
+   continues past a winning row is `422 guess-mismatch` with **no row**,
+   exactly as a mismatched grid is. Six guesses exhausted is NOT that case
+   — it is `outcome: "lost"`. `deriveBoardStatus` throws a `RangeError` on
+   a row following a win (`packages/games/src/termo/status.ts:31-36`), so
+   that case is checked explicitly BEFORE the call, the same way ADR-0032
+   decision 4 puts the length check before the compare loop.
+
+   **Amended at #27 (step-6 review) — three corrections, all in
+   `apps/api/src/termo/judge.ts` and the two routes that call it.** The
+   original wording above said *"`isValidGuess` on **every** guess"* and
+   made a non-word one of the three `guess-mismatch` cases. That is what
+   shipped first and it was wrong in a way the ADR's own decision 1 causes:
+
+   (i) **The dictionary gate ran over the ACCUMULATED list, and the client
+   is stateless, so it re-posts every earlier guess every turn.** `apps/web`
+   and `apps/api` are separate Vercel projects that deploy independently and
+   [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)
+   expects `validation.txt` to be regenerated, so a word the client's copy
+   accepts and the server's no longer does is reachable in normal operation.
+   One such word in guess 2 rejected guess 3, guess 4 and every turn after
+   it — the player retypes forever — and the completion POST then answered
+   `422 guess-mismatch`, which `apps/web/src/play/sync.ts` treats as
+   terminal, settling the record `rejected` and losing the day for the
+   streak on a row ADR-0026 decision 1 can never reopen. **`POST /termo/guess`
+   now checks only the NEWEST guess** — the one the player just typed, the
+   only one whose rejection is a player outcome — **and `judgeTermo` checks
+   none.** Dropping it entirely there is safe and buys back nothing: a
+   non-word earlier in the list cannot manufacture a win, because the win
+   test is `guess === answer` and the answer is a dictionary member by
+   construction, and a client that posts junk earlier guesses only cheats
+   itself — which consequence (a) already accepts for the six-guess limit.
+
+   (ii) **The ladder is ONE module, not two copies.** It shipped written
+   out in both route files under a TSDoc reading *"if either changes, change
+   both"* — the exact trade decision 8 below rejects for `ACCEPTED_DAYS_BACK`
+   one decision later, and with a worse failure: a gate added to the guess
+   route alone would leave `POST /completions` recording a write-once `lost`
+   row for a board the guess route would never have closed. It is now
+   `judgeGuessList(guesses, answer): { tiles, status } | null` in
+   `apps/api/src/termo/judge.ts`, beside `src/publishing/dates.ts` and for
+   the same reason. The guess route returns `tiles` and `status`;
+   `judgeTermo` discards `tiles` and maps `status === "playing"` to `null`.
+
+   (iii) **`POST /termo/guess` gains a distinct `422 board-closed` code for
+   the "a row follows a winning row" case.** It previously answered
+   `invalid-guess` there — the same token the dictionary gate uses — so a
+   desynced board was told a correct word was not in the dictionary, while
+   `POST /completions` already named the identical fact separately
+   (`guess-mismatch`). The two routes no longer disagree. `invalid-guess`
+   now means exactly one thing: **the newest guess is not in the validation
+   dictionary**, a legitimate player outcome the screen renders as "não está
+   na lista". `board-closed` is a client bug or tampering and renders as a
+   generic fault. See
+   [ADR-0039](./0039-termo-cannot-be-played-offline.md) decision 3, amended
+   in the same commit, for the client half.
 
 5. **`storedSolution` is narrowed, never widened.** Its parameter type
    becomes `Exclude<CompletionRequest["game"], "termo">`, so TypeScript
@@ -209,7 +257,12 @@ extension point in that route with no tripwire on it.
   above. Cryptography that does not close the hole is what decision 9
   forbids.
 - **Judging only the newest guess.** Saves nanoseconds and costs the server
-  any authoritative view of board status.
+  any authoritative view of board status. This is about the JUDGEMENT — the
+  whole list is still evaluated and `deriveBoardStatus` still runs over all
+  of it. It is not about the DICTIONARY CHECK, which decision 4's amendment
+  deliberately narrows to the newest guess for an unrelated reason: an
+  earlier non-word cannot change the board's status, so re-rejecting it
+  every turn only soft-locks an honest player.
 - **Batch judging at the end of the game.** The feedback loop is the game.
 - **A `tiles` or an `outcome` field on the completion request.** A second
   place for the client to lie about a fact the stored row owns — the
@@ -340,6 +393,12 @@ extension point in that route with no tripwire on it.
   is instant and offline on the client and re-checked on the server without
   a second source of truth. The server check exists because the server
   never trusts the client, not because the client's is unreliable.
+  **Amended at #27 (step-6 review): the two lists are pinned byte-for-byte
+  in the REPO and can still differ in PRODUCTION**, because `apps/web` and
+  `apps/api` are separate Vercel projects that deploy independently. That is
+  why decision 4's amendment scopes the server re-check to the newest guess
+  — the disagreement is a real, survivable state rather than an impossible
+  one, and it must cost the player one retype and not the day.
 
 ## Parked: shipping the answer to the client
 

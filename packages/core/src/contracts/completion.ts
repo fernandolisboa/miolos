@@ -46,8 +46,10 @@ const submittedCellSchema = z.union([z.literal(0), z.literal(1)]);
  * real route. Every OTHER smuggled key, `constructor` included, is rejected.
  * `T-CORE-S16` pins both halves so a Zod bump that changes either goes red.
  *
- * EXTENSION POINT: #27 adds its variant to the union; the discriminator is
- * `game`.
+ * EXTENSION POINT, CLOSED AT #27: `termoCompletionRequestSchema` is the
+ * fourth member and the union now covers every M2 game. The discriminator is
+ * still `game`, and a fifth game attaches the same way — by adding a member
+ * here, never by loosening one.
  */
 export const binairoCompletionRequestSchema = z.strictObject({
   game: z.literal("binairo"),

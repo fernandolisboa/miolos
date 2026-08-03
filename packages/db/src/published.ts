@@ -53,13 +53,20 @@ function wallPredicate(game: Game, date?: string): SQL | undefined {
  * members, an un-narrowed return type forces every page to branch on a
  * discriminator it already knows (plan 018 S11).
  *
- * `ProjectedGame`, NOT `Game`, and that is load-bearing: termo has no
- * projection yet, so `Extract<DailyPuzzleResponse, { game: "termo" }>` is
- * `never` and a `Game`-keyed reader would type
- * `getTodayDaily(db, "termo")` as `Promise<undefined>` while
- * `stripDailyContent` throws for it at runtime. #27 widens `ProjectedGame`
- * in the same PR that adds its projection; until then the call does not
- * compile.
+ * `ProjectedGame`, NOT `Game`, and that is load-bearing: a game with no
+ * projection has `Extract<DailyPuzzleResponse, { game: G }>` = `never`, so a
+ * `Game`-keyed reader would type the call as `Promise<undefined>` while
+ * `stripDailyContent` threw for it at runtime. The bound is what keeps an
+ * unprojected game off the wall at COMPILE time, and it is the reason
+ * `ProjectedGame` exists as a separate name from `Game`.
+ *
+ * **Termo closed at #27** — it has a projection (`game` and `date` only,
+ * ADR-0038 decision 7), `ProjectedGame` covers all four M2 games
+ * (`daily.ts`'s extension point is discharged), and `getTodayDaily(db,
+ * "termo")` is a live call in `apps/web`'s two Termo segments. The bound
+ * therefore constrains nothing today and must NOT be removed as dead: it is
+ * the guard the fifth game meets, and #31 (archive) reads every projected
+ * game through exactly this signature.
  */
 export async function getTodayDaily<G extends ProjectedGame>(
   db: Db,
@@ -88,7 +95,9 @@ export async function getTodayDaily<G extends ProjectedGame>(
 /**
  * Same wall, explicit date — future dates return `undefined` by the
  * predicate, never by argument checks. Narrowed to the requested game for
- * the same reason `getTodayDaily` is, with the same `ProjectedGame` bound.
+ * the same reason `getTodayDaily` is, with the same `ProjectedGame` bound —
+ * including its #27 status: all four M2 games are projected, so the bound
+ * constrains nothing today and is kept for the fifth.
  */
 export async function getPublishedDaily<G extends ProjectedGame>(
   db: Db,

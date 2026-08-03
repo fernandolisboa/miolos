@@ -7,11 +7,27 @@ export interface TermoAnswer {
 }
 
 /**
- * The 400 answers, in answers.csv row order. ORDER IS CONTRACTUAL: #27's
- * server-side seeded choice (ADR-0010) indexes into this array; reordering
- * is a breaking change and the word-list harness pins it. The normalized
- * form is derived here by normalizeWord — the single normalization function
- * is the only path from canonical to normalized in the runtime.
+ * The 400 answers, in answers.csv row order. ORDER IS CONTRACTUAL — the
+ * word-list harness pins this array against `content/termo/answers.csv` row
+ * by row, so a reorder is a breaking change to the generated file's
+ * verification, not to any consumer's arithmetic. The normalized form is
+ * derived here by normalizeWord — the single normalization function is the
+ * only path from canonical to normalized in the runtime.
+ *
+ * THE DAILY DRAW IS NOT SEEDED AND DOES NOT INDEX THIS ARRAY. An earlier
+ * version of this sentence said #27's "server-side seeded choice (ADR-0010)
+ * indexes into this array"; both halves are false and the correction matters
+ * because a "recompute yesterday's answer" tool built on the old sentence
+ * would silently return a different word than the stored row.
+ * ADR-0024 decision 1 forbids a derivable seed, and
+ * `apps/api/src/publishing/service.ts`'s `topUpTermoBuffer` draws with
+ * `drawUniformIndex()` over `randomUint32()` (i.e. `crypto.getRandomValues`)
+ * into a RUN-SCOPED FILTERED POOL — `TERMO_ANSWERS.filter(a =>
+ * !used.has(a.normalized))`, then `pool.splice(index, 1)` — so the index has
+ * no stable meaning even within one run. The stored `seed` column is
+ * provenance only and reproduces nothing, and what the row stores is the
+ * WORD (ADR-0040). The invariant is "the answer stored is the answer served,
+ * forever", and its mechanism is row immutability.
  *
  * BOTH `/*#__PURE__*\/` ANNOTATIONS ARE LOAD-BEARING AND NEITHER IS TIDINESS
  * (ADR-0045 decision 5). This module and the validation dictionary are one

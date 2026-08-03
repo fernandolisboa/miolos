@@ -144,7 +144,7 @@ describe("GET /buffer-depth", () => {
     });
   });
 
-  it("T-API-S34: a drained TERMO buffer alone flips shallow=true", async () => {
+  it("T-API-S34b: a drained TERMO buffer alone flips shallow=true", async () => {
     // S16's failure mode instantiated for the key #27 just added. Termo is
     // the one game whose buffer can drain for a CONTENT reason — the curated
     // word list running out (ADR-0040 consequence (f)) — so it is also the

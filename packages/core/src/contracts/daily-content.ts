@@ -154,7 +154,7 @@ export type NonogramDailyContent = z.infer<typeof nonogramDailyContentSchema>;
  * `content/termo/canonical-map.csv` is harness input and does not ship.
  *
  * `.length(5)` and not a pt-BR charset regex: the DIMENSION check, matching
- * the engine's `WORD_LENGTH` and pinned to it by T-CORE-S18. A charset regex
+ * the engine's `WORD_LENGTH` and pinned to it by T-CORE-S18a. A charset regex
  * would fail every insert if a regeneration ever introduced `à`, `ô`, `õ` or
  * `â` — all in the domain the word-list arbitraries declare, none present in
  * today's 400. Membership in `TERMO_ANSWERS` is the rule-validity half; it

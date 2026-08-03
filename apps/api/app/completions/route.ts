@@ -18,14 +18,13 @@ import {
   recordCompletion,
   type CompletionRecord,
 } from "@miolos/db/user";
-import {
-  deriveBoardStatus,
-  evaluateGuess,
-  isValidGuess,
-} from "@miolos/games/termo";
 import type { NextRequest } from "next/server";
 
-import { corsHeaders, preflightResponse } from "../../src/cors";
+import {
+  corsHeaders,
+  isJsonContentType,
+  preflightResponse,
+} from "../../src/cors";
 import { getDb } from "../../src/db";
 import { ACCEPTED_DAYS_BACK, addDays } from "../../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../../src/session/cookie";
@@ -34,6 +33,7 @@ import {
   warnIfGuardDegraded,
 } from "../../src/session/origin-guard";
 import { requireUserId } from "../../src/session/service";
+import { judgeGuessList } from "../../src/termo/judge";
 
 // Never statically cached: every request judges against the database.
 export const dynamic = "force-dynamic";
@@ -167,21 +167,32 @@ function judgeGrid(
  * inversion is the real risk, so both halves are stated:
  *
  * - `null` (→ 422 `guess-mismatch`, NO ROW) for a list that is still
- *   `"playing"`, contains a non-word, or continues past a winning row. The
- *   `"playing"` half is the guard that makes a client bug non-fatal: the row
- *   is write-once (ADR-0026), so a prematurely posted loss would cost the
- *   player the day permanently. It must not be relaxed.
+ *   `"playing"` or continues past a winning row. The `"playing"` half is the
+ *   guard that makes a client bug non-fatal: the row is write-once
+ *   (ADR-0026), so a prematurely posted loss would cost the player the day
+ *   permanently. It must not be relaxed.
  * - `"lost"` (→ 200, a ROW) for six guesses exhausted without a win. That is
  *   the game working, not a rejected body.
  *
- * The ladder is `POST /termo/guess`'s steps 8–11 — the same dictionary gate,
- * the same "no row follows a winning row" pre-check in front of
- * `deriveBoardStatus`, the same engine calls. The two are deliberately
- * written where they run rather than behind a shared helper: this one
- * discards the tiles and answers a completion, that one is the whole
- * response. **If either changes, change both** — `apps/api/test/completions.test.ts`
- * (T-API-S39) and `apps/api/test/termo-guess.test.ts` (T-API-S38) pin the
- * shared cases from both sides.
+ * THE DICTIONARY GATE IS GONE FROM HERE (#27 step-7 finding A-1), and its
+ * absence is deliberate rather than an omission. It gated the ACCUMULATED
+ * list, which the stateless client re-posts in full: one word removed from
+ * `validation.txt` after an independent `apps/web` deploy would 422 a
+ * legitimate closed board — and 422 is terminal in
+ * `apps/web/src/play/sync.ts`, so the record would settle `rejected` and the
+ * day would be lost for the streak, permanently, on a row that can never be
+ * reopened. It also bought nothing: a non-word cannot manufacture a win,
+ * because the win test is `guess === answer`. `src/termo/judge.ts` carries
+ * the full argument.
+ *
+ * The ladder itself is `src/termo/judge.ts`, shared verbatim with
+ * `POST /termo/guess` — one copy, so a gate added for one route cannot go
+ * missing in the other and record a write-once `lost` row for a board the
+ * guess route would never have closed. This caller discards the tiles and
+ * maps `"playing"` to `null`; that one returns them as the response.
+ * `apps/api/test/completions.test.ts` (T-API-S39) and
+ * `apps/api/test/termo-guess.test.ts` (T-API-S38) pin the shared cases from
+ * both sides.
  *
  * `outcome` is DERIVED, never read off the body: a `won`/`lost` field would
  * be a client-asserted outcome, the same class of input as the completion
@@ -201,32 +212,13 @@ function judgeTermo(
   // THROWS — the same deliberate 500 the guess route takes.
   const answer = termoDailyContentSchema.parse(content).normalized;
 
-  if (!guesses.every((guess) => isValidGuess(guess))) {
+  // `null` here is the "a row follows a winning row" case, which would
+  // otherwise be a RangeError out of `deriveBoardStatus` and a 500.
+  const judged = judgeGuessList(guesses, answer);
+  if (!judged) {
     return null;
   }
-
-  // Before `deriveBoardStatus`, which throws a RangeError on a row following
-  // a winning row — reachable from a hostile body, and an uncaught RangeError
-  // here is a 500. Exact rather than conservative: `evaluateGuess` writes
-  // "correct" only where `guess.charAt(i) === answer.charAt(i)`, so all five
-  // correct ⟺ the guess EQUALS the answer, and both operands are `^[a-z]{5}$`.
-  const winAt = guesses.findIndex((guess) => guess === answer);
-  if (winAt !== -1 && winAt !== guesses.length - 1) {
-    return null;
-  }
-
-  const status = deriveBoardStatus(
-    guesses.map((guess) => evaluateGuess(guess, answer)),
-  );
-  return status === "playing" ? null : status;
-}
-
-/** `application/json`, parameters allowed (`; charset=utf-8`). */
-function isJsonContentType(header: string | null): boolean {
-  if (header === null) {
-    return false;
-  }
-  return header.split(";")[0]?.trim().toLowerCase() === "application/json";
+  return judged.status === "playing" ? null : judged.status;
 }
 
 export function OPTIONS(): Response {

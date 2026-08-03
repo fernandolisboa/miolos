@@ -532,7 +532,8 @@ export async function topUpNonogramBuffer(
 }
 
 /**
- * Remaining-answer count below which the run logs a warning. NOT an alert:
+ * Remaining-answer count AT OR below which the run logs a warning (ADR-0040
+ * decision 7 says "at 30 remaining", so the comparison is `<=`). NOT an alert:
  * the alert channel is buffer depth (ADR-0010) and `buffer-alert.yml`, and
  * this line lands in Vercel logs that nothing polls. It exists because the
  * depth alert gives only ~3 days of runway for THIS failure mode (see
@@ -701,7 +702,10 @@ export async function topUpTermoBuffer(
     const used = new Set(await listUsedTermoAnswers(db));
     const pool = TERMO_ANSWERS.filter((answer) => !used.has(answer.normalized));
 
-    if (pool.length < LOW_ANSWER_POOL_WARNING) {
+    // `<=`, not `<`: ADR-0040 decision 7 says the warning fires **at 30
+    // remaining**, and a strict `<` made a pool of exactly 30 silent — the
+    // one value the constant is named for (#27 step-7 finding A-4).
+    if (pool.length <= LOW_ANSWER_POOL_WARNING) {
       // Once per RUN, not per date: this is a log line for a human reading
       // Vercel logs, and one per uncovered date would be up to 30 copies of
       // the same sentence.

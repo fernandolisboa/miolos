@@ -30,7 +30,7 @@ import { calendarDateString, isoDateString } from "./daily";
  *
  * `TERMO_` prefixed because `apps/api`'s judge imports BOTH these and the
  * engine's own `MAX_GUESSES`/`WORD_LENGTH` in one file, where a bare name
- * would collide. Pinned equal to the engine's constants by T-CORE-S18 in
+ * would collide. Pinned equal to the engine's constants by T-CORE-S18b in
  * `packages/core/test/termo-guess-contract.test.ts`, which is where core is
  * allowed to meet games.
  */
@@ -49,14 +49,14 @@ export const TERMO_WORD_LENGTH = 5;
  */
 export const termoGuessWordSchema = z.string().regex(/^[a-z]{5}$/);
 
-/** One judged tile. The engine's `TileState`, restated (T-CORE-S18). */
+/** One judged tile. The engine's `TileState`, restated (T-CORE-S18b). */
 export const termoTileStateSchema = z.enum(["correct", "present", "absent"]);
 
 /**
  * One judged row. A TUPLE, not `.length(5)`: `z.tuple` infers a 5-tuple
  * assignable to the engine's `readonly TileStates`, so a parsed response feeds
  * straight into `deriveKeyboardState` with no `as`. The five members are
- * spelled out because `z.tuple` needs a literal-length array; T-CORE-S18 pins
+ * spelled out because `z.tuple` needs a literal-length array; T-CORE-S18b pins
  * the arity against `WORD_LENGTH` both structurally and behaviourally.
  */
 export const termoTilesSchema = z.tuple([

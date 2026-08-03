@@ -657,13 +657,15 @@ describe("termoDailyContentSchema", () => {
     ).toBe(false);
   });
 
-  it("T-CORE-S18: the literal 5 is the ENGINE's WORD_LENGTH, and MAX_GUESSES is 6", () => {
+  it("T-CORE-S18a: the literal 5 is the ENGINE's WORD_LENGTH, and MAX_GUESSES is 6", () => {
     // The dimension check, pinned to the engine rather than restated. This
     // half is the one the STORED-CONTENT contract owes; the wire's half —
     // `TERMO_WORD_LENGTH`, `TERMO_MAX_GUESSES` and `termoTilesSchema`'s arity
-    // — carries the SAME id in `test/termo-guess-contract.test.ts`, which is
-    // the file that owns those symbols. One id, two files, on the T-API-S34
-    // precedent.
+    // — is `T-CORE-S18b` in `test/termo-guess-contract.test.ts`, which is the
+    // file that owns those symbols. The two halves shipped under ONE id
+    // spanning two files, each citing the other as precedent; the sibling
+    // letters are `docs/agents/test-ids.md`'s rule for a new duplicate, and
+    // `a` is the stored-content half.
     expect(WORD_LENGTH).toBe(5);
     expect(MAX_GUESSES).toBe(6);
     expect(
@@ -683,7 +685,7 @@ describe("termoDailyContentSchema", () => {
     }
   });
 
-  it("T-CORE-S18: `.length(5)` counts JS characters, so an accented answer of five letters passes", () => {
+  it("T-CORE-S18a: `.length(5)` counts JS characters, so an accented answer of five letters passes", () => {
     // The reason the check is a LENGTH and not a pt-BR charset regex: today's
     // 400 carry `ã`, `ç`, `é` and `ó`, and a regeneration under ADR-0015 may
     // introduce `à`, `ô`, `õ` or `â`. A charset regex would fail every insert

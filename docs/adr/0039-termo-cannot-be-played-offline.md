@@ -51,6 +51,25 @@ project's shared layer would get bent around Termo one guess at a time.
    - 400, 403, 415 or 422: a client bug or tampering. The guess is cleared
      with a generic inline error, distinct in copy from "não está na lista",
      and the turn is not consumed — the server never judged it.
+
+     **Qualified at #27 — the 422 row SPLITS ON ITS ERROR CODE, and one of
+     the two halves IS "não está na lista".** The blanket sentence above was
+     written before the wire had error codes, and taken literally it forbids
+     the copy the shipped screen correctly renders. The rule is:
+
+     | Response | Meaning | What the screen shows |
+     |---|---|---|
+     | `422 {"error":"invalid-guess"}` | The NEWEST guess is not in the server's validation dictionary. A **legitimate player outcome**, reachable whenever `apps/web` and `apps/api` — separate Vercel projects — disagree about `validation.txt` ([ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md) decision 4 as amended, and its consequence (j)). | "não está na lista", the **same** sentence the instant client-side rejection renders. Same fact, same words. |
+     | `422 {"error":"board-closed"}` | The posted list continues past a winning row. A client bug or tampering, **never** a player outcome. | the generic inline error. |
+     | any other 422, and 400 / 403 / 415 | a client bug or tampering | the generic inline error. |
+
+     So the original sentence holds for every 422 except `invalid-guess`,
+     and that one exception is not a leak of a system fault into player
+     copy — it is the opposite. Rendering "não está na lista" as a generic
+     failure would tell a player their connection or the server was broken
+     when in fact their word simply is not in the list, and would hide the
+     one 422 they can act on. A future contributor "enforcing" this ADR by
+     collapsing the split would reintroduce exactly that.
    - 404: the day is gone (a killed row, or out of the accepted window).
      The screen renders the same unavailable view ADR-0028 decision 4
      specifies.

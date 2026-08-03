@@ -1479,20 +1479,17 @@ describe("POST /completions — termo (#27, ADR-0038)", () => {
     expect(await completionRows()).toHaveLength(0);
   });
 
-  it("T-API-S39: a non-dictionary word and a list past a winning row are 422 `guess-mismatch`, never 500", async () => {
+  it("T-API-S39: a list past a winning row is 422 `guess-mismatch`, never 500", async () => {
     const today = await todaySaoPaulo(ctx.db);
     await seedTermo(today);
     const { token } = await createSession();
     const decoy = TERMO_DECOYS[0] ?? "";
 
     const lists = [
-      // Shaped `^[a-z]{5}$` so it PARSES, and outside the dictionary so the
-      // judge refuses it — a 400 here would prove nothing about the judge.
-      ["zzzzz"],
-      [decoy, "zzzzz", termoAnswer.normalized],
       // `deriveBoardStatus` throws a RangeError on a row after a win, and an
       // uncaught RangeError in a route handler is a 500. The explicit
-      // pre-check in front of the call is what makes this a 422.
+      // pre-check in front of the call — now `judgeGuessList`'s, shared with
+      // `POST /termo/guess` — is what makes this a 422.
       [termoAnswer.normalized, decoy],
       [decoy, termoAnswer.normalized, TERMO_DECOYS[1] ?? ""],
       [termoAnswer.normalized, termoAnswer.normalized],
@@ -1505,6 +1502,64 @@ describe("POST /completions — termo (#27, ADR-0038)", () => {
       expect(response.status, guesses.join(",")).toBe(422);
       expect(await errorOf(response)).toEqual({ error: "guess-mismatch" });
     }
+    expect(await completionRows()).toHaveLength(0);
+  });
+
+  it("T-API-S43: a WIN whose earlier rows contain a non-word is RECORDED, not 422'd", async () => {
+    // The permanent-day-loss this exists to prevent (#27 step-7 finding A-1).
+    // The judge used to gate the whole accumulated list on `isValidGuess`, and
+    // the stateless client (ADR-0038 decision 1) re-posts every earlier guess.
+    // One word removed from validation.txt after an independent `apps/web`
+    // deploy therefore poisoned the whole list: `judgeTermo` returned `null`,
+    // the route answered 422 `guess-mismatch`, 422 is in `sync.ts`'s
+    // TERMINAL_STATUSES, so the record settled `rejected` and the day was lost
+    // for the streak on a row that ADR-0026 decision 1 can never reopen.
+    //
+    // Dropping the gate is safe because a non-word cannot manufacture a win:
+    // the win test is `guess === answer` and the answer is a dictionary member
+    // by construction. The list below wins honestly on row 3 and is recorded
+    // with the real guess count, non-word and all.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: termoBody({
+          date: today,
+          // Shaped `^[a-z]{5}$` so it PARSES, and outside the dictionary so
+          // the removed gate would have refused it.
+          guesses: [TERMO_DECOYS[0] ?? "", "zzzzz", termoAnswer.normalized],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = completionResponseSchema.parse(await response.json());
+    expect(body.outcome).toBe("won");
+    expect(body.recorded).toBe(true);
+    expect(await storedGuessCounts()).toEqual([{ game: "termo", guesses: 3 }]);
+  });
+
+  it("T-API-S43: an unfinished list is still 422 `guess-mismatch` when it contains a non-word", async () => {
+    // Anti-vacuity for the test above: dropping the dictionary gate must not
+    // relax the `"playing" → 422, no row` guard ADR-0038 consequence (c) calls
+    // the thing that makes a client bug non-fatal. A non-word is now simply an
+    // ordinary wrong guess, so the list is judged and REFUSED on its status.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: termoBody({ date: today, guesses: ["zzzzz"] }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await errorOf(response)).toEqual({ error: "guess-mismatch" });
     expect(await completionRows()).toHaveLength(0);
   });
 

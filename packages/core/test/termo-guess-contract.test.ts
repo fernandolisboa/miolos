@@ -39,16 +39,17 @@ const TILES: TermoTiles = ["correct", "present", "absent", "absent", "absent"];
 const WORD = "praga";
 
 describe("termoTilesSchema", () => {
-  // T-CORE-S18 (plan 022 §19.3) — the half `daily-contract.test.ts:660` names
-  // as this commit's. One id, two files, on the T-API-S34 precedent: the
-  // stored-content literals are pinned there and the wire literals here,
-  // because this is the file that owns these symbols.
-  it("T-CORE-S18: the restated bounds ARE the engine's WORD_LENGTH and MAX_GUESSES", () => {
+  // T-CORE-S18b (plan 022 §19.3) — the WIRE half; `daily-contract.test.ts`
+  // holds the stored-content half as `T-CORE-S18a`. The two shipped under one
+  // id spanning two files, each citing the other as precedent; the sibling
+  // letters are `docs/agents/test-ids.md`'s rule for a new duplicate, and `b`
+  // is this file, which owns these symbols.
+  it("T-CORE-S18b: the restated bounds ARE the engine's WORD_LENGTH and MAX_GUESSES", () => {
     expect(TERMO_WORD_LENGTH).toBe(WORD_LENGTH);
     expect(TERMO_MAX_GUESSES).toBe(MAX_GUESSES);
   });
 
-  it("T-CORE-S18: the tuple's arity is the engine's WORD_LENGTH, by shape AND by behaviour", () => {
+  it("T-CORE-S18b: the tuple's arity is the engine's WORD_LENGTH, by shape AND by behaviour", () => {
     // `.def.items`, never `.items`: verified against the installed zod 4.4.3
     // that a tuple exposes `type`/`items`/`rest` on `.def` and NOTHING at
     // `.items`, so `.items.length` would read `undefined.length` and throw a
@@ -66,7 +67,7 @@ describe("termoTilesSchema", () => {
     expect(termoTilesSchema.safeParse(TILES).success).toBe(true);
   });
 
-  it("T-CORE-S18: a parsed row IS the engine's `TileStates`, with no `as`", () => {
+  it("T-CORE-S18b: a parsed row IS the engine's `TileStates`, with no `as`", () => {
     // The assignment is the assertion (it is a `pnpm typecheck` failure if it
     // ever stops holding), and the `expect` is what keeps the binding USED so
     // `@typescript-eslint/no-unused-vars` cannot fire on it.

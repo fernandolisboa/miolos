@@ -8,14 +8,14 @@ import {
   getPublishedDailyWithSolution,
   todaySaoPaulo,
 } from "@miolos/db/publishing";
-import {
-  deriveBoardStatus,
-  evaluateGuess,
-  isValidGuess,
-} from "@miolos/games/termo";
+import { isValidGuess } from "@miolos/games/termo";
 import type { NextRequest } from "next/server";
 
-import { corsHeaders, preflightResponse } from "../../../src/cors";
+import {
+  corsHeaders,
+  isJsonContentType,
+  preflightResponse,
+} from "../../../src/cors";
 import { getDb } from "../../../src/db";
 import { ACCEPTED_DAYS_BACK, addDays } from "../../../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
@@ -24,6 +24,7 @@ import {
   warnIfGuardDegraded,
 } from "../../../src/session/origin-guard";
 import { requireUserId } from "../../../src/session/service";
+import { judgeGuessList } from "../../../src/termo/judge";
 
 // Never statically cached: every request judges against the database.
 export const dynamic = "force-dynamic";
@@ -38,24 +39,18 @@ export const dynamic = "force-dynamic";
  * 5xx or a network failure HOLDS the turn (ADR-0039 decision 3). Losing the
  * distinction would cost the player a guess or hang the board.
  *
- * Duplicated from `app/completions/route.ts` rather than shared: two six-line
- * helpers in two route modules is cheaper than a new `apps/api/src` surface,
- * and a route's error envelope is exactly the thing that should stay visible
- * in the route.
+ * Duplicated from `app/completions/route.ts` rather than shared, and that is
+ * a decision about THIS helper only: a route's error envelope is exactly the
+ * thing that should stay visible in the route. `isJsonContentType` was
+ * duplicated alongside it on a "no new `apps/api/src` surface" argument that
+ * was never true — `src/cors.ts` already exists and already holds
+ * `corsHeaders` — so that half now lives there (#27 step-7 finding A-6).
  */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
     headers: corsHeaders({ credentials: true }),
   });
-}
-
-/** `application/json`, parameters allowed (`; charset=utf-8`). */
-function isJsonContentType(header: string | null): boolean {
-  if (header === null) {
-    return false;
-  }
-  return header.split(";")[0]?.trim().toLowerCase() === "application/json";
 }
 
 export function OPTIONS(): Response {
@@ -84,10 +79,19 @@ export function OPTIONS(): Response {
  *  7. `getPublishedDailyWithSolution` (the wall)           → 404 no-puzzle
  *  8. `termoDailyContentSchema.parse` on the stored row    → 500 (a drifted
  *     row is deliberately loud: a 200 has to mean playable)
- *  9. `isValidGuess` on every guess                        → 422 invalid-guess
- * 10. the explicit "no row follows a winning row" check    → 422 invalid-guess
- * 11. `evaluateGuess` × n, then `deriveBoardStatus`
- * 12. `termoGuessResponseSchema.parse`                     → 200
+ *  9. `isValidGuess` on the NEWEST guess only              → 422 invalid-guess
+ * 10. `judgeGuessList` — `null` when a row follows a win   → 422 board-closed
+ * 11. `termoGuessResponseSchema.parse`                     → 200
+ *
+ * Steps 9 and 10 answer with DIFFERENT codes because they are different
+ * facts, and the client renders them differently (ADR-0039 decision 3 as
+ * qualified at #27). `invalid-guess` is a legitimate player outcome — the
+ * word the player just typed is not in the server's dictionary — and reads
+ * "não está na lista". `board-closed` is a client bug or tampering and reads
+ * as a generic fault. The completion route already distinguished the second
+ * case by name (`guess-mismatch`); before #27's step 7 this route answered
+ * both with `invalid-guess`, so a desynced board was told a correct word was
+ * not in the dictionary.
  *
  * TWO HONEST CAVEATS, because neither is what it looks like. The cross-site
  * guard is NOT load-bearing here: `isCrossSiteWrite` denies on positive
@@ -204,31 +208,34 @@ export async function POST(request: NextRequest): Promise<Response> {
   // unreliable — a word the client's copy accepts and this one does not is a
   // real player outcome after an independent deploy, which is why the screen
   // renders it as "não está na lista" rather than as a fault.
-  if (!body.guesses.every((guess) => isValidGuess(guess))) {
-    return errorResponse(422, "invalid-guess");
-  }
-
-  // NOT A NICETY. `deriveBoardStatus` throws a RangeError when a winning row
-  // is followed by another, that case is reachable from a hostile body, and
-  // an uncaught RangeError in a route handler is a 500. The check runs BEFORE
-  // the call, exactly as ADR-0032 puts the length check before the compare
-  // loop for the same class of reason.
   //
-  // It needs no tiles, because "all five correct" ⟺ "the guess equals the
-  // answer": `evaluateGuess` writes "correct" in exactly one place — pass 1's
-  // `if (letter === a.charAt(i))` — and pass 2 never writes it. Both operands
-  // are `^[a-z]{5}$` here (the request schema for the guess, the word-list
-  // harness for `normalized`), so this is plain ASCII equality and the check
-  // is EXACT rather than conservative: it can never 422 a legitimate board.
-  const winAt = body.guesses.findIndex((guess) => guess === content.normalized);
-  if (winAt !== -1 && winAt !== body.guesses.length - 1) {
+  // THE NEWEST GUESS ONLY, and that is the whole point (#27 step-7 finding
+  // A-1). The route is stateless, so the client re-posts every earlier guess
+  // every turn; gating on the accumulated list would let one word dropped
+  // from `validation.txt` after an independent `apps/web` deploy reject every
+  // subsequent turn of a board that already contains it — the player retypes
+  // forever, and the completion POST then 422s permanently. Only the word the
+  // player just typed can honestly be handed back. `judgeGuessList` gates
+  // nothing on the dictionary for the same reason, and its TSDoc records why
+  // an earlier non-word is harmless.
+  //
+  // `.min(1)` on the request schema guarantees the element exists;
+  // `noUncheckedIndexedAccess` cannot see that, and a guard is the shape this
+  // repo uses over a non-null assertion.
+  const newest = body.guesses[body.guesses.length - 1];
+  if (newest !== undefined && !isValidGuess(newest)) {
     return errorResponse(422, "invalid-guess");
   }
 
-  const tiles = body.guesses.map((guess) =>
-    evaluateGuess(guess, content.normalized),
-  );
-  const status = deriveBoardStatus(tiles);
+  const judged = judgeGuessList(body.guesses, content.normalized);
+  if (!judged) {
+    // A row follows a winning row: the board was already closed and the
+    // client kept posting. Never a player outcome — a distinct code so the
+    // screen renders a fault rather than "não está na lista", and so this
+    // route and `POST /completions` stop disagreeing about the same fact.
+    return errorResponse(422, "board-closed");
+  }
+  const { tiles, status } = judged;
 
   // `date` is the STORED row's, not the body's — server-derived by the time
   // it is echoed, which is why the response schema types it `isoDateString`.
