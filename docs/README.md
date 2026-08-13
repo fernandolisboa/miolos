@@ -58,6 +58,7 @@ Current:
 | `handoffs/023-issue-27-handoff-termo-mid-flight.md` | Session handoff taken mid-#27 with PR #77 open and steps 1–5 complete: what the ten commits landed, the three facts that cost that session real time (drizzle's insert column list, the `@miolos/core` ESM cycle vitest cannot see, zod's mutable tuple), the already-applied migration, and the known-deferred list step 6 must be shown |
 | `handoffs/024-handoff-m2-free-play-the-last-ticket.md` | Session handoff after #27 merged and the daily Termo went live: what the review changed, the four seams #28 (free play) already has, the silent-green traps in `bundle-check` and `impeccable detect`, and the obligations #27 transferred rather than discharged |
 | `plans/025-issue-28-plan-free-play-on-the-grid-games.md` | Implementation plan for #28 (free play on the grid games: the `/modo-livre` routes and level picker over the weekday ramps, browser-side generation with client-picked seeds, the free-play import wall and the evidence plan for the three negative acceptance criteria, and the route-scoped rework of the bundle markers) |
+| `handoffs/026-handoff-m2-complete-the-frontier-opens.md` | Session handoff after #28 merged and free play went live, closing M2: the new machinery that must not break (route-scoped fail-closed bundle markers, the free-play wall's hoist-don't-copy rule, ephemeral-by-decision free play), the re-derived test-id frontier, and the open frontier with #58's pending decision flagged for whoever starts M3 |
 
 ## Language
 
