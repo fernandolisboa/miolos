@@ -76,6 +76,28 @@ export function calendarMonths(
   return months.reverse();
 }
 
+/**
+ * The month grid of `date`'s own month with EVERY cell `null` — the
+ * settled-null cold rendering (§6.2's honest zero): only the month's
+ * geometry is drawn, and no state is claimed for any day. The view pairs
+ * it with no legend, for the same reason.
+ */
+export function neutralMonth(date: string): CalendarMonth {
+  const key = date.slice(0, 7);
+  const firstOfMonth = `${key}-01`;
+  const firstDay = epochDay(firstOfMonth);
+  const daysInMonth = epochDay(nextMonthFirst(key)) - firstDay;
+  const leading = (firstDay + 4) % WEEK_LENGTH; // 0 = Sunday
+  const cells: (CalendarDay | null)[] = [];
+  for (let cell = 0; cell < leading + daysInMonth; cell += 1) {
+    cells.push(null);
+  }
+  while (cells.length % WEEK_LENGTH !== 0) {
+    cells.push(null);
+  }
+  return { month: firstOfMonth, cells };
+}
+
 /** The first day of the month after 'YYYY-MM', via day arithmetic only. */
 function nextMonthFirst(monthKey: string): string {
   // The 28th + 7 days always lands in the next month, whose date string

@@ -29,12 +29,15 @@ import { bodyOf, decl, stylesheet } from "./css-source";
  * this one is that decision's gate.
  */
 describe("the ink on an accent fill (T-WEB-S72)", () => {
-  /** Every sheet in the app that paints a `var(--accent)` background. */
+  /** Every sheet in the app that paints a `var(--accent)` background —
+   *  #29's stats sheet included: its histogram bars, distribution bars and
+   *  washi tape all paint the accent. */
   const SHEETS = [
     "src/play/screen.module.css",
     "src/play/conclusion-view.module.css",
     "app/page.module.css",
     "src/nonogram/nonogram-board.module.css",
+    "app/estatisticas/page.module.css",
   ] as const;
 
   it("leaves no desk label on an accent fill, in any stylesheet", () => {
@@ -147,8 +150,9 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
 /**
  * The gate on ADR-0041: **an accent may colour a shape, never a word**.
  *
- * The three sheets below are SHARED — every play screen and every conclusion
- * renders them with `--accent` bound to the game's own token — so each of
+ * The sheets below are SHARED — every play screen and every conclusion
+ * renders the first three with `--accent` bound to the game's own token, and
+ * #29's stats sheet renders all four accents on one screen — so each of
  * them had to be legible against the worst of the four accents, and mustard
  * is 2.7311:1 on desk paper and 2.8501:1 on card. Both fail PRODUCT.md's
  * 4.5:1 floor, and 2.8501:1 is the ceiling over the whole paper family, so
@@ -166,7 +170,7 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
  * and `app/page.module.css` — on the SHARED list below — was already through
  * it with two `color: var(--accent-app)` declarations (step-7 finding A-F3).
  *
- * It is scoped to the three SHARED sheets, and that scope is the whole of
+ * It is scoped to the SHARED sheets, and that scope is the whole of
  * ADR-0041 decision 1's exception: a shared sheet renders all four accents
  * and therefore has to survive mustard, while a single-accent per-game
  * board or control module renders exactly one and its ratio can simply be
@@ -177,11 +181,16 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
  * Binairo's own four entirely — step-7 finding A-F7).
  */
 describe("accents colour shapes, never words (T-WEB-S73)", () => {
-  /** The three sheets every game renders, and the only ones ADR-0041 §3 converts. */
+  /** The sheets every game renders, and the only ones ADR-0041 §3
+   *  converts — plus #29's stats sheet, which renders all four game
+   *  accents on one screen and is therefore exactly the class of sheet
+   *  this scan exists for (it ships with ZERO accent-coloured text, and
+   *  this is the tripwire that keeps it so). */
   const SHARED = [
     "src/play/screen.module.css",
     "src/play/conclusion-view.module.css",
     "app/page.module.css",
+    "app/estatisticas/page.module.css",
   ] as const;
 
   /**

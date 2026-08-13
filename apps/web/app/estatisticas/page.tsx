@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { messages, routes } from "../../src/i18n";
 import styles from "./page.module.css";
+import { StatsView } from "./stats-view";
 
 /**
  * The statistics screen (#29, ADR-0051) — the /privacidade static register:
@@ -30,6 +31,12 @@ export default function StatsPage() {
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>{messages.stats.title}</h1>
       </div>
+
+      {/* The island owns the whole data composition: summary → (#30's
+          future medal section) → per-game blocks → calendar (plan 033
+          D10's screen order — the medal slot comment lives at the exact
+          seam inside stats-view.tsx). */}
+      <StatsView />
     </main>
   );
 }

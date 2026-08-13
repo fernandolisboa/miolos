@@ -1,6 +1,6 @@
 "use client";
 
-import type { Game } from "@miolos/core";
+import { timeBucketIndex, type Game } from "@miolos/core";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -13,6 +13,7 @@ import {
   routes,
   type Route,
 } from "../i18n";
+import { useStats } from "../stats/use-stats";
 import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
@@ -63,14 +64,13 @@ export interface ConclusionResult {
  * `date` is the SERVER's day, resolved from the wall by the page shell — the
  * client clock never selects which record is read (CONTEXT.md "Rollover").
  *
- * Three frame elements are deliberately absent, because rendering empty stat
- * rows would be fake data: best/average/solved and the histogram (#29), the
- * closing italic line (#29, it compares against an average that does not
- * exist) and the share button (#34 — a dead share button is a broken
- * promise, unlike a dead link). §12.3 carried the full table; #19 filled the
- * fourth gap — the streak card is live below, server-computed and gated on
- * the day being on the server (ADR-0048), so every unfetched state stays
- * exactly as honest as the old absence.
+ * Of the frame's three deliberate absences, #29 filled two: the stat rows
+ * with their histogram and the closing italic line are live below
+ * (`ConclusionStats`), server-computed and gated on the day being on the
+ * server exactly like the streak card (ADR-0048 decision 4, plan 033 D13),
+ * so every unfetched state stays exactly as honest as the old absence. The
+ * share button remains out (#34 — a dead share button is a broken promise,
+ * unlike a dead link).
  *
  * `picture` is the first per-game payoff payload (ADR-0034 decision 3): plain
  * data, optional, and supplied only by a client component that owns the local
@@ -335,6 +335,17 @@ export function ConclusionView({
             </svg>
           </div>
         )}
+        {/* The StreakCard's gate, on the stat block too (ADR-0048 decision
+            4, plan 033 D13): it only opens once the server holds the day,
+            so the fetched aggregates INCLUDE the game this screen is
+            decorating by construction. Without it, an offline/pending/
+            rejected conclusion would render solved/average/histogram
+            values that EXCLUDE the game just finished while highlighting
+            its bucket — asserting and denying today's play at once. Those
+            states render the shipped absence, which is honest. */}
+        {syncOutcome === "recorded" && (
+          <ConclusionStats game={game} result={stamp} lost={lost} />
+        )}
         {syncOutcome === "pending" && (
           <p className={styles.sync}>{messages.conclusion.sync.pending}</p>
         )}
@@ -451,6 +462,207 @@ function StreakCard() {
         )}
       </span>
     </section>
+  );
+}
+
+/**
+ * The stat block (#29, plan 033 §6.4/D13) — F5's main-card composition:
+ * the three stat rows, the 6-bucket histogram with TODAY's bucket
+ * highlighted, and the closing italic line for the timed games; the 7-row
+ * guess distribution with today's row highlighted for Termo, on both
+ * outcomes (ADR-0043's loss state included). No Termo time exists anywhere
+ * (ADR-0045 decision 4).
+ *
+ * The CALLER gates it on `syncOutcome === "recorded"` (the StreakCard's
+ * mechanism), so this component's own machine has the same three states:
+ * fetch in flight → the block at final dimensions with values blanked
+ * (`BLANK_VALUE`); settled without a value → unmount back to the shipped
+ * absence; resolved → the numbers, which include today's game by the
+ * gate's construction.
+ *
+ * Today's bucket comes from the LOCAL duration (`result`), today's Termo
+ * row from `todayTermoGuesses` on a win (its second call site) and the
+ * fail row from the local outcome on a loss. The markup is a per-sheet
+ * sibling of the stats screen's own (`app/estatisticas/stats-view.tsx`),
+ * not a shared component — CSS Modules hash per file, the
+ * `hub-day-state.tsx` reason.
+ */
+function ConclusionStats({
+  game,
+  result,
+  lost,
+}: {
+  readonly game: Game;
+  readonly result: ConclusionResult | undefined;
+  readonly lost: boolean;
+}) {
+  const stats = useStats();
+  if (stats === null) {
+    return null;
+  }
+  const loaded = stats !== undefined;
+  if (game === "termo") {
+    const counts = loaded
+      ? stats.termo.distribution
+      : ([0, 0, 0, 0, 0, 0, 0] as const);
+    const max = Math.max(...counts, 1);
+    // On a loss the fail row is today's; on a win, the server's own
+    // today value — never the local guess count, which the server may
+    // not hold yet (and then nothing is highlighted, honestly).
+    const todayRow = lost
+      ? 6
+      : loaded && stats.todayTermoGuesses !== null
+        ? stats.todayTermoGuesses - 1
+        : undefined;
+    return (
+      <div
+        className={styles.statsBlock}
+        aria-hidden={loaded ? undefined : true}
+        data-stats-state={loaded ? "value" : "skeleton"}
+      >
+        <div className={styles.distribution}>
+          {counts.map((count, index) => {
+            const fail = index === 6;
+            return (
+              <div
+                key={fail ? messages.stats.termo.fail : index + 1}
+                role="img"
+                aria-label={
+                  fail
+                    ? messages.stats.termo.failAria(count)
+                    : messages.stats.termo.rowAria(index + 1, count)
+                }
+                className={styles.distRow}
+                data-today={todayRow === index ? "" : undefined}
+              >
+                <span
+                  aria-hidden
+                  className={`${styles.distLabel} tabular-nums`}
+                >
+                  {fail ? messages.stats.termo.fail : index + 1}
+                </span>
+                <div aria-hidden className={styles.distTrack}>
+                  <div
+                    className={styles.distBar}
+                    style={{ width: `${String((count / max) * 100)}%` }}
+                  />
+                </div>
+                <span
+                  aria-hidden
+                  className={`${styles.distCount} tabular-nums`}
+                >
+                  {loaded ? count : BLANK_VALUE}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  const block = loaded ? stats[game] : undefined;
+  const counts = block?.histogram ?? ([0, 0, 0, 0, 0, 0] as const);
+  const max = Math.max(...counts, 1);
+  // The local record's duration, not the server's: this bucket is "where
+  // today's solve landed", and the local number is the one the stamp
+  // already shows. No local duration → no bucket highlighted.
+  const todayBucket =
+    result === undefined ? undefined : timeBucketIndex(result.elapsedMs);
+  const name = messages.games[game].name;
+  return (
+    <div
+      className={styles.statsBlock}
+      aria-hidden={loaded ? undefined : true}
+      data-stats-state={loaded ? "value" : "skeleton"}
+    >
+      <div className={styles.statRows}>
+        <StatValueRow
+          label={messages.stats.rows.best}
+          value={
+            block === undefined
+              ? BLANK_VALUE
+              : block.bestMs === null
+                ? messages.stats.emptyValue
+                : formatElapsed(block.bestMs)
+          }
+        />
+        <StatValueRow
+          label={messages.stats.rows.average}
+          value={
+            block === undefined
+              ? BLANK_VALUE
+              : block.averageMs === null
+                ? messages.stats.emptyValue
+                : formatElapsed(block.averageMs)
+          }
+        />
+        <StatValueRow
+          label={messages.stats.rows.solved(name)}
+          value={block === undefined ? BLANK_VALUE : String(block.solved)}
+        />
+      </div>
+      <div className={styles.histogram}>
+        {counts.map((count, index) => (
+          <div
+            key={messages.stats.histogram.labels[index]}
+            role="img"
+            aria-label={messages.stats.histogram.aria(
+              messages.stats.histogram.bucketNames[index] ?? "",
+              count,
+            )}
+            className={styles.bucket}
+            data-today={todayBucket === index ? "" : undefined}
+          >
+            <div aria-hidden className={styles.bucketTrack}>
+              <div
+                className={styles.bucketBar}
+                style={{ height: `${String((count / max) * 100)}%` }}
+              />
+            </div>
+            <span aria-hidden className={`${styles.bucketLabel} tabular-nums`}>
+              {messages.stats.histogram.labels[index]}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* F5:50's closing line, gated on the AVERAGE'S OWN sample
+          population: the recorded-gate means today's row is in the 30-day
+          sample by construction, so `>= 2` is today plus at least one
+          other on-time win — the line never compares a value against a
+          mean of itself alone. The comparison is against the INCLUSIVE
+          average, which is honest because its direction always agrees
+          with the exclusive one — x < mean(S ∪ {x}) ⇔ x < mean(S) for
+          nonempty S — so F5's sentence stays true under either reading.
+          Equal renders neither line. */}
+      {loaded &&
+        result !== undefined &&
+        block !== undefined &&
+        block.averageSampleCount >= 2 &&
+        block.averageMs !== null &&
+        result.elapsedMs !== block.averageMs && (
+          <p className={styles.closingLine}>
+            {result.elapsedMs < block.averageMs
+              ? messages.conclusion.closingFaster
+              : messages.conclusion.closingSlower}
+          </p>
+        )}
+    </div>
+  );
+}
+
+/** One F5 stat row: label in `--ink-2`, value tabular in `--ink`. */
+function StatValueRow({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: string;
+}) {
+  return (
+    <div className={styles.statRow}>
+      <span className={styles.statLabel}>{label}</span>
+      <span className={`${styles.statValue} tabular-nums`}>{value}</span>
+    </div>
   );
 }
 

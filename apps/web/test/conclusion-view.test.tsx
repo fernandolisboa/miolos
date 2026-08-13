@@ -1351,12 +1351,18 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
   });
 
   it("on recorded: the skeleton mounts at final dimensions, then the value settles in", async () => {
-    // A deferred response: the resolution is the test's to time.
+    // A deferred response: the resolution is the test's to time. CLONED
+    // per call since #29 — the recorded conclusion now fires two gated
+    // reads (streak and stats), and a single Response body can only be
+    // read once: without the clone, whichever consumer called `.json()`
+    // second threw, and when that was the streak the card under test
+    // unmounted. The stats read parses this body against ITS strict
+    // schema, fails, and settles to its own honest absence — harmless.
     let resolveFetch: (response: Response) => void = () => undefined;
     const deferred = new Promise<Response>((resolve) => {
       resolveFetch = resolve;
     });
-    fetchMock = vi.fn(() => deferred);
+    fetchMock = vi.fn(() => deferred.then((response) => response.clone()));
     vi.stubGlobal("fetch", fetchMock);
     writePlayRecord(concluded());
 
