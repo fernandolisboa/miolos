@@ -67,10 +67,11 @@
  * `turbo.json` or in a git hook invokes this file: a green CI is NOT evidence
  * that no motif name shipped. Plan 020 §20.2 scopes it deliberately — "a
  * per-PR tripwire for this route, not a standing rule #27 or #28 inherit" —
- * and its `FORBIDDEN`/`EXPECTED` arrays hard-code pt-BR product copy, which as
- * an unconditional CI step would red a build for a copy edit. Run it at step 8
- * and paste the output in the PR; a reviewer reading ADR-0027 or ADR-0033
- * should read them the same way.
+ * and its forbidden/expected marker arrays hard-code pt-BR product copy, which
+ * as an unconditional CI step would red a build for a copy edit (#28
+ * considered adding it to CI and declined again on the same ground, plan 025
+ * §10.4). Run it at step 8 and paste the output in the PR; a reviewer reading
+ * ADR-0027, ADR-0033 or ADR-0047 should read them the same way.
  *
  * Usage, from `apps/web`, after a build:
  *
@@ -114,9 +115,50 @@ const MAX_DELTA_BYTES = 40 * 1024;
  * would pass all three FORBIDDEN accent greps and every existing budget while
  * `/termo` grew silently.
  */
-const PER_ROUTE_BUDGET = { "/termo": 76 * 1024 };
+const PER_ROUTE_BUDGET = {
+  "/termo": 76 * 1024,
+  /**
+   * #28 (ADR-0046/ADR-0047): free-play Nonogram is the `/termo` argument a
+   * second time — the heavy content IS the feature. Generation needs the
+   * motif tables (~35 KB minified, curated pt-BR names included), so the
+   * route cannot ride the shared 40 KB, and the shared constant must not be
+   * raised to fit it, because the default is what arms the motif tripwire
+   * for the three DAILY grid routes. Measured at step 8 on this branch:
+   * +54.2 KB raw over `/`, against +18.2 / +18.2 for the free binairo and
+   * sudoku (which ride the default with room to spare) and −20.2 for the
+   * free-play index. 60 KB is measured + ~10% (plan 025 D12): enough for
+   * copy edits, tight enough that a second heavy library riding along
+   * lands it in the red.
+   */
+  "/modo-livre/nonogram": 60 * 1024,
+};
 
-const BUDGETED = ["/binairo", "/nonogram", "/sudoku", "/termo"];
+const BUDGETED = [
+  "/binairo",
+  "/nonogram",
+  "/sudoku",
+  "/termo",
+  "/modo-livre",
+  "/modo-livre/binairo",
+  "/modo-livre/nonogram",
+  "/modo-livre/sudoku",
+];
+
+/**
+ * The free-play route prefix that decides chunk attribution (ADR-0047).
+ * Everything NOT under it is daily scope — new routes are daily-strict by
+ * default, so forgetting to classify a future route fails closed.
+ */
+const FREE_PLAY_PREFIX = "/modo-livre";
+
+/** The four routes #28 ships; a build missing one is a loud exit 2, never a
+ *  vacuously-green scope (ADR-0047). */
+const FREE_PLAY_ROUTES = [
+  "/modo-livre",
+  "/modo-livre/binairo",
+  "/modo-livre/nonogram",
+  "/modo-livre/sudoku",
+];
 
 const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;
 
@@ -172,7 +214,50 @@ const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;
  * and that `zurro` below is one. When it reds, replace the marker in BOTH
  * files.
  */
-const FORBIDDEN = [
+/**
+ * SCOPED SINCE #28 (ADR-0047, which amends ADR-0033's bundle clause).
+ * Free play generates in the browser (ADR-0011/ADR-0046), so free-play
+ * chunks legitimately carry the motif library and the generator output
+ * keys — a single global list would fail by design on the first free-play
+ * build, and raising or trimming it would un-arm the tripwire for the
+ * three daily grid routes, the only thing it exists for. So markers carry
+ * a scope, and chunks carry an attribution (see the scan below):
+ *
+ * - `FORBIDDEN_EVERYWHERE` — the Termo answer canonicals, forbidden in
+ *   every chunk on disk, free-play chunks explicitly included: the answer
+ *   pool has no legitimate client home anywhere.
+ * - `FORBIDDEN_DAILY_SCOPE` — the motif/content markers, forbidden in
+ *   daily-scope and unattributed chunks. Exactly as forbidden as before
+ *   #28 for every daily route; ADR-0033's wire guarantees are untouched.
+ * - `FORBIDDEN_FREE_PLAY_SCOPE` — `zurro`, the validation-dictionary
+ *   control, forbidden in every `/modo-livre*` route's FIRST-LOAD SET,
+ *   scanned per route and shared chunks included — NOT over the derived
+ *   free-only set: if free play imported `@miolos/games/termo`, webpack
+ *   could hoist the dictionary into a chunk shared with `/termo`, the
+ *   derived set would exclude it by construction, and the scan would pass
+ *   without ever looking. In `/termo`'s own first-load set it remains
+ *   EXPECTED.
+ */
+const FORBIDDEN_EVERYWHERE = ["então", "mamãe", "época"];
+
+/**
+ * `requiredTier` IS DELIBERATELY NOT HERE, and it was until #28 (plan 025
+ * §15 deviation, measured at step 5). The string also lives in
+ * `packages/games/src/binairo/solve.ts` — `gradeBinairo` returns
+ * `{ requiredTier }` — and solve.ts is a module the DAILY legitimately
+ * ships (`solveBinairo` is the hint's solution memo). While nothing in the
+ * app used `gradeBinairo` the minifier dropped it and the marker was a
+ * clean discriminator; free play made it a live export
+ * (`generateBinairo` → `validateBinairo` → `gradeBinairo`), and webpack's
+ * used-exports analysis is GLOBAL, so every chunk that carries solve.ts —
+ * the daily `/binairo` first-load included — now retains the property key
+ * with zero daily imports of the generator. A marker that fires on a
+ * legitimate daily module cannot detect a leak. The generator-leak duty it
+ * carried transfers whole to `givensCount` (binairo validate/generate —
+ * modules the daily never imports), `clueCount` (sudoku generate) and the
+ * motif names (nonogram); ADR-0047 records the exclusion.
+ */
+const FORBIDDEN_DAILY_SCOPE = [
   "Escada",
   "Borboleta",
   "Caranguejo",
@@ -181,12 +266,10 @@ const FORBIDDEN = [
   "motifId",
   "reveal.solution must be size x size",
   "givensCount",
-  "requiredTier",
   "clueCount",
-  "então",
-  "mamãe",
-  "época",
 ];
+
+const FORBIDDEN_FREE_PLAY_SCOPE = ["zurro"];
 
 /**
  * Strings that MUST appear, so a scan looking at nothing cannot pass.
@@ -208,13 +291,24 @@ const FORBIDDEN = [
  * stopped shipping the word list altogether, or on the day this walk stopped
  * reaching that chunk, while asserting the absence of nothing.
  */
-const EXPECTED = [
+const EXPECTED_DAILY_SCOPE = [
   "Preenchemos uma célula da figura para você.",
   "Revele a figura escondida pelos números.",
   "Nível",
   "malformed nonogram clues: size must be an integer in 1..",
   "zurro",
 ];
+
+/**
+ * The controls that keep the SPLIT itself honest (ADR-0047): the SAME
+ * strings the daily scope forbids, required in the free-play-only chunks.
+ * `Escada` forbidden-in-daily + expected-in-free means (a) the attribution
+ * actually separates the two sets — mis-attributed free chunks red the
+ * forbidden side, an empty or unscanned free set reds this side; (b) the
+ * marker still exists in the library, additionally pinned by
+ * `packages/games/test/nonogram/bundle-markers.test.ts`.
+ */
+const EXPECTED_FREE_PLAY_SCOPE = ["Escada", "givensCount"];
 
 function fail(message) {
   console.error(`FAIL  ${message}`);
@@ -294,31 +388,152 @@ for (const route of BUDGETED) {
   }
 }
 
-const sources = readdirSync(CHUNKS, { recursive: true })
+/* ── chunk attribution (ADR-0047) ─────────────────────────────────────── */
+
+// Structural sanity FIRST: a missing free-play route would silently shrink
+// the free-play scope, and a vacuous scope is a failure, never a pass.
+for (const route of FREE_PLAY_ROUTES) {
+  if (!stats.some((entry) => entry.route === route)) {
+    console.error(
+      `\`${route}\` is missing from ${STATS} — the free-play scope would ` +
+        "be scanned vacuously. Exiting 2.",
+    );
+    process.exit(2);
+  }
+}
+
+const isFreePlayRoute = (route) =>
+  route === FREE_PLAY_PREFIX || route.startsWith(`${FREE_PLAY_PREFIX}/`);
+
+// Attribution runs on NORMALIZED paths (the stats file and the disk walk
+// spell the same chunk differently).
+const normalize = (path) => join(path);
+
+const dailyChunkSet = new Set(
+  stats
+    .filter((entry) => !isFreePlayRoute(entry.route))
+    .flatMap((entry) => entry.firstLoadChunkPaths.map(normalize)),
+);
+
+const freeOnlyChunkSet = new Set(
+  stats
+    .filter((entry) => isFreePlayRoute(entry.route))
+    .flatMap((entry) => entry.firstLoadChunkPaths.map(normalize))
+    // A chunk shared with ANY daily route is daily scope, period: sharing
+    // withheld-content code with a daily route is the defect, not an
+    // attribution nuance (ADR-0047).
+    .filter((path) => !dailyChunkSet.has(path)),
+);
+
+if (freeOnlyChunkSet.size === 0) {
+  console.error(
+    "The free-play-only chunk set is empty — the free-play expected " +
+      "markers would be scanned vacuously. Exiting 2.",
+  );
+  process.exit(2);
+}
+
+const allChunkPaths = readdirSync(CHUNKS, { recursive: true })
   .map((name) => join(CHUNKS, name))
   .filter((path) => path.endsWith(".js") && statSync(path).isFile())
-  .map((path) => readFileSync(path, "utf8"));
+  .map(normalize);
+
+// Everything on disk in neither set — lazy chunks, runtime slices — scans
+// as DAILY scope: fail closed (ADR-0047).
+const unattributedChunkPaths = allChunkPaths.filter(
+  (path) => !dailyChunkSet.has(path) && !freeOnlyChunkSet.has(path),
+);
+
+const readAll = (paths) => paths.map((path) => readFileSync(path, "utf8"));
+
+const everySource = readAll(allChunkPaths);
+const dailyScopeSources = readAll([
+  ...dailyChunkSet,
+  ...unattributedChunkPaths,
+]);
+const freeOnlySources = readAll([...freeOnlyChunkSet]);
 
 console.log("");
-for (const marker of FORBIDDEN) {
-  const hits = sources.filter((source) => source.includes(marker)).length;
+console.log(
+  `chunk attribution: ${dailyChunkSet.size} daily-scope, ` +
+    `${freeOnlyChunkSet.size} free-play-only, ` +
+    `${unattributedChunkPaths.length} unattributed (scanned as daily)`,
+);
+
+console.log("");
+for (const marker of FORBIDDEN_EVERYWHERE) {
+  const hits = everySource.filter((source) => source.includes(marker)).length;
   if (hits > 0) {
     fail(
-      `\`${marker}\` appears in ${hits} client chunk(s); it must appear in 0.`,
+      `\`${marker}\` appears in ${hits} client chunk(s); it must appear in 0 ` +
+        "anywhere (Termo answer canonical).",
     );
   } else {
     console.log(`ok    \`${marker}\` absent from every client chunk`);
   }
 }
 
-for (const marker of EXPECTED) {
-  const hits = sources.filter((source) => source.includes(marker)).length;
-  if (hits === 0) {
+for (const marker of FORBIDDEN_DAILY_SCOPE) {
+  const hits = dailyScopeSources.filter((source) =>
+    source.includes(marker),
+  ).length;
+  if (hits > 0) {
     fail(
-      `\`${marker}\` appears in 0 client chunks — the scan is looking at the ` +
-        "wrong files, so its negatives prove nothing.",
+      `\`${marker}\` appears in ${hits} daily-scope/unattributed chunk(s); ` +
+        "it must appear in 0 (ADR-0033 as amended by ADR-0047).",
     );
   } else {
-    console.log(`ok    \`${marker}\` present in ${hits} client chunk(s)`);
+    console.log(`ok    \`${marker}\` absent from every daily-scope chunk`);
+  }
+}
+
+// Per free-play ROUTE, first-load set directly — never the derived
+// free-only set, which hoisting could empty (ADR-0047).
+for (const marker of FORBIDDEN_FREE_PLAY_SCOPE) {
+  for (const route of FREE_PLAY_ROUTES) {
+    const entry = stats.find((current) => current.route === route);
+    const routeSources = readAll(entry.firstLoadChunkPaths.map(normalize));
+    const hits = routeSources.filter((source) =>
+      source.includes(marker),
+    ).length;
+    if (hits > 0) {
+      fail(
+        `\`${marker}\` appears in ${hits} chunk(s) of ${route}'s first-load ` +
+          "set; the Termo dictionary leaked into free play.",
+      );
+    } else {
+      console.log(`ok    \`${marker}\` absent from ${route}'s first-load set`);
+    }
+  }
+}
+
+for (const marker of EXPECTED_DAILY_SCOPE) {
+  const hits = dailyScopeSources.filter((source) =>
+    source.includes(marker),
+  ).length;
+  if (hits === 0) {
+    fail(
+      `\`${marker}\` appears in 0 daily-scope chunks — the scan is looking ` +
+        "at the wrong files, so its negatives prove nothing.",
+    );
+  } else {
+    console.log(`ok    \`${marker}\` present in ${hits} daily-scope chunk(s)`);
+  }
+}
+
+for (const marker of EXPECTED_FREE_PLAY_SCOPE) {
+  const hits = freeOnlySources.filter((source) =>
+    source.includes(marker),
+  ).length;
+  if (hits === 0) {
+    fail(
+      `\`${marker}\` appears in 0 free-play-only chunks — either the ` +
+        "attribution collapsed or the scan stopped looking, and the daily " +
+        "forbidden side above is only meaningful while this side finds it.",
+    );
+  } else {
+    console.log(
+      `ok    \`${marker}\` present in ${hits} free-play-only chunk(s)`,
+    );
   }
 }

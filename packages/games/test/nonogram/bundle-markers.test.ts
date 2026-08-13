@@ -13,11 +13,15 @@ import { MOTIFS } from "../../src/nonogram/motifs";
  * barrel's tree-shaking. So the only place these names can be enumerated is
  * inside this package.
  *
- * THE CONSUMER, BY NAME. `apps/web/scripts/route-client-js.mjs`'s `FORBIDDEN`
- * array hard-codes the five markers below and asserts they appear in ZERO
- * client chunks. A grep for a string that no longer exists passes trivially —
+ * THE CONSUMER, BY NAME. `apps/web/scripts/route-client-js.mjs`'s
+ * `FORBIDDEN_DAILY_SCOPE` array hard-codes the five markers below and asserts
+ * they appear in ZERO daily-scope or unattributed chunks — since #28 the scan
+ * is route-scoped (ADR-0047 amends ADR-0033's bundle clause): free-play
+ * chunks legitimately carry the motif library, and `EXPECTED_FREE_PLAY_SCOPE`
+ * requires `Escada` THERE, so the same string is red on one side and required
+ * on the other. A grep for a string that no longer exists passes trivially —
  * so if all five were renamed away, the script would keep printing `ok` while
- * asserting the absence of nothing, at precisely the place ADR-0033's only
+ * asserting the absence of nothing, at precisely the place ADR-0033's
  * mechanical guarantee lives. Nothing on the web side can notice: the script
  * holds no link back to the library.
  *
