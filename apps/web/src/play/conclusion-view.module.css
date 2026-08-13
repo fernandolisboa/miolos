@@ -1,10 +1,11 @@
 /* The conclusion — SHARED by every game (ADR-0029, plan 018 §5.2).
    Desktop-first per f5-conclusao-desktop, mobile per f6-conclusao-mobile,
-   with the scope table of plan 017 §12.3 applied: the
-   streak card, best/average/solved, the histogram, the closing italic line
-   and the share button are all out of this ticket, so the desktop
-   composition is redesigned within the system rather than left as an empty
-   rectangle at 48px padding.
+   with the scope table of plan 017 §12.3 applied as amended by #19:
+   best/average/solved, the histogram, the closing italic line and the
+   share button remain out (#29/#34), so the desktop composition is
+   redesigned within the system rather than left as an empty rectangle at
+   48px padding. The streak card is live since #19 (ADR-0048) — F5:54-56's
+   sealing-wax card, `.streakCard` below.
 
    Every accent here is `var(--accent)`, set inline on the root from
    `play/accent.ts` — one sheet, four games (plan 018 §5.2 edit 1).
@@ -474,6 +475,69 @@
   display: flex;
   flex-direction: column;
   gap: 26px;
+}
+
+/* The streak card (#19, ADR-0048) — F5:54's sealing-wax treatment: card
+   paper, 1.5px --accent-app ring, the hard 0.25-alpha offset shadow and a
+   slight rotation, with the tape scrap as a pseudo-element (F5's inline
+   div; the shipped `.tape` is the GAME accent and this card is app
+   identity, so it does not reuse it). Always `--accent-app`, never
+   `var(--accent)`: the streak is the app's own value on every game's
+   conclusion — the hub stamp's rule. */
+.streakCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  background: var(--paper-card);
+  border: 1.5px solid var(--accent-app);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent-app) 25%, transparent);
+  padding: var(--space-6) var(--space-7);
+  transform: rotate(1deg);
+}
+
+.streakCard::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  right: 30px;
+  width: 58px;
+  height: 19px;
+  border-radius: var(--radius-tape);
+  background: color-mix(in srgb, var(--accent-app) 30%, transparent);
+  transform: rotate(4deg);
+}
+
+/* F5:55 — Fraunces at 52px, the conclusion's own size for the sanctioned
+   single non-aligning numeral (the hub stamp's 44px `--text-numeral-lg` is
+   the token's case; ADR-0036 decision 2 sanctions the KIND, not one size).
+   The min-width holds the skeleton's box at one-digit width so the value
+   arriving is a settle, not a reflow of the whole card. This `color` is an
+   ADR-0041 decision 1 exception, named in `ink-on-accent.test.ts`:
+   `--accent-app` #9E3B2F on `--paper-card` #FBF7EF = 6.2980:1. */
+.streakCardNumeral {
+  font: 600 52px/1 var(--font-display);
+  min-width: 34px;
+  text-align: center;
+  color: var(--accent-app);
+}
+
+/* F5:56 — the numeral's companion line. The second named ADR-0041
+   exception, same pair, same 6.2980:1. */
+.streakCardLabel {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--accent-app);
+}
+
+/* The "mantida por hoje." tail — F5:56's italic Fraunces, rendered only
+   when the server says today itself is a counted day (ADR-0048). Inherits
+   the label's accent; no third color declaration. */
+.streakCardTail {
+  font-family: var(--font-display);
+  font-style: italic;
 }
 
 .dayCard {
@@ -980,6 +1044,20 @@
 
   .dayCard {
     padding: var(--space-4) 18px;
+  }
+
+  /* The streak card shrinks the way the hub stamp does (page.module.css):
+     tighter box, the small shadow, a smaller Fraunces numeral. */
+  .streakCard {
+    padding: var(--space-4) 18px;
+    gap: var(--space-4);
+    box-shadow: var(--shadow-sm)
+      color-mix(in srgb, var(--accent-app) 25%, transparent);
+  }
+
+  .streakCardNumeral {
+    font-size: 36px;
+    min-width: 24px;
   }
 
   .chips {

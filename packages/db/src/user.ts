@@ -13,6 +13,7 @@ export {
   getCompletion,
   grantedHintsToday, // DORMANT (plan 017 D22) — no v1 writer; see ADR-0027
   grantHints, // DORMANT (plan 017 D22)
+  listCompletionsForStreak,
   recordCompletion,
   type CompletionRecord,
 } from "./completions";

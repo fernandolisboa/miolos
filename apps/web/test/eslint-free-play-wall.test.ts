@@ -280,6 +280,105 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     }
   });
 
+  it("T-LINT-S21: the streak modules — client, hook, hub island and the bare barrel form — red from free play, clean from a daily path", async () => {
+    // #19's growth clause (plan 027 D9): `no-restricted-imports` bans by
+    // NAME and is non-transitive, so ADR-0046's "free play never touches
+    // the streak" stays true only because these names entered the list in
+    // the same change that created the modules. The bare `../streak` form
+    // is listed because `**/streak/**` does not match it — a future
+    // `src/streak/index.ts` barrel must not become a door.
+    const doors = [
+      "../streak/streak-client",
+      "../streak/use-streak",
+      "../../app/hub-streak",
+      "../streak",
+    ];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — the hub island and the conclusion card import
+      // them.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+  });
+
+  it("T-LINT-S22: dynamic-import evasions of the streak bans red, the bare barrel form included; a local dynamic import stays clean", async () => {
+    const doors = [
+      '  import("../streak/streak-client");',
+      '  import("../streak/use-streak");',
+      '  import("../../app/hub-streak");',
+      '  import("../streak");',
+    ];
+    for (const door of doors) {
+      const source = ["export const load = () =>", door, ""].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-syntax");
+    }
+
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
+  it("T-LINT-S24: the hub page and hub-day-state — one-hop doors to day-state and the streak — red from free play, clean from a daily path", async () => {
+    // The gap the #19 step-6 live probe demonstrated: `app/page` imports
+    // `hub-day-state` and `hub-streak`, and `hub-day-state` reaches
+    // `play/day-state`, so a relative import of the hub page carried the
+    // whole daily surface with ZERO wall hits. The wall bans one hop by
+    // name, so the page and the island are both listed.
+    const doors = ["../../app/page", "../../app/hub-day-state"];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // Scope control: from a daily path the hub page is ordinary
+      // architecture — the ban is the directory's, not the app's.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+  });
+
+  it("T-LINT-S25: dynamic-import evasions of the hub-page bans red; a local dynamic import stays clean", async () => {
+    const doors = [
+      '  import("../../app/page");',
+      '  import("../../app/hub-day-state");',
+    ];
+    for (const door of doors) {
+      const source = ["export const load = () =>", door, ""].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-syntax");
+    }
+
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S18: the free-play directory's LEGAL surface lints clean — the wall is not a blanket ban", async () => {
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',

@@ -215,6 +215,27 @@ export const messages = {
         binairo: "Binairo",
       },
     },
+    /**
+     * The streak card (#19, ADR-0048), server-computed and fetched only
+     * once the day is on the server. Shared chrome and composed HERE, never
+     * in `ConclusionCopy` (the `stampAria` mechanism above: that bundle is
+     * plain-data-only and a function member is an SSR 500).
+     *
+     * `value` is the numeral's companion line — F5:56's "dias de sequência"
+     * — and deliberately does NOT repeat the count the numeral already
+     * shows; the accessible name (`aria`) carries it. `maintained` renders
+     * ONLY when the server says today itself is a counted day
+     * (`todayCounts`, ADR-0048 decision 2): on a lost-Termo day or a late
+     * solve the streak may be alive through yesterday, but *this* day did
+     * not maintain it and the copy must not claim it did (ADR-0008 rules
+     * 1–3). CONTEXT.md's word — "sequência", never "dias seguidos".
+     */
+    streak: {
+      value: (count: number) => `${count === 1 ? "dia" : "dias"} de sequência`,
+      maintained: "— mantida por hoje.",
+      aria: (count: number) =>
+        `sequência de ${count} ${count === 1 ? "dia" : "dias"}`,
+    },
     ctaHome: "Fechar o dia — voltar para Hoje",
     // F5:65's own phrasing for this exact button — "Fechar o dia — jogar
     // Nonogram". Both CTA variants keep the "Fechar o dia" anchor and one

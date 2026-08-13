@@ -4,6 +4,7 @@ import { AdSlot } from "../src/components/ad-slot";
 import { locale, messages, routes } from "../src/i18n";
 import { accentVars } from "../src/play/accent";
 import { HubCardAction, HubProgress } from "./hub-day-state";
+import { HubStreak } from "./hub-streak";
 import styles from "./page.module.css";
 
 // The date must be today's (America/São Paulo), not build-day's.
@@ -81,7 +82,6 @@ export default function HojePage() {
   const now = new Date();
   const date = todayInSaoPaulo(now);
   const isoDate = todaySaoPauloDate(now);
-  const streakCount = 0;
 
   return (
     <main className={styles.page}>
@@ -93,17 +93,9 @@ export default function HojePage() {
           </p>
           <HubProgress date={isoDate} total={gameOrder.length} />
         </div>
-        <div
-          className={styles.streakStamp}
-          aria-label={messages.hoje.streak.aria(streakCount)}
-        >
-          <div aria-hidden className={`${styles.streakNumeral} tabular-nums`}>
-            {streakCount}
-          </div>
-          <div aria-hidden className={styles.streakLabel}>
-            {messages.hoje.streak.label}
-          </div>
-        </div>
+        {/* Server-computed and client-fetched (ADR-0048): the server render
+            shows the honest 0 and hydration only ever raises it. */}
+        <HubStreak />
       </header>
 
       <section className={styles.games}>

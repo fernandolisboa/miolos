@@ -1,7 +1,7 @@
 import type { Game } from "@miolos/core";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ConclusionView } from "../src/play/conclusion-view";
 import {
@@ -13,6 +13,7 @@ import {
 } from "../src/play/play-record";
 import type { ConclusionPicture } from "../src/play/types";
 import { useRecordSnapshot } from "../src/play/use-record-snapshot";
+import { TermoConclusion } from "../src/termo/termo-conclusion";
 import { formatElapsed, messages, routes } from "../src/i18n";
 import { bodyOf, decl, stylesheet } from "./css-source";
 
@@ -171,9 +172,36 @@ function dayCard(): HTMLElement {
   return card;
 }
 
+/** A 200 the strict streak contract accepts — shared by the S128/S129
+ *  streak-card suites below. */
+function streakResponse(streak: number, todayCounts: boolean): Response {
+  return new Response(JSON.stringify({ date: DATE, streak, todayCounts }), {
+    status: 200,
+  });
+}
+
+/** The streak fetch's default answer in this suite: an anonymous 401, so the
+ *  card settles to absence and every pre-#19 assertion passes unchanged.
+ *  The env stub and the fetch stub are a MANDATORY PAIR (plan 027 §8): with
+ *  only the fetch stub the env guard short-circuits and logs loudly. The
+ *  streak suites below install their own fetch stubs per case. */
+let fetchMock: ReturnType<typeof vi.fn>;
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
+  vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test");
+  fetchMock = vi.fn(() =>
+    Promise.resolve(
+      new Response(JSON.stringify({ error: "no-session" }), { status: 401 }),
+    ),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("the stamp (T-WEB-17)", () => {
@@ -1284,5 +1312,191 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
     ).toHaveLength(3);
+  });
+});
+
+/**
+ * The conclusion streak card's state machine (#19, plan 027 D8, ADR-0048).
+ * The gate is the record the view already reads: only `syncOutcome ===
+ * "recorded"` mounts the card, so the fetched number includes the day it
+ * decorates by construction, and every unfetched state is exactly as honest
+ * as the pre-#19 absence.
+ */
+describe("the streak card's state machine (T-WEB-S128)", () => {
+  function streakCardIn(container: HTMLElement): HTMLElement | null {
+    return container.querySelector("[data-streak-state]");
+  }
+
+  it("stays absent while the day is not on the server, and the fetch never fires", () => {
+    for (const syncOutcome of ["pending", "rejected"] as const) {
+      window.localStorage.clear();
+      writePlayRecord(concluded({ syncOutcome, pendingSync: true }));
+
+      const { container, unmount } = render(
+        <ConclusionView
+          game="binairo"
+          date={DATE}
+          copy={messages.games.binairo.conclusion}
+        />,
+      );
+
+      // The offline answer by construction: no card, no fake zero — and the
+      // ordering half of the assertion: the fetch is gated behind the mount,
+      // so it cannot have fired.
+      expect(streakCardIn(container), syncOutcome).toBeNull();
+      expect(fetchMock, syncOutcome).not.toHaveBeenCalled();
+      unmount();
+    }
+  });
+
+  it("on recorded: the skeleton mounts at final dimensions, then the value settles in", async () => {
+    // A deferred response: the resolution is the test's to time.
+    let resolveFetch: (response: Response) => void = () => undefined;
+    const deferred = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+    fetchMock = vi.fn(() => deferred);
+    vi.stubGlobal("fetch", fetchMock);
+    writePlayRecord(concluded());
+
+    const { container } = render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    // The gate opened, so the fetch fired (the call-order half: compare the
+    // pending/rejected case above, where it may not) — StrictMode double
+    // effects would make this 2 identical calls, so the assertion is on
+    // "fired", not a count.
+    expect(fetchMock).toHaveBeenCalledWith("https://api.example.test/streak", {
+      credentials: "include",
+    });
+    // The PlaySkeleton discipline: the box is reserved, the values are
+    // blank, and the unresolved card says nothing to a screen reader.
+    const skeleton = streakCardIn(container);
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveAttribute("data-streak-state", "skeleton");
+    expect(skeleton).toHaveAttribute("aria-hidden", "true");
+
+    resolveFetch(streakResponse(5, true));
+    const card = await screen.findByLabelText(
+      messages.conclusion.streak.aria(5),
+    );
+    expect(card).toHaveAttribute("data-streak-state", "value");
+    expect(card).toHaveTextContent(messages.conclusion.streak.value(5));
+  });
+
+  it("renders a fetched zero honestly and never unmounts on it", async () => {
+    // A late win or a lost-only day with no prior history resolves
+    // {streak: 0, todayCounts: false} on a mounted card: real server data,
+    // not the fake zero the pre-#19 conclusion refused to invent (§9's
+    // Fernando-overridable default).
+    fetchMock = vi.fn(() => Promise.resolve(streakResponse(0, false)));
+    vi.stubGlobal("fetch", fetchMock);
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const card = await screen.findByLabelText(
+      messages.conclusion.streak.aria(0),
+    );
+    expect(card).toHaveAttribute("data-streak-state", "value");
+    expect(card).toHaveTextContent(messages.conclusion.streak.value(0));
+  });
+
+  it("unmounts back to absence when the fetch fails", async () => {
+    // The suite-default 401 IS the failure (a reloaded /concluido offline
+    // resolves the same way through the catch path).
+    writePlayRecord(concluded());
+
+    const { container } = render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    expect(streakCardIn(container)).not.toBeNull();
+    await waitFor(() => {
+      expect(streakCardIn(container)).toBeNull();
+    });
+  });
+});
+
+/**
+ * The card's copy honesty (#19, plan 027 D5/§9, ADR-0008 rules 1–3): the
+ * italic tail is a claim that TODAY maintained the streak, so it renders
+ * only when the server's `todayCounts` says so. "dias seguidos" stays
+ * banned (the shipped negative, re-asserted over the new card).
+ */
+describe("the streak card's copy honesty (T-WEB-S129)", () => {
+  it("renders the maintained tail only when today itself counts", async () => {
+    fetchMock = vi.fn(() => Promise.resolve(streakResponse(12, true)));
+    vi.stubGlobal("fetch", fetchMock);
+    writePlayRecord(concluded());
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const card = await screen.findByLabelText(
+      messages.conclusion.streak.aria(12),
+    );
+    expect(card).toHaveTextContent(messages.conclusion.streak.value(12));
+    expect(card).toHaveTextContent(messages.conclusion.streak.maintained);
+  });
+
+  it("renders the bare value on a lost-Termo day — alive is not maintained", async () => {
+    // The server's answer for a day whose only terminal is a lost Termo:
+    // the streak is alive through yesterday (ADR-0048 decision 2) but today
+    // did not maintain it, and the copy must not claim it did. Driven
+    // through the REAL Termo conclusion, where the lost case lives.
+    fetchMock = vi.fn(() => Promise.resolve(streakResponse(3, false)));
+    vi.stubGlobal("fetch", fetchMock);
+    writePlayRecord(lostTermo());
+
+    render(<TermoConclusion date={DATE} />);
+
+    const card = await screen.findByLabelText(
+      messages.conclusion.streak.aria(3),
+    );
+    expect(card).toHaveTextContent(messages.conclusion.streak.value(3));
+    expect(card).not.toHaveTextContent(messages.conclusion.streak.maintained);
+  });
+
+  it("renders the fetched-zero card with the bare value and no tail", async () => {
+    fetchMock = vi.fn(() => Promise.resolve(streakResponse(0, false)));
+    vi.stubGlobal("fetch", fetchMock);
+    writePlayRecord(concluded());
+
+    const { container } = render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const card = await screen.findByLabelText(
+      messages.conclusion.streak.aria(0),
+    );
+    expect(card).toHaveTextContent(messages.conclusion.streak.value(0));
+    expect(card).not.toHaveTextContent(messages.conclusion.streak.maintained);
+    // The shipped negative, re-asserted over the new card's copy.
+    expect(container.textContent).not.toContain("dias seguidos");
   });
 });

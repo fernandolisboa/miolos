@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md)
+**Amended by:** [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md) — decision 5's *"#19 replaces `readDayState`'s body and nothing else"* is narrowed: #19 ships the streak that decision 3 deferred and does NOT replace `readDayState`'s body; the server day-truth payload and the body replacement move to [#83](https://github.com/fernandolisboa/miolos/issues/83). The local reader, its callers and the offline-fallback rule are untouched.
 **Amends:** the user-specific-fragment consequence of [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md) — *"If a public page ever grows a user-specific fragment (e.g. 'you solved this one'), that fragment calls `apps/api` — the page does not get to widen the direct-read scope."* — by narrowing it to fragments whose **source** is server state; see Decision 4.
 
 ## Context

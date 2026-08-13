@@ -26,14 +26,18 @@
  * false: this script stores no baseline, so it structurally cannot compare a
  * delta to its previous value. The only failure surface below is the 40 KB
  * budget, and the headroom is NOT the "half of it" an earlier version of this
- * comment claimed: measured on this branch after #28's step 7, the three GRID
- * play routes come in at binairo 35.8, sudoku 32.1 and nonogram 37.8 KB —
- * 90 %, 80 % and 95 % of budget — so the noisiest clean route has 2.2 KB of
- * slack, not 20. (An earlier version of this paragraph quoted #27's 33.0 /
- * 30.4 / 36.8 and a 3.2 KB slack, and before that #25's 28.3 / 30.9 / 34.3
- * and a 5.7 KB one, which overstated the room by 78 % in the one comment
- * whose whole thesis is that overstated room is the hazard; #28's free-play
- * routes reshuffled the shared chunks and moved all three.) It still
+ * comment claimed: measured on this branch after #19's step 5, the three GRID
+ * play routes come in at binairo 36.3, sudoku 32.6 and nonogram 38.3 KB —
+ * 91 %, 82 % and 96 % of budget — so the noisiest clean route has 1.7 KB of
+ * slack, not 20. Note the direction: #19 grew `/` (the BASELINE, hub-streak)
+ * AND the game routes (the conclusion streak card), and the card side won by
+ * ~0.5 KB, so every measured delta moved UP a hair rather than shrinking the
+ * instrument. (An earlier version of this paragraph quoted #28's 35.8 /
+ * 32.1 / 37.8 and a 2.2 KB slack, before that #27's 33.0 / 30.4 / 36.8 and
+ * a 3.2 KB one, and before that #25's 28.3 / 30.9 / 34.3 and a 5.7 KB one,
+ * which overstated the room by 78 % in the one comment whose whole thesis is
+ * that overstated room is the hazard; #28's free-play routes reshuffled the
+ * shared chunks and moved all three.) It still
  * discriminates against what it exists to catch (a motif-table leak is
  * ~35 KB minified and would land /nonogram around 73 KB), but nobody may
  * budget against room that is not there, and the figures above are the ones

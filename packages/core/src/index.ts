@@ -13,6 +13,7 @@ export {
   type FeatureFlags,
 } from "./feature-flags";
 export { GAMES, gameSchema, type Game } from "./game";
+export { computeStreak, type StreakRow, type StreakStatus } from "./streak";
 export {
   defaultRemoteConfig,
   remoteConfigSchema,
@@ -81,6 +82,7 @@ export {
   type TermoGuessResponse,
   type TermoTiles,
 } from "./contracts/termo-guess";
+export { streakResponseSchema, type StreakResponse } from "./contracts/streak";
 export {
   apiErrorResponseSchema,
   binairoCompletionRequestSchema,

@@ -11,9 +11,11 @@
  * also what `impeccable detect` always scans, and also what a second device
  * sees. A false `pending` is invisible to the player; a false `done` would
  * not be. It can therefore never back a streak, a medal or a statistic
- * (ADR-0031 consequence (b)); #19 replaces `readDayState`'s BODY with the
- * server payload and its callers do not change, keeping this reader as the
- * offline fallback the conclusion needs.
+ * (ADR-0031 consequence (b)). #19 did NOT replace `readDayState`'s body:
+ * ADR-0048 amends ADR-0031 decision 5 and defers the server day-truth
+ * payload — and this body's replacement — to its own issue (#83). This
+ * reader stays the day-state source and the offline fallback the
+ * conclusion needs.
  */
 import { GAMES, type Game } from "@miolos/core";
 import { useCallback, useSyncExternalStore } from "react";
