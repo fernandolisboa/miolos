@@ -33,7 +33,11 @@
    Do instead: revert that `.gitignore` line after pulling envs.
 
 ## Domain Behavior Guardrails
-1. **[2026-07-31] Streaks/dates always America/Sao_Paulo, computed server-side**
+1. **[2026-08-12] Bundle markers are route-scoped and fail closed (ADR-0047): a new route makes `route-client-js.mjs` exit 2 until classified**
+   Do instead: any PR adding a route classifies it (daily union vs `/modo-livre*`) in the script in the same PR; never weaken the double-role markers (`Escada`/`zurro` forbidden in one scope, expected in the other — that IS the anti-vacuity control).
+2. **[2026-08-12] The free-play ESLint wall bans named modules, non-transitive; free play is ephemeral by decision (ADR-0046)**
+   Do instead: hoist helpers both sides need to a wall-legal module (`play/picture-path.ts`, `binairo/state.ts` precedents), never copy into `free-play/`; no storage/timer/completion language in free play.
+3. **[2026-07-31] Streaks/dates always America/Sao_Paulo, computed server-side**
    Do instead: never trust the client clock; midnight fixed for every user.
 2. **[2026-07-31] #15 users schema needs nullable `email` + verification state from day one (ADR-0003)**
    Do instead: model anonymous-first identity with the email-attach columns present but null.
