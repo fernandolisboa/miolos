@@ -26,6 +26,11 @@ export {
   listCompletionsForMerge,
   mergeAccounts,
 } from "./merge";
+// The #29 statistics readers (plan 033, ADR-0051): the unfiltered
+// per-user projection the core derivations (and later #30's medals,
+// ADR-0049 decision 6) recompute over, and the account's SP birth day —
+// the calendar's range anchor.
+export { getUserSince, listCompletionsForStats } from "./stats";
 // `attachTokens` (#21, ADR-0050): user-scoped like completions — the
 // statements over it live in apps/api/src/attach/service.ts, and apps/web
 // mechanically cannot name it through the root entry (ADR-0026 decision 5).
