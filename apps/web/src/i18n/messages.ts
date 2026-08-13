@@ -235,6 +235,10 @@ export const messages = {
   freePlay: {
     title: "Modo livre",
     lead: "Puzzles infinitos, gerados aqui no seu aparelho. Nada daqui conta para a sequência nem para as estatísticas.",
+    // The game screens' back affordance targets the index, not Hoje, so the
+    // shared `play.back` ("← Hoje") would lie about the destination. Same
+    // arrow-is-copy rule as the hoisted `back` above.
+    back: "← Modo livre",
     backToIndexAria: "Voltar ao Modo livre",
     modeTag: "Modo livre",
     level: {
@@ -256,6 +260,14 @@ export const messages = {
       again: "Mais um",
       backToIndex: "Voltar ao Modo livre",
       backHome: "Voltar para Hoje",
+      /**
+       * The painted picture's accessible name. NOT `games.nonogram.reveal.aria`:
+       * that string says "de hoje", which is daily language, and the motif's
+       * curated name is withheld here exactly as it is on the conclusion
+       * (ADR-0033, amended by ADR-0047 for the bundle only — never for copy).
+       */
+      pictureAria:
+        "A figura revelada, formada pelas células preenchidas da sua grade.",
     },
   },
   games: {

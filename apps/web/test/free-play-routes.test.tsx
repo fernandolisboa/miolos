@@ -3,6 +3,10 @@
  * the typed route literals, the index screen, and the hub's link. The
  * Termo-absence assertions live here beside the things they constrain.
  */
+import { readdirSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -33,6 +37,29 @@ describe("the free-play route literals (T-WEB-S111)", () => {
     for (const game of FREE_PLAY_GAMES) {
       expect(freePlayRoutes[game]).toBe(`/${routeSlugs.freePlay}/${game}`);
     }
+  });
+});
+
+describe("the app/modo-livre segment (T-WEB-S112)", () => {
+  it("holds exactly the index and the three grid-game segments — no termo", () => {
+    const segment = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "..",
+      "app",
+      "modo-livre",
+    );
+
+    // The exact listing, not a `not.toContain`: a directory that gained an
+    // unplanned segment should fail loudly, whatever the segment is named.
+    // The 404 for /modo-livre/termo is then Next's by construction — no
+    // segment, no route (plan 025 §9.3).
+    expect(readdirSync(segment).sort()).toEqual([
+      "binairo",
+      "nonogram",
+      "page.module.css",
+      "page.tsx",
+      "sudoku",
+    ]);
   });
 });
 
