@@ -1,0 +1,76 @@
+# ADR-0046 — Free play: three routes, a level picker over the weekday ramps, an ephemeral session
+
+**Status:** Proposed — 2026-08-12 (issue #28)
+**Depends on:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0005](./0005-all-content-is-free.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md)
+
+## Context
+
+ADR-0011 decided free play is generated in the browser from a client-picked
+seed, with no endpoint and nothing recorded. It deliberately left open the
+product surface: routes, how difficulty is expressed (the engines have no
+free-play difficulty concept — their only axis is the ISO weekday ramp,
+Monday easiest through Sunday hardest, in all three grid games), whether a
+session persists, and what daily furniture (timer, hints, conclusion)
+transfers. Termo is excluded by project invariant (ADR-0005/ADR-0015).
+
+## Decision
+
+1. **Routes:** `/modo-livre` (index) plus literal per-game segments
+   `/modo-livre/{binairo,sudoku,nonogram}` (pt-BR slug per ADR-0013; game
+   names are untranslated proper nouns). Literal, not dynamic: typed routes
+   stay literal types, and the route boundary is what carries ADR-0011's
+   per-game code-splitting. No `/modo-livre/termo` segment exists; the 404
+   is by absence. The pages are static — they fetch nothing.
+2. **Difficulty is a three-level picker** — Leve / Médio / Difícil — mapped
+   to weekdays **1 / 4 / 7**, the ramp's endpoints and middle. The picker
+   lives on each game screen (default Médio), not in the URL, keeping the
+   pages static and level switches offline-instant.
+3. **The client picks one uint32 seed per puzzle** via
+   `crypto.getRandomValues`. "Mais um" draws a fresh seed at the same
+   level. No seed is user-visible in v1; the state keeps `{seed, weekday}`
+   so ADR-0011's noted-not-scheduled shareable links stay one rendering
+   away.
+4. **A free-play session is ephemeral.** Nothing is written to
+   `localStorage` — no reuse of the daily `miolos:play:*` namespace and no
+   new namespace. Reload regenerates. Puzzles are infinite; nothing scarce
+   is lost, and zero-writes is the strongest provable form of "records
+   nothing" on the client.
+5. **One free hint per puzzle, computed client-side** from the generator's
+   own solution (ADR-0027's mechanism). No extra-hint affordance: hint
+   grants are day-scoped server rows (ADR-0006) and free play never
+   touches that system.
+6. **No timer.** A clock measures a value free play has nowhere to put.
+7. **No conclusion screen and no daily chaining.** Solving swaps, in
+   place, to a solved card offering "Mais um".
+8. **The root layout's `POST /session` is unchanged** on free-play routes:
+   it is route-agnostic identity bootstrap, not a free-play request. The
+   "no free-play requests" guarantee is: zero requests originate from any
+   free-play module.
+
+## Rejected
+
+- **Seven-weekday difficulty UI:** exposes an internal axis as seven
+  labels nobody asked for.
+- **Random weekday per puzzle:** difficulty roulette.
+- **A persistence namespace:** schema/versioning/pruning machinery for a
+  convenience, purchased by weakening the cleanest negative proof.
+- **Suppressing the session mint on free-play routes:** layout surgery to
+  hide a request every other route makes.
+
+## Consequences
+
+- The Nonogram motif library (curated pt-BR names included) ships in the
+  free-play nonogram chunk — generation needs the tables. The names remain
+  **non-user-facing everywhere**: the solved card shows the painted
+  picture, never `reveal.name`. ADR-0033's payload and response
+  guarantees are unaffected; its bundle clause is amended and narrowed to
+  daily-route and shared chunks by ADR-0047, whose route-scoped tripwire
+  keeps daily chunks as forbidden as ever. CONTEXT.md's Motif row is
+  rewritten accordingly.
+- Free play never touches streak, statistics distributions or medals
+  (ADR-0008 rule 5) — enforced by an ESLint wall around the free-play
+  directories banning the sync/record/lifecycle/session/db/termo modules,
+  with probe tests.
+- Sudoku generation runs on the main thread with a generating state and a
+  fresh-seed retry ladder on exhaustion; a Web Worker is the named
+  escalation, not the default.

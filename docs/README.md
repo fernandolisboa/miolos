@@ -57,6 +57,7 @@ Current:
 | `plans/022-issue-27-plan-daily-termo-end-to-end.md` | Implementation plan for #27 (daily Termo end to end: the answer draw and its no-repeat rule, the stateless guess route and the offline degradation, the tile board and the pt-BR keyboard, the conclusion's fourth state, and the accent rule that closes #68) |
 | `handoffs/023-issue-27-handoff-termo-mid-flight.md` | Session handoff taken mid-#27 with PR #77 open and steps 1–5 complete: what the ten commits landed, the three facts that cost that session real time (drizzle's insert column list, the `@miolos/core` ESM cycle vitest cannot see, zod's mutable tuple), the already-applied migration, and the known-deferred list step 6 must be shown |
 | `handoffs/024-handoff-m2-free-play-the-last-ticket.md` | Session handoff after #27 merged and the daily Termo went live: what the review changed, the four seams #28 (free play) already has, the silent-green traps in `bundle-check` and `impeccable detect`, and the obligations #27 transferred rather than discharged |
+| `plans/025-issue-28-plan-free-play-on-the-grid-games.md` | Implementation plan for #28 (free play on the grid games: the `/modo-livre` routes and level picker over the weekday ramps, browser-side generation with client-picked seeds, the free-play import wall and the evidence plan for the three negative acceptance criteria, and the route-scoped rework of the bundle markers) |
 
 ## Language
 

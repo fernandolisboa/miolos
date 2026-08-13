@@ -10,7 +10,7 @@ Named tests carry an id in their `it(...)` title (or, for a whole-suite regressi
 T-<AREA>-[S]<n>[<letter>]
 ```
 
-- **`<AREA>`** — `CORE`, `DB`, `API`, `WEB`, `LINT`: `packages/core`, `packages/db`, `apps/api`, `apps/web`, and `apps/web/test/eslint-db-wall.test.ts`. **`packages/games` carries no ids** — verified by grep, and new suites there keep it that way.
+- **`<AREA>`** — `CORE`, `DB`, `API`, `WEB`, `LINT`: `packages/core`, `packages/db`, `apps/api`, `apps/web`, and the `apps/web/test/eslint-*-wall.test.ts` suites (one numbering across them: `eslint-db-wall.test.ts` was the area's only file until #28 added `eslint-free-play-wall.test.ts`). **`packages/games` carries no ids** — verified by grep, and new suites there keep it that way.
 - **`[S]`** — the series letter. Bare is the first series; `S` is the current one.
 - **`<n>`** — allocated by the plan that introduces the test. A plan reserves a contiguous per-area range up front and states it.
 - **`[<letter>]`** — a sibling of an id that already landed (`T-API-9b`, `T-DB-9a…9e`). Use it rather than a fresh number when the new assertion belongs to the same claim.
@@ -23,7 +23,7 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 022 (#27) **after its step-7 round 2**, re-derived by grep over the merge candidate. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 025 (#28) **at its step 5**, re-derived by grep over the branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 The grep that produces it, per area — titles only, so a cross-reference in a comment is not mistaken for an allocation:
 
@@ -36,8 +36,8 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 | `T-CORE` | `S25` | `S24` | never used |
 | `T-DB` | `S13` | `S12` | `T-DB-21` |
 | `T-API` | `S46` | `S45` | `T-API-16` |
-| `T-WEB` | `S109` | `S108` | `T-WEB-23` |
-| `T-LINT` | `S9` | `S8` | `T-LINT-10` |
+| `T-WEB` | `S125` | `S122` | `T-WEB-23` |
+| `T-LINT` | `S21` | `S18` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
 
@@ -51,6 +51,8 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 
 - at step 6 → step 7 round 1 — `T-API-S42`…`S44`, `T-WEB-S104`…`S107`, and the two **cross-file** spans that had acquired two meanings each, split into sibling letters: `T-CORE-S18a` (the stored-content half, `daily-contract.test.ts`) / `T-CORE-S18b` (the wire half, `termo-guess-contract.test.ts`), and `T-API-S34a` (`cron-publish.test.ts`) / `T-API-S34b` (`buffer-depth.test.ts`). Both had been minted on this branch citing each other as precedent, circularly; the rule below is what applies, and a cross-file span is what it exists to prevent.
 - at step 7 round 2 — `T-API-S45` (`test/termo-judge.test.ts`, the shared ladder's own preconditions) and `T-WEB-S108` (`test/session-remint.test.ts`, the re-mint allowance's two reset events).
+
+#28 (plan 025) reserved `T-WEB-S109…S124` and `T-LINT-S9…S20`, and spent `T-WEB-S109…S122` and `T-LINT-S9…S18` at step 5; `T-WEB-S123`/`S124` and `T-LINT-S19`/`S20` were the reserved review-round headroom and are **burned if unspent** per the rule below. The four free-play rows added to `T-WEB-S56`'s ROUTES table carry no new id — the `T-WEB-S100` burn precedent.
 
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead.
 
