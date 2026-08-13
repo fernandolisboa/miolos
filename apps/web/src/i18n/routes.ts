@@ -5,6 +5,8 @@
  */
 import type { Game } from "@miolos/core";
 
+import type { FreePlayGame } from "../free-play/catalog";
+
 export const routeSlugs = {
   archive: "arquivo",
   freePlay: "modo-livre",
@@ -42,6 +44,10 @@ export const routes = {
   nonogramConclusion: `/${routeSlugs.nonogram}/${routeSlugs.conclusion}`,
   termo: `/${routeSlugs.termo}`,
   termoConclusion: `/${routeSlugs.termo}/${routeSlugs.conclusion}`,
+  freePlay: `/${routeSlugs.freePlay}`,
+  freePlayBinairo: `/${routeSlugs.freePlay}/${routeSlugs.binairo}`,
+  freePlaySudoku: `/${routeSlugs.freePlay}/${routeSlugs.sudoku}`,
+  freePlayNonogram: `/${routeSlugs.freePlay}/${routeSlugs.nonogram}`,
 } as const;
 
 export type Route = (typeof routes)[keyof typeof routes];
@@ -63,4 +69,17 @@ export const playRoutes: Readonly<Record<Game, Route>> = {
   nonogram: routes.nonogram,
   sudoku: routes.sudoku,
   termo: routes.termo,
+};
+
+/**
+ * Where each free-play game lives. Total over `FreePlayGame` BY TYPE:
+ * adding termo here is a compile error, not a review catch (ADR-0046).
+ * The asymmetry with `playRoutes` above is deliberate — the daily map is
+ * keyed by `Game` (all four), this one by `FreePlayGame` (three), so the
+ * type system itself carries the Termo exclusion (ADR-0005, plan 025 §9.3).
+ */
+export const freePlayRoutes: Readonly<Record<FreePlayGame, Route>> = {
+  binairo: routes.freePlayBinairo,
+  sudoku: routes.freePlaySudoku,
+  nonogram: routes.freePlayNonogram,
 };

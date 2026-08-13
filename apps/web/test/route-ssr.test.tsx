@@ -253,6 +253,15 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/termo/concluido/page"),
     daily: TERMO,
   },
+  // The free-play routes (#28) read no wall at all — `daily: undefined`
+  // documents that, and the "nothing published" case below is their
+  // ordinary render.
+  {
+    path: "/modo-livre",
+    marker: "data-free-play=",
+    load: () => import("../app/modo-livre/page"),
+    daily: undefined,
+  },
 ];
 
 beforeEach(() => {

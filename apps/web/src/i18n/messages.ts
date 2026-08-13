@@ -225,6 +225,39 @@ export const messages = {
       body: "O resumo aparece assim que a grade fechar.",
     },
   },
+  /**
+   * Free-play chrome (#28, ADR-0046) — shared-chrome position, like `play`
+   * and `conclusion` above. Game names and kickers are reused from
+   * `games.<game>`, never duplicated (plan 018 S19). No completion
+   * language anywhere in this section: **Conclusão** is a daily verb
+   * (CONTEXT.md) and free play records nothing (ADR-0008 rule 5).
+   */
+  freePlay: {
+    title: "Modo livre",
+    lead: "Puzzles infinitos, gerados aqui no seu aparelho. Nada daqui conta para a sequência nem para as estatísticas.",
+    backToIndexAria: "Voltar ao Modo livre",
+    modeTag: "Modo livre",
+    level: {
+      label: "Nível",
+      leve: "Leve",
+      medio: "Médio",
+      dificil: "Difícil",
+      // Composed here, never joined at a call site (ADR-0018).
+      aria: (level: string) => `Nível: ${level}`,
+    },
+    generating: "Preparando o puzzle…",
+    error: {
+      title: "Não deu para gerar este puzzle.",
+      body: "Aconteceu um imprevisto por aqui. Tente de novo — é tudo gerado no seu aparelho.",
+      retry: "Tentar de novo",
+    },
+    solved: {
+      stamp: "Resolvido!",
+      again: "Mais um",
+      backToIndex: "Voltar ao Modo livre",
+      backHome: "Voltar para Hoje",
+    },
+  },
   games: {
     termo: {
       kicker: "Palavras",
