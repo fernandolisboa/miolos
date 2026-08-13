@@ -800,9 +800,14 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     } finally {
       errorSpy.mockRestore();
     }
-    // The un-stranding property finding C names: the holder's email
-    // survives (the tombstone statement never ran), so a re-requested
-    // link re-runs the merge — a transient mid-merge failure heals.
+    // Scope of this assertion, honestly: the lever throws BEFORE
+    // delegating, so NO merge statement ran — this proves a
+    // pre-operation failure leaves the holder untouched (email intact,
+    // nothing tombstoned), and that the route swallowed none of it. It
+    // proves NOTHING about half-run state: a real failure landing inside
+    // statements 2–4 heals by re-run only in the requester-is-winner arm;
+    // the holder-wins arm's stranding residual is recorded in ADR-0050
+    // decision 5, with the nightly-check/support seam as the repair path.
     expect((await userRow(x.userId)).email).toBe(EMAIL);
   });
 

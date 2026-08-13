@@ -83,9 +83,16 @@ async function resolveWinner(
     // ONLY the winner-liveness guard's throw is retryable — it fires
     // before any destructive statement. Anything else may have landed
     // mid-operation and must surface as the route's 500, never a 410/409
-    // that reads like a spent token (step-7 finding C): a re-requested
-    // link then re-runs the merge (the holder's email survives until the
-    // tombstone statement), so idempotent re-run stays the recovery.
+    // that reads like a spent token (step-7 finding C). Re-run healing
+    // after such a failure holds ONLY in the requester-is-winner arm (the
+    // holder's email survives, a re-requested link re-derives the pair and
+    // the merge re-runs). In the HOLDER-WINS arm — recovery/device move,
+    // the holder being older — statement 1 already remapped this device's
+    // cookie onto the holder, so a re-requested link is a HOLDER resend
+    // that resolves {merged:false} and never re-runs the merge: the fresh
+    // account's post-reset rows strand on its emptied row. Accepted
+    // residual, priced in ADR-0050 decision 5; the nightly-check/support
+    // seam (listCompletionsForMerge) is the repair path.
     if (!isWinnerLivenessError(error)) {
       console.error(
         "attach confirm: mergeAccounts failed mid-operation",

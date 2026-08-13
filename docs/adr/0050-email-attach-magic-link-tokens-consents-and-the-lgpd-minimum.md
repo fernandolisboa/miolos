@@ -2,7 +2,19 @@
 
 **Status:** Proposed — 2026-08-13 (issue #21)
 **Depends on:** ADR-0003, ADR-0009, ADR-0012, ADR-0013, ADR-0022, ADR-0025, ADR-0026, ADR-0048, ADR-0049
-**Amends:** nothing — deliberately. Every decision below either resolves a
+**Amends:** the tombstoning consequence of
+[ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md)
+— *"the old anonymous cookie may still exist in a browser somewhere and must
+map to the merged identity, not to a revived empty account"* — at the FLOW
+level only: decision 13's post-merge session revocation means the loser's
+original cookie resolves to nothing after a confirm-flow merge (the merged
+identity is handed to the clicking browser's fresh cookie instead), and an
+old device holding the dead cookie re-mints a NEW empty identity — a new
+account, never the tombstone resurrected, with the merged history safe and
+recoverable via the magic link. The operation-level remap inside
+`mergeAccounts`, and T-API-S54's pin of it, stand untouched; the reciprocal
+header line sits on ADR-0009, and #58's queued amendment there is additive.
+Nothing else below amends anything: every other decision either resolves a
 recorded silence (email uniqueness — schema.ts's "uniqueness semantics land
 with the attach/merge ticket"; consent merge semantics — ADR-0049 decision 4's
 explicit delegation), resolves a recorded conditional (ADR-0022's "adds the
@@ -91,9 +103,24 @@ prompting or deletion was recorded. This ADR records all of it as one design.
    is reserved for that throw ALONE: any other mid-merge failure is logged
    and rethrown into the route's 500, never flattened into a spent-token
    answer — the guard fires before any destructive statement, everything
-   else may not have, and because the holder's email survives until the
-   tombstone statement, a re-requested link simply re-runs the merge
-   (idempotent re-run stays the recovery, the recovery direction included).
+   else may not have. Re-run healing after such a failure holds ONLY in
+   the requester-is-winner arm: there the holder lost, its email survives
+   until the tombstone statement, so a re-requested link re-derives the
+   same pair and `mergeAccounts` re-runs. In the HOLDER-WINS arm —
+   recovery and device move, where the holder is always older and
+   therefore the winner — statement 1 has already remapped the requesting
+   device's cookie onto the holder, so a re-requested link is minted BY
+   the holder as a resend, resolves `{merged: false}`, and the merge never
+   re-runs: the fresh account's post-reset completions strand permanently
+   on its session-less, handle-less row (and in the crash sub-window after
+   statement 2 and before statement 3, the holder's deleted later-duplicate
+   days also vanish from served history until repaired). Accepted residual,
+   priced: the bounded loss is the fresh account's post-reset days; the
+   probability is one transient DB failure landing inside statements 2–4
+   of a merge-on-collision confirm — a rare event inside a rare event.
+   The repair seam is the nightly consistency check / first support
+   tooling ADR-0009 already contemplates (`listCompletionsForMerge` exists
+   for exactly that read), which is also this residual's revisit trigger.
    Route-level single-flight was rejected: stateless Vercel functions share
    no memory, so a route lock is fiction. This is an addition, not an
    amendment: no sentence of ADR-0049 is contradicted; sessions are still
@@ -197,7 +224,21 @@ prompting or deletion was recorded. This ADR records all of it as one design.
     while this revocation is an account-security action on a COMPLETED
     merge, taken at the confirm seam — `mergeAccounts` itself is untouched.
     Tombstone permanence is unaffected: the loser still owns no session and
-    no handle, and the winner's fresh session is minted immediately. Priced
+    no handle, and the winner's fresh session is minted immediately.
+    Accepted residual — the PRE-REVOCATION WINDOW: between the merge's
+    first statement (the remap, which already put the attacker's cookie on
+    the winner) and the revocation delete sit the merge's own remaining
+    statements plus one more round trip, each a separate neon-http request
+    — no transaction exists over neon-http (ADR-0049 decision 5), so the
+    window is structural, not an ordering bug. Inside it the attacker's
+    remapped cookie transiently RESOLVES to the winner: it can read the
+    merged account's gameplay surface (GET /streak, GET-served completions
+    state), and a sub-second blind race could land a destructive
+    POST /account/delete before the delete statement runs. Accepted for v1
+    at exactly that scope — a transient read plus a heavily timed race —
+    because persistent takeover stays closed: the revocation lands within
+    the same confirm invocation, after which the attacker holds nothing.
+    Priced
     cost: in an honest device move, the OLD device's cookie dies too and
     that device re-mints a fresh anonymous account on its next visit — one
     more merge-on-collision if the player returns there, accepted as the
@@ -217,7 +258,14 @@ prompting or deletion was recorded. This ADR records all of it as one design.
     that an ACKNOWLEDGED switch still replaces this device's cookie, and a
     user who checks the box loses this device's anonymous account from view
     (the account and its sessions survive untouched in the DB — the browser
-    simply stops presenting that cookie, and no path leads back to it).
+    simply stops presenting that cookie, and no path leads back to it). A
+    second accepted residual is the LAPSED-HISTORY bystander: a player with
+    real completions but streak 0 and nothing counted today evaluates the
+    signal false and is NOT gated — the bound of the deliberate
+    no-new-endpoint choice (the streak surface is the only signal this gate
+    reads); their account likewise survives in the DB but drops from view,
+    recoverable only through an attached email of its own, which an
+    anonymous bystander typically lacks.
 
 ## Rejected
 
