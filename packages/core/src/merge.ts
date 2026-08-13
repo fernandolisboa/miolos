@@ -1,10 +1,12 @@
 /**
  * The account-merge union — the pure half of ADR-0009's merge rule, made
  * concrete by ADR-0049: union both accounts' completion rows, dedupe per
- * (game, date) keeping the earliest, return the merged history. The attach
- * flow (#21), nightly consistency checks and support tooling all consume
- * this one function — no mode parameter, no flow variants — and read-only
- * callers get "what WOULD the merged history be" without a write path.
+ * (game, date) keeping the earliest, return the merged history. One
+ * semantics, no mode parameter, no flow variants: the attach flow (#21)
+ * consumes it through `mergeAccounts` (@miolos/db), whose SQL the
+ * agreement test pins to this function; read-only callers — nightly
+ * consistency checks, support previews — consume this function directly
+ * and get "what WOULD the merged history be" without a write path.
  *
  * No clock, no timezone, no I/O, no Zod enters this module: rows in, rows
  * out, the `computeStreak` shape. Derived state is never merged here —

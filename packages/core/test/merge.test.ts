@@ -121,7 +121,8 @@ describe("mergeCompletions — units (ADR-0009, ADR-0026, ADR-0049)", () => {
     // the 15:00 win is dropped — the write-once counterfactual (ADR-0026
     // decision 1: on a single account, the later win could never have been
     // recorded after the loss closed the daily; "a loss followed by an
-    // archive replay does not reopen the daily", ADR-0008 rule 3 via
+    // archive replay does not reopen the daily" — ADR-0008 rule 3's
+    // write-once corollary, stated in that ADR's Consequences — via
     // ADR-0026). AC 2's "without cause" names exactly this cause.
     const lostEarlier = row("termo", TODAY, instant(TODAY, "13:00:00"), {
       outcome: "lost",

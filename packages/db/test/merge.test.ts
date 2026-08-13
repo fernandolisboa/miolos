@@ -1,13 +1,13 @@
 import { mergeCompletions } from "@miolos/core";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { listCompletionsForMerge, mergeAccounts } from "../src/merge";
-import { completions, sessions, users } from "../src/schema";
+import { completions, hintGrants, sessions, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
 
 // The merge suite (issue #20, ADR-0009/ADR-0026/ADR-0049, plan 029 §6/§9).
-// What is proved here and nowhere else: the SQL realization of
+// What is pinned here and nowhere else: the SQL realization of
 // union-earliest-dedupe (two statements, because ON CONFLICT DO NOTHING
 // alone keeps the winner's LATER row), the tombstone (sessions remapped,
 // loser emptied and retained), operation-level idempotence ("run it twice,
@@ -22,11 +22,14 @@ beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
 
-beforeEach(async () => {
+/** One truncate spelling for every reset this file performs. */
+async function reset(): Promise<void> {
   await ctx.db.execute(
     sql`truncate table users, completions, hint_grants cascade`,
   );
-});
+}
+
+beforeEach(reset);
 
 afterAll(async () => {
   await ctx.close();
@@ -90,11 +93,19 @@ async function insertSession(userId: string, tokenHash: string): Promise<void> {
   await ctx.db.insert(sessions).values({ tokenHash, userId });
 }
 
-/** Deterministic full-state snapshot for the double-run and no-op proofs. */
+/** A dormant-in-prod grant row (no writer exists in v1) so the loser-side hint_grants cleanup is observable. */
+async function insertHintGrant(userId: string, date: string): Promise<void> {
+  await ctx.db
+    .insert(hintGrants)
+    .values({ userId, date, source: "rewarded-ad", hints: 3 });
+}
+
+/** Deterministic full-state snapshot for the double-run and no-op checks. */
 async function snapshotState(): Promise<{
   users: unknown[];
   sessions: unknown[];
   completions: unknown[];
+  hintGrants: unknown[];
 }> {
   return {
     users: await ctx.db.select().from(users).orderBy(asc(users.id)),
@@ -110,6 +121,10 @@ async function snapshotState(): Promise<{
         asc(completions.game),
         asc(completions.date),
       ),
+    hintGrants: await ctx.db
+      .select()
+      .from(hintGrants)
+      .orderBy(asc(hintGrants.id)),
   };
 }
 
@@ -271,7 +286,7 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
     ]);
   });
 
-  it("T-DB-S19: the loser row is emptied of every identity handle and RETAINED with updated_at advanced; an all-null anonymous loser never bumps at all", async () => {
+  it("T-DB-S19: the loser row is emptied of every identity handle and RETAINED with updated_at advanced, its hint grants deleted; an all-null anonymous loser never bumps at all", async () => {
     const winner = await createUser(OLDER);
     const loser = await createUser(NEWER);
     // No production writer of users identity columns exists yet (#21 owns
@@ -294,6 +309,9 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
       date: "2026-08-01",
       completedAt: onDay("2026-08-01"),
     });
+    // A grant on the loser (fixture-written; no production writer exists in
+    // v1) so the "emptied" assertion below actually bites.
+    await insertHintGrant(loser, "2026-08-01");
 
     await mergeAccounts(ctx.db, winner, loser);
 
@@ -316,7 +334,10 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
       consentAt.toISOString(),
     );
     expect(tombstone?.updatedAt.getTime()).toBeGreaterThan(NEWER.getTime());
-    // Emptied: zero completions, zero sessions.
+    // Emptied: zero completions, zero sessions, zero hint grants — no row
+    // of any account-scoped table keeps referencing the tombstone. Grants
+    // are DELETED, never carried to the winner (ADR-0049 decision 6:
+    // day-scoped, structurally expiring — not history).
     expect(
       await ctx.db
         .select()
@@ -325,6 +346,12 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
     ).toEqual([]);
     expect(
       await ctx.db.select().from(sessions).where(eq(sessions.userId, loser)),
+    ).toEqual([]);
+    expect(
+      await ctx.db
+        .select()
+        .from(hintGrants)
+        .where(eq(hintGrants.userId, loser)),
     ).toEqual([]);
     // The winner's identity columns are untouched.
     const winnerRow = (
@@ -346,7 +373,7 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
 });
 
 describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)", () => {
-  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions state after run one deep-equals run two", async () => {
+  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants state after run one deep-equals run two", async () => {
     const winner = await createUser(OLDER);
     const loser = await createUser(NEWER);
     await ctx.db
@@ -389,6 +416,10 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
       outcome: "lost",
       guesses: 6,
     });
+    // Grants on BOTH sides: the loser's exercises the hint_grants delete on
+    // both runs; the winner's must survive untouched (snapshot-asserted).
+    await insertHintGrant(winner, "2026-08-01");
+    await insertHintGrant(loser, "2026-08-01");
 
     const first = await mergeAccounts(ctx.db, winner, loser);
     const afterFirst = await snapshotState();
@@ -410,9 +441,7 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
     });
 
     // Fresh identical fixture, reversed argument order: same winner.
-    await ctx.db.execute(
-      sql`truncate table users, completions, hint_grants cascade`,
-    );
+    await reset();
     const a2 = await createUser(OLDER);
     const b2 = await createUser(NEWER);
     expect(await mergeAccounts(ctx.db, b2, a2)).toEqual({
@@ -421,9 +450,7 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
     });
 
     // Explicit-equal created_at: the lexicographically lower uuid wins.
-    await ctx.db.execute(
-      sql`truncate table users, completions, hint_grants cascade`,
-    );
+    await reset();
     const c = await createUser(OLDER);
     const d = await createUser(OLDER);
     const [lower, higher] = c < d ? [c, d] : [d, c];
@@ -532,5 +559,38 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
       /unknown/,
     );
     expect(await snapshotState()).toEqual(before);
+  });
+});
+
+describe("mergeAccounts — the repoint column-list tripwire (ADR-0049, step-6 finding)", () => {
+  it("T-DB-S24: the completions column set derived from the live schema deep-equals the names the repoint statement carries", () => {
+    // CONTRACT — what drift this catches: mergeAccounts' statement (ii)
+    // spells the completions column list by hand (an INSERT … SELECT with
+    // an explicit list), so a future migration that adds a column — #58's
+    // stored on_time is the named candidate — would otherwise let merged
+    // rows silently take that column's DEFAULT while directly-written rows
+    // carry a real value. Deriving the column set MECHANICALLY from the
+    // drizzle table object makes the suite go red the moment schema and
+    // statement disagree; the fix is one name in merge.ts's statement (ii)
+    // and one name below.
+    //
+    // The names are deliberately spelled a SECOND time here rather than
+    // shared as an exported list interpolated into the SQL: the statement
+    // stays a readable, parameterized literal, and the tripwire's whole
+    // job is to make the two spellings disagree loudly.
+    const liveColumns = Object.values(getTableColumns(completions))
+      .map((column) => column.name)
+      .sort();
+    const repointedColumns = [
+      "user_id",
+      "game",
+      "date",
+      "completed_at",
+      "outcome",
+      "elapsed_ms",
+      "hints_used",
+      "guesses",
+    ].sort();
+    expect(liveColumns).toEqual(repointedColumns);
   });
 });

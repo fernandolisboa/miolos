@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 
 import type { Db } from "./client";
 import { onTimeSql } from "./completions";
-import { completions, sessions, users } from "./schema";
+import { completions, hintGrants, sessions, users } from "./schema";
 
 /**
  * The account-merge operation (ADR-0009 executed; ADR-0049) — a merge
@@ -62,16 +62,17 @@ export async function listCompletionsForMerge(
  * No transaction is usable over the union `Db` (D7: neon-http is
  * non-interactive-only, PGlite has no batch) — every statement is
  * individually idempotent and RE-RUNNING THE MERGE IS THE CRASH RECOVERY
- * ("run it twice, get the same account", proved by T-DB-S20). `a === b`
+ * ("run it twice, get the same account", pinned by T-DB-S20). `a === b`
  * is a no-op. Throws on an unknown id: a merge against a typo must be
  * loud, not creative.
  *
  * EXTENSION POINT: account-scoped tables acquire their merge duty HERE —
  * #30's curated medal grants (union-and-dedupe), the rewarded-ad ticket's
- * same-day hint grants if it ever cares (ADR-0049; hint grants are NOT
- * carried today — day-scoped, structurally expiring, writer-less in v1,
- * plan 029 D12). #58's stored on_time joins the repoint statement's
- * explicit column list when it lands.
+ * same-day hint grants if it ever wants them repointed instead (ADR-0049
+ * decision 6; hint grants are DELETED, never carried — day-scoped,
+ * structurally expiring, writer-less in v1, plan 029 D12). #58's stored
+ * on_time joins the repoint statement's explicit column list when it
+ * lands.
  */
 export async function mergeAccounts(
   db: Db,
@@ -130,7 +131,10 @@ export async function mergeAccounts(
   //    NOTHING. completed_at is COPIED, never defaultNow(): re-stamping
   //    would reclassify an on-time completion as late (recordCompletion's
   //    own warning, at merge scale). The column list is exhaustive over
-  //    today's schema; #58's stored on_time joins it when it lands.
+  //    today's schema — MECHANICALLY pinned by T-DB-S24, which derives the
+  //    live column set from the drizzle table and fails the suite the day
+  //    a new column would silently default on merged rows. #58's stored
+  //    on_time joins this list when it lands.
   await db.execute(sql`
     insert into completions
       (user_id, game, date, completed_at, outcome, elapsed_ms, hints_used, guesses)
@@ -144,13 +148,22 @@ export async function mergeAccounts(
   //    survives on the winner.
   await db.delete(completions).where(eq(completions.userId, loserId));
 
-  // 5. Empty the shell: every identity handle nulled — current AND future
+  // 5. The loser's hint grants go with the rest of the loser-row cleanup:
+  //    "emptied" means EMPTIED — no row may keep referencing the tombstone
+  //    (ADR-0049 decision 6). Deleted, never carried to the winner: grants
+  //    are day-scoped convenience that expires structurally at the next
+  //    rollover, not history. Trivially idempotent (a re-run deletes zero
+  //    rows) and crash-prefix-safe: a crash before this statement leaves
+  //    only unreadable rows the re-run removes.
+  await db.delete(hintGrants).where(eq(hintGrants.userId, loserId));
+
+  // 6. Empty the shell: every identity handle nulled — current AND future
   //    (the social ids have no writer today, so nulling them is provably
   //    inert) — so no handle can ever resolve to a tombstone. Consent
   //    timestamps deliberately untouched: LGPD evidence, #21's semantics.
   //    updated_at set explicitly to DB-side now() (schema.ts's own
   //    instruction). The identity-handle guard makes this statement
-  //    individually idempotent like the other four: a re-run finds every
+  //    individually idempotent like the other five: a re-run finds every
   //    handle already null and touches ZERO rows — never re-bumping
   //    updated_at (T-DB-S20's full-state double-run snapshot).
   await db
