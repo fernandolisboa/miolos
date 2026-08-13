@@ -49,10 +49,18 @@ function epochDay(date: string): number {
   if (!match) {
     throw new RangeError(`expected 'YYYY-MM-DD', got ${JSON.stringify(date)}`);
   }
-  return (
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) /
-    86_400_000
-  );
+  const year = Number(match[1]);
+  // Date.UTC backfills years 0–99 to 1900–1999, so "0026-…" would silently
+  // alias to 1926. No producer emits a pre-1000 date — every row is a
+  // Postgres `date` — so the guard REFUSES the range rather than escaping
+  // it via setUTCFullYear, which would put a Date object into a module
+  // whose whole register is no-clock, no-Date arithmetic (T-CORE-S35).
+  if (year < 1000) {
+    throw new RangeError(
+      `expected a year >= 1000, got ${JSON.stringify(date)}`,
+    );
+  }
+  return Date.UTC(year, Number(match[2]) - 1, Number(match[3])) / 86_400_000;
 }
 
 /**

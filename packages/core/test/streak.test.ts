@@ -111,4 +111,20 @@ describe("computeStreak — units (ADR-0008, ADR-0009, ADR-0048)", () => {
       todayCounts: true,
     });
   });
+
+  it("T-CORE-S35: the date guard throws RangeError — malformed shapes and pre-1000 years alike, never a two-digit-year alias", () => {
+    // The shape guard, pinned as a thrown type rather than left implicit.
+    expect(() => computeStreak([], "26-08-13")).toThrow(RangeError);
+    expect(() => computeStreak([], "2026/08/13")).toThrow(RangeError);
+    // Date.UTC backfills years 0–99 to 1900–1999: without the year guard,
+    // "0099-01-01" would silently read as 1999 instead of throwing. The
+    // guard covers `today` and row dates through the same private helper.
+    expect(() => computeStreak([], "0099-01-01")).toThrow(RangeError);
+    expect(() => computeStreak([won("0099-01-01")], TODAY)).toThrow(RangeError);
+    // The guard's floor is exact: year 1000 is arithmetic, not an error.
+    expect(computeStreak([won("1000-01-01")], "1000-01-01")).toEqual({
+      streak: 1,
+      todayCounts: true,
+    });
+  });
 });
