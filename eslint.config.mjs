@@ -229,9 +229,17 @@ const freePlayBannedModuleGroups = [
       "**/binairo/binairo-screen",
       "**/sudoku/sudoku-screen",
       "**/nonogram/nonogram-screen",
+      // The hub page and its day-state island are one-hop doors of the
+      // same class: `app/page` imports `hub-day-state` and `hub-streak`,
+      // and `hub-day-state` reaches `play/day-state` — a relative
+      // `../../app/page` from free play carried all of it with zero wall
+      // hits until these names entered the list (#19 step-6 ADR M1, the
+      // one-hop-by-name discipline this group exists for).
+      "**/app/page",
+      "**/app/hub-day-state",
     ],
     message:
-      "free play records nothing and fetches nothing: the sync/record/lifecycle/session modules — and the daily hooks and screen roots that reach them one hop in — are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0008 rule 5, ADR-0046).",
+      "free play records nothing and fetches nothing: the sync/record/lifecycle/session modules — and the daily hooks, screen roots, hub page and hub islands that reach them one hop in — are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0008 rule 5, ADR-0046).",
   },
   {
     // ALL of db, root entry included — stricter than the app-wide wall,
@@ -269,7 +277,7 @@ const freePlayBannedModuleGroups = [
 // repeats, so a literal-specifier regex is the whole residual.
 const freePlayDynamicBannedModule = {
   selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
   message:
     "free play records nothing, fetches nothing, never touches Termo and never touches the streak: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048).",
 };

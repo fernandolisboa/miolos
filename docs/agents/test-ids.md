@@ -37,7 +37,7 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 | `T-DB` | `S16` | `S14` | `T-DB-21` |
 | `T-API` | `S54` | `S53` | `T-API-16` |
 | `T-WEB` | `S135` | `S131` | `T-WEB-23` |
-| `T-LINT` | `S24` | `S22` | `T-LINT-10` |
+| `T-LINT` | `S26` | `S25` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
 
