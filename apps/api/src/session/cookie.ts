@@ -28,3 +28,22 @@ export function buildSessionCookie(token: string): string {
   }
   return cookie;
 }
+
+/**
+ * The clearing twin (#21, ADR-0050 decision 12): POST /account/delete
+ * evicts the cookie whose user no longer exists. Same attributes as
+ * `buildSessionCookie` — Domain and Secure included — because a browser
+ * only replaces a cookie whose name/Domain/Path all match; `Max-Age=0` is
+ * the eviction.
+ */
+export function buildSessionClearingCookie(): string {
+  const cookieDomain = process.env.COOKIE_DOMAIN;
+  let cookie = `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`;
+  if (cookieDomain) {
+    cookie += `; Domain=${cookieDomain}`;
+  }
+  if (cookieDomain || process.env.NODE_ENV === "production") {
+    cookie += "; Secure";
+  }
+  return cookie;
+}
