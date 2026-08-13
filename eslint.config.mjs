@@ -280,6 +280,17 @@ const freePlayBannedModuleGroups = [
     message:
       "free play never touches identity or the attach flow: the attach client, hook and hub island are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0050).",
   },
+  {
+    // #29: the stats client and hooks reach the network and server-derived
+    // aggregates, and the /estatisticas screen root reaches them one hop in
+    // — banned by name like the streak group above (the napkin's one-hop
+    // rule). Both specifier shapes on purpose: `**/stats/**` does not match
+    // a bare `../stats`, so a future `src/stats/index.ts` barrel must not
+    // become a door, and `**/app/estatisticas/**` closes the screen root.
+    group: ["**/stats", "**/stats/**", "**/app/estatisticas/**"],
+    message:
+      "free play never touches the statistics: the stats client, hooks and the /estatisticas screen are banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0051).",
+  },
 ];
 
 // The dynamic-import evasion of the groups above: `no-restricted-imports`
@@ -288,9 +299,9 @@ const freePlayBannedModuleGroups = [
 // repeats, so a literal-specifier regex is the whole residual.
 const freePlayDynamicBannedModule = {
   selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|stats(\\/|$)|estatisticas|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
   message:
-    "free play records nothing, fetches nothing, never touches Termo, the streak or the attach flow: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050).",
+    "free play records nothing, fetches nothing, never touches Termo, the streak, the statistics or the attach flow: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051).",
 };
 
 // eslint-config-next ships a flat Linter.Config[]; scope every non-ignore

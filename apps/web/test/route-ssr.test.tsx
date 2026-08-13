@@ -293,6 +293,15 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/privacidade/page"),
     daily: undefined,
   },
+  // The #29 stats screen is the /privacidade shape — static by
+  // construction, db-free, `data-page` marker: every aggregate arrives via
+  // the island's mount-effect hooks only (plan 033 §6.6).
+  {
+    path: "/estatisticas",
+    marker: "data-page=",
+    load: () => import("../app/estatisticas/page"),
+    daily: undefined,
+  },
   {
     // `routes.attach` on purpose (step-7 finding E): the emailed link is
     // built api-side from the pinned `/vincular` literal

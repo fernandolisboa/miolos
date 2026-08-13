@@ -95,7 +95,7 @@ describe("the Modo livre index (T-WEB-S113)", () => {
 });
 
 describe("the hub's Modo livre entry (T-WEB-S114)", () => {
-  it("links Modo livre to routes.freePlay; Arquivo and Estatísticas stay href-less", () => {
+  it("links Modo livre to routes.freePlay and Estatísticas to routes.stats; Arquivo stays href-less", () => {
     render(<HojePage />);
     const nav = screen.getByRole("navigation");
 
@@ -105,7 +105,9 @@ describe("the hub's Modo livre entry (T-WEB-S114)", () => {
     const archive = within(nav).getByText(messages.hoje.links.archive);
     expect(archive.closest("a")).not.toHaveAttribute("href");
 
+    // Live since #29 (T-WEB-S159 pins the activation itself; this keeps
+    // the nav's composition honest beside the still-inert arquivo).
     const stats = within(nav).getByText(messages.hoje.links.stats);
-    expect(stats.closest("a")).not.toHaveAttribute("href");
+    expect(stats.closest("a")).toHaveAttribute("href", routes.stats);
   });
 });

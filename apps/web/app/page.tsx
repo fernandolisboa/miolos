@@ -125,15 +125,17 @@ export default function HojePage() {
       <HubAttach />
 
       <nav className={styles.secondaryLinks}>
-        {/* Arquivo and Estatísticas stay href-less until #31/#29 land their
-            routes — a dead href would be fake navigation (the hub rule the
-            done tile documents). Modo livre is real since #28, Privacidade
-            since #21 (its live target is what earns it the href). */}
+        {/* Arquivo stays href-less until #31 lands its route — a dead href
+            would be fake navigation (the hub rule the done tile documents).
+            Modo livre is real since #28, Privacidade since #21 and
+            Estatísticas since #29 (a live target is what earns the href). */}
         <a className={styles.secondaryLink}>{messages.hoje.links.archive}</a>
         <Link className={styles.secondaryLink} href={routes.freePlay}>
           {messages.hoje.links.freePlay}
         </Link>
-        <a className={styles.secondaryLink}>{messages.hoje.links.stats}</a>
+        <Link className={styles.secondaryLink} href={routes.stats}>
+          {messages.hoje.links.stats}
+        </Link>
         <Link className={styles.secondaryLink} href={routes.privacy}>
           {messages.hoje.links.privacy}
         </Link>

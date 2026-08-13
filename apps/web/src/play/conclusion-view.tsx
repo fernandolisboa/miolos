@@ -389,10 +389,12 @@ export function ConclusionView({
             {messages.conclusion.ctaNext(messages.games[next.game].name)}
           </Link>
         )}
-        {/* href-less, matching Hoje's shipped secondary links: the stats
-            screen arrives with #29 and a dead href would be fake
-            navigation. */}
-        <a className={styles.secondaryLink}>{messages.conclusion.stats}</a>
+        {/* Live since #29: /estatisticas is a real route, so the link
+            carries it — the same rule that kept it href-less while a dead
+            href would have been fake navigation. */}
+        <Link className={styles.secondaryLink} href={routes.stats}>
+          {messages.conclusion.stats}
+        </Link>
       </aside>
     </main>
   );

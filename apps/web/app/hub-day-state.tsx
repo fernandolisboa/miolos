@@ -18,14 +18,21 @@
  * what `impeccable detect` always scans, and also what a second device sees.
  * A false pending is invisible; a false done would not be. The streak stays
  * server-computed and is not read here at all — #19 gave it its own island,
- * `hub-streak.tsx` (ADR-0048).
+ * `hub-streak.tsx` (ADR-0048). The one server value read HERE is #29's
+ * completed-Termo caption (`TermoDoneLink` below): device state still
+ * decides the tile's shape, the fetched guess count only ever captions it.
  */
 import type { Game } from "@miolos/core";
 import Link from "next/link";
 
 import { formatElapsed, messages, playRoutes } from "../src/i18n";
 import { completedCount, useDayState } from "../src/play/day-state";
+import { useStats } from "../src/stats/use-stats";
 import styles from "./page.module.css";
+
+/** A non-breaking space: holds a line box open with nothing in it — the
+ *  `PlaySkeleton` blank-values idiom (conclusion-view.tsx). */
+const BLANK_VALUE = " ";
 
 /**
  * "X de 4 concluídos" — X being what this device has COMPLETED today, never
@@ -53,10 +60,10 @@ export function HubProgress({
  * finished it (DESIGN.md, "Game card").
  *
  * The done tile is a LINK, where F1:35-37 draws an inert `<span>` (plan 018
- * deviation 12): the archive is #31 and the statistics link is deliberately
- * href-less, so an inert card would leave a player who just solved a game no
- * in-app route back to the conclusion they earned — while `/<jogo>` restores
- * straight into it.
+ * deviation 12): the archive is #31 and its link deliberately href-less, so
+ * an inert card would leave a player who just solved a game no in-app route
+ * back to the conclusion they earned — while `/<jogo>` restores straight
+ * into it.
  */
 export function HubCardAction({
   game,
@@ -90,6 +97,16 @@ export function HubCardAction({
     );
   }
 
+  // A COMPLETED Termo's done anchor is `TermoDoneLink`'s whole (#29, plan
+  // 033 D5): its result is the server-fetched guess count, not a duration,
+  // and the component that fetches must be the component that renders the
+  // anchor (the accessible name is the ANCHOR's aria-label). A played
+  // (lost) Termo stays on the generic path below — playedAria, no fetch —
+  // and the three grid games' tiles are byte-identical to before.
+  if (game === "termo" && entry.status === "completed") {
+    return <TermoDoneLink date={date} />;
+  }
+
   const name = messages.games[game].name;
   const elapsed =
     elapsedMs === undefined ? undefined : formatElapsed(elapsedMs);
@@ -117,10 +134,12 @@ export function HubCardAction({
       {/* Two result strings, one hidden per viewport — a distinct mobile
           string, never a runtime truncation (F1:64 "em 07:12", F2:63
           "07:12"), matching the day card's nonogram precedent.
-          Emitted ONLY when there is a real duration: neither shipped composer
-          is ever called with a fabricated value, and a played or
-          duration-less completed tile simply renders its chip (#29 lands
-          `em 4/6` for Termo). */}
+          Emitted ONLY when there is a real duration: neither shipped
+          composer is ever called with a fabricated value, and a played
+          tile simply renders its chip. A COMPLETED Termo — the one
+          duration-less completed shape — never reaches this branch at all:
+          `TermoDoneLink` above owns that anchor and captions it `em 4/6`
+          from the server's answer (#29). */}
       {elapsed !== undefined && (
         <span aria-hidden className={`${styles.doneResult} tabular-nums`}>
           <span className={styles.doneResultLong}>
@@ -130,6 +149,78 @@ export function HubCardAction({
             {messages.hoje.doneResultShort(elapsed)}
           </span>
         </span>
+      )}
+    </Link>
+  );
+}
+
+/**
+ * The done anchor of a COMPLETED Termo (#29, plan 033 D5): the tile whose
+ * result is `em 4/6` — the server-held guess count, never a duration
+ * (ADR-0045 decision 4). It owns the WHOLE anchor — Link, aria-label, chip
+ * and both result spans — because the accessible name is the ANCHOR's
+ * `aria-label` and the result spans are aria-hidden, so a child span could
+ * never feed the parent's label. The hook lives inside this
+ * conditionally-mounted component (the `use-streak.ts` gate idiom: hooks
+ * are never conditional, consumers mount the consuming component
+ * conditionally), so at most one /stats fetch fires per hub view, and only
+ * on a hub whose Termo is already completed.
+ *
+ * The accessible-name ladder, each rung an honest claim:
+ *
+ * - unsettled, settled-`null`, or `stats.date !== date` (the tile's
+ *   server-resolved day — the DB clock and the web server's SP day can
+ *   disagree across midnight): `completedAria`, today's shipped won-Termo
+ *   name (T-WEB-S80 stays green untouched). While unsettled the result
+ *   line box is held open with `BLANK_VALUE`, so the value landing shifts
+ *   nothing (#37's CLS≈0); once settled without a usable value the box
+ *   collapses to the chip-only form — the shipped honest state.
+ * - value landed and dates match: `doneGuessesAria` with the count, and
+ *   the two aria-hidden result spans carry `em 4/6` / `4/6`.
+ *
+ * Server state decorating device state, in the monotone-safe direction
+ * (ADR-0031): the DEVICE record decides the tile is done; the server value
+ * only ever captions it. `DayEntry` gains nothing.
+ */
+function TermoDoneLink({ date }: { readonly date: string }) {
+  const stats = useStats();
+  const name = messages.games.termo.name;
+  // `todayTermoGuesses` can be null even when the dates match — the server
+  // not yet holding the win this device recorded — and that renders the
+  // chip-only form too: no count is claimed that the server does not hold.
+  const guesses =
+    stats !== undefined && stats !== null && stats.date === date
+      ? stats.todayTermoGuesses
+      : null;
+  return (
+    <Link
+      className={styles.done}
+      href={playRoutes.termo}
+      aria-label={
+        guesses === null
+          ? messages.hoje.completedAria(name)
+          : messages.hoje.doneGuessesAria(name, guesses)
+      }
+    >
+      <span aria-hidden className={styles.doneChip}>
+        {messages.hoje.done}
+      </span>
+      {guesses !== null ? (
+        <span aria-hidden className={`${styles.doneResult} tabular-nums`}>
+          <span className={styles.doneResultLong}>
+            {messages.hoje.doneResultLong(`${guesses}/6`)}
+          </span>
+          <span className={styles.doneResultShort}>
+            {messages.hoje.doneResultShort(`${guesses}/6`)}
+          </span>
+        </span>
+      ) : (
+        stats === undefined && (
+          <span aria-hidden className={`${styles.doneResult} tabular-nums`}>
+            <span className={styles.doneResultLong}>{BLANK_VALUE}</span>
+            <span className={styles.doneResultShort}>{BLANK_VALUE}</span>
+          </span>
+        )
       )}
     </Link>
   );

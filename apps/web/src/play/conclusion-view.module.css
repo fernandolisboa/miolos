@@ -753,8 +753,10 @@
   --rule-width: 2px;
   border-bottom: var(--rule-width) solid var(--line);
   padding-bottom: calc(6px - var(--rule-width));
-  /* No cursor: pointer while the anchor is href-less; it returns when #29
-     lands the statistics route. */
+  /* Live since #29: the anchor carries the statistics route, so the
+     pointer returns. Not shared with any href-less sibling — a plain rule
+     is enough here, unlike the hub's scoped `.secondaryLink[href]`. */
+  cursor: pointer;
 }
 
 /* This link already HAS the shape ADR-0041 decision 4 asks for — a rule under

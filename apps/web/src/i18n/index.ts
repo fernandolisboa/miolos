@@ -1,4 +1,9 @@
-export { formatElapsed, formatLongDate, formatShortDate } from "./format";
+export {
+  formatElapsed,
+  formatLongDate,
+  formatMonth,
+  formatShortDate,
+} from "./format";
 export { locale } from "./locale";
 export { messages, type Messages } from "./messages";
 export {

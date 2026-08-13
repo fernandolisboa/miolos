@@ -30,6 +30,20 @@ export function formatLongDate(isoDate: string): string {
 }
 
 /**
+ * "agosto de 2026" — the stats calendar's month title (#29). Takes the
+ * month's first day as 'YYYY-MM-01' and rides the same `utcNoon` anchor as
+ * its two siblings, so it inherits their UTC-noon reasoning wholesale: no
+ * new date arithmetic, no host-timezone rollover.
+ */
+export function formatMonth(isoDate: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(utcNoon(isoDate));
+}
+
+/**
  * "30 jul" — the mobile top bar. Composed from `formatToParts` rather than
  * a format string because pt-BR's own short form is "30 de jul.": the
  * connective and the abbreviation's full stop are both literal parts we
