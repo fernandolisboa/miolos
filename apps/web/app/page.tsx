@@ -116,10 +116,9 @@ export default function HojePage() {
               </p>
             </div>
             {/* Done or pending, per THIS DEVICE (plan 018 §11.3, ADR-0031),
-                and linked only where a play route exists — the `playRoutes`
-                map decides, and #27 added termo as a KEY rather than a
-                branch, which is what kept this JSX untouched by a fourth
-                game. All four are routed now; #75 totalises the map. */}
+                and linked through the `playRoutes` map — #27 added termo as
+                a KEY rather than a branch, which is what kept this JSX
+                untouched by a fourth game. */}
             <HubCardAction game={game} date={isoDate} />
           </article>
         ))}

@@ -51,18 +51,14 @@ export type Route = (typeof routes)[keyof typeof routes];
  * (plan 018 §11.3) and by the conclusion's chaining CTA (§11.4). Two copies
  * of it is how the hub links a game the conclusion still calls pending.
  *
- * Partial by construction: #23 added sudoku's key here, #25 nonogram's and
- * #27 termo's — always a key, never a branch at a call site (ADR-0028). A
- * game with no key has no play route yet, and its card keeps an href-less
- * anchor rather than fake navigation.
- *
- * ALL FOUR GAMES ARE ROUTED SINCE #27, so the type is now wider than the
- * value: every `route === undefined` branch downstream is dead, and #75
- * totalises the map to `Record<Game, Route>` and deletes them. It is a
- * separate ticket rather than one more line here because it rewrites the
- * exact two consumers #27 is already rewriting (plan 022 §17.1).
+ * Total since #75: #23 added sudoku's key here, #25 nonogram's and #27
+ * termo's — always a key, never a branch at a call site (ADR-0028) — and
+ * with all four games routed the `Partial` had become wider than the value,
+ * forcing dead `route === undefined` branches on every consumer. A fifth
+ * game now ADDS ITS KEY OR DOES NOT COMPILE, which is the stronger form of
+ * the old "no key, no link" contract.
  */
-export const playRoutes: Readonly<Partial<Record<Game, Route>>> = {
+export const playRoutes: Readonly<Record<Game, Route>> = {
   binairo: routes.binairo,
   nonogram: routes.nonogram,
   sudoku: routes.sudoku,
