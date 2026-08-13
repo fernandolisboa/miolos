@@ -30,8 +30,12 @@ import { generateSessionToken, hashSessionToken } from "../src/session/token";
 // its own SP day (on time) and one stamped on the NEXT date is late.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
+/** When set, the route sees this in place of the real db — the T-API-S53
+ *  500-branch probe swaps in a client whose every access throws. */
+let dbOverride: Awaited<ReturnType<typeof createTestDb>>["db"] | undefined;
+
 vi.mock("../src/db", () => ({
-  getDb: () => ctx.db,
+  getDb: () => dbOverride ?? ctx.db,
 }));
 
 // PGlite boot measures ~1.2 s locally and CI runners are ~3–4× slower;
@@ -48,6 +52,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  dbOverride = undefined;
   vi.unstubAllEnvs();
 });
 
@@ -319,6 +324,27 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
       streak: 2,
       todayCounts: false,
     });
+  });
+
+  it("T-API-S53: a thrown db is a 500 `internal` that still carries no-store and the credentialed CORS grant", async () => {
+    vi.stubEnv("WEB_ORIGIN", WEB);
+    // A db whose every access throws, standing in for a lost connection:
+    // the catch must produce the same header discipline as every
+    // intentional branch — a bare framework 500 carries neither.
+    dbOverride = new Proxy({} as NonNullable<typeof dbOverride>, {
+      get() {
+        throw new Error("connection lost");
+      },
+    });
+
+    const response = await GET(streakRequest(generateSessionToken()));
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "internal" });
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("access-control-allow-origin")).toBe(WEB);
+    expect(response.headers.get("access-control-allow-credentials")).toBe(
+      "true",
+    );
   });
 
   it("T-API-S51: the route module exports GET (and the dynamic marker) and nothing else — D6's no-OPTIONS pinned as export-absence", async () => {

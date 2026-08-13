@@ -49,34 +49,46 @@ function errorResponse(status: number, error: string): Response {
 }
 
 export async function GET(request: NextRequest): Promise<Response> {
-  const db = getDb();
-  // `requireUserId` never mints (service.ts): a GET from a cookieless
-  // client is 401, and SessionBootstrap owns minting.
-  const userId = await requireUserId(
-    db,
-    request.cookies.get(SESSION_COOKIE_NAME)?.value,
-  );
-  if (!userId) {
-    return errorResponse(401, "no-session");
-  }
+  // The whole body is caught: an unhandled throw would otherwise be the
+  // one branch whose response carries neither `no-store` nor the CORS
+  // grant, so the failure mode would leak the discipline every intentional
+  // branch keeps (step-6 finding security LOW 1). T-API-S53 pins it.
+  try {
+    const db = getDb();
+    // `requireUserId` never mints (service.ts): a GET from a cookieless
+    // client is 401, and SessionBootstrap owns minting.
+    const userId = await requireUserId(
+      db,
+      request.cookies.get(SESSION_COOKIE_NAME)?.value,
+    );
+    if (!userId) {
+      return errorResponse(401, "no-session");
+    }
 
-  // The DB clock's SP date (ADR-0010 single authority) — the `today` the
-  // pure function anchors on. Never new Date().
-  const today = await todaySaoPaulo(db);
-  // Unfiltered rows: the pure function is the streak's only filter (plan
-  // 027 D3), so this seam exercises the authority ADR-0009 names.
-  const rows = await listCompletionsForStreak(db, userId);
-  const status = computeStreak(rows, today);
+    // Post-auth, the two reads are independent, so they share one round-trip
+    // window. Auth stays FIRST and sequential: a 401 must cost zero queries.
+    const [today, rows] = await Promise.all([
+      // The DB clock's SP date (ADR-0010 single authority) — the `today`
+      // the pure function anchors on. Never new Date().
+      todaySaoPaulo(db),
+      // Unfiltered rows: the pure function is the streak's only filter
+      // (plan 027 D3), so this seam exercises the authority ADR-0009 names.
+      listCompletionsForStreak(db, userId),
+    ]);
+    const status = computeStreak(rows, today);
 
-  return Response.json(
-    // Parse, never cast (boundary rule) — the same strict schema the web
-    // client parses on arrival.
-    streakResponseSchema.parse({ date: today, ...status }),
-    {
-      headers: {
-        ...corsHeaders({ credentials: true }),
-        "Cache-Control": "no-store",
+    return Response.json(
+      // Parse, never cast (boundary rule) — the same strict schema the web
+      // client parses on arrival.
+      streakResponseSchema.parse({ date: today, ...status }),
+      {
+        headers: {
+          ...corsHeaders({ credentials: true }),
+          "Cache-Control": "no-store",
+        },
       },
-    },
-  );
+    );
+  } catch {
+    return errorResponse(500, "internal");
+  }
 }

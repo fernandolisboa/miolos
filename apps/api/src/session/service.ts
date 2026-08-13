@@ -21,6 +21,11 @@ const STALE_AFTER_MS = 60 * 60 * 1000; // 1 hour, mirrors the SQL predicate
  * remains the actual guard, so no JS-constructed date ever appears in a
  * query and clock skew can at worst delay a bump by one resolve — harmless
  * at day granularity.
+ *
+ * `lastSeenAt` is bumped on READS too, cross-site top-level GETs included
+ * (GET /streak has no origin guard by design). It must never become
+ * security-load-bearing — expiry, re-auth — without revisiting CSRF on
+ * GETs first (step-6 finding security LOW 2).
  */
 export async function resolveSession(
   db: Db,

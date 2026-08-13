@@ -35,7 +35,7 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 |---|---|---|---|
 | `T-CORE` | `S36` | `S35` | never used |
 | `T-DB` | `S16` | `S14` | `T-DB-21` |
-| `T-API` | `S53` | `S51` | `T-API-16` |
+| `T-API` | `S54` | `S53` | `T-API-16` |
 | `T-WEB` | `S135` | `S131` | `T-WEB-23` |
 | `T-LINT` | `S24` | `S22` | `T-LINT-10` |
 
