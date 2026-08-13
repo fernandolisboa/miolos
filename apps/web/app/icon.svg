@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The Miolos mark (#19, plan 027 D12) — the Ateliê language in geometry
+       only, no text (font-dependent text renders differently per platform):
+       desk paper ground, a slightly rotated paper card with the hard
+       single-color offset shadow in sealing-wax, the four games as a 2x2
+       grid of accent squares, and a translucent tape scrap. Every color is
+       a recorded token from packages/ui/tokens.css. Committed master; the
+       PNG set is rendered from this file by scripts/render-icons.mjs.
+       A Nano Banana replacement is a re-render away (swap this file, run
+       the script, commit). -->
+  <rect width="512" height="512" fill="#F7F2E9"/>
+  <g transform="rotate(2 256 256)">
+    <rect x="128" y="128" width="288" height="288" rx="24" fill="#9E3B2F"/>
+    <rect x="112" y="112" width="288" height="288" rx="24" fill="#FBF7EF" stroke="#9E3B2F" stroke-width="6"/>
+    <rect x="164" y="164" width="80" height="80" rx="12" fill="#C08A1E"/>
+    <rect x="268" y="164" width="80" height="80" rx="12" fill="#2E4E7E"/>
+    <rect x="164" y="268" width="80" height="80" rx="12" fill="#B5563C"/>
+    <rect x="268" y="268" width="80" height="80" rx="12" fill="#4E6B52"/>
+    <rect x="216" y="94" width="96" height="30" rx="4" fill="#9E3B2F" opacity="0.3" transform="rotate(-4 264 109)"/>
+  </g>
+</svg>
