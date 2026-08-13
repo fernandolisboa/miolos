@@ -20,6 +20,25 @@ which point ADR-0012's sentence is satisfied as written rather than
 amended. Recorded here so the step-6 ADR-adherence lens finds the argument,
 not a silence.
 
+A second near-miss, same register: ADR-0049 decision 4 grounds tombstone
+permanence in "no code path mints a session against an existing user" — and
+`createSessionForUser` (apps/api/src/session/service.ts, the confirm
+route's only session mint) is the repo's first such code path. It does not
+amend that sentence, because neither derivation arm of its one argument can
+ever name a tombstone: the id it receives is always decision 4's resolved
+winner, which is either the verified holder of the token's email (a
+verified holder has a non-null email by definition, and a tombstone's every
+identity handle is null) or the token's requester after the
+requester-liveness check (a requester who owns ≥ 1 session, and a tombstone
+owns none — sessions are never deleted in v1 outside decision 13's
+post-merge revocation, which runs only after the fresh winner session is
+the guaranteed next statement). A tombstone therefore remains permanently
+unresurrectable exactly as ADR-0049 argues; the mint against an *existing,
+live* user is the new capability, and decision 13 below records the one
+session-delete that now exists beside it. Recorded so the sentence and the
+function are argued against each other rather than left to look like a
+contradiction.
+
 ## Context
 
 ADR-0003 promised the magic-link attach at streak ≥ 5; ADR-0012 tied the LGPD
@@ -67,10 +86,18 @@ prompting or deletion was recorded. This ADR records all of it as one design.
    handle — i.e., must not be a tombstone (every live account owns a session
    by construction; only tombstones own none). On failure the operation
    throws before touching anything; the confirm route re-derives the pair
-   and retries once, then 409s. Route-level single-flight was rejected:
-   stateless Vercel functions share no memory, so a route lock is fiction.
-   This is an addition, not an amendment: no sentence of ADR-0049 is
-   contradicted; sessions are still remapped first among writes.
+   and retries once, then 409s. The guard's throw is discriminable
+   (`isWinnerLivenessError` on `@miolos/db/user`), and the retry/409 path
+   is reserved for that throw ALONE: any other mid-merge failure is logged
+   and rethrown into the route's 500, never flattened into a spent-token
+   answer — the guard fires before any destructive statement, everything
+   else may not have, and because the holder's email survives until the
+   tombstone statement, a re-requested link simply re-runs the merge
+   (idempotent re-run stays the recovery, the recovery direction included).
+   Route-level single-flight was rejected: stateless Vercel functions share
+   no memory, so a route lock is fiction. This is an addition, not an
+   amendment: no sentence of ADR-0049 is contradicted; sessions are still
+   remapped first among writes.
 6. **Verified-email uniqueness, three layers.** The Zod boundary normalizes
    (trim + lowercase) every email; the flow keeps at most one verified
    holder (the merge nulls the loser's email before the winner gains it —
@@ -106,16 +133,29 @@ prompting or deletion was recorded. This ADR records all of it as one design.
    permanently. localStorage was rejected: it re-prompts exactly the
    cleared-site-data user the feature serves.
 10. **Transport: Resend over plain fetch, fail-closed, dormant until keyed.**
-    No SDK (zero new dependencies). RESEND_API_KEY unset → the request route
-    503s before any side effect AND /attach/state reports ineligible, so the
-    whole feature is dormant until `vercel env add` — the grantHints posture
-    applied to a flow. Plain-text mail, no pixels. pt-BR mail copy lives in
-    apps/api/src/email/copy.ts — the api's one externalized-copy module.
+    No SDK (zero new dependencies). The dormancy switch is ONE predicate,
+    `isAttachConfigured` = RESEND_API_KEY AND WEB_ORIGIN, shared by both
+    sides: unconfigured or half-configured → the request route 503s before
+    any side effect AND /attach/state reports ineligible, so no environment
+    can render a prompt whose submit would 503 — the whole feature is
+    dormant until `vercel env add` supplies both, the grantHints posture
+    applied to a flow. Plain-text mail, no pixels; the send carries a 10 s
+    abort so a hung provider surfaces as the same 502 as a refusing one.
+    pt-BR mail copy lives in apps/api/src/email/copy.ts — the api's one
+    externalized-copy module. The sender identity
+    (`Miolos <conta@miolos.app>`) is a module-private literal on purpose:
+    it is bound to the Resend-verified sending domain — operational content
+    like privacidade@miolos.app, not a routable origin, so ADR-0013's
+    env-config rule does not cover it.
 11. **Rate limit: 3 requests per rolling hour per user AND per normalized
     email**, both counted from attach_tokens rows (multiple outstanding
     tokens are allowed precisely so the rows are the ledger). Opportunistic
-    cleanup deletes rows older than the ONE-HOUR rate window, not the
-    30-minute expiry — cleanup at 30 minutes would empty the band the count
+    cleanup deletes ALL rows older than the ONE-HOUR rate window — global,
+    not per-user: a row past the hour is expired for the claim and
+    invisible to both rolling-hour counts whoever owns it, so any request
+    bounds the whole table and abandoned users' rows outlive the window
+    only while nobody requests at all (no separate sweep is owed) — and
+    never at the 30-minute expiry, which would empty the band the count
     needs and silently double the limit; expired-but-recent rows serve as
     the ledger for their remaining half hour (a deliberate 30-minute
     data-hygiene cost). The per-email cap is the cheap closer for the
@@ -123,9 +163,14 @@ prompting or deletion was recorded. This ADR records all of it as one design.
     unthrottled (ADR-0022's acceptance), so a per-user cap alone is
     per-attacker-unlimited; mail-bombing one inbox is closed, while fresh
     users × many addresses (Resend quota, sender reputation) remains the
-    accepted v1 risk. Revisit: first abuse signal or #32's send
-    infrastructure. The global sweep of abandoned rows joins the
-    nightly-check ticket.
+    accepted v1 risk. A second recorded composition cuts the other way —
+    **victim lockout**: three throwaway accounts requesting an address
+    exhaust its per-email cap for the hour, denying the true owner the
+    attach flow while only attacker-requested links reach the inbox (the
+    honest-copy warning and decision 13's revocation are what those links
+    then run into). Accepted for v1 as the flip side of the mail-bombing
+    closure. Revisit both compositions on the first abuse signal or #32's
+    send infrastructure, whichever comes first.
 12. **Deletion is real, immediate, and self-service.** POST /account/delete
     (authenticated, literal confirm) cascade-deletes the user; the cookie is
     cleared; the next visit mints a fresh empty identity. Structurally
@@ -134,6 +179,45 @@ prompting or deletion was recorded. This ADR records all of it as one design.
     never conflict. The /privacidade page hosts the UI and publishes
     privacidade@miolos.app as the human-channel fallback (ADR-0012's
     "how to request deletion", both ways).
+13. **A cross-account merge revokes every pre-existing session on the
+    winner.** At confirm, when the merge actually ran (holder ≠ requester),
+    the route deletes ALL sessions owned by the winner AFTER `mergeAccounts`
+    returns and BEFORE minting the clicking browser's fresh session — the
+    merge's first statement remapped the loser's sessions onto the winner,
+    so this one delete retires both accounts' pre-existing cookies. It
+    closes the takeover the magic-link trust model would otherwise hand an
+    attacker: request a token for a victim's verified email, wait for the
+    victim to click, and the remap alone would leave the ATTACKER's cookie
+    resolving to the victim's account. After the revocation the clicking
+    browser's fresh session is the only live one. The plain-attach
+    no-collision path keeps its sessions (no second account is involved).
+    This does NOT contradict ADR-0049's remap-never-delete: the remap
+    inside the operation is what keeps a crashed merge resolvable on re-run
+    (delete there re-mints the revived empty account ADR-0009 forbids),
+    while this revocation is an account-security action on a COMPLETED
+    merge, taken at the confirm seam — `mergeAccounts` itself is untouched.
+    Tombstone permanence is unaffected: the loser still owns no session and
+    no handle, and the winner's fresh session is minted immediately. Priced
+    cost: in an honest device move, the OLD device's cookie dies too and
+    that device re-mints a fresh anonymous account on its next visit — one
+    more merge-on-collision if the player returns there, accepted as the
+    cost of making "someone else asked for this link" unwinnable. The mail
+    and the /vincular page carry the matching honest copy: only confirm a
+    link you asked for yourself, just now.
+14. **The clicking browser's own history gates the confirm client-side.**
+    /vincular reads the EXISTING streak surface (useStreak — no new
+    endpoint, ADR-0048's growth rule untouched) and, when this browser
+    already carries a played account (streak > 0 or a counted today),
+    requires an explicit switch-account acknowledgement before the POST
+    arms; cookieless and zero-history browsers — the recovery user — see no
+    extra step, and the button waits for the read to settle so the gate
+    cannot be raced by a fast click. This is a UX guard over decision 4's
+    recorded semantics (the bystander's account is never merged, only its
+    cookie replaced), not an authorization boundary: the residual stands
+    that an ACKNOWLEDGED switch still replaces this device's cookie, and a
+    user who checks the box loses this device's anonymous account from view
+    (the account and its sessions survive untouched in the DB — the browser
+    simply stops presenting that cookie, and no path leads back to it).
 
 ## Rejected
 
@@ -176,9 +260,13 @@ prompting or deletion was recorded. This ADR records all of it as one design.
   email and a spent token; a re-request heals it. Idempotence remains the
   recovery mechanism end to end.
 - Email change for an attached account is deliberately unsupported: 409 at
-  request, re-checked at confirm on the resolved winner (a still-live
-  pending token for a different email cannot become a silent change — 409,
-  token spent); it is a settings/M4 flow with its own safeguards.
+  request, re-checked TWICE at confirm — on the requester BEFORE any merge
+  (a still-live pending token for a different email is a dead intent the
+  moment the requester's verified email differs from it, and it must not
+  trigger a destructive merge with that email's holder on its way to the
+  409), and on the resolved winner after, as the concurrent-window
+  backstop. Either way: 409, token spent, zero silent change; email change
+  is a settings/M4 flow with its own safeguards.
 - The reminder channel remains dormant: #21 stores consent; only #32 may
   send, and only to reminder-consent holders (ADR-0012).
 - "Magic link" enters CONTEXT.md as a durable term.
