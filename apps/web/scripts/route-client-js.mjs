@@ -100,16 +100,18 @@ const MAX_DELTA_BYTES = 40 * 1024;
  * `/termo` cannot ride the shared 40 KB and the shared constant must not be
  * raised to fit it — that would un-arm the motif tripwire for the three grid
  * routes, which is the only thing it exists for. Measured on this branch,
- * clean build after step 7: /termo is +68.9 KB raw over `/`, against
- * +33.0 / +36.8 / +30.4 for binairo / nonogram / sudoku. The gap is not a
+ * clean build after #28's step 7: /termo is +69.1 KB raw over `/`, against
+ * +35.8 / +37.8 / +32.1 for binairo / nonogram / sudoku. The gap is not a
  * regression — it is the shared play-screen shell (~31 KB, in line with the
  * three siblings) plus the Termo library floor (~37.9 KB, of which ~36.4 KB
  * is the validation dictionary the ticket exists to ship, because "não está
  * na lista" has to be instant and offline).
  *
- * 76 KB leaves 7.1 KB — 9.3 % OF THE BUDGET, and the denominator is named
- * because the same figure appears in ADR-0045:170 and two denominators for one
- * number is how a headroom claim drifts. Enough for ordinary copy edits, tight
+ * 76 KB leaves 6.9 KB — 9.1 % OF THE BUDGET, and the denominator is named
+ * because ADR-0045:170 states the same convention (7.1 KB at #27's merge
+ * candidate, the point-in-time measurement that ADR records) and two
+ * denominators for one number is how a headroom claim drifts. Enough for
+ * ordinary copy edits, tight
  * enough that a SECOND `packages/games` module lands it in the red. That is
  * the failure this arms against — someone importing a value from
  * `@miolos/games/termo` into `play-record.ts` (whose `212-244` block warns
@@ -125,10 +127,11 @@ const PER_ROUTE_BUDGET = {
    * motif tables (~35 KB minified, curated pt-BR names included), so the
    * route cannot ride the shared 40 KB, and the shared constant must not be
    * raised to fit it, because the default is what arms the motif tripwire
-   * for the three DAILY grid routes. Measured at step 8 on this branch:
-   * +54.2 KB raw over `/`, against +18.2 / +18.2 for the free binairo and
-   * sudoku (which ride the default with room to spare) and −20.2 for the
-   * free-play index. 60 KB is measured + ~10% (plan 025 D12): enough for
+   * for the three DAILY grid routes. Measured after #28's step 7 on this
+   * branch: +54.3 KB raw over `/`, against +18.3 / +18.3 for the free
+   * binairo and sudoku (which ride the default with room to spare) and
+   * −20.3 for the free-play index. 60 KB is measured + ~10% (plan 025 D12):
+   * enough for
    * copy edits, tight enough that a second heavy library riding along
    * lands it in the red.
    */
