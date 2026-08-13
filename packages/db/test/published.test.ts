@@ -784,8 +784,10 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "hintGrants",
       "insertDailyPuzzle",
       "listBufferedDates",
+      "listCompletionsForMerge",
       "listCompletionsForStreak",
       "listUsedTermoAnswers",
+      "mergeAccounts",
       "recordCompletion",
       "remoteConfig",
       "sessions",
@@ -794,10 +796,11 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "users",
     ]);
     // A duplicate across two entries would be hidden by the Set above, so
-    // pin the count too: 26 distinct names, 26 exports. #27 moved it by
-    // exactly one — `listUsedTermoAnswers` on the publishing entry — and
-    // #19 by exactly one more: `listCompletionsForStreak` on the user
-    // entry (plan 027 §6), never the root.
-    expect(surface).toHaveLength(26);
+    // pin the count too: 28 distinct names, 28 exports. #27 moved it by
+    // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
+    // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
+    // and #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
+    // user entry (plan 029 §6), never the root.
+    expect(surface).toHaveLength(28);
   });
 });
