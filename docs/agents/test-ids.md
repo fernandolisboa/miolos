@@ -23,7 +23,7 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 025 (#28) **at its step 5**, re-derived by grep over the branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 027 (#19) **at its step 5**, re-derived by grep over the branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 The grep that produces it, per area — titles only, so a cross-reference in a comment is not mistaken for an allocation:
 
@@ -33,11 +33,11 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S25` | `S24` | never used |
-| `T-DB` | `S13` | `S12` | `T-DB-21` |
-| `T-API` | `S46` | `S45` | `T-API-16` |
-| `T-WEB` | `S125` | `S122` | `T-WEB-23` |
-| `T-LINT` | `S21` | `S18` | `T-LINT-10` |
+| `T-CORE` | `S35` | `S33` | never used |
+| `T-DB` | `S16` | `S14` | `T-DB-21` |
+| `T-API` | `S53` | `S51` | `T-API-16` |
+| `T-WEB` | `S135` | `S131` | `T-WEB-23` |
+| `T-LINT` | `S24` | `S22` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
 
@@ -53,6 +53,8 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 - at step 7 round 2 — `T-API-S45` (`test/termo-judge.test.ts`, the shared ladder's own preconditions) and `T-WEB-S108` (`test/session-remint.test.ts`, the re-mint allowance's two reset events).
 
 #28 (plan 025) reserved `T-WEB-S109…S124` and `T-LINT-S9…S20`, and spent `T-WEB-S109…S122` and `T-LINT-S9…S18` at step 5; `T-WEB-S123`/`S124` and `T-LINT-S19`/`S20` were the reserved review-round headroom and are **burned if unspent** per the rule below. The four free-play rows added to `T-WEB-S56`'s ROUTES table carry no new id — the `T-WEB-S100` burn precedent.
+
+#19 (plan 027) reserved `T-CORE-S25…S34`, `T-DB-S13…S15`, `T-API-S46…S52`, `T-WEB-S125…S134` and `T-LINT-S21…S23`, and spent `T-CORE-S25…S33`, `T-DB-S13`/`S14`, `T-API-S46…S51`, `T-WEB-S125…S131` and `T-LINT-S21`/`S22` at step 5; the tails (`T-CORE-S34`, `T-DB-S15`, `T-API-S52`, `T-WEB-S132…S134`, `T-LINT-S23`) are the reserved review-round headroom and are **burned if unspent** per the rule below.
 
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead.
 
