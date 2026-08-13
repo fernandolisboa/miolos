@@ -282,6 +282,15 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/modo-livre/nonogram/page"),
     daily: undefined,
   },
+  // The #21 pages read no wall either: /privacidade is static by
+  // construction, /vincular is request-rendered (it awaits searchParams)
+  // but still db-free — its shell renders here with none supplied.
+  {
+    path: "/privacidade",
+    marker: "data-page=",
+    load: () => import("../app/privacidade/page"),
+    daily: undefined,
+  },
 ];
 
 beforeEach(() => {

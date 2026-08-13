@@ -153,6 +153,9 @@ export const messages = {
       archive: "Arquivo",
       freePlay: "Modo livre",
       stats: "Estatísticas",
+      // Live since #21: /privacidade is a real route, so the hub links it
+      // (arquivo/estatisticas stay deliberately href-less until #31/#29).
+      privacy: "Política de Privacidade",
     },
   },
   /** Chrome every play screen shares (plan 018 §5.2, §13.1). */
@@ -294,6 +297,132 @@ export const messages = {
       pictureAria:
         "A figura revelada, formada pelas células preenchidas da sua grade.",
     },
+  },
+  /**
+   * The attach prompt card (#21, ADR-0050 decision 9; ADR-0012's
+   * purpose-limited consent language). The invitation is the human voice —
+   * Fraunces italic, protecting the streak — and every consent label says
+   * exactly what its checkbox does: recovery is the account function
+   * (required to submit), the reminder defaults UNCHECKED and its absence
+   * signs the player up for nothing.
+   */
+  attach: {
+    invitation: "Sua sequência merece um plano B.",
+    lead: "Vincule um e-mail e a sequência sobrevive a qualquer aparelho perdido ou limpo.",
+    emailLabel: "Seu e-mail",
+    recoveryLabel:
+      "Quero vincular este e-mail para recuperar e mover a minha sequência.",
+    reminderLabel:
+      "Quero receber um lembrete por e-mail quando a minha sequência estiver em risco.",
+    // The consent copy's link into the policy (T-WEB-S143).
+    privacyLinkLead: "Como cuidamos dos seus dados:",
+    privacyLinkLabel: "Política de Privacidade",
+    submit: "Enviar link mágico",
+    dismiss: "agora não",
+    sending: "Enviando…",
+    // The sent state replaces the form (D15): the normalized address is
+    // rendered so the player sees exactly where the link went.
+    sent: (email: string) => `Enviamos um link para ${email}.`,
+    sentNote: "Vale por 30 minutos e funciona uma única vez.",
+    errors: {
+      generic: "Não foi possível enviar o link. Tente de novo.",
+      rateLimited: "Muitos pedidos por agora — tente de novo em uma hora.",
+      alreadyAttached: "Esta conta já tem um e-mail vinculado.",
+    },
+  },
+  /**
+   * The /vincular confirm page (#21, ADR-0050 decision 3): an inert shell
+   * plus ONE explicit button — the human click is what spends the token,
+   * so an email scanner's GET consumes nothing.
+   */
+  confirm: {
+    title: "Vincular e-mail",
+    ready: {
+      lead: "Um clique e este e-mail fica vinculado à sua conta do Miolos.",
+      cta: "Confirmar vínculo",
+    },
+    posting: "Confirmando…",
+    attached: {
+      title: "E-mail vinculado!",
+      body: "Sua sequência agora tem um plano B: este e-mail a recupera e a leva para qualquer aparelho.",
+    },
+    merged: {
+      title: "Tudo certo — sua sequência voltou.",
+      body: "Este aparelho agora carrega o seu histórico completo.",
+    },
+    missingToken: {
+      title: "Este link está incompleto.",
+      body: "Abra de novo o link que chegou no seu e-mail — ou peça um novo na página inicial.",
+    },
+    invalid: {
+      title: "Este link não vale mais.",
+      body: "Cada link vale por 30 minutos e funciona uma única vez. Peça um novo na página inicial.",
+    },
+    conflict: {
+      title: "Não deu para confirmar com este link.",
+      body: "Aconteceu um imprevisto por aqui. Peça um novo link na página inicial.",
+    },
+    backHome: "Voltar para Hoje",
+  },
+  /**
+   * The privacy policy (#21, ADR-0012, ADR-0050 decision 12) — the largest
+   * single copy block in the app, and deliberately so: the page states
+   * EXACTLY what this release ships, so page and mechanism cannot drift.
+   */
+  privacy: {
+    title: "Política de Privacidade",
+    intro:
+      "O Miolos funciona sem cadastro: você joga com uma conta anônima criada neste aparelho. Esta página diz o que coletamos, para quê, e como apagar tudo.",
+    collected: {
+      heading: "O que coletamos",
+      account:
+        "A conta anônima e o seu histórico de jogos — quais puzzles você concluiu e quando. É disso que a sequência é calculada.",
+      email:
+        "O seu e-mail, somente se você escolher vinculá-lo. Ninguém precisa vincular e-mail para jogar.",
+      telemetry:
+        "Medições técnicas mínimas de uso e desempenho. Não gravamos a sua tela nem as suas sessões.",
+    },
+    why: {
+      heading: "Para que usamos",
+      recovery:
+        "O e-mail existe para recuperar e mover a sua sequência — se você limpar o navegador ou trocar de aparelho, ele é o caminho de volta.",
+      reminder:
+        "Lembretes de sequência em risco só chegam por e-mail se você marcar o consentimento próprio para isso — e ele vem desmarcado.",
+    },
+    consents: {
+      heading: "Os dois consentimentos",
+      body: "Vincular o e-mail (recuperação) e receber lembretes são consentimentos separados e independentes: um nunca implica o outro, e o lembrete vem sempre desmarcado.",
+    },
+    deletion: {
+      heading: "Excluir seus dados",
+      selfService:
+        "A exclusão é imediata e você mesmo faz, nesta página, na seção abaixo: apaga a conta, a sequência e todo o histórico, de uma vez.",
+      contactLead:
+        "Também atendemos pedidos de exclusão e qualquer dúvida de privacidade pelo e-mail",
+      contactEmail: "privacidade@miolos.app",
+    },
+    noPassword: {
+      heading: "O que não existe aqui",
+      body: "Não existe senha no Miolos — o link mágico por e-mail é o único acesso. Não vendemos os seus dados a ninguém.",
+    },
+    revision:
+      "Esta política cresce junto com o produto: uma versão completa acompanha as próximas funcionalidades.",
+  },
+  /** The self-service deletion island on /privacidade (D13). */
+  deleteAccount: {
+    heading: "Excluir minha conta e dados",
+    explain:
+      "Apaga a sua conta, a sua sequência e todo o histórico — imediatamente e em todos os aparelhos. Não dá para desfazer.",
+    start: "Excluir minha conta",
+    confirmTitle: "Tem certeza?",
+    confirmBody:
+      "A exclusão é definitiva: a sequência e o histórico não voltam.",
+    confirm: "Excluir de vez",
+    cancel: "Cancelar",
+    deleting: "Excluindo…",
+    done: "Conta excluída.",
+    doneNote: "Se voltar a jogar, você começa do zero — como no primeiro dia.",
+    error: "Não foi possível excluir agora. Tente de novo.",
   },
   games: {
     termo: {
