@@ -253,6 +253,35 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/termo/concluido/page"),
     daily: TERMO,
   },
+  // The free-play routes (#28) read no wall at all — `daily: undefined`
+  // documents that, and the "nothing published" case below is their
+  // ordinary render.
+  {
+    path: "/modo-livre",
+    marker: "data-free-play=",
+    load: () => import("../app/modo-livre/page"),
+    daily: undefined,
+  },
+  // The three game screens' static shell is the generating skeleton, whose
+  // `data-play-state="generating"` satisfies the preflight's existing arm.
+  {
+    path: "/modo-livre/binairo",
+    marker: "data-play-state=",
+    load: () => import("../app/modo-livre/binairo/page"),
+    daily: undefined,
+  },
+  {
+    path: "/modo-livre/sudoku",
+    marker: "data-play-state=",
+    load: () => import("../app/modo-livre/sudoku/page"),
+    daily: undefined,
+  },
+  {
+    path: "/modo-livre/nonogram",
+    marker: "data-play-state=",
+    load: () => import("../app/modo-livre/nonogram/page"),
+    daily: undefined,
+  },
 ];
 
 beforeEach(() => {

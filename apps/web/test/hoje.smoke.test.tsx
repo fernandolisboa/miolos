@@ -202,20 +202,15 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
 
     // Driven by the map itself rather than by a count (this replaces plan
     // 017's `links only the Binairo card`): #23 added sudoku's key to
-    // `playRoutes` and #25 nonogram's, #27 adds termo's, and this assertion
-    // follows them without an edit.
+    // `playRoutes` and #25 nonogram's, #27 added termo's, and this assertion
+    // follows them without an edit. The map is total since #75, so there is
+    // no dead-href arm left to assert — every card links its route.
     expect(Object.keys(playRoutes).length).toBeGreaterThan(0);
     for (const game of GAMES) {
       const cta = within(cardFor(game))
         .getByText(messages.hoje.playCta)
         .closest("a");
-      const route = playRoutes[game];
-      if (route === undefined) {
-        // A dead href would be fake navigation.
-        expect(cta).not.toHaveAttribute("href");
-      } else {
-        expect(cta).toHaveAttribute("href", route);
-      }
+      expect(cta).toHaveAttribute("href", playRoutes[game]);
     }
   });
 

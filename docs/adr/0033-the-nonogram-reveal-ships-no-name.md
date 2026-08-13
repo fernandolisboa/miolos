@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md), [ADR-0021](./0021-nonogram-pictures-are-a-curated-motif-library.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md)
+**Amended by:** [ADR-0047](./0047-bundle-markers-are-route-scoped.md) — decision 1's "not by shipping the motif library into the bundle" clause and consequence (d)'s "no motif name may reach `apps/web`" premise narrow to daily-route and shared chunks; free play (ADR-0046) legitimately ships the library in its own chunks, to generate and never to name. The payload and completion-response guarantees below are untouched.
 
 ## Context
 

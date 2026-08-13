@@ -72,6 +72,198 @@ const webRequireCall = {
     "apps/web is client-serving ESM: require() is banned — it evades the @miolos/db import restrictions (ADR-0024, ADR-0026).",
 };
 
+// The app-wide import wall's two halves (wall object (1) below), extracted to
+// named constants for the SAME reason `webDynamicDbImport` was: flat config
+// REPLACES a rule's whole configuration per matching file — it never merges —
+// so the free-play object further down has to REPEAT these verbatim or it
+// would silently delete the db wall for exactly the free-play files
+// (T-LINT-S14/S15 pin the repetition). Consumed unchanged by object (1): this
+// extraction is a pure move, and the eslint-db-wall.test.ts probes are the
+// no-op proof.
+const webWallImportPatterns = [
+  {
+    group: [
+      "@miolos/db/publishing",
+      "@miolos/db/publishing/*",
+      "@miolos/db/user",
+      "@miolos/db/user/*",
+      "@miolos/db/testing",
+      "@miolos/db/testing/*",
+    ],
+    message:
+      "apps/web is client-serving: import the wall-safe root entry `@miolos/db` only. `/publishing` carries the raw tables, the buffer writers and the solution-bearing reader; `/user` carries the completion and hint-grant writers, which belong to apps/api; `/testing` hands out a full-schema client (ADR-0024, ADR-0026).",
+  },
+  {
+    // Banning the bare specifiers is not enough on its own: a
+    // relative path into the package source reaches `completions`,
+    // `hint_grants`, `daily_puzzles` and `remote_config` with no rule
+    // firing, falsifying plan 017 D17's "apps/web cannot even *name*
+    // completions or hint_grants" (step 6 finding
+    // web-db-wall-has-no-relative-path-ban).
+    group: [
+      "**/packages/db/src",
+      "**/packages/db/src/*",
+      "**/packages/db/src/**",
+    ],
+    message:
+      "apps/web is client-serving: reach the db through the `@miolos/db` package entry, never by relative path into packages/db/src — the deep path hands out every server-internal table (ADR-0024, ADR-0026).",
+  },
+  {
+    // The same lesson the `@miolos/db` group above learned one
+    // ticket earlier, applied to the server-only core contracts: the
+    // `paths` entry below fires on the BARE specifier only, so
+    // `import { stripDailyContent } from
+    // "../../../packages/core/src/contracts/daily-content"` linted,
+    // typechecked and tested clean while re-shipping
+    // `nonogramRevealSchema`'s `motifId` / `name` / `mirrored` /
+    // `solution` key strings into every route's browser chunk —
+    // exactly what commit d5bb543 and ADR-0033 exist to prevent
+    // (step-6 round-4 finding
+    // `core-server-only-ban-is-bare-specifier-only`). The whole
+    // package source is banned by path rather than just the one
+    // module: apps/web has the `@miolos/core` entry and never needs
+    // a relative reach into it, and a path ban that enumerates
+    // modules has to be re-checked on every new file.
+    group: [
+      "**/packages/core/src",
+      "**/packages/core/src/*",
+      "**/packages/core/src/**",
+    ],
+    message:
+      "apps/web is client-serving: reach the contracts through the `@miolos/core` package entry, never by relative path into packages/core/src — the deep path reaches the SERVER-ONLY daily-content schemas, whose module is retained in the browser chunk of every route the moment anything names it (commit d5bb543, ADR-0024/ADR-0033).",
+  },
+];
+
+const webWallImportPaths = [
+  {
+    name: "@miolos/db",
+    // `users` and `sessions` are on the root entry too, and
+    // `db.select().from(users)` needs neither `sql` nor `eq` — an RSC
+    // payload of every user row (or every session token hash) was one
+    // import away (step 6 finding
+    // root-entry-users-and-sessions-are-importable-from-apps-web).
+    importNames: ["sql", "eq", "users", "sessions"],
+    message:
+      "apps/web must not build queries or touch the identity tables: read the daily through `getTodayDaily`. Raw SQL via the re-exported `sql` bypasses the published-predicate wall (ADR-0024 amendment), and every `users`/`sessions` read belongs to apps/api (ADR-0007/0014).",
+  },
+  {
+    name: "@miolos/core",
+    // The SERVER-ONLY half of the daily contracts
+    // (packages/core/src/contracts/daily-content.ts). Commit d5bb543
+    // split them out because a module-scope `z.strictObject(...)` is
+    // a call the bundler cannot prove pure, so naming one of them
+    // from apps/web retains the whole module — `nonogramRevealSchema`'s
+    // `motifId` / `name` / `mirrored` / `solution` key strings
+    // included — in the browser chunk of every route. `"sideEffects":
+    // false` only drops the module while NOTHING here names it, and
+    // until now that rule was prose in two file headers and a
+    // hand-run grep (step-6 round-3 finding
+    // `core-client-server-split-is-prose-only`). Pinned by T-LINT-3d.
+    //
+    // `termoDailyContentSchema` joined at #27. The list is not
+    // maintained by hand for long: `T-LINT-S7` derives the expected
+    // set from `daily-content.ts`'s own `export const|class|function`
+    // identifiers and asserts SET EQUALITY, so a schema added there
+    // and forgotten here is a red test rather than a silent hole —
+    // and a name left here after the module stops exporting it is
+    // red too, because a ban that covers nothing reads as coverage.
+    // `contracts/termo-guess.ts`'s exports are deliberately NOT here:
+    // they are client-safe by design and apps/web imports them.
+    importNames: [
+      "binairoDailyContentSchema",
+      "DailyProjectionUnsupportedError",
+      "nonogramDailyContentSchema",
+      "stripDailyContent",
+      "sudokuDailyContentSchema",
+      "termoDailyContentSchema",
+    ],
+    message:
+      "these are the SERVER-ONLY daily-content schemas (packages/core/src/contracts/daily-content.ts). apps/web receives the wall's already-stripped projection and must never name the content shape: one value import re-ships the withheld object's shape in every route's client chunk (commit d5bb543, ADR-0024/ADR-0033).",
+  },
+];
+
+// Wall object (2)'s two table-name selectors, extracted for the identical
+// flat-config reason: the free-play object matches files object (2) also
+// matches, so it must repeat them or reopen the raw-SQL residual for exactly
+// the free-play directories (T-LINT-S15).
+const webTableNameLiteral = {
+  selector: "Literal[value=/\\b(daily_puzzles|remote_config)\\b/]",
+  message:
+    "apps/web must not name the buffer tables: raw SQL through @miolos/db's re-exported `sql` / `.execute()` bypasses the published-predicate wall (ADR-0024 amendment, named #18 duty).",
+};
+
+const webTableNameTemplate = {
+  // Not optional: without it, sql`select * from daily_puzzles` slips
+  // straight through the Literal selector.
+  selector: "TemplateElement[value.raw=/\\b(daily_puzzles|remote_config)\\b/]",
+  message:
+    "apps/web must not name the buffer tables: raw SQL through @miolos/db's re-exported `sql` / `.execute()` bypasses the published-predicate wall (ADR-0024 amendment, named #18 duty).",
+};
+
+// (3) THE FREE-PLAY WALL (#28, ADR-0046; plan 025 §9.1). Free play records
+// nothing (ADR-0008 rule 5) and fetches nothing (ADR-0011), and this is the
+// mechanical half of that claim: the modules that can reach the network, the
+// play records or the db are import errors inside the free-play directories.
+// `no-restricted-imports` is NOT transitive, so the daily hooks, the daily
+// screen roots and `conclusion-view` — each one hop from `sync.ts` /
+// `use-play-lifecycle` / `day-state` — are banned BY NAME alongside the
+// direct doors. Both specifier shapes are listed: the `**/x` form for
+// relative reaches, and the mount point `components/session-bootstrap`
+// separately, because the bare `**/session/bootstrap` pattern does not match
+// it.
+const freePlayBannedModuleGroups = [
+  {
+    group: [
+      "**/play/sync",
+      "**/play/play-record",
+      "**/play/use-play-lifecycle",
+      "**/play/day-state",
+      "**/play/use-record-snapshot",
+      "**/play/conclusion-view",
+      "**/termo/guess-client",
+      "**/session/bootstrap",
+      "**/components/session-bootstrap",
+      "**/binairo/use-binairo-play",
+      "**/sudoku/use-sudoku-play",
+      "**/nonogram/use-nonogram-play",
+      "**/binairo/binairo-screen",
+      "**/sudoku/sudoku-screen",
+      "**/nonogram/nonogram-screen",
+    ],
+    message:
+      "free play records nothing and fetches nothing: the sync/record/lifecycle/session modules — and the daily hooks and screen roots that reach them one hop in — are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0008 rule 5, ADR-0046).",
+  },
+  {
+    // ALL of db, root entry included — stricter than the app-wide wall,
+    // which permits the wall-safe root entry: free play reads no wall and
+    // has no legitimate db surface at all.
+    group: ["@miolos/db", "@miolos/db/*"],
+    message:
+      "free play is generated on the client and reads no database at all — not even the wall-safe root entry (ADR-0011, ADR-0046).",
+  },
+  {
+    group: [
+      "@miolos/games/termo",
+      "@miolos/games/termo/*",
+      "**/packages/games/src/termo",
+      "**/packages/games/src/termo/**",
+    ],
+    message:
+      "Termo is excluded from free play by project invariant: its word list is finite curated content and free play would burn it (ADR-0005, ADR-0015, ADR-0046).",
+  },
+];
+
+// The dynamic-import evasion of the groups above: `no-restricted-imports`
+// never sees `import("../play/sync")`. Computed specifiers are already
+// banned app-wide by `webComputedDynamicImport`, which the free-play object
+// repeats, so a literal-specifier regex is the whole residual.
+const freePlayDynamicBannedModule = {
+  selector:
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+  message:
+    "free play records nothing, fetches nothing and never touches Termo: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046).",
+};
+
 // eslint-config-next ships a flat Linter.Config[]; scope every non-ignore
 // entry to the two Next apps so its rules never leak into the packages.
 // The scope must be FORCED, not defaulted (`config.files ?? appGlobs`
@@ -210,113 +402,16 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
-          patterns: [
-            {
-              group: [
-                "@miolos/db/publishing",
-                "@miolos/db/publishing/*",
-                "@miolos/db/user",
-                "@miolos/db/user/*",
-                "@miolos/db/testing",
-                "@miolos/db/testing/*",
-              ],
-              message:
-                "apps/web is client-serving: import the wall-safe root entry `@miolos/db` only. `/publishing` carries the raw tables, the buffer writers and the solution-bearing reader; `/user` carries the completion and hint-grant writers, which belong to apps/api; `/testing` hands out a full-schema client (ADR-0024, ADR-0026).",
-            },
-            {
-              // Banning the bare specifiers is not enough on its own: a
-              // relative path into the package source reaches `completions`,
-              // `hint_grants`, `daily_puzzles` and `remote_config` with no rule
-              // firing, falsifying plan 017 D17's "apps/web cannot even *name*
-              // completions or hint_grants" (step 6 finding
-              // web-db-wall-has-no-relative-path-ban).
-              group: [
-                "**/packages/db/src",
-                "**/packages/db/src/*",
-                "**/packages/db/src/**",
-              ],
-              message:
-                "apps/web is client-serving: reach the db through the `@miolos/db` package entry, never by relative path into packages/db/src — the deep path hands out every server-internal table (ADR-0024, ADR-0026).",
-            },
-            {
-              // The same lesson the `@miolos/db` group above learned one
-              // ticket earlier, applied to the server-only core contracts: the
-              // `paths` entry below fires on the BARE specifier only, so
-              // `import { stripDailyContent } from
-              // "../../../packages/core/src/contracts/daily-content"` linted,
-              // typechecked and tested clean while re-shipping
-              // `nonogramRevealSchema`'s `motifId` / `name` / `mirrored` /
-              // `solution` key strings into every route's browser chunk —
-              // exactly what commit d5bb543 and ADR-0033 exist to prevent
-              // (step-6 round-4 finding
-              // `core-server-only-ban-is-bare-specifier-only`). The whole
-              // package source is banned by path rather than just the one
-              // module: apps/web has the `@miolos/core` entry and never needs
-              // a relative reach into it, and a path ban that enumerates
-              // modules has to be re-checked on every new file.
-              group: [
-                "**/packages/core/src",
-                "**/packages/core/src/*",
-                "**/packages/core/src/**",
-              ],
-              message:
-                "apps/web is client-serving: reach the contracts through the `@miolos/core` package entry, never by relative path into packages/core/src — the deep path reaches the SERVER-ONLY daily-content schemas, whose module is retained in the browser chunk of every route the moment anything names it (commit d5bb543, ADR-0024/ADR-0033).",
-            },
-          ],
-          paths: [
-            {
-              name: "@miolos/db",
-              // `users` and `sessions` are on the root entry too, and
-              // `db.select().from(users)` needs neither `sql` nor `eq` — an RSC
-              // payload of every user row (or every session token hash) was one
-              // import away (step 6 finding
-              // root-entry-users-and-sessions-are-importable-from-apps-web).
-              importNames: ["sql", "eq", "users", "sessions"],
-              message:
-                "apps/web must not build queries or touch the identity tables: read the daily through `getTodayDaily`. Raw SQL via the re-exported `sql` bypasses the published-predicate wall (ADR-0024 amendment), and every `users`/`sessions` read belongs to apps/api (ADR-0007/0014).",
-            },
-            {
-              name: "@miolos/core",
-              // The SERVER-ONLY half of the daily contracts
-              // (packages/core/src/contracts/daily-content.ts). Commit d5bb543
-              // split them out because a module-scope `z.strictObject(...)` is
-              // a call the bundler cannot prove pure, so naming one of them
-              // from apps/web retains the whole module — `nonogramRevealSchema`'s
-              // `motifId` / `name` / `mirrored` / `solution` key strings
-              // included — in the browser chunk of every route. `"sideEffects":
-              // false` only drops the module while NOTHING here names it, and
-              // until now that rule was prose in two file headers and a
-              // hand-run grep (step-6 round-3 finding
-              // `core-client-server-split-is-prose-only`). Pinned by T-LINT-3d.
-              //
-              // Deliberately in THIS object rather than a new one: flat config
-              // REPLACES a rule's whole configuration when a later object sets
-              // the same rule id, so a second `no-restricted-imports` object
-              // globbed at apps/web/src|app would silently delete the
-              // `@miolos/db` wall above for exactly the files that hold the
-              // credential. apps/web/test/** is inside this glob and imports
-              // none of these names.
-              // `termoDailyContentSchema` joined at #27. The list is not
-              // maintained by hand for long: `T-LINT-S7` derives the expected
-              // set from `daily-content.ts`'s own `export const|class|function`
-              // identifiers and asserts SET EQUALITY, so a schema added there
-              // and forgotten here is a red test rather than a silent hole —
-              // and a name left here after the module stops exporting it is
-              // red too, because a ban that covers nothing reads as coverage.
-              // `contracts/termo-guess.ts`'s exports are deliberately NOT here:
-              // they are client-safe by design and apps/web imports them.
-              importNames: [
-                "binairoDailyContentSchema",
-                "DailyProjectionUnsupportedError",
-                "nonogramDailyContentSchema",
-                "stripDailyContent",
-                "sudokuDailyContentSchema",
-                "termoDailyContentSchema",
-              ],
-              message:
-                "these are the SERVER-ONLY daily-content schemas (packages/core/src/contracts/daily-content.ts). apps/web receives the wall's already-stripped projection and must never name the content shape: one value import re-ships the withheld object's shape in every route's client chunk (commit d5bb543, ADR-0024/ADR-0033).",
-            },
-          ],
+          // Both halves live in module-level constants since #28 (a pure
+          // move, pinned no-op by the eslint-db-wall.test.ts probes): the
+          // free-play wall object below has to repeat them, because flat
+          // config REPLACES a rule's whole configuration when a later object
+          // sets the same rule id — a second object that did not repeat them
+          // would silently delete this wall for exactly the files it matches.
+          // apps/web/test/** is inside this glob and imports none of these
+          // names.
+          patterns: webWallImportPatterns,
+          paths: webWallImportPaths,
         },
       ],
       "no-restricted-syntax": [
@@ -356,19 +451,39 @@ export default tseslint.config(
         webDynamicPackageSource,
         webComputedDynamicImport,
         webRequireCall,
+        webTableNameLiteral,
+        webTableNameTemplate,
+      ],
+    },
+  },
+  {
+    // (3) THE FREE-PLAY WALL (#28, ADR-0046) — see the constants' header
+    // comments above. Placed AFTER objects (1) and (2), and REPEATING their
+    // arrays: flat config replaces, never merges, so this object is the
+    // ENTIRE wall for the files it matches. T-LINT-S14/S15 are the
+    // replacement-regression controls; T-LINT-S9…S13 and S16…S18 probe the
+    // free-play bans themselves (apps/web/test/eslint-free-play-wall.test.ts).
+    files: [
+      `apps/web/src/free-play/**/*.${webWallExtensions}`,
+      `apps/web/app/modo-livre/**/*.${webWallExtensions}`,
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
         {
-          selector: "Literal[value=/\\b(daily_puzzles|remote_config)\\b/]",
-          message:
-            "apps/web must not name the buffer tables: raw SQL through @miolos/db's re-exported `sql` / `.execute()` bypasses the published-predicate wall (ADR-0024 amendment, named #18 duty).",
+          patterns: [...webWallImportPatterns, ...freePlayBannedModuleGroups],
+          paths: webWallImportPaths,
         },
-        {
-          // Not optional: without it, sql`select * from daily_puzzles` slips
-          // straight through the Literal selector.
-          selector:
-            "TemplateElement[value.raw=/\\b(daily_puzzles|remote_config)\\b/]",
-          message:
-            "apps/web must not name the buffer tables: raw SQL through @miolos/db's re-exported `sql` / `.execute()` bypasses the published-predicate wall (ADR-0024 amendment, named #18 duty).",
-        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        webDynamicDbImport,
+        webDynamicPackageSource,
+        webComputedDynamicImport,
+        webRequireCall,
+        webTableNameLiteral,
+        webTableNameTemplate,
+        freePlayDynamicBannedModule,
       ],
     },
   },

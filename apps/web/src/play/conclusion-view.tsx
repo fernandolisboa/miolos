@@ -16,6 +16,7 @@ import {
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
+import { picturePath } from "./picture-path";
 import { startCompletionSync } from "./sync";
 import type {
   ConclusionAnswer,
@@ -184,10 +185,7 @@ export function ConclusionView({
             <p className={styles.emptyBodyText}>
               {messages.conclusion.notYet.body}
             </p>
-            <Link
-              className={styles.emptyCta}
-              href={playRoutes[game] ?? routes.home}
-            >
+            <Link className={styles.emptyCta} href={playRoutes[game]}>
               {copy.notYet.cta}
             </Link>
           </article>
@@ -472,43 +470,8 @@ function OutcomeStamp({ outcome }: { readonly outcome: ConclusionOutcome }) {
 }
 
 /**
- * The bitmap as ONE `<path>`'s `d`: a unit square per filled cell, in
- * row-major order, inside a `size × size` viewBox.
- *
- * `M{col} {row}h1v1h-1z` — an absolute move to the cell's top-left corner and
- * a closed unit square, so every subpath is independent and the fill rule
- * never has to reconcile overlapping ones. Pure and module-scope, so it is
- * testable without React and cannot close over a render.
- */
-function picturePath(picture: ConclusionPicture): string {
-  let path = "";
-  for (const [index, cell] of picture.cells.entries()) {
-    if (cell === 1) {
-      const row = Math.floor(index / picture.size);
-      const column = index % picture.size;
-      path += `M${String(column)} ${String(row)}h1v1h-1z`;
-    }
-  }
-  return path;
-}
-
-/**
  * The first daily this device can still play today, in the day's order — AC
  * 3's "the conclusion chains to the next pending daily" (plan 018 S21).
- *
- * Written as a loop rather than a `find` because the route has to come out
- * NARROWED: `playRoutes` is typed `Partial<Record<Game, Route>>`, and Next's
- * typed `Link href` refuses a possibly-undefined value. A game with no play
- * route is skipped rather than offered — chaining to a route that does not
- * exist would be a 404 at the end of the one celebration screen the product
- * has.
- *
- * ALL FOUR GAMES ARE ROUTED SINCE #27, so the type is wider than the value
- * and this narrowing is now dead weight rather than a live guard — #75
- * totalises the map to `Record<Game, Route>` and deletes it, and `routes.ts`
- * carries the same note at the declaration. Do not "simplify" it away before
- * that ticket: the map is still declared partial, so the loop is what the
- * type system demands today.
  *
  * Understating is safe here for the same reason it is on the hub: the worst
  * a stale `pending` does is offer a game the player already solved on another
@@ -522,13 +485,10 @@ function picturePath(picture: ConclusionPicture): string {
 function nextPendingDaily(
   entryOf: (game: Game) => DayEntry,
 ): { readonly game: Game; readonly route: Route } | undefined {
-  for (const candidate of DAY_GAMES) {
-    const route = playRoutes[candidate];
-    if (route !== undefined && entryOf(candidate).status === "pending") {
-      return { game: candidate, route };
-    }
-  }
-  return undefined;
+  const game = DAY_GAMES.find(
+    (candidate) => entryOf(candidate).status === "pending",
+  );
+  return game === undefined ? undefined : { game, route: playRoutes[game] };
 }
 
 function ConclusionTopBar({

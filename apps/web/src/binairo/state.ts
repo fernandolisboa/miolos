@@ -184,6 +184,21 @@ function playableValue(state: PlayState, index: number): CellValue | undefined {
   return state.entries[index] ?? null;
 }
 
+/**
+ * Mode equality for the press-the-active-button-returns-to-cycle rule (D8).
+ * Shared by the daily hook and the free-play screen; it lives here because
+ * `state.ts` is on the wall-legal side of the free-play import wall, while
+ * `use-binairo-play` is banned there by name.
+ */
+export function sameMode(current: PaintMode, next: PaintMode): boolean {
+  if (current.kind !== next.kind) {
+    return false;
+  }
+  return current.kind === "paint" && next.kind === "paint"
+    ? current.value === next.value
+    : true;
+}
+
 /** The cell cycle, per input mode (D7/D8). */
 function tapped(mode: PaintMode, current: CellValue): CellValue {
   switch (mode.kind) {

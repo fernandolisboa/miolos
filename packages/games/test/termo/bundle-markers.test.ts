@@ -37,7 +37,11 @@ import {
  * verbatim, which is what makes this measurable at all.
  *
  * THE CONSUMER, BY NAME: `apps/web/scripts/route-client-js.mjs` hard-codes
- * `então`, `mamãe` and `época` in `FORBIDDEN` and `zurro` in `EXPECTED`. A
+ * `então`, `mamãe` and `época` in `FORBIDDEN_EVERYWHERE` (every chunk,
+ * free-play chunks included — since #28 the scan is route-scoped, ADR-0047)
+ * and `zurro` in `EXPECTED_DAILY_SCOPE` plus `FORBIDDEN_FREE_PLAY_SCOPE`
+ * (expected in `/termo`'s chunks, forbidden in every `/modo-livre*` route's
+ * first-load set). A
  * grep for a word that no longer exists in the shipped list passes trivially,
  * and nothing on the web side can notice — the script holds no link back to
  * this package. WHEN THIS REDS, pick a replacement that the shipped list

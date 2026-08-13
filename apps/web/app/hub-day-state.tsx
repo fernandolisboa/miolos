@@ -81,21 +81,6 @@ export function HubCardAction({
   // rendering "undefined" (`DayEntry.elapsedMs` is optional by type).
   const elapsedMs = entry.status === "completed" ? entry.elapsedMs : undefined;
 
-  if (route === undefined) {
-    // DEAD FOR ALL FOUR GAMES SINCE #27 added termo's key to `playRoutes` —
-    // by adding a key, which is the whole point, never a branch here. It is
-    // kept rather than deleted because `playRoutes` is still typed `Partial`
-    // and the compiler still demands this arm; totalising the map is #75,
-    // which touches this file and `conclusion-view.tsx` together (plan 022
-    // §17.1). Until then the anchor keeps a routeless card's shape without an
-    // href, because a dead href would be fake navigation.
-    return (
-      <a className={styles.cta}>
-        <PlayLabel />
-      </a>
-    );
-  }
-
   if (entry.status === "pending") {
     return (
       <Link className={styles.cta} href={route}>

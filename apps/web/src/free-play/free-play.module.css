@@ -1,0 +1,250 @@
+/* Free-play chrome (#28, ADR-0046): the level picker, the generating and
+   error states, and the solved card. Everything else the free screens paint
+   comes from the shared play/screen.module.css and each game's own board
+   module — this file holds only what the daily screens do not have.
+
+   Accent arrives via var(--accent)/var(--ink-on-accent), set inline on each
+   screen root from play/accent.ts. The accent colours shapes — fills, rings,
+   shadows, tape — never words (ADR-0041). Rotations are static transforms,
+   never animation. */
+
+/* ── level picker ────────────────────────────────────────────────────── */
+
+.levelPicker {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.levelChip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  min-width: 84px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font: var(--text-button);
+  cursor: pointer;
+}
+
+/* The active chip is carried by GEOMETRY and INK, never by accent-as-text
+   (ADR-0041): the ink border doubles, the accent hard shadow appears, and
+   the chip sits slightly crooked — a stamp, pressed. */
+.levelChipActive {
+  border: 1.5px solid var(--ink);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 25%, transparent);
+  transform: rotate(-1deg);
+}
+
+/* Ink, not the accent — the shared play layer's focus arithmetic
+   (screen.module.css `.hint:focus-visible`), applied to every free-play
+   control at once. */
+.levelChip:focus-visible,
+.retry:focus-visible,
+.again:focus-visible,
+.backToIndex:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ── generating ──────────────────────────────────────────────────────── */
+
+.generating {
+  margin: var(--space-4) 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+/* ── error card ──────────────────────────────────────────────────────── */
+
+.errorCard {
+  position: relative;
+  max-width: 420px;
+  padding: var(--space-8) var(--space-6) var(--space-6);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent) 22%, transparent);
+  transform: rotate(-0.5deg);
+  text-align: center;
+}
+
+.errorTitle {
+  margin: 0;
+  font: var(--text-card-title);
+}
+
+.errorBody {
+  margin: var(--space-3) 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.retry {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-6);
+  background: var(--accent);
+  color: var(--ink-on-accent, var(--paper-desk));
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 25%, transparent);
+  font: var(--text-button);
+  cursor: pointer;
+}
+
+/* Pressed = the element slides 1px toward its shadow and the shadow shrinks
+   by the same 1px (DESIGN.md). */
+.retry:active,
+.again:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ── solved card ─────────────────────────────────────────────────────── */
+
+.solvedPage {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.solvedCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 460px;
+  width: 100%;
+  padding: var(--space-11) var(--space-7) var(--space-7);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg)
+    color-mix(in srgb, var(--accent) 20%, transparent);
+  transform: rotate(-0.5deg);
+}
+
+.tape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 78px;
+  height: 26px;
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: var(--radius-tape);
+  transform: translateX(-50%) rotate(-3deg);
+}
+
+/* The stamp: the accent takes the RING (a shape), the ink takes the word
+   (ADR-0041). Static rotation, no animation — free play's payoff is quiet. */
+.stamp {
+  display: inline-block;
+  padding: var(--space-3) var(--space-7);
+  border: 3px solid var(--accent);
+  border-radius: 999px;
+  transform: rotate(-6deg);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 30px;
+  color: var(--ink);
+}
+
+/* The mode's own line under the stamp: free play has no time and no
+   completion language, so the card says which mode this was instead. */
+.modeLine {
+  margin: var(--space-4) 0 0;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* The painted picture (Nonogram only). One <svg>, one <path> — the
+   conclusion's own recorded argument: no background, no border, no radius,
+   no box-shadow, so nested-cards cannot fire. Terracotta on card paper is
+   4.51:1 against WCAG 1.4.11's 3:1 non-text floor. */
+.pictureRow {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+
+.picture {
+  width: 132px;
+  height: 132px;
+  fill: var(--accent);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 300px;
+  margin-top: var(--space-7);
+}
+
+.again {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-6);
+  background: var(--accent);
+  color: var(--ink-on-accent, var(--paper-desk));
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 25%, transparent);
+  font: var(--text-button);
+  cursor: pointer;
+}
+
+.backToIndex {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-6);
+  background: var(--paper-card);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  font: var(--text-button);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.quietLink {
+  align-self: center;
+  margin-top: var(--space-2);
+  font-size: 14px;
+  color: var(--ink-2);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+}

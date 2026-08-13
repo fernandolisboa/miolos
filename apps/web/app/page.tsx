@@ -1,5 +1,7 @@
+import Link from "next/link";
+
 import { AdSlot } from "../src/components/ad-slot";
-import { locale, messages } from "../src/i18n";
+import { locale, messages, routes } from "../src/i18n";
 import { accentVars } from "../src/play/accent";
 import { HubCardAction, HubProgress } from "./hub-day-state";
 import styles from "./page.module.css";
@@ -116,18 +118,22 @@ export default function HojePage() {
               </p>
             </div>
             {/* Done or pending, per THIS DEVICE (plan 018 §11.3, ADR-0031),
-                and linked only where a play route exists — the `playRoutes`
-                map decides, and #27 added termo as a KEY rather than a
-                branch, which is what kept this JSX untouched by a fourth
-                game. All four are routed now; #75 totalises the map. */}
+                and linked through the `playRoutes` map — #27 added termo as
+                a KEY rather than a branch, which is what kept this JSX
+                untouched by a fourth game. */}
             <HubCardAction game={game} date={isoDate} />
           </article>
         ))}
       </section>
 
       <nav className={styles.secondaryLinks}>
+        {/* Arquivo and Estatísticas stay href-less until #31/#29 land their
+            routes — a dead href would be fake navigation (the hub rule the
+            done tile documents). Modo livre is real since #28. */}
         <a className={styles.secondaryLink}>{messages.hoje.links.archive}</a>
-        <a className={styles.secondaryLink}>{messages.hoje.links.freePlay}</a>
+        <Link className={styles.secondaryLink} href={routes.freePlay}>
+          {messages.hoje.links.freePlay}
+        </Link>
         <a className={styles.secondaryLink}>{messages.hoje.links.stats}</a>
       </nav>
 
