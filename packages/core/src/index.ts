@@ -100,3 +100,26 @@ export {
   type SudokuCompletionRequest,
   type TermoCompletionRequest,
 } from "./contracts/completion";
+export {
+  attachConfirmResponseSchema,
+  attachConfirmSchema,
+  attachDismissResponseSchema,
+  attachDismissSchema,
+  attachEmailSchema,
+  attachRequestResponseSchema,
+  attachRequestSchema,
+  attachStateResponseSchema,
+  type AttachConfirmRequest,
+  type AttachConfirmResponse,
+  type AttachDismissRequest,
+  type AttachDismissResponse,
+  type AttachRequest,
+  type AttachRequestResponse,
+  type AttachStateResponse,
+} from "./contracts/attach";
+export {
+  accountDeleteResponseSchema,
+  accountDeleteSchema,
+  type AccountDeleteRequest,
+  type AccountDeleteResponse,
+} from "./contracts/account";

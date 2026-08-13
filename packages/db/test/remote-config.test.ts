@@ -32,32 +32,47 @@ afterAll(async () => {
 
 describe("getRemoteConfig", () => {
   it("yields defaults on an empty table (bufferDepth 7) — the cron must run against nothing", async () => {
-    expect(await getRemoteConfig(ctx.db)).toEqual({ bufferDepth: 7 });
+    expect(await getRemoteConfig(ctx.db)).toEqual({
+      bufferDepth: 7,
+      attachStreakThreshold: 5,
+    });
   });
 
   it("a bufferDepth row overrides the default", async () => {
     await ctx.db.insert(remoteConfig).values({ key: "bufferDepth", value: 3 });
-    expect(await getRemoteConfig(ctx.db)).toEqual({ bufferDepth: 3 });
+    expect(await getRemoteConfig(ctx.db)).toEqual({
+      bufferDepth: 3,
+      attachStreakThreshold: 5,
+    });
   });
 
   it("an invalid value falls back to defaults", async () => {
     await ctx.db
       .insert(remoteConfig)
       .values({ key: "bufferDepth", value: "not a depth" });
-    expect(await getRemoteConfig(ctx.db)).toEqual({ bufferDepth: 7 });
+    expect(await getRemoteConfig(ctx.db)).toEqual({
+      bufferDepth: 7,
+      attachStreakThreshold: 5,
+    });
   });
 
   it("an out-of-clamp value (500) falls back to defaults (Zod max 30)", async () => {
     await ctx.db
       .insert(remoteConfig)
       .values({ key: "bufferDepth", value: 500 });
-    expect(await getRemoteConfig(ctx.db)).toEqual({ bufferDepth: 7 });
+    expect(await getRemoteConfig(ctx.db)).toEqual({
+      bufferDepth: 7,
+      attachStreakThreshold: 5,
+    });
   });
 
   it("unknown keys are ignored, not fatal", async () => {
     await ctx.db
       .insert(remoteConfig)
       .values({ key: "someFutureTunable", value: { nested: true } });
-    expect(await getRemoteConfig(ctx.db)).toEqual({ bufferDepth: 7 });
+    expect(await getRemoteConfig(ctx.db)).toEqual({
+      bufferDepth: 7,
+      attachStreakThreshold: 5,
+    });
   });
 });
