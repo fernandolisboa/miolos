@@ -16,6 +16,7 @@ import Link from "next/link";
 
 import { messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
+import { picturePath } from "../play/picture-path";
 import type { ConclusionPicture } from "../play/types";
 import type { FreePlayGame, FreePlayLevel } from "./catalog";
 import styles from "./free-play.module.css";
@@ -42,14 +43,17 @@ export function FreePlaySolvedCard({
         <div aria-hidden className={styles.tape} />
         <p className={styles.stamp}>{messages.freePlay.solved.stamp}</p>
         <p className={styles.modeLine}>
-          {messages.freePlay.modeTag} · {messages.games[game].name} ·{" "}
-          {messages.freePlay.level[level]}
+          {messages.freePlay.solved.modeLine(
+            messages.freePlay.modeTag,
+            messages.games[game].name,
+            messages.freePlay.level[level],
+          )}
         </p>
         {picture !== undefined && (
           // One <svg>, one <path> — the conclusion's own pattern (SVG, Skia
-          // or code inside the app; CLAUDE.md). The path builder is a local
-          // copy: `conclusion-view.tsx` owns the original and sits behind
-          // the free-play import wall by design (plan 025 §6.5).
+          // or code inside the app; CLAUDE.md). The path builder is the
+          // shared `play/picture-path`, which sits on the wall-legal side
+          // of the free-play import wall (plan 025 §6.5).
           <div className={styles.pictureRow}>
             <svg
               className={styles.picture}
@@ -80,17 +84,4 @@ export function FreePlaySolvedCard({
       </article>
     </main>
   );
-}
-
-/** One `M…h1v1h-1z` square per filled cell, in row-major order. */
-function picturePath(picture: ConclusionPicture): string {
-  let path = "";
-  for (const [index, cell] of picture.cells.entries()) {
-    if (cell === 1) {
-      const row = Math.floor(index / picture.size);
-      const column = index % picture.size;
-      path += `M${String(column)} ${String(row)}h1v1h-1z`;
-    }
-  }
-  return path;
 }

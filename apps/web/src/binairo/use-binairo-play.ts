@@ -31,6 +31,7 @@ import {
   initPlayState,
   isSolvedGrid,
   playReducer,
+  sameMode,
   type CellValue,
   type PaintMode,
   type PlayState,
@@ -138,15 +139,6 @@ export function useBinairoPlay(daily: DailyBinairoResponse): BinairoPlay {
     toggleMode,
     revealHint,
   };
-}
-
-function sameMode(current: PaintMode, next: PaintMode): boolean {
-  if (current.kind !== next.kind) {
-    return false;
-  }
-  return current.kind === "paint" && next.kind === "paint"
-    ? current.value === next.value
-    : true;
 }
 
 /**

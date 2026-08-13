@@ -16,6 +16,7 @@ import {
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
+import { picturePath } from "./picture-path";
 import { startCompletionSync } from "./sync";
 import type {
   ConclusionAnswer,
@@ -469,27 +470,6 @@ function OutcomeStamp({ outcome }: { readonly outcome: ConclusionOutcome }) {
 }
 
 /**
- * The bitmap as ONE `<path>`'s `d`: a unit square per filled cell, in
- * row-major order, inside a `size × size` viewBox.
- *
- * `M{col} {row}h1v1h-1z` — an absolute move to the cell's top-left corner and
- * a closed unit square, so every subpath is independent and the fill rule
- * never has to reconcile overlapping ones. Pure and module-scope, so it is
- * testable without React and cannot close over a render.
- */
-function picturePath(picture: ConclusionPicture): string {
-  let path = "";
-  for (const [index, cell] of picture.cells.entries()) {
-    if (cell === 1) {
-      const row = Math.floor(index / picture.size);
-      const column = index % picture.size;
-      path += `M${String(column)} ${String(row)}h1v1h-1z`;
-    }
-  }
-  return path;
-}
-
-/**
  * The first daily this device can still play today, in the day's order — AC
  * 3's "the conclusion chains to the next pending daily" (plan 018 S21).
  *
@@ -505,12 +485,10 @@ function picturePath(picture: ConclusionPicture): string {
 function nextPendingDaily(
   entryOf: (game: Game) => DayEntry,
 ): { readonly game: Game; readonly route: Route } | undefined {
-  for (const candidate of DAY_GAMES) {
-    if (entryOf(candidate).status === "pending") {
-      return { game: candidate, route: playRoutes[candidate] };
-    }
-  }
-  return undefined;
+  const game = DAY_GAMES.find(
+    (candidate) => entryOf(candidate).status === "pending",
+  );
+  return game === undefined ? undefined : { game, route: playRoutes[game] };
 }
 
 function ConclusionTopBar({

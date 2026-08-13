@@ -26,7 +26,12 @@ import Link from "next/link";
 import boardStyles from "../binairo/binairo-screen.module.css";
 import { Controls } from "../binairo/controls";
 import { Grid } from "../binairo/grid";
-import { initPlayState, playReducer, type PaintMode } from "../binairo/state";
+import {
+  initPlayState,
+  playReducer,
+  sameMode,
+  type PaintMode,
+} from "../binairo/state";
 import { messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import type { Hint } from "../play/grid-hint";
@@ -358,15 +363,4 @@ function ErrorCard({ onRetry }: { readonly onRetry: () => void }) {
       </button>
     </div>
   );
-}
-
-/** Copied from `use-binairo-play` (private there): mode equality for the
- *  press-the-active-button-returns-to-cycle rule. */
-function sameMode(current: PaintMode, next: PaintMode): boolean {
-  if (current.kind !== next.kind) {
-    return false;
-  }
-  return current.kind === "paint" && next.kind === "paint"
-    ? current.value === next.value
-    : true;
 }

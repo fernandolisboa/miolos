@@ -257,6 +257,10 @@ export const messages = {
     },
     solved: {
       stamp: "Resolvido!",
+      // Composed here, never joined at a call site (ADR-0018) — the card's
+      // "Modo livre · Binairo · Leve" line.
+      modeLine: (mode: string, game: string, level: string) =>
+        `${mode} · ${game} · ${level}`,
       again: "Mais um",
       backToIndex: "Voltar ao Modo livre",
       backHome: "Voltar para Hoje",
