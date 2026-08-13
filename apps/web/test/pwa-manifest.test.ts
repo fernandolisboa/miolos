@@ -14,7 +14,7 @@ vi.mock("next/font/google", () => ({
 
 import manifest from "../app/manifest";
 import { metadata, viewport } from "../app/layout";
-import { messages } from "../src/i18n";
+import { locale, messages } from "../src/i18n";
 
 // The PWA surface (#19, plan 027 §10): the manifest is a typed metadata
 // route, so it is unit-tested by importing the default export — no HTTP
@@ -46,7 +46,7 @@ describe("the web app manifest (T-WEB-S130)", () => {
     expect(built.name).toBe(messages.brand.wordmark);
     expect(built.short_name).toBe(messages.brand.wordmark);
     expect(built.description).toBe(messages.meta.description);
-    expect(built.lang).toBe("pt-BR");
+    expect(built.lang).toBe(locale);
     expect(built.id).toBe("/");
     expect(built.start_url).toBe("/");
     expect(built.scope).toBe("/");

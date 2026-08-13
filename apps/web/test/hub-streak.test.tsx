@@ -104,6 +104,9 @@ describe("HubStreak (T-WEB-S125)", () => {
     render(<HubStreak />);
     await screen.findByLabelText(messages.hoje.streak.aria(1));
 
+    // This suite renders outside StrictMode, so "exactly one" is safe to
+    // count — the title's claim is asserted, not just the shape.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith("https://api.example.test/streak", {
       credentials: "include",
     });

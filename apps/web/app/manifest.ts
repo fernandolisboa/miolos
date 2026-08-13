@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { messages } from "../src/i18n";
+import { locale, messages } from "../src/i18n";
 
 /**
  * The web app manifest (#19, plan 027 D11) — a TS metadata route rather
@@ -25,7 +25,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: messages.brand.wordmark,
     short_name: messages.brand.wordmark,
     description: messages.meta.description,
-    lang: "pt-BR",
+    lang: locale,
     id: "/",
     start_url: "/",
     scope: "/",

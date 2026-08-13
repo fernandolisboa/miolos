@@ -172,6 +172,14 @@ function dayCard(): HTMLElement {
   return card;
 }
 
+/** A 200 the strict streak contract accepts — shared by the S128/S129
+ *  streak-card suites below. */
+function streakResponse(streak: number, todayCounts: boolean): Response {
+  return new Response(JSON.stringify({ date: DATE, streak, todayCounts }), {
+    status: 200,
+  });
+}
+
 /** The streak fetch's default answer in this suite: an anonymous 401, so the
  *  card settles to absence and every pre-#19 assertion passes unchanged.
  *  The env stub and the fetch stub are a MANDATORY PAIR (plan 027 §8): with
@@ -1319,12 +1327,6 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
     return container.querySelector("[data-streak-state]");
   }
 
-  function streakResponse(streak: number, todayCounts: boolean): Response {
-    return new Response(JSON.stringify({ date: DATE, streak, todayCounts }), {
-      status: 200,
-    });
-  }
-
   it("stays absent while the day is not on the server, and the fetch never fires", () => {
     for (const syncOutcome of ["pending", "rejected"] as const) {
       window.localStorage.clear();
@@ -1438,12 +1440,6 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
  * banned (the shipped negative, re-asserted over the new card).
  */
 describe("the streak card's copy honesty (T-WEB-S129)", () => {
-  function streakResponse(streak: number, todayCounts: boolean): Response {
-    return new Response(JSON.stringify({ date: DATE, streak, todayCounts }), {
-      status: 200,
-    });
-  }
-
   it("renders the maintained tail only when today itself counts", async () => {
     fetchMock = vi.fn(() => Promise.resolve(streakResponse(12, true)));
     vi.stubGlobal("fetch", fetchMock);

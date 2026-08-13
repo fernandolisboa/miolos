@@ -6,10 +6,12 @@ import { useEffect, useState } from "react";
 import { fetchStreak } from "./streak-client";
 
 /**
- * The mount-time streak read (ADR-0048, plan 027 §8). Three states, each
- * an honest claim:
+ * The mount-time streak read (ADR-0048, plan 027 §8). A plain mount
+ * effect: consumers that need a gate mount the consuming component
+ * conditionally (the conclusion card's `syncOutcome` gate does exactly
+ * that), so the hook takes no options. Three states, each an honest claim:
  *
- * - `undefined` — nothing has settled (unfetched, disabled, or in flight).
+ * - `undefined` — nothing has settled (unfetched or in flight).
  *   Consumers render the zero state / skeleton; server markup and the
  *   pre-hydration paint agree byte-for-byte because the fetch fires in a
  *   mount effect only.
@@ -22,22 +24,12 @@ import { fetchStreak } from "./streak-client";
  * number presented as current is wrong in both directions, while zero is
  * the honest unknown of a value the client can never compute.
  */
-export function useStreak(options?: {
-  /** `false` keeps the fetch unarmed (the conclusion's closed gate). */
-  readonly enabled?: boolean;
-  /** A change of identity re-runs the fetch (the conclusion's gate key). */
-  readonly refreshKey?: unknown;
-}): StreakResponse | null | undefined {
-  const enabled = options?.enabled !== false;
-  const refreshKey = options?.refreshKey;
+export function useStreak(): StreakResponse | null | undefined {
   const [value, setValue] = useState<StreakResponse | null | undefined>(
     undefined,
   );
 
   useEffect(() => {
-    if (!enabled) {
-      return;
-    }
     // The effect-scoped flag makes React 19 strict-mode double effects and
     // out-of-order resolutions harmless: the duplicate GET is idempotent
     // and cheap, and only the live effect's answer lands.
@@ -50,7 +42,7 @@ export function useStreak(options?: {
     return () => {
       cancelled = true;
     };
-  }, [enabled, refreshKey]);
+  }, []);
 
   return value;
 }
