@@ -13,6 +13,7 @@ import {
   routes,
   type Route,
 } from "../i18n";
+import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
@@ -28,6 +29,10 @@ import { useRecordSnapshot } from "./use-record-snapshot";
 
 /** The four dailies, in the order Hoje lists them. */
 const DAY_GAMES = ["termo", "sudoku", "nonogram", "binairo"] as const;
+
+/** A non-breaking space: holds a line box open with nothing in it — the
+ *  `PlaySkeleton` blank-values idiom (binairo/play-view.tsx). */
+const BLANK_VALUE = " ";
 
 /**
  * What the stamp shows when the conclusion renders in place, straight from
@@ -58,12 +63,14 @@ export interface ConclusionResult {
  * `date` is the SERVER's day, resolved from the wall by the page shell — the
  * client clock never selects which record is read (CONTEXT.md "Rollover").
  *
- * Four frame elements are deliberately absent, because rendering empty stat
- * rows and a zero streak would be fake data: the streak card (#19/#20,
- * server-computed), best/average/solved and the histogram (#29), the closing
- * italic line (#29, it compares against an average that does not exist) and
- * the share button (#34 — a dead share button is a broken promise, unlike a
- * dead link). §12.3 carries the full table.
+ * Three frame elements are deliberately absent, because rendering empty stat
+ * rows would be fake data: best/average/solved and the histogram (#29), the
+ * closing italic line (#29, it compares against an average that does not
+ * exist) and the share button (#34 — a dead share button is a broken
+ * promise, unlike a dead link). §12.3 carried the full table; #19 filled the
+ * fourth gap — the streak card is live below, server-computed and gated on
+ * the day being on the server (ADR-0048), so every unfetched state stays
+ * exactly as honest as the old absence.
  *
  * `picture` is the first per-game payoff payload (ADR-0034 decision 3): plain
  * data, optional, and supplied only by a client component that owns the local
@@ -340,6 +347,14 @@ export function ConclusionView({
       </article>
 
       <aside className={styles.side}>
+        {/* Gated on the day being ON THE SERVER (plan 027 D8): a conclusion
+            reached offline has syncOutcome "pending", and a card claiming a
+            streak the server has not counted would be the client clock
+            backing a streak — the forbidden direction. Because the gate only
+            opens after the server holds the day, the fetched number includes
+            today by construction. Unfetched and offline states render the
+            shipped absence, which is today's state and therefore honest. */}
+        {syncOutcome === "recorded" && <StreakCard />}
         <section className={styles.dayCard}>
           <p className={styles.dayCardTitle}>
             {messages.conclusion.dayCard.title}
@@ -380,6 +395,60 @@ export function ConclusionView({
         <a className={styles.secondaryLink}>{messages.conclusion.stats}</a>
       </aside>
     </main>
+  );
+}
+
+/**
+ * The streak card (#19, ADR-0048) — F5:54-56's sealing-wax card, first in
+ * the side column. The CALLER gates it on `syncOutcome === "recorded"`, so
+ * this component's own machine has three states:
+ *
+ * - fetch in flight → the card at final dimensions with the values blanked
+ *   (the `PlaySkeleton` discipline: reserve the boxes, blank the values —
+ *   `BLANK_VALUE`'s U+00A0 keeps each line box open).
+ * - fetch settled without a value (`null`) → unmount back to the shipped
+ *   absence, which is today's state and therefore honest.
+ * - fetch resolved → the numeral and its line — INCLUDING a fetched zero
+ *   (a late win or a lost-only day with no prior history): that zero is
+ *   real server data, not the fake zero the pre-#19 conclusion refused to
+ *   invent. The italic tail renders only when `todayCounts` says today
+ *   itself maintained the streak (ADR-0048 decision 2, ADR-0008 rules 1–3).
+ *
+ * `--accent-app`, never the game accent: the streak is app identity (the
+ * hub stamp's rule, DESIGN.md), and both accent-text declarations are
+ * ADR-0041 decision 1 exceptions measured at 6.2980:1 on `--paper-card`
+ * (`ink-on-accent.test.ts` names them one by one).
+ */
+function StreakCard() {
+  const streak = useStreak();
+  if (streak === null) {
+    return null;
+  }
+  const loaded = streak !== undefined;
+  return (
+    <section
+      className={styles.streakCard}
+      aria-label={
+        loaded ? messages.conclusion.streak.aria(streak.streak) : undefined
+      }
+      aria-hidden={loaded ? undefined : true}
+      data-streak-state={loaded ? "value" : "skeleton"}
+    >
+      <span aria-hidden className={styles.streakCardNumeral}>
+        {loaded ? streak.streak : BLANK_VALUE}
+      </span>
+      <span aria-hidden className={styles.streakCardLabel}>
+        {loaded ? messages.conclusion.streak.value(streak.streak) : BLANK_VALUE}
+        {loaded && streak.todayCounts && (
+          <>
+            <br />
+            <em className={styles.streakCardTail}>
+              {messages.conclusion.streak.maintained}
+            </em>
+          </>
+        )}
+      </span>
+    </section>
   );
 }
 

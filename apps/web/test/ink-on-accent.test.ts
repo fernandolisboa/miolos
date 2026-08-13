@@ -185,21 +185,28 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
   ] as const;
 
   /**
-   * The two declarations the scan below is allowed to see, named one by one
+   * The four declarations the scan below is allowed to see, named one by one
    * rather than left to a hole in the regex.
    *
-   * Both are the app accent `--accent-app` #9E3B2F (L 0.10602266) on
-   * `--paper-desk` #F7F2E9 (L 0.89161610) — `.streakStamp` paints desk paper —
-   * i.e. (0.89161610 + 0.05) / (0.10602266 + 0.05) = **6.0351:1**, clear of
-   * PRODUCT.md's 4.5 floor. `--accent-app` is one fixed hex on every screen,
-   * never per game, so it cannot become mustard the way `var(--accent)` can;
-   * that is exactly the case ADR-0041 decision 1 carves out. They are faithful
-   * to `f1-hoje-desktop.dc.html:23-24`, and the streak stamp is the app's one
-   * piece of first-party identity on the hub.
+   * All four are the app accent `--accent-app` #9E3B2F (L 0.10602266).
+   * The hub pair sits on `--paper-desk` #F7F2E9 (L 0.89161610) —
+   * `.streakStamp` paints desk paper — i.e. (0.89161610 + 0.05) /
+   * (0.10602266 + 0.05) = **6.0351:1**; the conclusion pair (#19,
+   * ADR-0048's amendment to ADR-0041 consequence (h)) sits on
+   * `--paper-card` #FBF7EF, ADR-0041 decision 1's own recorded
+   * **6.2980:1**. Both clear PRODUCT.md's 4.5 floor. `--accent-app` is one
+   * fixed hex on every screen, never per game, so it cannot become mustard
+   * the way `var(--accent)` can; that is exactly the case ADR-0041
+   * decision 1 carves out. The hub pair is faithful to
+   * `f1-hoje-desktop.dc.html:23-24` and the conclusion pair to
+   * `f5-conclusao-desktop.dc.html:55-56` — the streak is the app's one
+   * piece of first-party identity on both screens.
    */
   const ALLOWED_ACCENT_TEXT = new Set([
     "app/page.module.css .streakNumeral",
     "app/page.module.css .streakLabel",
+    "src/play/conclusion-view.module.css .streakCardNumeral",
+    "src/play/conclusion-view.module.css .streakCardLabel",
   ]);
 
   it("declares no accent-coloured text in the shared sheets, beyond the two allowed", () => {
@@ -231,8 +238,8 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
   });
 
   it("keeps the allow-list non-vacuous", () => {
-    // Two dead strings would quietly cover a future offender that happened to
-    // reuse the selector. Every entry above has to name a declaration that
+    // Four dead strings would quietly cover a future offender that happened
+    // to reuse a selector. Every entry above has to name a declaration that
     // exists and carries the accent the exception was measured for.
     for (const selector of [".streakNumeral", ".streakLabel"]) {
       expect(
@@ -243,7 +250,21 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
         true,
       );
     }
-    expect(ALLOWED_ACCENT_TEXT.size).toBe(2);
+    for (const selector of [".streakCardNumeral", ".streakCardLabel"]) {
+      expect(
+        decl(
+          bodyOf(stylesheet("src/play/conclusion-view.module.css"), selector),
+          "color",
+        ),
+        selector,
+      ).toBe("var(--accent-app)");
+      expect(
+        ALLOWED_ACCENT_TEXT.has(
+          `src/play/conclusion-view.module.css ${selector}`,
+        ),
+      ).toBe(true);
+    }
+    expect(ALLOWED_ACCENT_TEXT.size).toBe(4);
   });
 
   it("paints the eleven converted sites in a neutral ink", () => {
