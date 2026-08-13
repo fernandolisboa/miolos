@@ -39,9 +39,9 @@
    Do instead: hoist helpers both sides need to a wall-legal module (`play/picture-path.ts`, `binairo/state.ts` precedents), never copy into `free-play/`; no storage/timer/completion language in free play.
 3. **[2026-07-31] Streaks/dates always America/Sao_Paulo, computed server-side**
    Do instead: never trust the client clock; midnight fixed for every user.
-2. **[2026-07-31] #15 users schema needs nullable `email` + verification state from day one (ADR-0003)**
+4. **[2026-07-31] #15 users schema needs nullable `email` + verification state from day one (ADR-0003)**
    Do instead: model anonymous-first identity with the email-attach columns present but null.
-3. **[2026-07-31] Termo word lists are finite curated content in `content/termo/` (ADR-0015)**
+5. **[2026-07-31] Termo word lists are finite curated content in `content/termo/` (ADR-0015)**
    Do instead: harness (#26) consumes them; never expose Termo to free play.
 
 ## User Directives
