@@ -132,51 +132,60 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
 });
 
 describe("free-play Sudoku zero-fetch solve, no timer (T-WEB-S119)", () => {
-  it("solves a pinned Leve puzzle into the solved card with zero fetch calls", () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-    // Two draws: the default Médio mount, then the switch to Leve.
-    const { deps } = stableDeps({ seeds: [SEED, SEED] });
+  // Full simulated-keystroke solve: ~1.5s of test time locally, observed at
+  // 6-7s on starved CI runners (3-4x slowdown, napkin/handoff 024) — over
+  // vitest's 5s default. Local x4 plus margin over the observed CI worst case.
+  it(
+    "solves a pinned Leve puzzle into the solved card with zero fetch calls",
+    { timeout: 20_000 },
+    () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      // Two draws: the default Médio mount, then the switch to Leve.
+      const { deps } = stableDeps({ seeds: [SEED, SEED] });
 
-    const { container } = render(<SudokuFreeScreen deps={deps} />);
+      const { container } = render(<SudokuFreeScreen deps={deps} />);
 
-    // No timer rendered ANYWHERE on the free screen (D8) — neither label
-    // nor a 00:00 readout.
-    expect(
-      screen.queryByText(messages.play.timerLabel),
-    ).not.toBeInTheDocument();
-    expect(container.textContent).not.toContain("00:00");
+      // No timer rendered ANYWHERE on the free screen (D8) — neither label
+      // nor a 00:00 readout.
+      expect(
+        screen.queryByText(messages.play.timerLabel),
+      ).not.toBeInTheDocument();
+      expect(container.textContent).not.toContain("00:00");
 
-    // Switch to Leve — the picker regenerates immediately (remount by key).
-    fireEvent.click(
-      screen.getByRole("radio", { name: messages.freePlay.level.aria("Leve") }),
-    );
-
-    // Key the solution in: select each empty cell, press its digit.
-    for (const [index, given] of LEVE_PUZZLE.givens.entries()) {
-      if (given !== 0) {
-        continue;
-      }
-      const digit = LEVE_PUZZLE.solution[index];
-      const cell = container.querySelector<HTMLElement>(
-        `[data-cell-index="${index}"]`,
-      );
-      if (cell === null) {
-        break; // solved — the in-place swap took the board with it
-      }
-      fireEvent.click(cell);
+      // Switch to Leve — the picker regenerates immediately (remount by key).
       fireEvent.click(
-        screen.getByRole("button", {
-          name: messages.games.sudoku.play.keypad.digitAria(Number(digit)),
+        screen.getByRole("radio", {
+          name: messages.freePlay.level.aria("Leve"),
         }),
       );
-    }
 
-    expect(
-      screen.getByText(messages.freePlay.solved.stamp),
-    ).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
+      // Key the solution in: select each empty cell, press its digit.
+      for (const [index, given] of LEVE_PUZZLE.givens.entries()) {
+        if (given !== 0) {
+          continue;
+        }
+        const digit = LEVE_PUZZLE.solution[index];
+        const cell = container.querySelector<HTMLElement>(
+          `[data-cell-index="${index}"]`,
+        );
+        if (cell === null) {
+          break; // solved — the in-place swap took the board with it
+        }
+        fireEvent.click(cell);
+        fireEvent.click(
+          screen.getByRole("button", {
+            name: messages.games.sudoku.play.keypad.digitAria(Number(digit)),
+          }),
+        );
+      }
+
+      expect(
+        screen.getByText(messages.freePlay.solved.stamp),
+      ).toBeInTheDocument();
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("control: a deliberate fetch is recorded by the same stub shape", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));

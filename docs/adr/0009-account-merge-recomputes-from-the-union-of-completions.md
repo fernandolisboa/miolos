@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-07-30
 **Depends on:** [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md)
+**Amended by:** [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md) — the tombstoning consequence's cookie claim — *"the old anonymous cookie may still exist in a browser somewhere and must map to the merged identity, not to a revived empty account"* — is narrowed at the FLOW level: after a cross-account attach-confirm merge, ADR-0050 decision 13 revokes every pre-existing session on the winner, so the loser's original cookie resolves to NOTHING and the merged identity is handed to the clicking browser's fresh cookie; an old device that still holds the dead cookie then re-mints a NEW empty identity — a new account, never the tombstone resurrected, with the merged history safe on the winner and recoverable via the magic link. Scope: the confirm flow only — the operation-level remap inside `mergeAccounts` (and its T-API-S54 pin) is untouched, and outside a confirm no session is ever deleted. #58's queued amendment to this ADR is additive — multiple `Amended by:` lines stack.
 
 ## Context
 

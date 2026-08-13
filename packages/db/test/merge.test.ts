@@ -2,7 +2,11 @@ import { mergeCompletions } from "@miolos/core";
 import { asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { listCompletionsForMerge, mergeAccounts } from "../src/merge";
+import {
+  isWinnerLivenessError,
+  listCompletionsForMerge,
+  mergeAccounts,
+} from "../src/merge";
 import { completions, hintGrants, sessions, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
 
@@ -41,10 +45,20 @@ afterAll(async () => {
 const OLDER = new Date("2026-01-01T12:00:00.000Z");
 const NEWER = new Date("2026-06-01T12:00:00.000Z");
 
+// Unique per fixture user, never reset: birth hashes only need to never
+// collide, and the truncate in beforeEach removes the rows themselves.
+let birthSessionCounter = 0;
+
 /**
  * A fresh identity with a PINNED `created_at`/`updated_at` — `updated_at`
  * pinned too, so "advanced" and "never bumped" are exact comparisons
- * against a known instant instead of a race with the DB clock.
+ * against a known instant instead of a race with the DB clock — and a
+ * BIRTH SESSION, because every real minted user is born with one
+ * (`mintSession`'s own two inserts) and the D5 winner-liveness guard
+ * asserts exactly that: the old session-less fixtures modeled users that
+ * cannot exist in production (plan 031 D5's sanctioned fixture-realism
+ * edit). T-DB-S26 manufactures its tombstone-shaped winner by stripping
+ * this session again, deliberately.
  */
 async function createUser(createdAt: Date): Promise<string> {
   const inserted = await ctx.db
@@ -55,6 +69,11 @@ async function createUser(createdAt: Date): Promise<string> {
   if (!user) {
     throw new Error("users insert returned no row");
   }
+  birthSessionCounter += 1;
+  await ctx.db.insert(sessions).values({
+    tokenHash: `birth-hash-${birthSessionCounter}`,
+    userId: user.id,
+  });
   return user.id;
 }
 
@@ -272,18 +291,18 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
     // sessions.token_hash (service.ts), so after the remap the loser's
     // cookies resolve to the merged identity through the only mechanism
     // that exists. Remap, never delete: a deleted session would re-mint —
-    // the revived empty account ADR-0009 forbids.
+    // the revived empty account ADR-0009 forbids. Baseline +2: the two
+    // birth sessions the createUser fixture now mints (D5 fixture realism)
+    // are remapped exactly like the explicit ones.
     const rows = await ctx.db
       .select()
       .from(sessions)
       .orderBy(asc(sessions.tokenHash));
-    expect(
-      rows.map((row) => ({ tokenHash: row.tokenHash, userId: row.userId })),
-    ).toEqual([
-      { tokenHash: "hash-loser-1", userId: winner },
-      { tokenHash: "hash-loser-2", userId: winner },
-      { tokenHash: "hash-winner-1", userId: winner },
-    ]);
+    expect(rows).toHaveLength(5);
+    expect(rows.every((row) => row.userId === winner)).toBe(true);
+    expect(rows.map((row) => row.tokenHash)).toEqual(
+      expect.arrayContaining(["hash-loser-1", "hash-loser-2", "hash-winner-1"]),
+    );
   });
 
   it("T-DB-S19: the loser row is emptied of every identity handle and RETAINED with updated_at advanced, its hint grants deleted; an all-null anonymous loser never bumps at all", async () => {
@@ -599,5 +618,84 @@ describe("mergeAccounts — the repoint column-list tripwire (ADR-0049, step-6 f
       "guesses",
     ].sort();
     expect(liveColumns).toEqual(repointedColumns);
+  });
+});
+
+describe("mergeAccounts — the winner-liveness guard (issue #21 precondition 1, ADR-0050)", () => {
+  it("T-DB-S26: a tombstone-shaped winner throws before any destructive statement — the would-be loser's full state is unchanged", async () => {
+    // The hazard the guard closes: merge(A,B) racing merge(B,C), where B
+    // loses the first merge and the second would then strand C's history
+    // on B's tombstone. No test can schedule the real interleaving over
+    // PGlite, so the POST-RACE state is manufactured directly: a winner
+    // whose sessions were remapped away and whose handles are null — the
+    // exact shape only a tombstone can have, because every real minted
+    // user is born with a session and sessions are never deleted in v1.
+    const tombstone = await createUser(OLDER);
+    const victim = await createUser(NEWER);
+    await ctx.db.delete(sessions).where(eq(sessions.userId, tombstone));
+    await insertCompletion({
+      userId: victim,
+      game: "binairo",
+      date: "2026-08-01",
+      completedAt: onDay("2026-08-01"),
+    });
+    await insertHintGrant(victim, "2026-08-01");
+    const before = await snapshotState();
+
+    const thrown = await mergeAccounts(ctx.db, tombstone, victim).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toMatch(
+      /owns no session or identity handle/,
+    );
+    // The REAL guard throw satisfies the exported discriminant (step-7
+    // finding C): the confirm route retries on exactly this predicate, so
+    // the predicate and the throw are pinned against each other here —
+    // and an arbitrary error must never satisfy it.
+    expect(isWinnerLivenessError(thrown)).toBe(true);
+    expect(isWinnerLivenessError(new Error("connection reset"))).toBe(false);
+    expect(isWinnerLivenessError("not even an Error")).toBe(false);
+
+    // Nothing moved: no session remap, no completion repoint or delete, no
+    // hint-grant delete, no tombstone UPDATE — the guard sits before the
+    // first write.
+    expect(await snapshotState()).toEqual(before);
+  });
+
+  it("T-DB-S27: guard green paths — a session-less winner with an identity handle passes, and the double-run idempotence discipline survives the guard", async () => {
+    // The handle arm, non-vacuous: a winner stripped of sessions but still
+    // holding a verified email is NOT a tombstone (the tombstone UPDATE
+    // nulls every handle), so the guard lets the merge proceed.
+    const handleWinner = await createUser(OLDER);
+    const handleLoser = await createUser(NEWER);
+    await ctx.db.delete(sessions).where(eq(sessions.userId, handleWinner));
+    await ctx.db
+      .update(users)
+      .set({ email: "titular@example.com", emailVerifiedAt: sql`now()` })
+      .where(eq(users.id, handleWinner));
+    expect(await mergeAccounts(ctx.db, handleWinner, handleLoser)).toEqual({
+      winnerId: handleWinner,
+      loserId: handleLoser,
+    });
+
+    // T-DB-S20's discipline under the guard: after run one the winner owns
+    // the union of sessions, so the guard passes and the re-run — still
+    // D7's crash recovery — changes nothing.
+    await reset();
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await insertCompletion({
+      userId: loser,
+      game: "sudoku",
+      date: "2026-08-02",
+      completedAt: onDay("2026-08-02"),
+    });
+    const first = await mergeAccounts(ctx.db, winner, loser);
+    const afterFirst = await snapshotState();
+    const second = await mergeAccounts(ctx.db, winner, loser);
+    expect(second).toEqual(first);
+    expect(await snapshotState()).toEqual(afterFirst);
   });
 });

@@ -46,6 +46,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { routes } from "../src/i18n";
+
 // The day the shells resolve from the wall. Fixed, because the hub derives its
 // own São Paulo day from the clock and the records nothing here writes must
 // not accidentally match it.
@@ -280,6 +282,26 @@ const ROUTES: readonly RouteCase[] = [
     path: "/modo-livre/nonogram",
     marker: "data-play-state=",
     load: () => import("../app/modo-livre/nonogram/page"),
+    daily: undefined,
+  },
+  // The #21 pages read no wall either: /privacidade is static by
+  // construction, /vincular is request-rendered (it awaits searchParams)
+  // but still db-free — its shell renders here with none supplied.
+  {
+    path: "/privacidade",
+    marker: "data-page=",
+    load: () => import("../app/privacidade/page"),
+    daily: undefined,
+  },
+  {
+    // `routes.attach` on purpose (step-7 finding E): the emailed link is
+    // built api-side from the pinned `/vincular` literal
+    // (apps/api/app/attach/request/route.ts), and THIS row is the web-side
+    // consumer of the composed route — renaming the slug moves this path
+    // and the render below catches a page that no longer answers it.
+    path: routes.attach,
+    marker: "data-page=",
+    load: () => import("../app/vincular/page"),
     daily: undefined,
   },
 ];

@@ -4,13 +4,22 @@ import { defaultRemoteConfig, remoteConfigSchema } from "../src/index";
 
 describe("remoteConfigSchema", () => {
   it("defaults bufferDepth to 7 on an empty object", () => {
-    expect(remoteConfigSchema.parse({})).toEqual({ bufferDepth: 7 });
-    expect(defaultRemoteConfig).toEqual({ bufferDepth: 7 });
+    // #21 added attachStreakThreshold (default 5) beside it; the exact
+    // default object is re-pinned with both keys in T-CORE-S54.
+    expect(remoteConfigSchema.parse({})).toEqual({
+      bufferDepth: 7,
+      attachStreakThreshold: 5,
+    });
+    expect(defaultRemoteConfig).toEqual({
+      bufferDepth: 7,
+      attachStreakThreshold: 5,
+    });
   });
 
   it("accepts an in-clamp override", () => {
     expect(remoteConfigSchema.parse({ bufferDepth: 3 })).toEqual({
       bufferDepth: 3,
+      attachStreakThreshold: 5,
     });
   });
 

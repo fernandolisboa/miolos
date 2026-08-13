@@ -11,6 +11,10 @@ export const routeSlugs = {
   archive: "arquivo",
   freePlay: "modo-livre",
   stats: "estatisticas",
+  // #21 (ADR-0013, ADR-0050): the magic-link landing page and the privacy
+  // policy — pt-BR slugs, matching CONTEXT.md's "Vincular e-mail".
+  attach: "vincular",
+  privacy: "privacidade",
   binairo: "binairo",
   sudoku: "sudoku",
   // An untranslated proper noun, which is what makes `/nonogram` a legal
@@ -48,6 +52,8 @@ export const routes = {
   freePlayBinairo: `/${routeSlugs.freePlay}/${routeSlugs.binairo}`,
   freePlaySudoku: `/${routeSlugs.freePlay}/${routeSlugs.sudoku}`,
   freePlayNonogram: `/${routeSlugs.freePlay}/${routeSlugs.nonogram}`,
+  attach: `/${routeSlugs.attach}`,
+  privacy: `/${routeSlugs.privacy}`,
 } as const;
 
 export type Route = (typeof routes)[keyof typeof routes];

@@ -1,0 +1,274 @@
+/* Privacidade — the policy page (#21, ADR-0012). The modo-livre editorial
+   register on a text page: ink on desk paper, one measure, quiet headings.
+   The deletion section is deliberately UNDERSTATED — ink and words, never a
+   red alarm (ADR-0041: accents colour shapes, and no accent belongs here). */
+
+.page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-11) 80px var(--space-12);
+  max-width: 860px;
+}
+
+/* Anchored on the local class, never a bare `a:hover` (CSS Modules pure
+   mode). The state's carrier is the underline — the accent may colour the
+   rule, never the word (ADR-0041). */
+.page a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-app);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.back {
+  font: var(--text-button);
+  text-decoration: none;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 600;
+  transform: rotate(-1deg);
+}
+
+.titleBlock {
+  margin-top: 44px;
+}
+
+.title {
+  margin: 0;
+  font: var(--text-screen-title);
+}
+
+.lead {
+  margin: var(--space-4) 0 0;
+  max-width: 52ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.section {
+  margin-top: var(--space-8);
+  max-width: 52ch;
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.body {
+  margin: var(--space-3) 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.list {
+  margin: var(--space-3) 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.contact {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.revision {
+  margin: var(--space-4) 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* ——— the deletion island (D13): a quiet, ink-ruled closing section ——— */
+
+.deleteSection {
+  margin-top: var(--space-12);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--line);
+  max-width: 52ch;
+}
+
+.deleteStart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-4);
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-5);
+  background: var(--paper-card);
+  color: var(--ink);
+  font: var(--text-button);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-settle);
+}
+
+.deleteStart:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.deleteConfirm {
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  /* The system's hard shadow, in ink — this is a serious moment, not a
+     celebration, so no accent (blur 0 always). */
+  box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.deleteConfirmTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 19px;
+}
+
+.deleteActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.deleteConfirmButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-5);
+  background: var(--ink);
+  color: var(--paper-card);
+  font: var(--text-button);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.deleteConfirmButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.deleteConfirmButton:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.deleteCancel {
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-2);
+  background: none;
+  border: none;
+  font: var(--text-button);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.deleteCancel:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.deleteDone {
+  margin: var(--space-4) 0 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 550;
+  font-size: 19px;
+}
+
+.deleteError {
+  margin: var(--space-4) 0 0;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deleteStart {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-5) var(--space-5) var(--space-6);
+  }
+
+  .topBar {
+    min-height: var(--touch-target-min);
+  }
+
+  .back {
+    padding: 10px 10px 10px 0;
+  }
+
+  .titleBlock {
+    margin-top: var(--space-5);
+  }
+
+  .title {
+    font-size: 34px;
+  }
+
+  .lead {
+    margin-top: var(--space-3);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .section {
+    margin-top: var(--space-6);
+  }
+
+  .heading {
+    font-size: 20px;
+  }
+
+  .body,
+  .list {
+    font-size: 14px;
+  }
+
+  .deleteSection {
+    margin-top: var(--space-8);
+  }
+
+  .deleteActions {
+    flex-wrap: wrap;
+  }
+}

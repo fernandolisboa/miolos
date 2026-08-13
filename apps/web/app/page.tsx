@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdSlot } from "../src/components/ad-slot";
 import { locale, messages, routes } from "../src/i18n";
 import { accentVars } from "../src/play/accent";
+import { HubAttach } from "./hub-attach";
 import { HubCardAction, HubProgress } from "./hub-day-state";
 import { HubStreak } from "./hub-streak";
 import styles from "./page.module.css";
@@ -118,15 +119,24 @@ export default function HojePage() {
         ))}
       </section>
 
+      {/* In the hub's flow after the game cards, never a modal (D15). The
+          island renders null until GET /attach/state says eligible, so the
+          server render and impeccable's clean profile are unchanged. */}
+      <HubAttach />
+
       <nav className={styles.secondaryLinks}>
         {/* Arquivo and Estatísticas stay href-less until #31/#29 land their
             routes — a dead href would be fake navigation (the hub rule the
-            done tile documents). Modo livre is real since #28. */}
+            done tile documents). Modo livre is real since #28, Privacidade
+            since #21 (its live target is what earns it the href). */}
         <a className={styles.secondaryLink}>{messages.hoje.links.archive}</a>
         <Link className={styles.secondaryLink} href={routes.freePlay}>
           {messages.hoje.links.freePlay}
         </Link>
         <a className={styles.secondaryLink}>{messages.hoje.links.stats}</a>
+        <Link className={styles.secondaryLink} href={routes.privacy}>
+          {messages.hoje.links.privacy}
+        </Link>
       </nav>
 
       <div className={styles.spacer} />

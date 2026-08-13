@@ -17,6 +17,29 @@ import { completions, hintGrants, sessions, users } from "./schema";
  */
 
 /**
+ * The winner-liveness guard's discriminable signature (step-7 finding C on
+ * #21). Shared by the guard's `throw` below and the predicate beside it,
+ * so the two cannot drift.
+ */
+const WINNER_LIVENESS_SIGNATURE = "owns no session or identity handle";
+
+/**
+ * True exactly when `error` is the winner-liveness guard's throw — the one
+ * failure `mergeAccounts` raises BEFORE any destructive statement (a
+ * concurrent merge tombstoned the selected winner). Callers may retry on
+ * this and ONLY this: any other mid-merge failure may have landed after a
+ * destructive statement, must surface loudly (the confirm route rethrows
+ * it into a 500), and is healed by re-running the merge — never by a
+ * silent catch. The message-predicate idiom mirrors the api layer's
+ * `isVerifiedEmailUniqueViolation`.
+ */
+export function isWinnerLivenessError(error: unknown): boolean {
+  return (
+    error instanceof Error && error.message.includes(WINNER_LIVENESS_SIGNATURE)
+  );
+}
+
+/**
  * The opaque ordering key `mergeCompletions` compares and never parses
  * (plan 029 D3): a FIXED-WIDTH UTC instant via `to_char`, so lexicographic
  * order IS chronological order. Produced in SQL, which keeps ADR-0026's
@@ -53,11 +76,13 @@ export async function listCompletionsForMerge(
 }
 
 /**
- * ADR-0009 executed (ADR-0049): sessions remapped FIRST, earliest-wins
- * repoint (D6's two statements — `ON CONFLICT DO NOTHING` alone would keep
- * the winner's LATER row), loser emptied and retained as a tombstone. The
- * winner is deterministic from the data: older `created_at`, exact ties to
- * the lower id, selected DB-side (D8).
+ * ADR-0009 executed (ADR-0049): sessions remapped FIRST among writes (the
+ * winner-liveness guard between selection and remap is a READ — issue #21
+ * precondition 1, ADR-0050 decision 5), earliest-wins repoint (D6's two
+ * statements — `ON CONFLICT DO NOTHING` alone would keep the winner's
+ * LATER row), loser emptied and retained as a tombstone. The winner is
+ * deterministic from the data: older `created_at`, exact ties to the
+ * lower id, selected DB-side (D8).
  *
  * No transaction is usable over the union `Db` (D7: neon-http is
  * non-interactive-only, PGlite has no batch) — every statement is
@@ -79,8 +104,9 @@ export async function mergeAccounts(
   a: string,
   b: string,
 ): Promise<{ winnerId: string; loserId: string }> {
-  // Step 0, the one read: existence check and winner selection in a single
-  // DB-side ORDER BY — no JS Date comparison enters this package.
+  // Step 0: existence check and winner selection in a single DB-side
+  // ORDER BY — no JS Date comparison enters this package. (One more read
+  // follows — the winner-liveness guard below — before any write runs.)
   const candidates = await db
     .select({ id: users.id })
     .from(users)
@@ -100,6 +126,50 @@ export async function mergeAccounts(
   if (winnerId === undefined || loserId === undefined) {
     // Unreachable: both ids were just found, and a !== b.
     throw new Error("mergeAccounts: winner selection returned too few rows");
+  }
+
+  // Step 0b — the winner-liveness guard (issue #21 precondition 1,
+  // ADR-0050 decision 5): the selected winner must still own >= 1 session
+  // or >= 1 identity handle, i.e. must NOT be a tombstone. Why this
+  // predicate is exactly "not a tombstone": every minted user is born with
+  // a session (mintSession's two inserts), sessions are never deleted in
+  // v1 (no prune exists; account deletion removes the whole user), and a
+  // tombstone is precisely the row whose sessions were remapped away and
+  // whose handles were nulled. Without the guard, merge(A,B) racing
+  // merge(B,C) could strand C's history on B's tombstone — and
+  // pg_advisory_lock is unavailable over stateless neon-http, so an
+  // in-operation re-check is the serialization mechanism. The throw sits
+  // BEFORE any destructive statement; the loser needs no symmetric guard
+  // (a tombstoned loser contributes zero rows harmlessly, and merging into
+  // a healed state is what idempotent re-run already covers). The re-run
+  // discipline survives: after run one the winner owns the union of
+  // sessions, so the guard passes and every statement no-ops (T-DB-S27).
+  const winnerSessions = await db
+    .select({ userId: sessions.userId })
+    .from(sessions)
+    .where(eq(sessions.userId, winnerId))
+    .limit(1);
+  if (winnerSessions.length === 0) {
+    const winnerHandles = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(
+        and(
+          eq(users.id, winnerId),
+          or(
+            isNotNull(users.email),
+            isNotNull(users.emailVerifiedAt),
+            isNotNull(users.appleId),
+            isNotNull(users.googleId),
+          ),
+        ),
+      )
+      .limit(1);
+    if (winnerHandles.length === 0) {
+      throw new Error(
+        `mergeAccounts: winner ${winnerId} ${WINNER_LIVENESS_SIGNATURE} (concurrent merge?)`,
+      );
+    }
   }
 
   // 1. The remap FIRST: AC 3's property — the loser's cookie resolves to

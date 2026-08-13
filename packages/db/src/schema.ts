@@ -1,7 +1,8 @@
 import { COMPLETION_OUTCOMES, GAMES, HINT_GRANT_SOURCES } from "@miolos/core";
-import { sql } from "drizzle-orm";
+import { isNotNull, sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   date,
   index,
@@ -11,6 +12,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -27,29 +29,67 @@ const timestamptz = (name: string) =>
  * because a user is born with nothing but an id. Email/verification and the
  * social ids exist from day one so later tickets attach, never migrate.
  *
- * - `email` is deliberately NOT unique in M0: two anonymous accounts
- *   attaching the same email is exactly the state that triggers the
- *   ADR-0009 merge — a hard unique index would forbid the designed flow.
- *   Uniqueness semantics land with the attach/merge ticket.
+ * - `email` uniqueness semantics, resolved by #21 (ADR-0050 decisions 2
+ *   and 6): the column is written ONLY at attach-confirm, in the same
+ *   UPDATE that sets `email_verified_at`, so a non-null email implies
+ *   verified — and the flow keeps at most one verified holder (the merge
+ *   nulls the loser's email before the winner gains it). The partial
+ *   unique index `users_verified_email_uq` below is the mechanical
+ *   backstop for the one race the flow cannot close: two concurrent
+ *   confirms of the same email onto different winners fail loudly instead
+ *   of silently forking the identity.
  * - Consents (ADR-0012) are independent nullable timestamps: null = not
  *   consented (reminders default off), set = consented at that moment.
- *   The flag is derivable; the timestamp is the evidence.
+ *   The flag is derivable; the timestamp is the evidence (ADR-0022's
+ *   narrowing, kept by ADR-0050 decision 7 — the withdrawal surface that
+ *   would need flag columns does not exist in v1).
  */
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email"),
-  emailVerifiedAt: timestamptz("email_verified_at"),
-  appleId: text("apple_id").unique(), // PG unique: multiple NULLs allowed
-  googleId: text("google_id").unique(),
-  recoveryConsentAt: timestamptz("recovery_consent_at"),
-  reminderConsentAt: timestamptz("reminder_consent_at"),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
-  // No trigger or $onUpdate maintains this column: any future UPDATE of a
-  // users row must set it explicitly (to DB-side now()). The first writer
-  // is `mergeAccounts` (merge.ts), which empties a tombstoned loser's
-  // identity handles (ADR-0009, ADR-0049).
-  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email"),
+    emailVerifiedAt: timestamptz("email_verified_at"),
+    appleId: text("apple_id").unique(), // PG unique: multiple NULLs allowed
+    googleId: text("google_id").unique(),
+    recoveryConsentAt: timestamptz("recovery_consent_at"),
+    reminderConsentAt: timestamptz("reminder_consent_at"),
+    /**
+     * The attach prompt's one lifecycle per account (#21, ADR-0050
+     * decision 9): NULL = never dismissed; a timestamp = the player pressed
+     * "agora não" and the prompt never returns. Deliberately NOT in the
+     * tombstone SET (merge.ts statement 6): it is not an identity handle,
+     * and a loser's value stays on the tombstone untouched.
+     *
+     * MIGRATION `0004`: nullable, so every existing row satisfies it — but
+     * adding ANY users column changes the INSERT column list drizzle emits
+     * for every writer, `mintSession`'s `insert(users).values({})`
+     * included, so 0004 reaches Neon BEFORE the branch is first pushed
+     * (ADR-0038 (h); preview deploys share the production database).
+     */
+    attachPromptDismissedAt: timestamptz("attach_prompt_dismissed_at"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    // No trigger or $onUpdate maintains this column: any UPDATE of a users
+    // row must set it explicitly (to DB-side now()). The writers are
+    // `mergeAccounts` (merge.ts, the first — empties a tombstoned loser's
+    // identity handles, ADR-0009/ADR-0049) and #21's attach-confirm and
+    // dismiss statements (`attachEmailToUser` / `dismissAttachPrompt`,
+    // apps/api/src/attach/service.ts, ADR-0050). Account deletion is a
+    // DELETE, not an UPDATE, and belongs to no updated_at list.
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // At most one VERIFIED holder per email, ever (ADR-0050 decision 6).
+    // Partial on purpose: unverified emails never exist on users under D2's
+    // write-only-at-confirm rule, so a plain unique index would be
+    // materially equivalent today — the partial shape self-describes the
+    // invariant and stays robust to futures where unverified emails might
+    // exist. Multiple NULLs are exempt by the predicate itself.
+    uniqueIndex("users_verified_email_uq")
+      .on(t.email)
+      .where(isNotNull(t.emailVerifiedAt)),
+  ],
+);
 
 /**
  * Opaque session tokens (ADR-0022): the server stores only the SHA-256 hex
@@ -69,6 +109,52 @@ export const sessions = pgTable(
     lastSeenAt: timestamptz("last_seen_at").notNull().defaultNow(),
   },
   (t) => [index("sessions_user_id_idx").on(t.userId)],
+);
+
+/**
+ * Magic-link attach tokens (#21, ADR-0050 decision 2) — the sessions idiom
+ * plus expiry and single use. Only the SHA-256 hex of a 32-byte Web-Crypto
+ * token is stored (hash PK): a database leak leaks no usable credential,
+ * and lookup-by-hash means no timing-sensitive comparison exists anywhere.
+ *
+ * - `email` rides HERE, already normalized (trim + lowercase at the Zod
+ *   boundary, D6 layer 1), until the click proves it: `users.email` is
+ *   written only at confirm, so an unverified stranger's form submission
+ *   never decorates a users row.
+ * - Expiry is a DB-side predicate on the claim
+ *   (`created_at > now() - interval '30 minutes'`) — no expires_at column,
+ *   no JS clock. 30 minutes is tunable by ADR amendment only (a security
+ *   parameter, not a product knob).
+ * - Single use IS the claim: one atomic `DELETE … RETURNING`, race-safe
+ *   without a transaction — the loser of a double-confirm sees zero rows,
+ *   and unknown, expired and spent tokens are indistinguishable (410).
+ * - The rows double as the rate-limit ledger (3 per rolling hour per user
+ *   AND per normalized email, ADR-0050 decision 11): cleanup deletes ALL
+ *   rows older than the ONE-HOUR rate window, never the 30-minute expiry —
+ *   deleting at expiry would empty the 30–60-minute band the count needs
+ *   and silently double the limit. The sweep is GLOBAL, not per-user (a
+ *   row past the hour is dead for claim and counts alike, whoever's), so
+ *   any request bounds the whole table; rows outlive the window only
+ *   while nobody requests at all.
+ *
+ * The statements over this table live in apps/api/src/attach/service.ts
+ * (the session/service.ts precedent); the table is reachable only via
+ * `@miolos/db/user` (ADR-0026 decision 5).
+ */
+export const attachTokens = pgTable(
+  "attach_tokens",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    reminderConsent: boolean("reminder_consent").notNull().default(false),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  // The per-user rate-count scan (the sessions-index precedent); the
+  // global cleanup sweeps by created_at over a table this small.
+  (t) => [index("attach_tokens_user_id_idx").on(t.userId)],
 );
 
 /**
