@@ -1,5 +1,10 @@
-import type { CompletionOutcome, Game, HintGrantSource } from "@miolos/core";
-import { and, eq, sql } from "drizzle-orm";
+import type {
+  CompletionOutcome,
+  Game,
+  HintGrantSource,
+  StreakRow,
+} from "@miolos/core";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import type { Db } from "./client";
 import { SAO_PAULO_TIME_ZONE } from "./published";
@@ -34,6 +39,16 @@ export interface CompletionRecord {
 }
 
 /**
+ * THE `on_time` derivation (ADR-0026 decision 2: "in one place and one
+ * language"). Both readers project this one expression; a second spelling
+ * anywhere is the drift that decision exists to prevent. #58, if it lands,
+ * replaces this producer with a stored column and nothing downstream.
+ */
+function onTimeSql() {
+  return sql<boolean>`(${completions.completedAt} at time zone ${SAO_PAULO_TIME_ZONE})::date = ${completions.date}`;
+}
+
+/**
  * Read a completion back with its SQL-derived `on_time`; `undefined` when
  * the player has not finished that puzzle. A projected `.select({...})` is
  * proven to work on the union `Db` (the `resolveSession` precedent) —
@@ -52,7 +67,7 @@ export async function getCompletion(
       outcome: completions.outcome,
       elapsedMs: completions.elapsedMs,
       hintsUsed: completions.hintsUsed,
-      onTime: sql<boolean>`(${completions.completedAt} at time zone ${SAO_PAULO_TIME_ZONE})::date = ${completions.date}`,
+      onTime: onTimeSql(),
     })
     .from(completions)
     .where(
@@ -64,6 +79,35 @@ export async function getCompletion(
     )
     .limit(1);
   return rows[0];
+}
+
+/**
+ * Every completion row of one user, shaped for `computeStreak` (ADR-0009).
+ * Deliberately UNFILTERED — no `where outcome`, no `where on_time`: the
+ * pure function in packages/core is the only place lost and late rows are
+ * excluded, so the API seam exercises the authority AC 1 names (plan 027
+ * D3). Two filters would be two definitions of the streak; there is one.
+ *
+ * No limit in v1: the composite PK bounds the result at ≤4 rows per day,
+ * and `completions_user_date_idx` was built for exactly this read
+ * (schema.ts). A windowed read is a later optimisation with a measured
+ * trigger (plan 027 §16 risk 6), never a semantic change. The descending
+ * order is not required by the (permutation-invariant) function — it keeps
+ * the planner on the index and test fixtures readable.
+ */
+export async function listCompletionsForStreak(
+  db: Db,
+  userId: string,
+): Promise<StreakRow[]> {
+  return db
+    .select({
+      date: completions.date,
+      outcome: completions.outcome,
+      onTime: onTimeSql(),
+    })
+    .from(completions)
+    .where(eq(completions.userId, userId))
+    .orderBy(desc(completions.date));
 }
 
 /**

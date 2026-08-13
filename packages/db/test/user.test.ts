@@ -15,6 +15,7 @@ import {
   getCompletion,
   grantHints,
   grantedHintsToday,
+  listCompletionsForStreak,
   recordCompletion,
 } from "../src/completions";
 import { completions, hintGrants, users } from "../src/schema";
@@ -104,6 +105,7 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "grantHints",
       "grantedHintsToday",
       "hintGrants",
+      "listCompletionsForStreak",
       "recordCompletion",
     ]);
   });
@@ -280,6 +282,81 @@ describe("getCompletion", () => {
     expect(
       await getCompletion(ctx.db, otherUserId, "binairo", "2026-08-01"),
     ).toBeUndefined();
+  });
+});
+
+describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
+  it("T-DB-S13: returns every row of the user — lost and late included — with the SQL-derived onTime, date descending", async () => {
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDaysLocal(today, -1);
+
+    // An on-time win: written on its own SP day (T-DB-13's construction).
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "binairo",
+      date: today,
+      outcome: "won",
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+    });
+    // A LATE win: dated yesterday, completed_at is now — outside its day.
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "sudoku",
+      date: yesterday,
+      outcome: "won",
+      elapsedMs: 2_000,
+      hintsUsed: 0,
+    });
+    // A lost Termo, on time: the row the reader must NOT filter — the pure
+    // function in packages/core is the only place it is excluded (D3).
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "termo",
+      date: today,
+      outcome: "lost",
+      elapsedMs: 3_000,
+      hintsUsed: 0,
+      guesses: 6,
+    });
+
+    const rows = await listCompletionsForStreak(ctx.db, userId);
+    // Date descending; within a date the order is not part of the contract,
+    // so the today pair is compared as a set.
+    expect(rows).toHaveLength(3);
+    expect(rows[2]).toEqual({ date: yesterday, outcome: "won", onTime: false });
+    expect(
+      [rows[0], rows[1]].sort((a, b) =>
+        (a?.outcome ?? "").localeCompare(b?.outcome ?? ""),
+      ),
+    ).toEqual([
+      { date: today, outcome: "lost", onTime: true },
+      { date: today, outcome: "won", onTime: true },
+    ]);
+    // The projection is exactly the StreakRow shape — no completedAt leaks.
+    expect(Object.keys(rows[0] ?? {}).sort()).toEqual([
+      "date",
+      "onTime",
+      "outcome",
+    ]);
+  });
+
+  it("T-DB-S14: another user's rows never appear — the first user-scoped list read", async () => {
+    const userId = await createUser();
+    const otherUserId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+    await recordCompletion(ctx.db, {
+      userId: otherUserId,
+      game: "binairo",
+      date: today,
+      outcome: "won",
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+    });
+
+    expect(await listCompletionsForStreak(ctx.db, userId)).toEqual([]);
+    expect(await listCompletionsForStreak(ctx.db, otherUserId)).toHaveLength(1);
   });
 });
 
