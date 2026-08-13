@@ -326,6 +326,7 @@ export const messages = {
     sentNote: "Vale por 30 minutos e funciona uma única vez.",
     errors: {
       generic: "Não foi possível enviar o link. Tente de novo.",
+      invalidEmail: "Confira o e-mail digitado.",
       rateLimited: "Muitos pedidos por agora — tente de novo em uma hora.",
       alreadyAttached: "Esta conta já tem um e-mail vinculado.",
     },
@@ -362,6 +363,9 @@ export const messages = {
       title: "Não deu para confirmar com este link.",
       body: "Aconteceu um imprevisto por aqui. Peça um novo link na página inicial.",
     },
+    // A settled network/server failure: the token may still be alive, so
+    // the state returns to the button with this line beside it.
+    failed: "Não foi possível confirmar agora. Tente de novo.",
     backHome: "Voltar para Hoje",
   },
   /**

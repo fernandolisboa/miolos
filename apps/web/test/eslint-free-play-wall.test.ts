@@ -379,6 +379,70 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S26: the attach modules — client, hook and the bare barrel form — red from free play, clean from a daily path", async () => {
+    // #21's growth clause (the napkin's one-hop rule): the attach client
+    // reaches identity and the network, so ADR-0050's flow stays out of
+    // free play only because these names entered the list in the same
+    // change that created the modules. The bare `../attach` form is listed
+    // because `**/attach/**` does not match it.
+    const doors = [
+      "../attach/attach-client",
+      "../attach/use-attach-state",
+      "../attach",
+    ];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — the hub island and /vincular import them.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+  });
+
+  it("T-LINT-S27: dynamic-import evasions of the attach bans red, the bare barrel form included; a local dynamic import stays clean", async () => {
+    const doors = [
+      '  import("../attach/attach-client");',
+      '  import("../attach/use-attach-state");',
+      '  import("../attach");',
+      '  import("../../app/hub-attach");',
+    ];
+    for (const door of doors) {
+      const source = ["export const load = () =>", door, ""].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-syntax");
+    }
+
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
+  it("T-LINT-S28: the hub-attach island — one hop from the hub page and the attach client — red from free play, clean from a daily path", async () => {
+    const source = [
+      'import * as banned from "../../app/hub-attach";',
+      "",
+      "export const probe = banned;",
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(FREE_PATH, source))).toContain(
+      "no-restricted-imports",
+    );
+    expect(wallHits(await lintProbe(DAILY_PATH, source))).toEqual([]);
+  });
+
   it("T-LINT-S18: the free-play directory's LEGAL surface lints clean — the wall is not a blanket ban", async () => {
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',

@@ -1,0 +1,159 @@
+/* Vincular — the magic-link landing (#21, D3). One card, one task: the
+   editorial register at its quietest. The confirm button wears the app
+   accent (the streak-protection accent — this click is what saves it);
+   its label is --paper-card at 6.2980:1 (ADR-0041's recorded pair). */
+
+.page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-11) 80px var(--space-12);
+  max-width: 760px;
+}
+
+.page a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-app);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.back {
+  font: var(--text-button);
+  text-decoration: none;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 600;
+  transform: rotate(-1deg);
+}
+
+.titleBlock {
+  margin-top: 44px;
+}
+
+.title {
+  margin: 0;
+  font: var(--text-screen-title);
+}
+
+.card {
+  position: relative;
+  margin-top: var(--space-7);
+  max-width: 520px;
+  padding: var(--space-6);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent-app) 25%, transparent);
+  transform: rotate(-0.4deg);
+}
+
+.stateTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.stateBody {
+  margin: var(--space-3) 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.failedLine {
+  margin: var(--space-3) 0 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.confirmButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-5);
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-6);
+  background: var(--accent-app);
+  color: var(--paper-card);
+  font: var(--text-button);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-settle);
+}
+
+.confirmButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.confirmButton:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.homeLink {
+  display: inline-block;
+  margin-top: var(--space-5);
+  min-height: var(--touch-target-min);
+  font: var(--text-button);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirmButton {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-5) var(--space-5) var(--space-6);
+  }
+
+  .topBar {
+    min-height: var(--touch-target-min);
+  }
+
+  .back {
+    padding: 10px 10px 10px 0;
+  }
+
+  .titleBlock {
+    margin-top: var(--space-5);
+  }
+
+  .title {
+    font-size: 34px;
+  }
+
+  .card {
+    margin-top: var(--space-5);
+    max-width: none;
+    padding: var(--space-5) 18px;
+    box-shadow: var(--shadow-sm)
+      color-mix(in srgb, var(--accent-app) 25%, transparent);
+    transform: rotate(-0.3deg);
+  }
+}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdSlot } from "../src/components/ad-slot";
 import { locale, messages, routes } from "../src/i18n";
 import { accentVars } from "../src/play/accent";
+import { HubAttach } from "./hub-attach";
 import { HubCardAction, HubProgress } from "./hub-day-state";
 import { HubStreak } from "./hub-streak";
 import styles from "./page.module.css";
@@ -117,6 +118,11 @@ export default function HojePage() {
           </article>
         ))}
       </section>
+
+      {/* In the hub's flow after the game cards, never a modal (D15). The
+          island renders null until GET /attach/state says eligible, so the
+          server render and impeccable's clean profile are unchanged. */}
+      <HubAttach />
 
       <nav className={styles.secondaryLinks}>
         {/* Arquivo and Estatísticas stay href-less until #31/#29 land their

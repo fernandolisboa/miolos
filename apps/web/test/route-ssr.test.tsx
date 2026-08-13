@@ -291,6 +291,12 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/privacidade/page"),
     daily: undefined,
   },
+  {
+    path: "/vincular",
+    marker: "data-page=",
+    load: () => import("../app/vincular/page"),
+    daily: undefined,
+  },
 ];
 
 beforeEach(() => {
