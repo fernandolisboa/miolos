@@ -82,6 +82,7 @@ export {
   type TermoGuessResponse,
   type TermoTiles,
 } from "./contracts/termo-guess";
+export { streakResponseSchema, type StreakResponse } from "./contracts/streak";
 export {
   apiErrorResponseSchema,
   binairoCompletionRequestSchema,
