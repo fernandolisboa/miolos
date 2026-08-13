@@ -83,6 +83,54 @@
   color: var(--ink);
 }
 
+/* The only-if-you-asked warning (step-7 finding A): ink, never color-only —
+   the words are the defense. */
+.warnLine {
+  margin: var(--space-3) 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* The switch-account acknowledgement (step-7 finding D): a quiet ruled-off
+   block — this browser already carries a played account, and the checkbox
+   is what stands between it and a silent cookie swap. */
+.switchGate {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+/* The hub-attach consent register (its .consent/.checkbox pair verbatim —
+   same tokens, no promotion to packages/ui while consumers are two files). */
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  min-height: var(--touch-target-min);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* A native checkbox, sized for touch; accent-color paints the CHECK — a
+   shape, exactly what ADR-0041 allows the accent to colour. */
+.checkbox {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--accent-app);
+}
+
+.checkbox:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 .confirmButton {
   display: inline-flex;
   align-items: center;

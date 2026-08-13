@@ -340,7 +340,20 @@ export const messages = {
     title: "Vincular e-mail",
     ready: {
       lead: "Um clique e este e-mail fica vinculado à sua conta do Miolos.",
+      // The honest-copy warning (step-7 finding A): a magic link can be
+      // requested by anyone who knows the address — the words are part of
+      // the defense against an attacker-requested link.
+      warn: "Só confirme se foi você quem pediu este link agora mesmo. Se você não pediu, feche esta página.",
       cta: "Confirmar vínculo",
+    },
+    // The switch-account acknowledgement (step-7 finding D): this browser
+    // already carries a played account, and confirming replaces its
+    // session with the linked account's — an explicit checkbox, never a
+    // silent cookie swap. Zero-history and cookieless browsers never see
+    // this block.
+    switchAccount: {
+      lead: "Este aparelho já tem uma sequência própria. Ao confirmar, ele passa a usar a conta deste e-mail — a conta atual deste aparelho deixa de aparecer aqui.",
+      label: "Entendi: quero trocar de conta neste aparelho.",
     },
     posting: "Confirmando…",
     attached: {
