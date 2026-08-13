@@ -54,7 +54,7 @@
 
 .lead {
   margin: var(--space-4) 0 0;
-  max-width: 60ch;
+  max-width: 52ch;
   font-size: 15px;
   line-height: 1.6;
   color: var(--ink-2);
@@ -63,7 +63,7 @@
 
 .section {
   margin-top: var(--space-8);
-  max-width: 62ch;
+  max-width: 52ch;
 }
 
 .heading {
@@ -112,7 +112,7 @@
   margin-top: var(--space-12);
   padding-top: var(--space-6);
   border-top: 1px solid var(--line);
-  max-width: 62ch;
+  max-width: 52ch;
 }
 
 .deleteStart {
