@@ -15,11 +15,13 @@ import { createTestDb } from "../src/testing";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
+// PGlite boot + real-migration replay: ~1.2s locally, CI runners 3-4x
+// slower — the same 30s hook timeout the sibling suites carry.
 beforeAll(async () => {
   ctx = await createTestDb();
   // The invalid-value paths warn once per process; keep test output clean.
   vi.spyOn(console, "error").mockImplementation(() => undefined);
-});
+}, 30_000);
 
 beforeEach(async () => {
   await ctx.db.execute(sql`truncate table remote_config`);
