@@ -12,8 +12,29 @@ export {
   isFeatureEnabled,
   type FeatureFlags,
 } from "./feature-flags";
+export {
+  dateFromEpochDay,
+  epochDay,
+  MAX_EPOCH_DAY,
+  MIN_EPOCH_DAY,
+} from "./date";
 export { GAMES, gameSchema, type Game } from "./game";
 export { mergeCompletions, type MergeableCompletion } from "./merge";
+export {
+  computeCalendar,
+  computeStats,
+  perfectDays,
+  TIME_BUCKET_BOUNDS_MS,
+  timeBucketIndex,
+  TIMED_GAMES,
+  type CalendarDay,
+  type CalendarDayState,
+  type StatsRow,
+  type StatsSummary,
+  type TermoStats,
+  type TimedGame,
+  type TimedGameStats,
+} from "./stats";
 export { computeStreak, type StreakRow, type StreakStatus } from "./streak";
 export {
   defaultRemoteConfig,
@@ -84,6 +105,15 @@ export {
   type TermoTiles,
 } from "./contracts/termo-guess";
 export { streakResponseSchema, type StreakResponse } from "./contracts/streak";
+export {
+  calendarDayStateSchema,
+  statsCalendarResponseSchema,
+  statsResponseSchema,
+  termoStatsSchema,
+  timedGameStatsSchema,
+  type StatsCalendarResponse,
+  type StatsResponse,
+} from "./contracts/stats";
 export {
   apiErrorResponseSchema,
   binairoCompletionRequestSchema,
