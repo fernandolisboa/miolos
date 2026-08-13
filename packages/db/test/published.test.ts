@@ -767,6 +767,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     const surface = entries.flatMap((entry) => Object.keys(entry));
     expect([...new Set(surface)].sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
+      "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "bufferDepth",
       "completions",
       "createDb",
@@ -796,11 +797,12 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "users",
     ]);
     // A duplicate across two entries would be hidden by the Set above, so
-    // pin the count too: 28 distinct names, 28 exports. #27 moved it by
+    // pin the count too: 29 distinct names, 29 exports. #27 moved it by
     // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
     // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
-    // and #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
-    // user entry (plan 029 §6), never the root.
-    expect(surface).toHaveLength(28);
+    // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
+    // user entry (plan 029 §6), and #21 by one: `attachTokens` on the user
+    // entry (ADR-0050, ADR-0026 decision 5), never the root.
+    expect(surface).toHaveLength(29);
   });
 });

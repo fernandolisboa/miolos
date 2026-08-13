@@ -100,6 +100,7 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
   it("T-DB-9e: the user entry exports exactly the audited set", async () => {
     const user = await import("../src/user");
     expect(Object.keys(user).sort()).toEqual([
+      "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "completions",
       "getCompletion",
       "grantHints",

@@ -17,7 +17,10 @@ export {
   recordCompletion,
   type CompletionRecord,
 } from "./completions";
-// PRODUCTION-DORMANT until #21 wires the magic-link route (the grantHints
-// posture): the ADR-0009 merge operation and its read-only preview reader.
+// Live since #21 (the magic-link confirm route is the first production
+// caller): the ADR-0009 merge operation and its read-only preview reader.
 export { listCompletionsForMerge, mergeAccounts } from "./merge";
-export { completions, hintGrants } from "./schema";
+// `attachTokens` (#21, ADR-0050): user-scoped like completions — the
+// statements over it live in apps/api/src/attach/service.ts, and apps/web
+// mechanically cannot name it through the root entry (ADR-0026 decision 5).
+export { attachTokens, completions, hintGrants } from "./schema";
