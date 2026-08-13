@@ -225,7 +225,7 @@ describe("mergeAccounts — completions (ADR-0009, ADR-0026, ADR-0049)", () => {
       .from(completions)
       .orderBy(asc(completions.game));
     expect(raw.map((row) => row.userId)).toEqual([winner, winner, winner]);
-    // elapsed_ms identifies WHOSE row survived; completed_at proves it was
+    // elapsed_ms identifies WHOSE row survived; completed_at shows it was
     // carried, not re-stamped.
     expect(
       raw.map((row) => ({
@@ -417,12 +417,19 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
       guesses: 6,
     });
     // Grants on BOTH sides: the loser's exercises the hint_grants delete on
-    // both runs; the winner's must survive untouched (snapshot-asserted).
+    // both runs; the winner's must survive untouched — asserted DIRECTLY
+    // below, because a snapshot alone cannot see an unscoped DELETE (both
+    // runs would deep-equal an identical zero-grant state).
     await insertHintGrant(winner, "2026-08-01");
     await insertHintGrant(loser, "2026-08-01");
 
     const first = await mergeAccounts(ctx.db, winner, loser);
     const afterFirst = await snapshotState();
+    // Exactly the winner's grant survives run one: the delete is scoped to
+    // the loser, not the table.
+    const survivingGrants = await ctx.db.select().from(hintGrants);
+    expect(survivingGrants).toHaveLength(1);
+    expect(survivingGrants[0]?.userId).toBe(winner);
 
     // The second run is not just a test: it is D7's crash-recovery
     // mechanism, and it must change NOTHING — updated_at included (the

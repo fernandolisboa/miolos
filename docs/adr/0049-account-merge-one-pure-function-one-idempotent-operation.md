@@ -92,7 +92,7 @@ them.
    an identity handle, so a re-run touches zero rows and never re-bumps
    `updated_at`. Every crash point is repaired by running the merge again
    with the same ids — ADR-0009's "run it twice, get the same account" is
-   the integrity mechanism, proved at the PGlite seam by a full-state
+   the integrity mechanism, pinned at the PGlite seam by a full-state
    double-run snapshot. Merging an account with itself is a no-op; an
    unknown id throws.
 6. **Derived state is never copied; the merge returns history.** The
