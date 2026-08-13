@@ -40,11 +40,12 @@ export interface CompletionRecord {
 
 /**
  * THE `on_time` derivation (ADR-0026 decision 2: "in one place and one
- * language"). Both readers project this one expression; a second spelling
+ * language"). Every reader projects this one expression — the two readers
+ * here plus `listCompletionsForMerge` (merge.ts) — a second spelling
  * anywhere is the drift that decision exists to prevent. #58, if it lands,
  * replaces this producer with a stored column and nothing downstream.
  */
-function onTimeSql() {
+export function onTimeSql() {
   return sql<boolean>`(${completions.completedAt} at time zone ${SAO_PAULO_TIME_ZONE})::date = ${completions.date}`;
 }
 

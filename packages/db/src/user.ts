@@ -17,4 +17,7 @@ export {
   recordCompletion,
   type CompletionRecord,
 } from "./completions";
+// PRODUCTION-DORMANT until #21 wires the magic-link route (the grantHints
+// posture): the ADR-0009 merge operation and its read-only preview reader.
+export { listCompletionsForMerge, mergeAccounts } from "./merge";
 export { completions, hintGrants } from "./schema";

@@ -105,7 +105,9 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "grantHints",
       "grantedHintsToday",
       "hintGrants",
+      "listCompletionsForMerge",
       "listCompletionsForStreak",
+      "mergeAccounts",
       "recordCompletion",
     ]);
   });

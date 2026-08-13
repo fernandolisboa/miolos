@@ -13,6 +13,7 @@ export {
   type FeatureFlags,
 } from "./feature-flags";
 export { GAMES, gameSchema, type Game } from "./game";
+export { mergeCompletions, type MergeableCompletion } from "./merge";
 export { computeStreak, type StreakRow, type StreakStatus } from "./streak";
 export {
   defaultRemoteConfig,

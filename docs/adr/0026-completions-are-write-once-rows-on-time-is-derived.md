@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md)
+**Amended by:** [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md) — the merge-repoint consequence's sufficiency claim is corrected: the ordered `ON CONFLICT DO NOTHING` repoint ALONE does not deliver *"the surviving row is the earliest completion"* when the winning account already holds a LATER row for the same (game, date) — the conflict fires and `DO NOTHING` keeps the later row. ADR-0049 decision 2 adds the strictly-earlier DELETE that completes it; the sentence's ordering prescription (`completed_at` ascending, copied) stands.
 **Amends:** the mint-flood consequence of [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md) — *"Accepted because flood-minted rows are unreferenced and harmless, and Vercel's platform firewall is the backstop."* Flood-minted users can now write rows that are referenced by streak arithmetic; see Consequences.
 
 ## Context
