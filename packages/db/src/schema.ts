@@ -45,8 +45,9 @@ export const users = pgTable("users", {
   reminderConsentAt: timestamptz("reminder_consent_at"),
   createdAt: timestamptz("created_at").notNull().defaultNow(),
   // No trigger or $onUpdate maintains this column: any future UPDATE of a
-  // users row must set it explicitly (to DB-side now()). Nothing updates
-  // users yet; the first writer is the email-attach ticket.
+  // users row must set it explicitly (to DB-side now()). The first writer
+  // is `mergeAccounts` (merge.ts), which empties a tombstoned loser's
+  // identity handles (ADR-0009, ADR-0049).
   updatedAt: timestamptz("updated_at").notNull().defaultNow(),
 });
 
