@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { HubStreak } from "../app/hub-streak";
 import HojePage from "../app/page";
 import { formatElapsed, messages, playRoutes, routes } from "../src/i18n";
 import {
@@ -124,15 +125,33 @@ function cardFor(game: Game): HTMLElement {
   return card;
 }
 
+/** The streak fetch's answer in this suite: an anonymous 401, so every hub
+ *  case keeps the shipped zero state and every existing assertion —
+ *  `streak.aria(0)` included — passes unchanged. */
+let fetchMock: ReturnType<typeof vi.fn>;
+
 beforeEach(() => {
   // Only Date: the record store's 1 s poll stays on real timers, so nothing
   // here depends on advancing it.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(`${DATE}T12:00:00Z`));
   window.localStorage.clear();
+  // The env stub and the fetch stub are a MANDATORY PAIR (plan 027 §8, the
+  // shipped API-client suites' discipline): with only the fetch stub,
+  // `fetchStreak`'s env guard short-circuits, the stub is dead code and
+  // every hub case logs the loud console.error the guard exists for.
+  vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test");
+  fetchMock = vi.fn(() =>
+    Promise.resolve(
+      new Response(JSON.stringify({ error: "no-session" }), { status: 401 }),
+    ),
+  );
+  vi.stubGlobal("fetch", fetchMock);
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -452,5 +471,39 @@ describe("the hub's first paint (T-WEB-S17)", () => {
     expect(decl(bodyOf(mobile, ".card"), "--cta-box-min-height")).toBe(
       "var(--touch-target-min)",
     );
+  });
+});
+
+/**
+ * T-WEB-S17's contract extended over the streak island (#19, plan 027 §8):
+ * the streak arrives in a MOUNT EFFECT only, so the server render — which is
+ * also the pre-hydration paint — still touches nothing. The positive control
+ * is the #28 convention: the same spy the negative reads is proven live by
+ * the client render beside it, so the negative cannot go vacuously green.
+ */
+describe("the hub's first paint stays fetch-free (T-WEB-S127)", () => {
+  it("renders the server markup without storage, clock or fetch", () => {
+    const readStorage = vi.spyOn(Storage.prototype, "getItem");
+    const clock = vi.spyOn(Date, "now");
+
+    const markup = renderToStaticMarkup(<HojePage />);
+
+    expect(readStorage).not.toHaveBeenCalled();
+    expect(clock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    // The server markup shows the honest zero the client hydrates against;
+    // hydration only ever raises it (ADR-0031's monotone direction).
+    expect(markup).toContain(messages.hoje.streak.aria(0));
+  });
+
+  it("control: the island's mount effect does fire the same spy", async () => {
+    render(<HubStreak />);
+    // Two microtask turns settle the mock's promise chain.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(fetchMock).toHaveBeenCalledWith("https://api.example.test/streak", {
+      credentials: "include",
+    });
   });
 });

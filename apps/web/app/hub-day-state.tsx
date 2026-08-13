@@ -17,7 +17,8 @@
  * nothing and renders pending. That is also the cold-profile answer, also
  * what `impeccable detect` always scans, and also what a second device sees.
  * A false pending is invisible; a false done would not be. The streak stays
- * server-computed and is not read here at all (#19).
+ * server-computed and is not read here at all — #19 gave it its own island,
+ * `hub-streak.tsx` (ADR-0048).
  */
 import type { Game } from "@miolos/core";
 import Link from "next/link";
