@@ -2,10 +2,19 @@
 
 **Status:** Accepted — 2026-08-13
 **Depends on:** [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md)
-**Amends:** nothing — deliberately. Every decision below resolves a silence in
-ADR-0009/ADR-0026 (winner selection, tombstone mechanism, played-row
-collisions, the SQL realization of "earliest wins") without contradicting a
-recorded sentence; #58's queued amendments to both ADRs are untouched.
+**Amends:** the merge-repoint consequence of
+[ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md) —
+*"The merge re-points with `ON CONFLICT (user_id, game, date) DO NOTHING`
+**after ordering the source rows by `completed_at` ascending**, so the
+surviving row is the earliest completion"* — whose sufficiency claim does not
+hold: the ordered repoint ALONE does not deliver earliest-wins when the
+winning account already holds a LATER row for the same key, and decision 2's
+strictly-earlier DELETE completes it. Scope: only that sentence's "so";
+its ordering prescription (ascending, `completed_at` copied) stands, and
+every other decision below resolves a silence in ADR-0009/ADR-0026 (winner
+selection, tombstone mechanism, played-row collisions) without contradicting
+a recorded sentence. #58's queued amendments to both ADRs are untouched —
+multiple `Amended by:` lines are additive.
 
 ## Context
 
@@ -46,7 +55,10 @@ them.
    survives and the day stops counting — the write-once counterfactual
    (under ADR-0026 decision 1, the later win could never have been
    recorded on a single account), and the "cause" in #20's "never shrinks
-   without cause".
+   without cause". Statement (i) is the amendment the header records:
+   ADR-0026's consequence claimed the ordered repoint alone makes the
+   earliest row survive, which fails exactly when the winner already holds
+   the later row — the prescription is kept, its sufficiency corrected.
 3. **The winner is deterministic from the data:** older `created_at`, exact
    ties to the lower id, selected DB-side. Run it twice — or in either
    argument order — and the same account is canonical. ADR-0009's
@@ -91,9 +103,13 @@ them.
    (#29's fail row and calendar need them); exclusion is the derivations'
    job. `mergeAccounts` is the single place account-scoped tables acquire
    merge duties: #30 adds its curated-grants union-and-dedupe statement
-   there; hint grants are not carried (day-scoped, structurally expiring,
-   writer-less in v1 — the rewarded-ad ticket inherits the decision
-   point). #58 needs no special case here: `on_time` is row data carried
+   there; the loser's hint grants are DELETED, never carried to the
+   winner — "emptied" means no row of any account-scoped table keeps
+   referencing the tombstone, and grants are day-scoped convenience that
+   expires structurally at the next rollover, not history (writer-less in
+   v1; the rewarded-ad ticket inherits the decision point of whether
+   same-day grants should instead be repointed). #58 needs no special
+   case here: `on_time` is row data carried
    through the union, and its stored column, when it lands, joins the
    repoint statement's explicit column list.
 
