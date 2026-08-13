@@ -24,9 +24,12 @@ import {
 // PR may weaken this suite.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
+// PGlite boot + real-migration replay: ~1.2s locally, CI runners 3-4x
+// slower — over vitest's 10s hook default on a starved runner (it fired
+// on a docs-only PR). Same 30s the sibling suites carry.
 beforeAll(async () => {
   ctx = await createTestDb();
-});
+}, 30_000);
 
 beforeEach(async () => {
   await ctx.db.execute(sql`truncate table daily_puzzles`);
