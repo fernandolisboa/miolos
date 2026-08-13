@@ -29,11 +29,14 @@ vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-vi.mock("../src/email/transport", () => ({
-  MAGIC_LINK_SENDER: "Miolos <conta@miolos.app>",
-  isEmailConfigured: () => Boolean(process.env.RESEND_API_KEY),
-  sendMagicLinkEmail: vi.fn(),
-}));
+// importOriginal is spread so the REAL `isAttachConfigured` (env-derived
+// at call time — vi.stubEnv drives it) survives; only the send is inert
+// here (step-7 finding F: no re-declared module surface).
+vi.mock("../src/email/transport", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/email/transport")>();
+  return { ...actual, sendMagicLinkEmail: vi.fn() };
+});
 
 // PGlite boot measures ~1.2 s locally and CI runners are ~3–4× slower
 // (plan 017 §15's timeout arithmetic).
@@ -163,5 +166,23 @@ describe("GET /attach/state — server-owned eligibility (D9/D10)", () => {
     // No OPTIONS export: the READ template (the streak route's own pin).
     const routeModule = await import("../app/attach/state/route");
     expect(Object.keys(routeModule).sort()).toEqual(["GET", "dynamic"]);
+  });
+
+  it("T-API-S84: the dormancy conjunct is the FULL switch — a keyed environment with WEB_ORIGIN unset reports ineligible (step-7 finding H)", async () => {
+    // Half-configured: the key exists but the link target does not, so the
+    // request route would 503 — the state route must mirror that exact
+    // switch (isAttachConfigured) or it renders a form whose submit dies.
+    await ctx.db
+      .insert(remoteConfig)
+      .values({ key: "attachStreakThreshold", value: 1 });
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    await insertOnTimeWin(userId, today);
+    expect(await readEligible(token)).toBe(true);
+
+    vi.stubEnv("WEB_ORIGIN", undefined);
+    expect(await readEligible(token)).toBe(false);
+    vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
+    expect(await readEligible(token)).toBe(true);
   });
 });

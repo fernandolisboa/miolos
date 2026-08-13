@@ -106,6 +106,7 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "grantHints",
       "grantedHintsToday",
       "hintGrants",
+      "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
       "listCompletionsForMerge",
       "listCompletionsForStreak",
       "mergeAccounts",

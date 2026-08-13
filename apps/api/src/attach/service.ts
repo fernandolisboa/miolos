@@ -13,21 +13,20 @@ import { attachTokens } from "@miolos/db/user";
  */
 
 /**
- * The rate-window cleanup (ADR-0050 decision 11): delete this user's rows
- * older than the ONE-HOUR rate window — never the 30-minute expiry.
- * Cleanup at expiry would empty the 30–60-minute band the rolling-hour
- * count needs and silently double the limit; expired-but-recent rows stay
- * as the ledger for their remaining half hour.
+ * The rate-window cleanup (ADR-0050 decision 11): delete ALL rows older
+ * than the ONE-HOUR rate window — never the 30-minute expiry. Cleanup at
+ * expiry would empty the 30–60-minute band the rolling-hour count needs
+ * and silently double the limit; expired-but-recent rows stay as the
+ * ledger for their remaining half hour. Global on purpose (step-7 finding
+ * I): a row past the hour is invisible to both rolling-hour counts and
+ * expired for the claim WHOEVER owns it, so a per-user predicate bought
+ * nothing and left abandoned users' rows for a sweep — this way any
+ * request sweeps the whole ledger.
  */
-export async function cleanupStaleTokens(
-  db: Db,
-  userId: string,
-): Promise<void> {
+export async function cleanupStaleTokens(db: Db): Promise<void> {
   await db
     .delete(attachTokens)
-    .where(
-      sql`${attachTokens.userId} = ${userId} and ${attachTokens.createdAt} <= now() - interval '1 hour'`,
-    );
+    .where(sql`${attachTokens.createdAt} <= now() - interval '1 hour'`);
 }
 
 /** This user's rows inside the rolling hour — the per-user rate count. */
@@ -146,6 +145,27 @@ export async function userOwnsSession(
     .where(eq(sessions.userId, userId))
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * Post-merge session revocation (step-7 finding A, ADR-0050 decision 13):
+ * after a CROSS-ACCOUNT merge at confirm, no PRE-EXISTING session may
+ * survive onto the winner — an attacker who requested the token for a
+ * victim's verified email holds a cookie that the merge's statement 1 just
+ * remapped onto the victim's account, and this one delete retires it
+ * (both accounts' old sessions sit on the winner after the remap, so one
+ * user_id catches them all). The confirm route mints the clicking
+ * browser's fresh session immediately after; the plain-attach no-collision
+ * path never calls this. Deliberately NOT inside `mergeAccounts`:
+ * ADR-0049's remap-never-delete protects crash-recovery resolvability
+ * INSIDE the operation — this is an account-security action on a
+ * COMPLETED merge, at the confirm seam only.
+ */
+export async function revokeSessionsForUser(
+  db: Db,
+  userId: string,
+): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.userId, userId));
 }
 
 /**

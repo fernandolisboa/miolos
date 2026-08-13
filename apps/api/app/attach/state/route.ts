@@ -10,7 +10,7 @@ import type { NextRequest } from "next/server";
 import { getAttachAccountState } from "../../../src/attach/service";
 import { corsHeaders } from "../../../src/cors";
 import { getDb } from "../../../src/db";
-import { isEmailConfigured } from "../../../src/email/transport";
+import { isAttachConfigured } from "../../../src/email/transport";
 import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
 import { requireUserId } from "../../../src/session/service";
 
@@ -28,8 +28,10 @@ export const dynamic = "force-dynamic";
  *   streak >= attachStreakThreshold (remote config, ADR-0025)
  *   AND email IS NULL
  *   AND attach_prompt_dismissed_at IS NULL
- *   AND the email transport is configured (the dormancy switch: an
- *       unkeyed environment never renders a form whose submit would 503).
+ *   AND the attach flow is configured — `isAttachConfigured`, the SAME
+ *       full switch (RESEND_API_KEY and WEB_ORIGIN) the request route
+ *       503s under, so a half-configured environment never renders a
+ *       form whose submit would 503 (step-7 finding H).
  */
 
 /** The per-route error envelope (the completions route's own convention). */
@@ -68,7 +70,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     // The cheap suppressions first; the streak read is the expensive one.
-    if (!isEmailConfigured()) {
+    if (!isAttachConfigured()) {
       return stateResponse(false);
     }
     const account = await getAttachAccountState(db, userId);

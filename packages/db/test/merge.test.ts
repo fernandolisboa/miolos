@@ -2,7 +2,11 @@ import { mergeCompletions } from "@miolos/core";
 import { asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { listCompletionsForMerge, mergeAccounts } from "../src/merge";
+import {
+  isWinnerLivenessError,
+  listCompletionsForMerge,
+  mergeAccounts,
+} from "../src/merge";
 import { completions, hintGrants, sessions, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
 
@@ -638,9 +642,21 @@ describe("mergeAccounts — the winner-liveness guard (issue #21 precondition 1,
     await insertHintGrant(victim, "2026-08-01");
     const before = await snapshotState();
 
-    await expect(mergeAccounts(ctx.db, tombstone, victim)).rejects.toThrow(
+    const thrown = await mergeAccounts(ctx.db, tombstone, victim).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toMatch(
       /owns no session or identity handle/,
     );
+    // The REAL guard throw satisfies the exported discriminant (step-7
+    // finding C): the confirm route retries on exactly this predicate, so
+    // the predicate and the throw are pinned against each other here —
+    // and an arbitrary error must never satisfy it.
+    expect(isWinnerLivenessError(thrown)).toBe(true);
+    expect(isWinnerLivenessError(new Error("connection reset"))).toBe(false);
+    expect(isWinnerLivenessError("not even an Error")).toBe(false);
 
     // Nothing moved: no session remap, no completion repoint or delete, no
     // hint-grant delete, no tombstone UPDATE — the guard sits before the

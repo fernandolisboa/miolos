@@ -17,6 +17,7 @@ export function magicLinkBody(url: string): string {
     url,
     "",
     "O link vale por 30 minutos e funciona uma única vez.",
-    "Se você não pediu este e-mail, pode ignorá-lo — nada acontece sem o clique.",
+    "Importante: só confirme se foi você quem pediu este link agora mesmo.",
+    "Se você não pediu, ignore este e-mail — nada acontece sem o clique.",
   ].join("\n");
 }

@@ -129,10 +129,13 @@ export const sessions = pgTable(
  *   without a transaction — the loser of a double-confirm sees zero rows,
  *   and unknown, expired and spent tokens are indistinguishable (410).
  * - The rows double as the rate-limit ledger (3 per rolling hour per user
- *   AND per normalized email, ADR-0050 decision 11): cleanup deletes rows
- *   older than the ONE-HOUR rate window, never the 30-minute expiry —
+ *   AND per normalized email, ADR-0050 decision 11): cleanup deletes ALL
+ *   rows older than the ONE-HOUR rate window, never the 30-minute expiry —
  *   deleting at expiry would empty the 30–60-minute band the count needs
- *   and silently double the limit.
+ *   and silently double the limit. The sweep is GLOBAL, not per-user (a
+ *   row past the hour is dead for claim and counts alike, whoever's), so
+ *   any request bounds the whole table; rows outlive the window only
+ *   while nobody requests at all.
  *
  * The statements over this table live in apps/api/src/attach/service.ts
  * (the session/service.ts precedent); the table is reachable only via
@@ -149,7 +152,8 @@ export const attachTokens = pgTable(
     reminderConsent: boolean("reminder_consent").notNull().default(false),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
-  // The rate-count and cleanup scans (the sessions-index precedent).
+  // The per-user rate-count scan (the sessions-index precedent); the
+  // global cleanup sweeps by created_at over a table this small.
   (t) => [index("attach_tokens_user_id_idx").on(t.userId)],
 );
 

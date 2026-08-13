@@ -19,7 +19,7 @@ import {
 } from "../../../src/cors";
 import { getDb } from "../../../src/db";
 import {
-  isEmailConfigured,
+  isAttachConfigured,
   sendMagicLinkEmail,
 } from "../../../src/email/transport";
 import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
@@ -110,13 +110,14 @@ export async function POST(request: NextRequest): Promise<Response> {
   const body = parsed.data;
 
   // FAIL-CLOSED before any side effect (ADR-0050 decision 10, the
-  // CRON_SECRET posture): no key means no token row and no send — and the
-  // prompt never renders a form whose submit would land here, because
-  // GET /attach/state reports ineligible under the same switch. WEB_ORIGIN
-  // is required too: the link cannot be built, and nothing hardcodes the
-  // apex (ADR-0013).
+  // CRON_SECRET posture): `isAttachConfigured` requires BOTH the key (no
+  // send without it) and WEB_ORIGIN (the link cannot be built; nothing
+  // hardcodes the apex, ADR-0013) — and it is the SAME switch
+  // GET /attach/state reports ineligibility under, so a half-configured
+  // environment never renders a form whose submit would land here (step-7
+  // finding H). The local read below is only the typed handle for the URL.
   const webOrigin = process.env.WEB_ORIGIN;
-  if (!isEmailConfigured() || !webOrigin) {
+  if (!isAttachConfigured() || !webOrigin) {
     return errorResponse(503, "email-unconfigured");
   }
 
@@ -136,8 +137,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // The rate ledger (ADR-0050 decision 11): cleanup is aligned to the
   // ONE-HOUR rate window — deleting at the 30-minute expiry would empty
-  // the band the count needs and silently double the limit.
-  await cleanupStaleTokens(db, userId);
+  // the band the count needs and silently double the limit. Global: any
+  // request sweeps every stale row, whoever's (step-7 finding I).
+  await cleanupStaleTokens(db);
   const [userCount, emailCount] = await Promise.all([
     countRecentTokens(db, userId),
     countRecentTokensForEmail(db, body.email),
@@ -160,7 +162,11 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     // The link lands on the WEB confirm page (ADR-0050 decision 3): email
     // scanners prefetch GETs, and a GET there consumes nothing — only the
-    // page's explicit POST spends the token.
+    // page's explicit POST spends the token. The `/vincular` literal here
+    // is the SAME slug `routeSlugs.attach` composes on the web side
+    // (apps/web/src/i18n/routes.ts) and is pinned by the T-API seam suite,
+    // which harvests this URL to drive every confirm — renaming either
+    // side alone fails a test, never a user.
     await sendMagicLinkEmail({
       to: body.email,
       url: `${webOrigin}/vincular?token=${token}`,

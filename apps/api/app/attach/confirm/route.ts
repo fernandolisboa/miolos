@@ -3,7 +3,7 @@ import {
   attachConfirmResponseSchema,
   attachConfirmSchema,
 } from "@miolos/core";
-import { mergeAccounts } from "@miolos/db/user";
+import { isWinnerLivenessError, mergeAccounts } from "@miolos/db/user";
 import type { Db } from "@miolos/db";
 import type { NextRequest } from "next/server";
 
@@ -12,6 +12,7 @@ import {
   claimAttachToken,
   findVerifiedHolder,
   getAttachAccountState,
+  revokeSessionsForUser,
   userOwnsSession,
 } from "../../../src/attach/service";
 import {
@@ -78,7 +79,20 @@ async function resolveWinner(
   try {
     const { winnerId } = await mergeAccounts(db, requesterId, holder);
     return { winnerId, merged: true };
-  } catch {
+  } catch (error) {
+    // ONLY the winner-liveness guard's throw is retryable — it fires
+    // before any destructive statement. Anything else may have landed
+    // mid-operation and must surface as the route's 500, never a 410/409
+    // that reads like a spent token (step-7 finding C): a re-requested
+    // link then re-runs the merge (the holder's email survives until the
+    // tombstone statement), so idempotent re-run stays the recovery.
+    if (!isWinnerLivenessError(error)) {
+      console.error(
+        "attach confirm: mergeAccounts failed mid-operation",
+        error,
+      );
+      throw error;
+    }
     // The guard threw before any destructive statement. Re-derive both
     // sides fresh and retry exactly once (plan 031 D5): an astronomically
     // rare race costs one re-request, never a stranded history.
@@ -92,7 +106,14 @@ async function resolveWinner(
     try {
       const { winnerId } = await mergeAccounts(db, requesterId, freshHolder);
       return { winnerId, merged: true };
-    } catch {
+    } catch (retryError) {
+      if (!isWinnerLivenessError(retryError)) {
+        console.error(
+          "attach confirm: mergeAccounts retry failed mid-operation",
+          retryError,
+        );
+        throw retryError;
+      }
       return "conflict";
     }
   }
@@ -155,6 +176,23 @@ export async function POST(request: NextRequest): Promise<Response> {
     return errorResponse(410, "invalid-or-expired");
   }
 
+  // D16's stale-intent guard, BEFORE any merge (step-7 finding B): a
+  // requester who attached E1 while its E2 token was still live must not
+  // have that token trigger a DESTRUCTIVE merge with E2's verified holder
+  // — the intent the token recorded is dead the moment the requester's
+  // verified email differs from it. 409, token spent, ZERO merge.
+  // Recovery requesters have a null email and resends match, so neither
+  // is touched; the post-merge winner re-check below stays as the
+  // concurrent-window backstop.
+  const requesterAccount = await getAttachAccountState(db, claimed.userId);
+  if (
+    requesterAccount &&
+    requesterAccount.email !== null &&
+    requesterAccount.email !== claimed.email
+  ) {
+    return errorResponse(409, "email-already-attached");
+  }
+
   const resolved = await resolveWinner(db, claimed.userId, claimed.email);
   if (resolved === "gone") {
     return errorResponse(410, "invalid-or-expired");
@@ -165,10 +203,24 @@ export async function POST(request: NextRequest): Promise<Response> {
     return errorResponse(409, "confirm-conflict");
   }
 
-  // D16's confirm-side re-check, closing the pending-token side door: a
-  // still-live token for E2 confirmed after E1 was attached must not
-  // silently CHANGE the verified email. Token spent — a stale intent is
-  // not resurrected.
+  if (resolved.merged) {
+    // SECURITY (step-7 finding A, ADR-0050 decision 13): after a
+    // CROSS-ACCOUNT merge, no pre-existing session may survive onto the
+    // winner — an ATTACKER may have requested this token for the victim's
+    // verified email, and the merge's statement 1 just remapped the
+    // attacker's cookie onto the victim's account. One delete on the
+    // winner retires both accounts' old sessions (the loser's were
+    // remapped there); the clicking browser's fresh session is minted
+    // below and becomes the only live one. The plain-attach path keeps
+    // its sessions: no second account is involved.
+    await revokeSessionsForUser(db, resolved.winnerId);
+  }
+
+  // D16's confirm-side re-check on the resolved WINNER — since finding B's
+  // pre-merge guard above, this is the concurrent-window backstop: a
+  // racing confirm may have attached a different email to the winner
+  // between the guard and here, and the verified email must never
+  // silently CHANGE. Token spent — a stale intent is not resurrected.
   const winnerAccount = await getAttachAccountState(db, resolved.winnerId);
   if (
     winnerAccount &&

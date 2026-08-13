@@ -784,6 +784,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "grantedHintsToday",
       "hintGrants",
       "insertDailyPuzzle",
+      "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
       "listBufferedDates",
       "listCompletionsForMerge",
       "listCompletionsForStreak",
@@ -801,8 +802,10 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
     // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
     // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
-    // user entry (plan 029 §6), and #21 by one: `attachTokens` on the user
-    // entry (ADR-0050, ADR-0026 decision 5), never the root.
-    expect(surface).toHaveLength(29);
+    // user entry (plan 029 §6), #21 by one: `attachTokens` on the user
+    // entry (ADR-0050, ADR-0026 decision 5), never the root, and #21's
+    // step 7 by one more: `isWinnerLivenessError` on the user entry
+    // (finding C — the confirm route's retry discriminant).
+    expect(surface).toHaveLength(30);
   });
 });

@@ -17,6 +17,29 @@ import { completions, hintGrants, sessions, users } from "./schema";
  */
 
 /**
+ * The winner-liveness guard's discriminable signature (step-7 finding C on
+ * #21). Shared by the guard's `throw` below and the predicate beside it,
+ * so the two cannot drift.
+ */
+const WINNER_LIVENESS_SIGNATURE = "owns no session or identity handle";
+
+/**
+ * True exactly when `error` is the winner-liveness guard's throw — the one
+ * failure `mergeAccounts` raises BEFORE any destructive statement (a
+ * concurrent merge tombstoned the selected winner). Callers may retry on
+ * this and ONLY this: any other mid-merge failure may have landed after a
+ * destructive statement, must surface loudly (the confirm route rethrows
+ * it into a 500), and is healed by re-running the merge — never by a
+ * silent catch. The message-predicate idiom mirrors the api layer's
+ * `isVerifiedEmailUniqueViolation`.
+ */
+export function isWinnerLivenessError(error: unknown): boolean {
+  return (
+    error instanceof Error && error.message.includes(WINNER_LIVENESS_SIGNATURE)
+  );
+}
+
+/**
  * The opaque ordering key `mergeCompletions` compares and never parses
  * (plan 029 D3): a FIXED-WIDTH UTC instant via `to_char`, so lexicographic
  * order IS chronological order. Produced in SQL, which keeps ADR-0026's
@@ -144,7 +167,7 @@ export async function mergeAccounts(
       .limit(1);
     if (winnerHandles.length === 0) {
       throw new Error(
-        `mergeAccounts: winner ${winnerId} owns no session or identity handle (concurrent merge?)`,
+        `mergeAccounts: winner ${winnerId} ${WINNER_LIVENESS_SIGNATURE} (concurrent merge?)`,
       );
     }
   }
