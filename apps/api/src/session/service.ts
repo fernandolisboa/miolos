@@ -73,6 +73,21 @@ export async function mintSession(
 }
 
 /**
+ * A session for an EXISTING user — what `mintSession` cannot do (it always
+ * mints a new user). #21's attach-confirm is the only caller: the clicking
+ * browser is authenticated AS the resolved winner, and never merged into
+ * it (ADR-0050 decision 4). The caller generates the raw token, hashes it,
+ * and builds the Set-Cookie with `buildSessionCookie`.
+ */
+export async function createSessionForUser(
+  db: Db,
+  tokenHash: string,
+  userId: string,
+): Promise<void> {
+  await db.insert(sessions).values({ tokenHash, userId });
+}
+
+/**
  * Resolve the caller's user id for a WRITE (plan 017 D14). Deliberately
  * never mints: minting on a write would create a phantom user from any
  * stray POST, and identity is minted exactly once, by POST /session
