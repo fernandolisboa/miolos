@@ -429,7 +429,19 @@
 }
 
 @media (max-width: 768px) {
+  /* SINGLE DOCUMENT COLUMN on mobile (step-6 F1). The desktop shell is a
+     100dvh flex column; kept at one column width on a phone, that
+     composition opens the page with the tiny top bar / summary stamp and
+     the ~4-card games section sharing its first row — one sibling filling
+     5% of the viewport while another runs past 160%, the stretched-hero
+     signature `first-viewport-column-overflow` names (the fold falls deep
+     inside the section). Nothing here needs flex: no child grows, none
+     aligns, and the page is far taller than any viewport, so the honest
+     mobile shape is normal block flow — each section a full-width row in
+     the document, no viewport-height constraint stretching the opening. */
   .page {
+    display: block;
+    min-height: auto;
     padding: var(--space-5) var(--space-5) var(--space-6);
   }
 
@@ -450,6 +462,11 @@
   }
 
   .summary {
+    /* Block-level, not the desktop's atomic inline: in the page's mobile
+       block flow an inline-flex stamp would ride a text line box (strut
+       leading, baseline quirks); `flex` + the shared `width: fit-content`
+       keeps the card's box exactly as it was as a flex item. */
+    display: flex;
     margin-top: var(--space-6);
     padding: var(--space-3) var(--space-4);
   }
