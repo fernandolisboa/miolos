@@ -132,9 +132,11 @@ function writtenOnSaoPauloDay(day: string) {
 }
 
 /**
- * The archive write ceiling (#31, ADR-0053 decision 13): at most `max`
- * LATE rows per user per São Paulo `day`. Passed only on the late branch,
- * so the daily ritual's INSERT is byte-identical to the one it always was.
+ * The LATE-write ceiling (#31, ADR-0053 decision 13): at most `max` late
+ * rows per user per São Paulo `day`. Passed only on the late branch, so
+ * the daily ritual's INSERT is byte-identical to the one it always was.
+ * Not an *archive*-write ceiling: the branch also admits ADR-0026
+ * decision 7's post-rollover flush, which is inside it by construction.
  */
 interface LateWriteCeiling {
   readonly day: string;
@@ -224,7 +226,7 @@ function guardedInsertSelect(
  * write. Omitted, drizzle emits the SQL keyword `default` — i.e. NULL — which
  * is the only legal value for the other three games.
  *
- * `ceiling` is the archive write ceiling (#31, ADR-0053 decision 13) and is
+ * `ceiling` is the late-write ceiling (#31, ADR-0053 decision 13) and is
  * supplied ONLY on the late branch. With it the INSERT carries its own
  * guard (`guardedInsertSelect` above) and the result may be `capped`;
  * without it — every daily write — the statement and the return shape are

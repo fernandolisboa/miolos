@@ -56,7 +56,7 @@ export function isWritableDate(date: string, today: string): boolean {
 
 /**
  * Inside the write window, is this a LATE write — a day strictly before
- * the DB clock's São Paulo today? The archive write ceiling's branch
+ * the DB clock's São Paulo today? The late-write ceiling's branch
  * (ADR-0053 decision 13), and the daily ritual's exemption from it.
  *
  * IT HAS A NAME BECAUSE "LATE" IS SPELLED IN THREE LAYERS AND THEY MUST
