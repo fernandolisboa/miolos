@@ -15,15 +15,34 @@
    dates is a column of figures, so it is Instrument Sans + tabular-nums and
    never Fraunces, which has no tabular figures at all. */
 
+/* NORMAL BLOCK FLOW at every width, and that is a gate fix rather than a
+   preference (step-6 F6). This sheet's own mobile block argued the point and
+   then applied it only below the breakpoint: "nothing here needs flex, and
+   the page is far taller than any viewport, so normal block flow is the
+   honest shape". It is just as true at 1440. A `display:flex` column of
+   max-width 760 on a 1440 viewport is 0.528 of it — just over the 0.5 gate
+   in impeccable's `first-viewport-column-overflow` (`checks.mjs:5367-5417`)
+   — and its 80px side padding makes every child a 0.789 width share, inside
+   the rule's 0.25–0.9 "column" band. So `.titleBlock` and `.section` read as
+   two side-by-side columns, and the rule fires the moment the tall one
+   exceeds 1.4 × the viewport height: measured, 21 rows at 61px each. August
+   2026 reaches 21 archived days on 2026-08-22. **The gate would have broken
+   on the calendar, not on a commit.** Measured after this change: 29 rows,
+   exit 0.
+
+   `min-height: 100dvh` goes with it (it existed only to give `.spacer` room
+   to push, and `.spacer` is gone) and the desk texture is unaffected — it
+   lives on `body`, not here. */
 .page {
   box-sizing: border-box;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
   padding: var(--space-11) 80px var(--space-12);
-  /* ONE column at every width. The content is one list, and a second column
-     would be filler — the anti-reference the brief calls out by name. */
+  /* ONE column at every width, centred — plan 037 §7.5's "a max-width
+     measure centred on desk paper". The content is one list, and a second
+     column would be filler: the anti-reference the brief calls out by name.
+     The centring is what keeps the day page's four cards from sitting in
+     680×240 of the top-left corner of a 1440×900 screen (step-6 F11). */
   max-width: 760px;
+  margin-inline: auto;
 }
 
 /* Anchored on the local class, never a bare `a:hover` (CSS Modules pure
@@ -89,7 +108,7 @@
    the rows are separated by hairlines instead, the F5 stat-row register. */
 
 .section {
-  margin-top: var(--space-10, 40px);
+  margin-top: 40px;
 }
 
 .sectionHeading {
@@ -133,17 +152,33 @@
   font-weight: 500;
 }
 
+/* A FIXED FOUR-COLUMN GRID, left-aligned, and the fixedness is the point
+   (step-6 F9). This was a wrapping flex with `justify-content: flex-end`, so
+   a day holding two games did not read as a day holding two games — the
+   cluster simply shifted left, names never aligned into columns down the
+   page, and absence was undetectable by eye. Plan 037's "no greyed slot, no
+   fake navigation" call is right; right-aligning a variable-length list is
+   what made the ragged state look incidental rather than designed. On a grid
+   an absent game is an empty cell: a gap, which is what it is. */
 .rowGames {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-3);
+  flex: 0 0 auto;
+  width: 400px;
+  max-width: 100%;
 }
 
-/* The game's accent as a 2px LEFT RULE — a shape (ADR-0041 decision 1) — and
-   the name itself in --ink. The rule never carries meaning alone: the row's
+/* The game's accent as a LEFT RULE — a shape (ADR-0041 decision 1) — and the
+   name itself in --ink. The rule never carries meaning alone: the row's
    accessible name is one composed sentence naming the date and the games
    (ADR-0041 decision 5, `messages.archive.dayRowAria`).
+
+   3px on a padded line box, not 2px on a bare one (step-6 F10a). At 2×11px
+   the four accents rendered as `| BINAIRO | SUDOKU |` — indistinguishable
+   from punctuation, where DESIGN.md's rule is that accents carry IDENTITY.
+   The grid cell stretches, so with 4px of block padding the rule is a real
+   ~23px mark rather than a tick.
 
    A SHORT day renders fewer names and nothing else: no placeholder, no
    greyed slot, no "3 de 4". A disabled-looking affordance would be fake
@@ -151,8 +186,10 @@
    exactly this same shape, which matters because the kill switch is the
    whole reason these pages are uncached (ADR-0053 decision 2). */
 .rowGame {
-  border-left: 2px solid var(--accent);
-  padding-left: var(--space-2);
+  display: flex;
+  align-items: center;
+  border-left: 3px solid var(--accent);
+  padding: var(--space-1) 0 var(--space-1) var(--space-2);
   font: var(--text-kicker);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -194,7 +231,15 @@
   margin-top: var(--space-8);
 }
 
+/* A REAL TOUCH TARGET (step-6 F8). These measured 118×11px and 148×11px at
+   390×844 — an 11px strip at the bottom of a 2,225px scroll, and the primary
+   way to move backwards through the archive was the hardest thing on the
+   page to hit. DESIGN.md's ≥44px floor; every other link on both archive
+   sheets already honours it (`.monthChip`, `late-result .link`). */
 .monthNavLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
   font: var(--text-kicker);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -276,7 +321,7 @@
    resource exists and is empty, which is not a 404 — and no skeleton and no
    fake rows. */
 .empty {
-  margin-top: var(--space-10, 40px);
+  margin-top: 40px;
   max-width: 46ch;
   font-size: 15px;
   line-height: 1.6;
@@ -284,20 +329,13 @@
   text-wrap: pretty;
 }
 
-.spacer {
-  flex: 1;
-}
-
-@media (max-width: 900px) {
-  /* SINGLE DOCUMENT COLUMN on mobile, the /estatisticas fix (#29 step-6 F1):
-     a 100dvh flex column kept at one column width on a phone opens the page
-     with the tiny top bar and the first section sharing a row — the
-     `first-viewport-column-overflow` signature. Nothing here needs flex, and
-     the page is far taller than any viewport, so normal block flow is the
-     honest mobile shape. */
+@media (max-width: 768px) {
+  /* The block-flow argument now lives on `.page` itself, at every width
+     (step-6 F6) — this block keeps only the padding step-down. 768px, not
+     900px: seventeen other sheets and `globals.css:31` use 768, and the odd
+     breakpoint rendered the mobile layout on the desktop desk texture
+     between 769 and 900 (step-6 F11). */
   .page {
-    display: block;
-    min-height: auto;
     padding: var(--space-5) var(--space-5) var(--space-6);
   }
 
@@ -326,15 +364,14 @@
     padding: var(--space-3) 0;
   }
 
+  /* Full width of the stacked row, so the four columns stay four columns and
+     an absent game keeps reading as an empty cell (step-6 F9). */
   .rowGames {
-    justify-content: flex-start;
+    width: 100%;
+    gap: var(--space-2);
   }
 
   .cards {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .spacer {
-    display: none;
   }
 }

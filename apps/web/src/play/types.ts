@@ -41,6 +41,47 @@ export interface PlayCore {
   readonly hydrated: boolean;
 }
 
+/**
+ * The ONE optional prop the four shared per-game `PlayView`/`PlaySkeleton`
+ * components gain for the archive (#31, ADR-0053 decision 9). Absent — every
+ * daily route — the render is byte-identical to what shipped, and T-WEB-S185
+ * pins that in both directions for all four games.
+ *
+ * **The prop budget is closed at one optional member per view**, stated here
+ * the way ADR-0043 consequence (a) closes `ConclusionView`'s at two.
+ *
+ * **It lives in `src/play/`, not in `src/archive/`, and the direction is the
+ * point** (step-6 F22). Four DAILY views consume this type; a type imported
+ * by the daily layer out of the archive layer is the dependency arrow drawn
+ * backwards, and it sat there only because plan 037 §1 exception (iii) capped
+ * `src/play/` edits — a scope criterion deciding a module boundary. The
+ * concrete builder stays in `src/archive/chrome.ts`, where it belongs.
+ *
+ * **There is no mode chip, and its absence is a decision.** Three things
+ * already say "you are in the archive": the back link reads `← <the day>` and
+ * leaves for the day page, the top bar renders the archived long date, and
+ * the note states the semantics in a full sentence, which is the one thing a
+ * chip saying "Arquivo" could never say.
+ */
+export interface ArchivePlayChrome {
+  readonly back: {
+    readonly href: string;
+    readonly label: string;
+    readonly ariaLabel: string;
+  };
+  /**
+   * The note and the class that styles it. A CSS-module class name is a
+   * string, so carrying it here is what lets the archive own its own
+   * stylesheet without any per-game view importing one from `src/archive/`
+   * (step-6 F10b). It is NOT a general styling hook: one class, one sheet,
+   * one sentence.
+   */
+  readonly note: {
+    readonly text: string;
+    readonly className: string;
+  };
+}
+
 export interface HintState {
   /** One free hint per puzzle (plan 017 D21). Not a balance, not a grant. */
   readonly free: 1;

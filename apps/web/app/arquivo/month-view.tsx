@@ -53,7 +53,10 @@ export function ArchiveMonthView({
       </div>
 
       <section className={styles.section}>
-        <DayRows groups={groups} />
+        {/* The month and the year are in the `<h1>` directly above, so the
+            rows carry the day number and its weekday and nothing else
+            (step-6 F9). */}
+        <DayRows groups={groups} dateFormat="dayInMonth" />
       </section>
 
       <nav className={styles.monthNav}>
@@ -76,8 +79,6 @@ export function ArchiveMonthView({
           </Link>
         )}
       </nav>
-
-      <div className={styles.spacer} />
     </main>
   );
 }

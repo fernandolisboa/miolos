@@ -49,7 +49,12 @@ export function ArchiveIndexView({
 
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>{copy.title}</h1>
-        <p className={styles.lead}>{copy.lead}</p>
+        {/* SUPPRESSED WHEN EMPTY (step-6 F10d). The lead promises "todos os
+            puzzles do dia desde o começo" and `copy.empty` says there are
+            none; stacked 40px apart in the same 15px `--ink-2`, the page
+            promised everything and then said there was nothing. The empty
+            state's own sentence is the whole message there. */}
+        {empty ? null : <p className={styles.lead}>{copy.lead}</p>}
       </div>
 
       {empty ? (
@@ -82,8 +87,6 @@ export function ArchiveIndexView({
           </section>
         </>
       )}
-
-      <div className={styles.spacer} />
     </main>
   );
 }

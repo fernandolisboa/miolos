@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 import { formatLongDate, messages, routes } from "../i18n";
-import type { ArchivePlayChrome } from "../archive/chrome";
 import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
 import { TimerReadout } from "../play/timer-readout";
+import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
 import { Controls } from "./controls";
 import { Grid } from "./grid";
@@ -99,13 +99,17 @@ export function PlayView({
           </span>
         </div>
         <p className={screen.rules}>{messages.games.binairo.play.rules}</p>
-        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
-            `screen.rules` paragraph under the game's own — already `--ink-2`,
-            already shipped, so no stylesheet is edited. It is what makes the
-            archive's semantics visible to the person they apply to, which a
-            mode chip could not have said. */}
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line. It
+            carries its own class from the archive's own stylesheet — a
+            second `screen.rules` paragraph made "this does not move your
+            streak" indistinguishable from "fill the grid so each row has
+            1–9" (step-6 F10b) — and nothing under `src/play/` is edited
+            for it, because a CSS-module class name is a string the chrome
+            object hands over. It is what makes the archive's semantics
+            visible to the person they apply to, which a mode chip could
+            not have said. */}
         {archive === undefined ? null : (
-          <p className={screen.rules}>{archive.note}</p>
+          <p className={archive.note.className}>{archive.note.text}</p>
         )}
       </div>
 
@@ -245,13 +249,17 @@ export function PlaySkeleton({
           </span>
         </div>
         <p className={screen.rules}>{messages.games.binairo.play.rules}</p>
-        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
-            `screen.rules` paragraph under the game's own — already `--ink-2`,
-            already shipped, so no stylesheet is edited. It is what makes the
-            archive's semantics visible to the person they apply to, which a
-            mode chip could not have said. */}
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line. It
+            carries its own class from the archive's own stylesheet — a
+            second `screen.rules` paragraph made "this does not move your
+            streak" indistinguishable from "fill the grid so each row has
+            1–9" (step-6 F10b) — and nothing under `src/play/` is edited
+            for it, because a CSS-module class name is a string the chrome
+            object hands over. It is what makes the archive's semantics
+            visible to the person they apply to, which a mode chip could
+            not have said. */}
         {archive === undefined ? null : (
-          <p className={screen.rules}>{archive.note}</p>
+          <p className={archive.note.className}>{archive.note.text}</p>
         )}
       </div>
 

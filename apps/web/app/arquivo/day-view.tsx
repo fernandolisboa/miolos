@@ -77,8 +77,6 @@ export function ArchiveDayView({
           </li>
         ))}
       </ul>
-
-      <div className={styles.spacer} />
     </main>
   );
 }

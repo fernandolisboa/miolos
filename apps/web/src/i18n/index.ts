@@ -1,4 +1,6 @@
 export {
+  formatDayInMonth,
+  formatDayNumber,
   formatElapsed,
   formatLongDate,
   formatMonth,
