@@ -988,3 +988,51 @@ the text (the first is I42, from the step-7 round):
   without both rows the next ticket is free to call one of them "the accepted
   window" and re-join what decision 6 separated. The **Archive**, **Stats
   calendar** and **Late completion** rows are corrected in the same commit.
+
+## Product flags confirmed — 2026-08-14 (append-only)
+
+Plan 037 settled eight product-visible rulings as **[Fernando-adjustable]** so
+implementation could proceed without blocking on him — tabulated, each with its
+alternative, at
+[`docs/plans/037-issue-31-plan-archive.md:63-70`](../plans/037-issue-31-plan-archive.md)
+(F1–F8) and marked inline at the decisions they belong to. **Fernando reviewed
+all eight on 2026-08-14 and confirmed every one as shipped.** No flag was
+overridden, so no decision above changes; this section exists so a later session
+reads the eight as **settled** rather than as outstanding. The plan is a
+point-in-time snapshot and its table stays as written.
+
+- **F1 — the archive stays uncached.** Confirmed against `export const
+  revalidate = 60`, shown with its full upside (takedown latency bounded to
+  sixty seconds, crawler-driven database reads cut by roughly two orders of
+  magnitude) and with the `revalidatePath` pairing named as the precondition
+  that makes any TTL safe. **What the confirmation costs, on the record: every
+  crawler hit on this surface is a live database read**, for as long as
+  `force-dynamic` stands. Decision 2's precondition and its Neon
+  compute-hours revisit trigger are unchanged and remain the only route back
+  to a TTL.
+- **F2 — `/arquivo/<hoje>` and `/arquivo/<hoje>/<jogo>` keep their 307s**
+  rather than 404ing (decision 1), on the ground that sharing happens right
+  after playing and that window has no other per-day permalink.
+- **F3 — pre-birth late completions stay off-calendar** (decision 7): they
+  move the totals and paint no calendar cell. The fourth `CalendarDayState`
+  was declined with its cost — a strict-parsed wire value-set growth carrying
+  the deploy-skew failure ADR-0052 decision 5 designs against, plus a legend
+  row, an aria string and a CSS treatment.
+- **F4 — the Termo fail row stays unqualified** (decision 8): a lost Termo
+  counts whether it was on time or played from the archive, ADR-0008 rule 3 as
+  written. **The confirmation carries the cost explicitly: issue #31's third
+  acceptance criterion as literally worded is not met**, because the fail row
+  is part of the guess distribution and it moves. That is deliberate and
+  confirmed as such, not an outstanding defect.
+- **F5 — Termo stays archivable** (decision 11), reversing the pattern free
+  play set, because an archived answer was already spent as that date's shared
+  daily and nothing unspent is burned.
+- **F6 — there is no archive conclusion route** (decision 9): a closed
+  archived board swaps to the late-result panel in place, on the same URL.
+- **F7 — replaying a solved day shows a playable board and reveals the stored
+  result only after it is finished** (decision 10 layer 3). The client-fetch
+  alternative stays a separate ticket rather than a residual of this one.
+- **F8 — the ceiling stays 50 late completions per user per São Paulo day**
+  (decision 13). Raising it to ~100 and dropping it entirely were both offered
+  and declined. It remains **chosen, not measured**, in decision 13's own
+  words.
