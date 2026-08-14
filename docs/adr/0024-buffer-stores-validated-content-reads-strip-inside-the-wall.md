@@ -2,6 +2,7 @@
 
 Status: accepted
 Date: 2026-07-31
+**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — the operational-semantics horizon — *"the buffer is ~`bufferDepth` days deep — so any M2 content-shape change **must keep the read-side schema parsing rows generated up to `bufferDepth` days earlier**"* — lengthens to **the whole archive**. That bound was true because the only content read-backs were today's daily and a write path bounded at one day back; #31 makes every published past day readable at its own public URL, so a content-shape change owes compatibility with every row ever published, not the last seven. The failure mode is decided rather than deferred: the archive's per-day reader logs and returns nothing on a parse failure, so a stale row 404s instead of 500ing a URL the sitemap advertises (ADR-0053 decision 4); the two shipped readers still throw.
 
 ## Context
 
@@ -65,6 +66,16 @@ table around the helper.
   days deep — so any M2 content-shape change must keep the read-side
   schema parsing rows generated up to `bufferDepth` days earlier. This is
   a hard backward-compatibility duty for #23/#25/#27.
+  *(Lengthened at #31 —
+  [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+  decision 4. The `bufferDepth` horizon was true while the only content
+  read-backs were today's daily and a write path bounded at one day back.
+  The archive reads every published past day at its own public URL, so the
+  duty is now the **whole archive**: a content-shape change owes
+  compatibility with every row ever published. A row whose content no
+  longer parses makes the archive reader log and return nothing — a 404 on
+  a sitemap-advertised URL rather than a 500 — and the log line is the only
+  alarm.)*
 - **Vercel Instant Rollback does not update crons** — after a rollback,
   verify the cron schedule still matches the deployed `vercel.json`.
 

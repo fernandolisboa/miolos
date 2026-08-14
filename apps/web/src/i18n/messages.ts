@@ -498,7 +498,7 @@ export const messages = {
     collected: {
       heading: "O que coletamos",
       account:
-        "A conta anônima e o seu histórico de jogos — quais puzzles você concluiu e quando. É disso que a sequência é calculada.",
+        "A conta anônima e o seu histórico de jogos — quais puzzles você concluiu e quando. É disso que a sequência é calculada. Puzzles antigos concluídos pelo arquivo são registrados do mesmo jeito, e ficam de fora da sequência.",
       email:
         "O seu e-mail, somente se você escolher vinculá-lo. Ninguém precisa vincular e-mail para jogar.",
       telemetry:

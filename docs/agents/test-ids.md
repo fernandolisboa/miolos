@@ -23,7 +23,9 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 035 (#30) **at its step 5 (implement)**, re-derived by grep over the branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 037 (#31) **at the end of its PR 1**, re-derived by grep over the branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+
+**Plan 037 holds live reservations that PR 2 has not spent yet** — `T-DB-S44…S55` and `S57`, `T-WEB-S166…S188`, `T-LINT-S35…S38`. "Next free" below skips them: a *different* plan allocating into that space would collide with a range already published in a committed plan. PR 2 re-derives this table at its own end.
 
 The grep that produces it, per area — titles only, so a cross-reference in a comment is not mistaken for an allocation:
 
@@ -33,11 +35,11 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S80` | `S77` | never used |
-| `T-DB` | `S44` | `S43` | `T-DB-21` |
-| `T-API` | `S97` | `S95` | `T-API-16` |
-| `T-WEB` | `S166` | `S163` | `T-WEB-23` |
-| `T-LINT` | `S35` | `S34` | `T-LINT-10` |
+| `T-CORE` | `S86` | `S84` | never used |
+| `T-DB` | `S58` | `S56` | `T-DB-21` |
+| `T-API` | `S109` | `S107` | `T-API-16` |
+| `T-WEB` | `S189` | `S163` | `T-WEB-23` |
+| `T-LINT` | `S39` | `S34` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
 
@@ -64,6 +66,10 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 
 #30 (plan 035) reserved `T-CORE-S70…S79`, `T-DB-S37…S43`, `T-API-S92…S96`, `T-WEB-S160…S165` and `T-LINT-S33…S34`, and spent `T-CORE-S70…S77`, `T-DB-S37…S43` (the whole db range), `T-API-S92…S95`, `T-WEB-S160…S163` and `T-LINT-S33`/`S34` (the whole lint range) at step 5, plus one sibling letter — `T-API-S77a` (`account-delete.test.ts`, the medal-grants cascade assertion inside `T-API-S77`'s landed claim — the sibling rule, not a fresh number). The tails (`T-CORE-S78`/`S79`, `T-API-S96`, `T-WEB-S164`/`S165`) are the reserved review-round headroom and are **burned if unspent** per the rule below. `T-LINT-S33`/`S34` sit on `it(...)` in `eslint-free-play-wall.test.ts` (that file's own convention, per the note above); the other web ids sit on `describe(...)`.
 
+#31 (plan 037) reserved `T-CORE-S80…S85`, `T-DB-S44…S57`, `T-API-S97…S108`, `T-WEB-S166…S188` and `T-LINT-S35…S38` across **two pull requests**, and its PR 1 (the write window) spent `T-CORE-S80…S84`, `T-DB-S56` and `T-API-S97…S107` at step 5. The rest of the DB, WEB and LINT ranges belong to PR 2 and are live reservations, not free space. The tails `T-CORE-S85` and `T-API-S108` were PR 1's reserved review-round headroom and are **burned** below, unspent.
+
+Four existing claims were widened in place and correctly took **no** new id — `T-DB-9e` (15 → 16 names) and `T-DB-S5` (34 → 35) for the counter's export, and `T-API-9b`, `T-API-S12`, `T-API-S23b`, `T-API-S37` for the write window's inverted lower bound. A tripwire that grows by one name is the same claim counting one more thing; a route test whose expected status flips is the same claim about the same gate. `T-API-S107` sits on **two** `it(...)`s of one claim (the ceiling's route behaviour and the source scan proving 429 is not terminal in the web client's sync ladder) — the same-file, same-claim shape `T-API-S13` and `T-API-S37` already ship.
+
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead.
 
 ## Burned slots
@@ -81,6 +87,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-WEB-S46` | plan 020 reserved it for the pointer-stroke extraction's `git diff --exit-code` gate — a COMMAND, not an `it`, so there is no marker to point at (same shape as `T-WEB-S13`/`S32`) |
 | `T-WEB-S60` | tail of plan 020's `T-WEB-S35…S60` range |
 | `T-WEB-S100` | plan 022 §19.6 reserved it for `test/route-ssr.test.tsx` — "both termo paths render with their marker and no function crosses the RSC boundary". The assertions landed, but **inside the existing `T-WEB-S56` describe** ("every route the impeccable preflight fetches"), which is where they belong: the two termo rows went into that suite's own `ROUTES` table. Same shape as `T-WEB-S41` |
+| `T-CORE-S85`, `T-API-S108` | tails of plan 037's PR-1 ranges — the reserved review-round headroom, unspent at PR 1's exit |
 | `T-CORE-S6` | **predates #27.** Plan 018 reserved it for `completion-contract.test.ts` (`docs/plans/018-…:1376`); the assertion landed unmarked. Recorded here so the next re-derivation does not spend a pass re-investigating the gap |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.
