@@ -783,6 +783,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "getPublishedDailyWithSolution",
       "getRemoteConfig",
       "getTodayDaily",
+      "getUserSince", // #29 (plan 033): widened in the same commit as the export
       "grantHints",
       "grantedHintsToday",
       "hintGrants",
@@ -790,6 +791,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
       "listBufferedDates",
       "listCompletionsForMerge",
+      "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
       "listCompletionsForStreak",
       "listUsedTermoAnswers",
       "mergeAccounts",
@@ -806,9 +808,11 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
     // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
     // user entry (plan 029 §6), #21 by one: `attachTokens` on the user
-    // entry (ADR-0050, ADR-0026 decision 5), never the root, and #21's
+    // entry (ADR-0050, ADR-0026 decision 5), never the root, #21's
     // step 7 by one more: `isWinnerLivenessError` on the user entry
-    // (finding C — the confirm route's retry discriminant).
-    expect(surface).toHaveLength(30);
+    // (finding C — the confirm route's retry discriminant), and #29 by
+    // exactly two: `listCompletionsForStats` and `getUserSince` on the
+    // user entry (plan 033 §3.1), never the root.
+    expect(surface).toHaveLength(32);
   });
 });

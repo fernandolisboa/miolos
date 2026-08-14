@@ -11,6 +11,7 @@
  * (CLAUDE.md invariant).
  */
 import type { CompletionOutcome } from "./completion";
+import { epochDay } from "./date";
 
 /**
  * One completion row as streak arithmetic sees it (ADR-0009). `onTime` is
@@ -33,34 +34,6 @@ export interface StreakStatus {
    * through yesterday while today did not maintain it.
    */
   readonly todayCounts: boolean;
-}
-
-const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-/**
- * 'YYYY-MM-DD' → whole days since the Unix epoch, via the Date.UTC triple —
- * timezone-free calendar arithmetic, the same trick as
- * `apps/api/src/publishing/dates.ts`. Private on purpose: core cannot import
- * from an app, and hoisting the app's helper here is a refactor with its own
- * blast radius that #19 does not need (plan 027 §5).
- */
-function epochDay(date: string): number {
-  const match = ISO_DATE.exec(date);
-  if (!match) {
-    throw new RangeError(`expected 'YYYY-MM-DD', got ${JSON.stringify(date)}`);
-  }
-  const year = Number(match[1]);
-  // Date.UTC backfills years 0–99 to 1900–1999, so "0026-…" would silently
-  // alias to 1926. No producer emits a pre-1000 date — every row is a
-  // Postgres `date` — so the guard REFUSES the range rather than escaping
-  // it via setUTCFullYear, which would put a Date object into a module
-  // whose whole register is no-clock, no-Date arithmetic (T-CORE-S35).
-  if (year < 1000) {
-    throw new RangeError(
-      `expected a year >= 1000, got ${JSON.stringify(date)}`,
-    );
-  }
-  return Date.UTC(year, Number(match[2]) - 1, Number(match[3])) / 86_400_000;
 }
 
 /**

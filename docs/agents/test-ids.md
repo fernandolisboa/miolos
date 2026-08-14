@@ -23,7 +23,7 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 031 (#21) **at its step 5**, re-derived by grep over the branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 033 (#29) **at its step 7 (review-fix round)**, re-derived by grep over the branch. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 The grep that produces it, per area — titles only, so a cross-reference in a comment is not mistaken for an allocation:
 
@@ -33,11 +33,11 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S59` | `S54` | never used |
-| `T-DB` | `S34` | `S29` | `T-DB-21` |
-| `T-API` | `S85` | `S84` | `T-API-16` |
-| `T-WEB` | `S153` | `S152` | `T-WEB-23` |
-| `T-LINT` | `S31` | `S28` | `T-LINT-10` |
+| `T-CORE` | `S70` | `S69` | never used |
+| `T-DB` | `S37` | `S36` | `T-DB-21` |
+| `T-API` | `S92` | `S91` | `T-API-16` |
+| `T-WEB` | `S160` | `S159` | `T-WEB-23` |
+| `T-LINT` | `S33` | `S32` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
 
@@ -59,6 +59,8 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 #20 (plan 029) reserved `T-CORE-S36…S48`, `T-DB-S16…S25` and `T-API-S54…S56`, and spent `T-CORE-S36…S46`, `T-DB-S16…S23` and `T-API-S54` at step 5; at step 7 it spent `T-DB-S24` from the reserved review-round headroom (the repoint column-list tripwire, `packages/db/test/merge.test.ts` — step-6 quality finding); the remaining tails (`T-CORE-S47`/`S48`, `T-DB-S25`, `T-API-S55`/`S56`) are the rest of that headroom and are **burned if unspent** per the rule below. No `T-WEB` and no `T-LINT` ids were reserved — the merge has no UI and no lint-wall change (plan 029 §9).
 
 #21 (plan 031) reserved `T-CORE-S49…S58`, `T-DB-S26…S33`, `T-API-S57…S81`, `T-WEB-S135…S150` and `T-LINT-S26…S30`, and spent `T-CORE-S49…S54`, `T-DB-S26…S29`, `T-API-S57…S81` (the whole api range — the plan-review round had already extended it contiguously to S81), `T-WEB-S135…S144` and `T-LINT-S26…S28` at step 5. The tails (`T-CORE-S55…S58`, `T-DB-S30…S33`, `T-WEB-S145…S150`, `T-LINT-S29`/`S30`) are the reserved review-round headroom and are **burned if unspent** per the rule below. The `/privacidade` and `/vincular` `route-ssr` rows ride `T-WEB-S56`'s table — the `T-WEB-S100` burn precedent, no new id. At step 7 (the six-lens review round) #21 spent fresh post-tail ids — `T-API-S82` (the attacker-revocation scenario, `attach.test.ts`), `T-API-S83` (a non-guard `mergeAccounts` failure is rethrown, never swallowed into 410/409), `T-API-S84` (`/attach/state` mirrors the FULL dormancy switch, `attach-state.test.ts`), the sibling `T-API-S79a` (the stale-intent guard's verified-holder variant — same claim family as S79), `T-WEB-S151` (the `/vincular` switch-account gate, `attach-confirm.test.tsx`) and `T-WEB-S152` (the malformed-token explainer, same file) — the burned tails stayed burned (the #19 step-7 precedent).
+
+#29 (plan 033) reserved `T-CORE-S59…S69`, `T-DB-S34…S36`, `T-API-S85…S90`, `T-WEB-S153…S159` and `T-LINT-S31…S32`, and spent **every id in every range** at step 5 — no tails, so nothing new burns. The `/estatisticas` `route-ssr` row rides `T-WEB-S56`'s ROUTES table (the `T-WEB-S100` burn precedent, no new id), and the two conclusion/free-play link tests edited to assert the now-live `routes.stats` href kept their shipped ids (`T-WEB-18`'s block, `T-WEB-S114`). `T-LINT-S31`/`S32` sit on `it(...)` in `eslint-free-play-wall.test.ts` — that file's own convention, per the note above. At step 7 (the six-lens review round) #29 spent one fresh post-range id — **`T-API-S91`** (the calendar route's cross-user isolation probe, `stats-calendar.test.ts`) — and five sibling letters, each a new assertion inside a landed id's claim: `T-CORE-S63a` (only a won row extends the calendar range — the step-6 won-only clamp correction), `T-CORE-S67a` (duplicate won-today termo rows answer the minimum), `T-CORE-S69a` (a calendar day must be a real day — `calendarDateString`), `T-API-S90a` (a lost row one day before birth never extends the range) and `T-WEB-S157a` (the conclusion's today-decorations drop on a `stats.date` mismatch).
 
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead.
 

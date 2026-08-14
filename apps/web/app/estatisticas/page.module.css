@@ -1,0 +1,513 @@
+/* Estatísticas — the statistics screen (#29, ADR-0051). The /privacidade
+   editorial register on the chrome: ink on desk paper, quiet headings. The
+   data surfaces (stat rows, histograms, calendar) follow F5's main-card
+   vocabulary — paper cards, hairline separators, tabular numerals, bars in
+   each game's accent — and every WORD stays --ink/--ink-2 (ADR-0041:
+   accents colour shapes, never words). */
+
+.page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-11) 80px var(--space-12);
+  max-width: 980px;
+}
+
+/* Anchored on the local class, never a bare `a:hover` (CSS Modules pure
+   mode). The state's carrier is the underline — the accent may colour the
+   rule, never the word (ADR-0041). App accent, not a game's: this screen
+   belongs to no single game. */
+.page a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-app);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.back {
+  font: var(--text-button);
+  text-decoration: none;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 600;
+  transform: rotate(-1deg);
+}
+
+.titleBlock {
+  margin-top: 44px;
+}
+
+.title {
+  margin: 0;
+  font: var(--text-screen-title);
+}
+
+/* ——— summary: Dias Perfeitos ————————————————————————————————————————
+   The streak stamp's register (DESIGN.md "Streak stamp card"): desk paper,
+   1.5px app-accent border, hard sealing-wax shadow, a subtle static
+   rotation. The accent stays on the border and shadow — SHAPES — and both
+   words are ink (ADR-0041; the hub stamp's accent TEXT is a named,
+   measured exception this card does not take). The numeral is Instrument
+   Sans + tabular-nums, NOT Fraunces: it sits beside the per-game counts
+   it must read consistently with (ADR-0036). */
+
+.summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+  width: fit-content;
+  background: var(--paper-desk);
+  border: 1.5px solid var(--accent-app);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent-app) 25%, transparent);
+  padding: var(--space-4) var(--space-6);
+  transform: rotate(-0.6deg);
+}
+
+.summaryNumeral {
+  font: 600 40px/1 var(--font-ui);
+  color: var(--ink);
+  /* After the shorthand, because `font:` resets font-variant-numeric. */
+  font-variant-numeric: tabular-nums;
+  /* One numeral wide at minimum, so the skeleton's blank holds the box. */
+  min-width: 1ch;
+  text-align: center;
+}
+
+.summaryLabel {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* ——— the four per-game blocks ———————————————————————————————————————
+   The hub card's chrome (page.module.css "Game card" register): card
+   paper, hairline border, hard shadow in the game's accent at 22%, washi
+   tape, alternating static rotations. */
+
+.games {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-7);
+  margin-top: 40px;
+}
+
+.gameCard {
+  position: relative;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+  padding: var(--space-11) var(--space-6) var(--space-6);
+}
+
+.gameCard:nth-child(1) {
+  transform: rotate(-0.4deg);
+}
+.gameCard:nth-child(2) {
+  transform: rotate(0.4deg);
+}
+.gameCard:nth-child(3) {
+  transform: rotate(0.3deg);
+}
+.gameCard:nth-child(4) {
+  transform: rotate(-0.3deg);
+}
+
+.tape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 78px;
+  height: 26px;
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: var(--radius-tape);
+}
+
+.gameCard:nth-child(1) .tape {
+  transform: translateX(-50%) rotate(-4deg);
+}
+.gameCard:nth-child(2) .tape {
+  transform: translateX(-50%) rotate(3deg);
+}
+.gameCard:nth-child(3) .tape {
+  transform: translateX(-50%) rotate(-3deg);
+}
+.gameCard:nth-child(4) .tape {
+  transform: translateX(-50%) rotate(4deg);
+}
+
+/* The hub kicker's post-ADR-0041 form: --ink-2 (5.3003:1 on card paper),
+   never the accent. */
+.cardKicker {
+  margin: 0;
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.cardTitle {
+  margin: var(--space-2) 0 0;
+  font: var(--text-card-title);
+}
+
+/* ——— stat rows — F5's register (f5-conclusao-desktop:33-35) ————————— */
+
+.statRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+  font-size: 14px;
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 10px;
+}
+
+.statRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.statLabel {
+  color: var(--ink-2);
+}
+
+.statValue {
+  font-weight: 600;
+  color: var(--ink);
+  /* One value wide at minimum, so the skeleton's blank holds the box. */
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* ——— histogram — DESIGN.md's component, all-time form —————————————————
+   The BAR carries the accent; the label is ink, because a histogram is
+   chrome that renders whichever accent the game supplies and so has no
+   ratio to measure (ADR-0041 decision 1). No "today" exists on this
+   screen, so every bar is solid; the conclusion's copy is the one that
+   highlights a bucket. */
+
+.histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.bucket {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.bucketTrack {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bucketBar {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+
+.bucketLabel {
+  font-size: 11px;
+  color: var(--ink);
+}
+
+/* ——— Termo's guess distribution — 7 horizontal rows, fail row last ——— */
+
+.distribution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.distRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.distLabel {
+  width: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.distTrack {
+  flex: 1;
+  height: 14px;
+  display: flex;
+}
+
+.distBar {
+  background: var(--accent);
+  border-radius: 0 3px 3px 0;
+}
+
+.distCount {
+  min-width: 2ch;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ——— calendar ————————————————————————————————————————————————————————
+   Per-date states, geometry FIRST and colour second (plan 033 §6.2's
+   binding carriers): filled / outlined / plain survive greyscale by
+   construction, and the perfect day rides a distinct SHAPE, never a word
+   (ADR-0041). The hue is the app accent — the calendar is app identity,
+   like the streak — and every boundary is measured against the card paper
+   the cells sit on:
+
+   - onTime FILL and late RING: `--accent-app` #9E3B2F (L 0.10602266) on
+     `--paper-card` #FBF7EF (L 0.93262753) = (0.93262753 + 0.05) /
+     (0.10602266 + 0.05) = **6.2980:1** — ADR-0041 decision 1's own
+     recorded figure for this exact pair, clearing WCAG 1.4.11's 3:1
+     non-text floor with room.
+   - the filled cell's NUMERAL and the perfect MARK are `--paper-card` ON
+     that fill: the same **6.2980:1**, which also clears the 4.5 text
+     floor.
+   - a missed day's numeral is `--ink-2` on card paper, **5.3003:1**; a
+     late day's is `--ink`, **15.6663:1**. */
+
+.calendar {
+  margin-top: var(--space-12);
+}
+
+.sectionHeading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+/* Reserved dimensions for the unsettled state: one month card's worth of
+   height, so the enumeration landing shifts nothing above it (#37). */
+.calendarSkeleton {
+  min-height: 300px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legendSwatch {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.month {
+  width: fit-content;
+  margin-top: var(--space-6);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  /* The F5 day card's NEUTRAL hard shadow (#D8D0C2): the months are a
+     ledger, not a celebration, so no accent here. */
+  box-shadow: var(--shadow-md) var(--line);
+  padding: var(--space-5);
+}
+
+.monthTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 19px;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 34px);
+  gap: 4px;
+  margin-top: var(--space-3);
+}
+
+.day,
+.dayPad {
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  border-radius: var(--radius-cell);
+}
+
+.day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dayNumeral {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* onTime: the FILLED cell (6.2980:1 boundary, see the section header). */
+.day[data-state="onTime"],
+.legendSwatch[data-state="onTime"] {
+  background: var(--accent-app);
+}
+
+.day[data-state="onTime"] .dayNumeral {
+  color: var(--paper-card);
+}
+
+/* late: the OUTLINED cell — a ring and no fill, ADR-0008's "visually
+   distinct 'solved later' state". Inset, so the geometry never moves. */
+.day[data-state="late"],
+.legendSwatch[data-state="late"] {
+  box-shadow: inset 0 0 0 2px var(--accent-app);
+}
+
+.day[data-state="late"] .dayNumeral {
+  color: var(--ink);
+}
+
+/* missed: EMPTY neutral paper — no ring, no fill; the padding cells
+   differ from it by carrying no numeral at all. The legend's missed
+   swatch takes the soft hairline so it is visible as a sample. */
+.legendSwatch[data-state="missed"] {
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+
+/* The Dia Perfeito marker: a small paper diamond on the filled cell —
+   a SHAPE at 6.2980:1 against its fill, never a word (ADR-0041). */
+.perfectMark {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  background: var(--paper-card);
+  transform: rotate(45deg);
+}
+
+@media (max-width: 768px) {
+  /* SINGLE DOCUMENT COLUMN on mobile (step-6 F1). The desktop shell is a
+     100dvh flex column; kept at one column width on a phone, that
+     composition opens the page with the tiny top bar / summary stamp and
+     the ~4-card games section sharing its first row — one sibling filling
+     5% of the viewport while another runs past 160%, the stretched-hero
+     signature `first-viewport-column-overflow` names (the fold falls deep
+     inside the section). Nothing here needs flex: no child grows, none
+     aligns, and the page is far taller than any viewport, so the honest
+     mobile shape is normal block flow — each section a full-width row in
+     the document, no viewport-height constraint stretching the opening. */
+  .page {
+    display: block;
+    min-height: auto;
+    padding: var(--space-5) var(--space-5) var(--space-6);
+  }
+
+  .topBar {
+    min-height: var(--touch-target-min);
+  }
+
+  .back {
+    padding: 10px 10px 10px 0;
+  }
+
+  .titleBlock {
+    margin-top: var(--space-5);
+  }
+
+  .title {
+    font-size: 34px;
+  }
+
+  .summary {
+    /* Block-level, not the desktop's atomic inline: in the page's mobile
+       block flow an inline-flex stamp would ride a text line box (strut
+       leading, baseline quirks); `flex` + the shared `width: fit-content`
+       keeps the card's box exactly as it was as a flex item. */
+    display: flex;
+    margin-top: var(--space-6);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .summaryNumeral {
+    font-size: 30px;
+  }
+
+  .games {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+    margin-top: 26px;
+  }
+
+  .gameCard {
+    padding: var(--space-8) var(--space-4) var(--space-4);
+  }
+
+  .tape {
+    top: -9px;
+    width: 54px;
+    height: 18px;
+  }
+
+  .cardTitle {
+    font-size: 22px;
+  }
+
+  .bucketTrack {
+    height: 64px;
+  }
+
+  .calendar {
+    margin-top: var(--space-8);
+  }
+
+  .sectionHeading {
+    font-size: 20px;
+  }
+
+  .monthGrid {
+    grid-template-columns: repeat(7, 30px);
+  }
+}

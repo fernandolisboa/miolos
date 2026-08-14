@@ -123,6 +123,11 @@ export const messages = {
     doneResultShort: (elapsed: string) => elapsed,
     doneAria: (game: string, elapsed: string) =>
       `${game} concluído em ${elapsed}`,
+    // The accessible name of a completed Termo tile once the server's
+    // guess count lands (#29, plan 033 D5). (n is the guess count, 1..6;
+    // "1 de 6 tentativas" is correct — tentativas agrees with 6.)
+    doneGuessesAria: (game: string, n: number) =>
+      `${game} concluído em ${n} de 6 tentativas`,
     /**
      * The chip on a PLAYED game's tile (#27, ADR-0008 decision 3, ADR-0044).
      * Capitalised, beside `done: "Feito"` — the hub's chip register. The day
@@ -145,16 +150,24 @@ export const messages = {
      * A THIRD string rather than a reuse, and both reuses are wrong in
      * opposite directions: `doneAria` requires an elapsed this entry does
      * not have, and `playedAria` says *jogado* about a game the player won.
-     * ADR-0018 forbids composing the fallback in the component. #29 replaces
-     * this tile's readout with `em 4/6` and may retire the string.
+     * ADR-0018 forbids composing the fallback in the component.
+     *
+     * IT SURVIVES #29 rather than retiring: `doneGuessesAria` above names
+     * the tile only once the server's guess count has LANDED and is about
+     * the tile's own day. While the stats fetch is unsettled, settled
+     * without a value, or answering for a different SP day (the DB clock
+     * and the web server can disagree across midnight), this string is the
+     * honest name — completed, with nothing false about a count the client
+     * does not hold (plan 033 D5).
      */
     completedAria: (game: string) => `${game} concluído`,
     links: {
       archive: "Arquivo",
       freePlay: "Modo livre",
       stats: "Estatísticas",
-      // Live since #21: /privacidade is a real route, so the hub links it
-      // (arquivo/estatisticas stay deliberately href-less until #31/#29).
+      // Live: /privacidade since #21, /estatisticas since #29 — a real
+      // route is what earns the href (arquivo stays deliberately href-less
+      // until #31).
       privacy: "Política de Privacidade",
     },
   },
@@ -239,6 +252,15 @@ export const messages = {
       aria: (count: number) =>
         `sequência de ${count} ${count === 1 ? "dia" : "dias"}`,
     },
+    /**
+     * The stat block's closing italic line (#29, plan 033 §6.4) — F5:50's
+     * own sentence, one string per direction and never joined in the
+     * component (ADR-0018). Gated by the component on
+     * `averageSampleCount >= 2` and a local duration; equal renders
+     * neither.
+     */
+    closingFaster: "hoje você foi mais rápido que a sua média.",
+    closingSlower: "hoje você foi mais devagar que a sua média.",
     ctaHome: "Fechar o dia — voltar para Hoje",
     // F5:65's own phrasing for this exact button — "Fechar o dia — jogar
     // Nonogram". Both CTA variants keep the "Fechar o dia" anchor and one
@@ -247,6 +269,73 @@ export const messages = {
     stats: "Ver estatísticas",
     notYet: {
       body: "O resumo aparece assim que a grade fechar.",
+    },
+  },
+  /**
+   * The statistics screen (#29, ADR-0051). The stat-row labels are F5's
+   * exact register — `Seu melhor tempo` / `Sua média (30 dias)` /
+   * `<Jogo>s resolvidos` (f5-conclusao-desktop.dc.html:33-35) — adopted on
+   * BOTH the conclusion (where F5 is the spec) and the stats screen: one
+   * register, no drift. The average's label carries its own `(30 dias)`
+   * because its population is the 30-day window while best and solved are
+   * all-time (ADR-0051 decision 6 — the labels carry the distinction).
+   */
+  stats: {
+    title: "Estatísticas",
+    perfectDays: {
+      label: "Dias Perfeitos",
+      aria: (n: number) =>
+        `${n} ${n === 1 ? "dia perfeito" : "dias perfeitos"}`,
+    },
+    rows: {
+      best: "Seu melhor tempo",
+      average: "Sua média (30 dias)",
+      solved: (name: string) => `${name}s resolvidos`, // F5:35 "Binairos resolvidos"
+    },
+    emptyValue: "—",
+    histogram: {
+      labels: ["<4", "4–5", "5–6", "6–7", "7–9", ">9"], // minutes, F5's exact glyph set — VISUAL only
+      // Spoken names per bucket — real words, never the glyph labels ("<4" is
+      // unreadable aloud). Index-aligned with TIME_BUCKET_BOUNDS_MS.
+      bucketNames: [
+        "menos de 4 minutos",
+        "entre 4 e 5 minutos",
+        "entre 5 e 6 minutos",
+        "entre 6 e 7 minutos",
+        "entre 7 e 9 minutos",
+        "mais de 9 minutos",
+      ],
+      aria: (bucketName: string, n: number) =>
+        `${n} ${n === 1 ? "jogo" : "jogos"} ${bucketName ? `— ${bucketName}` : ""}`.trim(),
+      // rendered e.g. "3 jogos — entre 4 e 5 minutos", "1 jogo — menos de 4 minutos"
+    },
+    termo: {
+      fail: "X",
+      rowAria: (guesses: number, n: number) =>
+        `${n} ${n === 1 ? "vitória" : "vitórias"} em ${guesses} ${guesses === 1 ? "tentativa" : "tentativas"}`,
+      failAria: (n: number) => `${n} ${n === 1 ? "derrota" : "derrotas"}`,
+    },
+    calendar: {
+      title: "Calendário",
+      // "missed" means NO COMPLETION that day — which covers both a day never
+      // played and a day played-and-lost (a lost Termo colours no day, plan
+      // 033 D6), so the legend word must be honest for both. "perdido"
+      // (collides with the loss vocabulary — it would say "lost" over a day
+      // the player lost at Termo, meaning the opposite thing) and "não
+      // jogado" (false for a played-lost day) are both rejected. Fernando
+      // may adjust.
+      legend: { onTime: "no dia", late: "mais tarde", missed: "sem conclusão" },
+      // Complete per-state day composers — the formatted date goes IN here,
+      // never joined in the component. `date` is formatLongDate(day.date).
+      dayAria: {
+        onTime: (date: string) => `${date}: concluído no dia`,
+        onTimePerfect: (date: string) =>
+          `${date}: concluído no dia — Dia Perfeito`,
+        late: (date: string) => `${date}: concluído mais tarde`,
+        missed: (date: string) => `${date}: sem conclusão`,
+      },
+      // (no separate perfectAria — the perfect marker's meaning rides the day
+      // composer above, so no composer declares a parameter it ignores)
     },
   },
   /**

@@ -151,6 +151,11 @@ const BUDGETED = [
   "/modo-livre/binairo",
   "/modo-livre/nonogram",
   "/modo-livre/sudoku",
+  // #29: daily scope by default (not under /modo-livre), and BUDGETED under
+  // the shared 40 KB because — unlike /privacidade — this route ships real
+  // client JS (the stats island, both hooks and the month grouping) and
+  // must be watched (plan 033 D11.4).
+  "/estatisticas",
 ];
 
 /**

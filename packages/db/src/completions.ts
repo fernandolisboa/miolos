@@ -41,8 +41,9 @@ export interface CompletionRecord {
 /**
  * THE `on_time` derivation (ADR-0026 decision 2: "in one place and one
  * language"). Every reader projects this one expression — the two readers
- * here plus `listCompletionsForMerge` (merge.ts) — a second spelling
- * anywhere is the drift that decision exists to prevent. #58, if it lands,
+ * here plus `listCompletionsForMerge` (merge.ts) and
+ * `listCompletionsForStats` (stats.ts, #29) — a second spelling anywhere
+ * is the drift that decision exists to prevent. #58, if it lands,
  * replaces this producer with a stored column and nothing downstream.
  */
 export function onTimeSql() {

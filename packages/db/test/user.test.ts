@@ -103,11 +103,13 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "completions",
       "getCompletion",
+      "getUserSince", // #29 (plan 033): widened in the same commit as the export
       "grantHints",
       "grantedHintsToday",
       "hintGrants",
       "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
       "listCompletionsForMerge",
+      "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
       "listCompletionsForStreak",
       "mergeAccounts",
       "recordCompletion",

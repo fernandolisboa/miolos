@@ -1,10 +1,9 @@
 /* The conclusion — SHARED by every game (ADR-0029, plan 018 §5.2).
    Desktop-first per f5-conclusao-desktop, mobile per f6-conclusao-mobile,
-   with the scope table of plan 017 §12.3 applied as amended by #19:
-   best/average/solved, the histogram, the closing italic line and the
-   share button remain out (#29/#34), so the desktop composition is
-   redesigned within the system rather than left as an empty rectangle at
-   48px padding. The streak card is live since #19 (ADR-0048) — F5:54-56's
+   with the scope table of plan 017 §12.3 applied as amended by #19 and
+   #29: the stat rows, the histogram and the closing italic line are live
+   (`.statsBlock` below, plan 033 D13); only the share button remains out
+   (#34). The streak card is live since #19 (ADR-0048) — F5:54-56's
    sealing-wax card, `.streakCard` below.
 
    Every accent here is `var(--accent)`, set inline on the root from
@@ -753,8 +752,10 @@
   --rule-width: 2px;
   border-bottom: var(--rule-width) solid var(--line);
   padding-bottom: calc(6px - var(--rule-width));
-  /* No cursor: pointer while the anchor is href-less; it returns when #29
-     lands the statistics route. */
+  /* Live since #29: the anchor carries the statistics route, so the
+     pointer returns. Not shared with any href-less sibling — a plain rule
+     is enough here, unlike the hub's scoped `.secondaryLink[href]`. */
+  cursor: pointer;
 }
 
 /* This link already HAS the shape ADR-0041 decision 4 asks for — a rule under
@@ -1114,5 +1115,168 @@
 
   .skeletonCard {
     height: 220px;
+  }
+}
+
+/* ── the stat block (#29, plan 033 §6.4) ─────────────────────────────────
+   F5's main-card composition, filled at last: stat rows (F5:33-35),
+   histogram (F5:38-48) and the closing italic line (F5:50) for the timed
+   games; the 7-row guess distribution for Termo. Every bar is a SHAPE in
+   the game's accent and every word is ink (ADR-0041); every numeral that
+   must align is Instrument Sans + tabular-nums (ADR-0036). Placed after
+   the shared blocks and BEFORE nothing it overrides — all class names are
+   this block's own. */
+
+.statsBlock {
+  margin-top: var(--space-6);
+}
+
+.statRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+  font-size: 14px;
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 10px;
+}
+
+.statRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.statLabel {
+  color: var(--ink-2);
+}
+
+.statValue {
+  font-weight: 600;
+  color: var(--ink);
+  /* One value wide at minimum, so the skeleton's blank holds the box. */
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* DESIGN.md's Histogram: today's bucket solid accent + bold label, the
+   others rgba(accent, 0.25) — the system's own component spec, carried by
+   `data-today` (a geometry-and-weight hook, so the state survives a
+   colour-blind reading through the bold label). */
+.histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.bucket {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.bucketTrack {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bucketBar {
+  width: 100%;
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 3px 3px 0 0;
+}
+
+.bucket[data-today] .bucketBar {
+  background: var(--accent);
+}
+
+.bucketLabel {
+  font-size: 11px;
+  color: var(--ink);
+}
+
+.bucket[data-today] .bucketLabel {
+  font-weight: 700;
+}
+
+/* Termo's rows: today's row solid + bold count, the others tinted — the
+   same data-today carrier as the histogram. */
+.distribution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.distRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.distLabel {
+  width: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.distTrack {
+  flex: 1;
+  height: 14px;
+  display: flex;
+}
+
+.distBar {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 0 3px 3px 0;
+}
+
+.distRow[data-today] .distBar {
+  background: var(--accent);
+}
+
+.distCount {
+  min-width: 2ch;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.distRow[data-today] .distCount {
+  font-weight: 700;
+}
+
+/* F5:50 verbatim: italic Fraunces, --ink-2 (5.3003:1 on card paper). */
+.closingLine {
+  margin: var(--space-6) 0 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 768px) {
+  .statsBlock {
+    margin-top: var(--space-5);
+  }
+
+  .bucketTrack {
+    height: 56px;
+  }
+
+  .closingLine {
+    /* F6:42 draws 13px — its own composition, not a truncation. */
+    font-size: 13px;
   }
 }

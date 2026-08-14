@@ -52,6 +52,9 @@ export const routes = {
   freePlayBinairo: `/${routeSlugs.freePlay}/${routeSlugs.binairo}`,
   freePlaySudoku: `/${routeSlugs.freePlay}/${routeSlugs.sudoku}`,
   freePlayNonogram: `/${routeSlugs.freePlay}/${routeSlugs.nonogram}`,
+  // #29 (ADR-0051): the statistics screen — index only, no per-game
+  // sub-paths (one screen, sectioned; plan 033 D11).
+  stats: `/${routeSlugs.stats}`,
   attach: `/${routeSlugs.attach}`,
   privacy: `/${routeSlugs.privacy}`,
 } as const;

@@ -312,7 +312,7 @@ describe("the day card and the CTA (T-WEB-18)", () => {
     ).toBeInTheDocument();
   });
 
-  it("points the CTA at Hoje and leaves the statistics link dead", () => {
+  it("points the CTA at Hoje and the statistics link at /estatisticas", () => {
     // Every playable daily done, which is the only state that still ends the
     // day at Hoje now that the CTA chains (plan 018 S21 supersedes plan 017
     // §12.3's CTA row and its deviation 9). The set grows with `playRoutes`:
@@ -335,11 +335,12 @@ describe("the day card and the CTA (T-WEB-18)", () => {
     expect(
       screen.getByText(messages.conclusion.ctaHome).closest("a"),
     ).toHaveAttribute("href", routes.home);
-    // #29 owns the statistics screen; Hoje's shipped links are href-less
-    // for the same reason.
+    // Live since #29: /estatisticas is a real route, so the link carries
+    // it (T-WEB-S159 pins both activations; this keeps the day-card suite's
+    // own composition honest).
     expect(
       screen.getByText(messages.conclusion.stats).closest("a"),
-    ).not.toHaveAttribute("href");
+    ).toHaveAttribute("href", routes.stats);
   });
 });
 
@@ -1350,12 +1351,18 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
   });
 
   it("on recorded: the skeleton mounts at final dimensions, then the value settles in", async () => {
-    // A deferred response: the resolution is the test's to time.
+    // A deferred response: the resolution is the test's to time. CLONED
+    // per call since #29 — the recorded conclusion now fires two gated
+    // reads (streak and stats), and a single Response body can only be
+    // read once: without the clone, whichever consumer called `.json()`
+    // second threw, and when that was the streak the card under test
+    // unmounted. The stats read parses this body against ITS strict
+    // schema, fails, and settles to its own honest absence — harmless.
     let resolveFetch: (response: Response) => void = () => undefined;
     const deferred = new Promise<Response>((resolve) => {
       resolveFetch = resolve;
     });
-    fetchMock = vi.fn(() => deferred);
+    fetchMock = vi.fn(() => deferred.then((response) => response.clone()));
     vi.stubGlobal("fetch", fetchMock);
     writePlayRecord(concluded());
 

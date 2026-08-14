@@ -1,6 +1,6 @@
 "use client";
 
-import type { Game } from "@miolos/core";
+import { timeBucketIndex, type Game } from "@miolos/core";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -13,6 +13,7 @@ import {
   routes,
   type Route,
 } from "../i18n";
+import { useStats } from "../stats/use-stats";
 import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
@@ -63,14 +64,13 @@ export interface ConclusionResult {
  * `date` is the SERVER's day, resolved from the wall by the page shell — the
  * client clock never selects which record is read (CONTEXT.md "Rollover").
  *
- * Three frame elements are deliberately absent, because rendering empty stat
- * rows would be fake data: best/average/solved and the histogram (#29), the
- * closing italic line (#29, it compares against an average that does not
- * exist) and the share button (#34 — a dead share button is a broken
- * promise, unlike a dead link). §12.3 carried the full table; #19 filled the
- * fourth gap — the streak card is live below, server-computed and gated on
- * the day being on the server (ADR-0048), so every unfetched state stays
- * exactly as honest as the old absence.
+ * Of the frame's three deliberate absences, #29 filled two: the stat rows
+ * with their histogram and the closing italic line are live below
+ * (`ConclusionStats`), server-computed and gated on the day being on the
+ * server exactly like the streak card (ADR-0048 decision 4, plan 033 D13),
+ * so every unfetched state stays exactly as honest as the old absence. The
+ * share button remains out (#34 — a dead share button is a broken promise,
+ * unlike a dead link).
  *
  * `picture` is the first per-game payoff payload (ADR-0034 decision 3): plain
  * data, optional, and supplied only by a client component that owns the local
@@ -335,6 +335,20 @@ export function ConclusionView({
             </svg>
           </div>
         )}
+        {/* The StreakCard's gate, on the stat block too (ADR-0048 decision
+            4, plan 033 D13). The REAL invariant it buys (stated exactly —
+            step-6 F4): `recorded` guarantees the just-finished game's ROW
+            is on the server, so every aggregate the block renders includes
+            it. It does NOT guarantee the server still holds the record's
+            day AS today — a retry landing after the SP midnight records
+            the solve as a LATE win, excluded from histogram/best/average.
+            The today-decorations (bucket highlight, closing line) therefore
+            additionally require `stats.date === date` inside the block.
+            Offline/pending/rejected states render the shipped absence,
+            which is honest. */}
+        {syncOutcome === "recorded" && (
+          <ConclusionStats game={game} date={date} result={stamp} lost={lost} />
+        )}
         {syncOutcome === "pending" && (
           <p className={styles.sync}>{messages.conclusion.sync.pending}</p>
         )}
@@ -389,10 +403,12 @@ export function ConclusionView({
             {messages.conclusion.ctaNext(messages.games[next.game].name)}
           </Link>
         )}
-        {/* href-less, matching Hoje's shipped secondary links: the stats
-            screen arrives with #29 and a dead href would be fake
-            navigation. */}
-        <a className={styles.secondaryLink}>{messages.conclusion.stats}</a>
+        {/* Live since #29: /estatisticas is a real route, so the link
+            carries it — the same rule that kept it href-less while a dead
+            href would have been fake navigation. */}
+        <Link className={styles.secondaryLink} href={routes.stats}>
+          {messages.conclusion.stats}
+        </Link>
       </aside>
     </main>
   );
@@ -449,6 +465,234 @@ function StreakCard() {
         )}
       </span>
     </section>
+  );
+}
+
+/**
+ * The stat block (#29, plan 033 §6.4/D13) — F5's main-card composition:
+ * the three stat rows, the 6-bucket histogram with TODAY's bucket
+ * highlighted, and the closing italic line for the timed games; the 7-row
+ * guess distribution with today's row highlighted for Termo, on both
+ * outcomes (ADR-0043's loss state included). No Termo time exists anywhere
+ * (ADR-0045 decision 4).
+ *
+ * The CALLER gates it on `syncOutcome === "recorded"` (the StreakCard's
+ * mechanism), so this component's own machine has the same three states:
+ * fetch in flight → the block at final dimensions with values blanked
+ * (`BLANK_VALUE`); settled without a value → unmount back to the shipped
+ * absence; resolved → the numbers, which include today's game — as a row —
+ * by the gate's construction.
+ *
+ * `recorded` proves the ROW is on the server; it does NOT prove the server
+ * still holds `date` as its today (a retry across the SP midnight records
+ * a LATE win, absent from histogram/best/average). So the
+ * today-decorations — the bucket highlight and the closing line — require
+ * `stats.date === date` on top (the `TermoDoneLink` day-match rule,
+ * step-6 F4), and a bucket is only ever highlighted when its own count is
+ * nonzero: no claim the server doesn't hold.
+ *
+ * Today's bucket comes from the LOCAL duration (`result`), today's Termo
+ * row from `todayTermoGuesses` on a win (its second call site) and the
+ * fail row from the local outcome on a loss. The markup is a per-sheet
+ * sibling of the stats screen's own (`app/estatisticas/stats-view.tsx`),
+ * not a shared component — CSS Modules hash per file, the
+ * `hub-day-state.tsx` reason.
+ */
+function ConclusionStats({
+  game,
+  date,
+  result,
+  lost,
+}: {
+  readonly game: Game;
+  readonly date: string;
+  readonly result: ConclusionResult | undefined;
+  readonly lost: boolean;
+}) {
+  const stats = useStats();
+  if (stats === null) {
+    return null;
+  }
+  const loaded = stats !== undefined;
+  // The server holds the record's day AS its today: string equality on
+  // the contract's own `date`, the TermoDoneLink rule.
+  const dayMatches = loaded && stats.date === date;
+  if (game === "termo") {
+    const counts = loaded
+      ? stats.termo.distribution
+      : ([0, 0, 0, 0, 0, 0, 0] as const);
+    const max = Math.max(...counts, 1);
+    // On a loss the fail row is today's — a lost row is in the fail row
+    // UNQUALIFIED (ADR-0008 rule 3), so the highlight is honest on any
+    // day the server holds. On a win, the server's own today value —
+    // never the local guess count — and only when the server's day IS the
+    // record's day: `todayTermoGuesses` describes `stats.date`, not this
+    // screen (otherwise nothing is highlighted, honestly).
+    const todayRow = lost
+      ? 6
+      : loaded && dayMatches && stats.todayTermoGuesses !== null
+        ? stats.todayTermoGuesses - 1
+        : undefined;
+    return (
+      <div
+        className={styles.statsBlock}
+        aria-hidden={loaded ? undefined : true}
+        data-stats-state={loaded ? "value" : "skeleton"}
+      >
+        <div className={styles.distribution}>
+          {counts.map((count, index) => {
+            const fail = index === 6;
+            return (
+              <div
+                key={fail ? messages.stats.termo.fail : index + 1}
+                role="img"
+                aria-label={
+                  fail
+                    ? messages.stats.termo.failAria(count)
+                    : messages.stats.termo.rowAria(index + 1, count)
+                }
+                className={styles.distRow}
+                data-today={todayRow === index ? "" : undefined}
+              >
+                <span
+                  aria-hidden
+                  className={`${styles.distLabel} tabular-nums`}
+                >
+                  {fail ? messages.stats.termo.fail : index + 1}
+                </span>
+                <div aria-hidden className={styles.distTrack}>
+                  <div
+                    className={styles.distBar}
+                    style={{ width: `${String((count / max) * 100)}%` }}
+                  />
+                </div>
+                <span
+                  aria-hidden
+                  className={`${styles.distCount} tabular-nums`}
+                >
+                  {loaded ? count : BLANK_VALUE}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  const block = loaded ? stats[game] : undefined;
+  const counts = block?.histogram ?? ([0, 0, 0, 0, 0, 0] as const);
+  const max = Math.max(...counts, 1);
+  // The local record's duration, not the server's: this bucket is "where
+  // today's solve landed", and the local number is the one the stamp
+  // already shows. No local duration → no bucket highlighted; and no
+  // highlight either unless the server holds the day AS today — a late
+  // win is absent from the histogram, so its bucket may hold a count the
+  // solve is not in (possibly zero). The render additionally marks only a
+  // bucket whose own count is nonzero: the highlight claims "your solve
+  // is in this bar", and an empty bar holds nothing to claim (step-6 F4).
+  const todayBucket =
+    result === undefined || !dayMatches
+      ? undefined
+      : timeBucketIndex(result.elapsedMs);
+  const name = messages.games[game].name;
+  return (
+    <div
+      className={styles.statsBlock}
+      aria-hidden={loaded ? undefined : true}
+      data-stats-state={loaded ? "value" : "skeleton"}
+    >
+      <div className={styles.statRows}>
+        <StatRow
+          label={messages.stats.rows.best}
+          value={
+            block === undefined
+              ? BLANK_VALUE
+              : block.bestMs === null
+                ? messages.stats.emptyValue
+                : formatElapsed(block.bestMs)
+          }
+        />
+        <StatRow
+          label={messages.stats.rows.average}
+          value={
+            block === undefined
+              ? BLANK_VALUE
+              : block.averageMs === null
+                ? messages.stats.emptyValue
+                : formatElapsed(block.averageMs)
+          }
+        />
+        <StatRow
+          label={messages.stats.rows.solved(name)}
+          value={block === undefined ? BLANK_VALUE : String(block.solved)}
+        />
+      </div>
+      <div className={styles.histogram}>
+        {counts.map((count, index) => (
+          <div
+            key={messages.stats.histogram.labels[index]}
+            role="img"
+            aria-label={messages.stats.histogram.aria(
+              messages.stats.histogram.bucketNames[index] ?? "",
+              count,
+            )}
+            className={styles.bucket}
+            data-today={todayBucket === index && count > 0 ? "" : undefined}
+          >
+            <div aria-hidden className={styles.bucketTrack}>
+              <div
+                className={styles.bucketBar}
+                style={{ height: `${String((count / max) * 100)}%` }}
+              />
+            </div>
+            <span aria-hidden className={`${styles.bucketLabel} tabular-nums`}>
+              {messages.stats.histogram.labels[index]}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* F5:50's closing line, gated on the day-match AND the AVERAGE'S
+          OWN sample population: `dayMatches` is what makes "today's row
+          is in the 30-day sample" true — recorded alone proves only the
+          ROW, and a late win is outside the average's population, where
+          `>= 2` would lose its "today plus one other" meaning (step-6
+          F4). With both, `>= 2` is today plus at least one other on-time
+          win — the line never compares a value against a mean of itself
+          alone. The comparison is against the INCLUSIVE average, which is
+          honest because its direction always agrees with the exclusive
+          one — x < mean(S ∪ {x}) ⇔ x < mean(S) for nonempty S — so F5's
+          sentence stays true under either reading. Equal renders neither
+          line. */}
+      {loaded &&
+        dayMatches &&
+        result !== undefined &&
+        block !== undefined &&
+        block.averageSampleCount >= 2 &&
+        block.averageMs !== null &&
+        result.elapsedMs !== block.averageMs && (
+          <p className={styles.closingLine}>
+            {result.elapsedMs < block.averageMs
+              ? messages.conclusion.closingFaster
+              : messages.conclusion.closingSlower}
+          </p>
+        )}
+    </div>
+  );
+}
+
+/** One F5 stat row: label in `--ink-2`, value tabular in `--ink`. */
+function StatRow({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: string;
+}) {
+  return (
+    <div className={styles.statRow}>
+      <span className={styles.statLabel}>{label}</span>
+      <span className={`${styles.statValue} tabular-nums`}>{value}</span>
+    </div>
   );
 }
 

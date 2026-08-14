@@ -271,8 +271,14 @@
   text-decoration: none;
   border-bottom: 2px solid var(--line);
   padding-bottom: var(--space-1);
-  /* No cursor: pointer while the anchor is href-less; it returns when real
-     hrefs land. */
+}
+
+/* A SHARED class over four links, and only `arquivo` is still href-less
+   (#31), so the pointer returns through the attribute selector — the
+   `.cta[href]` discipline above — never a bare rule that would put a
+   pointer cursor on the one still-inert anchor. */
+.secondaryLink[href] {
+  cursor: pointer;
 }
 
 .spacer {
