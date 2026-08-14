@@ -97,6 +97,8 @@ All of [handoff 038 §3](./038-handoff-31-merged-the-archive-is-live.md) stands 
 
 7. **`pnpm install --frozen-lockfile` returning "Already up to date" in 350ms proves nothing about the cooldown**, because a warm `node_modules` short-circuits resolution. The cold-install evidence is CI run [`31844446116`](https://github.com/fernandolisboa/miolos/actions/runs/31844446116).
 
+8. **`packages/games` `P2 — determinism` flakes on CI, and it is now a merge blocker.** 038 §3 recorded it as a local full-concurrency flake. **This handoff's own PR — two markdown files, zero code — went red on it**: `test/binairo/generate.test.ts > generateBinairo > P2 — determinism` timed out at **5165ms against vitest's 5000ms default** in gate run [`31846743499`](https://github.com/fernandolisboa/miolos/actions/runs/31846743499), while the same suite passed locally uncached. The test is `fc.assert(…, { numRuns: 100 })` generating **200** Binairo puzzles with **no explicit timeout** (`packages/games/test/binairo/generate.test.ts:69-78`), which is exactly what the napkin's Execution & Validation item 3 says not to ship — CI runners are 3-4× slower, so any test near its timeout locally is a coin flip there. **Diagnosis before re-run:** confirm the failing test is unrelated to your diff, then `gh run rerun <id> --failed`. **The durable fix** is an explicit timeout sized at local wall time × 4 with the arithmetic in a comment, per ADR-0023's constraint that this property keeps its ≥100 runs — it is not filed as an issue yet and is a good small ticket for whoever tires of re-running.
+
 **`docs/` numbering:** handoff 039 is this file. Next plan/handoff: **`040`**. Next ADR: **`0054`**.
 
 ---
