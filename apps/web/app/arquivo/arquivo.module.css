@@ -1,0 +1,340 @@
+/* Arquivo — the archive's three read-only surfaces (#31, ADR-0053): the
+   index, a month and a day. ONE sheet for all three, because the day row is
+   the same object on the index and on a month page and a second copy is how
+   they drift (plan 037 §7.5).
+
+   The /estatisticas editorial register on the chrome — ink on desk paper,
+   quiet headings, hairline separators — and the hub's Game-card vocabulary
+   on the day page, which is the one archive surface where a card is right:
+   each card is a distinct destination with its own identity and there are at
+   most four of them.
+
+   ADR-0041 throughout: an accent may colour a SHAPE (the row's 2px rule, the
+   card's border and hard shadow, the washi tape) and never a WORD. Every
+   word on this sheet is --ink or --ink-2. ADR-0036 on the dates: a column of
+   dates is a column of figures, so it is Instrument Sans + tabular-nums and
+   never Fraunces, which has no tabular figures at all. */
+
+.page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-11) 80px var(--space-12);
+  /* ONE column at every width. The content is one list, and a second column
+     would be filler — the anti-reference the brief calls out by name. */
+  max-width: 760px;
+}
+
+/* Anchored on the local class, never a bare `a:hover` (CSS Modules pure
+   mode). The state's carrier is the underline — the accent may colour the
+   rule, never the word (ADR-0041). App accent, not a game's: the archive
+   belongs to no single game. */
+.page a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-app);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.back {
+  font: var(--text-button);
+  text-decoration: none;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 600;
+  transform: rotate(-1deg);
+}
+
+.barKicker {
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.titleBlock {
+  margin-top: 44px;
+}
+
+.title {
+  margin: 0;
+  font: var(--text-screen-title);
+}
+
+.lead {
+  margin: var(--space-4) 0 0;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* ——— sections ————————————————————————————————————————————————————————
+   BARE on desk paper, never a card. A day row inside a card inside a section
+   is exactly how card-inside-card happens, which the anti-references ban;
+   the rows are separated by hairlines instead, the F5 stat-row register. */
+
+.section {
+  margin-top: var(--space-10, 40px);
+}
+
+.sectionHeading {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 550;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* A hairline BETWEEN rows — none above the first, none below the last. */
+.row + .row {
+  border-top: 1px solid var(--line-soft);
+}
+
+/* One <Link> per row, one touch target. `min-height` rather than padding
+   alone, so a short row (a date holding one game) is the same target as a
+   full one. */
+.rowLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--touch-target-min);
+  padding: var(--space-2) 0;
+  text-decoration: none;
+}
+
+/* ADR-0036 decision 1's exact case: a column of dates is a column of
+   figures, so Instrument Sans with tabular figures — never the display
+   face, whose digits carry a ~2.2px spread. */
+.rowDate {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.rowGames {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* The game's accent as a 2px LEFT RULE — a shape (ADR-0041 decision 1) — and
+   the name itself in --ink. The rule never carries meaning alone: the row's
+   accessible name is one composed sentence naming the date and the games
+   (ADR-0041 decision 5, `messages.archive.dayRowAria`).
+
+   A SHORT day renders fewer names and nothing else: no placeholder, no
+   greyed slot, no "3 de 4". A disabled-looking affordance would be fake
+   navigation, which is the hub's own rule — and a killed game produces
+   exactly this same shape, which matters because the kill switch is the
+   whole reason these pages are uncached (ADR-0053 decision 2). */
+.rowGame {
+  border-left: 2px solid var(--accent);
+  padding-left: var(--space-2);
+  font: var(--text-kicker);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* ——— months ————————————————————————————————————————————————————————
+   A wrapping row of chips. No accent: a month has no game. */
+
+.months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.monthChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: var(--text-kicker);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* ——— month page: previous / next ——————————————————————————————————— */
+
+.monthNav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.monthNavLink {
+  font: var(--text-kicker);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* Pushes a lone `next` to the right when there is no `previous`. */
+.monthNavLink:only-child:last-child {
+  margin-left: auto;
+}
+
+/* ——— day page: the game cards —————————————————————————————————————
+   The hub's Game-card register (DESIGN.md "Game card"): card paper, 1px line
+   border, hard shadow in the game accent at 0.22, washi tape top-centre,
+   kicker + Fraunces title. Static rotations, alternating sign, never
+   animated. */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  list-style: none;
+  margin: var(--space-8) 0 0;
+  padding: 0;
+}
+
+.card {
+  position: relative;
+  display: block;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent) 22%, transparent);
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  text-decoration: none;
+}
+
+.cardOdd {
+  transform: rotate(-0.8deg);
+}
+
+.cardEven {
+  transform: rotate(0.6deg);
+}
+
+/* Decoration with nothing to announce — `aria-hidden` at the call site. */
+.tape {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 72px;
+  height: 14px;
+  margin-left: -36px;
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: var(--radius-tape);
+  transform: rotate(-4deg);
+}
+
+.cardKicker {
+  margin: 0;
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.cardTitle {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 550;
+  color: var(--ink);
+}
+
+/* ——— the empty archive ————————————————————————————————————————————
+   An honest sentence where the sections would be. 200 with its marker — the
+   resource exists and is empty, which is not a 404 — and no skeleton and no
+   fake rows. */
+.empty {
+  margin-top: var(--space-10, 40px);
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.spacer {
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  /* SINGLE DOCUMENT COLUMN on mobile, the /estatisticas fix (#29 step-6 F1):
+     a 100dvh flex column kept at one column width on a phone opens the page
+     with the tiny top bar and the first section sharing a row — the
+     `first-viewport-column-overflow` signature. Nothing here needs flex, and
+     the page is far taller than any viewport, so normal block flow is the
+     honest mobile shape. */
+  .page {
+    display: block;
+    min-height: auto;
+    padding: var(--space-5) var(--space-5) var(--space-6);
+  }
+
+  .topBar {
+    min-height: var(--touch-target-min);
+  }
+
+  .back {
+    padding: 10px 10px 10px 0;
+  }
+
+  .titleBlock {
+    margin-top: var(--space-5);
+  }
+
+  .title {
+    font-size: 34px;
+  }
+
+  /* The row stacks: a date above its games rather than beside them, so a
+     four-game day never squeezes the date column at 390px. */
+  .rowLink {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    padding: var(--space-3) 0;
+  }
+
+  .rowGames {
+    justify-content: flex-start;
+  }
+
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .spacer {
+    display: none;
+  }
+}

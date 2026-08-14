@@ -38,6 +38,11 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     "app/page.module.css",
     "src/nonogram/nonogram-board.module.css",
     "app/estatisticas/page.module.css",
+    // #31 (ADR-0053): the archive's three read-only surfaces. It paints
+    // `var(--accent)` on the day row's 2px rule and on the day card's border
+    // and hard shadow — shapes, never words — and an unlisted sheet is
+    // invisible to the whole automated ADR-0041 gate.
+    "app/arquivo/arquivo.module.css",
   ] as const;
 
   it("leaves no desk label on an accent fill, in any stylesheet", () => {
@@ -191,6 +196,10 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     "src/play/conclusion-view.module.css",
     "app/page.module.css",
     "app/estatisticas/page.module.css",
+    // #31: the archive renders whichever accent a day's games supply — up to
+    // all four on one row — so it is exactly the class of sheet this scan
+    // exists for, and it ships with ZERO accent-coloured text.
+    "app/arquivo/arquivo.module.css",
   ] as const;
 
   /**

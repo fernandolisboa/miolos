@@ -70,10 +70,12 @@ describe("the two Estatísticas links carry routes.stats (T-WEB-S159)", () => {
 
     const link = screen.getByText(messages.hoje.links.stats).closest("a");
     expect(link).toHaveAttribute("href", routes.stats);
-    // The scope control: `arquivo` stays deliberately href-less (#31).
+    // The scope control, live since #31: `arquivo` carries its own route
+    // now, and asserting the DIFFERENT href is what keeps this test from
+    // passing on a nav that gave every link the same one.
     expect(
       screen.getByText(messages.hoje.links.archive).closest("a"),
-    ).not.toHaveAttribute("href");
+    ).toHaveAttribute("href", routes.archive);
   });
 
   it("gives the conclusion's 'Ver estatísticas' the same href", async () => {

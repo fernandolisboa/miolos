@@ -1,0 +1,154 @@
+import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { formatMonth, messages } from "../src/i18n";
+
+// One month of the archive (#31 AC 1, ADR-0053 decision 1). The page is an
+// async server component, so it is invoked as a plain function; the view it
+// returns is rendered directly.
+
+const spies = vi.hoisted(() => ({
+  stubDb: {},
+  getDb: vi.fn(),
+  listArchivedDays: vi.fn(),
+  listArchivedMonths: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+}));
+
+vi.mock("../src/db", () => ({ getDb: spies.getDb }));
+vi.mock("@miolos/db", () => ({
+  listArchivedDays: spies.listArchivedDays,
+  listArchivedMonths: spies.listArchivedMonths,
+}));
+vi.mock("next/navigation", () => ({
+  notFound: spies.notFound,
+  redirect: vi.fn(),
+}));
+
+const { default: ArchiveMonthPage, generateMetadata } =
+  await import("../app/arquivo/mes/[mes]/page");
+
+beforeEach(() => {
+  spies.getDb.mockReturnValue(spies.stubDb);
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("the archive month page (T-WEB-S169)", () => {
+  it("T-WEB-S169: renders that month's day rows with previous/next month navigation", async () => {
+    spies.listArchivedDays.mockResolvedValue([
+      { date: "2026-08-02", game: "binairo" },
+      { date: "2026-08-02", game: "sudoku" },
+      { date: "2026-08-01", game: "binairo" },
+    ]);
+    spies.listArchivedMonths.mockResolvedValue([
+      "2026-09",
+      "2026-08",
+      "2026-07",
+    ]);
+
+    render(
+      await ArchiveMonthPage({ params: Promise.resolve({ mes: "2026-08" }) }),
+    );
+
+    // The reader is asked for the month's own inclusive edges, in SQL —
+    // never a string slice over an unbounded read.
+    expect(spies.listArchivedDays).toHaveBeenCalledWith(spies.stubDb, {
+      from: "2026-08-01",
+      to: "2026-08-31",
+    });
+
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: formatMonth("2026-08-01"),
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+
+    // `months` is newest-first, so NEXT is the neighbour before this one.
+    expect(
+      screen.getByRole("link", {
+        name: messages.archive.month.next(formatMonth("2026-09-01")),
+      }),
+    ).toHaveAttribute("href", "/arquivo/mes/2026-09");
+    expect(
+      screen.getByRole("link", {
+        name: messages.archive.month.previous(formatMonth("2026-07-01")),
+      }),
+    ).toHaveAttribute("href", "/arquivo/mes/2026-07");
+
+    // One level up, never further: the month page's back is the index.
+    expect(
+      screen.getByRole("link", { name: messages.archive.backToIndexAria }),
+    ).toHaveAttribute("href", "/arquivo");
+  });
+
+  it("T-WEB-S169: each sibling link is ABSENT at the archive's own edges", async () => {
+    spies.listArchivedDays.mockResolvedValue([
+      { date: "2026-08-01", game: "binairo" },
+    ]);
+    spies.listArchivedMonths.mockResolvedValue(["2026-08"]);
+
+    render(
+      await ArchiveMonthPage({ params: Promise.resolve({ mes: "2026-08" }) }),
+    );
+
+    expect(screen.queryByText(/←\s*\w+ de 2026/)).toBeNull();
+    expect(screen.queryByText(/de 2026\s*→/)).toBeNull();
+  });
+
+  it("T-WEB-S169: a month with no archived day is notFound(), and so is a malformed segment", async () => {
+    spies.listArchivedDays.mockResolvedValue([]);
+    spies.listArchivedMonths.mockResolvedValue(["2026-08"]);
+    await expect(
+      ArchiveMonthPage({ params: Promise.resolve({ mes: "2026-05" }) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(spies.notFound).toHaveBeenCalled();
+
+    // A malformed segment never reaches the reader at all: parsed, never
+    // cast, and refused before the round trip.
+    for (const mes of ["2026-13", "2026-8", "abcd-01", "../2026-08", "2026"]) {
+      spies.listArchivedDays.mockClear();
+      await expect(
+        ArchiveMonthPage({ params: Promise.resolve({ mes }) }),
+      ).rejects.toThrow("NEXT_NOT_FOUND");
+      expect(spies.listArchivedDays).not.toHaveBeenCalled();
+    }
+  });
+
+  it("T-WEB-S169: February's inclusive upper bound is the real last day, leap year included", async () => {
+    spies.listArchivedDays.mockResolvedValue([
+      { date: "2028-02-29", game: "binairo" },
+    ]);
+    spies.listArchivedMonths.mockResolvedValue(["2028-02"]);
+    await ArchiveMonthPage({ params: Promise.resolve({ mes: "2028-02" }) });
+    expect(spies.listArchivedDays).toHaveBeenCalledWith(spies.stubDb, {
+      from: "2028-02-01",
+      to: "2028-02-29",
+    });
+
+    spies.listArchivedDays.mockClear();
+    spies.listArchivedDays.mockResolvedValue([
+      { date: "2026-02-28", game: "binairo" },
+    ]);
+    spies.listArchivedMonths.mockResolvedValue(["2026-02"]);
+    await ArchiveMonthPage({ params: Promise.resolve({ mes: "2026-02" }) });
+    expect(spies.listArchivedDays).toHaveBeenCalledWith(spies.stubDb, {
+      from: "2026-02-01",
+      to: "2026-02-28",
+    });
+  });
+
+  it("T-WEB-S169: generateMetadata and the page share ONE parser — a hostile segment yields no canonical", async () => {
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ mes: "//evil.example.com" }),
+    });
+    expect(metadata.alternates).toBeUndefined();
+    expect(metadata.robots).toEqual({ index: false });
+  });
+});

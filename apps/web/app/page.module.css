@@ -273,10 +273,11 @@
   padding-bottom: var(--space-1);
 }
 
-/* A SHARED class over four links, and only `arquivo` is still href-less
-   (#31), so the pointer returns through the attribute selector — the
-   `.cta[href]` discipline above — never a bare rule that would put a
-   pointer cursor on the one still-inert anchor. */
+/* A SHARED class over four links. All four carry an href since #31 landed
+   `/arquivo`, so this selector now matches every one of them — it is kept
+   rather than flattened to a bare `.secondaryLink` rule, because the
+   `.cta[href]` discipline above is what makes a future inert link inert by
+   construction instead of by review. */
 .secondaryLink[href] {
   cursor: pointer;
 }

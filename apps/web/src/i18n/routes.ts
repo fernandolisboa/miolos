@@ -9,6 +9,13 @@ import type { FreePlayGame } from "../free-play/catalog";
 
 export const routeSlugs = {
   archive: "arquivo",
+  // #31 (ADR-0053 decision 1): a LITERAL segment between `/arquivo` and the
+  // month, so `app/arquivo/mes/[mes]` and `app/arquivo/[data]` can coexist.
+  // Two dynamic segment NAMES at the same position is a Next build error;
+  // Next resolves a static segment ahead of a dynamic sibling, and
+  // `/arquivo/mes` with nothing after it matches `[data]` with `data = "mes"`,
+  // which `calendarDateString` rejects -> 404.
+  month: "mes",
   freePlay: "modo-livre",
   stats: "estatisticas",
   // #21 (ADR-0013, ADR-0050): the magic-link landing page and the privacy
@@ -30,9 +37,19 @@ export const routeSlugs = {
 export type RouteSlug = keyof typeof routeSlugs;
 
 /**
- * Composed paths (ADR-0028). `as const` keeps these literal types, which
- * Next 16's typed routes require of a `<Link href>` — a function
- * returning `string` would not typecheck.
+ * Composed paths (ADR-0028). `as const` keeps these literal types because a
+ * single-home path table wants literal types for its own callers.
+ *
+ * **Route typing is NOT enabled in this repo**, and the comment that used to
+ * stand here — *"which Next 16's typed routes require of a `<Link href>` — a
+ * function returning `string` would not typecheck"* — was false of this
+ * configuration and is corrected at #31: `apps/web/next.config.ts` sets no
+ * `typedRoutes` option, `.next/types/routes.d.ts` carries no `declare module
+ * "next/link"` augmentation, and `next/link`'s own `href` is `string |
+ * UrlObject`. Enabling `typedRoutes` is a separate decision, explicitly out
+ * of #31's scope, and it would need the three archive builders below reworked
+ * (the generated `Routes` union is a finite literal union that a
+ * template-literal builder cannot satisfy).
  *
  * #23 added sudoku's pair, #25 nonogram's and #27 termo's — always here, never
  * as a literal at a call site. All four dailies are routed; a fifth game adds
@@ -57,9 +74,35 @@ export const routes = {
   stats: `/${routeSlugs.stats}`,
   attach: `/${routeSlugs.attach}`,
   privacy: `/${routeSlugs.privacy}`,
+  // #31 (ADR-0053 decision 1): the archive index. The three date-bearing
+  // paths below it are builders rather than keys, because a date is not a
+  // literal — but they still live HERE, so `/arquivo` has exactly one home
+  // in the app (T-WEB-S166 makes that a source scan).
+  archive: `/${routeSlugs.archive}`,
 } as const;
 
 export type Route = (typeof routes)[keyof typeof routes];
+
+/**
+ * The archive's three date-bearing paths (#31, ADR-0053 decision 1). Plain
+ * composed strings: they are the same single-home rule the table above
+ * carries, applied to paths whose last segment is data.
+ *
+ * They return `string` and not a literal type, which is fine because route
+ * typing is not enabled here (see the note on `routes` above) — and which is
+ * exactly what would have to change if it ever were.
+ */
+export function archiveMonthRoute(month: string): string {
+  return `${routes.archive}/${routeSlugs.month}/${month}`;
+}
+
+export function archiveDayRoute(date: string): string {
+  return `${routes.archive}/${date}`;
+}
+
+export function archiveGameRoute(date: string, game: Game): string {
+  return `${archiveDayRoute(date)}/${routeSlugs[game]}`;
+}
 
 /**
  * Where each game's play screen lives — ONE map, read by the hub's tiles
