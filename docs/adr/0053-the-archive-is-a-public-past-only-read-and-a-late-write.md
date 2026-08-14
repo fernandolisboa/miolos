@@ -115,10 +115,42 @@ is not falsified but its revisit trigger fires** — see decision 13.
 
 ## Decision
 
-**This ADR lands in PR 1, which ships only the write window.** Decisions 1,
-2, 3, 4, 9, 10, 11, 12 and 14 describe surfaces PR 2 builds; PR 2's
-docs-tail commit converts them from decision tense to shipped tense.
-Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
+**This ADR landed in PR 1, which shipped only the write window; PR 2 has
+since shipped the archive itself.** Decisions 5, 6, 7, 8, 13 and 15 were
+implemented by PR 1. Decisions 1, 2, 3, 4, 9, 10, 11, 12 and 14 described
+surfaces PR 2 built, and every one of them is now shipped — the routes, the
+readers and the classifier, the late-result panel, the retention cap, the
+discovery mechanism and the `sync.ts` `break` decision 13 made binding on
+that pull request. Where a sentence below still reads as a prescription, it
+is a prescription that the shipped code satisfies rather than one waiting on
+work.
+
+**Three points where the shipped code refines what is written below**, each
+recorded in plan 037 §14 batch 6 and batch 7 rather than by silently rewriting
+the text (the first is I42, from the step-7 round):
+
+- Decision 10's third layer used to say the panel renders the **stored row's**
+  outcome. **It does not, and the sentence has been rewritten to say what
+  ships** (I42, correcting I29's own account of the same point). `sync.ts`'s
+  `acceptResponse` parses and discards `completionResponseSchema.outcome`
+  exactly as it discards `onTime`, so the panel renders **this session's
+  locally judged board** and the note beside it never asserts when the
+  server's row was written. Carrying either field to the panel would mean a
+  versioned change to the local record schema, which this ticket does not
+  make. The panel's states are therefore exactly the ones the device can
+  check — queued, refused, already held here, settled, or not stored at
+  all — which is what the criterion needs: the screen never claims a
+  completion it did not make.
+- Decision 4's read-cost posture was measured rather than assumed at PR 2:
+  the three grid play routes came in **below** their daily twins (binairo
+  18.2 KB against 33.4, nonogram 19.7 against 35.5, sudoku 14.4 against
+  29.6), because the archive shells compose the per-game hooks and views and
+  never the screen roots, so the whole conclusion tree is outside their
+  module graphs. Plan 037's predicted squeeze on the archived Nonogram did
+  not happen (I33).
+- Decision 14's localStorage ceiling is now a number: the largest serialized
+  record is 1,329 bytes, so fifty of them is ~65 KiB — about 2.5 % of a
+  5 MiB per-origin quota counted in UTF-16. Fifty stands (I34).
 
 1. **Four route families, seven pages, date before game, the game segment
    literal — and today's date resolves rather than 404ing.** `/arquivo` is
@@ -140,7 +172,11 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
    URLs.
 
    **`/arquivo/<hoje>` and `/arquivo/<hoje>/<jogo>` resolve**, with a
-   **temporary** redirect to the daily route and to the hub respectively.
+   **temporary** redirect to the hub and to that game's daily route
+   respectively — the day URL to `/`, the play URL to `/<jogo>`, each landing
+   one level of specificity where it came from. *(This line named the two
+   targets the other way round until #31's step-7 round; the shipped code is
+   the sensible pairing and the record was wrong — plan 037 §14 I43.)*
    Sharing happens immediately after playing, and `/termo` is not a per-day
    URL — a link shared at 21:00 serves a different puzzle after the
    rollover — so 404ing today would leave the one window where sharing
@@ -163,8 +199,10 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
    reader under the same clock.
 
    **No write ever originates from an archive path.** The today-redirect
-   lands the player on the daily route, so the completion it produces is an
-   ordinary daily write that derives `on_time = true` correctly.
+   leaves the archive before anything is playable — the play URL lands
+   directly on the daily route, the day URL on the hub and thence on a daily
+   route — so every completion it can lead to is an ordinary daily write that
+   derives `on_time = true` correctly.
 
 2. **Every archive route is `force-dynamic`, and the reason is the kill
    switch, not the rollover.** `export const dynamic = "force-dynamic"` on
@@ -513,10 +551,24 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
        what keeps that record around long enough for this to be the common
        case rather than a theoretical one.
     3. **Cross-device or post-retention, the honest gap.** The board is
-       playable; on submit the server answers with the stored row and the
-       panel renders **that** outcome. Replaying a puzzle you already solved
-       is a legitimate act on a public archive; what the criterion forbids
-       is *reopening the daily*, and nothing can.
+       playable; on submit the server answers with the stored row and **writes
+       nothing**, and the panel renders **this session's own** outcome beside
+       a note that claims no more than the device can check. Replaying a
+       puzzle you already solved is a legitimate act on a public archive;
+       what the criterion forbids is *reopening the daily*, and nothing can.
+
+       **This layer used to promise that the panel rendered the stored row's
+       outcome, and that is not what shipped** (plan 037 §14 I42). The client
+       discards both `completionResponseSchema.outcome` and `.onTime`, so no
+       server-side verdict reaches any view; carrying one would be a
+       versioned change to the local record schema, which #31 does not make.
+       The reachable consequence is Termo-specific and is stated rather than
+       hidden: win an archived Termo on device A and lose it on device B, and
+       the guess route judges the new session while the completion POST
+       short-circuits to the stored **won** row — the panel prints the loss
+       the player just played. The mechanical teeth in layer 1 are unaffected;
+       what the panel loses is the ability to contradict a board the player
+       is looking at, which is not a property this layer needed.
 
     **Why no endpoint.** A per-day per-user read would be a user-specific
     fragment on a public page, which ADR-0014 routes to `apps/api` — **as

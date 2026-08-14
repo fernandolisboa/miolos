@@ -60,10 +60,12 @@ export function HubProgress({
  * finished it (DESIGN.md, "Game card").
  *
  * The done tile is a LINK, where F1:35-37 draws an inert `<span>` (plan 018
- * deviation 12): the archive is #31 and its link deliberately href-less, so
- * an inert card would leave a player who just solved a game no in-app route
- * back to the conclusion they earned — while `/<jogo>` restores straight
- * into it.
+ * deviation 12): an inert card would leave a player who just solved a game
+ * no in-app route back to the conclusion they earned — while `/<jogo>`
+ * restores straight into it. (The rationale used to lean on the archive
+ * being unreachable; `/arquivo` is live since #31, and the reason above is
+ * the one that was always doing the work — a *finished* day's conclusion is
+ * not something the archive links to at all.)
  */
 export function HubCardAction({
   game,

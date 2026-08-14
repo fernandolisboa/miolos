@@ -1,0 +1,35 @@
+/* The archive's play note (#31, ADR-0053 decision 9) — the one line on an
+   archived board that says the day does not move the streak.
+
+   IT SHIPPED AS A SECOND `screen.rules` PARAGRAPH and that was the finding
+   (step-6 F10b): same 15px, same `--ink-2`, same margin as the game's own
+   rules line directly above it, so "this does not count for your sequence"
+   read as one more sentence of "fill the grid so each row has 1–9". The
+   reason given for it — that a distinct class would need one in
+   `src/play/screen.module.css`, which #31 does not edit — was wrong on its
+   own terms: #31 already ships archive-owned stylesheets, and a class from a
+   second one touches nothing under `src/play/`. This is that second one.
+
+   THE VOICE IS THE DIFFERENCE, not the size. Fraunces italic is this
+   product's annotation voice (the wordmark, the stamp's hint line), the
+   game's rules are Instrument Sans, and a 3px rule in the game's accent
+   marks the paragraph as an aside. ADR-0041 holds exactly: the accent
+   colours a SHAPE — the rule — and every word here is `--ink-2`, which is
+   5.0791:1 on desk paper.
+
+   The class name reaches the four shared `PlayView`/`PlaySkeleton`
+   components through `ArchivePlayChrome.note.className`, so no per-game view
+   imports anything from `src/archive/` but a type that now lives in
+   `src/play/types.ts`. */
+
+.note {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--accent);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}

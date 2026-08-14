@@ -1,0 +1,189 @@
+/* The archive's late-result panel (#31, ADR-0053 decision 9). It renders IN
+   PLACE, on the archive play URL — there is no `/concluido` sibling, and the
+   archive never enters `ConclusionView`'s tree at all (T-WEB-S183 makes that
+   a module-graph assertion rather than prose).
+
+   THE STAMP IS THE SHIPPED STAMP'S GEOMETRY (step-6 F7). This sheet's header
+   used to claim "a 3px circle in the game's accent, rotated -6deg" while the
+   rule below shipped `min-width:148px; padding:16px 24px; border-radius:999px`
+   — a 148×57 PILL. Rendered at 1440×900 the panel was one small lozenge and
+   two grey lines on an empty desk: it read as an error state, not as a
+   completion. DESIGN.md's completion-stamp register is a circle, the daily's
+   own is a real 150×150 one (`play/conclusion-view.module.css:224-261`), and
+   this is now that circle with that anatomy — an 11px tracked label over a
+   display-scale figure, a postmark rather than a badge.
+
+   The FIGURE is the archived day's number, not a time. A published result
+   time is the comparison-shaped artefact ADR-0008 rule 2 keeps apart, and it
+   is a number no aggregate on this branch will ever contain — so the slot
+   the daily fills with `formatElapsed` is filled here with the one number
+   that IS the subject of the page. ADR-0036 decision 2 licenses it on
+   Fraunces in exactly these words: "a lone numeral that never has to line up
+   with another … may stay on Fraunces". The month name under it is the
+   annotation voice, Fraunces italic, the daily stamp's `.stampHints` slot.
+
+   THE TYPE LADDER, which is the other half of F7: the panel shipped at
+   14/15/24px, a 1.7:1 spread, and `flat-type-hierarchy` fires below 2.0 at
+   BOTH viewports (`checks.mjs:3870-3875`). It is now 11 / 13 / 14 / 15 / 34 /
+   40 / 44 — the ladder as MEASURED, which is what §14 I48 records; this block
+   used to state a five-step version of it and disagreed with the register on
+   14 and 34 — a 4.0:1 spread, with the outcome as the page's `<h1>` at
+   display scale, which is also where the hierarchy belongs: the outcome is
+   the message.
+
+   ADR-0041 throughout: the accent colours the RING — a shape — and every
+   word on this sheet is `--ink` or `--ink-2`, so WCAG 1.4.11's decorative
+   exemption applies and no word is ever accent-coloured. That is not a
+   budget the Termo route could have spent anyway: mustard is 2.8501:1 on
+   card, the ceiling over the whole paper family, against a 4.5 floor.
+
+   NO time, no streak, no day chips, no chaining CTA, no statistics. */
+
+.panel {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-11) var(--space-6) var(--space-12);
+  text-align: center;
+}
+
+.panel a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-app);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+/* The outcome, at display scale and in `--ink`. It is an `<h1>` and it is the
+   panel's FIRST element, which is what keeps impeccable's
+   `kicker-above-heading` and `hero-eyebrow-chip` rules down without a
+   structural wrapper: both anchor on `h1`–`h4` and read
+   `previousElementSibling`, and this one has none. */
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 550;
+  line-height: 1.08;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+/* The stamp: a ring in the game's accent, pressed slightly crooked. Same
+   150×150 and same 3px uniform border as the daily's, which never fires
+   `border-accent-on-rounded`: `checks.mjs:47` needs a dominant edge
+   (`w >= 2 && (maxOther <= 1 || w >= maxOther*2)`), and a uniform ring has
+   `maxOther = 3`, so `3 >= 6` is false on every side. */
+.stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 150px;
+  height: 150px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  transform: rotate(-6deg);
+  color: var(--ink);
+}
+
+.stampLabel {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.stampDay {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.stampMonth {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.note {
+  margin: 0;
+  max-width: 40ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* The archived Termo's word (step-6 F23), the daily conclusion's `.dayWord`
+   register: an 11px tracked lead over the canonical accented spelling at 34px
+   — deliberately BELOW the stamp's 40px, so the stamp stays the panel's
+   largest mark on a win. Neither element is a heading, and neither may
+   become one (see the call site). */
+.wordRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.wordLead {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.word {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  font: var(--text-button);
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 2px solid var(--line);
+}
+
+/* 768px, not 900px: seventeen other sheets and `globals.css:31` use 768, and
+   the odd breakpoint rendered the mobile layout on the desktop desk texture
+   between 769 and 900 (step-6 F11). */
+@media (max-width: 768px) {
+  .panel {
+    min-height: auto;
+    /* 40px written out. `var(--space-10, 40px)` referenced a token that does
+       not exist — `tokens.css` defines 1–8, 11 and 12 — so the fallback was
+       always the value, and the three sites in this branch were the only
+       `var(--space-N, …)` in the repo (step-6 F11/F22). */
+    padding: 40px var(--space-5) var(--space-8);
+  }
+
+  .title {
+    font-size: 34px;
+  }
+}

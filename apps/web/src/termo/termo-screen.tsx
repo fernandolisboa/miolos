@@ -5,6 +5,7 @@ import type { DailyTermoResponse } from "@miolos/core";
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
 import { elapsedMs } from "../play/timer";
+import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { TermoConclusion } from "./termo-conclusion";
 import { useTermoPlay } from "./use-termo-play";
@@ -53,14 +54,13 @@ export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
     return <PlaySkeleton date={daily.date} />;
   }
 
-  // Both conditions, not just the status: the clock is frozen one commit
-  // after the board closes, and swapping early would record a time the pause
-  // is about to correct. A restored concluded record is already frozen, so it
-  // lands here on its first paint.
-  if (
-    play.state.status !== "playing" &&
-    play.state.timer.runningSince === null
-  ) {
+  // Closed AND frozen, through the shared predicate (#31 step-6 F15): the
+  // clock is frozen one commit after the board closes, and swapping early
+  // would record a time the pause is about to correct. A restored concluded
+  // record is already frozen, so it lands here on its first paint. Termo is
+  // the game whose loss makes "closed" wider than "solved", which is exactly
+  // why the predicate is `status !== "playing"` and lives in one place.
+  if (isClosedAndFrozen(play.state)) {
     return (
       <TermoConclusion
         date={daily.date}

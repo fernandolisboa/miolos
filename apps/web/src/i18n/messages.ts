@@ -165,9 +165,9 @@ export const messages = {
       archive: "Arquivo",
       freePlay: "Modo livre",
       stats: "Estatísticas",
-      // Live: /privacidade since #21, /estatisticas since #29 — a real
-      // route is what earns the href (arquivo stays deliberately href-less
-      // until #31).
+      // Live: /privacidade since #21, /estatisticas since #29, and
+      // /arquivo since #31 — a real route is what earns the href, and all
+      // four now have one.
       privacy: "Política de Privacidade",
     },
   },
@@ -353,6 +353,190 @@ export const messages = {
     // the accessible content (a composed li label is name-PROHIBITED on
     // WebKit once `list-style: none` strips the list semantics — step-6
     // correctness finding; stats-view.tsx records the fix).
+  },
+  /**
+   * The archive (#31, ADR-0053, plan 037 §7.6) — shared-chrome position,
+   * like `play`, `conclusion` and `freePlay` above. Game names and kickers
+   * are reused from `games.<game>`, never duplicated (plan 018 S19).
+   *
+   * Every aria sentence ships whole, never assembled in a component
+   * (ADR-0018 :15), and the metadata composers live here for the same
+   * reason: `generateMetadata` may build no string of its own.
+   *
+   * `então`, `mamãe` and `época` are FORBIDDEN_EVERYWHERE in client chunks
+   * (`scripts/route-client-js.mjs`) — audited: no string below uses one.
+   */
+  archive: {
+    title: "Arquivo",
+    lead: "Todos os puzzles do dia desde o começo. Jogue quando quiser — o arquivo não move a sua sequência.",
+
+    // THREE back affordances, THREE destinations, one string each. Every
+    // archive surface goes exactly one level up (plan 037 §7.5), so the
+    // label names where it goes:
+    //   play screen  → the day page   → backToDay
+    //   day page     → its month page → backToMonth
+    //   month page   → the index      → backToIndex
+    // The late-result panel's two links out reuse backToDay and backToMonth,
+    // so no destination has two spellings.
+    backToDay: (longDate: string) => `← ${longDate}`,
+    backToDayAria: (longDate: string) =>
+      `Voltar para os puzzles de ${longDate}`,
+    backToMonth: (month: string) => `← ${month}`,
+    backToMonthAria: (month: string) => `Voltar para ${month}`,
+    backToIndex: "← Arquivo",
+    backToIndexAria: "Voltar para o Arquivo",
+
+    recent: { heading: "Dias recentes" },
+    months: { heading: "Por mês" },
+    empty:
+      "O arquivo começa quando o primeiro puzzle do dia sai. Volte amanhã.",
+
+    // A day row: the date, then the games that date holds. ONE composed
+    // sentence — the accent rules on the game names carry no meaning alone
+    // (ADR-0041 decision 5).
+    dayRowAria: (longDate: string, games: readonly string[]) =>
+      `${longDate} — ${games.join(", ")}`,
+
+    month: {
+      // formatMonth yields "agosto de 2026". These two are SIBLING
+      // navigation, not a back affordance — the month page's back is
+      // `backToIndex` above — and they deliberately DO NOT SPEND `←`
+      // (step-6 F11). In this product `←` means one level up: `play.back`
+      // ("← Hoje"), `freePlay.back` ("← Modo livre") and the archive's own
+      // three back labels all use it that way, and the late-result panel
+      // renders "← 1 de agosto de 2026" beside "← agosto de 2026". A fourth
+      // meaning for the same glyph — sideways, on the timeline — on the very
+      // page where both appear is one glyph doing two jobs. The words say
+      // which job this is.
+      //
+      // The DIRECTION and the MONTH are two strings, not one, and the view
+      // renders them as two elements — an uppercase kicker over the month in
+      // sentence case. `impeccable`'s `all-caps-body` fires on any non-heading
+      // element carrying more than 30 characters of DIRECT text under
+      // `text-transform: uppercase` (`checks.mjs:3463-3467`), with no
+      // interactive or `nav` exemption; the single composed string reached 32
+      // characters in fevereiro and 31 in setembro, novembro and dezembro, so
+      // four months in every twelve would have redded the detect gate on the
+      // newest month page — the one the CI job discovers — with no commit
+      // causing it and no commit able to fix it. Split, no element carries
+      // more than 17. Same reason `.monthNavMonth` is not uppercase.
+      //
+      // The composed sentence survives as the link's `aria-label`, the
+      // `backToIndex`/`backToIndexAria` idiom this file already uses: the
+      // accessible name contains the visible words, so WCAG 2.5.3's
+      // label-in-name holds.
+      previous: "Mês anterior",
+      previousAria: (month: string) => `Mês anterior · ${month}`,
+      next: "Próximo mês",
+      nextAria: (month: string) => `Próximo mês · ${month}`,
+    },
+
+    day: {
+      cardAria: (game: string, longDate: string) =>
+        `Jogar ${game} de ${longDate}`,
+    },
+
+    // The play chrome (ADR-0053 decision 9). ONE string: the line that makes
+    // the archive's semantics visible to the person they apply to. There is
+    // no mode chip — the back label and the top bar's date already say where
+    // you are, and a chip saying "Arquivo" could not have said what this
+    // sentence says. (The reason this comment used to give — that a chip
+    // needs a class in `src/play/screen.module.css`, which #31 does not edit
+    // — was a scope fact standing in for a design one, and step-6 F10b
+    // struck it down: the note itself now carries a class from the archive's
+    // OWN stylesheet, `src/archive/play-note.module.css`, and nothing under
+    // `src/play/` is edited for it.) The back affordance uses `backToDay`
+    // above, for the reason `freePlay`'s own comment gives: a shared
+    // "← Hoje" would lie about the destination.
+    play: {
+      note: "Puzzle do dia arquivado. Não conta para a sequência nem para os seus tempos.",
+    },
+
+    // FIVE notes, one per state the DEVICE can actually distinguish, and the
+    // set is closed by that criterion rather than by taste (#31 step-6
+    // findings F3/F5/F16). The panel reads the local play record and nothing
+    // else — there is no archive read endpoint (ADR-0053 decision 10) — so
+    // every string below is checkable from the record alone, and none of them
+    // asserts anything about WHEN the server's row was written. That is the
+    // half `sync.ts` throws away: `acceptResponse` parses and discards both
+    // `completionResponseSchema.onTime` and `.outcome`, and carrying either to
+    // this panel would be a versioned change to the local record schema (plan
+    // 037 §14 I29, I42).
+    result: {
+      wonTitle: "Concluído",
+      lostTitle: "Não foi dessa vez",
+      // The stamp's 11px tracked label, over the archived day's number and
+      // its month — a postmark, the daily stamp's own anatomy with the one
+      // figure the archive is allowed to show (step-6 F7). It is
+      // `aria-hidden` at the call site: the two links below already name the
+      // day and the month, so it announces nothing new.
+      stampLabel: "Arquivo",
+      // AC 4's UI half: this device already held a concluded record for the
+      // day when the archive page mounted, so the result on screen is one the
+      // player had before and NOT a late completion this visit produced.
+      already: "Você já tinha concluído este dia — nada foi registrado agora.",
+      // The settled-`recorded` note. It says the row EXISTS and deliberately
+      // does not say when it was written: the same 200 covers "the server
+      // wrote a late row just now" and "the server already held an on-time
+      // row and wrote nothing" (`recorded: false`, the idempotent
+      // short-circuit), and the client cannot tell them apart. The previous
+      // wording — "Conclusão tardia — registrada" — asserted the first on
+      // both, which is false on exactly ADR-0053 decision 10 layer 3's own
+      // case: a day solved on time, replayed later from another device.
+      late: "Resultado registrado — o arquivo não conta para a sua sequência.",
+      // NOT `messages.conclusion.sync.pending`: that string names
+      // connectivity, and the archive's own cause is the daily late-write
+      // ceiling answering 429 (ADR-0053 decision 13). This one is true of
+      // both, and it never claims a registration that did not happen.
+      pending:
+        "Resultado guardado neste aparelho — ainda não registrado. O envio se completa mais tarde.",
+      // The server REFUSED the completion — `sync.ts`'s `TERMINAL_STATUSES`,
+      // whose 404 arm is the kill switch, the one operation ADR-0053 decision
+      // 2's whole `force-dynamic` posture is built around. Without this arm
+      // the panel told the player the result was registered while the server
+      // held no completion at all, which is the client's own verdict standing
+      // as the user-visible authority — the thing ADR-0004 forbids, and the
+      // reason `messages.conclusion.sync.rejected` exists on the daily.
+      rejected:
+        "Não foi possível registrar este resultado — o servidor recusou o envio.",
+      // No record on this device AT ALL, which on a concluded panel means
+      // `localStorage` is unusable (DOM storage off in a WebView, site data
+      // blocked): `sync.ts`'s `memoryQueue` still posts, but nothing readable
+      // survives for this panel to report. It claims neither a registration
+      // nor a failure, because the device knows neither.
+      notStored:
+        "Este aparelho não guardou o resultado — o arquivo não conta para a sua sequência.",
+      // The archived Termo's word, on BOTH outcomes (#31 step-6 finding F23,
+      // ADR-0043 decision 6's rule applied where it was missing). A lost
+      // archived Termo showed "Não foi dessa vez" and nothing else, where the
+      // daily's conclusion reveals the answer — so the one game whose loss
+      // can teach you something taught nothing in the archive. NOT
+      // `games.termo.dayWord.lead`: that string says "de hoje",
+      // which is false of every date this panel renders.
+      wordLead: "A palavra desse dia era",
+      // The two links out reuse `backToDay` and `backToMonth`; no duplicate
+      // spellings live here.
+    },
+
+    // Metadata (ADR-0053 decision 1 / plan 037 D6). Distinct per date and per
+    // (date, game), which is what stops ~5 near-identical board pages a day
+    // from being thin duplicates — T-WEB-S173 asserts the distinctness, not
+    // just the shape.
+    meta: {
+      indexTitle: "Arquivo — Miolos",
+      indexDescription:
+        "Todos os puzzles do dia do Miolos: Binairo, Sudoku, Nonogram e Termo, dia a dia, de graça.",
+      monthTitle: (month: string) => `Arquivo de ${month} — Miolos`,
+      monthDescription: (month: string) =>
+        `Os puzzles do dia de ${month}: Binairo, Sudoku, Nonogram e Termo, um por dia.`,
+      dayTitle: (longDate: string) => `Puzzles de ${longDate} — Miolos`,
+      dayDescription: (longDate: string) =>
+        `Os puzzles do dia de ${longDate} no Miolos. Jogue de graça, quando quiser.`,
+      gameTitle: (game: string, longDate: string) =>
+        `${game} de ${longDate} — Miolos`,
+      gameDescription: (game: string, longDate: string) =>
+        `Jogue o ${game} do dia ${longDate} no Miolos. De graça, sem cadastro.`,
+    },
   },
   /**
    * Free-play chrome (#28, ADR-0046) — shared-chrome position, like `play`

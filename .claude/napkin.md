@@ -23,8 +23,8 @@
    Do instead: run `pnpm build` in apps/web before bundle-check whenever .next was wiped.
 8. **[2026-08-14] Pre-commit's full suite flakes under turbo's parallel fan-out (PGlite `beforeAll` timeouts, non-deterministic) — and turbo caches gate runs, so a cached re-run is a log replay, not evidence**
    Do instead: prefix every commit with `TURBO_CONCURRENCY=1 git commit …` (all ten of #29's commits needed it); re-run gates for PR-body evidence with `--force`.
-9. **[2026-08-14] `impeccable detect` in CI runs per-viewport — desktop green does not imply mobile green**
-   Do instead: check BOTH steps of the detect job (`/estatisticas` failed mobile-only on first-viewport-column-overflow; fix was mobile block flow, `0311f32`).
+9. **[2026-08-14] `impeccable detect` is per-viewport AND data-dependent — today's green does not imply tomorrow's, and a copy edit can red it**
+   Do instead: check BOTH steps of the detect job (`/estatisticas` failed mobile-only on first-viewport-column-overflow, `0311f32`); and on any page whose CONTENT grows with the calendar or whose LABEL is a template, measure the worst case rather than today's — #31 hit this twice, `first-viewport-column-overflow` at 21 archived rows (due 2026-08-22) and `all-caps-body` at 31 chars once `← <mês>` became `Mês anterior · <mês>` (due 2026-10-01, four months in twelve, forever). Both were invisible to CI and to any commit. Thresholds are literal: `all-caps-body` = >30 chars of DIRECT text under `text-transform: uppercase`, no interactive/`nav` exemption. Reproduce locally with `impeccable detect file://…` over the real component + real stylesheet (CSS-module names unhashed), and pin the shape with a test.
 10. **[2026-08-14] A fix that changes a PLAN statement owes a §-deviations entry in the same round — the falsified-record standard applies to plans, not just ADRs**
    Do instead: after every step-7 fix, sweep the committed plan for now-false prescriptions and append the deviation (the #30 verification round REJECTED solely for five stale plan sentences after the a11y fix; ADR-0018↔0052 was the same class one commit earlier).
 

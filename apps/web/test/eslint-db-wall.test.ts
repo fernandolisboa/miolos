@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -740,5 +740,172 @@ describe("apps/web db wall — not a blanket ban", () => {
       ].join("\n"),
     );
     expect(clean).toEqual([]);
+  });
+});
+
+/**
+ * AC 2 as a TEST rather than a hand-run grep (#31, ADR-0014 :16 / ADR-0053
+ * decision 4). The issue's second acceptance criterion is that `apps/web`'s
+ * direct database reads go only through the published-predicate helper, with
+ * no parallel query path — and until #31 that was a sentence in a PR body.
+ *
+ * A source scan in `T-WEB-S166`'s register: it enumerates every `@miolos/db`
+ * import in `apps/web` and asserts the imported NAMES are wall readers.
+ * ESLint already bans the dangerous subpaths and the four bypass names off
+ * the root entry; what it cannot express is "and nothing NEW on the root
+ * entry either", which is the thing an archive PR is most likely to get
+ * wrong.
+ */
+// The ids in this file live on `it(...)`, never on the `describe` — every
+// other block here does it that way, and `docs/agents/test-ids.md` records
+// `eslint-*-wall.test.ts` as keeping its own convention. This block landed
+// carrying the id on the `describe` AND on both of its `it`s, which is a
+// same-file duplicate whichever convention you read it under (step-7
+// verification round, plan 037 §14 I65). `T-LINT-S37` stays on the assertion §13's AC 2 cites; the
+// counter-assertion added at step 7 takes the sibling letter.
+describe("no parallel query path in apps/web", () => {
+  /**
+   * The wall readers `apps/web` may name, plus the one type the archive's
+   * grouping helper takes. Every one of them carries `published_at <= now()`
+   * and `killed_at IS NULL` in SQL — `archiveDateClass` is the single
+   * exception and it reads no table at all, so there is nothing for a wall
+   * to guard (ADR-0053 decision 4).
+   *
+   * Adding a name here without adding its wall tests in `packages/db` is the
+   * move this list exists to make visible.
+   */
+  const WALL_SURFACE = new Set([
+    "ArchivedDay",
+    "archiveDateClass",
+    "createDb",
+    "getArchivedDaily",
+    "getPublishedDaily",
+    "getTodayDaily",
+    "listArchivedDays",
+    "listArchivedMonths",
+    "type Db",
+  ]);
+
+  const SOURCE_FILE = /\.(?:tsx?|mts|cts|jsx?|mjs|cjs)$/;
+
+  function webSources(): string[] {
+    const found: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(path);
+        } else if (SOURCE_FILE.test(entry.name)) {
+          found.push(path);
+        }
+      }
+    };
+    for (const root of ["app", "src"]) {
+      walk(join(import.meta.dirname, "..", root));
+    }
+    return found;
+  }
+
+  /**
+   * The file with its comments removed, so the counter-assertion below
+   * counts CODE references to `@miolos/db` and not the doc blocks that
+   * discuss the wall at length. The same stripper `archive-routes.test.ts`
+   * uses, and it deliberately does not eat the `//` of a URL scheme.
+   */
+  function code(source: string): string {
+    return source
+      .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+      .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
+  }
+
+  /** Every `@miolos/db*` import in the file, as `{ from, names }`. */
+  function dbImports(
+    source: string,
+  ): { readonly from: string; readonly names: string[] }[] {
+    return [
+      ...source.matchAll(
+        /import\s+(type\s+)?\{([^}]*)\}\s+from\s+"(@miolos\/db[^"]*)"/g,
+      ),
+    ].map((match) => ({
+      from: match[3] ?? "",
+      names: (match[2] ?? "")
+        .split(",")
+        .map((name) => name.trim().replace(/\s+as\s+.*$/, ""))
+        .filter((name) => name.length > 0)
+        .map((name) => (match[1] === undefined ? name : `type ${name}`)),
+    }));
+  }
+
+  it("T-LINT-S37: every @miolos/db import in apps/web names only wall readers, on the root entry", () => {
+    const offenders: string[] = [];
+    for (const path of webSources()) {
+      const source = readFileSync(path, "utf8");
+      const found = dbImports(source);
+      for (const entry of found) {
+        if (entry.from !== "@miolos/db") {
+          offenders.push(`${path}: subpath ${entry.from}`);
+        }
+        for (const name of entry.names) {
+          const bare = name.replace(/^type /, "");
+          if (!WALL_SURFACE.has(name) && !WALL_SURFACE.has(bare)) {
+            offenders.push(`${path}: ${name}`);
+          }
+        }
+      }
+      // THE COUNTER-ASSERTION, and it is what makes this suite AC 2's proof
+      // rather than a scan of one import shape (step-6 F19). The parser above
+      // only sees BRACED named imports, so `import * as db from "@miolos/db"`,
+      // a default import and `await import("@miolos/db")` all pass it by
+      // yielding no matches at all — and the root entry is deliberately NOT
+      // ESLint-banned, which is this suite's whole premise, so the one hole
+      // sits in the one place the test claims to cover. A file that mentions
+      // the package in code and yields no parsed import is now an offender:
+      // an unparsed import shape reds instead of passing.
+      if (code(source).includes('"@miolos/db') && found.length === 0) {
+        offenders.push(
+          `${path}: an @miolos/db reference this scan cannot parse`,
+        );
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("T-LINT-S37a: the scan is not vacuous — it sees the real imports and would catch a new name", () => {
+    const seen = new Set<string>();
+    for (const path of webSources()) {
+      for (const found of dbImports(readFileSync(path, "utf8"))) {
+        for (const name of found.names) {
+          seen.add(name.replace(/^type /, ""));
+        }
+      }
+    }
+    // The archive's four readers really are found by the parser above, so an
+    // empty offender list means "all clean", not "nothing scanned".
+    expect(seen.has("getArchivedDaily")).toBe(true);
+    expect(seen.has("listArchivedDays")).toBe(true);
+    expect(seen.has("listArchivedMonths")).toBe(true);
+    expect(seen.has("archiveDateClass")).toBe(true);
+    expect(seen.has("getTodayDaily")).toBe(true);
+    // And a planted parallel path is seen for what it is.
+    expect(
+      dbImports('import { sql, users } from "@miolos/db";')[0]?.names,
+    ).toEqual(["sql", "users"]);
+    expect(
+      dbImports(
+        'import { getPublishedDailyWithSolution } from "@miolos/db/publishing";',
+      )[0]?.from,
+    ).toBe("@miolos/db/publishing");
+
+    // The three shapes the parser CANNOT read, pinned as unreadable so the
+    // counter-assertion above is the thing catching them and nobody later
+    // mistakes the parser for exhaustive (step-6 F19).
+    for (const unparsed of [
+      'import * as db from "@miolos/db";',
+      'import db from "@miolos/db";',
+      'const db = await import("@miolos/db");',
+    ]) {
+      expect(dbImports(unparsed)).toEqual([]);
+      expect(code(unparsed).includes('"@miolos/db')).toBe(true);
+    }
   });
 });

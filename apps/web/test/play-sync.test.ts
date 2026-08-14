@@ -632,6 +632,100 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     },
   );
 
+  // THE MIXED-DATE QUEUE, which is the case the `break` is actually about
+  // and the one nothing exercised (#31 step-6 finding F1). Every 429
+  // assertion above and below runs a SINGLE-record queue, where head-of-line
+  // blocking is unobservable by construction.
+  //
+  // The reproduction: two pending records, an archive date and today's, with
+  // the server capping only the late one — which is exactly what the route
+  // does, because its ceiling branch is `isLateDate(body.date, today)` and a
+  // today-dated write is never capped. `listPendingRecords()` walks
+  // `localStorage` key order, which is neither date order nor insertion
+  // order, so before the fix the archive record could be posted first, take
+  // the 429, and `break` before today's daily was ever sent. Every later
+  // trigger — mount, `online`, `visibilitychange`, all four retry rungs —
+  // hit the same record first and broke again, deterministically, until the
+  // São Paulo rollover; the deferred write then landed with `completed_at =
+  // now()`, so `on_time` was false and the streak day was gone.
+  it("posts today's daily BEFORE a late record that will take the 429", async () => {
+    const LATE = "2026-07-01";
+    const TODAY = "2026-08-14";
+    // Written late-first, so key order alone would post the capped record
+    // first: the queue's own ordering is what has to fix it.
+    writePlayRecord(pendingRecord({ date: LATE }));
+    writePlayRecord(pendingRecord({ date: TODAY }));
+
+    // The stub answers on the BODY'S DATE, exactly as the route's ceiling
+    // branch does — `stubFetch` hands over the attempt number, not the
+    // request, so this one is built inline.
+    const fetchMock = vi.fn((...args: unknown[]) => {
+      if (String(args[0]).endsWith("/session")) {
+        return Promise.resolve(
+          jsonResponse(200, { userId: crypto.randomUUID(), created: true }),
+        );
+      }
+      const parsed: unknown = JSON.parse(
+        String((args[1] as { body?: unknown }).body),
+      );
+      const date = (parsed as { date: string }).date;
+      return Promise.resolve(
+        date === TODAY
+          ? jsonResponse(200, okBody({ date: TODAY }))
+          : jsonResponse(429, { error: "archive-cap" }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+
+    const posted = completionCalls(fetchMock).map((call) => {
+      const parsed: unknown = JSON.parse(
+        String((call[1] as { body?: unknown }).body),
+      );
+      return (parsed as { date: string }).date;
+    });
+
+    // Today's daily is FIRST and it is posted. The late record follows, takes
+    // its 429 and stops the loop — which is now sound, because everything
+    // after it in a date-descending queue is older still.
+    expect(posted).toEqual([TODAY, LATE]);
+    expect(readPlayRecord("binairo", TODAY)).toMatchObject({
+      pendingSync: false,
+      syncOutcome: "recorded",
+    });
+    // And the capped one is kept, non-terminally, for the next rollover.
+    expect(readPlayRecord("binairo", LATE)).toMatchObject({
+      pendingSync: true,
+      syncOutcome: "pending",
+    });
+  });
+
+  it("stops at the first 429 — every record still ahead of it is older, so certain to be capped", async () => {
+    for (const date of ["2026-07-01", "2026-07-02", "2026-07-03"]) {
+      writePlayRecord(pendingRecord({ date }));
+    }
+    const fetchMock = stubFetch(() => jsonResponse(429, { error: "cap" }));
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+
+    // One POST, not three: the `break` is the whole point of the ordering.
+    const bodies = completionCalls(fetchMock).map((call) => {
+      const parsed: unknown = JSON.parse(
+        String((call[1] as { body?: unknown }).body),
+      );
+      return (parsed as { date: string }).date;
+    });
+    expect(bodies).toEqual(["2026-07-03"]);
+    for (const date of ["2026-07-01", "2026-07-02", "2026-07-03"]) {
+      expect(readPlayRecord("binairo", date)).toMatchObject({
+        pendingSync: true,
+      });
+    }
+  });
+
   it("re-mints once on a 401 and retries once, then stops for this page load", async () => {
     writePlayRecord(pendingRecord());
     const fetchMock = stubFetch(() =>

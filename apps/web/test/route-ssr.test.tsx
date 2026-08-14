@@ -53,6 +53,9 @@ import { routes } from "../src/i18n";
 // not accidentally match it.
 const DATE = "2026-08-01";
 
+/** The month `DATE` belongs to, for the archive month row's params. */
+const ARCHIVE_MONTH = DATE.slice(0, 7);
+
 const BINAIRO_PUZZLE = generateBinairo({ seed: 20_260_801, weekday: 6 });
 
 const BINAIRO: DailyBinairoResponse = {
@@ -101,12 +104,23 @@ const spies = vi.hoisted(() => ({
   stubDb: {},
   getDb: vi.fn(),
   getTodayDaily: vi.fn(),
+  // #31 (ADR-0053): the archive's readers. The rows below feed them the same
+  // fixtures the daily rows feed `getTodayDaily`, so an archive page renders
+  // its real screen rather than a 404 branch.
+  getArchivedDaily: vi.fn(),
+  listArchivedDays: vi.fn(),
+  listArchivedMonths: vi.fn(),
+  archiveDateClass: vi.fn(),
 }));
 
 vi.mock("../src/db", () => ({ getDb: spies.getDb }));
 
 vi.mock("@miolos/db", () => ({
   getTodayDaily: spies.getTodayDaily,
+  getArchivedDaily: spies.getArchivedDaily,
+  listArchivedDays: spies.listArchivedDays,
+  listArchivedMonths: spies.listArchivedMonths,
+  archiveDateClass: spies.archiveDateClass,
   getPublishedDaily: vi.fn(),
   createDb: vi.fn(),
   eq: vi.fn(),
@@ -189,8 +203,15 @@ interface RouteCase {
   /** The attribute the impeccable preflight greps for on this path. */
   readonly marker: string | undefined;
   readonly load: () => Promise<{
-    default: () => ReactNode | Promise<ReactNode>;
+    default: (props: never) => ReactNode | Promise<ReactNode>;
   }>;
+  /**
+   * The route's params, for the dynamic segments #31 added — the first this
+   * table has ever held. A page with a dynamic segment takes `{ params }` and
+   * `await`s it; the three `it.each` bodies pass this straight through, so a
+   * static route stays exactly the zero-argument call it always was.
+   */
+  readonly props?: { readonly params: Promise<Record<string, string>> };
   /** What the wall answers for this route, if it reads one at all. */
   readonly daily:
     | DailyBinairoResponse
@@ -313,11 +334,73 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/vincular/page"),
     daily: undefined,
   },
+  // #31 (ADR-0053): the seven archive routes. THREE of them carry a dynamic
+  // segment, which is why `RouteCase` grew a `props` member — this table's
+  // shape had never needed one, because every route before the archive was
+  // addressed by a literal path.
+  {
+    path: routes.archive,
+    marker: "data-page=",
+    load: () => import("../app/arquivo/page"),
+    daily: undefined,
+  },
+  {
+    path: "/arquivo/mes/[mes]",
+    marker: "data-page=",
+    load: () => import("../app/arquivo/mes/[mes]/page"),
+    props: { params: Promise.resolve({ mes: ARCHIVE_MONTH }) },
+    daily: undefined,
+  },
+  {
+    path: "/arquivo/[data]",
+    marker: "data-page=",
+    load: () => import("../app/arquivo/[data]/page"),
+    props: { params: Promise.resolve({ data: DATE }) },
+    daily: undefined,
+  },
+  {
+    path: "/arquivo/[data]/binairo",
+    marker: "data-play-state=",
+    load: () => import("../app/arquivo/[data]/binairo/page"),
+    props: { params: Promise.resolve({ data: DATE }) },
+    daily: BINAIRO,
+  },
+  {
+    path: "/arquivo/[data]/sudoku",
+    marker: "data-play-state=",
+    load: () => import("../app/arquivo/[data]/sudoku/page"),
+    props: { params: Promise.resolve({ data: DATE }) },
+    daily: SUDOKU,
+  },
+  {
+    path: "/arquivo/[data]/nonogram",
+    marker: "data-play-state=",
+    load: () => import("../app/arquivo/[data]/nonogram/page"),
+    props: { params: Promise.resolve({ data: DATE }) },
+    daily: NONOGRAM,
+  },
+  {
+    path: "/arquivo/[data]/termo",
+    marker: "data-play-state=",
+    load: () => import("../app/arquivo/[data]/termo/page"),
+    props: { params: Promise.resolve({ data: DATE }) },
+    daily: TERMO,
+  },
 ];
 
 beforeEach(() => {
   vi.clearAllMocks();
   spies.getDb.mockReturnValue(spies.stubDb);
+  // The archive's list readers answer with the fixture day, so the index, the
+  // month page and the day page render their real screens.
+  spies.listArchivedDays.mockResolvedValue([
+    { date: DATE, game: "binairo" },
+    { date: DATE, game: "nonogram" },
+    { date: DATE, game: "sudoku" },
+    { date: DATE, game: "termo" },
+  ]);
+  spies.listArchivedMonths.mockResolvedValue([ARCHIVE_MONTH]);
+  spies.archiveDateClass.mockResolvedValue("past");
 });
 
 afterEach(() => {
@@ -327,11 +410,12 @@ afterEach(() => {
 describe("every route the impeccable preflight fetches (T-WEB-S56)", () => {
   it.each(ROUTES)(
     "$path server-renders without throwing, with its marker in the pre-hydration paint",
-    async ({ marker, load, daily }) => {
+    async ({ marker, load, daily, props }) => {
       spies.getTodayDaily.mockResolvedValue(daily);
+      spies.getArchivedDaily.mockResolvedValue(daily);
       const page = await load();
 
-      const markup = renderToStaticMarkup(await page.default());
+      const markup = renderToStaticMarkup(await callPage(page, props));
 
       expect(markup.length).toBeGreaterThan(0);
       if (marker !== undefined) {
@@ -342,31 +426,60 @@ describe("every route the impeccable preflight fetches (T-WEB-S56)", () => {
 
   it.each(ROUTES)(
     "$path hands the client tree nothing React's Flight serializer would reject",
-    async ({ load, daily }) => {
+    async ({ load, daily, props }) => {
       spies.getTodayDaily.mockResolvedValue(daily);
+      spies.getArchivedDaily.mockResolvedValue(daily);
       const page = await load();
 
       // The element a page returns IS the RSC payload's root: every prop on it
       // is serialized before it reaches the browser, rendered or not. A hit
       // here is an HTTP 500 on the real route, which no component test can
       // see (the regression this suite exists for).
-      expect(unserializableProps(await page.default())).toEqual([]);
+      expect(unserializableProps(await callPage(page, props))).toEqual([]);
     },
   );
 
   it.each(ROUTES)(
     "$path server-renders the unavailable screen rather than throwing when nothing is published",
-    async ({ load }) => {
+    async ({ path, load, props }) => {
       spies.getTodayDaily.mockResolvedValue(undefined);
+      // The archive answers a real 404 where the daily renders an unavailable
+      // card at 200 — "no puzzle today" is not "no such resource", and an
+      // archived day that is not there IS. `notFound()` throws by design, so
+      // the archive rows assert the throw rather than a rendered screen.
+      spies.getArchivedDaily.mockResolvedValue(undefined);
+      spies.listArchivedDays.mockResolvedValue([]);
+      spies.archiveDateClass.mockResolvedValue("past");
       const page = await load();
 
-      const element = await page.default();
+      if (path.startsWith("/arquivo/")) {
+        await expect(callPage(page, props)).rejects.toThrow();
+        return;
+      }
+
+      const element = await callPage(page, props);
 
       expect(renderToStaticMarkup(element).length).toBeGreaterThan(0);
       expect(unserializableProps(element)).toEqual([]);
     },
   );
 });
+
+/**
+ * Call a page shell with its params, if it has any. The cast is the one this
+ * table cannot avoid: `default` is typed to accept `never` so a static route's
+ * zero-argument call stays exactly that, and the three dynamic routes hand it
+ * the `{ params }` object Next really passes.
+ */
+async function callPage(
+  page: { default: (props: never) => ReactNode | Promise<ReactNode> },
+  props: RouteCase["props"],
+): Promise<ReactNode> {
+  const call = page.default as (
+    props?: RouteCase["props"],
+  ) => ReactNode | Promise<ReactNode>;
+  return await call(props);
+}
 
 describe("the walker itself", () => {
   // Anti-vacuity: a scan that finds nothing because it walks nothing would

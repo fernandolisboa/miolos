@@ -1,4 +1,6 @@
 export {
+  formatDayInMonth,
+  formatDayNumber,
   formatElapsed,
   formatLongDate,
   formatMonth,
@@ -12,6 +14,9 @@ export { SAO_PAULO_TIME_ZONE, todaySaoPauloDate } from "./sao-paulo-day";
 // route that touches i18n (plan 035 §14 watch item 2, measured).
 export { messages, type Messages } from "./messages";
 export {
+  archiveDayRoute,
+  archiveGameRoute,
+  archiveMonthRoute,
   freePlayRoutes,
   playRoutes,
   routes,

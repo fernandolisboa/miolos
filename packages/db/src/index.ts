@@ -10,10 +10,19 @@ export { createDb, type Db } from "./client";
 // drizzle-orm dependency (pnpm's isolated node-linker would otherwise fail
 // the import). The driver stays an implementation detail of this package.
 export { eq, sql } from "drizzle-orm";
+// #31 (ADR-0053 decision 4): the three archive readers and the date
+// classifier join the ROOT entry, because `apps/web` is their only consumer
+// and it may hold nothing else. They carry the same wall plus "strictly
+// before the DB clock's SP day"; the classifier reads no table at all.
 export {
+  archiveDateClass,
+  getArchivedDaily,
   getPublishedDaily,
   getTodayDaily,
+  listArchivedDays,
+  listArchivedMonths,
   SAO_PAULO_TIME_ZONE,
+  type ArchivedDay,
 } from "./published";
 // Public response type for wall consumers (defined beside its schema in
 // @miolos/core; re-exported here so a wall read is one import).

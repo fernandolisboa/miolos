@@ -4,6 +4,7 @@ import type { DailyNonogramResponse } from "@miolos/core";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
+import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { submittedCells } from "./engine";
 import { NonogramConclusion } from "./nonogram-conclusion";
 import { PlaySkeleton, PlayView } from "./play-view";
@@ -62,14 +63,13 @@ export function NonogramScreen({
     );
   }
 
-  // Both conditions, not just `solved`: the clock is frozen one commit after
-  // the picture closes, and swapping early would stamp a time the pause is
-  // about to correct. A restored `concluded` record is already frozen, so it
-  // lands here on its first paint.
-  if (
-    play.state.status === "solved" &&
-    play.state.timer.runningSince === null
-  ) {
+  // Closed AND frozen, through the shared predicate (#31 step-6 F15): the
+  // clock is frozen one commit after the picture closes, and swapping early would
+  // stamp a time the pause is about to correct. A restored `concluded` record
+  // is already frozen, so it lands here on its first paint. The `solved` term
+  // stays VISIBLE beside it rather than folded into a re-typed conjunct —
+  // this game has no losing state and the conclusion it renders is a win.
+  if (isClosedAndFrozen(play.state) && play.state.status === "solved") {
     const cells = submittedCells(play.state.entries, play.state.size ** 2);
     return (
       <NonogramConclusion

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { sql } from "drizzle-orm";
 import fc from "fast-check";
@@ -5,9 +7,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { listUsedTermoAnswers } from "../src/buffer";
 import {
+  archiveDateClass,
+  getArchivedDaily,
   getPublishedDaily,
   getPublishedDailyWithSolution,
   getTodayDaily,
+  listArchivedDays,
+  listArchivedMonths,
 } from "../src/published";
 import { dailyPuzzles } from "../src/schema";
 import { createTestDb } from "../src/testing";
@@ -698,25 +704,385 @@ describe("listUsedTermoAnswers (#27, ADR-0040's no-repeat rule)", () => {
   });
 });
 
+describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
+  /**
+   * Every date this suite uses is derived from the DATABASE's São Paulo day,
+   * never from a JS clock and never hardcoded: `archivedWallPredicate`'s
+   * bound is `date < (the DB clock's SP day)`, so a literal date would pin
+   * "past" to whenever the file was written. `offsetDays` is negative for
+   * the past and positive for the future.
+   */
+  async function spDate(offsetDays: number): Promise<string> {
+    const rows = await ctx.db.execute(
+      sql`select (((now() at time zone 'America/Sao_Paulo')::date) + ${offsetDays}::int)::text as d`,
+    );
+    return String(rows.rows[0]?.["d"]);
+  }
+
+  it("T-DB-S44: getArchivedDaily returns the stripped projection for a published past day", async () => {
+    const date = await spDate(-3);
+    await insertRow({ date, publishedAt: sql`now() - interval '3 days'` });
+    const archived = await getArchivedDaily(ctx.db, "binairo", date);
+    expect(archived).toBeDefined();
+    expect(archived?.game).toBe("binairo");
+    expect(archived?.date).toBe(date);
+    // The same row shape `getPublishedDaily` would answer with: one wall,
+    // one projection, one extra conjunct.
+    expect(archived).toEqual(await getPublishedDaily(ctx.db, "binairo", date));
+  });
+
+  it("T-DB-S45: getArchivedDaily returns undefined for TODAY's published row — the past-only conjunct, asserted positively", async () => {
+    const today = await spDate(0);
+    await insertRow({
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    // The row is genuinely readable through the shipped wall...
+    expect(await getPublishedDaily(ctx.db, "binairo", today)).toBeDefined();
+    // ...and invisible to the archive, which is the whole difference.
+    expect(await getArchivedDaily(ctx.db, "binairo", today)).toBeUndefined();
+  });
+
+  it("T-DB-S46: AC 1's teeth — a future-dated, an unpublished and a killed row are each invisible to getArchivedDaily", async () => {
+    const future = await spDate(5);
+    const unpublished = await spDate(-4);
+    const killed = await spDate(-5);
+    await insertRow({
+      date: future,
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    await insertRow({
+      date: unpublished,
+      publishedAt: sql`now() + interval '1 day'`,
+      seed: 2,
+    });
+    await insertRow({
+      date: killed,
+      publishedAt: sql`now() - interval '1 hour'`,
+      killedAt: sql`now()`,
+      seed: 3,
+    });
+    expect(await getArchivedDaily(ctx.db, "binairo", future)).toBeUndefined();
+    expect(
+      await getArchivedDaily(ctx.db, "binairo", unpublished),
+    ).toBeUndefined();
+    expect(await getArchivedDaily(ctx.db, "binairo", killed)).toBeUndefined();
+  });
+
+  it("T-DB-S47: getArchivedDaily never returns another game's row, and never a solution, a seed or a clue count", async () => {
+    const date = await spDate(-2);
+    await insertRow({
+      date,
+      game: "sudoku",
+      publishedAt: sql`now() - interval '2 days'`,
+    });
+    expect(await getArchivedDaily(ctx.db, "binairo", date)).toBeUndefined();
+    const archived = await getArchivedDaily(ctx.db, "sudoku", date);
+    expect(archived?.game).toBe("sudoku");
+    const keys = collectKeys(archived);
+    for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+      expect(keys.has(forbidden)).toBe(false);
+    }
+  });
+
+  it("T-DB-S48: listArchivedDays returns (date, game) pairs only, ordered date DESC then game ASC, deterministically", async () => {
+    const older = await spDate(-4);
+    const newer = await spDate(-2);
+    await insertRow({
+      date: newer,
+      game: "sudoku",
+      publishedAt: sql`now() - interval '2 days'`,
+    });
+    await insertRow({
+      date: newer,
+      game: "binairo",
+      publishedAt: sql`now() - interval '2 days'`,
+    });
+    await insertRow({
+      date: older,
+      game: "termo",
+      publishedAt: sql`now() - interval '4 days'`,
+    });
+    const days = await listArchivedDays(ctx.db);
+    expect(days).toEqual([
+      { date: newer, game: "binairo" },
+      { date: newer, game: "sudoku" },
+      { date: older, game: "termo" },
+    ]);
+    // Deterministic across repeated calls: the order is the reader's, not
+    // the planner's.
+    expect(await listArchivedDays(ctx.db)).toEqual(days);
+  });
+
+  it("T-DB-S49: listArchivedDays excludes today, future, unpublished and killed rows — the same four-case wall suite, at the enumeration reader", async () => {
+    const past = await spDate(-1);
+    const today = await spDate(0);
+    const future = await spDate(3);
+    const unpublished = await spDate(-6);
+    const killed = await spDate(-7);
+    await insertRow({ date: past, publishedAt: sql`now() - interval '1 day'` });
+    await insertRow({
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+      seed: 2,
+    });
+    await insertRow({
+      date: future,
+      publishedAt: sql`now() - interval '1 hour'`,
+      seed: 3,
+    });
+    await insertRow({
+      date: unpublished,
+      publishedAt: sql`now() + interval '1 day'`,
+      seed: 4,
+    });
+    await insertRow({
+      date: killed,
+      publishedAt: sql`now() - interval '1 hour'`,
+      killedAt: sql`now()`,
+      seed: 5,
+    });
+    expect(await listArchivedDays(ctx.db)).toEqual([
+      { date: past, game: "binairo" },
+    ]);
+  });
+
+  it("T-DB-S50: listArchivedDays' from/to bounds are inclusive and compared in SQL; limit caps the rows and never changes the ordering", async () => {
+    const dates = [
+      await spDate(-5),
+      await spDate(-4),
+      await spDate(-3),
+      await spDate(-2),
+    ];
+    for (const [index, date] of dates.entries()) {
+      await insertRow({
+        date,
+        publishedAt: sql`now() - interval '10 days'`,
+        seed: index + 1,
+      });
+    }
+    // Inclusive at BOTH edges.
+    const ranged = await listArchivedDays(ctx.db, {
+      from: dates[1],
+      to: dates[2],
+    });
+    expect(ranged.map((row) => row.date)).toEqual([dates[2], dates[1]]);
+    // `limit` truncates the same descending order rather than reordering it.
+    const limited = await listArchivedDays(ctx.db, { limit: 2 });
+    expect(limited.map((row) => row.date)).toEqual([dates[3], dates[2]]);
+  });
+
+  it("T-DB-S51: listArchivedMonths returns YYYY-MM newest-first, one entry per month, and its last element is min(date)'s month — the archive's floor", async () => {
+    // Three dates spanning at least two calendar months, derived from the DB
+    // clock so the assertion never depends on when the suite runs.
+    const oldest = await spDate(-70);
+    const middle = await spDate(-35);
+    const newest = await spDate(-1);
+    for (const [index, date] of [oldest, middle, newest].entries()) {
+      await insertRow({
+        date,
+        publishedAt: sql`now() - interval '100 days'`,
+        seed: index + 1,
+      });
+      // A second game on the same date must NOT produce a second month entry.
+      await insertRow({
+        date,
+        game: "sudoku",
+        publishedAt: sql`now() - interval '100 days'`,
+        seed: index + 10,
+      });
+    }
+    const months = await listArchivedMonths(ctx.db);
+    const expected = [
+      ...new Set([newest, middle, oldest].map((d) => d.slice(0, 7))),
+    ];
+    expect(months).toEqual(expected);
+    expect(months.at(-1)).toBe(oldest.slice(0, 7));
+  });
+
+  it("T-DB-S52: listArchivedMonths excludes a month whose only rows are today's, unpublished or killed", async () => {
+    const today = await spDate(0);
+    await insertRow({
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    await insertRow({
+      date: await spDate(-400),
+      publishedAt: sql`now() + interval '1 day'`,
+      seed: 2,
+    });
+    await insertRow({
+      date: await spDate(-800),
+      publishedAt: sql`now() - interval '1 hour'`,
+      killedAt: sql`now()`,
+      seed: 3,
+    });
+    expect(await listArchivedMonths(ctx.db)).toEqual([]);
+  });
+
+  it("T-DB-S53a: the wall is ONE wall — the three shipped readers behave exactly as before over the same seeds", async () => {
+    const today = await spDate(0);
+    const past = await spDate(-1);
+    const future = await spDate(2);
+    await insertRow({
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    await insertRow({
+      date: past,
+      publishedAt: sql`now() - interval '1 day'`,
+      seed: 2,
+    });
+    await insertRow({
+      date: future,
+      publishedAt: sql`now() - interval '1 hour'`,
+      seed: 3,
+    });
+    await insertRow({
+      date: await spDate(-2),
+      publishedAt: sql`now() + interval '1 hour'`,
+      seed: 4,
+    });
+    // Today's row, through the today reader and the dated one.
+    expect((await getTodayDaily(ctx.db, "binairo"))?.date).toBe(today);
+    expect((await getPublishedDaily(ctx.db, "binairo", today))?.date).toBe(
+      today,
+    );
+    // A dated past row, and a FUTURE-dated row that is published: the shipped
+    // wall carries no date bound at all, and #31 did not give it one.
+    expect((await getPublishedDaily(ctx.db, "binairo", past))?.date).toBe(past);
+    expect((await getPublishedDaily(ctx.db, "binairo", future))?.date).toBe(
+      future,
+    );
+    expect(
+      (await getPublishedDailyWithSolution(ctx.db, "binairo", future))?.date,
+    ).toBe(future);
+    // An unpublished row stays invisible through both.
+    expect(
+      await getPublishedDaily(ctx.db, "binairo", await spDate(-2)),
+    ).toBeUndefined();
+  });
+
+  it("T-DB-S53b: the wall is ONE wall — one spelling, by source scan with comments stripped first", async () => {
+    const source = await readFile(
+      new URL("../src/published.ts", import.meta.url),
+      "utf8",
+    );
+    // Comment-stripping is LOAD-BEARING, not hygiene: this module's doc
+    // blocks discuss the very expressions counted below, so a scan over the
+    // raw file would count its own prose and red on a correct module.
+    const code = source
+      .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+      .replaceAll(/^[ \t]*\/\/.*$/gm, "");
+    const occurrences = (needle: RegExp): number =>
+      [...code.matchAll(needle)].length;
+    // ADR-0004's guarantee has ONE enforcement point (ADR-0010 :20,
+    // ADR-0014 :16). A second copy of any of the three reds here even when
+    // it behaves identically — which behaviour tests cannot catch, and which
+    // no test can reach through an export, because the helpers are private.
+    expect(occurrences(/dailyPuzzles\.publishedAt/g)).toBe(1);
+    expect(occurrences(/isNull\(dailyPuzzles\.killedAt\)/g)).toBe(1);
+    expect(occurrences(/killedAt/g)).toBe(1);
+    expect(occurrences(/now\(\) at time zone/g)).toBe(1);
+  });
+
+  it("T-DB-S54: the archive's list readers hold no content at all — asserted on the returned key sets", async () => {
+    const date = await spDate(-1);
+    await insertRow({ date, publishedAt: sql`now() - interval '1 day'` });
+    const days = await listArchivedDays(ctx.db);
+    expect(days).toHaveLength(1);
+    for (const row of days) {
+      expect(Object.keys(row).sort()).toEqual(["date", "game"]);
+    }
+    const months = await listArchivedMonths(ctx.db);
+    expect(months.every((month) => typeof month === "string")).toBe(true);
+  });
+
+  it("T-DB-S55: a row whose content fails to parse makes getArchivedDaily return undefined and log — the two shipped readers still throw", async () => {
+    const date = await spDate(-1);
+    await ctx.db.insert(dailyPuzzles).values({
+      game: "binairo",
+      date,
+      seed: 1,
+      content: { nonsense: true },
+      publishedAt: sql`now() - interval '1 day'`,
+    });
+    const logged: unknown[][] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]): void => {
+      logged.push(args);
+    };
+    try {
+      expect(await getArchivedDaily(ctx.db, "binairo", date)).toBeUndefined();
+    } finally {
+      console.error = original;
+    }
+    // The log line IS the alarm (ADR-0053 decision 4), so it names the row.
+    expect(logged).toHaveLength(1);
+    expect(String(logged[0]?.[0])).toContain("binairo");
+    expect(String(logged[0]?.[0])).toContain(date);
+    // A bad row on the LIVE readers is an incident, not a 404.
+    await expect(getPublishedDaily(ctx.db, "binairo", date)).rejects.toThrow();
+  });
+
+  it("T-DB-S57: archiveDateClass answers past/today/future against the DB clock, reads no table, and never contradicts the archive readers", async () => {
+    const past = await spDate(-1);
+    const today = await spDate(0);
+    const future = await spDate(1);
+    // It reads no table: the three dates below have no daily_puzzles row at
+    // all, and it still answers.
+    expect(await archiveDateClass(ctx.db, past)).toBe("past");
+    expect(await archiveDateClass(ctx.db, today)).toBe("today");
+    expect(await archiveDateClass(ctx.db, future)).toBe("future");
+    // And it agrees with the wall: a date the archive readers return is
+    // never classified anything but "past" (ADR-0053 decision 1's ordering
+    // rests on exactly this).
+    await insertRow({ date: past, publishedAt: sql`now() - interval '1 day'` });
+    await insertRow({
+      date: today,
+      publishedAt: sql`now() - interval '1 hour'`,
+      seed: 2,
+    });
+    for (const row of await listArchivedDays(ctx.db)) {
+      expect(await archiveDateClass(ctx.db, row.date)).toBe("past");
+    }
+  });
+});
+
 describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", () => {
   it("T-DB-9a: the wall module exports exactly the audited set", async () => {
     const published = await import("../src/published");
+    // #31 added exactly four (ADR-0053 decision 4): three archive readers,
+    // all wall-carrying, plus `archiveDateClass`, which carries no wall
+    // because it reads no table — it answers a question about the clock,
+    // and every caller has already been through the wall. 4 names became 8.
     expect(Object.keys(published).sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
+      "archiveDateClass",
+      "getArchivedDaily",
       "getPublishedDaily",
       "getPublishedDailyWithSolution",
       "getTodayDaily",
+      "listArchivedDays",
+      "listArchivedMonths",
     ]);
   });
 
   it("T-DB-9b: the root barrel exports exactly the wall-only set", async () => {
     const root = await import("../src/index");
+    // #31: the three archive readers and the date classifier join the root
+    // entry — `apps/web` is their only consumer and may hold nothing else.
+    // The publishing and user entries are untouched by this row. 8 → 12.
     expect(Object.keys(root).sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
+      "archiveDateClass",
       "createDb",
       "eq",
+      "getArchivedDaily",
       "getPublishedDaily",
       "getTodayDaily",
+      "listArchivedDays",
+      "listArchivedMonths",
       "sessions",
       "sql",
       "users",
@@ -770,6 +1136,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     const surface = entries.flatMap((entry) => Object.keys(entry));
     expect([...new Set(surface)].sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
+      "archiveDateClass", // #31 (ADR-0053): the four archive names, root entry
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "bufferDepth",
       "completions",
@@ -778,6 +1145,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "createTestDb",
       "dailyPuzzles",
       "eq",
+      "getArchivedDaily", // #31 (ADR-0053 decision 4)
       "getCompletion",
       "getPublishedDaily",
       "getPublishedDailyWithSolution",
@@ -789,6 +1157,8 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "hintGrants",
       "insertDailyPuzzle",
       "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
+      "listArchivedDays", // #31 (ADR-0053 decision 4)
+      "listArchivedMonths", // #31 (ADR-0053 decision 4)
       "listBufferedDates",
       "listCompletionsForMerge",
       "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
@@ -805,7 +1175,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "users",
     ]);
     // A duplicate across two entries would be hidden by the Set above, so
-    // pin the count too: 34 distinct names, 34 exports. #27 moved it by
+    // pin the count too: 38 distinct names, 38 exports. #27 moved it by
     // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
     // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
     // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
@@ -816,11 +1186,11 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // exactly two: `listCompletionsForStats` and `getUserSince` on the
     // user entry (plan 033 §3.1), never the root, and #30 by exactly
     // two: `listMedalGrants` and `medalGrants` on the user entry
-    // (ADR-0052), never the root. #31's write-window PR moves it by
+    // (ADR-0052), never the root. #31's write-window PR moved it by
     // ZERO — the late-write ceiling is a guard inside
     // `recordCompletion`'s own INSERT, not a new export (step-6 finding
     // F1) — and its archive PR moves it by exactly four: the three
     // archive readers and the date classifier, on the root entry.
-    expect(surface).toHaveLength(34);
+    expect(surface).toHaveLength(38);
   });
 });

@@ -38,13 +38,28 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     "app/page.module.css",
     "src/nonogram/nonogram-board.module.css",
     "app/estatisticas/page.module.css",
+    // #31 (ADR-0053): the archive's three read-only surfaces. It paints
+    // `var(--accent)` on the day row's 3px rule and on the day card's border
+    // and hard shadow — shapes, never words — and an unlisted sheet is
+    // invisible to the whole automated ADR-0041 gate.
+    "app/arquivo/arquivo.module.css",
+    // #31: the late-result panel paints the game's accent on the completion
+    // stamp's RING and nowhere else. It is the state CI can never scan, so
+    // an unlisted sheet would leave it with no gate at all.
+    "src/archive/late-result.module.css",
+    // #31 step-6 F10b: the archive play note's own sheet. It paints the
+    // game's accent on a left RULE — a shape — and nothing else, and it is
+    // reachable in CI (an archived play route is scanned), but the list is
+    // what makes the gate exhaustive rather than the scan.
+    "src/archive/play-note.module.css",
   ] as const;
 
   it("leaves no desk label on an accent fill, in any stylesheet", () => {
     // The non-vacuous half: a scan rather than a list, so a filled button
     // added later cannot reintroduce the pair without tripping this. Blocks
     // are split on `}` at a line start, which is the shape every rule in
-    // these four sheets has.
+    // every sheet in SHEETS has. ("these four sheets" was already stale at
+    // seven when #31 found it — step-6 F22.)
     const offenders: string[] = [];
     for (const sheet of SHEETS) {
       const css = stylesheet(sheet);
@@ -191,6 +206,16 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     "src/play/conclusion-view.module.css",
     "app/page.module.css",
     "app/estatisticas/page.module.css",
+    // #31: the archive renders whichever accent a day's games supply — up to
+    // all four on one row — so it is exactly the class of sheet this scan
+    // exists for, and it ships with ZERO accent-coloured text.
+    "app/arquivo/arquivo.module.css",
+    // #31: the late-result panel paints the game's accent on the completion
+    // stamp's RING and nowhere else. It is the state CI can never scan, so
+    // an unlisted sheet would leave it with no gate at all.
+    "src/archive/late-result.module.css",
+    // #31 step-6 F10b: the archive play note, whose accent is a left RULE.
+    "src/archive/play-note.module.css",
   ] as const;
 
   /**

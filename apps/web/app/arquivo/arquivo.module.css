@@ -1,0 +1,410 @@
+/* Arquivo — the archive's three read-only surfaces (#31, ADR-0053): the
+   index, a month and a day. ONE sheet for all three, because the day row is
+   the same object on the index and on a month page and a second copy is how
+   they drift (plan 037 §7.5).
+
+   The /estatisticas editorial register on the chrome — ink on desk paper,
+   quiet headings, hairline separators — and the hub's Game-card vocabulary
+   on the day page, which is the one archive surface where a card is right:
+   each card is a distinct destination with its own identity and there are at
+   most four of them.
+
+   ADR-0041 throughout: an accent may colour a SHAPE (the row's 3px rule, the
+   card's border and hard shadow, the washi tape) and never a WORD. Every
+   word on this sheet is --ink or --ink-2. ADR-0036 on the dates: a column of
+   dates is a column of figures, so it is Instrument Sans + tabular-nums and
+   never Fraunces, which has no tabular figures at all. */
+
+/* NORMAL BLOCK FLOW at every width, and that is a gate fix rather than a
+   preference (step-6 F6). This sheet's own mobile block argued the point and
+   then applied it only below the breakpoint: "nothing here needs flex, and
+   the page is far taller than any viewport, so normal block flow is the
+   honest shape". It is just as true at 1440. A `display:flex` column of
+   max-width 760 on a 1440 viewport is 0.528 of it — just over the 0.5 gate
+   in impeccable's `first-viewport-column-overflow` (`checks.mjs:5367-5417`)
+   — and its 80px side padding makes every child a 0.789 width share, inside
+   the rule's 0.25–0.9 "column" band. So `.titleBlock` and `.section` read as
+   two side-by-side columns, and the rule fires the moment the tall one
+   exceeds 1.4 × the viewport height: measured, 21 rows at 61px each. August
+   2026 reaches 21 archived days on 2026-08-22. **The gate would have broken
+   on the calendar, not on a commit.** Measured after this change: 29 rows,
+   exit 0.
+
+   `min-height: 100dvh` goes with it (it existed only to give `.spacer` room
+   to push, and `.spacer` is gone) and the desk texture is unaffected — it
+   lives on `body`, not here. */
+.page {
+  box-sizing: border-box;
+  padding: var(--space-11) 80px var(--space-12);
+  /* ONE column at every width, centred — plan 037 §7.5's "a max-width
+     measure centred on desk paper". The content is one list, and a second
+     column would be filler: the anti-reference the brief calls out by name.
+     The centring is what keeps the day page's four cards from sitting in
+     680×240 of the top-left corner of a 1440×900 screen (step-6 F11). */
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+/* Anchored on the local class, never a bare `a:hover` (CSS Modules pure
+   mode). The state's carrier is the underline — the accent may colour the
+   rule, never the word (ADR-0041). App accent, not a game's: the archive
+   belongs to no single game. */
+.page a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-app);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.back {
+  font: var(--text-button);
+  text-decoration: none;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 600;
+  transform: rotate(-1deg);
+}
+
+.barKicker {
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.titleBlock {
+  margin-top: 44px;
+}
+
+.title {
+  margin: 0;
+  font: var(--text-screen-title);
+}
+
+.lead {
+  margin: var(--space-4) 0 0;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* ——— sections ————————————————————————————————————————————————————————
+   BARE on desk paper, never a card. A day row inside a card inside a section
+   is exactly how card-inside-card happens, which the anti-references ban;
+   the rows are separated by hairlines instead, the F5 stat-row register. */
+
+.section {
+  margin-top: 40px;
+}
+
+.sectionHeading {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 550;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* A hairline BETWEEN rows — none above the first, none below the last. */
+.row + .row {
+  border-top: 1px solid var(--line-soft);
+}
+
+/* One <Link> per row, one touch target. `min-height` rather than padding
+   alone, so a short row (a date holding one game) is the same target as a
+   full one. */
+.rowLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--touch-target-min);
+  padding: var(--space-2) 0;
+  text-decoration: none;
+}
+
+/* ADR-0036 decision 1's exact case: a column of dates is a column of
+   figures, so Instrument Sans with tabular figures — never the display
+   face, whose digits carry a ~2.2px spread. */
+.rowDate {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* A FIXED FOUR-COLUMN GRID, left-aligned, and the fixedness is the point
+   (step-6 F9). This was a wrapping flex with `justify-content: flex-end`, so
+   a day holding two games did not read as a day holding two games — the
+   cluster simply shifted left, names never aligned into columns down the
+   page, and absence was undetectable by eye. Plan 037's "no greyed slot, no
+   fake navigation" call is right; right-aligning a variable-length list is
+   what made the ragged state look incidental rather than designed. On a grid
+   an absent game is an empty cell: a gap, which is what it is. */
+.rowGames {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  flex: 0 0 auto;
+  width: 400px;
+  max-width: 100%;
+}
+
+/* The game's accent as a LEFT RULE — a shape (ADR-0041 decision 1) — and the
+   name itself in --ink. The rule never carries meaning alone: the row's
+   accessible name is one composed sentence naming the date and the games
+   (ADR-0041 decision 5, `messages.archive.dayRowAria`).
+
+   3px on a padded line box, not 2px on a bare one (step-6 F10a). At 2×11px
+   the four accents rendered as `| BINAIRO | SUDOKU |` — indistinguishable
+   from punctuation, where DESIGN.md's rule is that accents carry IDENTITY.
+   The grid cell stretches, so with 4px of block padding the rule is a real
+   ~23px mark rather than a tick.
+
+   A SHORT day renders fewer names and nothing else: no placeholder, no
+   greyed slot, no "3 de 4". A disabled-looking affordance would be fake
+   navigation, which is the hub's own rule — and a killed game produces
+   exactly this same shape, which matters because the kill switch is the
+   whole reason these pages are uncached (ADR-0053 decision 2). */
+.rowGame {
+  display: flex;
+  align-items: center;
+  border-left: 3px solid var(--accent);
+  padding: var(--space-1) 0 var(--space-1) var(--space-2);
+  font: var(--text-kicker);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* ——— months ————————————————————————————————————————————————————————
+   A wrapping row of chips. No accent: a month has no game. */
+
+.months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.monthChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: var(--text-kicker);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* ——— month page: previous / next ——————————————————————————————————— */
+
+.monthNav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+/* A REAL TOUCH TARGET (step-6 F8). These measured 118×11px and 148×11px at
+   390×844 — an 11px strip at the bottom of a 2,225px scroll, and the primary
+   way to move backwards through the archive was the hardest thing on the
+   page to hit. DESIGN.md's ≥44px floor; every other link on both archive
+   sheets already honours it (`.monthChip`, `late-result .link`). */
+/* TWO LINES, and the uppercase lives on the top one only (step-7 V1). The
+   link used to be one uppercase run of `Mês anterior · <mês>`; impeccable's
+   `all-caps-body` fires on any non-heading element with more than 30
+   characters of direct text under `text-transform: uppercase`
+   (`checks.mjs:3463-3467`) and grants no interactive or `nav` exemption —
+   that one belongs to `undersized-ui-text`, twenty lines above it. In
+   fevereiro the label is 32 characters and in setembro, novembro and dezembro
+   31, so the gate would have redded on the newest month page for four months
+   in every twelve, on the calendar rather than on a diff. Kicker over month
+   is also the anatomy this sheet already uses on the day cards
+   (`.cardKicker` + `.cardTitle`), and it scans faster: the month, the only
+   varying token, is the one in sentence case. */
+.monthNavLink {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--touch-target-min);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* Pushes a lone `next` to the right when there is no `previous`. */
+.monthNavLink:only-child:last-child {
+  margin-left: auto;
+}
+
+/* `next` sits at the right edge of the `space-between` row, so both of its
+   lines align to that edge rather than ragging away from it. */
+.monthNavNext {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.monthNavKicker {
+  font: var(--text-kicker);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* NOT uppercase and NOT tracked — the two halves of the rule above. Tracking
+   belongs to the kicker register; on sentence case at body size impeccable's
+   `wide-tracking` would be right to complain. */
+.monthNavMonth {
+  font: var(--text-body);
+  color: var(--ink);
+}
+
+/* ——— day page: the game cards —————————————————————————————————————
+   The hub's Game-card register (DESIGN.md "Game card"): card paper, 1px line
+   border, hard shadow in the game accent at 0.22, washi tape top-centre,
+   kicker + Fraunces title. Static rotations, alternating sign, never
+   animated. */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  list-style: none;
+  margin: var(--space-8) 0 0;
+  padding: 0;
+}
+
+.card {
+  position: relative;
+  display: block;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent) 22%, transparent);
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  text-decoration: none;
+}
+
+.cardOdd {
+  transform: rotate(-0.8deg);
+}
+
+.cardEven {
+  transform: rotate(0.6deg);
+}
+
+/* Decoration with nothing to announce — `aria-hidden` at the call site. */
+.tape {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 72px;
+  height: 14px;
+  margin-left: -36px;
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: var(--radius-tape);
+  transform: rotate(-4deg);
+}
+
+.cardKicker {
+  margin: 0;
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.cardTitle {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 550;
+  color: var(--ink);
+}
+
+/* ——— the empty archive ————————————————————————————————————————————
+   An honest sentence where the sections would be. 200 with its marker — the
+   resource exists and is empty, which is not a 404 — and no skeleton and no
+   fake rows. */
+.empty {
+  margin-top: 40px;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+@media (max-width: 768px) {
+  /* The block-flow argument now lives on `.page` itself, at every width
+     (step-6 F6) — this block keeps only the padding step-down. 768px, not
+     900px: seventeen other sheets and `globals.css:31` use 768, and the odd
+     breakpoint rendered the mobile layout on the desktop desk texture
+     between 769 and 900 (step-6 F11). */
+  .page {
+    padding: var(--space-5) var(--space-5) var(--space-6);
+  }
+
+  .topBar {
+    min-height: var(--touch-target-min);
+  }
+
+  .back {
+    padding: 10px 10px 10px 0;
+  }
+
+  .titleBlock {
+    margin-top: var(--space-5);
+  }
+
+  .title {
+    font-size: 34px;
+  }
+
+  /* The row stacks: a date above its games rather than beside them, so a
+     four-game day never squeezes the date column at 390px. */
+  .rowLink {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    padding: var(--space-3) 0;
+  }
+
+  /* Full width of the stacked row, so the four columns stay four columns and
+     an absent game keeps reading as an empty cell (step-6 F9). */
+  .rowGames {
+    width: 100%;
+    gap: var(--space-2);
+  }
+
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -549,6 +549,61 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S35: the archive modules — the screens, the panel and the bare barrel form — red from free play, clean from a daily path", async () => {
+    // #31's growth clause (the napkin's one-hop rule): every module under
+    // `src/archive` is one hop from `sync.ts`, `play-record.ts`,
+    // `use-play-lifecycle.ts` and `use-record-snapshot.ts`, and
+    // `app/arquivo/**` is one hop from that. The bare `../archive` form is
+    // listed because `**/archive/**` does not match it — a future
+    // `src/archive/index.ts` barrel must not become a door.
+    const doors = [
+      "../archive/sudoku-screen",
+      "../archive/late-result",
+      "../archive/chrome",
+      "../archive",
+      "../../app/arquivo/page",
+      "../../app/arquivo/day-rows",
+    ];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — the archive shells import the per-game views.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+  });
+
+  it("T-LINT-S36: dynamic-import evasions of the archive bans red, the bare barrel form included; a local dynamic import stays clean", async () => {
+    const doors = [
+      '  import("../archive/sudoku-screen");',
+      '  import("../archive/late-result");',
+      '  import("../archive");',
+      '  import("../../app/arquivo/page");',
+    ];
+    for (const door of doors) {
+      const source = ["export const load = () =>", door, ""].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-syntax");
+    }
+
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S18: the free-play directory's LEGAL surface lints clean — the wall is not a blanket ban", async () => {
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',

@@ -7,6 +7,7 @@ import "./globals.css";
 
 import { SessionBootstrap } from "../src/components/session-bootstrap";
 import { locale, messages } from "../src/i18n";
+import { siteOrigin } from "../src/site-origin";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -33,9 +34,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ),
+  // #31: hoisted to `src/site-origin.ts`, because `sitemap.ts` and
+  // `robots.ts` need the same origin and Next does NOT resolve a sitemap
+  // entry against `metadataBase` — a canonical and a sitemap URL that
+  // resolve to different origins is exactly the failure one spelling
+  // prevents (ADR-0013 :36).
+  metadataBase: siteOrigin(),
   title: messages.meta.title,
   description: messages.meta.description,
   // The install-surface half iOS actually reads (#19, plan 027 §10.3):
