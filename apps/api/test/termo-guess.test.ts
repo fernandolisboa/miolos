@@ -290,9 +290,10 @@ describe("POST /termo/guess", () => {
   });
 
   it("T-API-S36: YESTERDAY's board is judged against yesterday's row (the rollover case)", async () => {
-    // ACCEPTED_DAYS_BACK exists for exactly this: a player mid-game at the São
-    // Paulo rollover must be able to submit guess five for yesterday's date,
-    // or Termo becomes unfinishable at midnight (ADR-0038 decision 8).
+    // The shared write window exists for exactly this: a player mid-game at
+    // the São Paulo rollover must be able to submit guess five for
+    // yesterday's date, or Termo becomes unfinishable at midnight (ADR-0038
+    // decision 8, whose one-predicate-both-routes substance survives #31).
     const today = await todaySaoPaulo(ctx.db);
     const yesterday = addDays(today, -1);
     await seedTermo(yesterday, 21);
@@ -421,7 +422,7 @@ describe("POST /termo/guess — the gate ladder", () => {
     }
   });
 
-  it("T-API-S37: two days back, a future date, an unpublished row and a killed row each ⇒ 404", async () => {
+  it("T-API-S37: two days back is now JUDGED; a future date, an unpublished row and a killed row each ⇒ 404 (#31)", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const tomorrow = addDays(today, 1);
     const twoDaysAgo = addDays(today, -2);
@@ -431,16 +432,19 @@ describe("POST /termo/guess — the gate ladder", () => {
     const { token } = await createSession();
     const list = [answer.normalized];
 
-    // Outside the accepted window: the row exists and is published, and the
-    // route still refuses it. ACCEPTED_DAYS_BACK is unchanged at 1.
-    const tooOld = await POST(
+    // THE WIDENING (#31, ADR-0053 decision 5), pinned where the old lower
+    // bound was pinned. The row exists and is published, and the write
+    // window no longer has a lower half — so an archived Termo is judged,
+    // which is what makes one playable at all. The wall is now the only
+    // lower authority, and the three cases below are what it still refuses.
+    const archived = await POST(
       guessRequest({ token, body: guessBody(twoDaysAgo, list) }),
     );
-    expect(tooOld.status).toBe(404);
-    expect(await tooOld.json()).toEqual({ error: "no-puzzle" });
+    expect(archived.status).toBe(200);
 
-    // Tomorrow is inside the window on the near side and invisible through
-    // the wall — ADR-0004's whole point.
+    // Tomorrow is refused by `isWritableDate` in the ROUTE, ahead of the
+    // wall read — the upper bound is the one #31 tightened (before it, a
+    // future date reached the wall and was refused there).
     const future = await POST(
       guessRequest({ token, body: guessBody(tomorrow, list) }),
     );
@@ -610,4 +614,110 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
       expect(body.tiles).toHaveLength(length);
     }
   });
+});
+
+describe("POST /termo/guess — the archive write window (#31, ADR-0053)", () => {
+  it("T-API-S101: an archived Termo is judged, and the window is the SAME one /completions uses", async () => {
+    // An archived Termo needs both routes to agree about the date or it is
+    // unfinishable: the guess route would judge and the completion route
+    // would 404 the result, or the reverse. ADR-0038 decision 8's
+    // one-predicate-both-routes rule is what stops that, and #31 kept it
+    // while removing the window's lower half — so this asserts one seeded
+    // date through BOTH routes rather than trusting the shared import.
+    const today = await todaySaoPaulo(ctx.db);
+    const archived = addDays(today, -90);
+    await seedTermo(archived);
+    const { token } = await createSession();
+
+    // The ladder answers, mid-game, at a 90-day-old date.
+    const playing = await POST(
+      guessRequest({ token, body: guessBody(archived, DECOYS.slice(0, 3)) }),
+    );
+    expect(playing.status).toBe(200);
+    const playingBody = termoGuessResponseSchema.parse(await playing.json());
+    expect(playingBody.status).toBe("playing");
+    expect(playingBody.tiles).toHaveLength(3);
+
+    // And it closes, at the same date.
+    const won = await POST(
+      guessRequest({
+        token,
+        body: guessBody(archived, [...DECOYS.slice(0, 2), answer.normalized]),
+      }),
+    );
+    expect(termoGuessResponseSchema.parse(await won.json()).status).toBe("won");
+
+    // The completion route accepts the same date — one window, both routes.
+    const { POST: completionsPost } = await import("../app/completions/route");
+    const completion = await completionsPost(
+      new NextRequest("http://localhost:3001/completions", {
+        method: "POST",
+        headers: new Headers({
+          "content-type": "application/json",
+          cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        }),
+        body: JSON.stringify({
+          game: "termo",
+          date: archived,
+          guesses: [...DECOYS.slice(0, 2), answer.normalized],
+          elapsedMs: 61_000,
+          hintsUsed: 0,
+        }),
+      }),
+    );
+    expect(completion.status).toBe(200);
+
+    // This route still wrote nothing of its own — the row above is the
+    // completion route's.
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+
+  it("T-API-S102: after the widening the 404 arm fires only for killed, unpublished and future", async () => {
+    // ADR-0039 decision 3's 404 table, re-pinned: #31 narrowed its reachable
+    // causes from four to three by deleting the route's lower bound, and the
+    // wall is now the only lower authority.
+    const today = await todaySaoPaulo(ctx.db);
+    const { token } = await createSession();
+    const list = [answer.normalized];
+
+    // Never published, 200 days back.
+    const missing = await POST(
+      guessRequest({ token, body: guessBody(addDays(today, -200), list) }),
+    );
+    expect(missing.status).toBe(404);
+    expect(await missing.json()).toEqual({ error: "no-puzzle" });
+
+    // Published in the future but dated in the past.
+    const pendingDate = addDays(today, -100);
+    await seedTermo(pendingDate, 11);
+    await ctx.db
+      .update(dailyPuzzles)
+      .set({ publishedAt: sql`now() + interval '1 day'` })
+      .where(eq(dailyPuzzles.date, pendingDate));
+    const pending = await POST(
+      guessRequest({ token, body: guessBody(pendingDate, list) }),
+    );
+    expect(pending.status).toBe(404);
+
+    // Killed.
+    const killedDate = addDays(today, -50);
+    await seedTermo(killedDate, 13);
+    await ctx.db
+      .update(dailyPuzzles)
+      .set({ killedAt: sql`now()` })
+      .where(eq(dailyPuzzles.date, killedDate));
+    const killed = await POST(
+      guessRequest({ token, body: guessBody(killedDate, list) }),
+    );
+    expect(killed.status).toBe(404);
+
+    // Future — refused in the ROUTE now, ahead of the wall.
+    await seedTermo(addDays(today, 1), 17);
+    const future = await POST(
+      guessRequest({ token, body: guessBody(addDays(today, 1), list) }),
+    );
+    expect(future.status).toBe(404);
+
+    expect(await completionRows()).toHaveLength(0);
+  }, 30_000);
 });

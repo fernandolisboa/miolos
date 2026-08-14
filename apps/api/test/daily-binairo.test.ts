@@ -31,9 +31,15 @@ vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
+// PGlite boot measures ~1.2 s locally, CI runners are ~3-4x slower, and
+// worker contention adds to both: 1.2 s x 4 + margin is the ceiling every
+// other PGlite file in this suite already carries (plan 017 SS15). This one
+// and session.test.ts were the last two riding vitest's 10 s default, and
+// #31's added PGlite work is what finally tipped them over it under
+// parallel fan-out (napkin item 3).
 beforeAll(async () => {
   ctx = await createTestDb();
-});
+}, 30_000);
 
 beforeEach(async () => {
   await ctx.db.execute(sql`truncate table daily_puzzles`);

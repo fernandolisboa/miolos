@@ -12,8 +12,10 @@ import {
  *
  * It was written twice — once in each route, under a TSDoc that said "if
  * either changes, change both". That is the shape ADR-0038 **decision 8**
- * rejects one decision earlier, hoisting `ACCEPTED_DAYS_BACK` into
- * `src/publishing/dates.ts` because "two copies of the bound would drift",
+ * rejects one decision earlier, hoisting the write window into
+ * `src/publishing/dates.ts` because "two copies of the bound would drift"
+ * (that bound is `isWritableDate` since #31 removed its lower half; the
+ * one-copy rule is what survived, ADR-0053),
  * and the drift here is worse than a widened window: a gate added to the
  * guess route alone would let `POST /completions` record a write-once
  * (ADR-0026 decision 1) `lost` row for a board the guess route would never

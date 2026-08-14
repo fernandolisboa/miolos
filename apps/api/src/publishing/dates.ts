@@ -8,30 +8,49 @@
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
- * How far back a completion or a guess may be claimed: SP-today or
- * SP-yesterday (plan 017 D29). `getPublishedDailyWithSolution` has no lower
- * bound, so without this any caller could write a `won` row for every past
- * daily — permanently, since a completion is never reopened (ADR-0026) — and
- * a stale localStorage record would flush as a day the player never played.
- * One day of slack is what keeps a post-rollover flush working (D19).
+ * The rollover slack: the only days a write INTENDED AS ON TIME may
+ * legitimately predate the account's birth day (a 00:30 account flushing
+ * yesterday's completion). Its ONE consumer is the stats calendar's range
+ * clamp — `computeCalendar(rows, since, today, rolloverSlackDays)`.
  *
- * ONE COPY, SHARED BY BOTH ROUTES (#27, ADR-0038 decision 8). It lived in
- * `app/completions/route.ts` until Termo needed the same window: a player
- * mid-game at the São Paulo rollover must be able to submit guess five for
- * yesterday's date, or Termo becomes unfinishable at midnight — while the
- * completion route already accepts that same day. Two copies of the bound is
- * exactly the drift ADR-0026 warns about: *"Widening it accidentally — by
- * removing the bound while 'fixing' a date test — reopens the whole past
- * calendar to forged completions."*
+ * It is NOT the write bound, it never was the same idea, and it must never
+ * be used as one again: #31 widened the write window to the whole archive
+ * (ADR-0053), and a clamp that followed it would drag the calendar's range
+ * back arbitrarily and paint "missed" over days the account did not exist
+ * for — the exact failure ADR-0051's Rejected list names at :175-178.
  *
- * This does NOT move the bound out of the route layer, which is what ADR-0026
- * decision 6 actually requires ("in the route and not in SQL"). A module
- * inside `apps/api/src` is still the route layer; nothing here reaches SQL.
- *
- * EXTENSION POINT: #31 (archive) widens this deliberately, with its own tests
- * and its own `late` semantics (ADR-0008).
+ * One constant, one owner. Until #31 this value and the write window were a
+ * SINGLE constant holding two ideas; splitting the name is what makes
+ * `isWritableDate`'s widening safe (ADR-0053 decision 6).
  */
-export const ACCEPTED_DAYS_BACK = 1;
+export const ROLLOVER_SLACK_DAYS = 1;
+
+/**
+ * The write window (ADR-0026 decision 6 as amended by ADR-0053).
+ *
+ * UPPER bound only: a completion or a guess may target any day up to and
+ * including the DB clock's São Paulo today. The LOWER bound is GONE — the
+ * archive is every published past day, and the WALL is the only authority
+ * on which those are. Bounded in the ROUTE, never in SQL: decision 6's
+ * layer rule is unchanged, and `wallPredicate` is untouched.
+ *
+ * The upper bound is a TIGHTENING, not a preservation: before #31 neither
+ * write route refused a future date in the route at all — the wall refused
+ * it one statement later. Now the route refuses it first.
+ *
+ * ONE PREDICATE, SHARED BY BOTH ROUTES (#27, ADR-0038 decision 8, whose
+ * substance survives whole even though its title names the deleted
+ * constant). Two copies of the window is exactly the drift ADR-0026 warns
+ * about, and an archived Termo needs both windows to agree or it is
+ * unfinishable.
+ *
+ * The volume ceiling this removal owes lives in the completion route
+ * (`ARCHIVE_WRITES_PER_DAY`, ADR-0053 decision 13), not here: it is a rate
+ * rule, not a date rule. String comparison is exact for 'YYYY-MM-DD'.
+ */
+export function isWritableDate(date: string, today: string): boolean {
+  return date <= today;
+}
 
 function partsOf(date: string): [number, number, number] {
   const match = ISO_DATE.exec(date);

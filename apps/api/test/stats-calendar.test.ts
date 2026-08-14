@@ -1,4 +1,4 @@
-import { statsCalendarResponseSchema } from "@miolos/core";
+import { statsCalendarResponseSchema, statsResponseSchema } from "@miolos/core";
 import { eq, sessions, sql, users } from "@miolos/db";
 import { todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
@@ -217,9 +217,11 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     const yesterday = addDays(today, -1);
     const { token, userId } = await createSession();
 
-    // The ACCEPTED_DAYS_BACK birth-midnight case: an account minted just
+    // The ROLLOVER SLACK's birth-midnight case: an account minted just
     // after the SP rollover completing YESTERDAY's puzzle — the row is
-    // dated one day before created_at's SP day and must appear.
+    // dated one day before created_at's SP day and must appear. The slack
+    // is one day and stays one day; #31 widened the WRITE window, which is
+    // a different constant with a different owner (ADR-0053 decision 6).
     await insertHistoryRow({
       userId,
       game: "binairo",
@@ -258,7 +260,8 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     const { token, userId } = await createSession();
 
     // The reachable case the won-only clamp exists for: a 00:20 account
-    // LOSES yesterday's Termo (ACCEPTED_DAYS_BACK admits the write). A
+    // LOSES yesterday's Termo (the write window admits it, and the rollover
+    // slack is what would let it extend the range). A
     // lost row colours no day, so an extension it earned could only paint
     // "missed" on a day the account did not exist for — the range must
     // start at birth, and the loss still lands in the fail row (visible
@@ -322,5 +325,64 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
       state: "onTime",
       perfect: true,
     });
+  });
+});
+
+describe("GET /stats/calendar — the archive widening (#31, ADR-0053)", () => {
+  it("T-API-S103: a late row 400 days before the account's birth paints no calendar day, does not move the range start, and still counts in GET /stats' `solved`", async () => {
+    // D9 at the seam, over two real routes and one PGlite database. The
+    // class is the one #31 creates and nothing else could: before #31 a
+    // won row could be at most one day before `since`, always inside the
+    // rollover slack. Off-calendar with the aggregates carrying it is
+    // ADR-0051 decision 2's SECOND sanctioned exit, taken verbatim.
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    await ageAccount(userId, 3);
+    const birthDay = addDays(today, -3);
+    const prebirth = addDays(today, -400);
+
+    // An on-time win today, so the calendar is not trivially all-missed.
+    await insertHistoryRow({
+      userId,
+      game: "binairo",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+    });
+    // The pre-birth archive row: dated 400 days back, WRITTEN today, so
+    // `on_time` derives false exactly as an archive completion does.
+    await insertHistoryRow({
+      userId,
+      game: "sudoku",
+      date: prebirth,
+      outcome: "won",
+      completedAtDate: today,
+    });
+
+    const response = await GET(calendarRequest(token));
+    expect(response.status).toBe(200);
+    const body = statsCalendarResponseSchema.parse(await response.json());
+
+    // No entry for the pre-birth date, and the range still starts at birth:
+    // not one fabricated "missed" day between the two.
+    expect(body.days.some((day) => day.date === prebirth)).toBe(false);
+    expect(body.days[0]?.date).toBe(birthDay);
+    expect(body.days).toHaveLength(4);
+
+    // And GET /stats counts it — the aggregates carry what the calendar
+    // does not paint (ADR-0051 decision 6).
+    const { GET: statsGet } = await import("../app/stats/route");
+    const stats = await statsGet(
+      new NextRequest("http://localhost:3001/stats", {
+        method: "GET",
+        headers: new Headers({ cookie: `${SESSION_COOKIE_NAME}=${token}` }),
+      }),
+    );
+    expect(stats.status).toBe(200);
+    const statsBody = statsResponseSchema.parse(await stats.json());
+    expect(statsBody.sudoku.solved).toBe(1);
+    // …and nothing time-shaped: a late row reaches no time statistic.
+    expect(statsBody.sudoku.bestMs).toBeNull();
+    expect(statsBody.sudoku.averageMs).toBeNull();
   });
 });
