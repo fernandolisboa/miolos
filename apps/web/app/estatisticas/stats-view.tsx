@@ -7,12 +7,17 @@
  * `page.module.css` has to import that exact module, and the page itself
  * stays a static server shell.
  *
- * Both hooks fire in mount effects only, so the server markup and the
+ * All three hooks fire in mount effects only, so the server markup and the
  * pre-hydration paint agree byte-for-byte (§6.6). Three renderings per
  * surface, each an honest claim:
  *
  * - unsettled — reserved-dimension skeleton, values blanked with the
- *   `BLANK_VALUE` idiom, so the fetch landing shifts nothing (#37).
+ *   `BLANK_VALUE` idiom, so the fetch landing shifts nothing (#37). The
+ *   medal section is the NAMED exception to this reserved-dimension law:
+ *   its height is unknowable pre-fetch and D8's nothing-at-zero rule
+ *   makes absence its honest unsettled state, so it reserves nothing and
+ *   inserts post-paint (ADR-0052; the measured CLS is its number, not
+ *   this screen's).
  * - settled-`null` (cold visitor — the profile `impeccable detect` always
  *   scans, since /stats is `requireUserId`-gated and the preview's
  *   credentialed calls are anonymous) — REAL zeros, the way the hub
@@ -24,12 +29,13 @@
  * shadows and calendar cells — shapes, never words (ADR-0041). Numerals
  * that must align ride Instrument Sans + `tabular-nums` (ADR-0036).
  */
-import type {
-  CalendarDay,
-  StatsResponse,
-  TermoStats,
-  TimedGame,
-  TimedGameStats,
+import {
+  MEDAL_IDS,
+  type CalendarDay,
+  type StatsResponse,
+  type TermoStats,
+  type TimedGame,
+  type TimedGameStats,
 } from "@miolos/core";
 
 import {
@@ -39,6 +45,8 @@ import {
   messages,
   todaySaoPauloDate,
 } from "../../src/i18n";
+import { medalCopy } from "../../src/medals/copy";
+import { useMedals } from "../../src/medals/use-medals";
 import { accentVars } from "../../src/play/accent";
 import {
   calendarMonths,
@@ -75,11 +83,11 @@ export function StatsView() {
   return (
     <>
       <PerfectDaysCard stats={stats} />
-      {/* #30's medal section slots HERE — between the summary and the
-          per-game blocks ("medals display in the stats area", plan 033
-          D10). Nothing empty is rendered until then: a placeholder
-          section would be fake UI. Medals arrive on their own endpoint
-          and contract (ADR-0048 decision 3), never on /stats. */}
+      {/* #30's medal section — between the summary and the per-game
+          blocks ("medals display in the stats area", plan 033 D10).
+          Medals arrive on their own endpoint and contract (GET /medals,
+          ADR-0048 decision 3, ADR-0052), never on /stats. */}
+      <MedalsSection />
       <section className={styles.games}>
         {GAME_ORDER.map((game) => (
           <GameBlock key={game} game={game} stats={stats} />
@@ -87,6 +95,71 @@ export function StatsView() {
       </section>
       <CalendarSection />
     </>
+  );
+}
+
+/**
+ * #30's medal section (ADR-0052) — a compact LIST of earned facts, never a
+ * tile grid: the anti-references ban the rounded icon tile and the
+ * decorative emoji, which are the two default medal idioms. The section
+ * OWNS its hook (the CalendarSection precedent), so the medals settle
+ * re-renders exactly this subtree.
+ *
+ * NOTHING renders at unsettled, at settled-`null` AND at zero earned
+ * medals (D8): no heading, no locked-badge grid, no count, no DOM — a
+ * locked-medal display is gamification chrome and a padlock grid is the
+ * loot-box visual language ADR-0006 exists to keep out. The section
+ * appears with the first earned medal. This is also why no dimension is
+ * reserved: the height is unknowable pre-fetch (0 to ~23 rows), and the
+ * anonymous/zero case inserts nothing, so the CI-visible state is
+ * CLS-neutral by construction (#37 inherits the measured seeded number).
+ *
+ * Unknown ids are silently DROPPED (the drop-unknown rule, ADR-0052's
+ * honesty mechanism): membership in the bundled catalog is the filter — a
+ * `Set` over the payload makes it O(1), and walking `MEDAL_IDS` makes
+ * catalog order the display order (no date exists on the wire to sort by).
+ * An all-unknown payload is the zero state too.
+ *
+ * The stamp-ring is ONE uniform hue for every medal — `--accent-app` on a
+ * SHAPE, never a word (ADR-0041): the list is an account-level surface,
+ * every row is the same state (earned), so no meaning rides on hue, and
+ * the words beside it stay `--ink`/`--ink-2`.
+ */
+function MedalsSection() {
+  const medals = useMedals();
+  if (medals === undefined || medals === null) {
+    return null;
+  }
+  const earned = new Set<string>(medals.medals);
+  const known = MEDAL_IDS.filter((id) => earned.has(id));
+  if (known.length === 0) {
+    return null;
+  }
+  return (
+    <section className={styles.medals}>
+      <h2 className={styles.sectionHeading}>{messages.medals.title}</h2>
+      {/* role="list" is load-bearing, not redundant: `list-style: none`
+          strips WebKit's list semantics (Safari/VoiceOver), and the
+          explicit role is the standard workaround. */}
+      <ul role="list" className={styles.medalList}>
+        {known.map((id) => (
+          // The visible name/description ARE the accessible content —
+          // no aria-label, no aria-hidden on the words: a composed label
+          // on the <li> is name-PROHIBITED on WebKit once the list
+          // semantics are stripped, and hiding the text left VoiceOver
+          // announcing nothing (step-6 correctness finding).
+          <li key={id} className={styles.medalRow}>
+            <span aria-hidden className={styles.medalRing} />
+            <span className={styles.medalWords}>
+              <span className={styles.medalName}>{medalCopy[id].name}</span>
+              <span className={styles.medalDescription}>
+                {medalCopy[id].description}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

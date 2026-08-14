@@ -96,6 +96,74 @@
   color: var(--ink-2);
 }
 
+/* ——— medals — #30's earned-fact list (ADR-0052) ——————————————————————
+   Rows in a list, never a tile grid: the anti-references ban the rounded
+   icon tile and the decorative emoji, the two default medal idioms. The
+   stamp-ring is ONE uniform hue for every medal — the APP accent, on a
+   SHAPE (ADR-0041): every word stays --ink/--ink-2, so no ratio is owed
+   beyond the sheet's existing measurements. No zero state exists to
+   style: the section renders nothing until the first earned medal, and
+   no dimension is reserved (the height is unknowable pre-fetch). Single
+   column at all widths; the description wraps under the name on narrow
+   viewports — nothing here carries a fixed width (the screen's
+   mobile-overflow history is why this is binding, not advisory). */
+
+.medals {
+  margin-top: var(--space-8);
+}
+
+.medalList {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hairline separators between rows — the F5 stat-row register. */
+.medalRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.medalRow:last-child {
+  border-bottom: none;
+}
+
+/* The completion stamp's OUTLINE only (DESIGN.md): ~20px, 3px border,
+   empty. The register's −6deg rotation is omitted because an empty
+   circle has none to show — typographic content, if a ring ever gains
+   any, brings the rotation back with it (DESIGN.md:39). */
+.medalRing {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--accent-app);
+  border-radius: 50%;
+}
+
+.medalWords {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.medalName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.medalDescription {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
 /* ——— the four per-game blocks ———————————————————————————————————————
    The hub card's chrome (page.module.css "Game card" register): card
    paper, hairline border, hard shadow in the game's accent at 22%, washi

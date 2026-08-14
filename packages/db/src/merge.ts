@@ -3,7 +3,13 @@ import { and, asc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 
 import type { Db } from "./client";
 import { onTimeSql } from "./completions";
-import { completions, hintGrants, sessions, users } from "./schema";
+import {
+  completions,
+  hintGrants,
+  medalGrants,
+  sessions,
+  users,
+} from "./schema";
 
 /**
  * The account-merge operation (ADR-0009 executed; ADR-0049) — a merge
@@ -91,13 +97,14 @@ export async function listCompletionsForMerge(
  * is a no-op. Throws on an unknown id: a merge against a typo must be
  * loud, not creative.
  *
- * EXTENSION POINT: account-scoped tables acquire their merge duty HERE —
- * #30's curated medal grants (union-and-dedupe), the rewarded-ad ticket's
- * same-day hint grants if it ever wants them repointed instead (ADR-0049
- * decision 6; hint grants are DELETED, never carried — day-scoped,
- * structurally expiring, writer-less in v1, plan 029 D12). #58's stored
- * on_time joins the repoint statement's explicit column list when it
- * lands.
+ * EXTENSION POINT, consumed by #30 as reserved (ADR-0049 decision 6):
+ * curated medal grants acquired their merge duty here — statements 5b/5c
+ * below, union-EARLIEST-dedupe then the loser's delete (ADR-0052). Future
+ * account-scoped tables still acquire theirs HERE — the rewarded-ad
+ * ticket's same-day hint grants if it ever wants them repointed instead
+ * (hint grants are DELETED, never carried — day-scoped, structurally
+ * expiring, writer-less in v1, plan 029 D12). #58's stored on_time joins
+ * the repoint statement's explicit column list when it lands.
  */
 export async function mergeAccounts(
   db: Db,
@@ -226,6 +233,27 @@ export async function mergeAccounts(
   //    rows) and crash-prefix-safe: a crash before this statement leaves
   //    only unreadable rows the re-run removes.
   await db.delete(hintGrants).where(eq(hintGrants.userId, loserId));
+
+  // 5b. #30's curated medal grants: union-EARLIEST-dedupe (ADR-0009's
+  //     union-and-dedupe sentence in its own earliest-wins posture;
+  //     ADR-0049 decision 6's reserved seat). granted_at is COPIED, never
+  //     defaultNow() — re-stamping would move the recorded grant event.
+  //     On a shared medal the EARLIEST granted_at wins regardless of side:
+  //     least() in the conflict arm — one statement where completions
+  //     needed two, because a grant has exactly one merge-relevant column
+  //     (ADR-0052). Column list hand-spelled, pinned by T-DB-S42.
+  //     Individually idempotent: a re-run selects zero loser rows, and
+  //     least() is stable under reapplication.
+  await db.execute(sql`
+    insert into medal_grants (user_id, medal_id, granted_at)
+    select ${winnerId}::uuid, medal_id, granted_at
+      from medal_grants where user_id = ${loserId}
+    on conflict (user_id, medal_id)
+    do update set granted_at = least(medal_grants.granted_at, excluded.granted_at)
+  `);
+  // 5c. The loser's grant rows go — "emptied" means EMPTIED; no row may
+  //     keep referencing the tombstone. Trivially idempotent.
+  await db.delete(medalGrants).where(eq(medalGrants.userId, loserId));
 
   // 6. Empty the shell: every identity handle nulled — current AND future
   //    (the social ids have no writer today, so nulling them is provably

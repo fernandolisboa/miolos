@@ -37,10 +37,10 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  // `cascade` because sessions references users; completions and
-  // hint_grants are children of users too.
+  // `cascade` because sessions references users; completions, hint_grants
+  // and medal_grants are children of users too.
   await ctx.db.execute(
-    sql`truncate table users, completions, hint_grants cascade`,
+    sql`truncate table users, completions, hint_grants, medal_grants cascade`,
   );
 });
 
@@ -111,6 +111,8 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "listCompletionsForMerge",
       "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
       "listCompletionsForStreak",
+      "listMedalGrants", // #30 (ADR-0052): widened in the same commit as the export
+      "medalGrants", // #30 (ADR-0052): the curated-grant table, user entry only
       "mergeAccounts",
       "recordCompletion",
     ]);

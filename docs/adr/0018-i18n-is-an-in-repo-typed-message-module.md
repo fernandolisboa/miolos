@@ -1,6 +1,7 @@
 # ADR-0018 — i18n is an in-repo typed message module, not a library
 
 **Status:** Accepted — 2026-07-31
+**Amended by:** [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md) — the copy-home sentence — *"All UI copy and metadata strings live here [messages.ts]; components never carry string literals."* — is narrowed: bulk per-item copy whose MEASURED bundle cost forces it out of the shared module (the 23-record medal catalog, whose ~2 KB of prose a `messages.ts` export carried into 15 of 17 routes' first-load chunks) may live in its own typed in-repo module under this ADR's same contract — typed, in-repo, composed, `as const` — while the surface's chrome stays in `messages.ts` and the i18n barrel does NOT re-export the split module (a re-export recreates the leak). Components still never carry string literals. Scope: measured bulk per-item copy only; `messages.ts` remains the default home for everything else. Multiple `Amended by:` lines stack.
 **Depends on:** [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md)
 
 ## Context

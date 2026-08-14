@@ -496,6 +496,59 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S33: the medals modules — client, hook and the bare barrel form — red from free play, clean from a daily path", async () => {
+    // #30's growth clause (the napkin's one-hop rule): the medals client
+    // reaches the network and the server-derived earned set, so ADR-0052's
+    // surface stays out of free play only because these names entered the
+    // list in the same change that created the modules. The bare
+    // `../medals` form is listed because `**/medals/**` does not match it —
+    // a future `src/medals/index.ts` barrel must not become a door. The
+    // section component rides `**/app/estatisticas/**`, already probed by
+    // T-LINT-S31.
+    const doors = [
+      "../medals/medals-client",
+      "../medals/use-medals",
+      "../medals",
+    ];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — the stats screen's island imports them.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+  });
+
+  it("T-LINT-S34: dynamic-import evasions of the medals bans red, the bare barrel form included; a local dynamic import stays clean", async () => {
+    const doors = [
+      '  import("../medals/medals-client");',
+      '  import("../medals/use-medals");',
+      '  import("../medals");',
+    ];
+    for (const door of doors) {
+      const source = ["export const load = () =>", door, ""].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-syntax");
+    }
+
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S18: the free-play directory's LEGAL surface lints clean — the wall is not a blanket ban", async () => {
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',

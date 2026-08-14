@@ -7,7 +7,13 @@ import {
   listCompletionsForMerge,
   mergeAccounts,
 } from "../src/merge";
-import { completions, hintGrants, sessions, users } from "../src/schema";
+import {
+  completions,
+  hintGrants,
+  medalGrants,
+  sessions,
+  users,
+} from "../src/schema";
 import { createTestDb } from "../src/testing";
 
 // The merge suite (issue #20, ADR-0009/ADR-0026/ADR-0049, plan 029 §6/§9).
@@ -29,7 +35,7 @@ beforeAll(async () => {
 /** One truncate spelling for every reset this file performs. */
 async function reset(): Promise<void> {
   await ctx.db.execute(
-    sql`truncate table users, completions, hint_grants cascade`,
+    sql`truncate table users, completions, hint_grants, medal_grants cascade`,
   );
 }
 
@@ -119,12 +125,30 @@ async function insertHintGrant(userId: string, date: string): Promise<void> {
     .values({ userId, date, source: "rewarded-ad", hints: 3 });
 }
 
+/** A curated grant row (no code writer exists in v1 — the operator ritual's
+ *  shape, ADR-0052) with an optional PINNED granted_at, so earliest-wins
+ *  assertions compare exact instants instead of racing the DB clock. */
+async function insertMedalGrant(
+  userId: string,
+  medalId: string,
+  grantedAt?: Date,
+): Promise<void> {
+  await ctx.db
+    .insert(medalGrants)
+    .values(
+      grantedAt === undefined
+        ? { userId, medalId }
+        : { userId, medalId, grantedAt },
+    );
+}
+
 /** Deterministic full-state snapshot for the double-run and no-op checks. */
 async function snapshotState(): Promise<{
   users: unknown[];
   sessions: unknown[];
   completions: unknown[];
   hintGrants: unknown[];
+  medalGrants: unknown[];
 }> {
   return {
     users: await ctx.db.select().from(users).orderBy(asc(users.id)),
@@ -144,6 +168,10 @@ async function snapshotState(): Promise<{
       .select()
       .from(hintGrants)
       .orderBy(asc(hintGrants.id)),
+    medalGrants: await ctx.db
+      .select()
+      .from(medalGrants)
+      .orderBy(asc(medalGrants.userId), asc(medalGrants.medalId)),
   };
 }
 
@@ -392,7 +420,7 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
 });
 
 describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)", () => {
-  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants state after run one deep-equals run two", async () => {
+  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants+medal_grants state after run one deep-equals run two", async () => {
     const winner = await createUser(OLDER);
     const loser = await createUser(NEWER);
     await ctx.db
@@ -441,6 +469,12 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
     // runs would deep-equal an identical zero-grant state).
     await insertHintGrant(winner, "2026-08-01");
     await insertHintGrant(loser, "2026-08-01");
+    // Medal grants on BOTH sides too (the same precedent): the loser's
+    // exercises the union+delete pair on both runs, and the winner's own
+    // grant surviving WITH ITS OWN granted_at is asserted directly below.
+    const winnerGrantedAt = new Date("2026-07-01T12:00:00.000Z");
+    await insertMedalGrant(winner, "founder", winnerGrantedAt);
+    await insertMedalGrant(loser, "bug-reporter", NEWER);
 
     const first = await mergeAccounts(ctx.db, winner, loser);
     const afterFirst = await snapshotState();
@@ -449,6 +483,31 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
     const survivingGrants = await ctx.db.select().from(hintGrants);
     expect(survivingGrants).toHaveLength(1);
     expect(survivingGrants[0]?.userId).toBe(winner);
+    // The winner's own medal grant survives with its own granted_at (an
+    // unscoped DELETE or a re-stamp would both be invisible to the
+    // snapshot's double-run equality); the loser's rode the union over.
+    const survivingMedals = await ctx.db
+      .select()
+      .from(medalGrants)
+      .orderBy(asc(medalGrants.medalId));
+    expect(
+      survivingMedals.map((row) => ({
+        userId: row.userId,
+        medalId: row.medalId,
+        grantedAt: row.grantedAt.toISOString(),
+      })),
+    ).toEqual([
+      {
+        userId: winner,
+        medalId: "bug-reporter",
+        grantedAt: NEWER.toISOString(),
+      },
+      {
+        userId: winner,
+        medalId: "founder",
+        grantedAt: winnerGrantedAt.toISOString(),
+      },
+    ]);
 
     // The second run is not just a test: it is D7's crash-recovery
     // mechanism, and it must change NOTHING — updated_at included (the
@@ -697,5 +756,93 @@ describe("mergeAccounts — the winner-liveness guard (issue #21 precondition 1,
     const second = await mergeAccounts(ctx.db, winner, loser);
     expect(second).toEqual(first);
     expect(await snapshotState()).toEqual(afterFirst);
+  });
+});
+
+describe("mergeAccounts — curated medal grants (#30, ADR-0052, ADR-0049 decision 6)", () => {
+  it("T-DB-S41: union-earliest-dedupe — the loser's grants surface on the winner, a shared medal keeps the EARLIEST granted_at whichever side carried it, the winner's own grant survives directly, the loser is emptied, and a re-run is a full no-op", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    const early = new Date("2026-03-01T12:00:00.000Z");
+    const late = new Date("2026-07-01T12:00:00.000Z");
+    // One grant each side, disjoint — the plain union half.
+    await insertMedalGrant(winner, "winner-only", early);
+    await insertMedalGrant(loser, "loser-only", late);
+    // Shared medals in BOTH directions (the least() pin): on one the
+    // WINNER was granted first, on the other the LOSER was — the earliest
+    // instant must win regardless of side. Plain DO NOTHING would keep
+    // the later grant date whenever the loser was granted first — against
+    // ADR-0009's earliest-wins posture.
+    await insertMedalGrant(winner, "shared-winner-first", early);
+    await insertMedalGrant(loser, "shared-winner-first", late);
+    await insertMedalGrant(winner, "shared-loser-first", late);
+    await insertMedalGrant(loser, "shared-loser-first", early);
+
+    const first = await mergeAccounts(ctx.db, winner, loser);
+    expect(first).toEqual({ winnerId: winner, loserId: loser });
+
+    // The winner owns the union, granted_at COPIED (never re-stamped) and
+    // earliest-wins on both shared medals; the winner's own disjoint
+    // grant survives DIRECTLY (the T-DB-S20 precedent — a snapshot alone
+    // cannot see an unscoped DELETE).
+    const rows = await ctx.db
+      .select()
+      .from(medalGrants)
+      .orderBy(asc(medalGrants.medalId));
+    expect(
+      rows.map((row) => ({
+        userId: row.userId,
+        medalId: row.medalId,
+        grantedAt: row.grantedAt.toISOString(),
+      })),
+    ).toEqual([
+      { userId: winner, medalId: "loser-only", grantedAt: late.toISOString() },
+      {
+        userId: winner,
+        medalId: "shared-loser-first",
+        grantedAt: early.toISOString(),
+      },
+      {
+        userId: winner,
+        medalId: "shared-winner-first",
+        grantedAt: early.toISOString(),
+      },
+      {
+        userId: winner,
+        medalId: "winner-only",
+        grantedAt: early.toISOString(),
+      },
+    ]);
+    // Emptied means EMPTIED: no grant row keeps referencing the tombstone.
+    expect(
+      await ctx.db
+        .select()
+        .from(medalGrants)
+        .where(eq(medalGrants.userId, loser)),
+    ).toEqual([]);
+
+    // The re-run is D7's crash recovery and changes NOTHING: zero loser
+    // rows to select, and least(a, least(a, b)) = least(a, b).
+    const afterFirst = await snapshotState();
+    const second = await mergeAccounts(ctx.db, winner, loser);
+    expect(second).toEqual(first);
+    expect(await snapshotState()).toEqual(afterFirst);
+  });
+
+  it("T-DB-S42: the grants merge statement's hand-spelled column list equals the live drizzle column set of medal_grants", () => {
+    // The T-DB-S24 sibling — the union statement (merge.ts 5b) spells the
+    // medal_grants column list by hand, so a future column would
+    // otherwise silently take its DEFAULT on merged rows while
+    // directly-written rows carry a real value. Deriving the live set
+    // MECHANICALLY from the drizzle table makes schema/statement drift a
+    // red suite; the fix is one name in merge.ts's statement 5b and one
+    // name below. The names are deliberately spelled a SECOND time here —
+    // the tripwire's whole job is to make the two spellings disagree
+    // loudly.
+    const liveColumns = Object.values(getTableColumns(medalGrants))
+      .map((column) => column.name)
+      .sort();
+    const unionColumns = ["user_id", "medal_id", "granted_at"].sort();
+    expect(liveColumns).toEqual(unionColumns);
   });
 });

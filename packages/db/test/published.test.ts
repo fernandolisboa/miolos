@@ -793,7 +793,9 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "listCompletionsForMerge",
       "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
       "listCompletionsForStreak",
+      "listMedalGrants", // #30 (ADR-0052): widened in the same commit as the export
       "listUsedTermoAnswers",
+      "medalGrants", // #30 (ADR-0052): the curated-grant table, user entry only
       "mergeAccounts",
       "recordCompletion",
       "remoteConfig",
@@ -810,9 +812,11 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // user entry (plan 029 §6), #21 by one: `attachTokens` on the user
     // entry (ADR-0050, ADR-0026 decision 5), never the root, #21's
     // step 7 by one more: `isWinnerLivenessError` on the user entry
-    // (finding C — the confirm route's retry discriminant), and #29 by
+    // (finding C — the confirm route's retry discriminant), #29 by
     // exactly two: `listCompletionsForStats` and `getUserSince` on the
-    // user entry (plan 033 §3.1), never the root.
-    expect(surface).toHaveLength(32);
+    // user entry (plan 033 §3.1), never the root, and #30 by exactly
+    // two: `listMedalGrants` and `medalGrants` on the user entry
+    // (ADR-0052), never the root.
+    expect(surface).toHaveLength(34);
   });
 });

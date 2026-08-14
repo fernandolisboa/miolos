@@ -27,11 +27,15 @@ export {
   mergeAccounts,
 } from "./merge";
 // The #29 statistics readers (plan 033, ADR-0051): the unfiltered
-// per-user projection the core derivations (and later #30's medals,
+// per-user projection the core derivations (and #30's shipped medals,
 // ADR-0049 decision 6) recompute over, and the account's SP birth day —
 // the calendar's range anchor.
 export { getUserSince, listCompletionsForStats } from "./stats";
+// The #30 curated-grant reader (ADR-0052): the grants input to
+// earnedMedals — rule-derived medals recompute over the stats reader
+// above and are never stored.
+export { listMedalGrants } from "./medals";
 // `attachTokens` (#21, ADR-0050): user-scoped like completions — the
 // statements over it live in apps/api/src/attach/service.ts, and apps/web
 // mechanically cannot name it through the root entry (ADR-0026 decision 5).
-export { attachTokens, completions, hintGrants } from "./schema";
+export { attachTokens, completions, hintGrants, medalGrants } from "./schema";
