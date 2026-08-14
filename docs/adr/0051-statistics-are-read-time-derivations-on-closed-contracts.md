@@ -59,13 +59,20 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
    that day, else `"late"` iff a won late row exists, else `"missed"` —
    and **a lost row never colours a day** (played is not completed,
    ADR-0008's verbs; the loss is visible in the fail row instead). The
-   range start is **clamped**:
-   `effectiveSince = max(min(since, earliest row date), since − acceptedDaysBack)`,
-   because a completion may legitimately be dated before account birth
-   (a 00:30 account completing yesterday's puzzle) and must appear — but
-   the backward extension is bounded by exactly the days a write can
-   legitimately predate birth, so the calendar can never paint `"missed"`
-   over days before the user existed. The bound is **route-supplied**:
+   range start is **clamped, and only a won row extends it** (the
+   won-only rule, corrected at step 6):
+   `effectiveSince = min(since, earliest WON-row date on or after since − acceptedDaysBack)`
+   — no such row, no extension. A completion may legitimately be dated
+   before account birth (a 00:30 account completing yesterday's puzzle)
+   and must appear — but only a row that actually **colours** a day may
+   extend the range. A lost row colours nothing, so an extension it
+   earned could only paint `"missed"` on a day the account did not exist
+   for — and that path is reachable today (a 00:20 account *losing*
+   yesterday's Termo). With the won-only rule every extension is bounded
+   by exactly the days a write can legitimately predate birth AND
+   anchored on a day the extension colours, so the calendar can never
+   paint `"missed"` over days before the user existed.
+   The bound is **route-supplied**:
    `ACCEPTED_DAYS_BACK` lives at `apps/api/src/publishing/dates.ts`
    (ADR-0026 decision 6's layer) and
    `computeCalendar(rows, since, today, acceptedDaysBack)` takes it as a
@@ -91,10 +98,17 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
    endpoint/contract — #30's medals arrive on their own, never as fields
    here. **The calendar payload's revisit trigger, stated now so #37
    inherits a number:** when the enumeration exceeds **1,100 days** of
-   account life or the response body exceeds **64 KB** — whichever comes
-   first — the endpoint gets windowing on a new contract, and not
-   before; at ~30 bytes/day the day bound arrives first and is the one
-   to watch.
+   account life, the response body exceeds **64 KB**, or the rendered
+   calendar exceeds **~2,000 DOM elements** — whichever comes first —
+   the endpoint gets windowing on a new contract, and not before.
+   Measured at step 6: **~54 bytes/day raw (~3.6 bytes/day gzipped)**,
+   which makes the two wire bounds near-coincident — 64 KB ≈ 1,210 days
+   — so the day bound arrives (just) first and is the one to watch.
+   **And the read side's own trigger:** when `listCompletionsForStats`
+   exceeds **~4,000 rows** or the hub's `/stats` p95 visibly degrades,
+   the hub gets a narrow endpoint (or `todayTermoGuesses` splits out of
+   `/stats`) — a NEW contract per ADR-0048 decision 3, never a field
+   change.
 
 4. **Solve times are a three-game statistic; Termo's statistic is the
    guess distribution.** Best/average/histogram exist for binairo,
@@ -162,6 +176,11 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
   `ACCEPTED_DAYS_BACK`, one archive completion of an old date would drag
   the range back arbitrarily far — the exact fabricated-missed failure
   the clamp exists to prevent.
+- **Extending the range for any in-bound row, won or lost** (the plan's
+  original clamp, corrected at step 6): a lost row colours no day, so
+  its extension day renders `"missed"` — fabricated history on a path
+  reachable today (a 00:20 account losing yesterday's Termo). Only a
+  won row extends (decision 2).
 - **Per-game calendar day rendering:** quadruples the visual vocabulary
   against a design system with no reference frame for it; ADR-0008
   committed to per-date states.
@@ -198,5 +217,22 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
 - The hub's Termo tile and the conclusion's stat block are `GET /stats`
   consumers; the conclusion mounts its block only under
   `syncOutcome === "recorded"` (ADR-0048 decision 4's gate), so the
-  aggregates include the game the screen decorates by construction.
+  just-finished game's **row** is on the server by construction. The
+  gate does not prove the server still holds the record's day AS today —
+  a cross-midnight retry lands a late win — so the block's
+  today-decorations (bucket highlight, closing line) additionally
+  require `stats.date` to equal the record's date.
+- The `recorded`-gate transition on the conclusion is a known
+  **~250–300 px post-paint insertion**: the stat block mounts only once
+  the server holds the day, and no box is reserved for it — a skeleton
+  that might never fill on a permanently-failed sync would be dishonest,
+  and the StreakCard precedent reserves nothing. #37 must measure CLS on
+  a **warm recorded profile**, not inherit CLS≈0 from the cold scan.
+- The app's single legal DEVICE-clock read is the stats calendar's
+  settled-null neutral month title (`todaySaoPauloDate(new Date())` in
+  that one branch): presentation-only — it claims no state for any day,
+  selects no record and backs no derived value. The next screen may not
+  cite the code as precedent without clearing that same bar; the shared
+  helper's doc (`apps/web/src/i18n/sao-paulo-day.ts`) states the
+  boundary at the call site.
 - "Stats calendar" enters CONTEXT.md as a durable term.
