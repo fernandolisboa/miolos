@@ -29,19 +29,14 @@ concurrency:
 jobs:
   gate:
     runs-on: ubuntu-latest
-    # Vercel Remote Cache, shared by every `turbo` invocation below
-    # (typecheck, test, build — `lint` is a root eslint script and is
-    # unaffected). TURBO_TOKEN is a bearer token and so a secret; TURBO_TEAM is
-    # a *variable* on purpose — as a secret, Actions would censor the team slug
-    # everywhere it appeared in the logs, per turbo's CI guide.
-    #
-    # Degrades gracefully: with neither configured both expand to the empty
-    # string, turbo reports "Remote caching disabled" and runs everything
-    # locally, exit 0 (verified on turbo 2.10.8). TURBO_REMOTE_ONLY is
-    # deliberately NOT set — it would turn a cache miss into a failed gate.
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    # No `env:` block, and deliberately so. This job previously carried
+    # TURBO_TOKEN/TURBO_TEAM for the Vercel Remote Cache; the turbo artifact
+    # cache is now carried by actions/cache instead (see the restore step
+    # below), which needs no credential at all. That is the whole point: a
+    # bearer token exported into the gate's environment is readable by every
+    # process the job starts, so any compromised dependency reached by
+    # `pnpm install`, `test` or `build` could exfiltrate it. Removing the
+    # secret removes the class.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6 — version comes from packageManager
@@ -50,7 +45,67 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # turbo's filesystem cache. `.turbo/cache` at the repo root is the whole
+      # artifact store on turbo 2.10.8 — verified, not assumed: with every
+      # `.turbo` directory deleted, one `pnpm typecheck` recreated the root
+      # `.turbo/cache` plus per-package `.turbo/*.log` files, and after
+      # deleting the per-package ones and leaving only `.turbo/cache`, the
+      # rerun reported "6 cached, 6 total >>> FULL TURBO". The logs live inside
+      # the cached tarballs and are replayed from them, so this one path is
+      # sufficient. It covers typecheck, test and build; `lint` is a root
+      # eslint script outside turbo and is unaffected either way.
+      #
+      # The key carries github.sha because Actions cache entries are immutable
+      # — an existing key can never be overwritten. Keyed on the lockfile hash
+      # alone, the very first run would save and every later run would hit that
+      # exact key and save nothing, freezing the cache at its first contents
+      # forever. A per-commit key means every run writes a fresh, strictly
+      # larger cache and `restore-keys` picks the newest matching prefix:
+      # first any cache built against this same lockfile, then any cache at all
+      # for this OS. A partial hit is still most of the win, because turbo
+      # keys each task by its own inputs — unchanged packages replay even when
+      # the commit that produced the cache touched something else.
+      #
+      # What this gives up against the remote cache it replaces, stated plainly:
+      # Actions caches are branch-scoped. A run can read its own branch's
+      # caches and the default branch's, never another PR's. Because this
+      # workflow triggers on `pull_request` only — no `push: [main]`, see the
+      # comment at the top — nothing ever writes a cache under main's scope, so
+      # there is no shared baseline and every PR's FIRST run is cold. Warmth is
+      # per-PR: it accrues across pushes to the same PR, which is the fix loop
+      # and the common case. The Vercel remote cache was shared across every
+      # branch and every machine; that sharing is the price of not holding the
+      # token, and it is not bought back by re-adding a main trigger.
+      #
+      # Degrades gracefully by construction: a cold cache is a normal full run.
+      # Nothing here can fail the gate — a miss costs time, never a red check.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        id: turbo-cache
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+      # Split restore/save rather than the unified `actions/cache`, matching
+      # the puppeteer cache in impeccable.yml. The unified action saves in a
+      # post step that is skipped when the job fails; `save-always` existed to
+      # patch that and is deprecated in favour of exactly this split. The
+      # failing run is the one whose cache matters most — a red gate is the
+      # start of a fix loop, and the next push should replay everything that
+      # was already green rather than re-proving it.
+      #
+      # `!cancelled()` and not `always()`: the concurrency group above cancels
+      # superseded runs, and paying an upload for a run nobody will read is the
+      # cost this whole file exists to avoid. The hashFiles guard keeps the
+      # step quiet when the job died before any turbo task ran and there is
+      # therefore no `.turbo/cache` to upload.
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        if: ${{ !cancelled() && hashFiles('.turbo/cache/**') != '' }}
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
