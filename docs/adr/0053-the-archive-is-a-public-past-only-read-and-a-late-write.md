@@ -115,10 +115,37 @@ is not falsified but its revisit trigger fires** — see decision 13.
 
 ## Decision
 
-**This ADR lands in PR 1, which ships only the write window.** Decisions 1,
-2, 3, 4, 9, 10, 11, 12 and 14 describe surfaces PR 2 builds; PR 2's
-docs-tail commit converts them from decision tense to shipped tense.
-Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
+**This ADR landed in PR 1, which shipped only the write window; PR 2 has
+since shipped the archive itself.** Decisions 5, 6, 7, 8, 13 and 15 were
+implemented by PR 1. Decisions 1, 2, 3, 4, 9, 10, 11, 12 and 14 described
+surfaces PR 2 built, and every one of them is now shipped — the routes, the
+readers and the classifier, the late-result panel, the retention cap, the
+discovery mechanism and the `sync.ts` `break` decision 13 made binding on
+that pull request. Where a sentence below still reads as a prescription, it
+is a prescription that the shipped code satisfies rather than one waiting on
+work.
+
+**Three points where the shipped code refines what is written below**, each
+recorded in plan 037 §14 batch 6 rather than by silently rewriting the text:
+
+- Decision 10's third layer says the panel renders the stored row's outcome.
+  It does exactly that. What it does **not** do is distinguish an on-time
+  stored row from a late one, because the client discards
+  `completionResponseSchema.onTime` and carrying it would mean a versioned
+  change to the local record schema. The panel's third state is therefore
+  *"this device already held a concluded result for this day"* — true,
+  checkable, and enough for the criterion, which is that the screen never
+  claims a completion it did not make (I29).
+- Decision 4's read-cost posture was measured rather than assumed at PR 2:
+  the three grid play routes came in **below** their daily twins (binairo
+  18.2 KB against 33.4, nonogram 19.7 against 35.5, sudoku 14.4 against
+  29.6), because the archive shells compose the per-game hooks and views and
+  never the screen roots, so the whole conclusion tree is outside their
+  module graphs. Plan 037's predicted squeeze on the archived Nonogram did
+  not happen (I33).
+- Decision 14's localStorage ceiling is now a number: the largest serialized
+  record is 1,329 bytes, so fifty of them is ~65 KiB — about 2.5 % of a
+  5 MiB per-origin quota counted in UTF-16. Fifty stands (I34).
 
 1. **Four route families, seven pages, date before game, the game segment
    literal — and today's date resolves rather than 404ing.** `/arquivo` is
