@@ -184,22 +184,29 @@ export interface CalendarDay {
  * Lost rows never colour a day — a day whose only row is a lost Termo
  * renders "missed"; the loss is visible in the fail row, not here.
  *
- * `effectiveSince` is the D6 clamp:
+ * `effectiveSince` is the D6 clamp, as corrected at step 6 (the won-only
+ * rule, ADR-0051 decision 2):
  *
- *   max( min(epochDay(since), min over rows of epochDay(row.date)),
- *        epochDay(since) − acceptedDaysBack )
+ *   min( epochDay(since),
+ *        min over { epochDay(row.date) :
+ *                   row.outcome === "won"
+ *                   ∧ epochDay(row.date) ≥ epochDay(since) − acceptedDaysBack } )
  *
- * The backward extension exists because a completion may legitimately be
- * dated before account creation (a 00:30 account completing yesterday's
- * puzzle, `ACCEPTED_DAYS_BACK`), and such a row must appear. But it is
- * BOUNDED by exactly the days a write can legitimately predate account
- * birth, so it can never fabricate "missed" over days before the user
- * existed — the unbounded min() was rejected at plan review (D6). Rows
- * dated before `effectiveSince` emit no day entry here and still feed
- * every `computeStats` aggregate; rows dated after `today` are inert
- * (the `computeStreak` posture). When #31 widens `ACCEPTED_DAYS_BACK` it
- * must revisit how a pre-birth late completion renders (ADR-0051
- * decision 2 records the obligation).
+ * (the set may be empty → epochDay(since)). The backward extension exists
+ * because a completion may legitimately be dated before account creation
+ * (a 00:30 account completing yesterday's puzzle, `ACCEPTED_DAYS_BACK`),
+ * and such a row must appear. But only a row that actually COLOURS a day —
+ * a won row — may extend the range: a lost row colours nothing (D6), so
+ * letting it extend would paint "missed" over a day the account did not
+ * exist for, the exact fabrication the clamp exists to prevent. And the
+ * extension is BOUNDED by exactly the days a write can legitimately
+ * predate account birth — a won row further back than the bound never
+ * extends (the unbounded min() was rejected at plan review). Rows dated
+ * before `effectiveSince` emit no day entry here and still feed every
+ * `computeStats` aggregate; rows dated after `today` are inert (the
+ * `computeStreak` posture). When #31 widens `ACCEPTED_DAYS_BACK` it must
+ * revisit how a pre-birth late completion renders (ADR-0051 decision 2
+ * records the obligation).
  */
 export function computeCalendar(
   rows: readonly StatsRow[],
@@ -213,20 +220,27 @@ export function computeCalendar(
   if (sinceDay > todayDay) {
     return [];
   }
-  let earliestDay = sinceDay;
+  const extensionFloorDay = sinceDay - acceptedDaysBack;
+  let effectiveSince = sinceDay;
   const wonOnTimeDays = new Set<number>();
   const wonLateDays = new Set<number>();
   for (const row of rows) {
     const day = epochDay(row.date);
-    earliestDay = Math.min(earliestDay, day);
     if (countsOnTimeWon(row)) {
       wonOnTimeDays.add(day);
     } else if (countsLateWon(row)) {
       wonLateDays.add(day);
+    } else {
+      // A lost row colours no day (D6) — and therefore never extends the
+      // range either: an extension it earned would only ever paint
+      // "missed" on a pre-birth day (the step-6 correction).
+      continue;
     }
-    // Lost rows fall through: they never colour a day (D6).
+    // Only a won row within the legitimate-predate bound extends the range.
+    if (day >= extensionFloorDay) {
+      effectiveSince = Math.min(effectiveSince, day);
+    }
   }
-  const effectiveSince = Math.max(earliestDay, sinceDay - acceptedDaysBack);
   const perfect = new Set(perfectDays(rows).map((date) => epochDay(date)));
   const days: CalendarDay[] = [];
   for (let day = effectiveSince; day <= todayDay; day += 1) {
@@ -330,17 +344,30 @@ export function computeStats(
   // `completed_at` is the DB clock at insert, so a row whose `date` equals
   // the DB clock's today derives on-time by definition. No `onTime`
   // conjunct, on purpose: adding one would be a second, redundant spelling
-  // of that construction (plan 033 §4.5).
-  const todayWin = rows.find(
-    (row) =>
-      row.game === "termo" && row.date === today && row.outcome === "won",
-  );
+  // of that construction (plan 033 §4.5). The MINIMUM over qualifying rows
+  // — not `find` — keeps the function total AND order-independent over its
+  // type: the composite PK makes duplicate (game, date) rows unreachable
+  // in production, but a permutation of a duplicate-carrying input must
+  // still answer identically (T-CORE-S62's property).
+  let todayTermoGuesses: number | null = null;
+  for (const row of rows) {
+    if (row.game !== "termo" || row.date !== today || row.outcome !== "won") {
+      continue;
+    }
+    const guesses = termoGuessOf(row);
+    if (
+      guesses !== null &&
+      (todayTermoGuesses === null || guesses < todayTermoGuesses)
+    ) {
+      todayTermoGuesses = guesses;
+    }
+  }
   return {
     binairo: timedGameStats(rows, "binairo", windowFloorDay),
     sudoku: timedGameStats(rows, "sudoku", windowFloorDay),
     nonogram: timedGameStats(rows, "nonogram", windowFloorDay),
     termo: termoStats(rows),
     perfectDays: perfectDays(rows).length,
-    todayTermoGuesses: todayWin === undefined ? null : termoGuessOf(todayWin),
+    todayTermoGuesses,
   };
 }

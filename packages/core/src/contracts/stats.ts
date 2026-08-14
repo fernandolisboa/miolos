@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isoDateString } from "./daily";
+import { calendarDateString, isoDateString } from "./daily";
 
 const statCount = z.number().int().min(0);
 
@@ -35,7 +35,12 @@ export const termoStatsSchema = z.strictObject({
 /** Body of GET /stats. Strict on both ends (ADR-0048 decision 3): growth is a
  *  NEW endpoint — #30's medals arrive on their own contract, never here. */
 export const statsResponseSchema = z.strictObject({
-  date: isoDateString, // the DB clock's SP day the summary was computed against
+  // The DB clock's SP day the summary was computed against. `isoDateString`
+  // (shape only) is deliberate and asymmetric with the calendar's
+  // `calendarDateString` below: this value feeds only string EQUALITY
+  // checks (the hub tile's and the conclusion's day-match gates), never a
+  // date parser — the repo convention for server-derived comparands.
+  date: isoDateString,
   binairo: timedGameStatsSchema,
   sudoku: timedGameStatsSchema,
   nonogram: timedGameStatsSchema,
@@ -60,7 +65,12 @@ export const statsCalendarResponseSchema = z.strictObject({
   days: z
     .array(
       z.strictObject({
-        date: isoDateString,
+        // A calendar-VALID day, not just the shape: these values go into
+        // throwing parsers on the client (`epochDay` in the month-grid
+        // helper, `Intl` formatters), so a malformed 200 must fail the
+        // `safeParse` — the honest settled-null zero — instead of throwing
+        // a `RangeError` mid-render.
+        date: calendarDateString,
         state: calendarDayStateSchema,
         perfect: z.boolean(),
       }),

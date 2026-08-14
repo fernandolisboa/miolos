@@ -236,8 +236,9 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     ]);
 
     // A manufactured row a week before birth (no writer can produce one
-    // today) does NOT drag the range further back: it emits no day entry,
-    // the start stays clamped at since − ACCEPTED_DAYS_BACK.
+    // today) does NOT drag the range further back: it emits no day entry
+    // and contributes nothing to the clamp — the start stays where the
+    // yesterday won row put it (the won-only rule, ADR-0051 decision 2).
     await insertHistoryRow({
       userId,
       game: "sudoku",
@@ -249,5 +250,32 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
       await (await GET(calendarRequest(token))).json(),
     );
     expect(clamped.days.map((day) => day.date)).toEqual([yesterday, today]);
+  });
+
+  it("T-API-S90a: a LOST row one day before birth never extends the range — reachable today, and the day it would fabricate does not appear", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const { token, userId } = await createSession();
+
+    // The reachable case the won-only clamp exists for: a 00:20 account
+    // LOSES yesterday's Termo (ACCEPTED_DAYS_BACK admits the write). A
+    // lost row colours no day, so an extension it earned could only paint
+    // "missed" on a day the account did not exist for — the range must
+    // start at birth, and the loss still lands in the fail row (visible
+    // on GET /stats, not here).
+    await insertHistoryRow({
+      userId,
+      game: "termo",
+      date: yesterday,
+      outcome: "lost",
+      completedAtDate: today,
+      guesses: 6,
+    });
+    const body = statsCalendarResponseSchema.parse(
+      await (await GET(calendarRequest(token))).json(),
+    );
+    expect(body.days).toEqual([
+      { date: today, state: "missed", perfect: false },
+    ]);
   });
 });

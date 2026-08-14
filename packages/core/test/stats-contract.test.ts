@@ -98,8 +98,12 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
 
     // `averageSampleCount` is load-bearing (the closing line's gate): a
     // payload without it fails.
-    const { averageSampleCount, ...withoutSampleCount } = timedZero;
-    void averageSampleCount;
+    const withoutSampleCount = {
+      solved: timedZero.solved,
+      bestMs: timedZero.bestMs,
+      averageMs: timedZero.averageMs,
+      histogram: timedZero.histogram,
+    };
     expect(
       statsResponseSchema.safeParse({
         ...validStats,
@@ -150,5 +154,27 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
     expect(statsCalendarResponseSchema.safeParse({ days: [] }).success).toBe(
       false,
     );
+  });
+
+  it("T-CORE-S69a: a calendar day must be a real day — a shape-valid non-day fails the parse instead of reaching a throwing parser", () => {
+    // `days[].date` goes into throwing parsers on the client (`epochDay`,
+    // the `Intl` formatters), so `calendarDateString` makes a malformed
+    // 200 a `safeParse` failure — the honest settled-null zero — never a
+    // `RangeError` mid-render.
+    for (const date of ["0000-00-00", "0000-01-01", "2026-02-30"]) {
+      expect(
+        statsCalendarResponseSchema.safeParse({
+          days: [{ date, state: "missed", perfect: false }],
+        }).success,
+      ).toBe(false);
+    }
+    // The asymmetry is deliberate: `statsResponseSchema.date` stays
+    // shape-only (`isoDateString`) because it feeds string EQUALITY checks
+    // only, never a parser — the repo convention for server-derived
+    // comparands.
+    expect(
+      statsResponseSchema.safeParse({ ...validStats, date: "0000-00-00" })
+        .success,
+    ).toBe(true);
   });
 });

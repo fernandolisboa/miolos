@@ -11,7 +11,8 @@ import {
 /**
  * The hoisted day arithmetic (plan 033 D9): `epochDay` moved out of
  * `streak.ts` unchanged, plus its productionised inverse. The round trip is
- * proved over exactly the domain the inverse's guards admit — outside it the
+ * sampled at 100 runs over exactly the domain the inverse's guards admit
+ * (ADR-0023: "proved" is reserved for construction) — outside it the
  * naive formula lies (pre-1000 emits "0999-…", which `epochDay` rejects;
  * past 9999 `toISOString` emits expanded-year forms whose `slice(0, 10)` is
  * garbage), which is why the guards exist at all.

@@ -134,7 +134,7 @@ describe("stats derivations — properties (ADR-0023)", () => {
     );
   });
 
-  it("T-CORE-S64: the calendar enumerates [effectiveSince, today] exactly once each, in order, states and markers agreeing with the rows; the clamp never fabricates history", () => {
+  it("T-CORE-S64: the calendar enumerates [effectiveSince, today] exactly once each, in order, states and markers agreeing with the rows; the range start EQUALS the won-only clamp recomputed independently", () => {
     fc.assert(
       fc.property(
         inputArb,
@@ -148,28 +148,28 @@ describe("stats derivations — properties (ADR-0023)", () => {
 
           // Never empty for since ≤ today, and the last entry IS today.
           expect(days.length).toBeGreaterThanOrEqual(1);
-          const startDay = epochDay(days[0]?.date ?? "");
           expect(days.at(-1)?.date).toBe(today);
 
-          // The clamp (D6): the range start never precedes
-          // since − acceptedDaysBack, and never precedes both `since` and
-          // the earliest row — no fabricated "missed" before the account
-          // existed beyond the bound a write can legitimately predate it.
-          expect(startDay).toBeGreaterThanOrEqual(sinceDay - acceptedDaysBack);
-          const earliestRowDay = rows.reduce(
-            (min, row) => Math.min(min, epochDay(row.date)),
-            sinceDay,
-          );
-          expect(startDay).toBeGreaterThanOrEqual(
-            Math.min(sinceDay, earliestRowDay),
-          );
+          // The clamp (D6, won-only — the step-6 correction): the range
+          // start EQUALS the decided rule, recomputed independently here:
+          // min(sinceDay, min over won-row days within the bound), the
+          // empty set answering sinceDay. Equality, not a one-sided
+          // inequality — a lost or out-of-bound row never extends, and a
+          // won row within the bound always does.
+          const wonDaysWithinBound = rows
+            .filter((row) => row.outcome === "won")
+            .map((row) => epochDay(row.date))
+            .filter((day) => day >= sinceDay - acceptedDaysBack);
+          const expectedStart = Math.min(sinceDay, ...wonDaysWithinBound);
+          expect(epochDay(days[0]?.date ?? "")).toBe(expectedStart);
 
-          // Each date of [startDay, today] exactly once, in order, each
+          // Each date of [expectedStart, today] exactly once, in order —
+          // the length recomputed from the rule, never read back — each
           // state and perfect marker agreeing with the row predicates
           // recomputed independently.
-          expect(days.length).toBe(todayDay - startDay + 1);
+          expect(days.length).toBe(todayDay - expectedStart + 1);
           days.forEach((day, index) => {
-            expect(day.date).toBe(dateFromEpochDay(startDay + index));
+            expect(day.date).toBe(dateFromEpochDay(expectedStart + index));
             const hasOnTimeWin = rows.some(
               (row) =>
                 row.date === day.date && row.outcome === "won" && row.onTime,

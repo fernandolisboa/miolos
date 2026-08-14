@@ -131,8 +131,10 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
     ]);
     expect(empty.every((day) => day.state === "missed")).toBe(true);
 
-    // The D6 clamp. A row exactly `acceptedDaysBack` days before `since`
-    // (the birth-midnight write) extends the range to reach it…
+    // The D6 clamp (won-only, the step-6 correction). A WON row exactly
+    // `acceptedDaysBack` days before `since` (the birth-midnight write)
+    // extends the range to reach it — and the extension day carries the
+    // row's own colouring, never a fabricated "missed"…
     const birthEdge = computeCalendar(
       [row({ game: "binairo", date: "2026-08-09", onTime: false })],
       SINCE,
@@ -144,13 +146,13 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
       state: "late",
       perfect: false,
     });
-    // …while a row earlier than that never drags the start past the bound:
-    // it emits NO day entry and the range start stays clamped at
-    // since − acceptedDaysBack (the unbounded min() rejected at step 3).
+    // …while a won row earlier than the bound never extends at all: it
+    // emits NO day entry and the range start stays at `since` (under the
+    // won-only rule an out-of-bound row contributes nothing — there is no
+    // padded start at since − acceptedDaysBack for it to reach).
     const farRow = row({ game: "binairo", date: "2026-08-03", onTime: false });
     const clamped = computeCalendar([farRow], SINCE, TODAY, 1);
     expect(clamped.map((day) => day.date)).toEqual([
-      "2026-08-09",
       "2026-08-10",
       "2026-08-11",
       "2026-08-12",
@@ -175,10 +177,59 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
     // since > today is a guard, not a reachable state: empty.
     expect(computeCalendar([], "2026-08-14", TODAY, 1)).toEqual([]);
   });
+
+  it("T-CORE-S63a: only a won row extends the range — a lost row at since − 1 never does, a won row there does, a far won row does not", () => {
+    // The reachable-today case the step-6 correction exists for: a 00:20
+    // account loses yesterday's Termo (`ACCEPTED_DAYS_BACK` admits the
+    // write). A lost row colours no day (D6), so letting it extend would
+    // paint "missed" on a day the account did not exist for — it must NOT
+    // extend, and the loss still lands in the fail row.
+    const lostAtBirthEdge = row({
+      game: "termo",
+      date: "2026-08-09",
+      outcome: "lost",
+      onTime: false,
+      guesses: 6,
+    });
+    const lostOnly = computeCalendar([lostAtBirthEdge], SINCE, TODAY, 1);
+    expect(lostOnly.map((day) => day.date)).toEqual([
+      "2026-08-10",
+      "2026-08-11",
+      "2026-08-12",
+      "2026-08-13",
+    ]);
+    expect(computeStats([lostAtBirthEdge], TODAY).termo.distribution[6]).toBe(
+      1,
+    );
+    // A WON row on the same day extends — every extension day carries a
+    // day-colouring row, so no extension can fabricate history.
+    const wonAtBirthEdge = row({
+      game: "binairo",
+      date: "2026-08-09",
+      onTime: false,
+    });
+    const wonExtends = computeCalendar(
+      [lostAtBirthEdge, wonAtBirthEdge],
+      SINCE,
+      TODAY,
+      1,
+    );
+    expect(wonExtends[0]).toEqual({
+      date: "2026-08-09",
+      state: "late",
+      perfect: false,
+    });
+    // A won row beyond the bound never extends: out of range for the
+    // calendar, in range for every aggregate.
+    const farWon = row({ game: "sudoku", date: "2026-08-01" });
+    const farOnly = computeCalendar([farWon], SINCE, TODAY, 1);
+    expect(farOnly[0]?.date).toBe(SINCE);
+    expect(computeStats([farWon], TODAY).sudoku.solved).toBe(1);
+  });
 });
 
 describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6)", () => {
-  it("T-CORE-S65: best is all-time, average is the 30-day window with its sample count, late/lost rows move solved only", () => {
+  it("T-CORE-S65: best is all-time, average is the 30-day window with its sample count; a late win moves `solved` only; a lost row moves nothing", () => {
     const rows = [
       // On-time wins: today, 29 days back (in window), 30 back (the exact
       // boundary, excluded: the window is epochDay(date) > today − 30),
@@ -297,5 +348,22 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
       computeStats([row({ game: "termo", date: YESTERDAY, guesses: 2 })], TODAY)
         .todayTermoGuesses,
     ).toBeNull();
+  });
+
+  it("T-CORE-S67a: duplicate won-today termo rows answer the minimum guess count — total and order-independent", () => {
+    // The composite PK makes duplicate (game, date) rows unreachable in
+    // production; the function is still total over its type, and taking
+    // the MINIMUM (not `find`) keeps a permutation of a duplicate-carrying
+    // input answering identically — T-CORE-S62's permutation property
+    // holds as written.
+    const five = row({ game: "termo", date: TODAY, guesses: 5 });
+    const two = row({ game: "termo", date: TODAY, guesses: 2 });
+    expect(computeStats([five, two], TODAY).todayTermoGuesses).toBe(2);
+    expect(computeStats([two, five], TODAY).todayTermoGuesses).toBe(2);
+    // A null-guess won row (impossible under `completions_guesses_check`)
+    // never carries the value.
+    const nullGuess = row({ game: "termo", date: TODAY, guesses: null });
+    expect(computeStats([nullGuess, five], TODAY).todayTermoGuesses).toBe(5);
+    expect(computeStats([nullGuess], TODAY).todayTermoGuesses).toBeNull();
   });
 });
