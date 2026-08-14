@@ -2,12 +2,46 @@ name: CI
 permissions:
   contents: read
 on:
+  # `push: [main]` deliberately absent. Every commit reaching main arrives
+  # through a squash merge, and the `protect-main` ruleset requires the `gate`
+  # check (integration 15368) on the PR before that merge is allowed — so a
+  # push-triggered run only ever re-proved, on the same tree, what the PR had
+  # already proved minutes earlier. It gated nothing: with `pull_request` as
+  # the sole trigger the required context is still produced on every PR.
+  # The signal genuinely given up is "CI green on main post-merge", which past
+  # handoffs cite as evidence; a squash merge can differ from the PR head when
+  # main moved underneath it, and that gap is now caught on the next PR rather
+  # than immediately.
   pull_request:
-  push:
-    branches: [main]
+
+# Supersession: pushing a new commit to a PR makes the older run's verdict
+# irrelevant, so stop paying for a gate nobody will read. The key is
+# `github.ref`, which for `pull_request` is `refs/pull/<n>/merge` — unique per
+# PR, so two different PRs can never cancel each other.
+#
+# This changes WHEN the gate runs, never WHAT it checks: a cancelled run leaves
+# `gate` in a non-success state, so the ruleset keeps blocking the merge until
+# the newest run passes on its own.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gate:
     runs-on: ubuntu-latest
+    # Vercel Remote Cache, shared by every `turbo` invocation below
+    # (typecheck, test, build — `lint` is a root eslint script and is
+    # unaffected). TURBO_TOKEN is a bearer token and so a secret; TURBO_TEAM is
+    # a *variable* on purpose — as a secret, Actions would censor the team slug
+    # everywhere it appeared in the logs, per turbo's CI guide.
+    #
+    # Degrades gracefully: with neither configured both expand to the empty
+    # string, turbo reports "Remote caching disabled" and runs everything
+    # locally, exit 0 (verified on turbo 2.10.8). TURBO_REMOTE_ONLY is
+    # deliberately NOT set — it would turn a cache miss into a failed gate.
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6 — version comes from packageManager

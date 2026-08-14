@@ -5,7 +5,19 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      # Monthly, not weekly: each Dependabot PR costs a full ~7-minute gate run,
+      # and this ecosystem is a handful of first-party actions pinned by SHA —
+      # routine version drift, not a runtime dependency surface.
+      #
+      # Read the cost honestly: Dependabot *security updates* are currently
+      # DISABLED on this repo (`GET /repos/…/automated-security-fixes` →
+      # `{"enabled": false}`, and `/vulnerability-alerts` 404s), so there is no
+      # advisory-driven fast path running alongside this schedule. This interval
+      # is the ONLY refresh cadence these pins have, and monthly widens the
+      # worst-case window on a compromised action from ~7 to ~30 days.
+      # Enabling Dependabot alerts + security updates costs zero Actions
+      # minutes and would restore the fast path independently of this setting.
+      interval: "monthly"
     groups:
       github-actions:
         patterns: ["*"]
