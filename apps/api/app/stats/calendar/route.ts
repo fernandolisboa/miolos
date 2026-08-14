@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
 
 import { corsHeaders } from "../../../src/cors";
 import { getDb } from "../../../src/db";
-import { ACCEPTED_DAYS_BACK } from "../../../src/publishing/dates";
+import { ROLLOVER_SLACK_DAYS } from "../../../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
 import { requireUserId } from "../../../src/session/service";
 
@@ -35,9 +35,21 @@ export const dynamic = "force-dynamic";
  *
  * The payload is exactly what core derived: range start = days[0].date,
  * range end = days.at(-1).date — NO envelope fields (plan 033 §3.3).
- * `ACCEPTED_DAYS_BACK` is passed into core as a parameter: the bound
- * lives in the route layer (ADR-0026 decision 6), and this route is its
- * one read-side owner.
+ * `ROLLOVER_SLACK_DAYS` is passed into core as a parameter: the bound
+ * lives in the route layer (ADR-0053 decision 6, amending ADR-0051
+ * decision 2), and this route is its ONE consumer — one constant, one
+ * owner. The citation is deliberately NOT ADR-0026 decision 6: after #31's
+ * split that decision governs the WRITE window and nothing else, and
+ * following it from here is exactly the re-joining the constant's own doc
+ * block forbids.
+ *
+ * It is deliberately NOT the write window. Until #31 both were ONE
+ * constant; #31 removed the write window's lower bound
+ * entirely (`isWritableDate`, ADR-0053 decision 5) and this clamp stayed
+ * at one day, because a clamp that followed the write window would drag
+ * the calendar's range back arbitrarily and paint "missed" over days the
+ * account did not exist for. This one line is what makes ADR-0053
+ * decision 7 true.
  */
 
 /** The per-route error envelope (the completions route's own convention). */
@@ -86,7 +98,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       // Parse, never cast (boundary rule) — the same strict schema the web
       // client parses on arrival.
       statsCalendarResponseSchema.parse({
-        days: computeCalendar(rows, since, today, ACCEPTED_DAYS_BACK),
+        days: computeCalendar(rows, since, today, ROLLOVER_SLACK_DAYS),
       }),
       {
         headers: {

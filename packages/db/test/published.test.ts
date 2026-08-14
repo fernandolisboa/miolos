@@ -805,7 +805,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "users",
     ]);
     // A duplicate across two entries would be hidden by the Set above, so
-    // pin the count too: 29 distinct names, 29 exports. #27 moved it by
+    // pin the count too: 34 distinct names, 34 exports. #27 moved it by
     // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
     // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
     // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
@@ -816,7 +816,11 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // exactly two: `listCompletionsForStats` and `getUserSince` on the
     // user entry (plan 033 §3.1), never the root, and #30 by exactly
     // two: `listMedalGrants` and `medalGrants` on the user entry
-    // (ADR-0052), never the root.
+    // (ADR-0052), never the root. #31's write-window PR moves it by
+    // ZERO — the late-write ceiling is a guard inside
+    // `recordCompletion`'s own INSERT, not a new export (step-6 finding
+    // F1) — and its archive PR moves it by exactly four: the three
+    // archive readers and the date classifier, on the root entry.
     expect(surface).toHaveLength(34);
   });
 });

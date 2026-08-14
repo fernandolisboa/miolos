@@ -26,7 +26,7 @@ import {
   preflightResponse,
 } from "../../src/cors";
 import { getDb } from "../../src/db";
-import { ACCEPTED_DAYS_BACK, addDays } from "../../src/publishing/dates";
+import { isLateDate, isWritableDate } from "../../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../../src/session/cookie";
 import {
   isCrossSiteWrite,
@@ -39,12 +39,48 @@ import { judgeGuessList } from "../../src/termo/judge";
 export const dynamic = "force-dynamic";
 
 /**
+ * How many LATE completions one user may write on one São Paulo day — the
+ * late-write ceiling (#31, ADR-0053 decision 13, firing ADR-0022
+ * :69-75's revisit trigger and reversing ADR-0026's Rejected entry for the
+ * late branch only). It is this repo's first rate limit ON THE COMPLETION
+ * WRITE PATH, not its first anywhere: `POST /attach/request` already
+ * answers `429 too-many-requests` off `MAX_REQUESTS_PER_HOUR` (ADR-0050
+ * decision 11), so ADR-0026's Rejected entry was already reversed once.
+ *
+ * LATE-write, not archive-write, and the difference is real: the branch is
+ * `isLateDate`, which also admits ADR-0026 decision 7's legitimate
+ * post-rollover flush — a player syncing yesterday's offline daily at
+ * 00:05 is inside this ceiling by construction, at most 4 rows.
+ *
+ * NOT MEASURED — there is no traffic to measure, and a borrowed number
+ * dressed as a measurement is worse than an honest choice. It is chosen
+ * as: comfortably above the largest plausible human archive session (a
+ * player clearing a full week of all four games is 28), and two orders of
+ * magnitude below the 4,380 an uncapped three-year archive would allow one
+ * minted identity.
+ *
+ * WHAT IT COSTS AN ATTACKER, on the axis that actually binds. Identities
+ * are free (`POST /session` reads no body and is unthrottled), so the
+ * sizing figure above is not the interesting one: rows per REQUEST goes
+ * from ≈1.00 uncapped to ≈0.98 here — one extra `POST /session` per 50
+ * rows, a 2% tax. The residual is accepted on ADR-0006 :51's own terms
+ * and the ceiling's real product is OBSERVABILITY (the log line below),
+ * not closure. ADR-0053 decision 13 says so in those words.
+ *
+ * The daily branch is uncapped and stays uncapped: the composite PK
+ * already bounds it at 4 rows per user per day.
+ */
+const ARCHIVE_WRITES_PER_DAY = 50;
+
+/**
  * Every response carries the credentialed CORS grant, 4xx included (plan
  * 017 D31). For a credentialed cross-origin fetch a response without those
  * headers is unreadable to JS — the promise rejects with a TypeError
  * indistinguishable from being offline — and on this route the STATUS is
  * the offline queue's control flow: 404/422/400/415/403 are terminal,
- * 401/5xx are retried. /session gets away without them because an
+ * 401/429/5xx are retried — 429 deliberately so, because the late-write
+ * ceiling is a per-day rate refusal and the record must survive it
+ * (ADR-0053 decision 13). /session gets away without them because an
  * unreadable error there is harmless.
  */
 function errorResponse(status: number, error: string): Response {
@@ -295,13 +331,25 @@ export async function POST(request: NextRequest): Promise<Response> {
     return completionResponse(existing, false);
   }
 
-  // D29, enforced against the DATABASE clock (ADR-0010 single authority),
-  // never new Date(). String comparison is exact for 'YYYY-MM-DD'.
-  const earliestAccepted = addDays(
-    await todaySaoPaulo(db),
-    -ACCEPTED_DAYS_BACK,
-  );
-  if (body.date < earliestAccepted) {
+  // The write window (ADR-0026 decision 6 as amended by ADR-0053 decision
+  // 5), enforced against the DATABASE clock (ADR-0010 single authority),
+  // never new Date(). Position unchanged: AFTER the idempotent
+  // short-circuit and BEFORE the wall read.
+  //
+  // #31 removed its LOWER bound. The reason is not that forging the past is
+  // hard — it is not: the guess route is an answer oracle at the cost of one
+  // authenticated request (ADR-0038 decision 9), and the three grid solvers
+  // run locally on the published payload in 0.04–0.16 ms (ADR-0027). What a
+  // forged past win buys is bounded and accepted on ADR-0006 :51's own
+  // terms: `solved` totals and the ten volume medals that count late wins by
+  // design (ADR-0052 decision 3). It reaches no streak, no time statistic,
+  // no Termo bucket 1–6 and no Dia Perfeito.
+  //
+  // What the removal owes is a RATE ceiling, and it lives at the write
+  // itself — `isLateDate` + `ARCHIVE_WRITES_PER_DAY`, at the bottom of this
+  // function. `today` is read ONCE here and reused there.
+  const today = await todaySaoPaulo(db);
+  if (!isWritableDate(body.date, today)) {
     return errorResponse(404, "no-puzzle");
   }
 
@@ -325,7 +373,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  const { record, recorded } = await recordCompletion(db, {
+  const input = {
     userId,
     game: body.game,
     date: body.date,
@@ -336,6 +384,47 @@ export async function POST(request: NextRequest): Promise<Response> {
     // (ADR-0026 decision 1), so a Termo day recorded without its count is
     // permanently absent from the guess distribution ADR-0008 rule 3 needs.
     guesses: body.game === "termo" ? body.guesses.length : undefined,
-  });
-  return completionResponse(record, recorded);
+  };
+
+  // The late-write ceiling (ADR-0053 decision 13), HERE and not earlier,
+  // and folded INTO the write rather than run beside it. Both halves are
+  // step-6 findings (F1, F2) and both matter:
+  //
+  // - **Here.** The ceiling is the last gate before the row. Run above the
+  //   wall read it would answer a retryable 429 to requests destined for a
+  //   terminal 404 or 422 — a queued record for a killed date would then
+  //   be re-posted forever instead of settling — and it would spend the
+  //   route's most expensive statement on an answer it throws away.
+  // - **Folded.** A `count(*)` followed by an INSERT is check-then-act:
+  //   `Promise.all` over N requests reads one snapshot in all N and writes
+  //   N rows, so "50 per day" held only against a sequential client.
+  //   `recordCompletion`'s guarded form is ONE statement (T-DB-S56a).
+  //
+  // `isLateDate` is a pure JS compare and the daily arm passes no ceiling
+  // at all, so the daily ritual's INSERT is byte-identical to the one it
+  // always was — no extra statement, no guard subquery, no round trip. 429
+  // is deliberate: `TERMINAL_STATUSES` in apps/web/src/play/sync.ts does
+  // not contain it, so a refused archive completion stays `pendingSync`
+  // and flushes after the next rollover — the correct semantics for a
+  // per-day rate cap, and the exact reason a terminal status was rejected.
+  const written = isLateDate(body.date, today)
+    ? await recordCompletion(db, input, {
+        day: today,
+        max: ARCHIVE_WRITES_PER_DAY,
+      })
+    : await recordCompletion(db, input);
+
+  if (written.capped) {
+    // THE CEILING'S PRINCIPAL PRODUCT (ADR-0053 decision 13): the platform
+    // log carries the status and the path but neither the `archive-cap`
+    // token nor the user, so it cannot make the one distinction the record
+    // says this exists to make — a marathon player trips it once, a script
+    // trips it on every minted identity. Same idiom as
+    // `app/cron/publish/route.ts` — the repo's only other structured log
+    // line. (`src/session/origin-guard.ts` was cited here and is NOT one:
+    // it emits a plain-string `console.error`.)
+    console.log(JSON.stringify({ event: "archive-cap", userId, day: today }));
+    return errorResponse(429, "archive-cap");
+  }
+  return completionResponse(written.record, written.recorded);
 }

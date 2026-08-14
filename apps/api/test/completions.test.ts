@@ -1,6 +1,10 @@
 import {
   completionResponseSchema,
   nonogramDailyContentSchema,
+  statsResponseSchema,
+  streakResponseSchema,
+  type StatsResponse,
+  type StreakResponse,
 } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { eq, sessions, sql, users } from "@miolos/db";
@@ -16,6 +20,7 @@ import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku, type SudokuPuzzle } from "@miolos/games/sudoku";
 import { isValidGuess, TERMO_ANSWERS } from "@miolos/games/termo";
+import { readFile } from "node:fs/promises";
 import { NextRequest } from "next/server";
 import {
   afterAll,
@@ -29,19 +34,27 @@ import {
 } from "vitest";
 
 import { OPTIONS, POST } from "../app/completions/route";
+// #31 (ADR-0053): T-API-S100 and T-API-S106 assert what an archive write
+// does NOT move, which is only checkable through the readers that would
+// have moved. Both are real routes over the same PGlite db and the same
+// `../src/db` mock; neither is imported anywhere else in this file.
+import { GET as statsGet } from "../app/stats/route";
+import { GET as streakGet } from "../app/streak/route";
 import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
 // Seam 4: the real route over PGlite. src/db is the only behavioural mock;
 // @miolos/db/publishing is spread from the ACTUAL module and only counts
-// calls to the judge (T-API-6 proves the idempotent short-circuit never
-// reaches it — an assertion no status code can make).
+// calls to `getPublishedDailyWithSolution` — THE WALL READ, which is the
+// statement immediately before the judge and the closest observable proxy
+// for it (T-API-6 proves the idempotent short-circuit never reaches it, an
+// assertion no status code can make). The spy is named for what it counts.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-const { getDbCalls, judgeCalls } = vi.hoisted(() => ({
+const { getDbCalls, wallReadCalls } = vi.hoisted(() => ({
   getDbCalls: vi.fn(),
-  judgeCalls: vi.fn(),
+  wallReadCalls: vi.fn(),
 }));
 
 vi.mock("../src/db", () => ({
@@ -58,7 +71,7 @@ vi.mock("@miolos/db/publishing", async (importOriginal) => {
     getPublishedDailyWithSolution: (
       ...args: Parameters<typeof actual.getPublishedDailyWithSolution>
     ) => {
-      judgeCalls();
+      wallReadCalls();
       return actual.getPublishedDailyWithSolution(...args);
     },
   };
@@ -75,7 +88,7 @@ beforeEach(async () => {
   // `cascade` from users reaches sessions, completions and hint_grants.
   await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
   getDbCalls.mockClear();
-  judgeCalls.mockClear();
+  wallReadCalls.mockClear();
 });
 
 afterEach(() => {
@@ -167,9 +180,11 @@ async function seedDaily(
   /**
    * Nonogram only: generate for THIS weekday rather than the date's own. A
    * nonogram's board size is a function of its weekday, and the length tests
-   * need two different sizes on ACCEPTED dates — of which there are only ever
-   * two (ACCEPTED_DAYS_BACK = 1), whose weekdays are whatever the calendar
-   * makes them. Nothing on this route reads `content.weekday`: the judge
+   * need two different sizes on writable dates, whose weekdays are whatever
+   * the calendar makes them. Before #31 there were only ever two such dates;
+   * the write window now has no lower bound (`isWritableDate`, ADR-0053),
+   * which makes this parameter MORE necessary, not less — nothing else pins
+   * a size class. Nothing on this route reads `content.weekday`: the judge
    * reads `reveal.solution` and the wall reads the DATE column.
    */
   nonogramWeekday?: Weekday,
@@ -442,7 +457,7 @@ describe("POST /completions", () => {
       }),
     );
     const firstBody = completionResponseSchema.parse(await first.json());
-    judgeCalls.mockClear();
+    wallReadCalls.mockClear();
 
     const replay = await POST(
       completionRequest({
@@ -463,7 +478,7 @@ describe("POST /completions", () => {
     });
     // The whole point of the step-4 short-circuit: an honest retry is
     // answered from the stored row, never re-judged (plan 017 D15).
-    expect(judgeCalls).not.toHaveBeenCalled();
+    expect(wallReadCalls).not.toHaveBeenCalled();
     expect(await completionRows()).toHaveLength(1);
   });
 
@@ -515,7 +530,7 @@ describe("POST /completions", () => {
     expect(await completionRows()).toHaveLength(0);
     // The positive half of T-API-6: proves the judge spy is actually wired
     // into the route's import, so "never called" there means something.
-    expect(judgeCalls).toHaveBeenCalledTimes(1);
+    expect(wallReadCalls).toHaveBeenCalledTimes(1);
   });
 
   it("T-API-8: a FUTURE date ⇒ 404 by the wall predicate, no row", async () => {
@@ -561,7 +576,11 @@ describe("POST /completions", () => {
     expect(await completionRows()).toHaveLength(0);
   });
 
-  it("T-API-9b: a published date two days old ⇒ 404 by the D29 bound, no row", async () => {
+  it("T-API-9b: a published date two days old is WRITTEN and derives late — the D29 lower bound is gone (#31)", async () => {
+    // This claim inverted at #31 (ADR-0053 decision 5). It used to pin the
+    // D29 lower bound at exactly the first date the bound refused; it now
+    // pins that the same date is a real write, at the same place, so a
+    // reinstated lower bound reds here first.
     const today = await todaySaoPaulo(ctx.db);
     const twoDaysAgo = addDays(today, -2);
     const solution = await seedDaily("binairo", twoDaysAgo, 13);
@@ -578,9 +597,11 @@ describe("POST /completions", () => {
       }),
     );
 
-    expect(response.status).toBe(404);
-    expect(await errorOf(response)).toEqual({ error: "no-puzzle" });
-    expect(await completionRows()).toHaveLength(0);
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toMatchObject(
+      { date: twoDaysAgo, outcome: "won", onTime: false, recorded: true },
+    );
+    expect(await completionRows()).toHaveLength(1);
   });
 
   it("T-API-10: malformed JSON, an unknown game and an impossible date each ⇒ 400, never 500", async () => {
@@ -602,8 +623,8 @@ describe("POST /completions", () => {
       // `calendar-date-year-zero-500s-the-completions-route`. JS has a year 0
       // and the proleptic Gregorian calendar Postgres implements does not, so
       // this survived `calendarDateString`'s UTC round trip, reached
-      // `getCompletion` — ADR-0026's idempotent short-circuit runs BEFORE the
-      // `ACCEPTED_DAYS_BACK` range check that would have 404'd it — and threw
+      // `getCompletion` — ADR-0026's idempotent short-circuit runs BEFORE
+      // the write-window check that would have 404'd it — and threw
       // 22008 out of an unhandled `select`, i.e. a 500 on the repo's only
       // authenticated write. Whoever moves the floor out of the schema reds
       // here as well as in `completion-contract.test.ts`.
@@ -893,7 +914,7 @@ describe("POST /completions — sudoku (plan 018 §7.3)", () => {
       }),
     );
     const firstBody = completionResponseSchema.parse(await first.json());
-    judgeCalls.mockClear();
+    wallReadCalls.mockClear();
 
     const replay = await POST(
       completionRequest({
@@ -913,11 +934,11 @@ describe("POST /completions — sudoku (plan 018 §7.3)", () => {
       recorded: false,
     });
     // The short-circuit still precedes the wall read for the second game.
-    expect(judgeCalls).not.toHaveBeenCalled();
+    expect(wallReadCalls).not.toHaveBeenCalled();
     expect(await completionRows()).toHaveLength(1);
   }, 30_000);
 
-  it("T-API-S12: a wrong sudoku grid ⇒ 422; future, killed and two-days-old ⇒ 404, never a row", async () => {
+  it("T-API-S12: a wrong sudoku grid ⇒ 422; future and killed ⇒ 404; a two-days-old published row is now WRITTEN, late (#31)", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const tomorrow = addDays(today, 1);
     const twoDaysAgo = addDays(today, -2);
@@ -952,8 +973,13 @@ describe("POST /completions — sudoku (plan 018 §7.3)", () => {
     expect(future.status).toBe(404);
     expect(await errorOf(future)).toEqual({ error: "no-puzzle" });
 
-    // ACCEPTED_DAYS_BACK is unchanged at 1 (#31 is its lever).
-    const tooOld = await POST(
+    // THE WIDENING, pinned where the old lower bound was pinned (#31,
+    // ADR-0053 decision 5). Two days back used to be 404 by the route's own
+    // arithmetic; the archive is every published past day, so it is now a
+    // real write and `on_time` derives false with no writer and no column.
+    // If someone reinstates a lower bound, this reds — which is what
+    // ADR-0026 :187-192 asks of these tests, in the new direction.
+    const archived = await POST(
       completionRequest({
         token,
         body: completionBody({
@@ -963,8 +989,10 @@ describe("POST /completions — sudoku (plan 018 §7.3)", () => {
         }),
       }),
     );
-    expect(tooOld.status).toBe(404);
-    expect(await errorOf(tooOld)).toEqual({ error: "no-puzzle" });
+    expect(archived.status).toBe(200);
+    expect(completionResponseSchema.parse(await archived.json())).toMatchObject(
+      { date: twoDaysAgo, outcome: "won", onTime: false, recorded: true },
+    );
 
     await ctx.db
       .update(dailyPuzzles)
@@ -983,7 +1011,9 @@ describe("POST /completions — sudoku (plan 018 §7.3)", () => {
     expect(killed.status).toBe(404);
     expect(await errorOf(killed)).toEqual({ error: "no-puzzle" });
 
-    expect(await completionRows()).toHaveLength(0);
+    // Exactly one row exists, and it is the archived one: every refused
+    // branch above wrote nothing.
+    expect(await completionRows()).toHaveLength(1);
   }, 30_000);
 
   it("T-API-S13: sudoku on-time derivation at the seam — yesterday is late, today is not", async () => {
@@ -1276,7 +1306,7 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
   it("T-API-S28: YESTERDAY's picture is judged against yesterday's stored row, at a different size", async () => {
     // The one LEGITIMATE submission whose length differs from today's board,
     // and the only shape binairo's `.length(64)` and sudoku's `.length(81)`
-    // structurally cannot produce: ACCEPTED_DAYS_BACK = 1 exists for D19's
+    // structurally cannot produce: the rollover slack exists for D19's
     // post-rollover flush, where a board finished offline yesterday is POSTed
     // on today's mount by `sync.ts`. Yesterday is a different ISO weekday and
     // a nonogram's size is a function of the weekday, so the two accepted
@@ -1313,7 +1343,7 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(await completionRows()).toHaveLength(1);
   });
 
-  it("T-API-S23b: a wrong picture ⇒ 422; future, killed and two-days-old ⇒ 404, never a row", async () => {
+  it("T-API-S23b: a wrong picture ⇒ 422; future and killed ⇒ 404; a two-days-old published row is now WRITTEN, late (#31)", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const tomorrow = addDays(today, 1);
     const twoDaysAgo = addDays(today, -2);
@@ -1348,8 +1378,9 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(future.status).toBe(404);
     expect(await errorOf(future)).toEqual({ error: "no-puzzle" });
 
-    // ACCEPTED_DAYS_BACK is unchanged at 1 (#31 is its lever).
-    const tooOld = await POST(
+    // The widening, at the third game (#31, ADR-0053 decision 5): two days
+    // back is a real write now, and it derives late.
+    const archived = await POST(
       completionRequest({
         token,
         body: completionBody({
@@ -1359,8 +1390,10 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
         }),
       }),
     );
-    expect(tooOld.status).toBe(404);
-    expect(await errorOf(tooOld)).toEqual({ error: "no-puzzle" });
+    expect(archived.status).toBe(200);
+    expect(completionResponseSchema.parse(await archived.json())).toMatchObject(
+      { date: twoDaysAgo, outcome: "won", onTime: false, recorded: true },
+    );
 
     await ctx.db
       .update(dailyPuzzles)
@@ -1379,7 +1412,8 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
     expect(killed.status).toBe(404);
     expect(await errorOf(killed)).toEqual({ error: "no-puzzle" });
 
-    expect(await completionRows()).toHaveLength(0);
+    // Exactly one row, the archived one.
+    expect(await completionRows()).toHaveLength(1);
   });
 });
 
@@ -1581,7 +1615,7 @@ describe("POST /completions — termo (#27, ADR-0038)", () => {
     expect(completionResponseSchema.parse(await lost.json()).outcome).toBe(
       "lost",
     );
-    judgeCalls.mockClear();
+    wallReadCalls.mockClear();
 
     const replay = await POST(
       completionRequest({
@@ -1599,7 +1633,7 @@ describe("POST /completions — termo (#27, ADR-0038)", () => {
     expect(body.outcome).toBe("lost");
     expect(body.recorded).toBe(false);
     expect(body.elapsedMs).toBe(61_000);
-    expect(judgeCalls).not.toHaveBeenCalled();
+    expect(wallReadCalls).not.toHaveBeenCalled();
     // Still one row, and its count is the LOSS's six.
     expect(await storedGuessCounts()).toEqual([{ game: "termo", guesses: 6 }]);
   });
@@ -1735,5 +1769,483 @@ describe("POST /completions — termo (#27, ADR-0038)", () => {
       expect(await errorOf(response)).toEqual({ error: "invalid-body" });
     }
     expect(await completionRows()).toHaveLength(0);
+  });
+});
+
+describe("POST /completions — the archive write window (#31, ADR-0053)", () => {
+  /** GET /stats through its own real route, over the same PGlite db. */
+  async function statsOf(token: string): Promise<StatsResponse> {
+    const response = await statsGet(
+      new NextRequest("http://localhost:3001/stats", {
+        method: "GET",
+        headers: new Headers({ cookie: `${SESSION_COOKIE_NAME}=${token}` }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    return statsResponseSchema.parse(await response.json());
+  }
+
+  /** GET /streak through its own real route. */
+  async function streakOf(token: string): Promise<StreakResponse> {
+    const response = await streakGet(
+      new NextRequest("http://localhost:3001/streak", {
+        method: "GET",
+        headers: new Headers({ cookie: `${SESSION_COOKIE_NAME}=${token}` }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    return streakResponseSchema.parse(await response.json());
+  }
+
+  it("T-API-S97: a completion 90 days back is ACCEPTED and reads back onTime: false", async () => {
+    // AC 3's write half. Lateness needs no writer, no column and no flag:
+    // `on_time` is derived in the read-back SELECT from `completed_at`'s SP
+    // day against the puzzle's own `date` (ADR-0026 decision 2). The only
+    // reason no late row existed on main is that the route refused the
+    // date — which is the single thing #31 changes.
+    const today = await todaySaoPaulo(ctx.db);
+    const archived = addDays(today, -90);
+    const solution = await seedDaily("binairo", archived);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: archived,
+          grid: solution,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toEqual({
+      game: "binairo",
+      date: archived,
+      outcome: "won",
+      onTime: false,
+      elapsedMs: 61_000,
+      hintsUsed: 0,
+      recorded: true,
+    });
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+
+  it("T-API-S98: a FUTURE date is refused in the route, BEFORE the wall read — new behaviour, not preserved behaviour", async () => {
+    // `isWritableDate`'s upper bound is a TIGHTENING. Before #31 the route
+    // bounded only the past; a future date reached the wall and was refused
+    // there. The status is the same 404 and the mechanism is not, so the
+    // wall-read spy is the assertion that carries the claim: the wall read
+    // never runs at all.
+    const today = await todaySaoPaulo(ctx.db);
+    const tomorrow = addDays(today, 1);
+    const solution = await seedDaily("binairo", tomorrow, 11);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: tomorrow,
+          grid: solution,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(await errorOf(response)).toEqual({ error: "no-puzzle" });
+    expect(wallReadCalls).not.toHaveBeenCalled();
+    expect(await completionRows()).toHaveLength(0);
+  }, 30_000);
+
+  it("T-API-S99: an unpublished, a killed and a never-published past date are each 404 — the wall is now the only lower authority", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token } = await createSession();
+
+    // Never published: no row at all, 90 days back.
+    const missing = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: addDays(today, -90),
+          grid: Array.from({ length: 64 }, () => 0),
+        }),
+      }),
+    );
+    expect(missing.status).toBe(404);
+    expect(await errorOf(missing)).toEqual({ error: "no-puzzle" });
+
+    // Published in the FUTURE but dated in the past: `published_at <= now()`
+    // is the conjunct that refuses it, and no route arithmetic can.
+    const unpublishedDate = addDays(today, -60);
+    const unpublished = await seedDaily("binairo", unpublishedDate, 13);
+    await ctx.db
+      .update(dailyPuzzles)
+      .set({ publishedAt: sql`now() + interval '1 day'` })
+      .where(eq(dailyPuzzles.date, unpublishedDate));
+    const pending = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: unpublishedDate,
+          grid: unpublished,
+        }),
+      }),
+    );
+    expect(pending.status).toBe(404);
+
+    // Killed: the operator takedown reaches the write path too.
+    const killedDate = addDays(today, -30);
+    const killedSolution = await seedDaily("binairo", killedDate, 17);
+    await ctx.db
+      .update(dailyPuzzles)
+      .set({ killedAt: sql`now()` })
+      .where(eq(dailyPuzzles.date, killedDate));
+    const killed = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: killedDate,
+          grid: killedSolution,
+        }),
+      }),
+    );
+    expect(killed.status).toBe(404);
+
+    expect(await completionRows()).toHaveLength(0);
+  }, 30_000);
+
+  it("T-API-S100: AC 3's exclusion half at the seam — an archived win and an archived Termo loss move `solved` and the FAIL ROW, and nothing else", async () => {
+    // The carve-out is asserted, not omitted (D10, flag F4): ADR-0008 rule 3
+    // says a lost Termo is PLAYED and records in the guess distribution's
+    // fail row, on time or not. AC 3's literal words say distributions never
+    // move; the fail row is part of the distribution and it does move. This
+    // test pins the documented behaviour so the exit criterion cannot claim
+    // something the plan concedes elsewhere is false.
+    const today = await todaySaoPaulo(ctx.db);
+    const archived = addDays(today, -90);
+    const { token } = await createSession();
+
+    // A baseline the archive rows are measured against: one on-time win
+    // today, so `bestMs`, `averageMs` and the histogram are non-null and a
+    // regression in either direction is visible.
+    const todaySolution = await seedDaily("binairo", today);
+    await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: today,
+          grid: todaySolution,
+          elapsedMs: 120_000,
+        }),
+      }),
+    );
+    const before = await statsOf(token);
+    const streakBefore = await streakOf(token);
+
+    // The two archive writes: a grid win and a Termo LOSS, both 90 days back.
+    const archivedSolution = await seedDaily("binairo", archived, 23);
+    await seedTermo(archived, 29);
+    const win = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: archived,
+          grid: archivedSolution,
+          elapsedMs: 1_000, // faster than the on-time row on purpose
+        }),
+      }),
+    );
+    expect(win.status).toBe(200);
+    const loss = await POST(
+      completionRequest({
+        token,
+        body: termoBody({ date: archived, guesses: TERMO_DECOYS }),
+      }),
+    );
+    expect(loss.status).toBe(200);
+
+    const after = await statsOf(token);
+
+    // What moves: `solved` by one (ADR-0051 decision 6 counts late wins by
+    // decision), and the Termo fail row by one (ADR-0008 rule 3).
+    expect(after.binairo.solved).toBe(before.binairo.solved + 1);
+    expect(after.termo.distribution[6]).toBe(before.termo.distribution[6] + 1);
+
+    // What does NOT move. `bestMs` is the sharpest of these: the archived
+    // row is 1 s against a 120 s on-time row, so a missing `countsOnTimeWon`
+    // conjunct would be impossible to miss here.
+    expect(after.binairo.bestMs).toBe(before.binairo.bestMs);
+    expect(after.binairo.averageMs).toBe(before.binairo.averageMs);
+    expect(after.binairo.averageSampleCount).toBe(
+      before.binairo.averageSampleCount,
+    );
+    expect(after.binairo.histogram).toEqual(before.binairo.histogram);
+    // Termo buckets 1–6 — the WON buckets — are untouched; only index 6,
+    // the fail row, moved.
+    expect(after.termo.distribution.slice(0, 6)).toEqual(
+      before.termo.distribution.slice(0, 6),
+    );
+    expect(after.termo.solved).toBe(before.termo.solved);
+    expect(after.perfectDays).toBe(before.perfectDays);
+    // And the streak, which is the invariant the whole mechanic rests on.
+    expect(await streakOf(token)).toEqual(streakBefore);
+  }, 40_000);
+
+  it("T-API-S104: AC 4's teeth — an archive-dated replay of a day already completed on time returns the STORED row and writes nothing, ahead of the cap", async () => {
+    // The composite PK plus the replay short-circuit at the top of the
+    // route, which runs BEFORE the write-window check, BEFORE the cap,
+    // BEFORE the wall read and BEFORE judging. A day completed on time and
+    // then re-solved from its archive page cannot be reopened by anything.
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const solution = await seedDaily("sudoku", yesterday);
+    const { token, userId } = await createSession();
+
+    // The on-time row, written with an explicit `completed_at` on its own
+    // day so `on_time` derives true.
+    await ctx.db.insert(completions).values({
+      userId,
+      game: "sudoku",
+      date: yesterday,
+      outcome: "won",
+      completedAt: new Date(`${yesterday}T15:00:00Z`),
+      elapsedMs: 42_000,
+      hintsUsed: 1,
+    });
+    const storedBefore = await ctx.db.select().from(completions);
+
+    wallReadCalls.mockClear();
+    const replay = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "sudoku",
+          date: yesterday,
+          grid: solution,
+          elapsedMs: 5,
+          hintsUsed: 0,
+        }),
+      }),
+    );
+
+    expect(replay.status).toBe(200);
+    expect(completionResponseSchema.parse(await replay.json())).toEqual({
+      game: "sudoku",
+      date: yesterday,
+      outcome: "won",
+      onTime: true,
+      elapsedMs: 42_000,
+      hintsUsed: 1,
+      recorded: false,
+    });
+    // Zero writes: the row count and the completed_at instant are both
+    // byte-identical, and the wall read never ran.
+    expect(await ctx.db.select().from(completions)).toEqual(storedBefore);
+    expect(wallReadCalls).not.toHaveBeenCalled();
+  }, 30_000);
+
+  it("T-API-S105: a lost archived Termo is written once and a later winning replay does not reopen it", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const archived = addDays(today, -45);
+    await seedTermo(archived);
+    const { token } = await createSession();
+
+    const lost = await POST(
+      completionRequest({
+        token,
+        body: termoBody({ date: archived, guesses: TERMO_DECOYS }),
+      }),
+    );
+    expect(lost.status).toBe(200);
+    expect(completionResponseSchema.parse(await lost.json())).toMatchObject({
+      outcome: "lost",
+      onTime: false,
+      recorded: true,
+    });
+
+    // ADR-0008 :39 — a loss followed by an archive replay does not reopen
+    // the daily. The winning list would judge `won`; the short-circuit
+    // never lets it near the judge.
+    const replay = await POST(
+      completionRequest({
+        token,
+        body: termoBody({ date: archived, guesses: [termoAnswer.normalized] }),
+      }),
+    );
+    expect(replay.status).toBe(200);
+    expect(completionResponseSchema.parse(await replay.json())).toMatchObject({
+      outcome: "lost",
+      recorded: false,
+    });
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+
+  it("T-API-S106: another user's archive completions never move the caller's stats or streak", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const archived = addDays(today, -70);
+    const solution = await seedDaily("binairo", archived);
+    const mine = await createSession();
+    const theirs = await createSession();
+
+    const baseline = await statsOf(mine.token);
+    const baselineStreak = await streakOf(mine.token);
+
+    const written = await POST(
+      completionRequest({
+        token: theirs.token,
+        body: completionBody({
+          game: "binairo",
+          date: archived,
+          grid: solution,
+        }),
+      }),
+    );
+    expect(written.status).toBe(200);
+
+    expect(await statsOf(mine.token)).toEqual(baseline);
+    expect(await streakOf(mine.token)).toEqual(baselineStreak);
+    // Anti-vacuity: the write really did land, on the other account.
+    expect((await statsOf(theirs.token)).binairo.solved).toBe(1);
+  }, 30_000);
+
+  it("T-API-S107: the 50th late write of a São Paulo day lands and the 51st is 429 archive-cap; a today-dated write is neither counted nor capped; the cap lifts when the clock crosses SP midnight", async () => {
+    // ADR-0053 decision 13, at the seam. The seeded rows go in directly —
+    // the route path is what is under test, not fifty judge runs — with an
+    // explicit `completed_at` on the CURRENT SP day, which is what the
+    // ceiling's guard reads.
+    //
+    // The clock is FAKED across a real São Paulo midnight rather than the
+    // rows being back-dated by an interval (step-6 finding F11): 02:59:59Z
+    // is 23:59:59 in SP and 03:00:01Z is 00:00:01 the next day — T-DB-14's
+    // instrument, and the only version of this test that can tell an SP
+    // day from a UTC one. Only `Date` is faked; PGlite's `now()` follows
+    // it, which is what makes `todaySaoPaulo(db)` move.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-11T02:59:59Z")); // 23:59:59 in SP
+
+    const today = await todaySaoPaulo(ctx.db);
+    expect(today).toBe("2026-08-10");
+    const { token, userId } = await createSession();
+
+    // FORTY-NINE late rows written today. Seeding fifty and asserting a
+    // refusal would pass identically under `>= 50`, `>= 49` and `> 48`
+    // (step-6 finding F12), so the boundary is walked from below: the 50th
+    // write must land, and only the 51st may be refused.
+    await ctx.db.insert(completions).values(
+      Array.from({ length: 49 }, (_unused, index) => ({
+        userId,
+        game: "binairo" as const,
+        date: addDays(today, -(index + 2)),
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-11T02:59:59Z"),
+        elapsedMs: 61_000,
+        hintsUsed: 0,
+      })),
+    );
+
+    // A TODAY-dated write is neither counted nor capped, whatever the late
+    // count — the cap runs on the late branch only, so the daily ritual
+    // pays nothing.
+    const todaySolution = await seedDaily("sudoku", today);
+    const daily = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "sudoku",
+          date: today,
+          grid: todaySolution,
+        }),
+      }),
+    );
+    expect(daily.status).toBe(200);
+
+    // The 50th LATE write lands.
+    const fiftieth = addDays(today, -99);
+    const fiftiethSolution = await seedDaily("sudoku", fiftieth, 30);
+    const accepted = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "sudoku",
+          date: fiftieth,
+          grid: fiftiethSolution,
+        }),
+      }),
+    );
+    expect(accepted.status).toBe(200);
+
+    // The 51st is refused, and writes nothing.
+    const archived = addDays(today, -100);
+    const archivedSolution = await seedDaily("sudoku", archived, 31);
+    const rowsBefore = await completionRows();
+    const capped = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "sudoku",
+          date: archived,
+          grid: archivedSolution,
+        }),
+      }),
+    );
+    expect(capped.status).toBe(429);
+    expect(await errorOf(capped)).toEqual({ error: "archive-cap" });
+    expect(await completionRows()).toHaveLength(rowsBefore.length);
+
+    // Two seconds later the São Paulo day has turned. Nothing about the
+    // rows changed — only the clock — and the same write lands, because
+    // the budget is spent per São Paulo write-day and nothing carries over.
+    vi.setSystemTime(new Date("2026-08-11T03:00:01Z")); // 00:00:01 in SP
+    expect(await todaySaoPaulo(ctx.db)).toBe("2026-08-11");
+    const retried = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "sudoku",
+          date: archived,
+          grid: archivedSolution,
+        }),
+      }),
+    );
+    expect(retried.status).toBe(200);
+    expect(completionResponseSchema.parse(await retried.json())).toMatchObject({
+      onTime: false,
+      recorded: true,
+    });
+  }, 40_000);
+
+  it("T-API-S107a: 429 is NOT terminal in the web client's sync ladder — a capped archive completion survives to flush later", async () => {
+    // The half of D8a that makes the cap correct rather than lossy. A
+    // terminal status would settle the record `rejected` and discard a
+    // completion the player really earned; 429 is retried, so the record
+    // stays `pendingSync` and lands after the next rollover.
+    //
+    // Asserted as a SOURCE SCAN, not an import: apps/api's package.json
+    // depends on core/db/games/next/react and NOT on apps/web, so a
+    // cross-app import would not resolve.
+    //
+    // The scan asserts ONE thing — 429 is absent — and deliberately not
+    // the whole list (step-6 finding F13). Pinning the exact set here made
+    // an incidental value the primary assertion: a legitimate future
+    // addition (409, say) would red an `apps/api` test with a message
+    // about a web file. The BEHAVIOURAL twin lives where it belongs, in
+    // `apps/web/test/play-sync.test.ts`'s "keeps the record pending on %i"
+    // — 429 is a case there.
+    const sync = await readFile(
+      new URL("../../web/src/play/sync.ts", import.meta.url),
+      "utf8",
+    );
+    const terminal =
+      /const TERMINAL_STATUSES[^=]*=\s*new Set\(\[([^\]]*)\]/.exec(sync);
+    expect(terminal?.[1]).toBeDefined();
+    expect(terminal?.[1]).not.toContain("429");
   });
 });

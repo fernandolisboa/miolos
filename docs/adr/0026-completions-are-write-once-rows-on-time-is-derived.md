@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md)
 **Amended by:** [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md) — the merge-repoint consequence's sufficiency claim is corrected: the ordered `ON CONFLICT DO NOTHING` repoint ALONE does not deliver *"the surviving row is the earliest completion"* when the winning account already holds a LATER row for the same (game, date) — the conflict fires and `DO NOTHING` keeps the later row. ADR-0049 decision 2 adds the strictly-earlier DELETE that completes it; the sentence's ordering prescription (`completed_at` ascending, copied) stands.
+**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — decision 6's **lower** bound is removed and its Rejected entry on rate limiting is **reversed** for one branch. Four sentences fall: *"A write may only target SP-today or SP-yesterday"*; *"Without a lower bound any client could write a `won` completion for every past daily … and a stale local record would flush as a completion the player never played"* (which now happens, deliberately); *"One day of slack is what keeps decision 7 from losing legitimate rows"* (no write-side slack survives — the calendar's one-day clamp does, under its own name); and the abuse posture's *"decision 6 caps the date axis at two days"*, replaced by a per-user-per-São-Paulo-day ceiling of 50 **late** completions answering `429` — late, not *archive*: the branch it guards also admits decision 7's own post-rollover flush, which is inside the ceiling by construction at ≤4 rows. The consequence written about #31 by name stands as a warning and its risk claim is superseded: #31 does **deliberately** what *"Widening it accidentally — by removing the bound while 'fixing' a date test"* names as the accident, with the cost restated (ADR-0053 decision 5) rather than left standing. The Rejected entry *"**Application-level rate limiting on the write, in v1.** Considered and declined"* is **implemented** for the late branch only; the daily branch still ships none. Unchanged: the composite PK, `on_time` derived in SQL, the database clock as the completion instant, the replay short-circuit, and decision 6's layer rule that the write bound lives in the route and never in `wallPredicate`. Multiple `Amended by:` lines stack.
 **Amends:** the mint-flood consequence of [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md) — *"Accepted because flood-minted rows are unreferenced and harmless, and Vercel's platform firewall is the backstop."* Flood-minted users can now write rows that are referenced by streak arithmetic; see Consequences.
 
 ## Context
@@ -98,6 +99,34 @@ rows exist in production:
    stale local record would flush as a completion the player never played.
    One day of slack is what keeps decision 7 from losing legitimate rows.
 
+   **Amended at #31 — the LOWER bound is gone
+   ([ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+   decisions 5 and 6).** A write may now target any day up to and including
+   the São Paulo today; the archive is every published past day and the wall
+   is the only authority on which those are. Four sentences above become
+   false. The fourth is the bolded one that names #31 outright — *"**The
+   lever the archive ticket (#31) widens is therefore the route constant
+   `ACCEPTED_DAYS_BACK`, not `wallPredicate`**"*. #31 did not widen that
+   constant: it **deleted and split** it, into `isWritableDate` (the write
+   window) and `ROLLOVER_SLACK_DAYS` (the stats calendar's clamp). The
+   sentence's substance — that the lever is in the ROUTE and not in the SQL
+   — survives whole and is exactly what the widening did; only its
+   mechanism and its identifier are wrong. The other three: *"SP-today or
+   SP-yesterday"*, the *"Without a lower bound"* warning
+   (that is now the shipped behaviour, accepted with its cost written out —
+   the Termo guess route is an answer oracle at the cost of one authenticated
+   request, the grid solvers run locally in a fraction of a millisecond, and
+   what forgery buys is `solved` totals and ten volume medals, on ADR-0006
+   `:51`'s own terms), and *"One day of slack"* — no write-side slack
+   survives. **What this decision actually protects is untouched:** the bound
+   still lives in the route and never in SQL, and `wallPredicate` still
+   carries no write-side bound. The one-day slack survives as a **separate
+   constant with a single owner**, the stats calendar's range clamp
+   (`ROLLOVER_SLACK_DAYS`), because feeding the widened write window into
+   that clamp would paint fabricated `"missed"` days. And the volume the
+   lower bound was implicitly capping is now capped explicitly, by rate
+   rather than by date: ADR-0053 decision 13.
+
 7. **A completion synced after the rollover derives as late** — the window
    decisions 3 and 6 open together, stated rather than discovered. Solve at
    23:58 offline, reconnect at 00:05, and `completed_at` is the server write
@@ -136,6 +165,22 @@ rows exist in production:
   the streak.
 - **Application-level rate limiting on the write, in v1.** Considered and
   declined with its reasoning recorded below, not skipped.
+  *(**REVERSED at #31**, for one branch —
+  [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+  decision 13 ships exactly this: `POST /completions` refuses a **late**
+  write with `429 archive-cap` once the caller holds 50 late completions
+  written on the current São Paulo day. It ships because decision 6's lower
+  bound — the "decision 6 caps the date axis at two days" leg of the posture
+  below — is what this entry's reasoning rested on, and #31 removes it. The
+  **daily** branch still ships no rate limit at all, and 429 is deliberately
+  not a terminal status for the sync queue, so a capped record survives and
+  lands after the next rollover. This is the repo's first rate limit **on
+  the completion write path** — not its first anywhere: `POST
+  /attach/request` already answers `429 too-many-requests` off
+  `MAX_REQUESTS_PER_HOUR` ([ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md)
+  decision 11), so this entry was already reversed once, by ADR-0050, on a
+  route it was not written about. It fires ADR-0022 `:69-75`'s revisit
+  trigger on a cause its own text did not anticipate.)*
 
 ## Consequences
 
@@ -179,6 +224,24 @@ rows exist in production:
   posture ADR-0024 recorded for the public reads, now extended to a write.
   **Revisit trigger:** the first abuse signal, or the rewarded-ad ticket
   (which adds a grant write), whichever comes first.
+  *(**Amended at #31** —
+  [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+  decisions 5 and 13. The middle leg of this posture, *"decision 6 caps the
+  date axis at two days"*, is deleted: the date axis is now the whole
+  archive. The composite-PK leg stands. The per-request-cost leg — *"each
+  request costs one jsonb wall read plus one insert"* — **grows on the late
+  branch**, deliberately: that insert now carries the ceiling's `count(*)`
+  as a guard inside the same statement, which is the thing being bought.
+  The daily branch's cost is unchanged. What replaces the deleted leg is
+  not a platform
+  backstop but an application-level ceiling — 50 late completions per user
+  per São Paulo day, `429 archive-cap` — so the uncapped axis becomes
+  minted-identities × 50 rather than minted-identities × the archive.
+  Verified at #31 that no substitute existed to inherit: no middleware in
+  either app, no firewall rules in either `vercel.json`, no rate-limit
+  dependency, and session minting still unthrottled. The trigger is now
+  observable rather than aspirational — the first `429 archive-cap` in the
+  logs is the signal, and it separates a marathon player from a script.)*
 - **The late-by-sync window is real and unresolved** (decision 7). Whatever
   Fernando decides, the schema, the route and the client are identical under
   both options — so this ADR does not block on it, and the decision is
@@ -190,6 +253,20 @@ rows exist in production:
   "fixing" a date test — reopens the whole past calendar to forged
   completions, so the bound carries its reason in the route's own comments
   as well as here.
+  *(**Amended at #31** —
+  [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+  decisions 5, 6 and 13. #31 did not widen the constant: it **deleted** it,
+  splitting the two ideas it held into `ROLLOVER_SLACK_DAYS` (the stats
+  calendar's clamp, value unchanged) and `isWritableDate` (the write window,
+  upper bound only), one owner each. So the paragraph's own worst case — the
+  whole past calendar open to forged completions — is now the shipped
+  behaviour, **deliberately** rather than by the accident this sentence
+  names. Its risk claim is not left standing: ADR-0053 decision 5 states what
+  forgery actually buys (`solved` totals and ten volume medals — never the
+  streak, a time statistic, a Termo bucket or Dia Perfeito) and accepts it on
+  ADR-0006 `:51`'s terms, while decision 13 caps the volume. The
+  carries-its-reason instruction survives and is executed: the route's
+  comment now cites ADR-0053 rather than this paragraph.)*
 - **#23 / #25 / #27 attach rather than migrate.** `outcome` accommodates
   `'lost'` from day one for Termo, `game` is the request union's
   discriminator, and the route is game-generic; the grid games are expected

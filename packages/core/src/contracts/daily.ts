@@ -55,8 +55,9 @@ export const isoDateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
  * and `'0000-01-01'::date` still raises 22008, the very failure the
  * paragraph above says this guard exists to prevent. `POST /completions`
  * reaches the DB with the body's date BEFORE any range check, because
- * ADR-0026's idempotent short-circuit runs ahead of `ACCEPTED_DAYS_BACK`
- * (`apps/api/app/completions/route.ts`) — so year 0 was an uncaught throw,
+ * ADR-0026's idempotent short-circuit runs ahead of the write-window check
+ * (`isWritableDate`, `apps/api/app/completions/route.ts`) — so year 0 was
+ * an uncaught throw,
  * i.e. a 500, on the repo's only authenticated write (step-6 round-4
  * finding `calendar-date-year-zero-500s-the-completions-route`). The floor
  * belongs HERE rather than in the route: the short-circuit's position is the

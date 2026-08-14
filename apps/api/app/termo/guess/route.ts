@@ -17,7 +17,7 @@ import {
   preflightResponse,
 } from "../../../src/cors";
 import { getDb } from "../../../src/db";
-import { ACCEPTED_DAYS_BACK, addDays } from "../../../src/publishing/dates";
+import { isWritableDate } from "../../../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
 import {
   isCrossSiteWrite,
@@ -75,7 +75,7 @@ export function OPTIONS(): Response {
  *  3. `Content-Type: application/json`, before the body    → 415
  *  4. `requireUserId` — never mints                        → 401 no-session
  *  5. `termoGuessRequestSchema.safeParse`                  → 400 invalid-body
- *  6. the shared `ACCEPTED_DAYS_BACK` bound                → 404 no-puzzle
+ *  6. the shared write window (`isWritableDate`)          → 404 no-puzzle
  *  7. `getPublishedDailyWithSolution` (the wall)           → 404 no-puzzle
  *  8. `termoDailyContentSchema.parse` on the stored row    → 500 (a drifted
  *     row is deliberately loud: a 200 has to mean playable)
@@ -177,16 +177,22 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   const body = parsed.data;
 
-  // Enforced against the DATABASE clock (ADR-0010 single authority), never
-  // `new Date()`. String comparison is exact for 'YYYY-MM-DD'. The bound is
-  // shared with the completion route so the two windows cannot drift: a
-  // player mid-game at the São Paulo rollover must be able to submit guess
-  // five for yesterday, or Termo becomes unfinishable at midnight.
-  const earliestAccepted = addDays(
-    await todaySaoPaulo(db),
-    -ACCEPTED_DAYS_BACK,
-  );
-  if (body.date < earliestAccepted) {
+  // The write window (ADR-0026 decision 6 as amended by ADR-0053 decision
+  // 5), enforced against the DATABASE clock (ADR-0010 single authority),
+  // never `new Date()`. The predicate is shared with the completion route so
+  // the two windows cannot drift: a player mid-game at the São Paulo
+  // rollover must be able to submit guess five for yesterday, or Termo
+  // becomes unfinishable at midnight — and after #31 an archived Termo needs
+  // both windows to agree or it is unfinishable too.
+  //
+  // NO CEILING HERE, and that is a decision (ADR-0053 decision 13). This
+  // route writes nothing, allocates nothing unbounded (≤ 6 elements of
+  // ^[a-z]{5}$) and was already unthrottled per request before #31 — the
+  // date axis was never what bounded its request count. What #31 changes is
+  // the number of distinct days whose answer it will yield, which is the
+  // exposure ADR-0038 decision 9 already discloses and which is LESS
+  // objectionable after #31, because those days are now genuinely playable.
+  if (!isWritableDate(body.date, await todaySaoPaulo(db))) {
     return errorResponse(404, "no-puzzle");
   }
 

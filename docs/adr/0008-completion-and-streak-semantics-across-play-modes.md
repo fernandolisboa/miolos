@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-07-30
 **Depends on:** [ADR-0005](./0005-all-content-is-free.md)
+**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — rule 2's calendar sentence — *"The stats calendar shows the date as solved with a visually distinct 'solved later' state."* — is narrowed for ONE class: a late completion dated before the account's clamped range start emits **no calendar entry at all** and is carried by the aggregates instead (ADR-0053 decision 7, taking ADR-0051 decision 2's second sanctioned exit). That class is created by #31's widened write window and by nothing else — before it, a won row can be at most one day back and is always inside the range extension. Rule 2's exclusion list is untouched, and the "three visual states per date" consequence below stays exactly true.
 **Amends:** the rewards line of [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md) — *"streak global (completar 1 dos 4 mantém)"* — by defining what "completar" means per mode.
 
 ## Context
@@ -22,7 +23,7 @@ Three verbs, used consistently from here on:
 The rules:
 
 1. **The streak comes only from on-time completions.** Completing at least one of the four dailies on its own day maintains it. Archive play never repairs or extends a streak, ever — the same rule free play already had. If archive play could repair it, the streak would be unbreakable and stop being a mechanic; scarcity is what makes it work.
-2. **Archive completions are recorded, and marked late.** The stats calendar shows the date as solved with a visually distinct "solved later" state. Late completions never feed the Termo guess distribution, the time statistics, streak medals, or Dia Perfeito. Archive-specific curated medals (e.g. "solved 100 archive puzzles") remain possible.
+2. **Archive completions are recorded, and marked late.** The stats calendar shows the date as solved with a visually distinct "solved later" state. Late completions never feed the Termo guess distribution, the time statistics, streak medals, or Dia Perfeito. Archive-specific curated medals (e.g. "solved 100 archive puzzles") remain possible. *(Narrowed at #31 — [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 7: the calendar sentence holds for every late completion dated inside the account's own lifetime, which is the common case and ships end to end. A late completion dated **before the account's clamped range start** — reachable only once #31 removes the write window's lower bound — paints no calendar cell at all; it is off-calendar, and moves `solved` and the volume medals instead. The exclusion list in this rule is unchanged.)*
 3. **A lost Termo is played, not completed.** The loss records in the Termo guess distribution as the fail row — standard Termo behavior — but counts for neither streak nor Dia Perfeito. Termo keeps real stakes, and the streak stays reachable through the three grid games.
 4. **Dia Perfeito = all four dailies completed on time.** A day containing a lost Termo is not perfect, whatever else happened.
 5. **Free play records nothing server-side**, reaffirming ADR-0005.

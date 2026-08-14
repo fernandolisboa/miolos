@@ -1,4 +1,6 @@
 import { eq, sql } from "drizzle-orm";
+import { drizzle as drizzleNeonHttp } from "drizzle-orm/neon-http";
+import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import {
   afterAll,
   afterEach,
@@ -11,6 +13,7 @@ import {
 } from "vitest";
 
 import { todaySaoPaulo } from "../src/buffer";
+import type { Db } from "../src/client";
 import {
   getCompletion,
   grantHints,
@@ -18,8 +21,12 @@ import {
   listCompletionsForStreak,
   recordCompletion,
 } from "../src/completions";
+import * as schema from "../src/schema";
 import { completions, hintGrants, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
+
+/** The two dialects `Db` unions, named so T-DB-S58 can compare them. */
+type Dialect = "neonHttp" | "pglite";
 
 // The user-scoped suite (issue #18, ADR-0026/ADR-0027, plan 017 §6).
 // Two things are proved here and nowhere else: a completion is written
@@ -102,6 +109,11 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
     expect(Object.keys(user).sort()).toEqual([
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "completions",
+      // #31 adds NOTHING here. The late-write ceiling (ADR-0053
+      // decision 13) is a guard folded into `recordCompletion`'s own
+      // INSERT, not a second exported statement — step-6 finding F1. A
+      // standalone counter would be both a second round trip and an
+      // export with no consumer.
       "getCompletion",
       "getUserSince", // #29 (plan 033): widened in the same commit as the export
       "grantHints",
@@ -365,6 +377,222 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
 
     expect(await listCompletionsForStreak(ctx.db, userId)).toEqual([]);
     expect(await listCompletionsForStreak(ctx.db, otherUserId)).toHaveLength(1);
+  });
+});
+
+describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
+  /** One late write, guarded by the ceiling. */
+  function lateWrite(
+    userId: string,
+    date: string,
+    ceiling: { day: string; max: number },
+  ) {
+    return recordCompletion(
+      ctx.db,
+      {
+        userId,
+        game: "binairo",
+        date,
+        outcome: "won",
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+      },
+      ceiling,
+    );
+  }
+
+  it("T-DB-S56: the ceiling counts LATE rows by the WRITE instant's São Paulo day, and 49/50/51 is where it bites", async () => {
+    // ADR-0053 decision 13. Two properties, asserted together because
+    // either one alone is satisfiable by the wrong predicate:
+    //
+    // (a) THE BOUNDARY, from below as well as above. 49 rows held → the
+    //     50th is written; 50 held → the 51st is refused. Seeding 50 and
+    //     asserting a refusal would pass identically under `>= 50`,
+    //     `>= 49` and `> 48` (step-6 finding F12).
+    // (b) THE DAY IS SÃO PAULO'S, not UTC's. The straddle is T-DB-14's
+    //     instrument at the ceiling: a row written at 02:00:00Z is SP
+    //     23:00 the PREVIOUS day, so it must spend the previous day's
+    //     budget. Under a UTC spelling of the same predicate every
+    //     assertion below flips (step-6 finding F11).
+    //
+    // Only `Date` is faked, the T-DB-14 register: PGlite's `now()` follows
+    // it, which is what lets two São Paulo write-days be seeded.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-10T12:00:00Z")); // 09:00 in SP
+
+    const userId = await createUser();
+    const otherUserId = await createUser();
+
+    // 49 late rows written on SP 2026-08-10, plus one ON-TIME row and one
+    // other user's late row — neither of which may spend this budget.
+    await ctx.db.insert(completions).values([
+      ...Array.from({ length: 49 }, (_unused, index) => ({
+        userId,
+        game: "binairo" as const,
+        date: addDaysLocal("2026-01-01", index),
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-10T12:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+      })),
+      {
+        userId,
+        game: "sudoku" as const,
+        date: "2026-08-10",
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-10T12:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+      },
+      {
+        userId: otherUserId,
+        game: "binairo" as const,
+        date: "2026-06-01",
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-10T12:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+      },
+    ]);
+
+    // 49 held: the 50th lands.
+    const fiftieth = await lateWrite(userId, "2026-06-10", {
+      day: "2026-08-10",
+      max: 50,
+    });
+    expect(fiftieth).toMatchObject({ capped: false, recorded: true });
+
+    // 50 held: the 51st is refused and writes nothing.
+    const before = await listCompletionsForStreak(ctx.db, userId);
+    const fiftyFirst = await lateWrite(userId, "2026-06-11", {
+      day: "2026-08-10",
+      max: 50,
+    });
+    expect(fiftyFirst).toEqual({ capped: true });
+    expect(await listCompletionsForStreak(ctx.db, userId)).toHaveLength(
+      before.length,
+    );
+
+    // A capped caller can still REPLAY a day it already holds: the guard
+    // suppresses the insert, the read-back still answers.
+    const replay = await lateWrite(userId, "2026-06-10", {
+      day: "2026-08-10",
+      max: 50,
+    });
+    expect(replay).toMatchObject({ capped: false, recorded: false });
+
+    // (b) THE STRADDLE. 02:00:00Z is 23:00 in São Paulo on 2026-08-11's
+    // EVE, so this row spends 2026-08-11's budget, not 2026-08-12's.
+    vi.setSystemTime(new Date("2026-08-12T02:00:00Z"));
+    const straddler = await createUser();
+    const first = await lateWrite(straddler, "2026-05-01", {
+      day: "2026-08-11",
+      max: 1,
+    });
+    expect(first).toMatchObject({ capped: false, recorded: true });
+
+    // Spent against SP 2026-08-11 — a ceiling of one on that day refuses.
+    expect(
+      await lateWrite(straddler, "2026-05-02", { day: "2026-08-11", max: 1 }),
+    ).toEqual({ capped: true });
+    // NOT spent against 2026-08-12, which is what a UTC spelling would say.
+    expect(
+      await lateWrite(straddler, "2026-05-02", { day: "2026-08-12", max: 1 }),
+    ).toMatchObject({ capped: false, recorded: true });
+
+    // The ceiling and the shipped flag can never disagree: everything it
+    // counted is exactly what the `on_time` projection calls late.
+    const late = (await listCompletionsForStreak(ctx.db, userId)).filter(
+      (row) => !row.onTime,
+    );
+    expect(late).toHaveLength(50);
+  }, 30_000);
+
+  it("T-DB-S56a: the ceiling is enforced INSIDE the insert — twenty concurrent late writes against a ceiling of ten write ten rows", async () => {
+    // Step-6 finding F1. A `count(*)` read followed by an INSERT is
+    // check-then-act: every request in a `Promise.all` reads the same
+    // snapshot of the count, passes the same comparison and writes. This
+    // is the test that separates the two shapes — measured on this stack,
+    // the two-statement form writes 20 rows here and the guarded single
+    // statement writes 10.
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, (_unused, index) =>
+        lateWrite(userId, addDaysLocal("2026-04-01", index), {
+          day: today,
+          max: 10,
+        }),
+      ),
+    );
+
+    expect(results.filter((result) => !result.capped)).toHaveLength(10);
+    expect(results.filter((result) => result.capped)).toHaveLength(10);
+    expect(await listCompletionsForStreak(ctx.db, userId)).toHaveLength(10);
+  }, 30_000);
+
+  it("T-DB-S58: the guarded INSERT renders byte-identically through the neon-http and PGlite dialects, as ONE statement", async () => {
+    // THE CEILING IS A CORRECTNESS PROPERTY ONLY WHILE IT IS ONE
+    // STATEMENT (ADR-0053 decision 13, `guardedInsertSelect`'s doc block).
+    // T-DB-S56a measures that through PGlite — and PGlite is not the
+    // driver production runs. `neon-http` is, and every other assertion in
+    // this repo about the ceiling is blind to it. The claim was verified
+    // once at step 7 with a throwaway probe; a claim the shipped bound
+    // rests on is owed a tripwire, so this is it.
+    //
+    // The instrument is drizzle's own `logger` seam: both sessions call
+    // `logQuery` with the rendered SQL *before* handing it to the driver.
+    // `drizzle.mock()` gives each driver its real dialect and session over
+    // an empty client, so the render happens and the driver call then
+    // throws — no network, no second PGlite boot, and, decisively, the
+    // statement compared is the one the SHIPPED `recordCompletion` built
+    // rather than one this test rebuilt from the same parts.
+    const logged: Record<Dialect, string[]> = { neonHttp: [], pglite: [] };
+    const loggerFor = (dialect: Dialect) => ({
+      logQuery: (query: string) => {
+        logged[dialect].push(query);
+      },
+    });
+    const dialects: Record<Dialect, Db> = {
+      neonHttp: drizzleNeonHttp.mock({
+        schema,
+        logger: loggerFor("neonHttp"),
+      }),
+      pglite: drizzlePglite.mock({ schema, logger: loggerFor("pglite") }),
+    };
+
+    for (const db of Object.values(dialects)) {
+      await expect(
+        recordCompletion(
+          db,
+          {
+            userId: "00000000-0000-4000-8000-000000000001",
+            game: "binairo",
+            date: "2026-01-01",
+            outcome: "won",
+            elapsedMs: 1_000,
+            hintsUsed: 0,
+          },
+          { day: "2026-08-10", max: 50 },
+        ),
+      ).rejects.toThrow();
+    }
+
+    const [guardedInsert] = logged.neonHttp;
+    if (guardedInsert === undefined) {
+      // Not an assertion but a guard: if the seam ever stops firing, every
+      // expectation below would pass vacuously against `undefined`.
+      throw new Error("the neon-http dialect logged no statement");
+    }
+    // Byte-identical, which is the whole claim.
+    expect(logged.pglite).toEqual([guardedInsert]);
+    // ONE statement, with the count inside it. If a future edit splits the
+    // guard back out — or a dialect ever renders a batch — this is what
+    // reds, and it reds before the concurrency test does.
+    expect(guardedInsert.match(/insert into/g)).toHaveLength(1);
+    expect(guardedInsert).toContain("select count(*)");
+    expect(guardedInsert).not.toContain(";");
   });
 });
 

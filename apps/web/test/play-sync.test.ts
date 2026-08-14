@@ -610,18 +610,27 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     },
   );
 
-  it.each([500, 502, 503])("keeps the record pending on %i", async (status) => {
-    writePlayRecord(pendingRecord());
-    stubFetch(() => jsonResponse(status, { error: "boom" }));
+  // 429 joined this list at #31 (ADR-0053 decision 13): the completion
+  // route's late-write ceiling is the first 429 this repo emits, and it is
+  // a RATE refusal — the record is real and must survive to flush after
+  // the next São Paulo rollover, which is exactly why it is not terminal.
+  // The behavioural assertion lives here rather than in the source scan
+  // `apps/api` carries (step-6 finding F13).
+  it.each([429, 500, 502, 503])(
+    "keeps the record pending on %i",
+    async (status) => {
+      writePlayRecord(pendingRecord());
+      stubFetch(() => jsonResponse(status, { error: "boom" }));
 
-    const { flushPendingCompletions } = await freshSync();
-    await flushPendingCompletions();
+      const { flushPendingCompletions } = await freshSync();
+      await flushPendingCompletions();
 
-    expect(readPlayRecord("binairo", DATE)).toMatchObject({
-      pendingSync: true,
-      syncOutcome: "pending",
-    });
-  });
+      expect(readPlayRecord("binairo", DATE)).toMatchObject({
+        pendingSync: true,
+        syncOutcome: "pending",
+      });
+    },
+  );
 
   it("re-mints once on a 401 and retries once, then stops for this page load", async () => {
     writePlayRecord(pendingRecord());

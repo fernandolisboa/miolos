@@ -4,10 +4,13 @@
  * needed to enumerate consecutive days AND turn epoch days back into ISO
  * dates — the second consumer plan 027 declined to pre-empt. The hoist
  * moves the function verbatim; `apps/api/src/publishing/dates.ts`
- * (`addDays`, `isoWeekdayOf`, `ACCEPTED_DAYS_BACK`) is deliberately NOT
- * consolidated here — that would be blast radius without need, and the
- * accepted-days bound must stay in the route layer (ADR-0026 decision 6),
- * so core takes it as a parameter (see `computeCalendar`).
+ * (`addDays`, `isoWeekdayOf`, `ROLLOVER_SLACK_DAYS`, `isWritableDate`) is
+ * deliberately NOT consolidated here — that would be blast radius without
+ * need, and both the write window and the calendar's rollover slack must
+ * stay in the route layer: the window by ADR-0026 decision 6 as amended by
+ * ADR-0053 decision 5, the slack by ADR-0053 decision 6 amending ADR-0051
+ * decision 2. They are two owners after #31's split, not one, and core
+ * takes the slack as a parameter (see `computeCalendar`).
  *
  * No clock, no timezone, no I/O in this module (the `streak.ts` register):
  * values in, values out.

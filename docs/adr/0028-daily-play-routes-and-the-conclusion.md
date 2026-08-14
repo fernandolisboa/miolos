@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0007](./0007-separate-web-and-api-apps.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md)
+**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — decision 2's route half is **narrowed to the daily play routes**. Its reason — *"without the route the screen has no URL, and a screen with no URL cannot be scanned by the visual gate"* — is load-bearing for the daily and does not transfer to the archive: an archive play URL is **itself** permanent and re-renders the stored result on reload, so the bookmark and back-button cases are already served, and the visual gate would only ever reach the empty branch, which for the archive is a screen no real user sees. `/arquivo/<data>/<jogo>/concluido` therefore does not exist; the late result renders in place on the same URL (ADR-0053 decision 9). The universality this ADR claims in Context — *"the shape all four dailies — and later the archive — will inherit"* — and in its consequence *"**Every future game screen is a copy of this shape**, not a new decision"* narrows with it: the archive copies the route family and the `force-dynamic` posture, not the conclusion sibling. Decision 5's per-route enumeration of the ADR-0014 direct-read extension **grows** to the seven archive routes plus `sitemap.ts` and `robots.ts`, and decision 6's prohibition on `generateStaticParams` over dates is obeyed, not amended. *(**Tense:** ADR-0053 lands in #31's FIRST pull request, which ships the write window and no route. Every archive surface named on this line is built by its second pull request and does not exist until that merges; ADR-0053's own decision preamble carries the same qualifier.)*
 **Amends:** the scope edge of [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md) — *"Scope: public, unauthenticated, cacheable server-rendered reads"* — by extending it to the public, unauthenticated but `force-dynamic` and interactive daily play route; see Decision 5.
 
 ## Context
@@ -12,6 +13,14 @@ only URL it named was `/arquivo/...`. Issue #18 ships the first play screen
 and therefore chooses the shape all four dailies — and later the archive —
 will inherit. Three questions came with it, and each is expensive to
 revisit once links exist in the wild:
+
+*(Narrowed at #31 —
+[ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+decision 9. The archive inherits this shape in part, not whole: the route
+family, the `force-dynamic` posture and the server-supplied date carry over;
+the conclusion **sibling route** does not. This sentence is where decision 2
+below gets its universality, so it is annotated with it rather than left to
+imply a rule the archive breaks.)*
 
 - **What the daily play URL is**, and what the post-completion screen is.
 - **Whether the conclusion is a navigation or a state.** A completed puzzle
@@ -46,6 +55,20 @@ revisit once links exist in the wild:
    `impeccable detect` reach. Neither half is redundant: without the state
    the offline finish is impossible; without the route the screen has no
    URL, and a screen with no URL cannot be scanned by the visual gate.
+
+   **Narrowed at #31 — this holds for the DAILY play routes, and not for the
+   archive
+   ([ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+   decision 9).** Neither half of the sentence transfers. An archive play URL
+   is itself permanent and re-renders the stored result from the local record
+   on reload, so the completed archive screen already has a URL — its own —
+   and the bookmark, reload and back-button cases are served without a
+   sibling route. And the visual gate would only ever reach the *empty*
+   branch of such a route, because the scanner launches a clean profile;
+   for the archive that is a screen no real user ever sees, so the route
+   would buy no coverage. An archived board that closes therefore swaps to a
+   late-result panel **in place**, and `/arquivo/<data>/<jogo>/concluido`
+   does not exist. The daily's own dual nature is untouched.
 
    **Qualified at #27 — the MECHANISM holds for Termo, the RATIONALE does
    not.** *"Which is what makes finishing offline work with no service
@@ -85,6 +108,19 @@ revisit once links exist in the wild:
    anything authenticated or user-specific, and **all writes**, go through
    `apps/api` — which is where the completion POST lives
    ([ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md)).
+
+   *(Grown at #31 —
+   [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+   decision 2. This enumeration is per-route, so it does not cover the
+   archive by implication. It grows to the seven `/arquivo/…` pages plus
+   `sitemap.ts` and `robots.ts`, on the same terms and for a **different**
+   reason: those pages are the SEO surface ADR-0014 was written for, and they
+   are `force-dynamic` because of the kill switch rather than the rollover.
+   The one-enforcement-point argument is what carries over intact, and #31
+   strengthens it — both wall predicates spread a single spelling of the
+   publication conjuncts. Written in the tense of the decision: those
+   routes and that second predicate land in #31's second pull request,
+   not the first one this annotation ships in.)*
 
 6. **`generateStaticParams` over dates is prohibited, standing.** No dynamic
    segment exists in #18, and the future archive route (#31) must never
@@ -145,6 +181,15 @@ revisit once links exist in the wild:
   segments and a conclusion view. The conclusion's dual nature is the part
   most likely to be "simplified" into one half by a later contributor, so it
   is recorded here rather than only in code.
+  *(Narrowed at #31 —
+  [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+  decision 9. "Every future game screen" reads as universal and is not: the
+  archive's four play screens add a slug pattern, `routes` builders and one
+  `force-dynamic` server segment each, and **no conclusion view and no
+  conclusion segment**. The warning this consequence carries still binds
+  where it was aimed — the daily's dual nature must not be simplified into
+  one half — and #31's departure is a decision with its own argument, not
+  the simplification it warns about.)*
 - **`impeccable detect` scans `/`, `/<jogo>` and `/<jogo>/concluido`** at
   both viewports in CI. Only the *unfinished* state of the conclusion is
   URL-scannable — the populated card renders from a solved local record, and

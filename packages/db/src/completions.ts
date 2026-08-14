@@ -113,6 +113,107 @@ export async function listCompletionsForStreak(
 }
 
 /**
+ * THE write-instant day predicate: did this row's `completed_at` land on
+ * the São Paulo calendar day `day`? One spelling, like `onTimeSql()` above
+ * and for the same reason (ADR-0026 decision 2).
+ *
+ * `day` is compared against the WRITE instant, never against the puzzle's
+ * own `date`: the ceiling below is a per-day rate rule on the writer, not
+ * a date rule on the puzzle. The date rule lives in the route
+ * (`isWritableDate`, ADR-0026 decision 6 as amended by ADR-0053), and
+ * after #31 it has no lower bound at all — which is exactly why the
+ * ceiling exists.
+ *
+ * No JS `Date`: the day arrives as a 'YYYY-MM-DD' string the caller read
+ * off the DB clock, and the cast runs in Postgres.
+ */
+function writtenOnSaoPauloDay(day: string) {
+  return sql`(${completions.completedAt} at time zone ${SAO_PAULO_TIME_ZONE})::date = ${day}`;
+}
+
+/**
+ * The LATE-write ceiling (#31, ADR-0053 decision 13): at most `max` late
+ * rows per user per São Paulo `day`. Passed only on the late branch, so
+ * the daily ritual's INSERT is byte-identical to the one it always was.
+ * Not an *archive*-write ceiling: the branch also admits ADR-0026
+ * decision 7's post-rollover flush, which is inside it by construction.
+ */
+interface LateWriteCeiling {
+  readonly day: string;
+  readonly max: number;
+}
+
+/**
+ * What a guarded write answers. `capped: true` is the ONLY shape carrying
+ * no record: the ceiling refused the row and nothing was written.
+ */
+type CompletionWrite =
+  | {
+      readonly capped: false;
+      readonly record: CompletionRecord;
+      readonly recorded: boolean;
+    }
+  | { readonly capped: true };
+
+/**
+ * The ceiling folded INTO the insert, as one statement.
+ *
+ * This is the whole point of the shape and it is a correctness property,
+ * not a round-trip saving. A `count(*)` read followed by an INSERT is
+ * check-then-act: `Promise.all` over N requests reads one snapshot of the
+ * count in all N and writes N rows, so the "50 per day" bound held only
+ * against a strictly sequential client (step-6 finding F1). Measured on
+ * the test stack: 20 concurrent writes against a ceiling of 10 wrote 20
+ * rows in the two-statement form and 10 in this one.
+ *
+ * `INSERT ... SELECT ... WHERE (subquery) < max` renders as ONE SQL
+ * statement — byte-identical through the neon-http and PGlite dialects,
+ * PINNED by T-DB-S58 rather than probed once (production runs `neon-http`
+ * and every other assertion about this guard runs on PGlite, so the
+ * equality is load-bearing) — which matters because `neon-http` is
+ * non-interactive-only and
+ * PGlite has no batch, so this repo has no transaction to put the pair in
+ * (merge.ts's recorded constraint, and why `pg_advisory_lock` is not
+ * available either). The honest residual is READ COMMITTED's: each
+ * statement takes its own snapshot at its own start, so writes whose
+ * statements overlap in time can still overshoot by the number in flight.
+ * ADR-0053 decision 13 states that bound rather than claiming a stricter
+ * one.
+ *
+ * Two spellings that must be read together:
+ *
+ * - **Lateness is `onTimeSql()` negated**, never re-derived (ADR-0026
+ *   decision 2's rule, applied to a guard), so the ceiling counts exactly
+ *   the rows every reader projects as late.
+ * - **`completed_at` is `now()` written out**, because `INSERT ... SELECT`
+ *   has no `DEFAULT` keyword available in its select list. It is the same
+ *   DB clock the column's own `defaultNow()` would have used — still no JS
+ *   `Date` anywhere in this file — and drizzle builds the column list from
+ *   the table, so a new column makes this select too short and the suite
+ *   reds loudly rather than defaulting silently.
+ */
+function guardedInsertSelect(
+  input: {
+    userId: string;
+    game: Game;
+    date: string;
+    outcome: CompletionOutcome;
+    elapsedMs: number;
+    hintsUsed: number;
+    guesses?: number;
+  },
+  ceiling: LateWriteCeiling,
+) {
+  return sql`select ${input.userId}::uuid, ${input.game}::text, ${input.date}::date, now(), ${input.outcome}::text, ${input.elapsedMs}::integer, ${input.hintsUsed}::integer, ${input.guesses ?? null}::integer
+    where (
+      select count(*) from ${completions}
+      where ${completions.userId} = ${input.userId}::uuid
+        and ${writtenOnSaoPauloDay(ceiling.day)}
+        and not (${onTimeSql()})
+    ) < ${ceiling.max}`;
+}
+
+/**
  * Write-once completion (plan 017 D15). Returns the stored record and
  * whether THIS call wrote it, so an idempotent replay can be answered with
  * the row the server already holds instead of a conflict.
@@ -127,6 +228,17 @@ export async function listCompletionsForStreak(
  * equality, so a termo row without it and a grid row with it both fail the
  * write. Omitted, drizzle emits the SQL keyword `default` — i.e. NULL — which
  * is the only legal value for the other three games.
+ *
+ * `ceiling` is the late-write ceiling (#31, ADR-0053 decision 13) and is
+ * supplied ONLY on the late branch. With it the INSERT carries its own
+ * guard (`guardedInsertSelect` above) and the result may be `capped`;
+ * without it — every daily write — the statement and the return shape are
+ * exactly what they always were, which is what the two overloads say.
+ *
+ * A capped caller can still REPLAY: the guard suppresses the insert, the
+ * unconditional read-back still runs, and a row already held comes back as
+ * `recorded: false`. Only "guard refused AND no row is readable" is
+ * `capped`.
  */
 export async function recordCompletion(
   db: Db,
@@ -139,35 +251,81 @@ export async function recordCompletion(
     hintsUsed: number;
     guesses?: number;
   },
-): Promise<{ record: CompletionRecord; recorded: boolean }> {
+): Promise<Extract<CompletionWrite, { capped: false }>>;
+export async function recordCompletion(
+  db: Db,
+  input: {
+    userId: string;
+    game: Game;
+    date: string;
+    outcome: CompletionOutcome;
+    elapsedMs: number;
+    hintsUsed: number;
+    guesses?: number;
+  },
+  ceiling: LateWriteCeiling,
+): Promise<CompletionWrite>;
+export async function recordCompletion(
+  db: Db,
+  input: {
+    userId: string;
+    game: Game;
+    date: string;
+    outcome: CompletionOutcome;
+    elapsedMs: number;
+    hintsUsed: number;
+    guesses?: number;
+  },
+  ceiling?: LateWriteCeiling,
+): Promise<CompletionWrite> {
   // Bare .returning(): on the union Db type only the no-argument overload
   // survives TS's union-signature collapse (session/service.ts and
   // buffer.ts precedents). The row shape is discarded anyway — `on_time`
   // has to come from SQL, so the read-back below is unconditional.
-  const inserted = await db
-    .insert(completions)
-    .values({
-      userId: input.userId,
-      game: input.game,
-      date: input.date,
-      outcome: input.outcome,
-      elapsedMs: input.elapsedMs,
-      hintsUsed: input.hintsUsed,
-      guesses: input.guesses,
-    })
-    .onConflictDoNothing({
-      target: [completions.userId, completions.game, completions.date],
-    })
-    .returning();
+  const inserted = ceiling
+    ? await db
+        .insert(completions)
+        .select(guardedInsertSelect(input, ceiling))
+        .onConflictDoNothing({
+          target: [completions.userId, completions.game, completions.date],
+        })
+        .returning()
+    : await db
+        .insert(completions)
+        .values({
+          userId: input.userId,
+          game: input.game,
+          date: input.date,
+          outcome: input.outcome,
+          elapsedMs: input.elapsedMs,
+          hintsUsed: input.hintsUsed,
+          guesses: input.guesses,
+        })
+        .onConflictDoNothing({
+          target: [completions.userId, completions.game, completions.date],
+        })
+        .returning();
   const recorded = inserted.length > 0;
 
   const record = await getCompletion(db, input.userId, input.game, input.date);
   if (!record) {
-    // Only reachable if the row vanished between the two statements — the
-    // schema has no delete path, so this is a bug or a manual truncate.
+    if (ceiling && !recorded) {
+      // The guard refused AND the caller holds no row: the ceiling is met.
+      // `!recorded` is load-bearing, not decoration — `!record` alone would
+      // answer 429 for a row this call DID write, where the unguarded arm
+      // throws. That asymmetry has no justification, and the doc block
+      // above already promises the conjunction.
+      return { capped: true };
+    }
+    // The row vanished between the two statements: a bug, a manual
+    // truncate, or a concurrent `mergeAccounts` (merge.ts deletes the
+    // loser's completions, reachable through POST /attach/confirm — so
+    // "the schema has no delete path", which this comment used to say, is
+    // false). Whatever the cause, it is not the ceiling, and both arms
+    // treat it the same way.
     throw new Error("completions insert left no readable row");
   }
-  return { record, recorded };
+  return { capped: false, record, recorded };
 }
 
 /**
