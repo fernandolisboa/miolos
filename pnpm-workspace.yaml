@@ -38,10 +38,10 @@ allowBuilds:
 # (it defaults to true whenever the value is configured, false when the value
 # is merely inherited). Under the old implicit default pnpm resolved the too-new
 # version anyway and silently wrote the pair into a minimumReleaseAgeExclude
-# list right here in this file — that is exactly where the ten @turbo/lint-staged
-# /@types entries removed in this commit came from, and a machine-written
-# permanent bypass is worse than a failed install. Strict mode fails loudly
-# instead; leave it on.
+# list right here in this file — that is exactly where the ten @turbo, turbo,
+# lint-staged and @types entries deleted alongside this line came from, and a
+# machine-written permanent bypass is worse than a failed install. Strict mode
+# fails loudly instead; leave it on.
 #
 # Deliberate exception, for when a security patch genuinely has to land inside
 # the window: add the exact `name@version` — never a bare name, never a range —
