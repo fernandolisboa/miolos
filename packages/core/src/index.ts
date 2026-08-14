@@ -35,6 +35,14 @@ export {
   type TimedGame,
   type TimedGameStats,
 } from "./stats";
+export {
+  MEDAL_DEFINITIONS,
+  MEDAL_IDS,
+  type MedalDefinition,
+  type MedalId,
+  type MedalRule,
+} from "./medals/definitions";
+export { earnedMedals } from "./medals/derive";
 export { computeStreak, type StreakRow, type StreakStatus } from "./streak";
 export {
   defaultRemoteConfig,
@@ -153,3 +161,8 @@ export {
   type AccountDeleteRequest,
   type AccountDeleteResponse,
 } from "./contracts/account";
+export {
+  medalIdSchema,
+  medalsResponseSchema,
+  type MedalsResponse,
+} from "./contracts/medals";

@@ -74,7 +74,7 @@ export function timeBucketIndex(elapsedMs: number): number {
  * counts-on-time-won (plan 033 §4): the only row shape that can feed a
  * distribution bucket, a time statistic or a Dia Perfeito.
  */
-function countsOnTimeWon(row: StatsRow): boolean {
+export function countsOnTimeWon(row: StatsRow): boolean {
   return row.outcome === "won" && row.onTime;
 }
 
@@ -83,12 +83,12 @@ function countsOnTimeWon(row: StatsRow): boolean {
  * nothing else (ADR-0008 rule 2's exclusion list names distributions and
  * time stats, not totals: a late solve is honestly a solve).
  */
-function countsLateWon(row: StatsRow): boolean {
+export function countsLateWon(row: StatsRow): boolean {
   return row.outcome === "won" && !row.onTime;
 }
 
 /** A termo row's guess count iff it is the DB-legal 1..6, else null (total function). */
-function termoGuessOf(row: StatsRow): number | null {
+export function termoGuessOf(row: StatsRow): number | null {
   const { guesses } = row;
   return guesses !== null &&
     Number.isInteger(guesses) &&
