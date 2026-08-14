@@ -400,9 +400,16 @@ export const messages = {
     month: {
       // formatMonth yields "agosto de 2026". These two are SIBLING
       // navigation, not a back affordance — the month page's back is
-      // `backToIndex` above.
-      previous: (month: string) => `← ${month}`,
-      next: (month: string) => `${month} →`,
+      // `backToIndex` above — and they deliberately DO NOT SPEND `←`
+      // (step-6 F11). In this product `←` means one level up: `play.back`
+      // ("← Hoje"), `freePlay.back` ("← Modo livre") and the archive's own
+      // three back labels all use it that way, and the late-result panel
+      // renders "← 1 de agosto de 2026" beside "← agosto de 2026". A fourth
+      // meaning for the same glyph — sideways, on the timeline — on the very
+      // page where both appear is one glyph doing two jobs. The words say
+      // which job this is.
+      previous: (month: string) => `Mês anterior · ${month}`,
+      next: (month: string) => `Próximo mês · ${month}`,
     },
 
     day: {
@@ -421,24 +428,68 @@ export const messages = {
       note: "Puzzle do dia arquivado. Não conta para a sequência nem para os seus tempos.",
     },
 
+    // FIVE notes, one per state the DEVICE can actually distinguish, and the
+    // set is closed by that criterion rather than by taste (#31 step-6
+    // findings F3/F5/F16). The panel reads the local play record and nothing
+    // else — there is no archive read endpoint (ADR-0053 decision 10) — so
+    // every string below is checkable from the record alone, and none of them
+    // asserts anything about WHEN the server's row was written. That is the
+    // half `sync.ts` throws away: `acceptResponse` parses and discards both
+    // `completionResponseSchema.onTime` and `.outcome`, and carrying either to
+    // this panel would be a versioned change to the local record schema (plan
+    // 037 §14 I29, I42).
     result: {
       wonTitle: "Concluído",
       lostTitle: "Não foi dessa vez",
+      // The stamp's 11px tracked label, over the archived day's number and
+      // its month — a postmark, the daily stamp's own anatomy with the one
+      // figure the archive is allowed to show (step-6 F7). It is
+      // `aria-hidden` at the call site: the two links below already name the
+      // day and the month, so it announces nothing new.
+      stampLabel: "Arquivo",
       // AC 4's UI half: this device already held a concluded record for the
       // day when the archive page mounted, so the result on screen is one the
-      // player had before and NOT a late completion this visit produced. The
-      // wire's `onTime` flag would say more, but `sync.ts` discards it and
-      // plan 037 §3 forbids adding a consumer for it — so the panel says the
-      // true thing it can know rather than the truer thing it cannot (plan
-      // 037 §14 deviation I29).
+      // player had before and NOT a late completion this visit produced.
       already: "Você já tinha concluído este dia — nada foi registrado agora.",
-      late: "Conclusão tardia — registrada, e fora da sequência.",
+      // The settled-`recorded` note. It says the row EXISTS and deliberately
+      // does not say when it was written: the same 200 covers "the server
+      // wrote a late row just now" and "the server already held an on-time
+      // row and wrote nothing" (`recorded: false`, the idempotent
+      // short-circuit), and the client cannot tell them apart. The previous
+      // wording — "Conclusão tardia — registrada" — asserted the first on
+      // both, which is false on exactly ADR-0053 decision 10 layer 3's own
+      // case: a day solved on time, replayed later from another device.
+      late: "Resultado registrado — o arquivo não conta para a sua sequência.",
       // NOT `messages.conclusion.sync.pending`: that string names
       // connectivity, and the archive's own cause is the daily late-write
       // ceiling answering 429 (ADR-0053 decision 13). This one is true of
       // both, and it never claims a registration that did not happen.
       pending:
         "Resultado guardado neste aparelho — ainda não registrado. O envio se completa mais tarde.",
+      // The server REFUSED the completion — `sync.ts`'s `TERMINAL_STATUSES`,
+      // whose 404 arm is the kill switch, the one operation ADR-0053 decision
+      // 2's whole `force-dynamic` posture is built around. Without this arm
+      // the panel told the player the result was registered while the server
+      // held no completion at all, which is the client's own verdict standing
+      // as the user-visible authority — the thing ADR-0004 forbids, and the
+      // reason `messages.conclusion.sync.rejected` exists on the daily.
+      rejected:
+        "Não foi possível registrar este resultado — o servidor recusou o envio.",
+      // No record on this device AT ALL, which on a concluded panel means
+      // `localStorage` is unusable (DOM storage off in a WebView, site data
+      // blocked): `sync.ts`'s `memoryQueue` still posts, but nothing readable
+      // survives for this panel to report. It claims neither a registration
+      // nor a failure, because the device knows neither.
+      notStored:
+        "Este aparelho não guardou o resultado — o arquivo não conta para a sua sequência.",
+      // The archived Termo's word, on BOTH outcomes (#31 step-6 finding F23,
+      // ADR-0043 decision 6's rule applied where it was missing). A lost
+      // archived Termo showed "Não foi dessa vez" and nothing else, where the
+      // daily's conclusion reveals the answer — so the one game whose loss
+      // can teach you something taught nothing in the archive. NOT
+      // `games.termo.dayWord.lead`: that string says "de hoje",
+      // which is false of every date this panel renders.
+      wordLead: "A palavra desse dia era",
       // The two links out reuse `backToDay` and `backToMonth`; no duplicate
       // spellings live here.
     },

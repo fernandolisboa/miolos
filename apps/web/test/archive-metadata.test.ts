@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 describe("archive metadata (T-WEB-S173)", () => {
-  it("T-WEB-S173: every route composes its title and description from messages.archive, with a SELF-REFERENTIAL canonical", async () => {
+  it("every route composes its title and description from messages.archive, with a SELF-REFERENTIAL canonical", async () => {
     expect(index.generateMetadata()).toEqual({
       title: messages.archive.meta.indexTitle,
       description: messages.archive.meta.indexDescription,
@@ -80,7 +80,7 @@ describe("archive metadata (T-WEB-S173)", () => {
     });
   });
 
-  it("T-WEB-S173: titles and descriptions are DISTINCT across dates and across months", async () => {
+  it("titles and descriptions are DISTINCT across dates and across months", async () => {
     const titles = new Set<unknown>();
     const descriptions = new Set<unknown>();
     for (const data of ["2026-08-01", "2026-08-02", "2026-08-03"]) {
@@ -104,12 +104,17 @@ describe("archive metadata (T-WEB-S173)", () => {
     expect(descriptions.size).toBe(6);
   });
 
-  it("T-WEB-S173: a HOSTILE segment yields robots.index false, no alternates, and never an off-origin URL", async () => {
+  it("a HOSTILE segment yields robots.index false, no alternates, and never an off-origin URL", async () => {
     const hostile = [
       "//evil.example.com",
       "https://evil.example.com",
       "..%2F..%2Fetc",
       "2026-08-03/../../evil",
+      // Year zero: shape-valid, calendar-invalid, and a Postgres 22008 at the
+      // reader if it ever got past the parser (step-6 F2). Refused here too,
+      // so `generateMetadata` composes no canonical for it either.
+      "0000-01",
+      "0000-01-01",
     ];
     for (const raw of hostile) {
       const asMonth = await month.generateMetadata({
@@ -127,7 +132,7 @@ describe("archive metadata (T-WEB-S173)", () => {
     }
   });
 
-  it("T-WEB-S173: no metadata function carries a string literal — every string comes from messages.archive", () => {
+  it("no metadata function carries a string literal — every string comes from messages.archive", () => {
     // ADR-0018 :15 applies to `generateMetadata` exactly as it applies to a
     // component: the composers live in `messages.ts`, and a title assembled
     // here would be copy outside the migration contract.

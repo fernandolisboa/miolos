@@ -88,6 +88,23 @@ const queueKey = (record: PlayRecord) => `${record.game}:${record.date}`;
  * the store could not hold. A stale memory copy of a record the store has
  * already settled costs one extra POST, which the route answers
  * idempotently — the alternative is dropping a completion.
+ *
+ * **NEWEST DATE FIRST, and the order is what makes the loop's `break` sound**
+ * (#31 step-6 finding F1). `listPendingRecords()` walks `localStorage` key
+ * order, which is neither date order nor insertion order; the flush below
+ * stops at the first 429 on the argument that every remaining record is
+ * certain to be refused for the same reason. That argument is only true of
+ * records the ceiling can refuse — the cap's branch is `isLateDate(date,
+ * server today)`, so a TODAY-dated write is never capped. In an unordered
+ * queue a stale archive record could therefore stop the flush before today's
+ * daily was ever posted, and the deferred write would land after the São
+ * Paulo rollover with `on_time = false`: the streak day lost, permanently,
+ * on the mechanic CLAUDE.md calls the core one.
+ *
+ * Date-descending removes the case rather than papering over it. Today's
+ * daily, if queued, is always first; and a record that took the 429 has
+ * proved its own date is `< server today`, so every record after it in this
+ * order is also late and also certain to be capped.
  */
 function pendingQueue(): PlayRecord[] {
   const stored = listPendingRecords();
@@ -97,7 +114,11 @@ function pendingQueue(): PlayRecord[] {
     ...[...memoryQueue.values()].filter(
       (record) => !storedKeys.has(queueKey(record)),
     ),
-  ];
+  ].sort((a, b) =>
+    a.date === b.date
+      ? queueKey(a).localeCompare(queueKey(b))
+      : b.date.localeCompare(a.date),
+  );
 }
 
 /**
@@ -158,8 +179,13 @@ export async function flushPendingCompletions(
       stillPending = verdict.stillPending || stillPending;
       // BREAK on the first 429, and this is not an optimisation (#31,
       // ADR-0053 decision 13). The late-write ceiling is per USER per São
-      // Paulo day, so once it answers, every remaining record in this queue
-      // is certain to be refused for the same reason. A player who closes
+      // Paulo day, and the queue is DATE-DESCENDING (see `pendingQueue`
+      // above), so the record that took this 429 has proved its own date is
+      // strictly before the server's today and every record still ahead of it
+      // is older still — every one of them is certain to be refused for the
+      // same reason. Without that ordering the claim is false, and a stale
+      // archive record head-of-line-blocks today's daily into a late,
+      // streak-losing write (step-6 F1). A player who closes
       // 200 archive boards in one day syncs 50 and holds 150 permanently
       // pending, and 429 is correctly non-terminal, so without this the whole
       // tail is re-posted on every mount, every `online` and every

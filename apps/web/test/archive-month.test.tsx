@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe("the archive month page (T-WEB-S169)", () => {
-  it("T-WEB-S169: renders that month's day rows with previous/next month navigation", async () => {
+  it("renders that month's day rows with previous/next month navigation", async () => {
     spies.listArchivedDays.mockResolvedValue([
       { date: "2026-08-02", game: "binairo" },
       { date: "2026-08-02", game: "sudoku" },
@@ -88,7 +88,7 @@ describe("the archive month page (T-WEB-S169)", () => {
     ).toHaveAttribute("href", "/arquivo");
   });
 
-  it("T-WEB-S169: each sibling link is ABSENT at the archive's own edges", async () => {
+  it("each sibling link is ABSENT at the archive's own edges", async () => {
     spies.listArchivedDays.mockResolvedValue([
       { date: "2026-08-01", game: "binairo" },
     ]);
@@ -98,11 +98,16 @@ describe("the archive month page (T-WEB-S169)", () => {
       await ArchiveMonthPage({ params: Promise.resolve({ mes: "2026-08" }) }),
     );
 
-    expect(screen.queryByText(/←\s*\w+ de 2026/)).toBeNull();
-    expect(screen.queryByText(/de 2026\s*→/)).toBeNull();
+    // The sibling labels are "Mês anterior · …" / "Próximo mês · …" and
+    // deliberately spend no `←` (step-6 F11 — in this product `←` means one
+    // level up, and the month page's own back link uses it).
+    expect(screen.queryByText(/Mês anterior/)).toBeNull();
+    expect(screen.queryByText(/Próximo mês/)).toBeNull();
+    // The back affordance is still there and still the only `←` on the page.
+    expect(screen.getAllByText(/←/)).toHaveLength(1);
   });
 
-  it("T-WEB-S169: a month with no archived day is notFound(), and so is a malformed segment", async () => {
+  it("a month with no archived day is notFound(), and so is a malformed segment", async () => {
     spies.listArchivedDays.mockResolvedValue([]);
     spies.listArchivedMonths.mockResolvedValue(["2026-08"]);
     await expect(
@@ -112,7 +117,25 @@ describe("the archive month page (T-WEB-S169)", () => {
 
     // A malformed segment never reaches the reader at all: parsed, never
     // cast, and refused before the round trip.
-    for (const mes of ["2026-13", "2026-8", "abcd-01", "../2026-08", "2026"]) {
+    //
+    // `0000-01` and `0000-12` are the step-6 F2 cases and they are not
+    // cosmetic additions to the table: `\d{4}` accepts year zero,
+    // `monthDayBounds` binds `0000-01-01`/`0000-01-31` into `gte`/`lte` on a
+    // `date` column, and Postgres answers `date/time field value out of
+    // range` (22008) — an unhandled throw in an async server component, i.e.
+    // an unauthenticated **500** on a route `robots.ts` now invites crawlers
+    // to. The month is validated through `calendarDateString`, so "a year
+    // that exists" has ONE definition in this repo, exactly as it does for
+    // the day segment whose own year floor was added for the same bug class.
+    for (const mes of [
+      "2026-13",
+      "2026-8",
+      "abcd-01",
+      "../2026-08",
+      "2026",
+      "0000-01",
+      "0000-12",
+    ]) {
       spies.listArchivedDays.mockClear();
       await expect(
         ArchiveMonthPage({ params: Promise.resolve({ mes }) }),
@@ -121,7 +144,7 @@ describe("the archive month page (T-WEB-S169)", () => {
     }
   });
 
-  it("T-WEB-S169: February's inclusive upper bound is the real last day, leap year included", async () => {
+  it("February's inclusive upper bound is the real last day, leap year included", async () => {
     spies.listArchivedDays.mockResolvedValue([
       { date: "2028-02-29", game: "binairo" },
     ]);
@@ -144,7 +167,7 @@ describe("the archive month page (T-WEB-S169)", () => {
     });
   });
 
-  it("T-WEB-S169: generateMetadata and the page share ONE parser — a hostile segment yields no canonical", async () => {
+  it("generateMetadata and the page share ONE parser — a hostile segment yields no canonical", async () => {
     const metadata = await generateMetadata({
       params: Promise.resolve({ mes: "//evil.example.com" }),
     });

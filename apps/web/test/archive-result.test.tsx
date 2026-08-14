@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LateResult } from "../src/archive/late-result";
+import { usePriorConclusion } from "../src/archive/use-prior-conclusion";
 import { formatLongDate, formatMonth, messages, routes } from "../src/i18n";
 import {
   playRecordKey,
@@ -46,7 +47,7 @@ afterEach(() => {
 });
 
 describe("the late-result panel (T-WEB-S177)", () => {
-  it("T-WEB-S177: renders the outcome in words, with the accent on the stamp SHAPE only", () => {
+  it("renders the outcome in words, with the accent on the stamp SHAPE only", () => {
     writePlayRecord(settledRecord());
     const { container } = render(
       <LateResult
@@ -66,7 +67,7 @@ describe("the late-result panel (T-WEB-S177)", () => {
     expect(root?.getAttribute("style")).toContain("--accent");
   });
 
-  it("T-WEB-S177: no time, no streak, no day chips, no chaining CTA and no link to today's dailies — asserted as ABSENCES", () => {
+  it("no time, no streak, no day chips, no chaining CTA and no link to today's dailies — asserted as ABSENCES", () => {
     writePlayRecord(settledRecord());
     const { container } = render(
       <LateResult
@@ -105,7 +106,7 @@ describe("the late-result panel (T-WEB-S177)", () => {
     }
   });
 
-  it("T-WEB-S177: a pendingSync record renders the archive's OWN pending line", () => {
+  it("a pendingSync record renders the archive's OWN pending line", () => {
     writePlayRecord(
       settledRecord({ pendingSync: true, syncOutcome: "pending" }),
     );
@@ -127,7 +128,7 @@ describe("the late-result panel (T-WEB-S177)", () => {
 });
 
 describe("AC 4's UI half (T-WEB-S178)", () => {
-  it("T-WEB-S178: a result this device ALREADY held is never reported as a late completion", () => {
+  it("a result this device ALREADY held is never reported as a late completion", () => {
     writePlayRecord(settledRecord());
     render(
       <LateResult game="sudoku" date={DATE} outcome="won" alreadyConcluded />,
@@ -137,7 +138,7 @@ describe("AC 4's UI half (T-WEB-S178)", () => {
     expect(screen.queryByText(messages.archive.result.late)).toBeNull();
   });
 
-  it("T-WEB-S178: a settled `recorded` record never shows the pending line", () => {
+  it("a settled `recorded` record shows the recorded line, which claims no TIMING", () => {
     writePlayRecord(settledRecord());
     render(
       <LateResult
@@ -150,9 +151,97 @@ describe("AC 4's UI half (T-WEB-S178)", () => {
 
     expect(screen.queryByText(messages.archive.result.pending)).toBeNull();
     expect(screen.getByText(messages.archive.result.late)).toBeVisible();
+    // The string may not assert WHEN the row was written (step-6 F16). The
+    // same 200 covers a fresh late write and the idempotent short-circuit
+    // over a row the server already held on time — ADR-0053 decision 10
+    // layer 3's own case, reachable on any second device — and the client
+    // discards `completionResponseSchema.onTime`, so it cannot tell them
+    // apart. "Conclusão tardia — registrada" asserted the first on both.
+    expect(messages.archive.result.late).not.toMatch(/tardi/i);
   });
 
-  it("T-WEB-S178: a LOST archived board is a result, not an unfinished one", () => {
+  // THE FOURTH ARM (step-6 F3). `LateResult` branched on three states and
+  // everything that was not `pending` or `alreadyConcluded` fell through to
+  // "registrada" — including a record the server REFUSED. The 404 arm of
+  // `sync.ts`'s `TERMINAL_STATUSES` is the kill switch, the single operation
+  // ADR-0053 decision 2's whole `force-dynamic` posture is built around: an
+  // operator sets `killed_at` mid-board, the completion 404s, and the panel
+  // told the player it was recorded. That is the client's own verdict
+  // standing as the user-visible authority, which ADR-0004 forbids — and the
+  // shipped daily has had a dedicated `sync.rejected` string for it since
+  // #17 for exactly this reason.
+  it("a REJECTED record says the server refused it — never that it was registered", () => {
+    writePlayRecord(settledRecord({ syncOutcome: "rejected" }));
+    render(
+      <LateResult
+        game="sudoku"
+        date={DATE}
+        outcome="won"
+        alreadyConcluded={false}
+      />,
+    );
+
+    expect(screen.getByText(messages.archive.result.rejected)).toBeVisible();
+    expect(screen.queryByText(messages.archive.result.late)).toBeNull();
+    expect(screen.queryByText(messages.archive.result.already)).toBeNull();
+    expect(screen.queryByText(messages.archive.result.pending)).toBeNull();
+  });
+
+  it("a REJECTED record wins over `alreadyConcluded` — the sharper true statement", () => {
+    writePlayRecord(settledRecord({ syncOutcome: "rejected" }));
+    render(
+      <LateResult game="sudoku" date={DATE} outcome="won" alreadyConcluded />,
+    );
+
+    expect(screen.getByText(messages.archive.result.rejected)).toBeVisible();
+    expect(screen.queryByText(messages.archive.result.already)).toBeNull();
+  });
+
+  // THE DECISION PROCEDURE BEHIND THE PROP, not just the prop (step-6 F4).
+  // `usePriorConclusion` froze its answer in a MODULE-scope cache that was
+  // invalidated only on a key miss, so the second mount of the same
+  // `(game, date)` got the first mount's verdict. The natural archive loop is
+  // one tap each way — the play screen's back link goes to the day page,
+  // whose card links straight back — so "you had already finished this day"
+  // survived a visit that concluded the day, and the panel rendered
+  // `result.late` for a session that registered nothing. The freeze is per
+  // MOUNT: `subscribe`'s teardown drops the slot.
+  it("usePriorConclusion re-reads on a REMOUNT, and stays frozen within one", () => {
+    const first = renderHook(() => usePriorConclusion("sudoku", DATE));
+    expect(first.result.current).toBe(false);
+
+    // Frozen within the mount: the archive session's own play concludes the
+    // record and the answer must NOT flip, or a fresh archive win would
+    // report itself as "you already had this".
+    writePlayRecord(settledRecord());
+    first.rerender();
+    expect(first.result.current).toBe(false);
+    first.unmount();
+
+    const second = renderHook(() => usePriorConclusion("sudoku", DATE));
+    expect(second.result.current).toBe(true);
+    second.unmount();
+  });
+
+  // THE SECOND DOOR of the same finding: on a device with no usable
+  // `localStorage` the completion lives only in `sync.ts`'s `memoryQueue`,
+  // so the panel reads back NO record at all — and the old branch answered
+  // "registrada" for it, a claim about a record it could not see.
+  it("no record on this device claims neither a registration nor a failure", () => {
+    render(
+      <LateResult
+        game="sudoku"
+        date={DATE}
+        outcome="won"
+        alreadyConcluded={false}
+      />,
+    );
+
+    expect(screen.getByText(messages.archive.result.notStored)).toBeVisible();
+    expect(screen.queryByText(messages.archive.result.late)).toBeNull();
+  });
+
+  it("a LOST archived board is a result, not an unfinished one", () => {
     writePlayRecord(settledRecord());
     render(
       <LateResult
@@ -168,7 +257,7 @@ describe("AC 4's UI half (T-WEB-S178)", () => {
 });
 
 describe("the ceiling at the UI (T-WEB-S180)", () => {
-  it("T-WEB-S180: a completion refused with 429 stays pending, renders the pending line, and survives every later prune", () => {
+  it("a completion refused with 429 stays pending, renders the pending line, and survives every later prune", () => {
     // 429 is NOT in `sync.ts`'s terminal set (ADR-0053 decision 13), so the
     // record the server refused is still the only copy of a puzzle the
     // player actually solved. Three facts have to hold together for that to
@@ -217,8 +306,72 @@ describe("the ceiling at the UI (T-WEB-S180)", () => {
   });
 });
 
+describe("the archived Termo's word (T-WEB-S177)", () => {
+  // Step-6 F23: a lost archived Termo showed "Não foi dessa vez" and nothing
+  // else, where the daily conclusion reveals the answer on BOTH outcomes
+  // (ADR-0043 decision 6). The word comes off the local record, which holds
+  // it from the closing write — never off a server read, which on an archive
+  // route would be a spoiler channel for anyone who has not played that day.
+  function termoRecord(overrides: Partial<PlayRecord> = {}): PlayRecord {
+    return {
+      v: 1,
+      game: "termo",
+      date: DATE,
+      guesses: [
+        {
+          guess: "casas",
+          tiles: ["absent", "absent", "absent", "absent", "absent"],
+        },
+      ],
+      answer: "carro",
+      outcome: "lost",
+      elapsedMs: 90_000,
+      hintsUsed: 0,
+      concluded: true,
+      pendingSync: false,
+      syncOutcome: "recorded",
+      ...overrides,
+    } as PlayRecord;
+  }
+
+  it.each(["won", "lost"] as const)(
+    "reveals the day's word on a %s archived Termo",
+    (outcome) => {
+      writePlayRecord(termoRecord({ outcome }));
+      render(
+        <LateResult
+          game="termo"
+          date={DATE}
+          outcome={outcome}
+          alreadyConcluded={false}
+        />,
+      );
+
+      expect(screen.getByText(messages.archive.result.wordLead)).toBeVisible();
+      expect(screen.getByText("carro")).toBeVisible();
+      // NOT the daily's lead, which says "de hoje" — false of every date this
+      // panel renders.
+      expect(screen.queryByText(messages.games.termo.dayWord.lead)).toBeNull();
+    },
+  );
+
+  it("shows no word for a grid game, and none when the record is absent", () => {
+    writePlayRecord(settledRecord());
+    const { container } = render(
+      <LateResult
+        game="sudoku"
+        date={DATE}
+        outcome="won"
+        alreadyConcluded={false}
+      />,
+    );
+    expect(screen.queryByText(messages.archive.result.wordLead)).toBeNull();
+    expect(container.textContent).not.toContain("carro");
+  });
+});
+
 describe("a restored concluded record needs no replay (T-WEB-S179)", () => {
-  it("T-WEB-S179: the panel renders from the local record alone — no board, no fetch", () => {
+  it("the panel renders from the local record alone — no board, no fetch", () => {
     writePlayRecord(settledRecord());
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);

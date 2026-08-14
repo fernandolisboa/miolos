@@ -37,7 +37,7 @@ function code(source: string): string {
 }
 
 describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
-  it("T-WEB-S181: every archive string is reachable from messages.archive", () => {
+  it("every archive string is reachable from messages.archive", () => {
     const copy = messages.archive;
     // The chrome, the sections, the empty state, the three back affordances
     // with their aria twins, the day row's composed sentence, the month's
@@ -49,12 +49,19 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
     expect(typeof copy.recent.heading).toBe("string");
     expect(typeof copy.months.heading).toBe("string");
     expect(typeof copy.play.note).toBe("string");
+    // FIVE notes, one per state the device can distinguish (step-6
+    // F3/F16), plus the two outcome titles, the stamp's label and the
+    // archived Termo's word lead (F7, F23).
     expect(Object.keys(copy.result).sort()).toEqual([
       "already",
       "late",
       "lostTitle",
+      "notStored",
       "pending",
+      "rejected",
+      "stampLabel",
       "wonTitle",
+      "wordLead",
     ]);
     expect(Object.keys(copy.meta).sort()).toEqual([
       "dayDescription",
@@ -74,7 +81,7 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
     expect(copy.backToIndex).toBe("← Arquivo");
   });
 
-  it("T-WEB-S181: no archive component carries a pt-BR literal", () => {
+  it("no archive component carries a pt-BR literal", () => {
     const offenders: string[] = [];
     for (const path of archiveSources()) {
       const source = code(readFileSync(path, "utf8"));
@@ -89,7 +96,7 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("T-WEB-S181: the scan is not vacuous — it catches a planted literal", () => {
+  it("the scan is not vacuous — it catches a planted literal", () => {
     expect(
       /(["'`])[^"'`]*[áàâãéêíóôõúüç][^"'`]*\1/i.test(
         'const title = "Conclusão tardia";',
@@ -98,7 +105,7 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
     expect(archiveSources().length).toBeGreaterThan(4);
   });
 
-  it("T-WEB-S181: ConclusionCopy's shape is byte-unchanged — the archive widened nothing", () => {
+  it("ConclusionCopy's shape is byte-unchanged — the archive widened nothing", () => {
     // ADR-0043 decision 8: the archive's result panel is a NEW block, not a
     // third optional member on the conclusion's copy contract. Asserted
     // structurally, over the game whose conclusion carries the most.
