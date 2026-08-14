@@ -756,7 +756,14 @@ describe("apps/web db wall — not a blanket ban", () => {
  * entry either", which is the thing an archive PR is most likely to get
  * wrong.
  */
-describe("no parallel query path in apps/web (T-LINT-S37)", () => {
+// The ids in this file live on `it(...)`, never on the `describe` — every
+// other block here does it that way, and `docs/agents/test-ids.md` records
+// `eslint-*-wall.test.ts` as keeping its own convention. This block landed
+// carrying the id on the `describe` AND on both of its `it`s, which is a
+// same-file duplicate whichever convention you read it under (step-7
+// verification round, plan 037 §14 I65). `T-LINT-S37` stays on the assertion §13's AC 2 cites; the
+// counter-assertion added at step 7 takes the sibling letter.
+describe("no parallel query path in apps/web", () => {
   /**
    * The wall readers `apps/web` may name, plus the one type the archive's
    * grouping helper takes. Every one of them carries `published_at <= now()`
@@ -863,7 +870,7 @@ describe("no parallel query path in apps/web (T-LINT-S37)", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("T-LINT-S37: the scan is not vacuous — it sees the real imports and would catch a new name", () => {
+  it("T-LINT-S37a: the scan is not vacuous — it sees the real imports and would catch a new name", () => {
     const seen = new Set<string>();
     for (const path of webSources()) {
       for (const found of dbImports(readFileSync(path, "utf8"))) {

@@ -310,7 +310,7 @@ describe("bounded retention (T-WEB-S186)", () => {
   const past = (date: string) =>
     record({ date, pendingSync: false, syncOutcome: "recorded" });
 
-  it("T-WEB-S186: a settled PAST record survives a later daily mount", () => {
+  it("a settled PAST record survives a later daily mount", () => {
     // The bug this cap exists to fix (#31, ADR-0053 decision 14): the prune
     // runs on EVERY play mount with that mount's date, and every archive
     // record is dated before today by construction — so before the cap, an
@@ -321,7 +321,7 @@ describe("bounded retention (T-WEB-S186)", () => {
     expect(readPlayRecord("binairo", "2026-03-02")).toBeDefined();
   });
 
-  it("T-WEB-S186: with 51 settled past records the OLDEST BY DATE is the one deleted, and 50 survive", () => {
+  it("with 51 settled past records the OLDEST BY DATE is the one deleted, and 50 survive", () => {
     const dates = Array.from(
       { length: 51 },
       (_, index) => `2026-05-${String(index + 1).padStart(2, "0")}`,
@@ -343,7 +343,7 @@ describe("bounded retention (T-WEB-S186)", () => {
     expect(survivors[0]).toBe("2026-05-02");
   });
 
-  it("T-WEB-S186: a pendingSync record is never deleted, whatever its date or the store's size", () => {
+  it("a pendingSync record is never deleted, whatever its date or the store's size", () => {
     writePlayRecord(record({ date: "2026-01-01", pendingSync: true }));
     for (let index = 0; index < 60; index += 1) {
       writePlayRecord(
@@ -356,7 +356,7 @@ describe("bounded retention (T-WEB-S186)", () => {
     expect(readPlayRecord("binairo", "2026-01-01")).toBeDefined();
   });
 
-  it("T-WEB-S186: a record that does not address its own key is still dropped, whatever its date", () => {
+  it("a record that does not address its own key is still dropped, whatever its date", () => {
     // Unsyncable by construction, so keeping it forever keeps nothing. It
     // goes at ANY date and whatever its `pendingSync` — the one drop the cap
     // does not soften.
@@ -369,7 +369,7 @@ describe("bounded retention (T-WEB-S186)", () => {
     expect(window.localStorage.getItem(foreign)).toBeNull();
   });
 
-  it("T-WEB-S186: today's record is never a prune candidate, so the daily surfaces are untouched", () => {
+  it("today's record is never a prune candidate, so the daily surfaces are untouched", () => {
     writePlayRecord(record({ date: "2026-08-14", pendingSync: false }));
     for (let index = 0; index < 60; index += 1) {
       writePlayRecord(

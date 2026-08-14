@@ -306,7 +306,12 @@ describe("the ceiling at the UI (T-WEB-S180)", () => {
   });
 });
 
-describe("the archived Termo's word (T-WEB-S177)", () => {
+// A SIBLING LETTER, not a second `T-WEB-S177` (step-7 verification round, plan 037 §14 I64). The panel's
+// own block above is `T-WEB-S177`; this one landed in the same round that split
+// `T-DB-S53`, carrying the same id in the same file — the duplicate that round
+// existed to remove. It is a new assertion inside the landed id's claim, so it
+// takes the letter rather than a number, as `T-API-S107a` did in PR 1.
+describe("the archived Termo's word (T-WEB-S177a)", () => {
   // Step-6 F23: a lost archived Termo showed "Não foi dessa vez" and nothing
   // else, where the daily conclusion reveals the answer on BOTH outcomes
   // (ADR-0043 decision 6). The word comes off the local record, which holds
