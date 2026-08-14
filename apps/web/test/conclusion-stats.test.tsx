@@ -287,6 +287,44 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
     );
   });
 
+  it("T-WEB-S157a: drops the today-decorations when the server's day is not the record's — no bucket highlight, no closing line, aggregates intact", async () => {
+    // The step-6 F4 case: a retry landing after the SP midnight. The day
+    // IS recorded (the gate opened) but as a LATE win — `stats.date` has
+    // moved on and the aggregates exclude the solve. The block still
+    // renders the server's numbers; only the today-claims go.
+    clients.fetchStats.mockResolvedValue({
+      ...statsWith(430_000, 3),
+      date: "2026-07-31",
+    });
+    writePlayRecord(concludedBinairo());
+
+    const binairo = renderBinairoConclusion();
+    expect(await screen.findByText("9")).toBeInTheDocument();
+    expect(binairo.container.querySelector("[data-today]")).toBeNull();
+    expect(
+      screen.queryByText(messages.conclusion.closingFaster),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.conclusion.closingSlower),
+    ).not.toBeInTheDocument();
+    binairo.unmount();
+
+    // And the Termo win highlight follows the same rule: another day's
+    // `todayTermoGuesses` describes `stats.date`, never this screen.
+    window.localStorage.clear();
+    clients.fetchStats.mockReset();
+    clients.fetchStats.mockResolvedValue({
+      ...statsWith(null, 0, 4),
+      date: "2026-07-31",
+    });
+    writePlayRecord(wonTermo());
+    const termo = render(<TermoConclusion date={DATE} />);
+    expect(
+      await screen.findByLabelText(messages.stats.termo.rowAria(4, 2)),
+    ).toBeInTheDocument();
+    expect(termo.container.querySelector("[data-today]")).toBeNull();
+  });
+
   it("unmounts back to the shipped absence when the fetch settles without a value", async () => {
     clients.fetchStats.mockResolvedValue(undefined);
     writePlayRecord(concludedBinairo());

@@ -1,7 +1,13 @@
 import Link from "next/link";
 
 import { AdSlot } from "../src/components/ad-slot";
-import { locale, messages, routes } from "../src/i18n";
+import {
+  locale,
+  messages,
+  routes,
+  SAO_PAULO_TIME_ZONE,
+  todaySaoPauloDate,
+} from "../src/i18n";
 import { accentVars } from "../src/play/accent";
 import { HubAttach } from "./hub-attach";
 import { HubCardAction, HubProgress } from "./hub-day-state";
@@ -10,13 +16,6 @@ import styles from "./page.module.css";
 
 // The date must be today's (America/São Paulo), not build-day's.
 export const dynamic = "force-dynamic";
-
-/**
- * The day's rollover, fixed for every user (CONTEXT.md "Rollover"). Declared
- * once here rather than imported from `@miolos/db`: the hub reads no
- * database, and pulling the driver in for a string would be a real cost.
- */
-const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 
 const gameOrder = ["termo", "sudoku", "nonogram", "binairo"] as const;
 
@@ -50,32 +49,9 @@ function todayInSaoPaulo(now: Date): { weekday: string; rest: string } {
   };
 }
 
-/**
- * Today's São Paulo calendar day, 'YYYY-MM-DD' — the key this device's day
- * state is read under (ADR-0031), and the same day `/binairo` and `/sudoku`
- * resolve from the published-puzzle wall.
- *
- * Derived from the SERVER's clock, on a `force-dynamic` segment: the browser's
- * clock never selects which day the hub is showing (CONTEXT.md "Rollover").
- * Assembled from the typed parts rather than from a formatted string, because
- * `locale` is pt-BR and would print 31/07/2026; the parts are numeric in every
- * locale, so no second locale is introduced for a machine-readable value. A
- * missing part cannot happen for these options, and if it ever did the date
- * would simply match no stored record and every tile would read pending — the
- * monotone-safe direction (ADR-0031).
- */
-function todaySaoPauloDate(now: Date): string {
-  const parts = new Intl.DateTimeFormat(locale, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: SAO_PAULO_TIME_ZONE,
-  }).formatToParts(now);
-  const field = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((part) => part.type === type)?.value ?? "";
-  return `${field("year")}-${field("month")}-${field("day")}`;
-}
-
+// `todaySaoPauloDate` (src/i18n/sao-paulo-day.ts, the step-6 F7 hoist) is
+// fed the SERVER's `now` below — this segment is `force-dynamic`, so the
+// browser's clock never selects which day the hub is showing.
 export default function HojePage() {
   // One instant for both readings: two `new Date()` calls a microsecond apart
   // can straddle the rollover and put a date on the tiles that the masthead

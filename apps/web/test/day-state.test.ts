@@ -182,9 +182,9 @@ describe("the three verbs (T-WEB-S79)", () => {
   it("reads a WON termo as completed, and still publishes no duration", () => {
     // The third option §6.2 missed, recorded in plan 022 §15.3: Termo's
     // elapsed time includes every per-guess round trip (§14.4), and both
-    // ADR-0043 and ADR-0045 call the number meaningless for this game. So
-    // the hub and the day card show the done shape without a number until
-    // #29 lands `em 4/6`.
+    // ADR-0043 and ADR-0045 call the number meaningless for this game. The
+    // hub's `TermoDoneLink` captions the tile `em 4/6` from the server
+    // value (#29); `DayEntry` still publishes no duration.
     writePlayRecord(wonTermoRecord());
 
     const entry = readDayState(DATE).termo;

@@ -21,12 +21,31 @@ function utcNoon(isoDate: string): Date {
   return new Date(`${isoDate}T12:00:00Z`);
 }
 
+// The three `Intl.DateTimeFormat` instances live at module scope: locale
+// and options are module constants, and construction is the expensive
+// part (measured at step 6: a per-call construct ran ~40× per calendar
+// render, 160–260 ms on a mid-range phone). `format` on a shared
+// instance is cheap and stateless.
+const longDateFormat = new Intl.DateTimeFormat(locale, {
+  dateStyle: "long",
+  timeZone: "UTC",
+});
+
+const monthFormat = new Intl.DateTimeFormat(locale, {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+const shortDateFormat = new Intl.DateTimeFormat(locale, {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
+
 /** "30 de julho de 2026" — formats the PUZZLE's date, never `new Date()`. */
 export function formatLongDate(isoDate: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "long",
-    timeZone: "UTC",
-  }).format(utcNoon(isoDate));
+  return longDateFormat.format(utcNoon(isoDate));
 }
 
 /**
@@ -36,11 +55,7 @@ export function formatLongDate(isoDate: string): string {
  * new date arithmetic, no host-timezone rollover.
  */
 export function formatMonth(isoDate: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(utcNoon(isoDate));
+  return monthFormat.format(utcNoon(isoDate));
 }
 
 /**
@@ -50,11 +65,7 @@ export function formatMonth(isoDate: string): string {
  * drop, and neither can be removed from the formatted string safely.
  */
 export function formatShortDate(isoDate: string): string {
-  const parts = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).formatToParts(utcNoon(isoDate));
+  const parts = shortDateFormat.formatToParts(utcNoon(isoDate));
   const day = parts.find((part) => part.type === "day")?.value ?? "";
   const month = parts.find((part) => part.type === "month")?.value ?? "";
   return `${day} ${month.replace(/\.$/, "")}`.trim();

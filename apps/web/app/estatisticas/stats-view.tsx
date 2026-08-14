@@ -26,9 +26,9 @@
  */
 import type {
   CalendarDay,
-  StatsCalendarResponse,
   StatsResponse,
   TermoStats,
+  TimedGame,
   TimedGameStats,
 } from "@miolos/core";
 
@@ -36,8 +36,8 @@ import {
   formatElapsed,
   formatLongDate,
   formatMonth,
-  locale,
   messages,
+  todaySaoPauloDate,
 } from "../../src/i18n";
 import { accentVars } from "../../src/play/accent";
 import {
@@ -69,34 +69,8 @@ const TERMO_ZERO: TermoStats = {
   distribution: [0, 0, 0, 0, 0, 0, 0],
 };
 
-const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
-
-/**
- * Today's SP calendar day from the CLIENT clock — presentation only, and
- * the one legal reading of it on this screen: the settled-`null` calendar
- * draws the current month's GEOMETRY with every cell neutral, claiming no
- * state for any day, selecting no record and backing no derived value
- * (ADR-0031; the client clock is never a source of truth). It is only
- * ever called from the settled-`null` branch, which cannot exist before
- * mount, so the server markup never carries its output and the
- * pre-hydration byte-agreement holds by construction. The data-bearing
- * months come exclusively from the server enumeration.
- */
-function todaySaoPauloDate(): string {
-  const parts = new Intl.DateTimeFormat(locale, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: SAO_PAULO_TIME_ZONE,
-  }).formatToParts(new Date());
-  const field = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((part) => part.type === type)?.value ?? "";
-  return `${field("year")}-${field("month")}-${field("day")}`;
-}
-
 export function StatsView() {
   const stats = useStats();
-  const calendar = useStatsCalendar();
 
   return (
     <>
@@ -111,7 +85,7 @@ export function StatsView() {
           <GameBlock key={game} game={game} stats={stats} />
         ))}
       </section>
-      <CalendarSection calendar={calendar} />
+      <CalendarSection />
     </>
   );
 }
@@ -168,7 +142,7 @@ function TimedBlock({
   game,
   stats,
 }: {
-  readonly game: Exclude<(typeof GAME_ORDER)[number], "termo">;
+  readonly game: TimedGame;
   readonly stats: StatsResponse | null | undefined;
 }) {
   const block =
@@ -333,12 +307,13 @@ function TermoBlock({
  * second (§6.2's binding carriers): filled / outlined / plain survive
  * greyscale by construction, and the app accent — never a game's — is the
  * hue, because the calendar is app identity.
+ *
+ * The section OWNS its hook (step-6 F6): the calendar enumeration is this
+ * subtree's only consumer, so the `/stats` settle never touches the
+ * ~1,300-cell tree — each fetch re-renders exactly the surface it feeds.
  */
-function CalendarSection({
-  calendar,
-}: {
-  readonly calendar: StatsCalendarResponse | null | undefined;
-}) {
+function CalendarSection() {
+  const calendar = useStatsCalendar();
   if (calendar === undefined) {
     // Reserved dimensions, no month claimed: the server markup renders
     // this same box, so the pre-hydration paint agrees byte-for-byte.
@@ -351,9 +326,16 @@ function CalendarSection({
       </section>
     );
   }
+  // The settled-null neutral month is the app's SINGLE legal device-clock
+  // read (ADR-0051's consequence; the shared helper's own doc states the
+  // boundary): presentation only — the month title claims no state for any
+  // day, selects no record and backs no derived value. This branch cannot
+  // exist before mount, so the server markup never carries its output and
+  // the pre-hydration byte-agreement holds by construction. Data-bearing
+  // months come exclusively from the server enumeration.
   const months =
     calendar === null
-      ? [neutralMonth(todaySaoPauloDate())]
+      ? [neutralMonth(todaySaoPauloDate(new Date()))]
       : calendarMonths(calendar.days);
   return (
     <section className={styles.calendar} data-stats-state="value">

@@ -278,4 +278,49 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
       { date: today, state: "missed", perfect: false },
     ]);
   });
+
+  it("T-API-S91: another user's completions never colour this user's calendar", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const winner = await createSession();
+    const other = await createSession();
+
+    // User A holds a full Dia Perfeito today; user B holds nothing. B's
+    // enumeration must show no non-missed day and no perfect marker —
+    // the reader is scoped by the SESSION's userId, and this pins it at
+    // the route seam (the streak suite's isolation posture).
+    for (const game of ["binairo", "sudoku", "nonogram"] as const) {
+      await insertHistoryRow({
+        userId: winner.userId,
+        game,
+        date: today,
+        outcome: "won",
+        completedAtDate: today,
+      });
+    }
+    await insertHistoryRow({
+      userId: winner.userId,
+      game: "termo",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      guesses: 2,
+    });
+
+    const body = statsCalendarResponseSchema.parse(
+      await (await GET(calendarRequest(other.token))).json(),
+    );
+    expect(body.days.every((day) => day.state === "missed")).toBe(true);
+    expect(body.days.every((day) => !day.perfect)).toBe(true);
+
+    // And the winner still sees their own day — the isolation cuts one
+    // way, not both.
+    const winnerBody = statsCalendarResponseSchema.parse(
+      await (await GET(calendarRequest(winner.token))).json(),
+    );
+    expect(winnerBody.days.at(-1)).toEqual({
+      date: today,
+      state: "onTime",
+      perfect: true,
+    });
+  });
 });

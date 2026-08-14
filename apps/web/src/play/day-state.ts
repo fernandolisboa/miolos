@@ -170,7 +170,9 @@ function entryFor(game: Game, date: string): DayEntry {
   if (record.game === "termo") {
     // A won Termo publishes no duration either (plan 022 §15.3): the number
     // includes every per-guess round trip and both ADR-0043 and ADR-0045
-    // call it meaningless for this game. #29 replaces it with `em 4/6`.
+    // call it meaningless for this game. The hub's `TermoDoneLink` captions
+    // the tile `em 4/6` from the SERVER value (#29); `DayEntry` still
+    // publishes no duration and gains nothing.
     return record.outcome === "lost"
       ? { status: "played", elapsedMs: undefined }
       : { status: "completed", elapsedMs: undefined };

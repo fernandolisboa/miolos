@@ -56,23 +56,9 @@ export function calendarMonths(
       monthKeys.push(key);
     }
   }
-  const months = monthKeys.map((key): CalendarMonth => {
-    const firstOfMonth = `${key}-01`;
-    const firstDay = epochDay(firstOfMonth);
-    const daysInMonth = epochDay(nextMonthFirst(key)) - firstDay;
-    const leading = (firstDay + 4) % WEEK_LENGTH; // 0 = Sunday
-    const cells: (CalendarDay | null)[] = [];
-    for (let cell = 0; cell < leading; cell += 1) {
-      cells.push(null);
-    }
-    for (let offset = 0; offset < daysInMonth; offset += 1) {
-      cells.push(byDay.get(firstDay + offset) ?? null);
-    }
-    while (cells.length % WEEK_LENGTH !== 0) {
-      cells.push(null);
-    }
-    return { month: firstOfMonth, cells };
-  });
+  const months = monthKeys.map((key) =>
+    buildMonth(key, (day) => byDay.get(day) ?? null),
+  );
   return months.reverse();
 }
 
@@ -83,14 +69,32 @@ export function calendarMonths(
  * it with no legend, for the same reason.
  */
 export function neutralMonth(date: string): CalendarMonth {
-  const key = date.slice(0, 7);
-  const firstOfMonth = `${key}-01`;
+  return buildMonth(date.slice(0, 7), () => null);
+}
+
+/**
+ * The one spelling of the month geometry (leading weekday padding, one
+ * cell per month day, trailing fill to whole weeks): `cellAt` decides
+ * what each in-month epoch day paints — the enumeration's entry, or
+ * `null` for `neutralMonth`'s all-empty grid.
+ */
+function buildMonth(
+  monthKey: string,
+  cellAt: (day: number) => CalendarDay | null,
+): CalendarMonth {
+  const firstOfMonth = `${monthKey}-01`;
   const firstDay = epochDay(firstOfMonth);
-  const daysInMonth = epochDay(nextMonthFirst(key)) - firstDay;
-  const leading = (firstDay + 4) % WEEK_LENGTH; // 0 = Sunday
+  const daysInMonth = epochDay(nextMonthFirst(monthKey)) - firstDay;
+  // Euclidean remainder, 0 = Sunday: JS `%` follows the dividend's sign,
+  // and `firstDay` is negative for every pre-1970 month — unreachable
+  // through the shipped range, but the helper is total over its type.
+  const leading = (((firstDay + 4) % WEEK_LENGTH) + WEEK_LENGTH) % WEEK_LENGTH;
   const cells: (CalendarDay | null)[] = [];
-  for (let cell = 0; cell < leading + daysInMonth; cell += 1) {
+  for (let cell = 0; cell < leading; cell += 1) {
     cells.push(null);
+  }
+  for (let offset = 0; offset < daysInMonth; offset += 1) {
+    cells.push(cellAt(firstDay + offset));
   }
   while (cells.length % WEEK_LENGTH !== 0) {
     cells.push(null);

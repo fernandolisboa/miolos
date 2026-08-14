@@ -336,15 +336,18 @@ export function ConclusionView({
           </div>
         )}
         {/* The StreakCard's gate, on the stat block too (ADR-0048 decision
-            4, plan 033 D13): it only opens once the server holds the day,
-            so the fetched aggregates INCLUDE the game this screen is
-            decorating by construction. Without it, an offline/pending/
-            rejected conclusion would render solved/average/histogram
-            values that EXCLUDE the game just finished while highlighting
-            its bucket — asserting and denying today's play at once. Those
-            states render the shipped absence, which is honest. */}
+            4, plan 033 D13). The REAL invariant it buys (stated exactly —
+            step-6 F4): `recorded` guarantees the just-finished game's ROW
+            is on the server, so every aggregate the block renders includes
+            it. It does NOT guarantee the server still holds the record's
+            day AS today — a retry landing after the SP midnight records
+            the solve as a LATE win, excluded from histogram/best/average.
+            The today-decorations (bucket highlight, closing line) therefore
+            additionally require `stats.date === date` inside the block.
+            Offline/pending/rejected states render the shipped absence,
+            which is honest. */}
         {syncOutcome === "recorded" && (
-          <ConclusionStats game={game} result={stamp} lost={lost} />
+          <ConclusionStats game={game} date={date} result={stamp} lost={lost} />
         )}
         {syncOutcome === "pending" && (
           <p className={styles.sync}>{messages.conclusion.sync.pending}</p>
@@ -477,8 +480,16 @@ function StreakCard() {
  * mechanism), so this component's own machine has the same three states:
  * fetch in flight → the block at final dimensions with values blanked
  * (`BLANK_VALUE`); settled without a value → unmount back to the shipped
- * absence; resolved → the numbers, which include today's game by the
- * gate's construction.
+ * absence; resolved → the numbers, which include today's game — as a row —
+ * by the gate's construction.
+ *
+ * `recorded` proves the ROW is on the server; it does NOT prove the server
+ * still holds `date` as its today (a retry across the SP midnight records
+ * a LATE win, absent from histogram/best/average). So the
+ * today-decorations — the bucket highlight and the closing line — require
+ * `stats.date === date` on top (the `TermoDoneLink` day-match rule,
+ * step-6 F4), and a bucket is only ever highlighted when its own count is
+ * nonzero: no claim the server doesn't hold.
  *
  * Today's bucket comes from the LOCAL duration (`result`), today's Termo
  * row from `todayTermoGuesses` on a win (its second call site) and the
@@ -489,10 +500,12 @@ function StreakCard() {
  */
 function ConclusionStats({
   game,
+  date,
   result,
   lost,
 }: {
   readonly game: Game;
+  readonly date: string;
   readonly result: ConclusionResult | undefined;
   readonly lost: boolean;
 }) {
@@ -501,17 +514,23 @@ function ConclusionStats({
     return null;
   }
   const loaded = stats !== undefined;
+  // The server holds the record's day AS its today: string equality on
+  // the contract's own `date`, the TermoDoneLink rule.
+  const dayMatches = loaded && stats.date === date;
   if (game === "termo") {
     const counts = loaded
       ? stats.termo.distribution
       : ([0, 0, 0, 0, 0, 0, 0] as const);
     const max = Math.max(...counts, 1);
-    // On a loss the fail row is today's; on a win, the server's own
-    // today value — never the local guess count, which the server may
-    // not hold yet (and then nothing is highlighted, honestly).
+    // On a loss the fail row is today's — a lost row is in the fail row
+    // UNQUALIFIED (ADR-0008 rule 3), so the highlight is honest on any
+    // day the server holds. On a win, the server's own today value —
+    // never the local guess count — and only when the server's day IS the
+    // record's day: `todayTermoGuesses` describes `stats.date`, not this
+    // screen (otherwise nothing is highlighted, honestly).
     const todayRow = lost
       ? 6
-      : loaded && stats.todayTermoGuesses !== null
+      : loaded && dayMatches && stats.todayTermoGuesses !== null
         ? stats.todayTermoGuesses - 1
         : undefined;
     return (
@@ -565,9 +584,16 @@ function ConclusionStats({
   const max = Math.max(...counts, 1);
   // The local record's duration, not the server's: this bucket is "where
   // today's solve landed", and the local number is the one the stamp
-  // already shows. No local duration → no bucket highlighted.
+  // already shows. No local duration → no bucket highlighted; and no
+  // highlight either unless the server holds the day AS today — a late
+  // win is absent from the histogram, so its bucket may hold a count the
+  // solve is not in (possibly zero). The render additionally marks only a
+  // bucket whose own count is nonzero: the highlight claims "your solve
+  // is in this bar", and an empty bar holds nothing to claim (step-6 F4).
   const todayBucket =
-    result === undefined ? undefined : timeBucketIndex(result.elapsedMs);
+    result === undefined || !dayMatches
+      ? undefined
+      : timeBucketIndex(result.elapsedMs);
   const name = messages.games[game].name;
   return (
     <div
@@ -576,7 +602,7 @@ function ConclusionStats({
       data-stats-state={loaded ? "value" : "skeleton"}
     >
       <div className={styles.statRows}>
-        <StatValueRow
+        <StatRow
           label={messages.stats.rows.best}
           value={
             block === undefined
@@ -586,7 +612,7 @@ function ConclusionStats({
                 : formatElapsed(block.bestMs)
           }
         />
-        <StatValueRow
+        <StatRow
           label={messages.stats.rows.average}
           value={
             block === undefined
@@ -596,7 +622,7 @@ function ConclusionStats({
                 : formatElapsed(block.averageMs)
           }
         />
-        <StatValueRow
+        <StatRow
           label={messages.stats.rows.solved(name)}
           value={block === undefined ? BLANK_VALUE : String(block.solved)}
         />
@@ -611,7 +637,7 @@ function ConclusionStats({
               count,
             )}
             className={styles.bucket}
-            data-today={todayBucket === index ? "" : undefined}
+            data-today={todayBucket === index && count > 0 ? "" : undefined}
           >
             <div aria-hidden className={styles.bucketTrack}>
               <div
@@ -625,16 +651,20 @@ function ConclusionStats({
           </div>
         ))}
       </div>
-      {/* F5:50's closing line, gated on the AVERAGE'S OWN sample
-          population: the recorded-gate means today's row is in the 30-day
-          sample by construction, so `>= 2` is today plus at least one
-          other on-time win — the line never compares a value against a
-          mean of itself alone. The comparison is against the INCLUSIVE
-          average, which is honest because its direction always agrees
-          with the exclusive one — x < mean(S ∪ {x}) ⇔ x < mean(S) for
-          nonempty S — so F5's sentence stays true under either reading.
-          Equal renders neither line. */}
+      {/* F5:50's closing line, gated on the day-match AND the AVERAGE'S
+          OWN sample population: `dayMatches` is what makes "today's row
+          is in the 30-day sample" true — recorded alone proves only the
+          ROW, and a late win is outside the average's population, where
+          `>= 2` would lose its "today plus one other" meaning (step-6
+          F4). With both, `>= 2` is today plus at least one other on-time
+          win — the line never compares a value against a mean of itself
+          alone. The comparison is against the INCLUSIVE average, which is
+          honest because its direction always agrees with the exclusive
+          one — x < mean(S ∪ {x}) ⇔ x < mean(S) for nonempty S — so F5's
+          sentence stays true under either reading. Equal renders neither
+          line. */}
       {loaded &&
+        dayMatches &&
         result !== undefined &&
         block !== undefined &&
         block.averageSampleCount >= 2 &&
@@ -651,7 +681,7 @@ function ConclusionStats({
 }
 
 /** One F5 stat row: label in `--ink-2`, value tabular in `--ink`. */
-function StatValueRow({
+function StatRow({
   label,
   value,
 }: {

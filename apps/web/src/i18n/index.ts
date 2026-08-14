@@ -5,6 +5,7 @@ export {
   formatShortDate,
 } from "./format";
 export { locale } from "./locale";
+export { SAO_PAULO_TIME_ZONE, todaySaoPauloDate } from "./sao-paulo-day";
 export { messages, type Messages } from "./messages";
 export {
   freePlayRoutes,

@@ -362,12 +362,34 @@ export function computeStats(
       todayTermoGuesses = guesses;
     }
   }
+  const timed = timedGameBlocks(rows, windowFloorDay);
   return {
-    binairo: timedGameStats(rows, "binairo", windowFloorDay),
-    sudoku: timedGameStats(rows, "sudoku", windowFloorDay),
-    nonogram: timedGameStats(rows, "nonogram", windowFloorDay),
+    binairo: timed.binairo,
+    sudoku: timed.sudoku,
+    nonogram: timed.nonogram,
     termo: termoStats(rows),
     perfectDays: perfectDays(rows).length,
     todayTermoGuesses,
   };
+}
+
+/**
+ * One aggregate block per timed game — `TIMED_GAMES` is the single
+ * spelling of the iteration (step-6 F8: the constant's own in-module
+ * consumer, so the wire order can never drift from the type). The
+ * empty-literal assertion is made true by the loop directly under it:
+ * every member of `TIMED_GAMES` — whose union IS `TimedGame` — is
+ * assigned exactly once before the return. Not a boundary cast: nothing
+ * crosses a wire here, and the route still parses the assembled summary
+ * through the strict schema.
+ */
+function timedGameBlocks(
+  rows: readonly StatsRow[],
+  windowFloorDay: number,
+): Record<TimedGame, TimedGameStats> {
+  const blocks = {} as Record<TimedGame, TimedGameStats>;
+  for (const game of TIMED_GAMES) {
+    blocks[game] = timedGameStats(rows, game, windowFloorDay);
+  }
+  return blocks;
 }
