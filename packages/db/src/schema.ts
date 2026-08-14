@@ -364,6 +364,55 @@ export const hintGrants = pgTable(
 );
 
 /**
+ * Curated medal grants (#30, ADR-0052) — NOT a wallet, balance or ledger:
+ * rows are APPEND-ONLY records of a grant event, and no quantity column
+ * exists to accumulate (revocation, if ever needed, is a DELETE — grants
+ * are append-only events like hint grants). Rule-derived medals are NEVER
+ * stored here: they recompute over `listCompletionsForStats` on every
+ * read, and a row bearing a rule-derived id is ignored at read time
+ * (ADR-0052) — storing one could fake an uncomputed feat or desync from
+ * a recompute.
+ *
+ * The v1 writer is the documented operator ritual (ADR-0052): a one-off
+ * script over `@neondatabase/serverless` inserting with
+ * `ON CONFLICT (user_id, medal_id) DO NOTHING` — no code writer exists,
+ * deliberately (an exported writer with no named caller is the dormant
+ * surface this repo treats as a finding). The one production reader is
+ * `listMedalGrants` (medals.ts). Merged by union-earliest-dedupe
+ * (merge.ts). Pinned by T-DB-S38 (column set), T-DB-S39 (table set) and
+ * T-DB-S43 (forbidden-vocabulary column scan).
+ *
+ * - Composite PK (user_id, medal_id): the completions shape — exactly the
+ *   unique key the merge's ON CONFLICT needs; no `id`, no `source`, no
+ *   `reason` (a reason is operator context that lives in the grant's
+ *   paper trail, not in a column with one writer and no reader).
+ * - `medal_id` carries a SHAPE CHECK (lowercase slug, ≤ 64), never a
+ *   membership CHECK: definitions live in code, so catalog/DB drift must
+ *   be a read-time no-op, not an insert-time production failure.
+ * - `granted_at` never crosses the wire (ADR-0052): its named readers are
+ *   the merge statement's `least()` (earliest-wins) and the operator's
+ *   audit queries. DB-side default; the merge always COPIES it.
+ * - No secondary index: every read is by user_id, the PK's leading column.
+ */
+export const medalGrants = pgTable(
+  "medal_grants",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    medalId: text("medal_id").notNull(),
+    grantedAt: timestamptz("granted_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.medalId] }),
+    check(
+      "medal_grants_medal_id_check",
+      sql`${t.medalId} ~ '^[a-z0-9]+(-[a-z0-9]+)*$' and char_length(${t.medalId}) <= 64`,
+    ),
+  ],
+);
+
+/**
  * Remote config (ADR-0025): key/jsonb rows merged and Zod-parsed through
  * `remoteConfigSchema` (@miolos/core), in-code defaults when empty.
  * First tunable: bufferDepth (7). Tuning is one INSERT/UPDATE — no

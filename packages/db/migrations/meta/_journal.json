@@ -36,6 +36,13 @@
       "when": 1786645992177,
       "tag": "0004_optimal_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786674902389,
+      "tag": "0005_serious_nova",
+      "breakpoints": true
     }
   ]
 }
