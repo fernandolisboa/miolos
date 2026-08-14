@@ -817,7 +817,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // user entry (plan 033 §3.1), never the root, and #30 by exactly
     // two: `listMedalGrants` and `medalGrants` on the user entry
     // (ADR-0052), never the root. #31's write-window PR moves it by
-    // ZERO — the archive write ceiling is a guard inside
+    // ZERO — the late-write ceiling is a guard inside
     // `recordCompletion`'s own INSERT, not a new export (step-6 finding
     // F1) — and its archive PR moves it by exactly four: the three
     // archive readers and the date classifier, on the root entry.

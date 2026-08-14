@@ -501,8 +501,9 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
 
     1. **Mechanical, and this is the acceptance criterion's actual teeth.**
        The composite primary key plus the idempotent short-circuit, which
-       runs **before** the date check, **before** the volume cap, **before**
-       the wall read and **before** judging, and returns the **stored** row
+       runs **before** the date check, **before** the wall read, **before**
+       judging and **before the volume cap** — the cap comes last because
+       decision 13 folded it into the write itself — and returns the **stored** row
        with `recorded: false`. A day completed on time and then replayed
        from its archive page returns the on-time row byte-for-byte and
        writes nothing.
@@ -602,7 +603,10 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
     written that way holds only against a strictly sequential client, which
     an attacker is not. The ceiling is therefore folded INTO the insert:
     `INSERT ... SELECT ... WHERE (count subquery) < 50`, one SQL statement,
-    rendered byte-identically through the `neon-http` and PGlite dialects.
+    rendered byte-identically through the `neon-http` and PGlite dialects —
+    **pinned by T-DB-S58**, which compares what the shipped writer renders
+    through each dialect's own logger, because production runs `neon-http`
+    and every other assertion about this guard runs on PGlite.
     Measured on the test stack, twenty concurrent writes against a ceiling
     of ten wrote **twenty** rows in the two-statement form and **ten** in
     this one (T-DB-S56a). **The honest residual is READ COMMITTED's:** each
@@ -665,7 +669,7 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
     needs to: a marathon player trips it once, a script trips it on every
     minted identity. That requires a **structured log line the route emits
     itself** — `console.log(JSON.stringify({ event: "archive-cap", userId,
-    day }))`, the `cron/publish` and `origin-guard` idiom — because the
+    day }))`, the `cron/publish` idiom — because the
     platform log carries the status and the path and neither the token nor
     the user, so it cannot make that distinction. The line is not
     decoration: it is the compensating control that makes the accepted
@@ -723,7 +727,10 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
     winner's budget. (b) The ceiling's branch and its count are two
     spellings of "late" — `isLateDate` in JS, `on_time` negated in SQL — and
     they disagree at exactly one instant per rollover, in the direction of
-    one uncounted row (`isLateDate`'s own doc block states the bound).
+    one **unchecked** row — unchecked, not uncounted: it escapes the day it
+    was written for and is then counted against the *next* day's budget by
+    every guarded write on it, which is the conservative direction
+    (`isLateDate`'s own doc block states the bound and its consequence).
 
 14. **`prunePlayRecords` gains bounded retention, and that is the price of a
     permanent archive result URL.** The prune keeps the **50 most recent
