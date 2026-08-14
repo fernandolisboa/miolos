@@ -292,6 +292,19 @@ const freePlayBannedModuleGroups = [
       "free play never touches the statistics: the stats client, hooks and the /estatisticas screen are banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0051).",
   },
   {
+    // #31: the archive's screens are one hop from `sync.ts`,
+    // `play-record.ts`, `use-play-lifecycle.ts` and `use-record-snapshot.ts`
+    // — the exact modules this wall exists to keep away from free play — and
+    // `app/arquivo/**` is one hop from that. Banned by name like the stats
+    // group above (the napkin's one-hop rule). Both specifier shapes on
+    // purpose: `**/archive/**` does not match a bare `../archive`, so a
+    // future `src/archive/index.ts` barrel must not become a door, and
+    // `**/app/arquivo/**` closes the route segment.
+    group: ["**/archive", "**/archive/**", "**/app/arquivo/**"],
+    message:
+      "free play records nothing and reads no archive: the archive's screens, its late-result panel and the /arquivo routes are banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0053).",
+  },
+  {
     // #30: the medals client and hook reach the network and the
     // server-derived earned set, one hop from walled server values —
     // banned by name like the stats group above (the napkin's one-hop
@@ -312,7 +325,7 @@ const freePlayBannedModuleGroups = [
 // repeats, so a literal-specifier regex is the whole residual.
 const freePlayDynamicBannedModule = {
   selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|stats(\\/|$)|medals(\\/|$)|estatisticas|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|stats(\\/|$)|medals(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
   message:
     "free play records nothing, fetches nothing, never touches Termo, the streak, the statistics, the medals or the attach flow: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052).",
 };

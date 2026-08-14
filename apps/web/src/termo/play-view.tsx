@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import { formatLongDate, messages, routes } from "../i18n";
+import type { ArchivePlayChrome } from "../archive/chrome";
 import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
 import { Board, BoardSkeleton } from "./board";
@@ -73,8 +74,20 @@ const SINGLE_LETTER = /^[a-z]$/;
  * clock runs and is recorded; it is not rendered, so `/termo` is not a fourth
  * surface for the #63 digit-swing defect, and a Termo elapsed time — which
  * includes every per-guess round trip — is never presented as a result.
+ *
+ * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
+ * daily route — this renders exactly what it always did, byte for byte, and
+ * T-WEB-S185 pins both directions. Present, the back affordance becomes the
+ * archived day's and one extra rules line states that the day does not move
+ * the streak.
  */
-export function PlayView({ play }: { readonly play: TermoPlay }) {
+export function PlayView({
+  play,
+  archive,
+}: {
+  readonly play: TermoPlay;
+  readonly archive?: ArchivePlayChrome;
+}) {
   const { state } = play;
   const copy = messages.games.termo.play;
   const activeKeyRef = useRef<HTMLButtonElement | null>(null);
@@ -154,10 +167,10 @@ export function PlayView({ play }: { readonly play: TermoPlay }) {
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
+          href={archive?.back.href ?? routes.home}
+          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
         >
-          {messages.play.back}
+          {archive?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
@@ -188,6 +201,14 @@ export function PlayView({ play }: { readonly play: TermoPlay }) {
           <h1 className={screen.title}>{copy.title}</h1>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
+            `screen.rules` paragraph under the game's own — already `--ink-2`,
+            already shipped, so no stylesheet is edited. It is what makes the
+            archive's semantics visible to the person they apply to, which a
+            mode chip could not have said. */}
+        {archive === undefined ? null : (
+          <p className={screen.rules}>{archive.note}</p>
+        )}
       </div>
 
       {/* ONE row, not three. Sudoku has `Nível` and Nonogram `Tamanho`
@@ -307,8 +328,20 @@ export function PlayView({ play }: { readonly play: TermoPlay }) {
  * card, and the `.progressBar` slot in the top bar — that last one so the
  * ≤1140px bar keeps THREE children before hydration and `space-between` does
  * not throw the kicker from hard-right to centre on hydrate.
+ *
+ * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
+ * daily route — this renders exactly what it always did, byte for byte, and
+ * T-WEB-S185 pins both directions. Present, the back affordance becomes the
+ * archived day's and one extra rules line states that the day does not move
+ * the streak.
  */
-export function PlaySkeleton({ date }: { readonly date: string }) {
+export function PlaySkeleton({
+  date,
+  archive,
+}: {
+  readonly date: string;
+  readonly archive?: ArchivePlayChrome;
+}) {
   const copy = messages.games.termo.play;
 
   return (
@@ -320,10 +353,10 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
+          href={archive?.back.href ?? routes.home}
+          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
         >
-          {messages.play.back}
+          {archive?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
@@ -340,6 +373,14 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
           <h1 className={screen.title}>{copy.title}</h1>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
+            `screen.rules` paragraph under the game's own — already `--ink-2`,
+            already shipped, so no stylesheet is edited. It is what makes the
+            archive's semantics visible to the person they apply to, which a
+            mode chip could not have said. */}
+        {archive === undefined ? null : (
+          <p className={screen.rules}>{archive.note}</p>
+        )}
       </div>
 
       <div aria-hidden className={screen.statsCard}>

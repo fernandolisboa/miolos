@@ -543,15 +543,53 @@ export function listPendingRecords(): PlayRecord[] {
 }
 
 /**
- * Drop records for days before `keepDate` that have nothing left to sync.
- * `keepDate` is the SERVER's date (ADR-0010's single authority), never a
- * client-computed today — pruning on a wrong clock would delete a queue
- * that was about to flush. A pending record is kept forever by design: it
- * is the only copy of a completion the server has not acknowledged.
+ * How many SETTLED records dated before the mount's `keepDate` survive a
+ * prune (#31, ADR-0053 decision 14).
  *
- * The ONE exception is a record that does not address its own key. It is
- * unsyncable by construction (see `listPendingRecords` above), so keeping it
- * forever keeps nothing; it is dropped whatever its `pendingSync` and
+ * Fifty, from the same sentence the late-write ceiling comes from — a player
+ * clearing a full week of all four games is 28 — so retention and the write
+ * ceiling can never disagree about what a plausible session is.
+ */
+const RETAINED_PAST_RECORDS = 50;
+
+/**
+ * Keep the 50 most recent settled records dated before `keepDate`, and drop
+ * the rest. `keepDate` is the SERVER's date (ADR-0010's single authority),
+ * never a client-computed today — pruning on a wrong clock would delete a
+ * queue that was about to flush. A pending record is kept forever by design:
+ * it is the only copy of a completion the server has not acknowledged.
+ *
+ * **The retention is #31's, and without it the archive has no permanent
+ * result URL** (ADR-0053 decision 14). This runs on EVERY play mount with
+ * that mount's date, and every archive record is dated before today **by
+ * construction** — so, before the cap, the moment an archive completion
+ * settled and the player reached any daily route the result was deleted. Not
+ * "on a later day": on the next navigation, in the same session. Browsing the
+ * archive forward self-destructed the same way, because the second mount's
+ * `keepDate` is the newer date.
+ *
+ * **The ordering key is `record.date`, because it is the only orderable field
+ * the record has** — the schema carries no written-at timestamp, and adding
+ * one is a versioned-schema decision this ticket has no business making. The
+ * record key breaks ties so the order is total and this function stays
+ * deterministic. The consequence is stated rather than hidden: a player
+ * already holding 50 settled archive records who then solves a date older
+ * than all of them loses that result on the next prune, and ADR-0053 decision
+ * 10 layer 3 is what covers that case.
+ *
+ * **Two honest bounds.** A pending record is never pruned, so a player past
+ * the daily write ceiling holds 50 settled records PLUS their pending tail
+ * until the next rollover flush. And the cap applies per mount date, so
+ * browsing newest-to-oldest lets records accumulate until the next daily
+ * mount re-applies it over everything: "bounded" means bounded at the next
+ * daily mount, self-healing rather than instantaneous.
+ *
+ * It stays behaviour-neutral for every daily surface, because today's record
+ * is never a prune candidate (`record.date < keepDate` is false for it).
+ *
+ * The ONE unconditional drop is a record that does not address its own key.
+ * It is unsyncable by construction (see `listPendingRecords` above), so
+ * keeping it forever keeps nothing; it goes whatever its `pendingSync` and
  * whatever its date. Unparseable keys are still left alone — this function
  * owns the play namespace's records, not its garbage.
  */
@@ -560,6 +598,7 @@ export function prunePlayRecords(keepDate: string): void {
   if (store === undefined) {
     return;
   }
+  const candidates: { key: string; date: string }[] = [];
   for (const key of playRecordKeys(store)) {
     const record = parseAt(store, key);
     if (record === undefined) {
@@ -570,7 +609,18 @@ export function prunePlayRecords(keepDate: string): void {
       continue;
     }
     if (!record.pendingSync && record.date < keepDate) {
-      store.removeItem(key);
+      candidates.push({ key, date: record.date });
     }
+  }
+  // Newest FIRST, key as the tiebreak: `playRecordKeys` walks the store in
+  // whatever order the browser hands back, so without a total order the same
+  // store could prune two different records on two runs.
+  candidates.sort((a, b) =>
+    a.date === b.date
+      ? a.key.localeCompare(b.key)
+      : b.date.localeCompare(a.date),
+  );
+  for (const stale of candidates.slice(RETAINED_PAST_RECORDS)) {
+    store.removeItem(stale.key);
   }
 }

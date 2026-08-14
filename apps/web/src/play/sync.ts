@@ -47,6 +47,16 @@ import {
 const TERMINAL_STATUSES = new Set([400, 403, 404, 415, 422]);
 
 /**
+ * The completion route's late-write ceiling (#31, ADR-0053 decision 13).
+ * Deliberately NOT in the set above and never to be added to it: the record
+ * is a real completion refused by a per-day RATE rule, and settling it would
+ * discard a puzzle the player actually solved. It is named here because the
+ * flush loop treats it differently from every other retryable status — it is
+ * the one refusal that is certain to repeat for every sibling in the queue.
+ */
+const CAPPED_STATUS = 429;
+
+/**
  * The bounded in-page retry ladder. It is what makes AC 3 true for a
  * player who finishes, sees the pending line and closes the tab: the other
  * triggers all need a new mount or an event that may never arrive.
@@ -144,7 +154,22 @@ export async function flushPendingCompletions(
 
     let stillPending = false;
     for (const record of pending) {
-      stillPending = (await syncRecord(apiUrl, record)) || stillPending;
+      const verdict = await syncRecord(apiUrl, record);
+      stillPending = verdict.stillPending || stillPending;
+      // BREAK on the first 429, and this is not an optimisation (#31,
+      // ADR-0053 decision 13). The late-write ceiling is per USER per São
+      // Paulo day, so once it answers, every remaining record in this queue
+      // is certain to be refused for the same reason. A player who closes
+      // 200 archive boards in one day syncs 50 and holds 150 permanently
+      // pending, and 429 is correctly non-terminal, so without this the whole
+      // tail is re-posted on every mount, every `online` and every
+      // `visibilitychange` — four retry rungs each, all certain to fail. The
+      // records stay queued and the ladder stays armed; what stops is paying
+      // for refusals we already know the answer to.
+      if (verdict.capped) {
+        stillPending = true;
+        break;
+      }
     }
 
     // The queue is RE-READ, never inferred from `pending`. That array was
@@ -194,11 +219,26 @@ export function startCompletionSync(): () => void {
   };
 }
 
-/** Sync one record. Resolves to `true` when it is still queued afterwards. */
+/**
+ * The outcome of one record's POST, as the flush loop needs it: whether the
+ * record is still queued, and whether the server refused it for a reason
+ * that will refuse every SIBLING too.
+ */
+interface SyncVerdict {
+  readonly stillPending: boolean;
+  /**
+   * The late-write ceiling answered (#31, ADR-0053 decision 13). The cap is
+   * per USER per São Paulo day, so record N+1 fails identically to record N —
+   * this is what tells the loop to stop rather than pay the whole queue.
+   */
+  readonly capped: boolean;
+}
+
+/** Sync one record. */
 async function syncRecord(
   apiUrl: string,
   record: PlayRecord,
-): Promise<boolean> {
+): Promise<SyncVerdict> {
   const body = buildBody(record);
   if (body === undefined) {
     // Unbuildable: there is no result to judge, and no retry can create one.
@@ -206,7 +246,7 @@ async function syncRecord(
       `completion for ${record.game} ${record.date} has no submittable result to post; dropping it from the queue`,
     );
     settle(record, "rejected");
-    return false;
+    return { stillPending: false, capped: false };
   }
 
   let response = await post(apiUrl, body);
@@ -235,11 +275,14 @@ async function syncRecord(
 
   if (response === undefined) {
     // Network failure: the record is the only copy, so it stays queued.
-    return true;
+    return { stillPending: true, capped: false };
   }
 
   if (response.ok) {
-    return !(await acceptResponse(record, response));
+    return {
+      stillPending: !(await acceptResponse(record, response)),
+      capped: false,
+    };
   }
 
   if (TERMINAL_STATUSES.has(response.status)) {
@@ -247,7 +290,7 @@ async function syncRecord(
       `completion for ${record.game} ${record.date} was rejected with ${response.status}; it will not be retried`,
     );
     settle(record, "rejected");
-    return false;
+    return { stillPending: false, capped: false };
   }
 
   // 401 (after the one re-mint), 429 and 5xx: retryable, keep it queued.
@@ -256,7 +299,7 @@ async function syncRecord(
   // is a real completion refused by a per-day RATE rule, so it must
   // survive to flush after the next São Paulo rollover. Settling it would
   // discard a puzzle the player actually solved.
-  return true;
+  return { stillPending: true, capped: response.status === CAPPED_STATUS };
 }
 
 /**

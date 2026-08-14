@@ -43,6 +43,10 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     // and hard shadow — shapes, never words — and an unlisted sheet is
     // invisible to the whole automated ADR-0041 gate.
     "app/arquivo/arquivo.module.css",
+    // #31: the late-result panel paints the game's accent on the completion
+    // stamp's RING and nowhere else. It is the state CI can never scan, so
+    // an unlisted sheet would leave it with no gate at all.
+    "src/archive/late-result.module.css",
   ] as const;
 
   it("leaves no desk label on an accent fill, in any stylesheet", () => {
@@ -200,6 +204,10 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // all four on one row — so it is exactly the class of sheet this scan
     // exists for, and it ships with ZERO accent-coloured text.
     "app/arquivo/arquivo.module.css",
+    // #31: the late-result panel paints the game's accent on the completion
+    // stamp's RING and nowhere else. It is the state CI can never scan, so
+    // an unlisted sheet would leave it with no gate at all.
+    "src/archive/late-result.module.css",
   ] as const;
 
   /**

@@ -50,7 +50,7 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
     expect(typeof copy.months.heading).toBe("string");
     expect(typeof copy.play.note).toBe("string");
     expect(Object.keys(copy.result).sort()).toEqual([
-      "alreadyOnTime",
+      "already",
       "late",
       "lostTitle",
       "pending",

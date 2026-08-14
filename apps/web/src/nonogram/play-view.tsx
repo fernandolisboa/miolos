@@ -3,6 +3,7 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import Link from "next/link";
 
 import { formatLongDate, messages, routes } from "../i18n";
+import type { ArchivePlayChrome } from "../archive/chrome";
 import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
 import { TimerReadout } from "../play/timer-readout";
@@ -74,8 +75,20 @@ const BLANK_READOUT = "\u00a0";
  * The three card rotations are a distinct signature from Binairo's and
  * Sudoku's through `.pageNonogram`, so the three screens read as different
  * sheets from the same pad rather than as copies.
+ *
+ * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
+ * daily route — this renders exactly what it always did, byte for byte, and
+ * T-WEB-S185 pins both directions. Present, the back affordance becomes the
+ * archived day's and one extra rules line states that the day does not move
+ * the streak.
  */
-export function PlayView({ play }: { readonly play: NonogramPlay }) {
+export function PlayView({
+  play,
+  archive,
+}: {
+  readonly play: NonogramPlay;
+  readonly archive?: ArchivePlayChrome;
+}) {
   const { state } = play;
   const copy = messages.games.nonogram.play;
 
@@ -88,10 +101,10 @@ export function PlayView({ play }: { readonly play: NonogramPlay }) {
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
+          href={archive?.back.href ?? routes.home}
+          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
         >
-          {messages.play.back}
+          {archive?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>
@@ -119,6 +132,14 @@ export function PlayView({ play }: { readonly play: NonogramPlay }) {
           </span>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
+            `screen.rules` paragraph under the game's own — already `--ink-2`,
+            already shipped, so no stylesheet is edited. It is what makes the
+            archive's semantics visible to the person they apply to, which a
+            mode chip could not have said. */}
+        {archive === undefined ? null : (
+          <p className={screen.rules}>{archive.note}</p>
+        )}
       </div>
 
       <div className={screen.statsCard}>
@@ -204,15 +225,23 @@ export function PlayView({ play }: { readonly play: NonogramPlay }) {
  * the clues arrive on the wire with the puzzle, so they owe the record nothing
  * — and the rails sit in `max-content` tracks, so a blank one would reserve
  * the wrong width.
+ *
+ * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
+ * daily route — this renders exactly what it always did, byte for byte, and
+ * T-WEB-S185 pins both directions. Present, the back affordance becomes the
+ * archived day's and one extra rules line states that the day does not move
+ * the streak.
  */
 export function PlaySkeleton({
   date,
   size,
   clues,
+  archive,
 }: {
   readonly date: string;
   readonly size: NonogramSize;
   readonly clues: NonogramClues;
+  readonly archive?: ArchivePlayChrome;
 }) {
   const copy = messages.games.nonogram.play;
 
@@ -225,10 +254,10 @@ export function PlaySkeleton({
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
+          href={archive?.back.href ?? routes.home}
+          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
         >
-          {messages.play.back}
+          {archive?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>
@@ -251,6 +280,14 @@ export function PlaySkeleton({
           </span>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
+            `screen.rules` paragraph under the game's own — already `--ink-2`,
+            already shipped, so no stylesheet is edited. It is what makes the
+            archive's semantics visible to the person they apply to, which a
+            mode chip could not have said. */}
+        {archive === undefined ? null : (
+          <p className={screen.rules}>{archive.note}</p>
+        )}
       </div>
 
       {/* The desktop sidebar card. Its THREE rows are what give it its height,

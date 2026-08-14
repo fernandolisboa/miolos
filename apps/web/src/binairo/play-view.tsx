@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { formatLongDate, messages, routes } from "../i18n";
+import type { ArchivePlayChrome } from "../archive/chrome";
 import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
 import { TimerReadout } from "../play/timer-readout";
@@ -41,8 +42,20 @@ const BLANK_READOUT = "\u00a0";
  * — so the readouts that appear in different places on the two layouts exist
  * twice and the sheet hides one of each pair. Only the board and the control
  * row are this game's own.
+ *
+ * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
+ * daily route — this renders exactly what it always did, byte for byte, and
+ * T-WEB-S185 pins both directions. Present, the back affordance becomes the
+ * archived day's and one extra rules line states that the day does not move
+ * the streak.
  */
-export function PlayView({ play }: { readonly play: BinairoPlay }) {
+export function PlayView({
+  play,
+  archive,
+}: {
+  readonly play: BinairoPlay;
+  readonly archive?: ArchivePlayChrome;
+}) {
   const { state } = play;
 
   return (
@@ -54,10 +67,10 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
+          href={archive?.back.href ?? routes.home}
+          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
         >
-          {messages.play.back}
+          {archive?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>
@@ -86,6 +99,14 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
           </span>
         </div>
         <p className={screen.rules}>{messages.games.binairo.play.rules}</p>
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
+            `screen.rules` paragraph under the game's own — already `--ink-2`,
+            already shipped, so no stylesheet is edited. It is what makes the
+            archive's semantics visible to the person they apply to, which a
+            mode chip could not have said. */}
+        {archive === undefined ? null : (
+          <p className={screen.rules}>{archive.note}</p>
+        )}
       </div>
 
       <div className={screen.statsCard}>
@@ -175,8 +196,20 @@ export function PlayView({ play }: { readonly play: BinairoPlay }) {
  * Pinning that would take a hard-coded `min-width` on the shipped rule, for
  * an 11px label; the board, the stats card, the hint bar and the control row
  * all land on the same pixel in both paints.
+ *
+ * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
+ * daily route — this renders exactly what it always did, byte for byte, and
+ * T-WEB-S185 pins both directions. Present, the back affordance becomes the
+ * archived day's and one extra rules line states that the day does not move
+ * the streak.
  */
-export function PlaySkeleton({ date }: { readonly date: string }) {
+export function PlaySkeleton({
+  date,
+  archive,
+}: {
+  readonly date: string;
+  readonly archive?: ArchivePlayChrome;
+}) {
   return (
     <main
       className={`${screen.page} ${styles.pageBinairo}`}
@@ -186,10 +219,10 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
+          href={archive?.back.href ?? routes.home}
+          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
         >
-          {messages.play.back}
+          {archive?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>
@@ -212,6 +245,14 @@ export function PlaySkeleton({ date }: { readonly date: string }) {
           </span>
         </div>
         <p className={screen.rules}>{messages.games.binairo.play.rules}</p>
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
+            `screen.rules` paragraph under the game's own — already `--ink-2`,
+            already shipped, so no stylesheet is edited. It is what makes the
+            archive's semantics visible to the person they apply to, which a
+            mode chip could not have said. */}
+        {archive === undefined ? null : (
+          <p className={screen.rules}>{archive.note}</p>
+        )}
       </div>
 
       {/* The desktop sidebar card. Its two rows are what give it its height,

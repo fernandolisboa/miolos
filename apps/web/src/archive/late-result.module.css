@@ -1,0 +1,89 @@
+/* The archive's late-result panel (#31, ADR-0053 decision 9). It renders IN
+   PLACE, on the archive play URL — there is no `/concluido` sibling, and the
+   archive never enters `ConclusionView`'s tree at all (T-WEB-S183 makes that
+   a module-graph assertion rather than prose).
+
+   The completion-stamp register (DESIGN.md): a 3px circle in the game's
+   accent, rotated -6deg, typographic content only. ADR-0041 throughout: the
+   accent colours the RING — a shape — and the outcome itself is `--ink` text
+   beside it, so WCAG 1.4.11's decorative exemption applies and no word on
+   this sheet is ever accent-coloured. That is not a budget the Termo route
+   could have spent anyway: mustard is 2.8501:1 on card, the ceiling over the
+   whole paper family, against a 4.5 floor.
+
+   NO time, no streak, no day chips, no chaining CTA, no statistics. A
+   published result time is the comparison-shaped artefact ADR-0008 rule 2
+   keeps apart, and it is a number no aggregate on this branch will ever
+   contain. */
+
+.panel {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-11) var(--space-6) var(--space-12);
+  text-align: center;
+}
+
+.panel a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-app);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+/* The stamp: a ring in the game's accent, pressed slightly crooked. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 148px;
+  padding: var(--space-4) var(--space-6);
+  border: 3px solid var(--accent);
+  border-radius: 999px;
+  transform: rotate(-6deg);
+}
+
+.stampLabel {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.note {
+  margin: 0;
+  max-width: 40ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  font: var(--text-button);
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 2px solid var(--line);
+}
+
+@media (max-width: 900px) {
+  .panel {
+    min-height: auto;
+    padding: var(--space-10, 40px) var(--space-5) var(--space-8);
+  }
+}

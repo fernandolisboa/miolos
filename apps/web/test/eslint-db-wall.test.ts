@@ -846,6 +846,7 @@ describe("no parallel query path in apps/web (T-LINT-S37)", () => {
     }
     // The archive's four readers really are found by the parser above, so an
     // empty offender list means "all clean", not "nothing scanned".
+    expect(seen.has("getArchivedDaily")).toBe(true);
     expect(seen.has("listArchivedDays")).toBe(true);
     expect(seen.has("listArchivedMonths")).toBe(true);
     expect(seen.has("archiveDateClass")).toBe(true);

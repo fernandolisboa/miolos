@@ -2,6 +2,7 @@ import type { SudokuTier } from "@miolos/games/sudoku";
 import Link from "next/link";
 
 import { formatLongDate, messages, routes } from "../i18n";
+import type { ArchivePlayChrome } from "../archive/chrome";
 import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
 import { TimerReadout } from "../play/timer-readout";
@@ -46,8 +47,20 @@ const BLANK_READOUT = "\u00a0";
  * The three card rotations mirror Binairo's signs through `.pageSudoku`, so
  * the two screens read as different sheets from the same pad rather than as
  * a copy (§12.4).
+ *
+ * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
+ * daily route — this renders exactly what it always did, byte for byte, and
+ * T-WEB-S185 pins both directions. Present, the back affordance becomes the
+ * archived day's and one extra rules line states that the day does not move
+ * the streak.
  */
-export function PlayView({ play }: { readonly play: SudokuPlay }) {
+export function PlayView({
+  play,
+  archive,
+}: {
+  readonly play: SudokuPlay;
+  readonly archive?: ArchivePlayChrome;
+}) {
   const { state } = play;
   const copy = messages.games.sudoku.play;
 
@@ -60,10 +73,10 @@ export function PlayView({ play }: { readonly play: SudokuPlay }) {
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
+          href={archive?.back.href ?? routes.home}
+          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
         >
-          {messages.play.back}
+          {archive?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>{messages.games.sudoku.kicker}</span>
@@ -90,6 +103,14 @@ export function PlayView({ play }: { readonly play: SudokuPlay }) {
           </span>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
+            `screen.rules` paragraph under the game's own — already `--ink-2`,
+            already shipped, so no stylesheet is edited. It is what makes the
+            archive's semantics visible to the person they apply to, which a
+            mode chip could not have said. */}
+        {archive === undefined ? null : (
+          <p className={screen.rules}>{archive.note}</p>
+        )}
       </div>
 
       <div className={screen.statsCard}>
@@ -169,13 +190,21 @@ export function PlayView({ play }: { readonly play: SudokuPlay }) {
  *
  * `Nível` is the one readout that does NOT wait: the tier arrives on the wire
  * with the givens (S10), so it owes the record nothing.
+ *
+ * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
+ * daily route — this renders exactly what it always did, byte for byte, and
+ * T-WEB-S185 pins both directions. Present, the back affordance becomes the
+ * archived day's and one extra rules line states that the day does not move
+ * the streak.
  */
 export function PlaySkeleton({
   date,
   tier,
+  archive,
 }: {
   readonly date: string;
   readonly tier: SudokuTier;
+  readonly archive?: ArchivePlayChrome;
 }) {
   const copy = messages.games.sudoku.play;
 
@@ -188,10 +217,10 @@ export function PlaySkeleton({
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
+          href={archive?.back.href ?? routes.home}
+          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
         >
-          {messages.play.back}
+          {archive?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>{messages.games.sudoku.kicker}</span>
@@ -212,6 +241,14 @@ export function PlaySkeleton({
           </span>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
+        {/* #31 (ADR-0053 decision 9): the archive's ONE added line, a second
+            `screen.rules` paragraph under the game's own — already `--ink-2`,
+            already shipped, so no stylesheet is edited. It is what makes the
+            archive's semantics visible to the person they apply to, which a
+            mode chip could not have said. */}
+        {archive === undefined ? null : (
+          <p className={screen.rules}>{archive.note}</p>
+        )}
       </div>
 
       {/* The desktop sidebar card. Its THREE rows are what give it its

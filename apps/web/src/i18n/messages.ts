@@ -424,9 +424,14 @@ export const messages = {
     result: {
       wonTitle: "Concluído",
       lostTitle: "Não foi dessa vez",
-      // The honest reading when the server answers with a stored on-time row
-      // (ADR-0053 decision 10 layer 3): the player did NOT complete this late.
-      alreadyOnTime: "Você já tinha concluído este dia no dia.",
+      // AC 4's UI half: this device already held a concluded record for the
+      // day when the archive page mounted, so the result on screen is one the
+      // player had before and NOT a late completion this visit produced. The
+      // wire's `onTime` flag would say more, but `sync.ts` discards it and
+      // plan 037 §3 forbids adding a consumer for it — so the panel says the
+      // true thing it can know rather than the truer thing it cannot (plan
+      // 037 §14 deviation I29).
+      already: "Você já tinha concluído este dia — nada foi registrado agora.",
       late: "Conclusão tardia — registrada, e fora da sequência.",
       // NOT `messages.conclusion.sync.pending`: that string names
       // connectivity, and the archive's own cause is the daily late-write

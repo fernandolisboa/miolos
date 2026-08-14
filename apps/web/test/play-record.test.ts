@@ -279,7 +279,12 @@ describe("listPendingRecords", () => {
 });
 
 describe("prunePlayRecords", () => {
-  it("drops only synced records older than the server's day", () => {
+  it("keeps a settled past record under the retention cap, keeps a pending one, and never touches a foreign key", () => {
+    // RESTATED at #31 (ADR-0053 decision 14): a settled past record used to
+    // be deleted on the next mount whatever the store held, which is exactly
+    // what made an archive result vanish on the next navigation. It now
+    // survives until 50 newer settled past records exist — the same claim
+    // this test always made about the pending record and the foreign key.
     writePlayRecord(
       record({
         date: "2026-07-28",
@@ -293,10 +298,86 @@ describe("prunePlayRecords", () => {
 
     prunePlayRecords("2026-07-30");
 
-    expect(readPlayRecord("binairo", "2026-07-28")).toBeUndefined();
+    expect(readPlayRecord("binairo", "2026-07-28")).toBeDefined();
     expect(readPlayRecord("binairo", "2026-07-29")).toBeDefined();
     expect(readPlayRecord("binairo", "2026-07-30")).toBeDefined();
     expect(window.localStorage.getItem("unrelated-key")).toBe("left alone");
+  });
+});
+
+describe("bounded retention (T-WEB-S186)", () => {
+  /** A settled binairo record for `date`, the prune's own candidate shape. */
+  const past = (date: string) =>
+    record({ date, pendingSync: false, syncOutcome: "recorded" });
+
+  it("T-WEB-S186: a settled PAST record survives a later daily mount", () => {
+    // The bug this cap exists to fix (#31, ADR-0053 decision 14): the prune
+    // runs on EVERY play mount with that mount's date, and every archive
+    // record is dated before today by construction — so before the cap, an
+    // archive result was deleted on the NEXT NAVIGATION, in the same session,
+    // and the archive play URL could not re-render it.
+    writePlayRecord(past("2026-03-02"));
+    prunePlayRecords("2026-08-14");
+    expect(readPlayRecord("binairo", "2026-03-02")).toBeDefined();
+  });
+
+  it("T-WEB-S186: with 51 settled past records the OLDEST BY DATE is the one deleted, and 50 survive", () => {
+    const dates = Array.from(
+      { length: 51 },
+      (_, index) => `2026-05-${String(index + 1).padStart(2, "0")}`,
+    );
+    for (const date of dates) {
+      writePlayRecord(past(date));
+    }
+
+    prunePlayRecords("2026-08-14");
+
+    const survivors = dates.filter(
+      (date) => readPlayRecord("binairo", date) !== undefined,
+    );
+    expect(survivors).toHaveLength(50);
+    // The ordering key is `record.date` — the only orderable field the record
+    // has, since the schema carries no written-at timestamp and adding one is
+    // a versioned-schema decision this ticket has no business making.
+    expect(survivors).not.toContain("2026-05-01");
+    expect(survivors[0]).toBe("2026-05-02");
+  });
+
+  it("T-WEB-S186: a pendingSync record is never deleted, whatever its date or the store's size", () => {
+    writePlayRecord(record({ date: "2026-01-01", pendingSync: true }));
+    for (let index = 0; index < 60; index += 1) {
+      writePlayRecord(
+        past(`2026-05-${String((index % 28) + 1).padStart(2, "0")}`),
+      );
+    }
+    prunePlayRecords("2026-08-14");
+    // The only copy of a completion the server has not acknowledged — and
+    // the reason `429 archive-cap` can be non-terminal at all.
+    expect(readPlayRecord("binairo", "2026-01-01")).toBeDefined();
+  });
+
+  it("T-WEB-S186: a record that does not address its own key is still dropped, whatever its date", () => {
+    // Unsyncable by construction, so keeping it forever keeps nothing. It
+    // goes at ANY date and whatever its `pendingSync` — the one drop the cap
+    // does not soften.
+    const foreign = playRecordKey("sudoku", "2026-08-14");
+    window.localStorage.setItem(
+      foreign,
+      JSON.stringify(record({ date: "2026-08-14", pendingSync: true })),
+    );
+    prunePlayRecords("2026-08-14");
+    expect(window.localStorage.getItem(foreign)).toBeNull();
+  });
+
+  it("T-WEB-S186: today's record is never a prune candidate, so the daily surfaces are untouched", () => {
+    writePlayRecord(record({ date: "2026-08-14", pendingSync: false }));
+    for (let index = 0; index < 60; index += 1) {
+      writePlayRecord(
+        past(`2026-05-${String((index % 28) + 1).padStart(2, "0")}`),
+      );
+    }
+    prunePlayRecords("2026-08-14");
+    expect(readPlayRecord("binairo", "2026-08-14")).toBeDefined();
   });
 });
 
@@ -377,7 +458,10 @@ describe("the union on `game` (T-WEB-S11)", () => {
 
     prunePlayRecords("2026-07-30");
 
-    expect(readPlayRecord("sudoku", "2026-07-28")).toBeUndefined();
+    // #31: the settled past record is inside the retention cap, so it stays
+    // (ADR-0053 decision 14). The claim this test carries is the GAME-BLIND
+    // one — one store, every game — and that is unchanged.
+    expect(readPlayRecord("sudoku", "2026-07-28")).toBeDefined();
     expect(readPlayRecord("sudoku", "2026-07-29")).toBeDefined();
     expect(readPlayRecord("binairo", "2026-07-29")).toBeDefined();
     expect(readPlayRecord("nonogram", "2026-07-29")).toBeDefined();
