@@ -38,6 +38,7 @@ export default function PrivacyPage() {
           <li>{messages.privacy.collected.account}</li>
           <li>{messages.privacy.collected.email}</li>
           <li>{messages.privacy.collected.telemetry}</li>
+          <li>{messages.privacy.collected.medals}</li>
         </ul>
       </section>
 

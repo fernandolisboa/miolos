@@ -1,6 +1,6 @@
 import { statsResponseSchema, type StatsCalendarResponse } from "@miolos/core";
 import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import StatsPage from "../app/estatisticas/page";
 import {
@@ -22,6 +22,16 @@ const clients = vi.hoisted(() => ({
   fetchStatsCalendar: vi.fn(),
 }));
 vi.mock("../src/stats/stats-client", () => clients);
+
+// #30's third client, mocked for the same seam reason (B6): without this,
+// `useMedals()` would run the real `fetchMedals` in jsdom — a loud
+// console.error from the env guard in every test and an un-acted
+// `setValue`. The medal renderings themselves are medals-section.test.tsx's
+// claim; here the pending promise keeps the section in its no-DOM state.
+const medalsClient = vi.hoisted(() => ({
+  fetchMedals: vi.fn(),
+}));
+vi.mock("../src/medals/medals-client", () => medalsClient);
 
 /** A populated summary: sudoku carries values, binairo carries nulls. */
 const STATS = statsResponseSchema.parse({
@@ -63,6 +73,12 @@ const CALENDAR: StatsCalendarResponse = {
     { date: "2026-08-02", state: "missed", perfect: false },
   ],
 };
+
+beforeEach(() => {
+  // Unsettled forever: every suite here is about the stats surfaces, and
+  // an unsettled medals fetch renders no medal DOM at all (D8).
+  medalsClient.fetchMedals.mockReturnValue(new Promise(() => undefined));
+});
 
 afterEach(() => {
   vi.restoreAllMocks();

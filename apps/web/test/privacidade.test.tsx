@@ -42,6 +42,9 @@ describe("the privacy policy page (T-WEB-S141)", () => {
     expect(markup).toContain(messages.privacy.why.reminder);
     expect(markup).toContain(messages.privacy.noPassword.body);
     expect(markup).toContain(messages.privacy.collected.telemetry);
+    // #30 (ADR-0052): operator-recorded medal grants are data about the
+    // user, so the inventory names them the release the table ships.
+    expect(markup).toContain(messages.privacy.collected.medals);
   });
 });
 

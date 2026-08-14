@@ -32,10 +32,10 @@ export default function StatsPage() {
         <h1 className={styles.title}>{messages.stats.title}</h1>
       </div>
 
-      {/* The island owns the whole data composition: summary → (#30's
-          future medal section) → per-game blocks → calendar (plan 033
-          D10's screen order — the medal slot comment lives at the exact
-          seam inside stats-view.tsx). */}
+      {/* The island owns the whole data composition: summary → #30's
+          medal section → per-game blocks → calendar (plan 033 D10's
+          screen order — the medal section lives at that exact seam
+          inside stats-view.tsx, ADR-0052). */}
       <StatsView />
     </main>
   );

@@ -339,6 +339,22 @@ export const messages = {
     },
   },
   /**
+   * The medal section's CHROME only (#30, ADR-0052) — the 23 per-medal
+   * name/description records live in `src/medals/copy.ts` (`medalCopy`),
+   * NOT here, and never may: measured on this branch, a second export of
+   * this module kept the ~2 KB of prose in the shared chunk of every
+   * route that imports `messages` for anything else (plan 035 §14 watch
+   * item 2's recorded fallback, applied). Only the medal section's own
+   * module graph carries the prose.
+   */
+  medals: {
+    title: "Medalhas",
+    // Complete aria composer (ADR-0018): the earned fact, whole. No date —
+    // none exists on the wire (ADR-0052).
+    earnedAria: (name: string, description: string) =>
+      `${name} — ${description}`,
+  },
+  /**
    * Free-play chrome (#28, ADR-0046) — shared-chrome position, like `play`
    * and `conclusion` above. Game names and kickers are reused from
    * `games.<game>`, never duplicated (plan 018 S19). No completion
@@ -487,6 +503,12 @@ export const messages = {
         "O seu e-mail, somente se você escolher vinculá-lo. Ninguém precisa vincular e-mail para jogar.",
       telemetry:
         "Medições técnicas mínimas de uso e desempenho. Não gravamos a sua tela nem as suas sessões.",
+      // #30 (ADR-0052): a `medal_grants` row is operator-written data
+      // about the user, so the inventory names it the release it ships —
+      // the page states EXACTLY what this release ships (this block's own
+      // doc comment), and deferring the line would be exactly that drift.
+      medals:
+        "As medalhas: a maioria é calculada do seu histórico de jogos; algumas são concedidas manualmente pela equipe e ficam registradas na sua conta. Todas são apagadas junto com a conta.",
     },
     why: {
       heading: "Para que usamos",
