@@ -14,16 +14,75 @@ allowBuilds:
   puppeteer: false
   sharp: true
   unrs-resolver: true
-# Exact versions newer than pnpm 11's release-age cooldown at install time,
-# integrity-locked in pnpm-lock.yaml. Prune once they have aged past it.
-minimumReleaseAgeExclude:
-  - "@turbo/darwin-64@2.10.8"
-  - "@turbo/darwin-arm64@2.10.8"
-  - "@turbo/linux-64@2.10.8"
-  - "@turbo/linux-arm64@2.10.8"
-  - "@turbo/windows-64@2.10.8"
-  - "@turbo/windows-arm64@2.10.8"
-  - lint-staged@17.3.0
-  - turbo@2.10.8
-  - "@types/react-dom@19.2.4"
-  - "@types/react@19.2.18"
+# Supply-chain cooldown: seven days, up from pnpm 11's built-in 1440 (one day),
+# which applied here until now by default rather than by decision. pnpm holds a
+# published version at arm's length for this long before it may be resolved,
+# and re-checks every entry in pnpm-lock.yaml on install — so it is a floor on
+# the age of everything installed, transitive dependencies included, not only
+# on what a `pnpm add` pulls in today. The bet is narrow and empirical: the npm
+# account takeovers of the last two years were spotted and the malicious
+# versions unpublished within hours to a couple of days, so waiting a week is
+# the cheapest possible defence — someone else finds it first, and we never
+# resolve the bad version at all.
+#
+# It is not a defence against a *patient* attacker, and it does nothing about
+# code already in the lockfile. It buys latency, and latency only.
+#
+# What the seven days cost: a brand-new release cannot be adopted for a week.
+# `pnpm add foo@latest` against a package published yesterday fails to resolve,
+# and so does `pnpm install --frozen-lockfile` if any locked version is younger
+# than the window — including in CI, where the failure is a red gate rather
+# than a warning. That is the setting working, not a bug to route around.
+#
+# Setting minimumReleaseAge explicitly also flips minimumReleaseAgeStrict on
+# (it defaults to true whenever the value is configured, false when the value
+# is merely inherited). Under the old implicit default pnpm resolved the too-new
+# version anyway and silently wrote the pair into a minimumReleaseAgeExclude
+# list right here in this file — that is exactly where the ten @turbo, turbo,
+# lint-staged and @types entries deleted alongside this line came from, and a
+# machine-written permanent bypass is worse than a failed install. Strict mode
+# fails loudly instead; leave it on.
+#
+# Deliberate exception, for when a security patch genuinely has to land inside
+# the window: add the exact `name@version` — never a bare name, never a range —
+# to a `minimumReleaseAgeExclude` list recreated below, in its own commit, with
+# a comment naming the advisory and the date the entry may be pruned. An entry
+# is a permanent age-check bypass for everything it matches, so pinning it to
+# one version makes the bypass die at the next bump. Prune it once the version
+# has aged past the window; pnpm-lock.yaml still integrity-locks it either way.
+minimumReleaseAge: 10080
+# Refuse a version whose publish-time trust evidence is weaker than that of a
+# version published before it — trusted publisher (OIDC) > provenance
+# attestation > nothing. A maintainer's npm token leaking and the attacker
+# publishing by hand is precisely a package that used to have provenance and
+# suddenly does not, so this catches the shape of the recent compromises
+# without our having to notice them. Default is `off`.
+#
+# The check is publish-date ordered, not semver ordered, and it says nothing
+# about packages that never had trust evidence in the first place — plenty of
+# the lockfile is in that category and stays installable. What it costs is a
+# hard install failure (ERR_PNPM_TRUST_DOWNGRADE) if a dependency we already
+# use regresses its publishing setup for innocent reasons. Handle that with a
+# narrow `trustPolicyExclude` entry and a comment, the same way as below; do
+# not turn the policy off.
+trustPolicy: no-downgrade
+# The two entries the existing lockfile fails on, both the same false-positive
+# shape: an old-major MAINTENANCE release cut after the current major line had
+# already adopted provenance. Because the check orders by publish date and not
+# by semver, the back-port looks like evidence being withdrawn. Verified
+# against the registry rather than assumed — dates and attestation status from
+# `registry.npmjs.org/<pkg>`:
+# - semver@6.3.1, published 2023-07-10 with no attestation, while semver@7.5.1
+#   (2023-05-12) through 7.5.4 (2023-07-07) carry one. It is the npm CLI team's
+#   own back-port of the 6.x line, reached transitively through @babel/core,
+#   eslint-plugin-import and eslint-plugin-react — dev tooling only.
+# - eslint-import-resolver-typescript@3.10.1, published 2025-04-21 with no
+#   attestation, while the 4.x line has carried one since 4.2.6 (2025-03-28).
+#   Pinned to 3.x by eslint-config-next@16.2.12; not ours to bump.
+# Exact `name@version`, so both bypasses expire the moment either version
+# moves. Recheck at the next eslint-config-next major: if it has moved to
+# eslint-import-resolver-typescript 4.x, delete that entry rather than
+# carrying it forward.
+trustPolicyExclude:
+  - semver@6.3.1
+  - eslint-import-resolver-typescript@3.10.1
