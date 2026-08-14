@@ -11,22 +11,22 @@
    Do instead: prefix shell commands with `source ~/.nvm/nvm.sh && nvm use default >/dev/null &&` (→ Node 24.18.1; jsdom needs ≥24.15).
 2. **[2026-07-31] Evidence rule: never report a gate as passing without pasted output**
    Do instead: run `pnpm typecheck && pnpm lint && pnpm test` and include real output in the PR body.
-3. **[2026-07-31] `packages/games` purity gate is armed and evasion-hardened**
-   Do instead: zero RN/Node deps there; property-based tests (fast-check) from the first generator; `createSeededRandom` is the PRNG substrate.
-4. **[2026-08-01] GitHub CI runners are ~3-4x slower than the dev machine — heavy property tests near their timeout flake on main**
+3. **[2026-08-01] GitHub CI runners are ~3-4x slower than the dev machine — heavy property tests near their timeout flake on main**
    Do instead: size in-file test timeouts at local wall time × 4 with margin; any test >10s locally gets an explicit timeout with the arithmetic in a comment (vitest default 5s; no vitest.config.ts in games per ADR-0017).
-5. **[2026-08-13] An ADR that amends another owes a reciprocal `**Amended by:**` header line in the amended file — step-6 reviewers reject its absence**
+4. **[2026-08-13] An ADR that amends another owes a reciprocal `**Amended by:**` header line in the amended file — step-6 reviewers reject its absence**
    Do instead: mirror the 0033↔0047 idiom (now also 0031/0041↔0048, 0026↔0049) in the same docs commit; plan exit criteria should name it. A corrected *sufficiency claim* in an old ADR's consequences counts as an amendment (0049 precedent).
-6. **[2026-08-13] Unused API surface with contract comments naming non-existent consumers is a HIGH review finding in this repo**
+5. **[2026-08-13] Unused API surface with contract comments naming non-existent consumers is a HIGH review finding in this repo**
    Do instead: ship only options/params a real call site uses; delete speculative hooks-of-the-future (useStreak enabled/refreshKey precedent; a generic `<T>` justified only by a future consumer died in #20's plan review).
-7. **[2026-08-13] ADR-0023 reserves "prove" for construction-backed invariants — in tests AND docs, all packages, not just games**
+6. **[2026-08-13] ADR-0023 reserves "prove" for construction-backed invariants — in tests AND docs, all packages, not just games**
    Do instead: single-fixture tests "pin" or "show"; reviewers rejected "proves/proved" three times across #20's rounds.
-8. **[2026-08-13] `rm -rf apps/web/.next` (required before typecheck) deletes the stats file `pnpm bundle-check` reads**
+7. **[2026-08-13] `rm -rf apps/web/.next` (required before typecheck) deletes the stats file `pnpm bundle-check` reads**
    Do instead: run `pnpm build` in apps/web before bundle-check whenever .next was wiped.
-9. **[2026-08-14] Pre-commit's full suite flakes under turbo's parallel fan-out (PGlite `beforeAll` timeouts, non-deterministic) — and turbo caches gate runs, so a cached re-run is a log replay, not evidence**
+8. **[2026-08-14] Pre-commit's full suite flakes under turbo's parallel fan-out (PGlite `beforeAll` timeouts, non-deterministic) — and turbo caches gate runs, so a cached re-run is a log replay, not evidence**
    Do instead: prefix every commit with `TURBO_CONCURRENCY=1 git commit …` (all ten of #29's commits needed it); re-run gates for PR-body evidence with `--force`.
-10. **[2026-08-14] `impeccable detect` in CI runs per-viewport — desktop green does not imply mobile green**
+9. **[2026-08-14] `impeccable detect` in CI runs per-viewport — desktop green does not imply mobile green**
    Do instead: check BOTH steps of the detect job (`/estatisticas` failed mobile-only on first-viewport-column-overflow; fix was mobile block flow, `0311f32`).
+10. **[2026-08-14] A fix that changes a PLAN statement owes a §-deviations entry in the same round — the falsified-record standard applies to plans, not just ADRs**
+   Do instead: after every step-7 fix, sweep the committed plan for now-false prescriptions and append the deviation (the #30 verification round REJECTED solely for five stale plan sentences after the a11y fix; ADR-0018↔0052 was the same class one commit earlier).
 
 ## Parallel-Stream Orchestration
 1. **[2026-07-31] docs/ numbering is global and the docs/README.md "Current" table row ships in the same PR as the artifact**
