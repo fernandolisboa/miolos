@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatMonth, messages } from "../src/i18n";
+import { formatDayInMonth, formatMonth, messages } from "../src/i18n";
 
 // One month of the archive (#31 AC 1, ADR-0053 decision 1). The page is an
 // async server component, so it is invoked as a plain function; the view it
@@ -86,6 +86,24 @@ describe("the archive month page (T-WEB-S169)", () => {
     expect(
       screen.getByRole("link", { name: messages.archive.backToIndexAria }),
     ).toHaveAttribute("href", "/arquivo");
+
+    // The rows carry the DAY and its weekday, never the month and year the
+    // `<h1>` directly above has just stated (step-6 F9). With 31 rows the old
+    // shape left about six distinct words on the page, and the only varying
+    // token — the leading day number — was not the visual anchor.
+    expect(screen.getByText(formatDayInMonth("2026-08-02"))).toBeVisible();
+    expect(screen.getByText(formatDayInMonth("2026-08-01"))).toBeVisible();
+    expect(screen.queryByText("2 de agosto de 2026")).toBeNull();
+    // The SAME string is the row's accessible name, so WCAG 2.5.3's
+    // label-in-name holds in this mode too.
+    expect(
+      screen.getByRole("link", {
+        name: messages.archive.dayRowAria(formatDayInMonth("2026-08-02"), [
+          messages.games.binairo.name,
+          messages.games.sudoku.name,
+        ]),
+      }),
+    ).toHaveAttribute("href", "/arquivo/2026-08-02");
   });
 
   it("each sibling link is ABSENT at the archive's own edges", async () => {
