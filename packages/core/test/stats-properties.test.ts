@@ -53,7 +53,7 @@ const inputArb = todayDayArb.chain((todayDay) =>
 
 /** since ≤ today always, at most 45 days back — the enumeration's domain. */
 const sinceOffsetArb = fc.integer({ min: 0, max: 45 });
-const acceptedDaysBackArb = fc.integer({ min: 0, max: 5 });
+const rolloverSlackDaysArb = fc.integer({ min: 0, max: 5 });
 
 describe("stats derivations — properties (ADR-0023)", () => {
   it("T-CORE-S61: d ∈ perfectDays(rows) ⇔ all four games hold a won-on-time row dated d — a date set, never a run length", () => {
@@ -93,23 +93,28 @@ describe("stats derivations — properties (ADR-0023)", () => {
       fc.property(
         inputArb,
         sinceOffsetArb,
-        acceptedDaysBackArb,
+        rolloverSlackDaysArb,
         fc.infiniteStream(fc.nat()),
-        ({ todayDay, today, rows }, sinceOffset, acceptedDaysBack, indices) => {
+        (
+          { todayDay, today, rows },
+          sinceOffset,
+          rolloverSlackDays,
+          indices,
+        ) => {
           const since = dateFromEpochDay(todayDay - sinceOffset);
           const referencePerfect = perfectDays(rows);
           const referenceCalendar = computeCalendar(
             rows,
             since,
             today,
-            acceptedDaysBack,
+            rolloverSlackDays,
           );
           const referenceStats = computeStats(rows, today);
           // Repeated calls agree (determinism: no clock, no randomness).
           expect(perfectDays(rows)).toEqual(referencePerfect);
-          expect(computeCalendar(rows, since, today, acceptedDaysBack)).toEqual(
-            referenceCalendar,
-          );
+          expect(
+            computeCalendar(rows, since, today, rolloverSlackDays),
+          ).toEqual(referenceCalendar);
           expect(computeStats(rows, today)).toEqual(referenceStats);
           // Any permutation agrees (the T-CORE-S30 shuffle).
           const shuffled = [...rows];
@@ -125,7 +130,7 @@ describe("stats derivations — properties (ADR-0023)", () => {
           }
           expect(perfectDays(shuffled)).toEqual(referencePerfect);
           expect(
-            computeCalendar(shuffled, since, today, acceptedDaysBack),
+            computeCalendar(shuffled, since, today, rolloverSlackDays),
           ).toEqual(referenceCalendar);
           expect(computeStats(shuffled, today)).toEqual(referenceStats);
         },
@@ -139,11 +144,11 @@ describe("stats derivations — properties (ADR-0023)", () => {
       fc.property(
         inputArb,
         sinceOffsetArb,
-        acceptedDaysBackArb,
-        ({ todayDay, today, rows }, sinceOffset, acceptedDaysBack) => {
+        rolloverSlackDaysArb,
+        ({ todayDay, today, rows }, sinceOffset, rolloverSlackDays) => {
           const sinceDay = todayDay - sinceOffset;
           const since = dateFromEpochDay(sinceDay);
-          const days = computeCalendar(rows, since, today, acceptedDaysBack);
+          const days = computeCalendar(rows, since, today, rolloverSlackDays);
           const perfect = new Set(perfectDays(rows));
 
           // Never empty for since ≤ today, and the last entry IS today.
@@ -159,7 +164,7 @@ describe("stats derivations — properties (ADR-0023)", () => {
           const wonDaysWithinBound = rows
             .filter((row) => row.outcome === "won")
             .map((row) => epochDay(row.date))
-            .filter((day) => day >= sinceDay - acceptedDaysBack);
+            .filter((day) => day >= sinceDay - rolloverSlackDays);
           const expectedStart = Math.min(sinceDay, ...wonDaysWithinBound);
           expect(epochDay(days[0]?.date ?? "")).toBe(expectedStart);
 
@@ -189,6 +194,63 @@ describe("stats derivations — properties (ADR-0023)", () => {
         },
       ),
       { numRuns: 100, seed: 20_260_829 },
+    );
+  });
+
+  it("T-CORE-S84: however far back the rows reach, every emitted date lies in [since − rolloverSlackDays, today] — the fabricated-`missed` impossibility", () => {
+    // #31 removes the write window's lower bound, so rows may now be dated
+    // ARBITRARILY far before `since`. This is the bound that makes the
+    // constant split load-bearing: the clamp follows the rollover slack,
+    // never the write window, so no quantity of far-past rows can drag the
+    // range back and paint days the account did not exist for.
+    //
+    // Stated as a two-sided BOUND, not as an equality against a
+    // recomputed `effectiveSince`: recomputing the clamp here would make
+    // the property a tautology of the code under test, and reading the
+    // start off the output would make it vacuous. T-CORE-S64 already owns
+    // the exact-clamp claim over rows clustered near `today`; this one
+    // owns the archive's row distribution.
+    const archiveRowArb = (todayDay: number): fc.Arbitrary<StatsRow> =>
+      fc.record({
+        game: fc.constantFrom(...GAMES),
+        // Up to ~5 years back: the archive's real reach, not a window.
+        date: fc
+          .integer({ min: todayDay - 1_800, max: todayDay + 2 })
+          .map((day) => dateFromEpochDay(day)),
+        outcome: fc.constantFrom(...COMPLETION_OUTCOMES),
+        onTime: fc.boolean(),
+        elapsedMs: fc.integer({ min: 0, max: 3_600_000 }),
+        hintsUsed: fc.integer({ min: 0, max: 3 }),
+        guesses: fc.option(fc.integer({ min: 1, max: 6 }), { nil: null }),
+      });
+
+    fc.assert(
+      fc.property(
+        todayDayArb.chain((todayDay) =>
+          fc.record({
+            todayDay: fc.constant(todayDay),
+            today: fc.constant(dateFromEpochDay(todayDay)),
+            rows: fc.array(archiveRowArb(todayDay), { maxLength: 80 }),
+          }),
+        ),
+        sinceOffsetArb,
+        rolloverSlackDaysArb,
+        ({ todayDay, today, rows }, sinceOffset, rolloverSlackDays) => {
+          const sinceDay = todayDay - sinceOffset;
+          const since = dateFromEpochDay(sinceDay);
+          const days = computeCalendar(rows, since, today, rolloverSlackDays);
+
+          const floor = sinceDay - rolloverSlackDays;
+          for (const day of days) {
+            expect(epochDay(day.date)).toBeGreaterThanOrEqual(floor);
+            expect(epochDay(day.date)).toBeLessThanOrEqual(todayDay);
+          }
+          // And the bound is not vacuous: the enumeration always reaches
+          // today, so an implementation that emitted nothing would fail.
+          expect(days.at(-1)?.date).toBe(today);
+        },
+      ),
+      { numRuns: 100, seed: 20_260_814 },
     );
   });
 });

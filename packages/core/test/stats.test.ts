@@ -132,7 +132,7 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
     expect(empty.every((day) => day.state === "missed")).toBe(true);
 
     // The D6 clamp (won-only, the step-6 correction). A WON row exactly
-    // `acceptedDaysBack` days before `since` (the birth-midnight write)
+    // `rolloverSlackDays` days before `since` (the birth-midnight write)
     // extends the range to reach it — and the extension day carries the
     // row's own colouring, never a fabricated "missed"…
     const birthEdge = computeCalendar(
@@ -149,7 +149,7 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
     // …while a won row earlier than the bound never extends at all: it
     // emits NO day entry and the range start stays at `since` (under the
     // won-only rule an out-of-bound row contributes nothing — there is no
-    // padded start at since − acceptedDaysBack for it to reach).
+    // padded start at since − rolloverSlackDays for it to reach).
     const farRow = row({ game: "binairo", date: "2026-08-03", onTime: false });
     const clamped = computeCalendar([farRow], SINCE, TODAY, 1);
     expect(clamped.map((day) => day.date)).toEqual([
@@ -180,7 +180,7 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
 
   it("T-CORE-S63a: only a won row extends the range — a lost row at since − 1 never does, a won row there does, a far won row does not", () => {
     // The reachable-today case the step-6 correction exists for: a 00:20
-    // account loses yesterday's Termo (`ACCEPTED_DAYS_BACK` admits the
+    // account loses yesterday's Termo (the rollover slack admits the
     // write). A lost row colours no day (D6), so letting it extend would
     // paint "missed" on a day the account did not exist for — it must NOT
     // extend, and the loss still lands in the fail row.
@@ -225,6 +225,118 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
     const farOnly = computeCalendar([farWon], SINCE, TODAY, 1);
     expect(farOnly[0]?.date).toBe(SINCE);
     expect(computeStats([farWon], TODAY).sudoku.solved).toBe(1);
+  });
+});
+
+describe("computeCalendar after the archive widening (#31, ADR-0053)", () => {
+  // #31 removes the WRITE window's lower bound, so a late won row may now
+  // be dated arbitrarily far before the account's birth day. The clamp is
+  // fed by ROLLOVER_SLACK_DAYS — a different constant with a different
+  // owner — and these four cases are what makes that split load-bearing
+  // rather than cosmetic (ADR-0053 decisions 6 and 7).
+  const SINCE = "2026-08-10";
+
+  it("T-CORE-S80: a pre-birth late win is off-calendar and the aggregates still carry it", () => {
+    // ADR-0051 decision 2's SECOND sanctioned exit, taken verbatim:
+    // "off-calendar with the aggregates carrying them". 400 days back is
+    // the class #31 creates and nothing else could — before #31 a won row
+    // could be at most one day before `since`.
+    const prebirth = row({
+      game: "binairo",
+      date: "2025-07-06",
+      onTime: false,
+    });
+    const days = computeCalendar([prebirth], SINCE, TODAY, 1);
+
+    expect(days.some((day) => day.date === "2025-07-06")).toBe(false);
+    expect(days[0]?.date).toBe(SINCE);
+    expect(days).toHaveLength(4);
+    // Not one fabricated "missed" day between the row and the range start.
+    expect(days.every((day) => day.date >= SINCE)).toBe(true);
+    // And it still moves the one aggregate ADR-0051 decision 6 lets it
+    // move: `solved` carries late wins by decision.
+    expect(computeStats([prebirth], TODAY).binairo.solved).toBe(1);
+  });
+
+  it("T-CORE-S81: the clamp is fed by rollover slack, not by the write window", () => {
+    // At a slack of 1, a won row two or more days before `since` never
+    // extends the range — whatever its `onTime`. This is the property the
+    // constant split exists to hold: a clamp that followed the write
+    // window would drag the range back arbitrarily and paint "missed" over
+    // days the account did not exist for (ADR-0051's Rejected list).
+    for (const onTime of [true, false]) {
+      const twoBack = row({ game: "sudoku", date: "2026-08-08", onTime });
+      expect(computeCalendar([twoBack], SINCE, TODAY, 1)[0]?.date).toBe(SINCE);
+      // One day back is inside the slack and does extend, both ways.
+      const oneBack = row({ game: "sudoku", date: "2026-08-09", onTime });
+      expect(computeCalendar([oneBack], SINCE, TODAY, 1)[0]?.date).toBe(
+        "2026-08-09",
+      );
+    }
+  });
+
+  it("T-CORE-S82: a late win inside the range renders 'late', and precedence is unchanged by far-past rows", () => {
+    // AC 3's common case — an account solving an archived day from inside
+    // its own lifetime — through machinery that already ships end to end.
+    const insideRange = row({
+      game: "binairo",
+      date: "2026-08-11",
+      onTime: false,
+    });
+    const farPast = row({ game: "sudoku", date: "2024-01-02", onTime: false });
+    const onTimeSameDay = row({ game: "nonogram", date: "2026-08-12" });
+    const lateSameDay = row({
+      game: "sudoku",
+      date: "2026-08-12",
+      onTime: false,
+    });
+
+    const days = computeCalendar(
+      [insideRange, farPast, onTimeSameDay, lateSameDay],
+      SINCE,
+      TODAY,
+      1,
+    );
+    expect(days).toEqual([
+      { date: "2026-08-10", state: "missed", perfect: false },
+      { date: "2026-08-11", state: "late", perfect: false },
+      // on-time > late on the same date, with a far-past row present.
+      { date: "2026-08-12", state: "onTime", perfect: false },
+      { date: "2026-08-13", state: "missed", perfect: false },
+    ]);
+  });
+
+  it("T-CORE-S83: a late lost row colours nothing and still counts in the fail row; a late win never reaches perfectDays", () => {
+    // The two halves are asserted together on purpose: a future "fix" of
+    // either one reds the other. D10 keeps ADR-0008 rule 3 as written —
+    // the fail row moves from archive play, and AC 3's carve-out says so.
+    const lateLoss = row({
+      game: "termo",
+      date: "2026-08-11",
+      outcome: "lost",
+      onTime: false,
+      guesses: 6,
+    });
+    expect(computeCalendar([lateLoss], SINCE, TODAY, 1)[1]).toEqual({
+      date: "2026-08-11",
+      state: "missed",
+      perfect: false,
+    });
+    expect(computeStats([lateLoss], TODAY).termo.distribution[6]).toBe(1);
+
+    // Four late wins on one date are NOT a Dia Perfeito: `perfectDays`
+    // returns on `!countsOnTimeWon` at the first line of its loop, so a
+    // late row never reaches it — inside the range or before it.
+    const lateAll = [
+      row({ game: "binairo", date: "2026-08-11", onTime: false }),
+      row({ game: "sudoku", date: "2026-08-11", onTime: false }),
+      row({ game: "nonogram", date: "2026-08-11", onTime: false }),
+      row({ game: "termo", date: "2026-08-11", onTime: false }),
+    ];
+    expect(perfectDays(lateAll)).toEqual([]);
+    expect(
+      computeCalendar(lateAll, SINCE, TODAY, 1).every((day) => !day.perfect),
+    ).toBe(true);
   });
 });
 

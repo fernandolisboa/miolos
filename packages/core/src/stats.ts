@@ -9,8 +9,11 @@
  * No clock, no timezone, no I/O enters this module (the `streak.ts`
  * register). `today` and `since` are parameters the caller supplies from
  * the DB clock (`todaySaoPaulo(db)`, ADR-0010's single authority), and
- * `acceptedDaysBack` is the route-passed bound (ADR-0026 decision 6 keeps
+ * `rolloverSlackDays` is the route-passed bound (ADR-0026 decision 6 keeps
  * it in the route layer — core takes it as a parameter, never a constant).
+ * It is the calendar's rollover slack and NOT the write window; #31 split
+ * the two (ADR-0053 decision 6), and `computeCalendar`'s doc block says
+ * what joining them again would fabricate.
  *
  * Every exclusion rule lives HERE, where seam 2 tests it (plan 033 D3):
  * the db reader is deliberately unfiltered, and the two shared predicates
@@ -190,11 +193,11 @@ export interface CalendarDay {
  *   min( epochDay(since),
  *        min over { epochDay(row.date) :
  *                   row.outcome === "won"
- *                   ∧ epochDay(row.date) ≥ epochDay(since) − acceptedDaysBack } )
+ *                   ∧ epochDay(row.date) ≥ epochDay(since) − rolloverSlackDays } )
  *
  * (the set may be empty → epochDay(since)). The backward extension exists
  * because a completion may legitimately be dated before account creation
- * (a 00:30 account completing yesterday's puzzle, `ACCEPTED_DAYS_BACK`),
+ * (a 00:30 account completing yesterday's puzzle — the ROLLOVER SLACK),
  * and such a row must appear. But only a row that actually COLOURS a day —
  * a won row — may extend the range: a lost row colours nothing (D6), so
  * letting it extend would paint "missed" over a day the account did not
@@ -204,15 +207,30 @@ export interface CalendarDay {
  * extends (the unbounded min() was rejected at plan review). Rows dated
  * before `effectiveSince` emit no day entry here and still feed every
  * `computeStats` aggregate; rows dated after `today` are inert (the
- * `computeStreak` posture). When #31 widens `ACCEPTED_DAYS_BACK` it must
- * revisit how a pre-birth late completion renders (ADR-0051 decision 2
- * records the obligation).
+ * `computeStreak` posture).
+ *
+ * THE PARAMETER IS THE ROLLOVER SLACK, NEVER THE WRITE WINDOW (#31,
+ * ADR-0053 decisions 6 and 7). The two were one constant until #31, which
+ * removed the write window's lower bound entirely: a completion may now
+ * target any published past day. A clamp that followed that window would
+ * drag the range back arbitrarily far and paint fabricated "missed" days
+ * over an account's whole pre-history — the failure ADR-0051's Rejected
+ * list names. So the write window lives in `isWritableDate` and the clamp
+ * is fed by `ROLLOVER_SLACK_DAYS` (both in `apps/api/src/publishing`),
+ * one owner each, and the two must never be joined again.
+ *
+ * The consequence for the class #31 creates is decided, not deferred: a
+ * late won row dated before `effectiveSince` is OFF-CALENDAR — it emits no
+ * day entry — and the aggregates carry it. It still moves `solved`
+ * (`computeStats`, ADR-0051 decision 6) and the volume medals, and it
+ * reaches neither `perfectDays` (which returns on `!countsOnTimeWon`
+ * above) nor any time statistic nor Termo buckets 1–6.
  */
 export function computeCalendar(
   rows: readonly StatsRow[],
   since: string,
   today: string,
-  acceptedDaysBack: number,
+  rolloverSlackDays: number,
 ): readonly CalendarDay[] {
   const sinceDay = epochDay(since);
   const todayDay = epochDay(today);
@@ -220,7 +238,7 @@ export function computeCalendar(
   if (sinceDay > todayDay) {
     return [];
   }
-  const extensionFloorDay = sinceDay - acceptedDaysBack;
+  const extensionFloorDay = sinceDay - rolloverSlackDays;
   let effectiveSince = sinceDay;
   const wonOnTimeDays = new Set<number>();
   const wonLateDays = new Set<number>();
