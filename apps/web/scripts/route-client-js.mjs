@@ -140,6 +140,13 @@ const PER_ROUTE_BUDGET = {
    * lands it in the red.
    */
   "/modo-livre/nonogram": 60 * 1024,
+  // #31 (ADR-0053 decision 1): the archived Termo, at the SAME value `/termo`
+  // carries and for the same ADR-0045 decision 7 reason — the ~36 KB
+  // validation dictionary is the route's whole cost and it is the point of
+  // the game. The date-first route shape is what keeps that dictionary off
+  // the archived Sudoku: four separate build outputs, one per literal game
+  // segment. Third entry in this map, not the second.
+  "/arquivo/[data]/termo": 76 * 1024,
 };
 
 const BUDGETED = [
@@ -156,6 +163,29 @@ const BUDGETED = [
   // client JS (the stats island, both hooks and the month grouping) and
   // must be watched (plan 033 D11.4).
   "/estatisticas",
+  // #31 (ADR-0053): the seven archive routes, in Next's own route-pattern
+  // spelling (verified against `.next/diagnostics/route-bundle-stats.json`).
+  //
+  // The index, the month page and the day page ship near-zero client JS and
+  // ride the shared 40 KB with enormous slack — measured at -38.7 KB against
+  // `/`, i.e. LESS than the hub. They are BUDGETED anyway, because "ships
+  // nothing today" is precisely the route that acquires a library silently.
+  //
+  // The three grid play routes came in BELOW their daily twins (binairo 18.2
+  // vs 33.4, nonogram 19.7 vs 35.5, sudoku 14.4 vs 29.6), and the reason is
+  // structural rather than lucky: the archive shells compose the per-game
+  // hooks and views and never the screen ROOTS, so the whole conclusion tree
+  // — `conclusion-view`, the two per-game conclusions, the streak card and
+  // `day-state` — is outside their graphs (ADR-0053 decision 9, T-WEB-S183).
+  // Plan 037's "named squeeze" on `/arquivo/[data]/nonogram` against a 40 KB
+  // budget therefore did not materialise; it lands at 49 % of it.
+  "/arquivo",
+  "/arquivo/mes/[mes]",
+  "/arquivo/[data]",
+  "/arquivo/[data]/binairo",
+  "/arquivo/[data]/nonogram",
+  "/arquivo/[data]/sudoku",
+  "/arquivo/[data]/termo",
 ];
 
 /**

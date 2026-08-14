@@ -21,6 +21,7 @@ jobs:
         # For deployment_status, GITHUB_SHA is the deployed commit (GitHub docs),
         # so the default checkout gives us the PR's own .impeccable/config.json.
       - name: preflight — assert every scanned route reachable through bypass
+        id: preflight
         # Guards the gate's proven silent-green paths: impeccable detect exits 0
         # on an empty or unreachable URL, and a rotated/empty secret would scan
         # the Vercel SSO page instead of the app. Fail loudly on all of them
@@ -64,6 +65,11 @@ jobs:
           # impeccable-preflight-does-not-cover-the-two-db-backed-urls-it-added).
           # Keep this list and the two detect invocations below in step.
           #
+          # #31 (ADR-0053 decision 12): this list holds LITERAL paths only. The
+          # archive's month, day and play URLs are dates, so they are
+          # DISCOVERED from the app's own HTML after the loop and handed to the
+          # detect steps through `env:` — see the discovery block below.
+          #
           # A 200 is NOT the property that matters, and on a db-backed route it
           # is the failure mode: with no published puzzle for today, /sudoku
           # renders the "ainda não chegou" card at HTTP 200 and detect would
@@ -73,7 +79,7 @@ jobs:
           # (play-view.tsx / conclusion-view.tsx). "/" needs no marker: it reads
           # no database, so reachable and rendered are the same property there.
           status=0
-          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido" "/modo-livre" "/modo-livre/binairo" "/modo-livre/sudoku" "/modo-livre/nonogram" "/privacidade" "/vincular" "/estatisticas"; do
+          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido" "/modo-livre" "/modo-livre/binairo" "/modo-livre/sudoku" "/modo-livre/nonogram" "/privacidade" "/vincular" "/estatisticas" "/arquivo"; do
             case "$path" in
               */concluido) marker='data-conclusion-state=' ;;
               # The free-play index (#28) is static and carries its own
@@ -86,7 +92,13 @@ jobs:
               # a token renders its missing-token explainer, marker
               # included, and /estatisticas is static — its aggregates
               # arrive client-side, so the marker is in the shell.
-              "/privacidade"|"/vincular"|"/estatisticas") marker='data-page=' ;;
+              # #31's archive index carries data-page too. Its three
+              # DATE-BEARING descendants are not in this list and cannot be:
+              # nobody can hardcode a date without inviting drift, a 404 or a
+              # vacuous green. They are DISCOVERED below, from the app's own
+              # HTML, and they carry data-page= (month, day) and
+              # data-play-state= (a play route) respectively.
+              "/privacidade"|"/vincular"|"/estatisticas"|"/arquivo") marker='data-page=' ;;
               "/") marker='' ;;
               *) marker='data-play-state=' ;;
             esac
@@ -106,13 +118,96 @@ jobs:
             esac
             # The body is only ever grepped, never echoed: it is fetched with
             # the bypass secret in the query string and printing it would put
-            # the response in the log.
+            # the response in the log. #31 narrows that rule rather than
+            # breaking it: a PATH extracted from a body may be echoed and
+            # exported, a URL may not — a URL carries the secret.
             if [ -n "$marker" ] && ! grep -q "$marker" "$body"; then
               echo "preflight $path: no $marker in the response — the screen we are about to scan did not render (no published puzzle for today, or a db-backed failure) — refusing to scan"
               status=1
             fi
             rm -f "$body"
           done
+          # ——— #31: DISCOVER the date-bearing archive URLs (ADR-0053 decision 12)
+          # The archive's month, day and play URLs are dates, and every
+          # alternative to discovery is worse in a way that matters: a
+          # hardcoded date DRIFTS the moment the archive's edges move and 404s
+          # forever after; a shell-computed one (`date -d yesterday`) puts a
+          # CLIENT CLOCK in charge of what the São Paulo publication wall
+          # published, which CLAUDE.md's own invariant forbids; and a stable
+          # alias route is a second URL for one resource.
+          #
+          # This matches the URL GRAMMAR rather than the markup, so a restyle
+          # cannot break it, and it cannot 404 — the URLs came out of a 200
+          # body. Only PATHS are exported, never a URL carrying the bypass
+          # secret: each detect step composes its own full URL, so no step
+          # output can contain the secret.
+          month_path=""; day_path=""; play_path=""
+          fetch_path() {
+            curl -sSL -c "$jar" -b "$jar" -o "$2" -w '%{http_code}' \
+              "$DEPLOYMENT_URL$1?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true" || true
+          }
+          index_body=$(mktemp)
+          fetch_path "/arquivo" "$index_body" >/dev/null
+          # The body is only ever grepped, never echoed — it is fetched with
+          # the bypass secret in the query string. A PATH extracted from it may
+          # be echoed; a URL may not.
+          month_path=$(grep -oE '/arquivo/mes/[0-9]{4}-[0-9]{2}' "$index_body" | head -n 1 || true)
+          rm -f "$index_body"
+          if [ -z "$month_path" ]; then
+            # An EMPTY ARCHIVE IS A SKIP, NOT A RED. This job fires on every
+            # preview deployment for every PR, so redding here would block the
+            # gate repo-wide on unrelated work until production has a strictly
+            # past published day. `/arquivo` itself is still asserted 200 +
+            # marker above, unconditionally, so the index can never silently
+            # disappear.
+            echo "preflight: /arquivo lists no month — the archive is empty, skipping the date-bearing scans"
+          else
+            # Re-validated against its own anchored grammar before use: the
+            # source is the deployment's own HTML.
+            case "$month_path" in
+              /arquivo/mes/[0-9][0-9][0-9][0-9]-[0-9][0-9]) ;;
+              *) echo "preflight: discovered month path failed its grammar — refusing to scan"; exit 1 ;;
+            esac
+            month_body=$(mktemp)
+            month_code=$(fetch_path "$month_path" "$month_body")
+            test "$month_code" = "200" || { echo "preflight $month_path: $month_code — refusing to scan"; exit 1; }
+            grep -q 'data-page=' "$month_body" || { echo "preflight $month_path: no data-page= — refusing to scan"; exit 1; }
+            echo "preflight $month_path: 200 + data-page= (discovered)"
+            day_path=$(grep -oE '/arquivo/[0-9]{4}-[0-9]{2}-[0-9]{2}' "$month_body" | head -n 1 || true)
+            rm -f "$month_body"
+            test -n "$day_path" || { echo "preflight: $month_path lists no day — refusing to scan"; exit 1; }
+            case "$day_path" in
+              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+              *) echo "preflight: discovered day path failed its grammar — refusing to scan"; exit 1 ;;
+            esac
+            day_body=$(mktemp)
+            day_code=$(fetch_path "$day_path" "$day_body")
+            test "$day_code" = "200" || { echo "preflight $day_path: $day_code — refusing to scan"; exit 1; }
+            grep -q 'data-page=' "$day_body" || { echo "preflight $day_path: no data-page= — refusing to scan"; exit 1; }
+            echo "preflight $day_path: 200 + data-page= (discovered)"
+            play_path=$(grep -oE '/arquivo/[0-9]{4}-[0-9]{2}-[0-9]{2}/(binairo|nonogram|sudoku|termo)' "$day_body" | head -n 1 || true)
+            rm -f "$day_body"
+            test -n "$play_path" || { echo "preflight: $day_path lists no game — refusing to scan"; exit 1; }
+            case "$play_path" in
+              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/binairo|\
+              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/nonogram|\
+              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/sudoku|\
+              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/termo) ;;
+              *) echo "preflight: discovered play path failed its grammar — refusing to scan"; exit 1 ;;
+            esac
+            play_body=$(mktemp)
+            play_code=$(fetch_path "$play_path" "$play_body")
+            test "$play_code" = "200" || { echo "preflight $play_path: $play_code — refusing to scan"; exit 1; }
+            grep -q 'data-play-state=' "$play_body" || { echo "preflight $play_path: no data-play-state= — refusing to scan"; exit 1; }
+            echo "preflight $play_path: 200 + data-play-state= (discovered)"
+            rm -f "$play_body"
+          fi
+          # Heredoc delimiters, so a value can never be mistaken for a new
+          # output line. The three may be EMPTY (the skip above), and both
+          # detect steps then scan their fixed lists only.
+          { echo "month_path<<EOF"; echo "$month_path"; echo EOF; } >> "$GITHUB_OUTPUT"
+          { echo "day_path<<EOF"; echo "$day_path"; echo EOF; } >> "$GITHUB_OUTPUT"
+          { echo "play_path<<EOF"; echo "$play_path"; echo EOF; } >> "$GITHUB_OUTPUT"
           rm -f "$jar"
           test "$status" -eq 0 || exit 1
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6 — version comes from packageManager
@@ -151,6 +246,15 @@ jobs:
         env:
           DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
           BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          # #31: the discovered archive paths reach this step through `env:`,
+          # NEVER by `${{ }}` interpolation inside the `run:` string below —
+          # that would be textual substitution of a value read out of a fetched
+          # HTML body into a shell command, an Actions expression-injection
+          # shape. Empty when the archive is empty, and `composeArchiveUrls`
+          # below then contributes nothing.
+          ARCHIVE_MONTH_PATH: ${{ steps.preflight.outputs.month_path }}
+          ARCHIVE_DAY_PATH: ${{ steps.preflight.outputs.day_path }}
+          ARCHIVE_PLAY_PATH: ${{ steps.preflight.outputs.play_path }}
         run: >-
           pnpm exec impeccable detect
           "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
@@ -169,6 +273,10 @@ jobs:
           "$DEPLOYMENT_URL/privacidade?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/vincular?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/estatisticas?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/arquivo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          ${ARCHIVE_MONTH_PATH:+"$DEPLOYMENT_URL$ARCHIVE_MONTH_PATH?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"}
+          ${ARCHIVE_DAY_PATH:+"$DEPLOYMENT_URL$ARCHIVE_DAY_PATH?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"}
+          ${ARCHIVE_PLAY_PATH:+"$DEPLOYMENT_URL$ARCHIVE_PLAY_PATH?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"}
           --viewport 1440x900
       - name: impeccable detect — mobile 390x844
         # Run even when desktop found regressions (one round-trip shows both
@@ -178,6 +286,15 @@ jobs:
         env:
           DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
           BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          # #31: the discovered archive paths reach this step through `env:`,
+          # NEVER by `${{ }}` interpolation inside the `run:` string below —
+          # that would be textual substitution of a value read out of a fetched
+          # HTML body into a shell command, an Actions expression-injection
+          # shape. Empty when the archive is empty, and `composeArchiveUrls`
+          # below then contributes nothing.
+          ARCHIVE_MONTH_PATH: ${{ steps.preflight.outputs.month_path }}
+          ARCHIVE_DAY_PATH: ${{ steps.preflight.outputs.day_path }}
+          ARCHIVE_PLAY_PATH: ${{ steps.preflight.outputs.play_path }}
         run: >-
           pnpm exec impeccable detect
           "$DEPLOYMENT_URL/?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
@@ -196,4 +313,8 @@ jobs:
           "$DEPLOYMENT_URL/privacidade?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/vincular?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/estatisticas?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/arquivo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          ${ARCHIVE_MONTH_PATH:+"$DEPLOYMENT_URL$ARCHIVE_MONTH_PATH?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"}
+          ${ARCHIVE_DAY_PATH:+"$DEPLOYMENT_URL$ARCHIVE_DAY_PATH?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"}
+          ${ARCHIVE_PLAY_PATH:+"$DEPLOYMENT_URL$ARCHIVE_PLAY_PATH?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"}
           --viewport 390x844
