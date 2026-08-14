@@ -2,6 +2,7 @@ import { listArchivedDays } from "@miolos/db";
 import type { MetadataRoute } from "next";
 
 import { groupArchivedDays } from "../src/archive/group-days";
+import { monthOf } from "../src/archive/parse-params";
 import { getDb } from "../src/db";
 import {
   archiveDayRoute,
@@ -37,7 +38,10 @@ export const dynamic = "force-dynamic";
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const days = await listArchivedDays(getDb());
-  const months = [...new Set(days.map((day) => day.date.slice(0, 7)))];
+  // `monthOf`, never a second `slice(0, 7)`: its own doc block declares
+  // itself the one place a month is sliced out of a date, and two other
+  // modules already import it (step-6 F22).
+  const months = [...new Set(days.map((day) => monthOf(day.date)))];
 
   // Next requires ABSOLUTE urls in a sitemap entry and does not resolve one
   // against `metadataBase`, so every path goes through the app's one origin

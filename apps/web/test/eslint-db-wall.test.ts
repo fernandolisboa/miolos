@@ -799,6 +799,18 @@ describe("no parallel query path in apps/web (T-LINT-S37)", () => {
     return found;
   }
 
+  /**
+   * The file with its comments removed, so the counter-assertion below
+   * counts CODE references to `@miolos/db` and not the doc blocks that
+   * discuss the wall at length. The same stripper `archive-routes.test.ts`
+   * uses, and it deliberately does not eat the `//` of a URL scheme.
+   */
+  function code(source: string): string {
+    return source
+      .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+      .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
+  }
+
   /** Every `@miolos/db*` import in the file, as `{ from, names }`. */
   function dbImports(
     source: string,
@@ -820,16 +832,32 @@ describe("no parallel query path in apps/web (T-LINT-S37)", () => {
   it("T-LINT-S37: every @miolos/db import in apps/web names only wall readers, on the root entry", () => {
     const offenders: string[] = [];
     for (const path of webSources()) {
-      for (const found of dbImports(readFileSync(path, "utf8"))) {
-        if (found.from !== "@miolos/db") {
-          offenders.push(`${path}: subpath ${found.from}`);
+      const source = readFileSync(path, "utf8");
+      const found = dbImports(source);
+      for (const entry of found) {
+        if (entry.from !== "@miolos/db") {
+          offenders.push(`${path}: subpath ${entry.from}`);
         }
-        for (const name of found.names) {
+        for (const name of entry.names) {
           const bare = name.replace(/^type /, "");
           if (!WALL_SURFACE.has(name) && !WALL_SURFACE.has(bare)) {
             offenders.push(`${path}: ${name}`);
           }
         }
+      }
+      // THE COUNTER-ASSERTION, and it is what makes this suite AC 2's proof
+      // rather than a scan of one import shape (step-6 F19). The parser above
+      // only sees BRACED named imports, so `import * as db from "@miolos/db"`,
+      // a default import and `await import("@miolos/db")` all pass it by
+      // yielding no matches at all — and the root entry is deliberately NOT
+      // ESLint-banned, which is this suite's whole premise, so the one hole
+      // sits in the one place the test claims to cover. A file that mentions
+      // the package in code and yields no parsed import is now an offender:
+      // an unparsed import shape reds instead of passing.
+      if (code(source).includes('"@miolos/db') && found.length === 0) {
+        offenders.push(
+          `${path}: an @miolos/db reference this scan cannot parse`,
+        );
       }
     }
     expect(offenders).toEqual([]);
@@ -860,5 +888,17 @@ describe("no parallel query path in apps/web (T-LINT-S37)", () => {
         'import { getPublishedDailyWithSolution } from "@miolos/db/publishing";',
       )[0]?.from,
     ).toBe("@miolos/db/publishing");
+
+    // The three shapes the parser CANNOT read, pinned as unreadable so the
+    // counter-assertion above is the thing catching them and nobody later
+    // mistakes the parser for exhaustive (step-6 F19).
+    for (const unparsed of [
+      'import * as db from "@miolos/db";',
+      'import db from "@miolos/db";',
+      'const db = await import("@miolos/db");',
+    ]) {
+      expect(dbImports(unparsed)).toEqual([]);
+      expect(code(unparsed).includes('"@miolos/db')).toBe(true);
+    }
   });
 });

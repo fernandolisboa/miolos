@@ -42,7 +42,7 @@ async function paths(): Promise<string[]> {
 }
 
 describe("the sitemap (T-WEB-S174)", () => {
-  it("T-WEB-S174: enumerates every archived date's day page and every (date, game) play page", async () => {
+  it("enumerates every archived date's day page and every (date, game) play page", async () => {
     spies.listArchivedDays.mockResolvedValue([
       { date: "2026-08-02", game: "binairo" },
       { date: "2026-08-02", game: "sudoku" },
@@ -69,7 +69,7 @@ describe("the sitemap (T-WEB-S174)", () => {
     expect(spies.listArchivedDays).toHaveBeenCalledWith(spies.stubDb);
   });
 
-  it("T-WEB-S174: nothing date-bearing enters except through the reader — the WALL excludes a future date, not a filter", async () => {
+  it("nothing date-bearing enters except through the reader — the WALL excludes a future date, not a filter", async () => {
     // The reader is mocked to do something it cannot actually do: return a
     // future date. The sitemap emits it, and that is the POINT — it proves
     // the sitemap adds no filter of its own, so the only thing keeping a
@@ -88,7 +88,7 @@ describe("the sitemap (T-WEB-S174)", () => {
     );
   });
 
-  it("T-WEB-S174: the daily play routes, their conclusions, /estatisticas and /vincular are absent", async () => {
+  it("the daily play routes, their conclusions, /estatisticas and /vincular are absent", async () => {
     spies.listArchivedDays.mockResolvedValue([
       { date: "2026-08-02", game: "termo" },
     ]);
@@ -109,7 +109,7 @@ describe("the sitemap (T-WEB-S174)", () => {
     }
   });
 
-  it("T-WEB-S174: every URL is ABSOLUTE against the app's one origin", async () => {
+  it("every URL is ABSOLUTE against the app's one origin", async () => {
     spies.listArchivedDays.mockResolvedValue([]);
     const entries = await sitemap();
     expect(entries.length).toBeGreaterThan(0);
@@ -121,14 +121,14 @@ describe("the sitemap (T-WEB-S174)", () => {
 });
 
 describe("robots.ts (T-WEB-S175)", () => {
-  it("T-WEB-S175: allows all, disallows /vincular, and points at the sitemap", () => {
+  it("allows all, disallows /vincular, and points at the sitemap", () => {
     expect(robots()).toEqual({
       rules: { userAgent: "*", allow: "/", disallow: [routes.attach] },
       sitemap: `${ORIGIN}/sitemap.xml`,
     });
   });
 
-  it("T-WEB-S175: the daily play routes and /estatisticas are crawlable but unlisted — absence from a sitemap is NOT noindex", async () => {
+  it("the daily play routes and /estatisticas are crawlable but unlisted — absence from a sitemap is NOT noindex", async () => {
     // The assertion this test exists for: nothing in `robots.ts` marks the
     // unlisted surfaces `noindex`. They are simply not an SEO surface worth a
     // sitemap slot (ADR-0028 :28-30), not secrets — and if either should

@@ -30,6 +30,31 @@ import {
 import { flushPendingCompletions, startCompletionSync } from "./sync";
 import type { LifecycleAction, PlayCore } from "./types";
 
+/**
+ * **The close-detection predicate, and the one spelling of it** (#31 step-6
+ * finding F15). The grid is CLOSED and the clock is FROZEN, in that order and
+ * both terms required: gating on `status` alone renders the conclusion with a
+ * time the `pause` dispatch below is about to correct by up to one tick, and
+ * gating on the timer alone is true of a board that was merely paused.
+ *
+ * It lives here because this hook is where the fact is produced. Eight screens
+ * consume it — the four daily roots and the four archive shells — and before
+ * this export each of them re-typed the two conjuncts by hand, in three
+ * different spellings, with the archive's own TSDoc saying *"exactly as
+ * `use-play-lifecycle.ts` computes it"*: the seam noticed and stepped over.
+ * That is the same move ADR-0053 decision 4 and `packages/db/src/published.ts`
+ * refuse one package over, and it is refused here for the same reason —
+ * ADR-0004-class guarantees may not have two enforcement points.
+ *
+ * A screen that wants the narrower "closed AND WON" writes
+ * `isClosedAndFrozen(state) && state.status === "solved"`, so the extra
+ * condition is visible as an extra condition instead of hiding inside a
+ * re-typed conjunct.
+ */
+export function isClosedAndFrozen(state: PlayCore): boolean {
+  return state.status !== "playing" && state.timer.runningSince === null;
+}
+
 export interface PlayLifecycle<S extends PlayCore> {
   readonly game: Game;
   readonly state: S;
@@ -102,10 +127,10 @@ export function usePlayLifecycle<S extends PlayCore>({
 
   const { date, timer, status, hydrated } = state;
 
-  // The grid is CLOSED and the clock is frozen. Gating the conclusion on
-  // both is what keeps the stamp from rendering a time that the pause
-  // dispatch below is about to correct by up to one tick.
-  const closedAndFrozen = status !== "playing" && timer.runningSince === null;
+  // The grid is CLOSED and the clock is frozen — through the exported
+  // predicate, so this hook and the eight screens that gate on the same fact
+  // read ONE definition of it (step-6 F15).
+  const closedAndFrozen = isClosedAndFrozen(state);
 
   useEffect(() => {
     const record = readPlayRecord(game, date);

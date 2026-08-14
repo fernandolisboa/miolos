@@ -60,7 +60,7 @@ function sourceFiles(): string[] {
 }
 
 describe("the archive's paths have one home (T-WEB-S166)", () => {
-  it("T-WEB-S166: routes.archive and the three builders compose the exact pt-BR paths", () => {
+  it("routes.archive and the three builders compose the exact pt-BR paths", () => {
     expect(routeSlugs.archive).toBe("arquivo");
     expect(routeSlugs.month).toBe("mes");
     expect(routes.archive).toBe("/arquivo");
@@ -83,14 +83,14 @@ describe("the archive's paths have one home (T-WEB-S166)", () => {
     );
   });
 
-  it("T-WEB-S166: no `/arquivo` string literal exists in apps/web outside routes.ts", () => {
+  it("no `/arquivo` string literal exists in apps/web outside routes.ts", () => {
     const offenders = sourceFiles()
       .filter((path) => !path.endsWith(join("src", "i18n", "routes.ts")))
       .filter((path) => ARCHIVE_LITERAL.test(code(readFileSync(path, "utf8"))));
     expect(offenders).toEqual([]);
   });
 
-  it("T-WEB-S166: the scan is not vacuous — routes.ts itself matches it, and comment-stripping does not hide code", () => {
+  it("the scan is not vacuous — routes.ts itself matches it, and comment-stripping does not hide code", () => {
     const routesSource = readFileSync(
       join(import.meta.dirname, "..", "src", "i18n", "routes.ts"),
       "utf8",

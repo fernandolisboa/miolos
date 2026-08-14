@@ -920,7 +920,7 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
     expect(await listArchivedMonths(ctx.db)).toEqual([]);
   });
 
-  it("T-DB-S53: the wall is ONE wall — (a) the three shipped readers behave exactly as before over the same seeds", async () => {
+  it("T-DB-S53a: the wall is ONE wall — the three shipped readers behave exactly as before over the same seeds", async () => {
     const today = await spDate(0);
     const past = await spDate(-1);
     const future = await spDate(2);
@@ -963,7 +963,7 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
     ).toBeUndefined();
   });
 
-  it("T-DB-S53: the wall is ONE wall — (b) one spelling, by source scan with comments stripped first", async () => {
+  it("T-DB-S53b: the wall is ONE wall — one spelling, by source scan with comments stripped first", async () => {
     const source = await readFile(
       new URL("../src/published.ts", import.meta.url),
       "utf8",

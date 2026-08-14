@@ -28,6 +28,20 @@ interface DayPageProps {
  * quibble. The segment is validated with `calendarDateString`, never a
  * hand-rolled regex: it is the repo's one calendar-day validator and it
  * rejects `2026-02-30`, which a shape regex accepts.
+ *
+ * **A WELL-FORMED date the wall refuses still gets a canonical and a title,
+ * and that asymmetry is deliberate** (step-6 F23). Metadata and the page
+ * resolve independently in the App Router, so a `notFound()` below cannot
+ * un-compose a `<head>` this function has already produced: `/arquivo/1999-
+ * 01-01` answers **404** with a self-referential canonical and a title
+ * naming puzzles that do not exist. The blast radius is exactly one 404
+ * response — the status is what crawlers act on, the URL is never in the
+ * sitemap because the sitemap is built from the reader, and the alternative
+ * (a second reader call inside `generateMetadata`) doubles the query count
+ * on every archive page view to tidy the head of a page nobody indexes. The
+ * malformed case is different and is handled: it yields `robots.index:
+ * false` with **no** `alternates`, because there the segment is attacker
+ * text and a canonical composed from it is the poisoning hazard.
  */
 export async function generateMetadata({
   params,

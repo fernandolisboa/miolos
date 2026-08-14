@@ -3,6 +3,7 @@
 import type { DailyBinairoResponse } from "@miolos/core";
 import { PlaySkeleton, PlayView } from "../binairo/play-view";
 import { useBinairoPlay } from "../binairo/use-binairo-play";
+import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { archiveChrome } from "./chrome";
 import { LateResult } from "./late-result";
 import { usePriorConclusion } from "./use-prior-conclusion";
@@ -24,11 +25,13 @@ import { usePriorConclusion } from "./use-prior-conclusion";
  *   button show is derived from the record and the record cannot be read
  *   before the mount effect — painting first renders a day the player
  *   already finished as an empty board with a live hint button;
- * - close detection on **both** conditions, because the clock is frozen one
- *   commit after the board closes and swapping early would stamp a time the
- *   pause is about to correct. `status !== "playing"` rather than
- *   `=== "solved"`, exactly as `use-play-lifecycle.ts` computes it, so a lost
- *   board closes here too.
+ * - close detection through `isClosedAndFrozen`, the shared predicate
+ *   `use-play-lifecycle.ts` exports (#31 step-6 F15). Both conjuncts are
+ *   required — the clock is frozen one commit after the board closes, and
+ *   swapping early would stamp a time the pause is about to correct — and
+ *   `status !== "playing"` rather than `=== "solved"` is what makes a lost
+ *   board close here too. It is IMPORTED rather than re-typed: nine hand
+ *   copies of one predicate were the finding.
  */
 export function ArchiveBinairoScreen({
   daily,
@@ -43,10 +46,7 @@ export function ArchiveBinairoScreen({
     return <PlaySkeleton date={daily.date} archive={archive} />;
   }
 
-  if (
-    play.state.status !== "playing" &&
-    play.state.timer.runningSince === null
-  ) {
+  if (isClosedAndFrozen(play.state)) {
     return (
       <LateResult
         game="binairo"

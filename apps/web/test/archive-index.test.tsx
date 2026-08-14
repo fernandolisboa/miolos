@@ -22,7 +22,7 @@ function pairs(
 }
 
 describe("the archive index (T-WEB-S167)", () => {
-  it("T-WEB-S167: renders recent day rows and one link per archived month, newest first", () => {
+  it("renders recent day rows and one link per archived month, newest first", () => {
     render(
       <ArchiveIndexView
         recent={[
@@ -56,7 +56,7 @@ describe("the archive index (T-WEB-S167)", () => {
     expect(months[0]).toHaveTextContent(formatMonth("2026-08-01"));
   });
 
-  it("T-WEB-S167: the dates render in the tabular register, and the rows are not a tile grid", () => {
+  it("the dates render in the tabular register, and the rows are not a tile grid", () => {
     const { container } = render(
       <ArchiveIndexView
         recent={[{ date: "2026-08-13", games: ["sudoku"] }]}
@@ -78,7 +78,7 @@ describe("the archive index (T-WEB-S167)", () => {
     );
   });
 
-  it("T-WEB-S167: the over-fetch discards a trailing group that may be cut mid-date, then takes seven", () => {
+  it("the over-fetch discards a trailing group that may be cut mid-date, then takes seven", () => {
     // 32 rows back over NINE dates: the window is full, so the last group is
     // possibly truncated and goes. `limit: 28` would have been wrong here —
     // 28 rows span eight dates once any date is short, and the eighth
@@ -124,7 +124,7 @@ describe("the archive index (T-WEB-S167)", () => {
 });
 
 describe("the empty archive (T-WEB-S168)", () => {
-  it("T-WEB-S168: renders the honest pt-BR empty state with its marker — not a skeleton, not a 404", () => {
+  it("renders the honest pt-BR empty state with its marker — not a skeleton, not a 404", () => {
     const { container } = render(<ArchiveIndexView recent={[]} months={[]} />);
 
     expect(screen.getByText(messages.archive.empty)).toBeInTheDocument();
@@ -140,7 +140,7 @@ describe("the empty archive (T-WEB-S168)", () => {
 });
 
 describe("the ragged archive, which is the real one (T-WEB-S182)", () => {
-  it("T-WEB-S182: a short day renders fewer names and NO placeholder", () => {
+  it("a short day renders fewer names and NO placeholder", () => {
     render(
       <ArchiveIndexView
         recent={[
@@ -165,7 +165,7 @@ describe("the ragged archive, which is the real one (T-WEB-S182)", () => {
     expect(short.textContent).not.toMatch(/de 4|—|--/);
   });
 
-  it("T-WEB-S182: the payload bounds hold — a 31-day month is at most 33 anchors, and the index lists one entry per month", () => {
+  it("the payload bounds hold — a 31-day month is at most 33 anchors, and the index lists one entry per month", () => {
     const dates = Array.from(
       { length: 31 },
       (_, index) => `2026-08-${String(index + 1).padStart(2, "0")}`,

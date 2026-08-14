@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 describe("the archive day page (T-WEB-S184)", () => {
-  it("T-WEB-S184: renders one card per game that date holds, and a link up to its month", async () => {
+  it("renders one card per game that date holds, and a link up to its month", async () => {
     spies.listArchivedDays.mockResolvedValue([
       { date: "2026-08-03", game: "binairo" },
       { date: "2026-08-03", game: "nonogram" },
@@ -97,7 +97,7 @@ describe("the archive day page (T-WEB-S184)", () => {
     ).toHaveAttribute("href", "/arquivo/mes/2026-08");
   });
 
-  it("T-WEB-S184: a short date renders fewer cards and NO placeholder", async () => {
+  it("a short date renders fewer cards and NO placeholder", async () => {
     // 2026-08-01 is the archive's real floor shape: the cron gained sudoku on
     // 01, nonogram on 02 and termo on 03, with no backfill.
     spies.listArchivedDays.mockResolvedValue([
@@ -114,7 +114,7 @@ describe("the archive day page (T-WEB-S184)", () => {
     expect(screen.queryByText(messages.games.nonogram.name)).toBeNull();
   });
 
-  it("T-WEB-S184: an empty date is notFound(), and a malformed segment never reaches the reader", async () => {
+  it("an empty date is notFound(), and a malformed segment never reaches the reader", async () => {
     spies.listArchivedDays.mockResolvedValue([]);
     spies.archiveDateClass.mockResolvedValue("past");
     await expect(
@@ -132,7 +132,7 @@ describe("the archive day page (T-WEB-S184)", () => {
     }
   });
 
-  it("T-WEB-S184: generateMetadata and the page share ONE parser — a hostile segment yields no canonical", async () => {
+  it("generateMetadata and the page share ONE parser — a hostile segment yields no canonical", async () => {
     const metadata = await generateMetadata({
       params: Promise.resolve({ data: "//evil.example.com" }),
     });
@@ -142,7 +142,7 @@ describe("the archive day page (T-WEB-S184)", () => {
 });
 
 describe("AC 1 — a future or malformed date 404s (T-WEB-S170)", () => {
-  it("T-WEB-S170: a WELL-FORMED future date 404s because the READER answers undefined, on both the day page and a play page", async () => {
+  it("a WELL-FORMED future date 404s because the READER answers undefined, on both the day page and a play page", async () => {
     // The mechanism that matters: a well-formed future date passes
     // validation and is refused IN SQL, inside the wall (ADR-0004). Nothing
     // in `apps/web` compares it to a clock — the reader simply has no row.
@@ -168,7 +168,7 @@ describe("AC 1 — a future or malformed date 404s (T-WEB-S170)", () => {
     );
   });
 
-  it("T-WEB-S170: a MALFORMED date 404s at calendarDateString, before any read", async () => {
+  it("a MALFORMED date 404s at calendarDateString, before any read", async () => {
     // The second, separate mechanism. `2026-02-30` is the case a shape regex
     // accepts and `calendarDateString` rejects, which is why the repo's one
     // day validator is used here rather than a hand-rolled pattern.
@@ -188,7 +188,7 @@ describe("AC 1 — a future or malformed date 404s (T-WEB-S170)", () => {
 });
 
 describe("today's URL RESOLVES (T-WEB-S171)", () => {
-  it("T-WEB-S171: today's date redirects — the day page to the hub, a play page to that game's daily route", async () => {
+  it("today's date redirects — the day page to the hub, a play page to that game's daily route", async () => {
     spies.listArchivedDays.mockResolvedValue([]);
     spies.getArchivedDaily.mockResolvedValue(undefined);
     spies.archiveDateClass.mockResolvedValue("today");
@@ -206,7 +206,7 @@ describe("today's URL RESOLVES (T-WEB-S171)", () => {
     expect(spies.notFound).not.toHaveBeenCalled();
   });
 
-  it("T-WEB-S171: the ORDER is asserted, not only the outcome — a rendering path never calls the classifier", async () => {
+  it("the ORDER is asserted, not only the outcome — a rendering path never calls the classifier", async () => {
     spies.getArchivedDaily.mockResolvedValue({
       game: "sudoku",
       date: "2026-08-03",
@@ -221,7 +221,7 @@ describe("today's URL RESOLVES (T-WEB-S171)", () => {
     expect(spies.archiveDateClass).not.toHaveBeenCalled();
   });
 
-  it("T-WEB-S171: an empty read classified `past` or `future` 404s rather than redirecting — the midnight straddle", async () => {
+  it("an empty read classified `past` or `future` 404s rather than redirecting — the midnight straddle", async () => {
     // The only reachable straddle: the date became past between the two
     // statements. It answers 404 and a reload resolves it, and it can never
     // hit a sitemap-advertised URL, because a URL enters the sitemap only
@@ -238,7 +238,7 @@ describe("today's URL RESOLVES (T-WEB-S171)", () => {
 });
 
 describe("a published past day renders the archived board (T-WEB-S172)", () => {
-  it("T-WEB-S172: the SERVER's date reaches the client tree, and the pre-hydration paint carries the play-state marker", async () => {
+  it("the SERVER's date reaches the client tree, and the pre-hydration paint carries the play-state marker", async () => {
     spies.getArchivedDaily.mockResolvedValue({
       game: "sudoku",
       date: "2026-08-03",
@@ -307,7 +307,7 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
     return undefined;
   }
 
-  it("T-WEB-S183: no archive page's module graph contains conclusion-view, termo-conclusion, nonogram-conclusion or readDayState", () => {
+  it("no archive page's module graph contains conclusion-view, termo-conclusion, nonogram-conclusion or readDayState", () => {
     const entries = [
       "app/arquivo/page.tsx",
       "app/arquivo/mes/[mes]/page.tsx",
@@ -350,7 +350,7 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
     }
   });
 
-  it("T-WEB-S183: the walker is not vacuous — it really reaches the shared play layer", () => {
+  it("the walker is not vacuous — it really reaches the shared play layer", () => {
     const graph = moduleGraph(
       join(import.meta.dirname, "..", "app/arquivo/[data]/sudoku/page.tsx"),
     );

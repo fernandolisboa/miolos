@@ -4,6 +4,7 @@ import type { DailySudokuResponse } from "@miolos/core";
 
 import { messages } from "../i18n";
 import { ConclusionView } from "../play/conclusion-view";
+import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useSudokuPlay } from "./use-sudoku-play";
 
@@ -40,14 +41,13 @@ export function SudokuScreen({
     return <PlaySkeleton date={daily.date} tier={daily.tier} />;
   }
 
-  // Both conditions, not just `solved`: the clock is frozen one commit after
-  // the grid closes, and swapping early would stamp a time the pause is about
-  // to correct. A restored `concluded` record is already frozen, so it lands
-  // here on its first paint.
-  if (
-    play.state.status === "solved" &&
-    play.state.timer.runningSince === null
-  ) {
+  // Closed AND frozen, through the shared predicate (#31 step-6 F15): the
+  // clock is frozen one commit after the grid closes, and swapping early would
+  // stamp a time the pause is about to correct. A restored `concluded` record
+  // is already frozen, so it lands here on its first paint. The `solved` term
+  // stays VISIBLE beside it rather than folded into a re-typed conjunct —
+  // this game has no losing state and the conclusion it renders is a win.
+  if (isClosedAndFrozen(play.state) && play.state.status === "solved") {
     return (
       <ConclusionView
         game="sudoku"

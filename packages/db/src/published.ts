@@ -55,10 +55,10 @@ function publishedConjuncts(): readonly SQL[] {
  * The DB clock's São Paulo day, and the ONLY spelling of it in this module.
  * `wallPredicate`'s today branch, `archivedWallPredicate`'s past bound and
  * `archiveDateClass` all interpolate this one fragment; a second timezone
- * cast of the clock anywhere in this file is the divergence T-DB-S53(b)
+ * cast of the clock anywhere in this file is the divergence T-DB-S53b
  * reds on.
  *
- * The wording avoids the scanned phrase deliberately: T-DB-S53(b) counts
+ * The wording avoids the scanned phrase deliberately: T-DB-S53b counts
  * occurrences in the source, so a doc block quoting the expression would
  * make the scan count its own comment. The scan additionally strips
  * comments before counting, so this is belt and braces.
@@ -75,7 +75,7 @@ function saoPauloToday(): SQL {
  * UNCHANGED BEHAVIOUR at #31: same signature, same required `game`, same
  * "date omitted means the DB clock's SP day". Only the two publication
  * conjuncts and the clock fragment are now spread instead of re-typed
- * (ADR-0053 decision 4); T-DB-S53(a) pins that the three shipped readers
+ * (ADR-0053 decision 4); T-DB-S53a pins that the three shipped readers
  * answer identically over the same seeds.
  */
 function wallPredicate(game: Game, date?: string): SQL | undefined {
@@ -135,11 +135,13 @@ function archivedWallPredicate(game?: Game, date?: string): SQL | undefined {
  * (`daily.ts`'s extension point is discharged), and `getTodayDaily(db,
  * "termo")` is a live call in `apps/web`'s two Termo segments. The bound
  * therefore constrains nothing today and must NOT be removed as dead: it is
- * the guard the fifth game meets, and #34 (share cards / OG images) reads
- * every projected game through exactly this signature — including today's,
- * which is why it wants THIS reader and not the archive's past-only twin
- * below. (#31 walked past this sentence and did not use it: the archive
- * reads `getArchivedDaily`, whose extra conjunct excludes today by SQL.)
+ * the guard the fifth game meets. **The invariant is stated without a
+ * ticket, deliberately** (step-6 F22): this sentence has already had its
+ * justification moved from one unshipped ticket to another (#31 → #34) and a
+ * third move would falsify it again. The standing fact is that this reader is
+ * the TODAY-inclusive one — any caller that needs today's projected daily
+ * wants this signature and not the archive's past-only twin below, whose
+ * extra conjunct excludes today in SQL.
  */
 export async function getTodayDaily<G extends ProjectedGame>(
   db: Db,
