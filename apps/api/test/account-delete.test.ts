@@ -4,6 +4,7 @@ import {
   attachTokens,
   completions,
   hintGrants,
+  medalGrants,
   mergeAccounts,
 } from "@miolos/db/user";
 import { NextRequest } from "next/server";
@@ -140,7 +141,7 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
     expect(await response.json()).toEqual({ deleted: true });
 
     // One statement, whole footprint: users, sessions, completions,
-    // hint_grants, attach_tokens.
+    // hint_grants, medal_grants, attach_tokens.
     expect(await ctx.db.select().from(users)).toHaveLength(0);
     expect(await ctx.db.select().from(sessions)).toHaveLength(0);
     expect(await ctx.db.select().from(completions)).toHaveLength(0);
@@ -151,6 +152,20 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
     const setCookie = response.headers.get("set-cookie") ?? "";
     expect(setCookie).toContain(`${SESSION_COOKIE_NAME}=;`);
     expect(setCookie).toContain("Max-Age=0");
+  });
+
+  it("T-API-S77a: a seeded medal_grants row is gone after the cascade delete — #30's table joins S77's footprint claim", async () => {
+    // The sibling inside S77's landed claim: an operator-recorded curated
+    // grant (no code writer exists in v1 — the direct insert IS the
+    // ritual's shape, ADR-0052) is user data and dies with the account.
+    const { token, userId } = await createSession(OLDER);
+    await ctx.db.insert(medalGrants).values({ userId, medalId: "founder" });
+    expect(await ctx.db.select().from(medalGrants)).toHaveLength(1);
+
+    const response = await deletePost(deleteRequest(token, { confirm: true }));
+    expect(response.status).toBe(200);
+    expect(await ctx.db.select().from(medalGrants)).toHaveLength(0);
+    expect(await ctx.db.select().from(users)).toHaveLength(0);
   });
 
   it("T-API-S78: after deletion the bootstrap mints a FRESH identity, and a merge tombstone is structurally unreachable by this route", async () => {
