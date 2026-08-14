@@ -7,12 +7,17 @@
  * `page.module.css` has to import that exact module, and the page itself
  * stays a static server shell.
  *
- * Both hooks fire in mount effects only, so the server markup and the
+ * All three hooks fire in mount effects only, so the server markup and the
  * pre-hydration paint agree byte-for-byte (§6.6). Three renderings per
  * surface, each an honest claim:
  *
  * - unsettled — reserved-dimension skeleton, values blanked with the
- *   `BLANK_VALUE` idiom, so the fetch landing shifts nothing (#37).
+ *   `BLANK_VALUE` idiom, so the fetch landing shifts nothing (#37). The
+ *   medal section is the NAMED exception to this reserved-dimension law:
+ *   its height is unknowable pre-fetch and D8's nothing-at-zero rule
+ *   makes absence its honest unsettled state, so it reserves nothing and
+ *   inserts post-paint (ADR-0052; the measured CLS is its number, not
+ *   this screen's).
  * - settled-`null` (cold visitor — the profile `impeccable detect` always
  *   scans, since /stats is `requireUserId`-gated and the preview's
  *   credentialed calls are anonymous) — REAL zeros, the way the hub
@@ -133,18 +138,19 @@ function MedalsSection() {
   return (
     <section className={styles.medals}>
       <h2 className={styles.sectionHeading}>{messages.medals.title}</h2>
-      <ul className={styles.medalList}>
+      {/* role="list" is load-bearing, not redundant: `list-style: none`
+          strips WebKit's list semantics (Safari/VoiceOver), and the
+          explicit role is the standard workaround. */}
+      <ul role="list" className={styles.medalList}>
         {known.map((id) => (
-          <li
-            key={id}
-            className={styles.medalRow}
-            aria-label={messages.medals.earnedAria(
-              medalCopy[id].name,
-              medalCopy[id].description,
-            )}
-          >
+          // The visible name/description ARE the accessible content —
+          // no aria-label, no aria-hidden on the words: a composed label
+          // on the <li> is name-PROHIBITED on WebKit once the list
+          // semantics are stripped, and hiding the text left VoiceOver
+          // announcing nothing (step-6 correctness finding).
+          <li key={id} className={styles.medalRow}>
             <span aria-hidden className={styles.medalRing} />
-            <span aria-hidden className={styles.medalWords}>
+            <span className={styles.medalWords}>
               <span className={styles.medalName}>{medalCopy[id].name}</span>
               <span className={styles.medalDescription}>
                 {medalCopy[id].description}

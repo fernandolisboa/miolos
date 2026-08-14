@@ -26,6 +26,7 @@ interface CatalogRow {
   readonly id: string;
   readonly name: string;
   readonly description: string;
+  readonly rule: string;
 }
 
 /** The README's catalog table rows: `| <n> | \`id\` | name | description |
@@ -42,8 +43,33 @@ function readCatalogRows(): CatalogRow[] {
         id: (cells[2] ?? "").replaceAll("`", ""),
         name: cells[3] ?? "",
         description: cells[4] ?? "",
+        rule: cells[5] ?? "",
       };
     });
+}
+
+/** The Rule column's canonical rendering, derived from each definition's
+ *  own rule params — one spelling, computed, never hand-kept, so the
+ *  column cannot drift from the code (T-WEB-S163a). */
+function canonicalRule(
+  rule: (typeof MEDAL_DEFINITIONS)[number]["rule"],
+): string {
+  switch (rule.kind) {
+    case "totalWins":
+      return `totalWins, ${rule.game ?? "all games"}, ${String(rule.count)}`;
+    case "streakReached":
+      return `streakReached, ${String(rule.days)}`;
+    case "perfectDaysReached":
+      return `perfectDaysReached, ${String(rule.count)}`;
+    case "termoGuessWins":
+      return `termoGuessWins, ${String(rule.guesses)} ${
+        rule.guesses === 1 ? "guess" : "guesses"
+      }, ${String(rule.count)}×`;
+    case "eachGameWon":
+      return "eachGameWon";
+    case "curated":
+      return "curated";
+  }
 }
 
 /** The rejected-candidates section's bullet rows (`- *Candidate* → reason`). */
@@ -123,17 +149,43 @@ describe("the medal content harness (T-WEB-S163)", () => {
     // typecheck (a missing or stray medalCopy key is a compile error).
   });
 
+  it("T-WEB-S163a: the README table's Rule column equals the canonical rendering of each definition's rule params — the column cannot drift", () => {
+    const rows = new Map(readCatalogRows().map((row) => [row.id, row]));
+    for (const definition of MEDAL_DEFINITIONS) {
+      expect(rows.get(definition.id)?.rule, definition.id).toBe(
+        canonicalRule(definition.rule),
+      );
+    }
+  });
+
+  it("T-WEB-S163b: the README text carries every forbidden-vocabulary entry and every allowlist word — weakening the README fails the suite", () => {
+    // The README→harness direction: the other tests enforce the README's
+    // rules on the copy; this one keeps the README itself from being
+    // quietly weakened while the harness still passes.
+    const lower = readme.toLowerCase();
+    for (const entry of FORBIDDEN_VOCABULARY) {
+      expect.soft(lower.includes(entry.toLowerCase()), entry).toBe(true);
+    }
+    for (const word of PAST_TENSE_FIRST_WORDS) {
+      expect.soft(readme.includes(word), word).toBe(true);
+    }
+  });
+
   it("the rejected-candidates sample records at least 10 judgment calls", () => {
     expect(rejectedCandidates().length).toBeGreaterThanOrEqual(10);
   });
 
-  it("every name passes the mechanical rules: 2–28 chars, no exclamation or question marks, no emoji, no forbidden vocabulary", () => {
+  it("every name passes the mechanical rules: 2–28 chars, no exclamation or question marks, no emoji, no digits, no diminutives, no forbidden vocabulary", () => {
     for (const id of MEDAL_IDS) {
       const { name } = medalCopy[id];
       expect.soft(name.length, id).toBeGreaterThanOrEqual(2);
       expect.soft(name.length, id).toBeLessThanOrEqual(28);
       expect.soft(name, id).not.toMatch(/[!?]/);
       expect.soft(name, id).not.toMatch(EMOJI);
+      // The README's "no digits-as-rank" and "no diminutives (-inho/-inha)"
+      // tone rules, made mechanical (step-6 F17).
+      expect.soft(name, id).not.toMatch(/[0-9]/);
+      expect.soft(name, id).not.toMatch(/inh[oa]\b/i);
       expect.soft(forbiddenRegex.test(name), `${id}: ${name}`).toBe(false);
     }
   });

@@ -16,7 +16,7 @@ import { requireUserId } from "../../src/session/service";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /medals — the fourth authenticated READ (#30, ADR-0052; ADR-0051
+ * GET /medals — an authenticated READ (#30, ADR-0052; ADR-0051
  * decision 3's "own endpoint and contract"), the `GET /streak` template
  * verbatim. Everything write-shaped is deliberately absent, each absence
  * a decision (plan 027 D6, restated):

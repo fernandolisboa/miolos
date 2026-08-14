@@ -89,15 +89,19 @@ levels only when the interface shows the ladder.
   **{Acertou, Chegou, Concluiu, Estava, Venceu}** — and extending the
   allowlist is a deliberate README + harness edit.
 - Forbidden vocabulary anywhere in medal copy (mechanical regex,
-  case-insensitive, word-bounded): `xp`, `nível`/`níveis`, `moeda(s)`,
-  `ponto(s)`, `ranking`/`ranque`, `placar`, `troféu` — the vetoed-concepts
-  list (CONTEXT.md, ADR-0006) plus the scoreboard words; **plus the recorded
-  copy rejections:** `dias seguidos` (messages.ts's own recorded rejection —
-  CONTEXT.md's noun is *sequência*, never "dias seguidos") and CONTEXT.md's
-  Terms-to-avoid — `premium`, `Wordle`, `Picross`, `Griddler`, `Hanjie`,
-  `paint-by-numbers`, and `dica(s)`/`pista(s)` (hints can never back a medal,
-  so the words have no legitimate place in medal copy); and the three bundle
-  canaries `então`, `mamãe`, `época`.
+  case-insensitive, word-bounded): `xp`, `nível`/`níveis`, `moeda`/`moedas`,
+  `ponto`/`pontos`, `ranking`/`ranque`, `placar`, `troféu` — the
+  vetoed-concepts list (CONTEXT.md, ADR-0006) plus the scoreboard words;
+  **plus the recorded copy rejections:** `dias seguidos` (messages.ts's own
+  recorded rejection — CONTEXT.md's noun is *sequência*, never "dias
+  seguidos") and CONTEXT.md's Terms-to-avoid — `premium`, `Wordle`,
+  `Picross`, `Griddler`, `Hanjie`, `paint-by-numbers`, and
+  `dica`/`dicas`/`pista`/`pistas` (hints can never back a medal, so the
+  words have no legitimate place in medal copy); and the three bundle
+  canaries `então`, `mamãe`, `época`. Every entry is spelled out literally
+  here because the harness asserts the README contains each one — the
+  README→harness direction: dropping a word from this list fails the suite
+  (T-WEB-S163b).
 - Tone: adult, dry, quiet — the medal records a fact, it does not cheer. No
   urgency, no mockery of the player, no diminutives (-inho/-inha), no
   losing-rewarded medals.

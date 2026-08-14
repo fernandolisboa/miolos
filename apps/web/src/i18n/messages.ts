@@ -349,10 +349,10 @@ export const messages = {
    */
   medals: {
     title: "Medalhas",
-    // Complete aria composer (ADR-0018): the earned fact, whole. No date —
-    // none exists on the wire (ADR-0052).
-    earnedAria: (name: string, description: string) =>
-      `${name} — ${description}`,
+    // No aria composer: the medal rows' visible name/description text IS
+    // the accessible content (a composed li label is name-PROHIBITED on
+    // WebKit once `list-style: none` strips the list semantics — step-6
+    // correctness finding; stats-view.tsx records the fix).
   },
   /**
    * Free-play chrome (#28, ADR-0046) — shared-chrome position, like `play`

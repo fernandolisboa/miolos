@@ -29,8 +29,10 @@ import { generateSessionToken, hashSessionToken } from "../src/session/token";
 // before any late writer existed.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-/** When set, the route sees this in place of the real db — the T-API-S94
- *  500-branch probe swaps in a client whose every access throws. */
+/** When set, the route sees this in place of the real db — T-API-S94's
+ *  two probes ride it: a counting proxy over the real db (the 401 path's
+ *  zero-queries-beyond-auth claim, asserted rather than titled) and a
+ *  client whose every access throws (the 500 branch). */
 let dbOverride: Awaited<ReturnType<typeof createTestDb>>["db"] | undefined;
 
 vi.mock("../src/db", () => ({
@@ -175,14 +177,45 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
   it("T-API-S94: cookieless is 401 with zero queries beyond auth, a thrown db is 500 internal, and no-store plus the CORS grant ride every branch", async () => {
     vi.stubEnv("WEB_ORIGIN", WEB);
 
-    // No cookie and an unknown cookie: 401 no-session, nothing minted.
+    // The 401 path runs over a COUNTING proxy: every query-verb access on
+    // the db is recorded and forwarded to the real client, so "zero
+    // queries beyond auth" is an asserted access list, not a title. Only
+    // the verbs are counted — every drizzle query STARTS with one, while
+    // execution also reads internal plumbing (`session`, `dialect`) off
+    // the instance, which is not a query of its own.
+    const QUERY_VERBS = new Set([
+      "select",
+      "insert",
+      "update",
+      "delete",
+      "execute",
+      "transaction",
+    ]);
+    const accessed: string[] = [];
+    dbOverride = new Proxy(ctx.db, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && QUERY_VERBS.has(property)) {
+          accessed.push(property);
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+
+    // No cookie: 401 no-session before the db is touched AT ALL — zero
+    // accesses, auth included (`requireUserId` short-circuits tokenless).
     const noCookie = await GET(medalsRequest());
     expect(noCookie.status).toBe(401);
     expect(await noCookie.json()).toEqual({ error: "no-session" });
     expect(noCookie.headers.get("cache-control")).toBe("no-store");
     expect(noCookie.headers.get("access-control-allow-origin")).toBe(WEB);
+    expect(accessed).toEqual([]);
+
+    // An unknown cookie: exactly the one auth lookup (`select`), and none
+    // of the three post-auth reads — a 401 costs zero queries beyond auth.
     const unknownCookie = await GET(medalsRequest(generateSessionToken()));
     expect(unknownCookie.status).toBe(401);
+    expect(accessed).toEqual(["select"]);
+    dbOverride = undefined;
     expect(await ctx.db.select().from(users)).toHaveLength(0);
 
     // The 200 branch carries the same discipline.

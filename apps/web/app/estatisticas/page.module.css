@@ -133,9 +133,10 @@
   border-bottom: none;
 }
 
-/* The completion-stamp register (DESIGN.md) reduced to its ring: ~20px,
-   3px border, the subtle static rotation, empty — typographic content
-   only if one ever gains any. */
+/* The completion stamp's OUTLINE only (DESIGN.md): ~20px, 3px border,
+   empty. The register's −6deg rotation is omitted because an empty
+   circle has none to show — typographic content, if a ring ever gains
+   any, brings the rotation back with it (DESIGN.md:39). */
 .medalRing {
   box-sizing: border-box;
   flex-shrink: 0;
@@ -143,7 +144,6 @@
   height: 20px;
   border: 3px solid var(--accent-app);
   border-radius: 50%;
-  transform: rotate(-6deg);
 }
 
 .medalWords {

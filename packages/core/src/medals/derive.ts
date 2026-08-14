@@ -76,6 +76,13 @@ export function earnedMedals(
     if (streak > maxStreakReached) {
       maxStreakReached = streak;
     }
+    // 365 is the largest `streakReached` threshold in the catalog: once
+    // reached, the remaining iterations cannot change any rule's answer,
+    // so stop paying for them. The full single-pass replacement stays
+    // deferred (ADR-0052/D10); T-CORE-S76 is the oracle that licenses it.
+    if (maxStreakReached >= 365) {
+      break;
+    }
   }
 
   // perfectDays is reused, never re-derived — on-time-only by that
