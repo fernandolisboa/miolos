@@ -420,10 +420,15 @@ export const messages = {
     // The play chrome (ADR-0053 decision 9). ONE string: the line that makes
     // the archive's semantics visible to the person they apply to. There is
     // no mode chip — the back label and the top bar's date already say where
-    // you are, and a chip would need a class in src/play/screen.module.css,
-    // which #31 does not edit. The back affordance uses `backToDay` above,
-    // for the reason `freePlay`'s own comment gives: a shared "← Hoje" would
-    // lie about the destination.
+    // you are, and a chip saying "Arquivo" could not have said what this
+    // sentence says. (The reason this comment used to give — that a chip
+    // needs a class in `src/play/screen.module.css`, which #31 does not edit
+    // — was a scope fact standing in for a design one, and step-6 F10b
+    // struck it down: the note itself now carries a class from the archive's
+    // OWN stylesheet, `src/archive/play-note.module.css`, and nothing under
+    // `src/play/` is edited for it.) The back affordance uses `backToDay`
+    // above, for the reason `freePlay`'s own comment gives: a shared
+    // "← Hoje" would lie about the destination.
     play: {
       note: "Puzzle do dia arquivado. Não conta para a sequência nem para os seus tempos.",
     },
