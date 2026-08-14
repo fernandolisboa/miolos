@@ -11,8 +11,11 @@ sample recording the judgment calls — ships in full below).
 
 The catalog itself lives in code:
 `packages/core/src/medals/definitions.ts` (ids and rules) and the pt-BR
-copy in `apps/web/src/i18n/messages.ts` (`medalCopy`,
-[ADR-0018](../../docs/adr/0018-i18n-is-an-in-repo-typed-message-module.md)).
+copy in `apps/web/src/medals/copy.ts` (`medalCopy`,
+[ADR-0018](../../docs/adr/0018-i18n-is-an-in-repo-typed-message-module.md) —
+its own module rather than a `messages.ts` export, so the prose rides only
+the stats route's chunks; plan 035 §14 deviation 3 records the measured
+reason).
 This file is the constraints document and the audit record; the harness
 (T-CORE-S70 in `packages/core/test/medals.test.ts`, T-WEB-S163 in
 `apps/web/test/medals-content.test.ts`) mechanically enforces the rules below
