@@ -16,6 +16,13 @@ import {
 } from "vitest";
 
 import { GET } from "../app/stats/calendar/route";
+// #31 (ADR-0053 decision 7): T-API-S103 asserts that the aggregates carry
+// what the calendar does not paint, which needs the other route.
+// Statically imported, the `completions.test.ts` register — `vi.mock` is
+// hoisted above every import, so a route module needs no `await
+// import(...)` to see the mocked `../src/db`, and one idiom for one need
+// beats two.
+import { GET as statsGet } from "../app/stats/route";
 import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
@@ -371,7 +378,6 @@ describe("GET /stats/calendar — the archive widening (#31, ADR-0053)", () => {
 
     // And GET /stats counts it — the aggregates carry what the calendar
     // does not paint (ADR-0051 decision 6).
-    const { GET: statsGet } = await import("../app/stats/route");
     const stats = await statsGet(
       new NextRequest("http://localhost:3001/stats", {
         method: "GET",

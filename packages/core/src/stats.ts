@@ -9,11 +9,13 @@
  * No clock, no timezone, no I/O enters this module (the `streak.ts`
  * register). `today` and `since` are parameters the caller supplies from
  * the DB clock (`todaySaoPaulo(db)`, ADR-0010's single authority), and
- * `rolloverSlackDays` is the route-passed bound (ADR-0026 decision 6 keeps
- * it in the route layer — core takes it as a parameter, never a constant).
- * It is the calendar's rollover slack and NOT the write window; #31 split
- * the two (ADR-0053 decision 6), and `computeCalendar`'s doc block says
- * what joining them again would fabricate.
+ * `rolloverSlackDays` is the route-passed bound (ADR-0053 decision 6,
+ * amending ADR-0051 decision 2, keeps it in the route layer — core takes
+ * it as a parameter, never a constant). It is the calendar's rollover
+ * slack and NOT the write window; #31 split the two, so ADR-0026
+ * decision 6 — which now governs the write window alone — is deliberately
+ * not the citation here, and `computeCalendar`'s doc block says what
+ * joining them again would fabricate.
  *
  * Every exclusion rule lives HERE, where seam 2 tests it (plan 033 D3):
  * the db reader is deliberately unfiltered, and the two shared predicates

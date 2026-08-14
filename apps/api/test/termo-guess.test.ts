@@ -24,6 +24,12 @@ import {
   vi,
 } from "vitest";
 
+// #31 (ADR-0053): T-API-S101 asserts that both write routes share ONE
+// window, which is only checkable by driving the other route. Statically
+// imported, the `completions.test.ts` register — `vi.mock` is hoisted
+// above every import, so a route module needs no `await import(...)` to
+// see the mocked `../src/db`, and one idiom for one need beats two.
+import { POST as completionsPost } from "../app/completions/route";
 import { OPTIONS, POST } from "../app/termo/guess/route";
 import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
@@ -648,7 +654,6 @@ describe("POST /termo/guess — the archive write window (#31, ADR-0053)", () =>
     expect(termoGuessResponseSchema.parse(await won.json()).status).toBe("won");
 
     // The completion route accepts the same date — one window, both routes.
-    const { POST: completionsPost } = await import("../app/completions/route");
     const completion = await completionsPost(
       new NextRequest("http://localhost:3001/completions", {
         method: "POST",

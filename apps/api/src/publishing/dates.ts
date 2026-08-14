@@ -17,7 +17,9 @@ const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
  * be used as one again: #31 widened the write window to the whole archive
  * (ADR-0053), and a clamp that followed it would drag the calendar's range
  * back arbitrarily and paint "missed" over days the account did not exist
- * for — the exact failure ADR-0051's Rejected list names at :175-178.
+ * for — the exact failure ADR-0051's Rejected list names under *"An
+ * unbounded `min()` at the range edge"* (cited by title, not by line: #31
+ * itself moves that entry down the file).
  *
  * One constant, one owner. Until #31 this value and the write window were a
  * SINGLE constant holding two ideas; splitting the name is what makes
@@ -50,6 +52,34 @@ export const ROLLOVER_SLACK_DAYS = 1;
  */
 export function isWritableDate(date: string, today: string): boolean {
   return date <= today;
+}
+
+/**
+ * Inside the write window, is this a LATE write — a day strictly before
+ * the DB clock's São Paulo today? The archive write ceiling's branch
+ * (ADR-0053 decision 13), and the daily ritual's exemption from it.
+ *
+ * IT HAS A NAME BECAUSE "LATE" IS SPELLED IN THREE LAYERS AND THEY MUST
+ * CONVERGE. This is the route layer's spelling, in JS over two date
+ * strings. The database's spelling is `on_time` negated —
+ * `(completed_at at time zone 'America/Sao_Paulo')::date <> date` — which
+ * is what the ceiling's guard counts and what every reader projects. The
+ * archive's read layer will add a third when it lands (`archiveDateClass`,
+ * ADR-0053 decision 4); it takes this predicate's meaning, not a fourth
+ * one.
+ *
+ * The two spellings agree because `completed_at` is `now()` AT INSERT: a
+ * row this predicate calls late is written after the day it names, so its
+ * write instant cannot fall on that day. THE ONE DISAGREEMENT IS THE
+ * ROLLOVER ITSELF, and it is bounded at one row per user per rollover: a
+ * `today` read at 23:59:59.9 lets a same-day write past the ceiling
+ * branch, and the row lands at 00:00:00.1 already late by the database's
+ * spelling and never counted against either day's budget. Costing one
+ * uncounted row per rollover is the correct trade against reading the
+ * clock twice inside one write.
+ */
+export function isLateDate(date: string, today: string): boolean {
+  return date < today;
 }
 
 function partsOf(date: string): [number, number, number] {

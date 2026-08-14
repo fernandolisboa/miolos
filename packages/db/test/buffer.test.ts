@@ -13,8 +13,8 @@ import { binairoContentFixture } from "./fixtures";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-// PGlite boot measures ~1.2 s locally, CI runners are ~3-4x slower, and
-// worker contention adds to both: 1.2 s x 4 + margin is the ceiling the
+// PGlite boot measures ~1.2 s locally, CI runners are ~3–4× slower, and
+// worker contention adds to both: 1.2 s × 4 + margin is the ceiling the
 // other seven PGlite files in this package already carry. This one was the
 // last riding vitest's 10 s default, and #31's added database work is what
 // finally tipped it over under parallel fan-out (napkin item 3).

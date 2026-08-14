@@ -12,7 +12,6 @@ import {
 
 import { todaySaoPaulo } from "../src/buffer";
 import {
-  countLateCompletionsWrittenOn,
   getCompletion,
   grantHints,
   grantedHintsToday,
@@ -103,9 +102,11 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
     expect(Object.keys(user).sort()).toEqual([
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "completions",
-      // #31 added exactly one: `countLateCompletionsWrittenOn`, the archive
-      // write ceiling's counter (ADR-0053 decision 13), never the root.
-      "countLateCompletionsWrittenOn",
+      // #31 adds NOTHING here. The archive write ceiling (ADR-0053
+      // decision 13) is a guard folded into `recordCompletion`'s own
+      // INSERT, not a second exported statement — step-6 finding F1. A
+      // standalone counter would be both a second round trip and an
+      // export with no consumer.
       "getCompletion",
       "getUserSince", // #29 (plan 033): widened in the same commit as the export
       "grantHints",
@@ -372,81 +373,157 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
   });
 });
 
-describe("countLateCompletionsWrittenOn (#31, ADR-0053 decision 13)", () => {
-  it("T-DB-S56: counts exactly the rows whose on_time is false and whose completed_at SP day is the given day", async () => {
-    // The archive write ceiling's counter. Lateness is spelled ONCE — the
-    // counter negates `onTimeSql()` rather than re-deriving it (ADR-0026
-    // decision 2) — so this asserts the counter against the SHIPPED
-    // `on_time` projection over a seeded mix, not against a second
-    // definition of lateness written in the test.
+describe("the archive write ceiling (#31, ADR-0053 decision 13)", () => {
+  /** One late write, guarded by the ceiling. */
+  function lateWrite(
+    userId: string,
+    date: string,
+    ceiling: { day: string; max: number },
+  ) {
+    return recordCompletion(
+      ctx.db,
+      {
+        userId,
+        game: "binairo",
+        date,
+        outcome: "won",
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+      },
+      ceiling,
+    );
+  }
+
+  it("T-DB-S56: the ceiling counts LATE rows by the WRITE instant's São Paulo day, and 49/50/51 is where it bites", async () => {
+    // ADR-0053 decision 13. Two properties, asserted together because
+    // either one alone is satisfiable by the wrong predicate:
+    //
+    // (a) THE BOUNDARY, from below as well as above. 49 rows held → the
+    //     50th is written; 50 held → the 51st is refused. Seeding 50 and
+    //     asserting a refusal would pass identically under `>= 50`,
+    //     `>= 49` and `> 48` (step-6 finding F12).
+    // (b) THE DAY IS SÃO PAULO'S, not UTC's. The straddle is T-DB-14's
+    //     instrument at the ceiling: a row written at 02:00:00Z is SP
+    //     23:00 the PREVIOUS day, so it must spend the previous day's
+    //     budget. Under a UTC spelling of the same predicate every
+    //     assertion below flips (step-6 finding F11).
     //
     // Only `Date` is faked, the T-DB-14 register: PGlite's `now()` follows
-    // it, which is what lets two distinct São Paulo write-days be seeded.
+    // it, which is what lets two São Paulo write-days be seeded.
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-08-10T12:00:00Z")); // 09:00 in SP
 
     const userId = await createUser();
     const otherUserId = await createUser();
 
-    // Written on SP 2026-08-10: three late rows (two won, one lost — the
-    // counter counts LATE, not WON) and one on-time row.
-    for (const [game, date, outcome] of [
-      ["binairo", "2026-08-01", "won"],
-      ["sudoku", "2026-08-02", "won"],
-      ["termo", "2026-08-03", "lost"],
-      ["nonogram", "2026-08-10", "won"],
-    ] as const) {
-      await recordCompletion(ctx.db, {
+    // 49 late rows written on SP 2026-08-10, plus one ON-TIME row and one
+    // other user's late row — neither of which may spend this budget.
+    await ctx.db.insert(completions).values([
+      ...Array.from({ length: 49 }, (_unused, index) => ({
         userId,
-        game,
-        date,
-        outcome,
+        game: "binairo" as const,
+        date: addDaysLocal("2026-01-01", index),
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-10T12:00:00Z"),
         elapsedMs: 1_000,
         hintsUsed: 0,
-        guesses: game === "termo" ? 6 : undefined,
-      });
-    }
-    // Another user's late row, written on the same day, must not count.
-    await recordCompletion(ctx.db, {
-      userId: otherUserId,
-      game: "binairo",
-      date: "2026-08-04",
-      outcome: "won",
-      elapsedMs: 1_000,
-      hintsUsed: 0,
+      })),
+      {
+        userId,
+        game: "sudoku" as const,
+        date: "2026-08-10",
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-10T12:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+      },
+      {
+        userId: otherUserId,
+        game: "binairo" as const,
+        date: "2026-06-01",
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-10T12:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+      },
+    ]);
+
+    // 49 held: the 50th lands.
+    const fiftieth = await lateWrite(userId, "2026-06-10", {
+      day: "2026-08-10",
+      max: 50,
     });
+    expect(fiftieth).toMatchObject({ capped: false, recorded: true });
 
-    // Written on SP 2026-08-11: one more late row.
-    vi.setSystemTime(new Date("2026-08-11T12:00:00Z"));
-    await recordCompletion(ctx.db, {
-      userId,
-      game: "binairo",
-      date: "2026-08-04",
-      outcome: "won",
-      elapsedMs: 1_000,
-      hintsUsed: 0,
+    // 50 held: the 51st is refused and writes nothing.
+    const before = await listCompletionsForStreak(ctx.db, userId);
+    const fiftyFirst = await lateWrite(userId, "2026-06-11", {
+      day: "2026-08-10",
+      max: 50,
     });
+    expect(fiftyFirst).toEqual({ capped: true });
+    expect(await listCompletionsForStreak(ctx.db, userId)).toHaveLength(
+      before.length,
+    );
 
-    expect(
-      await countLateCompletionsWrittenOn(ctx.db, userId, "2026-08-10"),
-    ).toBe(3);
-    expect(
-      await countLateCompletionsWrittenOn(ctx.db, userId, "2026-08-11"),
-    ).toBe(1);
-    expect(
-      await countLateCompletionsWrittenOn(ctx.db, userId, "2026-08-12"),
-    ).toBe(0);
-    expect(
-      await countLateCompletionsWrittenOn(ctx.db, otherUserId, "2026-08-10"),
-    ).toBe(1);
+    // A capped caller can still REPLAY a day it already holds: the guard
+    // suppresses the insert, the read-back still answers.
+    const replay = await lateWrite(userId, "2026-06-10", {
+      day: "2026-08-10",
+      max: 50,
+    });
+    expect(replay).toMatchObject({ capped: false, recorded: false });
 
-    // The counter and the shipped flag can never disagree: the per-day
-    // counts partition exactly the rows the `on_time` projection calls late.
+    // (b) THE STRADDLE. 02:00:00Z is 23:00 in São Paulo on 2026-08-11's
+    // EVE, so this row spends 2026-08-11's budget, not 2026-08-12's.
+    vi.setSystemTime(new Date("2026-08-12T02:00:00Z"));
+    const straddler = await createUser();
+    const first = await lateWrite(straddler, "2026-05-01", {
+      day: "2026-08-11",
+      max: 1,
+    });
+    expect(first).toMatchObject({ capped: false, recorded: true });
+
+    // Spent against SP 2026-08-11 — a ceiling of one on that day refuses.
+    expect(
+      await lateWrite(straddler, "2026-05-02", { day: "2026-08-11", max: 1 }),
+    ).toEqual({ capped: true });
+    // NOT spent against 2026-08-12, which is what a UTC spelling would say.
+    expect(
+      await lateWrite(straddler, "2026-05-02", { day: "2026-08-12", max: 1 }),
+    ).toMatchObject({ capped: false, recorded: true });
+
+    // The ceiling and the shipped flag can never disagree: everything it
+    // counted is exactly what the `on_time` projection calls late.
     const late = (await listCompletionsForStreak(ctx.db, userId)).filter(
       (row) => !row.onTime,
     );
-    expect(late).toHaveLength(4);
-  });
+    expect(late).toHaveLength(50);
+  }, 30_000);
+
+  it("T-DB-S56a: the ceiling is enforced INSIDE the insert — twenty concurrent late writes against a ceiling of ten write ten rows", async () => {
+    // Step-6 finding F1. A `count(*)` read followed by an INSERT is
+    // check-then-act: every request in a `Promise.all` reads the same
+    // snapshot of the count, passes the same comparison and writes. This
+    // is the test that separates the two shapes — measured on this stack,
+    // the two-statement form writes 20 rows here and the guarded single
+    // statement writes 10.
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, (_unused, index) =>
+        lateWrite(userId, addDaysLocal("2026-04-01", index), {
+          day: today,
+          max: 10,
+        }),
+      ),
+    );
+
+    expect(results.filter((result) => !result.capped)).toHaveLength(10);
+    expect(results.filter((result) => result.capped)).toHaveLength(10);
+    expect(await listCompletionsForStreak(ctx.db, userId)).toHaveLength(10);
+  }, 30_000);
 });
 
 describe("grantedHintsToday (DORMANT, plan 017 D22)", () => {

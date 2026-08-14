@@ -36,8 +36,12 @@ export const dynamic = "force-dynamic";
  * The payload is exactly what core derived: range start = days[0].date,
  * range end = days.at(-1).date — NO envelope fields (plan 033 §3.3).
  * `ROLLOVER_SLACK_DAYS` is passed into core as a parameter: the bound
- * lives in the route layer (ADR-0026 decision 6), and this route is its
- * ONE consumer — one constant, one owner.
+ * lives in the route layer (ADR-0053 decision 6, amending ADR-0051
+ * decision 2), and this route is its ONE consumer — one constant, one
+ * owner. The citation is deliberately NOT ADR-0026 decision 6: after #31's
+ * split that decision governs the WRITE window and nothing else, and
+ * following it from here is exactly the re-joining the constant's own doc
+ * block forbids.
  *
  * It is deliberately NOT the write window. Until #31 both were ONE
  * constant; #31 removed the write window's lower bound

@@ -250,7 +250,12 @@ async function syncRecord(
     return false;
   }
 
-  // 401 (after the one re-mint) and 5xx: retryable, keep it queued.
+  // 401 (after the one re-mint), 429 and 5xx: retryable, keep it queued.
+  // 429 is the completion route's late-write ceiling (#31, ADR-0053
+  // decision 13) and it is deliberately NOT in the set above: the record
+  // is a real completion refused by a per-day RATE rule, so it must
+  // survive to flush after the next São Paulo rollover. Settling it would
+  // discard a puzzle the player actually solved.
   return true;
 }
 

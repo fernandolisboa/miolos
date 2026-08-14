@@ -197,7 +197,7 @@ describe("stats derivations — properties (ADR-0023)", () => {
     );
   });
 
-  it("T-CORE-S84: however far back the rows reach, every emitted date lies in [since − rolloverSlackDays, today] — the fabricated-`missed` impossibility", () => {
+  it("T-CORE-S84: however far back the rows reach, every emitted date lies in [since − rolloverSlackDays, today] — the fabricated-`missed` bound, sampled", () => {
     // #31 removes the write window's lower bound, so rows may now be dated
     // ARBITRARILY far before `since`. This is the bound that makes the
     // constant split load-bearing: the clamp follows the rollover slack,
