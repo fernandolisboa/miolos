@@ -9,14 +9,17 @@ updates:
       # and this ecosystem is a handful of first-party actions pinned by SHA —
       # routine version drift, not a runtime dependency surface.
       #
-      # Read the cost honestly: Dependabot *security updates* are currently
-      # DISABLED on this repo (`GET /repos/…/automated-security-fixes` →
-      # `{"enabled": false}`, and `/vulnerability-alerts` 404s), so there is no
-      # advisory-driven fast path running alongside this schedule. This interval
-      # is the ONLY refresh cadence these pins have, and monthly widens the
-      # worst-case window on a compromised action from ~7 to ~30 days.
-      # Enabling Dependabot alerts + security updates costs zero Actions
-      # minutes and would restore the fast path independently of this setting.
+      # Read the cost honestly: this interval governs ROUTINE drift only.
+      # Dependabot alerts and security updates were enabled on this repo on
+      # 2026-08-14 (`GET /repos/…/automated-security-fixes` →
+      # `{"enabled": true, "paused": false}`; `/vulnerability-alerts` → 204),
+      # so an advisory-driven fast path now runs alongside this schedule and
+      # opens its own PR the moment an action is known-vulnerable, regardless
+      # of what is set here. Monthly is right BECAUSE that fast path exists:
+      # it widens the worst-case window on routine drift from ~7 to ~30 days
+      # while a real advisory is no longer waiting on the cadence at all.
+      # If the two settings are ever turned back off, this interval is again
+      # the ONLY refresh cadence these pins have — revisit it then.
       interval: "monthly"
     groups:
       github-actions:
