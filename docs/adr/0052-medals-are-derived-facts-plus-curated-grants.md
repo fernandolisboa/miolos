@@ -1,6 +1,7 @@
 # ADR-0052 — Medals are derived facts plus curated grants
 
 **Status:** Proposed — 2026-08-14 (issue #30)
+**Amends:** the copy-home sentence of [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md) — *"All UI copy and metadata strings live here [messages.ts]; components never carry string literals."* — by narrowing where bulk per-item copy may live when its measured bundle cost forces it out of the shared module; see decision 5.
 **Depends on:** [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md)
 
 ## Context
@@ -20,8 +21,15 @@ what travels on the wire; how a 20–30-threshold catalog is defended from
 being an XP-levels system in disguise; and where the mechanical teeth for
 "no wallet table" live.
 
-**Amendment audit — this ADR amends nothing** (audited at write, at commit
-and at exit). It *executes* standing records rather than changing them:
+**Amendment audit — this ADR amends exactly one standing record:
+ADR-0018** (the audit at write, commit and exit missed it; the step-6
+adherence review caught it). Moving the 23-record `medalCopy` out of
+`messages.ts` into `apps/web/src/medals/copy.ts` (decision 5) falsifies
+ADR-0018's "All UI copy and metadata strings live here [messages.ts]"
+as an absolute — the code is measured-correct, so the record is what
+changes: the `Amends:` header above and the decision-5 paragraph carry
+the narrowing, and ADR-0018 carries the reciprocal `Amended by:` line.
+Everything else this ADR touches it *executes* rather than changes:
 ADR-0006's no-wallet consequence gains its tripwires and its cheater medal
 stays available exactly as written; ADR-0008's exclusion list is obeyed
 sentence by sentence (decision 3 below); ADR-0009's union-and-dedupe sentence
@@ -38,8 +46,7 @@ rule 2's "archive-specific curated medals (e.g. 'solved 100 archive
 puzzles')" is read as *rule-derived-over-late-rows* — a definition #31 may
 add — not as hand-granted rows; that phrase's "curated" refers to the
 catalog's curation (every medal is curated content), not to the grant
-mechanism, so no sentence of ADR-0008 is contradicted. No `Amends:` header
-exists and no reciprocal `Amended by:` line is owed anywhere.
+mechanism, so no sentence of ADR-0008 is contradicted.
 
 ## Decision
 
@@ -92,7 +99,8 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
    schema, engine or contract change.
 
 4. **`medal_grants`: three columns, composite PK, a shape CHECK, an operator
-   write path, and a one-statement earliest-wins merge.** The table is
+   write path, and a two-statement merge: one union-earliest statement plus
+   the loser's delete.** The table is
    `user_id` (uuid, FK users ON DELETE CASCADE), `medal_id` (text),
    `granted_at` (timestamptz, DEFAULT now()); PRIMARY KEY
    `(user_id, medal_id)` — exactly the union-dedupe key. No `id`, no
@@ -137,7 +145,15 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
      deviation 3; the module is still the ADR-0018 contract — typed, in-repo,
      composed — and `satisfies Record<MedalId, …>` makes exhaustiveness a
      two-directional typecheck). Copy fixes are a client deploy; the payload
-     is bounded.
+     is bounded. **This is the recorded amendment of ADR-0018** (the
+     `Amends:` header above): ADR-0018's "all UI copy and metadata strings
+     live in `messages.ts`" is narrowed, not repealed — bulk per-item copy
+     whose MEASURED bundle cost forces it out of the shared module may live
+     in its own typed in-repo module under the same contract; a surface's
+     chrome stays in `messages.ts`; and the i18n barrel must NOT re-export
+     the split module, because a re-export puts it back in the module graph
+     of every barrel-importing route and recreates the exact leak the split
+     removed.
    - **No `earnedDate`.** For a late-counted feat the honest earning day is
      structurally unavailable (`StatsRow` carries no `completedAt` — the
      qualifying row's `date` is the *puzzle's* day), so a date field could
@@ -216,12 +232,18 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
    must precede the first grant. The window is decided at launch by #37
    (accounts with `created_at` before the launch instant); the procedure is
    the documented one-shot bulk insert via the decision-4 operator pattern —
-   `INSERT INTO medal_grants (user_id, medal_id) SELECT id, 'founder' FROM
-   users WHERE created_at < $launch ON CONFLICT DO NOTHING` — and the
-   **owner is #37's launch checklist**: this sentence is the written
-   obligation. The cheater medal stays unshipped (no cheat detection exists
-   to trigger the judgment); when it ships, its definition must precede its
-   first grant for the same reason.
+   `INSERT INTO medal_grants (user_id, medal_id) SELECT u.id, 'founder'
+   FROM users u WHERE u.created_at < $launch AND EXISTS (SELECT 1 FROM
+   sessions s WHERE s.user_id = u.id) ON CONFLICT DO NOTHING` — the
+   `EXISTS` filter excluding merge **tombstones** (zero sessions is the
+   tombstone discriminant; without it every pre-launch tombstone would
+   receive a grant that can never render — the step-6 security finding) —
+   and the **owner is #37's launch checklist**: this sentence is the
+   written obligation, and the checklist item itself is posted on the issue
+   ([#37's founder-grant comment](https://github.com/fernandolisboa/miolos/issues/37#issuecomment-5289169618),
+   the bidirectional pointer). The cheater medal stays unshipped (no cheat
+   detection exists to trigger the judgment); when it ships, its definition
+   must precede its first grant for the same reason.
 
 10. **Read amplification, restated with the third reader in it.** A
     signed-in `/estatisticas` visit now issues **three full-history reads**
@@ -232,12 +254,22 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
     a **×3 per-screen multiplier** (≈ 12,000 row-reads per stats-screen
     visit at the trigger point). The streak-sweep cost inside `earnedMedals`
     is one shared `computeStreak` walk over the distinct counted dates —
-    O(D·R) once per request for all streak medals together (≈ 5M cheap
-    operations at three years of daily play) — with its own revisit trigger:
-    if `/medals` p95 exceeds 200 ms server-side or the account passes 1,100
-    counted days, replace the sweep with a single-pass run-length scan
-    pinned to the computeStreak-per-day oracle T-CORE-S76 already provides.
-    Numbers, not shrugs, are what #37 inherits.
+    O(D·R) once per request for all streak medals together, **≈ 5M ops
+    ≈ 0.5 s of synchronous Node CPU at 1,100 counted days, measured** (the
+    sweep also stops early once the running maximum reaches 365, the
+    largest `streakReached` threshold — the cheap cap in `derive.ts`; the
+    worst case, an account that never reaches 365, is unchanged by it) —
+    with its own revisit trigger: if `/medals` p95 exceeds 200 ms
+    server-side or the account passes **~700 counted days**, replace the
+    sweep with a single-pass run-length scan pinned to the
+    computeStreak-per-day oracle T-CORE-S76 already provides. The day-count
+    trigger is ~700 rather than 1,100 because that is where the sweep's
+    measured wall-clock actually crosses the 200 ms sibling trigger — the
+    two triggers name the same line. If the read-amplification trigger
+    fires first, the cheap lever is a **narrowed projection for
+    `/medals`** — it pulls `elapsedMs`/`hintsUsed` and consumes neither,
+    ~25–30% wider than needed — deliberately not taken now (ADR-0051's
+    single-reader rule). Numbers, not shrugs, are what #37 inherits.
 
 ## Rejected
 
@@ -293,6 +325,19 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
   checklist (decision 9), the ×3 read-amplification figure and the
   streak-sweep trigger (decision 10), and the CLS/bundle measurements the
   PR body records.
+- **The measured warm seeded CLS (0.251 desktop / 0.677 mobile at 13
+  earned rows) is the MEDAL SECTION's own number, not the whole screen's
+  post-fetch settle:** #29's surfaces are dimension-reserved and
+  contribute ≈ 0 (`BLANK_VALUE` swaps values in place; the calendar is
+  last-in-flow, so its growth shifts nothing below it). The number is the
+  medal section's unreserved post-paint insert — the deliberate cost of
+  decision 8's nothing-at-zero rule. The common case is far smaller than
+  the measured worst case: 1 earned row inserts ≈ 97 px desktop /
+  92–111 px mobile, CLS ≈ 0.10–0.14 on mobile; 13 rows is the measured
+  0.677. A zero-product-change mitigation exists — placing the section
+  after `CalendarSection` would make the insert shift nothing in flow —
+  but the current slot is plan 033 D10's product order, so the move is
+  Fernando's call (flagged in the PR), deliberately not taken here.
 - The free-play wall extends over `src/medals/**` (ADR-0046's consequence,
   kept true by growth); free play can never touch a medal, structurally and
   by lint.

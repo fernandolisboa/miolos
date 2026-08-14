@@ -82,11 +82,13 @@ levels only when the interface shows the ladder.
   instructs, cheers, or points at future behaviour. Imperatives ("Vença…",
   "Mantenha…", "Acerte…", "Complete…", "Jogue…") are forbidden: only earned
   medals render, so an imperative reads as a to-do list of already-done
-  things — the casino quest-log register PRODUCT.md excludes. Verbs come from
-  CONTEXT.md's set (concluir/vencer, as shipped in messages.ts). Mechanically
-  enforced (T-WEB-S163): each description's first word is drawn from the
-  recorded past-tense allowlist in this README — initially
-  **{Acertou, Chegou, Concluiu, Estava, Venceu}** — and extending the
+  things — the casino quest-log register PRODUCT.md excludes. **The rule IS
+  the recorded past-tense first-word allowlist —
+  {Acertou, Chegou, Concluiu, Estava, Venceu} — which is exactly what
+  T-WEB-S163 enforces**: `Venceu` and `Concluiu` track the completion
+  vocabulary (CONTEXT.md's Win/Vitória and Completion/Conclusão rows, as
+  shipped in messages.ts); `Acertou`, `Chegou` and `Estava` are recorded
+  feat verbs for the guess, streak and founder classes. Extending the
   allowlist is a deliberate README + harness edit.
 - Forbidden vocabulary anywhere in medal copy (mechanical regex,
   case-insensitive, word-bounded): `xp`, `nível`/`níveis`, `moeda`/`moedas`,
@@ -125,8 +127,8 @@ from these classes.
 ## The catalog (23 definitions, curated 2026-08-13)
 
 Catalog order is display order (no date exists on the wire to sort by —
-ADR-0052). Every name and description is **[Fernando-adjustable]** in the PR;
-ids are frozen the moment they ship.
+ADR-0052). Names and descriptions may be revised; ids are frozen the moment
+they ship (an id is a wire value and a grant key).
 
 | # | Id | Name (pt-BR) | Description (pt-BR) | Rule | Rationale |
 |---|---|---|---|---|---|
@@ -205,8 +207,13 @@ deliberately has no `@types/node`; the games word-list harness is the
 file-reading precedent): every `MedalId` appears in this README's catalog
 table and vice versa; the rejected sample has ≥ 10 entries; every `medalCopy`
 name/description passes the mechanical rules above (lengths, no emoji, no
-exclamation in names, the forbidden-vocabulary regex including the recorded
-copy rejections, canary words, the past-tense first-word allowlist,
-threshold-digits parity against the rule params imported from `@miolos/core`).
+exclamation in names, no digits or diminutives in names, the
+forbidden-vocabulary regex including the recorded copy rejections, canary
+words, the past-tense first-word allowlist, threshold-digits parity against
+the rule params imported from `@miolos/core`); the catalog table's Rule
+column equals the canonical rendering of each definition's rule params
+(T-WEB-S163a — the column cannot drift); and this README itself contains
+every forbidden-vocabulary entry and every allowlist word (T-WEB-S163b —
+the README→harness direction: weakening this file fails the suite).
 Exhaustiveness of `medalCopy` over `MedalId` is the `satisfies` typecheck, not
 a runtime test.
