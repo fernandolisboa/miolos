@@ -420,7 +420,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     // token nor the user, so it cannot make the one distinction the record
     // says this exists to make — a marathon player trips it once, a script
     // trips it on every minted identity. Same idiom as
-    // `app/cron/publish/route.ts` and `src/session/origin-guard.ts`.
+    // `app/cron/publish/route.ts` — the repo's only other structured log
+    // line. (`src/session/origin-guard.ts` was cited here and is NOT one:
+    // it emits a plain-string `console.error`.)
     console.log(JSON.stringify({ event: "archive-cap", userId, day: today }));
     return errorResponse(429, "archive-cap");
   }

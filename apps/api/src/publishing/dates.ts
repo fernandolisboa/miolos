@@ -74,8 +74,17 @@ export function isWritableDate(date: string, today: string): boolean {
  * ROLLOVER ITSELF, and it is bounded at one row per user per rollover: a
  * `today` read at 23:59:59.9 lets a same-day write past the ceiling
  * branch, and the row lands at 00:00:00.1 already late by the database's
- * spelling and never counted against either day's budget. Costing one
- * uncounted row per rollover is the correct trade against reading the
+ * spelling.
+ *
+ * THE ROW ESCAPES THE *CHECK*, NOT THE *COUNT*, AND THE DIFFERENCE IS THE
+ * WHOLE REASON THIS IS SAFE. It is never compared against day D's budget,
+ * because the branch that would have compared it was not taken. But it
+ * carries `date = D` and a `completed_at` whose São Paulo day is D+1, so
+ * `writtenOnSaoPauloDay(D+1) ∧ not(on_time)` holds of it and EVERY guarded
+ * write on D+1 counts it — it spends one of the next day's fifty slots.
+ * The straddle therefore leaks nothing: it defers one row's accounting by
+ * one day, in the conservative direction. Do not "fix" it. Costing one
+ * unchecked row per rollover is the correct trade against reading the
  * clock twice inside one write.
  */
 export function isLateDate(date: string, today: string): boolean {
