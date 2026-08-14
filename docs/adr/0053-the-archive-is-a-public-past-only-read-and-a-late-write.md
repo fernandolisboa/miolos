@@ -2,7 +2,7 @@
 
 **Status:** Proposed — 2026-08-14 (issue #31)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0005](./0005-all-content-is-free.md), [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md), [ADR-0039](./0039-termo-cannot-be-played-offline.md), [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md), [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md)
-**Amends:** seven standing records. Every sentence below is quoted from the file as it stands; every amended file carries the reciprocal `**Amended by:**` line **and an in-place annotation of the amended sentence**, because in this repo "amended" means the file was edited ([ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md) consequence (b)).
+**Amends:** eight standing records. Every sentence below is quoted from the file as it stands; every amended file carries the reciprocal `**Amended by:**` line **and an in-place annotation of the amended sentence**, because in this repo "amended" means the file was edited ([ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md) consequence (b)).
 
 - **[ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md) rule 2** — *"**Archive completions are recorded, and marked late.** The stats calendar shows the date as solved with a visually distinct 'solved later' state."* For a late won row dated before the account's clamped range start there is no calendar entry at all — a class #31 and nothing else creates (decision 7). Rule 2's exclusion list and the three-visual-states consequence are untouched.
 - **[ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md)** — *"**Scope:** public, unauthenticated, cacheable server-rendered reads — the archive, published puzzle pages, OG images."* The archive, that clause's own named example, ships uncached (decision 2).
@@ -10,6 +10,7 @@
 - **[ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md)** — decision 6's *"A write may only target SP-today or SP-yesterday"*, its *"Without a lower bound any client could write a `won` completion for every past daily"* and its *"One day of slack is what keeps decision 7 from losing legitimate rows"*; the abuse posture's *"decision 6 caps the date axis at two days"*; and the consequence written about #31 by name, *"Widening it accidentally — by removing the bound while 'fixing' a date test — reopens the whole past calendar to forged completions"*, whose accident #31 commits deliberately and with its cost restated (decisions 5, 6, 13). **And its Rejected entry — *"**Application-level rate limiting on the write, in v1.** Considered and declined with its reasoning recorded below, not skipped."* — is REVERSED for the late branch** by decision 13.
 - **[ADR-0028](./0028-daily-play-routes-and-the-conclusion.md)** — decision 2's *"without the route the screen has no URL, and a screen with no URL cannot be scanned by the visual gate"*, narrowed to the daily play routes; the Context sentence that makes it universal, *"the shape all four dailies — and later the archive — will inherit"*; the consequence *"**Every future game screen is a copy of this shape**, not a new decision"*; and decision 5's per-route enumeration of the direct-read extension, which grows to the archive family (decisions 1, 2, 9).
 - **[ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md)** — consequence (f)'s *"the guess route runs ~6× per player per day"* and *"three indexed reads and no write, **at a volume bounded by the ritual**, is not ADR-0026's 'first abuse signal'"*: after #31 the ritual no longer bounds the guess route's legitimate volume (decisions 5, 11). Decision 8's own title — *"`ACCEPTED_DAYS_BACK` is hoisted to one module in `apps/api/src` and shared by both routes"* — and its back-reference name an identifier this ticket deletes; the substance (one bound, one module, both routes) survives whole as `isWritableDate` (decision 6).
+- **[ADR-0039](./0039-termo-cannot-be-played-offline.md)** — decision 3's *"**429 is never terminal.** This repo emits none today — the vocabulary borrowed here is `sync.ts:47`'s `TERMINAL_STATUSES` … — and the case exists because the platform firewall can emit one."* `POST /completions` now emits `429 archive-cap` (decision 13), so *"this repo emits none today"* is false and the causal clause is no longer why the case exists. **The rule is strengthened rather than falsified** — a first-party 429 whose whole design depends on 429 never settling a record — and the guess route, this decision's own subject, still emits none. This amendment was missed by the first three audit passes precisely because ADR-0039 had already been *cleared* on a different sentence (consequence (c)); an ADR ruled on for one reason is not thereby ruled on for all.
 - **[ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md)** — decision 2's *"The bound is **route-supplied**: `ACCEPTED_DAYS_BACK` lives at `apps/api/src/publishing/dates.ts` (ADR-0026 decision 6's layer) and `computeCalendar(rows, since, today, acceptedDaysBack)` takes it as a parameter — one constant, one owner"*, and decision 5's *"its `ACCEPTED_DAYS_BACK` must stay in the route layer"*. What falls is the identifier and the coupling of the calendar's bound to ADR-0026 decision 6's layer; **"one constant, one owner" stays true** and is more true after the split (decision 6). Decision 2's named #31 revisit is **discharged**, not amended — it offered decision 7's exit by name.
 
 ## Context
@@ -52,11 +53,12 @@ each is expensive to revisit once links exist in the wild:
 6. **How a visual gate whose input is a literal URL list reaches a page
    whose address is a date nobody can hardcode.**
 
-**Amendment audit — this ADR amends seven standing records**, listed with
+**Amendment audit — this ADR amends eight standing records**, listed with
 their quoted sentences in the `Amends:` header above and re-derived against
-the ADR text three times (at write, at the docs commit, at exit). Three
-further rulings are recorded here rather than left absent, because the
-failure this project has actually hit is an ADR **nobody looked at**:
+the ADR text three times at write and once more at step-6 review, which is
+where the eighth (ADR-0039) was found. Three further rulings are recorded
+here rather than left absent, because the failure this project has actually
+hit is an ADR **nobody looked at**:
 
 - **[ADR-0040](./0040-the-termo-daily-stores-the-drawn-answer.md) was
   audited and is NOT amended.** Consequence (g) says *"**No index is owed on
@@ -80,20 +82,22 @@ failure this project has actually hit is an ADR **nobody looked at**:
   [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md)'s.
   Both predate this ticket and neither touches the archive.
 - **The rule for a sentence that merely names a now-dead identifier, stated
-  once because #31 applies it twice.** `ACCEPTED_DAYS_BACK` no longer exists
-  in `apps` or `packages` after this ticket. A sentence that names it
-  without making a false forward claim is annotated **only when its file is
-  already being edited for a real amendment** — the annotation is
-  bookkeeping, not a finding, and opening an untouched ADR to record
-  bookkeeping is a drive-by. That is why
+  once because #31 applies it several times.** `ACCEPTED_DAYS_BACK` no
+  longer exists in `apps` or `packages` after this ticket. A sentence that
+  names it without making a false forward claim is annotated **only when
+  its file is already being edited for a real amendment** — the annotation
+  is bookkeeping, not a finding, and opening an untouched ADR to record
+  bookkeeping is a drive-by. Both
   [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md)'s
-  Rejected entry — still valid, and upheld by decision 7 — is annotated
-  while [ADR-0039](./0039-termo-cannot-be-played-offline.md) consequence (c)
-  is left exactly as written. ADR-0039 has a second, independent reason to
-  stand: *"nothing here widens `ACCEPTED_DAYS_BACK`"* is a **past-tense
-  statement about what ADR-0039 itself did**, so it asserts nothing about
-  the future and stays true — which is precisely why ADR-0051 decision 5's
-  **forward prescription** (*"must stay in the route layer"*) does not.
+  Rejected entry and [ADR-0039](./0039-termo-cannot-be-played-offline.md)
+  consequence (c) are annotated under that rule, each still **valid** and
+  each in a file this ticket edits for a real amendment. Both are
+  **past-tense statements about what their own ADR did**, so they assert
+  nothing about the future and stay true — which is precisely why ADR-0051
+  decision 5's **forward prescription** (*"must stay in the route layer"*)
+  does not. ADR-0039 carried this exemption alone until step-6 review
+  found the real amendment in its decision 3; the lesson recorded here is
+  that clearing an ADR on one sentence is not clearing the file.
 
 Everything else this ADR **executes** rather than changes: ADR-0004's wall
 (no archive reader can address a future date — the bound is in SQL, and the
@@ -346,7 +350,9 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
      backs the total-wins and each-game-won rules, reaching `first-win`,
      `wins-10`, `wins-50`, `wins-100`, `wins-500`, `binairo-30`,
      `sudoku-30`, `nonogram-30`, `termo-30` and `all-games`. A three-year
-     archive is 500 late wins, which mints every volume medal in the catalog.
+     archive is **over 4,000 late wins** — three years × four games × 365 —
+     which is eight times what the largest volume medal asks, and it is the
+     same 4,380 decision 13 sizes the ceiling against.
 
    **It is accepted, on the record's own terms.** ADR-0006 `:51`: *"It is not
    an anti-cheat system, and no detection infrastructure is being built for
@@ -536,9 +542,13 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
     playable; no confidentiality claim is weakened, because decision 9 makes
     none. What the widening costs is decision 5's cost statement and
     ADR-0038 consequence (f)'s amended volume claim, not a new exposure.
-    ADR-0039's posture — no offline finish, one round trip per guess, the
-    held-turn table — is inherited unchanged, and #31 narrows its 404 arm's
-    reachable causes to a killed row and an unpublished date.
+    ADR-0039's posture — no offline finish, one round trip per guess and the
+    held-turn table — is inherited in substance, and its 429 bullet is
+    amended by decision 13 (see the `Amends:` header). #31 narrows the guess
+    route's 404 arm to **four** reachable causes: a killed row, an
+    unpublished date, a never-published date (no row at all), and a **future**
+    date — which decision 5's own tightening now refuses in the route, ahead
+    of the wall. T-API-S102 pins the set.
 
 12. **A date-bearing gate URL is DISCOVERED from the app, never hardcoded —
     and this is the standing rule, not a one-off.** The visual gate's input
@@ -565,13 +575,49 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
     failure** — the job fires on every preview for every PR, so redding on
     an empty archive would block the gate repo-wide on unrelated work.
 
-13. **A player may write at most 50 archive completions per São Paulo day.**
-    The completion route refuses a **late** write — one whose date is
-    strictly before the database clock's São Paulo today — with `429
-    archive-cap` once the caller already holds 50 late completions written
-    on the current São Paulo day. The check runs **after** the idempotent
-    short-circuit, **after** the date predicate, and **only on the late
-    branch**, so the daily path pays no extra round trip.
+13. **A player may write at most 50 LATE completions per São Paulo day, and
+    the ceiling is enforced inside the write statement.** The completion
+    route refuses a write whose date is strictly before the database clock's
+    São Paulo today — `isLateDate`, the route layer's spelling — with `429
+    archive-cap` once the caller already holds 50 such rows written on the
+    current São Paulo day. The guard runs **after** the idempotent
+    short-circuit, **after** the date predicate, **after** the wall read and
+    the judge, and **only on the late branch**, so the daily path pays
+    nothing and a request destined for a terminal 404 or 422 never reaches
+    it.
+
+    **It is a LATE-write ceiling, not an archive-write ceiling, and the
+    difference is not cosmetic.** `isLateDate` also admits ADR-0026
+    decision 7's legitimate post-rollover flush — a player syncing
+    yesterday's offline daily at 00:05 is on this branch, and *is* the daily
+    ritual. That case is inside the ceiling by construction (at most four
+    rows), so nothing is lost by it; what would be lost is the record's
+    accuracy if this were called an archive-only rule. `CONTEXT.md` carries
+    the term under that name.
+
+    **The bound the code actually holds, stated rather than asserted.** A
+    `count(*)` read followed by an INSERT is check-then-act: `Promise.all`
+    over N requests reads one snapshot of the count in all N, passes the
+    same comparison in all N and writes N rows — so a "50 per day" ceiling
+    written that way holds only against a strictly sequential client, which
+    an attacker is not. The ceiling is therefore folded INTO the insert:
+    `INSERT ... SELECT ... WHERE (count subquery) < 50`, one SQL statement,
+    rendered byte-identically through the `neon-http` and PGlite dialects.
+    Measured on the test stack, twenty concurrent writes against a ceiling
+    of ten wrote **twenty** rows in the two-statement form and **ten** in
+    this one (T-DB-S56a). **The honest residual is READ COMMITTED's:** each
+    statement takes its own snapshot at its own start, so writes whose
+    statements genuinely overlap in time can still overshoot by the number
+    in flight. Closing that would need `BEGIN; pg_advisory_xact_lock(user);
+    …; COMMIT` — an interactive transaction the union database handle has
+    no way to express, because `neon-http` is non-interactive-only and
+    PGlite has no batch (the constraint `merge.ts` already records, and the
+    same reason it says `pg_advisory_lock` is unavailable there). So the
+    bound is: **50 per user per São Paulo day against any sequence of
+    writes, plus at most the number of write statements one attacker holds
+    in flight simultaneously.** That is a different order of magnitude from
+    the unbounded overshoot check-then-act permits, and it is what the code
+    enforces — this ADR states no stricter one.
 
     **A ceiling has to ship because decision 5 deletes the clause that was
     doing this job.** ADR-0026's abuse posture accepted an unthrottled mint
@@ -583,6 +629,18 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
     anywhere, and session minting is unthrottled. Without a ceiling the
     maximum rows per minted identity goes from 8 to four per archived day and
     grows by four a day forever.
+
+    **What the ceiling costs an attacker, on the axis that actually binds.**
+    Rows per *identity* is the wrong measure, because identities are free:
+    `POST /session` reads no body, needs no proof of work and is one
+    unauthenticated request. The binding axis is rows per **request**, and
+    there the ceiling moves ≈1.00 to ≈0.98 — one extra `POST /session` per
+    50 rows, a **2% tax**. The worst case decision 5 accepts is unchanged in
+    kind: an attacker mints more identities. **The ceiling's product is
+    observability, not closure**, and the Consequences below say so in the
+    same words. It is recorded here because a reader who took the
+    identity-axis figure for the whole story would believe this bought two
+    orders of magnitude when it bought two percent.
 
     **Where 50 comes from, named honestly: it is CHOSEN, not measured.**
     There is no traffic to measure, and calling this number measured would
@@ -601,10 +659,17 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
     carries a pending state with its own string, because the shipped pending
     copy names connectivity and a rate cap is not connectivity.
 
-    **The cap is its own instrument.** The first `429 archive-cap` in the
-    logs is the observation decision 5's abuse posture previously lacked, and
-    it distinguishes the two cases it needs to: a marathon player trips it
-    once, a script trips it on every minted identity. The second trigger is
+    **The cap is its own instrument, and the instrument is a line of code.**
+    The first `429 archive-cap` in the logs is the observation decision 5's
+    abuse posture previously lacked, and it distinguishes the two cases it
+    needs to: a marathon player trips it once, a script trips it on every
+    minted identity. That requires a **structured log line the route emits
+    itself** — `console.log(JSON.stringify({ event: "archive-cap", userId,
+    day }))`, the `cron/publish` and `origin-guard` idiom — because the
+    platform log carries the status and the path and neither the token nor
+    the user, so it cannot make that distinction. The line is not
+    decoration: it is the compensating control that makes the accepted
+    residual above defensible, and removing it un-accepts the risk. The second trigger is
     the first month in which archive completion writes exceed daily
     completion writes by an order of magnitude. **The guess route gets no
     ceiling** — it writes nothing, allocates nothing unbounded, and was
@@ -614,14 +679,51 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
     **ADR-0022's revisit trigger fires here, and it is not the hint grants.**
     That ADR says *"Revisit before public launch, at the first abuse signal,
     or alongside the first real rate-limiting need (ADR-0006 hint grants) —
-    whichever comes first."* `ARCHIVE_WRITES_PER_DAY` is this repo's **first
-    shipped application-level rate limit**, so the trigger fires on a cause
-    its own text did not anticipate. Nothing in ADR-0022 becomes false — an
-    accepted posture is a posture, and a fired trigger is not a falsification
-    — so it is not amended; the response it owes is session-mint throttling,
-    and that is a ticket, not a patch. **This decision is also what reverses
-    ADR-0026's Rejected entry**, for the late branch only: the daily branch
-    still ships no rate limit at all.
+    whichever comes first."* `ARCHIVE_WRITES_PER_DAY` is this repo's first
+    rate limit **on the completion write path**, and the trigger fires on a
+    cause its own text did not anticipate. It is **not** the repo's first
+    application-level rate limit at all: `POST /attach/request` already
+    answers `429 too-many-requests` off `MAX_REQUESTS_PER_HOUR`
+    ([ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md)
+    decision 11), in the same count-then-act shape — so ADR-0026's Rejected
+    entry was already reversed once, by ADR-0050, and this decision reverses
+    it a second time on the surface that entry was actually written about.
+    Nothing in ADR-0022 becomes false — an accepted posture is a posture,
+    and a fired trigger is not a falsification — so it is not amended; the
+    response it owes is session-mint throttling, and that is a ticket, not a
+    patch. The reversal of ADR-0026's entry is for the **late branch only**:
+    the daily branch still ships no rate limit at all.
+
+    **A BINDING OBLIGATION ON THE SECOND PULL REQUEST — the flush loop must
+    break on the first 429.** `sync.ts` posts the pending queue serially and
+    429 is correctly non-terminal, so a refused record stays queued forever
+    until the rollover. Before #31 an out-of-window date got 404, settled
+    and left the queue. After it, a player who closes 200 archive boards in
+    one day syncs 50 and holds **150 permanently pending**, and every mount,
+    `online` and `visibilitychange` re-posts all 150 serially, each paying
+    four round trips **and** the ceiling's count before its guaranteed 429 —
+    roughly **600 round trips and ~5 GB of buffer traffic per page load**,
+    all certain to fail. The cap is per user, so record N+1 fails
+    identically to record N: the fix is one `break` on the first 429,
+    optionally stamping the refusing São Paulo day and skipping until the
+    rollover. It is **not** shipped in the first pull request, because that
+    request ships no archive UI and nothing can reach the state; it is
+    recorded here and in plan 037 §12/§14 as work the second pull request
+    may not skip.
+
+    **Two honest non-invariants, so nobody reads the ceiling as a property
+    of the data.** (a) `mergeAccounts` copies completions verbatim,
+    `completed_at` included, so merged late rows land already stamped on the
+    winner's current São Paulo day and past its ceiling. It concentrates
+    rather than creates — totals across the two accounts are unmoved, and
+    the confirm route is throttled at 3/hour per email — but *"at most 50
+    per São Paulo day"* is a rule the **write path** enforces, not a
+    constraint the table satisfies. It also has a legitimate face: a player
+    merging two devices after archive sessions on both silently spends the
+    winner's budget. (b) The ceiling's branch and its count are two
+    spellings of "late" — `isLateDate` in JS, `on_time` negated in SQL — and
+    they disagree at exactly one instant per rollover, in the direction of
+    one uncounted row (`isLateDate`'s own doc block states the bound).
 
 14. **`prunePlayRecords` gains bounded retention, and that is the price of a
     permanent archive result URL.** The prune keeps the **50 most recent
@@ -765,6 +867,31 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
 - **Ten volume medals become self-mintable**, and #34 is where a self-minted
   volume medal first becomes socially visible. That is a change to #34's
   threat model caused by #31, recorded here rather than discovered there.
+- **The FIRST pull request alone changes what already-installed clients
+  write, and it does so before any archive page exists.** `sync.ts` posts
+  the whole pending queue with no date filter and `play-record.ts` never
+  prunes a pending record. On `main` today, a record two or more days old
+  gets 404, is terminal, and is discarded. The moment the write window's
+  lower bound goes, that same record is **accepted and written as a late
+  completion** — so the first production flush from any device that has
+  been offline more than a day retroactively writes real late rows, moving
+  `solved`, the ten volume medals and the calendar's `late` cells. It is
+  arguably a fix (the player did solve those boards, and none of it reaches
+  the streak or any time statistic), and it is recorded here because the
+  two-PR split is justified by *"no player can reach a page that would
+  produce an archive write"* — which is true of the archive and not of the
+  queue. There is no dormant seam to hide behind: this is a live-path
+  behaviour change shipped by PR 1.
+- **`/privacidade` describes the archive one pull request early.** The page's
+  own contract is that it states exactly what the release ships, and the
+  clause added here names archive completions while PR 1 ships no archive
+  URL. The disclosure is LGPD-accurate and over-broad rather than wrong — no
+  new data category, the ceiling's guard reads only the caller's own rows,
+  deletion still cascades — and it lands in PR 1 because splitting one
+  sentence across two PRs is worse than being early. If PR 2 slips, the page
+  is early for that long, and that is the accepted cost. Its *"ficam de fora
+  da sequência"* is true but partial: late rows do count in `solved` and in
+  the volume medals, which `CONTEXT.md`'s **Late completion** row states.
 - **Write amplification is this ticket's largest open number.** Decision 13
   caps a user at 50 late writes per São Paulo day, but minting is still
   unthrottled, so the axis is minted-identities × 50. The cap makes the axis
@@ -790,9 +917,13 @@ Decisions 5, 6, 7, 8, 13 and 15 are implemented by PR 1 itself.
   the archive and free play but not the daily play routes, which ADR-0028
   already states outright are not an SEO surface. Absence from a sitemap is
   not `noindex`, and that is stated rather than implied.
-- **`ACCEPTED_DAYS_BACK` survives in `docs/` only as quoted history inside
-  amendment annotations, never as a live prescription**, and nowhere at all
-  in `apps/` or `packages/`.
+- **`ACCEPTED_DAYS_BACK` survives in `docs/` only as history — original ADR
+  sentences that now carry an amendment annotation, plus point-in-time plans
+  and handoffs — never as a live prescription**, and nowhere at all in
+  `apps/` or `packages/`. The distinction matters because the identifier
+  still appears in the ADRs' own body text (ADR-0026, ADR-0038, ADR-0039,
+  ADR-0051), quoted by the annotations rather than deleted: this repo never
+  rewrites an amended sentence, it annotates it.
 - **"Write window" and "rollover slack" enter CONTEXT.md as durable terms**,
   because splitting one name into two ideas is a ubiquitous-language act:
   without both rows the next ticket is free to call one of them "the accepted

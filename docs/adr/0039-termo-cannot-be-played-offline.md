@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-02
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md)
+**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — decision 3's *"429 is never terminal. **This repo emits none today**"* is false the moment #31 merges, and the causal clause that follows it is no longer the reason the case exists. The rule itself is strengthened, not falsified.
 
 ## Context
 
@@ -88,6 +89,18 @@ project's shared layer would get bent around Termo one guess at a time.
      404, 415, 422])`, which contains no 429 — and the case exists because
      the platform firewall can emit one. Settling a live turn as "rejected"
      on a load spike would cost the player a guess.
+     *(**Amended at #31** —
+     [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+     decision 13. *"This repo emits none today"* is no longer true:
+     `POST /completions` answers `429 archive-cap` when the late-write
+     ceiling is met. The guess route still emits none, so this decision's
+     own subject is unchanged in behaviour — but the case no longer exists
+     only because a platform firewall might fire. **The rule is
+     strengthened, not falsified**: the repo now has a first-party 429
+     whose whole design depends on 429 never settling a record, and
+     `TERMINAL_STATUSES` still contains no 429 for exactly that reason.
+     The set is byte-unchanged; what changed is that a real caller now
+     depends on it.)*
 
 4. **`sync.ts` is NOT the vehicle for a guess, and this is a decision rather
    than an omission.** Its queue is a *completions* queue keyed on
@@ -206,6 +219,14 @@ project's shared layer would get bent around Termo one guess at a time.
   while the player is connected and the late-by-sync window is nearly
   closed for this game. Fernando's decision on #58 is inherited unchanged;
   nothing here widens `ACCEPTED_DAYS_BACK`.
+  *(**Still true at #31**, and annotated only because this file is now
+  edited for the real amendment above —
+  [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
+  decision 6 deletes the identifier `ACCEPTED_DAYS_BACK`, which after the
+  split is `isWritableDate` for the write window and `ROLLOVER_SLACK_DAYS`
+  for the calendar's clamp. This sentence is **past tense about what
+  ADR-0039 itself did** and asserts nothing about the future, so it stands
+  as written; only the name it quotes is dead.)*
 - **(d) `use-record-snapshot.ts`'s `sameToTheReader` must gain the guess
   count.** It compares exactly five chrome fields —
   `concluded`/`pendingSync`/`syncOutcome`/`elapsedMs`/`hintsUsed`,

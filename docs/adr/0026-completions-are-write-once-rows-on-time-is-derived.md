@@ -103,8 +103,16 @@ rows exist in production:
    ([ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
    decisions 5 and 6).** A write may now target any day up to and including
    the São Paulo today; the archive is every published past day and the wall
-   is the only authority on which those are. Three sentences above become
-   false: *"SP-today or SP-yesterday"*, the *"Without a lower bound"* warning
+   is the only authority on which those are. Four sentences above become
+   false. The fourth is the bolded one that names #31 outright — *"**The
+   lever the archive ticket (#31) widens is therefore the route constant
+   `ACCEPTED_DAYS_BACK`, not `wallPredicate`**"*. #31 did not widen that
+   constant: it **deleted and split** it, into `isWritableDate` (the write
+   window) and `ROLLOVER_SLACK_DAYS` (the stats calendar's clamp). The
+   sentence's substance — that the lever is in the ROUTE and not in the SQL
+   — survives whole and is exactly what the widening did; only its
+   mechanism and its identifier are wrong. The other three: *"SP-today or
+   SP-yesterday"*, the *"Without a lower bound"* warning
    (that is now the shipped behaviour, accepted with its cost written out —
    the Termo guess route is an answer oracle at the cost of one authenticated
    request, the grid solvers run locally in a fraction of a millisecond, and
@@ -166,8 +174,12 @@ rows exist in production:
   below — is what this entry's reasoning rested on, and #31 removes it. The
   **daily** branch still ships no rate limit at all, and 429 is deliberately
   not a terminal status for the sync queue, so a capped record survives and
-  lands after the next rollover. This is the repo's first shipped
-  application-level rate limit, which fires ADR-0022 `:69-75`'s revisit
+  lands after the next rollover. This is the repo's first rate limit **on
+  the completion write path** — not its first anywhere: `POST
+  /attach/request` already answers `429 too-many-requests` off
+  `MAX_REQUESTS_PER_HOUR` ([ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md)
+  decision 11), so this entry was already reversed once, by ADR-0050, on a
+  route it was not written about. It fires ADR-0022 `:69-75`'s revisit
   trigger on a cause its own text did not anticipate.)*
 
 ## Consequences
@@ -216,7 +228,12 @@ rows exist in production:
   [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
   decisions 5 and 13. The middle leg of this posture, *"decision 6 caps the
   date axis at two days"*, is deleted: the date axis is now the whole
-  archive. The other two legs stand. What replaces it is not a platform
+  archive. The composite-PK leg stands. The per-request-cost leg — *"each
+  request costs one jsonb wall read plus one insert"* — **grows on the late
+  branch**, deliberately: that insert now carries the ceiling's `count(*)`
+  as a guard inside the same statement, which is the thing being bought.
+  The daily branch's cost is unchanged. What replaces the deleted leg is
+  not a platform
   backstop but an application-level ceiling — 50 late completions per user
   per São Paulo day, `429 archive-cap` — so the uncapped axis becomes
   minted-identities × 50 rather than minted-identities × the archive.

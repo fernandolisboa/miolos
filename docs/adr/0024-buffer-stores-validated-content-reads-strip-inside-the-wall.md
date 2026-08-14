@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-07-31
-**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — the operational-semantics horizon — *"the buffer is ~`bufferDepth` days deep — so any M2 content-shape change **must keep the read-side schema parsing rows generated up to `bufferDepth` days earlier**"* — lengthens to **the whole archive**. That bound was true because the only content read-backs were today's daily and a write path bounded at one day back; #31 makes every published past day readable at its own public URL, so a content-shape change owes compatibility with every row ever published, not the last seven. The failure mode is decided rather than deferred: the archive's per-day reader logs and returns nothing on a parse failure, so a stale row 404s instead of 500ing a URL the sitemap advertises (ADR-0053 decision 4); the two shipped readers still throw.
+**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — the operational-semantics horizon — *"the buffer is ~`bufferDepth` days deep — so any M2 content-shape change **must keep the read-side schema parsing rows generated up to `bufferDepth` days earlier**"* — lengthens to **the whole archive**. That bound was true because the only content read-backs were today's daily and a write path bounded at one day back; #31 makes every published past day readable at its own public URL, so a content-shape change owes compatibility with every row ever published, not the last seven. The failure mode is decided rather than deferred: the archive's per-day reader logs and returns nothing on a parse failure, so a stale row 404s instead of 500ing a URL the sitemap advertises (ADR-0053 decision 4); the two shipped readers still throw. *(**Tense, and why this amendment is nonetheless true from PR 1.** ADR-0053 lands in #31's first pull request, which ships no archive route — so the public URL half is PR 2's. The horizon lengthens anyway, in PR 1, by a path that is easy to miss: the WRITE path already reaches `getPublishedDailyWithSolution` + the content parse at any published past date the moment the window's lower bound goes. **On that path a drifted row is still a 500**, not the 404 promised above — the graceful reader is PR 2's and governs PR 2's reader only.)*
 
 ## Context
 
@@ -75,7 +75,12 @@ table around the helper.
   compatibility with every row ever published. A row whose content no
   longer parses makes the archive reader log and return nothing — a 404 on
   a sitemap-advertised URL rather than a 500 — and the log line is the only
-  alarm.)*
+  alarm. **The lengthening itself is already true in #31's first pull
+  request**, before any archive URL exists: the completion route's write
+  path reads and parses stored content at any published past date as soon
+  as the window's lower bound goes. On that path a drifted row is a 500,
+  which is the shipped behaviour and deliberately unchanged; the 404 above
+  is the archive reader's, and arrives with it.)*
 - **Vercel Instant Rollback does not update crons** — after a rollback,
   verify the cron schedule still matches the deployed `vercel.json`.
 
