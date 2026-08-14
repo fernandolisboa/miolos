@@ -12,6 +12,7 @@ import {
 
 import { todaySaoPaulo } from "../src/buffer";
 import {
+  countLateCompletionsWrittenOn,
   getCompletion,
   grantHints,
   grantedHintsToday,
@@ -102,6 +103,9 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
     expect(Object.keys(user).sort()).toEqual([
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "completions",
+      // #31 added exactly one: `countLateCompletionsWrittenOn`, the archive
+      // write ceiling's counter (ADR-0053 decision 13), never the root.
+      "countLateCompletionsWrittenOn",
       "getCompletion",
       "getUserSince", // #29 (plan 033): widened in the same commit as the export
       "grantHints",
@@ -365,6 +369,83 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
 
     expect(await listCompletionsForStreak(ctx.db, userId)).toEqual([]);
     expect(await listCompletionsForStreak(ctx.db, otherUserId)).toHaveLength(1);
+  });
+});
+
+describe("countLateCompletionsWrittenOn (#31, ADR-0053 decision 13)", () => {
+  it("T-DB-S56: counts exactly the rows whose on_time is false and whose completed_at SP day is the given day", async () => {
+    // The archive write ceiling's counter. Lateness is spelled ONCE — the
+    // counter negates `onTimeSql()` rather than re-deriving it (ADR-0026
+    // decision 2) — so this asserts the counter against the SHIPPED
+    // `on_time` projection over a seeded mix, not against a second
+    // definition of lateness written in the test.
+    //
+    // Only `Date` is faked, the T-DB-14 register: PGlite's `now()` follows
+    // it, which is what lets two distinct São Paulo write-days be seeded.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-10T12:00:00Z")); // 09:00 in SP
+
+    const userId = await createUser();
+    const otherUserId = await createUser();
+
+    // Written on SP 2026-08-10: three late rows (two won, one lost — the
+    // counter counts LATE, not WON) and one on-time row.
+    for (const [game, date, outcome] of [
+      ["binairo", "2026-08-01", "won"],
+      ["sudoku", "2026-08-02", "won"],
+      ["termo", "2026-08-03", "lost"],
+      ["nonogram", "2026-08-10", "won"],
+    ] as const) {
+      await recordCompletion(ctx.db, {
+        userId,
+        game,
+        date,
+        outcome,
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        guesses: game === "termo" ? 6 : undefined,
+      });
+    }
+    // Another user's late row, written on the same day, must not count.
+    await recordCompletion(ctx.db, {
+      userId: otherUserId,
+      game: "binairo",
+      date: "2026-08-04",
+      outcome: "won",
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+    });
+
+    // Written on SP 2026-08-11: one more late row.
+    vi.setSystemTime(new Date("2026-08-11T12:00:00Z"));
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "binairo",
+      date: "2026-08-04",
+      outcome: "won",
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+    });
+
+    expect(
+      await countLateCompletionsWrittenOn(ctx.db, userId, "2026-08-10"),
+    ).toBe(3);
+    expect(
+      await countLateCompletionsWrittenOn(ctx.db, userId, "2026-08-11"),
+    ).toBe(1);
+    expect(
+      await countLateCompletionsWrittenOn(ctx.db, userId, "2026-08-12"),
+    ).toBe(0);
+    expect(
+      await countLateCompletionsWrittenOn(ctx.db, otherUserId, "2026-08-10"),
+    ).toBe(1);
+
+    // The counter and the shipped flag can never disagree: the per-day
+    // counts partition exactly the rows the `on_time` projection calls late.
+    const late = (await listCompletionsForStreak(ctx.db, userId)).filter(
+      (row) => !row.onTime,
+    );
+    expect(late).toHaveLength(4);
   });
 });
 

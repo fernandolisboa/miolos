@@ -4,7 +4,7 @@ import type {
   HintGrantSource,
   StreakRow,
 } from "@miolos/core";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, not, sql } from "drizzle-orm";
 
 import type { Db } from "./client";
 import { SAO_PAULO_TIME_ZONE } from "./published";
@@ -110,6 +110,49 @@ export async function listCompletionsForStreak(
     .from(completions)
     .where(eq(completions.userId, userId))
     .orderBy(desc(completions.date));
+}
+
+/**
+ * How many LATE rows this user wrote on the São Paulo day `day` — the
+ * archive write ceiling's counter (#31, ADR-0053 decision 13).
+ *
+ * Lateness is spelled ONCE: this negates `onTimeSql()` rather than
+ * re-deriving it, so no second definition of "late" can enter SQL
+ * (ADR-0026 decision 2's rule, applied to a counter). The counter and the
+ * flag every reader projects therefore cannot disagree — T-DB-S56 asserts
+ * that over a seeded mix.
+ *
+ * `day` is a São Paulo calendar day, compared against the WRITE instant's
+ * SP day (`completed_at`), never against the puzzle's own `date`: the
+ * ceiling is a per-day rate rule on the writer, not a date rule on the
+ * puzzle. The date rule lives in the route (`isWritableDate`,
+ * ADR-0026 decision 6 as amended by ADR-0053), and after #31 it has no
+ * lower bound at all — which is exactly why this counter exists.
+ *
+ * No JS `Date`: the day arrives as a 'YYYY-MM-DD' string the caller read
+ * off the DB clock, and the cast runs in Postgres.
+ */
+export async function countLateCompletionsWrittenOn(
+  db: Db,
+  userId: string,
+  day: string,
+): Promise<number> {
+  const rows = await db
+    .select({
+      // `count(*)` is bigint in Postgres and would arrive as a STRING; the
+      // ::int cast keeps the driver-parsed value a number (the
+      // `grantedHintsToday` precedent).
+      late: sql<number>`count(*)::int`,
+    })
+    .from(completions)
+    .where(
+      and(
+        eq(completions.userId, userId),
+        sql`(${completions.completedAt} at time zone ${SAO_PAULO_TIME_ZONE})::date = ${day}`,
+        not(onTimeSql()),
+      ),
+    );
+  return rows[0]?.late ?? 0;
 }
 
 /**

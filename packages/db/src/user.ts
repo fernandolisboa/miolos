@@ -10,6 +10,7 @@
  * test/user.test.ts — widening this surface fails the suite.
  */
 export {
+  countLateCompletionsWrittenOn, // #31 (ADR-0053 decision 13): the archive write ceiling's counter
   getCompletion,
   grantedHintsToday, // DORMANT (plan 017 D22) — no v1 writer; see ADR-0027
   grantHints, // DORMANT (plan 017 D22)

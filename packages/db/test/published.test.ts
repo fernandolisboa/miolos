@@ -773,6 +773,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "bufferDepth",
       "completions",
+      "countLateCompletionsWrittenOn", // #31 (ADR-0053 decision 13): the user entry, never the root
       "createDb",
       "createPublishingDb",
       "createTestDb",
@@ -805,7 +806,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "users",
     ]);
     // A duplicate across two entries would be hidden by the Set above, so
-    // pin the count too: 29 distinct names, 29 exports. #27 moved it by
+    // pin the count too: 35 distinct names, 35 exports. #27 moved it by
     // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
     // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
     // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
@@ -816,7 +817,10 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // exactly two: `listCompletionsForStats` and `getUserSince` on the
     // user entry (plan 033 §3.1), never the root, and #30 by exactly
     // two: `listMedalGrants` and `medalGrants` on the user entry
-    // (ADR-0052), never the root.
-    expect(surface).toHaveLength(34);
+    // (ADR-0052), never the root. #31 moves it by exactly five across two
+    // PRs: `countLateCompletionsWrittenOn` on the user entry here (the
+    // archive write ceiling's counter, ADR-0053 decision 13), then the
+    // three archive readers and the date classifier on the root entry.
+    expect(surface).toHaveLength(35);
   });
 });
