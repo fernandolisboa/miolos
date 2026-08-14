@@ -408,8 +408,27 @@ export const messages = {
       // meaning for the same glyph — sideways, on the timeline — on the very
       // page where both appear is one glyph doing two jobs. The words say
       // which job this is.
-      previous: (month: string) => `Mês anterior · ${month}`,
-      next: (month: string) => `Próximo mês · ${month}`,
+      //
+      // The DIRECTION and the MONTH are two strings, not one, and the view
+      // renders them as two elements — an uppercase kicker over the month in
+      // sentence case. `impeccable`'s `all-caps-body` fires on any non-heading
+      // element carrying more than 30 characters of DIRECT text under
+      // `text-transform: uppercase` (`checks.mjs:3463-3467`), with no
+      // interactive or `nav` exemption; the single composed string reached 32
+      // characters in fevereiro and 31 in setembro, novembro and dezembro, so
+      // four months in every twelve would have redded the detect gate on the
+      // newest month page — the one the CI job discovers — with no commit
+      // causing it and no commit able to fix it. Split, no element carries
+      // more than 17. Same reason `.monthNavMonth` is not uppercase.
+      //
+      // The composed sentence survives as the link's `aria-label`, the
+      // `backToIndex`/`backToIndexAria` idiom this file already uses: the
+      // accessible name contains the visible words, so WCAG 2.5.3's
+      // label-in-name holds.
+      previous: "Mês anterior",
+      previousAria: (month: string) => `Mês anterior · ${month}`,
+      next: "Próximo mês",
+      nextAria: (month: string) => `Próximo mês · ${month}`,
     },
 
     day: {

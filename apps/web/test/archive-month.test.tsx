@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -71,14 +74,16 @@ describe("the archive month page (T-WEB-S169)", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
 
     // `months` is newest-first, so NEXT is the neighbour before this one.
+    // The composed sentence is the ACCESSIBLE NAME; the visible label is a
+    // kicker over a month, in two elements (step-7 V1, pinned below).
     expect(
       screen.getByRole("link", {
-        name: messages.archive.month.next(formatMonth("2026-09-01")),
+        name: messages.archive.month.nextAria(formatMonth("2026-09-01")),
       }),
     ).toHaveAttribute("href", "/arquivo/mes/2026-09");
     expect(
       screen.getByRole("link", {
-        name: messages.archive.month.previous(formatMonth("2026-07-01")),
+        name: messages.archive.month.previousAria(formatMonth("2026-07-01")),
       }),
     ).toHaveAttribute("href", "/arquivo/mes/2026-07");
 
@@ -183,6 +188,93 @@ describe("the archive month page (T-WEB-S169)", () => {
       from: "2026-02-01",
       to: "2026-02-28",
     });
+  });
+
+  // The sibling links, pinned against the gate that broke on them (step-7
+  // V1). `impeccable`'s `all-caps-body` fires on any non-heading element with
+  // MORE THAN 30 characters of direct text under `text-transform: uppercase`
+  // (`checks.mjs:3463-3467`), and it grants no interactive or `nav` exemption
+  // — that one belongs to `undersized-ui-text`, twenty lines above it. The
+  // single composed label reached 32 characters in fevereiro and 31 in
+  // setembro, novembro and dezembro, and the CI job scans the NEWEST month
+  // page, which always has a `previous` sibling: four months in every twelve
+  // would have redded `detect` with no commit causing it and none able to fix
+  // it. Nothing asserted the label's shape, exactly as nothing asserted the
+  // row's before F9.
+  it("no sibling label can reach impeccable's all-caps gate, in any month", async () => {
+    // Every month as `previous`, at a four-digit year — the year's length is
+    // constant, so this is the whole space.
+    for (let m = 1; m <= 12; m += 1) {
+      const previous = `2026-${String(m).padStart(2, "0")}`;
+      spies.listArchivedDays.mockResolvedValue([
+        { date: "2027-01-01", game: "binairo" },
+      ]);
+      spies.listArchivedMonths.mockResolvedValue(["2027-01", previous]);
+
+      const { container, unmount } = render(
+        await ArchiveMonthPage({ params: Promise.resolve({ mes: "2027-01" }) }),
+      );
+
+      const nav = container.querySelector("nav");
+      expect(nav).not.toBeNull();
+      for (const el of [nav!, ...nav!.querySelectorAll("*")]) {
+        // impeccable's own predicate, element by element: the direct text
+        // run is what `hasDirectText` reads, and 30 is its threshold.
+        const direct = [...el.childNodes]
+          .filter((n) => n.nodeType === 3)
+          .map((n) => n.textContent ?? "")
+          .join("")
+          .trim();
+        expect(
+          direct.length,
+          `${previous}: <${el.tagName.toLowerCase()}> carries ${direct.length} characters of direct text ("${direct}")`,
+        ).toBeLessThanOrEqual(30);
+      }
+
+      // And the direction and the month are separate elements, so the month
+      // — the only varying token — is never inside the uppercase one.
+      const kickers = [...nav!.querySelectorAll("span")].map(
+        (s) => s.textContent,
+      );
+      expect(kickers).toContain(messages.archive.month.previous);
+      expect(kickers).toContain(formatMonth(`${previous}-01`));
+
+      // The composed sentence survives as the accessible name, so WCAG
+      // 2.5.3's label-in-name still holds over the visible words.
+      expect(
+        screen.getByRole("link", {
+          name: messages.archive.month.previousAria(
+            formatMonth(`${previous}-01`),
+          ),
+        }),
+      ).toHaveAttribute("href", `/arquivo/mes/${previous}`);
+
+      unmount();
+      vi.clearAllMocks();
+      spies.getDb.mockReturnValue(spies.stubDb);
+    }
+  });
+
+  it("the uppercase transform lives on the kicker alone, in the stylesheet", () => {
+    // The DOM half above cannot see CSS, and the CSS half is where the gate
+    // actually reads: `ink-on-accent.test.ts`'s source-scan idiom.
+    const sheet = readFileSync(
+      join(import.meta.dirname, "..", "app", "arquivo", "arquivo.module.css"),
+      "utf8",
+    );
+    const block = (selector: string) => {
+      const at = sheet.indexOf(`\n${selector} {`);
+      expect(
+        at,
+        `${selector} is missing from arquivo.module.css`,
+      ).toBeGreaterThan(-1);
+      return sheet.slice(at, sheet.indexOf("}", at));
+    };
+    expect(block(".monthNavKicker")).toContain("text-transform: uppercase");
+    expect(block(".monthNavLink")).not.toContain("text-transform");
+    expect(block(".monthNavMonth")).not.toContain("text-transform");
+    // Tracking follows the uppercase, for `wide-tracking`'s sake.
+    expect(block(".monthNavMonth")).not.toContain("letter-spacing");
   });
 
   it("generateMetadata and the page share ONE parser — a hostile segment yields no canonical", async () => {

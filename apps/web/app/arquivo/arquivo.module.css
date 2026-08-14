@@ -236,13 +236,24 @@
    way to move backwards through the archive was the hardest thing on the
    page to hit. DESIGN.md's ≥44px floor; every other link on both archive
    sheets already honours it (`.monthChip`, `late-result .link`). */
+/* TWO LINES, and the uppercase lives on the top one only (step-7 V1). The
+   link used to be one uppercase run of `Mês anterior · <mês>`; impeccable's
+   `all-caps-body` fires on any non-heading element with more than 30
+   characters of direct text under `text-transform: uppercase`
+   (`checks.mjs:3463-3467`) and grants no interactive or `nav` exemption —
+   that one belongs to `undersized-ui-text`, twenty lines above it. In
+   fevereiro the label is 32 characters and in setembro, novembro and dezembro
+   31, so the gate would have redded on the newest month page for four months
+   in every twelve, on the calendar rather than on a diff. Kicker over month
+   is also the anatomy this sheet already uses on the day cards
+   (`.cardKicker` + `.cardTitle`), and it scans faster: the month, the only
+   varying token, is the one in sentence case. */
 .monthNavLink {
   display: inline-flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
   min-height: var(--touch-target-min);
-  font: var(--text-kicker);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: var(--ink);
   text-decoration: none;
 }
@@ -250,6 +261,28 @@
 /* Pushes a lone `next` to the right when there is no `previous`. */
 .monthNavLink:only-child:last-child {
   margin-left: auto;
+}
+
+/* `next` sits at the right edge of the `space-between` row, so both of its
+   lines align to that edge rather than ragging away from it. */
+.monthNavNext {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.monthNavKicker {
+  font: var(--text-kicker);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* NOT uppercase and NOT tracked — the two halves of the rule above. Tracking
+   belongs to the kicker register; on sentence case at body size impeccable's
+   `wide-tracking` would be right to complain. */
+.monthNavMonth {
+  font: var(--text-body);
+  color: var(--ink);
 }
 
 /* ——— day page: the game cards —————————————————————————————————————

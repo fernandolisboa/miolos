@@ -59,23 +59,36 @@ export function ArchiveMonthView({
         <DayRows groups={groups} dateFormat="dayInMonth" />
       </section>
 
+      {/* Each sibling link is a kicker over a month, never one run of
+          uppercase text: `messages.archive.month` records why (impeccable's
+          `all-caps-body` gate fires at 30 characters, which the composed
+          label passed in four months of every twelve). The composed sentence
+          is the accessible name. */}
       <nav className={styles.monthNav}>
         {previous === undefined ? null : (
           <Link
             className={styles.monthNavLink}
             href={archiveMonthRoute(previous)}
             prefetch={false}
+            aria-label={copy.month.previousAria(formatMonth(`${previous}-01`))}
           >
-            {copy.month.previous(formatMonth(`${previous}-01`))}
+            <span className={styles.monthNavKicker}>{copy.month.previous}</span>
+            <span className={styles.monthNavMonth}>
+              {formatMonth(`${previous}-01`)}
+            </span>
           </Link>
         )}
         {next === undefined ? null : (
           <Link
-            className={styles.monthNavLink}
+            className={`${styles.monthNavLink} ${styles.monthNavNext}`}
             href={archiveMonthRoute(next)}
             prefetch={false}
+            aria-label={copy.month.nextAria(formatMonth(`${next}-01`))}
           >
-            {copy.month.next(formatMonth(`${next}-01`))}
+            <span className={styles.monthNavKicker}>{copy.month.next}</span>
+            <span className={styles.monthNavMonth}>
+              {formatMonth(`${next}-01`)}
+            </span>
           </Link>
         )}
       </nav>
