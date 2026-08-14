@@ -197,6 +197,7 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
         if (typeof property === "string" && QUERY_VERBS.has(property)) {
           accessed.push(property);
         }
+        // `as unknown` only widens Reflect.get's `any` for no-unsafe-return.
         return Reflect.get(target, property, receiver) as unknown;
       },
     });
