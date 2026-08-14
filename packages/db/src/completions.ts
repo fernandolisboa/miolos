@@ -167,8 +167,11 @@ type CompletionWrite =
  * rows in the two-statement form and 10 in this one.
  *
  * `INSERT ... SELECT ... WHERE (subquery) < max` renders as ONE SQL
- * statement — verified byte-identical through the neon-http and PGlite
- * dialects, which matters because `neon-http` is non-interactive-only and
+ * statement — byte-identical through the neon-http and PGlite dialects,
+ * PINNED by T-DB-S58 rather than probed once (production runs `neon-http`
+ * and every other assertion about this guard runs on PGlite, so the
+ * equality is load-bearing) — which matters because `neon-http` is
+ * non-interactive-only and
  * PGlite has no batch, so this repo has no transaction to put the pair in
  * (merge.ts's recorded constraint, and why `pg_advisory_lock` is not
  * available either). The honest residual is READ COMMITTED's: each
@@ -306,12 +309,20 @@ export async function recordCompletion(
 
   const record = await getCompletion(db, input.userId, input.game, input.date);
   if (!record) {
-    if (ceiling) {
-      // The guard refused and the caller holds no row: the ceiling is met.
+    if (ceiling && !recorded) {
+      // The guard refused AND the caller holds no row: the ceiling is met.
+      // `!recorded` is load-bearing, not decoration — `!record` alone would
+      // answer 429 for a row this call DID write, where the unguarded arm
+      // throws. That asymmetry has no justification, and the doc block
+      // above already promises the conjunction.
       return { capped: true };
     }
-    // Only reachable if the row vanished between the two statements — the
-    // schema has no delete path, so this is a bug or a manual truncate.
+    // The row vanished between the two statements: a bug, a manual
+    // truncate, or a concurrent `mergeAccounts` (merge.ts deletes the
+    // loser's completions, reachable through POST /attach/confirm — so
+    // "the schema has no delete path", which this comment used to say, is
+    // false). Whatever the cause, it is not the ceiling, and both arms
+    // treat it the same way.
     throw new Error("completions insert left no readable row");
   }
   return { capped: false, record, recorded };
