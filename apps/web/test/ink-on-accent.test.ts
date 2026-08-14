@@ -39,7 +39,7 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     "src/nonogram/nonogram-board.module.css",
     "app/estatisticas/page.module.css",
     // #31 (ADR-0053): the archive's three read-only surfaces. It paints
-    // `var(--accent)` on the day row's 2px rule and on the day card's border
+    // `var(--accent)` on the day row's 3px rule and on the day card's border
     // and hard shadow — shapes, never words — and an unlisted sheet is
     // invisible to the whole automated ADR-0041 gate.
     "app/arquivo/arquivo.module.css",

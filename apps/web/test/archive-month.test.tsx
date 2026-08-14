@@ -75,7 +75,7 @@ describe("the archive month page (T-WEB-S169)", () => {
 
     // `months` is newest-first, so NEXT is the neighbour before this one.
     // The composed sentence is the ACCESSIBLE NAME; the visible label is a
-    // kicker over a month, in two elements (step-7 V1, pinned below).
+    // kicker over a month, in two elements (step-7 verification round, plan 037 §14 I63; pinned below).
     expect(
       screen.getByRole("link", {
         name: messages.archive.month.nextAria(formatMonth("2026-09-01")),
@@ -191,7 +191,7 @@ describe("the archive month page (T-WEB-S169)", () => {
   });
 
   // The sibling links, pinned against the gate that broke on them (step-7
-  // V1). `impeccable`'s `all-caps-body` fires on any non-heading element with
+  // verification round, plan 037 §14 I63). `impeccable`'s `all-caps-body` fires on any non-heading element with
   // MORE THAN 30 characters of direct text under `text-transform: uppercase`
   // (`checks.mjs:3463-3467`), and it grants no interactive or `nav` exemption
   // — that one belongs to `undersized-ui-text`, twenty lines above it. The

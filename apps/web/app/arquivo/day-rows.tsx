@@ -17,7 +17,7 @@ import styles from "./arquivo.module.css";
  * this row can be one date link instead of four game links.
  *
  * Each row is one `<Link>` and one touch target ≥44px. The game names carry
- * their game's accent as a 2px left RULE (a shape, ADR-0041 decision 1) and
+ * their game's accent as a 3px left RULE (a shape, ADR-0041 decision 1) and
  * never as text colour; the row's accessible name is one composed sentence
  * naming the date and the games, so the rules never carry meaning alone
  * (ADR-0041 decision 5).

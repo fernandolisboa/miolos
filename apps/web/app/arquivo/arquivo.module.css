@@ -9,7 +9,7 @@
    each card is a distinct destination with its own identity and there are at
    most four of them.
 
-   ADR-0041 throughout: an accent may colour a SHAPE (the row's 2px rule, the
+   ADR-0041 throughout: an accent may colour a SHAPE (the row's 3px rule, the
    card's border and hard shadow, the washi tape) and never a WORD. Every
    word on this sheet is --ink or --ink-2. ADR-0036 on the dates: a column of
    dates is a column of figures, so it is Instrument Sans + tabular-nums and

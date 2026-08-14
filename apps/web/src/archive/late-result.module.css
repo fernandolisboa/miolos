@@ -24,9 +24,12 @@
 
    THE TYPE LADDER, which is the other half of F7: the panel shipped at
    14/15/24px, a 1.7:1 spread, and `flat-type-hierarchy` fires below 2.0 at
-   BOTH viewports (`checks.mjs:3870-3875`). It is now 11 / 13 / 15 / 40 / 44
-   — 4.0:1 — with the outcome as the page's `<h1>` at display scale, which is
-   also where the hierarchy belongs: the outcome is the message.
+   BOTH viewports (`checks.mjs:3870-3875`). It is now 11 / 13 / 14 / 15 / 34 /
+   40 / 44 — the ladder as MEASURED, which is what §14 I48 records; this block
+   used to state a five-step version of it and disagreed with the register on
+   14 and 34 — a 4.0:1 spread, with the outcome as the page's `<h1>` at
+   display scale, which is also where the hierarchy belongs: the outcome is
+   the message.
 
    ADR-0041 throughout: the accent colours the RING — a shape — and every
    word on this sheet is `--ink` or `--ink-2`, so WCAG 1.4.11's decorative

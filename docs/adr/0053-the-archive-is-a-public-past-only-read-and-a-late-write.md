@@ -126,7 +126,8 @@ is a prescription that the shipped code satisfies rather than one waiting on
 work.
 
 **Three points where the shipped code refines what is written below**, each
-recorded in plan 037 §14 batch 6 rather than by silently rewriting the text:
+recorded in plan 037 §14 batch 6 and batch 7 rather than by silently rewriting
+the text (the first is I42, from the step-7 round):
 
 - Decision 10's third layer used to say the panel renders the **stored row's**
   outcome. **It does not, and the sentence has been rewritten to say what
