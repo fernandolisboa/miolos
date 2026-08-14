@@ -36,7 +36,7 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
 | `T-CORE` | `S86` | `S84` | never used |
-| `T-DB` | `S58` | `S56` | `T-DB-21` |
+| `T-DB` | `S59` | `S58` | `T-DB-21` |
 | `T-API` | `S109` | `S107` | `T-API-16` |
 | `T-WEB` | `S189` | `S163` | `T-WEB-23` |
 | `T-LINT` | `S39` | `S34` | `T-LINT-10` |
@@ -69,6 +69,8 @@ grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
 #31 (plan 037) reserved `T-CORE-S80…S85`, `T-DB-S44…S57`, `T-API-S97…S108`, `T-WEB-S166…S188` and `T-LINT-S35…S38` across **two pull requests**, and its PR 1 (the write window) spent `T-CORE-S80…S84`, `T-DB-S56` and `T-API-S97…S107` at step 5. The rest of the DB, WEB and LINT ranges belong to PR 2 and are live reservations, not free space. The tails `T-CORE-S85` and `T-API-S108` were PR 1's reserved review-round headroom and are **burned** below, unspent.
 
 PR 1 also spent two sibling letters at step 7, each a new assertion inside a landed id's claim rather than a fresh number: **`T-DB-S56a`** (the ceiling holds under a concurrent `Promise.all`, `packages/db/test/user.test.ts` — the guarded-insert half of step-6 finding F1) and **`T-API-S107a`** (the source scan pinning that 429 is absent from the web client's terminal-status set). `T-API-S107a` is a **rename**: step 5 shipped that assertion as a second `it(...)` also titled `T-API-S107`, which is the duplicate this document's own rule forbids (step-6 finding F17).
+
+At the **step-7 verification round** PR 1 spent one fresh post-range id — **`T-DB-S58`** (the guarded INSERT renders byte-identically through the `neon-http` and PGlite dialects, as one statement; `packages/db/test/user.test.ts`). It is a new claim, not a widening, so it takes a number rather than a sibling letter, and it is taken from *above* PR 2's live reservations (`T-DB-S44…S55`, `S57`) rather than out of them — the #19/#21 precedent for fresh post-tail ids at step 7. The burned tails stay burned.
 
 Four existing claims were widened in place and correctly took **no** new id — `T-API-9b`, `T-API-S12`, `T-API-S23b` and `T-API-S37`, for the write window's inverted lower bound. A route test whose expected status flips is the same claim about the same gate. `T-DB-9e` and `T-DB-S5` were widened at step 5 for a counter export and then **restored to their landed values** at step 7 (15 names and 34): folding the ceiling into `recordCompletion`'s own INSERT means #31's first pull request adds no runtime export to any package entry at all.
 

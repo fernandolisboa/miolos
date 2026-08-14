@@ -1,4 +1,6 @@
 import { eq, sql } from "drizzle-orm";
+import { drizzle as drizzleNeonHttp } from "drizzle-orm/neon-http";
+import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import {
   afterAll,
   afterEach,
@@ -11,6 +13,7 @@ import {
 } from "vitest";
 
 import { todaySaoPaulo } from "../src/buffer";
+import type { Db } from "../src/client";
 import {
   getCompletion,
   grantHints,
@@ -18,8 +21,12 @@ import {
   listCompletionsForStreak,
   recordCompletion,
 } from "../src/completions";
+import * as schema from "../src/schema";
 import { completions, hintGrants, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
+
+/** The two dialects `Db` unions, named so T-DB-S58 can compare them. */
+type Dialect = "neonHttp" | "pglite";
 
 // The user-scoped suite (issue #18, ADR-0026/ADR-0027, plan 017 §6).
 // Two things are proved here and nowhere else: a completion is written
@@ -102,7 +109,7 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
     expect(Object.keys(user).sort()).toEqual([
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "completions",
-      // #31 adds NOTHING here. The archive write ceiling (ADR-0053
+      // #31 adds NOTHING here. The late-write ceiling (ADR-0053
       // decision 13) is a guard folded into `recordCompletion`'s own
       // INSERT, not a second exported statement — step-6 finding F1. A
       // standalone counter would be both a second round trip and an
@@ -373,7 +380,7 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
   });
 });
 
-describe("the archive write ceiling (#31, ADR-0053 decision 13)", () => {
+describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
   /** One late write, guarded by the ceiling. */
   function lateWrite(
     userId: string,
@@ -524,6 +531,69 @@ describe("the archive write ceiling (#31, ADR-0053 decision 13)", () => {
     expect(results.filter((result) => result.capped)).toHaveLength(10);
     expect(await listCompletionsForStreak(ctx.db, userId)).toHaveLength(10);
   }, 30_000);
+
+  it("T-DB-S58: the guarded INSERT renders byte-identically through the neon-http and PGlite dialects, as ONE statement", async () => {
+    // THE CEILING IS A CORRECTNESS PROPERTY ONLY WHILE IT IS ONE
+    // STATEMENT (ADR-0053 decision 13, `guardedInsertSelect`'s doc block).
+    // T-DB-S56a measures that through PGlite — and PGlite is not the
+    // driver production runs. `neon-http` is, and every other assertion in
+    // this repo about the ceiling is blind to it. The claim was verified
+    // once at step 7 with a throwaway probe; a claim the shipped bound
+    // rests on is owed a tripwire, so this is it.
+    //
+    // The instrument is drizzle's own `logger` seam: both sessions call
+    // `logQuery` with the rendered SQL *before* handing it to the driver.
+    // `drizzle.mock()` gives each driver its real dialect and session over
+    // an empty client, so the render happens and the driver call then
+    // throws — no network, no second PGlite boot, and, decisively, the
+    // statement compared is the one the SHIPPED `recordCompletion` built
+    // rather than one this test rebuilt from the same parts.
+    const logged: Record<Dialect, string[]> = { neonHttp: [], pglite: [] };
+    const loggerFor = (dialect: Dialect) => ({
+      logQuery: (query: string) => {
+        logged[dialect].push(query);
+      },
+    });
+    const dialects: Record<Dialect, Db> = {
+      neonHttp: drizzleNeonHttp.mock({
+        schema,
+        logger: loggerFor("neonHttp"),
+      }),
+      pglite: drizzlePglite.mock({ schema, logger: loggerFor("pglite") }),
+    };
+
+    for (const db of Object.values(dialects)) {
+      await expect(
+        recordCompletion(
+          db,
+          {
+            userId: "00000000-0000-4000-8000-000000000001",
+            game: "binairo",
+            date: "2026-01-01",
+            outcome: "won",
+            elapsedMs: 1_000,
+            hintsUsed: 0,
+          },
+          { day: "2026-08-10", max: 50 },
+        ),
+      ).rejects.toThrow();
+    }
+
+    const [guardedInsert] = logged.neonHttp;
+    if (guardedInsert === undefined) {
+      // Not an assertion but a guard: if the seam ever stops firing, every
+      // expectation below would pass vacuously against `undefined`.
+      throw new Error("the neon-http dialect logged no statement");
+    }
+    // Byte-identical, which is the whole claim.
+    expect(logged.pglite).toEqual([guardedInsert]);
+    // ONE statement, with the count inside it. If a future edit splits the
+    // guard back out — or a dialect ever renders a batch — this is what
+    // reds, and it reds before the concurrency test does.
+    expect(guardedInsert.match(/insert into/g)).toHaveLength(1);
+    expect(guardedInsert).toContain("select count(*)");
+    expect(guardedInsert).not.toContain(";");
+  });
 });
 
 describe("grantedHintsToday (DORMANT, plan 017 D22)", () => {
