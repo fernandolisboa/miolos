@@ -366,9 +366,9 @@ extension point in that route with no tripwire on it.
   route runs ~6× per player per day"* and *"at a volume bounded by the
   ritual"* — stop being true: every published past Termo becomes playable at
   its own URL, so the route's legitimate volume is six times however many
-  archived Termos a player opens. That URL arrives in #31's SECOND pull
-  request; the widened window this annotation ships beside arrives in the
-  first, and is already enough to make the bound false in kind. The **posture is unchanged**: still no rate
+  archived Termos a player opens. That URL arrived in #31's second pull
+  request; the widened window this annotation shipped beside arrived in the
+  first, and was already enough to make the bound false in kind. The **posture is unchanged**: still no rate
   limit on this route, because it writes nothing, allocates nothing unbounded
   and was already unthrottled per request before #31 — the date axis was
   never what bounded its request count. The rest of (f) stands as written,

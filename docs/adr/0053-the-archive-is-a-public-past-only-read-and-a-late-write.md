@@ -128,14 +128,18 @@ work.
 **Three points where the shipped code refines what is written below**, each
 recorded in plan 037 §14 batch 6 rather than by silently rewriting the text:
 
-- Decision 10's third layer says the panel renders the stored row's outcome.
-  It does exactly that. What it does **not** do is distinguish an on-time
-  stored row from a late one, because the client discards
-  `completionResponseSchema.onTime` and carrying it would mean a versioned
-  change to the local record schema. The panel's third state is therefore
-  *"this device already held a concluded result for this day"* — true,
-  checkable, and enough for the criterion, which is that the screen never
-  claims a completion it did not make (I29).
+- Decision 10's third layer used to say the panel renders the **stored row's**
+  outcome. **It does not, and the sentence has been rewritten to say what
+  ships** (I42, correcting I29's own account of the same point). `sync.ts`'s
+  `acceptResponse` parses and discards `completionResponseSchema.outcome`
+  exactly as it discards `onTime`, so the panel renders **this session's
+  locally judged board** and the note beside it never asserts when the
+  server's row was written. Carrying either field to the panel would mean a
+  versioned change to the local record schema, which this ticket does not
+  make. The panel's states are therefore exactly the ones the device can
+  check — queued, refused, already held here, settled, or not stored at
+  all — which is what the criterion needs: the screen never claims a
+  completion it did not make.
 - Decision 4's read-cost posture was measured rather than assumed at PR 2:
   the three grid play routes came in **below** their daily twins (binairo
   18.2 KB against 33.4, nonogram 19.7 against 35.5, sudoku 14.4 against
@@ -167,7 +171,11 @@ recorded in plan 037 §14 batch 6 rather than by silently rewriting the text:
    URLs.
 
    **`/arquivo/<hoje>` and `/arquivo/<hoje>/<jogo>` resolve**, with a
-   **temporary** redirect to the daily route and to the hub respectively.
+   **temporary** redirect to the hub and to that game's daily route
+   respectively — the day URL to `/`, the play URL to `/<jogo>`, each landing
+   one level of specificity where it came from. *(This line named the two
+   targets the other way round until #31's step-7 round; the shipped code is
+   the sensible pairing and the record was wrong — plan 037 §14 I43.)*
    Sharing happens immediately after playing, and `/termo` is not a per-day
    URL — a link shared at 21:00 serves a different puzzle after the
    rollover — so 404ing today would leave the one window where sharing
@@ -190,8 +198,10 @@ recorded in plan 037 §14 batch 6 rather than by silently rewriting the text:
    reader under the same clock.
 
    **No write ever originates from an archive path.** The today-redirect
-   lands the player on the daily route, so the completion it produces is an
-   ordinary daily write that derives `on_time = true` correctly.
+   leaves the archive before anything is playable — the play URL lands
+   directly on the daily route, the day URL on the hub and thence on a daily
+   route — so every completion it can lead to is an ordinary daily write that
+   derives `on_time = true` correctly.
 
 2. **Every archive route is `force-dynamic`, and the reason is the kill
    switch, not the rollover.** `export const dynamic = "force-dynamic"` on
@@ -540,10 +550,24 @@ recorded in plan 037 §14 batch 6 rather than by silently rewriting the text:
        what keeps that record around long enough for this to be the common
        case rather than a theoretical one.
     3. **Cross-device or post-retention, the honest gap.** The board is
-       playable; on submit the server answers with the stored row and the
-       panel renders **that** outcome. Replaying a puzzle you already solved
-       is a legitimate act on a public archive; what the criterion forbids
-       is *reopening the daily*, and nothing can.
+       playable; on submit the server answers with the stored row and **writes
+       nothing**, and the panel renders **this session's own** outcome beside
+       a note that claims no more than the device can check. Replaying a
+       puzzle you already solved is a legitimate act on a public archive;
+       what the criterion forbids is *reopening the daily*, and nothing can.
+
+       **This layer used to promise that the panel rendered the stored row's
+       outcome, and that is not what shipped** (plan 037 §14 I42). The client
+       discards both `completionResponseSchema.outcome` and `.onTime`, so no
+       server-side verdict reaches any view; carrying one would be a
+       versioned change to the local record schema, which #31 does not make.
+       The reachable consequence is Termo-specific and is stated rather than
+       hidden: win an archived Termo on device A and lose it on device B, and
+       the guess route judges the new session while the completion POST
+       short-circuits to the stored **won** row — the panel prints the loss
+       the player just played. The mechanical teeth in layer 1 are unaffected;
+       what the panel loses is the ability to contradict a board the player
+       is looking at, which is not a property this layer needed.
 
     **Why no endpoint.** A per-day per-user read would be a user-specific
     fragment on a public page, which ADR-0014 routes to `apps/api` — **as

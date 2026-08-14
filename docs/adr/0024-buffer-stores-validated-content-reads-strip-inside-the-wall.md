@@ -75,12 +75,12 @@ table around the helper.
   compatibility with every row ever published. A row whose content no
   longer parses makes the archive reader log and return nothing — a 404 on
   a sitemap-advertised URL rather than a 500 — and the log line is the only
-  alarm. **The lengthening itself is already true in #31's first pull
-  request**, before any archive URL exists: the completion route's write
+  alarm. **The lengthening became true in #31's first pull
+  request**, before any archive URL existed: the completion route's write
   path reads and parses stored content at any published past date as soon
   as the window's lower bound goes. On that path a drifted row is a 500,
   which is the shipped behaviour and deliberately unchanged; the 404 above
-  is the archive reader's, and arrives with it.)*
+  is the archive reader's, and shipped with #31's second pull request.)*
 - **Vercel Instant Rollback does not update crons** — after a rollback,
   verify the cron schedule still matches the deployed `vercel.json`.
 
