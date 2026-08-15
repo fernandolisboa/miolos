@@ -1079,7 +1079,9 @@ function ShareButton({
           // confirmation, and `aria-live` announces nothing at all because
           // the text never changed. Going through `idle` moves the text
           // twice, which re-arms the timer and gives the region something to
-          // speak. Measured: ARMED 1 then 1 before, 1 then 2 after.
+          // speak. Measured by removing this line: the second copy's
+          // confirmation is gone at t+6s, where the timer would have expired
+          // 5s after the FIRST copy, and the region never clears in between.
           setStatus("idle");
           // Feature detection happens inside `deliverShare`, at CLICK time
           // and never at render time: `typeof navigator.share` evaluated
