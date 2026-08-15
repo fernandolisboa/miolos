@@ -768,7 +768,20 @@
    this screen is an `<a>` on the UA default, which is why the three states
    below are declared here rather than inherited from anything. `border-box`
    is explicit because this app ships no global reset and the 44px floor is
-   a BORDER-box promise (DESIGN.md:40). */
+   a BORDER-box promise (DESIGN.md:40).
+
+   THREE STATES AND NO `:hover`, DELIBERATELY (step-6 finding G4, whose
+   premise is corrected here rather than acted on). Every `:hover` rule on
+   this sheet — `.page .cta:hover`, `.page .cta.ctaNext:hover`,
+   `.page .emptyCta:hover` — exists because its subject is an `<a>` caught by
+   `.page a:hover` (ADR-0041), and each one is an OPT-OUT from an inherited
+   accent colour and underline, not an affordance the element wanted. Only
+   `.secondaryLink:hover` is a real hover treatment, and it is a link. The
+   shared play layer's own native button, `screen.module.css`'s `.hint`,
+   declares `:active` and `:focus-visible` and no `:hover` at all — so this
+   control follows the shipped idiom for a BUTTON rather than diverging from
+   it. `cursor: pointer`, the 1px press and the focus ring carry the
+   affordance; a pointer-only state is the one DESIGN.md never asks for. */
 .share {
   box-sizing: border-box;
   display: flex;
@@ -1184,7 +1197,15 @@
     padding: 0;
   }
 
-  /* F6's mobile button height, matching `.cta` above — and ONLY the height.
+  /* 52px IS `.cta`'s HEIGHT, NOT F6's SHARE BUTTON'S (step-6 finding G5).
+     `f6:61`'s share button is 48px; 52px is `f6:59`'s PRIMARY, which `.cta`
+     above takes. Matching the primary is plan 040 V7's recorded deviation —
+     `.share` is not F6's secondary but a third level whose paper-plus-shadow
+     is its emphasis, and it stacks full-width rather than sharing a row — so
+     the height is the CTA's by choice. The old wording called it "F6's mobile
+     button height", which is the sentence the next reader would have
+     believed. And ONLY the height moves here.
+
      Plan 040 C12 had `.share` copy `.cta`'s `padding: 0` here on the grounds
      that `min-height` plus centring supplies the vertical box; measured in
      file mode at 390x844 (I6a), `cramped-padding` fires on the SHIPPED sheet

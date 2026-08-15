@@ -413,6 +413,27 @@ function storage(): Storage | undefined {
   }
 }
 
+/**
+ * Whether a play record could EVER be read on this device (#34, step-6
+ * blocker K3).
+ *
+ * `readPlayRecord` returning `undefined` is two different facts wearing one
+ * answer: "not written yet", which resolves in a commit or two, and "this
+ * browser has no store", which never resolves. Only the second one makes a
+ * gated control permanently dead, and `storage()` is exactly the predicate
+ * that separates them — Safari private mode and a site-data-blocked profile
+ * both land in its `catch`.
+ *
+ * A RENDER-TIME CALL IS SAFE HERE, unlike `typeof navigator.share`: the only
+ * caller renders behind `snapshot.hydrated`, which is `false` for the server
+ * markup and for the hydrating client render both (`use-record-snapshot.ts`'s
+ * constant server snapshot), so no branch on this value is ever part of a
+ * tree React has to match.
+ */
+export function playRecordsAvailable(): boolean {
+  return storage() !== undefined;
+}
+
 /** Every stored key belonging to this app's play records, snapshotted. */
 function playRecordKeys(store: Storage): string[] {
   const keys: string[] = [];

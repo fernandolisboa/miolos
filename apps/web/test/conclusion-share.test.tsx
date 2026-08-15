@@ -13,6 +13,7 @@ import {
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
+import type { ShareSubject } from "../src/play/share-text";
 import { absoluteUrl } from "../src/site-origin";
 
 /**
@@ -38,17 +39,26 @@ vi.mock("../src/play/sync", () => ({
 vi.mock("../src/streak/use-streak", () => ({ useStreak: () => null }));
 vi.mock("../src/stats/use-stats", () => ({ useStats: () => null }));
 
-/** The composer, spied THROUGH to the real implementation (T-WEB-S192a). */
+/**
+ * The composer, spied THROUGH to the real implementation (T-WEB-S192a).
+ *
+ * `ShareSubject`, not `PlayRecord`: since K3 the three grid games compose
+ * from `{ game, date, elapsedMs }` when no record exists, and typing the spy
+ * as a record would hide exactly the argument shape this file now asserts.
+ */
 const composed = vi.hoisted(() =>
-  vi.fn<(record: PlayRecord, options: { readonly url: string }) => void>(),
+  vi.fn<(subject: unknown, options: { readonly url: string }) => void>(),
 );
 vi.mock("../src/play/share-text", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../src/play/share-text")>();
   return {
-    buildShareText: (record: PlayRecord, options: { readonly url: string }) => {
-      composed(record, options);
-      return actual.buildShareText(record, options);
+    buildShareText: (
+      subject: ShareSubject,
+      options: { readonly url: string },
+    ) => {
+      composed(subject, options);
+      return actual.buildShareText(subject, options);
     },
   };
 });
@@ -244,11 +254,18 @@ describe("the share button renders in both terminal states and nowhere else (T-W
 // ── T-WEB-S195 ──────────────────────────────────────────────────────────
 
 describe("the button is disabled until the concluded record hydrates (T-WEB-S195)", () => {
-  it("renders its box either way, and is disabled while `stored` is undefined", () => {
+  it("TERMO renders its box either way, and is disabled while `stored` is undefined", () => {
     // The in-place swap's one-commit window, reproduced exactly: the stamp
     // comes from the `result` prop and there is no record in storage yet.
+    //
+    // TERMO IS THE SUBJECT NOW, and the change of game is the whole of step-6
+    // blocker K3: the grid games no longer need the record to share, so the
+    // window they used to sit disabled through does not exist for them.
+    // Termo's grid lives on `guesses[].tiles` and nowhere else, so it keeps
+    // the gate — and the arm below proves the gate is momentary rather than
+    // permanent.
     const { unmount } = render(
-      view("binairo", { result: { elapsedMs: 407_000, hintsUsed: 0 } }),
+      view("termo", { result: { elapsedMs: 407_000, hintsUsed: 0 } }),
     );
     const gated = shareButton();
     expect(gated, "the box is reserved, not withheld").not.toBeNull();
@@ -257,18 +274,105 @@ describe("the button is disabled until the concluded record hydrates (T-WEB-S195
     expect(shareStatus(gated as HTMLElement)).not.toBeNull();
     unmount();
 
-    writePlayRecord(binairo());
-    render(view("binairo"));
+    writePlayRecord(termo());
+    render(view("termo"));
     expect(shareButton()).toBeEnabled();
   });
 
   it("a click in that window composes nothing", async () => {
-    render(view("binairo", { result: { elapsedMs: 407_000, hintsUsed: 0 } }));
+    render(view("termo", { result: { elapsedMs: 407_000, hintsUsed: 0 } }));
     (shareButton() as HTMLButtonElement).click();
     await Promise.resolve();
     expect(composed).not.toHaveBeenCalled();
     expect(shareMock).not.toHaveBeenCalled();
     expect(writeTextMock).not.toHaveBeenCalled();
+  });
+
+  it("(a) the THREE GRID GAMES share from `result` with no record at all", async () => {
+    // K3's fix, as a behaviour. Their whole share is a header and an elapsed
+    // time, and `ConclusionResult` carries the elapsed time — so a store-less
+    // browser (Safari private, site data blocked), where `readPlayRecord`
+    // returns undefined FOREVER, gets a working control instead of one that
+    // never enables and never explains itself.
+    for (const [game, elapsedMs] of [
+      ["binairo", 407_000],
+      ["sudoku", 512_000],
+      ["nonogram", 613_000],
+    ] as const) {
+      vi.clearAllMocks();
+      window.localStorage.clear();
+      const { unmount } = render(
+        view(game, { result: { elapsedMs, hintsUsed: 0 } }),
+      );
+      const button = shareButton();
+      expect(button, game).not.toBeNull();
+      expect(button, game).toBeEnabled();
+
+      (button as HTMLButtonElement).click();
+      await waitFor(() => {
+        expect(composed, game).toHaveBeenCalledTimes(1);
+      });
+      // Composed from the PROP, and the elapsed time really travelled: same
+      // three fields the record path would have supplied.
+      expect(composed.mock.calls[0]?.[0], game).toEqual({
+        game,
+        date: DATE,
+        elapsedMs,
+      });
+      const text = (shareMock.mock.calls[0]?.[0] as { text: string }).text;
+      expect(text, game).toContain(messages.games[game].name);
+      unmount();
+    }
+  });
+
+  it("(b) TERMO with no store renders NOTHING rather than a permanently dead control", () => {
+    // The other half of K3. `readPlayRecord` returning undefined is two
+    // different facts wearing one answer — "not written yet", which resolves
+    // in a commit, and "this browser has no store", which never does — and
+    // only the second one makes a gated control ADR-0045 :186-191's dead
+    // share button. `playRecordsAvailable()` separates them, so the control
+    // is omitted rather than shown broken.
+    const getItem = vi
+      .spyOn(Storage.prototype, "getItem")
+      .mockImplementation(() => {
+        throw new Error("site data blocked");
+      });
+    // The predicate reads `window.localStorage` itself, so the store has to
+    // be gone rather than merely throwing on access.
+    const store = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("site data blocked");
+      },
+    });
+    try {
+      const { unmount } = render(
+        view("termo", { result: { elapsedMs: 407_000, hintsUsed: 0 } }),
+      );
+      expect(shareButton()).toBeNull();
+      // The rest of the conclusion is untouched — this omits one control, it
+      // does not fall back to the empty card.
+      expect(document.querySelector("[data-conclusion-state]")).toHaveAttribute(
+        "data-conclusion-state",
+        "result",
+      );
+      unmount();
+
+      // The counted floor, in the same environment: a GRID game still renders
+      // its button there, so the omission above is Termo's own and not a
+      // store-less screen rendering nothing at all.
+      const grid = render(
+        view("binairo", { result: { elapsedMs: 407_000, hintsUsed: 0 } }),
+      );
+      expect(shareButton()).toBeEnabled();
+      grid.unmount();
+    } finally {
+      if (store !== undefined) {
+        Object.defineProperty(window, "localStorage", store);
+      }
+      getItem.mockRestore();
+    }
   });
 });
 
@@ -385,6 +489,66 @@ describe("what the player is told, per rejection (T-WEB-S197)", () => {
     await waitFor(() => {
       expect(region).toHaveTextContent(messages.share.failed);
     });
+  });
+
+  it("a SECOND copy re-announces and re-arms the timer", async () => {
+    // Step-6 finding K4. `setStatus("copied")` when the state is already
+    // "copied" is a bail-out: React does not re-render, the `[status]` effect
+    // does not re-run, so the FIRST copy's five-second timer keeps running and
+    // clears the second copy's confirmation early — and `aria-live` announces
+    // nothing at all, because the text never changed. Measured before the fix:
+    // ARMED after the first click 1, after the second 1.
+    vi.useFakeTimers();
+    try {
+      deleteShare();
+      stubClipboard();
+      writePlayRecord(sudoku());
+      render(view("sudoku"));
+      const button = shareButton() as HTMLButtonElement;
+      const region = shareStatus(button);
+
+      button.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(region).toHaveTextContent(messages.share.copied);
+
+      // Four seconds in — the first timer has one second left.
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(region).toHaveTextContent(messages.share.copied);
+
+      // The second copy, with the clipboard held open, so the intermediate
+      // state is observable: the handler clears the region BEFORE dispatching,
+      // which is what gives the live region a change to speak and the effect a
+      // reason to re-run.
+      let settle = (): void => undefined;
+      stubClipboard(
+        () =>
+          new Promise<void>((resolve) => {
+            settle = resolve;
+          }),
+      );
+      button.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect
+        .soft(region.textContent?.trim(), "cleared before dispatch")
+        .toBe("");
+      settle();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(region).toHaveTextContent(messages.share.copied);
+
+      // Two seconds later the ORIGINAL timer would have fired. It must not
+      // have taken the second confirmation with it.
+      await vi.advanceTimersByTimeAsync(2000);
+      expect.soft(writeTextMock).toHaveBeenCalledTimes(1);
+      expect
+        .soft(region, "the first copy's timer must not clear the second")
+        .toHaveTextContent(messages.share.copied);
+
+      // And the new timer does still expire on its own schedule.
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(region.textContent?.trim()).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("a missing clipboard is a failure, not a crash", async () => {

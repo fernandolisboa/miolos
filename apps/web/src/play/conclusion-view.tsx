@@ -21,8 +21,8 @@ import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { picturePath } from "./picture-path";
-import type { PlayRecord } from "./play-record";
-import { buildShareText } from "./share-text";
+import { playRecordsAvailable, type PlayRecord } from "./play-record";
+import { buildShareText, type ShareSubject } from "./share-text";
 import { startCompletionSync } from "./sync";
 import type {
   ConclusionAnswer,
@@ -411,7 +411,7 @@ export function ConclusionView({
             {messages.conclusion.ctaNext(messages.games[next.game].name)}
           </Link>
         )}
-        <ShareButton game={game} date={date} stored={stored} />
+        <ShareButton game={game} date={date} stored={stored} stamp={stamp} />
         {/* Live since #29: /estatisticas is a real route, so the link
             carries it — the same rule that kept it href-less while a dead
             href would have been fake navigation. */}
@@ -973,22 +973,58 @@ async function deliverShare(text: string): Promise<ShareStatus> {
 }
 
 /**
+ * What this device can honestly say about the day, or `undefined` if it can
+ * say nothing yet (#34, ADR-0054 decision 1; step-6 blocker K3).
+ *
+ * The concluded record wins whenever there is one — it is the authoritative
+ * copy, and for Termo it is the ONLY source of `guesses[].tiles`. Without it
+ * the three grid games fall back to `stamp`, which is `stored ?? result` and
+ * therefore the live play state the screen already passes down; their whole
+ * share is a header plus an elapsed time, and `ConclusionResult` carries the
+ * elapsed time by construction.
+ */
+function shareSubject(
+  game: Game,
+  date: string,
+  stored: PlayRecord | undefined,
+  stamp: ConclusionResult | undefined,
+): ShareSubject | undefined {
+  if (stored !== undefined) {
+    return stored;
+  }
+  if (game === "termo" || stamp === undefined) {
+    return undefined;
+  }
+  return { game, date, elapsedMs: stamp.elapsedMs };
+}
+
+/**
  * The share (#34, ADR-0054 decisions 1, 1a, 4 and 13) — in-file, like
  * `StreakCard`, `ConclusionStats` and `DayChip` above, and with no prop of
  * its own on `ConclusionView`: the composition it needs is a pure function
- * of the record this component already reads.
+ * of values this component already holds.
  *
- * IT IS ALWAYS RENDERED IN `result` AND `lost`, AND DISABLED UNTIL THE
- * CONCLUDED RECORD HYDRATES. On the in-place swap React runs a child's mount
- * effect before its parent's (see the note at the top of this file), so for
- * one commit `stored` is undefined — and for Termo the grid comes from
- * `stored.guesses[].tiles` with no prop fallback, so a click in that window
- * would compose a share missing the one thing it exists to carry. Gating the
- * RENDER would move the layout a frame later; gating the enabled state does
- * not. This is not ADR-0045 `:186-191`'s dead share button — that is a
- * control promising an action the product does not have. A control that is
- * momentarily not yet ready and then works is `PlaySkeleton`'s
- * reserve-the-boxes discipline applied to a button.
+ * THREE STATES, AND THE THIRD ONE IS THE FIX FOR A SHIPPED FALSEHOOD (step-6
+ * blocker K3). The first version of this block claimed the gate was only ever
+ * "a control that is momentarily not yet ready and then works". That was true
+ * of the in-place swap — React runs a child's mount effect before its
+ * parent's, so for one commit `stored` is undefined — and false of the
+ * environment this file argues at `:44-50` that it supports: where
+ * `localStorage` throws, `readPlayRecord` returns `undefined` FOREVER, so the
+ * player got a permanently disabled control that never explained itself. That
+ * IS ADR-0045 `:186-191`'s dead share button, reached from the other side.
+ *
+ *   - **a subject** → enabled. For the three grid games that now includes the
+ *     store-less case, composed from `stamp`.
+ *   - **no subject, but a store to write one** → disabled for the one commit
+ *     the swap takes. Gating the RENDER here would move the layout a frame
+ *     later; gating the enabled state does not, which is `PlaySkeleton`'s
+ *     reserve-the-boxes discipline applied to a button.
+ *   - **no subject and no store** → NOTHING RENDERED. Only Termo can reach
+ *     this: its grid lives on the record alone, so the honest answer is to
+ *     omit the control rather than to show one that can never work. The
+ *     decision is stable from the first client commit — this subtree renders
+ *     only behind `hydrated` — so it costs no reflow.
  *
  * There is deliberately NO GATE ON `syncOutcome`: a player whose sync was
  * rejected can still share. The share is this device's record of its own
@@ -1000,10 +1036,12 @@ function ShareButton({
   game,
   date,
   stored,
+  stamp,
 }: {
   readonly game: Game;
   readonly date: string;
   readonly stored: PlayRecord | undefined;
+  readonly stamp: ConclusionResult | undefined;
 }) {
   const [status, setStatus] = useState<ShareStatus>("idle");
 
@@ -1019,22 +1057,36 @@ function ShareButton({
     };
   }, [status]);
 
+  const subject = shareSubject(game, date, stored, stamp);
+  if (subject === undefined && !playRecordsAvailable()) {
+    return null;
+  }
+
   return (
     <div className={styles.shareBlock}>
       <button
         type="button"
         className={styles.share}
-        disabled={stored === undefined}
+        disabled={subject === undefined}
         onClick={() => {
-          if (stored === undefined) {
+          if (subject === undefined) {
             return;
           }
+          // CLEARED FIRST, AND IT IS NOT A TIDY-UP (step-6 finding K4). A
+          // second successful copy sets `status` to the value it already
+          // holds, React bails out of the re-render, the `[status]` effect
+          // never re-runs — so the old five-second timer expires on the new
+          // confirmation, and `aria-live` announces nothing at all because
+          // the text never changed. Going through `idle` moves the text
+          // twice, which re-arms the timer and gives the region something to
+          // speak. Measured: ARMED 1 then 1 before, 1 then 2 after.
+          setStatus("idle");
           // Feature detection happens inside `deliverShare`, at CLICK time
           // and never at render time: `typeof navigator.share` evaluated
           // during render is a hydration mismatch, because the server has no
           // `navigator`. One label, one DOM, one test.
           void deliverShare(
-            buildShareText(stored, {
+            buildShareText(subject, {
               url: absoluteUrl(archiveGameRoute(date, game)),
             }),
           ).then(setStatus, () => {

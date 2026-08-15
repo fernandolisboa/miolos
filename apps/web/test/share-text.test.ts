@@ -424,6 +424,50 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
         "nonogram: size 5 vs 15",
         () => [nonogram({ size: 5 }), nonogram({ size: 15 })],
       ],
+      // THE PLAYER'S FILLED BOARD, on all three grid records (step-6 finding
+      // K5). `entries` was covered only incidentally, through the Nonogram
+      // size differential above, so binairo and sudoku had no arm at all —
+      // and this claim says "every excluded field that IS on the record".
+      // It is the most spoiler-bearing field of the three: a solved board is
+      // the answer.
+      [
+        "binairo: entries empty vs filled",
+        () => [
+          binairo({}),
+          binairo({ entries: Array.from({ length: 64 }, () => 0 as const) }),
+        ],
+      ],
+      [
+        "sudoku: entries empty vs filled",
+        () => [
+          sudoku({}),
+          sudoku({ entries: Array.from({ length: 81 }, () => 5 as const) }),
+        ],
+      ],
+      [
+        "nonogram: entries empty vs filled",
+        () => [
+          nonogram({}),
+          nonogram({ entries: Array.from({ length: 100 }, () => 1 as const) }),
+        ],
+      ],
+      // `pendingSync`, the last member of the record with two reachable
+      // values (K5). `v` has ONE — `z.literal(1)` — so no differential over
+      // it can exist; it is covered by the key-set assertion in (c) instead,
+      // which is the mechanism the doc block assigns to a field that cannot
+      // vary.
+      ...(
+        [
+          ["binairo", binairo],
+          ["sudoku", sudoku],
+          ["nonogram", nonogram],
+          ["termo/won", termoWon],
+          ["termo/lost", termoLost],
+        ] as const
+      ).map(([name, build]): [string, () => [unknown, unknown]] => [
+        `${name}: pendingSync`,
+        () => [build({ pendingSync: false }), build({ pendingSync: true })],
+      ]),
     ];
 
     for (const [name, build] of pairs) {
@@ -528,9 +572,11 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
     const body = composerBody();
     const signature = body.slice(0, body.indexOf("): string"));
 
-    // Counted floor: the slice really is the signature.
+    // Counted floor: the slice really is the signature. The first parameter
+    // is `subject` since K3 — a `TermoPlayRecord` OR the three fields a grid
+    // game's share needs — so the floor names that instead of `record`.
     expect(signature).toContain("buildShareText");
-    expect(signature).toContain("record");
+    expect(signature).toContain("subject");
 
     const objectTypes = [...signature.matchAll(/\{([^{}]*)\}/g)].map(
       (match) => match[1] ?? "",

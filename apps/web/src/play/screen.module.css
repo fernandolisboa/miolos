@@ -323,10 +323,14 @@
 }
 
 /* INK, not the accent, and the reason is arithmetic rather than taste
-   (step-7 finding A-F1). This is the only focus indicator the SHARED play
-   layer declares, and unlike the hover underline above it is not a
-   pointer-only affordance — it is the whole of what tells a keyboard user
-   where they are, so WCAG 2.4.7 and 1.4.11's 3:1 non-text floor both bind.
+   (step-7 finding A-F1). This was the only focus indicator the SHARED play
+   layer declared until #34; `.share:focus-visible` in
+   `conclusion-view.module.css` is the second, declared in the same terms and
+   for the same reason, and its own header comment carries the argument
+   (step-6 finding W2 — one sheet moved, the twin's clause did not). Unlike
+   the hover underline above this is not a pointer-only affordance — it is the
+   whole of what tells a keyboard user where they are, so WCAG 2.4.7 and
+   1.4.11's 3:1 non-text floor both bind.
 
    `outline-offset: 2px` puts `--paper-desk` on BOTH sides of the ring — the
    gap inside it and the page background outside — so the ring is measured
