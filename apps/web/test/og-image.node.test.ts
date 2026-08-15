@@ -693,7 +693,10 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // `packages/core` grows a member — measured against a `kakuro` probe,
     // which left the old self-referential version green. The half that
     // reaches the author BEFORE they write anything is the route recipe in
-    // ADR-0028 `:233-246` and ADR-0039 `:43-45`.
+    // ADR-0028 `:238-262` — the bullet AND its "(Grown at #34)" note, which
+    // is the half naming the two image files — and ADR-0039 `:43-45`.
+    // The range moved from `:233` when this same round repaired a "ninth
+    // image route" sentence higher in the file (plan 040 D43/D44).
     expect(GAMES).toHaveLength(4);
     for (const game of GAMES) {
       expect.soft(existsSync(dailyCard(game)), game).toBe(true);
