@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
  *
  * **`openGraph` and nothing else — no page `title`, no `description`, no
  * `alternates`.** A page-level `description` is the SERP snippet, not a chat
- * bubble, so adding one would make ADR-0028 `:36-38`'s "neither cacheable nor
+ * bubble, so adding one would make ADR-0028 `:37-39`'s "neither cacheable nor
  * an SEO surface" a claim this ticket had quietly falsified. Verified on a
  * Turbopack production build: with `openGraph` alone, `<title>` and
  * `<meta name="description">` still come from the root layout, while

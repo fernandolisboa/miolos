@@ -619,7 +619,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // card: none of #34's four per-game surfaces is `ProjectedGame`-bound.
     // This half fires once someone writes the fifth game's entry; the half
     // that reaches the author BEFORE they write anything is the route recipe
-    // in ADR-0028 `:179-192` and ADR-0039 `:42-44`.
+    // in ADR-0028 `:233-246` and ADR-0039 `:43-45`.
     expect(GAMES).toHaveLength(4);
     for (const game of GAMES) {
       expect.soft(existsSync(dailyCard(game)), game).toBe(true);

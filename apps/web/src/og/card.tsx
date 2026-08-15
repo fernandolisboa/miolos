@@ -32,7 +32,7 @@ import {
  * impossibility, and ADR-0033 decision 2 `:49-55` insists on the distinction
  * being stated in those words: `solveNonogram(clues)` recovers the picture
  * from the PUBLISHED clues alone — measured over 280 dailies, 0 mismatches,
- * worst 0.338 ms (ADR-0033 Context `:23-30`) — so withholding it protects
+ * worst 0.338 ms (ADR-0033 Context `:26-30`) — so withholding it protects
  * nothing about the picture's shape. **It is a PRODUCT decision, not a
  * confidentiality one.** The OG ESLint wall is the mechanical half.
  *

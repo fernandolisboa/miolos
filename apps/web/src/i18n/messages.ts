@@ -314,7 +314,7 @@ export const messages = {
    *
    * The four `daily*` pairs are the ONLY metadata the daily play routes
    * carry. They are deliberately not page `title`/`description`: those stay
-   * inherited from the root layout, which is what keeps ADR-0028 `:36-38`'s
+   * inherited from the root layout, which is what keeps ADR-0028 `:37-39`'s
    * "the daily routes are not an SEO surface" literally true (ADR-0054
    * decision 10). The ARCHIVE routes add no copy at all — they reuse the
    * `messages.archive.meta` strings they already compose.

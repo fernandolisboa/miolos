@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-02
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md)
 **Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — decision 3's *"429 is never terminal. **This repo emits none today**"* is false the moment #31 merges, and the causal clause that follows it is no longer the reason the case exists. The rule itself is strengthened, not falsified.
+**Amended by:** [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md) — decision 2's fifth-game route recipe, *"a slug, a `routes` entry, **two `force-dynamic` segments**, a conclusion view — **is still required**"*, grows by the two `opengraph-image.tsx` files #34 adds. See the annotation at decision 2, including why three consecutive audit passes cleared this file. *(Reciprocal line added at #34, alongside ADR-0053's; multiple `Amended by:` lines stack.)*
 
 ## Context
 
@@ -42,6 +43,23 @@ project's shared layer would get bent around Termo one guess at a time.
    Decision is amended. Copying the route shape — a slug, a `routes` entry,
    two `force-dynamic` segments, a conclusion view — is still required; what
    cannot be copied is the sentence explaining why the in-place half exists.
+
+   *(Grown at #34 —
+   [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+   decision 7. The route shape a fifth game must copy now also carries
+   `app/<jogo>/opengraph-image.tsx` and
+   `app/arquivo/[data]/<jogo>/opengraph-image.tsx`, each with its own
+   `export const dynamic = "force-dynamic"` — three `force-dynamic` modules
+   under the daily slug, two under the archive one. **The sentence above is a
+   forward prescription, not a description**, which is why it is annotated
+   rather than left as a dead identifier: a fifth game's author who follows
+   it as written ships with no card. Recorded with one more clause, because
+   `0053:99-101` asked for exactly this lesson: **three consecutive
+   amendment audits swept this file as untouched**, on the strength of its
+   already having been ruled on once (ADR-0053, decision 3), and the recipe
+   here reads identically to the ADR-0028 quotation at ADR-0029 `:13-15` —
+   except that this one is not a quotation. Clearing an ADR on one sentence
+   is not clearing the file.)*
 
 3. **A failed guess is HELD, never queued and never silently lost.**
    - `fetch` rejects (offline), any 5xx, a 401 that survives one forced

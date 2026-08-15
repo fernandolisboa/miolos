@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0007](./0007-separate-web-and-api-apps.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md)
 **Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — decision 2's route half is **narrowed to the daily play routes**. Its reason — *"without the route the screen has no URL, and a screen with no URL cannot be scanned by the visual gate"* — is load-bearing for the daily and does not transfer to the archive: an archive play URL is **itself** permanent and re-renders the stored result on reload, so the bookmark and back-button cases are already served, and the visual gate would only ever reach the empty branch, which for the archive is a screen no real user sees. `/arquivo/<data>/<jogo>/concluido` therefore does not exist; the late result renders in place on the same URL (ADR-0053 decision 9). The universality this ADR claims in Context — *"the shape all four dailies — and later the archive — will inherit"* — and in its consequence *"**Every future game screen is a copy of this shape**, not a new decision"* narrows with it: the archive copies the route family and the `force-dynamic` posture, not the conclusion sibling. Decision 5's per-route enumeration of the ADR-0014 direct-read extension **grows** to the seven archive routes plus `sitemap.ts` and `robots.ts`, and decision 6's prohibition on `generateStaticParams` over dates is obeyed, not amended. *(ADR-0053 landed in #31's first pull request, which shipped the write window and no route. Every archive surface named on this line was built by its second pull request and is live.)*
+**Amended by:** [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md) — **the per-route enumerations grow again, in three places, and the segment count is NOT one of them.** #34 adds `app/<jogo>/opengraph-image.tsx` beside each daily play route. That is a **metadata route inside the existing `/<jogo>` segment**, so decision 4's *"Both segments"* stays literally true; what grows is the number of `force-dynamic` route **modules** under the slug, two → three, and it is not inherited from the sibling `page.tsx` (verified: `force-dynamic` on a page leaves the sibling image route `○ Static`). Decision 4's closing clause is the one that genuinely diverges — see the annotation there. Decision 5's per-route enumeration of the ADR-0014 direct-read extension grows to the **eight** image routes (four daily, four archive), and the fifth-game consequence's *"two `force-dynamic` server segments"* — with #31's *"one … each"* for the archive — becomes three per daily game and two per archive play screen. Decision 6's prohibition on `generateStaticParams` is obeyed, not amended, and no `revalidate` is added. *(Reciprocal line added at #34, alongside ADR-0053's; multiple `Amended by:` lines stack.)*
 **Amends:** the scope edge of [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md) — *"Scope: public, unauthenticated, cacheable server-rendered reads"* — by extending it to the public, unauthenticated but `force-dynamic` and interactive daily play route; see Decision 5.
 
 ## Context
@@ -37,6 +38,24 @@ imply a rule the archive breaks.)*
   its scope line says **cacheable**, and this page is neither cacheable nor
   an SEO surface. Reading it as sanctioned without saying so would be
   scope creep by silence.
+
+  *(Qualified at #34 —
+  [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+  decision 10. The denial's **mechanism** holds and nothing about the crawl
+  posture moves: the four daily routes stay out of `sitemap.ts`, `robots.ts`
+  is untouched, no canonical is added, no `generateStaticParams` appears, and
+  `<title>` and `<meta name="description">` on `/<jogo>` are verified
+  **byte-unchanged** — #34 gives those routes `openGraph` and nothing else.
+  The denial's **coverage** is narrower than it reads, and that is stated
+  rather than left to be discovered: the `<head>` of `/<jogo>` now carries
+  ~15 crawl-facing tags, and `og:title` is a documented title-link candidate
+  when a page's own title is generic — which `/<jogo>`'s is, since it
+  inherits the root's. So #34 plausibly changes the crawl-facing
+  *presentation* of a page this sentence says is not a crawl surface, even
+  though no crawl-posture file moves. The distinction that keeps the design
+  unchanged: an `og:` tag is a **sharing** affordance — it renders a chat
+  bubble — while the sitemap and `robots.txt` are the crawl posture.
+  Different mechanisms.)*
 
 ## Decision
 
@@ -97,6 +116,25 @@ imply a rule the archive breaks.)*
    (`CONTEXT.md` **Rollover**). When the helper returns nothing — no puzzle,
    or a killed one — both routes render the same pt-BR unavailable screen.
 
+   *(Grown at #34 —
+   [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+   decisions 7, 8 and 9, **and the SEGMENT COUNT is not what changed.** An
+   `opengraph-image.tsx` is a metadata route **inside** the existing
+   `/<jogo>` segment, so *"both segments"* above stays true. Two things do
+   move. First, the number of `force-dynamic` route **modules** under a daily
+   slug goes two → three, and the third one declares its own
+   `export const dynamic`: segment config comes from the layouts on the path
+   plus the leaf, and `force-dynamic` on `page.tsx` leaves the sibling image
+   route `○ Static` (verified on a Turbopack production build). Second, and
+   this is the clause that genuinely diverges: **the closing sentence's
+   *"both routes render the same pt-BR unavailable screen"* now has a sibling
+   module under the same slug that answers the identical helper-returned-
+   nothing condition with a 404 and an EMPTY BODY.** Deliberately — there is
+   no page to render a not-found boundary into, and a card is not a screen.
+   The consequence is stated at ADR-0054 decision 8: on a day with nothing
+   published, `/<jogo>` renders the unavailable screen at 200 while its
+   `og:image` 404s.)*
+
 5. **ADR-0014's scope is extended, explicitly.** `apps/web` reads
    `packages/db` directly for `/<jogo>` and `/<jogo>/concluido`. Those pages
    are public, unauthenticated, non-user-specific and helper-gated —
@@ -121,6 +159,22 @@ imply a rule the archive breaks.)*
    publication conjuncts. Those routes and that second
    predicate landed in #31's second pull request, not the first one this
    annotation shipped in.)*
+
+   *(Grown at #34 —
+   [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+   decisions 7 and 8. The enumeration is per-route, so it does not cover a
+   metadata image route by implication either. It grows by **eight** files,
+   all of them public, unauthenticated, `force-dynamic` reads through the
+   same wall helpers: `app/{binairo,sudoku,nonogram,termo}/opengraph-image.tsx`
+   on `getTodayDaily`, and
+   `app/arquivo/[data]/{binairo,sudoku,nonogram,termo}/opengraph-image.tsx`
+   on `getPublishedDaily`. The ninth image route, `app/opengraph-image.tsx`,
+   reads **nothing** and is static — it is named here only so the count is
+   not read as nine. These eight are one hop further from the scope line than
+   anything before them, because their audience is a social scraper rather
+   than a browser, which is why ADR-0054 decision 8 makes the read an
+   existence proof and gives the response a `private, no-cache` header
+   instead of the framework default.)*
 
 6. **`generateStaticParams` over dates is prohibited, standing.** No dynamic
    segment exists in #18, and the future archive route (#31) must never
@@ -190,6 +244,17 @@ imply a rule the archive breaks.)*
   where it was aimed — the daily's dual nature must not be simplified into
   one half — and #31's departure is a decision with its own argument, not
   the simplification it warns about.)*
+  *(Grown at #34 —
+  [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+  decision 7. **Both inventories on this bullet are one item short.** A
+  fifth game now adds a slug, a `routes` entry, **three** `force-dynamic`
+  server modules — `page.tsx`, `concluido/page.tsx` and
+  `opengraph-image.tsx` — and a conclusion view; and its archive play screen
+  adds **two**, `page.tsx` and `opengraph-image.tsx`, still with no
+  conclusion view and no conclusion segment. This is the sentence a future
+  game's author follows, so an undercount here is precisely how a game ships
+  with no card. The same recipe is restated as its own claim at ADR-0039
+  decision 2, which is annotated there.)*
 - **`impeccable detect` scans `/`, `/<jogo>` and `/<jogo>/concluido`** at
   both viewports in CI. Only the *unfinished* state of the conclusion is
   URL-scannable — the populated card renders from a solved local record, and

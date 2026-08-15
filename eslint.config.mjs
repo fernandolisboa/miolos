@@ -77,7 +77,10 @@ const webRequireCall = {
 // REPLACES a rule's whole configuration per matching file — it never merges —
 // so the free-play object further down has to REPEAT these verbatim or it
 // would silently delete the db wall for exactly the free-play files
-// (T-LINT-S14/S15 pin the repetition). Consumed unchanged by object (1): this
+// (T-LINT-S14/S15 pin the repetition). #34 gave them a SECOND repeater, the
+// OG wall (object (4)), on the same rule: any later object whose files are a
+// subset of (1)'s or (2)'s owes the same repetition, and T-LINT-S43 is that
+// object's own regression control. Consumed unchanged by object (1): this
 // extraction is a pure move, and the eslint-db-wall.test.ts probes are the
 // no-op proof.
 const webWallImportPatterns = [
@@ -343,7 +346,7 @@ const freePlayDynamicBannedModule = {
 const ogBannedGameGroups = [
   {
     // ADR-0033 decision 2 `:49-55` — the Nonogram picture is DERIVABLE from
-    // the published clues in under a millisecond (Context `:23-30`: 280
+    // the published clues in under a millisecond (Context `:26-30`: 280
     // dailies, 0 mismatches, worst 0.338 ms). Withholding it protects nothing
     // about the picture's shape, so refusing to DRAW it is a PRODUCT decision
     // and not a confidentiality one — the ADR requires it be stated in those

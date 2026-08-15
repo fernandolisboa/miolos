@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
  * **Excluded, each for its own reason:** `/vincular` (already `noindex`, and
  * `robots.ts` disallows it), `/estatisticas` (personal, and its aggregates
  * arrive client-side behind a session), and the four daily play routes with
- * their `concluido` siblings — ADR-0028 `:36-38` states outright that they
+ * their `concluido` siblings — ADR-0028 `:37-39` states outright that they
  * are not an SEO surface. Absence from a sitemap is NOT `noindex`, and
  * `robots.ts` says what the crawl posture actually is.
  *
