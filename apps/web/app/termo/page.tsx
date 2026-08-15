@@ -1,8 +1,10 @@
 import { getTodayDaily } from "@miolos/db";
+import type { Metadata } from "next";
 
 import { DailyUnavailable } from "../../src/components/daily-unavailable";
 import { getDb } from "../../src/db";
 import { messages } from "../../src/i18n";
+import { OG_DEFAULTS } from "../../src/og/defaults";
 import { TermoScreen } from "../../src/termo/termo-screen";
 
 // No caching of any kind on this segment (plan 017 D5): a cached page would
@@ -11,6 +13,19 @@ import { TermoScreen } from "../../src/termo/termo-screen";
 // predicate is not what the client sees (ADR-0004). No `revalidate`, no
 // `generateStaticParams`, no `fetch` on this path at all.
 export const dynamic = "force-dynamic";
+
+/**
+ * The share card's copy (#34 AC 4, ADR-0054 decision 10) — see
+ * `app/binairo/page.tsx` for why this object carries `openGraph` and nothing
+ * else, and `src/og/defaults.ts` for why the spread is not optional.
+ */
+export const metadata: Metadata = {
+  openGraph: {
+    ...OG_DEFAULTS,
+    title: messages.og.dailyTitle(messages.games.termo.name),
+    description: messages.og.dailyDescription(messages.games.termo.name),
+  },
+};
 
 /**
  * Today's Termo (#27 AC 1). The daily is fetched ONLY through the
