@@ -305,6 +305,41 @@ export const messages = {
     termoLost: (max: number) => `X/${max}`,
   },
   /**
+   * Open Graph copy (#34, ADR-0054 decisions 7 and 10). Two kinds.
+   *
+   * `altGame` is the image route's static `alt` export, and it is DATELESS by
+   * constraint rather than by choice: `alt` is a module export on a metadata
+   * route and cannot read `params`, so there is no date to put in it. Written
+   * down here so a reviewer does not read the omission as an oversight.
+   *
+   * The four `daily*` pairs are the ONLY metadata the daily play routes
+   * carry. They are deliberately not page `title`/`description`: those stay
+   * inherited from the root layout, which is what keeps ADR-0028 `:36-38`'s
+   * "the daily routes are not an SEO surface" literally true (ADR-0054
+   * decision 10). The ARCHIVE routes add no copy at all — they reuse the
+   * `messages.archive.meta` strings they already compose.
+   *
+   * None of these strings contains `então`, `mamãe` or `época`
+   * (`FORBIDDEN_EVERYWHERE`, `route-client-js.mjs:285`), and `T-WEB-S206a`
+   * keeps it audited — the `messages.share` half is `T-WEB-S206`.
+   */
+  og: {
+    altGame: (name: string) => `Cartão do ${wordmark} — ${name}`,
+    altSite: `Cartão do ${wordmark}`,
+    /**
+     * The SITE card's second line, under the wordmark. Written here rather
+     * than derived from `meta.title` or `meta.description` by string
+     * surgery: `meta.title` already contains the wordmark the card renders
+     * at 96px, so reusing it would print the brand twice, and
+     * `meta.description` is 133 characters — three wrapped lines of 39px
+     * body copy where the composition wants one tagline.
+     */
+    siteTagline: "Quatro jogos de raciocínio por dia.",
+    dailyTitle: (name: string) => `${name} de hoje — ${wordmark}`,
+    dailyDescription: (name: string) =>
+      `O ${name} de hoje no ${wordmark}: um por dia, igual para todo mundo.`,
+  },
+  /**
    * The statistics screen (#29, ADR-0051). The stat-row labels are F5's
    * exact register — `Seu melhor tempo` / `Sua média (30 dias)` /
    * `<Jogo>s resolvidos` (f5-conclusao-desktop.dc.html:33-35) — adopted on

@@ -337,6 +337,41 @@ const freePlayDynamicBannedModule = {
     "free play records nothing, fetches nothing, never touches Termo, the streak, the statistics, the medals or the attach flow: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052).",
 };
 
+// (4) THE OG WALL's own ban (#34, ADR-0054 decisions 8 and 15). Everything
+// else in that wall object is objects (1)'s and (2)'s arrays, repeated — see
+// the object itself for why that repetition is not redundant.
+const ogBannedGameGroups = [
+  {
+    // ADR-0033 decision 2 `:49-55` — the Nonogram picture is DERIVABLE from
+    // the published clues in under a millisecond (Context `:23-30`: 280
+    // dailies, 0 mismatches, worst 0.338 ms). Withholding it protects nothing
+    // about the picture's shape, so refusing to DRAW it is a PRODUCT decision
+    // and not a confidentiality one — the ADR requires it be stated in those
+    // words wherever it is cited. This is the mechanical half of that
+    // refusal: an OG route already holds `daily.clues` from its wall read, so
+    // `solveNonogram` is one import away from painting the exact bitmap into
+    // a chat bubble for people who have not played. Reachable today with
+    // ZERO lint hits — `@miolos/games` is in `transpilePackages` and the
+    // free-play wall bans only `@miolos/games/termo`, only under free play.
+    group: [
+      "@miolos/games",
+      "@miolos/games/*",
+      "**/packages/games/src",
+      "**/packages/games/src/*",
+      "**/packages/games/src/**",
+    ],
+    message:
+      "an OG card draws no puzzle content: @miolos/games is banned from the card and the image routes — `solveNonogram(clues)` recovers the Nonogram picture from the published clues, and refusing to draw it is the product decision ADR-0033 decision 2 records (ADR-0054 decision 8).",
+  },
+];
+
+const ogDynamicGamesImport = {
+  selector:
+    "ImportExpression > Literal[value=/(^@miolos\\/games(\\/|$)|packages\\/games\\/src)/]",
+  message:
+    'an OG card draws no puzzle content, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/nonogram")`, and one dynamic import is all `solveNonogram` needs (ADR-0033 decision 2, ADR-0054 decision 8).',
+};
+
 // eslint-config-next ships a flat Linter.Config[]; scope every non-ignore
 // entry to the two Next apps so its rules never leak into the packages.
 // The scope must be FORCED, not defaulted (`config.files ?? appGlobs`
@@ -557,6 +592,55 @@ export default tseslint.config(
         webTableNameLiteral,
         webTableNameTemplate,
         freePlayDynamicBannedModule,
+      ],
+    },
+  },
+  {
+    // (4) THE OG WALL (#34, ADR-0054 decisions 8 and 15). Placed AFTER
+    // objects (1), (2) and (3), and REPEATING (1)'s and (2)'s arrays for the
+    // reason the free-play object above repeats them: flat config REPLACES a
+    // rule's whole configuration per matching file — it never merges — so
+    // this object is the ENTIRE wall for the files it matches, and its globs
+    // are a strict subset of (1)'s and (2)'s.
+    //
+    // MEASURED, not assumed: against a version of this object declaring only
+    // the games ban, all eight db-wall probes that red here today lint CLEAN
+    // — the db subpath, the relative reach into packages/db/src, `sql` and
+    // `users` off the root entry, `stripDailyContent` off @miolos/core, the
+    // two table-name selectors, the computed dynamic import and require().
+    // These are the eight files in the app that call `getDb()` on an
+    // unauthenticated crawler-facing path, i.e. the most consequential place
+    // in the repo to lose those bans, and a file-diff criterion cannot see
+    // the loss. T-LINT-S43/S44 and T-LINT-S8a are the regression controls.
+    // Do not "de-duplicate" the spreads away.
+    files: [
+      `apps/web/src/og/**/*.${webWallExtensions}`,
+      // `**` matches ZERO segments here, so this reaches the ROOT card
+      // `apps/web/app/opengraph-image.tsx` as well as the eight nested ones
+      // — verified against this repo's own eslint, not assumed (T-LINT-S44).
+      `apps/web/app/**/opengraph-image.${webWallExtensions}`,
+      // `twitter-image` is covered although the root layout's `twitter`
+      // defaults mean none will ever be needed: if one ever is, it must not
+      // arrive OUTSIDE the wall, and the cost is one token and one probe.
+      `apps/web/app/**/twitter-image.${webWallExtensions}`,
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [...webWallImportPatterns, ...ogBannedGameGroups],
+          paths: webWallImportPaths,
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        webDynamicDbImport,
+        webDynamicPackageSource,
+        webComputedDynamicImport,
+        webRequireCall,
+        webTableNameLiteral,
+        webTableNameTemplate,
+        ogDynamicGamesImport,
       ],
     },
   },
