@@ -152,7 +152,7 @@ on the Termo client.**
    `MAX_DELTA_BYTES` is not raised.** Termo's floor is +37.9 KB raw before
    one line of screen code, because ~36.4 KB of it is **content the ticket
    exists to ship**. The 40 KB constant
-   (`apps/web/scripts/route-client-js.mjs:91`) was calibrated for routes
+   (`route-client-js.mjs:145`, was `:91`, repaired #34) was calibrated for routes
    whose whole delta is code, and raising it would simultaneously un-arm
    the tripwire for the three grid routes — the script's own header records
    that a motif leak is ~35 KB and lands near 69 KB. The script moves to
@@ -189,6 +189,18 @@ on the Termo client.**
   pre-hydration affordance for a button that will exist. A permanent inert
   box for one that never will is the "dead share button"
   `conclusion-view.tsx` rejects by name.
+  *(Citation repaired at #34 —
+  [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+  decision 1. **This entry is not amended: it is DISCHARGED on its own
+  terms.** #34 ships a share button that performs the action, so the rule it
+  cites — a control must not promise what the product does not have — is
+  satisfied rather than abandoned, and the `.placeholder` box stays rejected
+  on the argument above, untouched. What moved is the **citation**: the
+  `conclusion-view.tsx` comment named here used to read *"the share button
+  remains out (#34 — a dead share button is a broken promise, unlike a dead
+  link)"* and is rewritten to shipped tense in the same pull request. The
+  rule now lives in that comment as discharged, and here as its source. No
+  header is taken: no decision moves and no enumeration grows.)*
 - **Rendering the clock on the Termo screen for parity.** It would be the
   one number on screen that no statistic ever reflects, on a game whose
   elapsed time is mostly network latency.

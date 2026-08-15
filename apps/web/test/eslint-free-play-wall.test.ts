@@ -604,6 +604,48 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S39: play/share-text is banned from free play, clean from a daily path", async () => {
+    // #34's growth clause (the napkin's one-hop rule). Free play RECORDS
+    // NOTHING (ADR-0008 rule 5, ADR-0046 `:31`), so it has no result to
+    // share, and ADR-0011's shareable-seed idea is noted rather than
+    // scheduled. The composer takes a `PlayRecord`, which free play cannot
+    // legally hold — but the wall bans by NAME and is not transitive, so
+    // the name has to enter the list in the change that creates the module.
+    const source = [
+      'import { buildShareText } from "../play/share-text";',
+      "",
+      "export const probe = buildShareText;",
+      "",
+    ].join("\n");
+
+    expect(ruleIds(await lintProbe(FREE_PATH, source))).toContain(
+      "no-restricted-imports",
+    );
+    expect(ruleIds(await lintProbe(ROUTE_PATH, source))).toContain(
+      "no-restricted-imports",
+    );
+    // Scope control: the composer is the daily conclusion's own surface.
+    expect(wallHits(await lintProbe(DAILY_PATH, source))).toEqual([]);
+  });
+
+  it("T-LINT-S40: the dynamic-import evasion of the share-text ban reds; a local dynamic import stays clean", async () => {
+    const source = [
+      "export const load = () =>",
+      '  import("../play/share-text");',
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(FREE_PATH, source))).toContain(
+      "no-restricted-syntax",
+    );
+
+    const clean = [
+      "export const load = () =>",
+      '  import("./share-nothing");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S18: the free-play directory's LEGAL surface lints clean — the wall is not a blanket ban", async () => {
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',

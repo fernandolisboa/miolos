@@ -2,9 +2,10 @@
 
 import { timeBucketIndex, type Game } from "@miolos/core";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
+  archiveGameRoute,
   formatElapsed,
   formatLongDate,
   formatShortDate,
@@ -13,12 +14,15 @@ import {
   routes,
   type Route,
 } from "../i18n";
+import { absoluteUrl } from "../site-origin";
 import { useStats } from "../stats/use-stats";
 import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { picturePath } from "./picture-path";
+import { playRecordsAvailable, type PlayRecord } from "./play-record";
+import { buildShareText, type ShareSubject } from "./share-text";
 import { startCompletionSync } from "./sync";
 import type {
   ConclusionAnswer,
@@ -64,13 +68,17 @@ export interface ConclusionResult {
  * `date` is the SERVER's day, resolved from the wall by the page shell — the
  * client clock never selects which record is read (CONTEXT.md "Rollover").
  *
- * Of the frame's three deliberate absences, #29 filled two: the stat rows
- * with their histogram and the closing italic line are live below
- * (`ConclusionStats`), server-computed and gated on the day being on the
- * server exactly like the streak card (ADR-0048 decision 4, plan 033 D13),
- * so every unfetched state stays exactly as honest as the old absence. The
- * share button remains out (#34 — a dead share button is a broken promise,
- * unlike a dead link).
+ * The frame's three deliberate absences are all filled now. #29 took two:
+ * the stat rows with their histogram and the closing italic line are live
+ * below (`ConclusionStats`), server-computed and gated on the day being on
+ * the server exactly like the streak card (ADR-0048 decision 4, plan 033
+ * D13), so every unfetched state stays exactly as honest as the old absence.
+ * #34 took the third: `ShareButton` at the foot of this file composes a
+ * spoiler-free text — game, date, result, and for Termo the grid of server
+ * verdicts — and hands it to the share sheet or the clipboard. The rule that
+ * kept it out is DISCHARGED rather than abandoned: ADR-0045 `:186-191`
+ * rejects a share button that promises an action the product does not have,
+ * and this one performs it.
  *
  * `picture` is the first per-game payoff payload (ADR-0034 decision 3): plain
  * data, optional, and supplied only by a client component that owns the local
@@ -226,8 +234,10 @@ export function ConclusionView({
   // Without this, /termo's own conclusion would print `em 03:08` in the chip
   // that `entryFor` — and therefore the hub, and every other game's
   // conclusion — renders as `feito` (ADR-0045 decision 4, plan 022 §15.3).
-  // A game that passes no `outcome` renders exactly what it rendered before
-  // this prop existed.
+  // A game that passes no `outcome` gets exactly the day entry it got before
+  // this prop existed. Scoped to the day entry deliberately (#34): the claim
+  // used to be about the whole render, and the share block — which reads
+  // neither `outcome` nor the day state — makes that version false.
   const dayEntry = (dayGame: Game): DayEntry =>
     dayGame === game
       ? outcome === undefined
@@ -285,13 +295,26 @@ export function ConclusionView({
              that "the conclusion owns the terminal sentence".
 
              The string is ALREADY COMPOSED (types.ts's plain-data rule —
-             nothing is composed here), games that pass no `outcome` render no
-             region and are byte-identical, and focus still never moves
+             nothing is composed here), and focus still never moves
              programmatically: a role="status" announces without stealing the
              caret, which is the mechanism PRODUCT.md's "nothing nags" points
              at. That a live region MOUNTING with content is spoken is an AT
              behaviour jsdom cannot prove; it rides the one real
-             VoiceOver/NVDA pass ADR-0042 consequence (e) already owes. */
+             VoiceOver/NVDA pass ADR-0042 consequence (e) already owes.
+
+             #34 FALSIFIED ONE CLAUSE THAT USED TO STAND HERE, and it is
+             deleted rather than softened: "games that pass no `outcome`
+             render no region and are byte-identical". The share button's
+             own role="status" region renders on the result and lost
+             branches of ALL FOUR games, gated on neither `outcome` nor
+             game, so three conclusions gained a live region. ADR-0043
+             decision 10 carries the same repair, and ADR-0054 decision 4
+             carries the DISJOINT-WRITERS rule ADR-0042 decision 10 requires
+             of any screen with two of these: this region's text is a prop
+             composed before mount and no transition here ever writes it,
+             while the share region's text is written only by the click
+             handler and its own timeout. Only one of the two can mutate at
+             all after mount. */
           <p role="status" className={styles.announcer}>
             {outcome.aria}
           </p>
@@ -403,6 +426,7 @@ export function ConclusionView({
             {messages.conclusion.ctaNext(messages.games[next.game].name)}
           </Link>
         )}
+        <ShareButton game={game} date={date} stored={stored} stamp={stamp} />
         {/* Live since #29: /estatisticas is a real route, so the link
             carries it — the same rule that kept it href-less while a dead
             href would have been fake navigation. */}
@@ -891,6 +915,214 @@ function DayChip({
         </span>
       )}
       <span className={styles.chipValue}>{value}</span>
+    </div>
+  );
+}
+
+/** How long a share announcement stands before the region is cleared. */
+const SHARE_STATUS_MS = 5000;
+
+/** What the `aria-live` region has to say. `idle` says nothing. */
+type ShareStatus = "idle" | "copied" | "failed";
+
+/**
+ * `AbortError` by NAME, and with NO `instanceof` anywhere in it. The sheet's
+ * dismissal arrives as a `DOMException` in a browser and as whatever a stub
+ * rejects with in a test, so `name` is the only thing they agree on — and
+ * `instanceof` is worse than merely redundant here: it is realm-scoped, and
+ * a `DOMException` raised by the platform fails `instanceof Object` whenever
+ * the checking code holds a different realm's intrinsics. Measured, not
+ * assumed: under jsdom `new DOMException("x", "AbortError") instanceof
+ * Object` is `false`, which made an earlier version of this predicate route
+ * every dismissal into the clipboard and announce "Resultado copiado." for a
+ * share the player had just cancelled. `typeof` is realm-independent.
+ */
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "AbortError"
+  );
+}
+
+/**
+ * THREE ARMS, NOT TWO (ADR-0054 decision 4, plan 040 D4 / landmine 5).
+ *
+ * `navigator.share` rejects with `AbortError` when the player dismisses the
+ * sheet — surfacing that as a failure message is the single most common bug
+ * in this feature, so it renders nothing at all. But it also rejects with
+ * `NotAllowedError` (no transient activation), `DataError` and `TypeError`,
+ * and treating only the Abort case would make every one of those a SILENT
+ * failure: no sheet, no clipboard write, no message. So any other rejection
+ * falls through to the clipboard and takes that branch's own outcome.
+ *
+ * `text` only — no `url` field and no `title`. Targets disagree about both:
+ * WhatsApp appends the url, some replace the text with it, several prepend
+ * the title. One field is what makes "the clipboard copies the same bytes
+ * the sheet received" a testable property (T-WEB-S196) rather than a hope.
+ */
+async function deliverShare(text: string): Promise<ShareStatus> {
+  if (typeof navigator.share === "function") {
+    try {
+      await navigator.share({ text });
+      // A sheet that opened needs no confirmation — something visible
+      // happened. Only the clipboard write has to announce itself.
+      return "idle";
+    } catch (error) {
+      if (isAbortError(error)) {
+        return "idle";
+      }
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return "copied";
+  } catch {
+    // No third fallback: `document.execCommand("copy")` is deprecated, needs
+    // a hidden textarea and a selection, and would be more code than the
+    // case is worth. `.app` is HSTS-preloaded (ADR-0013) so production and
+    // preview are always secure contexts, and so is localhost.
+    return "failed";
+  }
+}
+
+/**
+ * What this device can honestly say about the day, or `undefined` if it can
+ * say nothing yet (#34, ADR-0054 decision 1; step-6 blocker K3).
+ *
+ * The concluded record wins whenever there is one — it is the authoritative
+ * copy, and for Termo it is the ONLY source of `guesses[].tiles`. Without it
+ * the three grid games fall back to `stamp`, which is `stored ?? result` and
+ * therefore the live play state the screen already passes down; their whole
+ * share is a header plus an elapsed time, and `ConclusionResult` carries the
+ * elapsed time by construction.
+ */
+function shareSubject(
+  game: Game,
+  date: string,
+  stored: PlayRecord | undefined,
+  stamp: ConclusionResult | undefined,
+): ShareSubject | undefined {
+  if (stored !== undefined) {
+    return stored;
+  }
+  if (game === "termo" || stamp === undefined) {
+    return undefined;
+  }
+  return { game, date, elapsedMs: stamp.elapsedMs };
+}
+
+/**
+ * The share (#34, ADR-0054 decisions 1, 1a, 4 and 13) — in-file, like
+ * `StreakCard`, `ConclusionStats` and `DayChip` above, and with no prop of
+ * its own on `ConclusionView`: the composition it needs is a pure function
+ * of values this component already holds.
+ *
+ * THREE STATES, AND THE THIRD ONE IS THE FIX FOR A SHIPPED FALSEHOOD (step-6
+ * blocker K3). The first version of this block claimed the gate was only ever
+ * "a control that is momentarily not yet ready and then works". That was true
+ * of the in-place swap — React runs a child's mount effect before its
+ * parent's, so for one commit `stored` is undefined — and false of the
+ * environment this file argues at `:44-50` that it supports: where
+ * `localStorage` throws, `readPlayRecord` returns `undefined` FOREVER, so the
+ * player got a permanently disabled control that never explained itself. That
+ * IS ADR-0045 `:186-191`'s dead share button, reached from the other side.
+ *
+ *   - **a subject** → enabled. For the three grid games that now includes the
+ *     store-less case, composed from `stamp`.
+ *   - **no subject, but a store to write one** → disabled for the one commit
+ *     the swap takes. Gating the RENDER here would move the layout a frame
+ *     later; gating the enabled state does not, which is `PlaySkeleton`'s
+ *     reserve-the-boxes discipline applied to a button.
+ *   - **no subject and no store** → NOTHING RENDERED. Only Termo can reach
+ *     this: its grid lives on the record alone, so the honest answer is to
+ *     omit the control rather than to show one that can never work. The
+ *     decision is stable from the first client commit — this subtree renders
+ *     only behind `hydrated` — so it costs no reflow.
+ *
+ * There is deliberately NO GATE ON `syncOutcome`: a player whose sync was
+ * rejected can still share. The share is this device's record of its own
+ * play broadcast in a chat message, which is the purest affordance in the
+ * product (ADR-0031 decision 6), and blocking it would punish exactly the
+ * offline players the in-place conclusion exists for.
+ */
+function ShareButton({
+  game,
+  date,
+  stored,
+  stamp,
+}: {
+  readonly game: Game;
+  readonly date: string;
+  readonly stored: PlayRecord | undefined;
+  readonly stamp: ConclusionResult | undefined;
+}) {
+  const [status, setStatus] = useState<ShareStatus>("idle");
+
+  useEffect(() => {
+    if (status === "idle") {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      setStatus("idle");
+    }, SHARE_STATUS_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [status]);
+
+  const subject = shareSubject(game, date, stored, stamp);
+  if (subject === undefined && !playRecordsAvailable()) {
+    return null;
+  }
+
+  return (
+    <div className={styles.shareBlock}>
+      <button
+        type="button"
+        className={styles.share}
+        disabled={subject === undefined}
+        onClick={() => {
+          if (subject === undefined) {
+            return;
+          }
+          // CLEARED FIRST, AND IT IS NOT A TIDY-UP (step-6 finding K4). A
+          // second successful copy sets `status` to the value it already
+          // holds, React bails out of the re-render, the `[status]` effect
+          // never re-runs — so the old five-second timer expires on the new
+          // confirmation, and `aria-live` announces nothing at all because
+          // the text never changed. Going through `idle` moves the text
+          // twice, which re-arms the timer and gives the region something to
+          // speak. Measured by removing this line: the second copy's
+          // confirmation is gone at t+6s, where the timer would have expired
+          // 5s after the FIRST copy, and the region never clears in between.
+          setStatus("idle");
+          // Feature detection happens inside `deliverShare`, at CLICK time
+          // and never at render time: `typeof navigator.share` evaluated
+          // during render is a hydration mismatch, because the server has no
+          // `navigator`. One label, one DOM, one test.
+          void deliverShare(
+            buildShareText(subject, {
+              url: absoluteUrl(archiveGameRoute(date, game)),
+            }),
+          ).then(setStatus, () => {
+            setStatus("failed");
+          });
+        }}
+      >
+        {messages.share.label}
+      </button>
+      {/* The reserved box (DESIGN.md:52): always rendered, `min-height` held
+          by the sheet, only the text content changing — so a successful
+          share does not reflow the column under the player's thumb. */}
+      <p role="status" aria-live="polite" className={styles.shareStatus}>
+        {status === "copied"
+          ? messages.share.copied
+          : status === "failed"
+            ? messages.share.failed
+            : BLANK_VALUE}
+      </p>
     </div>
   );
 }

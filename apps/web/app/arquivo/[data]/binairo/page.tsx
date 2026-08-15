@@ -11,6 +11,7 @@ import {
   messages,
   routes,
 } from "../../../../src/i18n";
+import { OG_DEFAULTS } from "../../../../src/og/defaults";
 
 // ADR-0053 decision 2 — see `app/arquivo/page.tsx` for the kill-switch
 // argument. No `revalidate`, no `generateStaticParams`, no `fetch`.
@@ -21,7 +22,15 @@ interface PlayPageProps {
   readonly params: Promise<{ readonly data: string }>;
 }
 
-/** The SAME parser the page body calls (plan 037 D6a). */
+/**
+ * The SAME parser the page body calls (plan 037 D6a).
+ *
+ * The share card reuses the page's own two strings verbatim (#34 AC 4,
+ * ADR-0054 decision 10), so the archive half of the OG surface adds no copy
+ * at all — and the spread is what keeps the three root-level members, because
+ * a leaf `openGraph` replaces the root's rather than merging into it
+ * (`src/og/defaults.ts`). The canonical is unchanged.
+ */
 export async function generateMetadata({
   params,
 }: PlayPageProps): Promise<Metadata> {
@@ -30,16 +39,19 @@ export async function generateMetadata({
     return { robots: { index: false } };
   }
   const longDate = formatLongDate(date);
+  const title = messages.archive.meta.gameTitle(
+    messages.games.binairo.name,
+    longDate,
+  );
+  const description = messages.archive.meta.gameDescription(
+    messages.games.binairo.name,
+    longDate,
+  );
   return {
-    title: messages.archive.meta.gameTitle(
-      messages.games.binairo.name,
-      longDate,
-    ),
-    description: messages.archive.meta.gameDescription(
-      messages.games.binairo.name,
-      longDate,
-    ),
+    title,
+    description,
     alternates: { canonical: archiveGameRoute(date, "binairo") },
+    openGraph: { ...OG_DEFAULTS, title, description },
   };
 }
 

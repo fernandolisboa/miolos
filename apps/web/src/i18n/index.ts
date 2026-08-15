@@ -6,7 +6,7 @@ export {
   formatMonth,
   formatShortDate,
 } from "./format";
-export { locale } from "./locale";
+export { locale, ogLocale } from "./locale";
 export { SAO_PAULO_TIME_ZONE, todaySaoPauloDate } from "./sao-paulo-day";
 // `medalCopy` (#30, ADR-0052) deliberately does NOT ride this barrel: it
 // lives in `src/medals/copy.ts`, imported only by the medal section —

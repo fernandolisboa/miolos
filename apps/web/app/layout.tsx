@@ -7,6 +7,7 @@ import "./globals.css";
 
 import { SessionBootstrap } from "../src/components/session-bootstrap";
 import { locale, messages } from "../src/i18n";
+import { OG_DEFAULTS } from "../src/og/defaults";
 import { siteOrigin } from "../src/site-origin";
 
 const fraunces = Fraunces({
@@ -51,6 +52,21 @@ export const metadata: Metadata = {
     title: messages.brand.wordmark,
     statusBarStyle: "default",
   },
+  // #34 (ADR-0054 decision 11): the fallback card for every route that
+  // declares no `openGraph` of its own. The eight routes that DO declare one
+  // spread `OG_DEFAULTS` into it, because a leaf declaration replaces this
+  // object rather than merging into it — see `src/og/defaults.ts`.
+  openGraph: {
+    ...OG_DEFAULTS,
+    title: messages.meta.title,
+    description: messages.meta.description,
+  },
+  // `twitter:image`, `:image:alt`, `:type`, `:width` and `:height` are
+  // emitted automatically from the `opengraph-image` file convention, and
+  // `twitter:title`/`:description` are derived from `openGraph` — verified on
+  // the same build. So the card size is the only member worth declaring, and
+  // no `twitter-image.tsx` will ever be needed.
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

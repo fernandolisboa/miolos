@@ -157,3 +157,103 @@ describe("archive metadata (T-WEB-S173)", () => {
     }
   });
 });
+
+// ── T-WEB-S209 ──────────────────────────────────────────────────────────
+
+/**
+ * The four PER-GAME archive routes (#34), imported BELOW the block above so
+ * that `T-WEB-S173`'s suite and its three module imports stay byte-unmoved.
+ * They are called by no other test: `archive-metadata.test.ts` covered the
+ * index, the month page and the day page only, so the claim its own `describe`
+ * makes — *"every route composes its title and description … with a
+ * self-referential canonical"* — held over three of seven routes. This is the
+ * other four, in the suite that already claims them. The `openGraph` half of
+ * the same four functions is `T-WEB-S207`, in `og-metadata.test.ts`.
+ */
+const perGame = {
+  binairo: await import("../app/arquivo/[data]/binairo/page"),
+  nonogram: await import("../app/arquivo/[data]/nonogram/page"),
+  sudoku: await import("../app/arquivo/[data]/sudoku/page"),
+  termo: await import("../app/arquivo/[data]/termo/page"),
+};
+
+const PER_GAME = Object.keys(perGame) as (keyof typeof perGame)[];
+
+describe("the four per-game archive routes' own metadata (T-WEB-S209)", () => {
+  it("titles and descriptions are DISTINCT across games AND across dates", async () => {
+    const dates = ["2026-02-22", "2026-08-03"];
+    const titles = new Set<unknown>();
+    const descriptions = new Set<unknown>();
+    for (const game of PER_GAME) {
+      for (const data of dates) {
+        const metadata = await perGame[game].generateMetadata({
+          params: Promise.resolve({ data }),
+        });
+        titles.add(metadata.title);
+        descriptions.add(metadata.description);
+      }
+    }
+    // Four games × two dates, no collisions — the same "not thin duplicates"
+    // property the block above asserts for the index, month and day routes.
+    expect(titles.size).toBe(PER_GAME.length * dates.length);
+    expect(descriptions.size).toBe(PER_GAME.length * dates.length);
+  });
+
+  it("every canonical is self-referential in BOTH the date and the game", async () => {
+    // Spelled as literals here for the reason the block above spells
+    // `/arquivo/2026-08-03`: a canonical asserted through the same builder the
+    // route calls would agree with itself no matter what either did.
+    const expected = {
+      binairo: "/arquivo/2026-02-22/binairo",
+      nonogram: "/arquivo/2026-02-22/nonogram",
+      sudoku: "/arquivo/2026-02-22/sudoku",
+      termo: "/arquivo/2026-02-22/termo",
+    };
+    for (const game of PER_GAME) {
+      const metadata = await perGame[game].generateMetadata({
+        params: Promise.resolve({ data: "2026-02-22" }),
+      });
+      expect(metadata.alternates, game).toEqual({ canonical: expected[game] });
+    }
+  });
+
+  it("no per-game metadata function carries a string literal beyond its own game token", () => {
+    // The same slice and the same regex as the scan above, extended to the
+    // four files it never reached — with ONE allowlisted literal per file:
+    // that file's own game token. It enters through
+    // `archiveGameRoute(date, <game>)` as the `Game` union member, an
+    // identifier crossing a typed boundary rather than copy, and ADR-0018 :15
+    // is about strings a translator would touch. The allowlist is the file's
+    // OWN token and not the set of four: allowing all four would let the
+    // sudoku route name binairo with this scan still green.
+    for (const game of PER_GAME) {
+      const source = readFileSync(
+        join(
+          import.meta.dirname,
+          "..",
+          "app",
+          "arquivo",
+          "[data]",
+          game,
+          "page.tsx",
+        ),
+        "utf8",
+      );
+      const body = source.slice(source.indexOf("generateMetadata"));
+      const metadataBlock = body.slice(0, body.indexOf("\n}\n") + 3);
+      // Anti-vacuity, both halves: the slice really is the metadata
+      // function's body, and the one literal that IS allowed was really
+      // found — so the empty set below is "no other literals" rather than
+      // "no text was read".
+      expect(metadataBlock, game).toContain("canonical");
+      const literals = [
+        ...metadataBlock.matchAll(/(["'])(?:(?!\1).){2,}\1/g),
+      ].map((match) => match[0]);
+      expect(literals, game).toContain(`"${game}"`);
+      expect(
+        literals.filter((literal) => literal !== `"${game}"`),
+        game,
+      ).toEqual([]);
+    }
+  });
+});

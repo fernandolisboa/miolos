@@ -1,0 +1,55 @@
+# Provenance for the OG card's three static font instances (#34, ADR-0054
+# decision 12). Committing a binary is exactly the path that sidesteps pnpm's
+# `minimumReleaseAge` and `trustPolicy` gates, a binary is un-reviewable in a
+# diff, and these bytes feed a server-side OpenType parser on an
+# unauthenticated public path. So every face records where it came from and
+# how, and `T-WEB-S202` re-computes the digests below against the files on
+# disk. The digest is NECESSARY AND NOT SUFFICIENT — it compares the file
+# against a line the same commit could rewrite — which is why S202 also reads
+# the cut out of the binary itself (`name` ID 16, `OS/2.xAvgCharWidth`).
+#
+# Every face was fetched by requesting the `css2` URL below with the legacy
+# user-agent, then downloading the single `format('truetype')` URL that
+# stylesheet resolves to. The legacy UA is what makes Google serve a STATIC
+# instance: a modern UA returns woff2, which the bundled satori refuses
+# (`Unsupported OpenType signature wOF2`).
+#
+#   user-agent:  Mozilla/4.0 (Windows NT 6.1)
+#   fetch date:  2026-08-15
+#
+# THE `opsz` TERM IN THE FRAUNCES URL IS LOAD-BEARING AND MUST NOT BE DROPPED.
+# `css2` quantises `opsz` into eighteen buckets and serves an off-bucket or
+# absent request silently: `Fraunces:wght@500` with no `opsz` term returns
+# Google's 13-15pt TEXT cut, and `@30`/`@32` return the 28pt cut. All three of
+# the 24, 28 and 36pt cuts are 71,648 bytes with the same `fvar` absence, the
+# same family name and the same `usWeightClass`, so a one-bucket miss is
+# invisible to the size and to every generic check. §7.2a of plan 040 derives
+# why 36 is the right bucket; ADR-0054 decision 12 records the criterion.
+#
+# THE FRAUNCES COPYRIGHT YEARS DISAGREE AND THAT IS NOT A DEFECT (step-6
+# finding P3, recorded so nobody rediscovers it). `OFL-Fraunces.txt` opens
+# "Copyright 2018 The Fraunces Project Authors" — it is the upstream repo's
+# own OFL.txt — while the committed binary's `name` ID 0 reads "Copyright
+# 2020". Both are SIL OFL 1.1, neither declares a Reserved Font Name, and the
+# licence text is the same text; upstream simply did not restamp the notice
+# when it cut the static instances. Nothing is owed, and no renaming
+# restriction applies to the three files here. Instrument Sans agrees with
+# itself (2022 in both places).
+
+Fraunces-36pt-500.ttf
+  css2:    https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@36,500&display=swap
+  gstatic: https://fonts.gstatic.com/s/fraunces/v38/6NUh8FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0K7iN7hzFUPJH58njr1K03gg7S2nfgRYIchRujDg.ttf
+  bytes:   71648
+  sha256:  2f8e7b5684e797bd9a103db53d66d6f7b78472d266e05ccea1beeb1cb303adc1
+
+InstrumentSans-400.ttf
+  css2:    https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400&display=swap
+  gstatic: https://fonts.gstatic.com/s/instrumentsans/v4/pximypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr-yp2JGEJOH9npSTF-Qf1.ttf
+  bytes:   48616
+  sha256:  01689ad055025ff1891607b077513c9389f73360d471dcffa036e326af179b00
+
+InstrumentSans-600.ttf
+  css2:    https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@600&display=swap
+  gstatic: https://fonts.gstatic.com/s/instrumentsans/v4/pximypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr-yp2JGEJOH9npSQb_gf1.ttf
+  bytes:   48732
+  sha256:  5e39a358a65a72b6b74b56b384bbe17a61d8899d33cc255d49112e6522e3df0d

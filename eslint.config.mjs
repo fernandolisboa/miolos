@@ -77,9 +77,19 @@ const webRequireCall = {
 // REPLACES a rule's whole configuration per matching file — it never merges —
 // so the free-play object further down has to REPEAT these verbatim or it
 // would silently delete the db wall for exactly the free-play files
-// (T-LINT-S14/S15 pin the repetition). Consumed unchanged by object (1): this
-// extraction is a pure move, and the eslint-db-wall.test.ts probes are the
-// no-op proof.
+// (T-LINT-S14/S15 pin the repetition). #34 gave them a SECOND repeater, the
+// OG wall (object (4)), on the same rule, and T-LINT-S43 is that object's own
+// regression control.
+//
+// THE RULE IS NOT "A SUBSET OF (1) OR (2)" — IT IS ANY INTERSECTION WITH ANY
+// EARLIER OBJECT, and this clause was written one wall too narrow at #34
+// (step-6 finding K1). Object (4)'s globs also intersect object (3)'s: a
+// future `app/modo-livre/**/opengraph-image.tsx` matches both, later wins,
+// and free play's own bans — stricter than the app-wide wall's, since they
+// forbid `@miolos/db`'s root entry outright — would vanish with no file diff
+// to see it in. Object (5) is that intersection, repeating BOTH. Consumed
+// unchanged by object (1): this extraction is a pure move, and the
+// eslint-db-wall.test.ts probes are the no-op proof.
 const webWallImportPatterns = [
   {
     group: [
@@ -220,6 +230,13 @@ const freePlayBannedModuleGroups = [
       "**/play/day-state",
       "**/play/use-record-snapshot",
       "**/play/conclusion-view",
+      // #34: the share text composes a `PlayRecord` into the string the
+      // conclusion hands to the share sheet. Free play records nothing
+      // (ADR-0008 rule 5, ADR-0046 `:31`), so it has nothing to share, and
+      // ADR-0011's shareable-seed idea is noted rather than scheduled. The
+      // BUTTON needs no entry of its own: it lives inside
+      // `play/conclusion-view`, which is already banned by name above.
+      "**/play/share-text",
       "**/termo/guess-client",
       "**/session/bootstrap",
       "**/components/session-bootstrap",
@@ -325,9 +342,44 @@ const freePlayBannedModuleGroups = [
 // repeats, so a literal-specifier regex is the whole residual.
 const freePlayDynamicBannedModule = {
   selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|stats(\\/|$)|medals(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|share-text)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|stats(\\/|$)|medals(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
   message:
     "free play records nothing, fetches nothing, never touches Termo, the streak, the statistics, the medals or the attach flow: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052).",
+};
+
+// (4) THE OG WALL's own ban (#34, ADR-0054 decisions 8 and 15). Everything
+// else in that wall object is objects (1)'s and (2)'s arrays, repeated — see
+// the object itself for why that repetition is not redundant.
+const ogBannedGameGroups = [
+  {
+    // ADR-0033 decision 2 `:49-55` — the Nonogram picture is DERIVABLE from
+    // the published clues in under a millisecond (Context `:26-30`: 280
+    // dailies, 0 mismatches, worst 0.338 ms). Withholding it protects nothing
+    // about the picture's shape, so refusing to DRAW it is a PRODUCT decision
+    // and not a confidentiality one — the ADR requires it be stated in those
+    // words wherever it is cited. This is the mechanical half of that
+    // refusal: an OG route already holds `daily.clues` from its wall read, so
+    // `solveNonogram` is one import away from painting the exact bitmap into
+    // a chat bubble for people who have not played. Reachable today with
+    // ZERO lint hits — `@miolos/games` is in `transpilePackages` and the
+    // free-play wall bans only `@miolos/games/termo`, only under free play.
+    group: [
+      "@miolos/games",
+      "@miolos/games/*",
+      "**/packages/games/src",
+      "**/packages/games/src/*",
+      "**/packages/games/src/**",
+    ],
+    message:
+      "an OG card draws no puzzle content: @miolos/games is banned from the card and the image routes — `solveNonogram(clues)` recovers the Nonogram picture from the published clues, and refusing to draw it is the product decision ADR-0033 decision 2 records (ADR-0054 decision 8).",
+  },
+];
+
+const ogDynamicGamesImport = {
+  selector:
+    "ImportExpression > Literal[value=/(^@miolos\\/games(\\/|$)|packages\\/games\\/src)/]",
+  message:
+    'an OG card draws no puzzle content, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/nonogram")`, and one dynamic import is all `solveNonogram` needs (ADR-0033 decision 2, ADR-0054 decision 8).',
 };
 
 // eslint-config-next ships a flat Linter.Config[]; scope every non-ignore
@@ -550,6 +602,115 @@ export default tseslint.config(
         webTableNameLiteral,
         webTableNameTemplate,
         freePlayDynamicBannedModule,
+      ],
+    },
+  },
+  {
+    // (4) THE OG WALL (#34, ADR-0054 decisions 8 and 15). Placed AFTER
+    // objects (1), (2) and (3), and REPEATING (1)'s and (2)'s arrays for the
+    // reason the free-play object above repeats them: flat config REPLACES a
+    // rule's whole configuration per matching file — it never merges — so
+    // this object is the ENTIRE wall for the files it matches, and its globs
+    // are a strict subset of (1)'s and (2)'s.
+    //
+    // MEASURED, not assumed: against a version of this object declaring only
+    // the games ban, all eight db-wall probes that red here today lint CLEAN
+    // — the db subpath, the relative reach into packages/db/src, `sql` and
+    // `users` off the root entry, `stripDailyContent` off @miolos/core, the
+    // two table-name selectors, the computed dynamic import and require().
+    // These are the eight files in the app that call `getDb()` on an
+    // unauthenticated crawler-facing path, i.e. the most consequential place
+    // in the repo to lose those bans, and a file-diff criterion cannot see
+    // the loss. T-LINT-S43/S44 and T-LINT-S8a are the regression controls.
+    // Do not "de-duplicate" the spreads away.
+    //
+    // THIS WALL IS NOT TRANSITIVE, and it does not pretend to be (step-6
+    // finding P2). `no-restricted-imports` sees the specifiers a file writes
+    // and nothing behind them, so a module that itself re-exports something
+    // from `@miolos/games` would pass. The free-play object above answers
+    // the same hole by banning one-hop modules BY NAME
+    // (`freePlayBannedModuleGroups`); the OG surface needs no such list
+    // TODAY because its whole one-hop set is `src/i18n`, `src/db`,
+    // `src/archive/parse-params`, `@miolos/db` and `@miolos/core`, none of
+    // which reaches `@miolos/games`. A new import into `src/og/**` that does
+    // owes an entry here.
+    files: [
+      `apps/web/src/og/**/*.${webWallExtensions}`,
+      // `**` matches ZERO segments here, so this reaches the ROOT card
+      // `apps/web/app/opengraph-image.tsx` as well as the eight nested ones
+      // — verified against this repo's own eslint, not assumed (T-LINT-S44).
+      `apps/web/app/**/opengraph-image.${webWallExtensions}`,
+      // `twitter-image` is covered although the root layout's `twitter`
+      // defaults mean none will ever be needed: if one ever is, it must not
+      // arrive OUTSIDE the wall, and the cost is one token and one probe.
+      `apps/web/app/**/twitter-image.${webWallExtensions}`,
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [...webWallImportPatterns, ...ogBannedGameGroups],
+          paths: webWallImportPaths,
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        webDynamicDbImport,
+        webDynamicPackageSource,
+        webComputedDynamicImport,
+        webRequireCall,
+        webTableNameLiteral,
+        webTableNameTemplate,
+        ogDynamicGamesImport,
+      ],
+    },
+  },
+  {
+    // (5) THE INTERSECTION OF (3) AND (4) (#34, step-6 finding K1). Placed
+    // LAST, and it exists because flat config replaces per rule: an
+    // `app/modo-livre/**/opengraph-image.tsx` matches object (3)'s
+    // `apps/web/app/modo-livre/**` AND object (4)'s
+    // `apps/web/app/**/opengraph-image.*`, so (4) — the later object — would
+    // become that file's ENTIRE wall and silently delete free play's bans.
+    //
+    // MEASURED against the shipped config before this object existed: at
+    // `app/modo-livre/opengraph-image.tsx`, `play/sync`, `play/share-text`,
+    // `@miolos/db`'s ROOT entry, `streak` and a dynamic `play/sync` all lint
+    // CLEAN, while the same five red at the control `app/modo-livre/page.tsx`.
+    // The root-entry loss is the sharpest of them: object (3) bans `@miolos/db`
+    // outright and `webWallImportPatterns` PERMITS it, so the intersection was
+    // strictly weaker than either parent. `T-LINT-S46` is the probe.
+    //
+    // No file matches this object today and that is the point — a wall for a
+    // path that does not exist yet is a wall doing its job, the same argument
+    // object (4) makes for `twitter-image`. Repeats (1)'s, (2)'s, (3)'s and
+    // (4)'s arrays; do not "de-duplicate" them away.
+    files: [
+      `apps/web/app/modo-livre/**/opengraph-image.${webWallExtensions}`,
+      `apps/web/app/modo-livre/**/twitter-image.${webWallExtensions}`,
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webWallImportPatterns,
+            ...freePlayBannedModuleGroups,
+            ...ogBannedGameGroups,
+          ],
+          paths: webWallImportPaths,
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        webDynamicDbImport,
+        webDynamicPackageSource,
+        webComputedDynamicImport,
+        webRequireCall,
+        webTableNameLiteral,
+        webTableNameTemplate,
+        freePlayDynamicBannedModule,
+        ogDynamicGamesImport,
       ],
     },
   },

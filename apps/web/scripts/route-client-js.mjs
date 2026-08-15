@@ -26,13 +26,60 @@
  * false: this script stores no baseline, so it structurally cannot compare a
  * delta to its previous value. The only failure surface below is the 40 KB
  * budget, and the headroom is NOT the "half of it" an earlier version of this
- * comment claimed: measured on this branch after #19's step 5, the three GRID
- * play routes come in at binairo 36.3, sudoku 32.6 and nonogram 38.3 KB —
- * 91 %, 82 % and 96 % of budget — so the noisiest clean route has 1.7 KB of
- * slack, not 20. Note the direction: #19 grew `/` (the BASELINE, hub-streak)
- * AND the game routes (the conclusion streak card), and the card side won by
- * ~0.5 KB, so every measured delta moved UP a hair rather than shrinking the
- * instrument. (An earlier version of this paragraph quoted #28's 35.8 /
+ * comment claimed: measured on this branch after #34's Batch E, the three
+ * GRID play routes come in at binairo 35.3, sudoku 31.5 and nonogram 37.5 KB
+ * — 88 %, 79 % and 94 % of budget — so the noisiest clean route has 2.5 KB of
+ * slack, not 20. Note the direction, and note that the DELTA can move on a
+ * ticket that touches no grid route at all: #19 grew `/` (the BASELINE,
+ * hub-streak) AND the game routes (the conclusion streak card), and the card
+ * side won by ~0.5 KB, so every measured delta moved UP a hair rather than
+ * shrinking the instrument; #34 then moved all three UP by ~2.0 KB
+ * (33.5 → 35.5, 29.7 → 31.7, 35.6 → 37.6, `/` 824.8 → 829.5 KB) WITHOUT
+ * TOUCHING A GRID ROUTE.
+ *
+ * #34'S RISE HAS TWO CAUSES AND THEY MUST NOT BE COLLAPSED INTO ONE. An
+ * earlier version of this paragraph said the ticket "grew EVERY route's
+ * absolute by ~5.8-6.0 KB … because the copy deck in `src/i18n/messages.ts`
+ * is on every route's client graph". Both halves are false, measured by
+ * building `main` and this branch with the same toolchain in the same
+ * session:
+ *
+ *   (1) The absolute growth is BIMODAL, not uniform. The eight routes that
+ *       carry the conclusion screen root — `/<jogo>` and `/<jogo>/concluido`
+ *       — grew +6.5 to +6.7 KB. EVERYTHING else grew +0.3 to +4.4, `/`
+ *       itself +4.7, `/_not-found` +0.3. There is no "+5.8-6.0 on every
+ *       route" figure; it was the conclusion routes' number applied to the
+ *       whole table.
+ *   (2) The copy deck is NOT on every client graph. The chunk carrying
+ *       `messages` is absent from `/_not-found`, `/arquivo`,
+ *       `/arquivo/mes/[mes]`, `/arquivo/[data]` and `/modo-livre` — and
+ *       three of those still grew +3.4 KB, which is shared-chunk reshuffle
+ *       and not copy at all.
+ *
+ * WHAT ACTUALLY MOVED THE GRID ROUTES' DELTA is the share button landing in
+ * the conclusion's chunk: a 16,261 B chunk containing the `AbortError`
+ * handler is on exactly those eight routes' first-load sets and on no
+ * others, and the delta rise is that weight minus `/`'s own +4.7. THE
+ * ARCHIVE PLAY ROUTES ARE THE CONTROL and are cited as such: they compose
+ * the same hooks and the same play views but never the conclusion screen
+ * root, and their deltas moved by -0.2 to -0.3 KB — i.e. not at all. This is
+ * a standing budget rule rather than incidental noise, which matters here
+ * because THIS FILE'S WHOLE THESIS IS THAT OVERSTATED ROOM IS THE HAZARD:
+ * `/nonogram`'s slack went 4.4 → 2.4 KB on a ticket whose whole diff is a
+ * conclusion button and some metadata.
+ *
+ * AND THE RELIEF, NAMED SO IT IS NOT THE CONSTANT. One more conclusion-sized
+ * feature reds `/nonogram` for a reason unrelated to a motif leak, and the
+ * pressure then will be to raise `MAX_DELTA_BYTES`. Do not. The structural
+ * move is proved by the same build: the archive play routes exclude the
+ * conclusion tree and land ~17 KB lower (`/arquivo/[data]/nonogram` +20.9
+ * against `/nonogram` +37.6), and the conclusion only renders after the grid
+ * closes — a natural `next/dynamic` boundary. ADR-0054 decision 15 records
+ * it for whoever gets there first.
+ *
+ * (An earlier version of this paragraph quoted #19's 36.3 / 32.6 / 38.3 and
+ * a 1.7 KB slack — already drifted to 33.5 / 29.7 / 35.6 on `main` by #34,
+ * through three tickets that did not re-measure it — before that #28's 35.8 /
  * 32.1 / 37.8 and a 2.2 KB slack, before that #27's 33.0 / 30.4 / 36.8 and
  * a 3.2 KB one, and before that #25's 28.3 / 30.9 / 34.3 and a 5.7 KB one,
  * which overstated the room by 78 % in the one comment whose whole thesis is
@@ -186,6 +233,24 @@ const BUDGETED = [
   "/arquivo/[data]/nonogram",
   "/arquivo/[data]/sudoku",
   "/arquivo/[data]/termo",
+  // #34 (ADR-0054): the four conclusion routes, which #34 is the first ticket
+  // to ship real client JS to on purpose — the share button, its clipboard
+  // fallback and its `aria-live` region. They ride the SHARED 40 KB with
+  // room: measured on this branch after Batch E, +10.0 / +10.6 / +10.0 /
+  // +11.5 KB for binairo / nonogram / sudoku / termo (from +8.3 / +8.9 /
+  // +8.3 / +9.8 on `main`), i.e. 25–29 % of budget, so no `PER_ROUTE_BUDGET`
+  // entry is owed and none is added. `/termo`'s is the largest of the four
+  // and still nowhere near its daily twin's 68.6 — the conclusion never
+  // imports the validation dictionary.
+  //
+  // They are BUDGETED for the reason the archive index is: a conclusion is
+  // the screen a future ticket reaches for when it wants a chart, a medal
+  // animation or a second sharing channel, and an unbudgeted route is the
+  // one that acquires a library with nothing saying so.
+  "/binairo/concluido",
+  "/nonogram/concluido",
+  "/sudoku/concluido",
+  "/termo/concluido",
 ];
 
 /**

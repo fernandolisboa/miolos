@@ -1,8 +1,11 @@
 import { getTodayDaily } from "@miolos/db";
+import type { Metadata } from "next";
 
 import { DailyUnavailable } from "../../src/components/daily-unavailable";
 import { getDb } from "../../src/db";
 import { messages } from "../../src/i18n";
+import { ogCopy } from "../../src/og/copy";
+import { OG_DEFAULTS } from "../../src/og/defaults";
 import { SudokuScreen } from "../../src/sudoku/sudoku-screen";
 
 // No caching of any kind on this segment (plan 017 D5): a cached page would
@@ -11,6 +14,19 @@ import { SudokuScreen } from "../../src/sudoku/sudoku-screen";
 // now()` predicate is not what the client sees (ADR-0004). No `revalidate`,
 // no `generateStaticParams`, no `fetch` on this path at all.
 export const dynamic = "force-dynamic";
+
+/**
+ * The share card's copy (#34 AC 4, ADR-0054 decision 10) — see
+ * `app/binairo/page.tsx` for why this object carries `openGraph` and nothing
+ * else, and `src/og/defaults.ts` for why the spread is not optional.
+ */
+export const metadata: Metadata = {
+  openGraph: {
+    ...OG_DEFAULTS,
+    title: ogCopy.dailyTitle(messages.games.sudoku.name),
+    description: ogCopy.dailyDescription(messages.games.sudoku.name),
+  },
+};
 
 /**
  * Today's Sudoku (plan 018 AC 1/AC 3). The puzzle is fetched ONLY through the

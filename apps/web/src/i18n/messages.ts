@@ -272,6 +272,39 @@ export const messages = {
     },
   },
   /**
+   * The share (#34, ADR-0054) — shared chrome, imported by the client
+   * component rather than passed to it, exactly like `conclusion` above.
+   *
+   * `então`, `mamãe` and `época` are FORBIDDEN_EVERYWHERE in client chunks
+   * (`scripts/route-client-js.mjs:350`) — audited: no string below uses one,
+   * and T-WEB-S206 keeps it audited (it also pins that neither this module
+   * nor `share-text.ts` imports from `@miolos/games/termo`).
+   *
+   * THE THREE SQUARES ARE CONTENT, NOT DECORATION, and they live here rather
+   * than in `share-text.ts` so that every user-visible character in the app
+   * keeps one auditable home. DESIGN.md:58 bans "emoji decorativo" — emoji
+   * that decorate a RENDERED PAGE, where the design system could set a word
+   * instead. A share text has no CSS, no fonts and no tokens; there the
+   * square is the only available encoding of a per-cell verdict, and it is
+   * the encoding the genre already uses. The same test forbids inventing
+   * squares for the three games that have no per-cell verdict (ADR-0054
+   * decisions 2 and 3).
+   */
+  share: {
+    label: "Compartilhar",
+    /** After the clipboard fallback writes. Announced, because nothing visible happened. */
+    copied: "Resultado copiado.",
+    /** Both mechanisms refused. The only failure the player can see. */
+    failed: "Não foi possível copiar o resultado.",
+    tiles: { correct: "🟩", present: "🟨", absent: "⬜" },
+    /** "Miolos · Termo · 14 ago" */
+    header: (game: string, shortDate: string) =>
+      `${wordmark} · ${game} · ${shortDate}`,
+    /** Termo's result line. "4/6" won, "X/6" lost — the genre's own notation. */
+    termoWon: (used: number, max: number) => `${used}/${max}`,
+    termoLost: (max: number) => `X/${max}`,
+  },
+  /**
    * The statistics screen (#29, ADR-0051). The stat-row labels are F5's
    * exact register — `Seu melhor tempo` / `Sua média (30 dias)` /
    * `<Jogo>s resolvidos` (f5-conclusao-desktop.dc.html:33-35) — adopted on

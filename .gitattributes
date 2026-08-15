@@ -5,3 +5,10 @@ packages/games/src/termo/words.generated.ts linguist-generated=true
 # Termo content artifacts are LF-only: the codegen and the word-list harness
 # reject CRLF loudly, so pin the working-tree encoding too.
 content/termo/* text eol=lf
+
+# The OG card's three static font instances (#34, ADR-0054 decision 12). Not
+# strictly required today — there is no `* text=auto` line, so git's NUL-byte
+# heuristic already classifies them — but the pin survives anyone adding one,
+# and it stops GitHub attempting a diff of 169 KB of glyph outlines.
+# Provenance for every byte is in `apps/web/assets/fonts/SHA256SUMS`.
+*.ttf binary

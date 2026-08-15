@@ -399,6 +399,79 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     expect(wallHits(clean)).toEqual([]);
   });
 
+  it("T-LINT-S8a: the wall fires from apps/web/src/og/**, and a clean OG file reports nothing", async () => {
+    // The T-LINT-S8 claim above, on the source directory #34 adds. It is the
+    // same claim — "every glob in the wall is written against
+    // `apps/web/src/**` rather than against an enumerated list of
+    // directories" — so it takes the sibling letter rather than a fresh id.
+    //
+    // It matters more here than it did for `src/termo`: `src/og` is the
+    // directory whose modules DO read the database, on an unauthenticated
+    // crawler-facing path, and #34 adds a fourth flat-config wall object
+    // whose globs cover it. Flat config replaces rather than merges, so this
+    // is the assertion that the app-wide wall survived that addition from
+    // inside the new directory itself (T-LINT-S43 asserts the same thing from
+    // the route side).
+    const OG_PATH = "apps/web/src/og/eslint-probe.ts";
+
+    const bare = await lintProbe(
+      OG_PATH,
+      [
+        'import { getPublishedDailyWithSolution } from "@miolos/db/publishing";',
+        "",
+        "export const read = getPublishedDailyWithSolution;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(bare)).toContain("no-restricted-imports");
+
+    const contentSchema = await lintProbe(
+      OG_PATH,
+      [
+        'import { stripDailyContent } from "@miolos/core";',
+        "",
+        "export const strip = stripDailyContent;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(contentSchema)).toContain("no-restricted-imports");
+
+    const relative = await lintProbe(
+      OG_PATH,
+      [
+        'import { dailyPuzzles } from "../../../../packages/db/src/schema";',
+        "",
+        "export const table = dailyPuzzles;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(relative)).toContain("no-restricted-imports");
+
+    const dynamic = await lintProbe(
+      OG_PATH,
+      [
+        "export const load = () =>",
+        '  import("../../../../packages/core/src/contracts/daily-content");',
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(dynamic)).toContain("no-restricted-syntax");
+
+    // Anti-vacuity: what the shipped handlers actually import reports ZERO
+    // wall hits. `getPublishedDaily` and `getTodayDaily` are on the root
+    // entry and on `WALL_SURFACE`, so `T-LINT-S37` needs no new name either.
+    const clean = await lintProbe(
+      OG_PATH,
+      [
+        'import { getPublishedDaily, getTodayDaily } from "@miolos/db";',
+        "",
+        "export const readers = { getPublishedDaily, getTodayDaily };",
+        "",
+      ].join("\n"),
+    );
+    expect(wallHits(clean)).toEqual([]);
+  });
+
   it("T-LINT-3c: a relative path into packages/db/src is restricted", async () => {
     // Step 6 finding web-db-wall-has-no-relative-path-ban: the bare-specifier
     // groups match none of this, so `completions` and `hint_grants` were one

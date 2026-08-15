@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-02
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md), [ADR-0042](./0042-the-termo-board-is-read-only-output.md), [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
+**Amended by:** [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md) — decision 10's closing sentence, *"Games that pass no `outcome` render no region and are unchanged"*, is **false** after #34: the share button renders a second `role="status" aria-live="polite"` region on **all four** conclusions, in both terminal branches, whether or not `outcome` is passed — with one exception that does not rescue the sentence: in a browser with no play-record store, Termo's share block renders nothing at all rather than a dead control (`conclusion-view.tsx`'s `playRecordsAvailable()` guard, plan 040 D17), so Termo alone can reach a no-region state, by a route the decision never contemplated. The decision's substance survives — the `.announcer` region, its composed string and the no-focus-steal mechanism are untouched — and what changes is the *scope* of the "unchanged" claim plus the fact that the conclusion now carries **two** live regions, which [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 10 requires be given an explicit disjointness rule. See the annotation at decision 10.
 
 ## Context
 
@@ -269,6 +270,47 @@ the loss.
     still does not move — a `role="status"` announces without stealing the
     caret, which is the calmer of the two mechanisms and the one this
     product's *"nothing nags"* principle points at.
+
+    *(**Amended at #34** —
+    [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+    decision 4. The sentence **"Games that pass no `outcome` render no
+    region and are unchanged" is false.** The share button renders a second
+    `role="status" aria-live="polite"` region on the `result` and `lost`
+    branches of **all four** conclusions, whether or not `outcome` is
+    passed, and it reserves its box with a fixed `min-height` — so Binairo,
+    Sudoku and Nonogram conclusions now carry a live region and are not
+    unchanged. One exception, which narrows the "all four" without rescuing
+    the sentence: in a browser with no play-record store, Termo's share
+    block renders nothing rather than a dead control (`playRecordsAvailable()`,
+    plan 040 D17), so Termo alone can still reach a no-region state — by a
+    route this decision never contemplated, and never for the three games
+    the falsified sentence was written about. Everything else survives: `.announcer` is
+    still gated on `outcome`, still carries the already-composed `aria`
+    string, and still never moves focus.*
+
+    ***The conclusion therefore has TWO `role="status"` regions, and
+    [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 10
+    requires that pair carry an explicit disjointness rule rather than an
+    assumption.** It is stated in decision 10's own terms — **disjoint
+    writers** — and on this screen the rule is stronger than on the board.
+    `.announcer`'s text is `outcome.aria`, a prop composed by the game
+    before the view mounts; no client transition in `ConclusionView` writes
+    it, and it is byte-identical for the component's whole lifetime.
+    `.shareStatus`'s text is derived from the `status` state, which is
+    written **only** by the share click handler and by its own
+    `[status]` timeout effect. So no transition writes both, and the
+    stronger claim holds too: only one of the two regions can ever mutate at
+    all after mount. **ADR-0042 decision 10's own second hazard does not
+    transfer**: it needed a zero-width nonce because a repeated identical
+    `notice` is inaudible, and the share region already moves its text
+    through `idle` on every click (ADR-0054 decision 4's `setStatus("idle")`
+    line), which is what re-announces a second copy.*
+
+    *The record is corrected here rather than in the test file. `#34`'s own
+    plan and `docs/agents/test-ids.md` both recorded this as a **test**
+    deviation — `T-WEB-S96`'s `queryAllByRole("status")).toEqual([])` "became
+    false" — and filed nothing against this decision, which is why the
+    falsification stood unannotated through a full review round.)*
 
 ## Rejected
 

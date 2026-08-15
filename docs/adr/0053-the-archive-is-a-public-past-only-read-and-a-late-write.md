@@ -2,6 +2,7 @@
 
 **Status:** Proposed — 2026-08-14 (issue #31)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0005](./0005-all-content-is-free.md), [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md), [ADR-0039](./0039-termo-cannot-be-played-offline.md), [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md), [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md)
+**Amended by:** [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md) — **decision 2's route enumeration and its `revalidatePath` path list both grow, and decision 4's 404-vs-500 rule is narrowed at the caller.** #34 adds an `opengraph-image.tsx` beside each of the four archive play routes, so *"on all seven pages, on `sitemap.ts` and on `robots.ts`"* — nine `force-dynamic` route modules — becomes **thirteen**. *(Quotation corrected at step 7, finding W7: the line first read *"all seven pages, `sitemap.ts` and `robots.ts`"*, which is the same claim in fewer words and not what `:210` says. This pull request's own standard is verbatim, so it is repaired rather than defended.)* The path list is the one that matters: a future `killed_at` writer built from *"day, month, index, play, sitemap"* as written would **not** invalidate `/arquivo/<YYYY-MM-DD>/{binairo,sudoku,nonogram,termo}/opengraph-image`, so a withdrawn puzzle's card would keep serving after its page 404s — decision 2's own failure mode on a surface it predates. The precondition itself is **obeyed, not weakened**: no `revalidate` is added anywhere, and the new routes are `force-dynamic` for exactly the reason this decision gives. Decision 4's *"the two shipped readers keep throwing"* stays true — `packages/db` is byte-unmoved — but on the eight image routes the **caller** now catches a projection-class throw by name, logs it and answers 404, while an outage, a pool error or a missing `DATABASE_URL` still re-throws to the 500 that clause defends. See the annotations at decisions 2 and 4, and the qualification in Consequences.
 **Amends:** eight standing records. Every sentence below is quoted from the file as it stands; every amended file carries the reciprocal `**Amended by:**` line **and an in-place annotation of the amended sentence**, because in this repo "amended" means the file was edited ([ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md) consequence (b)).
 
 - **[ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md) rule 2** — *"**Archive completions are recorded, and marked late.** The stats calendar shows the date as solved with a visually distinct 'solved later' state."* For a late won row dated before the account's clamped range start there is no calendar entry at all — a class #31 and nothing else creates (decision 7). Rule 2's exclusion list and the three-visual-states consequence are untouched.
@@ -232,6 +233,41 @@ the text (the first is I42, from the step-7 round):
    sitemap). Cache-then-invalidate is the wrong order. No `revalidate` may
    be added to an archive route before that writer exists.
 
+   *(Grown at #34 —
+   [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+   decisions 7 and 9, in TWO places, and the second one is not bookkeeping.*
+
+   *First, the count: #34 adds an `opengraph-image.tsx` beside each of the
+   four archive play routes, each with its own `export const dynamic =
+   "force-dynamic"` — the export is required per file, since segment config
+   comes from the layouts on the path plus the leaf and a sibling `page.tsx`
+   does not confer it. So this family carries **thirteen** `force-dynamic`
+   route modules, not nine.*
+
+   ***Second, and this is a live hole rather than a count: the path list
+   above is a FORWARD PRESCRIPTION, and a path absent from it is a path the
+   future writer will not invalidate.** It must also name*
+   `/arquivo/<YYYY-MM-DD>/binairo/opengraph-image`,
+   `/arquivo/<YYYY-MM-DD>/sudoku/opengraph-image`,
+   `/arquivo/<YYYY-MM-DD>/nonogram/opengraph-image` *and*
+   `/arquivo/<YYYY-MM-DD>/termo/opengraph-image`. *A card is the surface
+   where a stale takedown is most visible — it renders inside somebody
+   else's chat client — so a writer built from the un-annotated list would
+   leave a killed puzzle's card serving after its page 404s. The list is
+   completed rather than merely lengthened: the DAILY cards at
+   `/<jogo>/opengraph-image` belong to ADR-0028 decision 4's family and not
+   to this one, and the index, month and day pages inherit the root card,
+   which reads nothing and cannot go stale.*
+
+   *The precondition itself is obeyed and not narrowed: #34 adds no
+   `revalidate` anywhere, and it adds no CDN TTL either — the emitted
+   `cache-control` is overridden to `private, no-cache, no-store` in the
+   `ImageResponse` options, because `force-dynamic` governs Next's route
+   cache and not the response header. Separately, and outside what any
+   invalidation can reach: social scrapers hold a fetched card on their own
+   infrastructure for days, so a card already scraped survives a `killed_at`
+   takedown regardless — recorded at ADR-0054's consequences.)*
+
    **This is where ADR-0014's scope edge is amended.** The archive is that
    clause's own named example of a *cacheable* read and it ships uncached.
    The honest record: `public, unauthenticated, non-user-specific,
@@ -320,6 +356,26 @@ the text (the first is I42, from the step-7 round):
    crawler, and it hides which row is bad. The log line *is* the alarm. The
    two shipped readers keep throwing, because on those a bad row is a live
    incident.
+
+   *(Narrowed at #34 —
+   [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+   decision 8, **at the CALLER and not at the readers.** Clause 1 holds
+   unchanged and #34 adopts its argument wholesale. The **because** clause is
+   what moves, on eight new surfaces: the two shipped readers do still throw
+   — `packages/db` is byte-unmoved, proved by `git diff` at #34's exit — but
+   the OG image routes now catch a **projection-class** throw by name
+   (`ZodError`, `DailyProjectionUnsupportedError`), log it and answer 404,
+   i.e. treat a bad row exactly the way the archive reader does rather than
+   as a live incident. Everything else — an outage, a pool error, a missing
+   `DATABASE_URL` — is **re-thrown** and still becomes the 500 this clause is
+   defending, because for a transient failure the 404-over-500 argument
+   inverts: a 404 on a scraper-facing surface is negative-cached for days,
+   names no bad row in the log, and outlives the outage. The match is on
+   `name` rather than `instanceof` because neither class can be imported
+   there — one is on the app-wide wall's banned-name list — and it fails
+   **closed**, to the 500, if a version skew ever broke it. Without this
+   annotation a fifth game's author would read decision 4 and conclude that
+   an OG route must let those readers 500.)*
 
    **This is where ADR-0024's backward-compatibility horizon is amended.**
    Its duty was scoped to *"rows generated up to `bufferDepth` days
@@ -976,6 +1032,18 @@ the text (the first is I42, from the step-7 round):
   the archive and free play but not the daily play routes, which ADR-0028
   already states outright are not an SEO surface. Absence from a sitemap is
   not `noindex`, and that is stated rather than implied.
+  *(Qualified at #34 —
+  [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+  decision 10, the echo of the qualification on ADR-0028 `:35-40` itself.
+  Every clause above survives: the daily play routes are still absent from
+  `sitemap.ts`, `robots.ts` does not move, no canonical is added, and the
+  daily routes' `<title>` and `<meta name="description">` are verified
+  byte-unchanged, because #34 gives them `openGraph` and nothing else. What
+  the denial does **not** cover is that those pages now emit ~15
+  crawl-facing tags, and `og:title` is a documented title-link candidate on a
+  page whose own title is generic — which theirs is. No design changes; the
+  record gains the sentence. An `og:` tag is a sharing affordance and the
+  sitemap is the crawl posture.)*
 - **`ACCEPTED_DAYS_BACK` survives in `docs/` only as history — original ADR
   sentences that now carry an amendment annotation, plus point-in-time plans
   and handoffs — never as a live prescription**, and nowhere at all in
