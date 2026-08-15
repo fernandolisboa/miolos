@@ -41,7 +41,7 @@ vi.mock("next/navigation", () => ({
   redirect: spies.redirect,
 }));
 
-const { locale, messages } = await import("../src/i18n");
+const { locale, messages, ogLocale } = await import("../src/i18n");
 const { OG_DEFAULTS } = await import("../src/og/defaults");
 const layout = await import("../app/layout");
 
@@ -115,7 +115,7 @@ describe("the daily play routes carry openGraph and NOTHING else (T-WEB-S198)", 
       // The whole object, key by key. An absence asserted as a key list
       // rather than four `toBeUndefined()`s: a later ticket that adds a page
       // `title`, a `description` or an `alternates.canonical` to a daily
-      // route reds HERE, which is what keeps ADR-0028 :36-38's "not an SEO
+      // route reds HERE, which is what keeps ADR-0028 :37-39's "not an SEO
       // surface" denial literally true (ADR-0054 decision 10). The daily
       // routes' crawl-facing metadata stays byte-unchanged: `<title>` and
       // `<meta name="description">` keep coming from the root layout.
@@ -173,8 +173,15 @@ describe("og:locale is pt_BR, and it is asserted on a LEAF (T-WEB-S199)", () => 
 
   it("the og: locale is NOT the exported BCP-47 one", () => {
     // `og:locale` is `language_TERRITORY`; `<html lang>` is BCP-47. Sharing
-    // one constant between them is the "fix" this asserts against.
+    // one constant between them is the "fix" this asserts against. Both now
+    // live in `src/i18n/locale.ts` (step-6 finding W4, ADR-0018 bullet 3),
+    // which makes the non-identity arm MORE load-bearing rather than less:
+    // adjacent declarations are exactly where a later reader collapses two
+    // into one.
     expect(locale).toBe("pt-BR");
+    expect(ogLocale).toBe("pt_BR");
+    expect(ogLocale).not.toBe(locale);
+    expect(OG_DEFAULTS.locale).toBe(ogLocale);
     expect(OG_DEFAULTS.locale).not.toBe(locale);
     expect(OG_DEFAULTS.locale.replace("_", "-")).toBe(locale);
   });
@@ -242,10 +249,33 @@ describe("the OG deck's accent audit (T-WEB-S206a)", () => {
    * editor will grow, and a copy edit is exactly how a false positive would
    * reach that grep and red a build for a reason nobody could find. The arm
    * below keeps the audit whether or not the module stays out of the browser.
+   *
+   * READ FROM THE GATE, NOT RE-TYPED (step-6 finding Q3). The list used to be
+   * a local literal here while its twin `T-WEB-S206` derived the same list
+   * from `route-client-js.mjs`, so a fourth marker added to the script was
+   * audited against `messages.share` and silently not against the OG deck.
+   * The two halves now read the same declaration by the same regex.
    */
-  const FORBIDDEN = ["então", "mamãe", "época"];
+  function forbiddenEverywhere(): string[] {
+    const script = readFileSync(
+      join(import.meta.dirname, "..", "scripts", "route-client-js.mjs"),
+      "utf8",
+    );
+    const declaration = /const FORBIDDEN_EVERYWHERE = \[([^\]]*)\]/.exec(
+      script,
+    );
+    expect(declaration, "FORBIDDEN_EVERYWHERE is not declared").not.toBeNull();
+    return [...(declaration?.[1] ?? "").matchAll(/"([^"]+)"/g)].map(
+      (match) => match[1] ?? "",
+    );
+  }
 
-  it("none of the three Termo canonicals appears in ogCopy", () => {
+  it("no FORBIDDEN_EVERYWHERE canonical appears in ogCopy", () => {
+    const FORBIDDEN = forbiddenEverywhere();
+    // Counted floor: an empty list would pass the loop below, and the three
+    // Termo canonicals the script ships today are the ones this claim names.
+    expect(FORBIDDEN.length).toBeGreaterThanOrEqual(3);
+    expect(FORBIDDEN).toContain("então");
     const deck = JSON.stringify(
       Object.values(ogCopy).map((value) =>
         typeof value === "function" ? value("Nonogram") : value,

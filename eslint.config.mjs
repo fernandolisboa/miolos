@@ -623,6 +623,17 @@ export default tseslint.config(
     // in the repo to lose those bans, and a file-diff criterion cannot see
     // the loss. T-LINT-S43/S44 and T-LINT-S8a are the regression controls.
     // Do not "de-duplicate" the spreads away.
+    //
+    // THIS WALL IS NOT TRANSITIVE, and it does not pretend to be (step-6
+    // finding P2). `no-restricted-imports` sees the specifiers a file writes
+    // and nothing behind them, so a module that itself re-exports something
+    // from `@miolos/games` would pass. The free-play object above answers
+    // the same hole by banning one-hop modules BY NAME
+    // (`freePlayBannedModuleGroups`); the OG surface needs no such list
+    // TODAY because its whole one-hop set is `src/i18n`, `src/db`,
+    // `src/archive/parse-params`, `@miolos/db` and `@miolos/core`, none of
+    // which reaches `@miolos/games`. A new import into `src/og/**` that does
+    // owes an entry here.
     files: [
       `apps/web/src/og/**/*.${webWallExtensions}`,
       // `**` matches ZERO segments here, so this reaches the ROOT card

@@ -195,6 +195,17 @@ describe("no emoji on a rendered surface (T-WEB-S208)", () => {
    * `messages.ts` is a `.ts` file and therefore outside the scope by
    * EXTENSION, which is the same scoping `medals-content.test.ts:129` uses
    * for its own emoji regex — not an exemption written for #34.
+   *
+   * WHAT THIS DOES NOT CATCH, stated because plan 040 :135 claimed it did
+   * (step-6 finding G6). The plan justified this gate as closing "a later
+   * ticket could render a preview of the share text on a page". It does not:
+   * `<pre>{buildShareText(...)}</pre>` carries no literal emoji and passes
+   * green. What the scan catches is an emoji AUTHORED INTO a rendered
+   * surface, which is the realistic regression. An import-graph arm was
+   * considered and is impossible as stated — `conclusion-view.tsx` is itself
+   * a rendered `.tsx` that legitimately imports `share-text.ts`, so "no
+   * rendered surface reaches the share composer" is red on the shipped tree.
+   * The runtime path is held by ADR-0054 decision 2 and by design review.
    */
   const EMOJI = /\p{Extended_Pictographic}/u;
   const RENDERED = /\.(?:tsx|css)$/;

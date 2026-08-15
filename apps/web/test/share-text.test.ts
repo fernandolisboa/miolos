@@ -566,7 +566,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
 
   it("(d) the composer's second parameter declares exactly one member, url", () => {
     // The streak's realistic regression is an ARGUMENT, not an import:
-    // `conclusion-view.tsx:371` already holds the server streak in scope at
+    // `conclusion-view.tsx:394` already holds the server streak in scope at
     // the call site, so `buildShareText(record, { url, streak })` is the edit
     // that breaks the rule — and the module-graph scan above cannot see it.
     const body = composerBody();

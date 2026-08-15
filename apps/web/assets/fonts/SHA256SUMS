@@ -25,6 +25,16 @@
 # same family name and the same `usWeightClass`, so a one-bucket miss is
 # invisible to the size and to every generic check. §7.2a of plan 040 derives
 # why 36 is the right bucket; ADR-0054 decision 12 records the criterion.
+#
+# THE FRAUNCES COPYRIGHT YEARS DISAGREE AND THAT IS NOT A DEFECT (step-6
+# finding P3, recorded so nobody rediscovers it). `OFL-Fraunces.txt` opens
+# "Copyright 2018 The Fraunces Project Authors" — it is the upstream repo's
+# own OFL.txt — while the committed binary's `name` ID 0 reads "Copyright
+# 2020". Both are SIL OFL 1.1, neither declares a Reserved Font Name, and the
+# licence text is the same text; upstream simply did not restamp the notice
+# when it cut the static instances. Nothing is owed, and no renaming
+# restriction applies to the three files here. Instrument Sans agrees with
+# itself (2022 in both places).
 
 Fraunces-36pt-500.ttf
   css2:    https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@36,500&display=swap

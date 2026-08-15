@@ -1,4 +1,4 @@
-import { messages } from "../i18n";
+import { messages, ogLocale } from "../i18n";
 
 /**
  * The three `og:` members every leaf declaration must re-declare (#34,
@@ -26,13 +26,15 @@ import { messages } from "../i18n";
  *
  * **`pt_BR` carries an UNDERSCORE, and it must not be "fixed".** The Open
  * Graph protocol's `og:locale` is `language_TERRITORY`; `<html lang>` is
- * BCP-47 with a hyphen. `src/i18n/locale.ts` exports `"pt-BR"` and
- * `app/layout.tsx` correctly uses it for `lang`. **The two must not share a
- * constant**, and `T-WEB-S199` asserts both the underscore form and that it
- * is not the exported `locale`.
+ * BCP-47 with a hyphen. `src/i18n/locale.ts` exports both — `locale` for
+ * `<html lang>` (`app/layout.tsx`) and `ogLocale` for this — as **two
+ * constants that must never be derived from each other**, which is what
+ * `T-WEB-S199` asserts. Both live in `src/i18n/` because ADR-0018's decision
+ * bullet 3 externalizes locale tags there; the literal used to sit in this
+ * file, which was the one part of the rule #34 missed (step-6 finding W4).
  */
 export const OG_DEFAULTS = {
   type: "website",
-  locale: "pt_BR",
+  locale: ogLocale,
   siteName: messages.brand.wordmark,
 } as const;

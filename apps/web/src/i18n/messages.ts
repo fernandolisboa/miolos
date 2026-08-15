@@ -276,7 +276,7 @@ export const messages = {
    * component rather than passed to it, exactly like `conclusion` above.
    *
    * `então`, `mamãe` and `época` are FORBIDDEN_EVERYWHERE in client chunks
-   * (`scripts/route-client-js.mjs:285`) — audited: no string below uses one,
+   * (`scripts/route-client-js.mjs:350`) — audited: no string below uses one,
    * and T-WEB-S206 keeps it audited (it also pins that neither this module
    * nor `share-text.ts` imports from `@miolos/games/termo`).
    *
