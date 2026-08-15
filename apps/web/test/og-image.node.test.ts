@@ -542,21 +542,23 @@ describe("the committed fonts are the faces the card was designed against (T-WEB
   });
 });
 
+const APP_DIR = join(import.meta.dirname, "..", "app");
+/**
+ * THE ROOT CARD IS A STATIC ASSET, NOT A ROUTE (step-6 blocker B1). A
+ * file-convention metadata MODULE on the root segment is resolved into the
+ * metadata graph of every descendant route, so `app/opengraph-image.tsx`
+ * dragged `next/og` — `@vercel/og`, `resvg.wasm`, `sharp` and libvips — into
+ * the traced payload of 24 routes that mostly render no card at all: 13 of
+ * them fell from ~23 MB to ~2.2 MB when it became a PNG, 271 MB across the
+ * build. The card is still generated in code (AC 2); only the moment moved,
+ * from build-time prerender to commit-time render, pinned by `T-WEB-S212`.
+ */
+const ROOT_CARD_ASSET = join(APP_DIR, "opengraph-image.png");
+const ROOT_CARD_ALT = join(APP_DIR, "opengraph-image.alt.txt");
+const ROOT_CARD_MODULE = join(APP_DIR, "opengraph-image.tsx");
+
 describe("the OG route family, as files (T-WEB-S204)", () => {
-  const appDir = join(import.meta.dirname, "..", "app");
-  /**
-   * THE ROOT CARD IS A STATIC ASSET, NOT A ROUTE (step-6 blocker B1). A
-   * file-convention metadata MODULE on the root segment is resolved into the
-   * metadata graph of every descendant route, so `app/opengraph-image.tsx`
-   * dragged `next/og` — `@vercel/og`, `resvg.wasm`, `sharp` and libvips —
-   * into the traced payload of all 24 functions, 17 of them `ƒ` dynamic
-   * surfaces that render no card at all. The card is still generated in code
-   * (AC 2); only the moment moved, from build-time prerender to
-   * commit-time render, pinned by `T-WEB-S212` below.
-   */
-  const rootCardAsset = join(appDir, "opengraph-image.png");
-  const rootCardAlt = join(appDir, "opengraph-image.alt.txt");
-  const rootCardModule = join(appDir, "opengraph-image.tsx");
+  const appDir = APP_DIR;
   /** The module that BUILDS the root card, now that no route file does. */
   const cardSource = join(import.meta.dirname, "..", "src", "og", "card.tsx");
   const dailyCard = (game: string) => join(appDir, game, "opengraph-image.tsx");
@@ -661,13 +663,13 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // into every descendant route's metadata graph, and the whole `next/og`
     // toolchain is traced into functions that render no card. The route
     // table's `○ /opengraph-image` line goes with it — eight `ƒ`, no `○`.
-    expect(existsSync(rootCardModule)).toBe(false);
-    expect(existsSync(rootCardAsset)).toBe(true);
-    expect(existsSync(rootCardAlt)).toBe(true);
+    expect(existsSync(ROOT_CARD_MODULE)).toBe(false);
+    expect(existsSync(ROOT_CARD_ASSET)).toBe(true);
+    expect(existsSync(ROOT_CARD_ALT)).toBe(true);
     // The `.alt.txt` convention carries the string the deleted module used to
     // export, and Next uses the file's content verbatim — so the deck stays
     // the single source and a translator still edits one place.
-    expect(readFileSync(rootCardAlt, "utf8")).toBe(ogCopy.altSite);
+    expect(readFileSync(ROOT_CARD_ALT, "utf8")).toBe(ogCopy.altSite);
   });
 
   it("within each family the four files differ ONLY in the game token", () => {
@@ -700,74 +702,74 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
       expect.soft(ogCopy.altGame(name), game).toContain(name);
     }
   });
+});
 
-  // ── T-WEB-S212 ────────────────────────────────────────────────────────
+// ── T-WEB-S212 ────────────────────────────────────────────────────────
 
-  describe("the committed root card is the code's own render (T-WEB-S212)", () => {
-    /**
-     * WHAT KEEPS AC 2 TRUE AFTER B1. "Generated in code" was enforced by the
-     * card being a runtime module; with the module deleted, the PNG on disk
-     * could drift from `siteCard()` — a hand-edited asset, a token change
-     * that never reaches the file, a font swap — and nothing would say so.
-     * This is that guard: re-render the tree the same way the deleted route
-     * did and compare the bytes.
-     *
-     * **To regenerate** after an intentional change to `siteCard()`, the
-     * tokens or the faces:
-     *
-     * ```
-     * WRITE_SITE_CARD=1 pnpm --filter @miolos/web test og-image
-     * ```
-     *
-     * which rewrites `app/opengraph-image.png` from the current tree and
-     * then asserts against what it wrote. CI never sets it, so the gate here
-     * is a plain equality.
-     */
-    it("app/opengraph-image.png equals a fresh siteCard() rasterisation", async () => {
-      const rendered = Buffer.from(
-        await new ImageResponse(actualCard.siteCard(), {
-          width: 1200,
-          height: 630,
-          fonts: FONTS,
-        }).arrayBuffer(),
-      );
+describe("the committed root card is the code's own render (T-WEB-S212)", () => {
+  /**
+   * WHAT KEEPS AC 2 TRUE AFTER B1. "Generated in code" was enforced by the
+   * card being a runtime module; with the module deleted, the PNG on disk
+   * could drift from `siteCard()` — a hand-edited asset, a token change
+   * that never reaches the file, a font swap — and nothing would say so.
+   * This is that guard: re-render the tree the same way the deleted route
+   * did and compare the bytes.
+   *
+   * **To regenerate** after an intentional change to `siteCard()`, the
+   * tokens or the faces:
+   *
+   * ```
+   * WRITE_SITE_CARD=1 pnpm --filter @miolos/web test og-image
+   * ```
+   *
+   * which rewrites `app/opengraph-image.png` from the current tree and
+   * then asserts against what it wrote. CI never sets it, so the gate here
+   * is a plain equality.
+   */
+  it("app/opengraph-image.png equals a fresh siteCard() rasterisation", async () => {
+    const rendered = Buffer.from(
+      await new ImageResponse(actualCard.siteCard(), {
+        width: 1200,
+        height: 630,
+        fonts: FONTS,
+      }).arrayBuffer(),
+    );
 
-      if (process.env["WRITE_SITE_CARD"] === "1") {
-        writeFileSync(rootCardAsset, rendered);
-      }
+    if (process.env["WRITE_SITE_CARD"] === "1") {
+      writeFileSync(ROOT_CARD_ASSET, rendered);
+    }
 
-      const committed = readFileSync(rootCardAsset);
-      // Counted floors first, so a mismatch reports WHICH half moved rather
-      // than "two buffers differ": both are real 1200x630 PNGs.
-      for (const [label, png] of [
-        ["rendered", rendered],
-        ["committed", committed],
-      ] as const) {
-        expect
-          .soft([...png.subarray(0, 4)], label)
-          .toEqual([0x89, 0x50, 0x4e, 0x47]);
-        expect.soft(png.readUInt32BE(16), label).toBe(1200);
-        expect.soft(png.readUInt32BE(20), label).toBe(630);
-        expect.soft(png.length, label).toBeGreaterThan(10_000);
-      }
+    const committed = readFileSync(ROOT_CARD_ASSET);
+    // Counted floors first, so a mismatch reports WHICH half moved rather
+    // than "two buffers differ": both are real 1200x630 PNGs.
+    for (const [label, png] of [
+      ["rendered", rendered],
+      ["committed", committed],
+    ] as const) {
+      expect
+        .soft([...png.subarray(0, 4)], label)
+        .toEqual([0x89, 0x50, 0x4e, 0x47]);
+      expect.soft(png.readUInt32BE(16), label).toBe(1200);
+      expect.soft(png.readUInt32BE(20), label).toBe(630);
+      expect.soft(png.length, label).toBeGreaterThan(10_000);
+    }
 
-      expect(
-        createHash("sha256").update(committed).digest("hex"),
-        "app/opengraph-image.png is stale — see this suite's doc block to regenerate",
-      ).toBe(createHash("sha256").update(rendered).digest("hex"));
-    });
+    expect(
+      createHash("sha256").update(committed).digest("hex"),
+      "app/opengraph-image.png is stale — see this suite's doc block to regenerate",
+    ).toBe(createHash("sha256").update(rendered).digest("hex"));
+  });
 
-    it("the committed card is the SITE card and not a game card", async () => {
-      // Anti-vacuity for the equality above, in the `T-WEB-S202` idiom: two
-      // different trees through the same rasteriser must not agree, or the
-      // hash comparison would pass on any card at all.
-      const gameCardPng = Buffer.from(
-        await new ImageResponse(
-          actualCard.gameCard({ game: "termo", longDate: "1 de maio de 2026" }),
-          { width: 1200, height: 630, fonts: FONTS },
-        ).arrayBuffer(),
-      );
-      expect(readFileSync(rootCardAsset).equals(gameCardPng)).toBe(false);
-    });
+  it("the committed card is the SITE card and not a game card", async () => {
+    // Anti-vacuity for the equality above, in the `T-WEB-S202` idiom: two
+    // different trees through the same rasteriser must not agree, or the
+    // hash comparison would pass on any card at all.
+    const gameCardPng = Buffer.from(
+      await new ImageResponse(
+        actualCard.gameCard({ game: "termo", longDate: "1 de maio de 2026" }),
+        { width: 1200, height: 630, fonts: FONTS },
+      ).arrayBuffer(),
+    );
+    expect(readFileSync(ROOT_CARD_ASSET).equals(gameCardPng)).toBe(false);
   });
 });

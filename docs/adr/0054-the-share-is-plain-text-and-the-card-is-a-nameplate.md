@@ -143,23 +143,35 @@ verdicts, so this record is readable without it:
    comes from `messages` read directly.
 
    **ADR-0029 decision 2 is not broken**, because the game-shaped logic is not
-   in the view: it is in `share-text.ts`, a pure module that narrows the
-   `PlayRecord` discriminated union and returns a string. The view calls one
-   function and renders one button.
+   in the view: it is in `share-text.ts`, a pure module that narrows a
+   discriminated union — `ShareSubject`, after the amendment below — and
+   returns a string. The view calls one function and renders one button.
 
    **The button renders in both terminal states and is `disabled` until the
    concluded record hydrates.** `result` and `lost` share one return, so there
    is exactly one insertion point, in the `<aside>` between the chaining CTA
    and the statistics link; it is absent from the `skeleton` and `empty`
    branches by construction. The disabled window is the one-commit swap where
-   a child's mount effect runs before its parent's — for Termo the grid comes
-   from `stored.guesses[].tiles` with no prop fallback, so a click there would
-   produce a share missing the one thing it exists to carry. Gating the
-   *enabled state* rather than the *render* keeps the box reserved, which is
-   the `PlaySkeleton` discipline applied to a button. **This is not the dead
-   share button**: a control that is momentarily not yet ready, for one
-   commit, and then works, is not a control that promises an action the
-   product does not have.
+   a child's mount effect runs before its parent's. Gating the *enabled state*
+   rather than the *render* keeps the box reserved, which is the
+   `PlaySkeleton` discipline applied to a button.
+
+   **AMENDED AT STEP 7 (step-6 blocker B4/K3): the gate applies to TERMO
+   only, and a store-less Termo renders nothing.** The paragraph above was
+   true of the swap and false of a browser with no `localStorage` — Safari
+   private mode, a site-data-blocked profile — where `readPlayRecord` returns
+   `undefined` forever. There the shipped control never enabled and never
+   explained itself, which **is** ADR-0045 `:186-191`'s dead share button,
+   reached from the other side. The composer now takes a `ShareSubject`: a
+   `TermoPlayRecord`, or `{ game, date, elapsedMs }` for the three grid games,
+   whose entire share is a header and an elapsed time and whose elapsed time
+   `ConclusionResult` already carries. Termo genuinely cannot be composed that
+   way — its grid is `guesses[].tiles`, which exists nowhere but the record —
+   so it keeps the gate, and where no store exists to lift it,
+   `playRecordsAvailable()` omits the control instead of showing one that can
+   never work. Three states, all three written into the component's doc block:
+   subject → enabled; no subject but a store → disabled for one commit; no
+   subject and no store → nothing rendered.
 
 2. **Coloured squares are content in a channel with no CSS, not decoration on
    a rendered page.** Termo's grid uses 🟩 / 🟨 / ⬜ for `correct` / `present` /
@@ -290,12 +302,16 @@ verdicts, so this record is readable without it:
    majority reads `/<jogo>`'s head. Both families get metadata and both get a
    dated card.
 
-7. **Nine image routes: one static site card and eight dynamic
-   per-day-per-game cards. One card kind, one read path.**
+7. **Eight image routes and one static asset: a committed site card, and
+   eight dynamic per-day-per-game cards. One card kind, one read path.**
+
+   *(Amended at step 7, decision 9: the site card was an
+   `app/opengraph-image.tsx` module prerendered at build, and it is now a
+   committed PNG. The row below carries the amended shape.)*
 
    | File | Reads | Card | Generation |
    |---|---|---|---|
-   | `app/opengraph-image.tsx` | nothing | the site card | static |
+   | `app/opengraph-image.png` + `.alt.txt` | nothing | the site card | rendered at COMMIT time from `siteCard()`, pinned by `T-WEB-S212` |
    | `app/<jogo>/opengraph-image.tsx` (×4) | `getTodayDaily(db, game)` | the game card, dated with `daily.date` | `force-dynamic` |
    | `app/arquivo/[data]/<jogo>/opengraph-image.tsx` (×4) | `getPublishedDaily(db, game, date)` | the game card, dated with the URL's date | `force-dynamic` |
 
@@ -323,11 +339,14 @@ verdicts, so this record is readable without it:
    **Why a root card at all.** Metadata images resolve from the nearest
    ancestor segment that defines one, so a single root file covers `/`,
    `/estatisticas`, `/privacidade`, `/modo-livre*`, `/arquivo`,
-   `/arquivo/mes/<mes>` and `/arquivo/<data>` for one file and no runtime
-   cost. `/<jogo>/concluido` inherits its game's card for the same reason and
-   needs nothing.
+   `/arquivo/mes/<mes>` and `/arquivo/<data>`. `/<jogo>/concluido` inherits
+   its game's card for the same reason and needs nothing. **The words "for one
+   file and no runtime cost" stood here and were false** — see decision 9: a
+   metadata MODULE on the root segment costs every descendant route ~21 MB of
+   traced payload. As a static asset the inheritance is unchanged and the
+   claim is finally true.
 
-   **Why nine literal files and not a `[jogo]` segment.** The repo already
+   **Why eight literal files and not a `[jogo]` segment.** The repo already
    accepts literal-per-game duplication for exactly this reason — four literal
    daily pages, four literal archive play pages, four free-play routes, argued
    in ADR-0046 decision 1 and restated in ADR-0053 decision 1. A `[jogo]`
@@ -449,7 +468,62 @@ verdicts, so this record is readable without it:
    than a runtime scan.
 
 9. **`force-dynamic` on all eight game image routes, and no `revalidate`
-   anywhere.** Only the root site card reads nothing and stays static.
+   anywhere.** The root site card reads nothing, and it is not a route at all:
+   it ships as `app/opengraph-image.png` plus `app/opengraph-image.alt.txt`.
+
+   **AMENDED IN THE SAME PULL REQUEST, at step 7, on a measurement (step-6
+   blocker B1/F1).** As first shipped the root card was
+   `app/opengraph-image.tsx`, a file-convention metadata MODULE on the root
+   segment, prerendered at build. That is not a local cost. A metadata module
+   is resolved into the metadata graph of **every descendant route**, so
+   `next/og` — `@vercel/og`, `resvg.wasm`, `sharp` and libvips — was traced
+   into the serverless payload of routes that render no card at all. Measured
+   by summing the unique bytes behind each `.nft.json` on a real Turbopack
+   production build:
+
+   | | before | after |
+   |---|---|---|
+   | `/` | 23.1 MB | **2.2 MB** |
+   | `/privacidade` | 23.0 MB | **2.2 MB** |
+   | `/estatisticas` | 23.0 MB | **2.2 MB** |
+   | `/_not-found` | 22.9 MB | **2.0 MB** |
+   | `/vincular` | 23.0 MB | **2.2 MB** |
+   | `/arquivo`, `/arquivo/[data]`, `/arquivo/mes/[mes]` | 23.5–23.6 MB | **2.7 MB** |
+   | `/modo-livre` ×4 | 23.0–23.1 MB | **2.2 MB** |
+   | `/sitemap.xml` | 2.2 MB | 2.2 MB (never affected — no metadata resolution) |
+   | all 39 traced entries, summed | **779.3 MB** | **508.2 MB** (−271.1) |
+
+   Thirteen routes recover, five of them `ƒ` dynamic functions — `/`,
+   `/vincular`, `/arquivo`, `/arquivo/[data]`, `/arquivo/mes/[mes]` — the
+   product's front door among them, paying a ~10× cold-start artifact for a
+   card that renders **zero times at runtime**. The plan's round-1
+   justification for the root card, *"one file and no runtime cost"*, was
+   measurably false: the argument above about a build-time prerender was true
+   and beside the point, because the cost is in the trace and not in the
+   render. **The step-6 finding's own "17 dynamic routes" figure is corrected
+   here to five** — the daily, `concluido` and archive-game routes stay
+   inflated for the structural reason below, and no fix to the ROOT card was
+   ever going to reach them.
+
+   **What the PNG costs, and what remains.** The card is still GENERATED IN
+   CODE, which AC 2 requires: `T-WEB-S212` re-renders `siteCard()` through the
+   same `ImageResponse` the deleted route used and compares the SHA-256
+   against the committed 49,590 bytes, with `WRITE_SITE_CARD=1` as the
+   documented regeneration path and a game-card differential as its
+   anti-vacuity twin. `opengraph-image.alt.txt` carries `ogCopy.altSite`
+   verbatim, asserted equal to the deck. The residual is structural and is
+   stated rather than hidden: the eight dated card routes and the twelve pages
+   that live in or under a segment owning one — `/<jogo>`, `/<jogo>/concluido`
+   and `/arquivo/[data]/<jogo>` — are still ~23 MB, because a per-game card
+   must live in the game's own segment for the file convention to attach it.
+   Moving the dated cards to non-segment URLs with explicit
+   `openGraph.images` would lift that too, at the cost of the convention; it
+   is noted for #37 rather than taken here.
+
+   **`sharp` is a devDependency** (`apps/web/package.json:36`) traced into the
+   eight production functions that remain. It works today because Vercel's
+   build installs dev dependencies; a production-only install would change the
+   trace silently. Also noted for #37.
 
    ADR-0053 decision 2's precondition binds verbatim: *"the `killed_at` write
    must **first** gain a writer that calls `revalidatePath` for the affected
@@ -745,9 +819,11 @@ means what plan 040 meant by it.
     whole configuration per matching file — it never merges — so an object
     declaring only its own games ban would be the entire wall for the files it
     matches. Measured on the real config, against a version without the
-    spreads: **all eight db-wall probes that red at
-    `apps/web/app/opengraph-image.tsx` today lint clean**, and `pnpm lint`
-    stays green. Those are the eight files in the app that call `getDb()` on an
+    spreads: **all eight db-wall probes that red at the root-card path lint
+    clean**, and `pnpm lint` stays green. *(That path holds no file since
+    decision 9's amendment; the wall's globs still cover it, because a
+    rewritten root module must not arrive outside the wall — and the probes
+    are `lintText` calls, which need no file on disk.)* Those are the eight files in the app that call `getDb()` on an
     unauthenticated crawler-facing path — the most consequential place in the
     repo to lose the table-name and computed-dynamic-import bans, and the
     obligation ADR-0024 `:111-114` names by hand. A file-diff criterion cannot
@@ -755,6 +831,20 @@ means what plan 040 meant by it.
     and asserts the probes come back clean, then with them and asserts the
     messages are the app-wide wall's own. **Do not "de-duplicate" the spreads
     away.**
+
+    **AND THE SAME FAILURE ONE WALL OVER, missed until step 7 (finding K1).**
+    The OG object's globs intersect not only the app-wide wall's but the
+    FREE-PLAY object's: a future `app/modo-livre/<x>/opengraph-image.tsx`
+    matches `apps/web/app/modo-livre/**` and `apps/web/app/**/opengraph-image.*`
+    both, the OG object is later, and free play's bans vanish — including the
+    ones **stricter** than the app-wide wall, since object (3) bans
+    `@miolos/db`'s root entry outright where `webWallImportPatterns` permits
+    it. Measured on the shipped config: five probes clean at the card path and
+    red at the `page.tsx` control. `eslint.config.mjs`'s **object (5)** is the
+    intersection, repeating both parents; `T-LINT-S46` is its regression
+    control; and the constants' header comment is corrected from *"a subset of
+    (1)'s or (2)'s"* to **any intersection with any earlier object**, which is
+    the rule the narrow phrasing was hiding.
 
     **The four `/<jogo>/concluido` routes join `BUDGETED`.** #34 is the first
     ticket whose client JS lives primarily on the conclusion, and the script's
@@ -807,14 +897,14 @@ means what plan 040 meant by it.
   the Nonogram picture. Unreadable at thumbnail size, a spoiler argument to
   re-litigate per game, and for Nonogram the thing decision 8(a) refuses as a
   product decision.
-- **A `[jogo]` dynamic image segment instead of nine literal files.** It would
+- **A `[jogo]` dynamic image segment instead of eight literal files.** It would
   put untrusted text in front of the wall for a card, against the
   literal-per-game precedent the repo already accepts for three route families.
 - **A broad `try`/`catch` around the whole read.** It returns 404 for a Neon
   timeout, a pool error or a missing `DATABASE_URL`, and the doc block usually
   cited for it discusses a bad row, not an outage. On this surface a 404 is
   negative-cached for days.
-- **`export const revalidate`, or a CDN TTL, on any of the nine routes.**
+- **`export const revalidate`, or a CDN TTL, on any of the eight routes.**
   ADR-0053 decision 2's precondition binds and its writer does not exist.
 - **A page-level `title` or `description` on the daily routes.** It would move
   the SERP snippet on a surface ADR-0028 says is not an SEO surface, and would
@@ -856,14 +946,18 @@ means what plan 040 meant by it.
   `public, max-age=0, must-revalidate` in production, and `public` is precisely
   the token that lets a shared intermediary hold bytes the kill switch must be
   able to reach. `force-dynamic` governs Next's **route** cache, not the
-  emitted header, so each of the nine routes passes
+  emitted header, so each of the eight routes passes
   `headers: { "cache-control": "private, no-cache, no-store, max-age=0,
-  must-revalidate" }` in the response options. Verified on a real
+  must-revalidate" }` in the response options — **on the 404 arms as well as
+  on the 200** (step-6 finding K2: a refusal is the response whose truth flips
+  at São Paulo midnight, and it shipped with no header at all). Verified on a real
   `opengraph-image.tsx` metadata route in a Turbopack production build: with
   the option, `private, no-cache, no-store, max-age=0, must-revalidate`;
   without it, `public, max-age=0, must-revalidate`. No `next.config.ts` change,
   so the *"`headers()` returns exactly one rule"* tripwire stays intact. *(The
-  root site card reads nothing and cannot go stale; it keeps the default.)*
+  root site card is a static asset since decision 9's amendment; Next serves it
+  with its own immutable-asset headers, and it cannot go stale because it
+  reads nothing.)*
 - **The 404-vs-500 boundary is a name set, and it is where a future reader will
   look.** `ZodError` and `DailyProjectionUnsupportedError` → log and 404;
   everything else → re-throw and 500. The two shipped readers are unchanged and
