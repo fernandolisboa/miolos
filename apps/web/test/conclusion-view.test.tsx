@@ -15,7 +15,7 @@ import type { ConclusionPicture } from "../src/play/types";
 import { useRecordSnapshot } from "../src/play/use-record-snapshot";
 import { TermoConclusion } from "../src/termo/termo-conclusion";
 import { formatElapsed, messages, routes } from "../src/i18n";
-import { bodyOf, decl, stylesheet } from "./css-source";
+import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
 
 // T-WEB-17..T-WEB-20 (plan 017 §15). The conclusion is the same component
 // in two places — swapped in place on /binairo when the grid closes (D26)
@@ -1505,5 +1505,102 @@ describe("the streak card's copy honesty (T-WEB-S129)", () => {
     expect(card).not.toHaveTextContent(messages.conclusion.streak.maintained);
     // The shipped negative, re-asserted over the new card's copy.
     expect(container.textContent).not.toContain("dias seguidos");
+  });
+});
+
+/**
+ * The share button's treatment, read off the stylesheet as TEXT (#34,
+ * ADR-0054 decision 13). It lives here rather than in
+ * `conclusion-share.test.tsx` because this file already holds this sheet's
+ * tripwires above, and splitting one sheet's gate across two files is how
+ * the second one gets forgotten.
+ *
+ * Everything below is invisible to `impeccable detect` in CI: the scan
+ * launches a clean browser profile, which has no concluded record, so the
+ * URL-mode run always reaches the EMPTY conclusion and never sees this
+ * control at all (ADR-0034 decision 4). A file-mode run over the real
+ * component is the other half of the proof and lives in the PR body.
+ */
+describe("the share button's treatment (T-WEB-S205)", () => {
+  const CSS = stylesheet("src/play/conclusion-view.module.css");
+  const SHARE = bodyOf(CSS, ".share");
+  const MOBILE = bodyOf(CSS, "@media (max-width: 768px)");
+
+  it("is paper with a hard offset shadow, on the system's own radius", () => {
+    expect(decl(SHARE, "background")).toBe("var(--paper-card)");
+    expect(decl(SHARE, "border")).toBe("1px solid var(--line)");
+    expect(decl(SHARE, "border-radius")).toBe("var(--radius)");
+    // Hard, blur 0 (DESIGN.md:36) — asserted as the SAME shadow the shipped
+    // CTA directly above it already paints, so the two cannot drift and a
+    // softened share shadow reds here rather than only in a browser. The
+    // blur itself is pinned as a literal on `.share:active` below.
+    expect(decl(SHARE, "box-shadow")).toBe("var(--shadow-sm) var(--line)");
+    expect(decl(bodyOf(CSS, ".cta"), "box-shadow")).toBe(
+      decl(SHARE, "box-shadow"),
+    );
+  });
+
+  it("declares the three states this sheet had never needed before", () => {
+    // The conclusion's FIRST native button: every other interactive element
+    // here is an `<a>` on the UA default, so none of the three is inherited.
+    expect(decl(SHARE, "cursor")).toBe("pointer");
+    expect(decl(bodyOf(CSS, ".share:disabled"), "opacity")).toBe("0.55");
+    expect(decl(bodyOf(CSS, ".share:disabled"), "cursor")).toBe("default");
+    // `--ink` at 15.0124:1, never `var(--accent)` (2.7311:1 for mustard).
+    expect(decl(bodyOf(CSS, ".share:focus-visible"), "outline")).toBe(
+      "2px solid var(--ink)",
+    );
+    expect(
+      decl(bodyOf(CSS, ".share:focus-visible"), "outline-offset"),
+    ).toBeDefined();
+  });
+
+  it("clears the 44px target at BOTH viewports, and F6's 52px at mobile", () => {
+    // A border-box promise: this app ships no global reset, so the box model
+    // is part of the claim rather than an assumption about it.
+    expect(decl(SHARE, "box-sizing")).toBe("border-box");
+    expect(decl(SHARE, "min-height")).toBe("var(--touch-target-min)");
+    expect(token("--touch-target-min")).toBeGreaterThanOrEqual(44);
+    expect(pixels(decl(bodyOf(MOBILE, ".share"), "min-height"))).toBe(52);
+  });
+
+  it("insets the label on BOTH axes at the desktop rule", () => {
+    // `.cta`'s own `cramped-padding` finding (T-WEB-S65a), on a control that
+    // paints a bordered background for the same reason. The mobile rule
+    // deliberately does NOT re-declare padding — it inherits this one, which
+    // is the plan-040 D2 deviation from C12's "match `.cta`'s `padding: 0`".
+    const padding = decl(SHARE, "padding");
+    expect(padding, ".share declares no padding").toBeDefined();
+    const [block, inline] = (padding ?? "").split(/\s+/);
+    expect(Number.parseFloat(block ?? "0"), "block padding").toBeGreaterThan(0);
+    expect(
+      inline,
+      "inline padding — a zero here is the cramped red",
+    ).toBeDefined();
+    expect(inline).not.toBe("0");
+    expect(inline).not.toBe("0px");
+    expect(decl(bodyOf(MOBILE, ".share"), "padding")).toBeUndefined();
+  });
+
+  it("reserves the announcement's box so a successful share never reflows the column", () => {
+    // DESIGN.md:52, applied to the `aria-live` line for the same reason D1a
+    // applies it to the button. One line of `--text-body` (14px x 1.5).
+    const status = bodyOf(CSS, ".shareStatus");
+    expect(pixels(decl(status, "min-height"))).toBe(21);
+    expect(decl(status, "font")).toBe("var(--text-body)");
+  });
+
+  it("carries no animation name from the banned family", () => {
+    // impeccable's `bounce-easing` rule matches on the NAME, not the curve.
+    // The pressed state is a transition, never a keyframe.
+    for (const body of [SHARE, bodyOf(CSS, ".share:active")]) {
+      expect(decl(body, "animation")).toBeUndefined();
+      expect(body).not.toMatch(/bounce|elastic|wobble|jiggle|spring/i);
+    }
+    // And the pressed state IS the system's: one pixel toward the shadow,
+    // the shadow shrinking by the same amount (DESIGN.md:44).
+    const active = bodyOf(CSS, ".share:active");
+    expect(decl(active, "transform")).toBe("translate(1px, 1px)");
+    expect(decl(active, "box-shadow")).toBe("2px 2px 0 var(--line)");
   });
 });

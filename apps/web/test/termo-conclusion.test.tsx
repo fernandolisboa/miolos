@@ -211,8 +211,17 @@ describe("the fourth branch (T-WEB-S96)", () => {
     expect(screen.getByText(messages.conclusion.stampLabel)).toBeDefined();
     expect(screen.getAllByText("03:08").length).toBeGreaterThan(0);
     expect(screen.getByText(messages.conclusion.hints(0))).toBeDefined();
-    // No live region and no day-word row for a game that passes nothing.
-    expect(screen.queryAllByRole("status")).toEqual([]);
+    // No OUTCOME live region and no day-word row for a game that passes
+    // nothing. Narrowed at #34, which gave every terminal conclusion the
+    // share button's own always-rendered `aria-live` region — so
+    // `role="status"` is no longer unique on this screen and the bare
+    // `queryAllByRole("status")` stopped expressing this claim. The counted
+    // floor keeps it from loosening into nothing: exactly one status region
+    // survives, and it is the share's reserved box, which is EMPTY.
+    expect(container.querySelector(`.${styles.announcer ?? ""}`)).toBeNull();
+    expect(
+      screen.queryAllByRole("status").map((node) => node.textContent?.trim()),
+    ).toEqual([""]);
     expect(container.querySelector(`.${styles.dayWordRow ?? ""}`)).toBeNull();
   });
 
@@ -221,7 +230,7 @@ describe("the fourth branch (T-WEB-S96)", () => {
     // and no focus management at all, so on the in-place swap focus fell to
     // <body> and a blind player got nothing at the product's payoff moment.
     for (const outcome of [WON, LOST]) {
-      const { unmount } = render(
+      const { container, unmount } = render(
         <ConclusionView
           game="termo"
           date={DATE}
@@ -230,8 +239,12 @@ describe("the fourth branch (T-WEB-S96)", () => {
           outcome={outcome}
         />,
       );
-      const region = screen.getByRole("status");
-      expect(region.textContent).toBe(outcome.aria);
+      // By CLASS since #34: the share button contributes a second
+      // `role="status"` to this screen, so `getByRole` is ambiguous here.
+      // The subject is unchanged — the outcome announcer.
+      const region = container.querySelector(`.${styles.announcer ?? ""}`);
+      expect(region, "the outcome announcer").not.toBeNull();
+      expect(region?.textContent).toBe(outcome.aria);
       // Focus still never moves programmatically — a role="status" announces
       // without stealing the caret.
       expect(document.activeElement).toBe(document.body);
