@@ -2,11 +2,12 @@
 
 **Status:** Proposed — 2026-08-15 (issue #34)
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md), [ADR-0039](./0039-termo-cannot-be-played-offline.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
-**Amends:** three standing records, all by the same mechanism — a **per-route enumeration that #34 grows**. Every sentence below is quoted from the file as it stands; every amended file carries the reciprocal `**Amended by:**` line **and an in-place annotation of the amended sentence**, because in this repo "amended" means the file was edited ([ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md) consequence (b), restated at [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) `:6`).
+**Amends:** four standing records. Three go by one mechanism — a **per-route enumeration that #34 grows** — and the fourth, added at step 7 (finding B2/W1), is the only one where a decision's sentence is **outright false** rather than merely short. Every sentence below is quoted from the file as it stands; every amended file carries the reciprocal `**Amended by:**` line **and an in-place annotation of the amended sentence**, because in this repo "amended" means the file was edited ([ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md) consequence (b), restated at [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) `:6`).
 
 - **[ADR-0028](./0028-daily-play-routes-and-the-conclusion.md)** — decision 4's *"**Both segments** are `force-dynamic` async server components"* and its closing *"When the helper returns nothing — no puzzle, or a killed one — **both routes render the same pt-BR unavailable screen**."* The **segment** count is unchanged: an `opengraph-image.tsx` is a metadata route *inside* the existing `/<jogo>` segment, so *"both"* stays true. What grows is the number of `force-dynamic` route **modules** under the slug, two → three, and the unavailable-screen clause now has a sibling module that answers the same helper-returned-nothing condition with a **404 and an empty body** (decision 8). Decision 5's per-route enumeration of the ADR-0014 direct-read extension **grows** to the eight image routes; the consequence *"#23/#25/#27 add a slug, a `routes` entry, **two** `force-dynamic` server segments and a conclusion view"* and #31's own *"the archive's four play screens add … **one** `force-dynamic` server segment each"* are both one item short — three per daily game, two per archive play screen (decisions 7, 9, 10).
 - **[ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)** — decision 2's *"`export const dynamic = "force-dynamic"` on **all seven pages**, on `sitemap.ts` and on `robots.ts`"*: the archive family carries nine `force-dynamic` route modules today and **thirteen** after #34. **And its standing precondition's path list** — *"the `killed_at` write must **first** gain a writer that calls `revalidatePath` for the affected paths (**day, month, index, play, sitemap**)"* — grows by the four `/arquivo/<YYYY-MM-DD>/<jogo>/opengraph-image` paths. That one is not bookkeeping: a future `killed_at` writer built from the un-annotated list would leave a withdrawn puzzle's **card** serving after its page 404s, which is decision 2's own failure mode on the surface #34 creates. The precondition itself is **obeyed, not narrowed** — no `revalidate` is added anywhere (decision 9). Decision 4's *"The two shipped readers keep throwing, because on those a bad row is a live incident"* is narrowed at the **caller**: the readers are byte-unmoved and still throw, and #34's image routes answer a projection-class throw with a 404 while everything else still re-throws to the 500 that clause defends (decision 8).
 - **[ADR-0039](./0039-termo-cannot-be-played-offline.md)** — decision 2's *"Copying the route shape — a slug, a `routes` entry, **two `force-dynamic` segments**, a conclusion view — **is still required**"*. This is not a quotation of ADR-0028 (ADR-0029 `:13-15` is one, inside quote marks and attributed); it is ADR-0039 restating the fifth-game recipe as its own decision-2 claim, in a **stronger forward tense**. After #34 a fifth game copying "the route shape" also needs `app/<jogo>/opengraph-image.tsx` and `app/arquivo/[data]/<jogo>/opengraph-image.tsx`. **Three consecutive audit passes cleared this file as untouched**, which is recorded here because `0053:99-101` asked for exactly that lesson: *"clearing an ADR on one sentence is not clearing the file."*
+- **[ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md)** — decision 10's closing sentence, *"Games that pass no `outcome` render no region and are unchanged."* **This one is false, not short.** The share button renders a second `role="status" aria-live="polite"` region on the `result` and `lost` branches of **all four** conclusions, gated on neither `outcome` nor game, so Binairo, Sudoku and Nonogram conclusions carry a live region and are not unchanged. Two consequences, both taken at `0043:265`: the sentence is annotated in place, and — because [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 10 requires an explicit **disjoint-writers** rule wherever one screen carries two `role="status"` regions — the relationship between `.announcer` and `.shareStatus` is stated rather than assumed (decision 4). **Added at step 7, and the miss is worth recording:** the repo already knew. `docs/agents/test-ids.md` and plan 040 §14 D3 both say `T-WEB-S96`'s no-live-region assertion *"became false"*, and **both filed it as a test deviation rather than as a falsified record** — §11.2's sweep touched this ADR at decision 8, consequence (a) and `:30`, and never examined decision 10. That is the fourth instance of one pattern in this ticket, after U1, U2 and U8.
 
 ## Context
 
@@ -189,13 +190,24 @@ verdicts, so this record is readable without it:
    it without being taught. No emoji enters any JSX, any stylesheet or any
    medal string, and none of the five enforcement sites is edited.
 
-   **The rule is now a gate rather than an argument.** The two shipped emoji
-   scans are scoped to medal content by scoping, not by exemption, and all
-   three squares match their `\p{Extended_Pictographic}` regex — so a later
-   ticket could render a preview of the share text on a page and nothing would
-   stop it. `T-WEB-S208` scans every `.tsx` and `.css` under `apps/web` and
-   asserts zero hits. `messages.ts` is neither, and that is now a checked
-   boundary rather than a described one.
+   **The rule is now a gate rather than an argument — and the gate's reach is
+   stated exactly, because the plan overstated it** (step-7 finding G6).
+   `T-WEB-S208` scans every `.tsx` and `.css` under `apps/web` for
+   `\p{Extended_Pictographic}`, escape-encoded spellings decoded first, and
+   asserts zero hits. What that catches is an emoji **authored into** a
+   rendered surface — the realistic regression, since the two shipped emoji
+   scans are scoped to medal content and all three squares match their regex,
+   so nothing else in the repo would stop a designer pasting 🟩 into a
+   component or a stylesheet. What it does **not** catch is an emoji that
+   arrives at runtime through a composed string: plan 040 `:135` justified the
+   gate as closing *"a later ticket could render a preview of the share text
+   on a page"*, and it does not — `<pre>{buildShareText(…)}</pre>` contains no
+   literal emoji and passes green. **An import-graph ban would not work
+   either, and the reason is worth writing down**: `conclusion-view.tsx` is
+   itself a rendered `.tsx` that legitimately imports `share-text.ts`, so
+   "no rendered surface may reach the share composer" is red on the shipped
+   tree. That path is held by this decision, by `messages.share.tiles` being
+   the squares' only home, and by design review — not mechanically.
 
    **The cost is accepted rather than argued away:** 🟩🟨⬜ are off-brand
    against Ateliê's four accents and emoji cannot be recoloured. There is no
@@ -285,6 +297,28 @@ verdicts, so this record is readable without it:
    error.name === "AbortError"`. The next reader's instinct will be to tidy it
    back; the measurement is in the function's own doc block for that reason.
 
+   **THE CONCLUSION NOW CARRIES TWO `role="status"` REGIONS, and that owes an
+   explicit rule** (step-7 finding B2/W1). ADR-0042 decision 10 is the
+   precedent and the obligation both: it establishes that a screen with two
+   status regions states **disjoint writers** rather than assuming the two
+   cannot collide, and it withdrew an earlier draft that asserted disjointness
+   loosely. Here the two are `.announcer`, ADR-0043 decision 10's outcome
+   region, and `.shareStatus`, this decision's copy confirmation. The rule:
+   `.announcer`'s text is `outcome.aria`, **a prop composed by the game before
+   the view mounts** — no transition in `ConclusionView` writes it, and it is
+   byte-identical for the component's whole lifetime; `.shareStatus`'s text
+   derives from `status`, written **only** by the share click handler and by
+   its own `[status]` timeout. No transition writes both, and the stronger
+   claim is available on this screen and not on the board: **only one of the
+   two can mutate at all after mount.** The board's second hazard — a repeated
+   identical write being inaudible, which ADR-0042 answered with a zero-width
+   nonce — does not transfer, because the click handler moves `status` through
+   `idle` before dispatching (K4's fix), so a second copy really does change
+   the text. And the consequence for the older record is not cosmetic:
+   ADR-0043 decision 10's *"Games that pass no `outcome` render no region and
+   are unchanged"* is **false** after this, on three games, which is why
+   ADR-0043 takes the fourth `Amends:` bullet above.
+
 5. **The share URL is `absoluteUrl(archiveGameRoute(date, game))`** — the
    per-day permalink, settled by ADR-0053 decision 1 and its flag F2, not by
    this record. `/<jogo>` is stable but serves a different puzzle after the
@@ -336,15 +370,39 @@ verdicts, so this record is readable without it:
    that scraper's cache afterwards. That is strictly better than a card that
    is *never* per-day.
 
-   **Why a root card at all.** Metadata images resolve from the nearest
-   ancestor segment that defines one, so a single root file covers `/`,
-   `/estatisticas`, `/privacidade`, `/modo-livre*`, `/arquivo`,
-   `/arquivo/mes/<mes>` and `/arquivo/<data>`. `/<jogo>/concluido` inherits
-   its game's card for the same reason and needs nothing. **The words "for one
-   file and no runtime cost" stood here and were false** — see decision 9: a
-   metadata MODULE on the root segment costs every descendant route ~21 MB of
-   traced payload. As a static asset the inheritance is unchanged and the
-   claim is finally true.
+   **Why a root card at all, and exactly which routes inherit it.** Metadata
+   images resolve from the nearest ancestor segment that defines one, so the
+   single root asset covers **twelve** routes. The list is **re-derived from
+   the shipped build at step 7** rather than restated (finding W8: the
+   enumeration first written here was short by `/vincular` and `/_not-found`),
+   by reading `og:image` out of the prerendered HTML for the static routes and
+   off a real `next start` for the dynamic ones:
+
+   ```
+   /                     og:image → /opengraph-image.png     (ƒ, read at runtime)
+   /vincular             og:image → /opengraph-image.png     (ƒ)
+   /arquivo              og:image → /opengraph-image.png     (ƒ)
+   /arquivo/mes/<mes>    og:image → /opengraph-image.png     (ƒ)
+   /arquivo/<data>       og:image → /opengraph-image.png     (ƒ)
+   /estatisticas         og:image → /opengraph-image.png     (○, baked at build)
+   /privacidade          og:image → /opengraph-image.png     (○)
+   /modo-livre           og:image → /opengraph-image.png     (○)
+   /modo-livre/{binairo,nonogram,sudoku}  → /opengraph-image.png  (○ ×3)
+   /_not-found           og:image → /opengraph-image.png     (○)
+   /<jogo>/concluido     og:image → /<jogo>/opengraph-image  (its GAME's card,
+                                                              same nearest-ancestor
+                                                              rule — ×4)
+   ```
+
+   So twelve routes take the site card and the four `concluido` routes take
+   their game's dated card; neither group needs a file of its own. **The words
+   "for one file and no runtime cost" stood here and were false** — see
+   decision 9: a metadata MODULE on the root segment costs every descendant
+   route ~21 MB of traced payload. As a static asset the inheritance is
+   unchanged and the claim is finally true. `/vincular` inheriting it is
+   harmless and is stated rather than left implicit: the card is a dateless
+   nameplate with no user data on it, and `robots.ts` disallows the route
+   anyway.
 
    **Why eight literal files and not a `[jogo]` segment.** The repo already
    accepts literal-per-game duplication for exactly this reason — four literal
@@ -547,6 +605,21 @@ verdicts, so this record is readable without it:
    `app/sudoku/page.tsx` already does `force-dynamic` plus `getTodayDaily` on
    every real pageview of the same segment. The 215 ms is one-time WASM/engine
    init per lambda.
+
+   **"Per scrape, not per pageview" is right for a pasted link and understates
+   the ARCHIVE, which is disclosed here rather than discovered later**
+   (step-7 finding F3). `sitemap.ts` publishes every archived day **and every
+   archived game route**, and each of those game pages advertises its own
+   uncacheable card in its head — so a three-year archive offers a crawler
+   that follows `og:image` about **4,388 card URLs** (1,096 days × 4 games,
+   plus the four dailies), each costing one Neon read and one render, on top
+   of the 4,384 reads the pages themselves already cost. At the warm median
+   that is roughly **4–8 minutes of billed function time per full sweep, per
+   crawler**. The money is small and is not the point: the effect that matters
+   is that a sweep roughly **doubles** the request rate against Neon and keeps
+   the compute from scaling to zero for the length of it. Nothing here is
+   mitigable inside #34 — the precondition below is what a TTL waits on — and
+   it is the same p95 instrumentation #37 inherits, now sized.
 
 10. **The four daily routes gain metadata. This does not make them an SEO
     surface.** `app/<jogo>/page.tsx` gains a **static** `export const metadata`
@@ -787,9 +860,18 @@ verdicts, so this record is readable without it:
 **Decision 14 is deliberately absent.** Plan 040's D14 rules that #34 ships as
 one pull request; that is a statement about how a ticket is delivered, not
 about the product or the code, and it constrains no future deploy the way
-ADR-0053 decision 15 does. The plan is its home. The number is skipped rather
-than reused so that every citation of *"ADR-0054 decision 15"* in the tree
-means what plan 040 meant by it.
+ADR-0053 decision 15 does. The plan is its home.
+
+**The gap stands; the reason first given for it did not** (step-7 finding W6).
+That reason was that renumbering would break existing citations of *"decision
+15"*. It would not have: every such citation in the tree is **authored by this
+same pull request** — five in plan 040 (`:49`, `:50`, `:344`, `:1408`,
+`:1474`) and two in this file's own prose — so a renumber was free at the time
+and is free now. The real reason is cheaper and true: the register in plan 040 runs D1…D15
+and this record carries it across **by number**, so keeping D15 ↔ decision 15
+means a reader can move between the two documents without a translation table,
+and the one number that does not carry across is the one that deliberately did
+not come.
 
 15. **Walls, budgets and the lists that grow.**
 
@@ -855,6 +937,23 @@ means what plan 040 meant by it.
     route ships no client chunk and never appears in `route-bundle-stats.json`
     at all, which is also why ADR-0047's marker scan fails closed in #34's
     favour.
+
+    **`/nonogram` is down to 2.4 KB of slack, and the relief is named here so
+    that the next author has somewhere to go that is not the constant**
+    (step-7 finding F4). Not raising `MAX_DELTA_BYTES` is right — it is what
+    arms the motif tripwire, and a motif leak is ~35 KB, so the instrument is
+    still fully able to see what it exists to see. But #34 established a
+    coupling that was not visible before: **a conclusion-only feature costs
+    the three daily grid routes ~2.0 KB each**, because `/<jogo>` carries the
+    conclusion tree in its own first-load set. One more feature of this size
+    reds `/nonogram` for a reason unrelated to a motif leak, and the pressure
+    at that moment will be to raise the number. The structural relief is
+    proved by this very build: the four archive play routes compose the same
+    hooks and the same play views but **exclude the conclusion tree**, and
+    they land ~17 KB lower (`/arquivo/[data]/nonogram` +20.9 against
+    `/nonogram` +37.6). The conclusion only renders after the grid closes,
+    which is a natural `next/dynamic` boundary rather than a refactor —
+    that is the move, and it belongs to the ticket that first needs it.
 
     **Nothing else on any list moves.** No new page, so `impeccable.yml`'s URL
     lists, `route-ssr.test.tsx`'s `ROUTES` table, `sitemap.ts`'s path list and

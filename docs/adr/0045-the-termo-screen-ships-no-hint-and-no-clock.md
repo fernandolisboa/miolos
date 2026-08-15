@@ -152,7 +152,7 @@ on the Termo client.**
    `MAX_DELTA_BYTES` is not raised.** Termo's floor is +37.9 KB raw before
    one line of screen code, because ~36.4 KB of it is **content the ticket
    exists to ship**. The 40 KB constant
-   (`apps/web/scripts/route-client-js.mjs:91`) was calibrated for routes
+   (`route-client-js.mjs:145`, was `:91`, repaired #34) was calibrated for routes
    whose whole delta is code, and raising it would simultaneously un-arm
    the tripwire for the three grid routes — the script's own header records
    that a motif leak is ~35 KB and lands near 69 KB. The script moves to

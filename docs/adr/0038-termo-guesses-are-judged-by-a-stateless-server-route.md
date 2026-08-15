@@ -318,6 +318,24 @@ extension point in that route with no tripwire on it.
   shorter prefix and buy extra turns. It cheats only its owner, and it is a
   strictly more expensive forgery than the one every grid game already
   permits.
+
+  *(**Qualified at #34** —
+  [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
+  decision 3. **"It cheats only its owner" gains an audience.** The share text
+  broadcasts the guess count as `n/6` **and the tile grid**, both composed on
+  the device from the local play record (`apps/web/src/play/share-text.ts`),
+  so a bought turn is now a number a player sends to other people. ADR-0054
+  concedes exactly this bound for the three grid games' self-reported elapsed
+  time and did not carry it to the one game whose count is server-shaped;
+  it does here. **The prohibition half of this consequence is untouched** —
+  nothing is enforceable that was not, no rate limit is added, and ADR-0006
+  `:51`'s posture (*"not an anti-cheat system … for a rank that v1 does not
+  have"*) is why the widened audience changes no design. Two adjacent clauses
+  are one item short for the same reason and are not separately annotated:
+  (b)'s sink list for a self-reported Termo row now includes the share text,
+  and (f)'s revisit trigger should read the share as one more consumer of the
+  guess count. No header: no decision moves and no route enumeration grows —
+  the `0034:164` / ADR-0045 `:186-191` annotation-only shape.)*
 - **(b) A Termo `lost` row is self-reported in the same sense `hints_used`
   is.** A client can suppress a loss or fabricate a win. Both failure
   directions are safe — suppression grants nothing, and a fabricated win

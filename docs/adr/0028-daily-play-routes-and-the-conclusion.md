@@ -168,9 +168,14 @@ imply a rule the archive breaks.)*
    same wall helpers: `app/{binairo,sudoku,nonogram,termo}/opengraph-image.tsx`
    on `getTodayDaily`, and
    `app/arquivo/[data]/{binairo,sudoku,nonogram,termo}/opengraph-image.tsx`
-   on `getPublishedDaily`. The ninth image route, `app/opengraph-image.tsx`,
-   reads **nothing** and is static — it is named here only so the count is
-   not read as nine. These eight are one hop further from the scope line than
+   on `getPublishedDaily`. **Eight is the whole count, and it is eight rather
+   than nine because the site card is not a route at all**: it ships as the
+   committed asset `app/opengraph-image.png`, which reads nothing and runs
+   nothing. *(This sentence named a ninth `app/opengraph-image.tsx` module
+   until step 7 of the same pull request, when finding B1 deleted it — a
+   metadata module on the root segment was traced into every descendant
+   route's serverless payload. ADR-0054 decision 9 carries the measurement.)*
+   These eight are one hop further from the scope line than
    anything before them, because their audience is a social scraper rather
    than a browser, which is why ADR-0054 decision 8 makes the read an
    existence proof and gives the response a `private, no-cache` header

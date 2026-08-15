@@ -234,8 +234,10 @@ export function ConclusionView({
   // Without this, /termo's own conclusion would print `em 03:08` in the chip
   // that `entryFor` — and therefore the hub, and every other game's
   // conclusion — renders as `feito` (ADR-0045 decision 4, plan 022 §15.3).
-  // A game that passes no `outcome` renders exactly what it rendered before
-  // this prop existed.
+  // A game that passes no `outcome` gets exactly the day entry it got before
+  // this prop existed. Scoped to the day entry deliberately (#34): the claim
+  // used to be about the whole render, and the share block — which reads
+  // neither `outcome` nor the day state — makes that version false.
   const dayEntry = (dayGame: Game): DayEntry =>
     dayGame === game
       ? outcome === undefined
@@ -293,13 +295,26 @@ export function ConclusionView({
              that "the conclusion owns the terminal sentence".
 
              The string is ALREADY COMPOSED (types.ts's plain-data rule —
-             nothing is composed here), games that pass no `outcome` render no
-             region and are byte-identical, and focus still never moves
+             nothing is composed here), and focus still never moves
              programmatically: a role="status" announces without stealing the
              caret, which is the mechanism PRODUCT.md's "nothing nags" points
              at. That a live region MOUNTING with content is spoken is an AT
              behaviour jsdom cannot prove; it rides the one real
-             VoiceOver/NVDA pass ADR-0042 consequence (e) already owes. */
+             VoiceOver/NVDA pass ADR-0042 consequence (e) already owes.
+
+             #34 FALSIFIED ONE CLAUSE THAT USED TO STAND HERE, and it is
+             deleted rather than softened: "games that pass no `outcome`
+             render no region and are byte-identical". The share button's
+             own role="status" region renders on the result and lost
+             branches of ALL FOUR games, gated on neither `outcome` nor
+             game, so three conclusions gained a live region. ADR-0043
+             decision 10 carries the same repair, and ADR-0054 decision 4
+             carries the DISJOINT-WRITERS rule ADR-0042 decision 10 requires
+             of any screen with two of these: this region's text is a prop
+             composed before mount and no transition here ever writes it,
+             while the share region's text is written only by the click
+             handler and its own timeout. Only one of the two can mutate at
+             all after mount. */
           <p role="status" className={styles.announcer}>
             {outcome.aria}
           </p>
