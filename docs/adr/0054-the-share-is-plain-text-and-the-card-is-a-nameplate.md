@@ -96,7 +96,12 @@ verdicts, so this record is readable without it:
 - **Amended, header and annotation:** ADR-0028 (decisions 4 and 5, and the
   fifth-game consequence), ADR-0053 (decision 2's route enumeration and its
   `revalidatePath` path list, decision 4's 404-vs-500 clause), ADR-0039
-  (decision 2's fifth-game recipe).
+  (decision 2's fifth-game recipe), and **ADR-0043 (decision 10, whose
+  *"games that pass no `outcome` render no region and are unchanged"* is not
+  qualified but outright false once the share button's `role="status"`
+  region renders on every conclusion — the fourth record, added at step 7,
+  and the only one of the four where a sentence is contradicted rather than
+  an enumeration grown)**.
 - **Annotated, no header** — the sentence gains a term or a qualification, no
   decision moves and no route enumeration grows: ADR-0028 `:35-40` and its
   echo ADR-0053 `:1030-1034` (*"neither cacheable nor an SEO surface"*, which
@@ -104,7 +109,10 @@ verdicts, so this record is readable without it:
   dead-share-button rule, **discharged** by the live button, with the
   `conclusion-view.tsx` comment it cites rewritten); ADR-0002 `:41` (*"static
   instances of Fraunces **at chosen weights**"* — what must be chosen is
-  `{weight, opsz}`, decision 12).
+  `{weight, opsz}`, decision 12); and **ADR-0038 consequence (a) `:316-326`
+  (*"It cheats only its owner"* — a fabricated `n/6` and tile grid now reach
+  an audience, though the prohibition half, never a medal and never an
+  entitlement, is untouched)**.
 - **Obeyed, not amended:** ADR-0010 `:20` (both readers spread
   `publishedConjuncts()`; neither re-types it); ADR-0046 (the free-play wall
   gains a class, which strengthens the guarantee it describes); ADR-0047 (a
@@ -800,8 +808,10 @@ verdicts, so this record is readable without it:
     **They live in `apps/web/assets/fonts/`** — outside `app/`, where nothing
     can be mistaken for a route, and outside `public/`, which would publish
     three URLs nobody should fetch. **Loaded at module scope as
-    `export const FONTS` with top-level `await`**, one call shape for all nine
-    routes, keeping the module synchronously importable so the jsdom card suite
+    `export const FONTS` with top-level `await`**, one call shape for all eight
+    game image routes — the site card is a committed asset and reaches the
+    loader only at build time, through `T-WEB-S212` — keeping the module
+    synchronously importable so the jsdom card suite
     can import the card without dragging the loader in. **Blast radius,
     stated:** a throw there fails the **whole build**, not one route — the
     correct failure mode for a missing font, and the reason the digests are
