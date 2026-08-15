@@ -1,3 +1,4 @@
+import { GAMES } from "@miolos/core";
 import { describe, expect, it, vi } from "vitest";
 
 // The layout calls the Next font loaders at module scope, which only the Next
@@ -69,13 +70,35 @@ const ARCHIVE_PAGES = {
   termo: await import("../app/arquivo/[data]/termo/page"),
 } as const;
 
-type Game = keyof typeof DAILY_PAGES;
-
-const GAMES = Object.keys(DAILY_PAGES) as Game[];
+/**
+ * THE LOOP VARIABLE IS THE SHIPPED CONSTANT, imported (step-6 finding Q1).
+ * The old `Object.keys(DAILY_PAGES)` was self-referential — it could only ever
+ * list the routes this file had already imported, so a fifth game gaining a
+ * page and no `openGraph` was invisible to every assertion below. Measured:
+ * adding `kakuro` to `packages/core/src/game.ts` left all six OG suites green.
+ * `hoje.smoke.test.tsx:1` is the shipped idiom for the import, and the
+ * coverage arm inside `T-WEB-S198` is what turns it into a tripwire.
+ *
+ * No local `Game` alias survives either: `DAILY_PAGES[game]` indexes fine with
+ * core's own `Game`, and a `keyof typeof DAILY_PAGES` alias is the same
+ * self-reference one type level up.
+ */
 
 // ── T-WEB-S198 ──────────────────────────────────────────────────────────
 
 describe("the daily play routes carry openGraph and NOTHING else (T-WEB-S198)", () => {
+  it("every member of @miolos/core's GAMES is covered by both page maps", () => {
+    // Q1's repair. Sorted on both sides because the two orders differ by
+    // construction: core declares play order (binairo, sudoku, nonogram,
+    // termo) and the maps above are alphabetical. A fifth game reds HERE,
+    // which is what makes the `for (const game of GAMES)` loops below a
+    // coverage claim rather than a restatement of this file's own imports.
+    const covered = [...GAMES].sort();
+    expect(covered).toHaveLength(4);
+    expect(Object.keys(DAILY_PAGES).sort()).toEqual(covered);
+    expect(Object.keys(ARCHIVE_PAGES).sort()).toEqual(covered);
+  });
+
   it("each game's card copy is its own, and the object has no title, no description and no canonical", () => {
     const titles = new Set<unknown>();
     const descriptions = new Set<unknown>();

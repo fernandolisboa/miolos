@@ -93,10 +93,13 @@ const CARD_PADDING = 72; // --space-6 × 3
  * The desk texture, as explicit elements on a `DOT_TILE` lattice.
  *
  * **The count is DERIVED, never a literal.** `ceil(1200/72) × ceil(630/72)`
- * is 17 × 9 = 153. A hand-written 120 leaves the bottom-right 80×70 corner of
- * the desk with zero dots — the texture simply stops — because the last dot
- * is index 152 and any count below that truncates. `T-WEB-S200` asserts both
- * the derivation and the 153.
+ * is 17 × 9 = 153, emitted ROW-MAJOR, so any hand-written count below 153
+ * truncates the lattice from the bottom-right and the texture simply stops.
+ * The illustrative figure is computed rather than eyeballed (step-6 finding
+ * Q5): at 120 the last dot drawn is index 119 — row 7, column 0, at
+ * `(0, 504)` — so the whole of row 7 from `x = 72` and the whole of row 8 go
+ * unpainted, about the bottom 126 px of a 630 px card and a fifth of its
+ * area. `T-WEB-S200` asserts the derivation and the 153.
  */
 function deskDots(): ReactElement[] {
   const columns = Math.ceil(CARD_WIDTH / DOT_TILE);

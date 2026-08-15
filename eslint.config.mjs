@@ -78,11 +78,18 @@ const webRequireCall = {
 // so the free-play object further down has to REPEAT these verbatim or it
 // would silently delete the db wall for exactly the free-play files
 // (T-LINT-S14/S15 pin the repetition). #34 gave them a SECOND repeater, the
-// OG wall (object (4)), on the same rule: any later object whose files are a
-// subset of (1)'s or (2)'s owes the same repetition, and T-LINT-S43 is that
-// object's own regression control. Consumed unchanged by object (1): this
-// extraction is a pure move, and the eslint-db-wall.test.ts probes are the
-// no-op proof.
+// OG wall (object (4)), on the same rule, and T-LINT-S43 is that object's own
+// regression control.
+//
+// THE RULE IS NOT "A SUBSET OF (1) OR (2)" — IT IS ANY INTERSECTION WITH ANY
+// EARLIER OBJECT, and this clause was written one wall too narrow at #34
+// (step-6 finding K1). Object (4)'s globs also intersect object (3)'s: a
+// future `app/modo-livre/**/opengraph-image.tsx` matches both, later wins,
+// and free play's own bans — stricter than the app-wide wall's, since they
+// forbid `@miolos/db`'s root entry outright — would vanish with no file diff
+// to see it in. Object (5) is that intersection, repeating BOTH. Consumed
+// unchanged by object (1): this extraction is a pure move, and the
+// eslint-db-wall.test.ts probes are the no-op proof.
 const webWallImportPatterns = [
   {
     group: [
@@ -643,6 +650,55 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
+        ogDynamicGamesImport,
+      ],
+    },
+  },
+  {
+    // (5) THE INTERSECTION OF (3) AND (4) (#34, step-6 finding K1). Placed
+    // LAST, and it exists because flat config replaces per rule: an
+    // `app/modo-livre/**/opengraph-image.tsx` matches object (3)'s
+    // `apps/web/app/modo-livre/**` AND object (4)'s
+    // `apps/web/app/**/opengraph-image.*`, so (4) — the later object — would
+    // become that file's ENTIRE wall and silently delete free play's bans.
+    //
+    // MEASURED against the shipped config before this object existed: at
+    // `app/modo-livre/opengraph-image.tsx`, `play/sync`, `play/share-text`,
+    // `@miolos/db`'s ROOT entry, `streak` and a dynamic `play/sync` all lint
+    // CLEAN, while the same five red at the control `app/modo-livre/page.tsx`.
+    // The root-entry loss is the sharpest of them: object (3) bans `@miolos/db`
+    // outright and `webWallImportPatterns` PERMITS it, so the intersection was
+    // strictly weaker than either parent. `T-LINT-S46` is the probe.
+    //
+    // No file matches this object today and that is the point — a wall for a
+    // path that does not exist yet is a wall doing its job, the same argument
+    // object (4) makes for `twitter-image`. Repeats (1)'s, (2)'s, (3)'s and
+    // (4)'s arrays; do not "de-duplicate" them away.
+    files: [
+      `apps/web/app/modo-livre/**/opengraph-image.${webWallExtensions}`,
+      `apps/web/app/modo-livre/**/twitter-image.${webWallExtensions}`,
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webWallImportPatterns,
+            ...freePlayBannedModuleGroups,
+            ...ogBannedGameGroups,
+          ],
+          paths: webWallImportPaths,
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        webDynamicDbImport,
+        webDynamicPackageSource,
+        webComputedDynamicImport,
+        webRequireCall,
+        webTableNameLiteral,
+        webTableNameTemplate,
+        freePlayDynamicBannedModule,
         ogDynamicGamesImport,
       ],
     },

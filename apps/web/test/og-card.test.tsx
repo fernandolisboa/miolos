@@ -152,13 +152,29 @@ describe("the OG card paints the accent on the tape and the shadow only (T-WEB-S
   });
 
   it("the desk texture is 153 dots at 1200x630, DERIVED from the size", () => {
-    // `ceil(1200/72) x ceil(630/72)` = 17 x 9. Rendered with a hand-written
-    // 120 the bottom-right 80x70 desk corner holds ZERO dots — the texture
-    // simply stops, because the last dot is index 152.
+    // `ceil(1200/72) x ceil(630/72)` = 17 x 9, emitted ROW-MAJOR, so a
+    // hand-written count below 153 truncates from the bottom-right. The
+    // figure is computed and not eyeballed (step-6 finding Q5): at 120 the
+    // last dot is index 119 — row 7, column 0, at (0, 504) — leaving row 7
+    // from x = 72 and the whole of row 8 unpainted, the bottom 126px of the
+    // card. Asserted below rather than only described.
     const dots = elements(
       gameCard({ game: "binairo", longDate: "1 de maio de 2026" }),
     ).filter((element) => styleOf(element)["backgroundColor"] === "#211D190F");
     expect(dots).toHaveLength(153);
+
+    // The comment's arithmetic, as an assertion: the lattice really is
+    // row-major on a 72px pitch, so "index 119 sits at (0, 504)" is a fact
+    // about the shipped tree and not a story about it.
+    const at = (index: number) => {
+      const style = styleOf(dots[index] as ReactElement);
+      return [style["left"], style["top"]];
+    };
+    expect(at(0)).toEqual([0, 0]);
+    expect(at(1)).toEqual([72, 0]);
+    expect(at(17)).toEqual([0, 72]);
+    expect(at(119)).toEqual([0, 504]);
+    expect(at(152)).toEqual([16 * 72, 8 * 72]);
 
     // And the count is a derivation, not a literal anyone can drift.
     expect(cardSource).toContain("Math.ceil(CARD_WIDTH / DOT_TILE)");
@@ -184,6 +200,41 @@ describe("no emoji on a rendered surface (T-WEB-S208)", () => {
   const RENDERED = /\.(?:tsx|css)$/;
   const SKIP = new Set(["node_modules", ".next", ".turbo"]);
 
+  /**
+   * ESCAPE-ENCODED EMOJI ARE DECODED BEFORE THE SCAN (step-6 finding Q2).
+   * `{"✅ " + args.longDate}` renders exactly the character a literal
+   * `✅` renders, and the raw regex sees only backslashes and hex — so the
+   * gate was blind to the one spelling an author reaches for when a literal
+   * feels awkward. It is not a hypothetical spelling either:
+   * `share-text.test.ts:186-190` writes the three squares that way IN A
+   * COMMENT SAYING codepoint escapes keep a file "outside every emoji scan
+   * in the repo". The file explaining the evasion sits next to the gate.
+   *
+   * Both TS/JSX forms are decoded — `\uXXXX` and `\u{XXXXX}` — plus, IN
+   * `.css` FILES ONLY, the `content: "\1F7E9"` form, which is the same
+   * evasion one file extension over. The bare-backslash form is scoped that
+   * way on purpose: outside CSS it would decode `\face` inside a regex
+   * literal, and a scanner with false positives is a scanner someone
+   * eventually deletes. Out-of-range points are left as written rather than
+   * throwing.
+   */
+  function decodeEscapes(source: string, css = false): string {
+    const pattern = css
+      ? /\\u\{([\dA-Fa-f]{1,6})\}|\\u([\dA-Fa-f]{4})|\\([\dA-Fa-f]{4,6})\b/g
+      : /\\u\{([\dA-Fa-f]{1,6})\}|\\u([\dA-Fa-f]{4})()/g;
+    return source.replaceAll(
+      pattern,
+      (whole, braced?: string, plain?: string, bare?: string) => {
+        const hex = braced ?? plain ?? bare ?? "";
+        const point = Number.parseInt(hex, 16);
+        if (hex.length === 0 || !Number.isFinite(point) || point > 0x10_ff_ff) {
+          return whole;
+        }
+        return String.fromCodePoint(point);
+      },
+    );
+  }
+
   function renderedSurfaces(): string[] {
     const found: string[] = [];
     const walk = (dir: string): void => {
@@ -205,10 +256,12 @@ describe("no emoji on a rendered surface (T-WEB-S208)", () => {
     return found;
   }
 
-  it("no .tsx or .css under apps/web/{app,src} contains an emoji", () => {
+  it("no .tsx or .css under apps/web/{app,src} contains an emoji, escaped or literal", () => {
     const scanned = renderedSurfaces();
     const offenders = scanned.filter((path) =>
-      EMOJI.test(readFileSync(path, "utf8")),
+      EMOJI.test(
+        decodeEscapes(readFileSync(path, "utf8"), path.endsWith(".css")),
+      ),
     );
     expect(offenders).toEqual([]);
   });
@@ -222,18 +275,35 @@ describe("no emoji on a rendered surface (T-WEB-S208)", () => {
     const expected: [string, string][] = [
       ["src/play/conclusion-view.tsx", "ConclusionView"],
       ["app/sudoku/page.tsx", "export const dynamic"],
-      // #34's own new rendered surfaces, one per root.
+      // #34's own new rendered surfaces, one per root. The `app` entry is a
+      // dated card route: B1 turned the ROOT card into `opengraph-image.png`
+      // plus `opengraph-image.alt.txt`, neither of which the walk's `.tsx|.css`
+      // filter can see, so naming it here would leave this half dead.
       ["src/og/card.tsx", "gameCard"],
-      ["app/opengraph-image.tsx", "siteCard"],
+      ["app/sudoku/opengraph-image.tsx", "export const alt"],
     ];
     for (const [relative, token] of expected) {
       const path = join(import.meta.dirname, "..", relative);
       expect.soft(scanned, relative).toContain(path);
       expect.soft(readFileSync(path, "utf8"), relative).toContain(token);
     }
-    // And the regex itself sees what it is aimed at.
+    // And the regex itself sees what it is aimed at — in BOTH spellings,
+    // because the escaped one is the spelling that shipped past this gate.
     expect(EMOJI.test("🟩")).toBe(true);
     expect(EMOJI.test("⬜")).toBe(true);
+    for (const [escaped, css] of [
+      [String.raw`{"\u{1F7E9} " + args.longDate}`, false],
+      [String.raw`const WHITE = "\u2B1C";`, false],
+      [String.raw`.tile::after { content: "\1F7E8"; }`, true],
+    ] as const) {
+      expect.soft(EMOJI.test(escaped), escaped).toBe(false);
+      expect.soft(EMOJI.test(decodeEscapes(escaped, css)), escaped).toBe(true);
+    }
+    // And the decoder invents nothing out of ordinary hex prose or a regex
+    // literal — `\face` is four hex digits and decodes to no pictograph.
+    expect(
+      EMOJI.test(decodeEscapes(String.raw`#211D190F /\bfaceA/ \2b1c`, false)),
+    ).toBe(false);
   });
 });
 

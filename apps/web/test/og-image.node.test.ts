@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+import { GAMES, type Game } from "@miolos/core";
 import { ImageResponse } from "next/og";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -59,11 +60,21 @@ const actualCard =
   await vi.importActual<typeof import("../src/og/card")>("../src/og/card");
 const handlers = await import("../src/og/handlers");
 
-const GAMES = ["binairo", "sudoku", "nonogram", "termo"] as const;
+/**
+ * `GAMES` IS IMPORTED FROM `@miolos/core`, never re-typed as a local literal
+ * of the same four tokens (step-6 finding Q1). A re-typed copy makes every
+ * coverage assertion below self-referential — `expect(GAMES).toHaveLength(4)`
+ * against a literal declared four lines up is a tautology — and the fifth
+ * game it exists to catch was MEASURED: adding `kakuro` to
+ * `packages/core/src/game.ts` left all six OG suites green. Against the
+ * imported constant the same length assertion is a real tripwire, and the
+ * per-game existence checks below become the thing that reds when a fifth
+ * game gains a page and no card. `hoje.smoke.test.tsx:1` is the shipped idiom.
+ */
 
 /** A published row, with a date that is nothing like today's. */
 const PUBLISHED_DATE = "2026-02-22";
-function row(game: (typeof GAMES)[number]) {
+function row(game: Game) {
   return { game, date: PUBLISHED_DATE };
 }
 
@@ -209,6 +220,31 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
     );
 
     it.each(calls)(
+      "(7b) %s: THE REFUSAL carries it too — a 404 here goes stale at midnight",
+      async (_family, call, reader) => {
+        // Step-6 finding K2: this arm shipped with no `cache-control` at all,
+        // on the surface whose own doc block argues that a 404 is
+        // negative-cached by social scrapers for days. A refusal is the
+        // response whose truth flips at São Paulo midnight — today's card
+        // 404s until the day is published, and tomorrow's archive card 404s
+        // until tomorrow — so it needs the header at least as much as the 200
+        // does. Both refusal shapes, since they are different `return`s.
+        reader.mockResolvedValue(undefined);
+        expect((await call()).headers.get("cache-control")).toBe(
+          "private, no-cache, no-store, max-age=0, must-revalidate",
+        );
+
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        reader.mockRejectedValue(named("ZodError"));
+        const badRow = await call();
+        expect(badRow.status).toBe(404);
+        expect(badRow.headers.get("cache-control")).toBe(
+          "private, no-cache, no-store, max-age=0, must-revalidate",
+        );
+      },
+    );
+
+    it.each(calls)(
       "no field of the row reaches the card except its date",
       async (_family, call, reader, callDated) => {
         // Every field a sentinel, and none of them may appear in the PNG's
@@ -251,6 +287,11 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
       for (const segment of ["lixo", "2026-02-30", "", "../../etc/passwd"]) {
         const response = await handlers.archiveCardHandler(game, segment);
         expect.soft(response.status, segment).toBe(404);
+        // The pre-read refusal is a third `return refuse()` and carries the
+        // same header as the other two (K2).
+        expect
+          .soft(response.headers.get("cache-control"), segment)
+          .toBe("private, no-cache, no-store, max-age=0, must-revalidate");
       }
       expect(spies.getPublishedDaily).not.toHaveBeenCalled();
     });
@@ -502,7 +543,21 @@ describe("the committed fonts are the faces the card was designed against (T-WEB
 
 describe("the OG route family, as files (T-WEB-S204)", () => {
   const appDir = join(import.meta.dirname, "..", "app");
-  const rootCard = join(appDir, "opengraph-image.tsx");
+  /**
+   * THE ROOT CARD IS A STATIC ASSET, NOT A ROUTE (step-6 blocker B1). A
+   * file-convention metadata MODULE on the root segment is resolved into the
+   * metadata graph of every descendant route, so `app/opengraph-image.tsx`
+   * dragged `next/og` — `@vercel/og`, `resvg.wasm`, `sharp` and libvips —
+   * into the traced payload of all 24 functions, 17 of them `ƒ` dynamic
+   * surfaces that render no card at all. The card is still generated in code
+   * (AC 2); only the moment moved, from build-time prerender to
+   * commit-time render, pinned by `T-WEB-S212` below.
+   */
+  const rootCardAsset = join(appDir, "opengraph-image.png");
+  const rootCardAlt = join(appDir, "opengraph-image.alt.txt");
+  const rootCardModule = join(appDir, "opengraph-image.tsx");
+  /** The module that BUILDS the root card, now that no route file does. */
+  const cardSource = join(import.meta.dirname, "..", "src", "og", "card.tsx");
   const dailyCard = (game: string) => join(appDir, game, "opengraph-image.tsx");
   const archiveCard = (game: string) =>
     join(appDir, "arquivo", "[data]", game, "opengraph-image.tsx");
@@ -511,10 +566,9 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
    * The file with its comments removed, so every scan below counts CODE and
    * not the doc blocks that discuss the wall at length. The same stripper
    * `eslint-db-wall.test.ts` and `archive-routes.test.ts` use, and it is
-   * load-bearing twice over here: `src/i18n/sao-paulo-day.ts` says "Declared
-   * here rather than imported from `@miolos/db`" in a comment and imports
-   * nothing of the kind, and the root card's own doc block explains at length
-   * why it carries no `force-dynamic`.
+   * load-bearing here: `src/i18n/sao-paulo-day.ts` says "Declared here rather
+   * than imported from `@miolos/db`" in a comment and imports nothing of the
+   * kind, and `src/og/card.tsx`'s own doc blocks discuss the wall at length.
    */
   function code(source: string): string {
     return source
@@ -558,9 +612,14 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // rather than path membership. The walker resolves RELATIVE specifiers
     // only, so a bare `@miolos/db` never becomes a node and any assertion
     // written as `graph.filter(p => p.includes("@miolos/db"))` is
-    // structurally empty — on the root card and on the eight game routes
+    // structurally empty — on the card builder and on the eight game routes
     // alike. Both halves are therefore written in the same terms.
-    const graph = moduleGraph(rootCard);
+    //
+    // THE ENTRY IS `src/og/card.tsx` AND NOT A ROUTE FILE, because B1's fix
+    // deleted the root route: the property the claim is about — the card
+    // that reads nothing reaches no reader — belongs to the builder, and the
+    // builder is what `T-WEB-S212` renders to produce the committed PNG.
+    const graph = moduleGraph(cardSource);
     for (const path of graph) {
       const source = code(readFileSync(path, "utf8"));
       expect.soft(source, path).not.toContain("@miolos/db");
@@ -580,16 +639,14 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
         expect.soft(reachesTheWall, entry).not.toEqual([]);
       }
     }
-    // And the root card's graph is not a one-element accident.
+    // And the card builder's graph is not a one-element accident.
     expect(graph.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("the eight dated routes are force-dynamic and the root card is NOT", () => {
+  it("the eight dated routes are force-dynamic, and there is no NINTH route", () => {
     // Route segment config comes from the layouts on the path plus the leaf,
     // and `find apps/web/app -name layout.tsx` returns exactly one file — the
     // root — so the export is required on each of the eight, not decorative.
-    // The ABSENCE on the root card is asserted too: it reads nothing, cannot
-    // go stale, and is prerendered at build (one `○`, eight `ƒ`).
     for (const game of GAMES) {
       for (const entry of [dailyCard(game), archiveCard(game)]) {
         expect
@@ -597,7 +654,19 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
           .toContain('export const dynamic = "force-dynamic"');
       }
     }
-    expect(code(readFileSync(rootCard, "utf8"))).not.toContain("force-dynamic");
+
+    // THE ROOT CARD IS THE ASSET PAIR AND NOTHING ELSE (B1). A module here
+    // is not merely a slower way to serve the same bytes: it is resolved
+    // into every descendant route's metadata graph, and the whole `next/og`
+    // toolchain is traced into functions that render no card. The route
+    // table's `○ /opengraph-image` line goes with it — eight `ƒ`, no `○`.
+    expect(existsSync(rootCardModule)).toBe(false);
+    expect(existsSync(rootCardAsset)).toBe(true);
+    expect(existsSync(rootCardAlt)).toBe(true);
+    // The `.alt.txt` convention carries the string the deleted module used to
+    // export, and Next uses the file's content verbatim — so the deck stays
+    // the single source and a translator still edits one place.
+    expect(readFileSync(rootCardAlt, "utf8")).toBe(messages.og.altSite);
   });
 
   it("within each family the four files differ ONLY in the game token", () => {
@@ -617,9 +686,11 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
   it("every member of GAMES has a route in each family and an alt string", () => {
     // A fifth game would otherwise gain a working page and a silently missing
     // card: none of #34's four per-game surfaces is `ProjectedGame`-bound.
-    // This half fires once someone writes the fifth game's entry; the half
-    // that reaches the author BEFORE they write anything is the route recipe
-    // in ADR-0028 `:233-246` and ADR-0039 `:43-45`.
+    // `GAMES` is the IMPORTED constant (Q1), so this reds the moment
+    // `packages/core` grows a member — measured against a `kakuro` probe,
+    // which left the old self-referential version green. The half that
+    // reaches the author BEFORE they write anything is the route recipe in
+    // ADR-0028 `:233-246` and ADR-0039 `:43-45`.
     expect(GAMES).toHaveLength(4);
     for (const game of GAMES) {
       expect.soft(existsSync(dailyCard(game)), game).toBe(true);
@@ -627,5 +698,75 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
       const name = messages.games[game].name;
       expect.soft(messages.og.altGame(name), game).toContain(name);
     }
+  });
+
+  // ── T-WEB-S212 ────────────────────────────────────────────────────────
+
+  describe("the committed root card is the code's own render (T-WEB-S212)", () => {
+    /**
+     * WHAT KEEPS AC 2 TRUE AFTER B1. "Generated in code" was enforced by the
+     * card being a runtime module; with the module deleted, the PNG on disk
+     * could drift from `siteCard()` — a hand-edited asset, a token change
+     * that never reaches the file, a font swap — and nothing would say so.
+     * This is that guard: re-render the tree the same way the deleted route
+     * did and compare the bytes.
+     *
+     * **To regenerate** after an intentional change to `siteCard()`, the
+     * tokens or the faces:
+     *
+     * ```
+     * WRITE_SITE_CARD=1 pnpm --filter @miolos/web test og-image
+     * ```
+     *
+     * which rewrites `app/opengraph-image.png` from the current tree and
+     * then asserts against what it wrote. CI never sets it, so the gate here
+     * is a plain equality.
+     */
+    it("app/opengraph-image.png equals a fresh siteCard() rasterisation", async () => {
+      const rendered = Buffer.from(
+        await new ImageResponse(actualCard.siteCard(), {
+          width: 1200,
+          height: 630,
+          fonts: FONTS,
+        }).arrayBuffer(),
+      );
+
+      if (process.env["WRITE_SITE_CARD"] === "1") {
+        writeFileSync(rootCardAsset, rendered);
+      }
+
+      const committed = readFileSync(rootCardAsset);
+      // Counted floors first, so a mismatch reports WHICH half moved rather
+      // than "two buffers differ": both are real 1200x630 PNGs.
+      for (const [label, png] of [
+        ["rendered", rendered],
+        ["committed", committed],
+      ] as const) {
+        expect
+          .soft([...png.subarray(0, 4)], label)
+          .toEqual([0x89, 0x50, 0x4e, 0x47]);
+        expect.soft(png.readUInt32BE(16), label).toBe(1200);
+        expect.soft(png.readUInt32BE(20), label).toBe(630);
+        expect.soft(png.length, label).toBeGreaterThan(10_000);
+      }
+
+      expect(
+        createHash("sha256").update(committed).digest("hex"),
+        "app/opengraph-image.png is stale — see this suite's doc block to regenerate",
+      ).toBe(createHash("sha256").update(rendered).digest("hex"));
+    });
+
+    it("the committed card is the SITE card and not a game card", async () => {
+      // Anti-vacuity for the equality above, in the `T-WEB-S202` idiom: two
+      // different trees through the same rasteriser must not agree, or the
+      // hash comparison would pass on any card at all.
+      const gameCardPng = Buffer.from(
+        await new ImageResponse(
+          actualCard.gameCard({ game: "termo", longDate: "1 de maio de 2026" }),
+          { width: 1200, height: 630, fonts: FONTS },
+        ).arrayBuffer(),
+      );
+      expect(readFileSync(rootCardAsset).equals(gameCardPng)).toBe(false);
+    });
   });
 });

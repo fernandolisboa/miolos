@@ -92,8 +92,23 @@ const CARD_HEADERS = {
   "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
 } as const;
 
-/** There is no page to render a not-found boundary into, so: a bare 404. */
-const refuse = (): Response => new Response(null, { status: 404 });
+/**
+ * There is no page to render a not-found boundary into, so: a bare 404 — and
+ * it carries `CARD_HEADERS` for a stronger reason than the 200 does (step-6
+ * finding K2).
+ *
+ * The doc block above argues that "a 404 on this surface is negative-cached
+ * by social scrapers for days". A refusal is exactly the response whose truth
+ * flips at São Paulo midnight: `/termo/opengraph-image` 404s until the day is
+ * published and renders the moment it is, and `/arquivo/<amanhã>/…` 404s
+ * today and is a real card tomorrow. Shipping that with NO cache-control left
+ * it to whatever the platform defaults to, on the one arm where a stale copy
+ * outlives its truth by a day rather than by a revalidation. `killed_at` is
+ * the other direction of the same argument and it is why the 200 path carries
+ * the header; the 404 needs it at least as much.
+ */
+const refuse = (): Response =>
+  new Response(null, { status: 404, headers: CARD_HEADERS });
 
 export async function archiveCardHandler(
   game: ProjectedGame,

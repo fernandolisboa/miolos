@@ -8,9 +8,12 @@ import { describe, expect, it } from "vitest";
 /**
  * Mechanical proof that the OG wall (#34, ADR-0054 decisions 8 and 15) fires
  * — the `eslint-db-wall.test.ts` / `eslint-free-play-wall.test.ts`
- * architecture applied to the card and the nine image routes.
+ * architecture applied to the card and the eight image routes — plus the
+ * root path B1 emptied and the `twitter-image` path nothing has opened yet,
+ * both kept inside the globs because a wall that only covers files that
+ * already exist is a wall that arrives after the mistake.
  *
- * Two claims, and the second is the one that is easy to get wrong.
+ * Three claims, and the last two are the ones that are easy to get wrong.
  *
  * **The games ban.** `solveNonogram(clues)` recovers the Nonogram picture
  * from the PUBLISHED clues in under a millisecond, so an OG route — which
@@ -27,6 +30,12 @@ import { describe, expect, it } from "vitest";
  * on an unauthenticated crawler-facing path. Measured: eight probes, all
  * clean against that naive shape, nine messages against the shipped one.
  * `T-LINT-S43` is that measurement, kept.
+ *
+ * **The same regression one wall over.** The OG object's globs also intersect
+ * the FREE-PLAY object's, so a future `app/modo-livre/<x>/opengraph-image.tsx`
+ * would have had its free-play bans deleted the same way — including the ones
+ * stricter than the app-wide wall. `T-LINT-S46` is that measurement, and
+ * `eslint.config.mjs`'s object (5) is the fix.
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -68,7 +77,15 @@ function wallHits(messages: { ruleId: string | null }[]): (string | null)[] {
 
 /** The card's own directory. */
 const OG_SOURCE_PATH = "apps/web/src/og/eslint-probe.ts";
-/** The ROOT card — `**` matches zero segments, and this is what proves it. */
+/**
+ * The root-card PATH — `**` matches zero segments, and this is what proves
+ * it. No file lives here since B1 turned the root card into a static
+ * `opengraph-image.png`, and the glob stays covering it deliberately: the
+ * cheapest way to reintroduce the traced-`next/og`-everywhere regression is
+ * to write this module again, and it must not arrive OUTSIDE the wall when
+ * someone does. Same argument as `twitter-image` below; `lintText` needs no
+ * file on disk either way.
+ */
 const ROOT_CARD_PATH = "apps/web/app/opengraph-image.tsx";
 /** One of each dated family. */
 const DAILY_CARD_PATH = "apps/web/app/sudoku/opengraph-image.tsx";
@@ -76,6 +93,14 @@ const ARCHIVE_CARD_PATH =
   "apps/web/app/arquivo/[data]/sudoku/opengraph-image.tsx";
 /** A file the root layout's `twitter` defaults mean will never exist. */
 const TWITTER_CARD_PATH = "apps/web/app/sudoku/twitter-image.tsx";
+/**
+ * The INTERSECTION of the free-play wall and the OG wall — object (5) in
+ * `eslint.config.mjs`. No such file exists today; `lintText` needs none, and
+ * the whole point is that the wall is standing before the file arrives.
+ */
+const FREE_PLAY_CARD_PATH = "apps/web/app/modo-livre/opengraph-image.tsx";
+/** Its control: the shipped free-play route, matched by object (3) alone. */
+const FREE_PLAY_PAGE_PATH = "apps/web/app/modo-livre/page.tsx";
 
 /** Every path the OG wall must reach. */
 const OG_PATHS = [
@@ -215,11 +240,12 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
     ).toBe(true);
   });
 
-  it("T-LINT-S44: the wall's globs reach all nine route paths, the root card included", async () => {
+  it("T-LINT-S44: the wall's globs reach all nine route paths, the root path included", async () => {
     // `apps/web/app/**/opengraph-image.*` — `**` matches ZERO segments, so
-    // the ROOT card is inside the glob. Verified here rather than assumed,
-    // because if it were not, the one card that reads nothing would be the
-    // one card outside the wall.
+    // the ROOT path is inside the glob. Verified here rather than assumed.
+    // Eight of the nine are files today; the ninth is the root path B1
+    // emptied, kept in the list because a rewritten root module must land
+    // inside the wall rather than beside it.
     const source = [
       'import { solveNonogram } from "@miolos/games/nonogram";',
       "",
@@ -271,5 +297,82 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
     for (const path of OG_PATHS) {
       expect.soft(wallHits(await lintProbe(path, clean)), path).toEqual([]);
     }
+  });
+
+  it("T-LINT-S46: the OG wall does not DELETE the free-play wall where the two globs intersect", async () => {
+    // THE SAME REPLACEMENT FAILURE AS `T-LINT-S43`, ONE WALL OVER (step-6
+    // finding K1). `app/modo-livre/**/opengraph-image.tsx` matches object
+    // (3)'s `apps/web/app/modo-livre/**` AND object (4)'s
+    // `apps/web/app/**/opengraph-image.*`; flat config replaces per rule and
+    // (4) is later, so before object (5) existed the OG wall was that file's
+    // ENTIRE configuration and every free-play ban vanished — including the
+    // ones STRICTER than the app-wide wall, which (4) repeats. Measured
+    // against the shipped config without (5): all five probes below CLEAN at
+    // the card path, all five red at the page control.
+    //
+    // `T-LINT-S43` cannot see this: it probes `app/opengraph-image.tsx`, and
+    // the free-play suite's own `ROUTE_PATH` is a `page.tsx`.
+    const probes: [string, string][] = [
+      [
+        "play/sync",
+        'import { startCompletionSync } from "../../src/play/sync";\nexport const p = startCompletionSync;\n',
+      ],
+      [
+        "play/share-text",
+        'import { buildShareText } from "../../src/play/share-text";\nexport const p = buildShareText;\n',
+      ],
+      [
+        // The sharpest of the five: object (3) bans the ROOT entry outright
+        // ("not even the wall-safe root entry"), while `webWallImportPatterns`
+        // — all object (4) repeats — permits it. The intersection was
+        // strictly weaker than either parent.
+        "@miolos/db root entry",
+        'import { getTodayDaily } from "@miolos/db";\nexport const p = getTodayDaily;\n',
+      ],
+      [
+        "streak",
+        'import { streakCopy } from "../../src/streak/copy";\nexport const p = streakCopy;\n',
+      ],
+      [
+        "dynamic play/sync",
+        'export const load = () => import("../../src/play/sync");\n',
+      ],
+    ];
+
+    for (const [label, source] of probes) {
+      expect
+        .soft(wallHits(await lintProbe(FREE_PLAY_CARD_PATH, source)), label)
+        .not.toEqual([]);
+      // The control, in the same terms: the ban being asserted is genuinely
+      // free play's own, and it fires on the route that already exists.
+      expect
+        .soft(wallHits(await lintProbe(FREE_PLAY_PAGE_PATH, source)), label)
+        .not.toEqual([]);
+    }
+
+    // And object (5) carries the OG half too — it is an intersection, not a
+    // replacement of (4) by (3).
+    const games = [
+      'import { solveNonogram } from "@miolos/games/nonogram";',
+      "",
+      "export const probe = solveNonogram;",
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(FREE_PLAY_CARD_PATH, games))).toContain(
+      "no-restricted-imports",
+    );
+    expect(
+      ruleIds(
+        await lintProbe(
+          FREE_PLAY_CARD_PATH,
+          'export const load = () => import("@miolos/games/nonogram");\n',
+        ),
+      ),
+    ).toContain("no-restricted-syntax");
+
+    // Anti-vacuity: the games ban really is free play's LEGAL surface, so a
+    // wall that reds on everything would pass the two lines above for the
+    // wrong reason. `@miolos/games` lints clean at the free-play PAGE.
+    expect(wallHits(await lintProbe(FREE_PLAY_PAGE_PATH, games))).toEqual([]);
   });
 });
