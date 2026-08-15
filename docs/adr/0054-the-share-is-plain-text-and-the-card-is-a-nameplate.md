@@ -7,7 +7,7 @@
 - **[ADR-0028](./0028-daily-play-routes-and-the-conclusion.md)** — decision 4's *"**Both segments** are `force-dynamic` async server components"* and its closing *"When the helper returns nothing — no puzzle, or a killed one — **both routes render the same pt-BR unavailable screen**."* The **segment** count is unchanged: an `opengraph-image.tsx` is a metadata route *inside* the existing `/<jogo>` segment, so *"both"* stays true. What grows is the number of `force-dynamic` route **modules** under the slug, two → three, and the unavailable-screen clause now has a sibling module that answers the same helper-returned-nothing condition with a **404 and an empty body** (decision 8). Decision 5's per-route enumeration of the ADR-0014 direct-read extension **grows** to the eight image routes; the consequence *"#23/#25/#27 add a slug, a `routes` entry, **two** `force-dynamic` server segments and a conclusion view"* and #31's own *"the archive's four play screens add … **one** `force-dynamic` server segment each"* are both one item short — three per daily game, two per archive play screen (decisions 7, 9, 10).
 - **[ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)** — decision 2's *"`export const dynamic = "force-dynamic"` on **all seven pages**, on `sitemap.ts` and on `robots.ts`"*: the archive family carries nine `force-dynamic` route modules today and **thirteen** after #34. **And its standing precondition's path list** — *"the `killed_at` write must **first** gain a writer that calls `revalidatePath` for the affected paths (**day, month, index, play, sitemap**)"* — grows by the four `/arquivo/<YYYY-MM-DD>/<jogo>/opengraph-image` paths. That one is not bookkeeping: a future `killed_at` writer built from the un-annotated list would leave a withdrawn puzzle's **card** serving after its page 404s, which is decision 2's own failure mode on the surface #34 creates. The precondition itself is **obeyed, not narrowed** — no `revalidate` is added anywhere (decision 9). Decision 4's *"The two shipped readers keep throwing, because on those a bad row is a live incident"* is narrowed at the **caller**: the readers are byte-unmoved and still throw, and #34's image routes answer a projection-class throw with a 404 while everything else still re-throws to the 500 that clause defends (decision 8).
 - **[ADR-0039](./0039-termo-cannot-be-played-offline.md)** — decision 2's *"Copying the route shape — a slug, a `routes` entry, **two `force-dynamic` segments**, a conclusion view — **is still required**"*. This is not a quotation of ADR-0028 (ADR-0029 `:13-15` is one, inside quote marks and attributed); it is ADR-0039 restating the fifth-game recipe as its own decision-2 claim, in a **stronger forward tense**. After #34 a fifth game copying "the route shape" also needs `app/<jogo>/opengraph-image.tsx` and `app/arquivo/[data]/<jogo>/opengraph-image.tsx`. **Three consecutive audit passes cleared this file as untouched**, which is recorded here because `0053:99-101` asked for exactly that lesson: *"clearing an ADR on one sentence is not clearing the file."*
-- **[ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md)** — decision 10's closing sentence, *"Games that pass no `outcome` render no region and are unchanged."* **This one is false, not short.** The share button renders a second `role="status" aria-live="polite"` region on the `result` and `lost` branches of **all four** conclusions, gated on neither `outcome` nor game, so Binairo, Sudoku and Nonogram conclusions carry a live region and are not unchanged. Two consequences, both taken at `0043:265`: the sentence is annotated in place, and — because [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 10 requires an explicit **disjoint-writers** rule wherever one screen carries two `role="status"` regions — the relationship between `.announcer` and `.shareStatus` is stated rather than assumed (decision 4). **Added at step 7, and the miss is worth recording:** the repo already knew. `docs/agents/test-ids.md` and plan 040 §14 D3 both say `T-WEB-S96`'s no-live-region assertion *"became false"*, and **both filed it as a test deviation rather than as a falsified record** — §11.2's sweep touched this ADR at decision 8, consequence (a) and `:30`, and never examined decision 10. That is the fourth instance of one pattern in this ticket, after U1, U2 and U8.
+- **[ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md)** — decision 10's closing sentence, *"Games that pass no `outcome` render no region and are unchanged."* **This one is false, not short.** The share button renders a second `role="status" aria-live="polite"` region on the `result` and `lost` branches of **all four** conclusions, gated on neither `outcome` nor game, so Binairo, Sudoku and Nonogram conclusions carry a live region and are not unchanged. Two consequences, both taken at `0043:266`: the sentence is annotated in place, and — because [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 10 requires an explicit **disjoint-writers** rule wherever one screen carries two `role="status"` regions — the relationship between `.announcer` and `.shareStatus` is stated rather than assumed (decision 4). **Added at step 7, and the miss is worth recording:** the repo already knew. `docs/agents/test-ids.md` and plan 040 §14 D3 both say `T-WEB-S96`'s no-live-region assertion *"became false"*, and **both filed it as a test deviation rather than as a falsified record** — §11.2's sweep touched this ADR at decision 8, consequence (a) and `:30`, and never examined decision 10. That is the fourth instance of one pattern in this ticket, after U1, U2 and U8.
 
 ## Context
 
@@ -875,9 +875,12 @@ ADR-0053 decision 15 does. The plan is its home.
 **The gap stands; the reason first given for it did not** (step-7 finding W6).
 That reason was that renumbering would break existing citations of *"decision
 15"*. It would not have: every such citation in the tree is **authored by this
-same pull request** — five in plan 040 (`:49`, `:50`, `:344`, `:1408`,
-`:1474`) and two in this file's own prose — so a renumber was free at the time
-and is free now. The real reason is cheaper and true: the register in plan 040 runs D1…D15
+same pull request** — six in plan 040 (`:49`, `:50`, `:344`, `:1413`, `:1479`,
+`:1509`) and two in this file's own prose — so a renumber was free at the time
+and is free now. *(Those line numbers are re-derived at the step-7 verification
+round: the last two moved when step 7 grew the plan by 79 lines, and `:1509` is
+new. A paragraph whose whole argument rests on an enumeration of citations is
+the worst place in this record for a stale one — V3.)* The real reason is cheaper and true: the register in plan 040 runs D1…D15
 and this record carries it across **by number**, so keeping D15 ↔ decision 15
 means a reader can move between the two documents without a translation table,
 and the one number that does not carry across is the one that deliberately did
@@ -1064,9 +1067,13 @@ not come.
   the option, `private, no-cache, no-store, max-age=0, must-revalidate`;
   without it, `public, max-age=0, must-revalidate`. No `next.config.ts` change,
   so the *"`headers()` returns exactly one rule"* tripwire stays intact. *(The
-  root site card is a static asset since decision 9's amendment; Next serves it
-  with its own immutable-asset headers, and it cannot go stale because it
-  reads nothing.)*
+  root site card is a static asset since decision 9's amendment, and it keeps
+  the framework default — measured off the shipped build's
+  `opengraph-image.png.meta`: `public, max-age=0, must-revalidate`, byte-for-byte
+  what the deleted module emitted. **Not** immutable-asset headers, as this
+  bullet claimed until the step-7 verification round (V5). The default is
+  correct here for a reason no header expresses: the card reads nothing, so it
+  cannot go stale, and there is no `killed_at` for a cache to outlive.)*
 - **The 404-vs-500 boundary is a name set, and it is where a future reader will
   look.** `ZodError` and `DailyProjectionUnsupportedError` → log and 404;
   everything else → re-throw and 500. The two shipped readers are unchanged and
