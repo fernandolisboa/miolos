@@ -8,6 +8,7 @@ import { ImageResponse } from "next/og";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { formatLongDate, messages } from "../src/i18n";
+import { ogCopy } from "../src/og/copy";
 import { FONTS } from "../src/og/fonts";
 
 const FONT_DIR = join(import.meta.dirname, "../assets/fonts");
@@ -666,7 +667,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // The `.alt.txt` convention carries the string the deleted module used to
     // export, and Next uses the file's content verbatim — so the deck stays
     // the single source and a translator still edits one place.
-    expect(readFileSync(rootCardAlt, "utf8")).toBe(messages.og.altSite);
+    expect(readFileSync(rootCardAlt, "utf8")).toBe(ogCopy.altSite);
   });
 
   it("within each family the four files differ ONLY in the game token", () => {
@@ -696,7 +697,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
       expect.soft(existsSync(dailyCard(game)), game).toBe(true);
       expect.soft(existsSync(archiveCard(game)), game).toBe(true);
       const name = messages.games[game].name;
-      expect.soft(messages.og.altGame(name), game).toContain(name);
+      expect.soft(ogCopy.altGame(name), game).toContain(name);
     }
   });
 

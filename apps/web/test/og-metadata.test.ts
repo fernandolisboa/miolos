@@ -1,5 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { GAMES } from "@miolos/core";
 import { describe, expect, it, vi } from "vitest";
+
+import { ogCopy } from "../src/og/copy";
 
 // The layout calls the Next font loaders at module scope, which only the Next
 // compiler can execute (the `pwa-manifest.test.ts` idiom); the mock returns
@@ -119,11 +124,9 @@ describe("the daily play routes carry openGraph and NOTHING else (T-WEB-S198)", 
       // And the sharing channel really does gain per-game copy — the
       // positive floor that stops the key list above from passing over an
       // empty `openGraph`.
-      expect(metadata.openGraph?.title, game).toBe(
-        messages.og.dailyTitle(name),
-      );
+      expect(metadata.openGraph?.title, game).toBe(ogCopy.dailyTitle(name));
       expect(metadata.openGraph?.description, game).toBe(
-        messages.og.dailyDescription(name),
+        ogCopy.dailyDescription(name),
       );
 
       titles.add(metadata.openGraph?.title);
@@ -227,21 +230,24 @@ describe("the per-game archive routes' openGraph (T-WEB-S207)", () => {
 describe("the OG deck's accent audit (T-WEB-S206a)", () => {
   /**
    * `T-WEB-S206`'s other half, and it lives here rather than in
-   * `share-text.test.ts` because `messages.og` lands two batches after
+   * `share-text.test.ts` because the OG deck lands two batches after
    * `messages.share`.
    *
    * `então`, `mamãe` and `época` are Termo ANSWER canonicals, and
    * `scripts/route-client-js.mjs`'s `FORBIDDEN_EVERYWHERE` forbids all three
-   * in every client chunk. `messages.og` ships in the server bundle rather
-   * than the browser, but the deck is pt-BR copy an editor will grow, and a
-   * copy edit is exactly how a false positive would reach that grep and red a
-   * build for a reason nobody could find.
+   * in every client chunk. `ogCopy` is now genuinely server-only — step-6
+   * finding F5 moved it out of `messages` because a bundler eliminates unused
+   * exports and not unused object PROPERTIES, so as a member of the deck it
+   * was shipping in the browser after all — but the strings are pt-BR copy an
+   * editor will grow, and a copy edit is exactly how a false positive would
+   * reach that grep and red a build for a reason nobody could find. The arm
+   * below keeps the audit whether or not the module stays out of the browser.
    */
   const FORBIDDEN = ["então", "mamãe", "época"];
 
-  it("none of the three Termo canonicals appears in messages.og", () => {
+  it("none of the three Termo canonicals appears in ogCopy", () => {
     const deck = JSON.stringify(
-      Object.values(messages.og).map((value) =>
+      Object.values(ogCopy).map((value) =>
         typeof value === "function" ? value("Nonogram") : value,
       ),
     );
@@ -249,8 +255,32 @@ describe("the OG deck's accent audit (T-WEB-S206a)", () => {
       expect(deck, word).not.toContain(word);
     }
     // Anti-vacuity: the deck really was serialised and really was read.
-    expect(deck).toContain(messages.og.siteTagline);
-    expect(deck).toContain(messages.og.altSite);
+    expect(deck).toContain(ogCopy.siteTagline);
+    expect(deck).toContain(ogCopy.altSite);
     expect(deck.length).toBeGreaterThan(100);
+  });
+
+  it("the deck is OUT of `messages` and out of the i18n barrel, both directions", () => {
+    // F5's fix, as a gate rather than as a paragraph — the same two edges
+    // `src/medals/copy.ts` names in prose and nothing enforces. Either one
+    // puts ~350 bytes of server-only pt-BR back into every client chunk,
+    // because a bundler eliminates unused EXPORTS and not unused object
+    // properties.
+    expect(Object.keys(messages)).not.toContain("og");
+    const barrel = readFileSync(
+      join(import.meta.dirname, "..", "src", "i18n", "index.ts"),
+      "utf8",
+    );
+    const deckSource = readFileSync(
+      join(import.meta.dirname, "..", "src", "i18n", "messages.ts"),
+      "utf8",
+    );
+    // Floors: both files were read and are the ones this claim is about.
+    expect(barrel).toContain("export { messages");
+    expect(deckSource).toContain("export const messages");
+
+    expect(barrel).not.toContain("og/copy");
+    expect(barrel).not.toContain("ogCopy");
+    expect(deckSource).not.toContain("ogCopy");
   });
 });

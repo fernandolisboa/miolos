@@ -5,6 +5,7 @@ import { DailyUnavailable } from "../../src/components/daily-unavailable";
 import { getDb } from "../../src/db";
 import { messages } from "../../src/i18n";
 import { NonogramScreen } from "../../src/nonogram/nonogram-screen";
+import { ogCopy } from "../../src/og/copy";
 import { OG_DEFAULTS } from "../../src/og/defaults";
 
 // No caching of any kind on this segment (plan 017 D5): a cached page would
@@ -22,8 +23,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   openGraph: {
     ...OG_DEFAULTS,
-    title: messages.og.dailyTitle(messages.games.nonogram.name),
-    description: messages.og.dailyDescription(messages.games.nonogram.name),
+    title: ogCopy.dailyTitle(messages.games.nonogram.name),
+    description: ogCopy.dailyDescription(messages.games.nonogram.name),
   },
 };
 

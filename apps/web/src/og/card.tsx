@@ -2,6 +2,7 @@ import type { Game } from "@miolos/core";
 import type { ReactElement } from "react";
 
 import { messages } from "../i18n";
+import { ogCopy } from "./copy";
 import {
   ACCENT_APP_SHADOW,
   ACCENT_APP_TAPE,
@@ -268,7 +269,7 @@ export function gameCard(args: {
  *
  * It is not any one game's, so it takes `--accent-app` ("sealing-wax red:
  * streak, promo"), and `DESIGN.md:37` describes ONE tape over a card's top
- * edge rather than four. The tagline is `messages.og.siteTagline`, written
+ * edge rather than four. The tagline is `ogCopy.siteTagline`, written
  * for this surface: `meta.title` already contains the wordmark this card sets
  * at 96px, and `meta.description` is 133 characters — three wrapped lines of
  * body copy where the composition wants one line.
@@ -288,9 +289,7 @@ export function siteCard(): ReactElement {
         }}
       >
         <div style={displayStyle}>{messages.brand.wordmark}</div>
-        <div style={{ ...bodyStyle, marginTop: 12 }}>
-          {messages.og.siteTagline}
-        </div>
+        <div style={{ ...bodyStyle, marginTop: 12 }}>{ogCopy.siteTagline}</div>
       </div>
     ),
   });

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { DailyUnavailable } from "../../src/components/daily-unavailable";
 import { getDb } from "../../src/db";
 import { messages } from "../../src/i18n";
+import { ogCopy } from "../../src/og/copy";
 import { OG_DEFAULTS } from "../../src/og/defaults";
 import { SudokuScreen } from "../../src/sudoku/sudoku-screen";
 
@@ -22,8 +23,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   openGraph: {
     ...OG_DEFAULTS,
-    title: messages.og.dailyTitle(messages.games.sudoku.name),
-    description: messages.og.dailyDescription(messages.games.sudoku.name),
+    title: ogCopy.dailyTitle(messages.games.sudoku.name),
+    description: ogCopy.dailyDescription(messages.games.sudoku.name),
   },
 };
 
