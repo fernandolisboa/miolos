@@ -37,10 +37,11 @@ export function NonogramConclusion({
   readonly picture?: ConclusionPicture;
 }) {
   // The SAME `(game, date)` key `<ConclusionView/>` subscribes with,
-  // deliberately: `use-record-snapshot`'s cache is a single module slot keyed
-  // `{game, date}` (:43-49), so two subscribers on one key share one cached
-  // object and neither re-renders. Two subscribers on DIFFERENT keys would
-  // thrash that slot and `useSyncExternalStore` would loop. Do not "optimise"
+  // deliberately. `use-record-snapshot`'s cache is a `(game, date)`-keyed
+  // `Map` (#96, ADR-0056 decision 1), so two different keys no longer thrash
+  // each other — that defect is gone. Sharing this one still buys what
+  // matters: ONE entry and ONE live consumer of it, so both subscribers get
+  // the same cached object back and neither re-renders. Do not "optimise"
   // this into a different key.
   const snapshot = useRecordSnapshot("nonogram", date);
   const stored = snapshot.hydrated ? snapshot.record : undefined;

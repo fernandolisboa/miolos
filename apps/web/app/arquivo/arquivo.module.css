@@ -301,6 +301,46 @@
 }
 
 .card {
+  /* The done row's RESERVED height — and the DIAL this card's permanent
+     growth is set on, written as a dial rather than as a constant because
+     growth and clearance trade continuously and the next person should see
+     the trade (step-6 finding D4).
+
+     The chip's own DECLARED box is 2 × 1.5px border + 2 × 5px padding +
+     11px × 1 line-height = 24px. `margin-block: -2.5px` takes its OUTER box
+     to 19px, and 19px is what the row reserves in BOTH states. The card
+     grows by 19 − the kicker's 11px line = +8px.
+
+     Measured in Chrome over plan 043 §11's fixture at 1440×900, 390×844,
+     360×800 and 320×700. `tape → chip` is the worst case over the four cards
+     and the four viewports on the painted `getBoundingClientRect` basis; the
+     rhythm figures are layout (`offsetTop`), which is the basis DESIGN.md's
+     4pt scale is written in:
+
+       row    growth   margin-block   tape→chip   top inset / kicker→title
+       24px    +13px      0            11.14px      31 / 14
+       20px     +9px     -2px           9.14px      29 / 12
+     → 19px     +8px     -2.5px         8.64px      28 / 12   ← shipped
+       18px     +7px     -3px           8.14px      28 / 11
+       11px      0px     -6px           4.14px      24 /  8   (main's rhythm)
+
+     19px is chosen rather than landed on. The kicker gains growth/2 of
+     leading on each side, so the pending card's two rhythm terms are
+     24 + g/2 and 8 + g/2; both stay on the 4pt scale only when g ≡ 0 (mod 8),
+     and the next such point after 8 is 16px of growth — worse than the 13 it
+     replaces. 19px is therefore the ONLY intermediate row height that cuts
+     the growth AND leaves the pending card's rhythm on the scale.
+
+     `declared >= used` is still the invariant, never `declared == used`:
+     Blink floors the 1.5px border to 1px at dpr 1, 2 and 3 alike, so the
+     chip PAINTS 23px (21px at the mobile padding) and overhangs the row by
+     2.5px above and below, into the card's own 24px top padding — 15px of
+     layout clearance to the tape above and 6px to the title below, both
+     measured. ONE constant, no breakpoint-dependent height, and the sum of
+     the declarations is the only thing a stylesheet-text test can honestly
+     check (`T-WEB-S221`). */
+  --done-chip-box: 19px;
+
   position: relative;
   display: block;
   background: var(--paper-card);
@@ -333,7 +373,106 @@
   transform: rotate(-4deg);
 }
 
+/* ——— the done chip's row ————————————————————————————————————————————
+   Kicker left, chip right, in ONE FLOW ROW — this sheet's own `.rowLink`
+   idiom. Nothing is positioned, so nothing can overlap the kicker, the tape
+   or the title at any width, and `impeccable`'s `text-occlusion` rule (which
+   was measured BLIND to the corner-stamp design it replaces, occFrac 0.286
+   against a 0.45 bar) has nothing to be lenient about.
+
+   ZERO CLS: the row is `--done-chip-box` tall in BOTH states, so hydration
+   adds the chip into space that was already there. Measured identical at all
+   four viewports — 288 × 112 pending and done at 1440×900. This reserves no
+   EMPTINESS — the kicker occupies the row in the pending state, which is what
+   `day-view.tsx`'s "no placeholder, no greyed slot" forbids. The price is
+   real and permanent and is written down rather than argued away: every day
+   card is **8px** taller in both states (288 × 104 → 288 × 112 at 1440×900,
+   +7.7%), and the kicker gains 4px of leading on each side, taking the
+   pending card's rhythm from 24 / 8 to 28 / 12 — still on DESIGN.md's 4pt
+   scale, which is why the dial sits at 19 and not at 18 or 20.
+
+   THE CHIP OVERHANGS THE ROW BY 2.5px, AND STAYS IN FLOW. `margin-block` is
+   NOT `position`: the chip is still a flex item, still cannot overlap the
+   kicker at any width, and `impeccable`'s `text-occlusion` rule still has
+   nothing to be lenient about. What the negative margin removes is the
+   chip's contribution to the row's HEIGHT, not its participation in the
+   row's layout. Layout clearance for the overhang: 15px to the tape above,
+   6px to the title below.
+
+   The measured clearances at 1440×900, on a 288px card with a 246px content
+   measure, painted `getBoundingClientRect` basis, worst case over the four
+   cards: tape → chip 8.64px vertically and 5.17px horizontally (the latter
+   on the `JOGADO` card, the tightest relationship here), chip → title
+   2.17px, and 80.67px of horizontal slack on the widest row (`Palavras`
+   71.77px + 12px gap + `JOGADO` 81.56px).
+   Nothing wraps at 1440, 390, 360 or 320. `.cardTop` overflows its content
+   box in the done state because the rotated chip's bounding box exceeds its
+   layout box; it is absorbed by `.card`'s 20px side padding and produces no
+   page-level horizontal scroll at any viewport — do not "fix" it by dropping
+   the rotation, which is a DESIGN.md signature. */
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--done-chip-box);
+}
+
+/* The Game-card chip, carried over from the hub (`app/page.module.css`) —
+   same register, same ring, same rotation.
+
+   The RING keeps the accent and the WORD does not (ADR-0041 decisions 1 and
+   5). WCAG 1.4.11's decorative exemption applies because the enclosed word
+   carries the whole message: the ring is 2.8501:1 on card paper worst case
+   (mustard L 0.29477163 against `--paper-card` L 0.93262753) and the word is
+   `--ink` #211D19 at 15.6663:1. Termo is the only accent that needs the
+   exemption at all — sudoku 7.8385:1, binairo 5.5377:1 and nonogram 4.5063:1
+   clear the 3:1 non-text floor unaided. `impeccable`'s `low-contrast` never
+   evaluates a border, so `T-WEB-S73`'s ring scan is the gate here, not the
+   detector (ADR-0041 consequence (f)).
+
+   `line-height: 1` is declared rather than inherited, and it makes this chip
+   DELIBERATELY shorter than the hub's. The hub's chip, measured three ways
+   because the single figure this comment used to carry (29.34px) is none of
+   them: used box **28.5px** (2 × 1px floored border + 2 × 5px padding + a
+   16.5px line), `offsetHeight` **29px**, painted rect through its own
+   rotation **31.8px**. This one's used box is **23px** — ~19% tighter than
+   the hub's used box, the only basis on which the two are comparable. Two
+   reasons, both recorded in ADR-0056 consequence (e) — inheriting the hub's
+   16.5px line would take the declared box to ~29.5px and, at the same
+   margins, the row to ~24.5px, so +13.5px of permanent card growth instead
+   of +8 (arithmetic on the measured line box, not a fourth measurement); and
+   with the term inherited the box arithmetic is not in this sheet at all, so
+   `T-WEB-S221` could not be written.
+
+   `margin-block: -2.5px` is the dial, and it belongs to `--done-chip-box`'s
+   comment above rather than to this rule: it takes the chip's 24px declared
+   box to a 19px OUTER box so the row can reserve 19 instead of 24. It is a
+   margin and not a `position`, so the chip stays a flex item and keeps every
+   overlap property the row's comment claims. */
+.doneChip {
+  flex: none;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 5px var(--space-3);
+  margin-block: -2.5px;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  /* A stamp, pressed slightly crooked — the system's static rotation, never
+     an animation (DESIGN.md). No `transition` here, ever: `layout-transition`
+     bans transitions on layout properties and this box is one. */
+  transform: rotate(-3deg);
+}
+
 .cardKicker {
+  /* So a longer kicker SHRINKS rather than pushing the chip out of the card.
+     Both boxes are flex items in one row, so the failure mode of a future
+     longer kicker is a wrapped kicker and never an occluded chip. */
+  min-width: 0;
   margin: 0;
   font: var(--text-kicker);
   letter-spacing: 0.16em;
@@ -406,5 +545,23 @@
 
   .cards {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The hub's own mobile step-down (`app/page.module.css`): a tighter box,
+     and NOT its 10px type. 11px is the legibility floor for functional text,
+     the rule `.cardKicker` follows — and NOTHING MECHANICAL HOLDS IT HERE.
+     `impeccable`'s `undersized-ui-text` was measured firing on a 9px chip
+     with `aria-hidden=""` and NOT firing with `aria-hidden="true"`, which is
+     what React actually ships, because its `EXEMPT_CONTEXT` selector list
+     includes `[aria-hidden="true"]`. The detector is structurally blind to
+     this element at any size. The floor is held by DESIGN.md and by review,
+     and this comment says so rather than naming a gate that cannot fire.
+
+     Declared box 2 × 1.5 + 2 × 4 + 11 = 22px; the base rule's
+     `margin-block: -2.5px` takes its OUTER box to 17px, inside the unchanged
+     19px row (used 21px, painted, overhanging by 1px each side). The
+     invariant `T-WEB-S221` checks is `<=`, not `==`. */
+  .doneChip {
+    padding: var(--space-1) 9px;
   }
 }

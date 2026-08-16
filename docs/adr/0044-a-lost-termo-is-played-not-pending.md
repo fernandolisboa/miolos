@@ -257,7 +257,9 @@ done would be a lie the player can catch."*
   count.** Its header already requires this: *"A per-game payload field
   that can move INDEPENDENTLY of `concluded` breaks that and must be added
   below."* It compares exactly five chrome fields today
-  (`use-record-snapshot.ts:116-127`). `answer` and `outcome` do not need
+  (in `use-record-snapshot.ts`'s `sameToTheReader` — by SYMBOL and not by
+  line, because #96's docblock rewrite moved the paragraph this pointed at,
+  `:116-127` → `:146-156`). `answer` and `outcome` do not need
   adding — the record schema now makes their lockstep with `concluded` a
   parse-time invariant. #27 owes Termo's copy of `T-WEB-S64` for that
   lockstep, asserted on `answer`.

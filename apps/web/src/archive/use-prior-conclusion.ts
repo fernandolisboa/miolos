@@ -32,8 +32,10 @@ import { readPlayRecord } from "../play/play-record";
  */
 
 /**
- * One slot, for the same reason `use-record-snapshot.ts` keeps one: a
- * browser has one `localStorage` and one archive page renders at a time.
+ * One slot — and NOT for the reason `use-record-snapshot.ts` keeps a staleness-swept
+ * keyed `Map` (#96, ADR-0056 decision 1). That module has per-game consumers
+ * on one page and this one has a measured bound of ONE consumer, so the two
+ * caches are deliberately different shapes.
  *
  * **The slot is scoped to the MOUNT, not to the module**, and that is the
  * whole correctness of it (#31 step-6 finding F4). The hazard here is a key

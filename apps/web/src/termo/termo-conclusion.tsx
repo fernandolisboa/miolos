@@ -54,10 +54,11 @@ export function TermoConclusion({
   readonly live?: TermoOutcomeSource;
 }) {
   // The SAME `(game, date)` key `<ConclusionView/>` subscribes with,
-  // deliberately: `use-record-snapshot`'s cache is a single module slot keyed
-  // `{game, date}`, so two subscribers on one key share one cached object and
-  // neither re-renders. Two subscribers on DIFFERENT keys would thrash that
-  // slot and `useSyncExternalStore` would loop.
+  // deliberately. `use-record-snapshot`'s cache is a `(game, date)`-keyed
+  // `Map` (#96, ADR-0056 decision 1), so two different keys no longer thrash
+  // each other — that defect is gone. Sharing this one still buys what
+  // matters: ONE entry and ONE live consumer of it, so both subscribers get
+  // the same cached object back and neither re-renders.
   const snapshot = useRecordSnapshot("termo", date);
   const stored = snapshot.hydrated ? snapshot.record : undefined;
   // The record's `superRefine` ties `answer` and `outcome` to `concluded`, so

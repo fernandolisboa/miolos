@@ -23,22 +23,24 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 040 (#34), re-derived by grep over the branch at its step-5 exit. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 043 (#96), re-derived by grep over the branch at its step-5 exit. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 **Plan 037's reservations are now fully resolved.** PR 2 spent `T-DB-S44…S55` and `S57`, `T-WEB-S166…S186` and `T-LINT-S35…S37`; the tails `T-WEB-S187`/`S188` and `T-LINT-S38` were its reserved review-round headroom and are **burned** below, unspent. Nothing in plan 037's ranges is a live reservation any more, and "next free" below is a plain frontier again.
 
 The grep that produces it, per area — titles only, so a cross-reference in a comment is not mistaken for an allocation:
 
 ```
-grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
+grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u | sort -t S -k2 -n
 ```
+
+The second `sort` is not decoration. `sort -u` alone is **lexical**, so it orders `S99` after `S222` and a frontier read off its tail is wrong by whatever the largest two-digit id happens to be. Deduplicate lexically, then re-sort numerically on the field after the `S`.
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
 | `T-CORE` | `S86` | `S84` | never used |
 | `T-DB` | `S59` | `S58` | `T-DB-21` |
 | `T-API` | `S109` | `S107` | `T-API-16` |
-| `T-WEB` | `S213` | `S212` | `T-WEB-23` |
+| `T-WEB` | `S225` | `S222` | `T-WEB-23` |
 | `T-LINT` | `S47` | `S46` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
@@ -96,6 +98,12 @@ Five existing claims were widened in place and correctly took **no** new id in P
 
 **Two landed claims were re-aimed in place at step 7 and correctly took no new id.** `T-WEB-S195` ("the button is disabled until the concluded record hydrates") moves its subject from Binairo to Termo, because blocker K3's fix means the three grid games no longer have a disabled window at all — same claim, same gate, the one game it is still true of — and gains two arms inside it, the grid games' record-free share and Termo's store-less omission. `T-WEB-S204` re-aims its root-card module-graph scan at `src/og/card.tsx`, the module that now builds the committed card, and swaps the "root card is not force-dynamic" arm for "there is no ninth route, and the asset pair exists": the claim was always *the card that reads nothing reaches no reader*, and the file it lives in moved.
 
+#96 (plan 043) reserved `T-WEB-S213…S224` and spent `T-WEB-S213…S222` at step 5. No `T-CORE`, `T-DB`, `T-API` or `T-LINT` id was reserved or spent: nothing outside `apps/web` moves. The tails `T-WEB-S223`/`S224` are the reserved review-round headroom and are **burned if unspent** per the rule below.
+
+**Two shipped suites were widened in place and correctly took no new id — the `T-WEB-S100` burn precedent.** `T-WEB-S181` (`archive-copy.test.ts`) gains the four `archive.day.*` keys in its *"every archive string is reachable"* arm; its `copy.result` and `copy.meta` exact key-lists are untouched, and the ticket brief's warning that adding archive keys is a closed-list edit was verified false against the file — `copy.day` carries no key-list assertion. `T-WEB-S73` (`ink-on-accent.test.ts`) has its *"keeps the two accent rings"* arm rebuilt as a **scan with a closed five-site list**: the arm was an enumeration of two literals under a title that said *"the accent rings"*, which made the title false the moment #31 shipped a third ring (`late-result.module.css`'s postmark) that no test named. The scan closes the set, so a sixth reds on arrival (ADR-0056 decision 4).
+
+**One id carries three claims and is flagged rather than split.** `T-WEB-S217` asserts that the chip renders on the concluded card and no other, that it publishes no duration, and that it carries `aria-hidden`. Per the rule above a new letter is opened only when the space has become ambiguous, and it has not: all three are one claim about what a done card renders, asserted in one render. If a step-6 reviewer wants it split, `T-WEB-S217a`/`S217b` is the move and the burned tails stay burned.
+
 **One landed claim was re-aimed in place at step 5 and correctly took no new id** — `T-WEB-S96` in `termo-conclusion.test.tsx`. Its two assertions rode `role="status"`, which stopped being unique on the conclusion the moment the share button's always-rendered live region landed: one of them asserted *"no live region"* and became false, the other used a bare `getByRole("status")` and became ambiguous. Both are re-aimed at the outcome announcer's own class — which is the claim S96 was always making — with #34 named in the comment, and the first is re-aimed **with a counted floor** (exactly one `role="status"` element survives and its text is empty) so a future ticket cannot reintroduce a chatty region under it. A claim re-aimed at the element it was always about is the same claim. `T-WEB-S173` is untouched — it is a green suite about three routes #34 does not change. **And the record half of that assertion was owed and was missed for a full review round** (step-6 finding B2): *"no live region"* was not only a test's claim, it is [ADR-0043](../adr/0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md) decision 10's closing sentence, so re-aiming the test discharged half the duty and left the ADR false. It is annotated at step 7 pass 2. **The rule this leaves behind: a landed assertion that had to be re-aimed because it became FALSE is a pointer at a record, and belongs in the amendment audit's inputs, not only in this file.**
 
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead — **and "new" means anything not yet on `main`, this branch's own step-7 output included**: `T-DB-S53a`/`S53b`, `T-WEB-S177a` and `T-LINT-S37a` are all that rule applied to duplicates created in the same pull request that removed the others.
@@ -118,6 +126,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-CORE-S85`, `T-API-S108` | tails of plan 037's PR-1 ranges — the reserved review-round headroom, unspent at PR 1's exit |
 | `T-WEB-S187`, `T-WEB-S188`, `T-LINT-S38` | tails of plan 037's PR-2 ranges — the reserved review-round headroom, unspent at PR 2's exit |
 | `T-WEB-S210`, `T-WEB-S211` | tails of plan 040's `T-WEB` range — #34's reserved review-round headroom, unspent at step 5's exit. **`T-LINT-S45` is NOT here**: plan 040 listed it as headroom, and it was spent on the OG wall's legal-imports control instead |
+| `T-WEB-S223`, `T-WEB-S224` | tails of plan 043's `T-WEB` range — #96's reserved review-round headroom, unspent at step 5's exit |
 | `T-CORE-S6` | **predates #27.** Plan 018 reserved it for `completion-contract.test.ts` (`docs/plans/018-…:1376`); the assertion landed unmarked. Recorded here so the next re-derivation does not spend a pass re-investigating the gap |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.

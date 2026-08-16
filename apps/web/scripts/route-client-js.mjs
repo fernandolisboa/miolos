@@ -29,7 +29,12 @@
  * comment claimed: measured on this branch after #34's Batch E, the three
  * GRID play routes come in at binairo 35.3, sudoku 31.5 and nonogram 37.5 KB
  * — 88 %, 79 % and 94 % of budget — so the noisiest clean route has 2.5 KB of
- * slack, not 20. Note the direction, and note that the DELTA can move on a
+ * slack, not 20. RE-CHECKED at #96 rather than carried forward (step-6
+ * finding M6), over a fresh `rm -rf .next && pnpm build`: binairo **35.4**,
+ * sudoku **31.6**, nonogram **37.5**. The load-bearing figure — nonogram's
+ * 2.5 KB of slack — is unchanged; the other two moved by one rounding step,
+ * on a ticket that touches no grid route, which is itself the point the next
+ * sentence makes. Note the direction, and note that the DELTA can move on a
  * ticket that touches no grid route at all: #19 grew `/` (the BASELINE,
  * hub-streak) AND the game routes (the conclusion streak card), and the card
  * side won by ~0.5 KB, so every measured delta moved UP a hair rather than
@@ -213,10 +218,24 @@ const BUDGETED = [
   // #31 (ADR-0053): the seven archive routes, in Next's own route-pattern
   // spelling (verified against `.next/diagnostics/route-bundle-stats.json`).
   //
-  // The index, the month page and the day page ship near-zero client JS and
-  // ride the shared 40 KB with enormous slack — measured at -38.7 KB against
-  // `/`, i.e. LESS than the hub. They are BUDGETED anyway, because "ships
-  // nothing today" is precisely the route that acquires a library silently.
+  // The index and the month page ship near-zero client JS and ride the
+  // shared 40 KB with enormous slack — measured at -40.1 KB against `/`, i.e.
+  // LESS than the hub. The DAY PAGE no longer does, and this comment was
+  // written to be re-checked by the first ticket that put JS on these routes:
+  // #96 gives `/arquivo/[data]` a per-game done chip, so its card is a client
+  // island carrying `use-record-snapshot` -> `play-record` (zod +
+  // `@miolos/core`) and it measures **-30.2 KB** against `/` — ~8.5 KB of new
+  // client JS over the -38.7 KB this route measured before the chip,
+  // re-measured at step 7 over a fresh `rm -rf .next && pnpm build`, still
+  // 70 KB inside the budget's ceiling. The `messages` chunk
+  // did NOT follow it (the card takes pre-composed strings as props and
+  // imports no copy module): measured with the marker probe over the same
+  // build, `/arquivo/[data]` reports zero `messages` chunks while `/` reports
+  // one, so the enumeration at the top of this file stands as written.
+  //
+  // All three were BUDGETED from the start precisely because "ships nothing
+  // today" is the route that acquires a library silently — which is the
+  // sentence this edit vindicates rather than retires.
   //
   // The three grid play routes came in BELOW their daily twins (binairo 18.2
   // vs 33.4, nonogram 19.7 vs 35.5, sudoku 14.4 vs 29.6), and the reason is

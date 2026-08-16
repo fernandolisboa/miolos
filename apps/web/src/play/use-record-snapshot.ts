@@ -39,29 +39,90 @@ const serverSnapshot = (): RecordSnapshot => SERVER_SNAPSHOT;
  * conclusion routes live in one SPA session, `/binairo/concluido →
  * /sudoku/concluido` on the same day would otherwise hand back the Binairo
  * snapshot and stamp another game's time.
+ *
+ * ONE ENTRY PER KEY, not one slot (ADR-0056 decision 1). A single slot is
+ * the same bug the paragraph above describes, one level down: N consumers
+ * with different keys evict each other on every read, so every one of them
+ * gets a fresh object back and React throws `Maximum update depth exceeded`.
+ * It bites across GAMES — four per-game consumers on one page is what
+ * `/arquivo/<data>`'s day card is — and across DATES, which is the axis that
+ * went unrecorded until the date became a URL variable.
+ *
+ * NOTHING IS EVER EVICTED ON THE READ PATH, AT ANY N (ADR-0056 decision 1,
+ * step-6 blocker B2). The first repair kept a count bound and trimmed inside
+ * `readSnapshot`; measured, bound + 1 live consumers reinstated exactly the
+ * loop the `Map` was introduced to delete — `Maximum update depth exceeded`
+ * at 17 against a 16-entry cache, plain and in StrictMode. A cache whose
+ * overflow is a white screen is worse than one that grows, and the guard was
+ * weaker than it read: the test that held it pinned call-site FILES, so an
+ * archive MONTH page reusing `day-card.tsx` (31 × 4 = 124 consumers) would
+ * have added no file, stayed green and crashed. The count bound is gone. No
+ * N of live consumers can loop, because a read can only ever ADD.
+ *
+ * WHAT BOUNDS IT INSTEAD IS STALENESS, SWEPT OFF THE POLL AND NEVER OFF A
+ * READ. `subscribeToPlayRecords`'s interval calls `pruneStaleSnapshots`
+ * before it notifies, dropping every entry no read has touched for
+ * `SNAPSHOT_STALE_MS`. A live consumer is re-read once per second by its own
+ * interval, so its entry's age is at most ~1 s and the sweep provably cannot
+ * reach it; what the sweep collects is the keys left behind by navigation --
+ * and only while some consumer is still mounted, since the interval IS the
+ * collector. A page that unmounts every consumer leaves its keys until the
+ * next mount ticks; retention is bounded by the session's distinct
+ * (game, date) space, not by the sweep.
+ * Its worst case is bounded degradation rather than a loop: if a background
+ * tab's timers are throttled hard enough that a live entry does age past the
+ * window, the sweep costs that consumer ONE extra render — the next read
+ * re-caches the key, and no timer can fire between two `getSnapshot` calls
+ * inside one synchronous render pass.
+ *
+ * AND THE `Map` WIDENS THE STALENESS WINDOW, deliberately. Under the single
+ * slot a cached snapshot died the moment another key was read, so the fields
+ * `sameToTheReader` does not compare (nonogram `grid`/`size`, termo `answer`/
+ * `outcome`) could only ever be briefly stale. Under the `Map` an entry
+ * survives as long as it is being read. That is safe ONLY because of the
+ * lockstep invariants named below — `T-WEB-S64` and the termo record's
+ * `superRefine` — which stop being belt-and-braces here and become
+ * load-bearing.
  */
-let cachedSnapshot:
-  | {
-      readonly game: Game;
-      readonly date: string;
-      readonly snapshot: RecordSnapshot;
-    }
-  | undefined;
+interface CachedSnapshot {
+  readonly snapshot: Extract<RecordSnapshot, { hydrated: true }>;
+  /** `Date.now()` at the last read this entry answered. Mutable on purpose:
+   *  touching it must NOT disturb `snapshot`'s identity. */
+  lastReadAt: number;
+}
+
+/**
+ * How long an entry survives with nothing reading it. Five times the poll
+ * interval, so an entry belonging to a live consumer cannot be swept even if
+ * four consecutive ticks are dropped.
+ */
+export const SNAPSHOT_STALE_MS = 5_000;
+
+const cachedSnapshots = new Map<string, CachedSnapshot>();
 
 function readSnapshot(game: Game, date: string): RecordSnapshot {
   const next = readPlayRecord(game, date);
-  const cached = cachedSnapshot;
-  if (
-    cached?.game === game &&
-    cached.date === date &&
-    cached.snapshot.hydrated &&
-    sameToTheReader(cached.snapshot.record, next)
-  ) {
+  const key = `${game}|${date}`;
+  const cached = cachedSnapshots.get(key);
+  if (cached !== undefined && sameToTheReader(cached.snapshot.record, next)) {
+    cached.lastReadAt = Date.now();
     return cached.snapshot;
   }
-  const snapshot: RecordSnapshot = { hydrated: true, record: next };
-  cachedSnapshot = { game, date, snapshot };
+  const snapshot = { hydrated: true, record: next } as const;
+  cachedSnapshots.set(key, { snapshot, lastReadAt: Date.now() });
   return snapshot;
+}
+
+/**
+ * The sweep, exported so `T-WEB-S214` can drive it directly instead of
+ * waiting out real time. Deleting from a `Map` while iterating it is defined
+ * and safe; a clock that goes backwards makes ages negative, which errs
+ * towards keeping an entry.
+ */
+export function pruneStaleSnapshots(now: number = Date.now()): void {
+  for (const [key, entry] of cachedSnapshots) {
+    if (now - entry.lastReadAt > SNAPSHOT_STALE_MS) cachedSnapshots.delete(key);
+  }
 }
 
 /**
@@ -70,12 +131,21 @@ function readSnapshot(game: Game, date: string): RecordSnapshot {
  * the caches its consumers keep, zero re-renders while the records stand
  * still.
  *
+ * THE POLL IS ALSO THE CACHE'S ONLY COLLECTOR (ADR-0056 decision 1). Sweep
+ * first, notify second: the sweep drops what no consumer has read for
+ * `SNAPSHOT_STALE_MS`, and the notify that follows re-stamps every live key.
+ * Per hook instance it re-reads only its OWN key; the aggregate holds
+ * because every live consumer owns an interval.
+ *
  * Exported because `day-state.ts` subscribes to the same store with a
  * different projection (plan 018 §11.2) — one subscription mechanism, so a
  * settled sync can never reach one reader and not the other.
  */
 export function subscribeToPlayRecords(onStoreChange: () => void): () => void {
-  const interval = setInterval(onStoreChange, 1000);
+  const interval = setInterval(() => {
+    pruneStaleSnapshots();
+    onStoreChange();
+  }, 1000);
   window.addEventListener("storage", onStoreChange);
   return () => {
     clearInterval(interval);

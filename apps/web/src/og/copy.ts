@@ -36,7 +36,8 @@ import { messages } from "../i18n";
  * strings they already compose.
  *
  * None of these strings contains `então`, `mamãe` or `época`
- * (`FORBIDDEN_EVERYWHERE`, `route-client-js.mjs:350`), and `T-WEB-S206a`
+ * (`route-client-js.mjs`'s `const FORBIDDEN_EVERYWHERE` — by symbol, because
+ * the line has rotted twice), and `T-WEB-S206a`
  * keeps it audited — the `messages.share` half is `T-WEB-S206`.
  */
 export const ogCopy = {

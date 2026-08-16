@@ -73,6 +73,20 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
       "monthDescription",
       "monthTitle",
     ]);
+    // The day card's three accessible names and its two chip words (#96).
+    // Additive by choice: `copy.day` carries no exact key-list assertion, so
+    // nothing above is a closed list this had to be added to.
+    expect(copy.day.cardAria("Sudoku", "1 de agosto de 2026")).toBe(
+      "Jogar Sudoku de 1 de agosto de 2026",
+    );
+    expect(copy.day.cardAriaDone("Sudoku", "1 de agosto de 2026")).toBe(
+      "Ver o resultado do Sudoku de 1 de agosto de 2026",
+    );
+    expect(copy.day.cardAriaPlayed("Termo", "1 de agosto de 2026")).toBe(
+      "Ver o resultado do Termo de 1 de agosto de 2026 — jogado",
+    );
+    expect(typeof copy.day.done).toBe("string");
+    expect(typeof copy.day.played).toBe("string");
     // Composed WHOLE in the module, never assembled in a component.
     expect(copy.dayRowAria("1 de agosto de 2026", ["Binairo", "Termo"])).toBe(
       "1 de agosto de 2026 — Binairo, Termo",
@@ -122,6 +136,50 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
     // shipped one names connectivity, and a rate cap is not connectivity.
     expect(messages.archive.result.pending).not.toBe(
       messages.conclusion.sync.pending,
+    );
+  });
+});
+
+/**
+ * T-WEB-S222 (#96, plan 043 D3/R14, ADR-0056 decision 2). The day card's chip
+ * words ARE the hub's — one word, one register, one definition — and the
+ * assertion has to red on both ways that can stop being true.
+ *
+ * The IDENTITY arms catch a re-point: one block edited to carry its own
+ * literal while the other keeps the const. The VALUE arms catch a rename that
+ * moves both surfaces together, which is the failure a cross-block comparison
+ * alone cannot see — `copy.day.done === messages.hoje.done` is one binding
+ * compared with itself, and stays green while `Feito` silently becomes
+ * `Concluído` everywhere.
+ *
+ * The two overlap, and that is stated rather than dressed up as four
+ * independent facts: with both value arms present a re-point already reds
+ * one of them. The identity arms are kept because they are the ones that
+ * still say "one definition" on the day the literal is deliberately changed
+ * — the reversal ADR-0056 decision 2 describes, which must be a decision that
+ * edits this test and never a drift that slips past it.
+ */
+describe("the archive chip wears the hub's own words (T-WEB-S222)", () => {
+  it("points both registers at one definition", () => {
+    expect(messages.archive.day.done).toBe(messages.hoje.done);
+    expect(messages.archive.day.played).toBe(messages.hoje.played);
+  });
+
+  it("pins the words themselves, so a rename cannot move both silently", () => {
+    expect(messages.hoje.done).toBe("Feito");
+    expect(messages.archive.day.done).toBe("Feito");
+    expect(messages.hoje.played).toBe("Jogado");
+    expect(messages.archive.day.played).toBe("Jogado");
+  });
+
+  it("keeps the day ROW's lowercase tabular register split, as shipped", () => {
+    // `messages.ts` documents a deliberate split for this one word across two
+    // registers — the chip's capitalised `Jogado` against a tabular value
+    // slot's lowercase `jogado` (plan 022 §15.3). The chip joining the
+    // capitalised side is what this ticket does; the split itself is
+    // untouched, and this arm is what says so.
+    expect(messages.archive.day.played).not.toBe(
+      messages.archive.day.played.toLowerCase(),
     );
   });
 });

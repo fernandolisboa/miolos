@@ -21,8 +21,11 @@ import { useRecordSnapshot } from "../src/play/use-record-snapshot";
  * The comparator is module-private, so it is driven where its output lands:
  * on the snapshot `useRecordSnapshot` hands back. A snapshot object that
  * survives a store change IS the comparator answering "same to the reader".
- * Each case uses its own date, because the cache is one module-level slot
- * keyed `{game, date}`.
+ * Each case uses its own date, because the cache is a module-level `Map`
+ * keyed `{game, date}` (#96, ADR-0056 decision 1) — so distinct dates are
+ * distinct ENTRIES and the cases cannot collide. Before that repair the same
+ * test design held for the opposite reason: one slot, which every case
+ * evicted from the one before it.
  */
 
 type Tiles = TermoPlayRecord["guesses"][number]["tiles"];

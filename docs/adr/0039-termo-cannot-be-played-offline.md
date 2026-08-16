@@ -248,7 +248,10 @@ project's shared layer would get bent around Termo one guess at a time.
 - **(d) `use-record-snapshot.ts`'s `sameToTheReader` must gain the guess
   count.** It compares exactly five chrome fields —
   `concluded`/`pendingSync`/`syncOutcome`/`elapsedMs`/`hintsUsed`,
-  `use-record-snapshot.ts:116-127` — and its own header requires that any
+  in `use-record-snapshot.ts`'s `sameToTheReader` — cited by SYMBOL and not
+  by line, because #96's docblock rewrite moved the paragraph this pointed at
+  (`:116-127` → `:146-156`) and a line into a comment rots on the next
+  comment edit — and its own header requires that any
   per-game payload field which moves INDEPENDENTLY of `concluded` be added
   there. Termo's guess list moves on every turn while all five stand still;
   Nonogram escaped this only through the `grid`/`concluded` lockstep.
