@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { GAMES, type Game } from "@miolos/core";
@@ -15,7 +15,8 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 import {
-  SNAPSHOT_CACHE_LIMIT,
+  pruneStaleSnapshots,
+  SNAPSHOT_STALE_MS,
   useRecordSnapshot,
 } from "../src/play/use-record-snapshot";
 
@@ -117,12 +118,17 @@ const BUILDERS: Record<Game, (date: string, elapsedMs: number) => PlayRecord> =
     termo: termoRecord,
   };
 
-/** A distinct, recognisable duration per (game, date) pair. */
+/**
+ * A distinct, recognisable duration per (game, date) pair — distinct along
+ * BOTH axes, so a probe handed a neighbour's entry cannot coincide with its
+ * own. Derived from `GAMES` rather than from a literal list standing beside
+ * it: a fifth game would otherwise take `indexOf` → `-1` on the literal and
+ * collide with the first (step-6 finding m7).
+ */
 function elapsedFor(game: Game, date: string): number {
-  const gameTerm = (
-    ["binairo", "sudoku", "nonogram", "termo"] as const
-  ).indexOf(game);
-  return 100_000 + gameTerm * 1_000 + (date === DATE ? 0 : 7);
+  const gameTerm = GAMES.indexOf(game);
+  const dateTerm = Number(date.replaceAll("-", "")) % 10_000;
+  return 1_000_000 + gameTerm * 100_000 + dateTerm;
 }
 
 function seed(game: Game, date: string): void {
@@ -134,11 +140,15 @@ function seed(game: Game, date: string): void {
  * mounted once per card. It renders what it read, so the assertion can be
  * about the record and not merely about survival.
  */
+const renderCounts = new Map<string, number>();
+
 function Probe({ game, date }: { readonly game: Game; readonly date: string }) {
   const snapshot = useRecordSnapshot(game, date);
   const record = snapshot.hydrated ? snapshot.record : undefined;
+  const key = `${game}|${date}`;
+  renderCounts.set(key, (renderCounts.get(key) ?? 0) + 1);
   return (
-    <span data-testid={`${game}|${date}`}>
+    <span data-testid={key}>
       {record === undefined
         ? "none"
         : `${record.game}|${record.date}|${String(record.elapsedMs)}`}
@@ -154,6 +164,7 @@ function expectOwnRecord(game: Game, date: string): void {
 
 beforeEach(() => {
   window.localStorage.clear();
+  renderCounts.clear();
 });
 
 describe("useRecordSnapshot is N-consumer safe (T-WEB-S213)", () => {
@@ -250,52 +261,119 @@ function callSiteFiles(): string[] {
   return found.sort();
 }
 
+/** `n` (game, date) pairs, `GAMES.length` per date, all distinct. */
+function pairs(n: number): { game: Game; date: string }[] {
+  return Array.from({ length: n }, (_unused, i) => ({
+    game: GAMES[i % GAMES.length] as Game,
+    // 2026-07-01 upwards; `n / 4` distinct dates, ≤ 31 for every n used here.
+    date: `2026-07-${String(Math.floor(i / GAMES.length) + 1).padStart(2, "0")}`,
+  }));
+}
+
 /**
- * T-WEB-S214 (plan 043 §4 seam 2, ADR-0056 decision 1). The bound, in the two
- * forms a test can actually hold.
+ * T-WEB-S214 (plan 043 §4 seam 2, ADR-0056 decision 1, step-6 blocker B2).
  *
- * (a) A FLOOR under the constant, rendered at that floor. `bound >= live
- *     maximum` is the safe property — 16 live consumers against a 16-entry
- *     cache were measured stable and 17 measured looping — so a test that
- *     renders fewer than it declares proves nothing about the declaration.
- * (b) An INVENTORY of the call-site files, so a new consumer file cannot
- *     arrive without the bound being re-derived against it.
+ * THE PROPERTY IS "ANY N", AND IT IS EXERCISED RATHER THAN DECLARED. The
+ * first repair replaced one cache slot with a `Map` bounded at 16 entries and
+ * trimmed on the read path, and this test held a FLOOR under that constant
+ * plus an inventory of call-site FILES. Both arms were green while bound + 1
+ * live consumers reinstated the original defect — measured `Maximum update
+ * depth exceeded` at 17, plain and in StrictMode — and the file inventory
+ * could not see it coming, because the surface most likely to raise the mount
+ * count (an archive month page, 31 × 4 = 124 consumers) reuses
+ * `app/arquivo/day-card.tsx` and adds no file.
  *
- * The inventory's limit, stated because it is easy to over-read: it pins
- * FILES, not mounts. A surface that reuses a file already on the list adds no
- * row and stays green while raising the live maximum — an archive MONTH page
- * would mount 31 × 4 through `app/arquivo/day-card.tsx` alone. That growth is
- * held by ADR-0056 decision 1, by the hook's docblock and by review, and this
- * comment says so rather than letting the green be read as a guarantee.
+ * So the bound is gone (`readSnapshot` can only ever ADD) and the assertion
+ * is the property itself, at 4, 16, 17, 32 and 128 live consumers: no loop,
+ * and every consumer reading ITS OWN record. 17 and 128 are on the list
+ * because they are the two shapes the old bound failed at — one past it and
+ * one far past it.
+ *
+ * THE SWEEP IS THE ONLY THING THAT DELETES, and both directions are asserted:
+ * it cannot collect an entry a live consumer just read, and when it does
+ * collect one the cost is exactly ONE re-render rather than a loop.
+ *
+ * The call-site inventory survives, under a DIFFERENT justification — there
+ * is no bound left for it to force a re-derivation of. What a new consumer
+ * file now owes is a read against the widened staleness window: an entry
+ * lives as long as it is read, so a reader rendering a payload field that
+ * `sameToTheReader` does not compare is handed a stale snapshot. That is the
+ * hook's docblock's standing obligation, and this arm is what makes a new
+ * reader arrive in front of it.
  */
-describe("the snapshot cache's bound (T-WEB-S214)", () => {
-  it("declares a limit at or above the games-times-two floor", () => {
-    expect(SNAPSHOT_CACHE_LIMIT).toBeGreaterThanOrEqual(GAMES.length * 2);
-  });
+describe("the snapshot cache is stable at any N (T-WEB-S214)", () => {
+  for (const n of [4, 16, 17, 32, 128]) {
+    it(`renders ${String(n)} live consumers, each reading its own record`, () => {
+      const consumers = pairs(n);
+      for (const { game, date } of consumers) seed(game, date);
 
-  it("renders GAMES.length * 2 live consumers without looping", () => {
-    const dates = [DATE, OTHER_DATE];
-    for (const date of dates) for (const game of GAMES) seed(game, date);
+      render(
+        <>
+          {consumers.map(({ game, date }) => (
+            <Probe key={`${game}|${date}`} game={game} date={date} />
+          ))}
+        </>,
+      );
 
+      expect(screen.getAllByTestId(/\|/).length).toBe(n);
+      for (const { game, date } of consumers) expectOwnRecord(game, date);
+      // A loop is `Maximum update depth exceeded`, but a cache thrashing just
+      // below that is still a defect: a mount settles in one render each.
+      for (const { game, date } of consumers)
+        expect(renderCounts.get(`${game}|${date}`)).toBe(1);
+    });
+  }
+
+  it("the sweep cannot collect an entry a live consumer has just read", () => {
+    const consumers = pairs(GAMES.length * 2);
+    for (const { game, date } of consumers) seed(game, date);
+    // Read BEFORE the render, so every entry's `lastReadAt` is at or after it
+    // and `beforeMount + SNAPSHOT_STALE_MS` is inside the window for all of
+    // them — the boundary, deterministically, however long the mount takes.
+    const beforeMount = Date.now();
     render(
       <>
-        {dates.map((date) =>
-          GAMES.map((game) => (
-            <Probe key={`${game}|${date}`} game={game} date={date} />
-          )),
-        )}
+        {consumers.map(({ game, date }) => (
+          <Probe key={`${game}|${date}`} game={game} date={date} />
+        ))}
       </>,
     );
 
-    expect(screen.getAllByTestId(/\|/).length).toBe(GAMES.length * 2);
-    for (const date of dates)
-      for (const game of GAMES) expectOwnRecord(game, date);
+    // Exactly what the poll does, one tick later: sweep, then notify.
+    act(() => {
+      pruneStaleSnapshots(beforeMount + SNAPSHOT_STALE_MS);
+      window.dispatchEvent(new StorageEvent("storage"));
+    });
+
+    for (const { game, date } of consumers) {
+      expectOwnRecord(game, date);
+      expect(renderCounts.get(`${game}|${date}`)).toBe(1);
+    }
   });
 
-  it("pins the inventory of call-site files, so a new one re-derives the bound", () => {
-    // Five files, and the live maximum re-derived against them: a conclusion
-    // mounts 2 (the shared reader plus its nested per-game one, same key), and
-    // `/arquivo/<data>` mounts 4 (one card per game, one date). Bound 16.
+  it("collects an entry past the window, and that costs one render, not a loop", () => {
+    const consumers = pairs(GAMES.length * 2);
+    for (const { game, date } of consumers) seed(game, date);
+    render(
+      <>
+        {consumers.map(({ game, date }) => (
+          <Probe key={`${game}|${date}`} game={game} date={date} />
+        ))}
+      </>,
+    );
+
+    act(() => {
+      pruneStaleSnapshots(Date.now() + SNAPSHOT_STALE_MS + 1);
+      window.dispatchEvent(new StorageEvent("storage"));
+    });
+
+    for (const { game, date } of consumers) {
+      expectOwnRecord(game, date);
+      expect(renderCounts.get(`${game}|${date}`)).toBe(2);
+    }
+  });
+
+  it("pins the inventory of call-site files, so a new reader arrives in front of the staleness window", () => {
     expect(callSiteFiles()).toEqual([
       "app/arquivo/day-card.tsx",
       "src/archive/late-result.tsx",

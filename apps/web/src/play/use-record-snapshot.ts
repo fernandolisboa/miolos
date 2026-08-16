@@ -16,7 +16,7 @@
  * - nothing re-renders while nothing the reader shows has changed, because
  *   `readSnapshot` hands back the cached object in that case.
  */
-import { GAMES, type Game } from "@miolos/core";
+import type { Game } from "@miolos/core";
 import { useCallback, useSyncExternalStore } from "react";
 
 import { readPlayRecord, type PlayRecord } from "./play-record";
@@ -48,49 +48,77 @@ const serverSnapshot = (): RecordSnapshot => SERVER_SNAPSHOT;
  * `/arquivo/<data>`'s day card is — and across DATES, which is the axis that
  * went unrecorded until the date became a URL variable.
  *
- * THE BOUND IS A FLOOR, NOT A BUDGET: it must be AT LEAST the largest number
- * of simultaneously-mounted consumers, because eviction below that count
- * reinstates the loop. Measured: 16 live consumers against a 16-entry cache
- * are stable, 17 loop. Today the shipped maximum is 2 (a conclusion nests
- * one per-game consumer inside one shared one); the archive day card makes it
- * 4. `T-WEB-S214` holds a floor under the constant and pins the inventory of
- * call-site FILES — which is not the same as pinning the mount count, so a
- * surface that reuses an existing call site (an archive MONTH page would
- * mount 31 × 4 through the day card) has to be read against ADR-0056
- * decision 1 rather than against that test.
+ * NOTHING IS EVER EVICTED ON THE READ PATH, AT ANY N (ADR-0056 decision 1,
+ * step-6 blocker B2). The first repair kept a count bound and trimmed inside
+ * `readSnapshot`; measured, bound + 1 live consumers reinstated exactly the
+ * loop the `Map` was introduced to delete — `Maximum update depth exceeded`
+ * at 17 against a 16-entry cache, plain and in StrictMode. A cache whose
+ * overflow is a white screen is worse than one that grows, and the guard was
+ * weaker than it read: the test that held it pinned call-site FILES, so an
+ * archive MONTH page reusing `day-card.tsx` (31 × 4 = 124 consumers) would
+ * have added no file, stayed green and crashed. The count bound is gone. No
+ * N of live consumers can loop, because a read can only ever ADD.
  *
- * AND IT WIDENS THE STALENESS WINDOW, deliberately. Under the single slot a
- * cached snapshot died the moment another key was read, so the fields
+ * WHAT BOUNDS IT INSTEAD IS STALENESS, SWEPT OFF THE POLL AND NEVER OFF A
+ * READ. `subscribeToPlayRecords`'s interval calls `pruneStaleSnapshots`
+ * before it notifies, dropping every entry no read has touched for
+ * `SNAPSHOT_STALE_MS`. A live consumer is re-read once per second by its own
+ * interval, so its entry's age is at most ~1 s and the sweep provably cannot
+ * reach it; what the sweep collects is the keys left behind by navigation.
+ * Its worst case is bounded degradation rather than a loop: if a background
+ * tab's timers are throttled hard enough that a live entry does age past the
+ * window, the sweep costs that consumer ONE extra render — the next read
+ * re-caches the key, and no timer can fire between two `getSnapshot` calls
+ * inside one synchronous render pass.
+ *
+ * AND THE `Map` WIDENS THE STALENESS WINDOW, deliberately. Under the single
+ * slot a cached snapshot died the moment another key was read, so the fields
  * `sameToTheReader` does not compare (nonogram `grid`/`size`, termo `answer`/
  * `outcome`) could only ever be briefly stale. Under the `Map` an entry
- * survives the whole session. That is safe ONLY because of the lockstep
- * invariants named below — `T-WEB-S64` and the termo record's `superRefine` —
- * which stop being belt-and-braces here and become load-bearing.
+ * survives as long as it is being read. That is safe ONLY because of the
+ * lockstep invariants named below — `T-WEB-S64` and the termo record's
+ * `superRefine` — which stop being belt-and-braces here and become
+ * load-bearing.
  */
-export const SNAPSHOT_CACHE_LIMIT = GAMES.length * 4;
+interface CachedSnapshot {
+  readonly snapshot: Extract<RecordSnapshot, { hydrated: true }>;
+  /** `Date.now()` at the last read this entry answered. Mutable on purpose:
+   *  touching it must NOT disturb `snapshot`'s identity. */
+  lastReadAt: number;
+}
 
-const cachedSnapshots = new Map<
-  string,
-  Extract<RecordSnapshot, { hydrated: true }>
->();
+/**
+ * How long an entry survives with nothing reading it. Five times the poll
+ * interval, so an entry belonging to a live consumer cannot be swept even if
+ * four consecutive ticks are dropped.
+ */
+export const SNAPSHOT_STALE_MS = 5_000;
+
+const cachedSnapshots = new Map<string, CachedSnapshot>();
 
 function readSnapshot(game: Game, date: string): RecordSnapshot {
   const next = readPlayRecord(game, date);
   const key = `${game}|${date}`;
   const cached = cachedSnapshots.get(key);
-  if (cached !== undefined && sameToTheReader(cached.record, next)) {
-    return cached;
+  if (cached !== undefined && sameToTheReader(cached.snapshot.record, next)) {
+    cached.lastReadAt = Date.now();
+    return cached.snapshot;
   }
   const snapshot = { hydrated: true, record: next } as const;
-  // Written FIRST, trimmed after, so the key just read can never be the key
-  // evicted — the one ordering that cannot hand its own caller a fresh object
-  // on the very next read.
-  cachedSnapshots.set(key, snapshot);
-  if (cachedSnapshots.size > SNAPSHOT_CACHE_LIMIT) {
-    const oldest = cachedSnapshots.keys().next().value;
-    if (oldest !== undefined) cachedSnapshots.delete(oldest);
-  }
+  cachedSnapshots.set(key, { snapshot, lastReadAt: Date.now() });
   return snapshot;
+}
+
+/**
+ * The sweep, exported so `T-WEB-S214` can drive it directly instead of
+ * waiting out real time. Deleting from a `Map` while iterating it is defined
+ * and safe; a clock that goes backwards makes ages negative, which errs
+ * towards keeping an entry.
+ */
+export function pruneStaleSnapshots(now: number = Date.now()): void {
+  for (const [key, entry] of cachedSnapshots) {
+    if (now - entry.lastReadAt > SNAPSHOT_STALE_MS) cachedSnapshots.delete(key);
+  }
 }
 
 /**
@@ -99,12 +127,20 @@ function readSnapshot(game: Game, date: string): RecordSnapshot {
  * the caches its consumers keep, zero re-renders while the records stand
  * still.
  *
+ * THE POLL IS ALSO THE CACHE'S ONLY COLLECTOR (ADR-0056 decision 1). Sweep
+ * first, notify second: the sweep drops what no consumer has read for
+ * `SNAPSHOT_STALE_MS`, and the notify that follows re-reads — and therefore
+ * re-stamps — every key that is still live.
+ *
  * Exported because `day-state.ts` subscribes to the same store with a
  * different projection (plan 018 §11.2) — one subscription mechanism, so a
  * settled sync can never reach one reader and not the other.
  */
 export function subscribeToPlayRecords(onStoreChange: () => void): () => void {
-  const interval = setInterval(onStoreChange, 1000);
+  const interval = setInterval(() => {
+    pruneStaleSnapshots();
+    onStoreChange();
+  }, 1000);
   window.addEventListener("storage", onStoreChange);
   return () => {
     clearInterval(interval);
