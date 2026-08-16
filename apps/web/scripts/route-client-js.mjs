@@ -213,10 +213,22 @@ const BUDGETED = [
   // #31 (ADR-0053): the seven archive routes, in Next's own route-pattern
   // spelling (verified against `.next/diagnostics/route-bundle-stats.json`).
   //
-  // The index, the month page and the day page ship near-zero client JS and
-  // ride the shared 40 KB with enormous slack — measured at -38.7 KB against
-  // `/`, i.e. LESS than the hub. They are BUDGETED anyway, because "ships
-  // nothing today" is precisely the route that acquires a library silently.
+  // The index and the month page ship near-zero client JS and ride the
+  // shared 40 KB with enormous slack — measured at -40.1 KB against `/`, i.e.
+  // LESS than the hub. The DAY PAGE no longer does, and this comment was
+  // written to be re-checked by the first ticket that put JS on these routes:
+  // #96 gives `/arquivo/[data]` a per-game done chip, so its card is a client
+  // island carrying `use-record-snapshot` -> `play-record` (zod +
+  // `@miolos/core`) and it measures **-30.1 KB** against `/` — 8.6 KB of new
+  // client JS, still 70 KB inside the budget's ceiling. The `messages` chunk
+  // did NOT follow it (the card takes pre-composed strings as props and
+  // imports no copy module): measured with the marker probe over the same
+  // build, `/arquivo/[data]` reports zero `messages` chunks while `/` reports
+  // one, so the enumeration at the top of this file stands as written.
+  //
+  // All three were BUDGETED from the start precisely because "ships nothing
+  // today" is the route that acquires a library silently — which is the
+  // sentence this edit vindicates rather than retires.
   //
   // The three grid play routes came in BELOW their daily twins (binairo 18.2
   // vs 33.4, nonogram 19.7 vs 35.5, sudoku 14.4 vs 29.6), and the reason is
