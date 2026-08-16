@@ -16,7 +16,7 @@
  * - nothing re-renders while nothing the reader shows has changed, because
  *   `readSnapshot` hands back the cached object in that case.
  */
-import type { Game } from "@miolos/core";
+import { GAMES, type Game } from "@miolos/core";
 import { useCallback, useSyncExternalStore } from "react";
 
 import { readPlayRecord, type PlayRecord } from "./play-record";
@@ -39,28 +39,57 @@ const serverSnapshot = (): RecordSnapshot => SERVER_SNAPSHOT;
  * conclusion routes live in one SPA session, `/binairo/concluido →
  * /sudoku/concluido` on the same day would otherwise hand back the Binairo
  * snapshot and stamp another game's time.
+ *
+ * ONE ENTRY PER KEY, not one slot (ADR-0056 decision 1). A single slot is
+ * the same bug the paragraph above describes, one level down: N consumers
+ * with different keys evict each other on every read, so every one of them
+ * gets a fresh object back and React throws `Maximum update depth exceeded`.
+ * It bites across GAMES — four per-game consumers on one page is what
+ * `/arquivo/<data>`'s day card is — and across DATES, which is the axis that
+ * went unrecorded until the date became a URL variable.
+ *
+ * THE BOUND IS A FLOOR, NOT A BUDGET: it must be AT LEAST the largest number
+ * of simultaneously-mounted consumers, because eviction below that count
+ * reinstates the loop. Measured: 16 live consumers against a 16-entry cache
+ * are stable, 17 loop. Today the shipped maximum is 2 (a conclusion nests
+ * one per-game consumer inside one shared one); the archive day card makes it
+ * 4. `T-WEB-S214` holds a floor under the constant and pins the inventory of
+ * call-site FILES — which is not the same as pinning the mount count, so a
+ * surface that reuses an existing call site (an archive MONTH page would
+ * mount 31 × 4 through the day card) has to be read against ADR-0056
+ * decision 1 rather than against that test.
+ *
+ * AND IT WIDENS THE STALENESS WINDOW, deliberately. Under the single slot a
+ * cached snapshot died the moment another key was read, so the fields
+ * `sameToTheReader` does not compare (nonogram `grid`/`size`, termo `answer`/
+ * `outcome`) could only ever be briefly stale. Under the `Map` an entry
+ * survives the whole session. That is safe ONLY because of the lockstep
+ * invariants named below — `T-WEB-S64` and the termo record's `superRefine` —
+ * which stop being belt-and-braces here and become load-bearing.
  */
-let cachedSnapshot:
-  | {
-      readonly game: Game;
-      readonly date: string;
-      readonly snapshot: RecordSnapshot;
-    }
-  | undefined;
+export const SNAPSHOT_CACHE_LIMIT = GAMES.length * 4;
+
+const cachedSnapshots = new Map<
+  string,
+  Extract<RecordSnapshot, { hydrated: true }>
+>();
 
 function readSnapshot(game: Game, date: string): RecordSnapshot {
   const next = readPlayRecord(game, date);
-  const cached = cachedSnapshot;
-  if (
-    cached?.game === game &&
-    cached.date === date &&
-    cached.snapshot.hydrated &&
-    sameToTheReader(cached.snapshot.record, next)
-  ) {
-    return cached.snapshot;
+  const key = `${game}|${date}`;
+  const cached = cachedSnapshots.get(key);
+  if (cached !== undefined && sameToTheReader(cached.record, next)) {
+    return cached;
   }
-  const snapshot: RecordSnapshot = { hydrated: true, record: next };
-  cachedSnapshot = { game, date, snapshot };
+  const snapshot = { hydrated: true, record: next } as const;
+  // Written FIRST, trimmed after, so the key just read can never be the key
+  // evicted — the one ordering that cannot hand its own caller a fresh object
+  // on the very next read.
+  cachedSnapshots.set(key, snapshot);
+  if (cachedSnapshots.size > SNAPSHOT_CACHE_LIMIT) {
+    const oldest = cachedSnapshots.keys().next().value;
+    if (oldest !== undefined) cachedSnapshots.delete(oldest);
+  }
   return snapshot;
 }
 
