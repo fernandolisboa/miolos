@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { ESLint } from "eslint";
 import tseslint from "typescript-eslint";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Mechanical proof that the ADR-0024 §5 wall (and its 2026-07-31 amendment,
 // a named #18 duty) actually fires. The rules live in the ROOT
@@ -35,6 +35,37 @@ const eslint = new ESLint({
     },
   ],
 });
+
+// Explicit test timeout, FILE-scoped (ADR-0055 decisions 2, 3 and 4). The
+// cost this budgets is a property of the file, not of any one test: the
+// `new ESLint()` above is cheap, but the FIRST `lintText` lazily loads the
+// root flat config and everything eslint-config-next/core-web-vitals and
+// typescript-eslint pull in. Whichever `it` runs first pays it, and three
+// measurement sessions disagreed about which one that is — so pinning the
+// budget to a named test would pin a scheduling accident, and a `describe`
+// option would need one edit per top-level describe (five in this file)
+// with a silent hole for the sixth.
+//
+// This file's own figures: 4186 ms on CI (gate run 31888933252 — 83.7 % of
+// vitest's 5000 ms default, 814 ms of margin, the thinnest budget in the
+// suite), 3537 ms under contended local fan-out, and a 4983 ms sample from
+// an earlier session that is right-censored at the 5000 ms wall.
+//
+// The three wall suites build byte-identical ESLint options over the same
+// config and differ only in when they are scheduled, so they are ONE
+// population and all three take the population maximum: eslint-og-wall's
+// 9832 ms (contended local, pooled over 11 samples). 9832 x 4 = 39 328 ->
+// 40 000 ms. That anchor is a sample maximum, not a bound — it has grown
+// twice already (4983 -> 7907 -> 9832 ms) — and the x4 with the round-up is
+// what absorbs the next surprise.
+//
+// A ceiling, not a target: any of these tests over budget / 2 = 20 000 ms
+// is a defect to diagnose and record, never a number to raise. The line is
+// budget / 2 and not budget / 4 because budget = anchor x 4, so budget / 4
+// IS the anchor: a tripwire there fires whenever a session sets a new
+// sample maximum, which ADR-0055 decision 2 predicts as normal. Twice the
+// anchor is drift; one times it is a draw.
+vi.setConfig({ testTimeout: 40_000 });
 
 /** The two rule ids that carry the wall. Everything else is noise here. */
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
