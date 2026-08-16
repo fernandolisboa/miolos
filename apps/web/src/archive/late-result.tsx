@@ -108,7 +108,7 @@ export function LateResult({
   // record from outside React, so this subscribes to the record store rather
   // than copying it once — the same reader the conclusions use, which is the
   // one place a settled sync reaches a view without a notifier `sync.ts` does
-  // not have. Its cache is a bounded `Map` keyed `(game, date)`, so a second
+  // not have. Its cache is a `Map` keyed `(game, date)`, swept by staleness, so a second
   // reader of another key on the same page reads its own entry instead of
   // evicting this one (#96, ADR-0056 decision 1).
   const snapshot = useRecordSnapshot(game, date);

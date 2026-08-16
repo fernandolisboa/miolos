@@ -32,7 +32,7 @@ import { readPlayRecord } from "../play/play-record";
  */
 
 /**
- * One slot — and NOT for the reason `use-record-snapshot.ts` keeps a bounded
+ * One slot — and NOT for the reason `use-record-snapshot.ts` keeps a staleness-swept
  * keyed `Map` (#96, ADR-0056 decision 1). That module has per-game consumers
  * on one page and this one has a measured bound of ONE consumer, so the two
  * caches are deliberately different shapes.

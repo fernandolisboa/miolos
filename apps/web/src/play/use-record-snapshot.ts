@@ -64,7 +64,11 @@ const serverSnapshot = (): RecordSnapshot => SERVER_SNAPSHOT;
  * before it notifies, dropping every entry no read has touched for
  * `SNAPSHOT_STALE_MS`. A live consumer is re-read once per second by its own
  * interval, so its entry's age is at most ~1 s and the sweep provably cannot
- * reach it; what the sweep collects is the keys left behind by navigation.
+ * reach it; what the sweep collects is the keys left behind by navigation --
+ * and only while some consumer is still mounted, since the interval IS the
+ * collector. A page that unmounts every consumer leaves its keys until the
+ * next mount ticks; retention is bounded by the session's distinct
+ * (game, date) space, not by the sweep.
  * Its worst case is bounded degradation rather than a loop: if a background
  * tab's timers are throttled hard enough that a live entry does age past the
  * window, the sweep costs that consumer ONE extra render — the next read
@@ -129,8 +133,9 @@ export function pruneStaleSnapshots(now: number = Date.now()): void {
  *
  * THE POLL IS ALSO THE CACHE'S ONLY COLLECTOR (ADR-0056 decision 1). Sweep
  * first, notify second: the sweep drops what no consumer has read for
- * `SNAPSHOT_STALE_MS`, and the notify that follows re-reads — and therefore
- * re-stamps — every key that is still live.
+ * `SNAPSHOT_STALE_MS`, and the notify that follows re-stamps every live key.
+ * Per hook instance it re-reads only its OWN key; the aggregate holds
+ * because every live consumer owns an interval.
  *
  * Exported because `day-state.ts` subscribes to the same store with a
  * different projection (plan 018 §11.2) — one subscription mechanism, so a

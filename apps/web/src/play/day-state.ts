@@ -188,7 +188,7 @@ const serverDayState = (): Readonly<Record<Game, DayEntry>> => NOTHING_DONE;
  * `readDayState` builds a fresh object on every call. Keyed on the date,
  * because that is this projection's whole key — it already spans every game.
  *
- * A SINGLE DATE-KEYED SLOT, where `use-record-snapshot.ts` now keys a bounded
+ * A SINGLE DATE-KEYED SLOT, where `use-record-snapshot.ts` now keys a staleness-swept
  * `Map` (#96, ADR-0056 decision 1): that module has per-game consumers on one
  * page and this projection has none. The defect is the same one level up —
  * two day-states for different dates in one session would evict each other —
