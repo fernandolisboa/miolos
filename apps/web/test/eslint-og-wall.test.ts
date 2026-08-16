@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { ESLint } from "eslint";
 import tseslint from "typescript-eslint";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 /**
  * Mechanical proof that the OG wall (#34, ADR-0054 decisions 8 and 15) fires
@@ -52,6 +52,34 @@ const eslint = new ESLint({
     },
   ],
 });
+
+// Explicit test timeout, FILE-scoped (ADR-0055 decisions 2, 3 and 4). The
+// cost this budgets is a property of the file, not of any one test: the
+// `new ESLint()` above is cheap, but the FIRST `lintText` lazily loads the
+// root flat config and everything eslint-config-next/core-web-vitals and
+// typescript-eslint pull in. Whichever `it` runs first pays it, and three
+// measurement sessions disagreed about which one that is, so pinning the
+// budget to a named test would pin a scheduling accident.
+//
+// This file's own figures are the TRIO'S ANCHOR: 9832 ms under contended
+// local fan-out — the largest figure any of the three has produced over 11
+// pooled samples — against 3477 ms on CI (gate run 31888933252 — 69.5 % of
+// vitest's 5000 ms default).
+//
+// The three wall suites build byte-identical ESLint options over the same
+// config and differ only in when they are scheduled, so they are ONE
+// population and all three take that maximum: 9832 x 4 = 39 328 -> 40 000
+// ms. The anchor is a sample maximum, not a bound — it has grown twice
+// already (4983 -> 7907 -> 9832 ms) — and the x4 with the round-up is what
+// absorbs the next surprise.
+//
+// A ceiling, not a target: any of these tests over budget / 2 = 20 000 ms
+// is a defect to diagnose and record, never a number to raise. The line is
+// budget / 2 and not budget / 4 because budget = anchor x 4, so budget / 4
+// IS the anchor: a tripwire there fires whenever a session sets a new
+// sample maximum, which ADR-0055 decision 2 predicts as normal. Twice the
+// anchor is drift; one times it is a draw.
+vi.setConfig({ testTimeout: 40_000 });
 
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
