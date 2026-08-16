@@ -64,7 +64,23 @@ describe("generateBinairo", () => {
       }),
       { numRuns: 150 },
     );
-  });
+    // Explicit timeout (ADR-0055 decisions 2 and 4). P1 and P2 are ONE
+    // population: two properties over the same generator, the same
+    // arbitraries and the same seed domain, differing only by 50 runs — and
+    // their local ordering reverses between measurement sessions, so both
+    // take the population maximum rather than a per-test figure that would
+    // pin a scheduling accident. P1's own figures: 3246 ms on CI (gate run
+    // 31888933252 — 64.9 % of vitest's 5000 ms default) and 5051 ms under
+    // contended local fan-out. The pair's maximum is P2's 5922 ms (contended
+    // local, pooled over 11 samples), so 5922 x 4 = 23 688 -> 25 000 ms.
+    // P3 is deliberately left bare: 1776 ms contended local (35.5 %) and
+    // 581 ms on CI (11.6 %), both under ADR-0055's 40 %-of-budget trigger.
+    // A ceiling, not a target: over budget / 4 = 6250 ms is a defect to
+    // diagnose and record, never a number to raise. In-file because
+    // ADR-0017 forbids a vitest config here; the run count above is
+    // untouched, because ADR-0023 floors it and time is never bought by
+    // sampling less.
+  }, 25_000);
 
   it("P2 — determinism: same (seed, weekday) yields a deep-equal puzzle", () => {
     fc.assert(
@@ -75,7 +91,18 @@ describe("generateBinairo", () => {
       }),
       { numRuns: 100 },
     );
-  });
+    // Explicit timeout (ADR-0055 decisions 2 and 4), the same 25 000 ms as
+    // P1 for the same reason: one population, one number. P2's own figures
+    // are the pair's anchor — 5922 ms under contended local fan-out (pooled
+    // over 11 samples, the largest either property has produced) and 2667 ms
+    // on CI (gate run 31888933252 — 53.3 % of vitest's 5000 ms default); it
+    // is also the only one of the two with a recorded real CI failure,
+    // killed at >= 5165 ms in gate run 31846743499. 5922 x 4 = 23 688 ->
+    // 25 000 ms. A ceiling, not a target: over budget / 4 = 6250 ms is a
+    // defect to diagnose and record, never a number to raise. In-file
+    // because ADR-0017 forbids a vitest config here; the run count above is
+    // untouched per ADR-0023.
+  }, 25_000);
 
   it("P3 — seed normalization: seeds alias modulo 2^32", () => {
     fc.assert(
