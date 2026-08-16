@@ -108,8 +108,9 @@ export function LateResult({
   // record from outside React, so this subscribes to the record store rather
   // than copying it once — the same reader the conclusions use, which is the
   // one place a settled sync reaches a view without a notifier `sync.ts` does
-  // not have. Two archive dates cannot coexist (one page renders at a time),
-  // so its single-slot cache is a miss at worst and never a wrong answer.
+  // not have. Its cache is a bounded `Map` keyed `(game, date)`, so a second
+  // reader of another key on the same page reads its own entry instead of
+  // evicting this one (#96, ADR-0056 decision 1).
   const snapshot = useRecordSnapshot(game, date);
   const record = snapshot.hydrated ? snapshot.record : undefined;
   // Present IFF the record is a CONCLUDED termo (the schema's own

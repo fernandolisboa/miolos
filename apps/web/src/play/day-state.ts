@@ -183,11 +183,17 @@ function entryFor(game: Game, date: string): DayEntry {
 const serverDayState = (): Readonly<Record<Game, DayEntry>> => NOTHING_DONE;
 
 /**
- * The same cache `use-record-snapshot.ts` keeps, for the same reason:
- * `getSnapshot` must return a referentially stable value or
- * `useSyncExternalStore` loops forever, and `readDayState` builds a fresh
- * object on every call. Keyed on the date, because that is this
- * projection's whole key — it already spans every game.
+ * A cache for the reason every `getSnapshot` needs one: it must return a
+ * referentially stable value or `useSyncExternalStore` loops forever, and
+ * `readDayState` builds a fresh object on every call. Keyed on the date,
+ * because that is this projection's whole key — it already spans every game.
+ *
+ * A SINGLE DATE-KEYED SLOT, where `use-record-snapshot.ts` now keys a bounded
+ * `Map` (#96, ADR-0056 decision 1): that module has per-game consumers on one
+ * page and this projection has none. The defect is the same one level up —
+ * two day-states for different dates in one session would evict each other —
+ * and it is unreachable today because the hub renders one date. A surface
+ * that mounts two owes the same repair here.
  */
 let cachedDayState:
   | { readonly date: string; readonly state: Readonly<Record<Game, DayEntry>> }
