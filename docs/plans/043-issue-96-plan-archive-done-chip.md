@@ -696,15 +696,27 @@ expect(2 * border + 2 * padY + fontSize * lineHeight).toBe(box);               /
 >
 > *(The size claim has been retracted twice. Revision 2 sold it as "net −2"; revision 3 as "net 0". Rebuilt to spec three more times at round 3 it measured **−1, −5 and −5**, with prettier changing none of them. So the claim is now the weakest one every measurement supports — **never larger than the code it replaces, and 0 to 5 lines smaller depending on the eviction guard's shape** — and it will not need retracting again. Nothing about the decision turns on which of those figures lands.)*
 
-> ### 3. Every day card gets 13px taller, in both states, permanently.
+> ### 3. Every day card gets 8px taller, in both states, permanently — and the number is a dial you set.
 >
-> The chip sits in a flex row beside the kicker (D6), whose `min-height` is the chip's declared box (24px) against the kicker's 11px line. Measured, all three viewports: **`288 × 104 → 288 × 117` — +13px, +12.5%**, and it is paid on the ~99% of visits with no record too.
+> *(Rewritten at step 7. Revision 4 shipped +13px and presented it as a two-option choice — the row, or the corner stamp. Step-6 finding D4 established that it is neither: it is a continuous dial on `--done-chip-box`, and Fernando chose an intermediate point on it.)*
 >
-> **Three things about this cost that revision 2 stated wrongly and that you should have straight before deciding:**
+> The chip sits in a flex row beside the kicker (D6). The row's `min-height` is the chip's **outer** box against the kicker's 11px line, and `margin-block: -2.5px` is what makes the outer box (19px) smaller than the declared one (24px): the chip overhangs the row by 2.5px above and below, into the card's own 24px top padding. Measured, all four viewports: **`288 × 104 → 288 × 112` — +8px, +7.7%**, `.card` identical in the pending and the done state at every one, and paid on the ~99% of visits with no record too.
 >
-> 1. **It is not only height.** The kicker gains 6.5px of leading on each side, so the card's optical top padding goes 24 → 30.5px and the kicker-to-title gap 8 → 14.5px. The pending card's internal rhythm changes, not just its bounding box.
-> 2. **13px is the price of *this* way of getting zero CLS, not the price of having no corner stamp.** Negative block margins on the chip would hold the row at 11px in both states while the chip overhangs into the card's own padding (measured headroom 12.9px above, 6.4px below). That option exists; it was not weighed; it is more fragile. You chose the row and the row is the safer of the two — but the record should say what the real alternative set was.
-> 3. **The archive chip is deliberately 23px where the hub's is 29.34px** (D6, R2-M2). Matching them means a 30px row and **19px** of growth instead of 13. If you want the two chips identical, that is the switch, and it is one constant plus one deleted declaration.
+> **The dial, measured in Chrome over §11's fixture** (clearance on the painted `getBoundingClientRect` basis, rhythm on the layout one):
+>
+> | row | growth | tape → chip | pending rhythm (top inset / kicker → title) |
+> |---|---|---|---|
+> | 24px | +13px | 11.14px | 31 / 14 |
+> | 20px | +9px | 9.14px | 29 / 12 |
+> | **19px — shipped** | **+8px** | **8.64px** | **28 / 12** |
+> | 18px | +7px | 8.14px | 28 / 11 |
+> | 11px | 0px | 4.14px | 24 / 8 |
+>
+> **Three things about this cost worth having straight:**
+>
+> 1. **It is not only height.** The kicker gains 4px of leading on each side, so the card's top inset goes 24 → 28 and the kicker-to-title gap 8 → 12. The pending card's internal rhythm changes, not just its bounding box — but **both new values are still on DESIGN.md's 4pt scale**, which the shipped 31 / 14 were not, and that is why the dial sits at 19 and not at 18 or 20: the terms are `24 + g/2` and `8 + g/2`, both multiples of 4 only when `g ≡ 0 (mod 8)`.
+> 2. **The overhang is a margin, not a `position`.** The chip is still a flex item, so it still cannot overlap the kicker at any width and `text-occlusion` still has nothing to be lenient about. What the negative margin removes is the chip's contribution to the row's **height**. Layout clearance for the overhang: 15px to the tape above, 6px to the title below.
+> 3. **The archive chip's used box is 23px where the hub's is 28.5px** — ~19% tighter, and the basis matters because the hub's chip is also `offsetHeight` 29px and a 31.8px painted rect, none of which is the 29.34px this plan used to quote. Inheriting the hub's 16.5px line would take the row to ~24.5px and the growth to +13.5px.
 >
 > **Reversing the placement entirely means going back to the absolute stamp**, which reopens findings D-01, D-02, D-04, D-05 and D-13 — a component and stylesheet change, not a one-liner.
 
@@ -846,9 +858,11 @@ Its Rejected list weighs *"two more `useRecordSnapshot` subscribers on the same 
 **Grep 1 — cache prose. Scope and patterns both widened at revision 3** *(blocker R2-B4: revision 2's pattern matched neither of the two live falsifications, and its scope excluded `apps/web/test` entirely — which is where two of them live)*:
 
 ```
-grep -rn "single-slot\|single slot\|One slot\|one slot\|keeps one\|same cache\|module-level slot\|useRecordSnapshot\|readSnapshot\|snapshot cache" \
+grep -rn "single-slot\|single slot\|One slot\|one slot\|keeps one\|same cache\|module-level slot\|useRecordSnapshot\|readSnapshot\|snapshot cache\|use-record-snapshot\.ts:[0-9]" \
   apps/web/src apps/web/app apps/web/scripts apps/web/test docs/adr DESIGN.md CONTEXT.md
 ```
+
+**The last alternative is CITATION-SHAPED, and it was added at step 7** *(finding M1)*. Every earlier revision matched what a comment *said* and none matched what a comment *pointed at*, so two living ADRs — `0039` consequence (d) and `0044` consequence (d), both declared dependencies of ADR-0056 under *"obeyed, not amended"* — went on citing `use-record-snapshot.ts:116-127` for the comparator's header after this ticket's docblock rewrite moved it to `:146-156`. A prose sweep is structurally blind to a rotted line: the sentence around it stays true. Both are repaired **by symbol** (`sameToTheReader`), which is the only repair a later comment edit cannot rot again, and the pattern above returns **nothing** after it. Its sibling in grep 2 is `route-client-js\.mjs:[0-9]`, added for the same reason and for the same class of hit.
 
 Run at step 4 and again after the last fix (§12). **Every line it returns is mapped in the table below, and the count is deliberately not stated** — the rule this subsection exists to obey is *"never a bare count"* (handoff 041 `:96`), and revision 3 broke it in its own header, with a figure that was wrong in both terms and that hid an unmapped hit (`use-record-snapshot.test.ts:22`) behind a number that looked like a result. *(Finding F-2.)* Call sites (a bare `import`, a bare `useRecordSnapshot(…)` call) are grouped as one row: they are code, not prose claims, and the inventory that governs them is `T-WEB-S214` (D9).
 
@@ -870,12 +884,14 @@ Run at step 4 and again after the last fix (§12). **Every line it returns is ma
 | `docs/adr/0030-…:143` | tab stops per playable cell — unrelated |
 | `docs/adr/0041-…:350` | the kicker's character tracking — unrelated |
 
-**Grep 2 — the archive's bundle prose:** `grep -rn "near-zero\|ships nothing today\|38.7" apps/web/scripts docs/adr`
+**Grep 2 — the archive's bundle prose, plus citations INTO the script** *(the second pattern added at step 7, finding M2)*: `grep -rn "near-zero\|ships nothing today\|38.7\|route-client-js\.mjs:[0-9]" apps/web/src apps/web/app apps/web/scripts apps/web/test docs/adr`
 
 | hit | row |
 |---|---|
 | `apps/web/scripts/route-client-js.mjs:216-217` | **(c1)** — falsified unconditionally |
 | `docs/adr/0054-…:947` | **(c4)**, below — quotes the rationale, not the figure |
+| `apps/web/src/i18n/messages.ts` and `apps/web/src/og/copy.ts`, both citing `route-client-js.mjs:350` for `FORBIDDEN_EVERYWHERE` | **step-7 finding M2** — this ticket's inserts above it moved the constant twice — `:350` → `:362` → `:367` — and `messages.ts` is a file this PR already edits. Both repaired **by symbol** (`const FORBIDDEN_EVERYWHERE`); the line had already rotted `:285` → `:314` → `:350`, which is the argument for the symbol rather than for a fourth number. |
+| `docs/adr/0045-…:155` citing `route-client-js.mjs:145` for `MAX_DELTA_BYTES` | **confirmed, still correct** — re-read at step 7, the constant is at `:145`; this ticket's insert is below it. No edit. |
 
 **(c4) ADR-0054 `:944-948` — CONFIRMED, no amendment.** It quotes `route-client-js.mjs`'s *"'ships nothing today' is precisely the route that acquires a library silently"* and applies it to the four `/<jogo>/concluido` routes joining `BUDGETED`. That clause is **vindicated** by this ticket — it is the sentence that made (c1)'s edit predictable — and ADR-0054 quotes no figure and makes no claim about `/arquivo/[data]`'s current client JS. Recorded because the reverse check found it, and silence here is indistinguishable from having missed it.
 
@@ -1170,3 +1186,22 @@ So the pass criterion is: **the fixture's scan must contain `cream-palette`.** I
 | 7 | §6 — the ADR's filename `0056-the-record-snapshot-cache-is-per-key.md` | `0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md` | The slug carried only the first half of a two-part title, and the `Feito`/late-completion collapse (decision 2) is the half a future reader searches for. **Trivial.** |
 | 8 | §2.2 — the repair is *"between 0 and 5 lines smaller"* | Measured **−1** on this branch (22 lines of code against 23) | Inside the plan's stated band, at its top end. The whole-file diffstat is `+47/−18` because the docblock grows by the three sentences D1 requires of it; the size claim was always about the code. **None.** |
 | 9 | §4 seam 3 — *"red until the Termo `outcome === "lost"` arm exists"* | Run **twice**: once against no module (an import error), then against a deliberately naive `concluded === true` implementation | An import error is a red, but not the red the plan names, and the plan permits *"against nothing or against a deliberately wrong implementation"*. The naive pass produced the design-driving red exactly — two failures, both the lost-Termo arms, `expected 'completed' to be 'played'`. **None.** |
+
+### Batch 2 — 2026-08-16, step 7 (fix, after step 6's 3 × REJECT)
+
+*Findings file: `docs/plans/043-step6-review-findings.md` (working file, not committed). Numbering continues the global sequence.*
+
+| # | From | To | Cause, and severity |
+|---|---|---|---|
+| 10 | D1 / §4 seam 2 — `SNAPSHOT_CACHE_LIMIT = GAMES.length * 4`, trimmed on the read path, held by a floor plus a call-site-file inventory | **No count bound at all.** `readSnapshot` only ever adds; a staleness sweep (`pruneStaleSnapshots`, `SNAPSHOT_STALE_MS = 5_000`) runs off the existing poll and is the only thing that deletes | **Step-6 blocker B2.** Bound + 1 live consumers reinstated the loop the `Map` was introduced to delete — measured `Maximum update depth exceeded` at 17 against a 16-entry cache, plain and in StrictMode — and the guard pinned FILES, so an archive month page reusing `day-card.tsx` (31 × 4 = 124 consumers) would have added no file, stayed green and crashed. A cache whose overflow is a render loop is worse than one that grows. Re-measured at 4, 16, 17, 32 and 128: one render each on mount, zero wrong records. **`T-WEB-S214` now asserts the property**, and the inventory survives under a new justification (the widened staleness window). **High — this is the ticket's one real robustness gap.** |
+| 11 | D1's *"`GAMES` is a value import from `@miolos/core`, replacing today's type-only import"* | Back to `import type { Game }` | The value import existed only to compute the deleted bound. **Trivial.** |
+| 12 | §5 decision 3 / D6 — `--done-chip-box: 24px`, +13px of permanent card growth, presented as a two-option choice | **`--done-chip-box: 19px` plus `margin-block: -2.5px` on the chip — +8px**, and §5 decision 3 now carries the whole **dial** rather than a constant | **Step-6 finding D4 and Fernando's decision.** D4 established that the growth is continuous in `--done-chip-box`, not a choice between the row and the corner stamp; Fernando chose an intermediate point. 19px is the only intermediate that keeps the pending card's rhythm (`24 + g/2`, `8 + g/2`) on DESIGN.md's 4pt scale. Re-measured at all four viewports: `.card` identical in both states everywhere, tape → chip 8.64px worst case, no wrap, no overlap, no page overflow. **Medium.** |
+| 13 | D6 / `DESIGN.md` / ADR-0056 (e) — the hub's chip is **29.34px** | **28.5px used, 29px `offsetHeight`, 31.8px painted**, with the basis named in all three places | **Step-6 finding M7 (D1).** 29.34 is reproducible on no basis. The conclusion (the archive chip is deliberately tighter) survives; the figure did not. **Low, but `DESIGN.md` is the living context `/impeccable` reads.** |
+| 14 | `arquivo.module.css`'s mobile block — *"the gate `undersized-ui-text` fires below"* the 11px floor | *"Nothing mechanical holds it"*, with the reason | **Step-6 finding M8 (D2).** `impeccable@3.4.0`'s `EXEMPT_CONTEXT` includes `[aria-hidden="true"]`, which is exactly what this chip ships as, so the detector is structurally blind to it at any size — measured firing at 9px with `aria-hidden=""` and silent with `aria-hidden="true"`. The floor is held by DESIGN.md, by `T-WEB-S221`'s `expect(fontSize).toBe(11)` and by review. **Low — a false claim about a gate, which is the class the evidence rule exists for.** |
+| 15 | §7.1 greps 1 and 2 — prose patterns only | Both gain a **citation-shaped** alternative (`use-record-snapshot\.ts:[0-9]`, `route-client-js\.mjs:[0-9]`) | **Step-6 findings M1 and M2.** A prose sweep is structurally blind to a rotted line number, because the sentence around it stays true — which is how ADR-0039 (d), ADR-0044 (d), `messages.ts` and `og/copy.ts` kept citing lines this ticket moved. All four repaired **by symbol** (`sameToTheReader`, `FORBIDDEN_EVERYWHERE`), which is the only repair a later comment edit cannot rot. **Medium — two of the four are living ADRs and declared dependencies of ADR-0056.** |
+| 16 | ADR-0056 decision 1's `day-state.ts:192-204` | `day-state.ts`'s `cachedDayState`, by symbol | **Step-6 finding M3.** A commit inside this PR added six lines above it (`:198-210`), so the ADR shipped stale in the tree that introduced it. **Low.** |
+| 17 | `nonogram-conclusion.tsx` and `termo-conclusion.tsx` — *"a single module slot keyed `{game, date}` (:43-49)"*, *"would thrash that slot"* | The cache is a `(game, date)`-keyed `Map`; the shared key still buys one entry and one live consumer | **Step-6 finding M4.** Their standing prohibition on re-keying rested on the premise this ticket deletes, and `(:43-49)` pointed at the docblock *about* the repair. ADR-0056's falsified-prose list goes five → **seven**. **Low.** |
+| 18 | D7's rejection of a non-polling variant, argued as *"a second reader class in the same module"* | **ADR-0056 consequence (h)** — a written dismissal that argues the measured cost | **Step-6 finding M11 (F4).** The plan's refusal engaged the code's shape and never the cost. Measured: 13.1 µs per full-record read, 0.5 µs per miss, so the archive's ~99% case is 2 µs/s and the worst case 52 µs/s ≈ 0.005 % of one core. Dismissed on that, plus the correctness hazard of a second reader class and the poll's new second job as the cache's only collector. **Low.** |
+| 19 | `record-snapshot.test.tsx`'s `elapsedFor` — a literal four-game list beside an imported `GAMES` | `GAMES.indexOf(game)`, and a date term that varies along both axes | **Step-6 finding m7.** A fifth game would take `indexOf` → `-1` on the literal and collide. **Trivial.** |
+| 20 | `docs/agents/test-ids.md` — `\| sort -u` | `\| sort -u \| sort -t S -k2 -n`, with the reason | **Step-6 finding m3.** The published command is the one this PR's own body calls wrong: `sort -u` is lexical and puts `S99` after `S222`. **Trivial.** |
+| 21 | ADR-0056 decision 2 — the `Feito` collapse is *"reversible in one line"* | Two lines and four assertions across two `it`s | **Step-6 finding m4.** **Trivial**, and recorded because a record that understates a reversal is the class §7.1 exists for. |

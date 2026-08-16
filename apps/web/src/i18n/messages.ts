@@ -289,8 +289,11 @@ export const messages = {
    * The share (#34, ADR-0054) — shared chrome, imported by the client
    * component rather than passed to it, exactly like `conclusion` above.
    *
-   * `então`, `mamãe` and `época` are FORBIDDEN_EVERYWHERE in client chunks
-   * (`scripts/route-client-js.mjs:350`) — audited: no string below uses one,
+   * `então`, `mamãe` and `época` are FORBIDDEN_EVERYWHERE in client chunks —
+   * `scripts/route-client-js.mjs`'s `const FORBIDDEN_EVERYWHERE`, cited by
+   * SYMBOL and not by line — the line has moved four times (`:285` → `:314`
+   * → `:350` → and again in this very commit), which is the whole argument
+   * for the symbol. Audited: no string below uses one,
    * and T-WEB-S206 keeps it audited (it also pins that neither this module
    * nor `share-text.ts` imports from `@miolos/games/termo`).
    *

@@ -6,10 +6,16 @@
 Every record this ADR depends on is **obeyed, not amended**. No statement in
 ADR-0031, ADR-0041, ADR-0043, ADR-0044 or ADR-0053 is falsified, so no
 `**Amended by:**` header is owed anywhere in `docs/adr/`. What *is* falsified
-by decision 1 is source prose, in five places
+by decision 1 is source prose, in **seven** places
 (`src/archive/late-result.tsx`, `src/archive/use-prior-conclusion.ts`,
-`src/play/day-state.ts`, `test/use-record-snapshot.test.ts` and
+`src/play/day-state.ts`, `src/nonogram/nonogram-conclusion.tsx`,
+`src/termo/termo-conclusion.tsx`, `test/use-record-snapshot.test.ts` and
 `scripts/route-client-js.mjs`), and a comment edit is not an ADR amendment.
+The last two of those were found at step 6 (finding M4): both conclusions
+still described the single slot and warned that different keys *"would thrash
+that slot"*, which is the defect this decision deletes — so their standing
+prohibition on re-keying rested on a falsified premise. Rewritten to the
+reason that survives: one key means one entry and one live consumer.
 
 ## Context
 
@@ -42,36 +48,59 @@ projection was built to exclude (`src/play/day-state.ts:26-30`).
 ## Decision
 
 1. **`useRecordSnapshot`'s snapshot cache is keyed per `(game, date)` in a
-   bounded `Map`, and the bound must be at least the number of
-   simultaneously-mounted consumers.** The shipped single slot loops
-   (`Maximum update depth exceeded`) with two consumers of different keys, and
-   does so across **games** and across **dates** alike — the second was never
-   recorded, and `/arquivo/<data>` is the first surface where the date is a
-   URL variable. The repair is **never larger than the code it replaces**:
-   rebuilt to spec independently several times, it measured between 0 and 5
-   lines smaller, the spread being the eviction guard's shape and nothing
-   else. **The bound is load-bearing and measured**: 16 live consumers against
-   a 16-entry cache are stable, **17 loop**, so the safe property is not "a
-   `Map` fixes it" but **`bound ≥ live maximum`** — today 2, after this ticket
-   4, bound `GAMES.length * 4 = 16`. The property is about **live** consumers,
-   not entries: eviction survives interleaving, and the dead keys ten
-   simulated client navigations leave behind change nothing. **Eviction is
-   `set`-then-trim**, so the key just written can never be the key evicted.
-   `T-WEB-S213` holds the repair; `T-WEB-S214` holds a floor under the
-   constant and an inventory of the consumer **call-site files**. **That
-   inventory pins files, not mounts** — a surface that reuses an existing
-   call-site file (the archive month page would mount 31 × 4 through this
-   ticket's own `day-card.tsx`) raises the live maximum past the bound without
-   redding anything — so **this decision, not that test, is what a new surface
-   has to be read against**. Two siblings, named so the rule is not
-   rediscovered: **`usePriorConclusion` is deliberately not repaired** — its
-   slot is mount-scoped by design (#31 step-6 finding F4), its hazard is a key
-   *hit* rather than a miss, and its measured bound is one consumer; and
-   **`day-state.ts:192-204`'s `cachedDayState` is the one sibling with the
-   identical defect**, a single date-keyed slot one level up that two archive
-   dates in a session would evict the same way. It is unreachable today (the
-   hub renders one date and this ticket adds no consumer) and is **not**
-   repaired here.
+   `Map` that NOTHING EVICTS ON THE READ PATH, at any N.** The shipped single
+   slot loops (`Maximum update depth exceeded`) with two consumers of
+   different keys, and does so across **games** and across **dates** alike —
+   the second was never recorded, and `/arquivo/<data>` is the first surface
+   where the date is a URL variable.
+
+   **The first repair kept a count bound, and the bound was the same defect
+   deferred.** It trimmed inside `readSnapshot` at `GAMES.length * 4 = 16`
+   entries, on the argument `bound ≥ live maximum`. Measured at step 6: 16
+   live consumers stable, **17 `Maximum update depth exceeded`**, plain and in
+   StrictMode. Bound + 1 is not degradation, it is a white screen — and the
+   guard was weaker than it read, because `T-WEB-S214` pinned call-site
+   **files**, so the likeliest next surface (an archive month page, 31 × 4 =
+   124 consumers through this ticket's own `day-card.tsx`) would have added no
+   file, stayed green and crashed. **A cache whose overflow is a render loop
+   is worse than one that grows**, so the count bound is deleted rather than
+   raised. `readSnapshot` can only ever ADD, which makes "no N loops" a
+   property of the shape and not of a constant. Measured at **4, 16, 17, 32
+   and 128** live consumers, plain and StrictMode: one render each on mount
+   (two under StrictMode's double-invoke), zero wrong records.
+
+   **What bounds the `Map` instead is STALENESS, swept off the poll and never
+   off a read.** `subscribeToPlayRecords`'s interval calls
+   `pruneStaleSnapshots` before it notifies, dropping every entry no read has
+   touched for `SNAPSHOT_STALE_MS = 5_000` — five times the poll interval. A
+   live consumer is re-read once per second by its own interval, so its entry
+   can never age into the sweep; what the sweep collects is the keys
+   navigation leaves behind. **Its worst case is bounded degradation, not a
+   loop**: if a background tab's timers are throttled hard enough that a live
+   entry does age out, that consumer pays exactly ONE extra render, because
+   the next read re-caches the key and no timer can fire between two
+   `getSnapshot` calls inside one synchronous render pass. Both directions are
+   asserted.
+
+   `T-WEB-S213` holds the repair; **`T-WEB-S214` now asserts the property
+   itself** — N consumers stable for N ∈ {4, 16, 17, 32, 128}, each reading
+   its own record, plus the sweep's two directions. Its call-site inventory
+   survives under a **different** justification, since there is no bound left
+   to re-derive: a new consumer file has to be read against the **widened
+   staleness window**, because an entry now lives as long as it is read and a
+   reader rendering a payload field `sameToTheReader` does not compare would
+   be handed a stale snapshot.
+
+   Two siblings, named so the rule is not rediscovered:
+   **`usePriorConclusion` is deliberately not repaired** — its slot is
+   mount-scoped by design (#31 step-6 finding F4), its hazard is a key *hit*
+   rather than a miss, and its measured bound is one consumer; and
+   **`day-state.ts`'s `cachedDayState` is the one sibling with the identical
+   defect** (cited by symbol, not by line — this citation had already rotted
+   `:192-204` → `:198-210` inside this PR's own diff), a single date-keyed
+   slot one level up that two archive dates in a session would evict the same
+   way. It is unreachable today (the hub renders one date and this ticket adds
+   no consumer) and is **not** repaired here.
 2. **The archive day chip publishes a *late* completion under the hub's
    *on-time* word, and that collapse is deliberate.** `CONTEXT.md:12` names
    the archive's term — `Late completion · Conclusão tardia`, *"never feeds
@@ -82,8 +111,12 @@ projection was built to exclude (`src/play/day-state.ts:26-30`).
    card to be that register. It is acceptable because the chip is device state
    claiming nothing about the streak, and because `messages.archive.play.note`
    says *"Não conta para a sequência nem para os seus tempos"* one screen
-   away. **It is reversible in one line** — split the const in `messages.ts`
-   and update `T-WEB-S222`. **Two verbs (`Feito` / `Jogado`) are not
+   away. **It is reversible in two lines and four
+   assertions** — `messages.archive.day.done` / `.played` stop pointing at
+   `messages.hoje`'s consts and carry their own literals, and `T-WEB-S222`'s
+   identity and value arms move with them, across two `it`s. Small, but
+   *"one line"* was wrong and this record should not understate what the
+   reversal touches. **Two verbs (`Feito` / `Jogado`) are not
    reversible**: a lost Termo showing *Feito* is the false done ADR-0031
    decision 2 forbids by name. Sharpening the record: the union this
    projection re-derives (`day-state.ts:26-30`) was built to exclude *"the one
@@ -223,11 +256,25 @@ of a record as 'not done' authoritatively"* wearing an apology.
 (e) `DESIGN.md`'s Game card gains a documented archive variant with **five**
 differences: no tabular result, no description, no pending accent button, the
 chip in a flex row **above** the title rather than in a reserved box below it,
-and **a deliberately tighter chip — a 23px used box against the hub's measured
-29.34px** — because this one declares `line-height: 1` so its geometry can be
-asserted from stylesheet text. The size delta is the one a design review
+and **a deliberately tighter chip**. The size delta is the one a design review
 comparing the two cards would see, so it is recorded here and in `DESIGN.md`
-rather than only in the plan.
+rather than only in the plan — **with its basis named, because a single figure
+for a rotated box is ambiguous and the one this ADR first carried (29.34px)
+was reproducible on no basis at all**. The hub's chip, measured three ways:
+used box **28.5px** (2 × 1px floored border + 2 × 5px padding + a 16.5px
+line), `offsetHeight` **29px**, painted rect through its own rotation
+**31.8px**. The archive chip's used box is **23px**, ~19% tighter on the only
+basis the two are comparable on, because it declares `line-height: 1` so its
+geometry can be asserted from stylesheet text.
+
+**And what `DESIGN.md` records is the DIAL, not a constant.** The card's
+permanent growth and the tape → chip clearance trade continuously along
+`--done-chip-box`, so the entry carries the trade: 24px row / +13px growth /
+11.14px clearance at one end, 11px row / 0px growth / 4.14px clearance at the
+other, shipped at **19px row / +8px growth / 8.64px clearance**. 19px is the
+only intermediate point that keeps both terms of the pending card's rhythm on
+DESIGN.md's 4pt scale, because the kicker gains growth/2 of leading on each
+side and the terms are `24 + g/2` and `8 + g/2`.
 
 (f) `T-WEB-S215` is the standing anti-drift instrument between
 `archiveCardStatus` and the hub's `readDayState`; a change to either's status
@@ -240,10 +287,48 @@ both sides moving together; the absolute arm on `pendingSync: true` and
 `syncOutcome: "rejected"` is what pins it, and it is a separate assertion for
 that reason.
 
-(g) Every day card on `/arquivo/<data>` grows **13px** (+12.5%), in both
-states, permanently — measured `288 × 104 → 288 × 117` at 1440×900 and
-`350/320 × 104 → × 117` at 390×844 and 360×800. The kicker also gains 6.5px of
-leading on each side, so the pending card's internal rhythm changes and not
-only its bounding box. That is the price of getting zero CLS by reserving the
-row rather than by overhanging it, and it is paid on the ~99% of visits with
-no record.
+(g) Every day card on `/arquivo/<data>` grows **8px** (+7.7%), in both states,
+permanently — measured `288 × 104 → 288 × 112` at 1440×900 and `350/320 ×
+104 → × 112` at 390×844, 360×800 and 320×700, `.card` identical in the pending
+and the done state at all four. **The kicker also gains 4px of leading on each
+side**, so the pending card's internal rhythm changes and not only its
+bounding box: top inset **24 → 28** and kicker → title **8 → 12**, on the
+~99% of visits that carry no record. Both new values are still on
+`DESIGN.md`'s 4pt scale, and that is the reason the dial sits at 19px rather
+than at 18 or 20 — it is the only intermediate point at which they are.
+
+That is the price of getting zero CLS by reserving the row, and the row is
+reserved at the chip's **outer** box rather than its declared one: a
+`margin-block: -2.5px` lets the chip overhang the row by 2.5px above and below
+into the card's own 24px top padding, which is what buys back 5 of the 13px
+the first shape cost. The chip stays a flex item — a margin is not a
+`position` — so every overlap property the in-flow design rests on is
+unchanged.
+
+(h) **The day page acquires a 4 Hz `localStorage` poll for state that cannot
+change in this tab, and that is accepted rather than opted out of.** Four
+cards mount four `useRecordSnapshot` consumers, each of which installs its own
+1 s interval and its own `storage` listener: four reads and four parses per
+second for as long as the page is open, teardown clean. The chip renders
+`concluded` and, for Termo, `outcome`; neither can move in this tab while the
+day page is open, and the one path that does move them — the cross-tab prune
+of consequence (b) — is carried by the `storage` listener, not by the poll. So
+the poll genuinely buys this surface nothing.
+
+**Dismissed on the measured cost, not on the code's shape** (the plan's
+earlier refusal — *"a second reader class in the same module"* — argued a
+shape and never engaged the cost, which is why this consequence exists).
+Measured over the shipped `readPlayRecord`, jsdom, 20 000 iterations after a
+warm-up: **13.1 µs** for a full 81-cell Sudoku record (read + `JSON.parse` +
+zod parse) and **0.5 µs** for a miss. The archive's ~99% case is four misses —
+**2 µs/s**. The worst case, four complete records, is **52 µs/s ≈ 0.005 % of
+one core**, no network, no layout, and zero re-renders while the records stand
+still because the cache hands back the same object. Against that: an opt-out
+means a second subscription mechanism in the module whose whole point is that
+`day-state.ts` and every conclusion share one, so a future in-tab writer on
+this route would reach one reader class and not the other — a correctness
+hazard bought for 0.005 % of a core. The poll also became the cache's only
+collector under decision 1, so an opted-out consumer would accumulate entries
+nothing sweeps. If the cost ever stops being negligible the fix is a single
+shared interval for the whole module, which is a strictly better trade than a
+per-consumer opt-out and needs no new reader class.

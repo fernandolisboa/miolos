@@ -30,8 +30,10 @@ Frontier as of plan 043 (#96), re-derived by grep over the branch at its step-5 
 The grep that produces it, per area — titles only, so a cross-reference in a comment is not mistaken for an allocation:
 
 ```
-grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u
+grep -rhoE "T-<AREA>-S[0-9]+[a-z]?" apps packages | sort -u | sort -t S -k2 -n
 ```
+
+The second `sort` is not decoration. `sort -u` alone is **lexical**, so it orders `S99` after `S222` and a frontier read off its tail is wrong by whatever the largest two-digit id happens to be. Deduplicate lexically, then re-sort numerically on the field after the `S`.
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
