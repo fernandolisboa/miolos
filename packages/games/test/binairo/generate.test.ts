@@ -75,8 +75,11 @@ describe("generateBinairo", () => {
     // local, pooled over 11 samples), so 5922 x 4 = 23 688 -> 25 000 ms.
     // P3 is deliberately left bare: 1776 ms contended local (35.5 %) and
     // 581 ms on CI (11.6 %), both under ADR-0055's 40 %-of-budget trigger.
-    // A ceiling, not a target: over budget / 4 = 6250 ms is a defect to
-    // diagnose and record, never a number to raise. In-file because
+    // A ceiling, not a target: over budget / 2 = 12 500 ms is a defect to
+    // diagnose and record, never a number to raise — budget / 2 and not
+    // budget / 4 because budget = anchor x 4, so budget / 4 IS the anchor
+    // and would fire on any session that sets a new sample maximum, which
+    // ADR-0055 decision 2 predicts as normal. In-file because
     // ADR-0017 forbids a vitest config here; the run count above is
     // untouched, because ADR-0023 floors it and time is never bought by
     // sampling less.
@@ -98,8 +101,11 @@ describe("generateBinairo", () => {
     // on CI (gate run 31888933252 — 53.3 % of vitest's 5000 ms default); it
     // is also the only one of the two with a recorded real CI failure,
     // killed at >= 5165 ms in gate run 31846743499. 5922 x 4 = 23 688 ->
-    // 25 000 ms. A ceiling, not a target: over budget / 4 = 6250 ms is a
-    // defect to diagnose and record, never a number to raise. In-file
+    // 25 000 ms. A ceiling, not a target: over budget / 2 = 12 500 ms is a
+    // defect to diagnose and record, never a number to raise — budget / 2
+    // and not budget / 4 because budget = anchor x 4, so budget / 4 IS the
+    // anchor and fires on the new sample maximum ADR-0055 decision 2
+    // predicts as normal. In-file
     // because ADR-0017 forbids a vitest config here; the run count above is
     // untouched per ADR-0023.
   }, 25_000);

@@ -59,8 +59,12 @@ const eslint = new ESLint({
 // twice already (4983 -> 7907 -> 9832 ms) — and the x4 with the round-up is
 // what absorbs the next surprise.
 //
-// A ceiling, not a target: any of these tests over budget / 4 = 10 000 ms
-// is a defect to diagnose and record, never a number to raise.
+// A ceiling, not a target: any of these tests over budget / 2 = 20 000 ms
+// is a defect to diagnose and record, never a number to raise. The line is
+// budget / 2 and not budget / 4 because budget = anchor x 4, so budget / 4
+// IS the anchor: a tripwire there fires whenever a session sets a new
+// sample maximum, which ADR-0055 decision 2 predicts as normal. Twice the
+// anchor is drift; one times it is a draw.
 vi.setConfig({ testTimeout: 40_000 });
 
 /** The two rule ids that carry the wall. Everything else is noise here. */
