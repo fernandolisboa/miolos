@@ -340,22 +340,108 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     }
   });
 
-  it("keeps the two accent rings, which outline an already-legible label", () => {
-    // ADR-0041 decision 5: an accent border that outlines a label carrying
-    // the whole message is decoration, and WCAG 1.4.11's decorative
-    // exemption applies. Both rings are 2.8501:1 against card paper and both
-    // enclose text at 15.6663:1. Written down rather than left to be
-    // rediscovered — and asserted, so "the text went neutral" cannot quietly
-    // become "the accent left the screen".
+  /**
+   * Every per-game accent border in the shared sheets, ENUMERATED BY A SCAN
+   * rather than by a list of instances (#96, ADR-0056 decision 4).
+   *
+   * ADR-0041 decision 5: an accent border that outlines a label carrying the
+   * whole message is decoration, so WCAG 1.4.11's decorative exemption
+   * applies; an accent border that is the only thing saying which state a
+   * control is in is not. The decision states that RULE first and then names
+   * two instances of it, so the enumeration is exemplary and a third instance
+   * obeys it rather than falsifying it — but consequence (f) is explicit that
+   * *"`impeccable detect` cannot see any of this and never will, so every
+   * decision here is gated by one test file or by nothing"*, and `low-contrast`
+   * provably never evaluates a border (both `contrastRatio(` call sites in
+   * `impeccable@3.4.0` take a TEXT foreground). Hence a scan: a fifth ring in
+   * a shared sheet reds here on arrival instead of joining the tree
+   * unasserted, which is what the archive postmark did for the whole of #31.
+   *
+   * `var(--accent)` EXACTLY, and not `var(--accent[a-z-]*)`. `--accent-app` is
+   * one fixed hex on every screen, never per game, and is ADR-0041 decision
+   * 1's own carve-out; widening the pattern would sweep in four app-identity
+   * rings — `conclusion-view.module.css .streakCard`, `page.module.css
+   * .streakStamp`, `estatisticas/page.module.css .summary` and `.medalRing` —
+   * whose ratios the `ALLOWED_ACCENT_TEXT` block above already records at
+   * 6.0351:1 and 6.2980:1, and which are not this scan's business.
+   *
+   * The ratios, per ring and per PAPER, because the fourth ring does not sit
+   * on the same paper as the other three:
+   *
+   * - `conclusion-view.module.css .stamp` — the daily's 3px postmark, ring
+   *   2.8501:1 on `--paper-card`, enclosing `--ink` at 15.6663:1.
+   * - `page.module.css .doneChip` — the hub's 1.5px chip, same paper, same
+   *   two figures.
+   * - `arquivo.module.css .doneChip` — #96's archive chip, same paper, same
+   *   two figures.
+   * - `late-result.module.css .stamp` — the archive's 3px postmark, on DESK
+   *   paper: ring 2.7311:1, enclosing `--ink` at 15.0124:1 (`.stampDay`) and
+   *   `--ink-2` at 5.0791:1 (`.stampLabel`, `.stampMonth`). The lowest
+   *   enclosed word here is 5.0791:1, above PRODUCT.md's 4.5 floor, so this
+   *   ring outlines an already-legible label too — and it is `aria-hidden`
+   *   besides, so it is decoration by construction as well as by ratio. It
+   *   has been shipped and unasserted since #31.
+   * - `screen.module.css .hint` — NOT a ring: an accent FILL whose border is
+   *   its own edge (`background: var(--accent)`, `color: var(--ink-on-accent,
+   *   var(--paper-desk))`). The same pattern matches it, and `T-WEB-S72` —
+   *   the fill scan — is what gates it.
+   */
+  const ACCENT_BORDERS = new Map([
+    ["src/play/conclusion-view.module.css .stamp", "3px solid var(--accent)"],
+    ["app/page.module.css .doneChip", "1.5px solid var(--accent)"],
+    ["app/arquivo/arquivo.module.css .doneChip", "1.5px solid var(--accent)"],
+    ["src/archive/late-result.module.css .stamp", "3px solid var(--accent)"],
+    ["src/play/screen.module.css .hint", "1.5px solid var(--accent)"],
+  ]);
+
+  it("enumerates every accent border in the shared sheets, and only those", () => {
+    const found = new Map<string, string>();
+    for (const sheet of SHARED) {
+      for (const block of stylesheet(sheet).split(/^\}$/m)) {
+        const border = decl(block, "border");
+        if (
+          border !== undefined &&
+          /^[\d.]+px\s+solid\s+var\(--accent\)$/.test(border)
+        ) {
+          const selector = (/^\s*(\S.*?)\s*\{/m.exec(block) ?? [])[1] ?? "?";
+          found.set(`${sheet} ${selector}`, border);
+        }
+      }
+    }
+
+    // The SET is what closes it: a sixth accent border in a shared sheet reds
+    // this test rather than passing unnoticed.
+    expect([...found.keys()].sort()).toEqual([...ACCENT_BORDERS.keys()].sort());
+    // And each declaration by value, so "the text went neutral" cannot
+    // quietly become "the accent left the screen".
+    for (const [site, border] of ACCENT_BORDERS) {
+      expect(found.get(site), site).toBe(border);
+    }
+  });
+
+  it("keeps the ring scan non-vacuous, and keeps `--accent-app` out of it", () => {
+    // A pattern that matched nothing would make the arm above a green over an
+    // empty set.
+    expect(ACCENT_BORDERS.size).toBe(5);
+    expect(
+      /^[\d.]+px\s+solid\s+var\(--accent\)$/.test("1.5px solid var(--accent)"),
+    ).toBe(true);
+    // The carve-out, asserted rather than described: the app-identity rings
+    // really do declare `--accent-app`, and the pattern really does miss them.
+    expect(
+      /^[\d.]+px\s+solid\s+var\(--accent\)$/.test(
+        "1.5px solid var(--accent-app)",
+      ),
+    ).toBe(false);
     expect(
       decl(
-        bodyOf(stylesheet("src/play/conclusion-view.module.css"), ".stamp"),
+        bodyOf(
+          stylesheet("src/play/conclusion-view.module.css"),
+          ".streakCard",
+        ),
         "border",
       ),
-    ).toBe("3px solid var(--accent)");
-    expect(
-      decl(bodyOf(stylesheet("app/page.module.css"), ".doneChip"), "border"),
-    ).toBe("1.5px solid var(--accent)");
+    ).toBe("1.5px solid var(--accent-app)");
   });
 
   it("moves the hover accent from the word to the rule under it", () => {

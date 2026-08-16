@@ -21,6 +21,20 @@ const wordmark = "Miolos";
 const back = "← Hoje";
 const backAria = "Voltar para Hoje";
 
+// The Game-card chip's two words, hoisted for the same reason `back` is: the
+// hub's tile and the archive day card are the same DESIGN.md register, and a
+// second copy is how two screens drift apart (#96, ADR-0056 decision 2).
+//
+// The archive's completions are LATE ones (CONTEXT.md:12,
+// `Conclusão tardia`), so `done` is being applied there to the state the hub's
+// on-time word does not name. That collapse is deliberate and it is
+// reversible in one line — point `archive.day` at its own literals and update
+// `T-WEB-S222`, which exists to make exactly that split a decision rather than
+// a drift. This file has already split such a pair on purpose once: see
+// `hoje.played` and the day card's lowercase tabular `jogado`.
+const done = "Feito";
+const played = "Jogado";
+
 // Hoisted so the invalid-cell name can be COMPOSED here rather than joined
 // in grid.tsx with a separator no editor of this module can see (ADR-0018:
 // `Messages` is the migration contract, so every user-facing string has to
@@ -118,7 +132,7 @@ export const messages = {
     // The done tile (plan 018 §11.3): an outlined stamp chip plus a tabular
     // result, per DESIGN.md's "Game card" entry. Two result strings rather
     // than a runtime truncation, matching the dayCard's nonogram precedent.
-    done: "Feito",
+    done,
     doneResultLong: (elapsed: string) => `em ${elapsed}`,
     doneResultShort: (elapsed: string) => elapsed,
     doneAria: (game: string, elapsed: string) =>
@@ -135,7 +149,7 @@ export const messages = {
      * VALUE slot beside a duration rather than a chip, and the difference is
      * deliberate (plan 022 §15.3).
      */
-    played: "Jogado",
+    played,
     /**
      * The whole accessible name of a PLAYED tile, composed here (ADR-0018).
      * Takes NO duration: `doneAria` is `"${game} concluído em ${elapsed}"`
@@ -464,9 +478,41 @@ export const messages = {
       nextAria: (month: string) => `Próximo mês · ${month}`,
     },
 
+    /**
+     * The day page's cards (#31), and their per-game done chip (#96,
+     * ADR-0056).
+     *
+     * `done` and `played` are the HUB'S OWN consts, not copies: this card is
+     * declared to be the hub's Game-card register (`arquivo.module.css`), and
+     * one word on one register has one definition. `T-WEB-S222` asserts both
+     * the identity and the literal, so a re-point and a rename each go red.
+     *
+     * THREE ACCESSIBLE NAMES, because the chip is `aria-hidden` and an
+     * anchor's `aria-label` REPLACES its content: on a done card the name is
+     * the only channel carrying state to assistive tech. `cardAriaDone` and
+     * `cardAriaPlayed` are therefore different sentences — collapsing them
+     * would show a sighted user FEITO and JOGADO while telling a screen-reader
+     * user the same thing about a won Sudoku and a lost Termo, which is the
+     * false done ADR-0031 decision 2 forbids, in the one place the player
+     * cannot catch it.
+     *
+     * All three keep the VERB FIRST. WCAG 2.4.4 (Level A) asks a link's name
+     * to make its destination determinable, and a card whose name states a
+     * state while its three siblings state a purpose is the one a
+     * screen-reader user cannot act on. "Ver o resultado" is accurate exactly
+     * when it renders: the chip's predicate and ADR-0053 decision 10 layer
+     * 2's local-restore predicate are the same predicate on the same record,
+     * so a card carrying this name really does open closed on this device.
+     */
     day: {
       cardAria: (game: string, longDate: string) =>
         `Jogar ${game} de ${longDate}`,
+      cardAriaDone: (game: string, longDate: string) =>
+        `Ver o resultado do ${game} de ${longDate}`,
+      cardAriaPlayed: (game: string, longDate: string) =>
+        `Ver o resultado do ${game} de ${longDate} — jogado`,
+      done,
+      played,
     },
 
     // The play chrome (ADR-0053 decision 9). ONE string: the line that makes

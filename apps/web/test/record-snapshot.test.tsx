@@ -293,7 +293,11 @@ describe("the snapshot cache's bound (T-WEB-S214)", () => {
   });
 
   it("pins the inventory of call-site files, so a new one re-derives the bound", () => {
+    // Five files, and the live maximum re-derived against them: a conclusion
+    // mounts 2 (the shared reader plus its nested per-game one, same key), and
+    // `/arquivo/<data>` mounts 4 (one card per game, one date). Bound 16.
     expect(callSiteFiles()).toEqual([
+      "app/arquivo/day-card.tsx",
       "src/archive/late-result.tsx",
       "src/nonogram/nonogram-conclusion.tsx",
       "src/play/conclusion-view.tsx",

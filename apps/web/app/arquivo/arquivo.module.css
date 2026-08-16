@@ -301,6 +301,16 @@
 }
 
 .card {
+  /* The done chip's DECLARED box: 2 × 1.5px border + 2 × 5px padding +
+     11px × 1 line-height. The invariant is `declared >= used`, never
+     `declared == used` — Blink floors a 1.5px used border width to 1px at
+     dpr 1, 2 and 3 alike, so the chip PAINTS 23px inside a row that RESERVES
+     24px (21px at the mobile padding, inside the same 24px row). Flooring can
+     only ever shrink the used box, and the sum of the declarations is the
+     only thing a stylesheet-text test can honestly check (`T-WEB-S221`). ONE
+     constant, no breakpoint-dependent height. */
+  --done-chip-box: 24px;
+
   position: relative;
   display: block;
   background: var(--paper-card);
@@ -333,7 +343,79 @@
   transform: rotate(-4deg);
 }
 
+/* ——— the done chip's row ————————————————————————————————————————————
+   Kicker left, chip right, in ONE FLOW ROW — this sheet's own `.rowLink`
+   idiom. Nothing is positioned, so nothing can overlap the kicker, the tape
+   or the title at any width, and `impeccable`'s `text-occlusion` rule (which
+   was measured BLIND to the corner-stamp design it replaces, occFrac 0.286
+   against a 0.45 bar) has nothing to be lenient about.
+
+   ZERO CLS WITHOUT LEAVING FLOW: the row is `--done-chip-box` tall in both
+   states, so hydration adds the chip into space that was already there. This
+   reserves no EMPTINESS — the kicker occupies the row in the pending state,
+   which is what `day-view.tsx`'s "no placeholder, no greyed slot" forbids.
+   The price is real and permanent and is written down rather than argued
+   away: every day card is 13px taller in BOTH states (measured 288 × 104 →
+   288 × 117 at 1440×900), and the kicker gains 6.5px of leading on each side.
+
+   The measured clearances at 1440×900, on a 288px card with a 246px content
+   measure: tape → chip 12.91px vertically and ~5.4px horizontally, title →
+   chip 6.40px, and 81px of horizontal slack on the widest row (`Palavras`
+   72px + 12px gap + `JOGADO` 81.52px). Nothing wraps at 1440, 390, 360 or
+   320. `.cardTop` overflows its content box by 1px in the done state because
+   the rotated chip's bounding box exceeds its layout box; it is absorbed by
+   `.card`'s 20px side padding and produces no page-level horizontal scroll at
+   any viewport — do not "fix" it by dropping the rotation, which is a
+   DESIGN.md signature. */
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--done-chip-box);
+}
+
+/* The Game-card chip, carried over from the hub (`app/page.module.css`) —
+   same register, same ring, same rotation.
+
+   The RING keeps the accent and the WORD does not (ADR-0041 decisions 1 and
+   5). WCAG 1.4.11's decorative exemption applies because the enclosed word
+   carries the whole message: the ring is 2.8501:1 on card paper worst case
+   (mustard L 0.29477163 against `--paper-card` L 0.93262753) and the word is
+   `--ink` #211D19 at 15.6663:1. Termo is the only accent that needs the
+   exemption at all — sudoku 7.8385:1, binairo 5.5377:1 and nonogram 4.5063:1
+   clear the 3:1 non-text floor unaided. `impeccable`'s `low-contrast` never
+   evaluates a border, so `T-WEB-S73`'s ring scan is the gate here, not the
+   detector (ADR-0041 consequence (f)).
+
+   `line-height: 1` is declared rather than inherited, and it makes this chip
+   DELIBERATELY shorter than the hub's: 23px against the hub's measured
+   29.34px, ~21% tighter. Two reasons, both recorded in ADR-0056 consequence
+   (e) — matching the hub would cost 19px of permanent card growth instead of
+   13, and with the term inherited the box arithmetic is not in this sheet at
+   all, so `T-WEB-S221` could not be written. */
+.doneChip {
+  flex: none;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 5px var(--space-3);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  /* A stamp, pressed slightly crooked — the system's static rotation, never
+     an animation (DESIGN.md). No `transition` here, ever: `layout-transition`
+     bans transitions on layout properties and this box is one. */
+  transform: rotate(-3deg);
+}
+
 .cardKicker {
+  /* So a longer kicker SHRINKS rather than pushing the chip out of the card.
+     Both boxes are flex items in one row, so the failure mode of a future
+     longer kicker is a wrapped kicker and never an occluded chip. */
+  min-width: 0;
   margin: 0;
   font: var(--text-kicker);
   letter-spacing: 0.16em;
@@ -406,5 +488,14 @@
 
   .cards {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The hub's own mobile step-down (`app/page.module.css`): a tighter box,
+     and NOT its 10px type. 11px is the legibility floor for functional text —
+     the rule `.cardKicker` follows, and the gate `undersized-ui-text` fires
+     below. Declared box 2 × 1.5 + 2 × 4 + 11 = 22px, used 21px, inside the
+     unchanged 24px row. */
+  .doneChip {
+    padding: var(--space-1) 9px;
   }
 }
