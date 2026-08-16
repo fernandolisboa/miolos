@@ -517,18 +517,25 @@ describe("the done card's accessible name (T-WEB-S219)", () => {
  *
  * The invariant is `declared >= used`, NOT `declared === used`. Blink floors
  * a 1.5px used border width to 1px at dpr 1, 2 and 3 alike, so the declared
- * 24px box is what the row RESERVES while the chip PAINTS 23px (21px on
- * mobile, where the padding steps down). Flooring can only ever shrink the
- * second, and a test that asserted the rendered box would have to encode a
- * rendering engine's rounding rule in a CSS-source assertion. The sum of the
- * declarations is the only thing a text reader can honestly check.
+ * box is what the row RESERVES while the chip PAINTS one pixel less (23px,
+ * and 21px on mobile where the padding steps down). Flooring can only ever
+ * shrink the second, and a test that asserted the rendered box would have to
+ * encode a rendering engine's rounding rule in a CSS-source assertion. The
+ * sum of the declarations is the only thing a text reader can honestly check.
+ *
+ * `margin-block` IS A TERM, and it is the dial the card's permanent growth is
+ * set on (step-6 finding D4): the chip's 24px declared box has a 19px OUTER
+ * box, and 19px is what the row reserves. Changing `--done-chip-box` without
+ * the margin, or the margin without the constant, breaks the equality below
+ * — which is the coupling this arm exists to hold, because the two numbers
+ * are meaningless apart.
  *
  * TWO PASSES, not one, because `bodyOf` matches the first line-anchored block:
  * a one-pass version is blind to the `@media` override, and bumping the mobile
- * padding to `var(--space-2)` would give a 30px box inside a 24px row with
- * every assertion still green. And `line-height` is a TERM in the arithmetic,
- * not an assumption: without it, changing `1` to `1.5` passes while the row
- * goes 5.5px short.
+ * padding to `var(--space-2)` would give a 25px outer box inside a 19px row
+ * with every assertion still green. And `line-height` is a TERM too, not an
+ * assumption: without it, changing `1` to `1.5` passes while the row goes
+ * 5.5px short.
  */
 describe("the chip's row reserves the chip's declared box (T-WEB-S221)", () => {
   const sheet = stylesheet("app/arquivo/arquivo.module.css");
@@ -547,22 +554,28 @@ describe("the chip's row reserves the chip's declared box (T-WEB-S221)", () => {
     expect(decl(bodyOf(sheet, ".cardKicker"), "min-width")).toBe("0");
   });
 
-  it("closes the arithmetic: 2xborder + 2xpadding + font-size x line-height", () => {
+  it("closes the arithmetic: the chip's OUTER box is what the row reserves", () => {
     const chip = bodyOf(sheet, ".doneChip");
-    // `--done-chip-box: 24px` on `.card` is a bare px length, so `pixels`
+    // `--done-chip-box: 19px` on `.card` is a bare px length, so `pixels`
     // reads it directly. `border` and `padding` are SHORTHANDS whose second
     // terms are a keyword and a token, so `pixels()` throws on either whole
     // value — each is read from its first term instead.
     const box = pixels(decl(bodyOf(sheet, ".card"), "--done-chip-box"));
     const border = pixels(decl(chip, "border")?.split(/\s+/)[0]);
     const padY = pixels(decl(chip, "padding")?.split(/\s+/)[0]);
+    const marginY = pixels(decl(chip, "margin-block"));
     const fontSize = pixels(decl(chip, "font-size"));
     const lineHeight = Number(decl(chip, "line-height"));
 
     // Unitless, or the product below is meaningless.
     expect(Number.isNaN(lineHeight)).toBe(false);
-    expect(2 * border + 2 * padY + fontSize * lineHeight).toBe(box);
-    expect(box).toBe(24);
+    // The declared box, then the outer box the margin takes it to.
+    expect(2 * border + 2 * padY + fontSize * lineHeight).toBe(24);
+    expect(marginY).toBeLessThan(0);
+    expect(2 * border + 2 * padY + fontSize * lineHeight + 2 * marginY).toBe(
+      box,
+    );
+    expect(box).toBe(19);
   });
 
   it("keeps the mobile chip inside the same row, at the same type size", () => {
@@ -586,17 +599,23 @@ describe("the chip's row reserves the chip's declared box (T-WEB-S221)", () => {
     expect(padToken).toBe("--space-1");
     const padY = token(padToken ?? "");
     const border = pixels(decl(chip, "border")?.split(/\s+/)[0]);
+    const marginY = pixels(decl(chip, "margin-block"));
     const fontSize = pixels(decl(chip, "font-size"));
     const lineHeight = Number(decl(chip, "line-height"));
 
-    // 2 x 1.5 + 2 x 4 + 11 x 1 = 22, inside a 24px row with 2px of slack.
-    // ONE constant, no breakpoint-dependent height.
-    expect(2 * border + 2 * padY + fontSize * lineHeight).toBeLessThanOrEqual(
-      box,
-    );
-    // 11px is the legibility floor for functional text, and
-    // `undersized-ui-text` fires below it — so the mobile step-down takes the
-    // padding and never the type.
+    // 2 x 1.5 + 2 x 4 + 11 x 1 = 22 declared, 17 outer at the base rule's
+    // margin, inside the same 19px row. ONE constant, no breakpoint-dependent
+    // height, and `<=` rather than `==` because that is the real invariant.
+    expect(decl(mobile, "margin-block")).toBeUndefined();
+    expect(
+      2 * border + 2 * padY + fontSize * lineHeight + 2 * marginY,
+    ).toBeLessThanOrEqual(box);
+    // 11px is the legibility floor for functional text, and NOTHING
+    // MECHANICAL HOLDS IT: `impeccable`'s `undersized-ui-text` exempts
+    // `[aria-hidden="true"]` through its `EXEMPT_CONTEXT` selector list, and
+    // that is what this chip ships as — measured firing on a 9px chip with
+    // `aria-hidden=""` and silent with `aria-hidden="true"`. This assertion
+    // and DESIGN.md are the floor, which is why the assertion is here.
     expect(fontSize).toBe(11);
   });
 });
