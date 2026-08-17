@@ -42,6 +42,64 @@ function reportTiming(fields: Record<string, string | number>): void {
 }
 
 /**
+ * THE HOOK BUDGET FOR EVERY CALLER: 30_000 ms. The arithmetic and the measured
+ * figures live here, at the cost driver, rather than at the 26 call sites
+ * (ADR-0055 decision 1 as amended by #114 — one cost driver, one comment).
+ *
+ * WHAT THE BUDGET BUYS, measured with MIOLOS_TEST_DB_TIMING=1. PGlite's WASM
+ * `initdb` is ~97 % of the boot; the six-migration replay is 17.9-28.4 ms,
+ * under 3 %. Isolated, one process, five serial boots: 1135.1 ms cold, then
+ * 797.9 / 718.2 / 714.6 / 703.4 ms.
+ *
+ * THE NUMBER THAT MATTERS, and it is not the comfortable one. UNCAPPED — six
+ * package suites at turbo's default fan-out, which is what CI runs and what a
+ * bare `turbo run test` runs — the pooled maximum over five runs is
+ * 53 429.8 ms, which is 178 % of this budget. All five of those runs were red.
+ * Under the `TURBO_CONCURRENCY=2` cap the root `test` script now ships
+ * (ADR-0057), the pooled maximum over four green runs is 11 007.8 ms.
+ *
+ * SO: THE CLASS IS AVOIDED BY THE CAP, NOT CLOSED. 30_000 is not a ceiling
+ * that fits the boot's worst measured cost; it is one that fits the boot under
+ * a configuration this repo now chooses locally. The cause is memory
+ * exhaustion rather than this hook (ADR-0057), which is why raising the number
+ * relocates the failure instead of removing it: at 60_000 and default fan-out,
+ * 0 hook timeouts and 26/26 boots complete, and 2 of 3 runs still went red on
+ * a different `apps/web` test each time.
+ *
+ * WHY 30_000 IS NOT RE-DERIVED. This population has no eligible anchor.
+ * ADR-0055 decision 2 sizes from the highest measured figure, CI first, worst
+ * contended local second; an isolated run is never eligible and a run in which
+ * anything timed out is never eligible either, which rules out every uncapped
+ * figure above. 11 007.8 ms is a CAPPED pooled maximum, so it is not an anchor
+ * either — it shows only that the shipped ceiling is not breached under the
+ * shipped local configuration. No green run has ever put a boot near 30_000.
+ * Raising it would cost 15 s of hang detection on the largest hook population
+ * in the repo to buy nothing any measurement asked for.
+ *
+ * THE TRIPWIRE, AND THE CONFIGURATION IT IS READ UNDER. Take the pooled
+ * maximum from a GREEN run: capped locally, or a CI gate log, which runs
+ * uncapped with this instrument on (ADR-0057). Over 12 000 ms — 40 % of this
+ * budget, ADR-0055 decision 1 — the explicit timeout this hook carries is
+ * confirmed as required. Over 15 000 ms — `budget / 2`, decision 4 — it is a
+ * defect to diagnose and record, and only then, if it is drift rather than a
+ * draw, the cause to move the number with fresh figures in the pull-request
+ * body. Cost drivers for that re-read: this function, `../migrations/**`, the
+ * `@electric-sql/pglite` version, and the concurrency setting on the root
+ * `test` script.
+ *
+ * WHAT THE 21 COMMENTS THIS REPLACES GOT WRONG. Three attributed the cost to
+ * the migration replay — `published.test.ts` and `remote-config.test.ts` as
+ * "PGlite boot + real-migration replay", `session.test.ts` as "WASM Postgres
+ * boot + migration replay ~1s" — over-weighting a component that costs under
+ * 3 %. The other eighteen said "PGlite boot measures ~1.2 s locally" and named
+ * no component at all. The ~1.2 s is right for a cold boot; 17 of the 21 then
+ * multiplied it by four and added an unnamed "+ margin", an arithmetic that
+ * cannot be checked because the margin carries all the weight between 4.8 s
+ * and 30 s. And none of the 21 carried a contended figure, because until this
+ * instrument shipped there was none to carry.
+ */
+
+/**
  * The honest test double: an in-memory PGlite database running the REAL
  * committed migrations from ./migrations — the same SQL artifact Neon gets.
  * Only reachable via the `@miolos/db/testing` subpath so app bundles never

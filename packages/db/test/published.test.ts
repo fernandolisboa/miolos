@@ -30,9 +30,10 @@ import {
 // PR may weaken this suite.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-// PGlite boot + real-migration replay: ~1.2s locally, CI runners 3-4x
-// slower — over vitest's 10s hook default on a starved runner (it fired
-// on a docs-only PR). Same 30s the sibling suites carry.
+// Hook budget 30_000 ms. The arithmetic, both measured figures, the uncapped
+// worst case and the re-derivation tripwire live once, beside `createTestDb`
+// in `@miolos/db/testing` (ADR-0055 decision 1 as amended by #114; ADR-0057).
+// Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);

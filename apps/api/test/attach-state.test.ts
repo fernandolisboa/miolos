@@ -38,8 +38,10 @@ vi.mock("../src/email/transport", async (importOriginal) => {
   return { ...actual, sendMagicLinkEmail: vi.fn() };
 });
 
-// PGlite boot measures ~1.2 s locally and CI runners are ~3–4× slower
-// (plan 017 §15's timeout arithmetic).
+// Hook budget 30_000 ms. The arithmetic, both measured figures, the uncapped
+// worst case and the re-derivation tripwire live once, beside `createTestDb`
+// in `@miolos/db/testing` (ADR-0055 decision 1 as amended by #114; ADR-0057).
+// Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
