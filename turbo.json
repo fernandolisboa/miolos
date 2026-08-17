@@ -15,7 +15,10 @@
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "typecheck": { "dependsOn": ["^typecheck"] },
-    "test": { "dependsOn": ["^build"] },
+    "test": {
+      "dependsOn": ["^build"],
+      "env": ["MIOLOS_TEST_DB_TIMING"]
+    },
     "dev": { "cache": false, "persistent": true }
   }
 }
