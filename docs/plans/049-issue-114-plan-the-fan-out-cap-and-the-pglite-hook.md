@@ -24,7 +24,7 @@ Handoff 048 §4's durable finding is that a document's claims about *itself and 
    echo "$F" | xargs grep -lE '~1\.2 ?s' | wc -l                     # → 21
    ```
 
-   **Two** files carry that exact phrase (`packages/db/test/published.test.ts`, `packages/db/test/remote-config.test.ts`). A **third** spelling of the same over-weighting exists and no sweep for `real-migration replay` finds it: `apps/api/test/session.test.ts` says *"WASM Postgres boot + migration replay ~1s"*. The class that actually needs fixing is larger and different in kind — **21 of the 26** files carry a `~1.2 s` boot-cost sentence and **19 of those name no cost component at all**, which is under-specification rather than over-weighting. §4 is the full derived census.
+   **Two** files carry that exact phrase (`packages/db/test/published.test.ts`, `packages/db/test/remote-config.test.ts`). A **third** spelling of the same over-weighting exists and no sweep for `real-migration replay` finds it: `apps/api/test/session.test.ts` says *"WASM Postgres boot + migration replay ~1s"*. The class that actually needs fixing is larger and different in kind — **21 of the 26** files carry a `~1.2 s` boot-cost sentence and **18 of those name no cost component at all** (21 − 3: the two exact-phrase files plus `session.test.ts`), which is under-specification rather than over-weighting. The raw `grep -l 'PGlite boot measures ~1.2 s locally'` returns **19**, and 18 rather than 19 is the number to state anywhere: `session.test.ts` is inside that 19 while *also* carrying the third spelling, so it names a component and is not part of the silent class. §4 is the full derived census, and `packages/db/src/testing.ts`'s shipped comment says "the other eighteen" — the two agree.
 
 2. **"Twenty-six files do `await ctx.close()` in `afterAll`."** True, verified exhaustively rather than sampled — all 26 `afterAll` bodies are `await ctx.close();`, two of them followed by `vi.restoreAllMocks()` (`apps/api/test/cron-publish.test.ts`, `packages/db/test/remote-config.test.ts`), and none of the 26 carries an explicit hook budget.
 
@@ -94,7 +94,7 @@ Four reviewers rejected the previous revision. **No reviewer faulted the diagnos
 - **`--maxWorkers` on any package script.** Measured inert: G1 (default turbo, db+api at `--maxWorkers=3`) was still **red**, at 9 097 MB and two test timeouts. It costs six comment-free JSON edits and does nothing on CI where vitest already computes 1.
 - **`turbo.json`'s top-level `concurrency`.** Global-only in turbo 2.10.8's schema, breaks `pnpm dev` below 3, and would silently cap `pnpm typecheck`. Measured in #110; re-verified here only to the extent of confirming `turbo.json` carries no such key today.
 - **Any `vitest.config.ts` addition.** None is needed; ADR-0017 permits one only where defaults don't suffice, and after the cap they do.
-- **ADR status lifecycle.** Eight ADRs sit at Proposed. Named as a separate records ticket in §8 R2, not done here.
+- **ADR status lifecycle.** Eight ADRs sit at Proposed. Named as a separate records ticket in §8 R2 and **filed as [#116](https://github.com/fernandolisboa/miolos/issues/116)**, not done here.
 - **Handoff files.** `docs/handoffs/` and `docs/plans/` are snapshot classes and are never rewritten (`docs/README.md`). Handoff 048 landmine 1 already says `TURBO_CONCURRENCY=1` retires the moment #114 lands; it is correct as written and needs no edit.
 
 ---
@@ -141,7 +141,7 @@ A 1.75× CPU oversubscription cannot turn a 1.1 s boot into a 50 s boot. Swap th
 | id | config | rc | elapsed | hook TO | test TO | max boot | peak boots | peak RSS |
 |---|---|---|---|---|---|---|---|---|
 | B1 | default fan-out, hooks lifted to 600 000 | 0 | 92 s | 0 | 0 | 14 316.6 ms | 14 | — |
-| C1 | default, hooks 30 000 | 1 | 78 s | 0 | 1 | — | 14 | — |
+| C1 | default, hooks 30 000 | 1 | 78 s | 0 | 1 | **29 389.9 ms** | 14 | — |
 | D1 | default, hooks 30 000 | 1 | 100 s | 7 | 0 | **53 429.8 ms** | 14 | — |
 | D2 | default, hooks 30 000 | 1 | 79 s | 7 | 0 | 41 690.7 ms | 14 | — |
 | D3 | default, hooks 30 000 | 1 | 79 s | 7 | 0 | 37 021.9 ms | 14 | — |
@@ -165,11 +165,13 @@ A 1.75× CPU oversubscription cannot turn a 1.1 s boot into a 50 s boot. Swap th
 | W1 | default, hooks 600 000 | 0 | — | 0 | 0 | 18 675.3 ms | 14 | — |
 | W2 | default, hooks 600 000 | 0 | — | 0 | 0 | 26 076.1 ms | 14 | — |
 
-Summary: **status quo (default fan-out, hooks 30 000) is 0 green in 6 runs** (C1, D1–D3, E1, F1). **TC=2 is 4/4 green, at 42–97 s against 78–100 s uncapped and 98–120 s at TC=3, and at 8 042 MB against 15 484.** Simultaneously the greenest, the fastest and the lightest — there is no speed/safety trade to make. It also reproduces #110's independent earlier finding (`--concurrency=2` at 43–44 s against 56–59 s uncapped, same box, different session, different tree).
+Summary: **status quo (default fan-out, hooks 30 000) is 0 green in 6 runs** (C1, D1–D3, E1, F1). **TC=2 is 4/4 green, at 42–97 s, and at 8 042 MB against 15 484.** It is **the greenest and the lightest**, and it is **not** the fastest: TC=4 elapsed 52 / 53 s (mean 52.5 s) against TC=2's 97 / 61 / 42 / 42 s (mean 60.5 s). The "42–97 s against 78–100 s uncapped" comparison is **not** a speed result either and must not be quoted as one — the uncapped runs are the RED ones, and turbo terminates a red run's siblings early, so their elapsed times are censored downward (handoff 048 §3 landmine 6: *"this also makes before/after **elapsed wall clock** incomparable across a red/green boundary"*). The only green-vs-green speed measurement in evidence is #110's independent earlier finding (`--concurrency=2` at 43–44 s against 56–59 s uncapped, same box, **different session and different tree** from this sweep). So the case for 2 over 4 rests on **memory**, not speed: TC=4 has no RSS sample at all and §2.2's model puts it at ~12.6 GB against a 15.5 GB box.
+
+**And the strongest single datum in the set is C1's, extracted for this revision and absent from every earlier one.** At the **shipped** 30 000 ms wall, uncapped, C1 fired **zero** hook timeouts while its worst boot reached **29 389.9 ms — 98 % of the wall**, missing the ceiling by 610.1 ms (`30000 − 29389.9`). C1's red is a `Test timed out`, not a hook timeout. The hook budget was not breached in that run; it was very nearly breached, which is a far stronger argument for the cap than any run that simply blew through it.
 
 **The two pooled maxima this plan turns on, both stated wherever either is:**
 
-- **uncapped** (D1–D3, E1, F1 — five runs, all red): **53 429.8 ms** = **178 %** of the 30 000 ms budget (`53429.8 / 30000 = 1.78099…`).
+- **uncapped, at the shipped 30 000 ms wall** (C1, D1–D3, E1, F1 — **six** runs, all red): **53 429.8 ms** = **178 %** of the budget (`53429.8 / 30000 = 1.78099…`). The pool is six rather than the five previously stated: C1 belongs in it — same configuration, also red — and including it does not move the maximum, only the honesty of the denominator. C1 is in fact the pool's **lowest** max boot at 29 389.9 ms (against 53 429.8 / 47 720.3 / 41 690.7 / 38 829.9 / 37 021.9), and that is exactly what makes it the strongest datum: the best uncapped run at the shipped wall still spent a boot at 98 % of it.
 - **capped at TC=2** (TC2-1/2/3, M1 — four runs, all green): **11 007.8 ms** = **36.7 %** of it.
 
 ### 2.4 The wall partly causes its own failure — and the mechanism, corrected
@@ -191,16 +193,23 @@ ADV1 forced `@miolos/db` and `apps/api` to run together at default workers: **14
 
 ### 2.6 Fixing the budget alone only relocates the failure
 
-J1–J3 (hooks 60 000, default fan-out): the PGlite hook class disappeared — 0 hook timeouts, 26/26 boots complete — but `@miolos/web` failed in **2 of 3** runs on a different random test each time:
+J1–J3 (hooks 60 000, default fan-out): the PGlite hook class disappeared — 0 hook timeouts, 26/26 boots complete — but `@miolos/web` failed in **2 of 3** runs. **The previous revision said "a different random test each time" and that is FALSE**, corrected here from the logs rather than deleted, because the shape of the failure is what makes the starvation reading right:
 
 ```
-T-WEB-S119  free-play-sudoku.test.tsx   (20000ms)
-T-WEB-S203  og-image.node.test.ts       ( 5000ms)
-T-WEB-S28   sudoku-screen.test.tsx      ( 5000ms)
-T-WEB-S48   nonogram-screen.test.tsx    ( 5000ms)
+J2 — Failed Tests 4, across 3 files:
+  T-WEB-S119  free-play-sudoku.test.tsx   (20000ms)
+  T-WEB-S203  og-image.node.test.ts       ( 5000ms)  x2
+  T-WEB-S28   sudoku-screen.test.tsx      ( 5000ms)
+
+J3 — Failed Tests 4, across 3 files:
+  T-WEB-S119  free-play-sudoku.test.tsx   (20000ms)
+  T-WEB-S48   nonogram-screen.test.tsx    ( 5000ms)
+  T-WEB-S203  og-image.node.test.ts       ( 5000ms)  x2
 ```
 
-All `Test timed out`. These are **starvation victims of the memory exhaustion §2.2 diagnoses, not defects in the named tests**, and per ADR-0055 decision 2 a run in which anything timed out is never an anchor — so none of these figures sizes anything, here or in #109.
+So: **four `apps/web` tests each, across three files each — not one — and `T-WEB-S119` and `T-WEB-S203` went red in BOTH runs.** The overlap is why "random" was the wrong word. (J1 is green: `Failed Tests` absent, 0 `FAIL` lines.)
+
+**The counting method, recorded because the first attempt at this correction got it wrong too.** `grep -c "Test timed out"` is **not** a test count: J2's two `og-image.node.test.ts` failures are two distinct tests that share **one** error block, so the grep reads 3 where vitest reads 4. Use vitest's own `Failed Tests N` header, or count `FAIL` lines — `grep -oE "Failed Tests [0-9]+" J2.log J3.log` → `4` and `4`, `grep -c "  FAIL  "` → `4` and `4`, agreeing. All four in each run are `Test timed out`. These are **starvation victims of the memory exhaustion §2.2 diagnoses, not defects in the named tests**, and per ADR-0055 decision 2 a run in which anything timed out is never an anchor — so none of these figures sizes anything, here or in #109.
 
 **A correction the previous revision got wrong, and it is the reason §9.4's comment is scoped to a file rather than to a test.** `T-WEB-S48` is **not** one of #109's three residuals. #109's third residual is *"renders one labelled rail per row and per column"* — the **`T-WEB-S43`** clue-rails `describe`, at 2 368 ms against a bare 5 000 ms default. What went red in J3 and G1 is *"the board geometry (`T-WEB-S48`) > C1"*, a **different `describe` in the same file**. #109 never mentions `T-WEB-S48` at all. #109's sentences *"It has never been seen red"* and *"None of the three has ever gone red"* both still stand for the tests #109 is actually about.
 
@@ -326,13 +335,20 @@ This decision is recorded as abandoned rather than deleted, because a reader of 
 
 **The conclusion is unchanged; the previous revision's reasoning for it was wrong and is replaced.**
 
-The two pooled maxima again, because both belong wherever either does: **uncapped 53 429.8 ms = 178 % of budget** (five runs, all red); **capped at TC=2, 11 007.8 ms = 36.7 %** (four runs, all green).
+The two pooled maxima again, because both belong wherever either does: **uncapped at the shipped wall, 53 429.8 ms = 178 % of budget** (six runs — C1, D1–D3, E1, F1 — all red); **capped at TC=2, 11 007.8 ms = 36.7 %** (four runs, all green).
 
 **Why the budget is not re-derived — four reasons, none of which is a quotation of decision 4:**
 
-1. **This population has no eligible anchor at all.** ADR-0055 decision 2 sizes from the highest measured figure, CI first and worst contended local second; an isolated run is never eligible, and **a run in which anything timed out is never eligible either**. Every uncapped local run had timeouts. So 53 429.8 ms cannot size anything. And 11 007.8 ms is a **capped** figure, which by R2b's own rewritten definition of "contended" is not an anchor either — it is used here only to show the shipped ceiling is not breached under the shipped local configuration, which is a different question. **D4 is what fixes this**: the CI gate now measures the hook, uncapped and green, which is exactly the CI-first anchor decision 2 asks for.
-2. **No green-run measurement has put a boot near 30 000 ms.** B1/W1/W2 (uncapped, hooks lifted) topped out at 26 076.1 ms with every boot under 30 s; every capped run is far below. There is no measured case for raising it.
-3. **Raising 26 hooks buys nothing measured and costs 15 s of hang detection** on the largest hook population in the repo. `CLAUDE.md`'s mechanical gate says no PR may remove or weaken a gate it does not need to weaken.
+1. **This population has no eligible LOCAL anchor — and the previous revision's REASON for that was false.** It said *"a run in which anything timed out is never eligible, which rules out every uncapped figure"* and *"Every uncapped local run had timeouts."* **B1, W1, W2 and J1 are uncapped, 6/6 green, with zero timeouts of any kind**, so that sentence disqualifies nothing and is withdrawn.
+
+   **Note the narrowing to LOCAL, which a step-7 finding forced.** The CI half is not in the same position: #114's own gate run is green, uncapped, nothing timed out, and a genuine `cache miss, executing`, which makes it **an eligible anchor by decision 2's own terms** — and decision 2 prefers CI first. Run the procedure on it and it yields `8 686.4 × 4 = 34 745.6 → 35 000 ms`, **above** the shipped ceiling rather than below it. So this reason cannot be "no data exists"; the number survives on decision 4 (reason 4 below), not on decision 2. Saying otherwise would have shipped a fresh false claim in the act of correcting one. The true disqualifier is two-part:
+
+   - Every uncapped run **at the shipped 30 000 ms wall** did have something time out — D1/D2/D3/E1/F1 on hook timeouts, C1 on a `Test timed out`. Decision 2's "never size from a run in which anything timed out" disqualifies all six, and that is where 53 429.8 ms dies.
+   - Every uncapped run that stayed **green** did so only because the wall had been lifted to 60 000 (J1) or 600 000 (B1, W1, W2). **A lifted wall is not a shipped configuration**, and ADR-0055 decision 2 does not contemplate sizing from one: the run is green because the estimator's own subject was changed for the experiment.
+
+   The exclusion has to be **argued rather than assumed**, because it is load-bearing: if a lifted-wall run were accepted, the anchor would be W2's **26 076.1 ms → ×4 → 104 304 → 105 000 ms**, i.e. this decision would flip. And 11 007.8 ms is a **capped** figure, which by R2b's own rewritten definition of "contended" is not an anchor either — it is used here only to show the shipped ceiling is not breached under the shipped local configuration, which is a different question. **D4 is what fixes this**: the CI gate now measures the hook, uncapped and green **at the shipped wall**, which is exactly the CI-first anchor decision 2 asks for.
+2. **The budget is close, not comfortable — and the previous revision's "no green-run measurement has put a boot near 30 000 ms" was false.** W2 is green, uncapped, and its worst boot is **26 076.1 ms = 87 %** of the wall; and C1, uncapped **at the shipped wall**, reached **29 389.9 ms = 98 %** with zero hook timeouts, missing the ceiling by 610.1 ms. Both clear the 15 000 ms tripwire this very block installs. What follows is **not** a case for raising the number, though: the 26 076.1 ms and 29 389.9 ms figures are exactly the uncapped condition the cap removes, and D2 is the fix for them. It is a case for stating the margin honestly rather than claiming one that does not exist.
+3. **Raising 26 hooks buys nothing measured and costs 15 s of hang detection** on the largest hook population **carrying an explicit budget** (75 `beforeEach` is a larger hook population outright — §12 item 11). `CLAUDE.md`'s mechanical gate says no PR may remove or weaken a gate it does not need to weaken.
 4. **Lowering it is equally unwarranted.** Decision 4 is explicit that a shipped timeout is a ceiling rather than a target; a ceiling that no green run approaches is not a defect.
 
 **What is NOT claimed, and the previous revision claimed it.** ADR-0055 decision 4's sentence is *"**A test over `budget / 2`** is a defect to investigate and record, never a number to raise, and never an automatic re-derivation either"*. Every clause after that antecedent is governed by it. Our figures are not over `budget / 2` under the shipped local configuration, so the sentence does not engage, and generalising it into a blanket prohibition on re-derivation was a misreading. It is deleted from this decision **and from the canonical comment**, which would otherwise have committed the misreading to source.
@@ -351,7 +367,7 @@ ADR-0055 decision 1 requires "the arithmetic and both measured figures in a comm
 
 So: **the full block goes beside `createTestDb` in `packages/db/src/testing.ts`**, and each of the 26 `beforeAll`s carries a four-line pointer citing it **by symbol**. 18 of the 26 pointers cross a package boundary (`apps/api` imports `@miolos/db/testing`; the other 8 are `packages/db`'s own `../src/testing`), so the pointer names the module by its **published subpath**, which is correct read from either side. This is written into ADR-0055 as an amendment (§8 R2c) rather than assumed.
 
-**The canonical block** — exact text, immediately above `export async function createTestDb`:
+**The canonical block** — text, immediately above `export async function createTestDb`. **The shipped comment beside `createTestDb` is authoritative on exact wording; this quote is the plan's record of the argument.** It carries four step-7 corrections (marked below), because the step-5 draft reproduced here shipped four false statements that step-6 reviewers rejected: a five-run uncapped pool that is six, "a different `apps/web` test each time", "no green run has ever put a boot near 30 000", and "the largest hook population in the repo".
 
 ```ts
 /**
@@ -366,9 +382,10 @@ So: **the full block goes beside `createTestDb` in `packages/db/src/testing.ts`*
  *
  * THE NUMBER THAT MATTERS, and it is not the comfortable one. UNCAPPED — six
  * package suites at turbo's default fan-out, which is what CI runs and what a
- * bare `turbo run test` runs — the pooled maximum over five runs is
- * 53 429.8 ms, which is 178 % of this budget. All five of those runs were red.
- * Under the `TURBO_CONCURRENCY=2` cap the root `test` script now ships
+ * bare `turbo run test` runs — the pooled maximum over SIX runs at this wall
+ * is 53 429.8 ms, which is 178 % of this budget. All six were red. The lowest
+ * of those six still put a boot at 29 389.9 ms, 98 % of the wall, without
+ * firing. Under the `TURBO_CONCURRENCY=2` cap the root `test` script now ships
  * (ADR-0057), the pooled maximum over four green runs is 11 007.8 ms.
  *
  * SO: THE CLASS IS AVOIDED BY THE CAP, NOT CLOSED. 30_000 is not a ceiling
@@ -377,17 +394,25 @@ So: **the full block goes beside `createTestDb` in `packages/db/src/testing.ts`*
  * exhaustion rather than this hook (ADR-0057), which is why raising the number
  * relocates the failure instead of removing it: at 60_000 and default fan-out,
  * 0 hook timeouts and 26/26 boots complete, and 2 of 3 runs still went red on
- * a different `apps/web` test each time.
+ * four `apps/web` tests each, two of them (T-WEB-S119, T-WEB-S203) in both
+ * runs — all `Test timed out`, all starvation victims.
  *
- * WHY 30_000 IS NOT RE-DERIVED. This population has no eligible anchor.
- * ADR-0055 decision 2 sizes from the highest measured figure, CI first, worst
- * contended local second; an isolated run is never eligible and a run in which
- * anything timed out is never eligible either, which rules out every uncapped
- * figure above. 11 007.8 ms is a CAPPED pooled maximum, so it is not an anchor
- * either — it shows only that the shipped ceiling is not breached under the
- * shipped local configuration. No green run has ever put a boot near 30_000.
- * Raising it would cost 15 s of hang detection on the largest hook population
- * in the repo to buy nothing any measurement asked for.
+ * WHY 30_000 IS NOT RE-DERIVED. This population has no eligible anchor, and
+ * the reason is narrower than "the uncapped runs were red". ADR-0055 decision
+ * 2 sizes from the highest measured figure, CI first, worst contended local
+ * second; an isolated run is never eligible and a run in which anything timed
+ * out is never eligible either. Every uncapped run AT THIS WALL had something
+ * time out, so every uncapped figure above dies on that clause. The uncapped
+ * runs that were GREEN — and there are four — were green only because the wall
+ * had been lifted to 60_000 or 600_000 for the experiment, which is not a
+ * configuration this repo ships and not one decision 2 contemplates; the
+ * highest of them would otherwise anchor at 26 076.1 ms x4 -> 105_000. And
+ * 11 007.8 ms is a CAPPED pooled maximum, so it is not an anchor either — it
+ * shows only that the shipped ceiling is not breached under the shipped local
+ * configuration. Raising the number would cost 15 s of hang detection on the
+ * largest hook population in this repo CARRYING AN EXPLICIT BUDGET (75
+ * `beforeEach` is a larger population outright, all on the bare default) to
+ * buy nothing any measurement asked for.
  *
  * THE TRIPWIRE, AND THE CONFIGURATION IT IS READ UNDER. Take the pooled
  * maximum from a GREEN run: capped locally, or a CI gate log, which runs
@@ -631,7 +656,7 @@ f. **Decision 4's instantiated cost-driver list gains *"the concurrency setting 
 grep -H "^\*\*Status" docs/adr/*.md | grep -c Proposed   # → 8  (0046, 0047, 0050, 0052, 0053, 0054, 0055, 0056)
 ```
 
-— and nothing in `docs/agents/domain.md`, `docs/README.md`, `CLAUDE.md` or the napkin names a status lifecycle, an owner for the flip, or a trigger. The argument for flipping ("Proposed is a stale label") is therefore true of eight ADRs, not one; flipping 0055 alone converts an unmaintained field into a meaningful one and implies the other seven are not-yet-adopted, which is false of all of them. The previous revision's own fallback — flip at #107's hand-close — is worse: same inconsistency, plus a side effect with no PR to carry it. **Out of scope here.** Worth doing as **a separate records ticket**: flip all eight, and record the lifecycle rule (who flips, on what trigger) in `docs/agents/domain.md` so the field means something afterwards. Named in §12 so it is not lost.
+— and nothing in `docs/agents/domain.md`, `docs/README.md`, `CLAUDE.md` or the napkin names a status lifecycle, an owner for the flip, or a trigger. The argument for flipping ("Proposed is a stale label") is therefore true of eight ADRs, not one; flipping 0055 alone converts an unmaintained field into a meaningful one and implies the other seven are not-yet-adopted, which is false of all of them. The previous revision's own fallback — flip at #107's hand-close — is worse: same inconsistency, plus a side effect with no PR to carry it. **Out of scope here.** Worth doing as **a separate records ticket**: flip all eight, and record the lifecycle rule (who flips, on what trigger) in `docs/agents/domain.md` so the field means something afterwards. **Filed at step 5 as [#116](https://github.com/fernandolisboa/miolos/issues/116)**, which ADR-0057 consequence (e) also cites; §12 item 3 carries the correction to the "not filed" wording this plan shipped.
 
 ### R3 — ADR-0017: annotation on the consequence *"Turbo fans out `pnpm test`"*
 
@@ -847,7 +872,7 @@ Nothing below blocked the plan. Items 1–4 are resolved-and-recorded; 5 onward 
 
 1. **PGlite 0.5.4's `close()` on a booting instance — RESOLVED, and the answer is kept even though the decision that needed it is gone.** Step 3 measured it: `close()` on an instance whose `waitReady` is pending settles cleanly, `afterAll` does run after a hook timeout, no unhandled rejection escapes, and process exit is clean in every shape tested. Also measured: a double close throws `PGlite is closed` and a concurrent close throws `PGlite is closing`, so any future teardown that batches must clear its collection **before** awaiting. D3 was dropped on rationale, not on mechanism.
 2. **D3's rationale — RESOLVED against it.** §3 D3. The two defects it claimed do not fire; the real mechanism is not reachable by a teardown; and it would have added a second hook timeout in the uncapped worlds.
-3. **ADR-0055 Proposed → Accepted — DROPPED as out of scope**, with a successor named: a records ticket that flips all eight Proposed ADRs and writes the lifecycle rule into `docs/agents/domain.md`. Not filed by this plan; §8 R2 is where the reasoning lives.
+3. **ADR-0055 Proposed → Accepted — DROPPED as out of scope**, with a successor named: a records ticket that flips the shipped Proposed ADRs and writes the lifecycle rule into `docs/agents/domain.md`. **It IS filed — [#116](https://github.com/fernandolisboa/miolos/issues/116), *"Records: flip the eight shipped ADRs off Proposed, and write the status lifecycle rule"*, open** — and ADR-0057 consequence (e) says so ("Filed as #116"). This entry said "Not filed by this plan" and was falsified by the ticket's own records step; corrected at step 7. §8 R2 is where the reasoning lives.
 4. **Scan-test placement — DECIDED before the reservation** (§10.1), `apps/web/test/`, `T-WEB` ids, on the repo's own root-config-scan precedent. The claimed workflow-file precedent was verified false and is replaced by an honest "this is the first".
 5. **The `~450 MB` per-worker constant understates a PGlite-bearing worker at peak** (~700 MB pre-GC, ~343 MB steady). The model is a fleet estimate. D2 leans on the two direct whole-run samples instead, and ADR-0057 states the shape without the constant — but the constant is still what §2.2's four-line model prints, and a reviewer may reasonably want it removed from the plan too. Left in, labelled.
 6. **CI's contended hook cost is measured for the first time by this PR** (§9.5) — and could still fail to produce a figure two ways (cache hit; D7 dropped). Both are named in advance, with the artifact that proves neither happened.

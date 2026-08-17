@@ -64,7 +64,10 @@ const eslint = new ESLint({
 // This file's own figures are the TRIO'S ANCHOR: 9832 ms under contended
 // local fan-out — the largest figure any of the three has produced over 11
 // pooled samples — against 3477 ms on CI (gate run 31888933252 — 69.5 % of
-// vitest's 5000 ms default).
+// vitest's 5000 ms default). The contended figure was measured at default
+// fan-out; after #114 the root `test` script caps turbo at 2, so reproduce
+// it with `pnpm test --force --concurrency=10` and not with a bare
+// `pnpm test`.
 //
 // The three wall suites build byte-identical ESLint options over the same
 // config and differ only in when they are scheduled, so they are ONE

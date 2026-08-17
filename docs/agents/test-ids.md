@@ -23,7 +23,7 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 043 (#96), re-derived by grep over the branch at its step-5 exit. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 049 (#114), re-derived by grep over the branch at its step-7 exit. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 **Plan 037's reservations are now fully resolved.** PR 2 spent `T-DB-S44…S55` and `S57`, `T-WEB-S166…S186` and `T-LINT-S35…S37`; the tails `T-WEB-S187`/`S188` and `T-LINT-S38` were its reserved review-round headroom and are **burned** below, unspent. Nothing in plan 037's ranges is a live reservation any more, and "next free" below is a plain frontier again.
 
@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S86` | `S84` | never used |
 | `T-DB` | `S59` | `S58` | `T-DB-21` |
 | `T-API` | `S109` | `S107` | `T-API-16` |
-| `T-WEB` | `S225` | `S222` | `T-WEB-23` |
+| `T-WEB` | `S229` | `S227` | `T-WEB-23` |
 | `T-LINT` | `S47` | `S46` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
@@ -106,7 +106,9 @@ Five existing claims were widened in place and correctly took **no** new id in P
 
 **One landed claim was re-aimed in place at step 5 and correctly took no new id** — `T-WEB-S96` in `termo-conclusion.test.tsx`. Its two assertions rode `role="status"`, which stopped being unique on the conclusion the moment the share button's always-rendered live region landed: one of them asserted *"no live region"* and became false, the other used a bare `getByRole("status")` and became ambiguous. Both are re-aimed at the outcome announcer's own class — which is the claim S96 was always making — with #34 named in the comment, and the first is re-aimed **with a counted floor** (exactly one `role="status"` element survives and its text is empty) so a future ticket cannot reintroduce a chatty region under it. A claim re-aimed at the element it was always about is the same claim. `T-WEB-S173` is untouched — it is a green suite about three routes #34 does not change. **And the record half of that assertion was owed and was missed for a full review round** (step-6 finding B2): *"no live region"* was not only a test's claim, it is [ADR-0043](../adr/0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md) decision 10's closing sentence, so re-aiming the test discharged half the duty and left the ADR false. It is annotated at step 7 pass 2. **The rule this leaves behind: a landed assertion that had to be re-aimed because it became FALSE is a pointer at a record, and belongs in the amendment audit's inputs, not only in this file.**
 
-#114 (plan 049) reserved **`T-WEB-S225…S228`** and spent **`T-WEB-S225…S227`** at step 5 — the three source scans in `apps/web/test/fanout-cap.test.ts` that pin the root `test` script's turbo cap and its overridability, the CI gate's deliberate `--concurrency=10` override and its timing flag, and `turbo.json`'s absence of a global `concurrency` key plus its `env` declaration. The tail **`T-WEB-S228` is the reserved review-round headroom and is burned if unspent** per the rule below. **No `T-CORE`, `T-DB`, `T-API` or `T-LINT` id is reserved or spent**: the ticket's other 26 file edits are comment-only, and a comment carries no claim.
+#114 (plan 049) reserved **`T-WEB-S225…S228`** and spent **`T-WEB-S225…S227`** at step 5 — the three source scans in `apps/web/test/fanout-cap.test.ts` that pin the root `test` script's turbo cap and its overridability, the CI gate's deliberate `--concurrency=10` override and its timing flag, and `turbo.json`'s absence of a global `concurrency` key plus its `env` declaration. The tail **`T-WEB-S228` is the reserved review-round headroom and is burned if unspent** per the rule below — **it went unspent, and it is in the Burned slots table**. **No `T-CORE`, `T-DB`, `T-API` or `T-LINT` id is reserved or spent**: the ticket's other 26 file edits are comment-only, and a comment carries no claim.
+
+**Two assertions were added to `fanout-cap.test.ts` at step 7 and correctly took no new id**, inside `T-WEB-S226`'s `describe`: the non-vacuity probe that a `--concurrency=10` surviving only inside a *trailing* comment fails the flag assertion (the scan stripped full-line comments only, so `- run: … pnpm test # --concurrency=10` was a live false green), and the workflow-shape guard moved out of the parser — which runs at collection time — so a malformed `ci.yml` reds as a named test rather than as a collection error. Both are the same claim about the same gate as `T-WEB-S226` itself; the `T-WEB-S100` burn precedent. **`T-WEB-S228` stays burned** (the #19/#21/#31/#34 precedent).
 
 **The ids sit on `describe(...)`**, which is `apps/web`'s shipped convention as stated at the top of this document, even though the subjects are a root `package.json`, a root `turbo.json` and a workflow file rather than anything under `apps/web/src`. They live there because `apps/web/test/` is where every existing **repo-root** config scan already lives and resolves its root the same way; the `T-LINT` area was not available, since this document defines it as the `eslint-*-wall.test.ts` suites specifically. **`T-WEB-S226` is the repo's first test to assert on a workflow file**, named as a first rather than dressed as a precedent — the nearest existing one is a test asserting on a `package.json`, and it is a package's own rather than the root's.
 
@@ -133,6 +135,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-WEB-S187`, `T-WEB-S188`, `T-LINT-S38` | tails of plan 037's PR-2 ranges — the reserved review-round headroom, unspent at PR 2's exit |
 | `T-WEB-S210`, `T-WEB-S211` | tails of plan 040's `T-WEB` range — #34's reserved review-round headroom, unspent at step 5's exit. **`T-LINT-S45` is NOT here**: plan 040 listed it as headroom, and it was spent on the OG wall's legal-imports control instead |
 | `T-WEB-S223`, `T-WEB-S224` | tails of plan 043's `T-WEB` range — #96's reserved review-round headroom, unspent at step 5's exit |
+| `T-WEB-S228` | tail of plan 049's `T-WEB` range — #114's reserved review-round headroom, unspent at step 7's exit. Step 7 added assertions to `fanout-cap.test.ts` (the trailing-comment non-vacuity probe and the workflow-shape guard) **inside `T-WEB-S226`'s `describe`**, which is the same claim about the same gate — the `T-WEB-S100` burn precedent — so the tail was never needed |
 | `T-CORE-S6` | **predates #27.** Plan 018 reserved it for `completion-contract.test.ts` (`docs/plans/018-…:1376`); the assertion landed unmarked. Recorded here so the next re-derivation does not spend a pass re-investigating the gap |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.

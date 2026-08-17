@@ -23,23 +23,47 @@ import { z } from "zod";
  *
  * THE SWEEP THAT CHOSE THE VALUE. Every row is a full `pnpm test`, same box,
  * hook budget 30 000 ms, with `MIOLOS_TEST_DB_TIMING=1` (plan 049 §2.3 is the
- * tracked home of the full table):
+ * tracked home of the full table). THIS SESSION, one box, one tree — the
+ * elapsed column is NOT a speed result, see below:
  *
- *   config       green      elapsed      peak summed RSS
- *   uncapped     0 of 6     78-100 s     15 484 MB / 33 procs, MemAvailable
- *                                        floor 135 MB, swap 1 348 MB
- *   TC=2         4 of 4     42-97 s       8 042 MB / 16 procs
- *   TC=3         4 of 4     98-120 s      9 841 MB / 25 procs
- *   TC=4         2 of 2     52-53 s      NOT SAMPLED
+ *   config       green      elapsed (mean)   peak summed RSS
+ *   uncapped     0 of 6     78-100 s         15 484 MB / 33 procs,
+ *                                            MemAvailable floor 135 MB,
+ *                                            swap 1 348 MB
+ *   TC=2         4 of 4     42-97 s  (60.5)   8 042 MB / 16 procs
+ *   TC=3         4 of 4     98-120 s (106.3)  9 841 MB / 25 procs
+ *   TC=4         2 of 2     52-53 s  (52.5)  NOT SAMPLED
  *
- * WHY 2. It is simultaneously the greenest, the fastest and the lightest —
- * there is no speed-for-safety trade to make here. 3 costs 22 % more memory
- * and is measurably slower. 4 was green twice and fast, but has no RSS sample
- * at all, and the memory model puts it at ~12.6 GB against a 15.5 GB box —
- * inside the region where MemAvailable was measured collapsing. Shipping the
- * one number with no memory evidence, into a fix whose entire diagnosis is a
- * memory model, is not an option. 1 is slower than 2 (67 s against 43-44 s,
- * measured in #110) and buys nothing.
+ * WHY 2. It is the GREENEST and the LIGHTEST. It is NOT the fastest, and this
+ * block claimed it was until #114's step-7 round: TC=4 averaged 52.5 s (52,
+ * 53) against TC=2's 60.5 s (97, 61, 42, 42). Nor can "faster than uncapped"
+ * be read off the table — every uncapped row is RED, and turbo terminates a
+ * red run's siblings on the first failure, so those wall clocks are censored
+ * downward and are incomparable with a green one (handoff 048 landmine 6).
+ *
+ * So the case for 2 over 4 rests on MEMORY, not speed. 4 was green twice and
+ * fast, but has no RSS sample at all, and the memory model puts it at
+ * ~12.6 GB against a 15.5 GB box — inside the region where MemAvailable was
+ * measured collapsing to 135 MB. Shipping the one number with no memory
+ * evidence, into a fix whose entire diagnosis is a memory model, is not an
+ * option. 3 costs 22 % more memory than 2 (9 841 MB against 8 042) and is the
+ * slowest capped setting measured.
+ *
+ * THE ONLY GREEN-VS-GREEN SPEED FIGURES ARE #110's, AND THEY ARE A DIFFERENT
+ * SESSION AND A DIFFERENT TREE FROM THE TABLE ABOVE. Read as a set, never
+ * mixed with it: `--concurrency=2` at 43-44 s, uncapped at 56-59 s,
+ * `--concurrency=1` at 67 s. That is where "capped is faster than uncapped"
+ * comes from, and it is also why 1 is rejected on speed as well as on nothing
+ * else it buys. Mixing #110's 43-44 s with this table's 42-97 s is the trap
+ * this paragraph exists to stop.
+ *
+ * WHAT ELSE THE CAP THROTTLES, STATED ONCE SO IT IS NOT RE-DIAGNOSED.
+ * `turbo.json` gives the `test` task `dependsOn: ["^build"]`, so on a cold
+ * cache a `pnpm test` pulls dependency builds into the same run and the cap
+ * of 2 throttles THOSE too, not only the six test tasks. Every row above was
+ * measured with `--force`, so the figures already include forced builds and
+ * the effect is priced in; a warm bare `pnpm test` — what pre-commit runs —
+ * is strictly cheaper. Not a defect, and not a reason to move the cap.
  *
  * WHY THE CAP MUST STAY OVERRIDABLE, AND WHY IT IS AN INLINE ENV ASSIGNMENT
  * RATHER THAN A FLAG. A `--concurrency=2` baked into the script cannot be
@@ -106,27 +130,56 @@ const turboConfig: unknown = JSON.parse(readRepoFile("turbo.json"));
 
 const ciWorkflow = readRepoFile(".github", "workflows", "ci.yml");
 
+/** What `parseGateJob` found. `-1` on either index means "absent". */
+type GateJob = {
+  /** Where the `gate:` key sits among the comment-stripped lines. */
+  gateIndex: number;
+  /** Where `steps:` sits within the `gate:` job's own body. */
+  stepsIndex: number;
+  /** One entry per step, each carrying its own nested block verbatim. */
+  steps: string[];
+};
+
 /**
  * The `gate` job's steps, split without a YAML parser — the repo has no YAML
  * dependency and a scan of one workflow is not the reason to add one.
  *
- * Robust enough to survive reformatting: full-line comments are dropped first,
- * a step is every line from one `- ` item under `steps:` up to the next item at
- * the same indentation, so a step keeps its own `env:` block, its `with:` block
- * and a `run: |` block scalar whatever the indentation happens to be.
+ * Robust enough to survive reformatting: comments are dropped first, then a
+ * step is every line from one `- ` item under `steps:` up to the next item at
+ * the same indentation, so a step keeps its own `env:` block, its `with:`
+ * block and a `run: |` block scalar whatever the indentation happens to be.
  *
- * Dropping the comments first is not tidiness. It is what stops a `#` line
- * that merely MENTIONS `--concurrency=10` from satisfying the assertion — the
- * exact trap the one prior "workflow test" in this repo fell into by being a
- * comment rather than an assertion.
+ * DROPPING THE COMMENTS IS NOT TIDINESS, AND FULL-LINE STRIPPING IS NOT
+ * ENOUGH. It is what stops a `#` that merely MENTIONS `--concurrency=10` from
+ * satisfying the assertion. The first revision of this file stripped whole
+ * comment lines only, and that left a live false green: the line
+ * `- run: MIOLOS_TEST_DB_TIMING=1 pnpm test # --concurrency=10` PASSED the
+ * flag assertion while CI ran the capped script — exactly the regression
+ * `T-WEB-S226` exists to catch. Trailing comments are stripped too, and the
+ * *"a trailing comment cannot satisfy the flag assertion"* probe below is
+ * what keeps this paragraph true rather than merely claimed.
+ *
+ * The trailing strip is NAIVE about a `#` inside a quoted scalar — real YAML
+ * would keep that one, this drops it. Verified rather than assumed: a grep
+ * for a quoted scalar containing `#` over `.github/workflows/ci.yml` matches
+ * nothing, and the file's only trailing comments are the five `# vN` markers
+ * beside SHA-pinned actions. If such a scalar ever arrives, this scan
+ * over-strips and reds — which is the safe direction for a tripwire.
+ *
+ * It never throws and never asserts: a malformed workflow comes back as
+ * `-1`/`-1`/`[]` so it surfaces as a NAMED test failure rather than as a
+ * collection error. This runs at collection time, and a `expect()` inside it
+ * would take the whole file down before any test was reported.
  */
-function gateJobSteps(workflow: string): string[] {
+function parseGateJob(workflow: string): GateJob {
   const lines = workflow
     .split("\n")
-    .filter((line) => !/^\s*#/.test(line) && line.trim() !== "");
+    .filter((line) => !/^\s*#/.test(line))
+    .map((line) => line.replace(/\s+#.*$/, ""))
+    .filter((line) => line.trim() !== "");
 
   const gateIndex = lines.findIndex((line) => /^\s*gate:\s*$/.test(line));
-  expect(gateIndex, "ci.yml declares a `gate:` job").toBeGreaterThanOrEqual(0);
+  if (gateIndex < 0) return { gateIndex, stepsIndex: -1, steps: [] };
   const gateIndent = indentOf(lines[gateIndex] ?? "");
 
   // The job body: everything indented deeper than the `gate:` key itself.
@@ -137,10 +190,7 @@ function gateJobSteps(workflow: string): string[] {
   }
 
   const stepsIndex = body.findIndex((line) => /^\s*steps:\s*$/.test(line));
-  expect(
-    stepsIndex,
-    "the `gate:` job declares `steps:`",
-  ).toBeGreaterThanOrEqual(0);
+  if (stepsIndex < 0) return { gateIndex, stepsIndex, steps: [] };
 
   const steps: string[] = [];
   let itemIndent = -1;
@@ -160,7 +210,7 @@ function gateJobSteps(workflow: string): string[] {
     if (indent <= itemIndent) break; // out of the steps list entirely
     steps[steps.length - 1] = `${open}\n${line}`;
   }
-  return steps;
+  return { gateIndex, stepsIndex, steps };
 }
 
 /** The leading-whitespace width of a line. */
@@ -212,9 +262,23 @@ describe("the root test script caps turbo and stays overridable (T-WEB-S225)", (
 });
 
 describe("the CI gate is deliberately uncapped and instrumented (T-WEB-S226)", () => {
-  const testSteps = gateJobSteps(ciWorkflow).filter((step) =>
-    /\bpnpm test\b/.test(step),
-  );
+  const gateJob = parseGateJob(ciWorkflow);
+  const testSteps = gateJob.steps.filter((step) => /\bpnpm test\b/.test(step));
+
+  it("declares a gate job with a steps list the scanner can find", () => {
+    // These two were `expect()` calls inside the parser, which runs at
+    // COLLECTION time: a malformed workflow took the whole file down as a
+    // collection error, with no test name attached to the failure. Here they
+    // are a named red, and the parser returns -1 instead of throwing.
+    expect(
+      gateJob.gateIndex,
+      "ci.yml declares a `gate:` job",
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      gateJob.stepsIndex,
+      "the `gate:` job declares `steps:`",
+    ).toBeGreaterThanOrEqual(0);
+  });
 
   it("runs the suite in exactly one step", () => {
     // Fail-closed twice over: zero steps means the gate stopped running the
@@ -229,6 +293,30 @@ describe("the CI gate is deliberately uncapped and instrumented (T-WEB-S226)", (
     // and the repo loses its one uncapped runner. 10 is turbo's own default,
     // so this pins today's behaviour rather than introducing new behaviour.
     expect(testSteps[0]).toMatch(/--concurrency=10\b/);
+  });
+
+  it("a trailing comment cannot satisfy the --concurrency=10 assertion", () => {
+    // NON-VACUITY, and the probe that keeps the parser's doc block honest.
+    // Rewrite the gate's own test step so the flag survives ONLY inside a
+    // trailing comment — the exact shape a "tidy-up" would leave behind — and
+    // the scan must stop seeing it. Against the first revision of the parser,
+    // which stripped full-line comments only, this construction PASSED the
+    // assertion above while CI ran the capped script.
+    const sabotaged = ciWorkflow.replace(
+      /^(\s*- run: .*\bpnpm test\b).*--concurrency=10.*$/m,
+      "$1 # --concurrency=10",
+    );
+    expect(
+      sabotaged,
+      "the sabotage substitution actually fired — if not, the gate step's shape moved and this probe is asserting nothing",
+    ).not.toEqual(ciWorkflow);
+    expect(sabotaged).toContain("pnpm test # --concurrency=10");
+
+    const sabotagedSteps = parseGateJob(sabotaged).steps.filter((step) =>
+      /\bpnpm test\b/.test(step),
+    );
+    expect(sabotagedSteps).toHaveLength(1);
+    expect(sabotagedSteps[0]).not.toMatch(/--concurrency=10\b/);
   });
 
   it("sets MIOLOS_TEST_DB_TIMING on that step", () => {
