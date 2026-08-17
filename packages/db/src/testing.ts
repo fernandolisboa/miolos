@@ -64,8 +64,8 @@ function reportTiming(fields: Record<string, string | number>): void {
  * so each is labelled inline as [15.5 GB] or [23.5 GB]. Both are WSL2 on the
  * same host, 8 cores, 2026-08-17, `@electric-sql/pglite` 0.5.4, run with
  * `MIOLOS_TEST_DB_TIMING=1`; the allocation was raised mid-ticket from
- * 15 545 MB / 4 GB swap to 23 552 MB / 24 GB. The CI figure: gate run
- * 32003396086, same date, 2 vCPU / 7937 MB runner.
+ * 15 545 MB / 4 GB swap to 23 552 MB / 24 GB. The CI figures: gate runs
+ * 32003396086 and 32081091260, same date, 2 vCPU / 7937 MB runner.
  *
  * ON THE 23.5 GB BOX THE FAILURE DOES NOT REPRODUCE AT ANY FAN-OUT. Nine runs,
  * three each at `--concurrency` 10 / 4 / 2, all green, zero hook timeouts, zero
@@ -98,10 +98,14 @@ function reportTiming(fields: Record<string, string | number>): void {
  * Under the `TURBO_CONCURRENCY=2` cap the root `test` script now ships
  * (ADR-0057), the pooled maximum over four green runs is 11 007.8 ms, 37 %.
  * And on CI — at `--concurrency=10`, on a 2 vCPU / 7937 MB runner, 26 boots
- * reported — the pooled maximum is 8 686.4 ms, 29 %. That is the first CI
- * figure this hook has ever had, and it is the mildest number in the set: on
- * the evidence so far the two-vCPU runner is not this boot's worst case, the
- * eight-core box under six-way fan-out is.
+ * reported per run — TWO gate readings now exist: 8 686.4 ms (29 %, run
+ * 32003396086) and 9 733.8 ms (32 %, run 32081091260). Pooled: 9 733.8 ms.
+ * Those are the first CI figures this hook has ever had, and they are the
+ * mildest numbers in the set: on the evidence so far the two-vCPU runner is
+ * not this boot's worst case, the eight-core box under six-way fan-out is.
+ * The second run also reports `pool=1` on all 26 boots, which measures rather
+ * than assumes the premise ADR-0057 decision 3 rests on — vitest really does
+ * collapse to one worker there, so there is no oversubscription to relieve.
  *
  * SO: THE CLASS IS AVOIDED BY THE CAP, NOT CLOSED. 30_000 is not a ceiling
  * that fits the boot's worst measured cost; it is one that fits the boot under
@@ -119,17 +123,22 @@ function reportTiming(fields: Record<string, string | number>): void {
  * four and rounds up to the next 5000 ms. Run that procedure honestly and it
  * does NOT say "keep 30_000" — it says this:
  *
- *   - CI half: the gate figure IS eligible. It is a green run, nothing timed
- *     out, uncapped, and `cache miss, executing` rather than a replay. So the
- *     procedure yields 8 686.4 x 4 = 34 745.6 → 35 000 ms, which is ABOVE the
- *     shipped ceiling, not below it.
+ *   - CI half: the gate figures ARE eligible. Green runs, nothing timed out,
+ *     uncapped, `cache miss, executing` rather than a replay. TWO gate
+ *     readings now exist — 8 686.4 ms (run 32003396086) and 9 733.8 ms (run
+ *     32081091260) — and decision 2 takes the highest, so the procedure
+ *     yields 9 733.8 x 4 = 38 935.2 → 40 000 ms, ABOVE the shipped ceiling,
+ *     not below it. The second reading also settles what the first could not:
+ *     all 26 boots report `pool=1`, so vitest really does collapse to one
+ *     worker on the 2-vCPU runner. ADR-0057 decision 3's premise is measured
+ *     rather than assumed.
  *   - contended-local half [23.5 GB]: an eligible figure now EXISTS, and it
  *     agrees with CI. Three uncapped runs at THIS wall completed green with
  *     nothing timed out: 8 597.1 / 9 017.7 / 9 146.4 ms. Uncapped is the most
  *     contended local configuration there is, so the procedure yields
  *     9 146.4 x 4 = 36 585.6 → 40 000 ms. Also ABOVE the shipped ceiling.
- *     Decision 2 takes CI first, so 35 000 is the figure the procedure names;
- *     both halves point the same way.
+ *     Both halves now name 40 000; decision 2 takes CI first, so 40 000 is
+ *     the figure the procedure yields either way.
  *   - contended-local half [15.5 GB], retained as the record of what was
  *     tested: no eligible figure existed — and the reason was NOT that every
  *     uncapped run was red, because four of them were green 6/6 with zero
@@ -148,7 +157,7 @@ function reportTiming(fields: Record<string, string | number>): void {
  * ADR-0055 decision 4 rather than by decision 2. Decision 2 sizes a budget;
  * decision 4 governs MOVING a shipped one, and it requires a diagnosed defect
  * and fresh figures, not an arithmetic result. No defect exists: this hook has
- * not fired once under the shipped cap or on the gate. Going to 35 000 would
+ * not fired once under the shipped cap or on the gate. Going to 40 000 would
  * buy nothing — the local evidence says it would not be a bound either, since
  * 29 389.9 ms was measured at the 30_000 wall itself — while spending 5 s more
  * hang detection on the largest hook population in this repo carrying an
@@ -170,7 +179,7 @@ function reportTiming(fields: Record<string, string | number>): void {
  *     rather than leaving it unargued; do not delete it on one green sample.
  *     THIS IS THE BRANCH THAT CURRENTLY READS, and it is said here rather than
  *     left for a reader to notice: on the 23.5 GB box NO green configuration
- *     clears 10 000 ms — 3 033.5 capped, 9 146.4 uncapped — and CI's 8 686.4
+ *     clears 10 000 ms — 3 033.5 capped, 9 146.4 uncapped — and CI's 9 733.8
  *     does not either. On this box alone the override earns nothing.
  *   - over 10 000 ms, the explicit timeout is confirmed as required, because
  *     the hook would have failed on the bare default. This is the whole case
@@ -196,7 +205,7 @@ function reportTiming(fields: Record<string, string | number>): void {
  * timing lines rather than produce them — that is the common case, not the
  * edge one. A CI figure counts only from a run whose `@miolos/db:test` line
  * reads `cache miss, executing` or `cache bypass`, never `cache hit, replaying
- * logs`; the `t=` stamp is the secondary tell. The 8 686.4 ms above is from a
+ * logs`; the `t=` stamp is the secondary tell. Both CI figures above are from
  * step reporting `Cached: 0 cached, 6 total`.
  *
  * COST DRIVERS FOR THAT RE-READ: this function, `../migrations/**`, the
