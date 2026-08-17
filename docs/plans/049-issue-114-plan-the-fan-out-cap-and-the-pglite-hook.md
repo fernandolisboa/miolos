@@ -103,6 +103,8 @@ Four reviewers rejected the previous revision. **No reviewer faulted the diagnos
 
 **This section is the tracked home for the diagnosis figures.** ADR-0055's Consequences forbid an ADR carrying a measurements appendix, so ADR-0057 keeps only the qualitative findings and points here; the same table goes in the PR body. Raw logs are in `~/miolos-114-logs/`, which is untracked and will not survive the session — nothing below depends on it.
 
+> **§2.1–2.6 were measured on a box that no longer exists, and are superseded in part by [§2.7](#27-the-box-changed-and-the-diagnosis-was-re-measured-on-it).** The WSL2 allocation was raised mid-ticket from 15 545 MB / 4 GB swap to 23 552 MB / 24 GB. The findings below are left byte-for-byte as recorded — this file is a snapshot class and is not rewritten — but the exhaustion they diagnose does not reproduce on the enlarged box, and two of their conclusions are reversed in §2.7. Read them as the record of what was found on the old box, not as the current state.
+
 Box: WSL2, `nproc`=8 (host Ryzen 9 9950X3D), 15 545 MB RAM, 4 GB swap. All runs `pnpm test --force --env-mode=loose` with `MIOLOS_TEST_DB_TIMING=1`. `--env-mode=loose` was required because turbo's strict env filtering drops an undeclared variable — the trap D7 fixes.
 
 ### 2.1 The boot is WASM, not migration
@@ -212,6 +214,40 @@ So: **four `apps/web` tests each, across three files each — not one — and `T
 **The counting method, recorded because the first attempt at this correction got it wrong too.** `grep -c "Test timed out"` is **not** a test count: J2's two `og-image.node.test.ts` failures are two distinct tests that share **one** error block, so the grep reads 3 where vitest reads 4. Use vitest's own `Failed Tests N` header, or count `FAIL` lines — `grep -oE "Failed Tests [0-9]+" J2.log J3.log` → `4` and `4`, `grep -c "  FAIL  "` → `4` and `4`, agreeing. All four in each run are `Test timed out`. These are **starvation victims of the memory exhaustion §2.2 diagnoses, not defects in the named tests**, and per ADR-0055 decision 2 a run in which anything timed out is never an anchor — so none of these figures sizes anything, here or in #109.
 
 **A correction the previous revision got wrong, and it is the reason §9.4's comment is scoped to a file rather than to a test.** `T-WEB-S48` is **not** one of #109's three residuals. #109's third residual is *"renders one labelled rail per row and per column"* — the **`T-WEB-S43`** clue-rails `describe`, at 2 368 ms against a bare 5 000 ms default. What went red in J3 and G1 is *"the board geometry (`T-WEB-S48`) > C1"*, a **different `describe` in the same file**. #109 never mentions `T-WEB-S48` at all. #109's sentences *"It has never been seen red"* and *"None of the three has ever gone red"* both still stand for the tests #109 is actually about.
+
+### 2.7 The box changed, and the diagnosis was re-measured on it
+
+**Appended after §2.1–2.6 were written, and after the implementation had already shipped.** The developer box's WSL2 allocation was raised — `.wslconfig` gaining `memory=24GB`, `swap=24GB`, `autoMemoryReclaim=gradual`, `processors=8` — in response to the same failures this ticket diagnoses, from outside it. The kernel confirms it: `MemTotal` **23.5 GB**, `SwapTotal` **24.0 GB**, `nproc` still 8.
+
+Nine runs, three at each fan-out, `pnpm test --force --concurrency=N` with `MIOLOS_TEST_DB_TIMING=1`, box otherwise quiet. **All nine green. Zero hook timeouts at every level, including uncapped. Zero swap touched at every level.**
+
+| `--concurrency` | used peak | `MemAvailable` floor | elapsed | max boot | % of 30 000 budget |
+|---|---|---|---|---|---|
+| 10 | 16 822 / 17 663 / 17 748 MB | 6 285–7 210 MB | 53 / 55 / 55 s | 8 597.1 / 9 017.7 / **9 146.4** ms | 30.5 % |
+| 4 | 11 687 / 12 611 / 12 842 MB | 11 191–12 346 MB | 50 / 52 / 53 s | 4 959.8 / 5 128.5 / **5 690.3** ms | 19.0 % |
+| **2** | 9 626 / 9 655 / **9 756** MB | 14 277–14 406 MB | **40 / 41 / 41 s** | 2 961.1 / 3 007.0 / **3 033.5** ms | **10.1 %** |
+| 1 | 9 786 MB | 14 247 MB | 69 s | — | — |
+
+**Three conclusions from §2.1–2.6 are reversed, and one is confirmed.**
+
+1. **Reversed — TC=4 is not faster than TC=2.** §2.3's summary records TC=4 at a 52.5 s mean against TC=2's 60.5 s and concludes *"the case for 2 over 4 rests on **memory**, not speed"*. On the enlarged box two is faster than four by a clear 10 s and lighter by 3 GB. Two now wins on **both** axes and the trade §2.3 describes does not exist.
+2. **Reversed — TC=4 is no longer the setting with "no memory sample at all".** It has three, and they place it at 11.7–12.8 GB, close to §2.2's model prediction of ~12.6 GB. The model was right; the box it was measured against was the problem.
+3. **Reversed — uncapped is not red.** §2.3's headline is *"status quo (default fan-out, hooks 30 000) is 0 green in 6 runs"*. On the enlarged box it is 3 green in 3, with the worst boot at 30.5 % of its budget. This is what creates an eligible local anchor where ADR-0057 decision 5 previously argued none existed.
+4. **Confirmed — the oversubscription is untouched, and it is now the whole of the cap's warrant.** Full fan-out remains the *slowest* configuration despite 6 GB of spare memory, because 6 packages × `cpus − 1` still puts up to 42 processes on 8 cores. Adding RAM removed the symptom and left the arithmetic.
+
+**The inner axis, measured for the first time.** The cap bounds packages; vitest's own worker count is the other multiplier, and passing it through turbo works (`pnpm test --force --concurrency=2 -- --maxWorkers=4`, verified reaching vitest):
+
+| config | used peak | elapsed |
+|---|---|---|
+| `--concurrency=2` (shipped) | 9 626 MB | 41 s |
+| `--concurrency=2 -- --maxWorkers=4` | **6 781 MB** | 42 s |
+| `--concurrency=4 -- --maxWorkers=2` | 7 312 MB | 42 s |
+
+~2.9 GB for ~1 s. Rejected in ADR-0057 for a reason that is not about the local numbers: the root script is shared with CI, where vitest already computes one worker, so hard-coding `--maxWorkers=4` would multiply the gate's workers on the one runner that is deliberately uncapped.
+
+**Two configuration changes were proposed alongside the `.wslconfig` edit and measured inert.** `TURBO_CONCURRENCY=3` on the root `build` and `typecheck` scripts: `build` has only **2 tasks in its entire graph**, so a cap of 3 can never bind (3 927 MB / 11 s uncapped against 3 918 MB / 8 s capped); `typecheck` has 6, but they complete in **6 s** at ~1 GB, and the capped run's peak was marginally *higher* (2 612 MB against 2 369 MB) — noise, which is the point. Both were reverted. They also red the suite: `T-WEB-S225` asserts exactly one script carries `TURBO_CONCURRENCY` and caught them, `expected [ 'build', 'typecheck', 'test' ] to deeply equal [ 'test' ]`. **The guard fired on the first change anyone made to the thing it guards**, which is the only evidence available that it works on something other than its own fixture.
+
+**What this does not change.** The cap ships at 2, unchanged — it is still the best measured setting, now on speed and boot headroom rather than on exhaustion. The instrument, the CI exemption, the comment consolidation and the hook budget are all untouched. **What it changes is the honesty of the warrant**, and ADR-0057's header, decisions 1, 2 and 5, two Rejected entries and consequence (c) are rewritten to say so.
 
 ---
 

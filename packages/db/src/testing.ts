@@ -59,15 +59,30 @@ function reportTiming(fields: Record<string, string | number>): void {
  * states 30_000 in the file. What follows is why that override exists and what
  * would have to change to move it.
  *
- * PROVENANCE. Every local figure below: WSL2, 8 cores, 15 545 MB, 2026-08-17,
- * `@electric-sql/pglite` 0.5.4, run with `MIOLOS_TEST_DB_TIMING=1`. The CI
- * figure: gate run 32003396086, same date, 2 vCPU / 7937 MB runner.
+ * PROVENANCE, AND A BOX THAT CHANGED UNDER THIS COMMENT. Local figures come
+ * from TWO machines and the difference decides several of the readings below,
+ * so each is labelled inline as [15.5 GB] or [23.5 GB]. Both are WSL2 on the
+ * same host, 8 cores, 2026-08-17, `@electric-sql/pglite` 0.5.4, run with
+ * `MIOLOS_TEST_DB_TIMING=1`; the allocation was raised mid-ticket from
+ * 15 545 MB / 4 GB swap to 23 552 MB / 24 GB. The CI figure: gate run
+ * 32003396086, same date, 2 vCPU / 7937 MB runner.
+ *
+ * ON THE 23.5 GB BOX THE FAILURE DOES NOT REPRODUCE AT ANY FAN-OUT. Nine runs,
+ * three each at `--concurrency` 10 / 4 / 2, all green, zero hook timeouts, zero
+ * swap touched. Max boot 9 146.4 ms uncapped (30 %), 5 690.3 ms at 4 (19 %),
+ * 3 033.5 ms at 2 (10 %). Peak memory 17.7 / 12.8 / 9.8 GB against 23.5 GB
+ * total. The cap still ships, because at 40-41 s it is also the FASTEST setting
+ * (against 50-53 s at 4 and 53-55 s at 10) — 6 packages x `cpus-1` still puts
+ * up to 42 processes on 8 cores whatever the RAM. What follows on the 15.5 GB
+ * box is retained because it is the evidence that this budget is needed at all.
  *
  * WHAT THE BUDGET BUYS. PGlite's WASM `initdb` is ~97 % of the boot; the
  * migration replay is 17.9-28.4 ms, under 3 %. Isolated, one process, five
  * serial boots: 1135.1 ms cold, then 797.9 / 718.2 / 714.6 / 703.4 ms.
  *
- * THE NUMBERS THAT MATTER, and they are not the comfortable ones. UNCAPPED —
+ * THE NUMBERS THAT MATTER [15.5 GB], and they are not the comfortable ones.
+ * These are the readings that justify the budget; none of them reproduces on
+ * the 23.5 GB box, and that is the point of keeping them. UNCAPPED —
  * all six package suites running at once, which is what `ci.yml` asks for with
  * `--concurrency=10` and what `turbo run test` does when the root script's cap
  * is not in front of it — the pooled maximum over the six runs taken at THIS
@@ -108,17 +123,25 @@ function reportTiming(fields: Record<string, string | number>): void {
  *     out, uncapped, and `cache miss, executing` rather than a replay. So the
  *     procedure yields 8 686.4 x 4 = 34 745.6 → 35 000 ms, which is ABOVE the
  *     shipped ceiling, not below it.
- *   - contended-local half: no eligible figure exists — and the reason is NOT
- *     that every uncapped run was red, because four of them were green 6/6
- *     with zero timeouts of any kind. It is that every uncapped run taken at
- *     THIS wall had something time out — five of them lost seven of
- *     `packages/db`'s eight test files to `Hook timed out in 30000ms`, the
- *     sixth lost one `apps/web` test to `Test timed out` — which decision 2
- *     disqualifies. And every uncapped run that stayed green did so only with
- *     the wall lifted to 60 000 or 600 000, a configuration this repo does not
- *     ship and one decision 2 does not contemplate. That exclusion is
- *     load-bearing and has to be argued rather than assumed: admit a
- *     lifted-wall run and the same procedure gives 26 076.1 x 4 → 105 000 ms.
+ *   - contended-local half [23.5 GB]: an eligible figure now EXISTS, and it
+ *     agrees with CI. Three uncapped runs at THIS wall completed green with
+ *     nothing timed out: 8 597.1 / 9 017.7 / 9 146.4 ms. Uncapped is the most
+ *     contended local configuration there is, so the procedure yields
+ *     9 146.4 x 4 = 36 585.6 → 40 000 ms. Also ABOVE the shipped ceiling.
+ *     Decision 2 takes CI first, so 35 000 is the figure the procedure names;
+ *     both halves point the same way.
+ *   - contended-local half [15.5 GB], retained as the record of what was
+ *     tested: no eligible figure existed — and the reason was NOT that every
+ *     uncapped run was red, because four of them were green 6/6 with zero
+ *     timeouts of any kind. It was that every uncapped run taken at THIS wall
+ *     had something time out — five of them lost seven of `packages/db`'s
+ *     eight test files to `Hook timed out in 30000ms`, the sixth lost one
+ *     `apps/web` test to `Test timed out` — which decision 2 disqualifies.
+ *     And every uncapped run that stayed green did so only with the wall
+ *     lifted to 60 000 or 600 000, a configuration this repo does not ship and
+ *     one decision 2 does not contemplate. That exclusion was load-bearing and
+ *     had to be argued rather than assumed: admit a lifted-wall run and the
+ *     same procedure gives 26 076.1 x 4 → 105 000 ms.
  *
  * So the gate reading is spent on the tripwire below rather than on a
  * re-derivation (ADR-0057 decision 5), and the number stays at 30_000 by
@@ -145,12 +168,21 @@ function reportTiming(fields: Record<string, string | number>): void {
  *   - under 10 000 ms, the boot fits vitest's bare hook default and the
  *     explicit timeout is no longer doing measurable work. Say so in the PR
  *     rather than leaving it unargued; do not delete it on one green sample.
+ *     THIS IS THE BRANCH THAT CURRENTLY READS, and it is said here rather than
+ *     left for a reader to notice: on the 23.5 GB box NO green configuration
+ *     clears 10 000 ms — 3 033.5 capped, 9 146.4 uncapped — and CI's 8 686.4
+ *     does not either. On this box alone the override earns nothing.
  *   - over 10 000 ms, the explicit timeout is confirmed as required, because
- *     the hook would have failed on the bare default. 11 007.8 ms capped and
- *     29 389.9 ms uncapped both clear it. This is the whole case for the
- *     override, and it is the criterion that means something here — decision
- *     1's 40 % trigger decides whether a test ACQUIRES an explicit timeout,
- *     so it cannot confirm one this hook already carries.
+ *     the hook would have failed on the bare default. This is the whole case
+ *     for the override, and on the 15.5 GB box it read clearly: 11 007.8 ms
+ *     capped and 29 389.9 ms uncapped both cleared it. THAT is why the
+ *     override stays despite the branch above — it is sized for the box where
+ *     the boot is expensive, not for the one where it is cheap, and a box with
+ *     the old cores-to-RAM ratio is one `.wslconfig` edit away. Deleting it on
+ *     the current readings would re-open #114 for whoever next runs this suite
+ *     on a smaller machine. It is also the criterion that means something
+ *     here — decision 1's 40 % trigger decides whether a test ACQUIRES an
+ *     explicit timeout, so it cannot confirm one this hook already carries.
  *   - over 15 000 ms — `budget / 2`, ADR-0055 decision 4 — it is a defect to
  *     diagnose and record, and only then, if it is drift rather than a draw,
  *     the cause to move the number with fresh figures in the pull-request
