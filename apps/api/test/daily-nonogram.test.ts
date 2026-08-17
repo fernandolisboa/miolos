@@ -31,13 +31,19 @@ import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 // measures 0.0354 ms (Mon 5x5) to 0.1902 ms (Sun 15x15), three orders of
 // magnitude under the sudoku boards that made daily-sudoku.test.ts carry
 // 30_000, so copying that constant here would be a number with no reason to
-// exist. The PGlite boot hook keeps its own, which is what it is for.
+// exist. The PGlite boot hook keeps its own, which is what it is for — on
+// evidence the comment beside `beforeAll` points at.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
+// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
+// measured figures behind it — isolated, capped, uncapped and CI — why it is
+// not re-derived, and the re-derivation tripwire live once, beside
+// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
+// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);

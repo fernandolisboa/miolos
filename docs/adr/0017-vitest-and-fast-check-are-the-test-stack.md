@@ -18,6 +18,6 @@ No founding document names a test runner, but the mechanical gate depends on one
 
 ## Consequences
 
-- Every workspace with tests carries `vitest` and a `test: "vitest run"` script; Turbo fans out `pnpm test`.
+- Every workspace with tests carries `vitest` and a `test: "vitest run"` script; Turbo fans out `pnpm test`. *(**Annotated at #114** — [ADR-0057](./0057-the-test-suites-memory-model-and-a-cap-that-binds-locally.md) decisions 2 and 3. **The sentence stays true and becomes incomplete: turbo still fans out, at 2 locally and at 10 on CI.** The root script carries an inline `TURBO_CONCURRENCY=2`, because six `vitest run` processes each at `maxWorkers = cpus − 1` demand more memory than an 8-core developer box has and the suite went red on swap thrash rather than on any test; the gate passes `--concurrency=10` explicitly — turbo's own default — because on the hosted runner's vCPU count vitest's `maxWorkers` collapses to 1 and there is nothing for a cap to relieve. **No `**Amended by:**` header is taken here**: this ADR's decision does not change, the runner does not change, and no per-workspace `vitest.config.ts` is added — ADR-0017's prohibition on one in `packages/games` is obeyed, and ADR-0057 decision 2 explicitly declines a new `packages/db/vitest.config.ts` on this ADR's *"only where the defaults don't suffice"* grounds. The sentence gains a term.)*
 - Property tests are ordinary Vitest files importing fast-check — no separate runner or CI step.
 - A future runner change would touch every workspace and this ADR.

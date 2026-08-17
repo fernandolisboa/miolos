@@ -15,8 +15,11 @@ import { createTestDb } from "../src/testing";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-// PGlite boot + real-migration replay: ~1.2s locally, CI runners 3-4x
-// slower — the same 30s hook timeout the sibling suites carry.
+// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
+// measured figures behind it — isolated, capped, uncapped and CI — why it is
+// not re-derived, and the re-derivation tripwire live once, beside
+// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
+// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
   // The invalid-value paths warn once per process; keep test output clean.

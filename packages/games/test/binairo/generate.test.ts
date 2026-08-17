@@ -73,6 +73,9 @@ describe("generateBinairo", () => {
     // 31888933252 — 64.9 % of vitest's 5000 ms default) and 5051 ms under
     // contended local fan-out. The pair's maximum is P2's 5922 ms (contended
     // local, pooled over 11 samples), so 5922 x 4 = 23 688 -> 25 000 ms.
+    // Every contended figure here was measured at default fan-out; after
+    // #114 the root `test` script caps turbo at 2, so reproduce them with
+    // `pnpm test --force --concurrency=10` and not with a bare `pnpm test`.
     // P3 is deliberately left bare: 1776 ms contended local (35.5 %) and
     // 581 ms on CI (11.6 %), both under ADR-0055's 40 %-of-budget trigger.
     // A ceiling, not a target: over budget / 2 = 12 500 ms is a defect to
@@ -101,7 +104,10 @@ describe("generateBinairo", () => {
     // on CI (gate run 31888933252 — 53.3 % of vitest's 5000 ms default); it
     // is also the only one of the two with a recorded real CI failure,
     // killed at >= 5165 ms in gate run 31846743499. 5922 x 4 = 23 688 ->
-    // 25 000 ms. A ceiling, not a target: over budget / 2 = 12 500 ms is a
+    // 25 000 ms. The contended figure was measured at default fan-out;
+    // after #114 the root `test` script caps turbo at 2, so reproduce it
+    // with `pnpm test --force --concurrency=10` and not with a bare
+    // `pnpm test`. A ceiling, not a target: over budget / 2 = 12 500 ms is a
     // defect to diagnose and record, never a number to raise — budget / 2
     // and not budget / 4 because budget = anchor x 4, so budget / 4 IS the
     // anchor and fires on the new sample maximum ADR-0055 decision 2

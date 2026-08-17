@@ -10,7 +10,7 @@
     "dev": "turbo run dev",
     "typecheck": "turbo run typecheck",
     "lint": "eslint --max-warnings 0 .",
-    "test": "turbo run test",
+    "test": "TURBO_CONCURRENCY=2 turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"

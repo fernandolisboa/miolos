@@ -35,13 +35,19 @@ import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 //
 // No per-`it` timeout anywhere (landmine 25): there is no engine to run at
 // all — the seed is an array element — so every case here is a PGlite round
-// trip and nothing else. The boot hook keeps its own, which is what it is for.
+// trip and nothing else. The boot hook keeps its own, which is what it is
+// for — on evidence the comment beside `beforeAll` points at.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
+// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
+// measured figures behind it — isolated, capped, uncapped and CI — why it is
+// not re-derived, and the re-derivation tripwire live once, beside
+// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
+// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);

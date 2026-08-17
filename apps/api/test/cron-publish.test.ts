@@ -113,9 +113,11 @@ async function rowsFor(game: string): Promise<DailyPuzzleRow[]> {
   return rows.filter((row) => row.game === game);
 }
 
-// PGlite boot measures ~1.2 s locally and CI runners are ~3-4x slower;
-// 1.2 s x 4 + margin puts the hook ceiling well above vitest's default
-// (plan 018 §15).
+// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
+// measured figures behind it — isolated, capped, uncapped and CI — why it is
+// not re-derived, and the re-derivation tripwire live once, beside
+// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
+// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 //
 // Every `it` that triggers a top-up carries its OWN 30_000, and the
 // arithmetic is: a run now generates a full week for FOUR games, and the

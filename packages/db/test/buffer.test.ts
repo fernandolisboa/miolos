@@ -13,11 +13,11 @@ import { binairoContentFixture } from "./fixtures";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-// PGlite boot measures ~1.2 s locally, CI runners are ~3–4× slower, and
-// worker contention adds to both: 1.2 s × 4 + margin is the ceiling the
-// other seven PGlite files in this package already carry. This one was the
-// last riding vitest's 10 s default, and #31's added database work is what
-// finally tipped it over under parallel fan-out (napkin item 3).
+// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
+// measured figures behind it — isolated, capped, uncapped and CI — why it is
+// not re-derived, and the re-derivation tripwire live once, beside
+// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
+// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);

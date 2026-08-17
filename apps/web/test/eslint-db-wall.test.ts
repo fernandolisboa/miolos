@@ -49,7 +49,10 @@ const eslint = new ESLint({
 // This file's own figures: 4186 ms on CI (gate run 31888933252 — 83.7 % of
 // vitest's 5000 ms default, 814 ms of margin, the thinnest budget in the
 // suite), 3537 ms under contended local fan-out, and a 4983 ms sample from
-// an earlier session that is right-censored at the 5000 ms wall.
+// an earlier session that is right-censored at the 5000 ms wall. The
+// contended figure was measured at default fan-out; after #114 the root
+// `test` script caps turbo at 2, so reproduce it with
+// `pnpm test --force --concurrency=10` and not with a bare `pnpm test`.
 //
 // The three wall suites build byte-identical ESLint options over the same
 // config and differ only in when they are scheduled, so they are ONE

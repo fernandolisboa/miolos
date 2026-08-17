@@ -34,8 +34,11 @@ vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// PGlite boot measures ~1.2 s locally and CI runners are ~3–4× slower
-// (plan 017 §15's timeout arithmetic).
+// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
+// measured figures behind it — isolated, capped, uncapped and CI — why it is
+// not re-derived, and the re-derivation tripwire live once, beside
+// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
+// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);

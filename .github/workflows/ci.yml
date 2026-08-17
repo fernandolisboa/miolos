@@ -88,7 +88,30 @@ jobs:
             turbo-${{ runner.os }}-
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm test
+      # The root `test` script caps turbo at 2 (ADR-0057). That cap is a fix for
+      # a 15.5 GB / 8-core developer box, where vitest spawns `cpus-1` workers
+      # per package and six packages at once demand ~19 GB — measured peak RSS
+      # 15 484 MB, MemAvailable floor 135 MB, swap 1 348 MB. This runner has
+      # neither problem: on its 2 vCPUs vitest's own maxWorkers collapses to 1,
+      # so six packages demand ~2.7 GB and there is no oversubscription to
+      # relieve. Capping here would cost ~+55 % (gate run 31888933252: 1021.2 s
+      # of per-package work inside a 330 s step; a two-lane makespan floor is
+      # max(1021.2/2, 325.6) ~= 510 s) to buy nothing.
+      #
+      # Passing the flag explicitly also keeps CI the ONE runner that still
+      # executes the suite at the fan-out ADR-0055's budgets were anchored on.
+      # This is behaviourally identical to the bare `pnpm test` that ran here
+      # before ADR-0057 — it pins the existing configuration, it does not
+      # introduce a new one. A runner upgrade (more vCPUs, a larger-runner
+      # label, or the repo going public) multiplies `cpus-1` and re-opens #114
+      # here, where nothing is capped: that residual is named in ADR-0057.
+      #
+      # MIOLOS_TEST_DB_TIMING makes the PGlite boot report its own cost, which
+      # is what discharges ADR-0055 decision 4's CI re-read for `createTestDb`
+      # (vitest prints no hook durations in any reporter). It reaches the
+      # workers only because `turbo.json`'s test task declares it under `env`.
+      - run: nproc && free -m
+      - run: MIOLOS_TEST_DB_TIMING=1 pnpm test --concurrency=10
       - run: pnpm build
       # Split restore/save rather than the unified `actions/cache`, matching
       # the puppeteer cache in impeccable.yml. The unified action saves in a
