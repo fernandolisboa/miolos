@@ -1,7 +1,6 @@
 # 0025 — Remote config is a database table read through a typed accessor
 
-Status: accepted
-Date: 2026-07-31
+**Status:** Accepted — 2026-07-31
 
 ## Context
 

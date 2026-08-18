@@ -1,6 +1,6 @@
 # ADR-0046 — Free play: three routes, a level picker over the weekday ramps, an ephemeral session
 
-**Status:** Proposed — 2026-08-12 (issue #28)
+**Status:** Accepted — 2026-08-12 (issue #28, shipped in #81)
 **Depends on:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0005](./0005-all-content-is-free.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md)
 
 ## Context

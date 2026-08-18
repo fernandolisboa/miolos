@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-07-29
 **Depends on:** [ADR-0001](./0001-web-is-the-launch-platform.md)
+**Supersedes in part:** [ADR-0001](./0001-web-is-the-launch-platform.md) — its anonymous-first "device → JWT" identity assumption (ADR-0001, Consequences: "Resolved by ADR-0003").
 **Amends:** the auth section of [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md)
 
 ## Context

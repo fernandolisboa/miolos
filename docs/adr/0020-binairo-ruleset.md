@@ -1,7 +1,6 @@
 # 0020 — Binairo ruleset: canonical Takuzu, including unique lines
 
-Status: accepted
-Date: 2026-07-31
+**Status:** Accepted — 2026-07-31
 
 ## Context
 
