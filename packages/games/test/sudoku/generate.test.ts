@@ -32,10 +32,11 @@ import {
 // budget / 2 and not budget / 4 because budget = anchor x 4, so budget / 4 IS
 // the anchor and would fire on the ordinary new sample maximum.
 //
-// What these budgets measure on CI is CPU SHARE, not the generator
-// (load-bearing): the engine is byte-identical since e02d82a and P1 went from
-// 35 220 ms (gate run 30683187834, 2026-08-01, 39 test files across the
-// whole suite) to 155 025 ms (gate run 31888933252, 2026-08-15, 161 files).
+// What these budgets measure on CI is CPU SHARE, not the generator — the
+// finding everything below rests on: the engine is byte-identical since
+// e02d82a and P1 went from 35 220 ms (gate run 30683187834, 2026-08-01, 39
+// test files across the whole suite) to 155 025 ms (gate run 31888933252,
+// 2026-08-15, 161 files).
 // On the 2-vCPU runner six vitest processes share two cores, so a CPU-bound
 // property's wall time is its CPU time divided by the share it gets while
 // sibling suites are executing — a share that saturates once the siblings
@@ -96,21 +97,22 @@ describe("generateSudoku / generateDailySudoku", () => {
     // Explicit timeout, re-derived at #109 (ADR-0055 decisions 1, 2 and 4;
     // plan 051; shared arithmetic and cost drivers in the header above). The
     // cost is 200 generations — two per run, which IS the determinism
-    // property; the deep-equal is not measurable beside them (P1 / P2 = 2.48
-    // on CI, two generations against one) — so nothing is reducible without
-    // reducing numRuns, which ADR-0023 floors. Figures: 155 025 ms on CI, the
-    // pooled maximum over seven genuine gate runs (31888933252; the others
-    // 85 994–147 606 ms) — 64.6 % of the previous 240 000 ms and over its
-    // budget / 2 = 120 000 ms on five of the seven — and 40 844 ms contended
-    // local (pooled max over 3 uncapped runs at #109; apps at #120's
-    // worker bound, packages/games at cpus - 1). CI is the anchor:
-    // 155 025 x 4 = 620 100 -> 625 000 ms, of which the anchor is 24.8 % and
-    // 49.6 % of the budget / 2 = 312 500 ms tripwire. (load-bearing) The
-    // 240 000 it replaces was never derived by ADR-0055 decision 2: sized at
-    // #55 from an isolated ~18.5 s local figure — the baseline class plan
-    // 042 §2.2 shows under-shoots CI — via a multiplier its comment never
-    // stated (18.5 x 4 = 74 s, not 240 s); CI runs this test at 4.6–8.4x its
-    // isolated cost, not the "3-4x" that comment claimed. So this is decision
+    // property; the deep-equal is not measurable beside them (P1 / P2 ≈ 2.5
+    // on CI — 2.39–2.68 across the seven runs — two generations against one)
+    // — so nothing is reducible without reducing numRuns, which ADR-0023
+    // floors. Figures: 155 025 ms on CI, the pooled maximum over seven
+    // genuine gate runs (31888933252; the others 85 994–147 606 ms) — 64.6 %
+    // of the previous 240 000 ms and over its budget / 2 = 120 000 ms on five
+    // of the seven — and 40 844 ms contended local (pooled max over 3
+    // uncapped runs at #109; every workspace but packages/games at #120's
+    // worker bound). CI is the anchor: 155 025 x 4 = 620 100 -> 625 000 ms,
+    // of which the anchor is 24.8 % and 49.6 % of the budget / 2 =
+    // 312 500 ms tripwire. The 240 000 it replaces was never derived by
+    // ADR-0055 decision 2: sized at #55 from an isolated ~18.5 s local
+    // figure — the baseline class plan 042 §2.2 shows under-shoots CI — via
+    // a multiplier its comment never stated (18.5 x 4 = 74 s, not 240 s); CI
+    // runs this test at 4.6–8.4x its isolated cost, not the "3-4x" that
+    // comment claimed. So this is decision
     // 2's first application here, with decision 4's diagnosis discharged
     // first (plan 051 §3 D1). A ceiling, not a target: over 312 500 ms is a
     // defect to diagnose and record, never a number to raise — and on an
@@ -149,10 +151,10 @@ describe("generateSudoku / generateDailySudoku", () => {
     );
     // Retained at 240 000 ms at #109, not re-derived (ADR-0055 decision 4
     // governs a shipped ceiling; the ADR-0057 decision 5 shape). Figures:
-    // 62 009 ms on CI (gate run 31888933252; 56 202 ms on 32091557143, the
-    // newest genuine run) = 25.8 % — under the 40 %
-    // trigger and under budget / 2 = 120 000 ms — and 9 870 ms contended local
-    // (#109, 3 uncapped runs). Decision 2's arithmetic would say
+    // 62 009 ms on CI, the pooled maximum over the same seven genuine runs
+    // (31888933252; 32 122–61 783 ms on the other six) = 25.8 % — under the
+    // 40 % trigger and under budget / 2 = 120 000 ms — and 9 870 ms contended
+    // local (#109, 3 uncapped runs). Decision 2's arithmetic would say
     // 62 009 x 4 = 248 036 -> 250 000 ms, one step above what ships;
     // recorded as that one-step disagreement and not moved, because nothing
     // fires and it has never been red. Same driver and same contention as P1

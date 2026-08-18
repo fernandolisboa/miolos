@@ -55,7 +55,7 @@ The third residual, `T-WEB-S43`, is unaffected by any of this: 944 ms maximum on
 3. **Sudoku `P2 — solvability`**: number **retained** at 240 000 ms; its comment — false on the same class error, and dependent on `P1`'s old comment (*"the same margin as P1"*) — is replaced (§3 D3, §4.3). In scope because editing `P1`'s comment orphans it; the falsified-record standard (napkin Execution #5) puts it in the same round.
 4. **Sudoku `P3 — full-week`**: number retained at 60 000 ms, figures recorded inside the ramp's comment (the Binairo `P3` precedent), literal respelt `60_000` (§3 D4).
 5. **`T-WEB-S43` clue rails**: **no timeout** — measured-and-fine on the CI axis, with the local axis re-taken under today's configuration; a short comment records the verdict at the `describe` (§3 D5, §4.5). Contingency if the re-take fires the trigger: §3 D5(c).
-6. **The file-header "90 s ceiling" comment** in `generate.test.ts`: false (the file measures 218–250 s on CI); rewritten as the one place the shared arithmetic and cost drivers live (§4.1).
+6. **The file-header "90 s ceiling" comment** in `generate.test.ts`: false (the file measures 137–250 s on CI); rewritten as the one place the shared arithmetic and cost drivers live (§4.1).
 7. **Records**: ADR-0055 in-place annotations (j)–(p) and the reciprocal annotation at ADR-0057 decision 5 (mapping, §7 R1); `docs/agents/test-ids.md` frontier correction and two paragraphs (§7 R2, §9); `.claude/napkin.md` Execution #4 (§7 R3); `docs/README.md` row for this plan (§7 R4); the issue's closing verdict table (§7 R5); the gate-shape successor filed as an issue (§7 R7); the PR body's cost-driver list (§8). Each item beyond the three residuals carries its one-line reason in the section that owns it: the `P2` and header comments are orphaned or falsified by the `P1` edit (same-round correction, napkin Execution #5); the full-week respell is one line of formatting; napkin #4's *"residuals: #109"* closes with the ticket; the frontier row is a live trap for the next allocator; (m) and (o) are the amendments §6.2's runs and D7 respectively make unavoidable; (p) and its reciprocal are the reading ADR-0057 decision 5 asked this ticket to record (D1).
 8. **Evidence**: three uncapped local runs for the local half (§6.2); typecheck, lint, capped `pnpm test` (§6.3); the PR's own gate log read with the cache-miss check (§6.4).
 9. **Coordination with the sibling branch #116** (§5.1): three named conflict surfaces, `git merge origin/main` before gates and before merge.
@@ -529,7 +529,8 @@ Then: `gh issue view <n> --json number,labels,title` pasted; `#<n>` written into
 ## What changed
 - packages/games/test/sudoku/generate.test.ts — P1 240_000 → 625_000; P3 ramp 60000 → 100_000; P2 and full-week retained (240_000, 60_000); header comment rewritten; no numRuns change.
 - apps/web/test/nonogram-screen.test.tsx — one comment above the T-WEB-S43 describe; no timeout.
-- ADR-0055 annotations (j)–(p) + one header line; ADR-0057 decision 5 reciprocal annotation; test-ids.md frontier S230/S229 + two paragraphs; napkin Execution #4; docs/README.md row; docs/plans/051; successor issue #<n> filed (gate shape).
+- ADR-0055 annotations (j)–(p) + the `**Amended at #109**` header line; ADR-0057 decision 5 reciprocal annotation and one clause on its `**Amends:**` header ((m)'s reciprocal); docs/agents/domain.md — one sentence extending #116's amendment rule to a ticket that amends an ADR without shipping an ADR of its own, plus the matching clause in its "Who checks"; test-ids.md frontier S230/S229 + two paragraphs; napkin Execution #4; docs/README.md row; docs/plans/051; successor issue #123 filed (gate shape).
+- **A rule that landed hours earlier is edited here, deliberately.** #116 (merged as #122, the same day) wrote the amendment rule in `docs/agents/domain.md`; #109 is the first ticket to amend an Accepted ADR with no ADR of its own, so that rule's checker sentence, read literally, fails this PR — every `**Amended by:**` in `docs/adr/` cites an ADR, and this PR's amender is a ticket. One sentence added and the "Who checks" clause widened, in the rule's own terse register (step-6 adherence MAJOR-2).
 
 ## Verdicts (ADR-0055 decisions 1, 2, 4)
 | test | before | CI pooled max (run id) | % | local pooled max (n uncapped runs) | verdict | after |
@@ -547,7 +548,7 @@ The drift, and why it is not the test: P1 35 220 ms on gate 30683187834 (2026-08
 2. numRuns, FC_SEED and the two arbitraries in packages/games/test/sudoku/generate.test.ts
 3. fast-check's version in packages/games/package.json / pnpm-lock.yaml
 4. the gate runner's vCPU count and class (`nproc` on every gate; the gate's --concurrency=10, guarded by T-WEB-S226)
-5. the CPU demand of whatever sibling suites execute concurrently with generate.test.ts on the 2-vCPU runner — CPU share, not file count; it saturates once the siblings outlast the file — this is the driver that moved P1 4.4× on an unchanged generator; no per-timeout list can enumerate it, so the routing is: any gate log read for any reason reads the sudoku lines against 312 500 / 50 000 ms; a hit on unchanged code is a gate-shape defect, not a test defect — issue #<n>.
+5. the CPU demand of whatever sibling suites execute concurrently with generate.test.ts on the 2-vCPU runner — CPU share, not file count; it saturates once the siblings outlast the file — this is the driver that moved P1 4.4× on an unchanged generator; no per-timeout list can enumerate it, so the routing is: any gate log read for any reason reads the sudoku lines against 312 500 / 50 000 ms; a hit on unchanged code is a gate-shape defect, not a test defect — issue #123.
 (Locally, additionally: turbo's concurrency on the root script (ADR-0055 4(f)) — and NOT vitest.shared.ts, which packages/games does not consume.)
 
 ## Evidence
@@ -555,9 +556,23 @@ The drift, and why it is not the test: P1 35 220 ms on gate 30683187834 (2026-08
 - pnpm typecheck / pnpm lint / pnpm test --force (capped) — tails pasted
 - This PR's gate: run <id>; games and web `cache miss, executing`; nproc / free -m; the five test lines; Time — pasted. P1 <x> ms (< 312 500), P3 <y> ms (< 50 000).
 - Incidental, not acted on: Binairo P1/P2, the three wall first-its, the largest PGlite boot, all from the same three uncapped runs (first post-#120 local readings of #107's five and of the hook).
+- Which runs measured which tree: the three uncapped local runs measured the plan-only commit (unedited literals — a literal cannot move a duration); the capped gate run and the PR's own CI gate ran the edited literals.
+
+## Known and left (nothing owed by #109; listed so the next sweep has them)
+- ADR-0040:244's live *"CI runners are 3–4× slower"* clause — falsified for the tests ADR-0055 measured, immaterial there (sub-millisecond CPU), and not this ticket's to repair (step-6 adherence MINOR-3).
+- apps/web/test/sudoku-hint.test.ts:31 and apps/web/test/free-play-sudoku.test.tsx:136 cite the same 3–4× as the history of their own sizing — adjudicated at #107 (plan 042 MAJ-4), not made false by #109 (§7 R6).
+- grade.test.ts's two bare `60000` (10 815 / 4 157 ms = 18.0 % / 6.9 % of budget) — measured, under the trigger, nothing owed, not filed.
+
+## Step-6 reviews
+Four lenses ran (ADR/CONTEXT adherence, correctness, issue adherence, quality + performance): three ACCEPT WITH FIXES, performance ACCEPT. Every finding and its disposition is in plan 051 §12 "Step-7 changes"; any dismissal is written out there and repeated here rather than left silent.
 
 ## Decisions for Fernando
-None required — but one thing is stated for veto rather than assumed: the ADR-0055 decision 2 / decision 4 reading (plan 051 §3 D1; ADR-0055 annotation (p) and its reciprocal at ADR-0057 decision 5). If you read decision 4 as forbidding any raise of a shipped ceiling, P1 holds at 240 000 with the tripwire recorded as permanently tripped and P3 ramp holds at 60 000; say so on the PR and steps 5–7 re-run for the two numbers only.
+Three, and none of them is a number.
+1. **The decision-2 / decision-4 partition** — ADR-0055 annotation (p), reciprocal at ADR-0057 decision 5 (plan 051 §3 D1). Decision 2 governs a budget being *set* (first time, or one it never derived on which decision 1's trigger fires); decision 4 governs *every other* shipped ceiling — retain, record any arithmetic disagreement beside it, diagnose over `budget / 2`, never raise on the tripwire alone. **Alternative:** read decision 4 as forbidding any raise of a shipped ceiling — then P1 holds at 240 000 with the tripwire recorded as permanently tripped and P3 ramp holds at 60 000; say so on the PR and steps 5–7 re-run for those two numbers only.
+2. **Rule (o)** — ADR-0055 decision 2's pooling clause gains: samples taken under a worker configuration no shipped command reproduces are history, not anchors. It is what turns T-WEB-S43 from a 10 000 ms timeout into none. **Alternative:** pool the pre-#120 figures literally and ship a 10 000 ms timeout on a test whose measured maximum is 944 ms.
+3. **Annotation or a short ADR-0058 for (o) and (p).** Both ship as lettered in-place annotations. Step 6's ADR reviewer accepted that — (p) was delegated to the settling ticket by ADR-0057 decision 5 and adds no mechanism, (o) is narrow and derived from ADR-0057 decision 6 + (f) — while recording the alternative explicitly: a short ADR-0058 carrying (o) and (p) with `**Amends:** ADR-0055` and the reciprocal `**Amended by:**` fits the amendment rule as written with no new idiom, and is the conservative reading of `CLAUDE.md`'s *"a new technical decision of any weight is an ADR"*. Say the word and it becomes ADR-0058; nothing else changes.
+
+Plus one thing offered for veto rather than decision: the `docs/agents/domain.md` sentence edits a rule #116 shipped the same day (see "What changed").
 ```
 
 ---
@@ -579,7 +594,10 @@ None reserved, none spent, none burned. `packages/games` carries no ids (`docs/a
 5. **Records**: §7 R1 (ADR-0055 (j)–(p) + header line; the ADR-0057 decision 5 reciprocal), R2 (`test-ids.md`), R3 (napkin, with `#<n>`). Then §6.5's sweep in both directions; paste the mapping.
 6. **`git merge origin/main`** (§5.1 — resolve the three surfaces as written there if #116 has landed), then **§6.3**: typecheck, lint, capped `pnpm test --force`. Commit (pre-commit runs the capped suite again; that is fine and is not evidence of anything beyond green).
 7. **Push; open the PR** with the §8 body, `Closes #109`. `gh pr view <n> --json closingIssuesReferences` → `[109]`; `gh pr view <n> --json mergeable,mergeStateStatus` → not `DIRTY` (napkin Execution #10 — a dirty PR gets no `gate` at all).
-8. **Read the gate log** per §6.4; edit the PR body with the eighth row and the cache-miss lines. Post the verdict comment on #109 (§7 R5).
+8. **Read the gate log** per §6.4; edit the PR body with the eighth row and the cache-miss lines. Post the verdict comment on #109 (§7 R5) **before merge, never after** (`Closes #109` auto-closes on squash — handoff 048 landmine 4). That comment carries, beyond the verdict table and the eighth-row figures:
+   - the **2 368 / 1 959 ms re-label** in the code comment's own vocabulary — *contended local, uncapped, `apps/web` at pre-#120 `maxWorkers = 7`; superseded by the re-take at the shipped bound (624 ms pooled max over 3 runs), CI 944 ms max over 7 and 835 ms on this PR's gate* — because the row in the issue body is Fernando's and stays as written (step-6 issue F2);
+   - the note that the issue's own evidence grep **`grep -c timeout apps/web/test/nonogram-screen.test.tsx` now returns 1**, and that the hit is the new comment's own word; `grep -cE 'setConfig|\}, [0-9_]+\);'` is still 0 (step-6 issue F5);
+   - one line for the two snapshot-only residuals: `grade.test.ts`'s two bare `60000` and the three live `3–4×` comments are **measured, under trigger, nothing owed, not filed** (step-6 issue F3), with ADR-0040:244 named as the sweep's, not #109's.
 9. **Step 6 reviews** — six lenses, one each; a records lens must run the §6.5 sweep itself rather than read this plan's copy of it.
 10. **`git merge origin/main` again if `main` moved** (the #116 merge is the expected mover; §5.1), re-run §6.3 if anything merged, wait for the new gate; then **merge on green** (`gh pr merge --squash --delete-branch` from a clean worktree — napkin Shell #5). #109 closes on merge. No post-merge blocks.
 
@@ -598,7 +616,8 @@ None reserved, none spent, none burned. `packages/games` carries no ids (`docs/a
 - [ ] §6.5's sweep pasted as a mapping; every hit accounted for.
 - [ ] Cost-driver list in the PR body (§8).
 - [ ] Six step-6 reviews satisfied or each dismissal written in the PR.
-- [ ] #109 has the verdict comment; PR merged; issue closed.
+- [ ] #109 has the verdict comment **posted before merge**, carrying the verdict table, the eighth-row figures, the 2 368 / 1 959 re-label, the `grep -c timeout` = 1 note and the "measured, nothing owed, not filed" line (§10 step 8); PR merged; issue closed.
+- [ ] The PR body's "Decisions for Fernando" names (p), (o) and annotation-vs-ADR-0058, each with its alternative — never "None required" (§8; step-6 issue F1).
 
 ---
 
@@ -654,3 +673,49 @@ None reserved, none spent, none burned. `packages/games` carries no ids (`docs/a
 - **§6.3 on the merged tree**: `pnpm typecheck --force` — 6 successful, 0 cached, 6.122 s; `pnpm lint` — `eslint --max-warnings 0 .` exit 0; `pnpm test --force` (capped) — 6 successful, 0 cached, 41.232 s, every package green (ui 1/3 · core 23/205 · db 8/97 · api 26/246 · games 28/187 · web 78/1174). Capped sudoku readings, acceptance not anchors: `P1` 21 016 ms, `P2` 9 833, `P3` ramp 3 855, full-week 1 292 — the shipped ceilings hold under the shipped configuration.
 - **R2 widened by one sentence.** The frontier's provenance line ("Frontier as of plan 049 (#114), re-derived … at its step-7 exit") is updated to "as of plan 051 (#109)" with a pointer at the new #120 paragraph — the row it introduces was re-derived here, and leaving the provenance on #114 would have the sentence and the row disagree. Comment-class edit, no id involved.
 - **ADR-0055 annotation (o) placement.** R1 says "decision 2, after the third consequence — the pooling clause"; it is placed as its own italic paragraph immediately after the third consequence's paragraph (which carries (k)) and before the *"And the corollary…"* paragraph, so (k) and (o) read in sequence and the pooling clause they both amend is the paragraph above them.
+
+#### Step-7 changes (2026-08-18, applying the four step-6 reviews — every finding, one line each)
+
+**Deviations this round records, over and above the findings:**
+
+- **The (p) reading is restated as a partition, and this plan's §3 D1 second paragraph is the pre-partition wording.** D1 stated decision 4's domain by #109's instances — *"a shipped ceiling whose derivation is sound and whose test has no defect — under decision 1's trigger, under `budget / 2`, never red"* — which leaves the commonest future case ungoverned: a budget decision 2 *did* derive, sitting at 25 % of its own budget by construction, on which a later sample fires the 40 % trigger exactly as decision 2's residual predicts. What ships instead, in ADR-0055 (p) and, as a pointer plus a one-line verdict, at ADR-0057 decision 5: **decision 2 governs a budget being SET** — first time, or a shipped budget decision 2 never derived on which decision 1's trigger fires, with decision 4's diagnosis written first where the tripwire is also crossed; **decision 4 governs every other shipped ceiling** — whether or not the trigger fires (on a decision-2-derived budget it is expected to, anywhere between 1.6× and 2× the anchor), whether or not decision 2 derived it — retain, record any arithmetic disagreement beside it, diagnose over `budget / 2`, never raise on the tripwire alone. Every #109 verdict is unchanged by the restatement; `P2`'s "sharp edge" now follows from the rule instead of patching it. §3 D1 is left as written — a plan is a snapshot — and this entry is where the two disagree.
+- **`docs/agents/domain.md`'s amendment rule, shipped by #116 hours earlier, is extended by one sentence here.** #109 is the first ticket to amend an Accepted ADR decision-level with no ADR of its own: every `**Amended by:**` in `docs/adr/` cites an ADR, so the rule's checker sentence read literally fails this PR. The sentence names the `**Amended at #N**` header idiom, makes the plan's records section the reciprocal, and repeats `CLAUDE.md`'s exception ("a new rule of any weight is an ADR"); the "Who checks" clause gains *"or `**Amended at #N**` where the amender is a ticket"*. Register kept terse, per #116. Surfaced in the PR body's "What changed" so it is a visible edit to someone else's rule and not a silent one.
+
+**ADR / CONTEXT adherence lens**
+
+- **MAJOR-1** — applied, in all three places: ADR-0055 (p) rewritten as the partition above (one paragraph); ADR-0057's decision-5 reciprocal trimmed to a pointer at (p) plus the one-line verdict for the hook (also quality A7); this register's deviation line above. The header bullet (p) now reads *"stated as a partition, with decision 1's trigger as the discriminator on the setting side"*.
+- **MAJOR-2 (a)** — applied: ADR-0055 line 5 `**Annotated at #109**` → `**Amended at #109**`; the rest of the line unchanged.
+- **MAJOR-2 (b)** — applied: one sentence in `docs/agents/domain.md` plus the "Who checks" clause, as above.
+- **MAJOR-2 (c)** — applied: §8's "Decisions for Fernando" now names (p), (o) and annotation-vs-ADR-0058, each with its alternative. No ADR-0058 is filed; the reviewer did not demand one and accepted both annotations.
+- **MINOR-1** — applied: (o) gains both bounding clauses — *"shipped"* = a configuration an ADR names as a measurement configuration (the gate's command, decision 2's uncapped local command), a bare flag override no ADR names is not one; *"worker configuration"* = the configuration of the population's OWN package, a sibling package's change moving the contention basis ((f), (m)) and owing a re-measure rather than a discard.
+- **MINOR-2** — applied: ADR-0057's `**Amends:**` header gains *"— and decision 6's worker bound joins decision 4's cost-driver list, recorded at #109 as ADR-0055 annotation (m)"*.
+- **MINOR-3** — no edit, as the reviewer said; ADR-0040:244's live *"3–4×"* clause is listed in §8's new "Known and left" block for the PR body.
+- **MINOR-4** — applied: `generate.test.ts`'s *"apps at #120's worker bound, packages/games at cpus - 1"* → *"every workspace but packages/games at #120's bound"*; the rails comment names the `it` (*"renders one labelled rail per row and per column"*) instead of *"the rails test below"*. The *"re-derived"* / *"never derived → first application"* phrasing pair is left as the reviewer allowed, and is noted here so a later reader does not read it as an oversight. The PR body's decision-4 obligation is step 8's, in §8 and §11.
+
+**Correctness lens**
+
+- **F1** — applied: *"the file measures 218–250 s"* → *"137–250 s"* in `docs/README.md`'s 051 row and in §1 item 6 (the seven genuine samples are 136 933–249 512 ms; the conclusion the sentence draws is unaffected).
+- **F2** — applied: `P1 / P2 = 2.48 on CI` → `≈ 2.5 on CI — 2.39–2.68 across the seven runs`.
+- **F3** — applied: napkin #4's *"since the box grew and #120 bounded the workers"* → *"with #120's worker bound it is green on the 16 GB / 8-core box"*. The box at #109 is 15 993 MB, not handoff 050's 23 552 MB; the causal claim the ticket's own data contradicts is gone.
+- **F4** — applied with F4's own suggestion: header bullet (o) now says *"See the annotation there"*, matching (l)/(m)/(p), since (o) amends the pooling clause rather than a consequence.
+- **F5** — no edit: napkin #4's closing *"residuals closed at #109 (plan 051)"* is the post-merge state the napkin describes, and the item is only true once step 8 merges. Recorded here rather than hedged in the napkin.
+
+**Quality / maintainability lens**
+
+- **A1** — applied: both leaked `(load-bearing)` plan tags deleted from shipped comment text; the header's became prose (*"— the load-bearing finding:"*), the `P1` site's is gone entirely.
+- **A2 / A3 / A4** — applied: the `P1 / P2` ratio takes the max-plus-range idiom (F2); `P2`'s figure line now reads *"the pooled maximum over the same seven genuine runs (31888933252; 32 122–61 783 ms on the other six)"* — no time-relative word, same idiom as the other three sites, and it answers the issue lens's F4 in the same edit; both blocks reflowed.
+- **A5** — applied: millisecond measurements are out of ADR-0055's annotations, per that ADR's own Consequence. (j) keeps the verdicts and the shipped budgets and points at plan 051 §2.1/§12 and the PR body; (o) keeps the counterfactual 10 000 ms (a budget, not a measurement) and drops `2 368 × 4 = 9 472` and the 624 ms re-take; (l) keeps the qualitative drift (4.4×) and both run ids; (n) points at (l) rather than repeating the pair. (k) is unchanged — `16 GB, 8 cores, 15 993 MB` names the box class, not a duration, which A5 explicitly allows.
+- **A6** — applied: header bullet (n) *"Rewritten in place"* → *"Annotated in place"*.
+- **A7** — applied together with MAJOR-1: the ADR-0057 reciprocal is a pointer at (p) plus the one-line verdict; the partition itself is stated once, in ADR-0055 (p).
+- **A8** — applied, partially by the number: napkin #4 is 2 500 → 2 104 characters, with the two history parentheticals and the closing verdict list dropped and the causal clause fixed (F3). It does not reach the reviewer's ≤1 900 target because the item now also has to carry (o), (p) and the CPU-share mechanism, which the pre-#109 1 798-character version did not; every sentence left is a rule, not a record.
+- **A9** — dismissed with reason: the `gh run view --log` colour-strip stays. It is plan H-3's, and it is the difference between a grep that finds a CI figure and one that silently does not (`[0-9]{4,}ms` does not match `155025^[[2mms`) — a reader re-deriving a figure from a gate log needs it at the point of use.
+- **A10** — applied: §8's `#<n>` placeholders are `#123`.
+- **A11 / A12 / A13** — info, nothing owed; the two pending items A13 names are discharged by this round (the (p)-promotion question answered above, the §6.4 gate row recorded at step 5).
+- **B1–B6** — lens B is ACCEPT; no edit. The raised red-run worst case (~+6.4 min on a genuine `P1` hang) is stated in §3 D1 and in the PR body's cost section.
+
+**Issue-adherence lens**
+
+- **F1** — applied: §8's "Decisions for Fernando" is no longer "None required" (MAJOR-2 (c) above).
+- **F2 / F3 / F5** — step-8 items by construction; written into §10 step 8 and §11 so the closing comment cannot miss them (the 2 368 / 1 959 re-label, the `grep -c timeout` = 1 note, the "measured, nothing owed, not filed" line).
+- **F4** — applied in the `P2` comment (A3's edit carries it): *"the pooled maximum over the same seven genuine runs"*.
+- **F6 / F7** — info; F6's "which runs measured which tree" is now an explicit line in §8's Evidence block.
