@@ -112,11 +112,11 @@ describe("generateSudoku / generateDailySudoku", () => {
     // figure — the baseline class plan 042 §2.2 shows under-shoots CI — via
     // a multiplier its comment never stated (18.5 x 4 = 74 s, not 240 s); CI
     // runs this test at 4.6–8.4x its isolated cost, not the "3-4x" that
-    // comment claimed. So this is decision
-    // 2's first application here, with decision 4's diagnosis discharged
-    // first (plan 051 §3 D1). A ceiling, not a target: over 312 500 ms is a
-    // defect to diagnose and record, never a number to raise — and on an
-    // unchanged generator that defect is the gate's shape (see the header).
+    // comment claimed. So this is decision 2's first application here, with
+    // decision 4's diagnosis discharged first (plan 051 §3 D1). A ceiling,
+    // not a target: over 312 500 ms is a defect to diagnose and record,
+    // never a number to raise — and on an unchanged generator that defect
+    // is the gate's shape (see the header).
   }, 625_000);
 
   it("P1 — pinned regression: the literal expected puzzle for a fixed seed", () => {

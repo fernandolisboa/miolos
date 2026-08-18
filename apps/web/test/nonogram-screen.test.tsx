@@ -404,13 +404,17 @@ describe("the composite widget (T-WEB-S42)", () => {
 
 // Deliberately bare — no timeout (ADR-0055 decision 1; #109, plan 051).
 // #109's third residual is the `it` below, "renders one labelled rail per
-// row and per column": 944 ms maximum on CI over seven genuine gate runs
-// (31888933252; 376–932 ms on the others) = 18.9 % of vitest's 5000 ms
-// default, and 624 ms pooled maximum over 3 uncapped local runs at #109
-// (`pnpm test --force --concurrency=10`). Under the trigger on both axes;
-// x4 on the CI anchor gives the default it rides. The 2368 / 1959 ms that
-// filed it (plan 042 §2.3) were taken at apps/web's pre-#120 seven workers
-// — history, not anchors: ADR-0055 annotation (o).
+// row and per column": 990 ms maximum on CI over nine genuine gate runs
+// (32196991090; 376–944 ms on the other eight) = 19.8 % of vitest's
+// 5000 ms default, and 624 ms pooled maximum over 3 uncapped local runs at
+// #109 (`pnpm test --force --concurrency=10`). Under the trigger on both
+// axes; 990 x 4 = 3 960 -> the 5000 ms default it already rides. Under
+// decision 2 the anchor is a SAMPLE maximum, so a later run above it is the
+// estimator working, not a falsified record: this comment owes an update
+// only when a sample crosses the 2000 ms trigger, never on every new gate
+// row. The 2368 / 1959 ms that filed it (plan 042 §2.3) were taken at
+// apps/web's pre-#120 seven workers — history, not anchors: ADR-0055
+// annotation (o).
 describe("the clue rails (T-WEB-S43)", () => {
   it("renders one labelled rail per row and per column", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
