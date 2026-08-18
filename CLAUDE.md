@@ -130,5 +130,5 @@ Pre-issue implementation plans go to `docs/plans/` under the same numbering. Bot
 - Product or scope question → the founding handoff, as amended by the table at its top. Where an ADR supersedes it, the ADR is the final word; everywhere else the handoff is.
 - Recorded technical decision → `docs/adr/`.
 - Domain term → `CONTEXT.md`. Use its vocabulary in issue titles, test names and proposals; don't drift to synonyms.
-- New technical decision of any weight → propose an ADR before implementing, even a short one. It stays `Proposed` until it is flipped to `Accepted` in the PR that merges its code, before that PR's final review — the lifecycle, with owner and trigger, is in [`docs/agents/domain.md`](./docs/agents/domain.md).
+- New technical decision of any weight → propose an ADR before implementing, even a short one. It stays `Proposed` until the PR that ships its code flips it to `Accepted` in that same diff — owner, forms and edge cases in [`docs/agents/domain.md`](./docs/agents/domain.md).
 - A "small improvement" nobody asked for → sanity-check it first. If it doesn't hold up, say so and drop it. Don't execute on autopilot.
