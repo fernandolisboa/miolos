@@ -128,17 +128,23 @@ function reportTiming(fields: Record<string, string | number>): void {
  *     readings now exist — 8 686.4 ms (run 32003396086) and 9 733.8 ms (run
  *     32081091260) — and decision 2 takes the highest, so the procedure
  *     yields 9 733.8 x 4 = 38 935.2 → 40 000 ms, ABOVE the shipped ceiling,
- *     not below it. The second reading also settles what the first could not:
+ *     not below it. Decision 2 takes CI first, so 40 000 is the figure the
+ *     procedure names. The second reading also settles what the first could not:
  *     all 26 boots report `pool=1`, so vitest really does collapse to one
  *     worker on the 2-vCPU runner. ADR-0057 decision 3's premise is measured
  *     rather than assumed.
- *   - contended-local half [23.5 GB]: an eligible figure now EXISTS, and it
- *     agrees with CI. Three uncapped runs at THIS wall completed green with
- *     nothing timed out: 8 597.1 / 9 017.7 / 9 146.4 ms. Uncapped is the most
- *     contended local configuration there is, so the procedure yields
- *     9 146.4 x 4 = 36 585.6 → 40 000 ms. Also ABOVE the shipped ceiling.
- *     Both halves now name 40 000; decision 2 takes CI first, so 40 000 is
- *     the figure the procedure yields either way.
+ *   - contended-local half [23.5 GB]: eligible figures now EXIST. SIX uncapped
+ *     runs at THIS wall completed green with nothing timed out — 8 597.1 /
+ *     9 017.7 / 9 146.4 on the branch, then 8 085.7 / 8 429.1 / 10 283.1 on
+ *     the merged `main`. Uncapped is the most contended local configuration
+ *     there is, so the procedure yields 10 283.1 x 4 = 41 132.4 → 45 000 ms.
+ *     Also ABOVE the shipped ceiling, and one step above CI's. Decision 2
+ *     takes CI first, so 40 000 is the figure the procedure names; the local
+ *     half naming 45 000 is recorded because the spread between the two is
+ *     itself the reason ADR-0057 leaves this as a tension rather than a
+ *     number. Note the drift WITHIN this half: three more runs moved the
+ *     local maximum from 9 146.4 to 10 283.1, which is what a heavy-tailed
+ *     sample does and why no single reading should ever move this budget.
  *   - contended-local half [15.5 GB], retained as the record of what was
  *     tested: no eligible figure existed — and the reason was NOT that every
  *     uncapped run was red, because four of them were green 6/6 with zero
@@ -177,19 +183,21 @@ function reportTiming(fields: Record<string, string | number>): void {
  *   - under 10 000 ms, the boot fits vitest's bare hook default and the
  *     explicit timeout is no longer doing measurable work. Say so in the PR
  *     rather than leaving it unargued; do not delete it on one green sample.
- *     THIS IS THE BRANCH THAT CURRENTLY READS, and it is said here rather than
- *     left for a reader to notice: on the 23.5 GB box NO green configuration
- *     clears 10 000 ms — 3 033.5 capped, 9 146.4 uncapped — and CI's 9 733.8
- *     does not either. On this box alone the override earns nothing.
+ *     This is the branch the CAPPED reading takes: 3 033.5 ms, a third of the
+ *     bare default. Under the cap alone the override earns nothing, and a
+ *     reader who samples only `pnpm test` will conclude it is dead weight.
  *   - over 10 000 ms, the explicit timeout is confirmed as required, because
- *     the hook would have failed on the bare default. This is the whole case
- *     for the override, and on the 15.5 GB box it read clearly: 11 007.8 ms
- *     capped and 29 389.9 ms uncapped both cleared it. THAT is why the
- *     override stays despite the branch above — it is sized for the box where
- *     the boot is expensive, not for the one where it is cheap, and a box with
- *     the old cores-to-RAM ratio is one `.wslconfig` edit away. Deleting it on
- *     the current readings would re-open #114 for whoever next runs this suite
- *     on a smaller machine. It is also the criterion that means something
+ *     the hook would have failed on the bare default. THIS BRANCH ALSO READS,
+ *     on the same 23.5 GB box, and that is the finding: uncapped on `main`
+ *     the boot reached 10 283.1 ms — past the bare default, at 34 % of this
+ *     budget, in a run that was GREEN 6/6 with zero timeouts. The override is
+ *     doing real work on the current box, not only on the old one. On the
+ *     15.5 GB box it read louder still: 11 007.8 ms capped and 29 389.9 ms
+ *     uncapped. So the override survives on both boxes, and the honest
+ *     summary is that the CAP is what makes it look unnecessary — remove the
+ *     cap and the bare default starts failing again within one run in three.
+ *     Deleting it would re-open #114 for anyone running uncapped or on a
+ *     smaller machine. It is also the criterion that means something
  *     here — decision 1's 40 % trigger decides whether a test ACQUIRES an
  *     explicit timeout, so it cannot confirm one this hook already carries.
  *   - over 15 000 ms — `budget / 2`, ADR-0055 decision 4 — it is a defect to
