@@ -2,6 +2,8 @@
 
 **Point-in-time snapshot, 2026-08-17.** `main` at `f684447`. Not a living document.
 
+> ⚠️ **Superseded within hours of being written — read §8 first.** #120 landed the change that actually fixes #114, #114 and #107 are both **closed**, and the WSL allocation is back down to 16 GB. Sections 1–7 below are left as written because a handoff is a snapshot, but their status table and their central claim about the cap are both out of date.
+
 ---
 
 ## 1. Where things stand
@@ -116,3 +118,31 @@ If I have nothing for you on #114/#107, the unblocked candidates are #109
 (its third residual, T-WEB-S43, is measurable again on the local axis) and
 #116 (the ADR Status: field gap).
 ```
+
+
+---
+
+## 8. Addendum — what changed after §1–7 were written
+
+**§2's headline was wrong in the direction that mattered.** It said the cap is retained because it is *fastest*, "not because the machine runs out of memory". That framed a still-broken box as fixed. The turbo cap bounds **packages**; vitest's `maxWorkers = cpus - 1` bounds nothing, ties memory to **core count**, and is what actually exhausted the machine. #117 filed that as a residual for "a future box with a higher cores-to-RAM ratio" — it was this box, all along.
+
+**#120 (`36b82b2`) bounds the worker axis.** `vitest.shared.ts` exports `min(4, cpus - 1)`; every workspace permitted a config imports it.
+
+| path | before | after |
+|---|---|---|
+| `pnpm test` | 9 626 MB | **6 347 MB** |
+| `--concurrency=10`, or a bare `turbo run test` | 17 748 MB | **11 629 MB** |
+
+The second row is the whole difference: a bound that only holds through one script is not a bound.
+
+**The box is back to 16 GB.** The capped suite touches no swap down to a simulated **8 GB**; 16 GB is set only to absorb the uncapped path (11.6 GB) and the agent sessions beside it. `.wslconfig` carries the table.
+
+**#114 and #107 are closed.** #114's AC2 was *rewritten*, not reinterpreted — as written it demanded ten green runs at a fan-out that exhausted the box, i.e. it asked the fix to prove itself by not being applied. It now requires ten green `pnpm test` runs **and** a stated peak memory that fits 16 GB without swap. Both met: 10/10, 6 347 MB. #107's AC1 needed no change at all; §1's claim that it had "the identical problem" was wrong.
+
+**Three landmines this addendum adds, all earned the hard way:**
+
+- **`packages/core` and `packages/ui` carry `types: []`, exactly like `packages/games`.** Putting a `vitest/config` import into any of their tsconfig programs drags vite's `@types/node`-referencing declarations in and silently defeats the purity typecheck. Their configs are deliberately outside every tsconfig `include`, linted via eslint's `allowDefaultProject`. `T-WEB-S229` guards it.
+- **A glob is not an inventory.** `ls packages/*/vitest.config.*` aborted on a no-match under zsh and I read it as "none anywhere" — then generated a config over `apps/web`'s existing one, silently removing jsdom, plugin-react and its setup file. Component tests would have run in the wrong environment without failing.
+- **A simulation that does not assert its own preconditions is not a measurement.** Three background memory hogs accumulated because their kill was never verified, which produced a false "12 GB thrashes" result that reached both an ADR and a config file before being caught.
+
+**Still open and unblocked:** #109, #116.
