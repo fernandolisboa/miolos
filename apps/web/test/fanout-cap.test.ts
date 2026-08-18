@@ -13,6 +13,19 @@ import { z } from "zod";
  * have nowhere to live beside the settings they explain. THIS FILE IS THAT
  * COMMENT — a place a `git blame` and a red run both lead to.
  *
+ * READ THIS FIRST: EVERYTHING BELOW WAS MEASURED ON A BOX THAT NO LONGER
+ * EXISTS, AND THE CAP IS NO LONGER THE WHOLE FIX. The developer box's WSL2
+ * allocation was 15 545 MB when this block was written and is 16 GB now, and
+ * more importantly ADR-0057 decision 6 added `vitest.shared.ts`, which bounds
+ * `maxWorkers` — the axis this block treats as fixed at `cpus - 1` throughout.
+ * With that bound in place `pnpm test` peaks at 6 670 MB rather than 9 626,
+ * and the uncapped path at 11 629 rather than 17 748. Three specific claims
+ * below are dead: "TC=4 ... NOT SAMPLED" (it has three samples now), "It is
+ * NOT the fastest" (2 is fastest on the current box, 40-41 s against 4's
+ * 50-53), and "uncapped 0 of 6" (uncapped is green). The reasoning is kept
+ * because it is why the cap exists and why the budget stays; the numbers are
+ * history. Current figures: ADR-0057 decision 6 and plan 049 §2.7.
+ *
  * WHAT WENT WRONG. `pnpm test` runs six package suites through turbo, and
  * vitest's forks pool defaults each of them to `cpus - 1` workers. On the
  * 8-core / 15.5 GB developer box that is 6 x 7 workers at ~450 MB, i.e. ~19 GB
@@ -351,5 +364,56 @@ describe("turbo.json carries no global concurrency key (T-WEB-S227)", () => {
       })
       .parse(turboConfig).tasks.test.env;
     expect(testTaskEnv).toContain("MIOLOS_TEST_DB_TIMING");
+  });
+});
+
+describe("the worker bound, and the one package that must not carry it (T-WEB-S229)", () => {
+  // The turbo cap bounds PACKAGES. `vitest.shared.ts` bounds WORKERS, which is
+  // the axis tied to core count and therefore the one that outgrows any box.
+  // Both are needed; see that file for the measurements.
+  //
+  // This scan exists because writing these configs is exactly where the purity
+  // backstop nearly died: a first pass generated one for every workspace with a
+  // glob, which both clobbered `apps/web`'s real config (jsdom, plugin-react,
+  // setup file) and put a `vitest/config` import into `packages/games`.
+  const repoRoot = join(import.meta.dirname, "..", "..", "..");
+  const read = (p: string) => readFileSync(join(repoRoot, p), "utf8");
+
+  it("binds every workspace that may carry a config to the shared bound", () => {
+    // `packages/games` is deliberately absent from this list, not overlooked.
+    const bound = [
+      "packages/db",
+      "packages/core",
+      "packages/ui",
+      "apps/web",
+      "apps/api",
+    ];
+    const missing = bound.filter(
+      (pkg) =>
+        !/from "\.\.\/\.\.\/vitest\.shared"/.test(
+          read(`${pkg}/vitest.config.ts`),
+        ),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("keeps apps/web's own settings, which a generated config would have erased", () => {
+    // Named individually: a config that merely imports the bound would satisfy
+    // the test above while having silently dropped the DOM environment, and
+    // every component test would then pass against the wrong environment.
+    const web = read("apps/web/vitest.config.ts");
+    expect(web).toContain("jsdom");
+    expect(web).toContain("plugin-react");
+    expect(web).toContain("./test/setup.ts");
+  });
+
+  it("leaves packages/games without a vitest config, per ADR-0017", () => {
+    // NOT a style rule. Importing `vitest/config` pulls vite's `.d.ts`, which
+    // references `@types/node`, into a package whose tsconfig sets `types: []`
+    // — silently defeating the typecheck that enforces the project's central
+    // invariant that `packages/games` takes zero Node dependencies. ADR-0017
+    // records that it was found only when a negative typecheck test began
+    // passing when it should not have.
+    expect(() => read("packages/games/vitest.config.ts")).toThrow();
   });
 });

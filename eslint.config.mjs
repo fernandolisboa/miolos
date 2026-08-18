@@ -415,7 +415,27 @@ export default tseslint.config(
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          // The shared worker bound and the per-package configs that import it
+          // (ADR-0057 decision 6) are deliberately NOT in any package's
+          // tsconfig `include`. `packages/core` and `packages/ui` compile with
+          // `types: []`, and pulling in a file that reaches `vitest/config`
+          // would drag vite's `@types/node`-referencing declarations into those
+          // programs — the exact contamination ADR-0017 forbids in
+          // `packages/games`. Linting them through the default project keeps
+          // them checked without touching a single tsconfig.
+          // Listed one by one rather than globbed: `apps/web/vitest.config.ts`
+          // predates this and IS in its tsconfig, and a glob that swept it in
+          // is an error ("included by allowDefaultProject but also found in
+          // the project service"), not a silent no-op.
+          allowDefaultProject: [
+            "vitest.shared.ts",
+            "packages/db/vitest.config.ts",
+            "packages/core/vitest.config.ts",
+            "packages/ui/vitest.config.ts",
+            "apps/api/vitest.config.ts",
+          ],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
