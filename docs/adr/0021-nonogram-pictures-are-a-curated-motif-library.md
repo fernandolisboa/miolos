@@ -1,9 +1,7 @@
 # ADR-0021 — Nonogram pictures are a curated motif library
 
-- Status: accepted
-- Date: 2026-07-31
-- Issue: [#24](https://github.com/fernandolisboa/miolos/issues/24)
-- Plan: [`docs/plans/012-issue-24-plan-nonogram-engine.md`](../plans/012-issue-24-plan-nonogram-engine.md)
+**Status:** Accepted — 2026-07-31 (issue [#24](https://github.com/fernandolisboa/miolos/issues/24))
+**Plan:** [`docs/plans/012-issue-24-plan-nonogram-engine.md`](../plans/012-issue-24-plan-nonogram-engine.md)
 
 ## Context
 

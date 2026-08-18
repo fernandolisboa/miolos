@@ -1,7 +1,6 @@
 # 0024 — The daily buffer stores validated content, reads are stripped inside the wall, and the wall is the package surface
 
-Status: accepted
-Date: 2026-07-31
+**Status:** Accepted — 2026-07-31
 **Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — the operational-semantics horizon — *"the buffer is ~`bufferDepth` days deep — so any M2 content-shape change **must keep the read-side schema parsing rows generated up to `bufferDepth` days earlier**"* — lengthens to **the whole archive**. That bound was true because the only content read-backs were today's daily and a write path bounded at one day back; #31 makes every published past day readable at its own public URL, so a content-shape change owes compatibility with every row ever published, not the last seven. The failure mode is decided rather than deferred: the archive's per-day reader logs and returns nothing on a parse failure, so a stale row 404s instead of 500ing a URL the sitemap advertises (ADR-0053 decision 4); the two shipped readers still throw. *(**Tense, and why this amendment is nonetheless true from PR 1.** ADR-0053 lands in #31's first pull request, which ships no archive route — so the public URL half is PR 2's. The horizon lengthens anyway, in PR 1, by a path that is easy to miss: the WRITE path already reaches `getPublishedDailyWithSolution` + the content parse at any published past date the moment the window's lower bound goes. **On that path a drifted row is still a 500**, not the 404 promised above — the graceful reader is PR 2's and governs PR 2's reader only.)*
 
 ## Context

@@ -1,6 +1,6 @@
 # Domain Docs
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase.
+How the engineering skills should consume this repo's domain documentation when exploring the codebase, and how the ADR status field is maintained.
 
 This repo is **single-context**.
 
@@ -35,3 +35,25 @@ If the concept you need isn't in the glossary yet, that's a signal — either yo
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
 > _Contradicts ADR-0007 (event-sourced orders) — but worth reopening because…_
+
+## ADR status lifecycle
+
+Line 3 of every ADR is its status line; status and date live nowhere else (no `Date:` line, no status in the H1). The date is the `America/Sao_Paulo` day the ADR reached that status and moves only when the status moves. The four forms:
+
+```
+**Status:** Proposed — <drafting day> (issue #N)
+**Status:** Accepted — <merge day> (issue #N, shipped in #PR)
+**Status:** Superseded — <merge day> (issue #N; by [ADR-NNNN](…), shipped in #PR)
+**Status:** Withdrawn — <merge day> (issue #N; <one-line reason>)
+```
+
+- **Proposed** — drafted with the plan (steps 2–4); its code is not on `main`. It stays `Proposed` on `main` only while that holds — the first PR of a two-PR ticket.
+- **Accepted** — its code is on `main`; a decision-only ADR (no code of its own, e.g. ADR-0001–0015) when the PR carrying it merges, and a later ticket that implements it leaves its status alone. **Owner:** the agent driving that PR writes the flip into the PR's diff at step 5, with the code, dated with the day the PR is expected to merge and re-dated on the PR's last push if that day has changed. A ticket shipping as several PRs flips on the one that completes the code and cites them all (`shipped in #94 and #95`, ADR-0053).
+- **Superseded** — a later ADR replaces the decision as a whole. Flipped in the PR that ships the superseding ADR (that PR is the `shipped in`; `issue #N` stays the superseded ADR's own); the superseding ADR carries `**Supersedes:** [ADR-MMMM](…)`. **Partial replacement keeps `Accepted`:** the older ADR gains `**Superseded in part by:** [ADR-NNNN](…) (<which part>)`, the newer `**Supersedes in part:** [ADR-MMMM](…) — <which part>` (ADR-0001 ↔ ADR-0003). Use `**Amended by:**` when a sentence of the older decision is narrowed or corrected and the decision stands; `**Superseded in part by:**` when one of its decisions is replaced outright.
+- **Withdrawn** — a `Proposed` ADR whose code will not merge. Flipped by the PR that abandons it, or by a docs-only PR when the ticket closes with no PR; the file is kept. A reversed `Accepted` decision is `Superseded` by the reversing ADR, never `Withdrawn`.
+
+**Amendment moves neither status nor date.** `**Amends:**` on the amending ADR, the reciprocal `**Amended by:**` plus an in-place annotation on the amended one, in the same commit (ADR-0055 ↔ ADR-0057).
+
+**Pre-rule lines** — `Accepted` with a drafting day and no parenthetical at all (0021's `(issue #24)` aside), and ADR-0001's pointer to ADR-0004, mirrored on ADR-0004 rather than re-adjudicated — are left as written.
+
+**Who checks:** the step-6 "adherence to the ADRs and `CONTEXT.md`" reviewer, against the PR — every ADR whose code is in the PR carries the flip; every ADR the PR amends carries the reciprocal header; anything left `Proposed` has no code on `main`. No mechanical checker; a later sweep finding a shipped ADR still `Proposed` is the trigger to add one (plan 052 D8).
