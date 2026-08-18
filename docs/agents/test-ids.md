@@ -23,7 +23,7 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 049 (#114), re-derived by grep over the branch at its step-7 exit. It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 051 (#109), re-derived by grep over the branch at its step-5 build (the `T-WEB` row had been outrun by #120's `S229`; see the #120 paragraph below). It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 **Plan 037's reservations are now fully resolved.** PR 2 spent `T-DB-S44…S55` and `S57`, `T-WEB-S166…S186` and `T-LINT-S35…S37`; the tails `T-WEB-S187`/`S188` and `T-LINT-S38` were its reserved review-round headroom and are **burned** below, unspent. Nothing in plan 037's ranges is a live reservation any more, and "next free" below is a plain frontier again.
 
@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S86` | `S84` | never used |
 | `T-DB` | `S59` | `S58` | `T-DB-21` |
 | `T-API` | `S109` | `S107` | `T-API-16` |
-| `T-WEB` | `S229` | `S227` | `T-WEB-23` |
+| `T-WEB` | `S230` | `S229` | `T-WEB-23` |
 | `T-LINT` | `S47` | `S46` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
@@ -113,6 +113,10 @@ Five existing claims were widened in place and correctly took **no** new id in P
 **The ids sit on `describe(...)`**, which is `apps/web`'s shipped convention as stated at the top of this document, even though the subjects are a root `package.json`, a root `turbo.json` and a workflow file rather than anything under `apps/web/src`. They live there because `apps/web/test/` is where every existing **repo-root** config scan already lives and resolves its root the same way; the `T-LINT` area was not available, since this document defines it as the `eslint-*-wall.test.ts` suites specifically. **`T-WEB-S226` is the repo's first test to assert on a workflow file**, named as a first rather than dressed as a precedent — the nearest existing one is a test asserting on a `package.json`, and it is a package's own rather than the root's.
 
 **One reservation that appeared in an uncommitted draft is NOT issued and NOT burned.** An earlier revision of plan 049 proposed `T-DB-S59…S64` for a teardown API that was dropped at step 4 before any of it landed. That revision was never committed, so no permanent record ever gave those ids a meaning — which is the whole warrant for the burn rule below. **`T-DB-S59` is still next free**, and this paragraph exists so a later derivation does not spend a pass re-investigating why an orphaned range appears in a review log. **Burn ids that a committed plan reserved; never burn ids that only an orchestrator's context or an uncommitted draft ever held.**
+
+#120 (`36b82b2`, the worker bound absorbing #114's residual) spent **`T-WEB-S229`** on the worker-bound scan in `apps/web/test/fanout-cap.test.ts` (`describe("the worker bound, and the one package that must not carry it (T-WEB-S229)"`) **without a reservation paragraph or a frontier update at the time**; recorded at #109 (plan 051 §7 R2) because the frontier row above said `S229` was next free while the grep said it was in use. No id was burned; `T-WEB-S228` stays burned as recorded above.
+
+#109 (plan 051) reserved nothing and spent nothing: `packages/games` carries no ids, the `T-WEB-S43` comment in `apps/web/test/nonogram-screen.test.tsx` is not a claim, and the two edited files carry only comment and literal changes — the #114 precedent. Its one edit here is the frontier correction #120 owed.
 
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead — **and "new" means anything not yet on `main`, this branch's own step-7 output included**: `T-DB-S53a`/`S53b`, `T-WEB-S177a` and `T-LINT-S37a` are all that rule applied to duplicates created in the same pull request that removed the others.
 

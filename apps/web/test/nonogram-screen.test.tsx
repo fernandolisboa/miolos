@@ -402,6 +402,14 @@ describe("the composite widget (T-WEB-S42)", () => {
   });
 });
 
+// Deliberately bare — no timeout (ADR-0055 decision 1; #109, plan 051).
+// The rails test below was #109's third residual: 944 ms maximum on CI over
+// seven genuine gate runs (31888933252; 376–932 ms on the others) = 18.9 % of
+// vitest's 5000 ms default, and 624 ms pooled maximum over 3 uncapped
+// local runs at #109 (`pnpm test --force --concurrency=10`). Under the
+// trigger on both axes; x4 on the CI anchor gives the default it rides. The
+// 2368 / 1959 ms that filed it (plan 042 §2.3) were taken at apps/web's
+// pre-#120 seven workers — history, not anchors: ADR-0055 annotation (o).
 describe("the clue rails (T-WEB-S43)", () => {
   it("renders one labelled rail per row and per column", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
