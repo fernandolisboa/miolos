@@ -1,6 +1,6 @@
 # ADR-0055 — Test timeouts are sized against contention
 
-**Status:** Proposed — 2026-08-15 (issue #107)
+**Status:** Accepted — 2026-08-16 (issue #107, shipped in #112)
 **Amended by:** [ADR-0057](./0057-the-test-suites-memory-model-and-a-cap-that-binds-locally.md) — #114 ships the concurrency cap this ADR left to #110 and measures the hook axis it declared unmeasurable. **Listed as a mapping rather than a count** — the previous revision of #114's own plan said *"three amendments"* and listed four, in a ticket whose thesis is that counts rot faster than mappings. Every edit is annotated in place; nothing is deleted. **(a)–(f) are decision-level — four of them amendments (a with b as one annotation, c, e, f) and one a citation repair (d); (g)–(h) are the two Consequences made outright false; (i) is a Consequence adjudicated in place and deliberately NOT amended.** ADR-0057's `**Amends:**` header states the same split — two Consequences amended, one adjudicated — and the two headers are checked against each other rather than written independently.
 **Annotated at #109** ([plan 051](../plans/051-issue-109-plan-the-three-timeout-residuals.md)) — (j)–(p), continuing the lettering; **(k), (m), (o) and (p) are decision-level amendments** (a clause of decision 2 superseded; an entry added to decision 4's instantiated list, as (f) was; a rule added to decision 2's pooling clause; and the decision-2/decision-4 reading decision 4 left implicit); **(j), (l) and (n) are records completed or sharpened, not falsified**; every edit annotated in place, nothing deleted.
 

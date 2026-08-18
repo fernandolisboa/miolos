@@ -1,6 +1,6 @@
 # ADR-0052 — Medals are derived facts plus curated grants
 
-**Status:** Proposed — 2026-08-14 (issue #30)
+**Status:** Accepted — 2026-08-14 (issue #30, shipped in #92)
 **Amends:** the copy-home sentence of [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md) — *"All UI copy and metadata strings live here [messages.ts]; components never carry string literals."* — by narrowing where bulk per-item copy may live when its measured bundle cost forces it out of the shared module; see decision 5.
 **Depends on:** [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md)
 

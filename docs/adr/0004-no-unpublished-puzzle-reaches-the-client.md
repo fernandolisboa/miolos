@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-07-29
 **Depends on:** [ADR-0001](./0001-web-is-the-launch-platform.md)
+**Supersedes in part:** [ADR-0001](./0001-web-is-the-launch-platform.md) — its offline-caching scope (ADR-0001, Consequences: "narrowed by ADR-0004").
 **Supersedes:** the offline caching line in [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md) — *"App offline-friendly: cache dos próximos 2–3 dias de puzzles."*
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-0047 — Bundle markers are route-scoped: forbidden-everywhere vs forbidden-in-daily-scope
 
-**Status:** Proposed — 2026-08-12 (issue #28)
+**Status:** Accepted — 2026-08-12 (issue #28, shipped in #81)
 **Depends on:** [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md), [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md)
 **Amends:** [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md) — decision 1's *"not by shipping the motif library into the bundle"* clause narrows to daily-route and shared chunks, and consequence (d)'s premise that no motif name may reach `apps/web` narrows likewise; the payload and completion-response guarantees, and `FORBIDDEN_DAILY_KEYS`, are not touched. Its Rejected entry on shipping the motif tables stays rejected for what it argued — naming the daily reveal client-side; free play ships the tables to generate, never to name.
 
