@@ -284,7 +284,7 @@ Both breaks restored; `git diff --stat packages/games/src` empty and the file gr
 | `docs/adr/0023-…` | `**Amended by:** ADR-0059` header + an in-place annotation on the *"never below 100"* sentence. The floor is **narrowed in where it binds, never in whether it binds** |
 | `docs/adr/0055-…` | annotations **(q)** and **(r)**, continuing (j)–(p): at the decision-4 cost-driver routing and at the honest-residual Consequence, both of which name the sudoku sites as the gate's cost centre and route to #123. #126 *is* the shape change #123 held the question for |
 | `docs/README.md` | rows for plan 055 and ADR-0059 |
-| `docs/agents/test-ids.md` | `T-WEB` frontier `S231` → `S232`, with the reservation paragraph `T-WEB-S229` did not get — plus the `S230` → `S231` renumber the merge with #63 forced, recorded rather than smoothed over |
+| `docs/agents/test-ids.md` | `T-WEB` frontier `S232` → `S233`, with the reservation paragraph `T-WEB-S229` did not get. **The id was renumbered TWICE at merge time** — written `S230`, moved to `S231` when #63 (`#130`) landed `S230`, moved again to `S232` when #103 (`#136`) landed `S231`, both while this branch sat in GitHub's runner backlog. Three tickets read the same frontier row hours apart and all three were right when they read it, because the row records what has LANDED and a parallel branch is by definition what has not. Both other reservations are kept in full beside this one rather than one overwriting another, and the twice-earned mitigation is written there: reserve the id on `main` before step 5, not in the pull request that spends it |
 
 **Not touched:** the timeouts #109 set days ago. With `P1` at ≈ 35 s the 625 000 ms
 ceiling becomes *generous* rather than *wrong*, and re-deriving it here would restart
