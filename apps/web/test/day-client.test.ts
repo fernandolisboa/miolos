@@ -33,7 +33,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("fetchDayTruth (T-WEB-S231)", () => {
+describe("fetchDayTruth (T-WEB-S233)", () => {
   it("parses a valid body against the strict contract, with credentials and no custom headers", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(jsonResponse(200, validBody)),

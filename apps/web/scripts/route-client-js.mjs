@@ -83,6 +83,25 @@
  * `/nonogram`'s slack went 4.4 → 2.4 KB on a ticket whose whole diff is a
  * conclusion button and some metadata.
  *
+ * AMENDED AT #103 — THE ARCHIVE PLAY ROUTES ARE NO LONGER THE CONTROL, and
+ * the paragraph above is left standing rather than rewritten because it is
+ * the reasoning that makes the change below legible. #103 puts the share
+ * button on the archive's late-result panel, so the `AbortError` handler is
+ * on the four `/arquivo/[data]/<jogo>` first-load sets too and "on no
+ * others" is false of it. Measured on fresh production builds of `main` and
+ * of that branch: the four archive play routes +2.0 to +2.1 KB (binairo
+ * 19.2 → 21.3, nonogram 20.8 → 22.8, sudoku 15.4 → 17.5, termo 51.6 → 53.6),
+ * the four daily play routes +0.1 to +0.3 KB, everything else unchanged to
+ * the rounding step. The daily rise is the CSS split (the button's rules
+ * became their own chunk), not new logic. `/nonogram`'s slack goes
+ * 2.5 → 2.2 KB, which is this block's own predicted pressure arriving from
+ * the archive side; it is recorded here and in ADR-0054 decision 15's relief
+ * paragraph rather than absorbed, and `MAX_DELTA_BYTES` is untouched.
+ * WHAT A FUTURE TICKET NEEDS INSTEAD OF A CONTROL: the daily and archive
+ * play routes now share the share button, so the honest comparison is
+ * `/<jogo>` minus `/arquivo/[data]/<jogo>`, which still isolates the rest of
+ * the conclusion tree — ~16 KB, the `next/dynamic` relief below, unspent.
+ *
  * AND THE RELIEF, NAMED SO IT IS NOT THE CONSTANT. One more conclusion-sized
  * feature reds `/nonogram` for a reason unrelated to a motif leak, and the
  * pressure then will be to raise `MAX_DELTA_BYTES`. Do not. The structural

@@ -72,7 +72,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("the day-truth store's refresh discipline (T-WEB-S232)", () => {
+describe("the day-truth store's refresh discipline (T-WEB-S234)", () => {
   it("fetches ONCE for N subscribers, plain and in StrictMode", async () => {
     for (const wrapper of [undefined, strict]) {
       vi.resetModules();
@@ -158,7 +158,7 @@ describe("the day-truth store's refresh discipline (T-WEB-S232)", () => {
   });
 });
 
-describe("the day-truth store's triggers (T-WEB-S233)", () => {
+describe("the day-truth store's triggers (T-WEB-S235)", () => {
   it("refetches on visibilitychange -> visible, on focus and on online", async () => {
     const fetchMock = stubFetch(() => jsonResponse(200, payload()));
     const { useDayTruth } = await loadStore();
@@ -223,7 +223,7 @@ describe("the day-truth store's triggers (T-WEB-S233)", () => {
   });
 });
 
-describe("referential stability under N consumers (T-WEB-S239)", () => {
+describe("referential stability under N consumers (T-WEB-S241)", () => {
   it("hands back the same object at N = 4, 16 and 32, plain and in StrictMode, with no render loop", async () => {
     for (const wrapper of [undefined, strict]) {
       for (const consumers of [4, 16, 32]) {
@@ -264,7 +264,7 @@ describe("referential stability under N consumers (T-WEB-S239)", () => {
   });
 });
 
-describe("the day-truth seam is one function body wide (T-WEB-S241)", () => {
+describe("the day-truth seam is one function body wide (T-WEB-S243)", () => {
   const WEB_ROOT = join(import.meta.dirname, "..");
 
   function sourceFiles(directory: string): string[] {

@@ -634,7 +634,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
-  it("T-LINT-S39: play/share-text is banned from free play, clean from a daily path", async () => {
+  it("T-LINT-S39: play/share-text AND play/share-button are banned from free play, clean from a daily path", async () => {
     // #34's growth clause (the napkin's one-hop rule). Free play RECORDS
     // NOTHING (ADR-0008 rule 5, ADR-0046 `:31`), so it has no result to
     // share, and ADR-0011's shareable-seed idea is noted rather than
@@ -656,9 +656,50 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     );
     // Scope control: the composer is the daily conclusion's own surface.
     expect(wallHits(await lintProbe(DAILY_PATH, source))).toEqual([]);
+
+    // #103 WIDENS THIS CLAIM RATHER THAN OPENING A NEW ONE — a ban list
+    // gaining a name is the same claim about the same gate (`T-DB-9a`'s
+    // 4 → 8 precedent). Until #103 the BUTTON needed no entry, and this
+    // file's own comment above said why: it lived inside
+    // `play/conclusion-view`, already banned by name. The archive's
+    // late-result panel needed the same control, the component moved to its
+    // own file, and the premise died with the move. Measured before the
+    // entry existed: a free-play probe importing `../play/share-button`
+    // linted CLEAN, so the module was an unnamed one-hop door to BOTH
+    // `play/share-text` and `play/play-record`.
+    const button = [
+      'import { ShareButton } from "../play/share-button";',
+      "",
+      "export const probe = ShareButton;",
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(FREE_PATH, button))).toContain(
+      "no-restricted-imports",
+    );
+    expect(ruleIds(await lintProbe(ROUTE_PATH, button))).toContain(
+      "no-restricted-imports",
+    );
+    // The same scope control: the control is the daily conclusion's own, and
+    // since #103 the archive's too — neither is behind this wall.
+    expect(wallHits(await lintProbe(DAILY_PATH, button))).toEqual([]);
   });
 
-  it("T-LINT-S40: the dynamic-import evasion of the share-text ban reds; a local dynamic import stays clean", async () => {
+  it("T-LINT-S40: the dynamic-import evasion of the share-text and share-button bans reds; a local dynamic import stays clean", async () => {
+    // Both halves of every ban in this wall are load-bearing, and #103's
+    // entry is no exception: the regex at `eslint.config.mjs`'s
+    // `freePlayDynamicBannedModule` is the other door, and a name added to
+    // the static group and not to the regex is a wall that reds on the easy
+    // spelling only.
+    for (const specifier of ["../play/share-text", "../play/share-button"]) {
+      const dynamic = [
+        "export const load = () =>",
+        `  import("${specifier}");`,
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, dynamic)), specifier)
+        .toContain("no-restricted-syntax");
+    }
     const source = [
       "export const load = () =>",
       '  import("../play/share-text");',

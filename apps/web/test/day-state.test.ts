@@ -353,7 +353,7 @@ function dayPayload(
   };
 }
 
-describe("the merge with the server's day truth (T-WEB-S234)", () => {
+describe("the merge with the server's day truth (T-WEB-S236)", () => {
   it("adds a game completed on ANOTHER device, with no duration", () => {
     // The whole point of the ticket: nothing local, and the tile is done.
     const state = readDayState(DATE, dayPayload({ sudoku: "completed" }));
@@ -414,7 +414,7 @@ describe("the merge with the server's day truth (T-WEB-S234)", () => {
   });
 });
 
-describe("the date precondition (T-WEB-S235)", () => {
+describe("the date precondition (T-WEB-S237)", () => {
   it("discards a payload for another day IN FULL, not game by game", () => {
     writePlayRecord(sudokuRecord());
 
@@ -452,7 +452,7 @@ describe("the date precondition (T-WEB-S235)", () => {
   });
 });
 
-describe("the merge never invents a pending (T-WEB-S240)", () => {
+describe("the merge never invents a pending (T-WEB-S242)", () => {
   it("no server payload can demote a local `completed` to `pending`", () => {
     writePlayRecord(binairoRecord());
     writePlayRecord(sudokuRecord());
@@ -463,7 +463,7 @@ describe("the merge never invents a pending (T-WEB-S240)", () => {
         dayPayload({ binairo: server, sudoku: server }),
       );
       // The one permitted demotion is `completed` -> `played` (asserted in
-      // T-WEB-S234); `pending` out of a local `completed` is impossible,
+      // T-WEB-S236); `pending` out of a local `completed` is impossible,
       // because `mergeDayStatus` returns the LOCAL value exactly when the
       // server said `pending`.
       expect(state.binairo.status, server).not.toBe("pending");
