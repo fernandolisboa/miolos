@@ -1,6 +1,7 @@
 # ADR-0054 — The share is plain text and the card is a nameplate
 
 **Status:** Accepted — 2026-08-15 (issue #34, shipped in #105)
+**Amended at #103** (the archive's late-result panel gains this share button — the first item on the Rejected list below, taken up; Tier 2 under [ADR-0058](./0058-implementation-flows-are-tiered.md), plan section in the PR body rather than a plan document). **No decision moves.** What changes is where decision 1's control LIVES, how far decision 1a's third state REACHES, and **one entry on decision 15's free-play wall list** — all three annotated in place below, plus the Rejected entry marked taken up. The late-share question #103 owns — *what may a late share honestly say?* — is answered by decision 3 as written rather than by anything new: **a late share is byte-identical to the on-time share of the same record**, which is why this record grows no clause. `T-WEB-S231` is that identity as a gate.
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md), [ADR-0039](./0039-termo-cannot-be-played-offline.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
 **Amends:** four standing records. Three go by one mechanism — a **per-route enumeration that #34 grows** — and the fourth, added at step 7 (finding B2/W1), is the only one where a decision's sentence is **outright false** rather than merely short. Every sentence below is quoted from the file as it stands; every amended file carries the reciprocal `**Amended by:**` line **and an in-place annotation of the amended sentence**, because in this repo "amended" means the file was edited ([ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md) consequence (b), restated at [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) `:6`).
 
@@ -135,7 +136,23 @@ verdicts, so this record is readable without it:
 
 1. **The share is composed inside `ConclusionView`, from the record it already
    reads.** `ConclusionView` gains an in-file `ShareButton` and calls a new
-   pure module `apps/web/src/play/share-text.ts`. Its props stay at **seven**
+   pure module `apps/web/src/play/share-text.ts`.
+   *(**Amended at #103** — *"in-file"* is no longer true and nothing else in
+   this decision moved. The control lives in `apps/web/src/play/share-button.tsx`
+   with its own `share-button.module.css`, and it is rendered by
+   `ConclusionView` **and** by `archive/late-result.tsx`. It could not simply
+   be imported from `conclusion-view.tsx`: `T-WEB-S183` bans that module from
+   every `app/arquivo/**` module graph because `useDayState(date)` fires
+   `GET /streak` and chains to today's routes — and the ban is on
+   `conclusion-view`, not on `src/play/**`, which is the seam this record
+   already placed `share-text.ts` on. The stylesheet moved with the component
+   for a bundle reason, not a tidiness one: reaching `.shareBlock` through the
+   conclusion's own sheet would have shipped ~1,400 lines of CSS onto four
+   archive routes whose whole point is that the conclusion tree is outside
+   their graphs (ADR-0053 decision 4). The rules are byte-unmoved; only their
+   file changed. **The prop count is untouched** — `ConclusionView` still has
+   seven and `LateResult` still has four, because the button composes from
+   values both callers already hold.)* Its props stay at **seven**
    — three required (`game`, `date`, `copy`) and four optional (`result?`,
    `picture?`, `outcome?`, `answer?`). `ConclusionCopy` is **not** widened and
    Binairo and Sudoku gain no wrapper.
@@ -181,6 +198,15 @@ verdicts, so this record is readable without it:
    never work. Three states, all three written into the component's doc block:
    subject → enabled; no subject but a store → disabled for one commit; no
    subject and no store → nothing rendered.
+   *(**Amended at #103** — the three states are unchanged; what changes is
+   how far the third one REACHES. On the archive's late-result panel all four
+   games can reach it, not Termo alone, because that panel passes no `stamp`:
+   *"no time"* is one of its declared deliberate absences (`late-result.tsx`
+   `:73-76`) and taking an elapsed time as a prop purely to feed a share would
+   reopen an absence a share button is not a licence to reopen. The result is a
+   **narrower** surface than the daily's, never a wider one — nothing is shared
+   there that a daily conclusion would not share — and `T-WEB-S231` asserts the
+   omission on all four games rather than leaving it to this paragraph.)*
 
 2. **Coloured squares are content in a channel with no CSS, not decoration on
    a rendered page.** Termo's grid uses 🟩 / 🟨 / ⬜ for `correct` / `present` /
@@ -895,6 +921,21 @@ not come.
     walled value. The button itself needs no entry — it lives inside
     `play/conclusion-view`, which is already banned by name, and that is one
     reason not to give it its own file.
+    *(**Amended at #103** — **the wall gains `**/play/share-button`, in both
+    halves.** The last two clauses above are dead: the button DOES have its
+    own file now, because the archive's late-result panel needs the same
+    control and `T-WEB-S183` bans `conclusion-view` from every
+    `app/arquivo/**` graph. This is the one place where the reason not to
+    split the file was a real argument, and #103 overrode it — so it pays
+    the price the argument names. `no-restricted-imports` is per-file and
+    not transitive, which is why this list names one-hop doors by hand, and
+    a step-6 reviewer **measured** the hole before it was closed: a
+    free-play probe importing `../play/share-button` linted CLEAN through
+    both the static group and the `ImportExpression` regex, reaching
+    `play/share-text` AND `play/play-record` with no wall hit. `T-LINT-S39`
+    and `T-LINT-S40` are widened in place — a ban list gaining a name is the
+    same claim about the same gate, the `T-DB-9a` precedent — and the probe
+    is the clean-daily-path control's twin.)*
 
     **The OG wall is new and standing.** `@miolos/games` is banned from
     `apps/web/src/og/**` and from `apps/web/app/**/{opengraph,twitter}-image.*`,
@@ -967,6 +1008,19 @@ not come.
     `/nonogram` +37.6). The conclusion only renders after the grid closes,
     which is a natural `next/dynamic` boundary rather than a refactor —
     that is the move, and it belongs to the ticket that first needs it.
+    *(**Amended at #103**, and the numbers are the point rather than the
+    prose. The archive play routes are still ~16 KB lower and the relief is
+    still there, but **part of it has been spent**: measured on a fresh
+    production build of `main` and of #103's branch, the four archive play
+    routes moved +2.0 to +2.1 KB each (binairo 19.2 → 21.3, nonogram
+    20.8 → 22.8, sudoku 15.4 → 17.5, termo 51.6 → 53.6 against a 76 KB
+    per-route budget) and the four daily play routes moved +0.1 to +0.3 KB
+    (a CSS split, not new logic). **`/nonogram`'s slack goes 2.5 → 2.2 KB**,
+    which is exactly the pressure this paragraph predicted, arriving from the
+    archive side. Recorded rather than absorbed, per this decision's own
+    sentence that nobody may budget against room that is not there. The
+    `next/dynamic` move is still unspent and still belongs to the ticket that
+    first needs it.)*
 
     **Nothing else on any list moves.** No new page, so `impeccable.yml`'s URL
     lists, `route-ssr.test.tsx`'s `ROUTES` table, `sitemap.ts`'s path list and
@@ -1046,6 +1100,12 @@ not come.
   per-game*, and the day page is per-day and not per-game. Filed as follow-ups
   rather than dropped, and `share-text.ts` is placed in `src/play/` precisely
   so the first is a wiring job.
+  *(**Taken up at #103** — the share button half. It **was** a wiring job: the
+  composer is byte-unmoved, the button was extracted rather than copied, and
+  the one thing that had to be decided rather than wired was what a late share
+  may honestly say. It says exactly what an on-time share says; see the
+  annotations on decisions 1 and 1a and the header note above. The OG-card half
+  is still open.)*
 
 ## Consequences
 

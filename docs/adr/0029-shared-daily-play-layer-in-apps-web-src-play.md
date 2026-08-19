@@ -70,6 +70,23 @@ it as a timing rule and was wrong.
    stylesheet, the play composition and its skeleton, the screen root,
    and all copy.
 
+   *(**Amended at #103** — the "Shared" enumeration is **three items short**
+   and is completed here rather than left to drift. #34 added
+   `share-text.ts`, the pure share composer, and did not annotate it; #103
+   adds `share-button.tsx` and `share-button.module.css`, the control and
+   its stylesheet, extracted from `conclusion-view.tsx` so the ARCHIVE's
+   late-result panel can render the same button. That last one widens the
+   enumeration's own premise in a way worth stating: this layer is now
+   shared by the four daily play screens **and** by `src/archive/`, which is
+   a second consumer family the seam was not written for and which
+   `T-WEB-S183` polices by naming what the archive may not reach. Decision
+   2's substance is unchanged — the non-visual layer and the shared
+   stylesheets are shared, JSX composition stays per game — and no rule
+   moves. ADR-0054's own amendment audit was re-run *"by shape — forward-tense
+   prescriptions that enumerate artifacts"* precisely because a file-by-file
+   read misses this class; this is that class, found the same way at #103's
+   step-6 adherence review.)*
+
 3. **`sync.ts` is exactly one module, permanently.** Its genericity is
    scoped to the **queue, retry ladder and settle machinery**;
    `buildBody` is the one per-game dispatch **inside** it. Termo's

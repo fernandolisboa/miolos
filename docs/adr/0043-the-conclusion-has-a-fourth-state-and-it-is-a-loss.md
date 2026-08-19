@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-08-02
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md), [ADR-0042](./0042-the-termo-board-is-read-only-output.md), [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
-**Amended by:** [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md) — decision 10's closing sentence, *"Games that pass no `outcome` render no region and are unchanged"*, is **false** after #34: the share button renders a second `role="status" aria-live="polite"` region on **all four** conclusions, in both terminal branches, whether or not `outcome` is passed — with one exception that does not rescue the sentence: in a browser with no play-record store, Termo's share block renders nothing at all rather than a dead control (`conclusion-view.tsx`'s `playRecordsAvailable()` guard, plan 040 D17), so Termo alone can reach a no-region state, by a route the decision never contemplated. The decision's substance survives — the `.announcer` region, its composed string and the no-focus-steal mechanism are untouched — and what changes is the *scope* of the "unchanged" claim plus the fact that the conclusion now carries **two** live regions, which [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 10 requires be given an explicit disjointness rule. See the annotation at decision 10.
+**Amended by:** [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md) — decision 10's closing sentence, *"Games that pass no `outcome` render no region and are unchanged"*, is **false** after #34: the share button renders a second `role="status" aria-live="polite"` region on **all four** conclusions, in both terminal branches, whether or not `outcome` is passed — with one exception that does not rescue the sentence: in a browser with no play-record store, Termo's share block renders nothing at all rather than a dead control (`playRecordsAvailable()` guard, plan 040 D17), so Termo alone can reach a no-region state, by a route the decision never contemplated. *(**Amended at #103** — two citations in the preceding clause have moved. The guard is in `apps/web/src/play/share-button.tsx`, not in `conclusion-view.tsx`: the control was extracted so the archive's late-result panel could render the same one. And *"Termo alone"* is true of the four DAILY conclusions and false of the archive panel, which passes no `ConclusionResult` — *"no time"* is one of its declared deliberate absences — so on `/arquivo/<data>/<jogo>` all four games reach the no-region state. `T-WEB-S231`'s fifth `it` asserts exactly that, which is why it is recorded here rather than left for the test to contradict. The sentence's substance is untouched: the archive is a NARROWER surface, and nothing renders a region there that would not render one on a daily.)* The decision's substance survives — the `.announcer` region, its composed string and the no-focus-steal mechanism are untouched — and what changes is the *scope* of the "unchanged" claim plus the fact that the conclusion now carries **two** live regions, which [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 10 requires be given an explicit disjointness rule. See the annotation at decision 10.
 
 ## Context
 
@@ -287,6 +287,18 @@ the loss.
     the falsified sentence was written about. Everything else survives: `.announcer` is
     still gated on `outcome`, still carries the already-composed `aria`
     string, and still never moves focus.*
+
+    *(**Amended at #103** — the exception's SCOPE, once more. The guard moved
+    to `apps/web/src/play/share-button.tsx` when the control was extracted for
+    the archive's late-result panel, and on THAT surface all four games reach
+    the no-region state rather than Termo alone, because the panel passes no
+    `ConclusionResult` to fall back on. Nothing above changes for the four
+    daily conclusions this decision is about, and the disjointness rule below
+    does not acquire a new instance: the archive screens render `LateResult`
+    **instead of** the play view, so the board's own live regions are
+    unmounted and the two-region pair never exists there. Verified at #103's
+    step-6 adherence review, which raised it as a candidate blocker and
+    dropped it for that reason.)*
 
     ***The conclusion therefore has TWO `role="status"` regions, and
     [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 10
