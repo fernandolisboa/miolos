@@ -348,6 +348,15 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
     for (const path of graph) {
       expect(readFileSync(path, "utf8")).not.toContain("readDayState");
     }
+    // WIDENED AT #83, and the ADR-0053 decision 9 claim moves with it:
+    // `useDayState` now also FETCHES, so composing a daily screen root on an
+    // archived date would fire `GET /day` as well as `GET /streak` — a
+    // user-specific read on a public, crawler-facing route. `src/day` is
+    // reachable only through `play/day-state`, and neither may appear here.
+    expect(graph.filter((path) => path.includes("/src/day/"))).toEqual([]);
+    for (const path of graph) {
+      expect(readFileSync(path, "utf8")).not.toContain("useDayTruth");
+    }
   });
 
   it("the walker is not vacuous — it really reaches the shared play layer", () => {

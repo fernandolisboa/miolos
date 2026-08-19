@@ -1162,6 +1162,9 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "listArchivedDays", // #31 (ADR-0053 decision 4)
       "listArchivedMonths", // #31 (ADR-0053 decision 4)
       "listBufferedDates",
+      // #83 (ADR-0060): the day-truth reader, user entry only. Widened in
+      // place beside `T-DB-9e`, in the same commit as the export.
+      "listCompletionsForDay",
       "listCompletionsForMerge",
       "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
       "listCompletionsForStreak",
@@ -1192,7 +1195,10 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // ZERO — the late-write ceiling is a guard inside
     // `recordCompletion`'s own INSERT, not a new export (step-6 finding
     // F1) — and its archive PR moves it by exactly four: the three
-    // archive readers and the date classifier, on the root entry.
-    expect(surface).toHaveLength(38);
+    // archive readers and the date classifier, on the root entry. #83 moves
+    // it by exactly one: `listCompletionsForDay` on the USER entry
+    // (ADR-0060 decision 1), never the root — apps/web must stay unable to
+    // name it.
+    expect(surface).toHaveLength(39);
   });
 });

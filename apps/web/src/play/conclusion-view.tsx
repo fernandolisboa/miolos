@@ -113,10 +113,14 @@ export function ConclusionView({
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
   const record = snapshot.hydrated ? snapshot.record : undefined;
-  // What THIS DEVICE knows about the rest of the day (ADR-0031). It can only
-  // understate — a game solved on another device reads `falta` here, which
-  // is stated in the plan rather than hidden, and is the same answer a cold
-  // profile gets.
+  // What THE USER's day looks like as this device and the server together
+  // know it (ADR-0031 as amended by ADR-0060). Since #83 a game solved on
+  // another device no longer reads `falta` here: this surface carries the
+  // merged answer too, because `useDayState` is the ONE seam and there is no
+  // second spelling of it. A cold profile still reads everything pending —
+  // `/day` answers 401 with no session — and the local reader is the whole
+  // answer whenever the fetch does not land, which is what lets this screen
+  // finish offline.
   const dayState = useDayState(date);
 
   useEffect(() => {
@@ -806,17 +810,24 @@ function OutcomeStamp({ outcome }: { readonly outcome: ConclusionOutcome }) {
 }
 
 /**
- * The first daily this device can still play today, in the day's order — AC
- * 3's "the conclusion chains to the next pending daily" (plan 018 S21).
+ * The first daily THE USER can still play today, in the day's order — AC 3's
+ * "the conclusion chains to the next pending daily" (plan 018 S21).
  *
- * Understating is safe here for the same reason it is on the hub: the worst
- * a stale `pending` does is offer a game the player already solved on another
- * device, and `/<jogo>` restores straight into its conclusion (ADR-0031).
+ * SINCE #83 IT CHAINS ON THE MERGED STATE, not on this device's (ADR-0031 as
+ * amended by ADR-0060). `entryOf` reads the merged `dayState`, so a game
+ * solved on another device is no longer `pending` and is no longer offered
+ * at all — the understatement this paragraph used to rest on is gone, and
+ * with it the old claim that `/<jogo>` "restores straight into its
+ * conclusion". That sentence is the exact one ADR-0060 decision 8 exists to
+ * correct: the screen roots swap to `ConclusionView` off the LOCAL record
+ * (`isClosedAndFrozen(play.state)`), so cross-device `/<jogo>` renders a
+ * fresh, PLAYABLE board — ADR-0053 decision 10 layer 3's "honest gap", and
+ * the replay writes nothing (layer 1).
  *
  * The chain is on `"pending"` ALONE, never on "not completed" (#27, ADR-0044
  * decision 5). A lost Termo is *played*: its six guesses are spent and the
- * CTA's own contract is "the first daily this device can still play today",
- * so re-offering it would send the player to a board with no turns left.
+ * CTA's own contract is "the first daily still playable today", so
+ * re-offering it would send the player to a board with no turns left.
  */
 function nextPendingDaily(
   entryOf: (game: Game) => DayEntry,
@@ -855,10 +866,12 @@ function ConclusionTopBar({
 }
 
 /**
- * One "O dia até agora" chip, read from THIS DEVICE's day state (ADR-0031,
- * plan 018 §11.4). A game with no local concluded record is honestly
- * `falta` rather than a fake result — and together with the CTA the chips
- * are the AC's "points to the next pending daily" (plan 017 §12.3).
+ * One "O dia até agora" chip, read from the MERGED day state (ADR-0031 as
+ * amended by ADR-0060, plan 018 §11.4). A game NEITHER this device nor the
+ * server holds is honestly `falta` rather than a fake result; since #83 a
+ * game with no local record but a completion row on the server reads done
+ * here instead of `falta` — and together with the CTA the chips are the AC's
+ * "points to the next pending daily" (plan 017 §12.3).
  */
 function DayChip({
   game,

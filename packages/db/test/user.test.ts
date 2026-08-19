@@ -18,6 +18,7 @@ import {
   getCompletion,
   grantHints,
   grantedHintsToday,
+  listCompletionsForDay,
   listCompletionsForStreak,
   recordCompletion,
 } from "../src/completions";
@@ -122,6 +123,10 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "grantedHintsToday",
       "hintGrants",
       "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
+      // #83 (ADR-0060): the day-truth reader. This tripwire is WIDENED IN
+      // PLACE and gains no new id — a tripwire that counts one more export
+      // is the same claim (the `T-DB-9a`/`T-DB-S5` precedent).
+      "listCompletionsForDay",
       "listCompletionsForMerge",
       "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
       "listCompletionsForStreak",
@@ -852,5 +857,118 @@ describe("the migration's constraints (ADR-0006 guard, plan 017 §11)", () => {
       "onTime",
       "outcome",
     ]);
+  });
+});
+
+/**
+ * The day-truth reader (#83, ADR-0060 decision 1): one user, one São Paulo
+ * day, at most four rows. The two claims that matter are that the SCOPE is
+ * in SQL — never another user's rows and never another day's — and that
+ * `onTime` is the same `onTimeSql()` derivation every other reader here
+ * projects, taken off the DB clock and never off a JS `Date`.
+ */
+describe("listCompletionsForDay (#83, ADR-0060)", () => {
+  it("T-DB-S59: only that user's rows for exactly that date, with the SQL-derived onTime", async () => {
+    const userId = await createUser();
+    const other = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDaysLocal(today, -1);
+
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "binairo",
+      date: today,
+      outcome: "won",
+      elapsedMs: 61_000,
+      hintsUsed: 0,
+    });
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "termo",
+      date: today,
+      outcome: "lost",
+      elapsedMs: 61_000,
+      hintsUsed: 0,
+      guesses: 6,
+    });
+    // Another DAY for the same user, and the same day for another USER:
+    // neither may appear.
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "sudoku",
+      date: yesterday,
+      outcome: "won",
+      elapsedMs: 61_000,
+      hintsUsed: 0,
+    });
+    await recordCompletion(ctx.db, {
+      userId: other,
+      game: "nonogram",
+      date: today,
+      outcome: "won",
+      elapsedMs: 61_000,
+      hintsUsed: 0,
+    });
+
+    const rows = await listCompletionsForDay(ctx.db, userId, today);
+    expect([...rows].sort((a, b) => a.game.localeCompare(b.game))).toEqual([
+      { game: "binairo", outcome: "won", onTime: true },
+      { game: "termo", outcome: "lost", onTime: true },
+    ]);
+    // The projection is exactly the three fields `dayStateFromRows` reads —
+    // no `completedAt`, no `elapsedMs`, no `hintsUsed` on this wire path.
+    for (const row of rows) {
+      expect(Object.keys(row).sort()).toEqual(["game", "onTime", "outcome"]);
+    }
+
+    // The other user sees only their own row, and the other day only its.
+    expect(await listCompletionsForDay(ctx.db, other, today)).toEqual([
+      { game: "nonogram", outcome: "won", onTime: true },
+    ]);
+    // Yesterday's row was WRITTEN today, so `onTimeSql()` derives false —
+    // the reader returns the row and packages/core turns it into `pending`
+    // (ADR-0008 rule 2). The reader never filters; that is the point.
+    expect(await listCompletionsForDay(ctx.db, userId, yesterday)).toEqual([
+      { game: "sudoku", outcome: "won", onTime: false },
+    ]);
+  });
+
+  it("T-DB-S60: the rollover boundary, faked clock — a write instant on the NEXT SP day reads onTime false", async () => {
+    // The T-DB-14 idiom: only `Date` is faked, and two identities are
+    // mandatory because a same-user replay hits ON CONFLICT DO NOTHING and
+    // re-reads the ORIGINAL completed_at.
+    vi.useFakeTimers({ toFake: ["Date"] });
+
+    vi.setSystemTime(new Date("2026-08-01T02:59:59Z")); // 23:59:59 in SP
+    const onTimeUser = await createUser();
+    await recordCompletion(ctx.db, {
+      userId: onTimeUser,
+      game: "binairo",
+      date: "2026-07-31",
+      outcome: "won",
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+    });
+
+    vi.setSystemTime(new Date("2026-08-01T03:00:01Z")); // 00:00:01 in SP
+    const lateUser = await createUser();
+    await recordCompletion(ctx.db, {
+      userId: lateUser,
+      game: "binairo",
+      date: "2026-07-31",
+      outcome: "won",
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+    });
+
+    expect(
+      await listCompletionsForDay(ctx.db, onTimeUser, "2026-07-31"),
+    ).toEqual([{ game: "binairo", outcome: "won", onTime: true }]);
+    // A late win is still a ROW of that day — the reader returns it and the
+    // `pending` verdict is packages/core's, in one place (ADR-0026
+    // decision 2, ADR-0008 rule 2).
+    expect(await listCompletionsForDay(ctx.db, lateUser, "2026-07-31")).toEqual(
+      [{ game: "binairo", outcome: "won", onTime: false }],
+    );
   });
 });

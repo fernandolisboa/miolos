@@ -13,6 +13,9 @@ export {
   getCompletion,
   grantedHintsToday, // DORMANT (plan 017 D22) — no v1 writer; see ADR-0027
   grantHints, // DORMANT (plan 017 D22)
+  // #83 (ADR-0060): the day-truth reader — one user, one SP day, <= 4 rows
+  // on `completions_user_date_idx`, the index built for this read.
+  listCompletionsForDay,
   listCompletionsForStreak,
   recordCompletion,
   type CompletionRecord,

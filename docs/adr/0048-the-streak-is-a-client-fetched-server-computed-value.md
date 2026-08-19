@@ -9,6 +9,11 @@ decision 5's *"#19 replaces `readDayState`'s body and nothing else"* is narrowed
 body-replacement move to a dedicated follow-up issue
 ([#83](https://github.com/fernandolisboa/miolos/issues/83)). The local reader,
 its callers and the offline-fallback rule are unchanged.
+**Discharged at #83 / [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md)**,
+which ships the payload this deferral names and replaces `readDayState`'s
+body, keeping the local reader as the offline fallback exactly as the sentence
+above requires. This ADR's own decisions need no change — this is the
+fulfilment it predicted.
 Also amends [ADR-0041](./0041-accents-colour-shapes-never-words.md)
 consequence (h) — its enumeration of surviving accent-text declarations
 ("thirteen … this table is the thing to recompute rather than trust") grows

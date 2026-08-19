@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md)
 **Amended by:** [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md) — decision 5's *"#19 replaces `readDayState`'s body and nothing else"* is narrowed: #19 ships the streak that decision 3 deferred and does NOT replace `readDayState`'s body; the server day-truth payload and the body replacement move to [#83](https://github.com/fernandolisboa/miolos/issues/83). The local reader, its callers and the offline-fallback rule are untouched.
+**Amended by:** [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md) — **decisions 1 and 2 and consequence (d)**, each annotated in place below. **Decision 1** is narrowed: the one-seam property survives untouched (`readDayState` is still the only function that derives completion, and every consumer still reads it), but what it returns is this device's record **merged with the server's claim for today**. **Decision 2**'s safety property survives — the day state still can never overstate the *user's* day, and the one demotion ADR-0060 creates is a correction in the direction this decision permits — while its **mechanism does not**: *"absence proves nothing and renders as pending"* is false for the merged projection, where absence on the **device** renders as whatever the server says. **Consequence (d)** is discharged and its second sentence corrected. **Decision 5**, as already narrowed by ADR-0048, is **discharged**: #83 shipped the payload and replaced the body, and the local reader stayed as the offline fallback.
 **Amends:** the user-specific-fragment consequence of [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md) — *"If a public page ever grows a user-specific fragment (e.g. 'you solved this one'), that fragment calls `apps/api` — the page does not get to widen the direct-read scope."* — by narrowing it to fragments whose **source** is server state; see Decision 4.
 
 ## Context
@@ -51,6 +52,14 @@ reader discover the tension.
    conclusion's day chips and the conclusion's chaining CTA all read
    this one function.
 
+   > **Amended at #83 ([ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md) decision 3).** The
+   > one-seam property survives verbatim; the signature and the answer do not.
+   > `readDayState(date, server?)` returns this device's record **merged with
+   > the server's claim for today**, and *"whether **this device** concluded"*
+   > is now *"whether the user concluded, as far as this device and the server
+   > together know"*. `server === undefined` — for any reason — leaves the
+   > local projection as the whole answer.
+
 2. **It is monotone-safe, and that is the property that makes it
    shippable.** A local `concluded` record proves this device solved
    the puzzle; **absence proves nothing** and renders as *pending*. The
@@ -58,6 +67,19 @@ reader discover the tension.
    invisible — it is also the cold-profile default, what
    `impeccable detect` always scans, and what a second device already
    shows today. A false *done* would be a lie the player can catch.
+
+   > **Amended at #83 ([ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md) decision 3).** The
+   > **property survives, the mechanism does not.** The day state still can
+   > never overstate the *user's* day — a done tile means the device or the
+   > server holds a completion, and both are real. But *"absence proves
+   > nothing and renders as pending"* is false for the merged projection:
+   > absence on the **device** renders as whatever the server says, and
+   > absence on **both** is what still renders pending. The cold profile and
+   > the visual gate are unchanged (no session, `/day` answers 401); the
+   > second device is not, which is the whole of #83. The state can also now
+   > move DOWN once after hydration, in exactly one case — a Termo won here
+   > and lost elsewhere — which is a correction in the direction this decision
+   > permits, never an overstatement.
 
 3. **The streak stays server-computed, and `streakCount` stays
    hardcoded `0` until #19.** The asymmetry is deliberate: a streak is a
@@ -80,6 +102,14 @@ reader discover the tension.
    the CSS variant, the copy and the components survive untouched, and
    when the server payload arrives **the local reader stays** as the
    offline fallback the conclusion requires by decision 1's first fact.
+
+   > **Discharged at #83 ([ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md)),
+   > as narrowed by [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md).**
+   > The payload shipped as `GET /day` with its own contract, the body was
+   > replaced, and the local reader stayed — exactly as written. The callers,
+   > the CSS variant and the copy survived untouched; the one thing this
+   > decision did not anticipate is that the merged answer can demote, and
+   > ADR-0060 decision 7 owns that.
 
 6. **This state can never back a medal, a streak or any award.** It is
    self-reported device state, under the same rule
@@ -144,6 +174,16 @@ reader discover the tension.
   chaining CTA inherits the same understatement: at worst it points at a
   daily this player already finished on another device, which lands them
   on a screen that immediately restores into its own conclusion.
+
+  > **Discharged and corrected at #83 ([ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md)
+  > decisions 3 and 8).** The understatement is gone: a game completed on
+  > another device now reads *done* on this one. The second sentence was
+  > **wrong in the other direction** and is corrected — a done tile reached
+  > cross-device links to a route that renders a fresh **playable** board,
+  > because the screen roots swap to `ConclusionView` off the LOCAL record
+  > and cross-device there is none. That is ADR-0053 decision 10 layer 3's
+  > *"honest gap"*, reached from the daily hub for the first time; the replay
+  > writes nothing.
 - **(e) The visual gate keeps scanning the pending state.**
   `impeccable detect` launches a clean browser profile, so the local
   store is always empty and both viewports always scan *pending* — which
