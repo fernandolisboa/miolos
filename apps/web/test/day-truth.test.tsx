@@ -72,7 +72,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("the day-truth store's refresh discipline (T-WEB-S234)", () => {
+describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
   it("fetches ONCE for N subscribers, plain and in StrictMode", async () => {
     for (const wrapper of [undefined, strict]) {
       vi.resetModules();
@@ -158,7 +158,7 @@ describe("the day-truth store's refresh discipline (T-WEB-S234)", () => {
   });
 });
 
-describe("the day-truth store's triggers (T-WEB-S235)", () => {
+describe("the day-truth store's triggers (T-WEB-S236)", () => {
   it("refetches on visibilitychange -> visible, on focus and on online", async () => {
     const fetchMock = stubFetch(() => jsonResponse(200, payload()));
     const { useDayTruth } = await loadStore();
@@ -203,7 +203,7 @@ describe("the day-truth store's triggers (T-WEB-S235)", () => {
     rendered.unmount();
   });
 
-  it("T-WEB-S245: a REJECTED fetch does not wedge the in-flight guard — the next trigger still fetches", async () => {
+  it("T-WEB-S246: a REJECTED fetch does not wedge the in-flight guard — the next trigger still fetches", async () => {
     // The guard's correctness must be LOCAL. `fetchDayTruth` is total by
     // construction today, so this rejection is unreachable through the real
     // client — which is exactly why the client is STUBBED here: the store
@@ -260,7 +260,7 @@ describe("the day-truth store's triggers (T-WEB-S235)", () => {
   });
 });
 
-describe("referential stability under N consumers (T-WEB-S241)", () => {
+describe("referential stability under N consumers (T-WEB-S242)", () => {
   it("hands back the same object at N = 4, 16 and 32, plain and in StrictMode, with no render loop", async () => {
     for (const wrapper of [undefined, strict]) {
       for (const consumers of [4, 16, 32]) {
@@ -301,7 +301,7 @@ describe("referential stability under N consumers (T-WEB-S241)", () => {
   });
 });
 
-describe("the day-truth seam is one function body wide (T-WEB-S243)", () => {
+describe("the day-truth seam is one function body wide (T-WEB-S244)", () => {
   const WEB_ROOT = join(import.meta.dirname, "..");
 
   function sourceFiles(directory: string): string[] {

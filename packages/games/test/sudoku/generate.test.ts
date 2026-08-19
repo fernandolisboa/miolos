@@ -15,12 +15,35 @@ import {
   type SudokuApprovalCriteria,
   type Weekday,
 } from "../../src/sudoku/index";
+import { FULL_PROPERTIES, PR_GATE_RUNS, propertyRuns } from "../property-runs";
 
+// THIS FILE IS SPLIT, AND A GREEN PULL-REQUEST GATE IS NOT THE FULL PROOF
+// (#126, ADR-0059 amending ADR-0023). The three properties below run their
+// full counts — 100, 100, 35 — only under MIOLOS_FULL_PROPERTIES=1, which is
+// what `.github/workflows/properties.yml` runs nightly and on
+// workflow_dispatch. Every other run — the pull-request gate, pre-commit, and
+// every local `pnpm test` — takes the reduced sample PR_GATE_RUNS = 25. Both
+// numbers are visible at every call site; the mechanism, the sizing table and
+// the reason it is an env var rather than a vitest config live in
+// `test/property-runs.ts`.
+//
+// WHY THE SPLIT EXISTS: the floor cost this file 167–219 s on every pull
+// request — 83–87 % of `@miolos/games` — for 300 sudoku generations, on
+// markdown-only pull requests too, because the gate has no `paths` filter.
+// ADR-0023's floor is NOT weakened: ADR-0059 narrows WHERE it binds, never
+// whether. Nothing about the invariants being proved changed.
+//
 // Every fc.assert in test/sudoku/** pins { seed: FC_SEED, numRuns } so the
 // sampled puzzle-seed set is identical on every CI run (plan §5, review B2).
+// Because fast-check draws forward from that pinned seed, the reduced sample
+// is a strict PREFIX of the full one: the gate checks the first 25 of the 100
+// pairs the nightly checks, never a different 25. The coverage test below
+// re-asserts that, and the weekday coverage it depends on, on every run.
+//
 // Run counts follow ADR-0023: 100 is the FLOOR for the main determinism (P1)
-// and validity (P2) properties — never reduce those below 100, and time is
-// never bought by sampling less (ADR-0055).
+// and validity (P2) properties — never reduce those below 100 on the run that
+// carries the proof, and time is never bought by sampling less on it
+// (ADR-0055).
 //
 // There is no file-level ceiling. The four heavy tests below carry their own
 // in-file timeouts (ADR-0017 forbids a vitest config here), adjudicated at
@@ -49,7 +72,11 @@ import {
 // which no per-timeout list can enumerate, and which is why the tripwire
 // above is read whenever a gate log is read for anything. If a tripwire
 // fires again on an unchanged generator, the defect is the gate's shape,
-// not this file: that conversation is issue #123. Every contended-local
+// not this file: that conversation was issue #123, and #126 IS the shape
+// change it held the question for — the properties above no longer run their
+// full counts on the gate at all, so a future tripwire firing here is a
+// firing at a quarter of the old sample and is that much louder. Every
+// contended-local
 // figure below is from a run at turbo's default fan-out; after #114 a bare
 // `pnpm test` is capped at 2, so reproduce with
 // `pnpm test --force --concurrency=10`, and read a CI figure only from a run
@@ -62,6 +89,19 @@ import {
 // ones that are, in order: P3 35 -> 25 and grade.test.ts's cross-check
 // 25 -> 15 (secondary properties, Binairo P3 = 25 precedent), then a floor
 // amendment proposed against ADR-0023.
+//   *(**SPENT AND SUPERSEDED AT #126.** The floor amendment this paragraph named
+//   as the last lever is the one that shipped: ADR-0059 narrows where
+//   ADR-0023's floor binds, and P3's own 35 -> 25 arrived with it, through
+//   `propertyRuns` rather than as an edit to a literal. The remaining lever is
+//   `grade.test.ts`'s cross-check, unchanged and unspent — it already samples
+//   25, which IS the reduced sample, so the split leaves it alone by
+//   construction (`Math.min`). What has NOT become available is lowering
+//   PR_GATE_RUNS: below 21 the weekday-coverage test goes red on purpose. And
+//   the four timeouts below are DELIBERATELY NOT re-derived here — #109 set
+//   them days ago against measured contention, and re-deriving a ceiling in
+//   the same change that moves its anchor is the loop #126 exists to end. They
+//   are now generous rather than wrong; ADR-0059 records the follow-up sweep
+//   and the arithmetic it will use.)*
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
@@ -84,6 +124,91 @@ const PINNED_SOLUTION: readonly number[] = [
   6, 1, 9,
 ];
 
+describe("the reduced pull-request sample (#126, ADR-0059)", () => {
+  // WHAT KEEPS THE CHEAPER GATE FROM BEING A RUBBER STAMP, MECHANICALLY.
+  // The behavioural half of that proof is #126's anti-vacuity control — the
+  // generator deliberately broken and shown red at 25 runs, twice: module
+  // state leaked into the PRNG (P1 red on fast-check run 1) and a tier-5
+  // criteria band made invalid, which is Sunday-only and goes red on run 21,
+  // the exact run where this pinned draw first yields weekday 7. At 20 runs
+  // that second one is INVISIBLE, and the first test below is what goes red
+  // instead. That control lives in a pull-request body, which no future
+  // change re-runs; these four tests are the half that runs forever. They
+  // cost no generations at all: the recorded predicate below pushes a pair
+  // and returns, generating nothing.
+  /**
+   * The pairs `fc.assert` ITSELF draws — recorded from the property's own
+   * predicate, not modelled by a lookalike. This distinction is load-bearing
+   * and was nearly got wrong: `fc.sample(fc.property(...))` yields a
+   * DIFFERENT sequence from `fc.assert(fc.property(...))` in fast-check 4,
+   * while `fc.sample(fc.tuple(...))` happens to match today. Sizing the
+   * sample off the lookalike would mean a future draw-order change could move
+   * what the properties consume while leaving these tests green — measuring a
+   * sequence nothing runs.
+   */
+  const asserted = (numRuns: number): (readonly [number, Weekday])[] => {
+    const seen: (readonly [number, Weekday])[] = [];
+    fc.assert(
+      fc.property(seedArb, weekdayArb, (seed, weekday) => {
+        seen.push([seed, weekday]);
+      }),
+      { seed: FC_SEED, numRuns },
+    );
+    return seen;
+  };
+
+  /** The `fc.sample` lookalike, kept only so the line below can pin it. */
+  const drawn = (numRuns: number): readonly (readonly [number, Weekday])[] =>
+    fc.sample(fc.tuple(seedArb, weekdayArb), { seed: FC_SEED, numRuns });
+
+  it("is drawn by fc.assert itself, not by a lookalike that may diverge", () => {
+    // Plan 055 §3's sizing table was produced with `fc.sample(fc.tuple(...))`.
+    // This is the assertion that makes that table a statement about the runs
+    // the properties actually take, rather than a coincidence.
+    expect(drawn(PR_GATE_RUNS)).toEqual(asserted(PR_GATE_RUNS));
+    expect(drawn(100)).toEqual(asserted(100));
+  });
+
+  it("draws every weekday, which is what sizes it at 25 and not less", () => {
+    // The sudoku criteria table is per-weekday — seven tiers, seven clue
+    // bands — so a sample that never draws a weekday cannot fail on a
+    // regression confined to it. At FC_SEED the seventh weekday first appears
+    // on run 21; 20 runs never draw Sunday, the hardest tier. 25 is that
+    // measured floor plus margin, so this test still passes if FC_SEED moves
+    // a little, and goes red the moment PR_GATE_RUNS is "optimised" below it.
+    const weekdays = new Set(
+      asserted(PR_GATE_RUNS).map(([, weekday]) => weekday),
+    );
+    expect([...weekdays].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    // ...and the pairs are 25 distinct seeds, not one seed drawn 25 times.
+    expect(new Set(asserted(PR_GATE_RUNS).map(([seed]) => seed)).size).toBe(
+      PR_GATE_RUNS,
+    );
+  });
+
+  it("is a strict prefix of the full sample, so the gate proves a subset", () => {
+    // fast-check draws forward from the pinned seed, so the gate checks the
+    // FIRST 25 of the 100 pairs the nightly checks — not a different 25 that
+    // happens to be smaller. If this ever stopped holding (a fast-check
+    // upgrade changing the draw order, say), "the gate is a subset of the
+    // proof" would become a claim nobody had checked; here it is checked.
+    expect(asserted(100).slice(0, PR_GATE_RUNS)).toEqual(
+      asserted(PR_GATE_RUNS),
+    );
+  });
+
+  it("declares, in the run itself, which sample this run took", () => {
+    // Not a tautology: it fails if `propertyRuns` ever stops honouring either
+    // side of the split — an env var read that silently always returns the
+    // floor would make every gate expensive again, and one that always
+    // returns 25 would make the nightly a second gate rather than the proof.
+    expect(propertyRuns(100)).toBe(FULL_PROPERTIES ? 100 : PR_GATE_RUNS);
+    expect(propertyRuns(35)).toBe(FULL_PROPERTIES ? 35 : PR_GATE_RUNS);
+    // A property already at or below the reduced sample is never inflated.
+    expect(propertyRuns(10)).toBe(10);
+  });
+});
+
 describe("generateSudoku / generateDailySudoku", () => {
   it("P1 — determinism: same (seed, weekday) yields deep-equal puzzles", () => {
     fc.assert(
@@ -92,7 +217,8 @@ describe("generateSudoku / generateDailySudoku", () => {
         const second = generateDailySudoku({ seed, weekday });
         expect(second).toEqual(first);
       }),
-      { seed: FC_SEED, numRuns: 100 },
+      // 100 on the nightly (the ADR-0023 floor); 25 on the pull-request gate.
+      { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
     // Explicit timeout, re-derived at #109 (ADR-0055 decisions 1, 2 and 4;
     // plan 051; shared arithmetic and cost drivers in the header above). The
@@ -100,7 +226,10 @@ describe("generateSudoku / generateDailySudoku", () => {
     // property; the deep-equal is not measurable beside them (P1 / P2 ≈ 2.5
     // on CI — 2.39–2.68 across the seven runs — two generations against one)
     // — so nothing is reducible without reducing numRuns, which ADR-0023
-    // floors. Figures: 155 025 ms on CI, the pooled maximum over seven
+    // floors. *(Still true, and #126 is what it implies: the only lever was
+    // numRuns, so the ticket moved the floor's binding site rather than the
+    // floor. On the gate this test now runs 50 generations, not 200.)*
+    // Figures: 155 025 ms on CI, the pooled maximum over seven
     // genuine gate runs (31888933252; the others 85 994–147 606 ms) — 64.6 %
     // of the previous 240 000 ms and over its budget / 2 = 120 000 ms on five
     // of the seven — and 40 844 ms contended local (pooled max over 3
@@ -147,7 +276,8 @@ describe("generateSudoku / generateDailySudoku", () => {
         expect(countSudokuSolutions(puzzle.givens, 2)).toBe(1);
         expect(getSudokuConflicts(puzzle.givens)).toEqual([]);
       }),
-      { seed: FC_SEED, numRuns: 100 },
+      // 100 on the nightly (the ADR-0023 floor); 25 on the pull-request gate.
+      { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
     // Retained at 240 000 ms at #109, not re-derived (ADR-0055 decision 4
     // governs a shipped ceiling; the ADR-0057 decision 5 shape). Figures:
@@ -180,7 +310,9 @@ describe("generateSudoku / generateDailySudoku", () => {
           clueCount: puzzle.clueCount,
         });
       }),
-      { seed: FC_SEED, numRuns: 35 },
+      // 35 on the nightly (a secondary approval property, outside ADR-0023's
+      // floor and left at the count it has always had); 25 on the gate.
+      { seed: FC_SEED, numRuns: propertyRuns(35) },
     );
     // Explicit timeout, re-derived at #109 (ADR-0055 decisions 1, 2 and 4;
     // plan 051; shared arithmetic in the header). 35 runs of one generation +
@@ -196,7 +328,12 @@ describe("generateSudoku / generateDailySudoku", () => {
     // share exactly as P1 did (header). A ceiling, not a target: over
     // 50 000 ms is a defect to diagnose and record. numRuns 35 is a
     // secondary (approval) property outside ADR-0023's floor and is untouched
-    // regardless (#109). The full-week sibling below is deliberately left at
+    // regardless (#109) — *superseded at #126: 35 is now the NIGHTLY count and
+    // the gate takes 25, through `propertyRuns`. The clause was about #109
+    // declining to buy time by sampling less; #126 buys it by moving the full
+    // sample off the per-pull-request path instead, which is a different
+    // trade. The 100 000 ms ceiling is NOT re-derived here — see the header.*
+    // The full-week sibling below is deliberately left at
     // 60 000 ms: 8 189 ms CI maximum over the same seven runs (31888933252;
     // 4 391–8 072 ms on the others) = 13.6 %, 1 288 ms contended local — under
     // the trigger; its literal is respelt 60_000 and nothing else changes.

@@ -1008,18 +1008,24 @@ pre-empted it.
    **A collision the reviews could not see, handled first.** `git fetch && git
    merge origin/main` before anything else: #103 (`#136`) had merged and taken
    `T-WEB-S231`, and #126's `#131` had claimed `S232`. This branch's whole
-   `T-WEB` range moved from `S231…S243` to **`S233…S245`** — in the four test
-   files, the one source citation (`app/hub-day-state.tsx`) and
-   `docs/agents/test-ids.md` — leaving `S232` as a hole belonging to #126
-   rather than a burn. `S231`'s three #103 sites and its two ADR citations were
+   `T-WEB` range moved from `S231…S243` to `S233…S245`. **And then it moved
+   again**: #131, #133 and #137 all landed within the hour, #67 (`#133`) took
+   `S232` for `hint-tab-order.test.tsx`, #126 renumbered ITSELF to `S233` at
+   its own merge, and the PR went `CONFLICTING` — which is also why the `gate`
+   check stopped firing, since GitHub cannot build `refs/pull/135/merge` for a
+   dirty PR. Final range: **`S234…S246`**, in the four test files, two source
+   citations (`app/hub-day-state.tsx`, `src/day/day-truth.ts`),
+   `packages/core/test/day.test.ts`'s cross-reference and
+   `docs/agents/test-ids.md`. No hole is left — `S230` #63, `S231` #103,
+   `S232` #67, `S233` #126, `S234…S246` #83, contiguous. `S231`'s three #103 sites and its two ADR citations were
    left untouched, verified by grep. This document's §4 and §5 tables are left
    in the numbering they were written in, per the plan-is-a-snapshot rule; the
    mapping lives in `test-ids.md`. Two conflicts were resolved keeping both
    sides: `test-ids.md`'s frontier row and `eslint.config.mjs`'s dynamic-import
    regex, where #103's `share-button` and this branch's `\/day(\/|$)` are both
-   in the shipped alternation. **It was the third `T-WEB` collision in one
+   in the shipped alternation. **It was the FOURTH `T-WEB` collision in one
    night**, and the mitigation `test-ids.md` already carried — reserve the id
-   on `main` before step 5 — now has three instances behind it.
+   on `main` before step 5 — now has four instances behind it.
 
    | Finding | Disposition |
    |---|---|

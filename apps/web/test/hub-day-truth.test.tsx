@@ -166,7 +166,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("the hub's first paint is untouched (T-WEB-S238)", () => {
+describe("the hub's first paint is untouched (T-WEB-S239)", () => {
   it("renders every tile pending from the server snapshot, and issues NO fetch during render", async () => {
     const fetchMock = stubFetchByUrl(() => jsonResponse(200, dayBody()));
     const HojePage = await loadHojePage();
@@ -186,7 +186,7 @@ describe("the hub's first paint is untouched (T-WEB-S238)", () => {
   });
 });
 
-describe("a game completed on another device (T-WEB-S239)", () => {
+describe("a game completed on another device (T-WEB-S240)", () => {
   it("renders `Feito` with no duration, and `X de 4` counts it", async () => {
     stubFetchByUrl(() => jsonResponse(200, dayBody({ nonogram: "completed" })));
     const HojePage = await loadHojePage();
@@ -267,7 +267,7 @@ describe("a game completed on another device (T-WEB-S239)", () => {
   });
 });
 
-describe("the conclusion still finishes offline (T-WEB-S240)", () => {
+describe("the conclusion still finishes offline (T-WEB-S241)", () => {
   it("renders its stamp when the day fetch rejects", async () => {
     writePlayRecord(concludedBinairo());
     vi.stubGlobal(
@@ -299,7 +299,7 @@ describe("the conclusion still finishes offline (T-WEB-S240)", () => {
   });
 });
 
-describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S244)", () => {
+describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S245)", () => {
   it("keeps its href, and the play route behind it has no local record to restore", async () => {
     stubFetchByUrl(() => jsonResponse(200, dayBody({ sudoku: "completed" })));
     const HojePage = await loadHojePage();

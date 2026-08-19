@@ -91,7 +91,7 @@ export function HubProgress({
  * `ConclusionView` via `isClosedAndFrozen(play.state)`, i.e. off the local
  * record, and cross-device there is none. That is ADR-0053 decision 10 layer
  * 3's "honest gap", reached from the daily hub for the first time; the
- * replay writes nothing (layer 1). `T-WEB-S244` pins it.
+ * replay writes nothing (layer 1). `T-WEB-S245` pins it.
  */
 export function HubCardAction({
   game,

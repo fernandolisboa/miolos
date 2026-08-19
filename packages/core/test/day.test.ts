@@ -285,7 +285,7 @@ describe("the merge invariant (ADR-0060 decision 3)", () => {
     // (`local === "pending" ? server : local`, the device winning wherever it
     // claims anything) does NOT satisfy. The three above all hold of it:
     // totality, idempotence and "pending iff both" are direction-blind, so
-    // until this existed only the tables in T-CORE-S90 and T-WEB-S235
+    // until this existed only the tables in T-CORE-S90 and T-WEB-S236
     // discriminated the invariant at all.
     //
     // ABSORPTION: where the server claims, the device's status is not an

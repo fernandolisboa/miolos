@@ -136,7 +136,7 @@ function samePayload(previous: DayResponse, next: DayResponse): boolean {
  * leaves `inFlight === true` for the lifetime of the page: every later
  * trigger, `online` recovery included, is swallowed by the guard and there
  * is no way back short of a reload. In `finally` the guard's correctness is
- * local and stays local. `T-WEB-S245` stubs a rejecting `fetchDayTruth` and
+ * local and stays local. `T-WEB-S246` stubs a rejecting `fetchDayTruth` and
  * asserts the next trigger still fetches.
  *
  * The `catch` beside it is not decoration: `finally` RE-THROWS, so without it
