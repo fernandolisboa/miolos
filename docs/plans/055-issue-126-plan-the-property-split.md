@@ -210,7 +210,7 @@ resembling a release workflow — so there is no event to hang one on. Recorded 
 rather than invented; the ADR names the trigger to add on the day a release process
 exists.
 
-**Guard.** `T-WEB-S232` joins `apps/web/test/fanout-cap.test.ts`, whose `T-WEB-S226`/`227`
+**Guard.** `T-WEB-S233` joins `apps/web/test/fanout-cap.test.ts`, whose `T-WEB-S226`/`227`
 already scan `ci.yml` and `turbo.json` for exactly this class of silent drift: the
 workflow exists, is scheduled, sets `MIOLOS_FULL_PROPERTIES=1`, runs the games suite, and
 `turbo.json` declares the variable. Without it the nightly can be deleted in a tidy-up and
