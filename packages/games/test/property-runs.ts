@@ -96,7 +96,7 @@ export const FULL_PROPERTIES = process.env.MIOLOS_FULL_PROPERTIES === "1";
  * For the class of defect no sample can be made to catch by construction — one
  * valid on a fraction p of the domain — 25 runs catch it with probability
  * 1 − (1 − p)^25: 92.8 % at p = 0.1, 99.6 % at p = 0.2, and certainly for a
- * whole-domain break (the anti-vacuity control in #126's pull-request body
+ * whole-domain break (the anti-vacuity control in #126's pull request (#131)
  * breaks determinism and uniqueness one character at a time and shows this
  * sample red on both). Below 21 that arithmetic is beside the point, because
  * the sample has stopped covering the domain's own partition.

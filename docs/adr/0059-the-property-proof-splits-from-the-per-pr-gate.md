@@ -1,6 +1,6 @@
 # ADR-0059 — The property proof splits: a reduced sample per pull request, the ADR-0023 floor nightly
 
-**Status:** Accepted — 2026-08-19 (issue [#126](https://github.com/fernandolisboa/miolos/issues/126), shipped in #129)
+**Status:** Accepted — 2026-08-19 (issue [#126](https://github.com/fernandolisboa/miolos/issues/126), shipped in #131)
 **Amends:** [ADR-0023](./0023-proved-not-sampled-property-testing.md) — decision layer 3's *"Run counts are a floor, never below 100 for the main validity and determinism properties"* is narrowed in **where** it binds, never in **whether** it binds. The reciprocal `**Amended by:**` header is on ADR-0023, and the sentence itself is annotated in place. Nothing about the invariants being proved, about the construction-level proof, or about the reserved word *"prove"* changes.
 **Annotates:** [ADR-0055](./0055-test-timeouts-are-sized-against-contention.md) — annotations (q) and (r), at the two places that name the sudoku sites as the gate's cost centre and route to [#123](https://github.com/fernandolisboa/miolos/issues/123). This ADR is the shape change #123 held the question for. Its decisions are untouched, and the **four** in-file timeouts #109 adjudicated in `packages/games/test/sudoku/generate.test.ts` — `P1` and the `P3` ramp re-derived, `P2` and the full-week sibling retained — are deliberately **not** re-derived here. (Four, not five: five is ADR-0055's count of **#107's** shipped timeouts, and #109's fifth site, `T-WEB-S43`, was closed with no timeout at all.)
 **Depends on:** [ADR-0017](./0017-vitest-and-fast-check-are-the-test-stack.md) (no `vitest.config.ts` in `packages/games`, which is what forces an in-file mechanism), [ADR-0057](./0057-the-test-suites-memory-model-and-a-cap-that-binds-locally.md) (the gate is the one uncapped runner, so its figures are the anchor).
@@ -177,7 +177,7 @@ release is exactly the case the issue was reaching for.
   finisher was **`@miolos/web`** (231–283 s), 20–32 s *after* `@miolos/games`.
   So the `pnpm test` step's wall clock is a makespan, and removing games' CPU
   demand frees share for `web` and `api` rather than subtracting its own wall
-  time from the step. The measured before/after is in #126's pull-request body.
+  time from the step. The measured before/after is in #126's pull request (#131).
 - **The four in-file timeouts #109 adjudicated days ago are deliberately NOT re-derived here.**
   With `P1` no longer running 200 generations on the gate, the 625 000 ms
   ceiling becomes *generous* rather than *wrong*, and ADR-0055 decision 4 governs
