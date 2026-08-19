@@ -210,7 +210,7 @@ resembling a release workflow — so there is no event to hang one on. Recorded 
 rather than invented; the ADR names the trigger to add on the day a release process
 exists.
 
-**Guard.** `T-WEB-S230` joins `apps/web/test/fanout-cap.test.ts`, whose `T-WEB-S226`/`227`
+**Guard.** `T-WEB-S231` joins `apps/web/test/fanout-cap.test.ts`, whose `T-WEB-S226`/`227`
 already scan `ci.yml` and `turbo.json` for exactly this class of silent drift: the
 workflow exists, is scheduled, sets `MIOLOS_FULL_PROPERTIES=1`, runs the games suite, and
 `turbo.json` declares the variable. Without it the nightly can be deleted in a tidy-up and
@@ -284,7 +284,7 @@ Both breaks restored; `git diff --stat packages/games/src` empty and the file gr
 | `docs/adr/0023-…` | `**Amended by:** ADR-0059` header + an in-place annotation on the *"never below 100"* sentence. The floor is **narrowed in where it binds, never in whether it binds** |
 | `docs/adr/0055-…` | annotations **(q)** and **(r)**, continuing (j)–(p): at the decision-4 cost-driver routing and at the honest-residual Consequence, both of which name the sudoku sites as the gate's cost centre and route to #123. #126 *is* the shape change #123 held the question for |
 | `docs/README.md` | rows for plan 055 and ADR-0059 |
-| `docs/agents/test-ids.md` | `T-WEB` frontier `S230` → `S231`, with the reservation paragraph `T-WEB-S229` did not get |
+| `docs/agents/test-ids.md` | `T-WEB` frontier `S231` → `S232`, with the reservation paragraph `T-WEB-S229` did not get — plus the `S230` → `S231` renumber the merge with #63 forced, recorded rather than smoothed over |
 
 **Not touched:** the timeouts #109 set days ago. With `P1` at ≈ 35 s the 625 000 ms
 ceiling becomes *generous* rather than *wrong*, and re-deriving it here would restart

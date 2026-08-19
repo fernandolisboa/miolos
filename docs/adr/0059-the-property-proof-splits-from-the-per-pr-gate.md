@@ -131,7 +131,7 @@ which `if: failure()` alone would not do. It runs through turbo with
 `--force`, so the declaration in `turbo.json` is exercised rather than merely
 asserted and no cache hit can replay a green.
 
-`T-WEB-S230` in `apps/web/test/fanout-cap.test.ts` scans the workflow: it exists,
+`T-WEB-S231` in `apps/web/test/fanout-cap.test.ts` scans the workflow: it exists,
 it is scheduled, it sets the flag, it runs `@miolos/games`, it alerts on failure —
 plus a non-vacuity probe showing a commented-out `schedule:` cannot satisfy the
 scan. Deleting the nightly is the one way this decision becomes a downgrade, and

@@ -6,7 +6,7 @@
 # `numRuns >= 100` floor is not weakened — it binds HERE instead, once a day,
 # with `MIOLOS_FULL_PROPERTIES=1`. If this workflow stops running, the project
 # silently keeps only the cheap sample, which is the one way #126 turns into a
-# downgrade; `T-WEB-S230` in `apps/web/test/fanout-cap.test.ts` is the tripwire
+# downgrade; `T-WEB-S231` in `apps/web/test/fanout-cap.test.ts` is the tripwire
 # against that.
 #
 # NO RELEASE OR TAG TRIGGER, and that is recorded rather than invented: this
