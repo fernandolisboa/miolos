@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S86` | `S84` | never used |
 | `T-DB` | `S59` | `S58` | `T-DB-21` |
 | `T-API` | `S109` | `S107` | `T-API-16` |
-| `T-WEB` | `S230` | `S229` | `T-WEB-23` |
+| `T-WEB` | `S231` | `S230` | `T-WEB-23` |
 | `T-LINT` | `S47` | `S46` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
@@ -117,6 +117,8 @@ Five existing claims were widened in place and correctly took **no** new id in P
 #120 (`36b82b2`, the worker bound absorbing #114's residual) spent **`T-WEB-S229`** on the worker-bound scan in `apps/web/test/fanout-cap.test.ts` (`describe("the worker bound, and the one package that must not carry it (T-WEB-S229)"`) **without a reservation paragraph or a frontier update at the time**; recorded at #109 (plan 051 §7 R2) because the frontier row above said `S229` was next free while the grep said it was in use. No id was burned; `T-WEB-S228` stays burned as recorded above.
 
 #109 (plan 051) reserved nothing and spent nothing: `packages/games` carries no ids, the `T-WEB-S43` comment in `apps/web/test/nonogram-screen.test.tsx` is not a claim, and the two edited files carry only comment and literal changes — the #114 precedent. Its one edit here is the frontier correction #120 owed.
+
+#126 ([plan 055](../plans/055-issue-126-plan-the-property-split.md), ADR-0059) spends **`T-WEB-S230`** on the scan over `.github/workflows/properties.yml` in `apps/web/test/fanout-cap.test.ts` (`describe("the nightly full property proof cannot be deleted in silence (T-WEB-S230)")`), reserved here in the same pull request that spends it — which is what `T-WEB-S229` did not get. **One id, no tail reserved**, deliberately: plan 049's and plan 040's reserved review-round headroom was unspent both times and is burned below, so this ticket reserves the id it uses and nothing else. Nothing is burned. The assertions #126 added to `T-WEB-S227`'s `describe` — that `turbo.json` declares `MIOLOS_FULL_PROPERTIES` on the `test` task's `env` — correctly took **no** new id: same claim about the same file as `T-WEB-S227` itself, the `T-WEB-S100` burn precedent. **`packages/games` still carries no ids**, so the new `packages/games/test/property-runs.ts` and the three tests added to `packages/games/test/sudoku/generate.test.ts` take none — the #109 and #114 precedent, unchanged.
 
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead — **and "new" means anything not yet on `main`, this branch's own step-7 output included**: `T-DB-S53a`/`S53b`, `T-WEB-S177a` and `T-LINT-S37a` are all that rule applied to duplicates created in the same pull request that removed the others.
 

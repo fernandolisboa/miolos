@@ -1,0 +1,89 @@
+# THE FULL PROPERTY PROOF — the half of the gate that no longer runs per pull
+# request (#126, ADR-0059, amending ADR-0023).
+#
+# The per-pull-request `gate` runs `packages/games`'s generator properties at a
+# reduced 25-run sample (`packages/games/test/property-runs.ts`). ADR-0023's
+# `numRuns >= 100` floor is not weakened — it binds HERE instead, once a day,
+# with `MIOLOS_FULL_PROPERTIES=1`. If this workflow stops running, the project
+# silently keeps only the cheap sample, which is the one way #126 turns into a
+# downgrade; `T-WEB-S230` in `apps/web/test/fanout-cap.test.ts` is the tripwire
+# against that.
+#
+# NO RELEASE OR TAG TRIGGER, and that is recorded rather than invented: this
+# repository has no tags, no GitHub releases and no release workflow, so there
+# is no event to hang a pre-release run on. `workflow_dispatch` is the manual
+# equivalent until one exists (ADR-0059).
+name: Full property proof
+
+permissions:
+  contents: read
+
+on:
+  # 03:20 America/Sao_Paulo. Deliberately off `buffer-alert.yml`'s 07:30 UTC so
+  # two scheduled jobs never contend for a runner, and well after the daily
+  # publish cron so a red here is never confused with a publish failure.
+  schedule:
+    - cron: "20 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  properties:
+    runs-on: ubuntu-latest
+    # A hang-catcher, not a budget: the package's worst genuine gate row is
+    # 251 s at the SAME floor this job runs, and here it runs alone rather than
+    # beside five sibling suites on two vCPUs, so the real figure is smaller.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # For the failure step below, which opens or bumps the alert issue.
+      issues: write
+    env:
+      MIOLOS_FULL_PROPERTIES: "1"
+      REPO: fernandolisboa/miolos
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6 — version comes from packageManager
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Through turbo rather than `pnpm --filter`, so this run exercises the
+      # `MIOLOS_FULL_PROPERTIES` declaration on `turbo.json`'s `test` task
+      # instead of merely asserting it: without the declaration turbo's strict
+      # env filtering drops the variable and this job would quietly prove the
+      # 25-run sample twice. `--force` because a cache hit is a log REPLAY, and
+      # a replayed green here would be a proof that never executed. No
+      # `actions/cache` step for the same reason.
+      - name: the ADR-0023 floor, on packages/games
+        run: pnpm exec turbo run test --filter=@miolos/games --force
+      # Fail LOUDLY. A red scheduled run on a repo driven from a phone is a
+      # notification that is easy to miss; `buffer-alert.yml` established the
+      # idiom that a scheduled job which matters opens or bumps an issue.
+      #
+      # `failure() || cancelled()`, not `failure()` alone. `timeout-minutes`
+      # CANCELS the job rather than failing it, and `if: failure()` does not
+      # fire on a cancellation — so a 30-minute hang, which is exactly the
+      # silent failure this workflow exists to catch, would produce a red run
+      # and no issue. The cost is an issue on a manual cancellation, which is
+      # the safe direction. The label is repository state created with #126
+      # (`gh label create property-alert`), since `gh issue create --label`
+      # fails outright against a label that does not exist; ADR-0059 decision 5
+      # records it, because it cannot appear in a diff.
+      - name: Open or bump the alert issue
+        if: ${{ failure() || cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing="$(gh issue list -R "$REPO" --label property-alert --state open --json number --jq '.[0].number')"
+          body="The nightly full property proof failed: $RUN_URL
+
+          This is the ADR-0023 floor (\`MIOLOS_FULL_PROPERTIES=1\`), which the per-pull-request gate does NOT run — so a green \`gate\` on \`main\` does not contradict this. Read the failing property's counterexample in the run log; fast-check prints the shrunk seed and weekday, and \`MIOLOS_FULL_PROPERTIES=1 pnpm exec turbo run test --filter=@miolos/games --force\` reproduces it locally. See ADR-0059 for what each run proves."
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" -R "$REPO" --body "$body"
+          else
+            gh issue create -R "$REPO" --label property-alert \
+              --title "Nightly full property proof failed" \
+              --body "$body"
+          fi

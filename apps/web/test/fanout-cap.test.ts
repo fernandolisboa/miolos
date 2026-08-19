@@ -103,6 +103,18 @@ import { z } from "zod";
  * can show a run happening at 2 or a gate running at 10 — that evidence is
  * behavioural and lives in #114's pull-request body. These are the tripwire
  * that keeps the configuration from drifting away from that evidence.
+ * *(**FOUR scans as of #126**, which added `T-WEB-S230` over
+ * `.github/workflows/properties.yml`. Everything this paragraph says holds of
+ * it unchanged and for the same reason: it can show that the nightly full
+ * property proof is CONFIGURED, never that it ran or passed. That evidence is
+ * a green `workflow_dispatch` run, and it is necessarily POST-MERGE: GitHub
+ * exposes `workflow_dispatch` and `schedule` only for workflows already on the
+ * default branch, so #126 could not produce it before merging and posted it as
+ * a comment on the issue instead. The count is
+ * annotated rather than rewritten because a count is exactly the kind of claim
+ * this repo has watched rot — the mapping is what matters: `S225` the root
+ * script, `S226` the gate job, `S227` `turbo.json`, `S229` the worker bound,
+ * `S230` the nightly.)*
  *
  * A RED FROM THIS FILE ON A LEGITIMATE FUTURE CHANGE IS THE DESIGN, NOT A
  * DEFECT. These are tripwires, updated with evidence the way the bundle
@@ -118,7 +130,10 @@ import { z } from "zod";
  * of `.github/workflows/**` in any suite is a comment in `route-ssr.test.tsx`,
  * which asserts nothing. The precedent that does exist is a test asserting on
  * a `package.json` — `packages/games/test/purity.test.ts`, on its own
- * package's manifest rather than the root's.
+ * package's manifest rather than the root's. *(**And `T-WEB-S230` at #126 is
+ * the second**, over `.github/workflows/properties.yml`. `S226` stays the
+ * first; what it stopped being is the only one, which is why the sentence
+ * gains this clause rather than losing its claim.)*
  *
  * Homed in `apps/web/test/` because that is where the repo's root-config scans
  * already live and where `repoRoot` is already resolved as `../../..`:
@@ -353,6 +368,22 @@ describe("turbo.json carries no global concurrency key (T-WEB-S227)", () => {
     expect(keyPaths(turboConfig, "concurrency")).toEqual([]);
   });
 
+  it("declares MIOLOS_FULL_PROPERTIES on the test task's env", () => {
+    // Same two reasons as the sibling below, and one more that is specific to
+    // this flag: without the declaration turbo's strict env filtering drops
+    // it, so `MIOLOS_FULL_PROPERTIES=1 pnpm test` would run the REDUCED sample
+    // and report it green — a proof that never executed. The declaration also
+    // puts the flag in the task hash, so toggling it invalidates the cache
+    // rather than replaying the other mode's logs. See ADR-0059 and
+    // `packages/games/test/property-runs.ts`.
+    const testTaskEnv = z
+      .object({
+        tasks: z.object({ test: z.object({ env: z.array(z.string()) }) }),
+      })
+      .parse(turboConfig).tasks.test.env;
+    expect(testTaskEnv).toContain("MIOLOS_FULL_PROPERTIES");
+  });
+
   it("declares MIOLOS_TEST_DB_TIMING on the test task's env", () => {
     // Without the declaration turbo's strict env filtering drops the variable
     // and the CI instrument above is silently inert — it produces no lines and
@@ -407,7 +438,7 @@ describe("the worker bound, and the one package that must not carry it (T-WEB-S2
     expect(web).toContain("./test/setup.ts");
   });
 
-  it("leaves packages/games without a vitest config, per ADR-0017", () => {
+  it("leaves packages/games without a vitest config, per ADR-0017 (and #126 kept it that way)", () => {
     // NOT a style rule. Importing `vitest/config` pulls vite's `.d.ts`, which
     // references `@types/node`, into a package whose tsconfig sets `types: []`
     // — silently defeating the typecheck that enforces the project's central
@@ -415,5 +446,97 @@ describe("the worker bound, and the one package that must not carry it (T-WEB-S2
     // records that it was found only when a negative typecheck test began
     // passing when it should not have.
     expect(() => read("packages/games/vitest.config.ts")).toThrow();
+  });
+});
+
+describe("the nightly full property proof cannot be deleted in silence (T-WEB-S230)", () => {
+  /**
+   * WHY A SCAN AT ALL. #126 moved `packages/games`'s generator properties off
+   * the per-pull-request path: the gate runs a 25-run sample and
+   * `.github/workflows/properties.yml` runs ADR-0023's `numRuns >= 100` floor
+   * nightly. That trade is only sound while the nightly exists. Delete the
+   * workflow — or drop its `schedule`, or its `MIOLOS_FULL_PROPERTIES=1`, or
+   * point it at a package that has no properties — and every check in the repo
+   * stays green while the project silently keeps only the cheap sample. There
+   * is no other signal: a workflow that does not run produces no red.
+   *
+   * Same limits as the three scans above, stated once more because they are
+   * easy to forget: this reads a workflow FILE. It asserts what the
+   * configuration says, never that a nightly run happened or passed. The
+   * behavioural evidence is a green `workflow_dispatch` run, which could only
+   * be taken AFTER #126 merged — GitHub exposes `workflow_dispatch` and
+   * `schedule` only for workflows on the default branch — so it lives in a
+   * comment on #126 rather than in its pull-request body.
+   *
+   * Homed here rather than in `packages/games` because that package carries no
+   * test ids and no Node-ish repo-scanning tests by design, and because this is
+   * the file where `T-WEB-S226`/`S227` already scan `ci.yml` and `turbo.json`
+   * for exactly this class of drift.
+   */
+  const propertiesWorkflow = readRepoFile(
+    ".github",
+    "workflows",
+    "properties.yml",
+  );
+
+  /** Comment-stripped, for the same reason `parseGateJob` strips them: a `#` that
+   * merely MENTIONS a setting must not satisfy an assertion about it. */
+  const live = propertiesWorkflow
+    .split("\n")
+    .filter((line) => !/^\s*#/.test(line))
+    .map((line) => line.replace(/\s+#.*$/, ""))
+    .join("\n");
+
+  it("runs on a schedule, and can also be dispatched by hand", () => {
+    expect(live).toMatch(/^\s*schedule:\s*$/m);
+    expect(live).toMatch(/^\s*-\s*cron:\s*["']?[\d*\s/,-]+["']?\s*$/m);
+    expect(live).toMatch(/^\s*workflow_dispatch:\s*$/m);
+  });
+
+  it("sets MIOLOS_FULL_PROPERTIES=1, which is the whole point of it", () => {
+    // Without this the nightly runs the same reduced sample the gate runs, and
+    // ADR-0023's floor binds nowhere at all.
+    expect(live).toMatch(/MIOLOS_FULL_PROPERTIES:\s*["']?1["']?/);
+  });
+
+  it("actually runs the package whose properties were reduced", () => {
+    expect(live).toMatch(/turbo run test[^\n]*--filter=@miolos\/games/);
+    // `--force`, because a turbo cache hit is a log REPLAY: a replayed green
+    // would report a proof that never executed (napkin, #114).
+    expect(live).toMatch(/turbo run test[^\n]*--force/);
+  });
+
+  it("opens an issue when it fails, rather than trusting a red run to be seen", () => {
+    // `failure() || cancelled()`, not `failure()` alone: `timeout-minutes`
+    // CANCELS a hung job, and `if: failure()` does not fire on cancellation —
+    // a 30-minute hang would otherwise give a red run and no issue at all.
+    expect(live).toMatch(
+      /if:\s*\$\{\{\s*failure\(\)\s*\|\|\s*cancelled\(\)\s*\}\}/,
+    );
+    // The `--label` FLAG, not merely the string: `property-alert` also appears
+    // in the issue body, so `toContain` would still pass with both flags gone.
+    expect(live).toMatch(/--label property-alert\b/);
+    expect(live).toMatch(/issues:\s*write/);
+  });
+
+  it("a commented-out schedule cannot satisfy the schedule assertion", () => {
+    // NON-VACUITY, the `T-WEB-S226` trailing-comment probe's shape: comment the
+    // `schedule:` key out — the exact residue of a "temporarily disable the
+    // nightly" change that never got reverted — and the scan must stop seeing
+    // it.
+    const sabotaged = propertiesWorkflow.replace(
+      /^(\s*)schedule:\s*$/m,
+      "$1# schedule:",
+    );
+    expect(
+      sabotaged,
+      "the sabotage substitution actually fired — if not, the workflow's shape moved and this probe is asserting nothing",
+    ).not.toEqual(propertiesWorkflow);
+    const sabotagedLive = sabotaged
+      .split("\n")
+      .filter((line) => !/^\s*#/.test(line))
+      .map((line) => line.replace(/\s+#.*$/, ""))
+      .join("\n");
+    expect(sabotagedLive).not.toMatch(/^\s*schedule:\s*$/m);
   });
 });
