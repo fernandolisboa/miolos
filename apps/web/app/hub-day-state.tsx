@@ -12,15 +12,23 @@
  * cannot carry `"use client"` — it is the server component that resolves the
  * day (`date` below is the SERVER's São Paulo day, never the browser's clock).
  *
- * What they render is DEVICE state, not user state (ADR-0031): a local
- * concluded record proves this device solved that game today; absence proves
- * nothing and renders pending. That is also the cold-profile answer, also
- * what `impeccable detect` always scans, and also what a second device sees.
- * A false pending is invisible; a false done would not be. The streak stays
- * server-computed and is not read here at all — #19 gave it its own island,
- * `hub-streak.tsx` (ADR-0048). The one server value read HERE is #29's
- * completed-Termo caption (`TermoDoneLink` below): device state still
- * decides the tile's shape, the fetched guess count only ever captions it.
+ * What they render is THE USER's day as this device and the server together
+ * know it (ADR-0031 as amended by ADR-0060). A local concluded record proves
+ * this device solved that game today; a completion row the server holds
+ * proves the USER did, on whatever device. Absence on the device no longer
+ * implies pending — that is the whole of #83 — while absence on BOTH still
+ * does, which is the cold-profile answer and what `impeccable detect` always
+ * scans (no session, so `/day` answers 401 and the pending composition is
+ * what the gate sees). A false done would still be visible, and neither
+ * input can produce one. The streak stays server-computed and is not read
+ * here at all — #19 gave it its own island, `hub-streak.tsx` (ADR-0048).
+ *
+ * THERE ARE NOW TWO SERVER READS ON THIS SURFACE, and they do different
+ * jobs. `GET /day` decides a tile's SHAPE, through `useDayState` — new at
+ * #83, and the one place a fetched value is load-bearing for what the tile
+ * IS. #29's `GET /stats` still only ever CAPTIONS an already-completed Termo
+ * (`TermoDoneLink` below). Both are fetched from client islands, in effects,
+ * never during render.
  */
 import type { Game } from "@miolos/core";
 import Link from "next/link";
@@ -35,9 +43,12 @@ import styles from "./page.module.css";
 const BLANK_VALUE = " ";
 
 /**
- * "X de 4 concluídos" — X being what this device has COMPLETED today, never
- * what it has merely played. A lost Termo does not enter the count
- * (ADR-0008 decision 4, ADR-0044 decision 5).
+ * "X de 4 concluídos" — X being what THE USER has COMPLETED today as far as
+ * this device and the server together know (ADR-0060), never what has merely
+ * been played. A lost Termo does not enter the count (ADR-0008 decision 4,
+ * ADR-0044 decision 5), and since #83 the count can go DOWN once after
+ * hydration in exactly one case: a Termo won here and lost on another
+ * device, which is a correction rather than an understatement.
  */
 export function HubProgress({
   date,
@@ -66,6 +77,15 @@ export function HubProgress({
  * being unreachable; `/arquivo` is live since #31, and the reason above is
  * the one that was always doing the work — a *finished* day's conclusion is
  * not something the archive links to at all.)
+ *
+ * THE CAVEAT #83 OWES IT, decided rather than discovered (ADR-0060 decision
+ * 8): "restores straight into it" is true only where THIS DEVICE holds the
+ * record. A tile that is done because the SERVER says so links to a route
+ * that renders a fresh, PLAYABLE board — the screen roots swap to
+ * `ConclusionView` via `isClosedAndFrozen(play.state)`, i.e. off the local
+ * record, and cross-device there is none. That is ADR-0053 decision 10 layer
+ * 3's "honest gap", reached from the daily hub for the first time; the
+ * replay writes nothing (layer 1). `T-WEB-S242` pins it.
  */
 export function HubCardAction({
   game,

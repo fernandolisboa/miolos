@@ -23,7 +23,7 @@ Plan 017 continued plan 014's bare space. Plan 018 opened `S` because that space
 
 ## Frontier
 
-Frontier as of plan 051 (#109), re-derived by grep over the branch at its step-5 build (the `T-WEB` row had been outrun by #120's `S229`; see the #120 paragraph below). It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
+Frontier as of plan 056 (#83), re-derived by grep over the branch at its step-5 build and again at step 8 (the `T-WEB` row had been outrun by #120's `S229`; see the #120 paragraph below). It is a snapshot, not a guarantee: re-run the grep before allocating, and re-derive it at step 8 of any ticket that adds ids. The live series is `S` everywhere; the bare series are closed and nothing is ever added to them.
 
 **Plan 037's reservations are now fully resolved.** PR 2 spent `T-DB-S44…S55` and `S57`, `T-WEB-S166…S186` and `T-LINT-S35…S37`; the tails `T-WEB-S187`/`S188` and `T-LINT-S38` were its reserved review-round headroom and are **burned** below, unspent. Nothing in plan 037's ranges is a live reservation any more, and "next free" below is a plain frontier again.
 
@@ -37,11 +37,11 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S86` | `S84` | never used |
-| `T-DB` | `S59` | `S58` | `T-DB-21` |
-| `T-API` | `S109` | `S107` | `T-API-16` |
-| `T-WEB` | `S231` | `S230` | `T-WEB-23` |
-| `T-LINT` | `S47` | `S46` | `T-LINT-10` |
+| `T-CORE` | `S98` | `S95` | never used |
+| `T-DB` | `S62` | `S60` | `T-DB-21` |
+| `T-API` | `S117` | `S115` | `T-API-16` |
+| `T-WEB` | `S244` | `S242` | `T-WEB-23` |
+| `T-LINT` | `S49` | `S48` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
 
@@ -145,3 +145,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-CORE-S6` | **predates #27.** Plan 018 reserved it for `completion-contract.test.ts` (`docs/plans/018-…:1376`); the assertion landed unmarked. Recorded here so the next re-derivation does not spend a pass re-investigating the gap |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.
+
+#83 (plan 056) reserved **`T-CORE-S86…S97`**, **`T-DB-S59…S61`**, **`T-API-S109…S116`**, **`T-WEB-S231…S243`** and **`T-LINT-S47…S48`**, and spent `T-CORE-S86…S95`, `T-DB-S59`/`S60`, `T-API-S109…S115`, `T-WEB-S231…S242` and `T-LINT-S47`/`S48`. The unspent tails — `T-CORE-S96`/`S97`, `T-DB-S61`, `T-API-S116` and `T-WEB-S243` — were the reserved review-round headroom and are **burned**, per the rule above. Two tripwires were **widened in place** with no new id, on the `T-DB-9a`/`T-DB-S5` precedent: `T-DB-9e` counts one more user-entry export (`listCompletionsForDay`), and `T-WEB-S183`'s archive module-graph scan also excludes `src/day` and the string `useDayTruth`.
+
+**The `T-WEB` range shifted by one against the plan's reservation, and the reason is the rule working.** Plan 056 reserved `T-WEB-S230…S242` off a frontier row that read `S231` next free while `S230` was already in use — #63 (Tier 1, no plan) had spent it on `apps/web/test/aligning-numerals.test.ts` hours earlier, and recorded it here rather than in a reservation paragraph it had no document for. The step-5 grep caught it before an id was minted, and the range became `S231…S243`. This is the second time the documented grep has caught a stale `T-WEB` row (#120's `S229` was the first), which is why "re-run the grep before allocating" sits above the table rather than in a plan.

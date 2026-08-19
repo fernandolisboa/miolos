@@ -676,6 +676,69 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S47: the day modules — client, store and the bare barrel form — red from free play, clean from a daily path", async () => {
+    // #83's growth clause (the napkin's one-hop rule): the day client
+    // reaches the network and a server-derived, user-specific answer, so
+    // ADR-0060's surface stays out of free play only because these names
+    // entered the list in the same change that created the modules. The bare
+    // `../day` form is listed because `**/day/**` does not match it — a
+    // future `src/day/index.ts` barrel must not become a door.
+    const doors = ["../day/day-client", "../day/day-truth", "../day"];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — `play/day-state.ts` imports the store.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+
+    // THE GLOB CHECK, owed rather than assumed: `**/day` and `**/day/**`
+    // must not swallow the two day-SHAPED names that are banned elsewhere by
+    // their own literals. Probed from a DAILY path, where they are legal, so
+    // a hit here would mean the new group over-matched.
+    for (const neighbour of ["../play/day-state", "../../app/hub-day-state"]) {
+      const source = [
+        `import * as ok from "${neighbour}";`,
+        "",
+        "export const probe = ok;",
+        "",
+      ].join("\n");
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), neighbour)
+        .toEqual([]);
+    }
+  });
+
+  it("T-LINT-S48: dynamic-import evasions of the day bans red, the bare barrel form included; a local dynamic import stays clean", async () => {
+    const doors = [
+      '  import("../day/day-client");',
+      '  import("../day/day-truth");',
+      '  import("../day");',
+    ];
+    for (const door of doors) {
+      const source = ["export const load = () =>", door, ""].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-syntax");
+    }
+
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S18: the free-play directory's LEGAL surface lints clean — the wall is not a blanket ban", async () => {
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',

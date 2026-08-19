@@ -114,10 +114,14 @@ export function ConclusionView({
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
   const record = snapshot.hydrated ? snapshot.record : undefined;
-  // What THIS DEVICE knows about the rest of the day (ADR-0031). It can only
-  // understate — a game solved on another device reads `falta` here, which
-  // is stated in the plan rather than hidden, and is the same answer a cold
-  // profile gets.
+  // What THE USER's day looks like as this device and the server together
+  // know it (ADR-0031 as amended by ADR-0060). Since #83 a game solved on
+  // another device no longer reads `falta` here: this surface carries the
+  // merged answer too, because `useDayState` is the ONE seam and there is no
+  // second spelling of it. A cold profile still reads everything pending —
+  // `/day` answers 401 with no session — and the local reader is the whole
+  // answer whenever the fetch does not land, which is what lets this screen
+  // finish offline.
   const dayState = useDayState(date);
 
   useEffect(() => {
