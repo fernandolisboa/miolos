@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S86` | `S84` | never used |
 | `T-DB` | `S59` | `S58` | `T-DB-21` |
 | `T-API` | `S109` | `S107` | `T-API-16` |
-| `T-WEB` | `S231` | `S230` | `T-WEB-23` |
+| `T-WEB` | `S232` | `S231` | `T-WEB-23` |
 | `T-LINT` | `S47` | `S46` | `T-LINT-10` |
 
 #25 (plan 020) reserved `T-CORE-S8…S14`, `T-DB-S6…S9`, `T-API-S17…S26`, `T-WEB-S35…S60`, `T-LINT-S3`, and spent, on top of its range:
@@ -119,6 +119,8 @@ Five existing claims were widened in place and correctly took **no** new id in P
 #109 (plan 051) reserved nothing and spent nothing: `packages/games` carries no ids, the `T-WEB-S43` comment in `apps/web/test/nonogram-screen.test.tsx` is not a claim, and the two edited files carry only comment and literal changes — the #114 precedent. Its one edit here is the frontier correction #120 owed.
 
 #63 (Tier 1, no plan) spent **`T-WEB-S230`** on `apps/web/test/aligning-numerals.test.ts` — ADR-0036's rule as a gate: the running clock on `var(--font-ui)`, and a scan over every stylesheet in `apps/web` for the tabular-nums-on-Fraunces pairing, with decision 2's four sanctioned single numerals allow-listed. **A tier without a plan document has no reservation paragraph to write, so the allocation is recorded here at commit time instead** — the frontier row above is the only record either way, and it was re-derived by the documented grep immediately before allocating (`S229` highest in use, from #120). Nothing is reserved and nothing is burned: one id, one describe.
+
+#67 (Tier 1, no plan) spent **`T-WEB-S231`** on `apps/web/test/hint-tab-order.test.tsx` — the hint button's position in the tab sequence, over **all seven** screens that compose `play/screen.module.css`'s `.page` grid. One id, one describe, allocated the same way #63's was: the frontier row above is the record, re-derived by the documented grep first (`S230` highest in use, from #63). Nothing reserved, nothing burned.
 
 Four same-file, same-claim duplicates predate this branch and are deliberately left alone rather than renumbered — `T-API-S4` (×4, `cron-publish.test.ts`), `T-API-S5`, `T-API-S6` and `T-API-S13`. They ship on `main`, they are cited from plans and PR bodies, and renumbering a landed id is the thing that closed the bare space. New duplicates take the sibling letter instead — **and "new" means anything not yet on `main`, this branch's own step-7 output included**: `T-DB-S53a`/`S53b`, `T-WEB-S177a` and `T-LINT-S37a` are all that rule applied to duplicates created in the same pull request that removed the others.
 

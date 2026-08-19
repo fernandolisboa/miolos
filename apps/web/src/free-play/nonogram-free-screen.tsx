@@ -330,6 +330,24 @@ function Frame({
         </div>
       </div>
 
+      <section className={screen.board}>
+        <LevelPicker level={level} onChange={onLevelChange} />
+        {children}
+        {hintKind !== null && (
+          <p className={screen.hintExplain}>{copy.hint.explain[hintKind]}</p>
+        )}
+      </section>
+
+      {/* AFTER the board, and that is the whole of #67: `screen.page` places
+          every child by NAMED GRID AREA, so this element's position in the
+          source decides the tab order and decides nothing about the paint. It
+          used to sit above `.board` while painting below it in both bands —
+          bottom of the sidebar at >1140px, last row at <=1140px — so the
+          second tab stop on this screen was the lowest control on the page
+          (WCAG 2.4.3). Free play inherits the shared grid, so it inherited the
+          defect and inherits the fix. `grid-area: hint` is unconditional in
+          the shared sheet, so nothing about the layout moves with it.
+          T-WEB-S231. */}
       {hint === null ? (
         <div
           aria-hidden
@@ -347,14 +365,6 @@ function Frame({
           {hint.ready ? copy.hint.available : copy.hint.used}
         </button>
       )}
-
-      <section className={screen.board}>
-        <LevelPicker level={level} onChange={onLevelChange} />
-        {children}
-        {hintKind !== null && (
-          <p className={screen.hintExplain}>{copy.hint.explain[hintKind]}</p>
-        )}
-      </section>
     </main>
   );
 }

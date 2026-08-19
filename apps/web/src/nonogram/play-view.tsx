@@ -172,17 +172,6 @@ export function PlayView({
         </div>
       </div>
 
-      {/* `aria-disabled` rather than `disabled`: the exhausted button stays
-          focusable and keeps announcing why it does nothing. */}
-      <button
-        type="button"
-        className={`${screen.hint}${play.hintReady ? "" : ` ${screen.hintUsed}`}`}
-        aria-disabled={!play.hintReady}
-        onClick={play.revealHint}
-      >
-        {play.hintReady ? copy.hint.available : copy.hint.used}
-      </button>
-
       <section className={screen.board}>
         <div className={screen.gridCard}>
           <Board
@@ -206,6 +195,29 @@ export function PlayView({
           </p>
         )}
       </section>
+
+      {/* AFTER the board, and that is the whole of #67: `screen.page` places
+          every child by NAMED GRID AREA, so this element's position in the
+          source decides the tab order and decides nothing about the paint. It
+          used to sit above `.board` while painting below it in both bands —
+          bottom of the sidebar at >1140px, last row at <=1140px — so the
+          second tab stop on every play screen was the lowest control on the
+          page (WCAG 2.4.3). Moving the node is the only fix available: focus
+          order follows the DOM, and no CSS property reorders it in the
+          browsers this app ships to. `grid-area: hint` is unconditional in the
+          shared sheet, so nothing about the layout moves with it — verified
+          per band, per screen. T-WEB-S231.
+
+          `aria-disabled` rather than `disabled`: the exhausted button stays
+          focusable and keeps announcing why it does nothing. */}
+      <button
+        type="button"
+        className={`${screen.hint}${play.hintReady ? "" : ` ${screen.hintUsed}`}`}
+        aria-disabled={!play.hintReady}
+        onClick={play.revealHint}
+      >
+        {play.hintReady ? copy.hint.available : copy.hint.used}
+      </button>
     </main>
   );
 }
@@ -319,21 +331,26 @@ export function PlaySkeleton({
         </div>
       </div>
 
-      {/* Blank rather than labelled: which of the two hint labels applies is
-          read off the record, and the bar is the same 44px/50px either way. */}
-      <div
-        aria-hidden
-        className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}
-      >
-        {BLANK_READOUT}
-      </div>
-
       <section className={screen.board}>
         <div aria-hidden className={screen.gridCard}>
           <BoardSkeleton size={size} clues={clues} />
         </div>
         <ControlsSkeleton />
       </section>
+
+      {/* Last in the source, exactly as in the live view above: the skeleton's
+          placeholder is `aria-hidden` and unfocusable, so it owes nothing to
+          the tab order itself — but the two branches occupy the same grid
+          areas in the same source order, which is what the skeleton/live
+          parity assertions read (#67). Blank rather than labelled: which of
+          the two hint labels applies is read off the record, and the bar is
+          the same 44px/50px either way. */}
+      <div
+        aria-hidden
+        className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}
+      >
+        {BLANK_READOUT}
+      </div>
     </main>
   );
 }
