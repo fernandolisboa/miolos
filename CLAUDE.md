@@ -30,15 +30,34 @@ Development runs in phases. Each phase is a fresh session, started by pasting th
 
 1. **Spec** — `/to-spec`, using the founding handoff **plus every ADR in `docs/adr/`** as its input. The handoff alone is pre-amendment and would produce a spec for the wrong product.
 2. **Tickets** — `/to-tickets`, slicing the spec into tracer-bullet vertical slices with explicit blocking edges, published to GitHub Issues.
-3. **Development** — per issue, the eight-step flow below.
+3. **Development** — per issue, at the tier the work earns. The eight-step flow is Tier 2, not the universal default; the routing table is below.
 
 Once `CONTEXT.md` and ADRs exist, `/grill-with-docs` runs on every new plan. `/wayfinder` is reserved for large foggy blocks (pt-BR crosswords, monetization activation, the native clients) — not for ordinary tickets.
 
-Select the right skill automatically during development — `/implement`, `/tdd`, `/diagnosing-bugs`, `/code-review`, `/request-refactor-plan`, `/run` — without Fernando naming it.
+Select the right skill automatically during development — `just-do-it`, `small-fix`, `/implement`, `/tdd`, `/diagnosing-bugs`, `/code-review`, `/request-refactor-plan`, `/run` — without Fernando naming it.
 
-## Mandatory implementation flow (eight steps)
+## Implementation flows are tiered
 
-**This flow is not optional and eight steps is the floor, not the target.** Every issue goes through all of it. Each step runs in a **freshly spawned specialised subagent with clean context** — never carry one step's context into the next.
+**One flow for every task is how a typo pays a feature's ceremony.** The eight steps below are Tier 2 — they work, and every shipped feature came through them. They are not the default for everything. See [ADR-0058](./docs/adr/0058-implementation-flows-are-tiered.md).
+
+| The work | Tier | Flow |
+|---|---|---|
+| Typo, comment or doc correction, dependency bump, a one-line test fix, a records-only change (an ADR status flip, a `docs/README.md` row, a frontier update) | **0 — Just do it** | One agent: branch → change → gate → PR → merge |
+| A real defect, roughly ≤ 50 lines, no new decision and no new surface | **1 — Small fix** | Reproduce → fix → one reviewer, correctness lens → gate → merge |
+| A vertical slice, a new surface, a schema or contract change, or anything needing an ADR | **2 — Feature slice** | The eight steps, unchanged |
+| Architecture, or work whose shape is unclear | **3 — Foggy** | Find the shape first, then Tier 2 on the pieces |
+
+### Tier 0 — Just do it
+
+No ticket, no plan, no ADR, no handoff, no review agents. One agent: branch, make the change, run the gate, open the PR, merge. The gate still binds — that is what makes this safe. Driven with the `just-do-it` skill.
+
+### Tier 1 — Small fix
+
+Reproduce first: a failing test, or a pasted repro. Never a described one. Then fix, then **one** reviewer with the correctness lens, then the gate, then merge. No plan document, no ADR, no handoff. Driven with the `small-fix` skill.
+
+### Tier 2 — Feature slice (the eight steps)
+
+**Eight steps is the floor, not the target.** Each step runs in a **freshly spawned specialised subagent with clean context** — never carry one step's context into the next.
 
 1. **Explore** — read the codebase and any external material needed to understand the work. Read `CONTEXT.md` and every ADR touching the area first.
 2. **Plan** — produce the implementation plan.
@@ -51,13 +70,26 @@ Select the right skill automatically during development — `/implement`, `/tdd`
 
 Adding steps is always allowed. Removing one never is. If a review at step 3 or 6 rejects, go back to the earliest step that can actually fix the cause — never patch forward over a bad plan.
 
+### Tier 3 — Foggy
+
+`/wayfinder` or `/grill-with-docs` first, to find the shape. Then Tier 2 on the pieces it produces. Tier 3 is not a flow of its own — it is the step that turns fog into Tier 2 tickets.
+
+### The rules that make the tiers hold
+
+1. **Choose the tier before the work, and name it in the PR body.** A tier is a claim. If the work outgrows it, stop and re-tier rather than continuing at the wrong weight.
+2. **If a ticket's process artifacts outweigh its code diff, it was the wrong tier.** It is the cheapest test we have — apply it in that form, after the fact, on every ticket.
+3. **No ticket may be filed whose entire content is an observation about the test suite or the tooling.** A tracker entry needs an action. Observations go in `.claude/napkin.md`, or as an annotation on the ADR that owns the area.
+4. **Handoffs at session end or milestone close, not per ticket.**
+5. **Escalation is always allowed; skipping is not.** Tier 0 work that turns out to need a decision becomes Tier 2. Nothing goes *down* a tier because it is taking long.
+6. **Records work — plans, handoffs, ADR annotations — is Tier 0 or 1 by default**, never Tier 2 on its own.
+
 ## Verification gates
 
 Fernando reviews pull requests, not code. That only works if the machine — not the agent's judgement — decides what "done" means.
 
 **Evidence rule.** Never report a step as passing without pasting the real command output. "Should pass", "looks correct" and "I've verified" are not results. An agent that cannot run the check reports that it could not run it.
 
-**Mechanical gate.** A PR merges only when all of these are green, with output shown. Each gate binds from the ticket that introduces it — an M0 PR is not blocked by a checker that does not exist yet, but no PR may remove or weaken one that does:
+**Mechanical gate.** A PR merges only when all of these are green, with output shown. **The gate binds identically at every tier** — a Tier 0 typo passes the same checks as a Tier 2 slice. That is what makes the lighter tiers safe: they drop agents and documents, never checks. Each gate binds from the ticket that introduces it — an M0 PR is not blocked by a checker that does not exist yet, but no PR may remove or weaken one that does:
 
 - `pnpm typecheck` — `strict: true`, no `any` without a comment justifying it, no `@ts-ignore` without a written reason
 - `pnpm lint`
@@ -67,7 +99,7 @@ Fernando reviews pull requests, not code. That only works if the machine — not
 - `npx impeccable detect` — required on any change that touches UI. Visual quality is a gate, not an aspiration.
 - Pre-commit (Husky + lint-staged + typecheck + tests) must stay green. Set up in M0; never bypassed with `--no-verify`.
 
-**Adversarial review.** Step 6 reviewers default to rejecting. A finding is dismissed only with a written reason in the PR, never by silence.
+**Adversarial review.** Reviewers default to rejecting — Tier 2's six step-6 lenses and Tier 1's single correctness lens alike. A finding is dismissed only with a written reason in the PR, never by silence. Tier 0 has no reviewer at all; the gate is its whole defence, which is why the routing table's Tier 0 row is a closed list rather than a judgement call.
 
 **PR description.** State what changed, what was verified with the command output inline, and any decision Fernando actually needs to make. If nothing needs him, say so explicitly.
 
@@ -115,7 +147,7 @@ Later screens (Sudoku, Nonogram, Termo, archive, free play, stats, settings, onb
 
 ## Handoffs between sessions
 
-Long work spans several sessions. At the end of a session that produces one, run `/handoff`.
+Long work spans several sessions. At the end of a session that produces one — or at a milestone close — run `/handoff`. **Never per ticket:** a handoff records a session's transferable state, and a ticket that fits in one sitting has none.
 
 **Project override:** the `/handoff` skill saves to the OS temp directory by default. In this repo, handoffs are **committed** to `docs/handoffs/` under the naming convention in [`docs/README.md`](./docs/README.md) — `NNN[-issue-<n>]-handoff-<slug>.md`. A handoff that lives in `/tmp` is lost work.
 
@@ -132,5 +164,6 @@ Pre-issue implementation plans go to `docs/plans/` under the same numbering. Bot
 - Product or scope question → the founding handoff, as amended by the table at its top. Where an ADR supersedes it, the ADR is the final word; everywhere else the handoff is.
 - Recorded technical decision → `docs/adr/`.
 - Domain term → `CONTEXT.md`. Use its vocabulary in issue titles, test names and proposals; don't drift to synonyms.
+- Which flow a piece of work takes → the routing table in § *Implementation flows are tiered*. When two rows both look right, take the heavier one; escalating later is free, and skipping is not.
 - New technical decision of any weight → propose an ADR before implementing, even a short one. It stays `Proposed` until the PR that ships its code flips it to `Accepted` in that same diff — owner, forms and edge cases in [`docs/agents/domain.md`](./docs/agents/domain.md).
 - A "small improvement" nobody asked for → sanity-check it first. If it doesn't hold up, say so and drop it. Don't execute on autopilot.
