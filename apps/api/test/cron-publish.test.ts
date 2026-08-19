@@ -1,9 +1,11 @@
 import {
   binairoDailyContentSchema,
+  cronPublishGameResultSchema,
   cronPublishResponseSchema,
   nonogramDailyContentSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
+  type CronPublishGameResult,
 } from "@miolos/core";
 import { sql } from "@miolos/db";
 import {
@@ -107,6 +109,25 @@ function cronRequest(authorization?: string): NextRequest {
 async function authorizedRun(): Promise<Response> {
   return GET(cronRequest(`Bearer ${SECRET}`));
 }
+
+/**
+ * One game's free-text fields — `error` and each `failures[].reason`, the
+ * only two places in the cron's output that carry a string the code did not
+ * choose. T-API-S41 searches these for the drawn Termo answer instead of
+ * searching the serialized body, which also contains the fixed game keys
+ * (#111).
+ */
+function freeTextOf(result: CronPublishGameResult): string[] {
+  return [result.error ?? "", ...result.failures.map((entry) => entry.reason)];
+}
+
+/**
+ * One cron log line: a game result SPREAD into an object that also carries
+ * `event` and `game` for the shipped log query, hence `.loose()` over the
+ * strict result schema. Parsed rather than string-matched so the assertions
+ * above run against the fields, not against the scaffolding around them.
+ */
+const loggedResultSchema = cronPublishGameResultSchema.loose();
 
 async function rowsFor(game: string): Promise<DailyPuzzleRow[]> {
   const rows = await ctx.db.select().from(dailyPuzzles);
@@ -603,16 +624,41 @@ describe("GET /cron/publish top-up", () => {
       expect(serialized).not.toContain(bound ?? "<never bound>");
     }
 
-    // The answer word itself, named rather than inferred from the JSON blob.
+    // The answer word itself, named rather than inferred from the JSON blob —
+    // and searched in the body's FREE-TEXT fields, never in
+    // `JSON.stringify(body)` (#111). A five-letter substring test over the
+    // whole blob is unsound: the blob always carries the game KEY `"termo"`,
+    // and `content/termo/answers.csv:373` is `termo,termo`, so on that draw
+    // the assertion required the same five characters to be both present and
+    // absent. `freeTextOf` is where a leak can actually ride out; the rest of
+    // the body is numbers, ISO dates and keys fixed by
+    // `cronPublishResponseSchema`.
     const termoBound: unknown = JSON.parse(boundContent.get("termo") ?? "null");
     const answer = termoDailyContentSchema.parse(termoBound);
-    expect(serialized).not.toContain(answer.canonical);
-    expect(serialized).not.toContain(answer.normalized);
-
-    // The log line the operator queries takes the SAME sanitized string.
-    for (const line of logLines) {
+    const bodyText = Object.values(body.games).flatMap(freeTextOf);
+    // The log line the operator queries takes the SAME sanitized string, and
+    // had the SAME collision — the line is `{…,"game":"termo",…}`. `params:`
+    // is checked on the RAW line, since no game key can collide with it.
+    const loggedText = logLines.flatMap((line) => {
       expect(line).not.toContain("params:");
-      expect(line).not.toContain(answer.normalized);
+      const parsed: unknown = JSON.parse(line);
+      return freeTextOf(loggedResultSchema.parse(parsed));
+    });
+    for (const text of [...bodyText, ...loggedText]) {
+      expect(text).not.toContain(answer.canonical);
+      expect(text).not.toContain(answer.normalized);
+      // The residual the narrowing leaves open, closed mechanically: if any
+      // word of the list ever became a substring of the QUERY TEXT the
+      // operator keeps, the drawn-answer assertions above would go back to
+      // failing on one run in 400. Sweeping the WHOLE list makes that a
+      // deterministic red on every run instead of a lottery — and one
+      // assertion over 400 words, not 800 assertions.
+      const collisions = TERMO_ANSWERS.filter(
+        (candidate) =>
+          text.includes(candidate.canonical) ||
+          text.includes(candidate.normalized),
+      );
+      expect(collisions).toEqual([]);
     }
   }, 30_000);
 
