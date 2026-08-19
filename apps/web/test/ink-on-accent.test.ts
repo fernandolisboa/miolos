@@ -52,6 +52,14 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     // reachable in CI (an archived play route is scanned), but the list is
     // what makes the gate exhaustive rather than the scan.
     "src/archive/play-note.module.css",
+    // #103: the share button's own sheet, split out of
+    // `conclusion-view.module.css` so the archive's late-result panel can
+    // render the same control without the conclusion's stylesheet. Its rules
+    // are byte-unmoved and paint no accent at all — the button is app chrome,
+    // `--line` and `--paper-card` — but they were inside a LISTED sheet until
+    // this ticket, so leaving the new one off would silently narrow a gate
+    // that has been over this CSS since #34.
+    "src/play/share-button.module.css",
   ] as const;
 
   it("leaves no desk label on an accent fill, in any stylesheet", () => {
@@ -216,6 +224,11 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     "src/archive/late-result.module.css",
     // #31 step-6 F10b: the archive play note, whose accent is a left RULE.
     "src/archive/play-note.module.css",
+    // #103: the share button's sheet, now shared by the four daily
+    // conclusions AND the archive's late-result panel — four game accents on
+    // one set of rules, which is precisely the class this scan exists for. It
+    // ships with ZERO accent-coloured text and its focus ring is `--ink`.
+    "src/play/share-button.module.css",
   ] as const;
 
   /**
