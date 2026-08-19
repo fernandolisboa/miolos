@@ -141,7 +141,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("the hint button is the last tab stop, not the second (T-WEB-S231)", () => {
+describe("the hint button is the last tab stop, not the second (T-WEB-S232)", () => {
   it.each(SCREENS)(
     "$route puts its hint after its board in the tab sequence",
     ({ route, mount }) => {

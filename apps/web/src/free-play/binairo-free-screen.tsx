@@ -320,7 +320,7 @@ function Frame({
           (WCAG 2.4.3). Free play inherits the shared grid, so it inherited the
           defect and inherits the fix. `grid-area: hint` is unconditional in
           the shared sheet, so nothing about the layout moves with it.
-          T-WEB-S231. */}
+          T-WEB-S232. */}
       {hint === null ? (
         <div
           aria-hidden

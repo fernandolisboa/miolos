@@ -172,7 +172,7 @@ export function PlayView({
           order follows the DOM, and no CSS property reorders it in the
           browsers this app ships to. `grid-area: hint` is unconditional in the
           shared sheet, so nothing about the layout moves with it — verified
-          per band, per screen. T-WEB-S231.
+          per band, per screen. T-WEB-S232.
 
           `aria-disabled` rather than `disabled`: the exhausted button stays
           focusable and keeps announcing why it does nothing (§10.5). */}
