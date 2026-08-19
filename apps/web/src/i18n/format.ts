@@ -120,20 +120,25 @@ export function formatDayNumber(isoDate: string): string {
  * appears only once there is an hour to show, so the common case stays
  * the two-field clock the frames draw.
  *
- * THE RUNNING READOUT DOES SHIFT ON EVERY TICK, and this says so rather than
- * claiming otherwise (ADR-0036 decision 5, issue #63). `TimerReadout`'s two
- * live callers are `play/screen.module.css`'s `.timerBar` (20 px) and
- * `.timerCard` (30 px), both `font-family: var(--font-display)` — Fraunces,
- * which has NO tabular figures and responds to no OpenType feature tag, so
- * their `font-variant-numeric: tabular-nums` is a measured no-op and the
- * digits move by ≈6.1 px each at 30 px. The conclusion's `.stampTime` renders
- * a frozen value, so the same face costs nothing there.
+ * THE RUNNING READOUT NO LONGER SHIFTS ON EVERY TICK, as of #63.
+ * `TimerReadout`'s two live callers — `play/screen.module.css`'s `.timerBar`
+ * (20 px) and `.timerCard` (30 px) — carry `font-family: var(--font-ui)` with
+ * `font-variant-numeric: tabular-nums`, which is ADR-0036 decision 1: the face
+ * that can actually satisfy the feature. Instrument Sans collapses every digit
+ * to one advance (6.609375 px at 11 px, spread 0.000000), so a changing digit
+ * moves nothing to its right. The conclusion's `.stampTime` stays on Fraunces
+ * and that is not an oversight: it renders a frozen value, which is decision
+ * 2's single non-aligning numeral.
  *
- * This TSDoc used to assert the opposite — "rendered with tabular-nums by
- * every caller (tokens.css mandates it for timers) so the digits do not
- * jitter" — on the exact surfaces the ADR measures as jittering (step-6
- * round-4 finding `ADR-0036-UNAMENDED-LINES`). The fix is a face change on
- * two shipped screens and is #63's, not this ticket's.
+ * The history matters because this TSDoc has been wrong in both directions.
+ * It first asserted "rendered with tabular-nums by every caller (tokens.css
+ * mandates it for timers) so the digits do not jitter" — false, on the exact
+ * surfaces ADR-0036 measures at ≈6.1 px per digit at 30 px (step-6 round-4
+ * finding `ADR-0036-UNAMENDED-LINES`). #25 then corrected it to state the
+ * defect, because ADR-0036 decision 5 deliberately left the face change to
+ * #63. #63 made the change, so the statement of the defect became the false
+ * one and is replaced here. `T-WEB-S230` is the gate that keeps this
+ * paragraph true.
  */
 export function formatElapsed(totalMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(totalMs / 1000));

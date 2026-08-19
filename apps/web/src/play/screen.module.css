@@ -142,8 +142,22 @@
   color: var(--ink-2);
 }
 
+/* THE RUNNING CLOCK, AND THE ONE REASON IT IS NOT ON THE DISPLAY FACE (#63).
+   It ships `var(--font-ui)` because it is a numeral that has to align with
+   ITSELF across time: the value is replaced every second, and a digit whose
+   advance changes moves every digit to its right. Fraunces has no tabular
+   figures — no OpenType feature tag responds on it at all — so the
+   `font-variant-numeric` below was a measured no-op on it and the clock swung
+   ≈6.1px per digit at 30px (ADR-0036 decision 5 measured it; decision 1 is
+   the rule this now follows). Instrument Sans collapses every digit to one
+   advance — 6.609375px at 11px, spread 0.000000 — so the clock ticks in
+   place. `.timerCard` below is the same readout at the desktop size and
+   carries the same pair for the same reason; the two are swapped together or
+   not at all. What does NOT move to this face is a single non-aligning
+   numeral — the streak stamp, a board cell, the conclusion's frozen
+   `.stampTime` — which decision 2 leaves on Fraunces deliberately. */
 .timerBar {
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 20px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
@@ -248,8 +262,11 @@
   color: var(--ink-2);
 }
 
+/* The >1140px half of the running clock — same readout, same face, same
+   reason as `.timerBar` above (#63, ADR-0036 decision 1). This is the 30px
+   surface the ≈6.1px-per-digit measurement was taken on. */
 .timerCard {
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 30px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
