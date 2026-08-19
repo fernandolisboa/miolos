@@ -123,6 +123,8 @@ A handoff is self-contained and grounded in the real code, not in other document
 
 Immediately after writing it, emit a **copy-pasteable kickoff prompt** as the last block of the response — lean, pointing at the handoff rather than repeating it, so the next session starts without re-deriving context.
 
+**The kickoff prompt is not snapshot content.** It is the one part of a handoff that is regenerated whenever the handoff gains an addendum, and it lives at the very end of the file, after any addenda, so it can never be orphaned above one. It opens with a **preflight assertion** — the expected `main` SHA and the state of every issue it names — and the instruction that if any of that does not match, the session stops and reads the newest addendum before doing anything else.
+
 Pre-issue implementation plans go to `docs/plans/` under the same numbering. Both are point-in-time snapshots, never living specs.
 
 ## When in doubt
