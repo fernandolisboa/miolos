@@ -935,7 +935,7 @@ pre-empted it.
      written TODAY, so `onTimeSql()` derives false — the reader returns the row
      unfiltered and packages/core turns it into `pending`. The first draft
      expected `true` and was wrong about the fixture, not about the reader.
-   - **ADR-0060's status line names `#133` as its PR, unverified.** The
+   - **ADR-0060's status line named `#133` as its PR, unverified; corrected to `#135` when the PR opened.** The
      lifecycle rule (`docs/agents/domain.md`) requires `shipped in #PR` at step
      5, and no PR exists yet at step 5 by this ticket's own instruction. `#133`
      is the next number after `#132` (the last merge at the time of writing)
