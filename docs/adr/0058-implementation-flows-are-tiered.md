@@ -1,6 +1,6 @@
 # ADR-0058 — Implementation flows are tiered
 
-**Status:** Accepted — 2026-08-19 (no issue — Tier 0/1 change, shipped in #PRNUM)
+**Status:** Accepted — 2026-08-19 (no issue — Tier 0/1 change, shipped in #127)
 
 ## Context
 
