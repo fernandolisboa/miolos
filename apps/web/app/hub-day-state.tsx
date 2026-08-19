@@ -20,8 +20,14 @@
  * does, which is the cold-profile answer and what `impeccable detect` always
  * scans (no session, so `/day` answers 401 and the pending composition is
  * what the gate sees). A false done would still be visible, and neither
- * input can produce one. The streak stays server-computed and is not read
- * here at all — #19 gave it its own island, `hub-streak.tsx` (ADR-0048).
+ * input produces one in normal operation — the device's own tampering case
+ * is ADR-0044 consequence (f), recorded in `src/play/day-state.ts`: a
+ * hand-edited `{concluded: true, outcome: "won"}` record on a six-loss board
+ * reads `completed` on that device. It is self-inflicted, device-local and
+ * never reaches the wire, which is why it is acceptable — but "cannot" would
+ * be the stronger claim, and it is false. The streak stays server-computed
+ * and is not read here at all — #19 gave it its own island, `hub-streak.tsx`
+ * (ADR-0048).
  *
  * THERE ARE NOW TWO SERVER READS ON THIS SURFACE, and they do different
  * jobs. `GET /day` decides a tile's SHAPE, through `useDayState` — new at
@@ -200,9 +206,13 @@ export function HubCardAction({
  * - value landed and dates match: `doneGuessesAria` with the count, and
  *   the two aria-hidden result spans carry `em 4/6` / `4/6`.
  *
- * Server state decorating device state, in the monotone-safe direction
- * (ADR-0031): the DEVICE record decides the tile is done; the server value
- * only ever captions it. `DayEntry` gains nothing.
+ * Server state decorating THE MERGED day state (ADR-0031 as amended by
+ * ADR-0060). Since #83 the DEVICE record no longer decides this tile is
+ * done on its own: the merge does, so a Termo completed on another device
+ * now mounts this component where it previously did not (ADR-0060
+ * consequence (a)). What has NOT changed is the direction of the
+ * decoration — `GET /stats`'s `todayTermoGuesses` only ever CAPTIONS an
+ * already-done tile, never makes one, and `DayEntry` still gains nothing.
  */
 function TermoDoneLink({ date }: { readonly date: string }) {
   const stats = useStats();

@@ -8,16 +8,13 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import HojePage from "../app/page";
 import { formatElapsed, messages, playRoutes, routes } from "../src/i18n";
-import { ConclusionView } from "../src/play/conclusion-view";
 import {
   playRecordKey,
   writePlayRecord,
   type BinairoPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
-import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 
 /** Weekday 1 is tier 1, the cheapest rung (~0.7 ms), and it runs once. */
 const SUDOKU_PUZZLE = generateDailySudoku({ seed: 20_260_731, weekday: 1 });
@@ -32,6 +29,21 @@ const SUDOKU_PUZZLE = generateDailySudoku({ seed: 20_260_731, weekday: 1 });
  * own São Paulo day, and the env stub plus the fetch stub as a MANDATORY
  * PAIR — with only the fetch stub every client's env guard short-circuits
  * and the stub is dead code.
+ *
+ * THE THREE SURFACES ARE IMPORTED DYNAMICALLY, and that is what makes
+ * `vi.resetModules()` in `beforeEach` mean anything. The day-truth store is
+ * a MODULE-LEVEL slot that deliberately RETAINS its payload across
+ * unmounts; `vi.resetModules()` only affects modules imported *after* it, so
+ * with `import HojePage from "../app/page"` at the top of the file the store
+ * instance was bound once at file load and every payload leaked from one
+ * `it` to the next. That is a latent vacuity — a case whose `waitFor`
+ * expects the tile a PREVIOUS case's payload already produced passes
+ * without fetching anything — and it made the first assertion of the
+ * cross-device case (the tile is still the pending button *before* the
+ * payload lands) depend on suite order. Reloading the tree per test costs a
+ * few hundred milliseconds and buys real isolation. `@testing-library/react`
+ * and React itself stay static: they are externalised deps, which
+ * `resetModules` does not touch, so there is no split-React hazard.
  */
 const DATE = "2026-07-31";
 const API_URL = "https://api.example.test";
@@ -126,6 +138,19 @@ function cardFor(game: "termo" | "sudoku" | "nonogram" | "binairo") {
   return within(card);
 }
 
+/** The hub, the conclusion and the play screen, re-bound after each reset. */
+async function loadHojePage() {
+  return (await import("../app/page")).default;
+}
+
+async function loadConclusionView() {
+  return (await import("../src/play/conclusion-view")).ConclusionView;
+}
+
+async function loadSudokuScreen() {
+  return (await import("../src/sudoku/sudoku-screen")).SudokuScreen;
+}
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(`${DATE}T12:00:00Z`));
@@ -142,8 +167,9 @@ afterEach(() => {
 });
 
 describe("the hub's first paint is untouched (T-WEB-S238)", () => {
-  it("renders every tile pending from the server snapshot, and issues NO fetch during render", () => {
+  it("renders every tile pending from the server snapshot, and issues NO fetch during render", async () => {
     const fetchMock = stubFetchByUrl(() => jsonResponse(200, dayBody()));
+    const HojePage = await loadHojePage();
 
     const markup = renderToStaticMarkup(<HojePage />);
 
@@ -163,6 +189,7 @@ describe("the hub's first paint is untouched (T-WEB-S238)", () => {
 describe("a game completed on another device (T-WEB-S239)", () => {
   it("renders `Feito` with no duration, and `X de 4` counts it", async () => {
     stubFetchByUrl(() => jsonResponse(200, dayBody({ nonogram: "completed" })));
+    const HojePage = await loadHojePage();
 
     render(<HojePage />);
 
@@ -195,6 +222,7 @@ describe("a game completed on another device (T-WEB-S239)", () => {
   it("adds to what this device already knows rather than replacing it", async () => {
     writePlayRecord(concludedBinairo());
     stubFetchByUrl(() => jsonResponse(200, dayBody({ sudoku: "completed" })));
+    const HojePage = await loadHojePage();
 
     render(<HojePage />);
 
@@ -224,6 +252,7 @@ describe("a game completed on another device (T-WEB-S239)", () => {
         dayBody({ sudoku: "completed", nonogram: "completed" }, "2026-07-30"),
       ),
     );
+    const HojePage = await loadHojePage();
 
     render(<HojePage />);
 
@@ -245,6 +274,8 @@ describe("the conclusion still finishes offline (T-WEB-S240)", () => {
       "fetch",
       vi.fn(() => Promise.reject(new TypeError("network down"))),
     );
+
+    const ConclusionView = await loadConclusionView();
 
     render(
       <ConclusionView
@@ -271,6 +302,7 @@ describe("the conclusion still finishes offline (T-WEB-S240)", () => {
 describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S244)", () => {
   it("keeps its href, and the play route behind it has no local record to restore", async () => {
     stubFetchByUrl(() => jsonResponse(200, dayBody({ sudoku: "completed" })));
+    const HojePage = await loadHojePage();
 
     render(<HojePage />);
 
@@ -301,6 +333,8 @@ describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S244)", () =
     // reads the record, so the swap never happens and the board is live.
     stubFetchByUrl(() => jsonResponse(200, dayBody({ sudoku: "completed" })));
 
+    const SudokuScreen = await loadSudokuScreen();
+
     const { container } = render(<SudokuScreen daily={SUDOKU_DAILY} />);
 
     await waitFor(() => {
@@ -317,6 +351,7 @@ describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S244)", () =
     stubFetchByUrl(() =>
       jsonResponse(200, dayBody({ termo: "completed", nonogram: "played" })),
     );
+    const HojePage = await loadHojePage();
 
     render(<HojePage />);
 

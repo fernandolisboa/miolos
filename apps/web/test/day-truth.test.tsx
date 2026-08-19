@@ -1,7 +1,7 @@
 import type { DayResponse } from "@miolos/core";
 import { act, renderHook } from "@testing-library/react";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { StrictMode, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -203,6 +203,43 @@ describe("the day-truth store's triggers (T-WEB-S235)", () => {
     rendered.unmount();
   });
 
+  it("T-WEB-S245: a REJECTED fetch does not wedge the in-flight guard — the next trigger still fetches", async () => {
+    // The guard's correctness must be LOCAL. `fetchDayTruth` is total by
+    // construction today, so this rejection is unreachable through the real
+    // client — which is exactly why the client is STUBBED here: the store
+    // must not depend on a sibling module's body for the property that it
+    // can ever fetch again. With the reset inside the `.then` instead of the
+    // `.finally`, `inFlight` stays `true` for the page's lifetime and the
+    // second `expect` below reads 1.
+    const calls = vi.fn();
+    let rejecting = true;
+    vi.doMock("../src/day/day-client", () => ({
+      fetchDayTruth: () => {
+        calls();
+        return rejecting
+          ? Promise.reject(new TypeError("network"))
+          : Promise.resolve(payload({ sudoku: "completed" }));
+      },
+    }));
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await flush();
+    expect(calls).toHaveBeenCalledTimes(1);
+    expect(rendered.result.current).toBeUndefined();
+
+    // `online` is the offline -> online recovery path the ADR promises, and
+    // it is the one a wedged guard would silently swallow.
+    rejecting = false;
+    window.dispatchEvent(new Event("online"));
+    await flush();
+    expect(calls).toHaveBeenCalledTimes(2);
+    expect(rendered.result.current?.games.sudoku).toBe("completed");
+
+    rendered.unmount();
+    vi.doUnmock("../src/day/day-client");
+  });
+
   it("a hidden document does not refetch on visibilitychange", async () => {
     const fetchMock = stubFetch(() => jsonResponse(200, payload()));
     const { useDayTruth } = await loadStore();
@@ -284,7 +321,10 @@ describe("the day-truth seam is one function body wide (T-WEB-S243)", () => {
     const files = [
       ...sourceFiles(join(WEB_ROOT, "src")),
       ...sourceFiles(join(WEB_ROOT, "app")),
-    ].filter((path) => !path.includes(`${join("src", "day")}`));
+      // The trailing separator matters: `join("src","day")` alone would also
+      // exclude a future `src/day-something.ts`, i.e. quietly widen the hole
+      // this assertion exists to keep closed. Only the DIRECTORY is excluded.
+    ].filter((path) => !path.includes(`${join("src", "day")}${sep}`));
 
     const importers = files
       .filter((path) =>

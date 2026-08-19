@@ -661,7 +661,14 @@ ADR-0056's own record is the precedent and the warning: *"What is falsified by
 decision 1 is source prose, in **seven** places … The last two of those were found
 at step 6 (finding M4)."* This ticket falsifies more than that one did, so the
 inventory is part of batch E rather than a step-6 discovery. Nine sites, each read
-on this tree at step 4:
+on this tree at step 4 — **and the inventory was INCOMPLETE. Step 6's ADR lens
+swept the tree and found four more, so the real figure is thirteen**, listed
+under the nine below. Two of the four were self-contradicting *within this
+branch*: the same commits asserted the opposite a few dozen lines away, and one
+of them was the exact sentence ADR-0060 decision 8 exists to retire. The lesson
+is the one ADR-0056's record already carries and this table was written to
+avoid: an inventory built by reading the files you know you are changing misses
+the files you are not:
 
 | File | What becomes false, and what it becomes |
 |---|---|
@@ -674,6 +681,17 @@ on this tree at step 4:
 | `apps/web/src/play/conclusion-view.tsx:117-120` | *"It can only understate — a game solved on another device reads `falta` here"* — it no longer does; this surface carries the merged answer too |
 | `apps/web/src/archive/{binairo,sudoku,nonogram,termo}-screen.tsx` (×4, ~l.14-22) | each explains the archive exclusion partly via *"`conclusion-view.tsx` calls `useDayState(date)`"* — still true, and the reason **strengthens**: `useDayState` now also fetches, so composing a daily screen root on an archived date would fire `/day` as well as `/streak`. `T-WEB-S183` widens to match, and the ADR-0053 decision 9 claim moves with it |
 | `packages/core/src/contracts/streak.ts:5-12` | *"that future payload MUST arrive as a new endpoint and contract"* — **fulfilled** by this ticket; the sentence owes a pointer to `day.ts` rather than a prediction |
+
+**The four the inventory missed, found by step 6's ADR lens and fixed at step 7
+(finding A2), plus the one it downgraded to a NIT (A5):**
+
+| File | What was false, and what it became |
+|---|---|
+| `apps/web/app/hub-day-state.tsx:203-205` (`TermoDoneLink` doc) | *"the DEVICE record decides the tile is done; the server value only ever captions it"* — flatly contradicted by the header **the same commit** rewrote 150 lines above (*"`GET /day` decides a tile's SHAPE"*), and by ADR-0060 consequence (a)'s own reachable case. Now: the **merged** state decides the tile is done; `/stats` still only ever captions it and `DayEntry` still gains nothing |
+| `apps/web/src/play/conclusion-view.tsx:814-819` (`nextPendingDaily` doc) | two falsehoods. *"The first daily **this device** can still play today"* — `entryOf` reads the MERGED projection, so the CTA chains on the **user's** pending games and a game solved elsewhere is not offered at all; and *"`/<jogo>` restores straight into its conclusion"* — **the exact sentence ADR-0060 decision 8 exists to correct**, corrected in ADR-0031 consequence (d) and in `hub-day-state.tsx` and left standing here. Both rewritten; the `pending`-alone rule and its lost-Termo reason are untouched |
+| `apps/web/src/play/conclusion-view.tsx:863-866` (`DayChip` doc) | *"read from **THIS DEVICE's** day state … A game with **no local concluded record** is honestly `falta`"* — the chip's `entry` comes from the merged `dayState`. Now: read from the merged day state, and a game **neither this device nor the server** holds is honestly `falta` |
+| `apps/web/app/page.tsx:89-93` (JSX comment) | *"Done or pending, per **THIS DEVICE**"* — the same falsehood as row 4 above, one file over. Now: per this device **and the server** |
+| `apps/web/src/i18n/sao-paulo-day.ts:6` (NIT A5) | *"the key **this device's** day state is read under"* — still the right key, wrong possessive. Now names both inputs, and that this date is what the payload's own `date` must equal before the merge looks at it |
 
 ## 6. Gates, measurements and landmines
 
@@ -894,9 +912,14 @@ pre-empted it.
      not.** Two rows for one game are impossible by the composite primary key;
      the fold takes the **weakest** claim if it ever saw two, which makes the
      function order-independent over an ARBITRARY row array rather than only
-     over the arrays the schema can produce — so `T-CORE-S93` can quantify
-     without a caveat — and errs in the never-overstate direction ADR-0031
-     decision 2 permits.
+     over the arrays the schema can produce, and errs in the never-overstate
+     direction ADR-0031 decision 2 permits. *(**The clause "so `T-CORE-S93`
+     can quantify without a caveat" is STRUCK at step 7: it was false.**
+     `T-CORE-S93`'s generator uses `fc.uniqueArray` keyed `game|date`, and its
+     own comment argues duplicates must be EXCLUDED because the database
+     cannot hold them — the opposite of the benefit claimed here. The fold
+     bought nothing any test collected until step 7 added `T-CORE-S96` and
+     `T-CORE-S97`. See the step-7 register at the end of this section.)*
    - **`readDayState`'s merge body is shared with `useDayState` through a
      private `applyDayTruth`.** D4's snippet showed `useDayState` composing a
      `mergeDayState(local, date, truth)` that packages/core cannot own (core
@@ -976,3 +999,42 @@ pre-empted it.
      (e)). The `Feito` composition this ticket makes reachable cross-device is
      unreachable from a cold profile, exactly as the won-Termo `Feito` already
      is. The deployment-backed run is owed on the PR.
+
+6. **Step-7 changes** — the step-6 reviews' findings, each applied or dismissed
+   with a reason. Three lenses ran: CORRECTNESS AND BUGS (ACCEPT WITH FIXES —
+   1 MAJOR, 4 MINOR, 3 NIT), SECURITY (ACCEPT — 2 MINOR, 2 NIT) and
+   ADRs / CONTEXT / INVARIANTS (ACCEPT WITH FIXES — 2 MAJOR, 2 MINOR, 1 NIT).
+
+   **A collision the reviews could not see, handled first.** `git fetch && git
+   merge origin/main` before anything else: #103 (`#136`) had merged and taken
+   `T-WEB-S231`, and #126's `#131` had claimed `S232`. This branch's whole
+   `T-WEB` range moved from `S231…S243` to **`S233…S245`** — in the four test
+   files, the one source citation (`app/hub-day-state.tsx`) and
+   `docs/agents/test-ids.md` — leaving `S232` as a hole belonging to #126
+   rather than a burn. `S231`'s three #103 sites and its two ADR citations were
+   left untouched, verified by grep. This document's §4 and §5 tables are left
+   in the numbering they were written in, per the plan-is-a-snapshot rule; the
+   mapping lives in `test-ids.md`. Two conflicts were resolved keeping both
+   sides: `test-ids.md`'s frontier row and `eslint.config.mjs`'s dynamic-import
+   regex, where #103's `share-button` and this branch's `\/day(\/|$)` are both
+   in the shipped alternation. **It was the third `T-WEB` collision in one
+   night**, and the mitigation `test-ids.md` already carried — reserve the id
+   on `main` before step 5 — now has three instances behind it.
+
+   | Finding | Disposition |
+   |---|---|
+   | **CORRECTNESS MAJOR-1** — the weakest-claim fold has zero coverage; `<` → `>` leaves all 10 tests green; plan §8's justification is contradicted by `T-CORE-S93`'s own generator comment | **Applied.** `T-CORE-S96` feeds two rows for one game in both orders, on both edges of `STATUS_CLAIM`'s order (`completed`/`played` and `pending`/`completed`). `T-CORE-S97` adds the permutation property the doc actually claims — `fc.array` with NO uniqueness selector, `fc.shuffledSubarray` at min = max = length, `numRuns: 100`. The mutation `<` → `>` was run and goes **RED** on `T-CORE-S96`, output in the PR body. The false §8 clause is struck above, with the reason. `T-CORE-S93`'s generator comment gains the complement pointer |
+   | **CORRECTNESS MINOR-1** — *"the next fetch whose date matches restores it"* is false across a real rollover | **Applied.** `src/play/day-state.ts` now says it is true of the SKEW and not of a rollover: `date` is frozen at server render, so past SP midnight the payload's date never returns to the rendered day and a cross-device *Feito* reads *Jogar hoje* until the tab navigates or reloads. The direction — understating, never overstating — is stated with it |
+   | **CORRECTNESS MINOR-2 / SECURITY S1** — no rejection handler; a rejected promise wedges `inFlight` for the page's lifetime | **Applied.** The reset moved to `.finally()`. A `.catch()` sits in front of it because `finally` RE-THROWS — without it the same rejection becomes an unhandled rejection, which the new test surfaced immediately. `T-WEB-S245` stubs a rejecting `fetchDayTruth`, asserts the failure is silent, then flips the stub and asserts `online` still fetches and the payload lands |
+   | **CORRECTNESS MINOR-3** — `vi.resetModules()` is a no-op for statically imported modules, so the store leaks between cases and the header comment claiming isolation is false | **Applied, by fixing the isolation rather than the comment.** `hub-day-truth.test.tsx` now imports `HojePage`, `ConclusionView` and `SudokuScreen` **dynamically**, after the reset — `day-truth.test.tsx`'s own `loadStore()` idiom. `@testing-library/react` and React stay static (externalised deps, which `resetModules` does not touch). The header says all of this and names the vacuity it was hiding; the order dependence at the pre-payload assertion is gone because the store is genuinely empty at each case's start |
+   | **CORRECTNESS MINOR-4** — all three "properties" are satisfied by an inverted merge; only the tables discriminate | **Applied, without a new id.** `T-CORE-S91` gains the sub-property the inversion does NOT satisfy: **absorption** — where the server claims, two different locals against one server give the same answer; where it does not, the server is not an input. Plus the concrete consequence (`merge("completed","played") !== "completed"`). Widening a claim in the same PR that created it takes no new id |
+   | **ADR MAJOR A1** — consequence (a) undercounts the hub's credentialed GETs | **Applied.** ADR-0060 consequence (a) now reads **three** on a normal view (`/streak`, `/day`, `/attach/state`) and **four** once Termo is done, names `<HubAttach />`'s unconditional mount effect and says the `eligible !== true` check happens *after* the fetch. The paragraph also says out loud that ADR-0051 decision 3's collapse trigger is sized against this count. **§7's closing paragraph above and its `docs/README.md` row still carry the step-4 figure (two/three) and are deliberately left** — a plan is a point-in-time snapshot, and the README row describes the plan rather than the world. **ADR-0060 consequence (a) is the record a future ticket must read**, and it is the one that was wrong |
+   | **ADR MAJOR A2** — four falsified comments the nine-row inventory missed | **Applied, all four**, plus NIT A5. The falsification table above is extended from nine rows to thirteen and says the inventory was incomplete, with the reason |
+   | **ADR MINOR A3** — *"`pending` is the ABSENCE OF A ROW"* is imprecise: `statusOfRow` maps a late win (a present row) to `pending` | **Applied in four places**, not three: `core/src/day.ts`'s `DAY_STATUSES` doc, `mergeDayStatus`'s own block quote (found while fixing the first), ADR-0060 decision 2 and ADR-0060 decision 3's block quote. All now read *"the absence of a **counted completion** — no row, or the unreachable late-win row of consequence (f)"*, and say that the no-row case is the typical one rather than the definition |
+   | **ADR MINOR A4** — ADR-0053 decision 10's warrant quotes ADR-0031 decision 2's now-amended mechanism | **Applied.** ADR-0060 consequence (d) gains the note: the warrant survives in its own scope because the archive screens read `card-status.ts` / `usePriorConclusion` and never `useDayState`, so nothing merges there and decision 10's refusal is unchanged |
+   | **CORRECTNESS NIT-1** — *"neither input can produce [a false done]"* overstates against ADR-0044 consequence (f) | **Applied.** `hub-day-state.tsx`'s header now says *"neither input produces one in normal operation"* and names the device's own tampering case, why it is acceptable, and that "cannot" would be the stronger, false claim |
+   | **CORRECTNESS NIT-3** — `day-truth.test.tsx`'s path filter would also exclude a future `src/day-*.ts` | **Applied.** The filter takes a trailing `sep`, with the reason on the line |
+   | **CORRECTNESS NIT-2** — the route-client-JS re-measure figures are unverified by that review | **Dismissed with a reason.** They were measured at step 5 over `rm -rf apps/web/.next && pnpm build` and the numbers are in item 5 above; the reviewer explicitly flagged them as unverified-by-that-lens rather than wrong, and a second production build on a shared 16 GB box costs more than the claim is worth. The re-measure is restated in the PR body so Fernando can weigh it |
+   | **SECURITY S2** — the module-level payload survives a session swap | **Applied as a written residual, not a code change.** `day-truth.ts`'s retention paragraph now carries the IDENTITY case beside the navigation case: `/attach/confirm` returns home by client-side `<Link>`, so the pre-swap payload paints first. Recorded with why it is not a cross-person leak (ADR-0009 merges the two identities, the payload is four verbs and a date, the 0 → 1 `refresh()` corrects it in one round trip, the date precondition bounds it) and why no `resetDayTruth()` export was added: it would put a test-shaped hook into a module behind the free-play wall to buy one frame |
+   | **SECURITY NIT S3** — no `Vary: Cookie` | **Dismissed with a reason.** Moot under `Cache-Control: no-store`, which is on all three branches and pinned by `T-API-S111`; `/streak`, the template this route clones line for line, has none either. Adding it here alone would make the two routes differ for no behavioural gain |
+   | **SECURITY NIT S4** — the catch discards the error with no log | **Dismissed with a reason.** Identical to `/streak` and `/stats`, deliberately: it is an observability decision that belongs to the whole API surface at once, not a per-route one, and changing it on this route would be the second spelling this ticket spends its whole budget avoiding |

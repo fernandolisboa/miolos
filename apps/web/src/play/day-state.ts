@@ -163,7 +163,14 @@ export function readDayState(
  * tile keeps its shape, while this one discards a TILE SHAPE, so for the
  * length of the skew a cross-device done reverts to pending. What is lost is
  * only the cross-device ADDITION, never a local truth, and the next fetch
- * whose date matches restores it.
+ * whose date matches restores it — WHICH IS TRUE OF THE SKEW AND NOT OF A
+ * REAL ROLLOVER. `date` is resolved once, by the server component, and is
+ * frozen for the tab's lifetime; across a real São Paulo midnight on an
+ * already-open tab the payload's date moves to D+1 and never returns to D,
+ * so no later fetch matches and a cross-device *Feito* that was on screen
+ * before midnight reads *Jogar hoje* until the tab navigates or reloads.
+ * That tab is showing yesterday either way, and the local reader keeps its
+ * own dones, so the direction is still understating and never overstating.
  *
  * IT IS ALSO THE ROLLOVER MECHANISM: after SP midnight the payload's date
  * moves and the page's does not, so the payload is ignored and the hub falls

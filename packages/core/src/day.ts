@@ -28,8 +28,14 @@ import type { Game } from "./game";
  *   statistic;
  * - `played` is *Jogado* — finished for the day and counting for nothing.
  *   Only Termo can land there in v1: a grid game cannot be lost;
- * - `pending` is the ABSENCE OF A ROW, and CONTEXT.md has no entry for it.
- *   It is the local projection's shipped spelling for an absence
+ * - `pending` is the ABSENCE OF A COUNTED COMPLETION, and CONTEXT.md has no
+ *   entry for it. Precisely: no row at all, OR the late-win row — `won` and
+ *   `onTime: false` — which is a row that EXISTS and still yields no claim
+ *   (`statusOfRow` below; ADR-0060 consequence (f), unreachable for a
+ *   today-anchored payload). "The absence of a row" is the only case that
+ *   can reach the wire and it is what the merge invariant's warrant rests
+ *   on, but it is not the whole definition and is not stated as one here.
+ *   The verb is the local projection's shipped spelling for an absence
  *   (`apps/web/src/play/day-state.ts`), which this module adopts rather
  *   than invents. If the glossary should gain a row for it, that is a
  *   `/domain-modeling` call and was not #83's to make.
@@ -102,6 +108,13 @@ function statusOfRow(row: DayRow): DayGameStatus {
  * permits, and it makes this function total and permutation-invariant over
  * an arbitrary row array rather than only over the arrays the schema can
  * actually produce.
+ *
+ * BOTH HALVES OF THAT SENTENCE ARE PINNED, and neither was until step 7:
+ * `T-CORE-S96` feeds two rows for one game in both orders (so the
+ * `STATUS_CLAIM` comparison is actually evaluated, and flipping `<` to `>`
+ * goes red), and `T-CORE-S97` quantifies permutation-invariance over an
+ * arbitrary array WITHOUT a uniqueness selector — duplicates included, which
+ * is the case `T-CORE-S93`'s DB-shaped generator deliberately excludes.
  */
 export function dayStateFromRows(rows: readonly DayRow[]): DayState {
   return {
@@ -139,7 +152,8 @@ function statusForGame(rows: readonly DayRow[], game: Game): DayGameStatus {
  * (ADR-0009, ADR-0026).
  *
  * > The server MAKES A CLAIM exactly when its status is not `pending`;
- * > `pending` from the server is the ABSENCE of a completion row and
+ * > `pending` from the server is the ABSENCE OF A COUNTED COMPLETION — no
+ * > row, or the unreachable late-win row `statusOfRow` defines above — and
  * > therefore the absence of a claim, never a denial. Where the server
  * > claims, its claim is the day state; where it does not, the device's is.
  * > Absence on either side proves nothing, presence on the server is

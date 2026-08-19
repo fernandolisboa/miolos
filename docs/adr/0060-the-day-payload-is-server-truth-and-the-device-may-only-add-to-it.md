@@ -49,9 +49,13 @@ in the app that can **demote**.
 
 2. **Three verbs per game and nothing else on the wire.** `completed` is
    CONTEXT.md's *Conclusão*, `played` its *Jogado* (ADR-0008 rule 3 — only
-   Termo can land there), and `pending` is the **absence of a completion row**,
-   which CONTEXT.md has no entry for and which this contract adopts from the
-   local projection's shipped spelling rather than invents. No puzzle content
+   Termo can land there), and `pending` is the **absence of a counted
+   completion** — no row at all, or the late-win row of consequence (f), a row
+   that exists and still yields no claim — which CONTEXT.md has no entry for
+   and which this contract adopts from the local projection's shipped spelling
+   rather than invents. The no-row case is the only one that can reach the wire
+   on a today-anchored payload, and it is named as the typical case rather than
+   as the definition, because the definition is what decision 3 rests on. No puzzle content
    of any kind, no puzzle id, no answer, no board, no day but the server's own
    today (ADR-0004: there is nothing here to leak, and with no parameter there
    is no way to ask about tomorrow). No streak. No duration and no guess count
@@ -73,7 +77,8 @@ in the app that can **demote**.
 3. **The merge invariant.**
 
    > For each game, the server **makes a claim** exactly when its status is not
-   > `pending`; `pending` from the server is the *absence* of a completion row
+   > `pending`; `pending` from the server is the *absence of a counted
+   > completion* — no row, or the unreachable late-win row of consequence (f) —
    > and therefore the absence of a claim, **never a denial**. Where the server
    > claims, its claim is the day state; where it does not, the device's is.
    > Absence on either side proves nothing, presence on the server is
@@ -218,13 +223,19 @@ in the app that can **demote**.
 
 ## Consequences
 
-- **(a) The hub now makes two credentialed GETs on a normal view** — `/streak`
-  and `/day` — and **three** once Termo is done, since `TermoDoneLink` mounts
-  only for a completed Termo and fetches `/stats`. This ticket makes that
-  three-GET case **more frequent**, because a Termo completed on another
+- **(a) The hub now makes three credentialed GETs on a normal view** —
+  `/streak`, `/day` and `/attach/state` — and **four** once Termo is done,
+  since `TermoDoneLink` mounts only for a completed Termo and fetches
+  `/stats`. `/attach/state` is easy to miss and is counted here on purpose:
+  `<HubAttach />` (`apps/web/app/page.tsx`) runs `useAttachState` as an
+  **unconditional mount effect** (`apps/web/src/attach/use-attach-state.ts`),
+  so the fetch fires on every hub mount and the `eligible !== true` check
+  that renders nothing happens *after* it, in the renderer. This ticket makes
+  the four-GET case **more frequent**, because a Termo completed on another
   device now mounts `TermoDoneLink` where it previously did not. Each
-  conclusion surface adds one `/day`. Whether the three collapse into one hub
-  read is ADR-0051 decision 3's trigger, and it is not pre-empted here.
+  conclusion surface adds one `/day`. Whether these collapse into one hub read
+  is ADR-0051 decision 3's trigger, which is sized against this count — so the
+  count has to be right — and it is not pre-empted here.
 - **(b) A cross-device done tile carries no time.** The payload publishes no
   duration, so the tile renders the chip-only shape the hub already ships for
   a won Termo. A time this device did not measure is not this device's to
@@ -239,6 +250,16 @@ in the app that can **demote**.
   decision 9's archive claim true — and that claim is now **stronger**, since
   composing a daily screen root on an archived date would fire `/day` as well
   as `/streak`.
+
+  **The same one importer is what rescues ADR-0053 decision 10's *warrant*,
+  which this ADR would otherwise leave quoting an amended sentence.** Decision
+  10's "Why no endpoint" paragraph closes with *"ADR-0031 decision 2's monotone
+  rule makes its absence harmless: absence proves nothing and renders as
+  playable"* — and that mechanism is exactly what decision 1 of this ADR
+  amends. The warrant survives in its own scope rather than by luck: the
+  archive screens read `card-status.ts` / `usePriorConclusion`, never
+  `useDayState`, so nothing merges there and the monotone rule still holds
+  everywhere the archive relies on it. Decision 10's refusal is unchanged.
 - **(e) Free play gains a fourth walled directory.** `src/day` joins the
   streak, the statistics and the medals in the free-play wall's ban list, both
   specifier shapes and the dynamic-import regex, on the one-hop rule.

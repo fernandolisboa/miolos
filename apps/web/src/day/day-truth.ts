@@ -58,6 +58,21 @@ import { fetchDayTruth } from "./day-client";
  * would flip the snapshot to `undefined` and demote every cross-device tile
  * to pending for the length of a fetch, on every navigation.
  *
+ * THE RETENTION IS ARGUED AGAINST NAVIGATION, AND THERE IS A SECOND CASE:
+ * IDENTITY. `POST /attach/confirm` REPLACES this device's session with the
+ * linked account's (`app/vincular/attach-confirm.tsx`) and its success
+ * screen returns to the hub with a Next `<Link>` — a CLIENT-SIDE navigation,
+ * so this module is never re-evaluated and the pre-swap payload is what
+ * `getSnapshot` answers on the first paint after linking. The store has no
+ * notion of "the session changed". This is NOT a cross-person leak: ADR-0009
+ * merges the two identities into one human, the payload carries only four
+ * verbs and a date (no puzzle content, no duration, no guess count), the
+ * 0 -> 1 `refresh()` the hub's remount fires corrects it within one round
+ * trip, and the date precondition bounds it to the same day. It is recorded
+ * here as a named residual rather than fixed with a `resetDayTruth()` export
+ * because the correction is already one round trip away and an extra
+ * cross-module hook into the attach flow would buy a frame.
+ *
  * NO `localStorage` CACHE of the payload (ADR-0048 decision 4's argument): a
  * stale server answer presented as current is wrong in both directions, and
  * the local reader is already the honest offline answer.
@@ -112,25 +127,52 @@ function samePayload(previous: DayResponse, next: DayResponse): boolean {
  * absence alike, and demoting every cross-device tile on a transient failure
  * is the visible loss cleanup is written to avoid. The date precondition
  * still bounds how long a retained payload can be believed.
+ *
+ * THE RESET IS IN `finally`, NOT IN THE `then`, and that is the difference
+ * between a local guarantee and a borrowed one. `fetchDayTruth` is total by
+ * construction today — one `try`/`catch` around the fetch, the `json()` and
+ * the `safeParse` — but that is a property of a SIBLING MODULE's body, not
+ * of a signature. With the reset inside the `then`, one escaping rejection
+ * leaves `inFlight === true` for the lifetime of the page: every later
+ * trigger, `online` recovery included, is swallowed by the guard and there
+ * is no way back short of a reload. In `finally` the guard's correctness is
+ * local and stays local. `T-WEB-S245` stubs a rejecting `fetchDayTruth` and
+ * asserts the next trigger still fetches.
+ *
+ * The `catch` beside it is not decoration: `finally` RE-THROWS, so without it
+ * the same escaping rejection becomes an unhandled rejection — noise in a
+ * test run, and a `unhandledrejection` handler's problem in a browser. It
+ * SWALLOWS deliberately, because the client's contract is already "every
+ * failure answers `undefined`" and there is nothing here to report that
+ * `day-client.ts` has not already decided not to report (ADR-0060 decision
+ * 4's silent-degradation path).
  */
 function refresh(): void {
   if (inFlight) {
     return;
   }
   inFlight = true;
-  void fetchDayTruth().then((next) => {
-    inFlight = false;
-    if (next === undefined) {
-      return;
-    }
-    if (payload !== undefined && samePayload(payload, next)) {
-      return;
-    }
-    payload = next;
-    for (const listener of listeners) {
-      listener();
-    }
-  });
+  void fetchDayTruth()
+    .then((next) => {
+      if (next === undefined) {
+        return;
+      }
+      if (payload !== undefined && samePayload(payload, next)) {
+        return;
+      }
+      payload = next;
+      for (const listener of listeners) {
+        listener();
+      }
+    })
+    .catch(() => {
+      // Unreachable through the shipped client, and swallowed on purpose —
+      // see the header. The retained payload stands; the guard is released
+      // by the `finally` below either way.
+    })
+    .finally(() => {
+      inFlight = false;
+    });
 }
 
 function onVisibilityChange(): void {

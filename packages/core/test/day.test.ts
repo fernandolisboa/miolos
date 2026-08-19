@@ -180,6 +180,70 @@ describe("dayStateFromRows — the server's projection of one day's rows", () =>
     expect(dayStateFromRows(rows)).toEqual(expected);
     expect(dayStateFromRows([...rows].reverse())).toEqual(expected);
   });
+
+  it("T-CORE-S96: TWO ROWS FOR ONE GAME take the WEAKEST claim, in either order — the fold's documented rule, exercised", () => {
+    // Impossible by the composite primary key `(user_id, game, date)`, and
+    // `dayStateFromRows` defines it anyway (see the function's doc). Until
+    // this case existed, `STATUS_CLAIM[status] < STATUS_CLAIM[weakest]` was
+    // never evaluated — `weakest` was `undefined` on the only iteration that
+    // ever ran — so flipping `<` to `>` (STRONGEST wins, the exact opposite
+    // of the documented never-overstate direction ADR-0031 decision 2
+    // permits) left the whole file green. Both orders, so this pins
+    // "weakest" and not merely "the last row wins".
+    const strongerFirst: readonly DayRow[] = [
+      { game: "termo", outcome: "won", onTime: true }, // completed
+      { game: "termo", outcome: "lost", onTime: true }, // played
+    ];
+    expect(dayStateFromRows(strongerFirst)).toEqual(
+      stateOf({ termo: "played" }),
+    );
+    expect(dayStateFromRows([...strongerFirst].reverse())).toEqual(
+      stateOf({ termo: "played" }),
+    );
+
+    // And `pending` is weaker than `played`, which is the other edge of
+    // `STATUS_CLAIM`'s order and the one a `>` flip also inverts.
+    const withLateWin: readonly DayRow[] = [
+      { game: "sudoku", outcome: "won", onTime: false }, // pending
+      { game: "sudoku", outcome: "won", onTime: true }, // completed
+    ];
+    expect(dayStateFromRows(withLateWin)).toEqual(stateOf({}));
+    expect(dayStateFromRows([...withLateWin].reverse())).toEqual(stateOf({}));
+  });
+
+  it("T-CORE-S97: property — `dayStateFromRows` is PERMUTATION-INVARIANT over an ARBITRARY row array, duplicates included", () => {
+    // The claim the function's doc and plan 056 §8 both make, quantified
+    // rather than asserted: no uniqueness selector, so the generator really
+    // does produce two and three rows for one game, which is what makes the
+    // weakest-claim fold observable. `T-CORE-S93`'s generator deliberately
+    // excludes duplicates (it quantifies over states the database can hold);
+    // this one deliberately includes them (it quantifies over what the
+    // function's signature admits). The two are complementary, not rivals.
+    const rowArb: fc.Arbitrary<DayRow> = fc.record({
+      game: fc.constantFrom(...GAMES),
+      outcome: fc.constantFrom(...COMPLETION_OUTCOMES),
+      onTime: fc.boolean(),
+    });
+    const rowsAndPermutation = fc
+      .array(rowArb, { maxLength: 12 })
+      .chain((rows) =>
+        fc.tuple(
+          fc.constant(rows),
+          // A FULL shuffle, not a subarray: min = max = the array's own
+          // length, so every draw is a genuine permutation of the same rows.
+          fc.shuffledSubarray(rows, {
+            minLength: rows.length,
+            maxLength: rows.length,
+          }),
+        ),
+      );
+    fc.assert(
+      fc.property(rowsAndPermutation, ([rows, permuted]) => {
+        expect(dayStateFromRows(permuted)).toEqual(dayStateFromRows(rows));
+      }),
+      { numRuns: 100 },
+    );
+  });
 });
 
 describe("the merge invariant (ADR-0060 decision 3)", () => {
@@ -200,7 +264,7 @@ describe("the merge invariant (ADR-0060 decision 3)", () => {
     expect(mergeDayStatus("played", "completed")).toBe("completed"); // the PROMOTION
   });
 
-  it("T-CORE-S91: property — the merge is total over the enum, idempotent, and answers `pending` only when both inputs are", () => {
+  it("T-CORE-S91: property — the merge is total, idempotent, `pending` only when both inputs are, and the SERVER's claim ABSORBS the device's", () => {
     fc.assert(
       fc.property(statusArb, statusArb, (local, server) => {
         const merged = mergeDayStatus(local, server);
@@ -215,6 +279,36 @@ describe("the merge invariant (ADR-0060 decision 3)", () => {
       }),
       { numRuns: 100 },
     );
+
+    // THE DIRECTION, as a DERIVED property rather than a restatement of the
+    // one-line expression — and the one sub-property the inverted merge
+    // (`local === "pending" ? server : local`, the device winning wherever it
+    // claims anything) does NOT satisfy. The three above all hold of it:
+    // totality, idempotence and "pending iff both" are direction-blind, so
+    // until this existed only the tables in T-CORE-S90 and T-WEB-S235
+    // discriminated the invariant at all.
+    //
+    // ABSORPTION: where the server claims, the device's status is not an
+    // input — two different locals against one non-`pending` server give the
+    // same answer. The mirror, where the server does not claim, the SERVER's
+    // status is not an input.
+    fc.assert(
+      fc.property(statusArb, statusArb, statusArb, (localA, localB, server) => {
+        if (server === "pending") {
+          expect(mergeDayStatus(localA, server)).toBe(localA);
+          expect(mergeDayStatus(localB, server)).toBe(localB);
+        } else {
+          expect(mergeDayStatus(localA, server)).toBe(
+            mergeDayStatus(localB, server),
+          );
+        }
+      }),
+      { numRuns: 100 },
+    );
+
+    // And the concrete consequence the never-overstate direction turns on: a
+    // device `completed` against a server `played` never answers `completed`.
+    expect(mergeDayStatus("completed", "played")).not.toBe("completed");
   });
 
   it("T-CORE-S92: property — `mergeDayState` is POINTWISE: game g's answer depends on no other game's status", () => {
@@ -267,7 +361,10 @@ describe("the day projection and the streak agree (cross-endpoint)", () => {
         // UNIQUE ON (game, date), because the completions primary key is
         // `(user_id, game, date)`: a generator that produced two rows for
         // one game and one day would be quantifying over a state the
-        // database cannot hold.
+        // database cannot hold. `T-CORE-S97` is the complement and quantifies
+        // over exactly that state, because `dayStateFromRows`'s SIGNATURE
+        // admits it and its doc makes a claim about it; this property is
+        // about what the DATABASE can hand the route, which is narrower.
         rows: fc.uniqueArray(
           fc.record({
             game: fc.constantFrom(...GAMES),
