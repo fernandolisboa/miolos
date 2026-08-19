@@ -1510,19 +1510,33 @@ describe("the streak card's copy honesty (T-WEB-S129)", () => {
 
 /**
  * The share button's treatment, read off the stylesheet as TEXT (#34,
- * ADR-0054 decision 13). It lives here rather than in
- * `conclusion-share.test.tsx` because this file already holds this sheet's
- * tripwires above, and splitting one sheet's gate across two files is how
- * the second one gets forgotten.
+ * ADR-0054 decision 13).
+ *
+ * **RE-AIMED IN PLACE AT #103, AND IT TAKES NO NEW ID.** The rules it reads
+ * moved, byte-unmoved, from `conclusion-view.module.css` into the button's
+ * own `share-button.module.css`, so the archive's late-result panel could
+ * render the same control without dragging the conclusion's 1,400-line sheet
+ * onto four archive routes. A claim re-aimed at the file its subject moved to
+ * is the same claim — the `T-WEB-S204` precedent from #34, and `T-WEB-S96`'s
+ * from #96 — so `T-WEB-S205` follows the rules rather than the filename. The
+ * one assertion that spans BOTH sheets is the shadow identity with `.cta`,
+ * which is exactly why this suite stays in this file: `.cta` is still here,
+ * and splitting one control's gate across two files is how the second half
+ * gets forgotten.
  *
  * Everything below is invisible to `impeccable detect` in CI: the scan
  * launches a clean browser profile, which has no concluded record, so the
  * URL-mode run always reaches the EMPTY conclusion and never sees this
- * control at all (ADR-0034 decision 4). A file-mode run over the real
- * component is the other half of the proof and lives in the PR body.
+ * control at all (ADR-0034 decision 4). The same is true of the archive
+ * panel, for the same reason and one ADR further on (ADR-0043 consequence
+ * (d)). A file-mode run over the real component is the other half of the
+ * proof and lives in the PR body — #103's is over the ARCHIVE panel, which
+ * is the surface the URL scan can never reach at all.
  */
 describe("the share button's treatment (T-WEB-S205)", () => {
-  const CSS = stylesheet("src/play/conclusion-view.module.css");
+  const CSS = stylesheet("src/play/share-button.module.css");
+  /** The conclusion's own sheet, for the one cross-sheet identity below. */
+  const CONCLUSION = stylesheet("src/play/conclusion-view.module.css");
   const SHARE = bodyOf(CSS, ".share");
   const MOBILE = bodyOf(CSS, "@media (max-width: 768px)");
 
@@ -1535,14 +1549,15 @@ describe("the share button's treatment (T-WEB-S205)", () => {
     // softened share shadow reds here rather than only in a browser. The
     // blur itself is pinned as a literal on `.share:active` below.
     expect(decl(SHARE, "box-shadow")).toBe("var(--shadow-sm) var(--line)");
-    expect(decl(bodyOf(CSS, ".cta"), "box-shadow")).toBe(
+    expect(decl(bodyOf(CONCLUSION, ".cta"), "box-shadow")).toBe(
       decl(SHARE, "box-shadow"),
     );
   });
 
-  it("declares the three states this sheet had never needed before", () => {
-    // The conclusion's FIRST native button: every other interactive element
-    // here is an `<a>` on the UA default, so none of the three is inherited.
+  it("declares the three states no `<a>` on either screen supplies", () => {
+    // The FIRST native button on either screen that renders it: every other
+    // interactive element on the conclusion and on the archive's late-result
+    // panel is an `<a>` on the UA default, so none of the three is inherited.
     expect(decl(SHARE, "cursor")).toBe("pointer");
     expect(decl(bodyOf(CSS, ".share:disabled"), "opacity")).toBe("0.55");
     expect(decl(bodyOf(CSS, ".share:disabled"), "cursor")).toBe("default");
@@ -1557,7 +1572,10 @@ describe("the share button's treatment (T-WEB-S205)", () => {
 
   it("clears the 44px target at BOTH viewports, and F6's 52px at mobile", () => {
     // A border-box promise: this app ships no global reset, so the box model
-    // is part of the claim rather than an assumption about it.
+    // is part of the claim rather than an assumption about it. It also
+    // survived the move: the mobile override is the ONE `@media` block the
+    // button's own sheet declares, so `MOBILE` cannot silently resolve to a
+    // neighbouring breakpoint the way it could in a sheet with two.
     expect(decl(SHARE, "box-sizing")).toBe("border-box");
     expect(decl(SHARE, "min-height")).toBe("var(--touch-target-min)");
     expect(token("--touch-target-min")).toBeGreaterThanOrEqual(44);

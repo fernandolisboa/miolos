@@ -1,6 +1,7 @@
 # 0023 — Generator invariants: the "proved, not sampled" test pattern
 
 **Status:** Accepted — 2026-07-31
+**Amended by:** [ADR-0059](./0059-the-property-proof-splits-from-the-per-pr-gate.md) — #126 narrows layer 3's *"never below 100"* clause in **where** it binds, never in **whether** it binds: the floor moves to a nightly run (`MIOLOS_FULL_PROPERTIES=1`) and the per-pull-request gate takes a reduced 25-run sample of the same pinned draw. **One clause, one annotation, nothing deleted.** Layers 1 and 2 — the construction-level proof and the independent fixture-validated instrument — are untouched, and so is the reservation of the word *"prove"*; the sampled layer is the only one that moved, and it moved sites rather than standards.
 
 ## Context
 
@@ -31,7 +32,25 @@ unique, seed → puzzle deterministic — are established in three layers:
    quantify over the full uint32 seed domain (and every weekday where
    applicable) and re-check each invariant with the independent
    instrument. Run counts are a floor, never below 100 for the main
-   validity and determinism properties.
+   validity and determinism properties. *(**Amended at #126** —
+   [ADR-0059](./0059-the-property-proof-splits-from-the-per-pr-gate.md).
+   **The floor stands; what changed is which run it binds on.** It binds
+   on the full proof — `.github/workflows/properties.yml`, nightly and on
+   `workflow_dispatch`, with `MIOLOS_FULL_PROPERTIES=1` — and the
+   per-pull-request gate runs the same properties at a reduced 25-run
+   sample. The two are not different samples: fast-check draws forward
+   from the pinned seed, so the gate's 25 pairs are a strict **prefix** of
+   the nightly's 100, asserted on every run rather than assumed. 25 is
+   sized rather than chosen — the sudoku criteria table is per-weekday, and
+   full weekday coverage of that pinned draw first arrives at 21 runs, so
+   25 is that measured floor plus margin. The narrowing applies **only at a
+   measured cost centre**: sudoku's three generation properties cost
+   167–219 s of every gate run, 83–87 % of `@miolos/games`, while binairo's
+   cost 4.4–7.9 s and nonogram's 0.6 s — those keep running their full
+   counts on every pull request, and a new property joins the split only
+   with its own measured gate rows. The clause that did NOT survive is the
+   reading that a green pull-request gate is this layer's proof; it is a
+   subset of it, and the test files say so.)*
 
 The word "prove" is reserved for construction-backed invariants. Claims a
 property can only sample (e.g. that a difficulty-criteria table is
@@ -42,7 +61,13 @@ evidence, in tests and docs alike.
 
 - Sudoku, Nonogram and Termo cite this ADR instead of re-deriving the
   pattern; reviewers reject a generator PR that samples an invariant a
-  construction-level proof could carry.
+  construction-level proof could carry. *(**Still true, and #126 is what
+  it bought.** The one-character uniqueness break written for ADR-0059's
+  anti-vacuity control — capping the per-removal re-proof so it can never
+  see a second solution — failed **no** test, because the grading ladder
+  rejects the same removal independently. The invariant is proved twice by
+  construction, which is why moving the sampled layer's floor to a nightly
+  costs the project nothing on that axis.)*
 - Reference implementation: `packages/games/src/binairo/generate.ts`
   (per-removal re-proof), `packages/games/test/binairo/solver.test.ts`
   (instrument fixtures), `packages/games/test/binairo/generate.test.ts`
