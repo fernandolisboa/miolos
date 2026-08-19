@@ -17,7 +17,7 @@
     "typecheck": { "dependsOn": ["^typecheck"] },
     "test": {
       "dependsOn": ["^build"],
-      "env": ["MIOLOS_TEST_DB_TIMING"]
+      "env": ["MIOLOS_FULL_PROPERTIES", "MIOLOS_TEST_DB_TIMING"]
     },
     "dev": { "cache": false, "persistent": true }
   }
