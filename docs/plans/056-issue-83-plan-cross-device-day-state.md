@@ -941,3 +941,38 @@ pre-empted it.
      is the next number after `#132` (the last merge at the time of writing)
      and **must be re-checked and corrected on the PR's first push**, together
      with the date if the merge day has moved.
+
+5. **Step-5 measurements**, taken rather than predicted.
+
+   - **The route-client-JS re-measure came back BYTE-IDENTICAL on all three
+     grid routes** — binairo 35.4, sudoku 31.6, nonogram **37.5 KB against the
+     shared 40 KB, 2.5 KB of slack** — over `rm -rf apps/web/.next && pnpm
+     build`, with the script run FROM `apps/web` (from the root it exits 0
+     silently). That is a fact about the INSTRUMENT and §6's warning
+     anticipated it exactly: this ticket puts the contract, the client and the
+     store on `/`'s graph (the BASELINE, through `hub-day-state`) AND on all
+     eight conclusion-carrying routes (through `conclusion-view`), so both
+     sides of the subtraction moved together. What moved is the ABSOLUTE — `/`
+     829.5 → **831.5 KB** raw — and that is the figure written into
+     `route-client-js.mjs`. Every budgeted route passed, and all 23 marker
+     greps passed.
+   - **`impeccable detect`'s real gate could not be run at step 5, and this
+     says so rather than claiming a green.** The workflow scans a **Vercel
+     deployment URL**, which does not exist until the PR opens
+     (`.github/workflows/impeccable.yml`); a bare `npx impeccable detect` with
+     no URL exits 0 having scanned nothing, which the workflow's own comment
+     names as a silent-green path. What WAS run locally, against
+     `next start` on the branch's own production build, at BOTH gate
+     viewports (1440x900 and 390x844): `/`, `/privacidade`, `/modo-livre` and
+     its three games, and `/vincular` — **zero findings**, with a vacuity probe
+     (`--no-config`) confirming the scan is live by surfacing the three
+     configured ignores. The eight daily play/conclusion routes could not be
+     scanned locally: with no `DATABASE_URL` they render a Server Components
+     error, which is a local-environment artifact and not a regression (the
+     server log reads `Error: DATABASE_URL is not set`, once per route).
+     **The gate's INPUT is unchanged in shape, which is the substantive
+     claim:** a clean browser profile has no session, `/day` answers 401, and
+     both viewports still scan the pending composition (ADR-0031 consequence
+     (e)). The `Feito` composition this ticket makes reachable cross-device is
+     unreachable from a cold profile, exactly as the won-Termo `Feito` already
+     is. The deployment-backed run is owed on the PR.

@@ -34,7 +34,17 @@
  * sudoku **31.6**, nonogram **37.5**. The load-bearing figure — nonogram's
  * 2.5 KB of slack — is unchanged; the other two moved by one rounding step,
  * on a ticket that touches no grid route, which is itself the point the next
- * sentence makes. Note the direction, and note that the DELTA can move on a
+ * sentence makes. RE-CHECKED AGAIN at #83 over the same fresh
+ * `rm -rf .next && pnpm build`, and all three came back BYTE-IDENTICAL —
+ * binairo 35.4, sudoku 31.6, nonogram 37.5, still 2.5 KB inside the shared
+ * 40 KB. That is a fact about the INSTRUMENT and must not be read as comfort:
+ * #83 puts a zod contract, a fetch client and a module store on the graph of
+ * `/` — the BASELINE, through `hub-day-state` — AND on all eight
+ * conclusion-carrying routes, through `conclusion-view`, so both sides of the
+ * subtraction moved together and it ate the whole change. What DID move is
+ * the ABSOLUTE: `/` 829.5 → **831.5 KB** raw, ~+2.0 KB on every route, and
+ * the absolute is the figure to quote for a ticket shaped like this one.
+ * Note the direction, and note that the DELTA can move on a
  * ticket that touches no grid route at all: #19 grew `/` (the BASELINE,
  * hub-streak) AND the game routes (the conclusion streak card), and the card
  * side won by ~0.5 KB, so every measured delta moved UP a hair rather than
