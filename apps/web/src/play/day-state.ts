@@ -1,44 +1,71 @@
 /**
- * What THIS DEVICE knows about a given day (ADR-0031, plan 018 §11.2).
+ * What THE USER's day looks like, as far as this device and the server
+ * together know (ADR-0031 as amended by ADR-0060, plan 018 §11.2).
  *
- * Device state, not user state: it is read from the local play records, so
- * it does NOT widen ADR-0014's direct-read scope — nothing here is a
- * user-specific fragment fetched from a server on a public page.
+ * TWO INPUTS, NOT ONE, since #83. The local play records are one of them —
+ * the device's own claim, an affordance and never an entitlement (ADR-0031
+ * decision 6) — and `GET /day`'s payload is the other, which is the
+ * authority. `readDayState` is still the ONE seam that derives completion
+ * (ADR-0031 decision 1's surviving property); what it returns is now the
+ * device's record merged with the server's claim for today, under the
+ * invariant `mergeDayStatus` carries: the server makes a claim exactly when
+ * its status is not `pending`, and `pending` from the server is the absence
+ * of a completion row and therefore the absence of a claim, never a denial.
  *
- * MONOTONE-SAFE BY CONSTRUCTION, and that is the whole point: a concluded
- * record proves this device solved that game on that date; absence proves
- * nothing and reads as pending — which is also the cold-profile default,
- * also what `impeccable detect` always scans, and also what a second device
- * sees. A false `pending` is invisible to the player; a false `done` would
- * not be. It can therefore never back a streak, a medal or a statistic
- * (ADR-0031 consequence (b)). #19 did NOT replace `readDayState`'s body:
- * ADR-0048 amends ADR-0031 decision 5 and defers the server day-truth
- * payload — and this body's replacement — to its own issue (#83). This
- * reader stays the day-state source and the offline fallback the
- * conclusion needs.
+ * IT STILL DOES NOT WIDEN ADR-0014's DIRECT-READ SCOPE. The payload carries
+ * no puzzle content of any kind and answers about today only (ADR-0004,
+ * ADR-0060 decision 2), and it arrives on the authenticated surface
+ * ADR-0031 decision 4 routes server-sourced user facts to.
+ *
+ * WHAT SURVIVES OF THE MONOTONE ARGUMENT, and what does not. The day state
+ * still can never OVERSTATE the user's day: a done tile now means the
+ * device or the server holds a completion, and both are real. What is no
+ * longer true is the mechanism — "absence proves nothing and reads as
+ * pending" — because absence ON THE DEVICE now reads as whatever the server
+ * says. The cold profile and `impeccable detect` are unchanged (no session,
+ * `/day` answers 401, the pending composition is what is scanned); THE
+ * SECOND DEVICE IS NOT, and that is the whole point of #83.
+ *
+ * THE LOCAL PROJECTION IS THE OFFLINE FALLBACK, unchanged. Every failure of
+ * the fetch — env unset, 401, network, a malformed body — answers
+ * `undefined`, and `undefined` leaves the shipped local reader as the whole
+ * answer. Nothing on a play path awaits it.
  */
-import { GAMES, type Game } from "@miolos/core";
-import { useCallback, useSyncExternalStore } from "react";
+import {
+  GAMES,
+  mergeDayState,
+  type DayGameStatus,
+  type DayResponse,
+  type Game,
+} from "@miolos/core";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
+import { useDayTruth } from "../day/day-truth";
 import { readPlayRecord } from "./play-record";
 import { subscribeToPlayRecords } from "./use-record-snapshot";
 
 /**
- * CONTEXT.md's verbs, minus the one a local reader cannot see: a LATE
- * completion is an archive fact the server owns (#31), so this reader has
- * three states, not four.
+ * CONTEXT.md's verbs, minus the one no reader on this side can see: a LATE
+ * completion is an archive fact the server owns (#31), so this projection
+ * has three states, not four.
+ *
+ * AN ALIAS OF THE WIRE VOCABULARY SINCE #83, not a second spelling of it.
+ * `DayGameStatus` in packages/core feeds both `dayResponseSchema` and the
+ * merge arithmetic, so the local projection and the payload cannot drift
+ * into two enums that agree today and diverge later — which is what makes
+ * `mergeDayStatus` a merge rather than a translation.
  *
  * `played` exists because ADR-0008 decision 3 makes a lost Termo *played* and
  * never *completed*: it counts for neither streak nor Dia Perfeito, and it is
  * still visibly finished for the day.
  *
- * MONOTONE SAFETY IS PRESERVED, and the check is worth writing down because
- * ADR-0031 decision 2 is what makes this reader shippable at all. Absence
- * still reads `pending`, so the cold profile, the second device and
- * `impeccable detect` are unchanged. `played` is a WEAKER claim than
- * `completed`, not a stronger one: it publishes no time and enters no count.
- * It drives a chip, a tile shape and a CTA target — the affordances ADR-0031
- * decision 6 permits — and never an entitlement.
+ * NEVER OVERSTATING SURVIVES #83; the mechanism behind it does not. `played`
+ * is a WEAKER claim than `completed`, not a stronger one: it publishes no
+ * time and enters no count. It drives a chip, a tile shape and a CTA target
+ * — the affordances ADR-0031 decision 6 permits — and never an entitlement.
+ * What changed is that absence on the DEVICE no longer implies `pending`:
+ * the server may hold a completion this device has no record of, and then
+ * the tile is done (ADR-0060 decision 3).
  *
  * AN ENUM RATHER THAN A SECOND FLAG, deliberately. A `closed` boolean beside
  * `concluded` would fail SAFE: a consumer that forgot it would read pending.
@@ -47,7 +74,7 @@ import { subscribeToPlayRecords } from "./use-record-snapshot";
  * `sync.ts`'s `const unhandled: never` and this file's spelled-out
  * `Record<Game, DayEntry>` literal already make.
  */
-export type DayStatus = "pending" | "completed" | "played";
+export type DayStatus = DayGameStatus;
 
 export interface DayEntry {
   readonly status: DayStatus;
@@ -79,8 +106,15 @@ const NOTHING_DONE: Readonly<Record<Game, DayEntry>> = {
 };
 
 /**
- * This device's day state for the SERVER's `date` — never a client-computed
- * today (CONTEXT.md "Rollover").
+ * The day state for the SERVER's `date` — never a client-computed today
+ * (CONTEXT.md "Rollover").
+ *
+ * `server` is the payload `GET /day` answered with, and `undefined` means
+ * NO SERVER TRUTH, FOR ANY REASON — unfetched, in flight, env unset, 401,
+ * offline, malformed. In that case this is exactly the local projection
+ * that shipped before #83, byte for byte, which is what makes the offline
+ * fallback ADR-0031 decision 1 requires a property of the code rather than
+ * a promise.
  *
  * Spelled out game by game rather than folded over `GAMES` so the return
  * type keeps the map TOTAL over `Game`: a key dropped from this literal does
@@ -95,15 +129,91 @@ const NOTHING_DONE: Readonly<Record<Game, DayEntry>> = {
  *
  * What #27 DID change is everything else in this file (ADR-0044 consequence
  * (c)): the entry type, the reader, the counter and the comparator. The map
- * itself is untouched, exactly as the finding above predicted.
+ * itself is untouched, exactly as the finding above predicted — and #83
+ * leaves it untouched again, adding a second parameter rather than a key.
  */
-export function readDayState(date: string): Readonly<Record<Game, DayEntry>> {
-  return {
-    termo: entryFor("termo", date),
-    sudoku: entryFor("sudoku", date),
-    nonogram: entryFor("nonogram", date),
-    binairo: entryFor("binairo", date),
+export function readDayState(
+  date: string,
+  server?: DayResponse,
+): Readonly<Record<Game, DayEntry>> {
+  return applyDayTruth(
+    {
+      termo: entryFor("termo", date),
+      sudoku: entryFor("sudoku", date),
+      nonogram: entryFor("nonogram", date),
+      binairo: entryFor("binairo", date),
+    },
+    date,
+    server,
+  );
+}
+
+/**
+ * The merge, and THE DATE PRECONDITION THAT GUARDS IT (ADR-0060 decision 3).
+ *
+ * THE PAYLOAD IS DISCARDED IN FULL unless `server.date === date`. A payload
+ * for another day is not weaker evidence — it is evidence about a DIFFERENT
+ * QUESTION, and merging it across the São Paulo rollover would paint
+ * yesterday's dones onto today's tiles, the false *done* ADR-0031 decision 2
+ * forbids by name. The two dates really can disagree: `date` comes off the
+ * WEB SERVER's clock (`app/page.tsx`) and the payload's off the DB's, so
+ * they differ for seconds across midnight. This is `TermoDoneLink`'s shipped
+ * `stats.date !== date` gate applied to the whole payload — with a strictly
+ * larger blast radius, said out loud: that gate discards a CAPTION and the
+ * tile keeps its shape, while this one discards a TILE SHAPE, so for the
+ * length of the skew a cross-device done reverts to pending. What is lost is
+ * only the cross-device ADDITION, never a local truth, and the next fetch
+ * whose date matches restores it.
+ *
+ * IT IS ALSO THE ROLLOVER MECHANISM: after SP midnight the payload's date
+ * moves and the page's does not, so the payload is ignored and the hub falls
+ * back to the local reader for the day it is actually rendering.
+ *
+ * `elapsedMs` FOLLOWS THE STATUS THE MERGE PRODUCED. It survives only where
+ * the entry did not change — i.e. a local `completed` the server agrees
+ * with. A cross-device `completed` carries no duration because this device
+ * has no record and the payload carries none (ADR-0060 decision 2), which
+ * renders as the chip-only done tile the hub already ships for a won Termo.
+ *
+ * The identity of `local` is handed back untouched when the merge changes
+ * nothing, so an unchanged payload and unchanged records re-render nothing.
+ */
+function applyDayTruth(
+  local: Readonly<Record<Game, DayEntry>>,
+  date: string,
+  server: DayResponse | undefined,
+): Readonly<Record<Game, DayEntry>> {
+  if (server === undefined || server.date !== date) {
+    return local;
+  }
+  // POINTWISE, in packages/core: game g's answer depends on no other game's
+  // status, which is what makes the date gate above the only whole-payload
+  // rule anywhere in the merge.
+  const merged = mergeDayState(
+    {
+      termo: local.termo.status,
+      sudoku: local.sudoku.status,
+      nonogram: local.nonogram.status,
+      binairo: local.binairo.status,
+    },
+    server.games,
+  );
+  const next: Readonly<Record<Game, DayEntry>> = {
+    termo: entryWithStatus(local.termo, merged.termo),
+    sudoku: entryWithStatus(local.sudoku, merged.sudoku),
+    nonogram: entryWithStatus(local.nonogram, merged.nonogram),
+    binairo: entryWithStatus(local.binairo, merged.binairo),
   };
+  return GAMES.every((game) => next[game] === local[game]) ? local : next;
+}
+
+/**
+ * An entry whose status the merge changed carries NO duration: the only way
+ * to keep one is for the status not to have moved, and then the local entry
+ * is returned unchanged — identity included.
+ */
+function entryWithStatus(local: DayEntry, status: DayStatus): DayEntry {
+  return status === local.status ? local : { status, elapsedMs: undefined };
 }
 
 /**
@@ -120,27 +230,48 @@ export function completedCount(
 }
 
 /**
- * `readDayState`, subscribed to the same store the record snapshot polls
- * (plan 018 §11.2) — one mechanism, so a completion settled by `sync.ts`
- * cannot reach one reader and not the other.
+ * `readDayState`, subscribed to BOTH of its inputs: the record store the
+ * snapshot polls (plan 018 §11.2) and the day-truth store (#83) — one
+ * mechanism each, so a completion settled by `sync.ts` and a completion the
+ * server holds cannot reach one reader and not the other.
  *
- * The server snapshot is `NOTHING_DONE`, which is what makes the
- * pre-hydration paint free AND correct: React renders both the server
- * markup and the hydrating client render from `getServerSnapshot`, so the
- * two agree by construction and the store is consulted only afterwards.
- * Hydration can then only ever ADD a done tile — the monotone direction.
+ * Both server snapshots are the empty answer — `NOTHING_DONE` for the
+ * records and `undefined` for the payload — which is what makes the
+ * pre-hydration paint free AND correct: React renders the server markup and
+ * the hydrating client render from `getServerSnapshot`, so the two agree by
+ * construction, NO FETCH HAPPENS AT RENDER, and the stores are consulted
+ * only afterwards.
+ *
+ * HYDRATION CAN NOW DEMOTE, IN EXACTLY ONE CASE, where every shipped surface
+ * used to promise it could only ever ADD a done tile. The case is the server
+ * contradicting the device on a LOST TERMO: won here, lost on another
+ * device, so the merged day reads `played` and `X de 4` drops by one. That
+ * is a CORRECTION, not an understatement — the row is write-once (ADR-0026
+ * decision 1), the day genuinely does not count for the streak, and it is
+ * the direction ADR-0031 decision 2 permits. It is Termo-only in v1: no grid
+ * game can be lost. THE SAME ONE-LINE RULE PROMOTES IN THE MIRROR — lost
+ * here, won elsewhere reads `Feito` — and both arms are ADR-0060 decision 7.
  *
  * `localStorage` IS read during render, inside `getSnapshot`, which is the
  * store contract and not an accident; what never happens is a read from a
  * component body or an effect racing the paint (plan 017 D28). No component
  * reads the clock either — a duration comes from the record.
+ *
+ * The `useMemo` is what keeps this hook's answer referentially stable: both
+ * snapshots are stable across renders that changed nothing, so the merge
+ * runs again only when one of them really moved.
  */
 export function useDayState(date: string): Readonly<Record<Game, DayEntry>> {
-  return useSyncExternalStore(
+  const local = useSyncExternalStore(
     subscribeToPlayRecords,
     useCallback(() => dayStateSnapshot(date), [date]),
     serverDayState,
   );
+  // NO ARGUMENT, deliberately (see `day/day-truth.ts`): one module-level
+  // slot serves one "today" payload, and the date filter lives below where
+  // the rendered day is already a parameter.
+  const truth = useDayTruth();
+  return useMemo(() => applyDayTruth(local, date, truth), [local, date, truth]);
 }
 
 /**
@@ -180,6 +311,12 @@ function entryFor(game: Game, date: string): DayEntry {
   return { status: "completed", elapsedMs: record.elapsedMs };
 }
 
+/**
+ * The REACT SSR snapshot — "the server" here is the rendering server, not
+ * the API. It is spelled `serverDayState` and the API's answer is spelled
+ * `dayTruth` (`src/day/day-truth.ts`) precisely so the two never read as the
+ * same thing two lines apart.
+ */
 const serverDayState = (): Readonly<Record<Game, DayEntry>> => NOTHING_DONE;
 
 /**
@@ -200,6 +337,10 @@ let cachedDayState:
   | undefined;
 
 function dayStateSnapshot(date: string): Readonly<Record<Game, DayEntry>> {
+  // ONE ARGUMENT on purpose: this is the record store's snapshot, so it is
+  // the LOCAL projection only. `useDayState` merges the payload in
+  // afterwards, which keeps this cache keyed on the records alone and out of
+  // the payload's refresh cycle.
   const next = readDayState(date);
   const cached = cachedDayState;
   if (cached?.date === date && sameDayState(cached.state, next)) {
