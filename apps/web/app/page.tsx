@@ -86,10 +86,12 @@ export default function HojePage() {
                 {messages.games[game].description}
               </p>
             </div>
-            {/* Done or pending, per THIS DEVICE (plan 018 §11.3, ADR-0031),
-                and linked through the `playRoutes` map — #27 added termo as
-                a KEY rather than a branch, which is what kept this JSX
-                untouched by a fourth game. */}
+            {/* Done or pending, per this device AND the server (plan 018
+                §11.3, ADR-0031 as amended by ADR-0060 — since #83 a game
+                completed on another device reads done here too), and linked
+                through the `playRoutes` map — #27 added termo as a KEY
+                rather than a branch, which is what kept this JSX untouched
+                by a fourth game. */}
             <HubCardAction game={game} date={isoDate} />
           </article>
         ))}

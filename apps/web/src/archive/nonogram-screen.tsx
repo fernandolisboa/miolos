@@ -22,6 +22,11 @@ import { usePriorConclusion } from "./use-prior-conclusion";
  * `nextPendingDaily` to TODAY's routes on an archived date. T-WEB-S183 makes
  * the exclusion a module-graph assertion rather than prose.
  *
+ * THE REASON STRENGTHENED AT #83 (ADR-0060): `useDayState` now FETCHES too,
+ * so composing the root would fire `GET /day` as well as `GET /streak` —
+ * two user-specific reads on a public, crawler-facing route, and both about
+ * TODAY on a page rendering an archived date. T-WEB-S183 widened to match.
+ *
  * What it copies from the root is the GATE, not the comment:
  *
  * - the hydration gate, because everything the board, the clock and the hint

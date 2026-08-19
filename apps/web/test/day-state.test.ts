@@ -1,3 +1,4 @@
+import type { DayResponse } from "@miolos/core";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -324,5 +325,157 @@ describe("monotone safety (T-WEB-S15)", () => {
       status: "completed",
       elapsedMs: SUDOKU_MS,
     });
+  });
+});
+
+/**
+ * The merge (#83, ADR-0060 decision 3), driven through `readDayState`'s
+ * second parameter — the seam the rendered path runs too (`useDayState`
+ * composes the same `applyDayTruth` body over the subscribed snapshot).
+ *
+ * The invariant under test, stated once: the server MAKES A CLAIM exactly
+ * when its status is not `pending`; `pending` from the server is the absence
+ * of a completion row and therefore the absence of a claim, never a denial.
+ */
+function dayPayload(
+  games: Partial<DayResponse["games"]> = {},
+  date: string = DATE,
+): DayResponse {
+  return {
+    date,
+    games: {
+      termo: "pending",
+      sudoku: "pending",
+      nonogram: "pending",
+      binairo: "pending",
+      ...games,
+    },
+  };
+}
+
+describe("the merge with the server's day truth (T-WEB-S237)", () => {
+  it("adds a game completed on ANOTHER device, with no duration", () => {
+    // The whole point of the ticket: nothing local, and the tile is done.
+    const state = readDayState(DATE, dayPayload({ sudoku: "completed" }));
+
+    expect(state.sudoku.status).toBe("completed");
+    // A time this device did not measure is not this device's to publish,
+    // and the payload carries none (ADR-0060 decision 2).
+    expect(state.sudoku.elapsedMs).toBeUndefined();
+    expect(completedCount(state)).toBe(1);
+  });
+
+  it("keeps the DEVICE's claim, and its duration, where the server is silent", () => {
+    // Queued or just finished: the device is ahead of the server, and it
+    // keeps its claim — `pending` from the server is not a denial.
+    writePlayRecord(sudokuRecord());
+
+    const state = readDayState(DATE, dayPayload());
+
+    expect(state.sudoku.status).toBe("completed");
+    expect(state.sudoku.elapsedMs).toBe(SUDOKU_MS);
+  });
+
+  it("DEMOTES a locally-won Termo the server holds as lost, and drops the duration", () => {
+    // The one demotion this ticket creates, and it is a CORRECTION: the row
+    // is write-once (ADR-0026 decision 1), so the day genuinely does not
+    // count for the streak and `Feito` would be a lie the player can catch.
+    writePlayRecord(wonTermoRecord());
+
+    const state = readDayState(DATE, dayPayload({ termo: "played" }));
+
+    expect(state.termo.status).toBe("played");
+    expect(state.termo.elapsedMs).toBeUndefined();
+    expect(completedCount(state)).toBe(0);
+  });
+
+  it("PROMOTES a locally-lost Termo the server holds as won — the mirror of the same one-line rule", () => {
+    // Device B wins today's Termo; device A loses all six, its POST
+    // short-circuits on the composite PK and it discards the response's
+    // outcome (ADR-0053 decision 10), so A's record stays `lost`. Merged,
+    // the day reads completed — `Feito` one tap from this device's own loss
+    // screen (ADR-0060 decision 7, flagged in plan 056 §7 item 2).
+    writePlayRecord(lostTermoRecord());
+
+    const state = readDayState(DATE, dayPayload({ termo: "completed" }));
+
+    expect(state.termo.status).toBe("completed");
+    expect(state.termo.elapsedMs).toBeUndefined();
+    expect(completedCount(state)).toBe(1);
+  });
+
+  it("is the shipped local projection, unchanged, when there is no server truth", () => {
+    writePlayRecord(sudokuRecord());
+    writePlayRecord(lostTermoRecord());
+
+    // ADR-0031 decision 1's offline fallback: `undefined` means no server
+    // truth FOR ANY REASON — unfetched, 401, offline, malformed.
+    expect(readDayState(DATE, undefined)).toEqual(readDayState(DATE));
+  });
+});
+
+describe("the date precondition (T-WEB-S238)", () => {
+  it("discards a payload for another day IN FULL, not game by game", () => {
+    writePlayRecord(sudokuRecord());
+
+    // Every game claimed by a payload dated yesterday: none of it lands.
+    const state = readDayState(
+      DATE,
+      dayPayload(
+        {
+          termo: "completed",
+          sudoku: "played",
+          nonogram: "completed",
+          binairo: "completed",
+        },
+        OTHER_DATE,
+      ),
+    );
+
+    expect(state).toEqual(readDayState(DATE));
+    expect(state.sudoku.status).toBe("completed");
+    expect(state.sudoku.elapsedMs).toBe(SUDOKU_MS);
+    expect(state.termo.status).toBe("pending");
+    expect(state.nonogram.status).toBe("pending");
+    expect(state.binairo.status).toBe("pending");
+  });
+
+  it("is what makes the São Paulo rollover safe: yesterday's dones never paint today's tiles", () => {
+    // The web server's clock and the DB's can disagree for seconds across
+    // midnight. A payload for the other day is evidence about a different
+    // question, not weaker evidence about this one.
+    const state = readDayState(
+      DATE,
+      dayPayload({ binairo: "completed" }, OTHER_DATE),
+    );
+    expect(completedCount(state)).toBe(0);
+  });
+});
+
+describe("the merge never invents a pending (T-WEB-S243)", () => {
+  it("no server payload can demote a local `completed` to `pending`", () => {
+    writePlayRecord(binairoRecord());
+    writePlayRecord(sudokuRecord());
+
+    for (const server of ["pending", "completed", "played"] as const) {
+      const state = readDayState(
+        DATE,
+        dayPayload({ binairo: server, sudoku: server }),
+      );
+      // The one permitted demotion is `completed` -> `played` (asserted in
+      // T-WEB-S237); `pending` out of a local `completed` is impossible,
+      // because `mergeDayStatus` returns the LOCAL value exactly when the
+      // server said `pending`.
+      expect(state.binairo.status, server).not.toBe("pending");
+      expect(state.sudoku.status, server).not.toBe("pending");
+    }
+  });
+
+  it("answers `pending` for a game only when both sides are silent", () => {
+    const state = readDayState(DATE, dayPayload());
+    expect(completedCount(state)).toBe(0);
+    for (const game of ["termo", "sudoku", "nonogram", "binairo"] as const) {
+      expect(state[game].status, game).toBe("pending");
+    }
   });
 });

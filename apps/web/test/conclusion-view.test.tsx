@@ -1342,10 +1342,19 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
       );
 
       // The offline answer by construction: no card, no fake zero — and the
-      // ordering half of the assertion: the fetch is gated behind the mount,
-      // so it cannot have fired.
+      // ordering half of the assertion: the STREAK fetch is gated behind the
+      // card's mount, so it cannot have fired.
       expect(streakCardIn(container), syncOutcome).toBeNull();
-      expect(fetchMock, syncOutcome).not.toHaveBeenCalled();
+      // NARROWED AT #83 from "no fetch at all" (ADR-0060 consequence (a)):
+      // this surface now also reads `GET /day`, because `useDayState` is the
+      // one seam and it fetches. That read is ungated on purpose — the day
+      // card's chips must be right whether or not the streak card mounts —
+      // and it changes nothing this case is about. The claim that survives,
+      // and the only one that was ever load-bearing here, is that `/streak`
+      // stays unasked while the day is not on the server.
+      for (const call of fetchMock.mock.calls) {
+        expect(String(call[0]), syncOutcome).not.toContain("/streak");
+      }
       unmount();
     }
   });

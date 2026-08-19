@@ -1,5 +1,6 @@
 import type {
   CompletionOutcome,
+  DayRow,
   Game,
   HintGrantSource,
   StreakRow,
@@ -110,6 +111,48 @@ export async function listCompletionsForStreak(
     .from(completions)
     .where(eq(completions.userId, userId))
     .orderBy(desc(completions.date));
+}
+
+/**
+ * One user's completions for ONE São Paulo day, shaped for
+ * `dayStateFromRows` (#83, ADR-0060 decision 1). At most four rows, by the
+ * composite primary key.
+ *
+ * DATE-SCOPED IN SQL, unlike `listCompletionsForStreak` above and
+ * `listCompletionsForStats`. Those two are unfiltered because the EXCLUSION
+ * RULES — lost, late — must live in one place, and that place is
+ * packages/core. Scoping to one date is not an exclusion rule: it is the
+ * question. `getCompletion` two functions up already scopes
+ * `(user, game, date)` in SQL for exactly that reason.
+ *
+ * NO SCHEMA CHANGE WAS OWED FOR IT, and the evidence is in the schema:
+ * `completions_user_date_idx` on `(user_id, date)` exists, and its own
+ * comment names *"the day so far"* as one of the two reads it was built
+ * for. The read is <= 4 rows on an index built for it — constant cost
+ * forever, on the most-hit route in the app. Reusing
+ * `listCompletionsForStats` instead would need no db change at all, which
+ * is its real merit, and it reads the user's ENTIRE history (~2 900 rows
+ * after two years) to produce four enum values on every hub view: building
+ * ADR-0051 decision 3's narrow endpoint with the wide read is building it
+ * and skipping the point.
+ *
+ * `onTime` is the ONE `onTimeSql()` derivation (ADR-0026 decision 2), like
+ * every other reader here. No second spelling, and no `completedAt`: the
+ * verdict travels, the instant does not.
+ */
+export async function listCompletionsForDay(
+  db: Db,
+  userId: string,
+  date: string,
+): Promise<DayRow[]> {
+  return db
+    .select({
+      game: completions.game,
+      outcome: completions.outcome,
+      onTime: onTimeSql(),
+    })
+    .from(completions)
+    .where(and(eq(completions.userId, userId), eq(completions.date, date)));
 }
 
 /**

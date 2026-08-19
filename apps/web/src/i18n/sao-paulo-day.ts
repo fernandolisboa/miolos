@@ -3,8 +3,11 @@
  * (step-6 F7's hoist): the hub page and the stats calendar's settled-null
  * branch.
  *
- * On the hub it is the key this device's day state is read under
- * (ADR-0031), and the same day `/binairo` and `/sudoku` resolve from the
+ * On the hub it is the key the day state is read under (ADR-0031 as amended
+ * by ADR-0060 — since #83 that state is this device's AND the server's, and
+ * this date is also what the server payload's own `date` must equal before
+ * the merge will look at it), and the same day `/binairo` and `/sudoku`
+ * resolve from the
  * published-puzzle wall — derived from the SERVER's clock, on a
  * `force-dynamic` segment: the browser's clock never selects which day the
  * hub is showing (CONTEXT.md "Rollover").

@@ -18,6 +18,16 @@ export {
   MAX_EPOCH_DAY,
   MIN_EPOCH_DAY,
 } from "./date";
+export {
+  DAY_STATUSES,
+  dayGameStatusSchema,
+  dayStateFromRows,
+  mergeDayState,
+  mergeDayStatus,
+  type DayGameStatus,
+  type DayRow,
+  type DayState,
+} from "./day";
 export { GAMES, gameSchema, type Game } from "./game";
 export { mergeCompletions, type MergeableCompletion } from "./merge";
 export {
@@ -112,6 +122,7 @@ export {
   type TermoGuessResponse,
   type TermoTiles,
 } from "./contracts/termo-guess";
+export { dayResponseSchema, type DayResponse } from "./contracts/day";
 export { streakResponseSchema, type StreakResponse } from "./contracts/streak";
 export {
   calendarDayStateSchema,
