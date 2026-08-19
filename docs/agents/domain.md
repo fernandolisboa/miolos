@@ -30,6 +30,10 @@ When your output names a domain concept (in an issue title, a refactor proposal,
 
 If the concept you need isn't in the glossary yet, that's a signal — either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
 
+## Cite symbols, not lines
+
+When an ADR, plan or agent doc cites code, cite the **symbol** — a function, export, test id (`normalizeWord`, `T-WEB-S43`) — plus its file path, never a line number. Lines move on every edit; a symbol moves only when the thing it names changes. This has been the working convention since handoff 048 §4; the ~90 stale line citations in ADRs 0016–0044 are the cost of the old form (#78). A deliberately historical citation is allowed only with an explicit as-of-writing annotation (ADR-0043's is the model).
+
 ## Flag ADR conflicts
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:

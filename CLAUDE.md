@@ -153,11 +153,19 @@ Long work spans several sessions. At the end of a session that produces one — 
 
 A handoff is self-contained and grounded in the real code, not in other documents: scope, what to read first, order and dependencies, non-negotiable principles, landmines, exit criteria, environment gotchas. Reference specs, ADRs, issues and commits by path or URL rather than duplicating them.
 
+**Size cap (Fernando, 2026-08-19): a handoff is at most ~120 lines, the kickoff prompt at most ~15.** Fernando reads these on a phone. A handoff that wants more length is restating records it should only point at — the detail belongs in the PR bodies, ADRs, plans and issue comments it links. Handoff 058 (345 lines) is the anti-example.
+
 Immediately after writing it, emit a **copy-pasteable kickoff prompt** as the last block of the response — lean, pointing at the handoff rather than repeating it, so the next session starts without re-deriving context.
 
 **The kickoff prompt is not snapshot content.** It is the one part of a handoff that is regenerated whenever the handoff gains an addendum, and it lives at the very end of the file, after any addenda, so it can never be orphaned above one. It opens with a **preflight assertion** — the expected `main` SHA and the state of every issue it names — and the instruction that if any of that does not match, the session stops and reads the newest addendum before doing anything else.
 
 Pre-issue implementation plans go to `docs/plans/` under the same numbering. Both are point-in-time snapshots, never living specs.
+
+## Writing for Fernando
+
+English is not Fernando's first language. Plain words, short sentences, no flourishes. Anything that asks him for input — a PR decision point, a grilling question, a wizard step — must be answerable in one word or one line, multiple-choice where possible, and must say plainly what happens under each choice.
+
+Do not bring him UI/UX choices. Layout, copy wording, spacing, ordering and the like are professional design decisions (Fernando, 2026-08-19): make them with the design system, measurement, `/impeccable` and screenshots, and record the call and its reason on the issue. Bring him product scope, money, legal, and anything only he can do (credentials, store listings, production actions).
 
 ## When in doubt
 
