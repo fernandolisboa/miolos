@@ -103,7 +103,7 @@ import { z } from "zod";
  * can show a run happening at 2 or a gate running at 10 — that evidence is
  * behavioural and lives in #114's pull-request body. These are the tripwire
  * that keeps the configuration from drifting away from that evidence.
- * *(**FOUR scans as of #126**, which added `T-WEB-S231` over
+ * *(**FOUR scans as of #126**, which added `T-WEB-S232` over
  * `.github/workflows/properties.yml`. Everything this paragraph says holds of
  * it unchanged and for the same reason: it can show that the nightly full
  * property proof is CONFIGURED, never that it ran or passed. That evidence is
@@ -132,7 +132,7 @@ import { z } from "zod";
  * of `.github/workflows/**` in any suite is a comment in `route-ssr.test.tsx`,
  * which asserts nothing. The precedent that does exist is a test asserting on
  * a `package.json` — `packages/games/test/purity.test.ts`, on its own
- * package's manifest rather than the root's. *(**And `T-WEB-S231` at #126 is
+ * package's manifest rather than the root's. *(**And `T-WEB-S232` at #126 is
  * the second**, over `.github/workflows/properties.yml`. `S226` stays the
  * first; what it stopped being is the only one, which is why the sentence
  * gains this clause rather than losing its claim.)*
@@ -451,7 +451,7 @@ describe("the worker bound, and the one package that must not carry it (T-WEB-S2
   });
 });
 
-describe("the nightly full property proof cannot be deleted in silence (T-WEB-S231)", () => {
+describe("the nightly full property proof cannot be deleted in silence (T-WEB-S232)", () => {
   /**
    * WHY A SCAN AT ALL. #126 moved `packages/games`'s generator properties off
    * the per-pull-request path: the gate runs a 25-run sample and
