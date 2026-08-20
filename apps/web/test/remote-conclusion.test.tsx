@@ -29,10 +29,12 @@ import type { SudokuDigit } from "../src/sudoku/state";
  * `vi.resetModules()` really isolates the day-truth store's module-level
  * payload between cases.
  *
- * `T-WEB-S282` was #142's reserved review-round headroom and is BURNED
- * unspent (docs/agents/test-ids.md): #145's push opt-in card had not landed
- * at this branch's merge-from-main, so its exclusion from this view is
- * stated in ADR-0065 for #145's reviewers rather than asserted here.
+ * The tail of #142's T-WEB reservation (`S282` — spelled without the full
+ * prefix so the frontier grep never mistakes this note for an allocation)
+ * was the reserved review-round headroom and is BURNED unspent
+ * (docs/agents/test-ids.md): #145's push opt-in card had not landed at this
+ * branch's merge-from-main, so its exclusion from this view is stated in
+ * ADR-0065 for #145's reviewers rather than asserted here.
  */
 const DATE = "2026-07-31";
 const API_URL = "https://api.example.test";

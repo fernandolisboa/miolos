@@ -122,3 +122,9 @@ UI change → the gate binds. The workflow scan is cold-profile (no session, `/d
 ## 12. Exit criteria
 
 Gate green with pasted output (`typecheck --force`, `lint`, `test --force`, pre-commit, local `file://` detect for the new states); every reserved id spent or burned and the frontier re-derived; ADR-0065 `Accepted` in the shipping diff with ADR-0060's reciprocal amendment; S245's disposition recorded in `test-ids.md`; PR body names Tier 2, the §1 scope decision and the one deploy-skew note; issue #142 closed by the merge. Nothing needs Fernando unless review overturns the §1 or §3 decisions.
+
+## 13. Deviations at step 5 (this plan is a snapshot; the record of where execution differed)
+
+- **§7's ADR-number map shifted under the branch:** at the pre-gate `git merge origin/main`, #140 had landed as **ADR-0062** (`0062-termo-guess-dictionary-gaps-close-with-curated-additions.md`), not the map's 0064. **0065→#142 was unaffected** and is what shipped; ADR-0065's numbering paragraph records the shift.
+- **§8's T-WEB-S276 arm about the screen roots is carried by S273 instead:** mounting a play route runs the shipped play lifecycle, which writes its own PLAYING record exactly as it did before #142 — so "writes nothing" is asserted as written on the `/concluido` mount (S276, no play hook in the graph) and as "no CONCLUDED record is synthesised" on the screen-root mount (S273).
+- **Termo `played` renders the guess distribution and the streak card too**, mirroring the local loss conclusion (which renders both under its `recorded` gate) rather than the §1 table's terser cell; the fail-row highlight is ADR-0008 rule 3's unqualified claim and the row is on the server. The named absences (word, grid, time) hold exactly.

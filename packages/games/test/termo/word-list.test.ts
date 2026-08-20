@@ -22,7 +22,7 @@ const contentDir = join(repoRoot, "content", "termo");
 const gamesDir = join(testDir, "..", "..");
 
 const ANSWER_COUNT = 400;
-const VALIDATION_COUNT = 5310;
+const VALIDATION_COUNT = 5408; // 5310 from the IME-USP lexicon + 98 curated additions (#140, ADR-0062)
 const NORMALIZED_SHAPE = /^[a-z]{5}$/;
 
 function readLines(file: string): string[] {
@@ -161,6 +161,41 @@ describe("termo word-list harness (ADR-0015)", () => {
     expect(TERMO_VALIDATION_WORDS).toHaveLength(VALIDATION_COUNT);
     expect(isValidGuess("ábaco")).toBe(true);
     expect(isValidGuess("xqzwv")).toBe(false);
+  });
+
+  it('accepts "áudio" and its unaccented typing "audio" as guesses (#140)', () => {
+    // The reported defect: the IME-USP lexicon lacks the standalone noun
+    // "áudio", so the guess dictionary rejected an ordinary pt-BR word.
+    // Closed by content/termo/additions.txt (ADR-0062). Both spellings ride
+    // one normalized entry, exactly like rádio/radio always did.
+    expect(isValidGuess("áudio")).toBe(true);
+    expect(isValidGuess("audio")).toBe(true);
+  });
+
+  it("every additions.txt canonical is shaped, sorted, unique, and guessable through the shipped predicate", () => {
+    // Pins the curated-additions artifact (#140, ADR-0062) to the runtime:
+    // pipeline.py enforces the same shape at generation time, but nothing on
+    // that side can see the shipped dictionary. Sort order is the pipeline's
+    // (normalized form, then canonical) — additions.txt carries accented
+    // canonicals, so a plain codepoint sort would not read naturally.
+    const additions = readLines("additions.txt");
+    expect(additions.length).toBeGreaterThan(0);
+    expect(findDuplicates(additions)).toEqual([]);
+    // Codepoint comparison, not localeCompare: pipeline.py sorts the same
+    // tuple with Python's plain string order, and the pin is exact parity.
+    const byCodepoint = (a: string, b: string): number =>
+      a < b ? -1 : a > b ? 1 : 0;
+    const resorted = [...additions].sort((a, b) => {
+      const byNorm = byCodepoint(normalizeWord(a), normalizeWord(b));
+      return byNorm !== 0 ? byNorm : byCodepoint(a, b);
+    });
+    expect(resorted).toEqual(additions);
+    const validation = new Set(readLines("validation.txt"));
+    for (const word of additions) {
+      expect(normalizeWord(word)).toMatch(NORMALIZED_SHAPE);
+      expect(validation.has(normalizeWord(word)), word).toBe(true);
+      expect(isValidGuess(word), word).toBe(true);
+    }
   });
 
   it("TERMO_VALIDATION_WORDS equals validation.txt line-for-line", () => {
