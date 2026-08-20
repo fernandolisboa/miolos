@@ -45,6 +45,11 @@ describe("the privacy policy page (T-WEB-S141)", () => {
     // #30 (ADR-0052): operator-recorded medal grants are data about the
     // user, so the inventory names them the release the table ships.
     expect(markup).toContain(messages.privacy.collected.medals);
+    // #145 (ADR-0064): the push subscription — endpoint + keys, purpose-
+    // limited to the streak nudge, deleted on unsubscribe or account
+    // deletion — named the release its table ships (widened in place, the
+    // medals line's own precedent).
+    expect(markup).toContain(messages.privacy.collected.push);
   });
 });
 

@@ -154,19 +154,26 @@ describe("the response schemas are strict on both ends (ADR-0048's rule)", () =>
 });
 
 describe("remoteConfigSchema.attachStreakThreshold (D10, ADR-0003/ADR-0025)", () => {
-  it("T-CORE-S54: defaults to 5, clamps 1..365 integers, and defaultRemoteConfig carries both keys", () => {
+  // Widened in place at #145 (the T-DB-9a precedent — an exact-object pin
+  // gaining the config's new key is the same claim about the same gate):
+  // `pushOptInStreakThreshold` (default 3, ADR-0064) joins the pinned
+  // default object; its own clamp claim lives in T-CORE-S101.
+  it("T-CORE-S54: defaults to 5, clamps 1..365 integers, and defaultRemoteConfig carries every key", () => {
     expect(remoteConfigSchema.parse({})).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 5,
+      pushOptInStreakThreshold: 3,
     });
     expect(defaultRemoteConfig).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 5,
+      pushOptInStreakThreshold: 3,
     });
 
     expect(remoteConfigSchema.parse({ attachStreakThreshold: 3 })).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 3,
+      pushOptInStreakThreshold: 3,
     });
 
     // Out-of-clamp / non-integer values fail the whole-config parse — the

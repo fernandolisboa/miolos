@@ -87,18 +87,37 @@ export const users = pgTable(
      * (ADR-0038 (h); preview deploys share the production database).
      */
     onboardingSeenAt: timestamptz("onboarding_seen_at"),
+    /**
+     * The push pre-prompt's one lifecycle per account (#145, ADR-0064): the
+     * `attachPromptDismissedAt` doc block cloned. NULL = never dismissed; a
+     * timestamp = the player pressed "Agora não" (or the browser denied the
+     * permission) and the card never returns. Deliberately NOT in the
+     * tombstone SET (merge.ts statement 6): it is not an identity handle,
+     * and a loser's value stays on the tombstone untouched. Folded onto the
+     * winner earliest-wins by merge.ts statement 5d, as the third column of
+     * the fold that already carries `onboarding_seen_at` and
+     * `attach_prompt_dismissed_at`.
+     *
+     * MIGRATION `0007`: nullable, so every existing row satisfies it — but
+     * adding ANY users column changes the INSERT column list drizzle emits
+     * for every writer, `mintSession`'s `insert(users).values({})`
+     * included, so 0007 reaches Neon BEFORE the branch is first pushed
+     * (ADR-0038 (h); preview deploys share the production database).
+     */
+    pushPromptDismissedAt: timestamptz("push_prompt_dismissed_at"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     // No trigger or $onUpdate maintains this column: any UPDATE of a users
     // row must set it explicitly (to DB-side now()). The writers are
     // `mergeAccounts` (merge.ts — statement 6 empties a tombstoned LOSER's
     // identity handles, ADR-0009/ADR-0049, and statement 5d, the first
-    // writer of a WINNER's updated_at, folds the two once-per-account
-    // timestamps earliest-wins, #35/#134), #21's attach-confirm and
+    // writer of a WINNER's updated_at, folds the three once-per-account
+    // timestamps earliest-wins, #35/#134/#145), #21's attach-confirm and
     // dismiss statements (`attachEmailToUser` / `dismissAttachPrompt`,
-    // apps/api/src/attach/service.ts, ADR-0050), and #35's
+    // apps/api/src/attach/service.ts, ADR-0050), #35's
     // `markOnboardingSeen` (apps/api/src/onboarding/service.ts,
-    // ADR-0061). Account deletion is a DELETE, not an UPDATE, and belongs
-    // to no updated_at list.
+    // ADR-0061), and #145's `dismissPushPrompt`
+    // (apps/api/src/push/service.ts, ADR-0064). Account deletion is a
+    // DELETE, not an UPDATE, and belongs to no updated_at list.
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [
@@ -132,6 +151,46 @@ export const sessions = pgTable(
     lastSeenAt: timestamptz("last_seen_at").notNull().defaultNow(),
   },
   (t) => [index("sessions_user_id_idx").on(t.userId)],
+);
+
+/**
+ * Web Push subscriptions (#145, ADR-0064; the #32 shape §2): one row per
+ * browser install, several rows per user (phone + desktop) is the design.
+ *
+ * - `endpoint` is the push service's capability URL, stored raw — it is
+ *   what the dispatcher (#146) sends to — and it is the PRIMARY KEY: the
+ *   browser install is the authority for its own endpoint, so a re-POST
+ *   upserts (key rotation, or the endpoint following whoever the cookie
+ *   now says) rather than duplicating.
+ * - `p256dh` / `auth` are the client keys of RFC 8291; opaque text here.
+ * - `created_at` is the consent evidence (the ADR-0022 idiom — the
+ *   timestamp is the evidence, no separate consent column): subscribing IS
+ *   the consent act, and deleting the row is withdrawal (the settings
+ *   toggle in #36, browser-side revocation surfacing as 410-pruning in
+ *   #146, or account deletion via the FK cascade).
+ * - ADR-0049 merge duty: `mergeAccounts` statement 1b repoints a loser's
+ *   rows to the winner (the sessions precedent — and unlike sessions these
+ *   are NOT revoked by ADR-0050 decision 13, which is about cookie
+ *   takeover; a device's push channel follows the merged identity).
+ *
+ * The statements over this table live in apps/api/src/push/service.ts
+ * (the onboarding/service.ts precedent); the table export rides the same
+ * `@miolos/db` entry `users` does.
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    endpoint: text("endpoint").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  // The dispatcher's read and the merge remap both scan by user
+  // (the sessions-index precedent).
+  (t) => [index("push_subscriptions_user_id_idx").on(t.userId)],
 );
 
 /**

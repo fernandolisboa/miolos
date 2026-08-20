@@ -49,13 +49,19 @@ export function isJsonContentType(header: string | null): boolean {
  * Preflight answer for the credentialed endpoints. The session bootstrap
  * deliberately sends no body, so the hot path never preflights — OPTIONS
  * exists for robustness, not for the happy path.
+ *
+ * `methods` (#145): /push/subscriptions is the first route with a
+ * cross-origin DELETE, and its JSON content type forces a preflight on
+ * every call — a grant listing only POST would fail the browser's method
+ * check before the route ever ran. Every POST-only caller keeps the
+ * default.
  */
-export function preflightResponse(): Response {
+export function preflightResponse(methods = "POST, OPTIONS"): Response {
   return new Response(null, {
     status: 204,
     headers: {
       ...corsHeaders({ credentials: true }),
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Methods": methods,
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Max-Age": "86400",
     },

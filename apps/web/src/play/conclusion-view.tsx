@@ -19,6 +19,7 @@ import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 import { useDayState, type DayEntry } from "./day-state";
 import { picturePath } from "./picture-path";
+import { PushPromptCard } from "./push-prompt-card";
 import { BLANK_VALUE, ShareButton } from "./share-button";
 import { startCompletionSync } from "./sync";
 import type {
@@ -395,6 +396,18 @@ export function ConclusionView({
             today by construction. Unfetched and offline states render the
             shipped absence, which is today's state and therefore honest. */}
         {syncOutcome === "recorded" && <StreakCard />}
+        {/* The push pre-prompt (#145, ADR-0064): directly below the streak
+            slot — the number sits above the card that asks to protect it —
+            and above the day card. The conclusion IS the habitual play
+            moment by construction (the #32 shape §1), which is what makes
+            this the founding handoff's "at the habitual window" ask with
+            no derivation. Renders null until the server AND the browser
+            both say yes, so first paint and detect's clean profile are
+            unchanged. UNGATED on syncOutcome deliberately: eligibility is
+            server-computed over server rows (ADR-0048's direction), so no
+            client-clock claim rides on it — and an offline conclusion
+            fails the state fetch into the honest absent card anyway. */}
+        <PushPromptCard />
         <section className={styles.dayCard}>
           <p className={styles.dayCardTitle}>
             {messages.conclusion.dayCard.title}

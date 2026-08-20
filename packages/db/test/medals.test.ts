@@ -127,6 +127,11 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
       "daily_puzzles",
       "hint_grants",
       "medal_grants",
+      // #145 (ADR-0064): per-browser-install Web Push subscriptions —
+      // endpoint PK, keys, created_at-as-consent. Not a wallet, ledger or
+      // ranking: no quantity column exists to accumulate (T-DB-S66 pins
+      // the column set exactly). Widened in place, the T-DB-9a precedent.
+      "push_subscriptions",
       "remote_config",
       "sessions",
       "users",
@@ -182,10 +187,17 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
     // cost — a future legitimate column matching the pattern must edit
     // this test — is the point: that edit is the review moment AC 3
     // wants. The jsonb/view residual stays named in T-DB-S39's comment.
+    // ONE exact allow-listed pair (#145): `push_subscriptions.endpoint` is
+    // the Push API's own term for the capability URL (RFC 8030) and
+    // contains "point" only as a substring. Excluded by the exact
+    // (table, column) pair — never by loosening the regex, whose substring
+    // reach is the scan's value — and this edit IS the review moment the
+    // comment above promises a matching legitimate column must pay.
     const result = await ctx.db.execute(
       sql`select table_name, column_name from information_schema.columns
            where table_schema = 'public'
-             and column_name ~ '(balance|wallet|coin|point|credit|score|level|rank|xp)'`,
+             and column_name ~ '(balance|wallet|coin|point|credit|score|level|rank|xp)'
+             and not (table_name = 'push_subscriptions' and column_name = 'endpoint')`,
     );
     expect(result.rows).toEqual([]);
   });

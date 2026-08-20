@@ -40,6 +40,7 @@ describe("getRemoteConfig", () => {
     expect(await getRemoteConfig(ctx.db)).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 5,
+      pushOptInStreakThreshold: 3,
     });
   });
 
@@ -48,6 +49,7 @@ describe("getRemoteConfig", () => {
     expect(await getRemoteConfig(ctx.db)).toEqual({
       bufferDepth: 3,
       attachStreakThreshold: 5,
+      pushOptInStreakThreshold: 3,
     });
   });
 
@@ -58,6 +60,7 @@ describe("getRemoteConfig", () => {
     expect(await getRemoteConfig(ctx.db)).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 5,
+      pushOptInStreakThreshold: 3,
     });
   });
 
@@ -68,6 +71,7 @@ describe("getRemoteConfig", () => {
     expect(await getRemoteConfig(ctx.db)).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 5,
+      pushOptInStreakThreshold: 3,
     });
   });
 
@@ -78,6 +82,7 @@ describe("getRemoteConfig", () => {
     expect(await getRemoteConfig(ctx.db)).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 5,
+      pushOptInStreakThreshold: 3,
     });
   });
 });
