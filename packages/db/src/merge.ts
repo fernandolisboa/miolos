@@ -255,6 +255,48 @@ export async function mergeAccounts(
   //     keep referencing the tombstone. Trivially idempotent.
   await db.delete(medalGrants).where(eq(medalGrants.userId, loserId));
 
+  // 5d. The two once-per-account timestamps fold onto the winner
+  //     EARLIEST-WINS (#35's `onboarding_seen_at`, ADR-0061; and
+  //     `attach_prompt_dismissed_at`, shipped unmerged since #21 — #134's
+  //     defect, closed here). Statement 5b's `least()` idiom adapted from a
+  //     conflict arm to a self-join UPDATE: Postgres `least()` ignores NULL
+  //     arguments, so either side suffices, and when both are set the
+  //     earlier survives (the evidence property; nothing reads either
+  //     value — both readers compare to NULL). This is the FIRST statement
+  //     that writes the WINNER's updated_at (statement 6 bumps the
+  //     loser's); schema.ts's writer list names it. The guard is an OR over
+  //     the two per-column `is not null` + strict `<` conditions — a
+  //     single-column guard would skip rows the other column needs, and
+  //     `least()` on the column whose arm did not fire is a no-op
+  //     (`least(x, NULL) = x`, `least(x, y >= x) = x`), so the statement
+  //     never moves a value backwards. Individually idempotent: a re-run
+  //     matches ZERO rows and never re-bumps updated_at (T-DB-S20's
+  //     full-state double-run snapshot; T-DB-S64). The loser's own values
+  //     are deliberately NOT nulled — not identity handles, so they stay
+  //     out of statement 6's SET, resolving to nobody on the tombstone.
+  //     Runs before 6 to keep the file's narrative (fold every
+  //     account-scoped fact into the winner, then empty the shell);
+  //     crash-prefix-safe either way, since 6 does not touch either column.
+  await db.execute(sql`
+    update users w
+       set onboarding_seen_at =
+             least(w.onboarding_seen_at, l.onboarding_seen_at),
+           attach_prompt_dismissed_at =
+             least(w.attach_prompt_dismissed_at, l.attach_prompt_dismissed_at),
+           updated_at = now()
+      from users l
+     where w.id = ${winnerId}::uuid
+       and l.id = ${loserId}::uuid
+       and (
+             (l.onboarding_seen_at is not null
+              and (w.onboarding_seen_at is null
+                   or l.onboarding_seen_at < w.onboarding_seen_at))
+          or (l.attach_prompt_dismissed_at is not null
+              and (w.attach_prompt_dismissed_at is null
+                   or l.attach_prompt_dismissed_at < w.attach_prompt_dismissed_at))
+           )
+  `);
+
   // 6. Empty the shell: every identity handle nulled — current AND future
   //    (the social ids have no writer today, so nulling them is provably
   //    inert) — so no handle can ever resolve to a tombstone. Consent

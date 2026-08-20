@@ -473,6 +473,58 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(DAILY_PATH, source))).toEqual([]);
   });
 
+  it("T-LINT-S49: the onboarding modules — client, hook, bare barrel form and the hub island — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
+    // #35's growth clause (the napkin's one-hop rule): the onboarding
+    // client reaches identity (the session mint) and the network, and the
+    // island is one hop from the walled `app/page`, so ADR-0061's surface
+    // stays out of free play only because these names entered the list in
+    // the same change that created the modules. The bare `../onboarding`
+    // form is listed because `**/onboarding/**` does not match it. One id
+    // over both arms — one claim ("free play cannot reach onboarding, by
+    // any import form"), one it — because the reservation on issue #35
+    // holds a single T-LINT id where plan 057 drafted two.
+    const doors = [
+      "../onboarding/onboarding-client",
+      "../onboarding/use-onboarding-state",
+      "../onboarding",
+      "../../app/hub-onboarding",
+    ];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — the hub island imports them.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+
+    // The dynamic-import arm: the regex closes the evasion.
+    for (const door of doors) {
+      const source = [
+        "export const load = () =>",
+        `  import("${door}");`,
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), `dynamic ${door}`)
+        .toContain("no-restricted-syntax");
+    }
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S31: the stats modules and the /estatisticas screen root — the bare barrel form included — red from free play, clean from a daily path", async () => {
     // #29's growth clause (the napkin's one-hop rule): the stats client
     // reaches the network and server-derived aggregates, so ADR-0051's

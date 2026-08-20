@@ -2,9 +2,10 @@
 
 /**
  * The hub's streak stamp, live since #19 (ADR-0048): the third client
- * fragment beside `hub-day-state.tsx`'s two, here for the same mechanical
- * reason — CSS Modules hash per file, and this stamp paints with
- * `page.module.css`'s own `.streakStamp` classes.
+ * fragment beside `hub-day-state.tsx`'s two (five in all since #21's
+ * `hub-attach.tsx` and #35's `hub-onboarding.tsx`), here for the same
+ * mechanical reason — CSS Modules hash per file, and this stamp paints
+ * with `page.module.css`'s own `.streakStamp` classes.
  *
  * The server render and the pre-hydration paint show 0 — the honest
  * unknown of a value only the server can compute — and hydration only ever

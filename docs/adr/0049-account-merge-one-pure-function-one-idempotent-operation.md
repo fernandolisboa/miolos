@@ -112,6 +112,12 @@ them.
    case here: `on_time` is row data carried
    through the union, and its stored column, when it lands, joins the
    repoint statement's explicit column list.
+   *Annotation (#35, ADR-0061):* #35 added the first `users`-COLUMN merge
+   duty — statement 5d, folding `onboarding_seen_at` and
+   `attach_prompt_dismissed_at` onto the winner earliest-wins (the latter
+   closing [#134](https://github.com/fernandolisboa/miolos/issues/134)).
+   The decision's "tables" names the seat, not the shape of the fact: the
+   duty is still acquired in `mergeAccounts`, so nothing here goes false.
 
 ## Rejected
 

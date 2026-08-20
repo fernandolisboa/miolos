@@ -1,0 +1,143 @@
+/* The first-visit introduction card (#35, ADR-0061): card paper, 1px line
+   border, hard single-color offset shadow in the APP accent at 25% — the
+   register of the page's two other app-accent surfaces (the streak stamp
+   and the attach card), a CHOICE rather than a copy of the game cards' 22%
+   (blur 0 always) — static rotation, washi tape in the same accent.
+   Fraunces italic carries the one human line (an <h2>; .invitation is
+   element-agnostic); the body rides var(--text-body), this card being the
+   hub's first consumer of that token (identical to the sheets' 14px/1.5
+   longhand). Accent colours SHAPES only (ADR-0041): every text run is
+   --ink or --ink-2 on paper, so no contrast measurement is owed.
+
+   Named .intro/.introTape rather than hub-attach's .card/.tape ON PURPOSE:
+   CSS Modules hash per file so the names never collide in the app, but the
+   visual gate for this surface is a NON-SCOPED fixture emission (plan 043
+   §11, plan 057 §8) that links page.module.css and this sheet together —
+   and page.module.css already owns .card and .tape. */
+
+.intro {
+  position: relative;
+  margin-top: var(--space-8);
+  max-width: 560px;
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent-app) 25%, transparent);
+  transform: rotate(-0.5deg);
+  opacity: 1;
+  /* The one 200 ms settle (DESIGN.md "tinta que assenta", 150-250 ms, no
+     bounce): fires once, when the island's state settles post-hydration —
+     a mount transition via @starting-style below, so no JS class flip and
+     no @keyframes. It names ONLY opacity and transform, never a layout
+     property (impeccable's layout-transition): the card occupies its full
+     height in flow on the FIRST frame, so the reflow below it is a single
+     frame whatever the duration. DESIGN.md's "static — never animated per
+     interaction" rotation rule is untouched: the rotation is held constant
+     through the transition; a once-per-page mount settle is not a
+     per-interaction animation (plan 057 D13). */
+  transition:
+    opacity var(--duration-base) var(--ease-settle),
+    transform var(--duration-base) var(--ease-settle);
+}
+
+@starting-style {
+  .intro {
+    opacity: 0;
+    transform: rotate(-0.5deg) translateY(2px);
+  }
+}
+
+.introTape {
+  position: absolute;
+  top: -12px;
+  left: 40px;
+  width: 78px;
+  height: 26px;
+  background: color-mix(in srgb, var(--accent-app) 32%, transparent);
+  border-radius: var(--radius-tape);
+  transform: rotate(-4deg);
+}
+
+.invitation {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 550;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.body {
+  margin: var(--space-2) 0 0;
+  font: var(--text-body);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.dismiss {
+  margin-top: var(--space-4);
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-2);
+  background: none;
+  border: none;
+  font: var(--text-button);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro {
+    /* The rotation is decoration and stays; only the settle is stood down.
+       Dropping the transform outright would un-rotate the card, which is a
+       different design, not a calmer one. (The mobile block below still
+       re-angles to -0.3deg; it sets no transition, so the stand-down
+       holds there too.) */
+    transform: rotate(-0.5deg);
+    transition: none;
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .intro {
+    margin-top: var(--space-6);
+    max-width: none;
+    padding: var(--space-5) 18px var(--space-4);
+    box-shadow: var(--shadow-sm)
+      color-mix(in srgb, var(--accent-app) 25%, transparent);
+    transform: rotate(-0.3deg);
+  }
+
+  /* The mobile angle's own starting point: without it the settle would
+     animate the rotation -0.5deg → -0.3deg, and the rotation is held
+     CONSTANT through the transition at every viewport. */
+  @starting-style {
+    .intro {
+      opacity: 0;
+      transform: rotate(-0.3deg) translateY(2px);
+    }
+  }
+
+  .introTape {
+    top: -9px;
+    left: 26px;
+    width: 54px;
+    height: 18px;
+  }
+
+  .invitation {
+    font-size: 20px;
+  }
+}

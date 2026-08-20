@@ -43,6 +43,12 @@
  * conclusion-carrying routes, through `conclusion-view`, so both sides of the
  * subtraction moved together and it ate the whole change. What DID move is
  * the ABSOLUTE: `/` 829.5 → **831.5 KB** raw, ~+2.0 KB on every route, and
+ * RE-MEASURED at #35 over the same fresh `rm -rf .next && pnpm build`:
+ * `/` 831.7 → **834.1 KB** raw (223.9 → 224.4 gzip) — the onboarding island
+ * grows the BASELINE by ~2.4 KB raw, so every budgeted delta SHRANK
+ * (binairo 35.6 → 33.6, sudoku 31.9 → 29.8, nonogram 37.8 → 35.7) without
+ * any grid route losing a byte. Shrunken deltas from a grown denominator
+ * are NOT headroom; re-measure rather than quote, as ever.
  * the absolute is the figure to quote for a ticket shaped like this one.
  * Note the direction, and note that the DELTA can move on a
  * ticket that touches no grid route at all: #19 grew `/` (the BASELINE,

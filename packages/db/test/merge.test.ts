@@ -848,3 +848,163 @@ describe("mergeAccounts — curated medal grants (#30, ADR-0052, ADR-0049 decisi
     expect(liveColumns).toEqual(unionColumns);
   });
 });
+
+describe("mergeAccounts — the once-per-account timestamps (#35, ADR-0061; #134, statement 5d)", () => {
+  // Pinned instants so earliest-wins is an exact comparison, never a race
+  // with the DB clock (the insertMedalGrant precedent).
+  const EARLIER = new Date("2026-07-01T12:00:00.000Z");
+  const LATER = new Date("2026-07-15T12:00:00.000Z");
+
+  /** Stamp either timestamp column with a PINNED instant. */
+  async function stamp(
+    userId: string,
+    values: {
+      onboardingSeenAt?: Date;
+      attachPromptDismissedAt?: Date;
+    },
+  ): Promise<void> {
+    await ctx.db.update(users).set(values).where(eq(users.id, userId));
+  }
+
+  /** The two folded columns, read back off one row. */
+  async function timestampsOf(userId: string): Promise<{
+    onboardingSeenAt: Date | null;
+    attachPromptDismissedAt: Date | null;
+  }> {
+    const rows = await ctx.db
+      .select({
+        onboardingSeenAt: users.onboardingSeenAt,
+        attachPromptDismissedAt: users.attachPromptDismissedAt,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+    const row = rows[0];
+    if (!row) {
+      throw new Error(`no users row for ${userId}`);
+    }
+    return row;
+  }
+
+  it("T-DB-S63: either side suffices in both argument orders, both-stamped keeps the EARLIEST, and attach_prompt_dismissed_at rides the same statement — including the mixed case where only one column's arm fires", async () => {
+    // (a) Either side suffices — least() ignores NULL arguments, so a
+    // winner who never saw the introduction takes the loser's timestamp.
+    // Both argument orders, because the winner is a function of the DATA
+    // (older created_at), never of the call.
+    for (const reversed of [false, true]) {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await stamp(loser, { onboardingSeenAt: EARLIER });
+      const result = reversed
+        ? await mergeAccounts(ctx.db, loser, winner)
+        : await mergeAccounts(ctx.db, winner, loser);
+      expect(result).toEqual({ winnerId: winner, loserId: loser });
+      expect((await timestampsOf(winner)).onboardingSeenAt).toEqual(EARLIER);
+      await reset();
+    }
+
+    // The mirror: a stamped winner and an unstamped loser — the guard's
+    // `is not null` arm never fires, and the winner's value is untouched.
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await stamp(winner, { onboardingSeenAt: EARLIER });
+      await mergeAccounts(ctx.db, winner, loser);
+      expect((await timestampsOf(winner)).onboardingSeenAt).toEqual(EARLIER);
+      await reset();
+    }
+
+    // (b) Both stamped: the EARLIER survives, whichever side carried it —
+    // statement 5b's earliest-wins posture (the evidence property; nothing
+    // reads the value, both readers compare to NULL).
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await stamp(winner, { onboardingSeenAt: LATER });
+      await stamp(loser, { onboardingSeenAt: EARLIER });
+      await mergeAccounts(ctx.db, winner, loser);
+      expect((await timestampsOf(winner)).onboardingSeenAt).toEqual(EARLIER);
+      await reset();
+    }
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await stamp(winner, { onboardingSeenAt: EARLIER });
+      await stamp(loser, { onboardingSeenAt: LATER });
+      await mergeAccounts(ctx.db, winner, loser);
+      expect((await timestampsOf(winner)).onboardingSeenAt).toEqual(EARLIER);
+      await reset();
+    }
+
+    // (c) The twin column (#134's defect, closed by the same statement):
+    // attach_prompt_dismissed_at folds identically — and in the MIXED case,
+    // where only one column's arm fires the guard, least() on the other is
+    // a no-op and its value never moves backwards or forwards.
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      // The onboarding arm fires (loser earlier); the attach arm does NOT
+      // (the winner already holds the earlier value).
+      await stamp(winner, { attachPromptDismissedAt: EARLIER });
+      await stamp(loser, {
+        onboardingSeenAt: EARLIER,
+        attachPromptDismissedAt: LATER,
+      });
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await timestampsOf(winner)).toEqual({
+        onboardingSeenAt: EARLIER,
+        attachPromptDismissedAt: EARLIER,
+      });
+      await reset();
+    }
+    {
+      // Attach-only: a dismissed-on-device-A prompt survives the merge —
+      // the exact regression #134 records against the shipped precedent.
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await stamp(loser, { attachPromptDismissedAt: EARLIER });
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await timestampsOf(winner)).toEqual({
+        onboardingSeenAt: null,
+        attachPromptDismissedAt: EARLIER,
+      });
+    }
+  });
+
+  it("T-DB-S64: a re-run matches zero rows — the winner's updated_at is not re-bumped — and the loser's own values are untouched by the tombstone SET", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await stamp(loser, {
+      onboardingSeenAt: EARLIER,
+      attachPromptDismissedAt: LATER,
+    });
+
+    await mergeAccounts(ctx.db, winner, loser);
+    // 5d fired: the winner's updated_at moved off its pinned birth value —
+    // the FIRST winner-side updated_at write in mergeAccounts, which is
+    // what makes the no-re-bump below a real assertion and not a vacuous
+    // equality between two untouched rows.
+    const winnerAfterFirst = await ctx.db
+      .select()
+      .from(users)
+      .where(eq(users.id, winner));
+    expect(winnerAfterFirst[0]?.updatedAt.toISOString()).not.toBe(
+      OLDER.toISOString(),
+    );
+
+    // The loser's OWN values stay on the tombstone: not identity handles,
+    // so statement 6's SET never touches them (the attachPromptDismissedAt
+    // schema comment's rule, inherited by the new column).
+    expect(await timestampsOf(loser)).toEqual({
+      onboardingSeenAt: EARLIER,
+      attachPromptDismissedAt: LATER,
+    });
+
+    // The re-run: the `is not null` + strict `<` guard matches ZERO rows —
+    // the full state (updated_at included) deep-equals run one, which is
+    // T-DB-S20's discipline applied to the statement that could most
+    // easily re-bump.
+    const afterFirst = await snapshotState();
+    await mergeAccounts(ctx.db, winner, loser);
+    expect(await snapshotState()).toEqual(afterFirst);
+  });
+});
