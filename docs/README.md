@@ -12,6 +12,7 @@ Read them for the current state of the project. They are edited in place.
 | `agents/triage-labels.md` | The five canonical triage roles → this repo's label strings |
 | `agents/domain.md` | How agents must consume `CONTEXT.md` and ADRs, and the ADR status lifecycle (statuses, owner, trigger, header forms) |
 | `agents/test-ids.md` | The `T-<AREA>-[S]<n>[<letter>]` convention, the per-area frontier and the burned slots |
+| `pending-fernando.md` | The pending-on-Fernando ledger — every action/decision only Fernando can take, wizard-ready, maintained by every session that surfaces or discharges one |
 | `adr/` | Architecture Decision Records (`0001-…`, own 4-digit sequence) |
 
 `CONTEXT.md` (the domain glossary) lives at the repo root, not here — see `agents/domain.md`.
