@@ -314,6 +314,14 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/privacidade/page"),
     daily: undefined,
   },
+  // #158: the terms page is the /privacidade shape — static by
+  // construction, db-free, `data-page` marker.
+  {
+    path: "/termos",
+    marker: "data-page=",
+    load: () => import("../app/termos/page"),
+    daily: undefined,
+  },
   // The #29 stats screen is the /privacidade shape — static by
   // construction, db-free, `data-page` marker: every aggregate arrives via
   // the island's mount-effect hooks only (plan 033 §6.6).

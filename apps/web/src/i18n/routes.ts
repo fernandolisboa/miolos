@@ -22,6 +22,10 @@ export const routeSlugs = {
   // policy — pt-BR slugs, matching CONTEXT.md's "Vincular e-mail".
   attach: "vincular",
   privacy: "privacidade",
+  // #158: the terms of use — a pt-BR descriptive segment like `privacidade`
+  // (ADR-0028). Plural on purpose: `/termos` (the legal page) and `/termo`
+  // (the game, a proper noun) are distinct literal segments.
+  terms: "termos",
   binairo: "binairo",
   sudoku: "sudoku",
   // An untranslated proper noun, which is what makes `/nonogram` a legal
@@ -74,6 +78,7 @@ export const routes = {
   stats: `/${routeSlugs.stats}`,
   attach: `/${routeSlugs.attach}`,
   privacy: `/${routeSlugs.privacy}`,
+  terms: `/${routeSlugs.terms}`,
   // #31 (ADR-0053 decision 1): the archive index. The three date-bearing
   // paths below it are builders rather than keys, because a date is not a
   // literal — but they still live HERE, so `/arquivo` has exactly one home

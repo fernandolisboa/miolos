@@ -61,6 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     routes.freePlaySudoku,
     routes.freePlayNonogram,
     routes.privacy,
+    routes.terms,
     routes.archive,
     ...months.map((month) => archiveMonthRoute(month)),
     ...groupArchivedDays(days).flatMap((group) => [

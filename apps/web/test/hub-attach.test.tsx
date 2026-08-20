@@ -200,6 +200,23 @@ describe("the privacy links ride `routes`, never literals (T-WEB-S143)", () => {
   });
 });
 
+describe("the terms link rides beside the policy at both legal link sites (T-WEB-S294)", () => {
+  it("the hub nav carries the real /termos link and the card's legal-links line links it too", async () => {
+    // The server page: the fifth secondary-nav href is the routes value —
+    // T-WEB-S143's shape, applied to #158's link.
+    const hub = renderToStaticMarkup(<HojePage />);
+    expect(hub).toContain(`href="${routes.terms}"`);
+    expect(hub).toContain(messages.hoje.links.terms);
+
+    // The card: the terms sit on the same quiet line as the policy link.
+    await renderEligibleCard();
+    const link = screen.getByRole("link", {
+      name: messages.attach.termsLinkLabel,
+    });
+    expect(link).toHaveAttribute("href", routes.terms);
+  });
+});
+
 describe("form-control accessibility pins (T-WEB-S144)", () => {
   it("labels are bound to inputs, the checkboxes are native inputs, and dismiss/submit are buttons", async () => {
     await renderEligibleCard();
