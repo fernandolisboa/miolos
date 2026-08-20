@@ -38,7 +38,7 @@ Frontier order: **#146** (dispatcher — fully unblocked today), then #64 / #104
 
 ## Addendum B — 2026-08-20, later still
 
-- **Fernando delivered the PostHog project token.** Stored as `NEXT_PUBLIC_POSTHOG_KEY` on miolos-web ×3 environments; recorded on #33 with the products-enabled note (no Session Replay) and the install-step-skipped note. **#33 is unblocked.** One open detail: the project's region (us vs eu) — one-word question to Fernando, or read off the settings URL during #33.
+- **Fernando delivered the PostHog project token.** Stored as `NEXT_PUBLIC_POSTHOG_KEY` on miolos-web ×3 environments; recorded on #33 with the products-enabled note (no Session Replay) and the install-step-skipped note. **#33 is unblocked.** Region confirmed minutes later: **US cloud** (`api_host` targets `https://us.i.posthog.com`, or a first-party proxy — the plan's call). Nothing PostHog remains on Fernando.
 
 ## Kickoff prompt for the next session
 
@@ -53,8 +53,7 @@ On mismatch: stop, read the newest addendum before acting.
 
 Route work by CLAUDE.md § tiers. Frontier order: #146 first (fully
 unblocked), then #160–#163 (Fernando's own complaints — high signal),
-then #33 (unblocked: token in NEXT_PUBLIC_POSTHOG_KEY ×3; confirm the
-us/eu region from the project settings URL before wiring api_host),
+then #33 (unblocked: token in NEXT_PUBLIC_POSTHOG_KEY ×3, region US),
 then #64/#104/#158. Reserve test ids on the issue before step 5 (T-WEB
 S290 is spent by #59). Take ~/miolos-session/gate-lock.sh before any suite run,
 git commit included. Update docs/pending-fernando.md in the same PR
