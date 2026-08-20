@@ -108,6 +108,22 @@ describe("fetchDayTruth (T-WEB-S234)", () => {
           sudoku: { status: "played", elapsedMs: 1 },
         },
       },
+      // So does a hint count (#142) — and an over-cap one on a completed
+      // game: the read side never accepts what the write side refused.
+      {
+        ...validBody,
+        games: {
+          ...validBody.games,
+          sudoku: { status: "pending", hintsUsed: 0 },
+        },
+      },
+      {
+        ...validBody,
+        games: {
+          ...validBody.games,
+          sudoku: { status: "completed", hintsUsed: 2 },
+        },
+      },
       { ...validBody, date: "19/08/2026" },
       "not an object",
     ];

@@ -94,6 +94,14 @@ export interface NonogramPlay {
   /** A drag: an idempotent SET of the brush's value, never a toggle. */
   readonly paintOver: (index: number) => void;
   readonly revealHint: () => void;
+  /**
+   * Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
+   * root calls this when the server's claim wins the screen, so the 1 Hz
+   * tick stops behind the remote conclusion and the preserved in-progress
+   * record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
+   * timer is the timer reducer's no-op.
+   */
+  readonly pause: () => void;
 }
 
 export function useNonogramPlay(daily: DailyNonogramResponse): NonogramPlay {
@@ -191,6 +199,15 @@ export function useNonogramPlay(daily: DailyNonogramResponse): NonogramPlay {
     dispatch({ type: "use-hint" });
   }, []);
 
+  // Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
+  // root calls this when the server's claim wins the screen, so the 1 Hz
+  // tick stops behind the remote conclusion and the preserved in-progress
+  // record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
+  // timer is the timer reducer's no-op.
+  const pause = useCallback(() => {
+    dispatch({ type: "pause", now: Date.now() });
+  }, []);
+
   return {
     state,
     elapsed,
@@ -207,6 +224,7 @@ export function useNonogramPlay(daily: DailyNonogramResponse): NonogramPlay {
     clearCell,
     paintOver,
     revealHint,
+    pause,
   };
 }
 

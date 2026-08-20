@@ -36,6 +36,14 @@ export interface TermoOutcomeSource {
  * game is per-game code and belongs here. `NonogramConclusion` is the shipped
  * precedent, and this follows it hop for hop.
  *
+ * ONE EXCEPTION EXISTS, and it is bounded where it lives (#142 step 7):
+ * `RemoteConclusionView`'s `game === "termo"` stamp branch, forced by the
+ * RSC plain-data constraint below — its `X/6` detail exists only after a
+ * client fetch, so no server page can hand it down pre-composed the way
+ * this component's props are. Its header names ADR-0029 decision 2 and
+ * caps the crossing at that single branch; everything local still routes
+ * through here.
+ *
  * EVERY STRING IS COMPOSED HERE AND HANDED DOWN FINISHED. `ConclusionOutcome`
  * and `ConclusionAnswer` are plain data across the RSC boundary (ADR-0043
  * decision 8): a function member there does not fail typecheck, does not fail

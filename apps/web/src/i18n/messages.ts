@@ -284,6 +284,37 @@ export const messages = {
     notYet: {
       body: "O resumo aparece assim que a grade fechar.",
     },
+    /**
+     * The cross-device completed view (#142, ADR-0065): the day was decided
+     * on another device and this one holds no record, so the play route
+     * renders the conclusion the server can honestly back instead of a
+     * fresh playable board. The note is a single quiet line inside the
+     * result card, beside the stamp — never a banner — and the body is the
+     * card's one explanatory sentence. No consolation flourish, no emoji
+     * (DESIGN.md); "aparelho" is the register the sync line above already
+     * uses ("guardado neste aparelho").
+     */
+    remote: {
+      completedNote: "Feito em outro aparelho.",
+      playedNote: "Jogado em outro aparelho.",
+      completedBody: "Você concluiu o jogo de hoje em outro aparelho.",
+      // Game-generic like `completedBody` above (#142 step 7, quality m6):
+      // only Termo can be `played` in v1, but this bundle is shared chrome
+      // and names no game — a future losable game inherits the sentence
+      // rather than unpicking a key.
+      playedBody:
+        "Você jogou o jogo de hoje em outro aparelho. As tentativas ficaram lá.",
+      /**
+       * The stamp's accessible name where the claim carries a TIME and no
+       * hint count — the deploy-skew shape (an old server behind a new
+       * client). Never a fabricated "sem dicas": the aria renders exactly
+       * the lines the stamp does (§3's per-line rule, plan 060).
+       */
+      stampTimeAria: (game: string, elapsed: string) =>
+        `${game} concluído em ${elapsed}`,
+      /** The stamp's accessible name where the claim carries no value at all. */
+      stampBareAria: (game: string) => `${game} concluído`,
+    },
   },
   /**
    * The share (#34, ADR-0054) — shared chrome, imported by the client

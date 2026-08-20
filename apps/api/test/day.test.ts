@@ -116,6 +116,7 @@ async function insertHistoryRow(init: {
   outcome: "won" | "lost";
   completedAtDate: string;
   elapsedMs?: number;
+  hintsUsed?: number;
   guesses?: number;
 }): Promise<void> {
   await ctx.db.insert(completions).values({
@@ -125,7 +126,7 @@ async function insertHistoryRow(init: {
     outcome: init.outcome,
     completedAt: new Date(`${init.completedAtDate}T15:00:00Z`),
     elapsedMs: init.elapsedMs ?? 61_000,
-    hintsUsed: 0,
+    hintsUsed: init.hintsUsed ?? 0,
     guesses: init.guesses,
   });
 }
@@ -173,9 +174,9 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
       date: today,
       games: {
         // ADR-0008 rule 3: a lost Termo is PLAYED, never completed — and a
-        // played claim carries no duration.
+        // played claim carries no duration and no hint count.
         termo: { status: "played" },
-        sudoku: { status: "completed", elapsedMs: 61_000 },
+        sudoku: { status: "completed", elapsedMs: 61_000, hintsUsed: 0 },
         nonogram: { status: "pending" },
         binairo: { status: "pending" },
       },
@@ -214,8 +215,69 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
       games: {
         termo: { status: "completed" },
         sudoku: { status: "pending" },
-        nonogram: { status: "completed", elapsedMs: 512_000 },
+        nonogram: { status: "completed", elapsedMs: 512_000, hintsUsed: 0 },
         binairo: { status: "pending" },
+      },
+    });
+  });
+
+  it("T-API-S133: the completed grid game's claim carries the STORED hint count — 0 and 1 both round-trip — and never on Termo or a played game (#142)", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+
+    await insertHistoryRow({
+      userId,
+      game: "sudoku",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 512_000,
+      hintsUsed: 1,
+    });
+    await insertHistoryRow({
+      userId,
+      game: "binairo",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 407_000,
+      hintsUsed: 0,
+    });
+    // A WON Termo: completed on the wire, and no hint count — Termo ships no
+    // hint at all (ADR-0045 decision 1), so "sem dicas" would present as a
+    // virtue something that was never possible. Same suppression as its
+    // duration (ADR-0060 decision 2, annotations (b) and (f)).
+    await insertHistoryRow({
+      userId,
+      game: "termo",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      guesses: 4,
+    });
+    // A lost Termo's stored count is real and publishes nothing: a hint
+    // count beside a loss would frame it as a result (the `elapsedMs` rule,
+    // one field over).
+    await insertHistoryRow({
+      userId,
+      game: "nonogram",
+      date: today,
+      outcome: "lost",
+      completedAtDate: today,
+      hintsUsed: 1,
+      // `completions_guesses_check` pairs guesses with termo only; a grid
+      // row never carries one. A lost grid row is unreachable through the
+      // product and legal in the schema, which is exactly what makes it the
+      // cheapest "played publishes nothing" fixture at this seam.
+    });
+
+    expect(await readDay(token)).toEqual({
+      date: today,
+      games: {
+        termo: { status: "completed" },
+        sudoku: { status: "completed", elapsedMs: 512_000, hintsUsed: 1 },
+        nonogram: { status: "played" },
+        binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
       },
     });
   });

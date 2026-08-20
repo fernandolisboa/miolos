@@ -116,7 +116,10 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
    (`apps/api/app/stats/route.ts`) carries the bounded aggregates —
    per-game blocks, the Dias Perfeitos count, `todayTermoGuesses` — for
    its three consumers (stats screen, conclusion stat block, hub Termo
-   tile); `GET /stats/calendar` (`apps/api/app/stats/calendar/route.ts`)
+   tile) *(a fourth consumer since #142: the cross-device remote conclusion
+   — `RemoteConclusionView`, one lifted call per mounted view; an
+   enumeration of readers, not part of the closure rule — no field grows
+   and no endpoint is added, ADR-0065 consequence (a) sizes the count)*; `GET /stats/calendar` (`apps/api/app/stats/calendar/route.ts`)
    carries the unbounded-growing day enumeration for its one consumer
    (the stats screen). Both are verbatim clones of the `GET /streak`
    authenticated-READ template (ADR-0048): `z.strictObject` contracts
