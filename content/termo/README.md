@@ -18,7 +18,8 @@ exactly as with the grid-game generators.
 | File | Contents |
 |---|---|
 | `answers.csv` | 400 daily-answer words. Header `canonical,normalized`. Canonical is the correct pt-BR spelling (lowercase, accents/ç kept); normalized matches `^[a-z]{5}$`. |
-| `validation.txt` | 5,310 accepted-guess words, one normalized 5-letter word per line, sorted, unique. Superset of every `answers.csv` normalized form. |
+| `validation.txt` | 5,408 accepted-guess words, one normalized 5-letter word per line, sorted, unique. Superset of every `answers.csv` normalized form. |
+| `additions.txt` | 98 curated canonical forms the base lexicon is missing ([ADR-0062](../../docs/adr/0062-termo-guess-dictionary-gaps-close-with-curated-additions.md), issue #140): real, current pt-BR words attested in the frequency corpus, one per line, sorted by (normalized form, canonical). Merged by `pipeline.py` under the same normalization and blocklist as lexicon entries. Guess dictionary only — never a source of answers. |
 | `canonical-map.csv` | Header `normalized,canonical`. One row per validation word, mapping it to a canonical accented display form. When several accented words share a normalized form (e.g. `sabia`/`sábia`), the most frequent one in the subtitle corpus is the canonical; all colliding spellings remain guessable through the single normalized entry. |
 | `rejected-sample.txt` | 107 examples of rejected words with the constraint that rejected each (tab-separated). **Hand-assembled audit record from the curation pass** — the answer-stage rejections come from model judgment, which no script reproduces. |
 | `rejected-lexicon-sample.txt` | The mechanical, reproducible counterpart: a seeded random sample of lexicon-stage rejections, written by `pipeline.py` on every run. |
@@ -59,12 +60,18 @@ Raw source downloads are not committed; the URLs above are the record, and
    legitimate common-noun or verb reading like `silva`, `bento`, `marta`,
    `edite`, `tomas`, `rosa` are deliberately kept), and two corrupted source
    tokens (`ceemo`, `geemo` — truncated `-eemos` subjunctives).
-3. **`validation.txt`** = all surviving normalized forms, sorted and deduplicated.
-4. **`canonical-map.csv`** = for each normalized form, the colliding canonical
+3. **Curated additions** (`additions.txt`): canonical forms for real pt-BR
+   words the base lexicon is missing, merged as if they were lexicon entries
+   (same normalization, same blocklist assertion; the proper-noun filters do
+   not apply because each line is hand-reviewed). A line already present in
+   the base lexicon fails the run — the file can never silently duplicate
+   the source.
+4. **`validation.txt`** = all surviving normalized forms, sorted and deduplicated.
+5. **`canonical-map.csv`** = for each normalized form, the colliding canonical
    spelling with the highest OpenSubtitles frequency (alphabetical tiebreak).
-5. **Answer candidates** = normalized forms scored by the max frequency of any of
+6. **Answer candidates** = normalized forms scored by the max frequency of any of
    their canonical spellings, descending (`candidates.tsv`, top 2,500).
-6. **Curation** (`select_answers.py`): a hand-picked pool of 626 normalized forms
+7. **Curation** (`select_answers.py`): a hand-picked pool of 626 normalized forms
    chosen word by word from the ranked candidates against the answer constraints
    below, then the top 400 of that pool by corpus frequency became `answers.csv`.
    The frequency floor of the kept set is ≈5,400 subtitle occurrences — every
@@ -108,9 +115,12 @@ curation pass (see `rejected-sample.txt`).
 - Duplicate normalized forms in answers: **0**
 - Every answer's normalized form present in `validation.txt`: **yes (400/400)**
 - Every answer's canonical form normalizes exactly to its normalized form: **yes**
-- `validation.txt`: **5,310 lines**, unique, sorted, all matching `^[a-z]{5}$`
-- `canonical-map.csv`: **5,310 rows**, covers the validation set exactly; every
+- `validation.txt`: **5,408 lines**, unique, sorted, all matching `^[a-z]{5}$`
+- `canonical-map.csv`: **5,408 rows**, covers the validation set exactly; every
   canonical normalizes back to its key
+- Every `additions.txt` entry survives the pipeline into `validation.txt`
+  and is accepted by the shipped `isValidGuess` (pinned in
+  `packages/games/test/termo/word-list.test.ts`)
 - Normalized forms with more than one canonical spelling (sabia/sábia-style
   collisions): **520** (largest groups are 4-way ties: `calca`, `forca`,
   `troca`)
@@ -121,10 +131,17 @@ curation pass (see `rejected-sample.txt`).
   is absent, so the `sabia` collision set is `sabia`/`sábia` only. Harmless for
   gameplay (the normalized form is guessable either way) but canonical-map
   coverage of rare accent variants is only as good as the source lexicon.
-- 5,337 validation words is at the low end of the 5k–15k target; term.ooo
+  Membership gaps reported by players (issue #140: `áudio`, and a corpus
+  sweep found `podre`, `letal`, `doces`, `tchau`, `dócil`… — 98 in all) are
+  closed through `additions.txt` ([ADR-0062](../../docs/adr/0062-termo-guess-dictionary-gaps-close-with-curated-additions.md));
+  the additions pass reviewed every missing normalized form with an
+  aggregated corpus frequency ≥ 200, so remaining gaps are rarer than that
+  or absent from the subtitle corpus.
+- 5,408 validation words is at the low end of the 5k–15k target; term.ooo
   accepts more because it expands the full hunspell affix table. Swapping in a
   fully unmunched hunspell expansion later would only add rows, never break
-  existing ones.
+  existing ones — ADR-0062 records why that expansion was not shippable
+  offline when #140 was fixed, and leaves the door open.
 - The obscenity/slur blocklist is hand-made (24 normalized forms, including the
   slur-strength `bicha` and `vadia`, of which 16 actually occur in the source
   lexicon and are excluded from validation); it was not
