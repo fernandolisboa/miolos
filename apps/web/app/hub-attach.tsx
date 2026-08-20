@@ -157,6 +157,10 @@ export function HubAttach() {
               <Link className={styles.privacyLink} href={routes.privacy}>
                 {messages.attach.privacyLinkLabel}
               </Link>
+              {" · "}
+              <Link className={styles.privacyLink} href={routes.terms}>
+                {messages.attach.termsLinkLabel}
+              </Link>
             </p>
 
             {error !== null && (
