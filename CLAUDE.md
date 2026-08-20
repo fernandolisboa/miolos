@@ -24,6 +24,10 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See [`docs/agents/d
 
 `T-<AREA>-[S]<n>[<letter>]` on every named test; a new series letter is opened only when the previous space has become ambiguous. See [`docs/agents/test-ids.md`](./docs/agents/test-ids.md) for the per-area frontier and the burned slots.
 
+### Pending-on-Fernando ledger
+
+[`docs/pending-fernando.md`](./docs/pending-fernando.md) is the living list of actions and decisions only Fernando can take (credentials, production actions, product calls). Any PR, review or session that surfaces a new one **adds it there in the same change**; a discharged item moves to its Done table with date and evidence, never gets deleted, and is never re-asked. Fernando works through it with `/wizard`. An item that lives only in a PR body or issue comment is a bug in the process.
+
 ## Pipeline
 
 Development runs in phases. Each phase is a fresh session, started by pasting the previous phase's kickoff prompt.
