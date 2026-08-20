@@ -29,20 +29,28 @@ Two sessions in one day. The first built [`docs/pending-fernando.md`](../pending
 
 Frontier order: **#146** (dispatcher — fully unblocked today), then #64 / #104 / #158 (all decided, `ready-for-agent`), #149, #155, #106. #51 still wants Fernando's one-liner. Resend activation and #59 wait for him (ledger NOW §1–§2).
 
+## Addendum A — 2026-08-20, late session (Fernando present)
+
+- **#59 executed live**, Fernando approving in-session: `miolos_web` role created (`relacl`: `miolos_web=r` on `daily_puzzles` only; `sessions` select and `daily_puzzles` delete both denied, probes pasted on the PR), `WEB_DATABASE_URL` set in all three miolos-web environments, `db.ts` repointed **with no fallback** (`T-WEB-S290`), `turbo.json` env list widened, ADR-0026's deferral bullet amended to claim both enforcement points. Secret files deleted after use.
+- **#51 closed wontfix** (Fernando delegated). **#74 accepted** — bulk-extension; his live-generation preference recorded on the issue. **PR #135 decision 2 confirmed** ("fine").
+- **Fernando's UI feedback filed:** #160 (`/privacidade` + `/estatisticas` hug the left on wide screens), #161 (Termo hub button reads as the odd one out — likely #68's contrast root), #162 (onboarding card looks misplaced — the veto is on the look, the no-shift property must survive), #163 (archive as a real clickable calendar). **He announced more gameplay feedback per game is coming.**
+- **PostHog signup in progress**: guidance = Product Analytics + Error Tracking, **Session Replay unticked**; its Error Tracking may discharge #37's monitoring AC. Awaiting his Project API key.
+
 ## Kickoff prompt for the next session
 
 ```
-Read docs/handoffs/062-handoff-the-answer-batch.md, then docs/pending-fernando.md.
+Read docs/handoffs/062-handoff-the-answer-batch.md WITH Addendum A, then
+docs/pending-fernando.md.
 
-PREFLIGHT: main has 8e6c980 in history; #32/#64/#104 are ready-for-agent;
-#158 exists; gh secret list shows CRON_SECRET; #59 open ready-for-human.
-On mismatch: stop, read the newest addendum below before acting.
+PREFLIGHT: #59 CLOSED with its PR merged; #51 CLOSED; #160–#163 exist and
+are ready-for-agent; gh secret list shows CRON_SECRET.
+On mismatch: stop, read the newest addendum before acting.
 
-Route work by CLAUDE.md § tiers. Frontier order: #146 first (unblocked:
-CRON_SECRET set, Q1=1a Q2=2a on #32), then #64/#104/#158. Do NOT start
-#59 unless Fernando is present to approve permission prompts — plan is
-on the issue. Reserve test ids on the issue before step 5; T-WEB S290 is
-taken by #59. Take ~/miolos-session/gate-lock.sh before any suite run,
+Route work by CLAUDE.md § tiers. Frontier order: #146 first (fully
+unblocked), then #160–#163 (Fernando's own complaints — high signal),
+then #64/#104/#158. If Fernando pastes a PostHog Project API key, that
+starts #33. Reserve test ids on the issue before step 5 (T-WEB S290 is
+spent by #59). Take ~/miolos-session/gate-lock.sh before any suite run,
 git commit included. Update docs/pending-fernando.md in the same PR
 whenever an item for Fernando appears or is discharged. End the session
 with a handoff ≤120 lines + kickoff ≤15 lines — never skip it.

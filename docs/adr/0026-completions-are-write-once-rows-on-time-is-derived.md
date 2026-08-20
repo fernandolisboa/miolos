@@ -227,26 +227,28 @@ rows exist in production:
   (T-CORE-S106). Kept deliberately — Fernando's "needs no special case" —
   and the ordering prescription itself stands, with `on_time` COPIED as
   one more column in the repoint's pinned list.)*
-- **One enforcement point ships; the second is a filed follow-up, and this
-  ADR does not claim it exists.** What ships in #18 is the **module-graph
-  wall**: `completions`/`hint_grants` live off the root entry (decision 5),
-  `apps/web` carries ESLint `no-restricted-imports` bans on
-  `@miolos/db/publishing`, `@miolos/db/user` and `@miolos/db/testing` plus
-  table-name literal bans, and `apps/web/src/db.ts` carries
-  `import "server-only"` so a `"use client"` module cannot walk around any
-  of it. A **second, independent** enforcement point was designed — a
-  least-privilege `miolos_web` Neon role holding `usage on schema public`
-  and `select on daily_puzzles` and nothing else — and is **deferred to
-  issue [#59](https://github.com/fernandolisboa/miolos/issues/59)** (plan
-  017 §5.3, §20). It is deferred because
-  `DATABASE_URL` on the `miolos-web` Vercel project is managed by the
-  Neon–Vercel integration across Production, Preview and Development;
-  hand-overwriting it risks a silent re-sync reverting the credential, which
-  would make a "two independent enforcement points" claim quietly false
-  while reading as true — worse than not making it. Until #59 lands, the
-  database grant is **not** a second layer, and no reviewer should read one
-  into this ADR; #59's own acceptance criteria require this ADR to be
-  amended only once the grant is live.
+- **Two enforcement points, both live as of #59 (2026-08-20).** What
+  shipped in #18 is the **module-graph wall**: `completions`/`hint_grants`
+  live off the root entry (decision 5), `apps/web` carries ESLint
+  `no-restricted-imports` bans on `@miolos/db/publishing`,
+  `@miolos/db/user` and `@miolos/db/testing` plus table-name literal bans,
+  and `apps/web/src/db.ts` carries `import "server-only"` so a
+  `"use client"` module cannot walk around any of it. The **second,
+  independent** enforcement point — a least-privilege `miolos_web` Neon
+  role holding `usage on schema public` and `select on daily_puzzles` and
+  **nothing else** — is live via issue
+  [#59](https://github.com/fernandolisboa/miolos/issues/59) (plan 017
+  §5.3, §20): `apps/web` connects through **`WEB_DATABASE_URL`**, a
+  separately-named variable the Neon–Vercel integration does not manage,
+  with **no fallback** to the integration's `DATABASE_URL`, pinned by
+  `T-WEB-S290`. The separate name is the answer to the clobber question
+  that had deferred this: hand-overwriting the integration-managed
+  variable risked a silent re-sync reverting the credential, which would
+  have made this claim quietly false while reading as true. *(Annotation,
+  2026-08-20: this bullet originally recorded the deferral and instructed
+  reviewers not to read a second layer into this ADR; #59 landed — grant
+  evidence, `\dp` ACL and the denied `sessions`/`delete` probes, is on
+  #59's pull request — and the instruction is discharged.)*
 - **ADR-0022's flood-mint posture is falsified and restated.** That ADR
   accepted an unthrottled mint *"because flood-minted rows are unreferenced
   and harmless"*. They are no longer unreferenced: a minted user can now
