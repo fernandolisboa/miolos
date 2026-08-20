@@ -1,6 +1,6 @@
 # ADR-0061 — "Seen the introduction" is a `users` timestamp, merged earliest-wins, never device storage
 
-**Status:** Accepted — 2026-08-19 (issue #35, shipped in the PR that carries it)
+**Status:** Accepted — 2026-08-19 (issue #35, shipped in #150)
 **Depends on:** [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md), [ADR-0022](./0022-opaque-session-tokens-hashed-at-rest.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md)
 
 ## Context
