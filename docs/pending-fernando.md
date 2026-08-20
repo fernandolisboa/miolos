@@ -24,12 +24,10 @@ Fernando (2026-08-20): *will do when ready to run the wizard — not yet.* Stays
 - **Blocks:** email attach / account recovery / merge — live-but-invisible since 2026-08-13; also the email-hedge slice of #32.
 - **Source:** `docs/handoffs/032-handoff-21-merged-m1-complete.md` §6; wizard form in `docs/plans/031` §15.
 
-### 2. PostHog — finish the signup, paste the key (#33)
+### 2. ⚡ PostHog region — one word (us or eu)
 
-In progress 2026-08-20: onboarding guidance given — "I'll pick myself" → **Product Analytics + Error Tracking**, **Session Replay unticked** (hard rule).
-
-- **Do:** finish signup, then paste the **Project API key** (Settings → Project) into any session. That is the whole human part.
-- **Blocks:** #33 (telemetry) → #37. PostHog's Error Tracking likely also covers #37's error-monitoring AC — the #33/#37 sessions decide; if so, no separate Sentry-class signup is needed.
+- **Do:** look at your PostHog dashboard URL — does it start with `us.posthog.com` or `eu.posthog.com`? Answer in any session (or an agent reads it off the project settings during #33 if you don't).
+- Everything else PostHog is done — the token is delivered and stored (Done table).
 
 ---
 
@@ -90,6 +88,7 @@ Accumulated across handoffs 024, 026, 028, 034; none ever marked done. One sessi
 
 | Item | Was pending in | Evidence done |
 |---|---|---|
+| PostHog account + project token | NOW §2 (PostHog) | 2026-08-20: Fernando signed up (Product Analytics + Error Tracking, no Session Replay) and delivered the `phc_…` token; stored as `NEXT_PUBLIC_POSTHOG_KEY` ×3 envs on miolos-web; recorded on #33. Error Tracking may also discharge #37's monitoring AC |
 | #59 least-privilege web DB role | NOW §2 | 2026-08-20, Fernando present and approving: `miolos_web` role live (`relacl … miolos_web=r`, `sessions`/`delete` probes denied), `WEB_DATABASE_URL` in all 3 envs, code + ADR-0026 amendment in #59's PR |
 | #135 veto decision 2 (Termo cross-device rule) | STANDING | Fernando 2026-08-20: "fine" — rule confirmed, ADR-0060/0065 stand as shipped |
 | #74 answer-pool direction | STANDING | Fernando 2026-08-20: bulk-extension accepted for now; his live-generation preference recorded on #74 |
