@@ -183,10 +183,12 @@ export async function GET(request: NextRequest): Promise<Response> {
   try {
     await pruneSeenDays(db);
   } catch (thrown) {
+    // The error object rides as the second argument (the attach/confirm
+    // idiom) so the stack, class and any `cause` survive into the log of a
+    // failure nobody watches happen.
     console.error(
-      `seen-days retention delete failed (puzzles above published normally): ${
-        thrown instanceof Error ? thrown.message : String(thrown)
-      }`,
+      "cron-publish: seen-days retention delete failed (puzzles above published normally)",
+      thrown,
     );
   }
 

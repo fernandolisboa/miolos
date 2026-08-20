@@ -1,9 +1,10 @@
-import type {
-  CompletionOutcome,
-  DayRow,
-  Game,
-  HintGrantSource,
-  StreakRow,
+import {
+  LATE_SYNC_CREDIT_DAYS_BACK,
+  type CompletionOutcome,
+  type DayRow,
+  type Game,
+  type HintGrantSource,
+  type StreakRow,
 } from "@miolos/core";
 import { and, desc, eq, sql } from "drizzle-orm";
 
@@ -133,7 +134,8 @@ export async function listCompletionsForStreak(
  *
  * `onTime` is the STORED write-time verdict (#58, ADR-0066), projected like
  * every other reader here — never re-derived. No second spelling, and no
- * `completedAt`: the verdict travels, the instant does not. `elapsedMs` DOES travel since #141
+ * `completedAt`: the verdict travels, the instant does not. `elapsedMs`
+ * DOES travel since #141
  * — the hub tile consumes it (ADR-0060 decision 2 as annotated there) — and
  * it is a stored column, so projecting it changes neither the predicate nor
  * the index this read sits on. `hintsUsed` travels since #142 (ADR-0065) on
@@ -204,6 +206,25 @@ type CompletionWrite =
   | { readonly capped: true };
 
 /**
+ * The write input, named ONCE (#58 step-6 quality m2): before this type the
+ * same eight-field literal was inlined at `guardedInsertSelect` and all
+ * three `recordCompletion` signatures, and every new column paid the edit
+ * four times (`hintsUsed`, `guesses`, `onTime` each did). `onTime` is the
+ * write-time verdict, decided by the route and stored verbatim — see
+ * `recordCompletion`'s doc block for the arm rule it travels with.
+ */
+interface CompletionWriteInput {
+  userId: string;
+  game: Game;
+  date: string;
+  outcome: CompletionOutcome;
+  elapsedMs: number;
+  hintsUsed: number;
+  guesses?: number;
+  onTime: boolean;
+}
+
+/**
  * The ceiling folded INTO the insert, as one statement.
  *
  * This is the whole point of the shape and it is a correctness property,
@@ -235,7 +256,9 @@ type CompletionWrite =
  *   counts exactly the rows every reader projects as late. A CREDITED row
  *   (`on_time = true` on a past date) never enters this count — and never
  *   enters this ARM at all: the route passes a ceiling only when the
- *   write-time verdict is `false` (the §3.3 exemption, T-DB-S75).
+ *   write-time verdict is `false` (the §3.3 exemption, T-DB-S75 — a
+ *   call-site discipline enforced by review plus T-DB-S72/S75, not by
+ *   types; S72 itself calls this arm with `onTime: true` on purpose).
  * - **`completed_at` is `now()` written out**, because `INSERT ... SELECT`
  *   has no `DEFAULT` keyword available in its select list. It is the same
  *   DB clock the column's own `defaultNow()` would have used — still no JS
@@ -246,16 +269,7 @@ type CompletionWrite =
  *   promised.
  */
 function guardedInsertSelect(
-  input: {
-    userId: string;
-    game: Game;
-    date: string;
-    outcome: CompletionOutcome;
-    elapsedMs: number;
-    hintsUsed: number;
-    guesses?: number;
-    onTime: boolean;
-  },
+  input: CompletionWriteInput,
   ceiling: LateWriteCeiling,
 ) {
   return sql`select ${input.userId}::uuid, ${input.game}::text, ${input.date}::date, now(), ${input.outcome}::text, ${input.elapsedMs}::integer, ${input.hintsUsed}::integer, ${input.guesses ?? null}::integer, ${input.onTime}::boolean
@@ -291,9 +305,16 @@ function guardedInsertSelect(
  * the next rollover, land two days back, and store `false` — a permanently
  * lost streak day on a write-once row, the exact outcome #58 exists to
  * prevent. Safe: the credit is server-derived and unforgeable (a seen row
- * plus the 1-day window, never client input), bounded at ≤3 rows per user
- * per day by construction (one creditable date; three grid games; Termo
- * cannot be played offline, ADR-0039). T-DB-S75 pins it at the ceiling.
+ * plus the 1-day window, never client input), bounded at ≤4 rows per user
+ * per day by construction — one creditable date × four games. Not three:
+ * ADR-0039's scope note bounds offline PLAY, not this path — a
+ * fully-judged online Termo whose POST failed can queue and flush
+ * post-rollover as a credited Termo row. The pairing "ceiling supplied
+ * iff `onTime === false`" is a CALL-SITE DISCIPLINE, enforced by review
+ * plus T-DB-S72/S75 rather than by types: a discriminated input would ban
+ * the `{ onTime: true } + ceiling` call T-DB-S72 deliberately makes to
+ * prove verbatim storage through the guarded arm (the written dismissal
+ * is in PR #156). T-DB-S75 pins it at the ceiling.
  * With a ceiling the INSERT carries its own guard (`guardedInsertSelect`
  * above) and the result may be `capped`; without it — every daily and
  * every credited write — the statement and the return shape are exactly
@@ -306,43 +327,16 @@ function guardedInsertSelect(
  */
 export async function recordCompletion(
   db: Db,
-  input: {
-    userId: string;
-    game: Game;
-    date: string;
-    outcome: CompletionOutcome;
-    elapsedMs: number;
-    hintsUsed: number;
-    guesses?: number;
-    onTime: boolean;
-  },
+  input: CompletionWriteInput,
 ): Promise<Extract<CompletionWrite, { capped: false }>>;
 export async function recordCompletion(
   db: Db,
-  input: {
-    userId: string;
-    game: Game;
-    date: string;
-    outcome: CompletionOutcome;
-    elapsedMs: number;
-    hintsUsed: number;
-    guesses?: number;
-    onTime: boolean;
-  },
+  input: CompletionWriteInput,
   ceiling: LateWriteCeiling,
 ): Promise<CompletionWrite>;
 export async function recordCompletion(
   db: Db,
-  input: {
-    userId: string;
-    game: Game;
-    date: string;
-    outcome: CompletionOutcome;
-    elapsedMs: number;
-    hintsUsed: number;
-    guesses?: number;
-    onTime: boolean;
-  },
+  input: CompletionWriteInput,
   ceiling?: LateWriteCeiling,
 ): Promise<CompletionWrite> {
   // Bare .returning(): on the union Db type only the no-argument overload
@@ -399,24 +393,31 @@ export async function recordCompletion(
 /**
  * The multi-past-date guard's read (#58, ADR-0066; T-API-S139): has this
  * user, on the current São Paulo day (`today`, read off the DB clock by
- * the route), already written a CREDITED row — `on_time = true` — for a
- * past date other than `date`? `POST /completions` refuses the write with
- * `422 multi-date-sync` when it answers true, which is the enforceable
- * form of the decision's "refuse a sync carrying completions for more than
- * one distinct past date": each POST carries one completion, so "a sync"
- * is invisible server-side, and the property enforced is *per user per
- * writing day, at most one distinct past date is ever credited*. Distinct
- * DATES, not games — three grid games for one date is legitimate, which is
- * exactly what `date <> excluding` leaves alone.
+ * the route), already written a CREDITED row — `on_time = true` — for an
+ * IN-WINDOW past date other than `excludingDate`? `POST /completions`
+ * refuses the write with `422 multi-date-sync` when it answers true, which
+ * is the enforceable form of the decision's "refuse a sync carrying
+ * completions for more than one distinct past date": each POST carries one
+ * completion, so "a sync" is invisible server-side, and the property
+ * enforced is *per user per writing day, at most one distinct past date is
+ * ever credited*. Distinct DATES, not games — three grid games for one
+ * date is legitimate, which is exactly what `date <> excludingDate`
+ * leaves alone.
  *
- * A WIDENING TRIPWIRE, dead code by design under the 1-day credit window
- * (say so plainly so a reviewer does not flag it): a stored `true` on a
- * past date is only ever produced for exactly `today − 1`, one such date
- * exists per writing day, the same date is excluded here, and backfilled
- * trues fail `writtenOnSaoPauloDay(today)` — so no client, honest or not,
- * can reach the 422 while the window is 1. It ships because widening the
- * window is one constant edit away, and this guard is what keeps that edit
- * from silently widening what one dark day can bank. Read-then-act is
+ * A WIDENING TRIPWIRE, provably empty under the 1-day credit window: the
+ * predicate carries the window itself (`date >= today −
+ * LATE_SYNC_CREDIT_DAYS_BACK`), so its match set is
+ * `date ∈ [today − 1, today) ∧ date ≠ today − 1` — empty by CONSTRUCTION.
+ * The window conjunct is load-bearing, not belt-and-braces: without it the
+ * guard matched the rollover-straddle artefact (a credit whose `today`
+ * was read at 23:59:59.9 and whose INSERT landed after midnight stores
+ * `date = today − 2` relative to the NEXT writing day, `on_time = true`,
+ * written today) and answered 422 — terminal in the sync client — to the
+ * next day's legitimate credited flush: silent permanent loss of a streak
+ * day, the exact outcome #58 exists to prevent (step-6 correctness
+ * blocker; T-API-S139 pins the boundary). It ships because widening the
+ * window is one constant edit away, and the moment more than one
+ * in-window date exists the guard goes live and correct. Read-then-act is
  * accepted WITH ITS REASON (ADR-0066): under a 1-day window a concurrent
  * double-credit of two distinct dates is structurally impossible; any
  * widening must fold this guard into the insert (the step-6 F1 precedent).
@@ -424,8 +425,7 @@ export async function recordCompletion(
 export async function hasCreditedPastDateToday(
   db: Db,
   userId: string,
-  today: string,
-  excluding: string,
+  args: { today: string; excludingDate: string },
 ): Promise<boolean> {
   const rows = await db
     .select({ date: completions.date })
@@ -434,9 +434,10 @@ export async function hasCreditedPastDateToday(
       and(
         eq(completions.userId, userId),
         eq(completions.onTime, true),
-        sql`${completions.date} < ${today}`,
-        sql`${completions.date} <> ${excluding}`,
-        writtenOnSaoPauloDay(today),
+        sql`${completions.date} < ${args.today}`,
+        sql`${completions.date} >= ${args.today}::date - ${LATE_SYNC_CREDIT_DAYS_BACK}::int`,
+        sql`${completions.date} <> ${args.excludingDate}`,
+        writtenOnSaoPauloDay(args.today),
       ),
     )
     .limit(1);

@@ -60,6 +60,13 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
    amendments are #58's own, and nothing here exposes `onTime` on a wire
    contract or pre-empts "#58 changes the producer and nothing
    downstream".
+   *Annotation (#58,
+   [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)):*
+   *`onTimeSql()` is deleted — the single producer is now `onTimeAtWrite`
+   (packages/core), applied once at write time and stored on the row, and
+   this ADR's readers project the stored column. The single-producer
+   discipline this sentence was stating survives whole with the new
+   producer; the boundary held exactly as drawn.*
 
 2. **The calendar runs from the account's own birth day, and "missed" is
    an absence.** `since` is the SP calendar day of the user's
@@ -255,6 +262,10 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
   as a number, not a shrug.
 - #58, when implemented, changes the producer of `onTime` and nothing in
   this ADR — the row field is consumed as data, never recomputed.
+  *Annotation (#58,
+  [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)):*
+  *implemented; the prediction held on both halves — the producer changed
+  (decided at write, stored) and nothing in this ADR moved.*
 - ADR-0008's calendar consequence ("three visual states per date") is
   discharged: on time, late, missed, with Dia Perfeito as a marker on an
   on-time day only.

@@ -102,15 +102,17 @@ export function OPTIONS(): Response {
  *
  * THE ABUSE POSTURE, counted in neon-http round trips — the unit that bills,
  * and `src/session/service.ts` records the rule ("each statement is its own
- * neon-http round trip"). Three per guess, each its own trip: `resolveSession`
- * through `requireUserId` (plus a conditional `last_seen_at` bump, at most
- * once an hour per session), `todaySaoPaulo`, and
- * `getPublishedDailyWithSolution`. `GET /daily/<game>` is ONE. So this route
- * costs 3× per request, not less — the "strictly cheaper than the public
- * read" claim an earlier draft made is false and is withdrawn here and in
- * ADR-0038 consequence (f). `apps/web` calls `/daily/termo` ZERO times, while
- * a player who finishes a Termo calls this ~6× per day: ≈18 round trips per
- * player-day. **No rate limiting ships in #27**, and the posture rests on
+ * neon-http round trip"). FOUR per guess since #58 (ADR-0066 — the count
+ * was three before the seen-day write joined `resolveSession`), each its
+ * own trip: the session lookup and the seen-day write inside
+ * `resolveSession` through `requireUserId` (plus a conditional
+ * `last_seen_at` bump, at most once an hour per session), `todaySaoPaulo`,
+ * and `getPublishedDailyWithSolution`. `GET /daily/<game>` is ONE. So this
+ * route costs 4× per request, not less — the "strictly cheaper than the
+ * public read" claim an earlier draft made is false and is withdrawn here
+ * and in ADR-0038 consequence (f). `apps/web` calls `/daily/termo` ZERO
+ * times, while a player who finishes a Termo calls this ~6× per day: ≈24
+ * round trips per player-day. **No rate limiting ships in #27**, and the posture rests on
  * four things that do not depend on the comparison: the route is
  * authenticated where the public reads are not; it writes nothing; its work
  * is bounded by the schema at ≤6 words of exactly five bytes before any

@@ -14,7 +14,7 @@ import {
   todaySaoPaulo,
 } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
-import { completions } from "@miolos/db/user";
+import { completions, hasCreditedPastDateToday } from "@miolos/db/user";
 import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
@@ -2351,21 +2351,23 @@ describe("POST /completions — the late-sync credit (#58, ADR-0066)", () => {
     expect(stats.binairo.solved).toBe(1);
   });
 
-  it("T-API-S139: the multi-past-date guard — a second distinct credited past date on one writing day is 422 multi-date-sync, no row", async () => {
-    // UNREACHABLE FOR ANY CLIENT under window = 1 (the guard is a widening
-    // tripwire — hasCreditedPastDateToday's doc block carries the proof),
-    // so the precondition is manufactured RAW, via the same direct-insert
-    // idiom every history seed in this file uses: a credited row for a
-    // PAST date, written on the current SP day — a state production cannot
-    // produce today, which is exactly what makes the guard's teeth
-    // testable at all.
+  it("T-API-S139: the multi-past-date guard's window boundary — a stale straddle-shaped credit (two days back, written today) does not block yesterday's credit, and the predicate still trips on a second in-window credited date (the widening tripwire)", async () => {
+    // THE REAL BOUNDARY (step-6 correctness blocker). The rollover
+    // straddle mints exactly this row: a credit accepted at 23:59:59.9
+    // whose INSERT lands after midnight — read from the NEXT writing day
+    // it is `date = today − 2`, `on_time = true`, `completed_at` on
+    // today's SP day. The pre-fix guard (no window conjunct) matched it
+    // and answered a TERMINAL 422 to the next day's legitimate credited
+    // flush — silent permanent loss of a streak day. The window conjunct
+    // in `hasCreditedPastDateToday` excludes it; this arm proves the
+    // legitimate write now lands.
     const today = await todaySaoPaulo(ctx.db);
     const yesterday = addDays(today, -1);
     const { token, userId } = await createSession();
     await ctx.db.insert(completions).values({
       userId,
       game: "sudoku",
-      date: addDays(today, -3), // a DIFFERENT past date than the POST's
+      date: addDays(today, -2), // the straddle shape: out of window
       outcome: "won",
       // completed_at defaults to the DB clock's now — written on TODAY's
       // SP day, so `writtenOnSaoPauloDay(today)` holds of it.
@@ -2376,8 +2378,7 @@ describe("POST /completions — the late-sync credit (#58, ADR-0066)", () => {
 
     await seedSeenDay(userId, yesterday);
     const solution = await seedDaily("binairo", yesterday);
-    const rowsBefore = await completionRows();
-    const refused = await POST(
+    const credited = await POST(
       completionRequest({
         token,
         body: completionBody({
@@ -2387,27 +2388,30 @@ describe("POST /completions — the late-sync credit (#58, ADR-0066)", () => {
         }),
       }),
     );
-    expect(refused.status).toBe(422);
-    expect(await errorOf(refused)).toEqual({ error: "multi-date-sync" });
-    expect(await completionRows()).toHaveLength(rowsBefore.length);
-
-    // The guard refuses CREDITED writes only: the same request shape with
-    // no credit claim (an unseen archive date) still lands as late.
-    const archived = addDays(today, -30);
-    const archivedSolution = await seedDaily("sudoku", archived, 33);
-    const late = await POST(
-      completionRequest({
-        token,
-        body: completionBody({
-          game: "sudoku",
-          date: archived,
-          grid: archivedSolution,
-        }),
-      }),
+    expect(credited.status).toBe(200);
+    expect(completionResponseSchema.parse(await credited.json())).toMatchObject(
+      { onTime: true, recorded: true, date: yesterday },
     );
-    expect(late.status).toBe(200);
-    expect(completionResponseSchema.parse(await late.json())).toMatchObject({
-      onTime: false,
-    });
+
+    // THE TRIPWIRE ARM, pinned on the predicate directly: under window = 1
+    // the route can never reach the 422 (excluding yesterday, the match
+    // set `date ∈ [today−1, today) ∧ date ≠ today−1` is provably empty —
+    // second assertion), so the guard's teeth are pinned where they live.
+    // The credited yesterday row just written IS a second distinct
+    // in-window credited date from the viewpoint of any OTHER in-window
+    // date — exactly the state a widened window makes reachable, and the
+    // predicate trips on it.
+    await expect(
+      hasCreditedPastDateToday(ctx.db, userId, {
+        today,
+        excludingDate: addDays(today, -2),
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      hasCreditedPastDateToday(ctx.db, userId, {
+        today,
+        excludingDate: yesterday,
+      }),
+    ).resolves.toBe(false);
   });
 });

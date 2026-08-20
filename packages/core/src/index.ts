@@ -58,7 +58,11 @@ export {
 export { earnedMedals } from "./medals/derive";
 // #58 (ADR-0066): the write-time on-time rule and its 1-day credit window.
 // One caller — POST /completions; no read path re-derives on-time.
-export { LATE_SYNC_CREDIT_DAYS_BACK, onTimeAtWrite } from "./on-time";
+export {
+  LATE_SYNC_CREDIT_DAYS_BACK,
+  isWithinCreditWindow,
+  onTimeAtWrite,
+} from "./on-time";
 export { computeStreak, type StreakRow, type StreakStatus } from "./streak";
 export {
   defaultRemoteConfig,

@@ -2,7 +2,8 @@
 
 **Status:** Accepted — 2026-08-20 (issue #58, shipped in #156)
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
-**Amends:** [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md) — decision 2 (*"`on_time` is derived in SQL, never stored"*) and the Rejected entry *"A stored `on_time` (or `is_late`) boolean"* are **reversed**; decision 7's escalation is resolved; the merge consequence's *"a merge can never downgrade an on-time completion to a late one"* gains a falsified corner (decision 7 below).
+**Supersedes in part:** [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md) — decision 2 (*"`on_time` is derived in SQL, never stored"*, the ADR's title claim) and the Rejected entry *"A stored `on_time` (or `is_late`) boolean"* are **replaced outright**, not narrowed (`domain.md`'s form for a decision replaced whole; status stays Accepted on both sides).
+**Amends:** [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md) — decision 7's escalation is resolved; the merge consequence's *"a merge can never downgrade an on-time completion to a late one"* gains a falsified corner (decision 7 below). These two ARE amendments — the decisions stand, one sentence each moves — which is why this line coexists with the `Supersedes in part:` line above.
 **Amends:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md) — the consequence sentence *"'On time' is derivable … and must stay derivable, because ADR-0009 recomputes streaks from these rows"* is falsified in its mechanism: on-time is now **decided once at write time and stored on the row**. What that sentence was actually protecting — ADR-0009's *"a streak is always derivable from completion rows"* — is exactly what storage preserves (decision 2 below). The **Completed (on time)** verb's definition gains the credit clause: solved during its own São Paulo day, **or** synced exactly one day late by a user the server itself saw online on that day.
 **Amends:** [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md) — additive, as its header anticipated (*"#58's queued amendment … additive"*): seen days are a **write-time-only** input. The invariant sentence of decision 3 below is the amendment's whole content; the conclusion — completions are the source of truth, streaks recompute from them alone — is unchanged.
 
@@ -28,6 +29,11 @@ executed, not reopened.
    record → the completion still lands as **played/late** (ADR-0008's
    existing verbs), never for the streak or Dia Perfeito. The failure
    direction of every edge is the status quo — late — never a false credit.
+   The rule is **date-and-seen shaped, deliberately**: the server cannot
+   distinguish a queued offline flush from a deliberate archive solve of
+   the same date without trusting the client clock, which is the harder
+   invariant — see the archive-credit consequence below for what that
+   admits.
 
 2. **On-time is decided once, at write time, and stored** (`completions.on_time`).
    This is ADR-0009's own constraint forcing the storage ADR-0026 rejected:
@@ -75,17 +81,26 @@ executed, not reopened.
    Dates, not games: three grid games for one date are legitimate. Before
    storing a past-date credit the route consults
    `hasCreditedPastDateToday`; a hit is **`422 multi-date-sync`**, no row —
-   422 is already terminal in the sync client, so no client change. Under
-   window = 1 the guard is **unreachable for any client, honest or not** (a
-   stored past-date `true` is only ever minted for exactly `today − 1`, one
-   such date exists per writing day, the same date is excluded, and
-   backfilled trues fail the written-today predicate): it ships as a
-   deliberate **widening tripwire**. Read-then-act is accepted **with its
-   reason**: under a 1-day window a concurrent double-credit of two
-   distinct dates is structurally impossible. **Revisit trigger: any
-   widening of the window must fold this guard into the insert** (the
-   step-6 F1 precedent) — and must revisit decision 5's predicate and this
-   guard's per-day arithmetic together.
+   422 is already terminal in the sync client, so no client change. The
+   guard's predicate **carries the credit window itself** (`date >= today −
+   LATE_SYNC_CREDIT_DAYS_BACK`), so under window = 1 its match set —
+   `date ∈ [today − 1, today) ∧ date ≠ today − 1` — is **empty by
+   construction**: provably dead code, not dead-by-argument. The window
+   conjunct is load-bearing (step-7): the argument-based "unreachable for
+   any client" claim an earlier draft made was **false** — the
+   rollover-straddle row (a credit whose `today` was read at 23:59:59.9
+   and whose INSERT landed after midnight is, from the next writing day,
+   a credited `today − 2` row written today) matched the unwindowed
+   predicate and turned the next day's legitimate credited flush into a
+   terminal 422: silent permanent loss of a streak day. T-API-S139 pins
+   the boundary and the tripwire. It ships as a deliberate **widening
+   tripwire**: the moment more than one in-window date exists, the guard
+   goes live and correct. Read-then-act is accepted **with its reason**:
+   under a 1-day window a concurrent double-credit of two distinct dates
+   is structurally impossible. **Revisit trigger: any widening of the
+   window must fold this guard into the insert** (the step-6 F1
+   precedent) — and must revisit decision 5's predicate and this guard's
+   per-day arithmetic together.
 
 7. **The merge needs no special case, and one theorem dies.** `on_time` is
    COPIED by the repoint (T-DB-S24's pinned column list); `user_seen_days`
@@ -107,10 +122,17 @@ executed, not reopened.
    rollover, land two days back, and store `false` — a permanently lost
    streak day on a write-once row, the exact outcome #58 exists to prevent.
    Safe because the credit is server-derived and unforgeable (a seen row
-   plus the 1-day window, never client input) and bounded at ≤3 rows per
-   user per day by construction (one creditable date; three grid games;
-   Termo cannot be played offline, ADR-0039). The guarded arm's count
-   predicate flips to the stored `not on_time` (T-DB-S75).
+   plus the 1-day window, never client input) and bounded at **≤4 rows per
+   user per day** by construction — one creditable date × four games. Not
+   three: ADR-0039's scope note bounds offline *play*, not this path — a
+   fully-judged online Termo whose POST failed can queue and flush
+   post-rollover as a credited Termo row (an earlier draft's "≤3" cited
+   ADR-0039 for a path it does not govern). The guarded arm's count
+   predicate flips to the stored `not on_time` (T-DB-S75). The "ceiling
+   iff `onTime === false`" pairing is a call-site discipline, enforced by
+   review plus T-DB-S72/S75 rather than by types (T-DB-S72 deliberately
+   drives the guarded arm with `onTime: true` to prove verbatim storage;
+   the written dismissal is in PR #156).
 
 9. **Storage-as-authority migration.** Migration 0008 (pre-push, additive
    only: the table; the column with a **temporary** DB default `false`; a
@@ -146,8 +168,65 @@ executed, not reopened.
 - **#18's promise is made true**: *"a connection drop mid-puzzle never
   costs the day"* now holds for the player the server saw — ADR-0026
   decision 7 quoted it as contradicted; this ADR closes it.
-- The beneficiaries are the three grid games; Termo cannot be played
-  offline at all (ADR-0039), so nothing here touches it.
+- **The archive-credit corner, named honestly.** Within the 1-day window,
+  a SEEN user's *archive* solve of yesterday's daily is credited — streak,
+  time statistics, Dia Perfeito and on-time medals included. Unavoidable
+  under decision 1's shape: the server cannot distinguish a queued offline
+  flush from a deliberate archive solve of the same date without trusting
+  the client clock, which is the harder invariant. So the archive is, for
+  exactly one day back and only for a user the server saw on that day, a
+  streak-repair surface. Accepted and intended; `CONTEXT.md`'s **Late
+  completion** row and ADR-0053's #58 annotation carve this class out.
+- **The idle-online rolling grace, which the going-dark argument does not
+  cover.** The Rejected bullet's *"going dark banks at most one day and
+  forfeits every day spent dark"* is sound for the disconnecting attacker
+  and says nothing about the cheaper persona the rule creates: a user who
+  opens the app daily and plays nothing accrues a seen row at zero cost,
+  forfeits nothing, and may solve day `D` any time on `D + 1` for full
+  credit. In practice the streak now means *"solved within one day of a
+  day you visited"* — a rolling one-day grace for every daily visitor.
+  Accepted, intended, and recorded here so a later reader does not
+  mistake it for a bug.
+- **"Seen" is weaker than "opened the app", and that is accepted with the
+  reason stated.** The session cookie is `SameSite=Lax`, so a cross-site
+  TOP-LEVEL navigation or redirect a third-party page controls carries it
+  to an unguarded GET (e.g. `GET /streak`, no origin guard by design) and
+  writes a seen day the user did not choose. The failure direction
+  favours the victim (they gain a credit they could have earned by
+  visiting), the write points serve unguarded GETs by design, and the
+  induced fact grants nothing a genuine visit would not — so no origin /
+  `Sec-Fetch-Site` condition is added. Decision 1's "the server recorded
+  the user online" therefore reads precisely: "a request bearing this
+  user's cookie reached the API on that day".
+- **What this costs, in the unit that bills** (neon-http round trips; the
+  cost the rejected-alternatives bullet only gestured at): every
+  authenticated route is **+1** — `GET /day` goes 3 → 4, `POST
+  /termo/guess` goes 3 → 4 (ADR-0038 consequence (f) is annotated with
+  the corrected ≈24/player-day figure). #143's visible-tab 60-second poll
+  multiplies it: one visible hub tab is 60 seen-writes/hour, so
+  `user_seen_days` absorbs the app's entire authenticated request rate as
+  statements, all but the first per user per SP day no-ops
+  (`recordSeenDay` pre-filters existence, so the no-op path writes no
+  tuple). **Named revisit signal**: if p95 `GET /day` latency degrades
+  measurably after launch, or `user_seen_days` statements become a
+  visible share of Neon compute-hours on the usage dashboard, the seam is
+  `recordSeenDay` (decision 4) and the first candidates are the CTE fold
+  and the per-instance memo that decision rejected as unmeasured — the
+  owner is whoever picks up the performance follow-up, with this bullet
+  as the trigger's record. No latency evidence ships with this PR (the
+  suite runs on PGlite, where the round trip does not exist); the
+  asymmetry with the "unmeasured wins" dismissal is acknowledged rather
+  than implied away.
+- **A credited flush and the client's copy disagree, knowingly.** The
+  completion response carries `onTime: true` for a credited yesterday
+  write, and the client parses and discards it — a RECORDED decision
+  (ADR-0054 decision 3: no client surface may claim *when* a day was
+  solved; `acceptResponse` discards `onTime` exactly as it discards the
+  server outcome). So the archive late-result panel shows its
+  "solved later" copy for a day the server credited. Honouring the field
+  would need a versioned local-record schema change and would contradict
+  ADR-0054 decision 3 — the gap is recorded here instead of patched
+  against a standing decision.
 - No client change: request schema unchanged, `completionResponseSchema`
   already carries `onTime`, 422 already terminal and 429 already
   non-terminal in the sync ladder, and the date-descending flush order

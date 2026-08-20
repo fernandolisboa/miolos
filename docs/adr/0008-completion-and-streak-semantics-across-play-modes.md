@@ -17,7 +17,7 @@
 
 Three verbs, used consistently from here on:
 
-- **Completed (on time)** — the puzzle was solved during its own `America/Sao_Paulo` day. The only thing that feeds the streak.
+- **Completed (on time)** — the puzzle was solved during its own `America/Sao_Paulo` day. The only thing that feeds the streak. *(Amended at #58 — [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md): the verb gains the credit clause — solved during its own SP day, **or** synced exactly one day late by a user the server itself saw online on that day (`user_seen_days`). Decided once at write time and stored on the row. What the verb feeds is unchanged.)*
 - **Completed late** — a past daily solved from the archive.
 - **Played** — engaged to a terminal state without winning. Only Termo can end here.
 
@@ -37,7 +37,7 @@ The rules:
 
 ## Consequences
 
-- The completions table must record, per (user, puzzle): when it was completed, the puzzle's own date, and the outcome (won / lost, the latter Termo-only). "On time" is derivable — `completed_at` falls within the puzzle's `America/Sao_Paulo` day — and must stay derivable, because [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md) recomputes streaks from these rows.
+- The completions table must record, per (user, puzzle): when it was completed, the puzzle's own date, and the outcome (won / lost, the latter Termo-only). "On time" is derivable — `completed_at` falls within the puzzle's `America/Sao_Paulo` day — and must stay derivable, because [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md) recomputes streaks from these rows. *(Amended at #58 — [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md): falsified in its mechanism — on-time is now decided once at write time and STORED on the row, never re-derived at read time. What this sentence was actually protecting, ADR-0009's "a streak is always derivable from completion rows", is exactly what the storage preserves.)*
 - A lost Termo still writes a completion-shaped row (it feeds the distribution); the outcome field is what excludes it from streak arithmetic. The row is written once — a loss followed by an archive replay does not reopen the daily.
 - The calendar UI needs three visual states per date: completed on time, completed late, and (implicitly) missed.
 - These verbs go into `CONTEXT.md`; issue titles and test names use them.

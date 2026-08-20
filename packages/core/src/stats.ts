@@ -364,7 +364,8 @@ export function computeStats(
   // `onTimeAtWrite` answers `true` unconditionally when the puzzle's date
   // IS the DB clock's today (#58, ADR-0066), so the stored column agrees.
   // No `onTime` conjunct, on purpose: adding one would be a second,
-  // redundant spelling of that construction (plan 033 §4.5). The MINIMUM over qualifying rows
+  // redundant spelling of that construction (plan 033 §4.5). The MINIMUM
+  // over qualifying rows
   // — not `find` — keeps the function total AND order-independent over its
   // type: the composite PK makes duplicate (game, date) rows unreachable
   // in production, but a permutation of a duplicate-carrying input must

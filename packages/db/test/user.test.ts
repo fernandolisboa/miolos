@@ -1306,18 +1306,26 @@ describe("seen days (#58, ADR-0066)", () => {
     expect(nextLate).toMatchObject({ capped: false, recorded: true });
   });
 
-  it("T-DB-S73: the migration backfill equals the old read-time derivation, promotes only, and re-runs as a no-op (a pin — ADR-0023's vocabulary)", async () => {
+  it("T-DB-S73: the migration backfill equals the old read-time derivation, promotes only, re-runs as a no-op, and 0009's sweep is the same statement (a pin — ADR-0023's vocabulary)", async () => {
     const { readFileSync } = await import("node:fs");
-    const migration = readFileSync(
-      new URL("../migrations/0008_classy_ink.sql", import.meta.url),
-      "utf8",
-    );
-    const sweep = migration
-      .split("--> statement-breakpoint")
-      .find((statement) => statement.includes('UPDATE "completions"'));
+    // The SQL alone, `--` header lines stripped: the two files carry
+    // different (deliberate) comment headers around the same statement.
+    const sweepOf = (file: string): string | undefined =>
+      readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8")
+        .split("--> statement-breakpoint")
+        .find((statement) => statement.includes('UPDATE "completions"'))
+        ?.split("\n")
+        .filter((line) => !line.trimStart().startsWith("--"))
+        .join("\n")
+        .trim();
+    const sweep = sweepOf("0008_classy_ink.sql");
     if (sweep === undefined) {
       throw new Error("migration 0008 lost its backfill UPDATE");
     }
+    // 0008's comment claims "It is 0009's sweep, the same statement,
+    // deliberately" — pinned MECHANICALLY here (step-6 quality M2), the
+    // T-DB-S24 derive-don't-copy spirit: a drifted hand copy goes red.
+    expect(sweepOf("0009_honest_repair.sql")).toBe(sweep);
 
     const userId = await createUser();
     // Four shapes, all with explicit instants so no clock fake is needed:

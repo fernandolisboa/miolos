@@ -398,6 +398,16 @@ extension point in that route with no tripwire on it.
   ships one: a 50-per-user-per-São-Paulo-day ceiling on late completions,
   ADR-0053 decision 13.)*
 
+  *Annotation (#58,
+  [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)):*
+  *the round-trip figure moves again — `resolveSession` now issues a second
+  statement (the seen-day write), so a guess costs **four** trips, the
+  route is 4× `GET /daily/<game>`, and a finished Termo is ≈24 trips per
+  player-day, not ≈18. This paragraph exists because a false cost claim
+  was once shipped and withdrawn; the #58 change invalidated the corrected
+  number and this annotation restores it in the same place. The posture is
+  otherwise unchanged.*
+
   Two honest caveats: the cross-site guard is *not* load-bearing here, because
   `isCrossSiteWrite` denies on positive evidence only
   (`apps/api/src/session/origin-guard.ts:13-31`) and `curl` walks past it — what
