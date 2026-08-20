@@ -261,6 +261,12 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       '  import("../play/play-record");',
       '  import("../binairo/use-binairo-play");',
       '  import("@miolos/db");',
+      // #145 step 7b — the dynamic arm of the T-LINT-S17 widening above:
+      // the lazy re-export module and the two per-game conclusion
+      // wrappers, each one hop from the banned conclusion graph.
+      '  import("../play/conclusion-lazy");',
+      '  import("../nonogram/nonogram-conclusion");',
+      '  import("../termo/termo-conclusion");',
     ];
     for (const door of doors) {
       const source = ["export const load = () =>", door, ""].join("\n");
@@ -290,6 +296,15 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../sudoku/sudoku-screen",
       "../nonogram/nonogram-screen",
       "../play/conclusion-view",
+      // #145 step 7b — the same claim widened, no new id (the T-DB-9a /
+      // T-LINT-S39/S40 precedent: a ban list gaining a name is the same
+      // claim about the same gate). `conclusion-lazy` RE-EXPORTS the two
+      // conclusion views, and the two per-game wrappers import
+      // `conclusion-view` statically — each a one-hop door the step-7b
+      // review measured CLEAN before these entries existed.
+      "../play/conclusion-lazy",
+      "../nonogram/nonogram-conclusion",
+      "../termo/termo-conclusion",
     ];
     for (const door of doors) {
       const source = [

@@ -809,11 +809,24 @@ describe("re-entering a finished day (T-WEB-9c)", () => {
 
     const { container } = render(<BinairoScreen daily={DAILY} />);
 
+    // Before the flush, a CONCLUSION-SHAPED frame is already painted —
+    // asserted positively (#145 step 7b, major 3): the old "no playable
+    // board" check was satisfied by an EMPTY container, which is exactly
+    // the blank frame D28's discipline forbids. The attribute selector is
+    // deliberately value-free because the frame is order-dependent in a
+    // shared module registry: cold, it is `ConclusionLoading`'s boundary
+    // skeleton; warm (an earlier test in this file already flushed the
+    // chunk, exactly like the shipped preload), it is the conclusion
+    // itself. The COLD frame is pinned deterministically in
+    // `conclusion-lazy.test.tsx` (T-WEB-S288), which resets the registry.
+    const frame = container.querySelector("[data-conclusion-state]");
+    expect(frame).not.toBeNull();
+    expect(frame?.childElementCount).toBeGreaterThan(0);
+    expect(container.querySelector("[data-cell-index]")).toBeNull();
     // Resolve the conclusion's next/dynamic boundary (#145 step 7,
     // ADR-0054 decision 15) — deterministic under fake timers: awaiting
     // the same import the lazy component awaits flushes its resolution
-    // without a timer-driven waitFor. No playable board paints meanwhile.
-    expect(container.querySelector("[data-cell-index]")).toBeNull();
+    // without a timer-driven waitFor.
     await act(async () => {
       await import("../src/play/conclusion-view");
     });

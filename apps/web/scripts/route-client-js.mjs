@@ -126,7 +126,11 @@
  * `/<jogo>/concluido` pages keep static imports for their server render.
  * Measured on that merged build: binairo +18.9, nonogram +20.9, sudoku
  * +15.1, termo +52.3 — `/nonogram`'s slack is 19.1 KB. Re-measure rather
- * than quote; these figures date from 2026-08-20.
+ * than quote; these figures date from 2026-08-20. Step 7b attached the
+ * boundary's failure story (loading skeleton + retry-once fallback,
+ * ~2.7–2.9 raw KB per play route) and re-measured: binairo +21.8,
+ * nonogram +23.6, sudoku +18.0, termo +54.9 — `/nonogram`'s slack is
+ * 16.4 KB. Same date.
  *
  * (An earlier version of this paragraph quoted #19's 36.3 / 32.6 / 38.3 and
  * a 1.7 KB slack — already drifted to 33.5 / 29.7 / 35.6 on `main` by #34,

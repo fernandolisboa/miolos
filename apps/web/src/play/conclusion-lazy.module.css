@@ -1,0 +1,119 @@
+/* The lazy conclusion boundary's OWN two frames (#145 step 7b): the pending
+   skeleton `ConclusionLoading` and the chunk-failure card
+   `ConclusionChunkFallback`. A separate sheet from
+   `conclusion-view.module.css` on purpose — importing that sheet here would
+   put the conclusion's full CSS back into every play route's first paint,
+   and CSS Modules hash per file anyway (the `hub-day-state.tsx` reason).
+
+   DELIBERATELY ACCENT-FREE. The pending frame renders before any game
+   context exists (`next/dynamic`'s loading component receives no props), and
+   the fallback keeps the same neutral chrome: `ink-on-accent.test.ts` pins a
+   CLOSED list of accent rings (T-WEB-S73) and this transient/degraded pair
+   earns no entry in it. Paper, line and ink tokens only.
+
+   Every rule is anchored on a local class: Next compiles CSS Modules in
+   css-loader's `pure` mode, so a bare type selector either fails the build
+   or leaks globally (plan 017 risk 15). */
+
+.page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-11) var(--space-6);
+}
+
+/* The same card silhouette as `conclusion-view.module.css`'s
+   `.skeletonCard`, minus the accent-tinted shadow (see the header). */
+.skeletonCard {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  height: 280px;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg) color-mix(in srgb, var(--ink) 14%, transparent);
+  transform: rotate(-0.5deg);
+}
+
+.fallbackCard {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg) color-mix(in srgb, var(--ink) 14%, transparent);
+  padding: var(--space-12);
+  transform: rotate(-0.5deg);
+}
+
+.kicker {
+  margin: 0;
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.titleRow {
+  margin-top: 10px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 550;
+  line-height: 1.15;
+}
+
+/* The stamp's honest minimum: label and frozen time, ink ring rather than
+   the accent ring (the closed-list reason above), no settle animation — a
+   degraded frame celebrates quietly. No `font-variant-numeric` on the time:
+   `tabular-nums` on Fraunces is a measured no-op (ADR-0036) and the pairing
+   is what `aligning-numerals.test.ts` hunts; this is a single frozen value. */
+.stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 150px;
+  margin-top: var(--space-6);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  color: var(--ink);
+}
+
+.stampLabel {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.stampTime {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.back {
+  display: inline-block;
+  margin-top: var(--space-6);
+  color: var(--ink);
+}
+
+@media (max-width: 768px) {
+  .skeletonCard {
+    height: 220px;
+  }
+
+  .fallbackCard {
+    padding: var(--space-8);
+  }
+}

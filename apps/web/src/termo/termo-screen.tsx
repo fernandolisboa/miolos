@@ -1,12 +1,16 @@
 "use client";
 
 import type { DailyTermoResponse } from "@miolos/core";
-import nextDynamic from "next/dynamic";
 import { useEffect } from "react";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
-import { RemoteConclusionView } from "../play/conclusion-lazy";
+import {
+  ConclusionChunkFallback,
+  preloadTermoConclusion,
+  RemoteConclusionView,
+  resilientConclusion,
+} from "../play/conclusion-lazy";
 import { useServerDayClaim } from "../play/day-state";
 import { elapsedMs } from "../play/timer";
 import { isClosedAndFrozen } from "../play/use-play-lifecycle";
@@ -14,16 +18,23 @@ import { PlaySkeleton, PlayView } from "./play-view";
 import { useTermoPlay } from "./use-termo-play";
 
 /**
- * The per-game conclusion wrapper rides the same `next/dynamic` boundary
- * as `conclusion-lazy.tsx` (#145 step 7, ADR-0054 decision 15): this
+ * The per-game conclusion wrapper rides the same lazy boundary as
+ * `conclusion-lazy.tsx` (#145 step 7, ADR-0054 decision 15): this
  * screen root is `/termo`'s first-load set, and the wrapper statically
  * imports the whole conclusion tree. `/termo/concluido` keeps its own
  * STATIC import of the wrapper — that segment's server render is the
  * bookmark/detect surface and must keep carrying real markup.
+ * `resilientConclusion` attaches the pending skeleton and the
+ * retry-then-fallback failure story (#145 step-7b, blocker 2); the
+ * fallback carries NO stamp, because a Termo conclusion never shows a
+ * time (ADR-0045 decision 4) and a lost board must not wear the stamp
+ * word — the titled card understates and never lies.
  */
-const TermoConclusion = nextDynamic(
+const TermoConclusion = resilientConclusion<
+  Parameters<typeof import("./termo-conclusion").TermoConclusion>[0]
+>(
   async () => (await import("./termo-conclusion")).TermoConclusion,
-  { ssr: false },
+  () => <ConclusionChunkFallback copy={messages.games.termo.conclusion} />,
 );
 
 /**
@@ -80,11 +91,12 @@ export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
   // route's first-load set, and this background import is what makes the
   // win-moment swap resolve from the module cache instead of flashing a
   // blank where the celebration goes. A code chunk, never puzzle content —
-  // ADR-0004 untouched. Importing the per-game wrapper pulls
-  // `conclusion-view` transitively, so one preload warms the remote view's
-  // chunk too.
+  // ADR-0004 untouched. The named preload warms the per-game wrapper AND,
+  // through its static import, the shared conclusion tree — and being a
+  // named export of `conclusion-lazy` is what makes the warm testable
+  // (T-WEB-S289).
   useEffect(() => {
-    void import("./termo-conclusion");
+    preloadTermoConclusion();
   }, []);
 
   // The server told us this day is gone (a 404 from the guess route), so the

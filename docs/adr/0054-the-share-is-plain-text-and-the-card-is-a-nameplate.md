@@ -1030,7 +1030,20 @@ not come.
     module cache), while the `/<jogo>/concluido` pages keep their static
     imports — that segment's server render is the bookmark/detect surface.
     Measured on the merged build: binairo +18.9, nonogram +20.9, sudoku
-    +15.1, termo +52.3 — `/nonogram`'s slack is 19.1 KB.)*
+    +15.1, termo +52.3 — `/nonogram`'s slack is 19.1 KB. **The boundary
+    carries its own failure story** (#145 step 7b): a pending skeleton, one
+    retry on a failed chunk, and a terminal static fallback composed from
+    the in-memory record (the stamp word and time) — that fallback is the
+    mechanism that keeps ADR-0028 D26's "finishing offline works" true now
+    that the conclusion is no longer in the play routes' first-load sets
+    and `sw.js` deliberately caches nothing (ADR-0064 decision 5).
+    Re-measured with the failure story attached: binairo +21.8, nonogram
+    +23.6, sudoku +18.0, termo +54.9 — `/nonogram`'s slack is 16.4 KB. And
+    decision 15's other half was paid in the same pass: `conclusion-lazy`
+    re-exports the banned conclusion graph, so it — and the two per-game
+    wrappers — entered the free-play wall by name, per this ADR's own
+    one-hop rule above ("a one-hop-reachable module needs a wall
+    entry").)*
 
     **Nothing else on any list moves.** No new page, so `impeccable.yml`'s URL
     lists, `route-ssr.test.tsx`'s `ROUTES` table, `sitemap.ts`'s path list and
