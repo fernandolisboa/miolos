@@ -1,6 +1,6 @@
 # ADR-0064 — Streak-at-risk is a derived decision: read-time window, per-endpoint consent, claim-first ledger, one dispatcher
 
-**Status:** Accepted — 2026-08-20 (issue #32, shipped in #TBD)
+**Status:** Accepted — 2026-08-20 (issue #32, shipped in #154)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0012](./0012-minimal-lgpd-ships-with-email-attach.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0025](./0025-remote-config-is-a-database-table.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md), [ADR-0061](./0061-onboarding-seen-is-a-users-timestamp-merged-earliest-wins.md)
 **Amends:** [ADR-0061](./0061-onboarding-seen-is-a-users-timestamp-merged-earliest-wins.md) — decision 2's two-column enumeration of statement 5d, which now folds three (annotation (a) there); the decision stands
 
