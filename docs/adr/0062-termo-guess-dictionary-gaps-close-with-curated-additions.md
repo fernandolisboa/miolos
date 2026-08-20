@@ -1,6 +1,6 @@
 # ADR-0062 — Termo guess-dictionary gaps close with curated additions, not a hunspell expansion
 
-**Status:** Accepted — 2026-08-20 (issue #140, shipped in #TBD)
+**Status:** Accepted — 2026-08-20 (issue #140, shipped in #152)
 **Depends on:** [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)
 
 ## Context
