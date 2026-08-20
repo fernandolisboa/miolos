@@ -1011,3 +1011,32 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
     );
   });
 });
+
+describe("users.onboarding_seen_at (migration 0006, #35, ADR-0061)", () => {
+  it("T-DB-S62: the column exists on users, is nullable with no default, and a freshly minted user has it NULL", async () => {
+    // The migration's own shape, read from the live catalog: nullable, no
+    // default — every existing row satisfies it instantly, which is what
+    // made applying 0006 ahead of the deploy a provable non-event.
+    const catalog = await ctx.db.execute(sql`
+      select is_nullable, column_default, data_type
+        from information_schema.columns
+       where table_name = 'users' and column_name = 'onboarding_seen_at'
+    `);
+    expect(catalog.rows).toEqual([
+      {
+        is_nullable: "YES",
+        column_default: null,
+        data_type: "timestamp with time zone",
+      },
+    ]);
+
+    // A mint-shaped insert (`values({})` — mintSession's own statement):
+    // the fact starts NULL, i.e. "never seen", for every new identity.
+    const userId = await createUser();
+    const rows = await ctx.db
+      .select({ onboardingSeenAt: users.onboardingSeenAt })
+      .from(users)
+      .where(eq(users.id, userId));
+    expect(rows).toEqual([{ onboardingSeenAt: null }]);
+  });
+});

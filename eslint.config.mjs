@@ -306,6 +306,18 @@ const freePlayBannedModuleGroups = [
       "free play never touches identity or the attach flow: the attach client, hook and hub island are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0050).",
   },
   {
+    // #35: the onboarding modules reach identity (the session mint via
+    // `ensureSession`) and the hub page one hop in — banned by name like
+    // the attach group above (the napkin's one-hop rule: any module newly
+    // one hop from a walled value enters both the static group and the
+    // dynamic regex, with probes). Both specifier shapes on purpose:
+    // `**/onboarding/**` does not match a bare `../onboarding`, and
+    // `**/hub-onboarding` closes the app-dir island.
+    group: ["**/onboarding", "**/onboarding/**", "**/hub-onboarding"],
+    message:
+      "free play never touches identity or the first-visit introduction: the onboarding client, hook and hub island are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0061).",
+  },
+  {
     // #29: the stats client and hooks reach the network and server-derived
     // aggregates, and the /estatisticas screen root reaches them one hop in
     // — banned by name like the streak group above (the napkin's one-hop
@@ -371,9 +383,9 @@ const freePlayDynamicBannedModule = {
     // `../day/day-truth` and matches NEITHER `../play/day-state` NOR
     // `../../app/hub-day-state`, whose own literal names are already in this
     // alternation, where they belong.
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|share-text|share-button)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|share-text|share-button)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
   message:
-    "free play records nothing, fetches nothing, never touches Termo, the streak, the day, the statistics, the medals or the attach flow: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060).",
+    "free play records nothing, fetches nothing, never touches Termo, the streak, the day, the statistics, the medals, the attach flow or the onboarding flow: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061).",
 };
 
 // (4) THE OG WALL's own ban (#34, ADR-0054 decisions 8 and 15). Everything

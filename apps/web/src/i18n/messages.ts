@@ -703,6 +703,24 @@ export const messages = {
     },
   },
   /**
+   * The first-visit introduction (#35, ADR-0061). Sells the ritual — the
+   * four dailies, the sequência, the virada — and nothing else: per-game
+   * rules live on the play screens. Deliberately short; the card is read in
+   * seconds or dismissed, and a first visitor came here to play. Five
+   * strings, no aria string: the card's accessible name comes from the
+   * rendered invitation heading via `aria-labelledby`, so it cannot drift
+   * from the copy. "Horário de Brasília" is the term Brazilians actually
+   * use for this timezone (approved on issue #35); the CODE invariant
+   * stays `America/Sao_Paulo` — a code concern, never a copy concern.
+   */
+  onboarding: {
+    invitation: "Quatro puzzles do dia, iguais para todo mundo.",
+    lead: "Termo, Sudoku, Nonogram e Binairo. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
+    rollover: "A virada é à meia-noite, no horário de Brasília.",
+    noAccount: "Sem cadastro — é só jogar.",
+    dismiss: "Entendi",
+  },
+  /**
    * The /vincular confirm page (#21, ADR-0050 decision 3): an inert shell
    * plus ONE explicit button — the human click is what spends the token,
    * so an email scanner's GET consumes nothing.

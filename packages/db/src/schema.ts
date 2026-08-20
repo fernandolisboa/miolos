@@ -68,14 +68,37 @@ export const users = pgTable(
      * (ADR-0038 (h); preview deploys share the production database).
      */
     attachPromptDismissedAt: timestamptz("attach_prompt_dismissed_at"),
+    /**
+     * The first-visit introduction's one lifecycle per account (#35,
+     * ADR-0061): NULL = never acknowledged; a timestamp = the player
+     * pressed "Entendi" and the card never returns. Server-owned so the
+     * fact survives cleared site data AND attach/merge (the acceptance's
+     * own words — a device store survives neither). Deliberately NOT in
+     * the tombstone SET (merge.ts statement 6): it is not an identity
+     * handle, and a loser's value stays on the tombstone untouched.
+     * Folded onto the winner earliest-wins by merge.ts statement 5d,
+     * together with `attach_prompt_dismissed_at` above (whose own merge
+     * gap was #134, closed by the same statement).
+     *
+     * MIGRATION `0006`: nullable, so every existing row satisfies it — but
+     * adding ANY users column changes the INSERT column list drizzle emits
+     * for every writer, `mintSession`'s `insert(users).values({})`
+     * included, so 0006 reaches Neon BEFORE the branch is first pushed
+     * (ADR-0038 (h); preview deploys share the production database).
+     */
+    onboardingSeenAt: timestamptz("onboarding_seen_at"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     // No trigger or $onUpdate maintains this column: any UPDATE of a users
     // row must set it explicitly (to DB-side now()). The writers are
-    // `mergeAccounts` (merge.ts, the first — empties a tombstoned loser's
-    // identity handles, ADR-0009/ADR-0049) and #21's attach-confirm and
+    // `mergeAccounts` (merge.ts — statement 6 empties a tombstoned LOSER's
+    // identity handles, ADR-0009/ADR-0049, and statement 5d, the first
+    // writer of a WINNER's updated_at, folds the two once-per-account
+    // timestamps earliest-wins, #35/#134), #21's attach-confirm and
     // dismiss statements (`attachEmailToUser` / `dismissAttachPrompt`,
-    // apps/api/src/attach/service.ts, ADR-0050). Account deletion is a
-    // DELETE, not an UPDATE, and belongs to no updated_at list.
+    // apps/api/src/attach/service.ts, ADR-0050), and #35's
+    // `markOnboardingSeen` (apps/api/src/onboarding/service.ts,
+    // ADR-0061). Account deletion is a DELETE, not an UPDATE, and belongs
+    // to no updated_at list.
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [

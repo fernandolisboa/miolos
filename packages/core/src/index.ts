@@ -180,3 +180,11 @@ export {
   medalsResponseSchema,
   type MedalsResponse,
 } from "./contracts/medals";
+export {
+  onboardingSeenResponseSchema,
+  onboardingSeenSchema,
+  onboardingStateResponseSchema,
+  type OnboardingSeenRequest,
+  type OnboardingSeenResponse,
+  type OnboardingStateResponse,
+} from "./contracts/onboarding";

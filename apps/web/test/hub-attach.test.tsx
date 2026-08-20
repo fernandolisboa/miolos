@@ -77,13 +77,20 @@ describe("HubAttach dismissal (T-WEB-S136)", () => {
     expect(screen.queryByText(messages.attach.invitation)).toBeNull();
 
     // The mechanical half of D9's "server-owned, never localStorage": the
-    // attach modules' own sources carry no storage reference at all.
+    // attach modules' own sources carry no storage reference at all. #35's
+    // onboarding modules join the list (the same D9, plan 057: "per
+    // identity, surviving attach/merge" is a thing localStorage cannot do)
+    // — a widened claim about the same gate, no new id (the T-WEB-S100
+    // burn precedent).
     const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
     for (const sourcePath of [
       "src/attach/attach-client.ts",
       "src/attach/use-attach-state.ts",
       "app/hub-attach.tsx",
       "app/vincular/attach-confirm.tsx",
+      "src/onboarding/onboarding-client.ts",
+      "src/onboarding/use-onboarding-state.ts",
+      "app/hub-onboarding.tsx",
     ]) {
       expect(
         readFileSync(join(webRoot, sourcePath), "utf8"),
