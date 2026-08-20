@@ -20,10 +20,13 @@ export {
 } from "./date";
 export {
   DAY_STATUSES,
+  dayGamesFromRows,
+  dayGameStateSchema,
   dayGameStatusSchema,
   dayStateFromRows,
   mergeDayState,
   mergeDayStatus,
+  type DayGameState,
   type DayGameStatus,
   type DayRow,
   type DayState,

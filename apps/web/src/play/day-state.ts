@@ -34,6 +34,7 @@
 import {
   GAMES,
   mergeDayState,
+  type DayGameState,
   type DayGameStatus,
   type DayResponse,
   type Game,
@@ -86,7 +87,9 @@ export interface DayEntry {
    * elapsed time includes every per-guess round trip (ADR-0045 decision 4),
    * so the number is meaningless for that game and is never published. Both
    * consumers therefore branch on `status` and never on this field's
-   * presence.
+   * presence. Since #141 the value can come from EITHER side of the merge —
+   * the local record, or the server claim that won — with the same per-game
+   * rules on both.
    */
   readonly elapsedMs: number | undefined;
 }
@@ -176,11 +179,17 @@ export function readDayState(
  * moves and the page's does not, so the payload is ignored and the hub falls
  * back to the local reader for the day it is actually rendering.
  *
- * `elapsedMs` FOLLOWS THE STATUS THE MERGE PRODUCED. It survives only where
- * the entry did not change — i.e. a local `completed` the server agrees
- * with. A cross-device `completed` carries no duration because this device
- * has no record and the payload carries none (ADR-0060 decision 2), which
- * renders as the chip-only done tile the hub already ships for a won Termo.
+ * `elapsedMs` FOLLOWS THE SIDE WHOSE CLAIM WON, never blended across the two
+ * sources (#141, ADR-0060 decision 3's "nothing is blended field by field").
+ * Where the server claims — its status is not `pending` — the entry is the
+ * SERVER's claim whole: its status and its `elapsedMs`, which the payload
+ * carries for a completed grid game since #141 and never for Termo or a
+ * played game (ADR-0045 decision 4; a time beside a loss frames it as a
+ * result). Where the server does not claim, the entry is the LOCAL one
+ * whole, duration included. A cross-device `completed` therefore renders
+ * the same done tile a local completion does, time and all — and where the
+ * payload carries no duration (Termo), the chip-only shape the hub already
+ * ships.
  *
  * The identity of `local` is handed back untouched when the merge changes
  * nothing, so an unchanged payload and unchanged records re-render nothing.
@@ -203,24 +212,53 @@ function applyDayTruth(
       nonogram: local.nonogram.status,
       binairo: local.binairo.status,
     },
-    server.games,
+    {
+      termo: server.games.termo.status,
+      sudoku: server.games.sudoku.status,
+      nonogram: server.games.nonogram.status,
+      binairo: server.games.binairo.status,
+    },
   );
   const next: Readonly<Record<Game, DayEntry>> = {
-    termo: entryWithStatus(local.termo, merged.termo),
-    sudoku: entryWithStatus(local.sudoku, merged.sudoku),
-    nonogram: entryWithStatus(local.nonogram, merged.nonogram),
-    binairo: entryWithStatus(local.binairo, merged.binairo),
+    termo: entryFromMerge(local.termo, merged.termo, server.games.termo),
+    sudoku: entryFromMerge(local.sudoku, merged.sudoku, server.games.sudoku),
+    nonogram: entryFromMerge(
+      local.nonogram,
+      merged.nonogram,
+      server.games.nonogram,
+    ),
+    binairo: entryFromMerge(
+      local.binairo,
+      merged.binairo,
+      server.games.binairo,
+    ),
   };
   return GAMES.every((game) => next[game] === local[game]) ? local : next;
 }
 
 /**
- * An entry whose status the merge changed carries NO duration: the only way
- * to keep one is for the status not to have moved, and then the local entry
- * is returned unchanged — identity included.
+ * One game's merged entry. `status` is `mergeDayState`'s answer — the
+ * invariant's one spelling, in packages/core — and the duration follows the
+ * side that answer came from: the server's wherever it claimed
+ * (`claim.status !== "pending"`, the same condition the merge turned on),
+ * the local record's where it did not. The local entry is returned by
+ * IDENTITY when nothing moved, field for field, so an agreeing payload
+ * re-renders nothing.
  */
-function entryWithStatus(local: DayEntry, status: DayStatus): DayEntry {
-  return status === local.status ? local : { status, elapsedMs: undefined };
+function entryFromMerge(
+  local: DayEntry,
+  status: DayStatus,
+  claim: DayGameState,
+): DayEntry {
+  const elapsedMs =
+    claim.status === "pending"
+      ? local.elapsedMs
+      : status === "completed"
+        ? claim.elapsedMs
+        : undefined;
+  return status === local.status && elapsedMs === local.elapsedMs
+    ? local
+    : { status, elapsedMs };
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   COMPLETION_OUTCOMES,
   computeStreak,
   DAY_STATUSES,
+  dayGamesFromRows,
   dayResponseSchema,
   dayStateFromRows,
   GAMES,
@@ -61,6 +62,19 @@ function withStatus(
 
 const statusArb = fc.constantFrom(...ALL_STATUSES);
 
+/** A row's stored duration — every row has one, the column is NOT NULL. */
+const ELAPSED_MS = 61_000;
+
+/** A completion row with the duration the fixtures do not care about. */
+function rowOf(
+  game: Game,
+  outcome: DayRow["outcome"],
+  onTime: boolean,
+  elapsedMs: number = ELAPSED_MS,
+): DayRow {
+  return { game, outcome, onTime, elapsedMs };
+}
+
 const stateArb: fc.Arbitrary<DayState> = fc.record({
   termo: statusArb,
   sudoku: statusArb,
@@ -72,10 +86,12 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
   const valid = {
     date: "2026-08-19",
     games: {
-      termo: "completed",
-      sudoku: "pending",
-      nonogram: "played",
-      binairo: "pending",
+      // A completed Termo carries NO duration (ADR-0045 decision 4) — the
+      // one completed shape whose claim is the status alone.
+      termo: { status: "completed" },
+      sudoku: { status: "pending" },
+      nonogram: { status: "played" },
+      binairo: { status: "completed", elapsedMs: 407_000 },
     },
   };
 
@@ -86,18 +102,28 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       // An unknown TOP-LEVEL key: the growth ADR-0048 decision 3 refuses.
       { ...valid, streak: 3 },
       // An unknown key inside `games` — a fifth game, or a leaked field.
-      { ...valid, games: { ...valid.games, xadrez: "pending" } },
+      { ...valid, games: { ...valid.games, xadrez: { status: "pending" } } },
+      // An unknown key inside one game's claim.
+      {
+        ...valid,
+        games: {
+          ...valid.games,
+          sudoku: { status: "pending", onTime: true },
+        },
+      },
       // A MISSING game: the map is total or it is not an answer.
       {
         date: valid.date,
         games: {
-          termo: "completed",
-          sudoku: "pending",
-          nonogram: "played",
+          termo: { status: "completed" },
+          sudoku: { status: "pending" },
+          nonogram: { status: "played" },
         },
       },
       // A verb outside the vocabulary.
-      { ...valid, games: { ...valid.games, sudoku: "late" } },
+      { ...valid, games: { ...valid.games, sudoku: { status: "late" } } },
+      // The pre-#141 wire spelling — a bare status string is not a claim.
+      { ...valid, games: { ...valid.games, sudoku: "pending" } },
       // Shape-checked date (`isoDateString`), like every server-derived one.
       { ...valid, date: "19/08/2026" },
       { ...valid, date: "2026-8-19" },
@@ -122,6 +148,14 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
     expect(Object.keys(dayResponseSchema.shape.games.shape).sort()).toEqual(
       [...GAMES].sort(),
     );
+    // And each game's claim is exactly {status, elapsedMs} (#141) — a third
+    // field is this tripwire's business before it is anyone's feature.
+    for (const game of GAMES) {
+      expect(
+        Object.keys(dayResponseSchema.shape.games.shape[game].shape).sort(),
+        game,
+      ).toEqual(["elapsedMs", "status"]);
+    }
 
     // Nothing about a puzzle can be added without reddening this: the two
     // assertions above pin the key set, and the scan below pins the ban on
@@ -138,9 +172,84 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       "pending",
       "played",
     ]);
-    expect(dayResponseSchema.shape.games.shape.termo.options).toEqual([
-      ...DAY_STATUSES,
-    ]);
+    // Re-aimed at #141: the per-game value grew into a claim object, and the
+    // enum it was always about now sits on that claim's `status`.
+    expect(
+      dayResponseSchema.shape.games.shape.termo.shape.status.options,
+    ).toEqual([...DAY_STATUSES]);
+  });
+
+  it("T-CORE-S99: a claim carries `elapsedMs` only when completed, and the producer publishes it for completed grid games and never for Termo (#141)", () => {
+    // ONE id, one claim about what a per-game claim may carry, asserted at
+    // both ends of the seam — the schema that parses it and the projection
+    // that produces it (the T-WEB-S217 flagged-rather-than-split precedent).
+
+    // The schema end: a duration on a game nobody completed is a PARSE
+    // FAILURE, not a value a client has to decide about. So are a negative,
+    // a fractional, a non-numeric and an over-24 h duration — the last
+    // matching the cap every completion WRITE contract already enforces, so
+    // the read side never accepts what the write side would have refused.
+    const withGame = (game: unknown) => ({
+      ...valid,
+      games: { ...valid.games, sudoku: game },
+    });
+    for (const body of [
+      withGame({ status: "pending", elapsedMs: 61_000 }),
+      withGame({ status: "played", elapsedMs: 61_000 }),
+      withGame({ status: "completed", elapsedMs: -1 }),
+      withGame({ status: "completed", elapsedMs: 61.5 }),
+      withGame({ status: "completed", elapsedMs: "61000" }),
+      withGame({ status: "completed", elapsedMs: 86_400_001 }),
+    ]) {
+      expect(
+        dayResponseSchema.safeParse(body).success,
+        JSON.stringify(body),
+      ).toBe(false);
+    }
+    // A completed claim WITHOUT a duration stays legal — the chip-only done
+    // tile is a shipped honest state, and Termo's only completed shape.
+    expect(
+      dayResponseSchema.safeParse(withGame({ status: "completed" })).success,
+    ).toBe(true);
+
+    // The producer end: the completed grid row's duration is published, and
+    // neither a played nor a pending game carries one — a lost row and a
+    // late-win row both have a real stored `elapsedMs`, and publishing
+    // either would put a time on a game the day does not count.
+    expect(
+      dayGamesFromRows([
+        rowOf("sudoku", "won", true, 512_000),
+        rowOf("termo", "lost", true, 188_000),
+        rowOf("nonogram", "won", false, 99_000),
+        rowOf("binairo", "won", true, 407_000),
+      ]),
+    ).toEqual({
+      termo: { status: "played" },
+      sudoku: { status: "completed", elapsedMs: 512_000 },
+      nonogram: { status: "pending" },
+      binairo: { status: "completed", elapsedMs: 407_000 },
+    });
+
+    // A completed TERMO publishes none either (ADR-0045 decision 4): its
+    // stored duration is real and meaningless, and the local reader's
+    // `entryFor` makes the same exception — mirroring it is what keeps a
+    // cross-device Termo tile identical to a local one (`em 4/6` from
+    // `/stats`, never a clock).
+    expect(dayGamesFromRows([rowOf("termo", "won", true, 188_000)])).toEqual({
+      termo: { status: "completed" },
+      sudoku: { status: "pending" },
+      nonogram: { status: "pending" },
+      binairo: { status: "pending" },
+    });
+
+    // And the producer's output PARSES under the wire schema — the two ends
+    // of this id agree with each other, not just with this test.
+    expect(
+      dayResponseSchema.safeParse({
+        date: valid.date,
+        games: dayGamesFromRows([rowOf("binairo", "won", true, 407_000)]),
+      }).success,
+    ).toBe(true);
   });
 });
 
@@ -154,27 +263,27 @@ describe("dayStateFromRows — the server's projection of one day's rows", () =>
   });
 
   it("T-CORE-S88: a won on-time row is completed; a lost row is played, on time or not (ADR-0008 rule 3)", () => {
-    expect(
-      dayStateFromRows([{ game: "sudoku", outcome: "won", onTime: true }]),
-    ).toEqual(stateOf({ sudoku: "completed" }));
+    expect(dayStateFromRows([rowOf("sudoku", "won", true)])).toEqual(
+      stateOf({ sudoku: "completed" }),
+    );
 
     for (const onTime of [true, false]) {
       expect(
-        dayStateFromRows([{ game: "termo", outcome: "lost", onTime }]),
+        dayStateFromRows([rowOf("termo", "lost", onTime)]),
         `lost onTime=${String(onTime)}`,
       ).toEqual(stateOf({ termo: "played" }));
     }
   });
 
   it("T-CORE-S89: a won LATE row reads pending — unreachable today and defined anyway — and row order does not matter", () => {
-    expect(
-      dayStateFromRows([{ game: "nonogram", outcome: "won", onTime: false }]),
-    ).toEqual(stateOf({ nonogram: "pending" }));
+    expect(dayStateFromRows([rowOf("nonogram", "won", false)])).toEqual(
+      stateOf({ nonogram: "pending" }),
+    );
 
     const rows: readonly DayRow[] = [
-      { game: "binairo", outcome: "won", onTime: true },
-      { game: "termo", outcome: "lost", onTime: true },
-      { game: "sudoku", outcome: "won", onTime: false },
+      rowOf("binairo", "won", true),
+      rowOf("termo", "lost", true),
+      rowOf("sudoku", "won", false),
     ];
     const expected = stateOf({ binairo: "completed", termo: "played" });
     expect(dayStateFromRows(rows)).toEqual(expected);
@@ -191,8 +300,8 @@ describe("dayStateFromRows — the server's projection of one day's rows", () =>
     // permits) left the whole file green. Both orders, so this pins
     // "weakest" and not merely "the last row wins".
     const strongerFirst: readonly DayRow[] = [
-      { game: "termo", outcome: "won", onTime: true }, // completed
-      { game: "termo", outcome: "lost", onTime: true }, // played
+      rowOf("termo", "won", true), // completed
+      rowOf("termo", "lost", true), // played
     ];
     expect(dayStateFromRows(strongerFirst)).toEqual(
       stateOf({ termo: "played" }),
@@ -204,8 +313,8 @@ describe("dayStateFromRows — the server's projection of one day's rows", () =>
     // And `pending` is weaker than `played`, which is the other edge of
     // `STATUS_CLAIM`'s order and the one a `>` flip also inverts.
     const withLateWin: readonly DayRow[] = [
-      { game: "sudoku", outcome: "won", onTime: false }, // pending
-      { game: "sudoku", outcome: "won", onTime: true }, // completed
+      rowOf("sudoku", "won", false), // pending
+      rowOf("sudoku", "won", true), // completed
     ];
     expect(dayStateFromRows(withLateWin)).toEqual(stateOf({}));
     expect(dayStateFromRows([...withLateWin].reverse())).toEqual(stateOf({}));
@@ -223,6 +332,7 @@ describe("dayStateFromRows — the server's projection of one day's rows", () =>
       game: fc.constantFrom(...GAMES),
       outcome: fc.constantFrom(...COMPLETION_OUTCOMES),
       onTime: fc.boolean(),
+      elapsedMs: fc.nat({ max: 86_400_000 }),
     });
     const rowsAndPermutation = fc
       .array(rowArb, { maxLength: 12 })
@@ -240,6 +350,11 @@ describe("dayStateFromRows — the server's projection of one day's rows", () =>
     fc.assert(
       fc.property(rowsAndPermutation, ([rows, permuted]) => {
         expect(dayStateFromRows(permuted)).toEqual(dayStateFromRows(rows));
+        // Widened at #141, no new id (the T-WEB-S100 burn precedent): the
+        // claim producer composes the same fold and makes the same doc-level
+        // promise, duration selection included — `max` is what keeps the
+        // published time order-blind.
+        expect(dayGamesFromRows(permuted)).toEqual(dayGamesFromRows(rows));
       }),
       { numRuns: 100 },
     );
@@ -389,7 +504,12 @@ describe("the day projection and the streak agree (cross-endpoint)", () => {
         const day = dayStateFromRows(
           rows
             .filter((row) => row.date === today)
-            .map(({ game, outcome, onTime }) => ({ game, outcome, onTime })),
+            .map(({ game, outcome, onTime }) => ({
+              game,
+              outcome,
+              onTime,
+              elapsedMs: ELAPSED_MS,
+            })),
         );
         const someCompleted = GAMES.some((game) => day[game] === "completed");
         // The hub's "X de 4 >= 1" and the streak's "maintained today" can

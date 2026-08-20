@@ -98,10 +98,10 @@ function dayBody(
   return {
     date,
     games: {
-      termo: "pending",
-      sudoku: "pending",
-      nonogram: "pending",
-      binairo: "pending",
+      termo: { status: "pending" },
+      sudoku: { status: "pending" },
+      nonogram: { status: "pending" },
+      binairo: { status: "pending" },
       ...games,
     },
   };
@@ -187,8 +187,14 @@ describe("the hub's first paint is untouched (T-WEB-S239)", () => {
 });
 
 describe("a game completed on another device (T-WEB-S240)", () => {
-  it("renders `Feito` with no duration, and `X de 4` counts it", async () => {
-    stubFetchByUrl(() => jsonResponse(200, dayBody({ nonogram: "completed" })));
+  it("renders `Feito`, chip-only when the claim carries no duration, and `X de 4` counts it", async () => {
+    // A claim WITHOUT `elapsedMs` — Termo's only completed shape, and any
+    // degraded payload. Since #141 a completed grid claim normally carries
+    // one and the tile renders it (T-WEB-S257 below); this pins the honest
+    // fallback: no value in the payload, no time on the tile.
+    stubFetchByUrl(() =>
+      jsonResponse(200, dayBody({ nonogram: { status: "completed" } })),
+    );
     const HojePage = await loadHojePage();
 
     render(<HojePage />);
@@ -207,8 +213,7 @@ describe("a game completed on another device (T-WEB-S240)", () => {
     });
     const card = cardFor("nonogram");
     expect(card.getByText(messages.hoje.done)).toBeInTheDocument();
-    // Chip-only: a time this device did not measure is not this device's to
-    // publish, and the payload carries none (ADR-0060 decision 2).
+    // Chip-only: no fabricated value ever reaches a composer.
     expect(
       card.queryByText(
         messages.hoje.doneResultLong(formatElapsed(SUDOKU_ELAPSED_MS)),
@@ -221,7 +226,9 @@ describe("a game completed on another device (T-WEB-S240)", () => {
 
   it("adds to what this device already knows rather than replacing it", async () => {
     writePlayRecord(concludedBinairo());
-    stubFetchByUrl(() => jsonResponse(200, dayBody({ sudoku: "completed" })));
+    stubFetchByUrl(() =>
+      jsonResponse(200, dayBody({ sudoku: { status: "completed" } })),
+    );
     const HojePage = await loadHojePage();
 
     render(<HojePage />);
@@ -231,8 +238,7 @@ describe("a game completed on another device (T-WEB-S240)", () => {
         screen.getByText(messages.hoje.completedOfTotal(2, 4)),
       ).toBeInTheDocument();
     });
-    // The device's own done keeps its duration; the server's does not have
-    // one to keep.
+    // The device's own done keeps its duration; this claim carries none.
     expect(
       cardFor("binairo").getByText(
         messages.hoje.doneResultLong(formatElapsed(BINAIRO_ELAPSED_MS)),
@@ -249,7 +255,13 @@ describe("a game completed on another device (T-WEB-S240)", () => {
     stubFetchByUrl(() =>
       jsonResponse(
         200,
-        dayBody({ sudoku: "completed", nonogram: "completed" }, "2026-07-30"),
+        dayBody(
+          {
+            sudoku: { status: "completed", elapsedMs: SUDOKU_ELAPSED_MS },
+            nonogram: { status: "completed" },
+          },
+          "2026-07-30",
+        ),
       ),
     );
     const HojePage = await loadHojePage();
@@ -263,6 +275,88 @@ describe("a game completed on another device (T-WEB-S240)", () => {
     });
     expect(
       screen.getByText(messages.hoje.completedOfTotal(0, 4)),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Fernando's answer to PR #135 veto decision 1 (#141): look and feel match
+ * across devices. The cross-device done tile renders the server-carried
+ * duration through EXACTLY the shipped local path — same `HubCardAction`,
+ * same `formatElapsed`, same composers — so the presentation is identical by
+ * construction, and this suite asserts the identity rather than trusting it.
+ */
+describe("a cross-device done tile shows its time exactly as a local one (T-WEB-S257)", () => {
+  it("renders the payload's duration through the local tile's own composers", async () => {
+    stubFetchByUrl(() =>
+      jsonResponse(
+        200,
+        dayBody({
+          nonogram: { status: "completed", elapsedMs: SUDOKU_ELAPSED_MS },
+        }),
+      ),
+    );
+    const HojePage = await loadHojePage();
+
+    render(<HojePage />);
+
+    const elapsed = formatElapsed(SUDOKU_ELAPSED_MS);
+    await waitFor(() => {
+      expect(
+        cardFor("nonogram").getByLabelText(
+          messages.hoje.doneAria(messages.games.nonogram.name, elapsed),
+        ),
+      ).toBeInTheDocument();
+    });
+    const card = cardFor("nonogram");
+    expect(card.getByText(messages.hoje.done)).toBeInTheDocument();
+    expect(
+      card.getByText(messages.hoje.doneResultLong(elapsed)),
+    ).toBeInTheDocument();
+    expect(
+      card.getByText(messages.hoje.doneResultShort(elapsed)),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+    ).toBeInTheDocument();
+  });
+
+  it("is BYTE-IDENTICAL to the local tile's rendering of the same time, modulo the game", async () => {
+    // One game done locally, another done on the server with the SAME
+    // stored duration: the two anchors' inner markup must be equal once the
+    // game-specific strings are normalised away — one component, one
+    // formatter, zero per-source styling.
+    writePlayRecord(concludedBinairo());
+    stubFetchByUrl(() =>
+      jsonResponse(
+        200,
+        dayBody({
+          nonogram: { status: "completed", elapsedMs: BINAIRO_ELAPSED_MS },
+        }),
+      ),
+    );
+    const HojePage = await loadHojePage();
+
+    render(<HojePage />);
+
+    const elapsed = formatElapsed(BINAIRO_ELAPSED_MS);
+    await waitFor(() => {
+      expect(
+        cardFor("nonogram").getByLabelText(
+          messages.hoje.doneAria(messages.games.nonogram.name, elapsed),
+        ),
+      ).toBeInTheDocument();
+    });
+    const localAnchor = cardFor("binairo").getByLabelText(
+      messages.hoje.doneAria(messages.games.binairo.name, elapsed),
+    );
+    const serverAnchor = cardFor("nonogram").getByLabelText(
+      messages.hoje.doneAria(messages.games.nonogram.name, elapsed),
+    );
+    expect(serverAnchor.innerHTML).toBe(localAnchor.innerHTML);
+    expect(serverAnchor.className).toBe(localAnchor.className);
+    expect(
+      screen.getByText(messages.hoje.completedOfTotal(2, 4)),
     ).toBeInTheDocument();
   });
 });
@@ -301,7 +395,9 @@ describe("the conclusion still finishes offline (T-WEB-S241)", () => {
 
 describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S245)", () => {
   it("keeps its href, and the play route behind it has no local record to restore", async () => {
-    stubFetchByUrl(() => jsonResponse(200, dayBody({ sudoku: "completed" })));
+    stubFetchByUrl(() =>
+      jsonResponse(200, dayBody({ sudoku: { status: "completed" } })),
+    );
     const HojePage = await loadHojePage();
 
     render(<HojePage />);
@@ -331,7 +427,9 @@ describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S245)", () =
   it("the /sudoku screen behind it renders a fresh PLAYABLE board — asserted, not assumed", async () => {
     // No local record, and the server says completed. `isClosedAndFrozen`
     // reads the record, so the swap never happens and the board is live.
-    stubFetchByUrl(() => jsonResponse(200, dayBody({ sudoku: "completed" })));
+    stubFetchByUrl(() =>
+      jsonResponse(200, dayBody({ sudoku: { status: "completed" } })),
+    );
 
     const SudokuScreen = await loadSudokuScreen();
 
@@ -349,7 +447,13 @@ describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S245)", () =
   it("never writes the server's claim into a play record", async () => {
     writePlayRecord(concludedSudoku());
     stubFetchByUrl(() =>
-      jsonResponse(200, dayBody({ termo: "completed", nonogram: "played" })),
+      jsonResponse(
+        200,
+        dayBody({
+          termo: { status: "completed" },
+          nonogram: { status: "played" },
+        }),
+      ),
     );
     const HojePage = await loadHojePage();
 

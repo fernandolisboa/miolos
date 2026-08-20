@@ -14,8 +14,15 @@ import { isoDateString } from "./daily";
  *
  * IT DID, at #83: `dayResponseSchema` in `./day.ts`, behind `GET /day`
  * (ADR-0060 decision 1). The sentence above was the prediction; this one is
- * its discharge, and the rule it states still binds in both directions —
- * `/day`'s own growth is a THIRD endpoint, never a field here or there.
+ * its discharge, and the rule still binds HERE: nothing is ever appended to
+ * this schema or to `/stats`'s. The stronger claim this paragraph used to
+ * close with — "`/day`'s own growth is a THIRD endpoint, never a field here
+ * or there" — was overclaimed and #141 falsified it: `/day`'s per-game value
+ * grew `elapsedMs` IN PLACE (ADR-0060 decision 2 as annotated there), paid
+ * for consciously — every `/day` consumer fails closed to the device's own
+ * projection (ADR-0060 decision 6), so a version-skewed client renders the
+ * pre-#83 hub for one deploy window rather than a broken surface. A payload
+ * answering a NEW question still arrives as a new endpoint.
  *
  * `date` is `isoDateString`, not `calendarDateString`: server-derived
  * (the `completionResponseSchema` precedent).

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { dayGameStatusSchema } from "../day";
+import { dayGameStateSchema } from "../day";
 import { isoDateString } from "./daily";
 
 /**
@@ -25,22 +25,28 @@ import { isoDateString } from "./daily";
  * and interleaved with two scalars, so `Record<Game, X>` does not exist in
  * that payload at any shape and flat is the only honest spelling there.
  * `/day`'s four are HOMOGENEOUS, so `DayResponse["games"]` IS
- * `Record<Game, DayGameStatus>` by construction — literally `mergeDayState`'s
- * input type, typed without a cast or a helper. The two shapes differ
- * because the payloads differ, not because one of them drifted. Total over
- * the four games, one key each, so a dropped key does not compile.
+ * `Record<Game, DayGameState>` by construction — the per-game CLAIM (#141:
+ * status plus, on a completed grid game, the row's `elapsedMs`), typed
+ * without a cast or a helper. The two shapes differ because the payloads
+ * differ, not because one of them drifted. Total over the four games, one
+ * key each, so a dropped key does not compile.
  *
  * WHAT IT DOES NOT CARRY, and each absence is a decision (ADR-0060 decision
- * 2):
+ * 2, as annotated at #141):
  *
  * - no puzzle content of any kind — no id, no answer, no board — and no
  *   date but the server's own today. The route takes NO parameters, so
  *   there is no way to ask about tomorrow (ADR-0004);
  * - no streak: `/streak` owns it and this payload never derives it;
- * - no `elapsedMs` and no guess count. Solve times are a `/stats` concern
- *   (ADR-0051 decision 4) and `todayTermoGuesses` already exists on
- *   `statsResponseSchema` — carrying it here would be a SECOND PRODUCER of
- *   one value, so ADR-0051 decision 3's hub-endpoint trigger stands;
+ * - no guess count, and no `elapsedMs` for TERMO. `todayTermoGuesses`
+ *   already exists on `statsResponseSchema` — carrying it here would be a
+ *   SECOND PRODUCER of one value, so ADR-0051 decision 3's hub-endpoint
+ *   trigger stands — and Termo publishes no duration on any projection at
+ *   all (ADR-0045 decision 4). `elapsedMs` for a completed GRID game IS
+ *   carried since #141: the hub tile consumes it, which is the consumer
+ *   ADR-0060 decision 2's "nothing consumes it" reasoning was waiting on,
+ *   and it is not a second producer — `/stats` aggregates a history and
+ *   never carries today's per-game time;
  * - NO `onTime` FIELD, because nothing consumes it: the on-time rule is
  *   applied server-side and only its verdict travels, as one of the three
  *   verbs. The tempting warrant *"on-time never rides a wire contract"* is
@@ -52,10 +58,10 @@ export const dayResponseSchema = z.strictObject({
   /** The DB clock's SP today (ADR-0010), never a client-computed day. */
   date: isoDateString,
   games: z.strictObject({
-    termo: dayGameStatusSchema,
-    sudoku: dayGameStatusSchema,
-    nonogram: dayGameStatusSchema,
-    binairo: dayGameStatusSchema,
+    termo: dayGameStateSchema,
+    sudoku: dayGameStateSchema,
+    nonogram: dayGameStateSchema,
+    binairo: dayGameStateSchema,
   }),
 });
 

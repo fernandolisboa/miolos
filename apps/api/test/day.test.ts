@@ -115,6 +115,7 @@ async function insertHistoryRow(init: {
   date: string;
   outcome: "won" | "lost";
   completedAtDate: string;
+  elapsedMs?: number;
   guesses?: number;
 }): Promise<void> {
   await ctx.db.insert(completions).values({
@@ -123,7 +124,7 @@ async function insertHistoryRow(init: {
     date: init.date,
     outcome: init.outcome,
     completedAt: new Date(`${init.completedAtDate}T15:00:00Z`),
-    elapsedMs: 61_000,
+    elapsedMs: init.elapsedMs ?? 61_000,
     hintsUsed: 0,
     guesses: init.guesses,
   });
@@ -145,10 +146,10 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     expect(await readDay(token)).toEqual({
       date: today,
       games: {
-        termo: "pending",
-        sudoku: "pending",
-        nonogram: "pending",
-        binairo: "pending",
+        termo: { status: "pending" },
+        sudoku: { status: "pending" },
+        nonogram: { status: "pending" },
+        binairo: { status: "pending" },
       },
     });
 
@@ -171,11 +172,50 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     expect(await readDay(token)).toEqual({
       date: today,
       games: {
-        // ADR-0008 rule 3: a lost Termo is PLAYED, never completed.
-        termo: "played",
-        sudoku: "completed",
-        nonogram: "pending",
-        binairo: "pending",
+        // ADR-0008 rule 3: a lost Termo is PLAYED, never completed — and a
+        // played claim carries no duration.
+        termo: { status: "played" },
+        sudoku: { status: "completed", elapsedMs: 61_000 },
+        nonogram: { status: "pending" },
+        binairo: { status: "pending" },
+      },
+    });
+  });
+
+  it("T-API-S123: the completed grid game's claim carries the STORED duration, and a completed Termo's never does (#141)", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+
+    await insertHistoryRow({
+      userId,
+      game: "nonogram",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 512_000,
+    });
+    // A WON Termo: completed on the wire, and still no duration — Termo
+    // publishes none on any projection (ADR-0045 decision 4), so the payload
+    // must not invent the clock its own tile never renders. The hub captions
+    // that tile `em 4/6` from GET /stats, one value one producer (ADR-0060
+    // decision 2).
+    await insertHistoryRow({
+      userId,
+      game: "termo",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 188_000,
+      guesses: 4,
+    });
+
+    expect(await readDay(token)).toEqual({
+      date: today,
+      games: {
+        termo: { status: "completed" },
+        sudoku: { status: "pending" },
+        nonogram: { status: "completed", elapsedMs: 512_000 },
+        binairo: { status: "pending" },
       },
     });
   });
@@ -244,8 +284,13 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
       completedAtDate: today,
     });
 
-    expect((await readDay(mine.token)).games.binairo).toBe("pending");
-    expect((await readDay(theirs.token)).games.binairo).toBe("completed");
+    expect((await readDay(mine.token)).games.binairo.status).toBe("pending");
+    expect((await readDay(theirs.token)).games.binairo.status).toBe(
+      "completed",
+    );
+    // The isolation holds for the duration too — a value, not just a verb,
+    // must never cross users (#141).
+    expect((await readDay(mine.token)).games.binairo.elapsedMs).toBeUndefined();
   });
 
   it("T-API-S113: query parameters are ignored — `?date=<tomorrow>` still answers today (the ADR-0004 tripwire at the route)", async () => {
@@ -268,7 +313,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     ]) {
       const body = await readDay(token, search);
       expect(body.date, search).toBe(today);
-      expect(body.games.nonogram, search).toBe("completed");
+      expect(body.games.nonogram.status, search).toBe("completed");
     }
   });
 
@@ -288,10 +333,10 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     expect(await readDay(token)).toEqual({
       date: today,
       games: {
-        termo: "pending",
-        sudoku: "pending",
-        nonogram: "pending",
-        binairo: "pending",
+        termo: { status: "pending" },
+        sudoku: { status: "pending" },
+        nonogram: { status: "pending" },
+        binairo: { status: "pending" },
       },
     });
   });
