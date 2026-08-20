@@ -111,6 +111,10 @@ async function insertHistoryRow(init: {
     elapsedMs: 61_000,
     hintsUsed: 0,
     guesses: init.guesses,
+    // #58 (ADR-0066): on_time is stored at write. The helper stores the
+    // same verdict the pre-#58 derivation gave these instants — which is
+    // exactly what migration 0008's backfill guarantees for old rows.
+    onTime: init.completedAtDate === init.date,
   });
 }
 

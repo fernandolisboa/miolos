@@ -61,31 +61,31 @@ export function isWritableDate(date: string, today: string): boolean {
  *
  * IT HAS A NAME BECAUSE "LATE" IS SPELLED IN THREE LAYERS AND THEY MUST
  * CONVERGE. This is the route layer's spelling, in JS over two date
- * strings. The database's spelling is `on_time` negated —
- * `(completed_at at time zone 'America/Sao_Paulo')::date <> date` — which
- * is what the ceiling's guard counts and what every reader projects. The
- * archive's read layer will add a third when it lands (`archiveDateClass`,
- * ADR-0053 decision 4); it takes this predicate's meaning, not a fourth
- * one.
+ * strings. The database's spelling is the STORED `on_time` negated (#58,
+ * ADR-0066 — the old `(completed_at at time zone …)::date <> date`
+ * derivation, `onTimeSql()`, is deleted) — which is what the ceiling's
+ * guard counts and what every reader projects. The archive's read layer
+ * will add a third when it lands (`archiveDateClass`, ADR-0053 decision
+ * 4); it takes this predicate's meaning, not a fourth one.
  *
- * The two spellings agree because `completed_at` is `now()` AT INSERT: a
- * row this predicate calls late is written after the day it names, so its
- * write instant cannot fall on that day. THE ONE DISAGREEMENT IS THE
- * ROLLOVER ITSELF, and it is bounded at one row per user per rollover: a
- * `today` read at 23:59:59.9 lets a same-day write past the ceiling
- * branch, and the row lands at 00:00:00.1 already late by the database's
- * spelling.
+ * The two spellings agree because the verdict is decided from the same
+ * `today` this predicate reads: a row this predicate calls late stores
+ * `on_time = false` unless the seen-day credit applies. THE ONE
+ * DISAGREEMENT IS THE ROLLOVER ITSELF, and it is bounded at ≤4 rows per
+ * user per rollover by the composite PK: a `today` read at 23:59:59.9
+ * lets a same-day write past the ceiling branch, and the row's INSERT
+ * lands at 00:00:00.1 on the next SP day.
  *
- * THE ROW ESCAPES THE *CHECK*, NOT THE *COUNT*, AND THE DIFFERENCE IS THE
- * WHOLE REASON THIS IS SAFE. It is never compared against day D's budget,
- * because the branch that would have compared it was not taken. But it
- * carries `date = D` and a `completed_at` whose São Paulo day is D+1, so
- * `writtenOnSaoPauloDay(D+1) ∧ not(on_time)` holds of it and EVERY guarded
- * write on D+1 counts it — it spends one of the next day's fifty slots.
- * The straddle therefore leaks nothing: it defers one row's accounting by
- * one day, in the conservative direction. Do not "fix" it. Costing one
- * unchecked row per rollover is the correct trade against reading the
- * clock twice inside one write.
+ * SINCE #58 THE STRADDLE ROW ESCAPES BOTH THE CHECK AND THE COUNT, and
+ * that is accepted with its reason. Its verdict was decided with
+ * `today = D` and `date = D`, so it STORES `on_time = true` — where the
+ * old derivation called it late and made every guarded write on D+1 count
+ * it. The row now escapes the check (the branch was not taken) AND the
+ * count (`not on_time` excludes it). This favours the player and matches
+ * what they did — the completion WAS made on its own day by the only
+ * clock read the request took — and the exposure is ≤4 rows per user per
+ * rollover, sub-second window. Do not "fix" it: costing that is the
+ * correct trade against reading the clock twice inside one write.
  */
 export function isLateDate(date: string, today: string): boolean {
   return date < today;

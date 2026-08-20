@@ -116,6 +116,7 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
       completedAt: new Date("2026-08-01T15:00:00Z"),
       elapsedMs: 61_000,
       hintsUsed: 0,
+      onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
     });
     await ctx.db
       .insert(hintGrants)

@@ -2,7 +2,6 @@ import type { StatsRow } from "@miolos/core";
 import { desc, eq, sql } from "drizzle-orm";
 
 import type { Db } from "./client";
-import { onTimeSql } from "./completions";
 import { SAO_PAULO_TIME_ZONE } from "./published";
 import { completions, users } from "./schema";
 
@@ -17,8 +16,9 @@ import { completions, users } from "./schema";
  * because the DB clock is the only clock (CLAUDE.md invariant, ADR-0010).
  * The `created_at`-to-SP-date expression in `getUserSince` is a NEW
  * fact's derivation (the account's birth day, D2's calendar anchor) —
- * not a second spelling of on-time, which keeps its single producer,
- * `onTimeSql()` (ADR-0026 decision 2), imported below.
+ * not a second spelling of on-time, which since #58 (ADR-0066) is a
+ * STORED write-time verdict with a single producer, `onTimeAtWrite`
+ * applied by `POST /completions` — every reader here projects the column.
  */
 
 /**
@@ -44,7 +44,7 @@ export async function listCompletionsForStats(
       game: completions.game,
       date: completions.date,
       outcome: completions.outcome,
-      onTime: onTimeSql(),
+      onTime: completions.onTime,
       elapsedMs: completions.elapsedMs,
       hintsUsed: completions.hintsUsed,
       guesses: completions.guesses,

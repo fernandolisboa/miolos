@@ -305,11 +305,15 @@ export const dailyPuzzles = pgTable(
  * - `completed_at` is the DB clock at insert (`defaultNow()`); no
  *   JS-constructed date ever appears in an insert, and no client-supplied
  *   instant is accepted anywhere in the path (plan 017 D16/D19).
- * - "On time" is DERIVED, never stored:
- *     (completed_at at time zone 'America/Sao_Paulo')::date = date
- *   ADR-0009 recomputes streaks from these rows on merge, so the
- *   derivation must stay the definition. A denormalized column would be a
- *   cache; there is no cache.
+ * - "On time" is DECIDED ONCE AT WRITE TIME and STORED on the row (#58,
+ *   ADR-0066, amending ADR-0026 decision 2). The write-time rule is
+ *   `onTimeAtWrite` (packages/core): the puzzle's own SP day, or exactly
+ *   one day back with a server-recorded seen day (`user_seen_days`). It is
+ *   stored — not derived at read time — because ADR-0009's real constraint
+ *   is that a streak stays derivable from completion rows ALONE, and once
+ *   the seen-fact enters the definition a read-time derivation would have
+ *   to consult a second table on every streak read. Every reader projects
+ *   the stored column; no reader re-derives.
  * - `outcome` accommodates 'lost' from day one so #27 (Termo) attaches
  *   rather than migrates. Binairo only ever writes 'won'.
  * - `elapsed_ms` and `hints_used` are player statistics, not authority:
@@ -379,6 +383,22 @@ export const completions = pgTable(
      * `POST /completions` for binairo, sudoku and nonogram too (ADR-0038 (h)).
      */
     guesses: integer("guesses"),
+    /**
+     * The write-time on-time verdict (#58, ADR-0066). NO DEFAULT in this
+     * object, deliberately — drizzle builds every INSERT's column list from
+     * the table (the `guesses` precedent above), so every code writer must
+     * decide, and an omission is a loud red, never a silent `false`.
+     *
+     * MIGRATION `0008` adds the column with a TEMPORARY database-side
+     * `default false` (previews share the production DB, so old production
+     * code keeps inserting without the column until the deploy) plus the
+     * one-directional backfill; migration `0009`, applied AFTER the
+     * production deploy, re-runs the sweep for the old-code window and
+     * DROPS the default so hand-written SQL fails loudly too. Both
+     * migrations reach Neon by hand (the `guesses` ritual above); 0008
+     * before the branch's first push, 0009 after the deploy (ADR-0066).
+     */
+    onTime: boolean("on_time").notNull(),
   },
   (t) => [
     primaryKey({ columns: [t.userId, t.game, t.date] }),
@@ -406,6 +426,44 @@ export const completions = pgTable(
     // "the day so far" both read (user_id, date) across games.
     index("completions_user_date_idx").on(t.userId, t.date),
   ],
+);
+
+/**
+ * Seen days (#58, ADR-0066): one row per (user, São Paulo day) recording
+ * that the server saw this user online on that day. It is what makes a
+ * late-synced completion creditable: a completion for day `D` that syncs
+ * after the rollover stores `on_time = true` iff this table holds
+ * (user, D) — the server's own knowledge, never a client assertion.
+ *
+ * - CONSULTED ONLY AT WRITE TIME, inside `POST /completions` (`wasSeenOn`,
+ *   seen-days.ts). No streak, statistics, medal or day-state computation
+ *   reads it, and the pure merge recompute never consults it — so a streak
+ *   stays derivable from completion rows alone (ADR-0009, untouched).
+ * - A row is the WHOLE fact: no timestamp column, because nothing would
+ *   read it (an unread surface is a standing HIGH finding) and the merge
+ *   union needs none — `ON CONFLICT DO NOTHING` suffices.
+ * - The composite PK is the idempotency, the completions pattern: the
+ *   writer is `recordSeenDay`'s `ON CONFLICT DO NOTHING`, dated by the DB
+ *   clock (ADR-0010 — no JS date math on the path).
+ * - RETENTION (ADR-0066): only `today − 1` is ever read, so the daily
+ *   `/cron/publish` run deletes rows older than that. Widening the credit
+ *   window widens that predicate too.
+ * - ADR-0049 merge duty: merged by UNION (the completions idiom) —
+ *   `mergeAccounts` statements 4b/4c insert the loser's dates onto the
+ *   winner `ON CONFLICT DO NOTHING`, then empty the loser.
+ *
+ * User-scoped: reachable only via `@miolos/db/user` (ADR-0026 decision 5);
+ * the statements over it live in seen-days.ts.
+ */
+export const userSeenDays = pgTable(
+  "user_seen_days",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: date("date", { mode: "string" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.date] })],
 );
 
 /**

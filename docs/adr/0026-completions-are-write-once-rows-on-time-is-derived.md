@@ -3,7 +3,9 @@
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md)
 **Amended by:** [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md) — the merge-repoint consequence's sufficiency claim is corrected: the ordered `ON CONFLICT DO NOTHING` repoint ALONE does not deliver *"the surviving row is the earliest completion"* when the winning account already holds a LATER row for the same (game, date) — the conflict fires and `DO NOTHING` keeps the later row. ADR-0049 decision 2 adds the strictly-earlier DELETE that completes it; the sentence's ordering prescription (`completed_at` ascending, copied) stands.
-**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — decision 6's **lower** bound is removed and its Rejected entry on rate limiting is **reversed** for one branch. Four sentences fall: *"A write may only target SP-today or SP-yesterday"*; *"Without a lower bound any client could write a `won` completion for every past daily … and a stale local record would flush as a completion the player never played"* (which now happens, deliberately); *"One day of slack is what keeps decision 7 from losing legitimate rows"* (no write-side slack survives — the calendar's one-day clamp does, under its own name); and the abuse posture's *"decision 6 caps the date axis at two days"*, replaced by a per-user-per-São-Paulo-day ceiling of 50 **late** completions answering `429` — late, not *archive*: the branch it guards also admits decision 7's own post-rollover flush, which is inside the ceiling by construction at ≤4 rows. The consequence written about #31 by name stands as a warning and its risk claim is superseded: #31 does **deliberately** what *"Widening it accidentally — by removing the bound while 'fixing' a date test"* names as the accident, with the cost restated (ADR-0053 decision 5) rather than left standing. The Rejected entry *"**Application-level rate limiting on the write, in v1.** Considered and declined"* is **implemented** for the late branch only; the daily branch still ships none. Unchanged: the composite PK, `on_time` derived in SQL, the database clock as the completion instant, the replay short-circuit, and decision 6's layer rule that the write bound lives in the route and never in `wallPredicate`. Multiple `Amended by:` lines stack.
+**Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — decision 6's **lower** bound is removed and its Rejected entry on rate limiting is **reversed** for one branch. Four sentences fall: *"A write may only target SP-today or SP-yesterday"*; *"Without a lower bound any client could write a `won` completion for every past daily … and a stale local record would flush as a completion the player never played"* (which now happens, deliberately); *"One day of slack is what keeps decision 7 from losing legitimate rows"* (no write-side slack survives — the calendar's one-day clamp does, under its own name); and the abuse posture's *"decision 6 caps the date axis at two days"*, replaced by a per-user-per-São-Paulo-day ceiling of 50 **late** completions answering `429` — late, not *archive*: the branch it guards also admits decision 7's own post-rollover flush, which is inside the ceiling by construction at ≤4 rows. The consequence written about #31 by name stands as a warning and its risk claim is superseded: #31 does **deliberately** what *"Widening it accidentally — by removing the bound while 'fixing' a date test"* names as the accident, with the cost restated (ADR-0053 decision 5) rather than left standing. The Rejected entry *"**Application-level rate limiting on the write, in v1.** Considered and declined"* is **implemented** for the late branch only; the daily branch still ships none. Unchanged: the composite PK, `on_time` derived in SQL *(true when ADR-0053 wrote this line; replaced at #58 by ADR-0066 — its own `Superseded in part by:` line below carries the replacement)*, the database clock as the completion instant, the replay short-circuit, and decision 6's layer rule that the write bound lives in the route and never in `wallPredicate`. Multiple `Amended by:` lines stack.
+**Superseded in part by:** [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md) — decision 2 (this ADR's title claim) and the Rejected entry *"A stored `on_time` (or `is_late`) boolean"* are **replaced outright**: on-time is now decided ONCE at write time (`onTimeAtWrite`, packages/core) and STORED on the row, because Fernando's #58 decision makes a server-recorded seen day part of the definition, and ADR-0009's *"a streak is always derivable from completion rows"* — the very constraint decision 2 was serving — is what FORCES storage once a second table enters the derivation. `domain.md`'s form: a decision replaced whole takes `Superseded in part by:`, not `Amended by:`; partial replacement keeps this ADR `Accepted`. Every other decision here stands.
+**Amended by:** [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md) — the parts that ARE amendments, distinct from the replacement above: decision 7's escalation is resolved (the rule is ADR-0066 decision 1), and the merge consequence's *"a merge can never downgrade an on-time completion to a late one"* — a theorem of the derivation — is falsified: an earlier late row now beats a later credited row and earliest-wins keeps the late one, deliberately (ADR-0066 decision 7, T-CORE-S106). Unchanged: the composite PK, the write-once rule, the database clock as the completion instant, the replay short-circuit, and decision 6's layer rule.
 **Amends:** the mint-flood consequence of [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md) — *"Accepted because flood-minted rows are unreferenced and harmless, and Vercel's platform firewall is the backstop."* Flood-minted users can now write rows that are referenced by streak arithmetic; see Consequences.
 
 ## Context
@@ -55,6 +57,14 @@ rows exist in production:
    It is computed in the read-back projection, not persisted. No JavaScript
    timezone arithmetic exists anywhere on this path, and no column can drift
    out of agreement with the rows it summarizes.
+
+   *(**REVERSED at #58** —
+   [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)
+   decision 2. On-time is now decided once at write time by the pure
+   `onTimeAtWrite` rule and STORED; every reader projects the column and
+   `onTimeSql()` is deleted. What survives of this decision is its single-
+   producer discipline — one rule, one owner, no second spelling — and the
+   no-JS-timezone-arithmetic law, both intact in the new shape.)*
 
 3. **The completion instant is the database clock.** `completed_at` is
    `defaultNow()`; the request contract carries **no timestamp at all**.
@@ -141,6 +151,15 @@ rows exist in production:
    is an additive change to the derivation expression and its tests, and it
    changes ADR-0008's definition of on-time, so it belongs to him.
 
+   *(**RESOLVED at #58** — Fernando's 2026-08-02 decision, executed by
+   [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md):
+   neither of the two alternatives this decision anticipated, but a
+   server-owned seen-day record — a late sync is credited iff the server
+   itself saw the user online on the puzzle's own day, decided at write
+   time and stored. The legitimate post-rollover flush this decision names
+   is now creditable; an UNSEEN one still derives late, which keeps this
+   decision's safe reading as the failure direction.)*
+
 ## Rejected
 
 - **`ON CONFLICT … DO UPDATE` (upsert).** The obvious idiom and the wrong
@@ -151,6 +170,13 @@ rows exist in production:
   to get wrong. ADR-0009 recomputes streaks from these rows, so a
   denormalized column is a cache of a value the row already contains; there
   is no cache, and the SQL derivation stays the definition.
+  *(**REVERSED at #58** —
+  [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)
+  decision 2. The reversal is not a change of taste: once the seen-fact
+  enters the definition the row no longer contains its own on-time value,
+  so the stored column stops being a cache and becomes the record of a
+  decision — which is exactly the condition under which this entry's
+  reasoning no longer applies.)*
 - **A surrogate `id` plus a unique index on `(user_id, game, date)`.** Same
   guarantee, one more column and one more index, and it invites a second row
   to be inserted "temporarily". The composite PK also covers the
@@ -192,6 +218,15 @@ rows exist in production:
   completion — exactly ADR-0009's *"the earliest completion wins"* — and a
   merge can never downgrade an on-time completion to a late one. Any other
   order silently violates both ADRs.
+  *(**Amended at #58** —
+  [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)
+  decision 7. The never-downgrade clause was a theorem of the read-time
+  derivation and is falsified by the stored credit: an earlier LATE row
+  beats a later CREDITED row for the same puzzle and earliest-wins keeps
+  the late one, so a merge can visibly break a streak the user saw
+  (T-CORE-S106). Kept deliberately — Fernando's "needs no special case" —
+  and the ordering prescription itself stands, with `on_time` COPIED as
+  one more column in the repoint's pinned list.)*
 - **One enforcement point ships; the second is a filed follow-up, and this
   ADR does not claim it exists.** What ships in #18 is the **module-graph
   wall**: `completions`/`hint_grants` live off the root entry (decision 5),
@@ -247,6 +282,12 @@ rows exist in production:
   both options — so this ADR does not block on it, and the decision is
   [#58](https://github.com/fernandolisboa/miolos/issues/58), filed before
   merge rather than after and carrying both options in full.
+  *(**RESOLVED at #58** — see decision 7's annotation and
+  [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md). The
+  "identical under both options" claim held for the two options this ADR
+  posed; the chosen third shape DID need a migration — the seen table and
+  the stored column — and needed no client change, which T-WEB-S283/S284
+  pin.)*
 - **The archive ticket (#31) widens decision 6's route constant
   deliberately**, with its own tests and its own `late` semantics
   (ADR-0008). Widening it accidentally — by removing the bound while

@@ -1160,6 +1160,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "getUserSince", // #29 (plan 033): widened in the same commit as the export
       "grantHints",
       "grantedHintsToday",
+      "hasCreditedPastDateToday", // #58 (ADR-0066): user entry only
       "hintGrants",
       "insertDailyPuzzle",
       "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
@@ -1176,18 +1177,21 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "listUsedTermoAnswers",
       "medalGrants", // #30 (ADR-0052): the curated-grant table, user entry only
       "mergeAccounts",
+      "pruneSeenDays", // #58 (ADR-0066): user entry only
       // #145 (ADR-0064): the push-subscriptions table, root entry only —
       // widened in place beside T-DB-9b, in the same commit as the export.
       "pushSubscriptions",
       "recordCompletion",
+      "recordSeenDay", // #58 (ADR-0066): user entry only
       "remoteConfig",
       "sessions",
       "sql",
       "todaySaoPaulo",
       "users",
+      "wasSeenOn", // #58 (ADR-0066): user entry only
     ]);
     // A duplicate across two entries would be hidden by the Set above, so
-    // pin the count too: 38 distinct names, 38 exports. #27 moved it by
+    // pin the count too: 44 distinct names, 44 exports. #27 moved it by
     // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
     // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
     // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
@@ -1207,7 +1211,11 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // (ADR-0060 decision 1), never the root — apps/web must stay unable to
     // name it. #145 moves it by exactly one: `pushSubscriptions` on the
     // ROOT entry (ADR-0064 — the entry `users` rides; the statements over
-    // it live api-side, apps/api/src/push/service.ts).
-    expect(surface).toHaveLength(40);
+    // it live api-side, apps/api/src/push/service.ts). #58 moves it by
+    // exactly four, all on the USER entry (ADR-0066): the three seen-days
+    // statements plus the multi-past-date guard's read; the
+    // `user_seen_days` TABLE itself is on no entry at all — only
+    // seen-days.ts and mergeAccounts name it.
+    expect(surface).toHaveLength(44);
   });
 });

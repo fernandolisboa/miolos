@@ -3,7 +3,9 @@ import {
   binairoDailyContentSchema,
   completionRequestSchema,
   completionResponseSchema,
+  isWithinCreditWindow,
   nonogramDailyContentSchema,
+  onTimeAtWrite,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
   type CompletionOutcome,
@@ -15,7 +17,9 @@ import {
 } from "@miolos/db/publishing";
 import {
   getCompletion,
+  hasCreditedPastDateToday,
   recordCompletion,
+  wasSeenOn,
   type CompletionRecord,
 } from "@miolos/db/user";
 import type { NextRequest } from "next/server";
@@ -373,6 +377,50 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
+  // THE WRITE-TIME ON-TIME DECISION (#58, ADR-0066), made once, HERE, and
+  // stored on the row — no read path re-derives it (ADR-0009's constraint:
+  // the streak stays derivable from completion rows alone, so the seen
+  // table is consulted exactly here and nowhere downstream). `today` is
+  // the one `todaySaoPaulo(db)` read above, reused as its comment promises.
+  // The seen read runs only when the date is inside the 1-day credit
+  // window — `isWithinCreditWindow`, THE one spelling of the window,
+  // shared with `onTimeAtWrite`'s credit branch so this gate can never
+  // silently disagree with the rule it pre-filters (step-6 quality M1): a
+  // date outside the window can never be credited, so it never costs the
+  // round trip.
+  const seen = isWithinCreditWindow(body.date, today)
+    ? await wasSeenOn(db, userId, body.date)
+    : false;
+  const onTime = onTimeAtWrite(body.date, today, seen);
+
+  // The multi-past-date guard (#58, ADR-0066): before storing a CREDITED
+  // past-date row, refuse if this user already credited a DIFFERENT past
+  // date on the current SP writing day — the enforceable form of the
+  // decision's "refuse a sync carrying completions for more than one
+  // distinct past date" (dates, not games: three grid games for one date
+  // are three POSTs for the SAME date, untouched here; archive/late writes
+  // claim no credit and never enter this branch). 422 is already terminal
+  // in the sync client (`TERMINAL_STATUSES`) — no client change.
+  //
+  // A WIDENING TRIPWIRE, provably empty under window = 1: the predicate
+  // carries the credit window itself, so its match set is
+  // `date ∈ [today − 1, today) ∧ date ≠ today − 1` — empty by
+  // construction, not by argument (see `hasCreditedPastDateToday`'s doc
+  // block, including the rollover-straddle row the pre-window predicate
+  // wrongly matched). The moment the window widens, the guard goes live
+  // and catches a real second credited date — and ADR-0066 requires
+  // folding it into the insert at that same widening.
+  if (onTime && isLateDate(body.date, today)) {
+    if (
+      await hasCreditedPastDateToday(db, userId, {
+        today,
+        excludingDate: body.date,
+      })
+    ) {
+      return errorResponse(422, "multi-date-sync");
+    }
+  }
+
   const input = {
     userId,
     game: body.game,
@@ -384,6 +432,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // (ADR-0026 decision 1), so a Termo day recorded without its count is
     // permanently absent from the guess distribution ADR-0008 rule 3 needs.
     guesses: body.game === "termo" ? body.guesses.length : undefined,
+    onTime,
   };
 
   // The late-write ceiling (ADR-0053 decision 13), HERE and not earlier,
@@ -400,19 +449,34 @@ export async function POST(request: NextRequest): Promise<Response> {
   //   N rows, so "50 per day" held only against a sequential client.
   //   `recordCompletion`'s guarded form is ONE statement (T-DB-S56a).
   //
-  // `isLateDate` is a pure JS compare and the daily arm passes no ceiling
-  // at all, so the daily ritual's INSERT is byte-identical to the one it
-  // always was — no extra statement, no guard subquery, no round trip. 429
-  // is deliberate: `TERMINAL_STATUSES` in apps/web/src/play/sync.ts does
-  // not contain it, so a refused archive completion stays `pendingSync`
-  // and flushes after the next rollover — the correct semantics for a
-  // per-day rate cap, and the exact reason a terminal status was rejected.
-  const written = isLateDate(body.date, today)
-    ? await recordCompletion(db, input, {
+  // The arm is decided by the WRITE-TIME VERDICT, not by the date (#58,
+  // ADR-0066): an `onTime === true` write NEVER takes the guarded arm — a
+  // credited flush must land even for a user AT the ceiling, because 429
+  // is correctly non-terminal, so a capped credit would retry after the
+  // next rollover, land two days back, and store `false`: a permanently
+  // lost streak day on a write-once row, the exact outcome #58 exists to
+  // prevent. The exemption is safe — the credit is server-derived and
+  // unforgeable (a seen row plus the 1-day window, never client input),
+  // bounded at ≤4 rows/user/day by construction: one creditable date ×
+  // four games (a fully-judged online Termo whose POST failed can queue
+  // and flush post-rollover, so ADR-0039's offline scope note does not
+  // bound this path). The `onTime`↔arm pairing is a call-site discipline
+  // enforced by review plus T-DB-S72/S75, not by types — the ternary
+  // below is its one site. `onTime === false` here
+  // implies `isLateDate` (a today-dated write is on time by construction),
+  // so the guarded arm covers exactly the late writes it always did minus
+  // the credited flush. The daily ritual's INSERT is byte-identical to the
+  // one it always was — no extra statement, no guard subquery, no extra
+  // round trip. 429 stays deliberate: `TERMINAL_STATUSES` in
+  // apps/web/src/play/sync.ts does not contain it, so a refused archive
+  // completion stays `pendingSync` and flushes after the next rollover —
+  // the correct semantics for a per-day rate cap.
+  const written = onTime
+    ? await recordCompletion(db, input)
+    : await recordCompletion(db, input, {
         day: today,
         max: ARCHIVE_WRITES_PER_DAY,
-      })
-    : await recordCompletion(db, input);
+      });
 
   if (written.capped) {
     // THE CEILING'S PRINCIPAL PRODUCT (ADR-0053 decision 13): the platform

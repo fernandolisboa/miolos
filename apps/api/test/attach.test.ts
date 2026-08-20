@@ -251,6 +251,7 @@ async function insertOnTimeWin(init: {
     completedAt: new Date(`${init.date}T15:00:00Z`),
     elapsedMs: 61_000,
     hintsUsed: 0,
+    onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
   });
 }
 

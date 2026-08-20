@@ -10,6 +10,8 @@
 
 **Amended by:** [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md) (#142, Fernando's answer to PR #135 veto decision 3) — **(f) and (g), continuing the series; both decision-level.** Annotation (f): decision 2's per-game claim gains an optional `hintsUsed`, on annotation (b)'s template exactly — recorded at TWO loci under the one letter, decision 2 itself and, applying annotation (c)'s rule to it, decision 3's not-merged list (the #141 precedent gave that pair distinct letters; here the second locus is the same fact applied to the list it narrows, so it shares the letter and this header names both). Annotation (g): **decision 8's playable-board sentence is replaced for the daily path** — a cross-device done day now opens a completed view — while the decision's href sentence **stands untouched**, which is why this is `Amended by` and not `Superseded in part by`. Every edit annotated in place, nothing deleted; references qualify the letter ("annotation (f)"), because this ADR's native Consequences are lettered too.
 
+**Amended by:** [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md) (#58) — **(h), continuing the series.** Annotation (h): decision 2's on-time provenance paragraph cited "the one `onTimeSql()` derivation"; that symbol is deleted at #58 — the one producer is now `onTimeAtWrite`, applied at write time and STORED, and `/day` projects the stored column. The paragraph's claim — no second producer — stands. Annotated in place; nothing deleted; references qualify the letter ("annotation (h)").
+
 [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 10 and [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) decision 1 are **obeyed, not amended**, and this ADR says so in those words because a reviewer will ask about both. Decision 10 layer 3 is additionally **cited** by decision 8, as the precedent that makes a playable board behind a done tile acceptable; citing is not amending.
 
 ## Context
@@ -106,6 +108,10 @@ in the app that can **demote**.
    sentence is about the stats ADR's own payloads and the #58 boundary, which
    this ADR leaves untouched: `/day` adds no second producer of on-time, only
    a projection of the one `onTimeSql()` derivation (ADR-0026 decision 2).
+   *(**Annotation (h) — amended by ADR-0066 at #58.** The one producer is
+   `onTimeAtWrite`, applied at the write and STORED — `onTimeSql()` is
+   deleted; `/day` projects the stored column. Still no second producer,
+   which is this paragraph's claim.)*
 
 3. **The merge invariant.**
 

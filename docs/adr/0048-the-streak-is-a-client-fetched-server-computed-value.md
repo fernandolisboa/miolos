@@ -104,6 +104,11 @@ display semantics for.
   `computeStreak` unchanged — the route is just its first caller.
 - #58, when implemented, changes the producer of `onTime` and nothing in
   this ADR.
+  *Annotation (#58,
+  [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)):*
+  *implemented; the prediction held — on-time is decided at write and
+  stored, `computeStreak` consumes the row field as data, and nothing in
+  this ADR moved.*
 - Free play's wall extends over the streak modules (ADR-0046's consequence,
   kept true by growth).
 - The attach prompt (streak ≥ 5, ADR-0003) has a real value to read; its

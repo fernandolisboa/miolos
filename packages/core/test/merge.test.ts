@@ -138,6 +138,46 @@ describe("mergeCompletions — units (ADR-0009, ADR-0026, ADR-0049)", () => {
     expect(computeStreak(merged, TODAY).streak).toBe(0);
   });
 
+  it("T-CORE-S106: the #58 downgrade corner is ACCEPTED earliest-wins — an earlier late row beats a later credited row, and the merged streak visibly drops", () => {
+    // Under the pre-#58 read-time derivation "a merge can never downgrade
+    // an on-time completion to a late one" was a THEOREM (earliest instant
+    // ⇒ most on-time). The stored credit falsifies it: device A solved
+    // yesterday's puzzle from the archive-late path (stored false, earlier
+    // instant), device B held it offline and landed the CREDIT (stored
+    // true, later instant). Earliest wins keeps the late row — Fernando's
+    // "needs no special case" — so the credit is dropped and a streak the
+    // user saw on device B can visibly break. Pinned as the accepted
+    // behaviour (ADR-0066 §5; ADR-0026's sentence amended), NOT as a bug:
+    // `onTime` is row data, carried unchanged, never recomputed.
+    const yesterday = "2026-08-12";
+    const lateEarlier = row(
+      "binairo",
+      yesterday,
+      instant(yesterday, "20:00:00"),
+      {
+        onTime: false,
+      },
+    );
+    const creditedLater = row(
+      "binairo",
+      yesterday,
+      instant(TODAY, "01:00:00"),
+      {
+        onTime: true,
+      },
+    );
+
+    const merged = mergeCompletions([creditedLater], [lateEarlier]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toBe(lateEarlier);
+    expect(merged[0]?.onTime).toBe(false);
+
+    // The visible cost, stated as arithmetic: the credited input carried
+    // the day, the merged history does not.
+    expect(computeStreak([creditedLater], yesterday).streak).toBe(1);
+    expect(computeStreak(merged, yesterday).streak).toBe(0);
+  });
+
   it("T-CORE-S40: empty edges — merge([], []) is []; one empty side returns the other, sorted", () => {
     expect(mergeCompletions([], [])).toEqual([]);
 

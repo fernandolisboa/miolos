@@ -13,6 +13,9 @@ export {
   getCompletion,
   grantedHintsToday, // DORMANT (plan 017 D22) — no v1 writer; see ADR-0027
   grantHints, // DORMANT (plan 017 D22)
+  // #58 (ADR-0066): the multi-past-date guard's read — the widening
+  // tripwire POST /completions consults before storing a past-date credit.
+  hasCreditedPastDateToday,
   // #83 (ADR-0060): the day-truth reader — one user, one SP day, <= 4 rows
   // on `completions_user_date_idx`, the index built for this read.
   listCompletionsForDay,
@@ -20,6 +23,11 @@ export {
   recordCompletion,
   type CompletionRecord,
 } from "./completions";
+// #58 (ADR-0066): the seen-days statements — presence recorded by the
+// session service's three hooks, consulted ONLY by POST /completions'
+// write-time credit, pruned by /cron/publish. The table itself is NOT
+// exported: no consumer outside seen-days.ts and mergeAccounts names it.
+export { pruneSeenDays, recordSeenDay, wasSeenOn } from "./seen-days";
 // Live since #21 (the magic-link confirm route is the first production
 // caller): the ADR-0009 merge operation, its read-only preview reader, and
 // the winner-liveness guard's error predicate (the confirm route retries

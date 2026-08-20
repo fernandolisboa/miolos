@@ -155,7 +155,11 @@ reader discover the tension.
   `recordCompletion({ game, … })` and `getCompletion(db, userId, game,
   date)` take `game` as data and `on_time` is derived in SQL
   ([ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md)
-  decision 2). #19 defines the streak as consecutive days with at least
+  decision 2). *Annotation (#58,
+  [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)):*
+  *`on_time` is a STORED write-time verdict now, not a SQL derivation; the
+  consequence's substance is unchanged: a `game='sudoku'` row still counts
+  with zero additional work.* #19 defines the streak as consecutive days with at least
   one on-time completion over exactly those rows, so a `game='sudoku'`
   row counts with **zero** additional work. `streakCount` renders `0`
   until #19 ships the display, and that is flagged in the PR rather

@@ -360,11 +360,12 @@ export function computeStats(
   // F5's "Sua média (30 dias)": rows dated within the last 30 SP days,
   // today included — epochDay(date) > epochDay(today) − 30.
   const windowFloorDay = epochDay(today) - 30;
-  // A won row dated today is on time by the derivation's construction —
-  // `completed_at` is the DB clock at insert, so a row whose `date` equals
-  // the DB clock's today derives on-time by definition. No `onTime`
-  // conjunct, on purpose: adding one would be a second, redundant spelling
-  // of that construction (plan 033 §4.5). The MINIMUM over qualifying rows
+  // A won row dated today is on time by the write rule's construction —
+  // `onTimeAtWrite` answers `true` unconditionally when the puzzle's date
+  // IS the DB clock's today (#58, ADR-0066), so the stored column agrees.
+  // No `onTime` conjunct, on purpose: adding one would be a second,
+  // redundant spelling of that construction (plan 033 §4.5). The MINIMUM
+  // over qualifying rows
   // — not `find` — keeps the function total AND order-independent over its
   // type: the composite PK makes duplicate (game, date) rows unreachable
   // in production, but a permutation of a duplicate-carrying input must

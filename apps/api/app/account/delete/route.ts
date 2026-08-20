@@ -41,8 +41,9 @@ export function OPTIONS(): Response {
  * POST /account/delete (#21, ADR-0050 decision 12): real, immediate,
  * self-service deletion — the LGPD path the /privacidade page hosts. One
  * cascade DELETE removes sessions, completions, hint_grants, medal_grants,
- * attach_tokens and push_subscriptions with the row; the cookie is cleared; the next visit
- * mints a FRESH, empty identity through the normal bootstrap.
+ * attach_tokens, push_subscriptions and user_seen_days with the row; the
+ * cookie is cleared; the next visit mints a FRESH, empty identity through
+ * the normal bootstrap.
  *
  * Structurally distinct from tombstones, and deliberately so: a tombstone
  * owns no session, so `requireUserId` can never resolve a cookie to one —
@@ -90,8 +91,9 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // The cascade is the whole footprint: sessions, completions,
-  // hint_grants, medal_grants, attach_tokens and push_subscriptions
-  // (#145, migration 0007) all declare ON DELETE CASCADE.
+  // hint_grants, medal_grants, attach_tokens, push_subscriptions
+  // (#145, migration 0007) and user_seen_days (#58, migration 0008)
+  // all declare ON DELETE CASCADE.
   await db.delete(users).where(eq(users.id, userId));
 
   const response = Response.json(

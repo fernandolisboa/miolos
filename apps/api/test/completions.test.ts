@@ -14,7 +14,7 @@ import {
   todaySaoPaulo,
 } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
-import { completions } from "@miolos/db/user";
+import { completions, hasCreditedPastDateToday } from "@miolos/db/user";
 import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
@@ -2021,6 +2021,7 @@ describe("POST /completions — the archive write window (#31, ADR-0053)", () =>
       completedAt: new Date(`${yesterday}T15:00:00Z`),
       elapsedMs: 42_000,
       hintsUsed: 1,
+      onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
     });
     const storedBefore = await ctx.db.select().from(completions);
 
@@ -2150,6 +2151,7 @@ describe("POST /completions — the archive write window (#31, ADR-0053)", () =>
         completedAt: new Date("2026-08-11T02:59:59Z"),
         elapsedMs: 61_000,
         hintsUsed: 0,
+        onTime: false, // #58 (ADR-0066): late seeds — the rows the ceiling counts
       })),
     );
 
@@ -2249,5 +2251,167 @@ describe("POST /completions — the archive write window (#31, ADR-0053)", () =>
       /const TERMINAL_STATUSES[^=]*=\s*new Set\(\[([^\]]*)\]/.exec(sync);
     expect(terminal?.[1]).toBeDefined();
     expect(terminal?.[1]).not.toContain("429");
+  });
+});
+
+describe("POST /completions — the late-sync credit (#58, ADR-0066)", () => {
+  /** GET /streak through its own real route (the archive describe's idiom). */
+  async function streakOf(token: string): Promise<StreakResponse> {
+    const response = await streakGet(
+      new NextRequest("http://localhost:3001/streak", {
+        method: "GET",
+        headers: new Headers({ cookie: `${SESSION_COOKIE_NAME}=${token}` }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    return streakResponseSchema.parse(await response.json());
+  }
+
+  /** GET /stats through its own real route, over the same PGlite db. */
+  async function statsOf(token: string): Promise<StatsResponse> {
+    const response = await statsGet(
+      new NextRequest("http://localhost:3001/stats", {
+        method: "GET",
+        headers: new Headers({ cookie: `${SESSION_COOKIE_NAME}=${token}` }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    return statsResponseSchema.parse(await response.json());
+  }
+
+  /** A seen-day row for a chosen date — the fixture's shortcut for "the
+   *  user was online on D": production writes it via the session hooks
+   *  (`recordSeenDay`, DB-clock-dated), which a yesterday fixture cannot
+   *  reach without a clock fake this test does not need. */
+  async function seedSeenDay(userId: string, date: string): Promise<void> {
+    await ctx.db.execute(
+      sql`insert into user_seen_days (user_id, date)
+          values (${userId}::uuid, ${date}::date)
+          on conflict do nothing`,
+    );
+  }
+
+  it("T-API-S137: a seen yesterday is credited — 200 with onTime true, and GET /streak counts the day", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const { token, userId } = await createSession();
+    await seedSeenDay(userId, yesterday);
+    const solution = await seedDaily("binairo", yesterday);
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: yesterday,
+          grid: solution,
+        }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toMatchObject(
+      { onTime: true, recorded: true, date: yesterday },
+    );
+
+    // The credit reaches the streak: yesterday counts, exactly as an
+    // on-time completion of that day always did (#18's promise made true).
+    const streak = await streakOf(token);
+    expect(streak.streak).toBe(1);
+  });
+
+  it("T-API-S138: an UNSEEN yesterday stays late — 200, recorded, onTime false; streak and Dia Perfeito unmoved", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const { token } = await createSession();
+    // NO seen row for yesterday. The session hooks record TODAY's presence
+    // on this very request — which is exactly why today's row can never
+    // credit yesterday: the credit reads (user, yesterday), not (user, now).
+    const solution = await seedDaily("binairo", yesterday);
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: yesterday,
+          grid: solution,
+        }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toMatchObject(
+      { onTime: false, recorded: true },
+    );
+
+    // The failure direction is the status quo: played/late, no streak day,
+    // no Dia Perfeito movement — and the row IS recorded (solved counts).
+    expect((await streakOf(token)).streak).toBe(0);
+    const stats = await statsOf(token);
+    expect(stats.perfectDays).toBe(0);
+    expect(stats.binairo.solved).toBe(1);
+  });
+
+  it("T-API-S139: the multi-past-date guard's window boundary — a stale straddle-shaped credit (two days back, written today) does not block yesterday's credit, and the predicate still trips on a second in-window credited date (the widening tripwire)", async () => {
+    // THE REAL BOUNDARY (step-6 correctness blocker). The rollover
+    // straddle mints exactly this row: a credit accepted at 23:59:59.9
+    // whose INSERT lands after midnight — read from the NEXT writing day
+    // it is `date = today − 2`, `on_time = true`, `completed_at` on
+    // today's SP day. The pre-fix guard (no window conjunct) matched it
+    // and answered a TERMINAL 422 to the next day's legitimate credited
+    // flush — silent permanent loss of a streak day. The window conjunct
+    // in `hasCreditedPastDateToday` excludes it; this arm proves the
+    // legitimate write now lands.
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const { token, userId } = await createSession();
+    await ctx.db.insert(completions).values({
+      userId,
+      game: "sudoku",
+      date: addDays(today, -2), // the straddle shape: out of window
+      outcome: "won",
+      // completed_at defaults to the DB clock's now — written on TODAY's
+      // SP day, so `writtenOnSaoPauloDay(today)` holds of it.
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+      onTime: true, // the credited shape
+    });
+
+    await seedSeenDay(userId, yesterday);
+    const solution = await seedDaily("binairo", yesterday);
+    const credited = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: yesterday,
+          grid: solution,
+        }),
+      }),
+    );
+    expect(credited.status).toBe(200);
+    expect(completionResponseSchema.parse(await credited.json())).toMatchObject(
+      { onTime: true, recorded: true, date: yesterday },
+    );
+
+    // THE TRIPWIRE ARM, pinned on the predicate directly: under window = 1
+    // the route can never reach the 422 (excluding yesterday, the match
+    // set `date ∈ [today−1, today) ∧ date ≠ today−1` is provably empty —
+    // second assertion), so the guard's teeth are pinned where they live.
+    // The credited yesterday row just written IS a second distinct
+    // in-window credited date from the viewpoint of any OTHER in-window
+    // date — exactly the state a widened window makes reachable, and the
+    // predicate trips on it.
+    await expect(
+      hasCreditedPastDateToday(ctx.db, userId, {
+        today,
+        excludingDate: addDays(today, -2),
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      hasCreditedPastDateToday(ctx.db, userId, {
+        today,
+        excludingDate: yesterday,
+      }),
+    ).resolves.toBe(false);
   });
 });

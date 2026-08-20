@@ -94,6 +94,7 @@ describe("POST /notifications/dismiss — one permanent stamp (#145, ADR-0064)",
         completedAt: new Date(`${addDays(today, offset)}T15:00:00Z`),
         elapsedMs: 61_000,
         hintsUsed: 0,
+        onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
       });
     }
     const before = await stateGet(stateRequest(token));

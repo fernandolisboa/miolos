@@ -120,6 +120,9 @@ async function insertHistoryRow(init: {
     elapsedMs: 61_000,
     hintsUsed: 0,
     guesses: init.guesses,
+    // #58 (ADR-0066): stored at write; the old derivation's verdict for
+    // these instants, i.e. migration 0008's backfill semantics.
+    onTime: init.completedAtDate === init.date,
   });
 }
 
