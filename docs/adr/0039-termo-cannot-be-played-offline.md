@@ -204,6 +204,10 @@ project's shared layer would get bent around Termo one guess at a time.
   does not solve the problem in any case: a queued guess has no "later" —
   by the time it drains the player has stopped playing, and a turn judged
   into an empty room is not gameplay.
+  *Annotation (#145, ADR-0064):* the worker shipped, caching-free and
+  fetch-less by [ADR-0064](./0064-streak-at-risk-is-a-derived-decision.md)
+  decision 5, so the scope reason is retired; the rejection stands on its
+  second, independent reason.
 - **Judging guesses locally when offline and reconciling on reconnect.** It
   requires the answer on the client, which is ADR-0038's parked option and
   Fernando's call, not a fallback mode. Shipping it *only* for the offline

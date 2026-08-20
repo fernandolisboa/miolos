@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-19 (issue #35, shipped in #150)
 **Depends on:** [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md)
+**Amended by:** [ADR-0064](./0064-streak-at-risk-is-a-derived-decision.md) — decision 2's column enumeration (annotation (a))
 
 ## Context
 
@@ -33,7 +34,12 @@ a modal" comments) and live in plan 057, not here.
    and the same statement carries `attach_prompt_dismissed_at`, closing #134.**
    The shape is statement 5b's `least()` idiom as a self-join UPDATE, guarded
    `is not null` + strict `<` per column, OR-ed across the two columns, with
-   `updated_at` set to DB-side `now()`. `least()` ignores NULLs, so either
+   `updated_at` set to DB-side `now()`. *(**Amended at ADR-0064 (#145),
+   annotation (a):** "the two columns" is the enumeration as of #35 —
+   statement 5d now folds THREE once-per-account timestamps, #145's
+   `push_prompt_dismissed_at` joining under the identical per-column arm.
+   The shape, the guard discipline and everything else in this decision
+   stand unchanged.)* `least()` ignores NULLs, so either
    side suffices; both set keeps the earlier (the evidence property — nothing
    reads the value, both readers compare to NULL); a re-run matches zero rows
    (ADR-0049 decision 5's idempotence discipline). The loser's own values

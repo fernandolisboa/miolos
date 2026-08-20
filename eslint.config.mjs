@@ -230,6 +230,15 @@ const freePlayBannedModuleGroups = [
       "**/play/day-state",
       "**/play/use-record-snapshot",
       "**/play/conclusion-view",
+      // #145 step 7b: the lazy boundary RE-EXPORTS `conclusion-view`'s two
+      // views, so it is one hop from everything the entry above bans —
+      // `useDayState` (GET /streak AND GET /day), the record snapshot, the
+      // share pair, the push card. `no-restricted-imports` is NOT
+      // transitive — the whole reason this list names one-hop doors by
+      // hand (#103's share-button lesson, verbatim) — so the wrapper file
+      // needs its own entry. Measured CLEAN from a free-play probe before
+      // this entry existed (the step-7b review's lintText probes).
+      "**/play/conclusion-lazy",
       // #34: the share text composes a `PlayRecord` into the string the
       // conclusion hands to the share sheet. Free play records nothing
       // (ADR-0008 rule 5, ADR-0046 `:31`), so it has nothing to share, and
@@ -254,6 +263,16 @@ const freePlayBannedModuleGroups = [
       "**/binairo/binairo-screen",
       "**/sudoku/sudoku-screen",
       "**/nonogram/nonogram-screen",
+      // #145 step 7b, beside the screen roots they belong to: the two
+      // per-game conclusion wrappers statically import `conclusion-view`,
+      // so each is a one-hop door of the same class. They pre-dated this
+      // pass (both shipped at their games' conclusion tickets) and linted
+      // CLEAN from free play until these names entered the list — recorded
+      // by the step-7b review as the same hole as `conclusion-lazy`'s,
+      // closed in the same pass because it is the same list and the same
+      // claim.
+      "**/nonogram/nonogram-conclusion",
+      "**/termo/termo-conclusion",
       // The hub page and its day-state island are one-hop doors of the
       // same class: `app/page` imports `hub-day-state` and `hub-streak`,
       // and `hub-day-state` reaches `play/day-state` — a relative
@@ -355,6 +374,23 @@ const freePlayBannedModuleGroups = [
       "free play never touches the medals: the medals client and hook are banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0052).",
   },
   {
+    // #145 (ADR-0064): the push modules reach identity (the session mint
+    // via `ensureSession`), the network and the streak-derived eligibility
+    // — and the prompt card inside `play/` is one hop from them. Banned by
+    // name like the onboarding group above (the napkin's one-hop rule).
+    // The specifier shapes, all three on purpose: `**/push/**` does not
+    // match a bare `../push`; `**/play/push-prompt-card` closes the card
+    // itself — `no-restricted-imports` is NOT transitive, so the
+    // conclusion-view ban above does not cover a direct reach into the
+    // card. The glob is narrower than it looks (the `**/day` precedent,
+    // T-LINT-S50's control): `**/push` and `**/push/**` match `../push`
+    // and `../push/push-client` and match NEITHER `../play/push-prompt-card`
+    // (its own literal name is the third entry) nor anything else shipped.
+    group: ["**/push", "**/push/**", "**/play/push-prompt-card"],
+    message:
+      "free play never touches identity or the push opt-in: the push client, hook and prompt card are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0064).",
+  },
+  {
     // #83 (ADR-0060): the day client and the day-truth store reach the
     // network and a server-derived, user-specific answer — banned by name
     // like the stats group above (the napkin's one-hop rule). Both specifier
@@ -383,9 +419,9 @@ const freePlayDynamicBannedModule = {
     // `../day/day-truth` and matches NEITHER `../play/day-state` NOR
     // `../../app/hub-day-state`, whose own literal names are already in this
     // alternation, where they belong.
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|share-text|share-button)|termo\\/guess-client|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
   message:
-    "free play records nothing, fetches nothing, never touches Termo, the streak, the day, the statistics, the medals, the attach flow or the onboarding flow: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061).",
+    "free play records nothing, fetches nothing, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064).",
 };
 
 // (4) THE OG WALL's own ban (#34, ADR-0054 decisions 8 and 15). Everything
@@ -517,6 +553,19 @@ export default tseslint.config(
       parserOptions: {
         ecmaFeatures: { jsx: true },
       },
+    },
+  },
+  {
+    // #145 (ADR-0064): the caching-free service worker — a plain unbundled
+    // JS file served at /sw.js, matched by the plain-JS entry above but
+    // parsed there with no worker globals. SCANNED WITH ITS OWN GLOBALS
+    // rather than ignored — an ignored file is an unscanned file, and this
+    // is the one file where a stray request-interception handler would be
+    // an ADR-0004 breach (T-WEB-S261 pins the source; this entry keeps
+    // `self`/`clients` from reading as undefined globals).
+    files: ["apps/web/public/sw.js"],
+    languageOptions: {
+      globals: globals.serviceworker,
     },
   },
   {

@@ -36,9 +36,9 @@ import type { SudokuDigit } from "../src/sudoku/state";
  * plan-040 `T-LINT-S45` case): the issue-adherence lens required the
  * ADR-0043 decision-10 announcer on the remote view, and its arm below
  * spends the id inside the reservation rather than minting outside it.
- * (#145's push opt-in card is still excluded by ADR-0065 decision 8 alone —
- * the card had not landed at this branch's merge-from-main, so the first
- * ticket that adds it owes that test arm.)
+ * #145's push opt-in card landed with its own merge-from-main and ships
+ * ADR-0065 decision 8's owed arm here as T-WEB-S272: the card renders last
+ * in the LOCAL conclusion's aside and never on the remote view.
  */
 const DATE = "2026-07-31";
 const API_URL = "https://api.example.test";
@@ -121,12 +121,16 @@ function stubApi(routes: {
   day?: () => Response;
   stats?: () => Response;
   streak?: () => Response;
+  notifications?: () => Response;
 }) {
   const anonymous = () => jsonResponse(401, { error: "no-session" });
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = urlOf(input);
     if (url === `${API_URL}/day`) {
       return Promise.resolve((routes.day ?? anonymous)());
+    }
+    if (url === `${API_URL}/notifications/state`) {
+      return Promise.resolve((routes.notifications ?? anonymous)());
     }
     if (url === `${API_URL}/stats`) {
       return Promise.resolve((routes.stats ?? anonymous)());
@@ -773,5 +777,121 @@ describe("the remote swap announces itself — ADR-0043 decision 10's live regio
     expect(playedRegion).not.toHaveTextContent(
       messages.conclusion.remote.completedBody,
     );
+  });
+});
+
+/**
+ * A push-capable browser whose permission is still askable, so the card's
+ * own gates all open the moment the server says eligible — which is what
+ * makes the REMOTE arm below non-vacuous: everything that could render the
+ * card is present except a mount point.
+ */
+function installAskablePushBrowser(): void {
+  Object.defineProperty(window, "Notification", {
+    value: { permission: "default" },
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(window, "PushManager", {
+    value: class PushManager {},
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(navigator, "serviceWorker", {
+    value: { getRegistration: () => Promise.resolve(undefined) },
+    configurable: true,
+  });
+}
+
+function removePushBrowser(): void {
+  Reflect.deleteProperty(window, "Notification");
+  Reflect.deleteProperty(window, "PushManager");
+  Reflect.deleteProperty(navigator, "serviceWorker");
+}
+
+describe("the push card mounts LAST in the LOCAL aside, and never on the remote view (T-WEB-S272)", () => {
+  afterEach(() => {
+    removePushBrowser();
+  });
+
+  const eligiblePush = () =>
+    jsonResponse(200, { eligible: true, vapidPublicKey: "BServerKey" });
+
+  it("a locally-concluded day renders the card as the aside's last child — the mount-point pin: deleting the ConclusionAside prompt slot or its call-site fill goes red here", async () => {
+    installAskablePushBrowser();
+    writePlayRecord(concludedSudoku());
+    stubApi({
+      stats: () => jsonResponse(200, statsBody()),
+      streak: () => jsonResponse(200, streakBody()),
+      notifications: eligiblePush,
+    });
+    const ConclusionView = await loadConclusionView();
+
+    render(
+      <ConclusionView
+        game="sudoku"
+        date={DATE}
+        copy={messages.games.sudoku.conclusion}
+      />,
+    );
+
+    const title = await screen.findByText(messages.push.title);
+    const section = title.closest("section");
+    const aside = title.closest("aside");
+    expect(section).not.toBeNull();
+    expect(aside).not.toBeNull();
+    // LAST, deliberately (#145 step-6 perf minor 4): the card mounts late,
+    // and the last slot is what makes the insertion shift no content.
+    expect(aside?.lastElementChild).toBe(section);
+  });
+
+  it("the remote completed view — same eligibility, same askable browser — renders no card and fires no push state fetch (ADR-0065 decision 8's owed arm)", async () => {
+    installAskablePushBrowser();
+    const fetchMock = stubApi({
+      day: () =>
+        jsonResponse(
+          200,
+          dayBody({
+            sudoku: {
+              status: "completed",
+              elapsedMs: ELAPSED_MS,
+              hintsUsed: 0,
+            },
+          }),
+        ),
+      stats: () => jsonResponse(200, statsBody()),
+      streak: () => jsonResponse(200, streakBody()),
+      notifications: eligiblePush,
+    });
+    const ConclusionView = await loadConclusionView();
+
+    const { container } = render(
+      <ConclusionView
+        game="sudoku"
+        date={DATE}
+        copy={messages.games.sudoku.conclusion}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("[data-conclusion-remote]"),
+      ).not.toBeNull();
+    });
+    // Real time for a would-be card to fetch, gate and mount — the sibling
+    // arm above proves this window is long enough for the card to appear
+    // when a mount point exists.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    });
+    expect(screen.queryByText(messages.push.title)).toBeNull();
+    // Structurally absent, not merely gated: the remote view leaves the
+    // ConclusionAside prompt slot empty, so the card never mounts and the
+    // credentialed state GET is never even attempted from this view.
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        urlOf(input).endsWith("/notifications/state"),
+      ),
+    ).toBe(false);
   });
 });

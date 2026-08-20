@@ -5,13 +5,42 @@ import { useEffect } from "react";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
-import { RemoteConclusionView } from "../play/conclusion-view";
+import {
+  ConclusionChunkFallback,
+  preloadNonogramConclusion,
+  RemoteConclusionView,
+  resilientConclusion,
+} from "../play/conclusion-lazy";
 import { useServerDayClaim } from "../play/day-state";
 import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { submittedCells } from "./engine";
-import { NonogramConclusion } from "./nonogram-conclusion";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useNonogramPlay } from "./use-nonogram-play";
+
+/**
+ * The per-game conclusion wrapper rides the same lazy boundary as
+ * `conclusion-lazy.tsx` (#145 step 7, ADR-0054 decision 15): this
+ * screen root is `/nonogram`'s first-load set, and the wrapper statically
+ * imports the whole conclusion tree. `/nonogram/concluido` keeps its own
+ * STATIC import of the wrapper — that segment's server render is the
+ * bookmark/detect surface and must keep carrying real markup.
+ * `resilientConclusion` attaches the pending skeleton and the
+ * retry-then-fallback failure story (#145 step-7b, blocker 2); the
+ * fallback carries the stamp word and the frozen time from the caller's
+ * own `result`, and deliberately no picture — the reveal is a rich payoff
+ * the degraded frame does not promise.
+ */
+const NonogramConclusion = resilientConclusion<
+  Parameters<typeof import("./nonogram-conclusion").NonogramConclusion>[0]
+>(
+  async () => (await import("./nonogram-conclusion")).NonogramConclusion,
+  (props) => (
+    <ConclusionChunkFallback
+      copy={messages.games.nonogram.conclusion}
+      stamp={props.result}
+    />
+  ),
+);
 
 /**
  * The play screen's client root (plan 020 §10.6). It swaps its body from
@@ -58,6 +87,19 @@ export function NonogramScreen({
       pause();
     }
   }, [claimOwnsScreen, pause]);
+
+  // Warm the conclusion chunk while the player is still solving (#145
+  // step 7, ADR-0054 decision 15's relief): the conclusion tree left this
+  // route's first-load set, and this background import is what makes the
+  // win-moment swap resolve from the module cache instead of flashing a
+  // blank where the celebration goes. A code chunk, never puzzle content —
+  // ADR-0004 untouched. The named preload warms the per-game wrapper AND,
+  // through its static import, the shared conclusion tree — and being a
+  // named export of `conclusion-lazy` is what makes the warm testable
+  // (T-WEB-S289).
+  useEffect(() => {
+    preloadNonogramConclusion();
+  }, []);
 
   // The clues did not solve to an exact bitmap, so there is no picture to
   // compare against and the board could never close (§10.4). ADR-0021

@@ -15,10 +15,18 @@ import { z } from "zod";
  * eligible. Read ONLY by GET /attach/state, which serves a derived boolean
  * — the threshold itself never ships to a client (ADR-0048's rule). The
  * 1..365 clamp is the same untrusted-loop-bounds discipline.
+ *
+ * `pushOptInStreakThreshold` (#145, ADR-0064; the founding handoff's
+ * "opt-in after streak >= 3"): the streak at which the push pre-prompt
+ * becomes eligible — the `attachStreakThreshold` row cloned, same clamp
+ * discipline. Read ONLY by GET /notifications/state, which serves a
+ * derived boolean; the threshold never ships to a client (ADR-0048's
+ * rule). It gates the ASK, never a send (the #32 shape §3).
  */
 export const remoteConfigSchema = z.object({
   bufferDepth: z.number().int().min(1).max(30).default(7),
   attachStreakThreshold: z.number().int().min(1).max(365).default(5),
+  pushOptInStreakThreshold: z.number().int().min(1).max(365).default(3),
 });
 
 export type RemoteConfig = z.infer<typeof remoteConfigSchema>;

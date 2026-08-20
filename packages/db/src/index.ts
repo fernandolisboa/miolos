@@ -4,7 +4,11 @@
 // `@miolos/db/publishing` with the buffer writers and the
 // solution-bearing reader. The export list is pinned exactly by the
 // tripwire test in test/published.test.ts.
-export { sessions, users } from "./schema";
+// `pushSubscriptions` (#145, ADR-0064) rides the same entry `users` does:
+// its statements live in apps/api/src/push/service.ts, which imports the
+// root entry exactly as onboarding/service.ts imports `users`. Carries no
+// puzzle content, so it is not behind the ADR-0004 wall.
+export { pushSubscriptions, sessions, users } from "./schema";
 export { createDb, type Db } from "./client";
 // Re-exported so consumers depend only on @miolos/db and take no direct
 // drizzle-orm dependency (pnpm's isolated node-linker would otherwise fail

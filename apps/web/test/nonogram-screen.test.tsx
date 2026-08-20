@@ -967,11 +967,17 @@ describe("the four branches (T-WEB-S47)", () => {
     ).toBeInTheDocument();
   });
 
-  it("swaps the conclusion in place on a fill-only finish, with no navigation", () => {
+  it("swaps the conclusion in place on a fill-only finish, with no navigation", async () => {
     const { container } = render(<NonogramScreen daily={SMALL} />);
 
     paintThePicture(container);
 
+    // Resolve the conclusion's next/dynamic boundary (#145 step 7,
+    // ADR-0054 decision 15): awaiting the same import the lazy wrapper
+    // awaits flushes its resolution deterministically.
+    await act(async () => {
+      await import("../src/nonogram/nonogram-conclusion");
+    });
     expect(container.querySelector("[data-conclusion-state]")).toHaveAttribute(
       "data-conclusion-state",
       "result",

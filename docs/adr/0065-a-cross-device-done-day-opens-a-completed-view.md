@@ -117,6 +117,10 @@ never rides this wire (ADR-0004, ADR-0060 decision 2).
    device's day. #145 had not landed when this shipped, so the exclusion is
    stated here for its reviewers rather than asserted in a test; the first
    ticket that puts the card into `conclusion-view.tsx` owes the test arm.
+   *Annotation (#145):* that ticket paid it — the card rides
+   `ConclusionAside`'s `prompt` slot, filled by the local view only, and
+   `T-WEB-S272` (`remote-conclusion.test.tsx`) asserts the remote view
+   renders no card and fires no push state fetch.
 
 ## Rejected
 

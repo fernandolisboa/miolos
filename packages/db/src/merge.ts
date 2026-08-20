@@ -7,6 +7,7 @@ import {
   completions,
   hintGrants,
   medalGrants,
+  pushSubscriptions,
   sessions,
   users,
 } from "./schema";
@@ -97,14 +98,16 @@ export async function listCompletionsForMerge(
  * is a no-op. Throws on an unknown id: a merge against a typo must be
  * loud, not creative.
  *
- * EXTENSION POINT, consumed by #30 as reserved (ADR-0049 decision 6):
- * curated medal grants acquired their merge duty here — statements 5b/5c
- * below, union-EARLIEST-dedupe then the loser's delete (ADR-0052). Future
- * account-scoped tables still acquire theirs HERE — the rewarded-ad
- * ticket's same-day hint grants if it ever wants them repointed instead
- * (hint grants are DELETED, never carried — day-scoped, structurally
- * expiring, writer-less in v1, plan 029 D12). #58's stored on_time joins
- * the repoint statement's explicit column list when it lands.
+ * EXTENSION POINT, consumed by #30 and #145 as reserved (ADR-0049
+ * decision 6): curated medal grants acquired their merge duty here —
+ * statements 5b/5c below, union-EARLIEST-dedupe then the loser's delete
+ * (ADR-0052) — and push subscriptions acquired theirs as statement 1b
+ * (repoint, the sessions precedent; ADR-0064). Future account-scoped
+ * tables still acquire theirs HERE — the rewarded-ad ticket's same-day
+ * hint grants if it ever wants them repointed instead (hint grants are
+ * DELETED, never carried — day-scoped, structurally expiring, writer-less
+ * in v1, plan 029 D12). #58's stored on_time joins the repoint
+ * statement's explicit column list when it lands.
  */
 export async function mergeAccounts(
   db: Db,
@@ -191,6 +194,21 @@ export async function mergeAccounts(
     .set({ userId: winnerId })
     .where(eq(sessions.userId, loserId));
 
+  // 1b. The loser's push subscriptions follow the merged identity (#145,
+  //     ADR-0064 — the sessions precedent above, and the extension point
+  //     ADR-0049 decision 6 reserves, consumed as reserved). Repoint, never
+  //     delete: a device's push channel belongs to whoever that browser now
+  //     is, and deleting would silently withdraw a consent the player gave.
+  //     NOT revoked — ADR-0050 decision 13 is about cookie takeover, not
+  //     this. No conflict is possible (endpoint is a globally unique PK and
+  //     the PK does not move); trivially idempotent (a re-run matches zero
+  //     rows — T-DB-S67, and T-DB-S20's double-run snapshot by
+  //     construction).
+  await db
+    .update(pushSubscriptions)
+    .set({ userId: winnerId })
+    .where(eq(pushSubscriptions.userId, loserId));
+
   // 2. Statement (i): drop the winner's STRICTLY-LATER duplicate wherever
   //    the loser holds an earlier row for the same puzzle (ADR-0009: "the
   //    other row is dropped"). Strict <, so an exact tie keeps the
@@ -255,34 +273,38 @@ export async function mergeAccounts(
   //     keep referencing the tombstone. Trivially idempotent.
   await db.delete(medalGrants).where(eq(medalGrants.userId, loserId));
 
-  // 5d. The two once-per-account timestamps fold onto the winner
-  //     EARLIEST-WINS (#35's `onboarding_seen_at`, ADR-0061; and
+  // 5d. The three once-per-account timestamps fold onto the winner
+  //     EARLIEST-WINS (#35's `onboarding_seen_at`, ADR-0061;
   //     `attach_prompt_dismissed_at`, shipped unmerged since #21 — #134's
-  //     defect, closed here). Statement 5b's `least()` idiom adapted from a
-  //     conflict arm to a self-join UPDATE: Postgres `least()` ignores NULL
-  //     arguments, so either side suffices, and when both are set the
-  //     earlier survives (the evidence property; nothing reads either
-  //     value — both readers compare to NULL). This is the FIRST statement
-  //     that writes the WINNER's updated_at (statement 6 bumps the
-  //     loser's); schema.ts's writer list names it. The guard is an OR over
-  //     the two per-column `is not null` + strict `<` conditions — a
-  //     single-column guard would skip rows the other column needs, and
-  //     `least()` on the column whose arm did not fire is a no-op
-  //     (`least(x, NULL) = x`, `least(x, y >= x) = x`), so the statement
-  //     never moves a value backwards. Individually idempotent: a re-run
-  //     matches ZERO rows and never re-bumps updated_at (T-DB-S20's
-  //     full-state double-run snapshot; T-DB-S64). The loser's own values
-  //     are deliberately NOT nulled — not identity handles, so they stay
-  //     out of statement 6's SET, resolving to nobody on the tombstone.
-  //     Runs before 6 to keep the file's narrative (fold every
-  //     account-scoped fact into the winner, then empty the shell);
-  //     crash-prefix-safe either way, since 6 does not touch either column.
+  //     defect, closed here; and #145's `push_prompt_dismissed_at`,
+  //     ADR-0064, the third column of the same fold). Statement 5b's
+  //     `least()` idiom adapted from a conflict arm to a self-join UPDATE:
+  //     Postgres `least()` ignores NULL arguments, so either side
+  //     suffices, and when both are set the earlier survives (the evidence
+  //     property; nothing reads any of the values — every reader compares
+  //     to NULL). This is the FIRST statement that writes the WINNER's
+  //     updated_at (statement 6 bumps the loser's); schema.ts's writer
+  //     list names it. The guard is an OR over the three per-column
+  //     `is not null` + strict `<` conditions — a single-column guard
+  //     would skip rows the other columns need, and `least()` on a column
+  //     whose arm did not fire is a no-op (`least(x, NULL) = x`,
+  //     `least(x, y >= x) = x`), so the statement never moves a value
+  //     backwards. Individually idempotent: a re-run matches ZERO rows and
+  //     never re-bumps updated_at (T-DB-S20's full-state double-run
+  //     snapshot; T-DB-S64; T-DB-S68). The loser's own values are
+  //     deliberately NOT nulled — not identity handles, so they stay out
+  //     of statement 6's SET, resolving to nobody on the tombstone. Runs
+  //     before 6 to keep the file's narrative (fold every account-scoped
+  //     fact into the winner, then empty the shell); crash-prefix-safe
+  //     either way, since 6 touches none of the three columns.
   await db.execute(sql`
     update users w
        set onboarding_seen_at =
              least(w.onboarding_seen_at, l.onboarding_seen_at),
            attach_prompt_dismissed_at =
              least(w.attach_prompt_dismissed_at, l.attach_prompt_dismissed_at),
+           push_prompt_dismissed_at =
+             least(w.push_prompt_dismissed_at, l.push_prompt_dismissed_at),
            updated_at = now()
       from users l
      where w.id = ${winnerId}::uuid
@@ -294,6 +316,9 @@ export async function mergeAccounts(
           or (l.attach_prompt_dismissed_at is not null
               and (w.attach_prompt_dismissed_at is null
                    or l.attach_prompt_dismissed_at < w.attach_prompt_dismissed_at))
+          or (l.push_prompt_dismissed_at is not null
+              and (w.push_prompt_dismissed_at is null
+                   or l.push_prompt_dismissed_at < w.push_prompt_dismissed_at))
            )
   `);
 

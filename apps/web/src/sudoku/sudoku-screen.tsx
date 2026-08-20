@@ -4,7 +4,11 @@ import type { DailySudokuResponse } from "@miolos/core";
 import { useEffect } from "react";
 
 import { messages } from "../i18n";
-import { ConclusionView, RemoteConclusionView } from "../play/conclusion-view";
+import {
+  ConclusionView,
+  preloadConclusionView,
+  RemoteConclusionView,
+} from "../play/conclusion-lazy";
 import { useServerDayClaim } from "../play/day-state";
 import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { PlaySkeleton, PlayView } from "./play-view";
@@ -55,6 +59,16 @@ export function SudokuScreen({
       pause();
     }
   }, [claimOwnsScreen, pause]);
+
+  // Warm the conclusion chunk while the player is still solving (#145
+  // step 7, ADR-0054 decision 15's relief): the conclusion tree left this
+  // route's first-load set, and this background import is what makes the
+  // win-moment swap resolve from the module cache instead of flashing a
+  // blank where the celebration goes. A code chunk, never puzzle content —
+  // ADR-0004 untouched.
+  useEffect(() => {
+    preloadConclusionView();
+  }, []);
 
   // The record has not been read yet, so NOTHING derived from it may paint
   // (D28). Without this gate, reloading /sudoku on a day the player already

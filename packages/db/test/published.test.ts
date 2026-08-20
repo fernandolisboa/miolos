@@ -1075,6 +1075,9 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // #31: the three archive readers and the date classifier join the root
     // entry — `apps/web` is their only consumer and may hold nothing else.
     // The publishing and user entries are untouched by this row. 8 → 12.
+    // #145 (ADR-0064): `pushSubscriptions` joins — no puzzle content, and
+    // its statements live api-side beside the onboarding precedent. 12 → 13,
+    // widened in place (the T-DB-9a precedent).
     expect(Object.keys(root).sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
       "archiveDateClass",
@@ -1085,6 +1088,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "getTodayDaily",
       "listArchivedDays",
       "listArchivedMonths",
+      "pushSubscriptions",
       "sessions",
       "sql",
       "users",
@@ -1172,6 +1176,9 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "listUsedTermoAnswers",
       "medalGrants", // #30 (ADR-0052): the curated-grant table, user entry only
       "mergeAccounts",
+      // #145 (ADR-0064): the push-subscriptions table, root entry only —
+      // widened in place beside T-DB-9b, in the same commit as the export.
+      "pushSubscriptions",
       "recordCompletion",
       "remoteConfig",
       "sessions",
@@ -1198,7 +1205,9 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // archive readers and the date classifier, on the root entry. #83 moves
     // it by exactly one: `listCompletionsForDay` on the USER entry
     // (ADR-0060 decision 1), never the root — apps/web must stay unable to
-    // name it.
-    expect(surface).toHaveLength(39);
+    // name it. #145 moves it by exactly one: `pushSubscriptions` on the
+    // ROOT entry (ADR-0064 — the entry `users` rides; the statements over
+    // it live api-side, apps/api/src/push/service.ts).
+    expect(surface).toHaveLength(40);
   });
 });

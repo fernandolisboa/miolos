@@ -261,6 +261,12 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       '  import("../play/play-record");',
       '  import("../binairo/use-binairo-play");',
       '  import("@miolos/db");',
+      // #145 step 7b — the dynamic arm of the T-LINT-S17 widening above:
+      // the lazy re-export module and the two per-game conclusion
+      // wrappers, each one hop from the banned conclusion graph.
+      '  import("../play/conclusion-lazy");',
+      '  import("../nonogram/nonogram-conclusion");',
+      '  import("../termo/termo-conclusion");',
     ];
     for (const door of doors) {
       const source = ["export const load = () =>", door, ""].join("\n");
@@ -290,6 +296,15 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../sudoku/sudoku-screen",
       "../nonogram/nonogram-screen",
       "../play/conclusion-view",
+      // #145 step 7b — the same claim widened, no new id (the T-DB-9a /
+      // T-LINT-S39/S40 precedent: a ban list gaining a name is the same
+      // claim about the same gate). `conclusion-lazy` RE-EXPORTS the two
+      // conclusion views, and the two per-game wrappers import
+      // `conclusion-view` statically — each a one-hop door the step-7b
+      // review measured CLEAN before these entries existed.
+      "../play/conclusion-lazy",
+      "../nonogram/nonogram-conclusion",
+      "../termo/termo-conclusion",
     ];
     for (const door of doors) {
       const source = [
@@ -501,6 +516,60 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
         .toContain("no-restricted-imports");
       // Scope control: the identical specifiers are ordinary architecture
       // from a daily path — the hub island imports them.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+
+    // The dynamic-import arm: the regex closes the evasion.
+    for (const door of doors) {
+      const source = [
+        "export const load = () =>",
+        `  import("${door}");`,
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), `dynamic ${door}`)
+        .toContain("no-restricted-syntax");
+    }
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
+  it("T-LINT-S50: the push modules — client, hook, bare barrel form and the prompt card — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
+    // #145's growth clause (the napkin's one-hop rule): the push client
+    // reaches identity (the session mint) and the network, and the prompt
+    // card inside `play/` is one hop from both, so ADR-0064's surface
+    // stays out of free play only because these names entered the list in
+    // the same change that created the modules. The bare `../push` form is
+    // listed because `**/push/**` does not match it; the card is listed by
+    // its own literal name because `no-restricted-imports` is not
+    // transitive and the conclusion-view ban does not cover a direct
+    // reach. One id over both arms — the T-LINT-S49 shape: one claim
+    // ("free play cannot reach the push opt-in, by any import form"),
+    // one it.
+    const doors = [
+      "../push/push-client",
+      "../push/use-push-state",
+      "../push",
+      "../play/push-prompt-card",
+    ];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — the conclusion composition imports the card.
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);

@@ -645,11 +645,17 @@ describe("the one free hint (T-WEB-9)", () => {
 });
 
 describe("closing the grid (T-WEB-9b)", () => {
-  it("swaps the conclusion in place, with no navigation at all", () => {
+  it("swaps the conclusion in place, with no navigation at all", async () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
 
     solveByClicking(container);
 
+    // The conclusion rides a next/dynamic boundary since #145 step 7
+    // (ADR-0054 decision 15's relief), so the swap resolves one module
+    // tick after the close — same commit semantics, one await here.
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
     expect(container.querySelector("[data-conclusion-state]")).toHaveAttribute(
       "data-conclusion-state",
       "result",
@@ -793,7 +799,7 @@ describe("a second tab still playing (T-WEB-9f)", () => {
 });
 
 describe("re-entering a finished day (T-WEB-9c)", () => {
-  it("restores straight into the conclusion, with the clock stopped", () => {
+  it("restores straight into the conclusion, with the clock stopped", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
     const record = concludedRecord();
     window.localStorage.setItem(
@@ -802,6 +808,28 @@ describe("re-entering a finished day (T-WEB-9c)", () => {
     );
 
     const { container } = render(<BinairoScreen daily={DAILY} />);
+
+    // Before the flush, a CONCLUSION-SHAPED frame is already painted —
+    // asserted positively (#145 step 7b, major 3): the old "no playable
+    // board" check was satisfied by an EMPTY container, which is exactly
+    // the blank frame D28's discipline forbids. The attribute selector is
+    // deliberately value-free because the frame is order-dependent in a
+    // shared module registry: cold, it is `ConclusionLoading`'s boundary
+    // skeleton; warm (an earlier test in this file already flushed the
+    // chunk, exactly like the shipped preload), it is the conclusion
+    // itself. The COLD frame is pinned deterministically in
+    // `conclusion-lazy.test.tsx` (T-WEB-S288), which resets the registry.
+    const frame = container.querySelector("[data-conclusion-state]");
+    expect(frame).not.toBeNull();
+    expect(frame?.childElementCount).toBeGreaterThan(0);
+    expect(container.querySelector("[data-cell-index]")).toBeNull();
+    // Resolve the conclusion's next/dynamic boundary (#145 step 7,
+    // ADR-0054 decision 15) — deterministic under fake timers: awaiting
+    // the same import the lazy component awaits flushes its resolution
+    // without a timer-driven waitFor.
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
 
     // The stamp's own composed label, not `getByText`: the day card repeats
     // the same time in the Binairo chip.

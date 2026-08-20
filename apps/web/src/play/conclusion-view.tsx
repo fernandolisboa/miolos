@@ -7,6 +7,7 @@ import {
   type Game,
   type StatsResponse,
 } from "@miolos/core";
+import nextDynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 
@@ -23,6 +24,7 @@ import { useStats } from "../stats/use-stats";
 import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
+
 import { useDayState, useServerDayClaim, type DayEntry } from "./day-state";
 import { picturePath } from "./picture-path";
 import { BLANK_VALUE, ShareButton } from "./share-button";
@@ -34,6 +36,21 @@ import type {
   ConclusionPicture,
 } from "./types";
 import { useRecordSnapshot } from "./use-record-snapshot";
+/**
+ * The push pre-prompt card rides its own `next/dynamic` boundary with no
+ * SSR (#145 step 7). The conclusion tree itself is lazy on the PLAY routes
+ * (`conclusion-lazy.tsx`, ADR-0054 decision 15 taken up), so this inner
+ * boundary exists for the `/<jogo>/concluido` pages, which import this
+ * file STATICALLY for their server render: without it the whole push
+ * stack (card, client, hook, sheet) would join their first-load sets for
+ * a card most visitors never see. The card renders `null` server-side and
+ * until its gates settle anyway, so `ssr: false` changes no paint; the
+ * chunk loads lazily on the browsers that could actually show it.
+ */
+const PushPromptCard = nextDynamic(
+  () => import("./push-prompt-card").then((mod) => mod.PushPromptCard),
+  { ssr: false },
+);
 
 /** The four dailies, in the order Hoje lists them. */
 const DAY_GAMES = ["termo", "sudoku", "nonogram", "binairo"] as const;
@@ -421,6 +438,22 @@ export function ConclusionView({
         next={next}
         share={
           <ShareButton game={game} date={date} stored={stored} stamp={stamp} />
+        }
+        prompt={
+          /* The push pre-prompt (#145, ADR-0064), the LOCAL view's slot
+             only: the remote completed view (#142, ADR-0065 decision 8)
+             passes nothing, so the card structurally cannot appear on a
+             day this device did not play — pinned by T-WEB-S272. The
+             conclusion IS the habitual play moment by construction (the
+             #32 shape §1), which is what makes this the founding handoff's
+             "at the habitual window" ask with no derivation. Renders null
+             until the server AND the browser both say yes, so first paint
+             and detect's clean profile are unchanged. UNGATED on
+             syncOutcome deliberately: eligibility is server-computed over
+             server rows (ADR-0048's direction), so no client-clock claim
+             rides on it — and an offline conclusion fails the state fetch
+             into the honest absent card anyway. */
+          <PushPromptCard />
         }
       />
     </main>
@@ -1188,21 +1221,24 @@ function ConclusionCardHead({ copy }: { readonly copy: ConclusionCopy }) {
  * the local path's `syncOutcome === "recorded"` and the remote path's
  * claim-backed `true`, each argued at its call site; `share` is the
  * `ShareButton` only where a local record exists to compose from, and the
- * remote view passes nothing. #145's push opt-in card, when it lands, is a
- * decision about THIS component's props — one place to reason about, not a
- * second <aside> to remember (ADR-0065 decision 8 assigns that ticket the
- * test arm).
+ * remote view passes nothing. #145's push opt-in card landed exactly as the
+ * sentence that used to stand here predicted: a decision about THIS
+ * component's props — the `prompt` slot, filled by the local view only and
+ * never by `RemoteConclusionView`, with ADR-0065 decision 8's owed test arm
+ * shipped as T-WEB-S272.
  */
 function ConclusionAside({
   streak,
   entryOf,
   next,
   share,
+  prompt,
 }: {
   readonly streak: boolean;
   readonly entryOf: (game: Game) => DayEntry;
   readonly next: { readonly game: Game; readonly route: Route } | undefined;
   readonly share?: ReactNode;
+  readonly prompt?: ReactNode;
 }) {
   return (
     <aside className={styles.side}>
@@ -1248,6 +1284,15 @@ function ConclusionAside({
       <Link className={styles.secondaryLink} href={routes.stats}>
         {messages.conclusion.stats}
       </Link>
+      {/* The prompt slot renders LAST, deliberately (#145 step-6 perf
+          minor 4): the push card mounts hundreds of ms after paint, once
+          the server AND the browser have both settled, and it is the
+          column's only late insertion. Last in the aside, nothing sits
+          below it, so the mount shifts no content — the CTA and the day
+          card keep their positions and the insertion costs zero CLS.
+          Reserving its ~192px box on every conclusion for a card most
+          visitors never see would be strictly worse. */}
+      {prompt}
     </aside>
   );
 }

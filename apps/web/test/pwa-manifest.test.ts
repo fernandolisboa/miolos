@@ -124,10 +124,20 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     });
   });
 
-  it("registers no service worker anywhere in app/ or src/ — the D13 tripwire", () => {
-    // #19 ships installability WITHOUT a worker (Chromium dropped the SW
-    // install requirement; iOS never had it); the worker first earns its
-    // complexity with the streak-at-risk push ticket.
+  it("registers a service worker in exactly ONE place — the push card's accept gesture — and never at layout or mount level (the D13 tripwire, re-aimed at #145)", () => {
+    // #19 shipped installability WITHOUT a worker (Chromium dropped the SW
+    // install requirement; iOS never had it) and this tripwire pinned the
+    // absence, naming "the streak-at-risk push ticket" as the moment the
+    // worker earns its complexity. #145 IS that ticket, so the claim is
+    // RE-AIMED in place (the T-WEB-S96/T-WEB-S204 precedent — a landed
+    // assertion whose recorded premise the work retires): the worker now
+    // exists (apps/web/public/sw.js, caching-free, pinned by T-WEB-S261),
+    // and what this id guards from here on is that registration stays
+    // INSIDE the accept gesture — plan 061 §2's "no layout-level
+    // registration": the worker has no job until a subscription exists,
+    // registration persists browser-side once made, and no other route may
+    // gain a byte of client JS for it. Any second file naming the API is a
+    // regression this list makes loud.
     const sources: { path: string; text: string }[] = [];
     for (const dir of ["app", "src"]) {
       for (const entry of readdirSync(join(webRoot, dir), {
@@ -154,6 +164,14 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     const offenders = sources
       .filter((source) => source.text.includes("serviceWorker"))
       .map((source) => source.path);
-    expect(offenders).toEqual([]);
+    expect(offenders).toEqual([
+      join(webRoot, "src", "play", "push-prompt-card.tsx"),
+    ]);
+    // The layout arm that used to follow was DELETED at step 7 (#145
+    // step-6 quality m4): the exact-offender-list equality above already
+    // entails that layout.tsx names no serviceWorker, so a second
+    // assertion could never fail while the first held — it read as a
+    // second claim and was not one. The layout's own presence in the walk
+    // is what the anti-vacuity arm above proves.
   });
 });

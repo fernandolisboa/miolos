@@ -117,6 +117,21 @@
  * closes — a natural `next/dynamic` boundary. ADR-0054 decision 15 records
  * it for whoever gets there first.
  *
+ * SPENT AT #145 STEP 7, exactly as forecast: #142 (the remote completed
+ * view) and #145 (the push opt-in card) landed the same night, and their
+ * merged head redded `/binairo` (+41.1) and `/nonogram` (+43.2). The four
+ * play screen roots now import the conclusion tree through
+ * `src/play/conclusion-lazy.tsx` (`next/dynamic`, `ssr: false`, preloaded
+ * on mount so the win swap resolves from the module cache); the
+ * `/<jogo>/concluido` pages keep static imports for their server render.
+ * Measured on that merged build: binairo +18.9, nonogram +20.9, sudoku
+ * +15.1, termo +52.3 — `/nonogram`'s slack is 19.1 KB. Re-measure rather
+ * than quote; these figures date from 2026-08-20. Step 7b attached the
+ * boundary's failure story (loading skeleton + retry-once fallback,
+ * ~2.7–2.9 raw KB per play route) and re-measured: binairo +21.8,
+ * nonogram +23.6, sudoku +18.0, termo +54.9 — `/nonogram`'s slack is
+ * 16.4 KB. Same date.
+ *
  * (An earlier version of this paragraph quoted #19's 36.3 / 32.6 / 38.3 and
  * a 1.7 KB slack — already drifted to 33.5 / 29.7 / 35.6 on `main` by #34,
  * through three tickets that did not re-measure it — before that #28's 35.8 /

@@ -752,6 +752,22 @@ export const messages = {
     dismiss: "Entendi",
   },
   /**
+   * The push pre-prompt card (#145, ADR-0064; plan 061 §5) — the soft ask
+   * on the conclusion surface, CONTEXT.md vocabulary throughout
+   * (*sequência*, *virada*, *lembrete*). Four strings, no aria string: the
+   * card's accessible name comes from the rendered title via
+   * `aria-labelledby`, so it cannot drift from the copy (the onboarding
+   * card's shape). The service worker's own fallback strings live in
+   * apps/web/public/sw.js — the recorded i18n exception (a plain unbundled
+   * worker cannot import this module).
+   */
+  push: {
+    title: "Quer proteger sua sequência?",
+    body: "A gente te avisa antes da virada quando a sua sequência estiver em risco. No máximo um lembrete por dia — e nunca propaganda.",
+    accept: "Quero o lembrete",
+    decline: "Agora não",
+  },
+  /**
    * The /vincular confirm page (#21, ADR-0050 decision 3): an inert shell
    * plus ONE explicit button — the human click is what spends the token,
    * so an email scanner's GET consumes nothing.
@@ -824,6 +840,17 @@ export const messages = {
       // doc comment), and deferring the line would be exactly that drift.
       medals:
         "As medalhas: a maioria é calculada do seu histórico de jogos; algumas são concedidas manualmente pela equipe e ficam registradas na sua conta. Todas são apagadas junto com a conta.",
+      // #145 (ADR-0064): the push subscription is data about the user, so
+      // the inventory names it the release the table ships — the page
+      // states EXACTLY what this release ships (this block's own doc
+      // comment), and deferring the line would be exactly that drift.
+      // The withdrawal sentence describes what a player can actually DO in
+      // this release (#145 step-6 security 4): no in-app unsubscribe
+      // surface exists until #36's settings toggle, so the honest path is
+      // revoking the browser permission — delivery stops at once — with
+      // the dead-endpoint pruning (#146, ADR-0064 decision 10) removing
+      // the row, and account deletion cascading it (migration 0007).
+      push: "O lembrete no navegador, somente se você ativar: guardamos o endereço técnico da inscrição e as chaves que o navegador gera, usados só para avisar quando a sua sequência estiver em risco. Para parar, revogue a permissão de notificações nas configurações do navegador — os avisos param na hora e a inscrição, que deixa de funcionar, é removida dos nossos registros. Excluir a conta apaga tudo.",
     },
     why: {
       heading: "Para que usamos",

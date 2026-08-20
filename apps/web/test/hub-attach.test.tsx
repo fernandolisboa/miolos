@@ -91,6 +91,12 @@ describe("HubAttach dismissal (T-WEB-S136)", () => {
       "src/onboarding/onboarding-client.ts",
       "src/onboarding/use-onboarding-state.ts",
       "app/hub-onboarding.tsx",
+      // #145's push modules join (ADR-0064: the dismissal is the
+      // attach-prompt lifecycle — device storage re-prompts exactly the
+      // cleared-data user) — the same widened claim, no new id.
+      "src/push/push-client.ts",
+      "src/push/use-push-state.ts",
+      "src/play/push-prompt-card.tsx",
     ]) {
       expect(
         readFileSync(join(webRoot, sourcePath), "utf8"),

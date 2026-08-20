@@ -11,6 +11,7 @@ import {
   completions,
   hintGrants,
   medalGrants,
+  pushSubscriptions,
   sessions,
   users,
 } from "../src/schema";
@@ -144,13 +145,26 @@ async function insertMedalGrant(
     );
 }
 
-/** Deterministic full-state snapshot for the double-run and no-op checks. */
+/** A push-subscription row with literal keys (#145 — the merge remap's fixture). */
+async function insertPushSubscription(
+  userId: string,
+  endpoint: string,
+): Promise<void> {
+  await ctx.db
+    .insert(pushSubscriptions)
+    .values({ endpoint, userId, p256dh: "p256dh-key", auth: "auth-key" });
+}
+
+/** Deterministic full-state snapshot for the double-run and no-op checks.
+ *  Widened in place at #145 (the T-DB-9a precedent): `push_subscriptions`
+ *  joins, so T-DB-S20's double-run equality covers statement 1b too. */
 async function snapshotState(): Promise<{
   users: unknown[];
   sessions: unknown[];
   completions: unknown[];
   hintGrants: unknown[];
   medalGrants: unknown[];
+  pushSubscriptions: unknown[];
 }> {
   return {
     users: await ctx.db.select().from(users).orderBy(asc(users.id)),
@@ -174,6 +188,10 @@ async function snapshotState(): Promise<{
       .select()
       .from(medalGrants)
       .orderBy(asc(medalGrants.userId), asc(medalGrants.medalId)),
+    pushSubscriptions: await ctx.db
+      .select()
+      .from(pushSubscriptions)
+      .orderBy(asc(pushSubscriptions.endpoint)),
   };
 }
 
@@ -422,7 +440,9 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
 });
 
 describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)", () => {
-  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants+medal_grants state after run one deep-equals run two", async () => {
+  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants+medal_grants+push_subscriptions state after run one deep-equals run two", async () => {
+    // (push_subscriptions joined the title, the snapshot and this fixture
+    // at #145 — an in-place widening, the T-DB-9a precedent.)
     const winner = await createUser(OLDER);
     const loser = await createUser(NEWER);
     await ctx.db
@@ -431,6 +451,11 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
       .where(eq(users.id, loser));
     await insertSession(winner, "hash-winner-1");
     await insertSession(loser, "hash-loser-1");
+    // Subscriptions on BOTH sides (the grants precedent): the loser's
+    // exercises statement 1b's repoint on both runs; the winner's must
+    // survive untouched, which the snapshot's double-run equality sees.
+    await insertPushSubscription(winner, "https://push.example.org/w1");
+    await insertPushSubscription(loser, "https://push.example.org/l1");
     // Collisions in both directions, a disjoint row, and a lost Termo, so
     // the second run crosses every statement's path.
     await insertCompletion({
@@ -1026,5 +1051,171 @@ describe("mergeAccounts — the once-per-account timestamps (#35, ADR-0061; #134
     const afterFirst = await snapshotState();
     await mergeAccounts(ctx.db, winner, loser);
     expect(await snapshotState()).toEqual(afterFirst);
+  });
+});
+
+describe("mergeAccounts — push subscriptions and the push prompt (#145, ADR-0064, ADR-0049 decision 6)", () => {
+  // Pinned instants so earliest-wins is an exact comparison, never a race
+  // with the DB clock (the insertMedalGrant precedent).
+  const EARLIER = new Date("2026-07-01T12:00:00.000Z");
+  const LATER = new Date("2026-07-15T12:00:00.000Z");
+
+  /** The folded push column, read back off one row. */
+  async function pushDismissedOf(userId: string): Promise<Date | null> {
+    const rows = await ctx.db
+      .select({ pushPromptDismissedAt: users.pushPromptDismissedAt })
+      .from(users)
+      .where(eq(users.id, userId));
+    const row = rows[0];
+    if (!row) {
+      throw new Error(`no users row for ${userId}`);
+    }
+    return row.pushPromptDismissedAt;
+  }
+
+  it("T-DB-S67: statement 1b — the loser's subscriptions repoint to the winner, the tombstone holds none, the winner's own rows and keys are untouched, and a re-run is idempotent", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    // Several rows per user is the design (phone + desktop): two on the
+    // loser, one on the winner — the remap must move BOTH loser rows and
+    // touch neither the winner's row nor anyone's keys (repoint, never
+    // re-subscribe: the endpoint PK does not move, ADR-0064).
+    await insertPushSubscription(winner, "https://push.example.org/w-phone");
+    await insertPushSubscription(loser, "https://push.example.org/l-phone");
+    await insertPushSubscription(loser, "https://push.example.org/l-desktop");
+
+    const first = await mergeAccounts(ctx.db, winner, loser);
+    expect(first).toEqual({ winnerId: winner, loserId: loser });
+
+    const rows = await ctx.db
+      .select()
+      .from(pushSubscriptions)
+      .orderBy(asc(pushSubscriptions.endpoint));
+    // Every endpoint survives, byte-identical, all owned by the winner —
+    // the merged identity keeps every device's push channel (NOT revoked:
+    // ADR-0050 decision 13 is about cookie takeover, not this).
+    expect(
+      rows.map((row) => ({
+        endpoint: row.endpoint,
+        userId: row.userId,
+        p256dh: row.p256dh,
+        auth: row.auth,
+      })),
+    ).toEqual([
+      {
+        endpoint: "https://push.example.org/l-desktop",
+        userId: winner,
+        p256dh: "p256dh-key",
+        auth: "auth-key",
+      },
+      {
+        endpoint: "https://push.example.org/l-phone",
+        userId: winner,
+        p256dh: "p256dh-key",
+        auth: "auth-key",
+      },
+      {
+        endpoint: "https://push.example.org/w-phone",
+        userId: winner,
+        p256dh: "p256dh-key",
+        auth: "auth-key",
+      },
+    ]);
+    // The tombstone holds none — "emptied" extends to the push channel.
+    expect(
+      await ctx.db
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, loser)),
+    ).toEqual([]);
+
+    // The re-run matches zero rows (the loser owns nothing) — full-state
+    // idempotence, T-DB-S20's discipline on the new statement directly.
+    const afterFirst = await snapshotState();
+    const second = await mergeAccounts(ctx.db, winner, loser);
+    expect(second).toEqual(first);
+    expect(await snapshotState()).toEqual(afterFirst);
+  });
+
+  it("T-DB-S68: statement 5d folds push_prompt_dismissed_at earliest-wins — either side suffices in both argument orders, both-stamped keeps the EARLIEST whichever side carried it, and the never-dismissed pair stays NULL", async () => {
+    // (a) Either side suffices — least() ignores NULL arguments, so a
+    // winner who never saw the prompt takes the loser's dismissal (the
+    // T-DB-S63 shape, applied to the third column). Both argument orders,
+    // because the winner is a function of the DATA, never of the call.
+    for (const reversed of [false, true]) {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await ctx.db
+        .update(users)
+        .set({ pushPromptDismissedAt: EARLIER })
+        .where(eq(users.id, loser));
+      const result = reversed
+        ? await mergeAccounts(ctx.db, loser, winner)
+        : await mergeAccounts(ctx.db, winner, loser);
+      expect(result).toEqual({ winnerId: winner, loserId: loser });
+      expect(await pushDismissedOf(winner)).toEqual(EARLIER);
+      // The loser's OWN value stays on the tombstone: not an identity
+      // handle, so statement 6's SET never touches it.
+      expect(await pushDismissedOf(loser)).toEqual(EARLIER);
+      await reset();
+    }
+
+    // The mirror: a stamped winner and an unstamped loser — the guard's
+    // `is not null` arm never fires, and the winner's value is untouched.
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await ctx.db
+        .update(users)
+        .set({ pushPromptDismissedAt: EARLIER })
+        .where(eq(users.id, winner));
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await pushDismissedOf(winner)).toEqual(EARLIER);
+      await reset();
+    }
+
+    // (b) Both stamped: the EARLIER survives, whichever side carried it —
+    // the evidence property (nothing reads the value; every reader
+    // compares to NULL).
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await ctx.db
+        .update(users)
+        .set({ pushPromptDismissedAt: LATER })
+        .where(eq(users.id, winner));
+      await ctx.db
+        .update(users)
+        .set({ pushPromptDismissedAt: EARLIER })
+        .where(eq(users.id, loser));
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await pushDismissedOf(winner)).toEqual(EARLIER);
+      await reset();
+    }
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await ctx.db
+        .update(users)
+        .set({ pushPromptDismissedAt: EARLIER })
+        .where(eq(users.id, winner));
+      await ctx.db
+        .update(users)
+        .set({ pushPromptDismissedAt: LATER })
+        .where(eq(users.id, loser));
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await pushDismissedOf(winner)).toEqual(EARLIER);
+      await reset();
+    }
+
+    // (c) NULL-safe in the all-NULL direction too: neither account ever
+    // dismissed, the push arm never fires the guard, and the fold leaves
+    // NULL — a merge must never invent a dismissal.
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await pushDismissedOf(winner)).toBeNull();
+    }
   });
 });

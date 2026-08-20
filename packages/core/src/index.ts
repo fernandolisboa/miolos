@@ -188,3 +188,19 @@ export {
   type OnboardingSeenResponse,
   type OnboardingStateResponse,
 } from "./contracts/onboarding";
+export {
+  notificationsDismissResponseSchema,
+  notificationsDismissSchema,
+  notificationsStateResponseSchema,
+  pushSubscribeResponseSchema,
+  pushSubscribeSchema,
+  pushUnsubscribeResponseSchema,
+  pushUnsubscribeSchema,
+  type NotificationsDismissRequest,
+  type NotificationsDismissResponse,
+  type NotificationsStateResponse,
+  type PushSubscribeRequest,
+  type PushSubscribeResponse,
+  type PushUnsubscribeRequest,
+  type PushUnsubscribeResponse,
+} from "./contracts/notifications";
