@@ -38,19 +38,18 @@ import { fetchDayTruth } from "./day-client";
  *   hub with the payload from the session's first mount.
  * - `visibilitychange` -> visible, `focus`, and `online` — the last being
  *   the offline -> online recovery path the client's fallback promises.
- * - NOTHING ELSE. There is NO INTERVAL, and that is a decision with a named
- *   cost rather than a gate borrowed from ADR-0056 (whose decision 1 governs
- *   a 1 s `localStorage` poll and says nothing about a network refresh). A
- *   polling network loop would multiply the credentialed GETs on the most-hit
- *   route in the app, for a payload that can change at most four times a day,
- *   and every trigger above is an event the player actually generated.
- *
- *   THE RESIDUAL, stated rather than left to be found: an already-open,
- *   already-focused tab does not learn about a completion made elsewhere
- *   until it is refocused or navigated. A second monitor left on the hub —
- *   this ticket's own demo case — never updates on its own. Accepted for v1;
- *   the successor is a poll or a push, and the trigger for revisiting is a
- *   complaint, not a schedule (ADR-0060 decision 5).
+ * - A 60 s POLL, and ONLY while both of these hold: at least one listener is
+ *   subscribed, and the document is visible. ADR-0060 decision 5 shipped
+ *   this store with NO interval and named its cost — an already-open,
+ *   already-focused tab (a second monitor sitting on the hub) never updates
+ *   on its own — with a complaint as the trigger for revisiting. The
+ *   complaint fired: Fernando asked, answering PR #135's veto decision 4,
+ *   and #143 amended the clause (annotation (a)). The timer is torn down
+ *   while hidden — `visibilitychange` -> visible already refetches on
+ *   re-show, so a hidden tab owes the server nothing — and at zero
+ *   listeners, where cleanup clears it; each tick goes through `refresh()`,
+ *   so the in-flight guard below means a slow answer is never stacked on.
+ * - NOTHING ELSE.
  *
  * CLEANUP DROPS THE LISTENERS AND RETAINS THE PAYLOAD. The last unsubscribe
  * removes the three window/document handlers and leaves the cached value in
@@ -175,9 +174,41 @@ function refresh(): void {
     });
 }
 
+/**
+ * 60 s: modest against the most-hit route in the app — the payload can
+ * change at most four times a day, so anything tighter buys staleness
+ * measured in seconds at a multiple of the request count — and short enough
+ * that the second-monitor case reads a completion within a minute
+ * (ADR-0060 decision 5, annotation (a) at #143).
+ */
+const POLL_INTERVAL_MS = 60_000;
+
+let pollTimer: ReturnType<typeof setInterval> | undefined;
+
+/** Idempotent: a running timer is kept, never doubled. */
+function startPoll(): void {
+  if (pollTimer !== undefined) {
+    return;
+  }
+  pollTimer = setInterval(refresh, POLL_INTERVAL_MS);
+}
+
+function stopPoll(): void {
+  if (pollTimer === undefined) {
+    return;
+  }
+  clearInterval(pollTimer);
+  pollTimer = undefined;
+}
+
 function onVisibilityChange(): void {
   if (document.visibilityState === "visible") {
+    startPoll();
     refresh();
+  } else {
+    // No timer while hidden: the visible branch above already refetches on
+    // re-show, so ticks in a hidden tab would be pure request volume.
+    stopPoll();
   }
 }
 
@@ -188,6 +219,9 @@ function subscribe(onStoreChange: () => void): () => void {
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", refresh);
     window.addEventListener("online", refresh);
+    if (document.visibilityState === "visible") {
+      startPoll();
+    }
     refresh();
   }
   return () => {
@@ -196,6 +230,7 @@ function subscribe(onStoreChange: () => void): () => void {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", refresh);
       window.removeEventListener("online", refresh);
+      stopPoll();
       // The payload is RETAINED on purpose — see the header.
     }
   };

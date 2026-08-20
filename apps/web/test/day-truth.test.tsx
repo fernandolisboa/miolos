@@ -7,8 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * The day-truth store (#83, ADR-0060 decision 5): ONE shared value for N
- * consumers, refreshed on listener count 0 -> 1 and on the three events a
- * player actually generates, with NO interval and no payload cache.
+ * consumers, refreshed on listener count 0 -> 1, on the three events a
+ * player actually generates, and — since #143 amended decision 5's
+ * no-interval clause (annotation (a)) — on a 60 s poll that runs ONLY while
+ * at least one listener is subscribed AND the document is visible. No
+ * payload cache.
  *
  * The module holds state, so every test re-imports it after
  * `vi.resetModules()` — the store is the unit under test and a leaked
@@ -70,7 +73,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
+  // A no-op under real timers; the poll tests below fake them.
+  vi.useRealTimers();
 });
+
+/**
+ * The fake-timer twin of `flush`: advance the clock by `ms` and drain the
+ * microtask hops of whatever the ticks started. `flush` above cannot serve
+ * here — its own `setTimeout(0)` would be faked too and never fire.
+ */
+async function advance(ms: number): Promise<void> {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+}
 
 describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
   it("fetches ONCE for N subscribers, plain and in StrictMode", async () => {
@@ -131,18 +147,10 @@ describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
     second.unmount();
   });
 
-  it("installs NO interval", async () => {
-    const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
-    stubFetch(() => jsonResponse(200, payload()));
-    const { useDayTruth } = await loadStore();
-
-    const rendered = renderHook(() => useDayTruth());
-    await flush();
-    // ADR-0056 decision 1 governs a `localStorage` poll, not a network one;
-    // this store never gains a timer (ADR-0060 decision 5).
-    expect(setIntervalSpy).not.toHaveBeenCalled();
-    rendered.unmount();
-  });
+  // The "installs NO interval" arm that lived here until #143 asserted
+  // ADR-0060 decision 5's original no-interval clause. That clause is
+  // amended (annotation (a) at #143): the store now installs a bounded
+  // visible-tab poll, asserted as T-WEB-S259/S260 below.
 
   it("a refetch that changes nothing keeps the snapshot's identity", async () => {
     stubFetch(() => jsonResponse(200, payload({ termo: "completed" })));
@@ -257,6 +265,127 @@ describe("the day-truth store's triggers (T-WEB-S236)", () => {
     visibility.mockRestore();
 
     rendered.unmount();
+  });
+});
+
+describe("the visible-tab poll fires and never stacks (T-WEB-S259)", () => {
+  it("refetches every 60 s while at least one listener is subscribed and the document is visible", async () => {
+    vi.useFakeTimers();
+    const fetchMock = stubFetch(() => jsonResponse(200, payload()));
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // One tick short of a period fires nothing: the poll is an interval,
+    // not a debounce off the mount fetch.
+    await advance(59_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await advance(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // And it keeps firing — the second-monitor case ADR-0060 decision 5
+    // named as this poll's own demo (annotation (a) at #143).
+    await advance(60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    rendered.unmount();
+  });
+
+  it("a poll tick never stacks requests on a slow in-flight fetch — the guard every trigger already shares", async () => {
+    vi.useFakeTimers();
+    // Never settles: three whole periods elapse against one open request.
+    const fetchMock = stubFetch(() => new Promise<Response>(() => undefined));
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await advance(180_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    rendered.unmount();
+  });
+});
+
+describe("the poll's off states: hidden, zero listeners, cleanup (T-WEB-S260)", () => {
+  it("a 0 -> 1 subscribe while hidden installs no timer — the mount fetch stands alone until re-show", async () => {
+    vi.useFakeTimers();
+    const fetchMock = stubFetch(() => jsonResponse(200, payload()));
+    const { useDayTruth } = await loadStore();
+
+    // Hidden BEFORE the 0 -> 1 subscribe: a hub opened into a background
+    // tab (ctrl-click, target=_blank). The arm below reaches hidden through
+    // `visibilitychange`, whose stopPoll would mask a subscribe that
+    // installs the timer regardless of visibility — this one starts hidden,
+    // so only the visible check in `subscribe` keeps it green. The 0 -> 1
+    // `refresh()` still fires even hidden (pre-existing, unchanged).
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("hidden");
+    const rendered = renderHook(() => useDayTruth());
+    await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Three whole periods, zero ticks: no timer exists to fire.
+    await advance(180_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // First re-show: the visibilitychange refetch fires (call 2) and the
+    // poll starts from a fresh period (call 3 one minute later).
+    visibility.mockRestore();
+    document.dispatchEvent(new Event("visibilitychange"));
+    await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await advance(60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    rendered.unmount();
+  });
+
+  it("does not poll while the document is hidden, and the re-show restart resumes it", async () => {
+    vi.useFakeTimers();
+    const fetchMock = stubFetch(() => jsonResponse(200, payload()));
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Hidden: no timer at all. `visibilitychange` -> visible already
+    // refetches on re-show, so a hidden tab owes the server nothing.
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await advance(180_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Re-show: the existing visibilitychange refetch fires (call 2) and the
+    // poll resumes from a fresh period (call 3 one minute later).
+    visibility.mockRestore();
+    document.dispatchEvent(new Event("visibilitychange"));
+    await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await advance(60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    rendered.unmount();
+  });
+
+  it("the last unsubscribe clears the timer — zero listeners poll nothing", async () => {
+    vi.useFakeTimers();
+    const fetchMock = stubFetch(() => jsonResponse(200, payload()));
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    rendered.unmount();
+    await advance(180_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
