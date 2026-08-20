@@ -20,6 +20,7 @@ import { GET } from "../app/onboarding/state/route";
 import { getOnboardingState } from "../src/onboarding/service";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
+import { jsonHeaders, seenRequest } from "./onboarding-helpers";
 
 // Seam 4 for GET /onboarding/state (#35, ADR-0061, plan 057 D5): the real
 // handler over PGlite. The attach-state suite's conventions throughout.
@@ -151,20 +152,10 @@ describe("GET /onboarding/state — server-owned once-only (#35, ADR-0061)", () 
 
     // POST: 200, 401, 403, 415 and 400 — every branch grants, so a browser
     // can always READ the status instead of reporting an opaque CORS error.
-    const jsonHeaders = (sessionToken?: string): Headers => {
-      const headers = new Headers({ "content-type": "application/json" });
-      if (sessionToken !== undefined) {
-        headers.set("cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
-      }
-      return headers;
-    };
+    // The request builders are shared with onboarding-seen.test.ts
+    // (./onboarding-helpers.ts — step-6 quality finding).
     const post = (init: { headers: Headers; body: string }) =>
-      seenPost(
-        new NextRequest("http://localhost:3001/onboarding/seen", {
-          method: "POST",
-          ...init,
-        }),
-      );
+      seenPost(seenRequest(init));
 
     const posted = await post({ headers: jsonHeaders(token), body: "{}" });
     expect(posted.status).toBe(200);

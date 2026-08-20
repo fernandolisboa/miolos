@@ -6,10 +6,11 @@ import { z } from "zod";
  * stamped by one empty-bodied POST — the attach.ts register throughout.
  *
  * Every schema here is STRICT ON BOTH ENDS (the streak.ts register): the
- * route parses before `Response.json` and the web client parses what it
- * receives, so future payload growth MUST arrive as a new endpoint and
- * contract — an appended field would fail every deployed client's parse
- * (ADR-0048's rule).
+ * route parses before `Response.json`, and the web client strict-parses the
+ * GET's body (`markOnboardingSeen` reads only `response.ok` and discards
+ * the POST body — the dismissAttachPrompt precedent). So future payload
+ * growth MUST arrive as a new endpoint and contract — an appended field
+ * would fail every deployed client's parse (ADR-0048's rule).
  */
 
 /**

@@ -48,6 +48,16 @@ export function useOnboardingState():
         if (!cancelled) {
           setValue(response ?? null);
         }
+      })
+      // Both callees are verified never to reject, but bootstrap.ts itself
+      // treats that invariant as fragile enough to normalize inside
+      // `remintSession` — this one line makes the hook self-sufficient:
+      // if the invariant ever breaks, the failure direction stays "card
+      // absent", never an unhandled rejection (step-6 correctness lens).
+      .catch(() => {
+        if (!cancelled) {
+          setValue(null);
+        }
       });
     return () => {
       cancelled = true;

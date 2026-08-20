@@ -98,22 +98,25 @@ export default function HojePage() {
         ))}
       </section>
 
+      {/* The first-visit introduction (#35, ADR-0061). In the hub's flow
+          DIRECTLY after the game cards, never a modal — the same slot and
+          the same rule as HubAttach, and for a reason this ticket had to
+          learn: the island materialises post-hydration, after the mint and
+          the state read, so anything below it moves. Above the grid that
+          would be the four "Jogar hoje" links moving out from under a
+          first-time player's finger — the one acceptance criterion this
+          surface most needs not to violate. It sits BEFORE HubAttach
+          (step-6 issue-lens finding, plan 057 §4): if an unacknowledged
+          intro and an eligible attach prompt ever co-occur, the product
+          introduction must not render below the attach ask. Renders null
+          until GET /onboarding/state says show, so the server render and
+          the pre-hydration paint are unchanged (T-WEB-S127). */}
+      <HubOnboarding />
+
       {/* In the hub's flow after the game cards, never a modal (D15). The
           island renders null until GET /attach/state says eligible, so the
           server render and impeccable's clean profile are unchanged. */}
       <HubAttach />
-
-      {/* The first-visit introduction (#35, ADR-0061). In the hub's flow
-          AFTER the game cards, never a modal — the same slot and the same
-          rule as HubAttach, and for a reason this ticket had to learn: the
-          island materialises post-hydration, after the mint and the state
-          read, so anything below it moves. Above the grid that would be
-          the four "Jogar hoje" links moving out from under a first-time
-          player's finger — the one acceptance criterion this surface most
-          needs not to violate. Renders null until GET /onboarding/state
-          says show, so the server render and the pre-hydration paint are
-          unchanged (T-WEB-S127). */}
-      <HubOnboarding />
 
       <nav className={styles.secondaryLinks}>
         {/* Every one of the four now has a real target, and that is what

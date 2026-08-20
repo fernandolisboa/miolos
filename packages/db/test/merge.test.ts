@@ -957,6 +957,26 @@ describe("mergeAccounts — the once-per-account timestamps (#35, ADR-0061; #134
       await reset();
     }
     {
+      // The MIRROR of the mixed case (step-6 correctness finding, widened
+      // in place — same claim, no new id): the attach arm fires (loser
+      // earlier) while the onboarding arm is masked (the winner already
+      // holds the earlier value). The SQL is textually column-symmetric;
+      // this arm pins that symmetry against a future edit to one arm.
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await stamp(winner, { onboardingSeenAt: EARLIER });
+      await stamp(loser, {
+        onboardingSeenAt: LATER,
+        attachPromptDismissedAt: EARLIER,
+      });
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await timestampsOf(winner)).toEqual({
+        onboardingSeenAt: EARLIER,
+        attachPromptDismissedAt: EARLIER,
+      });
+      await reset();
+    }
+    {
       // Attach-only: a dismissed-on-device-A prompt survives the merge —
       // the exact regression #134 records against the shipped precedent.
       const winner = await createUser(OLDER);

@@ -1,6 +1,5 @@
 import { eq, sessions, sql, users } from "@miolos/db";
 import { createTestDb } from "@miolos/db/testing";
-import { NextRequest } from "next/server";
 import {
   afterAll,
   afterEach,
@@ -15,6 +14,7 @@ import {
 import { OPTIONS, POST } from "../app/onboarding/seen/route";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
+import { jsonHeaders, seenRequest } from "./onboarding-helpers";
 
 // Seam 4 for POST /onboarding/seen (#35, ADR-0061, plan 057 D5): the real
 // handler over PGlite. The attach-dismiss suite's conventions throughout.
@@ -59,21 +59,6 @@ async function createSession(): Promise<{ token: string; userId: string }> {
   return { token, userId: user.id };
 }
 
-function jsonHeaders(sessionToken?: string): Headers {
-  const headers = new Headers({ "content-type": "application/json" });
-  if (sessionToken !== undefined) {
-    headers.set("cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
-  }
-  return headers;
-}
-
-function seenRequest(init: { headers: Headers; body: string }): NextRequest {
-  return new NextRequest("http://localhost:3001/onboarding/seen", {
-    method: "POST",
-    ...init,
-  });
-}
-
 async function userRow(userId: string) {
   const rows = await ctx.db.select().from(users).where(eq(users.id, userId));
   const row = rows[0];
@@ -109,12 +94,9 @@ describe("POST /onboarding/seen — the permanent, idempotent acknowledgement (#
     expect(replay.status).toBe(200);
     expect(await replay.json()).toEqual({ seen: true });
     expect(await userRow(userId)).toEqual(stamped);
-
-    // OPTIONS exists for robustness (the write-route template).
-    expect(OPTIONS().status).toBe(204);
   });
 
-  it("T-API-S121: the write-route guards — 401 without a session, 403 cross-site, 415 non-JSON, 400 for any key and for a malformed body — and none of them stamps", async () => {
+  it("T-API-S121: the write-route guards — 401 without a session, 403 cross-site, 415 non-JSON, 400 for any key and for a malformed body, an OPTIONS preflight — and none of them stamps", async () => {
     const { token, userId } = await createSession();
 
     const noSession = await POST(
@@ -156,6 +138,11 @@ describe("POST /onboarding/seen — the permanent, idempotent acknowledgement (#
       seenRequest({ headers: jsonHeaders(token), body: "{" }),
     );
     expect(malformed.status).toBe(400);
+
+    // OPTIONS exists for robustness (the write-route template) — a guard
+    // branch like the rest, so it lives here, not under T-API-S120's
+    // stamping claim (step-6 quality finding: one claim per id).
+    expect(OPTIONS().status).toBe(204);
 
     // None of the guarded branches stamped anything.
     expect((await userRow(userId)).onboardingSeenAt).toBeNull();

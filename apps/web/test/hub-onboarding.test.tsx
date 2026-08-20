@@ -40,7 +40,6 @@ beforeEach(() => {
   bootstrapMock.ensureSession.mockReset();
   bootstrapMock.ensureSession.mockImplementation(() => Promise.resolve());
   clientMock.fetchOnboardingState.mockResolvedValue({ show: true });
-  window.localStorage.clear();
 });
 
 /** Render the card and wait for the state fetch to land it. */
@@ -226,8 +225,9 @@ describe("the hub with the card never blocks play (T-WEB-S248)", () => {
     const card = await screen.findByText(messages.onboarding.invitation);
 
     // The four game links exist and each PRECEDES the card in document
-    // order: the card is in the HubAttach slot, after the grid, so its
-    // post-hydration insertion can never move a "Jogar hoje" target.
+    // order: the card sits directly after the grid (before HubAttach —
+    // step-6 issue-lens finding, plan 057 §4), so its post-hydration
+    // insertion can never move a "Jogar hoje" target.
     for (const route of Object.values(playRoutes)) {
       const link = document.querySelector(`a[href="${route}"]`);
       expect(link, route).not.toBeNull();

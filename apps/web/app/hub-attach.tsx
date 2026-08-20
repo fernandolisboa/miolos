@@ -5,9 +5,9 @@
  * fourth client fragment (of five since #35 added `hub-onboarding.tsx`),
  * beside `hub-streak.tsx` and for the same mechanical reason (CSS Modules
  * hash per file). Quiet, in-flow paper after the game cards: never a modal
- * takeover, never floating, never blocking (PRODUCT.md principle 4,
- * `PRODUCT.md:34` — this comment said "principle 3" until #35, and the
- * citation was simply wrong; "nothing nags").
+ * takeover, never floating, never blocking (PRODUCT.md principle 4 —
+ * this comment said "principle 3" until #35, and the citation was simply
+ * wrong; "nothing nags").
  *
  * It renders `null` until the server says `eligible: true`, so the server
  * render and first paint are unchanged (T-WEB-S127's no-fetch-at-render

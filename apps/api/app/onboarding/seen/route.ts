@@ -43,48 +43,59 @@ export function OPTIONS(): Response {
  * boundary). Idempotent: the UPDATE is guarded on
  * `onboarding_seen_at IS NULL`, so a re-post touches zero rows, never
  * re-bumps `updated_at` and never moves the recorded moment.
+ *
+ * The whole body is caught (the GET route's discipline, a step-6
+ * correctness finding): a transient DB throw would otherwise be the one
+ * branch without the CORS grant, and T-API-S122's "every branch of BOTH
+ * routes" title would overclaim by exactly it. The three older write
+ * routes (attach/dismiss, attach/confirm, completions) share the gap and
+ * stay as-is — a template-wide observation, not this PR's scope.
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  warnIfGuardDegraded();
-
-  if (
-    isCrossSiteWrite(
-      {
-        secFetchSite: request.headers.get("sec-fetch-site"),
-        origin: request.headers.get("origin"),
-      },
-      process.env.WEB_ORIGIN,
-    )
-  ) {
-    return errorResponse(403, "cross-site");
-  }
-
-  if (!isJsonContentType(request.headers.get("content-type"))) {
-    return errorResponse(415, "unsupported-media-type");
-  }
-
-  const db = getDb();
-  const userId = await requireUserId(
-    db,
-    request.cookies.get(SESSION_COOKIE_NAME)?.value,
-  );
-  if (!userId) {
-    return errorResponse(401, "no-session");
-  }
-
-  let raw: unknown;
   try {
-    raw = await request.json();
+    warnIfGuardDegraded();
+
+    if (
+      isCrossSiteWrite(
+        {
+          secFetchSite: request.headers.get("sec-fetch-site"),
+          origin: request.headers.get("origin"),
+        },
+        process.env.WEB_ORIGIN,
+      )
+    ) {
+      return errorResponse(403, "cross-site");
+    }
+
+    if (!isJsonContentType(request.headers.get("content-type"))) {
+      return errorResponse(415, "unsupported-media-type");
+    }
+
+    const db = getDb();
+    const userId = await requireUserId(
+      db,
+      request.cookies.get(SESSION_COOKIE_NAME)?.value,
+    );
+    if (!userId) {
+      return errorResponse(401, "no-session");
+    }
+
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return errorResponse(400, "invalid-body");
+    }
+    if (!onboardingSeenSchema.safeParse(raw).success) {
+      return errorResponse(400, "invalid-body");
+    }
+
+    await markOnboardingSeen(db, userId);
+
+    return Response.json(onboardingSeenResponseSchema.parse({ seen: true }), {
+      headers: corsHeaders({ credentials: true }),
+    });
   } catch {
-    return errorResponse(400, "invalid-body");
+    return errorResponse(500, "internal");
   }
-  if (!onboardingSeenSchema.safeParse(raw).success) {
-    return errorResponse(400, "invalid-body");
-  }
-
-  await markOnboardingSeen(db, userId);
-
-  return Response.json(onboardingSeenResponseSchema.parse({ seen: true }), {
-    headers: corsHeaders({ credentials: true }),
-  });
 }
