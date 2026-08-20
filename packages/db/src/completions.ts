@@ -138,7 +138,10 @@ export async function listCompletionsForStreak(
  *
  * `onTime` is the ONE `onTimeSql()` derivation (ADR-0026 decision 2), like
  * every other reader here. No second spelling, and no `completedAt`: the
- * verdict travels, the instant does not.
+ * verdict travels, the instant does not. `elapsedMs` DOES travel since #141
+ * — the hub tile consumes it (ADR-0060 decision 2 as annotated there) — and
+ * it is a stored column, so projecting it changes neither the predicate nor
+ * the index this read sits on.
  */
 export async function listCompletionsForDay(
   db: Db,
@@ -150,6 +153,7 @@ export async function listCompletionsForDay(
       game: completions.game,
       outcome: completions.outcome,
       onTime: onTimeSql(),
+      elapsedMs: completions.elapsedMs,
     })
     .from(completions)
     .where(and(eq(completions.userId, userId), eq(completions.date, date)));

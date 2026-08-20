@@ -1,7 +1,7 @@
 import {
   apiErrorResponseSchema,
+  dayGamesFromRows,
   dayResponseSchema,
-  dayStateFromRows,
 } from "@miolos/core";
 import { todaySaoPaulo } from "@miolos/db/publishing";
 import { listCompletionsForDay } from "@miolos/db/user";
@@ -87,8 +87,10 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     return Response.json(
       // Parse, never cast (boundary rule) — the same strict schema the web
-      // client parses on arrival.
-      dayResponseSchema.parse({ date: today, games: dayStateFromRows(rows) }),
+      // client parses on arrival. `dayGamesFromRows` (#141) is
+      // `dayStateFromRows` plus the completed grid row's `elapsedMs`; the
+      // per-game publication rules live in packages/core, beside the fold.
+      dayResponseSchema.parse({ date: today, games: dayGamesFromRows(rows) }),
       {
         headers: {
           ...corsHeaders({ credentials: true }),

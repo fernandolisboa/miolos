@@ -50,6 +50,42 @@ export type DayGameStatus = (typeof DAY_STATUSES)[number];
 export const dayGameStatusSchema = z.enum(DAY_STATUSES);
 
 /**
+ * One game's claim on the wire (#141, amending ADR-0060 decision 2): the
+ * status, plus the completed row's duration where one is published.
+ *
+ * `elapsedMs` IS OPTIONAL, AND ITS ABSENCE IS MEANINGFUL, not sloppy:
+ *
+ * - a `pending` or `played` claim never carries one — the refinement below
+ *   makes a payload that claims a time on an unfinished or lost game a PARSE
+ *   FAILURE, not a value the client has to decide about;
+ * - a completed TERMO carries none either, because Termo publishes no
+ *   duration on any projection at all (ADR-0045 decision 4: the number
+ *   includes every per-guess round trip and is meaningless for that game).
+ *   The suppression lives in `dayGamesFromRows` below, so the wire never
+ *   sees a value no tile would honestly render;
+ * - a completed grid game always carries one in practice — the column is
+ *   NOT NULL — and the field stays optional anyway, so an absent duration
+ *   degrades to the chip-only done tile rather than failing the day.
+ *
+ * It lives HERE, beside `dayGameStatusSchema`, for the same reason that
+ * schema does: one list feeding both the wire and the arithmetic, so the
+ * projection and the contract cannot drift into two spellings.
+ */
+export const dayGameStateSchema = z
+  .strictObject({
+    status: dayGameStatusSchema,
+    elapsedMs: z.number().int().min(0).optional(),
+  })
+  .refine(
+    (game) => game.elapsedMs === undefined || game.status === "completed",
+    {
+      message: "elapsedMs is published only on a completed game",
+    },
+  );
+
+export type DayGameState = z.infer<typeof dayGameStateSchema>;
+
+/**
  * One completion row as the day projection sees it. `onTime` is a FIELD OF
  * THE ROW — produced today by the SQL derivation (ADR-0026 decision 2), by
  * a stored column if #58 lands — and is never recomputed here, the same
@@ -59,6 +95,13 @@ export interface DayRow {
   readonly game: Game;
   readonly outcome: CompletionOutcome;
   readonly onTime: boolean;
+  /**
+   * The stored duration, REQUIRED because the column is `elapsed_ms
+   * integer NOT NULL` (`>= 0` by check). Whether it is PUBLISHED is a
+   * different question, answered per game by `dayGamesFromRows` below —
+   * a row always has one, a claim does not always carry one.
+   */
+  readonly elapsedMs: number;
 }
 
 /** A total per-game projection — every game answers, always. */
@@ -139,6 +182,61 @@ function statusForGame(rows: readonly DayRow[], game: Game): DayGameStatus {
   // No row is not a denial — it is the absence of evidence, and that is
   // what `pending` means here.
   return weakest ?? "pending";
+}
+
+/**
+ * The four per-game claims the wire carries (#141): `dayStateFromRows`'s
+ * statuses, with the completed row's duration attached where one is
+ * published. `dayStateFromRows` stays THE status derivation — this composes
+ * it rather than re-spelling the fold.
+ *
+ * WHAT PUBLISHES A DURATION, exactly: a `completed` status, for every game
+ * but Termo. A `played` or `pending` claim carries none (a time beside a
+ * loss frames it as a result, ADR-0044 decision 4; a pending game has no
+ * result at all), and a completed TERMO carries none because Termo publishes
+ * no duration on any projection (ADR-0045 decision 4) — the local reader's
+ * `entryFor` makes the same per-game exception, and mirroring it here is
+ * what keeps a cross-device tile byte-identical to a local one.
+ *
+ * TWO ROWS FOR ONE GAME ARE IMPOSSIBLE (the composite primary key), and this
+ * is total over them anyway, like the fold it composes: a `completed` status
+ * means every row of that game read completed (weakest claim), and the
+ * duration taken is the LARGEST — the humbler time, the same never-overstate
+ * direction as the status fold, and permutation-invariant like it.
+ */
+export function dayGamesFromRows(
+  rows: readonly DayRow[],
+): Readonly<Record<Game, DayGameState>> {
+  const statuses = dayStateFromRows(rows);
+  return {
+    termo: claimForGame(rows, "termo", statuses.termo),
+    sudoku: claimForGame(rows, "sudoku", statuses.sudoku),
+    nonogram: claimForGame(rows, "nonogram", statuses.nonogram),
+    binairo: claimForGame(rows, "binairo", statuses.binairo),
+  };
+}
+
+function claimForGame(
+  rows: readonly DayRow[],
+  game: Game,
+  status: DayGameStatus,
+): DayGameState {
+  if (status !== "completed" || game === "termo") {
+    return { status };
+  }
+  let elapsedMs: number | undefined;
+  for (const row of rows) {
+    if (row.game !== game || statusOfRow(row) !== "completed") {
+      continue;
+    }
+    if (elapsedMs === undefined || row.elapsedMs > elapsedMs) {
+      elapsedMs = row.elapsedMs;
+    }
+  }
+  // A `completed` status guarantees a completed row exists (the fold takes
+  // the weakest claim), so the branch below is unreachable — and defined
+  // anyway, failing toward the chip-only tile rather than a fabricated 0.
+  return elapsedMs === undefined ? { status } : { status, elapsedMs };
 }
 
 /**

@@ -66,9 +66,11 @@ import { fetchDayTruth } from "./day-client";
  * `getSnapshot` answers on the first paint after linking. The store has no
  * notion of "the session changed". This is NOT a cross-person leak: ADR-0009
  * merges the two identities into one human, the payload carries only four
- * verbs and a date (no puzzle content, no duration, no guess count), the
- * 0 -> 1 `refresh()` the hub's remount fires corrects it within one round
- * trip, and the date precondition bounds it to the same day. It is recorded
+ * claims and a date (no puzzle content, no guess count — since #141 a
+ * completed grid game's claim does carry its `elapsedMs`, which is the same
+ * one human's own solve time), the 0 -> 1 `refresh()` the hub's remount
+ * fires corrects it within one round trip, and the date precondition bounds
+ * it to the same day. It is recorded
  * here as a named residual rather than fixed with a `resetDayTruth()` export
  * because the correction is already one round trip away and an extra
  * cross-module hook into the attach flow would buy a frame.
@@ -106,14 +108,28 @@ function getServerSnapshot(): DayResponse | undefined {
   return undefined;
 }
 
-/** Field for field: date plus the four statuses. Nothing else is on it. */
+/**
+ * Field for field: date plus the four claims — each a status AND, since
+ * #141, its optional `elapsedMs`. Comparing the status alone would swallow a
+ * payload whose only change is a duration (an account merge swapping in the
+ * other device's row), and the stale time would stand for the session.
+ */
+function sameGame(
+  previous: DayResponse["games"]["termo"],
+  next: DayResponse["games"]["termo"],
+): boolean {
+  return (
+    previous.status === next.status && previous.elapsedMs === next.elapsedMs
+  );
+}
+
 function samePayload(previous: DayResponse, next: DayResponse): boolean {
   return (
     previous.date === next.date &&
-    previous.games.termo === next.games.termo &&
-    previous.games.sudoku === next.games.sudoku &&
-    previous.games.nonogram === next.games.nonogram &&
-    previous.games.binairo === next.games.binairo
+    sameGame(previous.games.termo, next.games.termo) &&
+    sameGame(previous.games.sudoku, next.games.sudoku) &&
+    sameGame(previous.games.nonogram, next.games.nonogram) &&
+    sameGame(previous.games.binairo, next.games.binairo)
   );
 }
 

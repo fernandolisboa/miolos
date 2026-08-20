@@ -4,6 +4,8 @@
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md)
 **Amends:** [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md) — **decisions 1 and 2 and consequence (d)**. Decision 1's *"`readDayState(date)` returns, per game, whether **this device** concluded that day's puzzle"* is narrowed: the one-seam property survives untouched — it is still the only function that derives completion and every consumer still reads it — but what it returns is the device's record **merged with the server's claim for today**. Decision 2's **safety property survives** (the day state still can never overstate the *user's* day, and the one demotion this ADR creates is a correction in the direction that decision itself permits) while its **mechanism does not**: *"**absence proves nothing** and renders as *pending*"* is false for the merged projection, where absence on the **device** renders as whatever the server says. Consequence (d)'s *"Tiles and day chips understate across devices … until #19"* becomes false and is **discharged here**, and its second sentence about the chaining CTA (*"lands them on a screen that immediately restores into its own conclusion"*) is corrected by decision 8 below. Decision 5, as narrowed by [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), is **discharged**.
 
+**Amended at #141** (Fernando's answer to PR #135 veto decision 1; the amending ticket ships no ADR of its own, and its PR body carries the plan section and the reciprocal records note) — **(g)–(j), continuing the lettering; (g) and (h) are decision-level** (decision 2's no-duration clause is discharged for completed grid games — a consumer now exists — and decision 3's not-merged list narrows accordingly); **(i) corrects the one consequence made outright false; (j) sharpens a Rejected bullet's type claim.** Termo still publishes no duration anywhere and the guess count still does not ride this payload. Every edit annotated in place, nothing deleted.
+
 [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 10 and [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) decision 1 are **obeyed, not amended**, and this ADR says so in those words because a reviewer will ask about both. Decision 10 layer 3 is additionally **cited** by decision 8, as the precedent that makes a playable board behind a done tile acceptable; citing is not amending.
 
 ## Context
@@ -65,6 +67,22 @@ in the app that can **demote**.
    producer** of one value; ADR-0051 decision 3's hub-endpoint trigger
    therefore stands undischarged.
 
+   *(**(g) — decision-level, amended at #141.** The no-duration clause was
+   reasoned from "nothing consumes it", and a consumer now exists: Fernando's
+   answer to PR #135 veto decision 1 is that a game completed on another
+   device shows its time like a local one. Since #141 each per-game value is
+   a claim object — `dayGameStateSchema` in `packages/core/src/day.ts`,
+   `{status, elapsedMs?}` — and a **completed grid game's claim carries the
+   stored row's `elapsedMs`**, parsed strictly (`elapsedMs` on a non-completed
+   claim is a parse failure). This is NOT the second producer this clause
+   feared: `/stats` aggregates a history and never carries today's per-game
+   solve time, so the duration has exactly one producer on the wire. What
+   survives unchanged: **Termo's claim never carries a duration** — ADR-0045
+   decision 4 stands, `dayGamesFromRows` suppresses it, and the Termo tile's
+   `em 4/6` still comes from `/stats`'s `todayTermoGuesses` alone; the guess
+   count still does not ride this payload; and ADR-0051 decision 3's
+   hub-endpoint trigger still stands undischarged.)*
+
    **And no `onTime` field, because nothing consumes it**: the on-time rule is
    applied server-side and only its verdict travels, as one of the three
    verbs. The tempting warrant *"on-time never rides a wire contract"* is
@@ -117,6 +135,16 @@ in the app that can **demote**.
    crawler-facing route, and this endpoint answers about today only, on the
    authenticated surface ADR-0031 decision 4 routes server-sourced user facts
    to.
+
+   *(**(h) — decision-level, amended at #141.** "Durations" leaves this list
+   for the one case (g) creates: a **completed** game's published duration now
+   travels WITH its claim, and — the invariant's own sentence, now with a
+   field to bind — it is never blended. Where the server claims, the entry is
+   the server's whole: its status and its `elapsedMs`; where it does not, the
+   device's whole, duration included (`entryFromMerge` in
+   `apps/web/src/play/day-state.ts`). An IN-PROGRESS board's `elapsedMs`
+   stays exactly where this list puts it — device-local, never on the wire —
+   and guess counts stay off the payload entirely.)*
 
 4. **In-progress board state is device-local, is never on the wire, and
    cross-device resume is not a v1 capability.** Nothing is persisted before a
@@ -199,7 +227,11 @@ in the app that can **demote**.
   the only honest spelling there. `/day`'s four are homogeneous, so
   `DayResponse["games"]` **is** `Record<Game, DayGameStatus>` by construction
   — literally the merge's input type, without a cast or a helper. The two
-  shapes differ because the payloads differ.
+  shapes differ because the payloads differ. *(**(j) — sharpened at #141.**
+  The rejection stands and the homogeneity argument with it; only the type
+  moved: `DayResponse["games"]` is `Record<Game, DayGameState>` — the claim
+  object `{status, elapsedMs?}` of annotation (g) — and the status half is
+  still what `mergeDayState` consumes.)*
 - **Reusing `listCompletionsForStats` instead of a narrow reader.** It needs
   no database change at all, which is its real merit, and it reads the user's
   entire completion history to produce four enum values on every hub view.
@@ -239,7 +271,13 @@ in the app that can **demote**.
 - **(b) A cross-device done tile carries no time.** The payload publishes no
   duration, so the tile renders the chip-only shape the hub already ships for
   a won Termo. A time this device did not measure is not this device's to
-  publish.
+  publish. *(**(i) — FALSE after #141**, which is the ticket Fernando opened
+  against exactly this consequence at PR #135. A cross-device done tile now
+  carries the SERVER-held time — a time the server did measure, from the
+  user's own completion row — rendered through the identical local path
+  (`formatElapsed`, the same composers; `T-WEB-S257` pins the byte-identity).
+  The chip-only shape remains the honest rendering of a claim that carries no
+  duration: a completed Termo, always, and any degraded payload.)*
 - **(c) The visual gate is unchanged in shape.** `impeccable detect` launches
   a clean browser profile: no session, `/day` answers 401, and both viewports
   still scan the pending composition (ADR-0031 consequence (e), which

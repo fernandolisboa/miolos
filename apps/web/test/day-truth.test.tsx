@@ -22,10 +22,10 @@ function payload(overrides: Partial<DayResponse["games"]> = {}): DayResponse {
   return {
     date: DATE,
     games: {
-      termo: "pending",
-      sudoku: "pending",
-      nonogram: "pending",
-      binairo: "pending",
+      termo: { status: "pending" },
+      sudoku: { status: "pending" },
+      nonogram: { status: "pending" },
+      binairo: { status: "pending" },
       ...overrides,
     },
   };
@@ -114,12 +114,16 @@ describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
   });
 
   it("the last unsubscribe drops the listeners and RETAINS the payload", async () => {
-    stubFetch(() => jsonResponse(200, payload({ sudoku: "completed" })));
+    stubFetch(() =>
+      jsonResponse(200, payload({ sudoku: { status: "completed" } })),
+    );
     const { useDayTruth } = await loadStore();
 
     const first = renderHook(() => useDayTruth());
     await flush();
-    expect(first.result.current).toEqual(payload({ sudoku: "completed" }));
+    expect(first.result.current).toEqual(
+      payload({ sudoku: { status: "completed" } }),
+    );
     first.unmount();
 
     // The next mount's fetch never settles: whatever it renders is what the
@@ -127,7 +131,9 @@ describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
     // tile to pending for the length of a fetch, on every navigation.
     stubFetch(() => new Promise<Response>(() => undefined));
     const second = renderHook(() => useDayTruth());
-    expect(second.result.current).toEqual(payload({ sudoku: "completed" }));
+    expect(second.result.current).toEqual(
+      payload({ sudoku: { status: "completed" } }),
+    );
     second.unmount();
   });
 
@@ -145,7 +151,9 @@ describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
   });
 
   it("a refetch that changes nothing keeps the snapshot's identity", async () => {
-    stubFetch(() => jsonResponse(200, payload({ termo: "completed" })));
+    stubFetch(() =>
+      jsonResponse(200, payload({ termo: { status: "completed" } })),
+    );
     const { useDayTruth } = await loadStore();
 
     const rendered = renderHook(() => useDayTruth());
@@ -154,6 +162,33 @@ describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
     window.dispatchEvent(new Event("focus"));
     await flush();
     expect(rendered.result.current).toBe(first);
+    rendered.unmount();
+  });
+
+  it("a refetch that changes ONLY a duration IS a change — the comparator reads the whole claim (#141)", async () => {
+    // Widened in place under this describe, no new id (the T-WEB-S100 burn
+    // precedent): the complement of the identity case above, and the
+    // assertion that keeps `samePayload` honest about the field the claim
+    // gained at #141.
+    let elapsedMs = 512_000;
+    stubFetch(() =>
+      jsonResponse(
+        200,
+        payload({ sudoku: { status: "completed", elapsedMs } }),
+      ),
+    );
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await flush();
+    const first = rendered.result.current;
+    expect(first?.games.sudoku.elapsedMs).toBe(512_000);
+
+    elapsedMs = 444_000; // an account merge swapped in the other device's row
+    window.dispatchEvent(new Event("focus"));
+    await flush();
+    expect(rendered.result.current).not.toBe(first);
+    expect(rendered.result.current?.games.sudoku.elapsedMs).toBe(444_000);
     rendered.unmount();
   });
 });
@@ -218,7 +253,7 @@ describe("the day-truth store's triggers (T-WEB-S236)", () => {
         calls();
         return rejecting
           ? Promise.reject(new TypeError("network"))
-          : Promise.resolve(payload({ sudoku: "completed" }));
+          : Promise.resolve(payload({ sudoku: { status: "completed" } }));
       },
     }));
     const { useDayTruth } = await loadStore();
@@ -234,7 +269,7 @@ describe("the day-truth store's triggers (T-WEB-S236)", () => {
     window.dispatchEvent(new Event("online"));
     await flush();
     expect(calls).toHaveBeenCalledTimes(2);
-    expect(rendered.result.current?.games.sudoku).toBe("completed");
+    expect(rendered.result.current?.games.sudoku.status).toBe("completed");
 
     rendered.unmount();
     vi.doUnmock("../src/day/day-client");
@@ -265,7 +300,9 @@ describe("referential stability under N consumers (T-WEB-S242)", () => {
     for (const wrapper of [undefined, strict]) {
       for (const consumers of [4, 16, 32]) {
         vi.resetModules();
-        stubFetch(() => jsonResponse(200, payload({ nonogram: "completed" })));
+        stubFetch(() =>
+          jsonResponse(200, payload({ nonogram: { status: "completed" } })),
+        );
         const { useDayState } = await import("../src/play/day-state");
 
         let renders = 0;

@@ -344,23 +344,28 @@ function dayPayload(
   return {
     date,
     games: {
-      termo: "pending",
-      sudoku: "pending",
-      nonogram: "pending",
-      binairo: "pending",
+      termo: { status: "pending" },
+      sudoku: { status: "pending" },
+      nonogram: { status: "pending" },
+      binairo: { status: "pending" },
       ...games,
     },
   };
 }
 
 describe("the merge with the server's day truth (T-WEB-S237)", () => {
-  it("adds a game completed on ANOTHER device, with no duration", () => {
-    // The whole point of the ticket: nothing local, and the tile is done.
-    const state = readDayState(DATE, dayPayload({ sudoku: "completed" }));
+  it("adds a game completed on ANOTHER device; a claim without a duration carries none", () => {
+    // The whole point of #83: nothing local, and the tile is done. Since
+    // #141 the payload CAN carry the completed row's duration (asserted in
+    // T-WEB-S258 below); a claim WITHOUT one — Termo's only completed
+    // shape, and any degraded payload — still merges to the chip-only entry
+    // rather than a fabricated time.
+    const state = readDayState(
+      DATE,
+      dayPayload({ sudoku: { status: "completed" } }),
+    );
 
     expect(state.sudoku.status).toBe("completed");
-    // A time this device did not measure is not this device's to publish,
-    // and the payload carries none (ADR-0060 decision 2).
     expect(state.sudoku.elapsedMs).toBeUndefined();
     expect(completedCount(state)).toBe(1);
   });
@@ -382,7 +387,10 @@ describe("the merge with the server's day truth (T-WEB-S237)", () => {
     // count for the streak and `Feito` would be a lie the player can catch.
     writePlayRecord(wonTermoRecord());
 
-    const state = readDayState(DATE, dayPayload({ termo: "played" }));
+    const state = readDayState(
+      DATE,
+      dayPayload({ termo: { status: "played" } }),
+    );
 
     expect(state.termo.status).toBe("played");
     expect(state.termo.elapsedMs).toBeUndefined();
@@ -397,7 +405,10 @@ describe("the merge with the server's day truth (T-WEB-S237)", () => {
     // screen (ADR-0060 decision 7, flagged in plan 056 §7 item 2).
     writePlayRecord(lostTermoRecord());
 
-    const state = readDayState(DATE, dayPayload({ termo: "completed" }));
+    const state = readDayState(
+      DATE,
+      dayPayload({ termo: { status: "completed" } }),
+    );
 
     expect(state.termo.status).toBe("completed");
     expect(state.termo.elapsedMs).toBeUndefined();
@@ -414,6 +425,72 @@ describe("the merge with the server's day truth (T-WEB-S237)", () => {
   });
 });
 
+/**
+ * The duration under the merge (#141): it follows the SIDE whose claim won,
+ * never blended across the two sources — ADR-0060 decision 3's "nothing is
+ * blended field by field", now with a field to prove it on.
+ */
+describe("the merged entry's duration follows the winning claim (T-WEB-S258)", () => {
+  const SERVER_MS = 444_000;
+
+  it("a cross-device completed carries the SERVER's duration", () => {
+    const state = readDayState(
+      DATE,
+      dayPayload({ sudoku: { status: "completed", elapsedMs: SERVER_MS } }),
+    );
+
+    expect(state.sudoku).toEqual({ status: "completed", elapsedMs: SERVER_MS });
+    expect(completedCount(state)).toBe(1);
+  });
+
+  it("where the server claims, its duration is the entry's — the local one is not blended in", () => {
+    // Both sides completed with different times (an account merge can swap
+    // in the other device's row): the server's claim is the day state, whole.
+    writePlayRecord(sudokuRecord()); // local SUDOKU_MS
+
+    const state = readDayState(
+      DATE,
+      dayPayload({ sudoku: { status: "completed", elapsedMs: SERVER_MS } }),
+    );
+
+    expect(state.sudoku).toEqual({ status: "completed", elapsedMs: SERVER_MS });
+  });
+
+  it("where the server is silent, the LOCAL duration stands — the mirror, no blending either way", () => {
+    writePlayRecord(sudokuRecord());
+
+    const state = readDayState(DATE, dayPayload());
+
+    expect(state.sudoku).toEqual({ status: "completed", elapsedMs: SUDOKU_MS });
+  });
+
+  it("a served `played` claim strips the duration a local win had published — the demotion drops the time with the verb", () => {
+    writePlayRecord(sudokuRecord());
+
+    // Unreachable for a grid game in v1 (only Termo can be lost) and the
+    // rule is game-blind on purpose: one line, both directions, no per-game
+    // carve-out to drift.
+    const state = readDayState(
+      DATE,
+      dayPayload({ sudoku: { status: "played" } }),
+    );
+
+    expect(state.sudoku).toEqual({ status: "played", elapsedMs: undefined });
+  });
+
+  it("a duration in a payload for ANOTHER day never lands — the date gate discards values with verbs", () => {
+    const state = readDayState(
+      DATE,
+      dayPayload(
+        { sudoku: { status: "completed", elapsedMs: SERVER_MS } },
+        OTHER_DATE,
+      ),
+    );
+
+    expect(state.sudoku).toEqual({ status: "pending", elapsedMs: undefined });
+  });
+});
+
 describe("the date precondition (T-WEB-S238)", () => {
   it("discards a payload for another day IN FULL, not game by game", () => {
     writePlayRecord(sudokuRecord());
@@ -423,10 +500,10 @@ describe("the date precondition (T-WEB-S238)", () => {
       DATE,
       dayPayload(
         {
-          termo: "completed",
-          sudoku: "played",
-          nonogram: "completed",
-          binairo: "completed",
+          termo: { status: "completed" },
+          sudoku: { status: "played" },
+          nonogram: { status: "completed", elapsedMs: 99_000 },
+          binairo: { status: "completed", elapsedMs: 42_000 },
         },
         OTHER_DATE,
       ),
@@ -446,7 +523,7 @@ describe("the date precondition (T-WEB-S238)", () => {
     // question, not weaker evidence about this one.
     const state = readDayState(
       DATE,
-      dayPayload({ binairo: "completed" }, OTHER_DATE),
+      dayPayload({ binairo: { status: "completed" } }, OTHER_DATE),
     );
     expect(completedCount(state)).toBe(0);
   });
@@ -460,7 +537,10 @@ describe("the merge never invents a pending (T-WEB-S243)", () => {
     for (const server of ["pending", "completed", "played"] as const) {
       const state = readDayState(
         DATE,
-        dayPayload({ binairo: server, sudoku: server }),
+        dayPayload({
+          binairo: { status: server },
+          sudoku: { status: server },
+        }),
       );
       // The one permitted demotion is `completed` -> `played` (asserted in
       // T-WEB-S237); `pending` out of a local `completed` is impossible,

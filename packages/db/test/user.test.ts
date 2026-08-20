@@ -912,24 +912,61 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
 
     const rows = await listCompletionsForDay(ctx.db, userId, today);
     expect([...rows].sort((a, b) => a.game.localeCompare(b.game))).toEqual([
-      { game: "binairo", outcome: "won", onTime: true },
-      { game: "termo", outcome: "lost", onTime: true },
+      { game: "binairo", outcome: "won", onTime: true, elapsedMs: 61_000 },
+      { game: "termo", outcome: "lost", onTime: true, elapsedMs: 61_000 },
     ]);
-    // The projection is exactly the three fields `dayStateFromRows` reads —
-    // no `completedAt`, no `elapsedMs`, no `hintsUsed` on this wire path.
+    // The projection is exactly the four fields the day projection reads
+    // (`elapsedMs` since #141, for `dayGamesFromRows`) — still no
+    // `completedAt` and no `hintsUsed` on this wire path.
     for (const row of rows) {
-      expect(Object.keys(row).sort()).toEqual(["game", "onTime", "outcome"]);
+      expect(Object.keys(row).sort()).toEqual([
+        "elapsedMs",
+        "game",
+        "onTime",
+        "outcome",
+      ]);
     }
 
     // The other user sees only their own row, and the other day only its.
     expect(await listCompletionsForDay(ctx.db, other, today)).toEqual([
-      { game: "nonogram", outcome: "won", onTime: true },
+      { game: "nonogram", outcome: "won", onTime: true, elapsedMs: 61_000 },
     ]);
     // Yesterday's row was WRITTEN today, so `onTimeSql()` derives false —
     // the reader returns the row and packages/core turns it into `pending`
     // (ADR-0008 rule 2). The reader never filters; that is the point.
     expect(await listCompletionsForDay(ctx.db, userId, yesterday)).toEqual([
-      { game: "sudoku", outcome: "won", onTime: false },
+      { game: "sudoku", outcome: "won", onTime: false, elapsedMs: 61_000 },
+    ]);
+  });
+
+  it("T-DB-S65: the stored duration is projected back exactly, per row (#141)", async () => {
+    // The projection claim on its own id: the value the write path stored is
+    // the value this reader hands `dayGamesFromRows` — no derivation, no
+    // rounding, no default. Distinct per game, so a crossed wire cannot pass.
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "sudoku",
+      date: today,
+      outcome: "won",
+      elapsedMs: 512_000,
+      hintsUsed: 0,
+    });
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "binairo",
+      date: today,
+      outcome: "won",
+      elapsedMs: 0, // the CHECK's own lower bound is a legal stored value
+      hintsUsed: 0,
+    });
+
+    const rows = await listCompletionsForDay(ctx.db, userId, today);
+    expect([...rows].sort((a, b) => a.game.localeCompare(b.game))).toEqual([
+      { game: "binairo", outcome: "won", onTime: true, elapsedMs: 0 },
+      { game: "sudoku", outcome: "won", onTime: true, elapsedMs: 512_000 },
     ]);
   });
 
@@ -963,12 +1000,14 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
 
     expect(
       await listCompletionsForDay(ctx.db, onTimeUser, "2026-07-31"),
-    ).toEqual([{ game: "binairo", outcome: "won", onTime: true }]);
+    ).toEqual([
+      { game: "binairo", outcome: "won", onTime: true, elapsedMs: 1_000 },
+    ]);
     // A late win is still a ROW of that day — the reader returns it and the
     // `pending` verdict is packages/core's, in one place (ADR-0026
     // decision 2, ADR-0008 rule 2).
     expect(await listCompletionsForDay(ctx.db, lateUser, "2026-07-31")).toEqual(
-      [{ game: "binairo", outcome: "won", onTime: false }],
+      [{ game: "binairo", outcome: "won", onTime: false, elapsedMs: 1_000 }],
     );
   });
 });

@@ -32,9 +32,13 @@
  * THERE ARE NOW TWO SERVER READS ON THIS SURFACE, and they do different
  * jobs. `GET /day` decides a tile's SHAPE, through `useDayState` — new at
  * #83, and the one place a fetched value is load-bearing for what the tile
- * IS. #29's `GET /stats` still only ever CAPTIONS an already-completed Termo
- * (`TermoDoneLink` below). Both are fetched from client islands, in effects,
- * never during render.
+ * IS. Since #141 it also supplies a cross-device done tile's TIME: the
+ * payload carries the completed grid row's `elapsedMs`, the merge hands it
+ * to `DayEntry`, and the tile renders it through exactly the path a local
+ * completion takes — same component, same `formatElapsed`, byte-identical
+ * presentation. #29's `GET /stats` still only ever CAPTIONS an
+ * already-completed Termo (`TermoDoneLink` below). Both are fetched from
+ * client islands, in effects, never during render.
  */
 import type { Game } from "@miolos/core";
 import Link from "next/link";
