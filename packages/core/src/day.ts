@@ -74,7 +74,11 @@ export const dayGameStatusSchema = z.enum(DAY_STATUSES);
 export const dayGameStateSchema = z
   .strictObject({
     status: dayGameStatusSchema,
-    elapsedMs: z.number().int().min(0).optional(),
+    // The 24 h cap matches every completion WRITE contract
+    // (`completionRequestSchema` and siblings in `contracts/completion.ts`),
+    // so the read side can never accept a duration the write side would have
+    // refused to store.
+    elapsedMs: z.number().int().min(0).max(86_400_000).optional(),
   })
   .refine(
     (game) => game.elapsedMs === undefined || game.status === "completed",

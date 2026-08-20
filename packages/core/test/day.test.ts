@@ -186,7 +186,9 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
 
     // The schema end: a duration on a game nobody completed is a PARSE
     // FAILURE, not a value a client has to decide about. So are a negative,
-    // a fractional and a non-numeric duration.
+    // a fractional, a non-numeric and an over-24 h duration — the last
+    // matching the cap every completion WRITE contract already enforces, so
+    // the read side never accepts what the write side would have refused.
     const withGame = (game: unknown) => ({
       ...valid,
       games: { ...valid.games, sudoku: game },
@@ -197,6 +199,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       withGame({ status: "completed", elapsedMs: -1 }),
       withGame({ status: "completed", elapsedMs: 61.5 }),
       withGame({ status: "completed", elapsedMs: "61000" }),
+      withGame({ status: "completed", elapsedMs: 86_400_001 }),
     ]) {
       expect(
         dayResponseSchema.safeParse(body).success,

@@ -4,7 +4,9 @@
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md)
 **Amends:** [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md) — **decisions 1 and 2 and consequence (d)**. Decision 1's *"`readDayState(date)` returns, per game, whether **this device** concluded that day's puzzle"* is narrowed: the one-seam property survives untouched — it is still the only function that derives completion and every consumer still reads it — but what it returns is the device's record **merged with the server's claim for today**. Decision 2's **safety property survives** (the day state still can never overstate the *user's* day, and the one demotion this ADR creates is a correction in the direction that decision itself permits) while its **mechanism does not**: *"**absence proves nothing** and renders as *pending*"* is false for the merged projection, where absence on the **device** renders as whatever the server says. Consequence (d)'s *"Tiles and day chips understate across devices … until #19"* becomes false and is **discharged here**, and its second sentence about the chaining CTA (*"lands them on a screen that immediately restores into its own conclusion"*) is corrected by decision 8 below. Decision 5, as narrowed by [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), is **discharged**.
 
-**Amended at #141** (Fernando's answer to PR #135 veto decision 1; the amending ticket ships no ADR of its own, and its PR body carries the plan section and the reciprocal records note) — **(g)–(j), continuing the lettering; (g) and (h) are decision-level** (decision 2's no-duration clause is discharged for completed grid games — a consumer now exists — and decision 3's not-merged list narrows accordingly); **(i) corrects the one consequence made outright false; (j) sharpens a Rejected bullet's type claim.** Termo still publishes no duration anywhere and the guess count still does not ride this payload. Every edit annotated in place, nothing deleted.
+**Amended at #143** (Tier 2 at reduced ceremony — no plan document; the plan and its records section live in the PR body, per the #103 precedent) — **(a), a decision-level amendment**: decision 5's no-interval clause is superseded by a bounded visible-tab poll. The clause's own revisit trigger — *"a complaint, not a schedule"* — fired: Fernando asked, answering PR #135 veto decision 4. Annotated in place; nothing deleted. The annotation letters are their own series, distinct from this ADR's natively lettered Consequences (a)–(f): a bare "(a)" is ambiguous here, so references must qualify — "annotation (a)" or "consequence (a)".
+
+**Amended at #141** (Fernando's answer to PR #135 veto decision 1; the amending ticket ships no ADR of its own, and its PR body carries the plan section and the reciprocal records note) — **(b)–(e), continuing the annotation series #143 opened above; (b) and (c) are decision-level** (decision 2's no-duration clause is discharged for completed grid games — a consumer now exists — and decision 3's not-merged list narrows accordingly); **(d) corrects the one consequence made outright false; (e) sharpens a Rejected bullet's type claim.** Termo still publishes no duration anywhere and the guess count still does not ride this payload. Every edit annotated in place, nothing deleted.
 
 [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 10 and [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) decision 1 are **obeyed, not amended**, and this ADR says so in those words because a reviewer will ask about both. Decision 10 layer 3 is additionally **cited** by decision 8, as the precedent that makes a playable board behind a done tile acceptable; citing is not amending.
 
@@ -67,7 +69,7 @@ in the app that can **demote**.
    producer** of one value; ADR-0051 decision 3's hub-endpoint trigger
    therefore stands undischarged.
 
-   *(**(g) — decision-level, amended at #141.** The no-duration clause was
+   *(**Annotation (b) — decision-level, amended at #141.** The no-duration clause was
    reasoned from "nothing consumes it", and a consumer now exists: Fernando's
    answer to PR #135 veto decision 1 is that a game completed on another
    device shows its time like a local one. Since #141 each per-game value is
@@ -136,8 +138,8 @@ in the app that can **demote**.
    authenticated surface ADR-0031 decision 4 routes server-sourced user facts
    to.
 
-   *(**(h) — decision-level, amended at #141.** "Durations" leaves this list
-   for the one case (g) creates: a **completed** game's published duration now
+   *(**Annotation (c) — decision-level, amended at #141.** "Durations" leaves
+   this list for the one case annotation (b) creates: a **completed** game's published duration now
    travels WITH its claim, and — the invariant's own sentence, now with a
    field to bind — it is never blended. Where the server claims, the entry is
    the server's whole: its status and its `elapsedMs`; where it does not, the
@@ -180,6 +182,23 @@ in the app that can **demote**.
    A second monitor left on the hub — this ticket's own demo case — never
    updates on its own. That is accepted for v1; the successor is a poll or a
    push, and the trigger for revisiting is a complaint, not a schedule.
+
+   *(**(a) Superseded at #143.** The trigger fired: Fernando asked, answering
+   PR #135 veto decision 4. The store now polls `GET /day` every **60 s**,
+   and ONLY while both of these hold — at least one listener is subscribed,
+   and the document is visible. No timer while hidden (`visibilitychange` →
+   visible already refetches on re-show, so a hidden tab owes the server
+   nothing) and none at zero listeners, where cleanup clears it; every tick
+   goes through the same in-flight guard, so a slow answer is never stacked
+   on. The multiplied-GETs warrant is bounded rather than dismissed: the poll
+   costs at most one credentialed GET per open visible tab per minute, and
+   all four player-generated triggers above survive unchanged. This
+   paragraph's two preceding sentences — the no-interval choice, its warrant
+   and its named cost — are history as of #143; the ADR-0056 non-borrowing
+   sentence above stands, and that `localStorage` poll still never gains a
+   network call. Asserted as `T-WEB-S259`/`T-WEB-S260` in
+   `apps/web/test/day-truth.test.tsx`, which replace the "installs NO
+   interval" arm that lived under `T-WEB-S235`.)*
 
 6. **Every failure degrades to the local reader, and play never blocks on this
    fetch.** `NEXT_PUBLIC_API_URL` unset (loudly, as the sibling clients do),
@@ -227,11 +246,11 @@ in the app that can **demote**.
   the only honest spelling there. `/day`'s four are homogeneous, so
   `DayResponse["games"]` **is** `Record<Game, DayGameStatus>` by construction
   — literally the merge's input type, without a cast or a helper. The two
-  shapes differ because the payloads differ. *(**(j) — sharpened at #141.**
-  The rejection stands and the homogeneity argument with it; only the type
-  moved: `DayResponse["games"]` is `Record<Game, DayGameState>` — the claim
-  object `{status, elapsedMs?}` of annotation (g) — and the status half is
-  still what `mergeDayState` consumes.)*
+  shapes differ because the payloads differ. *(**Annotation (e) — sharpened at
+  #141.** The rejection stands and the homogeneity argument with it; only the
+  type moved: `DayResponse["games"]` is `Record<Game, DayGameState>` — the
+  claim object `{status, elapsedMs?}` of annotation (b) — and the status half
+  is still what `mergeDayState` consumes.)*
 - **Reusing `listCompletionsForStats` instead of a narrow reader.** It needs
   no database change at all, which is its real merit, and it reads the user's
   entire completion history to produce four enum values on every hub view.
@@ -265,13 +284,15 @@ in the app that can **demote**.
   that renders nothing happens *after* it, in the renderer. This ticket makes
   the four-GET case **more frequent**, because a Termo completed on another
   device now mounts `TermoDoneLink` where it previously did not. Each
-  conclusion surface adds one `/day`. Whether these collapse into one hub read
-  is ADR-0051 decision 3's trigger, which is sized against this count — so the
-  count has to be right — and it is not pre-empted here.
+  conclusion surface adds one `/day`. Since #143 a recurring term rides on top
+  of these per-view counts: the poll's at most one `/day` per open visible tab
+  per minute — decision 5's annotation (a). Whether these collapse into one hub
+  read is ADR-0051 decision 3's trigger, which is sized against this count — so
+  the count has to be right — and it is not pre-empted here.
 - **(b) A cross-device done tile carries no time.** The payload publishes no
   duration, so the tile renders the chip-only shape the hub already ships for
   a won Termo. A time this device did not measure is not this device's to
-  publish. *(**(i) — FALSE after #141**, which is the ticket Fernando opened
+  publish. *(**Annotation (d) — FALSE after #141**, which is the ticket Fernando opened
   against exactly this consequence at PR #135. A cross-device done tile now
   carries the SERVER-held time — a time the server did measure, from the
   user's own completion row — rendered through the identical local path
