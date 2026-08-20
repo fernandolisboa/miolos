@@ -79,7 +79,7 @@ jobs:
           # (play-view.tsx / conclusion-view.tsx). "/" needs no marker: it reads
           # no database, so reachable and rendered are the same property there.
           status=0
-          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido" "/modo-livre" "/modo-livre/binairo" "/modo-livre/sudoku" "/modo-livre/nonogram" "/privacidade" "/vincular" "/estatisticas" "/arquivo"; do
+          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido" "/modo-livre" "/modo-livre/binairo" "/modo-livre/sudoku" "/modo-livre/nonogram" "/privacidade" "/termos" "/vincular" "/estatisticas" "/arquivo"; do
             case "$path" in
               */concluido) marker='data-conclusion-state=' ;;
               # The free-play index (#28) is static and carries its own
@@ -98,7 +98,8 @@ jobs:
               # vacuous green. They are DISCOVERED below, from the app's own
               # HTML, and they carry data-page= (month, day) and
               # data-play-state= (a play route) respectively.
-              "/privacidade"|"/vincular"|"/estatisticas"|"/arquivo") marker='data-page=' ;;
+              # #158's /termos is the /privacidade shape: static, data-page.
+              "/privacidade"|"/termos"|"/vincular"|"/estatisticas"|"/arquivo") marker='data-page=' ;;
               "/") marker='' ;;
               *) marker='data-play-state=' ;;
             esac
@@ -271,6 +272,7 @@ jobs:
           "$DEPLOYMENT_URL/modo-livre/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/nonogram?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/privacidade?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/termos?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/vincular?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/estatisticas?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/arquivo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
@@ -311,6 +313,7 @@ jobs:
           "$DEPLOYMENT_URL/modo-livre/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/nonogram?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/privacidade?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/termos?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/vincular?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/estatisticas?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/arquivo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"

@@ -181,8 +181,9 @@ export const messages = {
       stats: "Estatísticas",
       // Live: /privacidade since #21, /estatisticas since #29, and
       // /arquivo since #31 — a real route is what earns the href, and all
-      // four now have one.
+      // five now have one (#158 gave the terms theirs).
       privacy: "Política de Privacidade",
+      terms: "Termos de Uso",
     },
   },
   /** Chrome every play screen shares (plan 018 §5.2, §13.1). */
@@ -716,9 +717,12 @@ export const messages = {
       "Quero vincular este e-mail para recuperar e mover a minha sequência.",
     reminderLabel:
       "Quero receber um lembrete por e-mail quando a minha sequência estiver em risco.",
-    // The consent copy's link into the policy (T-WEB-S143).
+    // The consent copy's link into the policy (T-WEB-S143). #158 appends
+    // the terms to the same line (T-WEB-S294): one quiet legal-links row,
+    // so the consent labels above stay about consent only.
     privacyLinkLead: "Como cuidamos dos seus dados:",
     privacyLinkLabel: "Política de Privacidade",
+    termsLinkLabel: "Termos de Uso",
     submit: "Enviar link mágico",
     dismiss: "agora não",
     sending: "Enviando…",
@@ -877,6 +881,54 @@ export const messages = {
     },
     revision:
       "Esta política cresce junto com o produto: uma versão completa acompanha as próximas funcionalidades.",
+  },
+  /**
+   * The terms of use (#158) — /privacidade's sibling page, in the same
+   * plain-words register (ADR-0012's posture: say exactly what the product
+   * does, nothing it doesn't). Each section states what this release
+   * actually ships: free content is ADR-0005, the no-signup account is
+   * ADR-0003/ADR-0050, and the contact address is the same one the policy
+   * publishes — one door for both legal pages.
+   */
+  terms: {
+    title: "Termos de Uso",
+    intro:
+      "O Miolos é um site de puzzles diários. Esta página diz, em palavras simples, o que você pode esperar da gente — e o que esperamos de você.",
+    free: {
+      heading: "Jogar é grátis",
+      body: "Todos os puzzles são gratuitos: o desafio do dia, o arquivo e o modo livre. Não vendemos acesso a nenhum deles.",
+    },
+    account: {
+      heading: "Sem cadastro",
+      body: "Você joga com uma conta anônima criada neste aparelho — sem e-mail, sem senha, sem formulário. Vincular um e-mail é opcional e serve só para recuperar e mover a sua sequência.",
+      privacyLead: "O que coletamos, e como apagar tudo, está na",
+      privacyLinkLabel: "Política de Privacidade",
+    },
+    acceptableUse: {
+      heading: "Uso aceitável",
+      body: "Use o Miolos para jogar. Não tente derrubar ou sobrecarregar o serviço, burlar a segurança, copiar o conteúdo com robôs nem atrapalhar os outros jogadores. Se isso acontecer, podemos limitar ou encerrar o acesso da conta envolvida.",
+    },
+    content: {
+      heading: "O conteúdo é nosso",
+      body: "Os puzzles, o design, o nome e a marca do Miolos nos pertencem. Compartilhar os seus resultados é sempre bem-vindo; copiar ou republicar o conteúdo do site como se fosse seu, ou usá-lo comercialmente sem a nossa autorização, não é.",
+    },
+    warranty: {
+      heading: "O que não prometemos",
+      asIs: "Trabalhamos para publicar um puzzle novo por dia e manter tudo no ar, mas o serviço é oferecido como está: podem acontecer falhas, interrupções e mudanças.",
+      liability:
+        "Se algo der errado — o site sair do ar, um puzzle atrasar, uma sequência se perder — a nossa responsabilidade se limita ao que a lei exigir. Nada nestes termos reduz os direitos que o Código de Defesa do Consumidor garante a você.",
+    },
+    changes: {
+      heading: "Quando estes termos mudam",
+      body: "Estes termos podem mudar conforme o produto cresce. A versão que vale é sempre a publicada nesta página; se você continuar jogando depois de uma mudança, ela passa a valer para você.",
+    },
+    contact: {
+      heading: "Fale com a gente",
+      lead: "Dúvidas sobre estes termos? Escreva para",
+      email: "privacidade@miolos.app",
+    },
+    revision:
+      "Estes termos crescem junto com o produto: uma versão completa acompanha as próximas funcionalidades.",
   },
   /** The self-service deletion island on /privacidade (D13). */
   deleteAccount: {

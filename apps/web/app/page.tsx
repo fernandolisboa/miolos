@@ -119,10 +119,11 @@ export default function HojePage() {
       <HubAttach />
 
       <nav className={styles.secondaryLinks}>
-        {/* Every one of the four now has a real target, and that is what
+        {/* Every one of the five now has a real target, and that is what
             earns the href — Privacidade since #21, Modo livre since #28,
-            Estatísticas since #29 and Arquivo since #31 (a dead href would
-            be fake navigation, the hub rule the done tile documents). */}
+            Estatísticas since #29, Arquivo since #31 and Termos since #158
+            (a dead href would be fake navigation, the hub rule the done
+            tile documents). */}
         <Link className={styles.secondaryLink} href={routes.archive}>
           {messages.hoje.links.archive}
         </Link>
@@ -134,6 +135,9 @@ export default function HojePage() {
         </Link>
         <Link className={styles.secondaryLink} href={routes.privacy}>
           {messages.hoje.links.privacy}
+        </Link>
+        <Link className={styles.secondaryLink} href={routes.terms}>
+          {messages.hoje.links.terms}
         </Link>
       </nav>
 
