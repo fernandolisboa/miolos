@@ -10,6 +10,7 @@
         "WEB_ORIGIN",
         "DATABASE_URL",
         "DATABASE_URL_UNPOOLED",
+        "WEB_DATABASE_URL",
         "COOKIE_DOMAIN"
       ],
       "outputs": [".next/**", "!.next/cache/**"]

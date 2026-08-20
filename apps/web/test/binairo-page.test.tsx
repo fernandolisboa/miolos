@@ -222,3 +222,30 @@ describe("the server-only guard on src/db.ts (T-WEB-23)", () => {
     expect(firstStatement).toBe('import "server-only";');
   });
 });
+
+describe("the least-privilege credential in src/db.ts (T-WEB-S290)", () => {
+  it("reads WEB_DATABASE_URL and carries no fallback to the integration credential", () => {
+    // Read as TEXT, never executed, comments stripped first (the T-LINT-S37
+    // idiom: a doc block may legitimately name the very token the scan
+    // forbids). #59's database grant is only a second enforcement point if
+    // the app actually connects as `miolos_web`: a fallback to the
+    // integration-managed variable would silently restore the all-tables
+    // credential on any env drift, so the ABSENCE asserted below is the
+    // ticket's claim, not an accident of spelling.
+    const source = readFileSync(
+      path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "src",
+        "db.ts",
+      ),
+      "utf8",
+    );
+    const code = source
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+
+    expect(code).toContain("process.env.WEB_DATABASE_URL");
+    expect(code).not.toMatch(/process\.env\.DATABASE_URL\b/);
+  });
+});

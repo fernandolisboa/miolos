@@ -19,9 +19,15 @@ import { createDb, type Db } from "@miolos/db";
  * layer without a PGlite anywhere in apps/web (plan 017 D33).
  */
 export function getDb(): Db {
-  const url = process.env.DATABASE_URL;
+  // #59 / ADR-0026: the credential is the least-privilege `miolos_web` role
+  // (select on daily_puzzles only), under a name the Neon–Vercel integration
+  // does not manage. Deliberately NO fallback to the integration's variable —
+  // a fallback would silently restore the all-tables credential on any env
+  // drift and turn ADR-0026's "second enforcement point" claim false while
+  // it still read as true. Pinned by T-WEB-S290.
+  const url = process.env.WEB_DATABASE_URL;
   if (!url) {
-    throw new Error("DATABASE_URL is not set");
+    throw new Error("WEB_DATABASE_URL is not set");
   }
   return createDb(url);
 }

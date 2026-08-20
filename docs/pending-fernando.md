@@ -24,23 +24,12 @@ Fernando (2026-08-20): *will do when ready to run the wizard — not yet.* Stays
 - **Blocks:** email attach / account recovery / merge — live-but-invisible since 2026-08-13; also the email-hedge slice of #32.
 - **Source:** `docs/handoffs/032-handoff-21-merged-m1-complete.md` §6; wizard form in `docs/plans/031` §15.
 
-### 2. #59 — run one session with you present (approval taps only)
+### 2. PostHog — finish the signup, paste the key (#33)
 
-Fernando authorized the work outright (2026-08-20); the agent permission layer blocks unattended commands against production database credentials, so it needs you in the room to tap "allow".
+In progress 2026-08-20: onboarding guidance given — "I'll pick myself" → **Product Analytics + Error Tracking**, **Session Replay unticked** (hard rule).
 
-- **Do:** start a session, say *"do #59"*, approve the permission prompts. The full plan is on issue #59 (comment of 2026-08-20); the agent does everything else.
-- **What it is, in plain words:** the website's database password can read and write everything; it only needs to read the daily puzzles. This creates a second, read-only database user for the website, so a leak of that credential is not a master key.
-- **Blocks:** nothing shipped — it is a security hardening ADR-0026 already promises.
-
-### 3. PostHog account — a signup only you can do (#33)
-
-- **Do:** sign up at posthog.com with your email (free tier), create a project named `miolos`, then give any session the **Project API key** (or `vercel env add` it yourself if you prefer). That is the whole human part — the five events, config and gate are agent work.
-- **Blocks:** #33 (telemetry), which sits on #37's blocked-by list.
-
-### 4. Error-monitoring account (#37 AC 4) — same shape as PostHog
-
-- **Do:** pick a vendor (Sentry-class), sign up, hand the DSN to a session. Can wait until #33/#36 are done; needed before launch.
-- **Blocks:** #37 (launch hardening) → the launch.
+- **Do:** finish signup, then paste the **Project API key** (Settings → Project) into any session. That is the whole human part.
+- **Blocks:** #33 (telemetry) → #37. PostHog's Error Tracking likely also covers #37's error-monitoring AC — the #33/#37 sessions decide; if so, no separate Sentry-class signup is needed.
 
 ---
 
@@ -50,7 +39,7 @@ Fernando authorized the work outright (2026-08-20); the agent permission layer b
 - **#64** Nonogram picture name — decided (ship the name, amend ADR-0033), `ready-for-agent`.
 - **#104** archive OG cards — decided (index + month get cards), `ready-for-agent`.
 - **#158** terms-of-use page `/termos` — approved and filed, `ready-for-agent`.
-- **⚡ #51** — still yours, one line: close as `wontfix`? (The "does impeccable ≥ 3.6.0 ship value extraction" check is Tier 0 agent work first.)
+- **#160–#163** Fernando's UI feedback of 2026-08-20 (left-hugging layouts, the Termo accent, the onboarding card's look, the archive calendar) — filed, `ready-for-agent`. He announced **more gameplay feedback per game is coming**; when he gives it, file it the same way and add anything human-blocking here.
 
 ---
 
@@ -87,8 +76,6 @@ Accumulated across handoffs 024, 026, 028, 034; none ever marked done. One sessi
 
 ## STANDING — no action unless you disagree
 
-- **Termo cross-device rule (PR #135 decision 2), in plain words:** same account, two devices, both played today's Termo before syncing — one won, one lost. Only the result that reached the server **first** counts (results are write-once). Both devices then show that result: if your win was second, your tile flips `Feito` → `Jogado` and the win doesn't count. Doing nothing keeps this rule.
-- **#74 answer-pool recommendation, awaiting your veto:** don't use a raw pt-BR dictionary as answers (full of plurals, conjugations, obscure/offensive words) — instead bulk-extend the curated pool by running the ADR-0015 harness over a big open dictionary. Runway grows from ~1 year to many years. Silence = go.
 - **Copy/design flags left open, revise only if you dislike them:** medals names/placement (handoff 036), five stats copy flags (handoff 034), four sharing deviations (handoff 041).
 
 ---
@@ -103,6 +90,10 @@ Accumulated across handoffs 024, 026, 028, 034; none ever marked done. One sessi
 
 | Item | Was pending in | Evidence done |
 |---|---|---|
+| #59 least-privilege web DB role | NOW §2 | 2026-08-20, Fernando present and approving: `miolos_web` role live (`relacl … miolos_web=r`, `sessions`/`delete` probes denied), `WEB_DATABASE_URL` in all 3 envs, code + ADR-0026 amendment in #59's PR |
+| #135 veto decision 2 (Termo cross-device rule) | STANDING | Fernando 2026-08-20: "fine" — rule confirmed, ADR-0060/0065 stand as shipped |
+| #74 answer-pool direction | STANDING | Fernando 2026-08-20: bulk-extension accepted for now; his live-generation preference recorded on #74 |
+| #51 wontfix call | SOON | Fernando delegated 2026-08-20; closed as wontfix with reason |
 | VAPID keys — push activated | this ledger NOW §1 (morning) | 2026-08-20: 3 `VAPID_*` vars added to miolos-api production, prod redeployed (`api.miolos.app`, "Ready in 1m") |
 | `CRON_SECRET` GitHub repo secret | this ledger NOW §4 (morning) | 2026-08-20: `gh secret list` shows `CRON_SECRET 2026-08-20T21:03:26Z` |
 | #32 Q1/Q2 | this ledger NOW §2 (morning) | Fernando 2026-08-20: **1a, 2a** — recorded on #32, `needs-info` dropped |
