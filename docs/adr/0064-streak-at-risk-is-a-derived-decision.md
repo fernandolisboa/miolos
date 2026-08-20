@@ -10,13 +10,19 @@ The founding handoff promises exactly one push type — streak at risk, at the
 player's habitual time, opt-in after streak ≥ 3, no marketing push — and
 ADR-0001 makes "push" mean Web Push. Issue #32's Tier-3 fog-clearing pass
 (its 2026-08-19 comment) settled the shape; this ADR records those decisions.
+Plan 061 drafted this document as "ADR-0062", a number #140 took first
+(PR #152, the Termo dictionary ADR) — the plan is a snapshot and stays as
+written, so the mapping is recorded here and on its `docs/README.md` row:
+every "ADR-0062" in plan 061 means THIS document.
 Slice A (#145) ships the opt-in half; the dispatcher (slice B, #146) and the
 email hedge (slice C) are its remaining implementers, and every decision here
 that only they exercise is recorded now so they attach rather than re-decide.
 
 ## Decisions
 
-1. **The habitual play window is derived at read time, never stored.** The
+1. **The habitual play window is derived at read time, never stored**
+   (exercised by slice B, #146 — recorded now, like decisions 6–8 and 10,
+   so the dispatcher attaches rather than re-decides). The
    median São Paulo minute-of-day of the player's earliest on-time completion
    per counted day over the last 21 SP days, extracted DB-side
    (`completed_at at time zone 'America/Sao_Paulo'`, `percentile_disc(0.5)`),
@@ -48,7 +54,15 @@ that only they exercise is recorded now so they attach rather than re-decide.
    fold). Eligibility for the ASK is `isPushConfigured() AND undismissed AND
    streak >= pushOptInStreakThreshold` (remote config, default 3, ADR-0025);
    the threshold gates the ask, never a send — once opted in, the nudge fires
-   for any live streak (Q2 on #32, Fernando's confirmable default).
+   for any live streak (Q2 on #32, Fernando's confirmable default). THE ASK
+   IS PER DEVICE, DELIBERATELY (#145 step-6 performance 2, dismissed in
+   writing): a subscription is per browser install (decision 2), so the
+   state endpoint does NOT suppress eligibility on an existing
+   `push_subscriptions` row — a player who accepted on their phone should
+   still be asked on their laptop. The already-subscribed device suppresses
+   itself client-side for free (`Notification.permission !== "default"`
+   gates both the card and the state fetch), so no subscribed install pays
+   the streak read either.
 
 4. **Dormancy is one fail-closed predicate over the full VAPID triple.**
    `isPushConfigured()` (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
@@ -68,7 +82,11 @@ that only they exercise is recorded now so they attach rather than re-decide.
    focuses or opens the hub (`/`). Registration happens inside the accept
    gesture only — register → `navigator.serviceWorker.ready` → subscribe,
    the `ready` wait load-bearing (the Push API rejects `subscribe()` with
-   `InvalidStateError` on a registration with no active worker).
+   `InvalidStateError` on a registration with no active worker). The
+   worker's two pt-BR fallback strings are the single recorded exception to
+   CLAUDE.md's strings-externalised rule: a plain unbundled worker cannot
+   import `messages.ts`, so `FALLBACK_TITLE`/`FALLBACK_BODY` are hardcoded
+   there, invisible to T-WEB-S270's externalisation scan by design.
 
 6. **The dispatcher is the product's only notification code path** (slice B,
    #146). Send iff: holds a subscription (or reminder consent, for the email
@@ -108,6 +126,14 @@ that only they exercise is recorded now so they attach rather than re-decide.
 10. **Endpoint hygiene rides the send pass** (slice B): a 404/410 from the
     push service deletes that subscription row in the same pass — browser-
     side revocation surfacing as pruning, which keeps the table honest.
+    *Note for #146 (#145 step-7, correctness F1's residual):* slice A ships
+    no `pushsubscriptionchange` handler, and its accept flow unwinds a
+    subscription the server failed to store — so after either event a
+    granted-permission install can legitimately hold NO subscription while
+    the account stays eligible. The card's `permission === "default"` gate
+    (deliberately not widened to "granted") means such an install is not
+    re-asked until #36's settings toggle; #146 decides whether the sw gains
+    the `pushsubscriptionchange` re-post alongside its pruning.
 
 ## Rejected
 

@@ -1,3 +1,5 @@
 # Evidence — #145 push opt-in card (PR #154)
 
 Step-5/8 evidence for a feature invisible on preview deploys (ADR-0048: the credentialed call is anonymous on every `*.vercel.app` origin, so `GET /notifications/state` 401s and the card never renders there — and the VAPID vars are unset on previews anyway, fail-closed by design). Static-fixture screenshots of the Binairo conclusion (result state) at 1440×900 and 390×844, with-card / without-card, embedded in the PR body. The fixture links the real stylesheets (`tokens.css`, `globals.css`, `conclusion-view.module.css`, `share-button.module.css`, `push-prompt-card.module.css`, names unhashed) and the committed font instances — the #35 ritual (`docs/evidence/35-onboarding/`).
+
+Re-shot at step 7: the card moved to the LAST slot of the side column (step-6 perf minor 4 — a late mount that shifts nothing), the without-card 390×844 frame joins the set (step-6 issue minor 4 — the mobile `cramped-padding` baseline is now checkable against an image), and `145-with-card-inflight-1440x900-card.png` shows the in-flight state (both buttons disabled while the accept flow awaits the permission dialog — step-6 correctness F4).

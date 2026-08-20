@@ -15,7 +15,7 @@ import { DELETE, POST } from "../app/push/subscriptions/route";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { jsonHeaders, subscriptionsRequest } from "./push-helpers";
 
-// Seam 4 for POST + DELETE /push/subscriptions (#145, ADR-0064; plan 058
+// Seam 4 for POST + DELETE /push/subscriptions (#145, ADR-0064; plan 061
 // §3): the real handlers over PGlite — the onboarding-seen suite's write
 // conventions (origin guard, 415, strict body, 401), plus the upsert and
 // own-rows-only semantics the endpoint PK carries.
@@ -261,5 +261,132 @@ describe("DELETE /push/subscriptions — own rows only (#145, ADR-0064)", () => 
       }),
     );
     expect(smuggled.status).toBe(400);
+  });
+});
+
+describe("the subscribe boundary refuses what the dispatcher must never receive (#145 step-6 security 1/2)", () => {
+  it("T-API-S131: non-https schemes (metadata, loopback, file, javascript, data) and oversized endpoint/keys are 400s — never 500s, never rows: these rows are #146's SSRF target list", async () => {
+    const { token } = await createSession();
+
+    // Positive control first (the T-API-S125 convention): a real push
+    // endpoint passes, so every refusal below is non-vacuous.
+    const legal = await POST(
+      subscriptionsRequest("POST", {
+        headers: jsonHeaders(token),
+        body: subscribeBody(),
+      }),
+    );
+    expect(legal.status).toBe(200);
+    await ctx.db.execute(sql`truncate table push_subscriptions`);
+
+    // The scheme floor: a browser push service is always https, and every
+    // one of these is a destination #146's server-side send pass must never
+    // be handed — the boundary is the only place that can refuse them
+    // before they become stored rows.
+    const hostile = [
+      "http://169.254.169.254/latest/meta-data/",
+      "http://localhost:5432/x",
+      "file:///etc/passwd",
+      "javascript:alert(1)",
+      "data:text/plain,hi",
+      "ftp://x.example/a",
+    ];
+    for (const endpoint of hostile) {
+      const refused = await POST(
+        subscriptionsRequest("POST", {
+          headers: jsonHeaders(token),
+          body: subscribeBody(endpoint),
+        }),
+      );
+      expect(refused.status, endpoint).toBe(400);
+      expect(await refused.json()).toEqual({ error: "invalid-body" });
+    }
+
+    // The length caps — and the status fix that rides them: an over-long
+    // endpoint used to raise inside the insert (the btree PK's ~2704-byte
+    // tuple limit), surfacing as a caller-reachable 500 for what is
+    // malformed input. The .max(2048) makes it the 400 it always was.
+    const oversizedEndpoint = `https://push.example.org/${"a".repeat(2100)}`;
+    const tooLong = await POST(
+      subscriptionsRequest("POST", {
+        headers: jsonHeaders(token),
+        body: subscribeBody(oversizedEndpoint),
+      }),
+    );
+    expect(tooLong.status).toBe(400);
+    const giantKey = await POST(
+      subscriptionsRequest("POST", {
+        headers: jsonHeaders(token),
+        body: subscribeBody(ENDPOINT, "p".repeat(129), "a1"),
+      }),
+    );
+    expect(giantKey.status).toBe(400);
+    const giantAuth = await POST(
+      subscriptionsRequest("POST", {
+        headers: jsonHeaders(token),
+        body: subscribeBody(ENDPOINT, "p1", "a".repeat(129)),
+      }),
+    );
+    expect(giantAuth.status).toBe(400);
+
+    // Nothing was stored by any refusal, and the DELETE contract mirrors
+    // the scheme floor for symmetry.
+    expect(await ctx.db.select().from(pushSubscriptions)).toEqual([]);
+    const deleteRefused = await DELETE(
+      subscriptionsRequest("DELETE", {
+        headers: jsonHeaders(token),
+        body: JSON.stringify({ endpoint: "http://169.254.169.254/x" }),
+      }),
+    );
+    expect(deleteRefused.status).toBe(400);
+  });
+});
+
+describe("created_at is the consent evidence and attests to the CURRENT owner (#145 step-6 security 3)", () => {
+  it("T-API-S132: a same-user key rotation preserves the stamp; an owner-changing repoint refreshes it — the recorded moment always belongs to the account that consented", async () => {
+    const first = await createSession();
+    await POST(
+      subscriptionsRequest("POST", {
+        headers: jsonHeaders(first.token),
+        body: subscribeBody(ENDPOINT, "p-old", "a-old"),
+      }),
+    );
+    // Age the stamp deterministically, so "preserved" and "refreshed" are
+    // a day apart rather than a race on the DB clock's millisecond.
+    await ctx.db.execute(
+      sql`update push_subscriptions set created_at = now() - interval '1 day'`,
+    );
+    const agedRows = await ctx.db.select().from(pushSubscriptions);
+    const aged = agedRows[0]?.createdAt;
+    expect(aged).toBeInstanceOf(Date);
+
+    // Same user, rotated keys: the consent act is unchanged — the stamp
+    // must not move (ADR-0064 decision 2's idiom).
+    await POST(
+      subscriptionsRequest("POST", {
+        headers: jsonHeaders(first.token),
+        body: subscribeBody(ENDPOINT, "p-new", "a-new"),
+      }),
+    );
+    let rows = await ctx.db.select().from(pushSubscriptions);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.createdAt?.getTime()).toBe(aged?.getTime());
+
+    // A different account repoints the row: the single record ADR-0064
+    // nominates as the proof of consent must now attest to the NEW owner's
+    // consent moment, not carry the old owner's.
+    const second = await createSession();
+    await POST(
+      subscriptionsRequest("POST", {
+        headers: jsonHeaders(second.token),
+        body: subscribeBody(ENDPOINT, "p-new", "a-new"),
+      }),
+    );
+    rows = await ctx.db.select().from(pushSubscriptions);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.userId).toBe(second.userId);
+    const refreshed = rows[0]?.createdAt;
+    expect(refreshed).toBeInstanceOf(Date);
+    expect((refreshed?.getTime() ?? 0) > (aged?.getTime() ?? 0)).toBe(true);
   });
 });

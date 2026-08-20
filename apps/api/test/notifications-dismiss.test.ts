@@ -15,14 +15,14 @@ import {
   vi,
 } from "vitest";
 
-import { GET as stateGet } from "../app/notifications/state/route";
 import { POST } from "../app/notifications/dismiss/route";
+import { GET as stateGet } from "../app/notifications/state/route";
 import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { dismissRequest, jsonHeaders } from "./push-helpers";
 
-// Seam 4 for POST /notifications/dismiss (#145, ADR-0064; plan 058 §3):
+// Seam 4 for POST /notifications/dismiss (#145, ADR-0064; plan 061 §3):
 // the real handler over PGlite — the onboarding-seen suite's conventions.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 

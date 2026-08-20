@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 // The caching-free service worker's source shape (#145, ADR-0064; ADR-0004
-// discharged by construction — plan 058 §2). These are SOURCE scans: the
+// discharged by construction — plan 061 §2). These are SOURCE scans: the
 // worker runs in no jsdom, so what is pinned is that the file cannot do
 // the one thing ADR-0004 forbids, in the only way a static test can pin a
 // capability — the tokens that reach it are absent.
@@ -48,6 +48,12 @@ describe("the service worker is caching-free (T-WEB-S261)", () => {
       (match) => match[1] ?? "",
     );
     expect(listeners.sort()).toEqual(["notificationclick", "push"]);
+    // …and the OTHER registration form is closed too (#145 step-6
+    // security 7): a handler-property assignment (`self.onmessage = …`,
+    // `self.onsync = …`) would add a capability without adding an
+    // addEventListener match, so the "exactly two, no third" claim needs
+    // both doors pinned.
+    expect(sw).not.toMatch(/self\.on[a-z]+\s*=/);
 
     // The push handler notifies through the registration — the one thing
     // the worker exists to do — with the pt-BR fallbacks baked in (the

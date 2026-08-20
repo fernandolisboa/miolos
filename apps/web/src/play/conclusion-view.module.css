@@ -481,6 +481,29 @@
   text-wrap: pretty;
 }
 
+/* ── the cross-device completed view (#142, ADR-0065) ────────────────────
+   Two quiet lines inside the result card, beside the stamp — never a
+   banner, never a kicker: both are lowercase-set body text, so the
+   `all-caps-body` threshold (>30 chars of direct uppercase text) is
+   structurally out of reach. */
+
+.remoteNote {
+  margin: var(--space-3) 0 0;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.remoteBody {
+  margin: var(--space-4) 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
 /* ── side column ─────────────────────────────────────────────────────── */
 
 .side {

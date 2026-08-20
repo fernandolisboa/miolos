@@ -204,6 +204,10 @@ imply a rule the archive breaks.)*
   worker with push in M3. Building it here to enable a navigation that the
   in-place state makes unnecessary is a milestone's worth of work for a
   transition.
+  *Annotation (#145, ADR-0064):* the service worker has now shipped — and it
+  is caching-free by decision ([ADR-0064](./0064-streak-at-risk-is-a-derived-decision.md)
+  decision 5: no fetch handler, ever), so this rejection stands on its own
+  terms; only its "not built yet" reason is retired.
 - **English segments (`/binairo/completed`).** Consistent with the code
   language rule, and ADR-0013 already decided against it for the only
   audience v1 has.

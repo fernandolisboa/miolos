@@ -7,7 +7,7 @@
 // /public — not a route, no bundle marker (ADR-0047's classifier does not
 // see /public files).
 //
-// Recorded i18n exception (plan 058 §2): the fallback strings below are the
+// Recorded i18n exception (plan 061 §2): the fallback strings below are the
 // one place pt-BR copy lives outside messages.ts — a plain unbundled worker
 // cannot import a TypeScript module, so the duplication is forced, and this
 // comment is the recorded decision rather than a drift. They are invisible

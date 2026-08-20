@@ -37,12 +37,25 @@ export type NotificationsStateResponse = z.infer<
  * form (`z.string().url()` is the deprecated zod-3 idiom); the URL-shape
  * check is load-bearing — a non-URL endpoint is a row #146 can never send
  * to, so it is a 400 here, not a stored dud.
+ *
+ * THE ENDPOINT IS `https` ONLY, AND EVERY FIELD IS CAPPED (#145 step-6
+ * security 1/2). Rows written here are the exact input set of #146's
+ * dispatcher, which will make a server-side HTTP request per row — an
+ * uncapped `z.url()` admits `http://169.254.169.254/…`, `file:`, `data:`
+ * and `javascript:`, i.e. an attacker-written SSRF target list behind an
+ * anonymously mintable session. A browser push service is always https,
+ * so the scheme floor rejects nothing real. A host allow-list is
+ * deliberately NOT attempted: FCM/Mozilla/Apple/self-hosted endpoints are
+ * open-ended. The `.max()`s bound storage and keep an over-long endpoint a
+ * 400 at this boundary rather than a 500 at the btree PK's ~2704-byte
+ * tuple limit; real values are far under them (a p256dh is ~88 base64url
+ * chars, an auth ~22).
  */
 export const pushSubscribeSchema = z.strictObject({
-  endpoint: z.url(),
+  endpoint: z.url({ protocol: /^https$/ }).max(2048),
   keys: z.strictObject({
-    p256dh: z.string().min(1),
-    auth: z.string().min(1),
+    p256dh: z.string().min(1).max(128),
+    auth: z.string().min(1).max(128),
   }),
 });
 export type PushSubscribeRequest = z.infer<typeof pushSubscribeSchema>;
@@ -52,9 +65,14 @@ export const pushSubscribeResponseSchema = z.strictObject({
 });
 export type PushSubscribeResponse = z.infer<typeof pushSubscribeResponseSchema>;
 
-/** Body of DELETE /push/subscriptions — own rows only, idempotent. */
+/**
+ * Body of DELETE /push/subscriptions — own rows only, idempotent. The
+ * endpoint constraint mirrors the subscribe schema's, for symmetry: a
+ * value the POST refuses can never be a stored row, so the DELETE has
+ * nothing to reconcile for it either.
+ */
 export const pushUnsubscribeSchema = z.strictObject({
-  endpoint: z.url(),
+  endpoint: z.url({ protocol: /^https$/ }).max(2048),
 });
 export type PushUnsubscribeRequest = z.infer<typeof pushUnsubscribeSchema>;
 

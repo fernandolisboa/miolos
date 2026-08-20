@@ -28,6 +28,14 @@ function apiUrl(): string | undefined {
   // Loud, not silent (the session/bootstrap.ts guard): without the var the
   // fetch would hit "undefined/…" and the catch would swallow the
   // misconfiguration forever.
+  //
+  // DELIBERATELY the third literal copy of this guard (#145 step-6
+  // quality 1), beside attach-client.ts and onboarding-client.ts: the
+  // free-play wall bans these client modules BY NAME, so a shared
+  // src/api/api-url.ts would itself need a wall entry and become one more
+  // module every future client must remember to route through — the copy
+  // keeps each client self-contained behind its own wall entry. The day a
+  // fourth copy arrives is the day to extract (the site-origin.ts rule).
   const url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
     console.error(

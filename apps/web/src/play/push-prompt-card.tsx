@@ -1,24 +1,30 @@
 "use client";
 
 /**
- * The push pre-prompt card (#145, ADR-0064; plan 058 §5) — the soft ask on
+ * The push pre-prompt card (#145, ADR-0064; plan 061 §5) — the soft ask on
  * the conclusion surface, which IS the habitual play moment by construction
  * (the #32 shape §1: no derivation times the ask; placement does). Quiet
- * in-flow paper card in `ConclusionView`'s side column, directly below the
- * `StreakCard` slot — the streak number sits above the card that asks to
- * protect it — and above the day card. Never a modal, never floating,
- * never blocking (PRODUCT.md principle 4). `--accent-app`, never the game
+ * in-flow paper card LAST in `ConclusionView`'s side column (the
+ * `ConclusionAside` `prompt` slot): the card mounts hundreds of ms after
+ * paint, so the last position is what makes the insertion shift nothing
+ * (#145 step-6 perf minor 4). Never a modal, never floating, never
+ * blocking (PRODUCT.md principle 4). `--accent-app`, never the game
  * accent: the streak is app identity (the StreakCard's own rule).
  *
- * Coordination with #142: its cross-device completed view is a second
- * conclusion-like surface; whether this card renders there is decided by
- * #142's plan (default: it does not — the card belongs to the genuine
- * post-solve conclusion only). This component is mounted by
- * `ConclusionView` alone.
+ * Coordination with #142: its cross-device completed view
+ * (`RemoteConclusionView`) is a second conclusion-like surface and the
+ * card NEVER renders there — the remote view leaves `ConclusionAside`'s
+ * `prompt` slot empty, per ADR-0065 decision 8, whose owed test arm is
+ * T-WEB-S272. This component is mounted by the local `ConclusionView`
+ * alone.
  *
  * It renders `null` until EVERY gate says yes, so server markup, first
  * paint and `impeccable detect`'s clean profile are unchanged (the
- * hub-onboarding precedent). The gates, all required (plan 058 §5):
+ * hub-onboarding precedent). The two synchronous gates below additionally
+ * SUPPRESS THE STATE FETCH (#145 step-6 performance 1): each one
+ * conclusively proves the card can never render here, so a browser that
+ * fails them fires no credentialed GET at all — `usePushState(enabled)`
+ * carries the switch. The gates, all required (plan 061 §5):
  *
  * - the TRIPLE feature detect — `"Notification" in window`,
  *   `"serviceWorker" in navigator`, `"PushManager" in window` — checked
@@ -61,11 +67,32 @@ function browserSupportsPush(): boolean {
 }
 
 /**
+ * The two FREE synchronous gates as `usePushState`'s fetch switch (#145
+ * step-6 performance 1): each one conclusively proves the card can never
+ * render here, so a browser that fails either fires NO credentialed GET —
+ * which runs the account's whole streak read server-side — on any
+ * conclusion, ever. Module-level so its identity is stable and the hook's
+ * effect runs once; evaluated inside that effect, never during render, so
+ * the server markup and the pre-hydration paint stay byte-for-byte
+ * identical.
+ */
+function askableHere(): boolean {
+  return browserSupportsPush() && Notification.permission === "default";
+}
+
+/**
  * On accept or decline the card leaves the DOM, so focus must be placed
  * deliberately or it falls to `<body>` (the #67 class of focus-order
  * failure — the hub-onboarding `moveFocusToFirstGame` lesson). It goes to
- * the side column's next control after the card — the CTA in the shipped
- * layout — found structurally rather than by class (CSS-Modules names are
+ * the side column's first control AFTER the card — POSITIONALLY, via
+ * `compareDocumentPosition` (#145 step-6 correctness F2): the old
+ * first-non-card-match walk was only correct by accident of the layout,
+ * and a control gaining a link above the card would have silently sent
+ * focus backwards. In the shipped layout the card is the aside's LAST
+ * child, so no following control exists and focus falls back to the
+ * nearest PRECEDING control (the stats link) — the element adjacent to
+ * where the card just was, which is where a sighted keyboard user expects
+ * to land. Found structurally rather than by class (CSS-Modules names are
  * hashed) or by href (the CTA's target varies with the day's state).
  * Called BEFORE the card unmounts, while `closest` still works; absent an
  * enclosing `<aside>` — a test rendering the card alone — nothing happens.
@@ -77,18 +104,29 @@ function moveFocusPastCard(card: HTMLElement | null): void {
   if (!card || !aside) {
     return;
   }
-  for (const control of aside.querySelectorAll<HTMLElement>(
-    "a[href], button",
-  )) {
-    if (!card.contains(control)) {
-      control.focus();
-      return;
-    }
-  }
+  const controls = [
+    ...aside.querySelectorAll<HTMLElement>("a[href], button"),
+  ].filter((control) => !card.contains(control));
+  const following = controls.find(
+    (control) =>
+      (card.compareDocumentPosition(control) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+      0,
+  );
+  // querySelectorAll is document order, so when nothing follows the card
+  // the last remaining control is the nearest preceding one.
+  (following ?? controls.at(-1))?.focus();
 }
 
 /**
- * The accept flow, in the order that works (plan 058 §2): `register()`
+ * The accept flow's outcome, decided for the card: `"stored"` ends the
+ * card, `"denied"` ends it with the permanent stamp, `"retriable"` keeps
+ * it on screen with its buttons live again.
+ */
+type SubscribeOutcome = "stored" | "denied" | "retriable";
+
+/**
+ * The accept flow, in the order that works (plan 061 §2): `register()`
  * resolves while the worker is still installing, and the Push API rejects
  * `subscribe()` with `InvalidStateError` when the registration has no
  * active worker — so the `ready` wait between them is load-bearing;
@@ -96,43 +134,74 @@ function moveFocusPastCard(card: HTMLElement | null): void {
  * gesture: transient activation is time-based and survives the awaits (the
  * sw is tiny and activates in milliseconds).
  *
- * Failure semantics (plan 058 §5): a rejection with the permission now
- * `"denied"` stamps the permanent dismissal — the browser remembers the
- * denial anyway; our stamp keeps every other surface honest. A TRANSIENT
- * failure (permission still `"default"`/`"granted"`) stamps nothing — the
- * card simply went for this visit and may return on the next.
+ * Failure semantics (plan 061 §5, hardened at step 7 — correctness F1): a
+ * `subscribe()` rejection with the permission now `"denied"` stamps the
+ * permanent dismissal — the browser remembers the denial anyway; our stamp
+ * keeps every other surface honest. A TRANSIENT subscribe failure
+ * (permission still `"default"`/`"granted"`) stamps nothing. And when the
+ * browser subscription EXISTS but the server never stored it — a keyless
+ * subscription, or a failed POST — the subscription is UNWOUND with
+ * `unsubscribe()`, best-effort, so the browser and the server can never
+ * permanently disagree: without the unwind, the "no local subscription"
+ * render gate would exclude this install forever while the server still
+ * answered `eligible: true` for it, an unrecoverable dead-end with no
+ * repair surface until #36. The residual (a granted browser with no
+ * subscription is not re-asked until #36/#146) is recorded on ADR-0064.
  */
-async function subscribeAndStore(vapidPublicKey: string): Promise<void> {
+async function subscribeAndStore(
+  vapidPublicKey: string,
+): Promise<SubscribeOutcome> {
+  let subscription: PushSubscription;
   try {
     await navigator.serviceWorker.register("/sw.js");
     const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
+    subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: applicationServerKeyBytes(vapidPublicKey),
-    });
-    const json = subscription.toJSON();
-    const p256dh = json.keys?.["p256dh"];
-    const auth = json.keys?.["auth"];
-    if (!p256dh || !auth) {
-      // A subscription without its keys is a row the dispatcher could
-      // never send to — the strict contract would 400 it anyway.
-      return;
-    }
-    await postPushSubscription({
-      endpoint: subscription.endpoint,
-      keys: { p256dh, auth },
     });
   } catch {
     if (Notification.permission === "denied") {
       void dismissPushPrompt();
+      return "denied";
     }
+    return "retriable";
   }
+  const json = subscription.toJSON();
+  const p256dh = json.keys?.["p256dh"];
+  const auth = json.keys?.["auth"];
+  // A subscription without its keys is a row the dispatcher could never
+  // send to — the strict contract would 400 it anyway — so it is unwound
+  // like a failed POST rather than stored or abandoned.
+  const stored =
+    p256dh !== undefined && auth !== undefined && p256dh !== "" && auth !== ""
+      ? await postPushSubscription({
+          endpoint: subscription.endpoint,
+          keys: { p256dh, auth },
+        })
+      : false;
+  if (!stored) {
+    try {
+      await subscription.unsubscribe();
+    } catch {
+      // Best-effort: an unsubscribe that itself fails leaves the browser
+      // subscribed with no server row — the state #146's 410-pruning can
+      // never repair — but there is nothing further to do from here.
+    }
+    return "retriable";
+  }
+  return "stored";
 }
 
 export function PushPromptCard() {
-  const state = usePushState();
+  const state = usePushState(askableHere);
   const [browserGate, setBrowserGate] = useState(false);
   const [gone, setGone] = useState(false);
+  // The accept flow in flight: the card STAYS on screen with its buttons
+  // disabled until the permission dialog and the store settle (#145
+  // step-6 correctness F4) — the card's copy is the browser prompt's only
+  // on-screen framing, so unmounting it synchronously would leave a bare
+  // permission dialog with no context.
+  const [inFlight, setInFlight] = useState(false);
   const cardRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -175,15 +244,24 @@ export function PushPromptCard() {
   }
   const vapidPublicKey = state.vapidPublicKey;
 
-  // Both handlers remove the card on the click, before the network
-  // answers (the hub-onboarding dismiss shape): a failed call costs one
-  // more sighting on a later visit — never a spinner between a player and
-  // a button whose purpose is to get out of the way. Focus moves first,
-  // while the card is still in the DOM.
+  // The two handlers deliberately differ (#145 step-6 correctness F1):
+  // DECLINE removes the card on the click, before the network answers
+  // (the hub-onboarding dismiss shape) — a failed stamp costs one more
+  // sighting on a later visit, because the permission is untouched.
+  // ACCEPT cannot make that promise: it changes the browser's permission,
+  // so the card stays (disabled) until the flow settles, leaves only on a
+  // terminal outcome, and re-arms on a transient one so the player can
+  // retry in place. Focus moves while the card is still in the DOM.
   function accept(): void {
-    moveFocusPastCard(cardRef.current);
-    setGone(true);
-    void subscribeAndStore(vapidPublicKey);
+    setInFlight(true);
+    void subscribeAndStore(vapidPublicKey).then((outcome) => {
+      if (outcome === "retriable") {
+        setInFlight(false);
+        return;
+      }
+      moveFocusPastCard(cardRef.current);
+      setGone(true);
+    });
   }
 
   function decline(): void {
@@ -209,13 +287,19 @@ export function PushPromptCard() {
       </h2>
       <p className={styles.promptBody}>{messages.push.body}</p>
       <div className={styles.promptActions}>
-        <button type="button" className={styles.promptAccept} onClick={accept}>
+        <button
+          type="button"
+          className={styles.promptAccept}
+          onClick={accept}
+          disabled={inFlight}
+        >
           {messages.push.accept}
         </button>
         <button
           type="button"
           className={styles.promptDecline}
           onClick={decline}
+          disabled={inFlight}
         >
           {messages.push.decline}
         </button>

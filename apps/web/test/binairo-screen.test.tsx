@@ -645,11 +645,17 @@ describe("the one free hint (T-WEB-9)", () => {
 });
 
 describe("closing the grid (T-WEB-9b)", () => {
-  it("swaps the conclusion in place, with no navigation at all", () => {
+  it("swaps the conclusion in place, with no navigation at all", async () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
 
     solveByClicking(container);
 
+    // The conclusion rides a next/dynamic boundary since #145 step 7
+    // (ADR-0054 decision 15's relief), so the swap resolves one module
+    // tick after the close — same commit semantics, one await here.
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
     expect(container.querySelector("[data-conclusion-state]")).toHaveAttribute(
       "data-conclusion-state",
       "result",
@@ -793,7 +799,7 @@ describe("a second tab still playing (T-WEB-9f)", () => {
 });
 
 describe("re-entering a finished day (T-WEB-9c)", () => {
-  it("restores straight into the conclusion, with the clock stopped", () => {
+  it("restores straight into the conclusion, with the clock stopped", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
     const record = concludedRecord();
     window.localStorage.setItem(
@@ -802,6 +808,15 @@ describe("re-entering a finished day (T-WEB-9c)", () => {
     );
 
     const { container } = render(<BinairoScreen daily={DAILY} />);
+
+    // Resolve the conclusion's next/dynamic boundary (#145 step 7,
+    // ADR-0054 decision 15) — deterministic under fake timers: awaiting
+    // the same import the lazy component awaits flushes its resolution
+    // without a timer-driven waitFor. No playable board paints meanwhile.
+    expect(container.querySelector("[data-cell-index]")).toBeNull();
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
 
     // The stamp's own composed label, not `getByText`: the day card repeats
     // the same time in the Binairo chip.

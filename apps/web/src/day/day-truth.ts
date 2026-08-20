@@ -109,16 +109,19 @@ function getServerSnapshot(): DayResponse | undefined {
 
 /**
  * Field for field: date plus the four claims — each a status AND, since
- * #141, its optional `elapsedMs`. Comparing the status alone would swallow a
- * payload whose only change is a duration (an account merge swapping in the
- * other device's row), and the stale time would stand for the session.
+ * #141, its optional `elapsedMs`, AND, since #142, its optional `hintsUsed`.
+ * Comparing the status alone would swallow a payload whose only change is a
+ * duration or a hint count (an account merge swapping in the other device's
+ * row), and the stale value would stand for the session.
  */
 function sameGame(
   previous: DayResponse["games"]["termo"],
   next: DayResponse["games"]["termo"],
 ): boolean {
   return (
-    previous.status === next.status && previous.elapsedMs === next.elapsedMs
+    previous.status === next.status &&
+    previous.elapsedMs === next.elapsedMs &&
+    previous.hintsUsed === next.hintsUsed
   );
 }
 

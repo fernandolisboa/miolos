@@ -71,10 +71,14 @@ export function OPTIONS(): Response {
  * the 503 precedes every side effect. Returns either the failure Response
  * or the authenticated context.
  */
-async function writePreamble(
-  request: NextRequest,
-): Promise<
-  { failure: Response } | { failure?: undefined; userId: string; raw: unknown }
+async function writePreamble(request: NextRequest): Promise<
+  | { failure: Response }
+  | {
+      failure?: undefined;
+      db: ReturnType<typeof getDb>;
+      userId: string;
+      raw: unknown;
+    }
 > {
   warnIfGuardDegraded();
 
@@ -113,7 +117,10 @@ async function writePreamble(
   } catch {
     return { failure: errorResponse(400, "invalid-body") };
   }
-  return { userId, raw };
+  // The handle rides the context (#145 step-6 quality m5): getDb() has
+  // deliberately no module-level cache, so returning this one saves each
+  // verb constructing a second client for the same request.
+  return { db, userId, raw };
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -128,7 +135,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse(400, "invalid-body");
     }
 
-    await upsertSubscription(getDb(), {
+    await upsertSubscription(context.db, {
       userId: context.userId,
       endpoint: parsed.data.endpoint,
       p256dh: parsed.data.keys.p256dh,
@@ -156,7 +163,7 @@ export async function DELETE(request: NextRequest): Promise<Response> {
       return errorResponse(400, "invalid-body");
     }
 
-    await deleteSubscription(getDb(), context.userId, parsed.data.endpoint);
+    await deleteSubscription(context.db, context.userId, parsed.data.endpoint);
 
     return Response.json(
       pushUnsubscribeResponseSchema.parse({ removed: true }),

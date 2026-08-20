@@ -1021,6 +1021,16 @@ not come.
     sentence that nobody may budget against room that is not there. The
     `next/dynamic` move is still unspent and still belongs to the ticket that
     first needs it.)*
+    *(**Taken up at #145 step 7** — the ticket that first needed it: #142
+    and #145 landed the same night and their merged head redded `/binairo`
+    (+41.1) and `/nonogram` (+43.2) against the 40 KB budgets. The four
+    play screen roots now load the conclusion tree through
+    `apps/web/src/play/conclusion-lazy.tsx` (`next/dynamic`, `ssr: false`,
+    plus a mount-time preload so the win-moment swap resolves from the
+    module cache), while the `/<jogo>/concluido` pages keep their static
+    imports — that segment's server render is the bookmark/detect surface.
+    Measured on the merged build: binairo +18.9, nonogram +20.9, sudoku
+    +15.1, termo +52.3 — `/nonogram`'s slack is 19.1 KB.)*
 
     **Nothing else on any list moves.** No new page, so `impeccable.yml`'s URL
     lists, `route-ssr.test.tsx`'s `ROUTES` table, `sitemap.ts`'s path list and

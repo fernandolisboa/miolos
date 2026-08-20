@@ -361,7 +361,7 @@ describe("the impeccable structural guard (T-WEB-S26)", () => {
     assertNoEyebrowAboveHeadings(play);
   });
 
-  it("holds in DailyUnavailable and in the conclusion", () => {
+  it("holds in DailyUnavailable and in the conclusion", async () => {
     const { container: unavailable } = render(
       <DailyUnavailable copy={messages.games.sudoku.play.unavailable} />,
     );
@@ -376,6 +376,12 @@ describe("the impeccable structural guard (T-WEB-S26)", () => {
       JSON.stringify(concludedRecord()),
     );
     const { container: conclusion } = render(<SudokuScreen daily={DAILY} />);
+    // Resolve the conclusion's next/dynamic boundary (#145 step 7,
+    // ADR-0054 decision 15): awaiting the same import the lazy component
+    // awaits flushes its resolution deterministically.
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
     expect(conclusion.querySelector("[data-conclusion-state]")).not.toBeNull();
     assertHeadingIsFirstChild(conclusion);
     assertNoEyebrowAboveHeadings(conclusion);
@@ -669,11 +675,17 @@ describe("the keyboard model (T-WEB-S28)", () => {
 });
 
 describe("closing the grid (T-WEB-S29)", () => {
-  it("swaps the conclusion in place, with no navigation at all", () => {
+  it("swaps the conclusion in place, with no navigation at all", async () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
 
     solveByTyping(container);
 
+    // Resolve the conclusion's next/dynamic boundary (#145 step 7,
+    // ADR-0054 decision 15): awaiting the same import the lazy component
+    // awaits flushes its resolution deterministically.
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
     expect(container.querySelector("[data-conclusion-state]")).toHaveAttribute(
       "data-conclusion-state",
       "result",
@@ -703,7 +715,7 @@ describe("closing the grid (T-WEB-S29)", () => {
     // margin over vitest's 5 000 ms default.
   }, 30_000);
 
-  it("restores a finished day straight into the conclusion, clock stopped", () => {
+  it("restores a finished day straight into the conclusion, clock stopped", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
     const record = concludedRecord();
     window.localStorage.setItem(
@@ -712,6 +724,15 @@ describe("closing the grid (T-WEB-S29)", () => {
     );
 
     const { container } = render(<SudokuScreen daily={DAILY} />);
+
+    // No playable board paints while the boundary resolves (#145 step 7).
+    expect(container.querySelector("[data-cell-index]")).toBeNull();
+    // Resolve the conclusion's next/dynamic boundary (#145 step 7,
+    // ADR-0054 decision 15): awaiting the same import the lazy component
+    // awaits flushes its resolution deterministically.
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
 
     const stamped = messages.conclusion.stampAria(
       messages.games.sudoku.conclusion.title,

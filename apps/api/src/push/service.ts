@@ -43,6 +43,16 @@ export async function upsertSubscription(
         userId: init.userId,
         p256dh: init.p256dh,
         auth: init.auth,
+        // `created_at` is the consent evidence (ADR-0064 decision 2), so
+        // it must attest to the CURRENT owner (#145 step-6 security 3): a
+        // same-user re-subscribe after key rotation keeps the original
+        // stamp — the consent act is unchanged — but a repoint to a
+        // different account is a new consent by a new owner, so the stamp
+        // refreshes. DB-side `now()`, per the schema.ts law.
+        createdAt: sql`case
+          when ${pushSubscriptions.userId} = ${init.userId}
+          then ${pushSubscriptions.createdAt}
+          else now() end`,
       },
     });
 }

@@ -79,11 +79,27 @@ export const dayGameStateSchema = z
     // so the read side can never accept a duration the write side would have
     // refused to store.
     elapsedMs: z.number().int().min(0).max(86_400_000).optional(),
+    // `.max(1)` mirrors the write contracts for the same reason as the 24 h
+    // cap above: one free hint per puzzle (plan 017 D21), so the read side
+    // never accepts a count the write side would have refused. A future
+    // hint-grant ticket raises both ends in one diff. Same optionality
+    // discipline as `elapsedMs` (#142, ADR-0065): absent on `pending` and
+    // `played` by the refinement below, and absent on a completed TERMO by
+    // the producer (`dayGamesFromRows`) — Termo ships no hint, and "sem
+    // dicas" is not a virtue where a hint was never possible (ADR-0045
+    // decision 1).
+    hintsUsed: z.number().int().min(0).max(1).optional(),
   })
   .refine(
     (game) => game.elapsedMs === undefined || game.status === "completed",
     {
       message: "elapsedMs is published only on a completed game",
+    },
+  )
+  .refine(
+    (game) => game.hintsUsed === undefined || game.status === "completed",
+    {
+      message: "hintsUsed is published only on a completed game",
     },
   );
 
@@ -106,6 +122,14 @@ export interface DayRow {
    * a row always has one, a claim does not always carry one.
    */
   readonly elapsedMs: number;
+  /**
+   * The stored hint count, REQUIRED for the same reason: the column is
+   * `hints_used integer NOT NULL` (capped at 1 by the write contracts).
+   * Published under exactly the rules `elapsedMs` follows (#142): on a
+   * completed grid game's claim, never on Termo, never on `played` or
+   * `pending`.
+   */
+  readonly hintsUsed: number;
 }
 
 /** A total per-game projection — every game answers, always. */
@@ -202,11 +226,17 @@ function statusForGame(rows: readonly DayRow[], game: Game): DayGameStatus {
  * `entryFor` makes the same per-game exception, and mirroring it here is
  * what keeps a cross-device tile byte-identical to a local one.
  *
+ * `hintsUsed` RIDES THE SAME RULES since #142 (ADR-0065): published on a
+ * completed grid game's claim, never on Termo (no hint was ever possible
+ * there — ADR-0045 decision 1 — so "sem dicas" would present as a virtue
+ * something that was never a choice), never on `played` or `pending`.
+ *
  * TWO ROWS FOR ONE GAME ARE IMPOSSIBLE (the composite primary key), and this
  * is total over them anyway, like the fold it composes: a `completed` status
  * means every row of that game read completed (weakest claim), and the
  * duration taken is the LARGEST — the humbler time, the same never-overstate
- * direction as the status fold, and permutation-invariant like it.
+ * direction as the status fold, and permutation-invariant like it. The hint
+ * count folds the same way: the largest, the humbler claim.
  */
 export function dayGamesFromRows(
   rows: readonly DayRow[],
@@ -229,6 +259,7 @@ function claimForGame(
     return { status };
   }
   let elapsedMs: number | undefined;
+  let hintsUsed: number | undefined;
   for (const row of rows) {
     if (row.game !== game || statusOfRow(row) !== "completed") {
       continue;
@@ -236,11 +267,24 @@ function claimForGame(
     if (elapsedMs === undefined || row.elapsedMs > elapsedMs) {
       elapsedMs = row.elapsedMs;
     }
+    // The LARGEST count, like the duration: the humbler claim, the same
+    // never-overstate direction as the status fold (#142) — "sem dicas" on a
+    // day any duplicate row spent a hint would overstate the solve.
+    if (hintsUsed === undefined || row.hintsUsed > hintsUsed) {
+      hintsUsed = row.hintsUsed;
+    }
   }
   // A `completed` status guarantees a completed row exists (the fold takes
-  // the weakest claim), so the branch below is unreachable — and defined
+  // the weakest claim), so the undefined arms are unreachable — and defined
   // anyway, failing toward the chip-only tile rather than a fabricated 0.
-  return elapsedMs === undefined ? { status } : { status, elapsedMs };
+  // Spread-per-field rather than a key set to `undefined`: the wire schema
+  // is strict and a consumer compares claims field for field, so an absent
+  // field must be ABSENT, not present-and-undefined.
+  return {
+    status,
+    ...(elapsedMs === undefined ? {} : { elapsedMs }),
+    ...(hintsUsed === undefined ? {} : { hintsUsed }),
+  };
 }
 
 /**

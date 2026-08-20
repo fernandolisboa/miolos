@@ -8,7 +8,7 @@ import {
 } from "../src/push/push-client";
 
 // The fetch-and-parse half of the notification endpoints (#145, ADR-0064;
-// plan 058 §5), tested without rendering — the streak-client suite's
+// plan 061 §5), tested without rendering — the streak-client suite's
 // conventions. This suite deliberately keeps the unset-env case (the
 // bootstrap.ts guard parity), which every RENDERING suite avoids by
 // stubbing the pair.

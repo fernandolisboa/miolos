@@ -199,6 +199,34 @@ describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
     expect(rendered.result.current?.games.sudoku.elapsedMs).toBe(444_000);
     rendered.unmount();
   });
+
+  it("a refetch that changes ONLY a hint count IS a change too (#142)", async () => {
+    // Widened again in place, no new id, on the same warrant as the
+    // duration arm above: the claim gained `hintsUsed` at #142 and the
+    // comparator must read it, or the stale count stands for the session.
+    let hintsUsed = 0;
+    stubFetch(() =>
+      jsonResponse(
+        200,
+        payload({
+          sudoku: { status: "completed", elapsedMs: 512_000, hintsUsed },
+        }),
+      ),
+    );
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await flush();
+    const first = rendered.result.current;
+    expect(first?.games.sudoku.hintsUsed).toBe(0);
+
+    hintsUsed = 1; // the merge swapped in the other device's hinted row
+    window.dispatchEvent(new Event("focus"));
+    await flush();
+    expect(rendered.result.current).not.toBe(first);
+    expect(rendered.result.current?.games.sudoku.hintsUsed).toBe(1);
+    rendered.unmount();
+  });
 });
 
 describe("the day-truth store's triggers (T-WEB-S236)", () => {

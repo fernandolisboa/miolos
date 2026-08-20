@@ -25,7 +25,7 @@ import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { jsonHeaders, subscriptionsRequest } from "./push-helpers";
 
-// Seam 4 for GET /notifications/state (#145, ADR-0064; plan 058 §3): the
+// Seam 4 for GET /notifications/state (#145, ADR-0064; plan 061 §3): the
 // real handler over PGlite with a LIVE remote_config row, so "read from
 // remote config" is pinned against the table rather than a compiled
 // constant — the attach-state suite's conventions throughout.

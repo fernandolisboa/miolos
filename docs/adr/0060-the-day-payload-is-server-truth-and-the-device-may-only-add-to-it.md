@@ -8,6 +8,8 @@
 
 **Amended at #141** (Fernando's answer to PR #135 veto decision 1; the amending ticket ships no ADR of its own, and its PR body carries the plan section and the reciprocal records note) — **(b)–(e), continuing the annotation series #143 opened above; (b) and (c) are decision-level** (decision 2's no-duration clause is discharged for completed grid games — a consumer now exists — and decision 3's not-merged list narrows accordingly); **(d) corrects the one consequence made outright false; (e) sharpens a Rejected bullet's type claim.** Termo still publishes no duration anywhere and the guess count still does not ride this payload. Every edit annotated in place, nothing deleted.
 
+**Amended by:** [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md) (#142, Fernando's answer to PR #135 veto decision 3) — **(f) and (g), continuing the series; both decision-level.** Annotation (f): decision 2's per-game claim gains an optional `hintsUsed`, on annotation (b)'s template exactly — recorded at TWO loci under the one letter, decision 2 itself and, applying annotation (c)'s rule to it, decision 3's not-merged list (the #141 precedent gave that pair distinct letters; here the second locus is the same fact applied to the list it narrows, so it shares the letter and this header names both). Annotation (g): **decision 8's playable-board sentence is replaced for the daily path** — a cross-device done day now opens a completed view — while the decision's href sentence **stands untouched**, which is why this is `Amended by` and not `Superseded in part by`. Every edit annotated in place, nothing deleted; references qualify the letter ("annotation (f)"), because this ADR's native Consequences are lettered too.
+
 [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 10 and [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) decision 1 are **obeyed, not amended**, and this ADR says so in those words because a reviewer will ask about both. Decision 10 layer 3 is additionally **cited** by decision 8, as the precedent that makes a playable board behind a done tile acceptable; citing is not amending.
 
 ## Context
@@ -85,6 +87,17 @@ in the app that can **demote**.
    count still does not ride this payload; and ADR-0051 decision 3's
    hub-endpoint trigger still stands undischarged.)*
 
+   *(**Annotation (f) — decision-level, amended by ADR-0065 at #142.** The
+   claim gains an optional `hintsUsed`, on annotation (b)'s template
+   exactly: `.min(0).max(1)` mirroring the write contracts so the read side
+   never accepts what the write side refused, a value on a non-`completed`
+   claim a parse failure, and the same Termo suppression in
+   `dayGamesFromRows` — Termo ships no hint at all (ADR-0045 decision 1),
+   so "sem dicas" would present as a virtue something that was never
+   possible. The consumer is ADR-0065's remote completed view's stamp; no
+   second producer exists — `/stats` carries no per-game hint count
+   anywhere. Everything else this decision refuses, it still refuses.)*
+
    **And no `onTime` field, because nothing consumes it**: the on-time rule is
    applied server-side and only its verdict travels, as one of the three
    verbs. The tempting warrant *"on-time never rides a wire contract"* is
@@ -147,6 +160,12 @@ in the app that can **demote**.
    `apps/web/src/play/day-state.ts`). An IN-PROGRESS board's `elapsedMs`
    stays exactly where this list puts it — device-local, never on the wire —
    and guess counts stay off the payload entirely.)*
+
+   *(Annotation (f) — decision 2 — applies to this list on annotation (c)'s
+   exact rule: a **completed** grid game's published `hintsUsed` travels
+   WITH its claim since #142 and is never blended, while an IN-PROGRESS
+   board's `hintsUsed` stays where this list puts it, device-local and off
+   the wire.)*
 
 4. **In-progress board state is device-local, is never on the wire, and
    cross-device resume is not a v1 capability.** Nothing is persisted before a
@@ -233,6 +252,19 @@ in the app that can **demote**.
    ADR-0031 consequence (d)'s *"lands them on a screen that immediately
    restores into its own conclusion"* is corrected by this decision — it is
    true only where this device holds the record.
+
+   *(**Annotation (g) — decision-level, amended by ADR-0065 at #142.** The
+   playable-board sentence is REPLACED for the daily path: the play route
+   behind a cross-device done tile now renders the completed view ADR-0065
+   defines, never a fresh playable board, and `T-WEB-S245`'s playable-board
+   arm is deleted with `T-WEB-S273` as its successor. The **href half of
+   this decision stands untouched** — the tile still links to
+   `playRoutes[game]`, and it is precisely because the route itself now
+   answers with the completed state that the link needs no rewrite; that
+   surviving half is why this is an amendment and not a partial
+   supersession. The citation of ADR-0053 decision 10 layer 3 is withdrawn
+   for the daily hub path only; the layer itself is obeyed, unamended, on
+   the archive where it lives.)*
 
 ## Rejected
 

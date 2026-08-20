@@ -120,6 +120,7 @@ function playFixture(overrides: Partial<TermoPlayState> = {}): PlayFixture {
     erase: vi.fn(),
     submit: vi.fn(),
     retry: vi.fn(),
+    pause: vi.fn(),
   };
   return {
     ...handlers,

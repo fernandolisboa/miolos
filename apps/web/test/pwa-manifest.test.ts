@@ -133,7 +133,7 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     // assertion whose recorded premise the work retires): the worker now
     // exists (apps/web/public/sw.js, caching-free, pinned by T-WEB-S261),
     // and what this id guards from here on is that registration stays
-    // INSIDE the accept gesture — plan 058 §2's "no layout-level
+    // INSIDE the accept gesture — plan 061 §2's "no layout-level
     // registration": the worker has no job until a subscription exists,
     // registration persists browser-side once made, and no other route may
     // gain a byte of client JS for it. Any second file naming the API is a
@@ -167,15 +167,11 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     expect(offenders).toEqual([
       join(webRoot, "src", "play", "push-prompt-card.tsx"),
     ]);
-    // And the one legal file touches it only through the gated flow: the
-    // triple feature detect precedes every API touch (T-WEB-S265/S266 own
-    // the behaviour; this arm pins that the LAYOUT gained nothing).
-    expect(
-      sources.some(
-        (source) =>
-          source.path.endsWith(join("app", "layout.tsx")) &&
-          source.text.includes("serviceWorker"),
-      ),
-    ).toBe(false);
+    // The layout arm that used to follow was DELETED at step 7 (#145
+    // step-6 quality m4): the exact-offender-list equality above already
+    // entails that layout.tsx names no serviceWorker, so a second
+    // assertion could never fail while the first held — it read as a
+    // second claim and was not one. The layout's own presence in the walk
+    // is what the anti-vacuity arm above proves.
   });
 });

@@ -1,4 +1,4 @@
-# Plan 058 — Issue #145: Web Push opt-in — service worker, subscription storage, streak-threshold prompt
+# Plan 061 — Issue #145: Web Push opt-in — service worker, subscription storage, streak-threshold prompt
 
 **Status:** point-in-time snapshot, written 2026-08-20 at step 2. Tier 2.
 **Inputs:** issue #145; the #32 fog-clearing comment (the settled shape — this plan implements slice A as decided, nothing re-litigated); ADR-0050/0061 (the templates); ADR-0048 (streak, threshold-never-ships, preview-anonymity); ADR-0025 (remote config); ADR-0004 (discharged by construction); ADR-0049 (merge extension point); ADR-0012 (two channels, two consents).
@@ -123,7 +123,7 @@ A Vercel preview **cannot** show the card: credentialed calls are anonymous on `
 
 ## 11. Build order (step 5), landmines, exit criteria
 
-**Order:** (1) schema.ts + migration 0007 → **apply to Neon, verify, only then push the branch**; (2) contracts + remote-config key (packages/core); (3) merge.ts 1b + 5d + db tests; (4) `isPushConfigured` + service + three routes + seam tests (PGlite, transports/time faked); (5) sw.js + eslint globals entry + source tests; push client/hook/card/strings/wall entries; local detect; (6) ADR-0062, privacy paragraph, `docs/README.md` rows (plan 058 + ADR-0062), test-id frontier update, napkin curation.
+**Order:** (1) schema.ts + migration 0007 → **apply to Neon, verify, only then push the branch**; (2) contracts + remote-config key (packages/core); (3) merge.ts 1b + 5d + db tests; (4) `isPushConfigured` + service + three routes + seam tests (PGlite, transports/time faked); (5) sw.js + eslint globals entry + source tests; push client/hook/card/strings/wall entries; local detect; (6) ADR-0062, privacy paragraph, `docs/README.md` rows (plan 061 + ADR-0062), test-id frontier update, napkin curation.
 
 **Landmines:**
 - The INSERT-column-list trap (§1) — the branch's first push is the deadline, not the merge.

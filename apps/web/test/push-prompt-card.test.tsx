@@ -12,7 +12,7 @@ import { messages } from "../src/i18n";
 import { PushPromptCard } from "../src/play/push-prompt-card";
 import { usePushState } from "../src/push/use-push-state";
 
-// The push pre-prompt card (#145, ADR-0064, plan 058 §5): server-owned
+// The push pre-prompt card (#145, ADR-0064, plan 061 §5): server-owned
 // eligibility, browser-owned support/permission/subscription gates, one
 // permanent dismissal. Every assertion goes through the messages module —
 // never string literals. jsdom has no ServiceWorker/PushManager/
@@ -48,6 +48,12 @@ vi.mock("../src/session/bootstrap", async (importOriginal) => {
 
 const SUB_ENDPOINT = "https://push.example.org/send/this-install";
 
+// usePushState's contract wants a MODULE-LEVEL predicate (a per-render
+// closure would re-run the effect on every state settle — the hook's own
+// doc says so), so the hook arms use these two rather than inline arrows.
+const FETCH_ENABLED = () => true;
+const FETCH_DISABLED = () => false;
+
 /** A mutable Notification stand-in — `permission` flips per scenario. */
 function installNotification(permission: NotificationPermission): {
   permission: NotificationPermission;
@@ -74,19 +80,25 @@ function installPushManager(): void {
  * registration REJECTS `subscribe` until `ready` has settled — the Push
  * API's own InvalidStateError semantics, so a register→subscribe shortcut
  * (skipping the `ready` wait) FAILS here exactly as it fails on a first
- * visit in a real browser (plan 058 §2; T-WEB-S267's anti-shortcut stub).
+ * visit in a real browser (plan 061 §2; T-WEB-S267's anti-shortcut stub).
  */
 function installServiceWorker(options?: {
   existingSubscription?: boolean;
   subscribeRejects?: boolean;
+  keylessSubscription?: boolean;
 }) {
   let readySettled = false;
+  const unsubscribe = vi.fn(() => Promise.resolve(true));
   const subscription = {
     endpoint: SUB_ENDPOINT,
-    toJSON: () => ({
-      endpoint: SUB_ENDPOINT,
-      keys: { p256dh: "client-p256dh", auth: "client-auth" },
-    }),
+    unsubscribe,
+    toJSON: () =>
+      options?.keylessSubscription
+        ? { endpoint: SUB_ENDPOINT }
+        : {
+            endpoint: SUB_ENDPOINT,
+            keys: { p256dh: "client-p256dh", auth: "client-auth" },
+          },
   };
   const subscribe = vi.fn(() => {
     if (!readySettled) {
@@ -127,6 +139,7 @@ function installServiceWorker(options?: {
   return {
     register,
     subscribe,
+    unsubscribe,
     settleReady: () => {
       readySettled = true;
       resolveReady(registration);
@@ -178,7 +191,7 @@ describe("usePushState awaits the mint and keeps three honest states (T-WEB-S264
       }),
     );
 
-    const { result } = renderHook(() => usePushState());
+    const { result } = renderHook(() => usePushState(FETCH_ENABLED));
     // Nothing has settled: the honest first state.
     expect(result.current).toBeUndefined();
     await waitFor(() => {
@@ -198,15 +211,27 @@ describe("usePushState awaits the mint and keeps three honest states (T-WEB-S264
     // Settled without a value (env unset, non-200, network, parse): null —
     // the card stays absent; an unreachable server must never nag.
     clientMock.fetchNotificationsState.mockResolvedValue(undefined);
-    const failed = renderHook(() => usePushState());
+    const failed = renderHook(() => usePushState(FETCH_ENABLED));
     await waitFor(() => {
       expect(failed.result.current).toBeNull();
     });
+
+    // And the other half of the seam (step-6 performance 1): disabled means
+    // NO mint and NO fetch — the card's suppression cases assert this
+    // end-to-end (T-WEB-S265/S266); this arm pins the hook's own switch.
+    bootstrapMock.ensureSession.mockClear();
+    clientMock.fetchNotificationsState.mockClear();
+    const suppressed = renderHook(() => usePushState(FETCH_DISABLED));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(suppressed.result.current).toBeUndefined();
+    expect(bootstrapMock.ensureSession).not.toHaveBeenCalled();
+    expect(clientMock.fetchNotificationsState).not.toHaveBeenCalled();
   });
 });
 
 describe("the render gate is a conjunction and every conjunct binds (T-WEB-S265)", () => {
-  it("renders on all-yes (the positive control), and each falsified conjunct alone keeps it out: ineligible, null key, permission granted/denied, an existing local subscription — and the server render is empty", async () => {
+  it("renders on all-yes (the positive control), and each falsified conjunct alone keeps it out: ineligible, null key, permission granted/denied (which also suppresses the state fetch), an existing local subscription — and the server render is empty", async () => {
     // The server render is EMPTY: no push markup exists before hydration,
     // so first paint and detect's clean profile are unchanged.
     expect(renderToStaticMarkup(<PushPromptCard />)).toBe("");
@@ -254,22 +279,34 @@ describe("the render gate is a conjunction and every conjunct binds (T-WEB-S265)
     expect(keyless.container.innerHTML).toBe("");
     keyless.unmount();
 
-    // Permission already granted or denied → never re-ask.
+    // Permission already granted or denied → never re-ask — AND never pay
+    // for the answer (step-6 performance 1): an already-answered browser
+    // fires NO credentialed GET, so exactly the accounts that accepted (the
+    // longest-history ones) stop funding an unbounded streak read per
+    // conclusion. The card-visible arms above are the positive control that
+    // the fetch DOES fire when these gates pass.
     clientMock.fetchNotificationsState.mockResolvedValue({
       eligible: true,
       vapidPublicKey: "BServerKey",
     });
     for (const permission of ["granted", "denied"] as const) {
+      clientMock.fetchNotificationsState.mockClear();
       installNotification(permission);
       installPushManager();
       installServiceWorker();
       const settled = render(<PushPromptCard />);
-      await waitFor(() => {
-        expect(clientMock.fetchNotificationsState).toHaveBeenCalled();
-      });
+      // Two microtask turns: room for a wrongly-scheduled fetch chain to
+      // surface before the negative assertions.
+      await Promise.resolve();
+      await Promise.resolve();
       expect(settled.container.innerHTML, permission).toBe("");
+      expect(
+        clientMock.fetchNotificationsState,
+        `${permission}: no state fetch`,
+      ).not.toHaveBeenCalled();
       settled.unmount();
     }
+    clientMock.fetchNotificationsState.mockClear();
 
     // This browser already holds a subscription → nothing to ask.
     installNotification("default");
@@ -283,20 +320,25 @@ describe("the render gate is a conjunction and every conjunct binds (T-WEB-S265)
   });
 });
 
-describe("each absent feature-detect leg hides the card without a throw (T-WEB-S266)", () => {
-  it("no Notification (iOS Safari uninstalled), no serviceWorker (non-secure context), no PushManager (older Safari/WebViews) — each alone renders nothing", async () => {
+describe("each absent feature-detect leg hides the card, fires no fetch, and never throws (T-WEB-S266)", () => {
+  it("no Notification (iOS Safari uninstalled), no serviceWorker (non-secure context), no PushManager (older Safari/WebViews) — each alone renders nothing AND suppresses the credentialed GET", async () => {
     // jsdom ships none of the three, so absence is the honest default and
-    // each case installs exactly the other two legs.
+    // each case installs exactly the other two legs. The fetch-suppression
+    // half (step-6 performance 1): an unsupported browser structurally
+    // cannot render the card, so it must not pay a per-conclusion state
+    // request either — iOS Safari uninstalled is a large slice of a pt-BR
+    // mobile audience. T-WEB-S265's all-yes control proves the fetch DOES
+    // fire when every leg is present, so these negatives are non-vacuous.
 
     // Leg 1 absent: window.Notification (with Push support present, which
     // real iOS never ships — the point is the guard order, not realism).
     installPushManager();
     installServiceWorker();
     const noNotification = render(<PushPromptCard />);
-    await waitFor(() => {
-      expect(clientMock.fetchNotificationsState).toHaveBeenCalled();
-    });
+    await Promise.resolve();
+    await Promise.resolve();
     expect(noNotification.container.innerHTML).toBe("");
+    expect(clientMock.fetchNotificationsState).not.toHaveBeenCalled();
     noNotification.unmount();
     Reflect.deleteProperty(window, "PushManager");
     Reflect.deleteProperty(navigator, "serviceWorker");
@@ -307,10 +349,10 @@ describe("each absent feature-detect leg hides the card without a throw (T-WEB-S
     installNotification("default");
     installPushManager();
     const noServiceWorker = render(<PushPromptCard />);
-    await waitFor(() => {
-      expect(clientMock.fetchNotificationsState).toHaveBeenCalled();
-    });
+    await Promise.resolve();
+    await Promise.resolve();
     expect(noServiceWorker.container.innerHTML).toBe("");
+    expect(clientMock.fetchNotificationsState).not.toHaveBeenCalled();
     noServiceWorker.unmount();
     Reflect.deleteProperty(window, "Notification");
     Reflect.deleteProperty(window, "PushManager");
@@ -319,22 +361,30 @@ describe("each absent feature-detect leg hides the card without a throw (T-WEB-S
     installNotification("default");
     installServiceWorker();
     const noPushManager = render(<PushPromptCard />);
-    await waitFor(() => {
-      expect(clientMock.fetchNotificationsState).toHaveBeenCalled();
-    });
+    await Promise.resolve();
+    await Promise.resolve();
     expect(noPushManager.container.innerHTML).toBe("");
+    expect(clientMock.fetchNotificationsState).not.toHaveBeenCalled();
   });
 });
 
 describe("accept subscribes in the order that works (T-WEB-S267)", () => {
-  it("register → serviceWorker.ready → subscribe, pinned — subscribe never fires before ready resolves — then the POST carries the subscription, the card leaves the DOM, and nothing is stamped", async () => {
+  it("register → serviceWorker.ready → subscribe, pinned — subscribe never fires before ready resolves — the card stays (disabled) as the permission dialog's framing, then the POST carries the subscription, the card leaves, and nothing is stamped", async () => {
     const { serviceWorker } = installSupportedBrowser();
     await renderShownCard();
 
     fireEvent.click(screen.getByRole("button", { name: messages.push.accept }));
-    // The card leaves on the click, before the network answers (the
-    // hub-onboarding dismiss shape).
-    expect(screen.queryByText(messages.push.title)).toBeNull();
+    // The card STAYS while the flow is in flight (step-7, correctness F4):
+    // its copy is the browser permission prompt's only on-screen framing,
+    // so it must not vanish before the dialog it explains can appear. Both
+    // buttons are inert meanwhile.
+    expect(screen.getByText(messages.push.title)).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: messages.push.accept }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: messages.push.decline }),
+    ).toBeDisabled();
 
     await waitFor(() => {
       expect(serviceWorker.register).toHaveBeenCalledWith("/sw.js");
@@ -361,18 +411,30 @@ describe("accept subscribes in the order that works (T-WEB-S267)", () => {
       endpoint: SUB_ENDPOINT,
       keys: { p256dh: "client-p256dh", auth: "client-auth" },
     });
+    // …and only NOW, with the flow settled and stored, the card leaves.
+    await waitFor(() => {
+      expect(screen.queryByText(messages.push.title)).toBeNull();
+    });
     // Accept stamps NOTHING: the dismissal is decline's and denial's.
     expect(clientMock.dismissPushPrompt).not.toHaveBeenCalled();
   });
 });
 
-describe("decline stamps once and moves focus deliberately (T-WEB-S268)", () => {
-  it("'Agora não' POSTs the dismissal, the card leaves the DOM, and focus lands on the side column's next control — never on <body>", async () => {
+describe("decline stamps once and moves focus POSITIONALLY (T-WEB-S268)", () => {
+  it("'Agora não' POSTs the dismissal and the card leaves; focus goes to the first control AFTER the card, or — the shipped layout, where the card is the aside's last child — to the nearest control BEFORE it, never to <body> and never backwards past a following control", async () => {
+    // The shipped layout's shape (step-6 correctness F2 / quality 2): the
+    // realistic aside — controls ABOVE the card (the CTA, the share button,
+    // the stats link) and the card LAST. The old first-non-card-match walk
+    // would land on the CTA (the aside's first control); the positional
+    // walk lands on the stats link, the control adjacent to where the card
+    // just was.
     installSupportedBrowser();
-    render(
+    const shipped = render(
       <aside>
-        <PushPromptCard />
         <a href="/proximo">{messages.conclusion.ctaHome}</a>
+        <button type="button">compartilhar</button>
+        <a href="/estatisticas">{messages.conclusion.stats}</a>
+        <PushPromptCard />
       </aside>,
     );
     await screen.findByText(messages.push.title);
@@ -382,18 +444,43 @@ describe("decline stamps once and moves focus deliberately (T-WEB-S268)", () => 
     );
     expect(clientMock.dismissPushPrompt).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(messages.push.title)).toBeNull();
-    // The #67 class of focus-order failure, closed: the next control in
-    // the column holds focus, not <body>.
+    // The #67 class of focus-order failure, closed — and closed in the
+    // right DIRECTION: the nearest preceding control, not the column's
+    // first.
     expect(document.activeElement).toBe(
-      screen.getByRole("link", { name: messages.conclusion.ctaHome }),
+      screen.getByRole("link", { name: messages.conclusion.stats }),
     );
     // Decline never touches the browser permission machinery.
     expect(clientMock.postPushSubscription).not.toHaveBeenCalled();
+    shipped.unmount();
+    clientMock.dismissPushPrompt.mockClear();
+    Reflect.deleteProperty(window, "Notification");
+    Reflect.deleteProperty(window, "PushManager");
+    Reflect.deleteProperty(navigator, "serviceWorker");
+
+    // And when a control DOES follow the card, it wins over every
+    // preceding one — the "first focusable after the card" half of the
+    // claim, which the old walk satisfied only by accident of the layout.
+    installSupportedBrowser();
+    render(
+      <aside>
+        <a href="/proximo">{messages.conclusion.ctaHome}</a>
+        <PushPromptCard />
+        <a href="/estatisticas">{messages.conclusion.stats}</a>
+      </aside>,
+    );
+    await screen.findByText(messages.push.title);
+    fireEvent.click(
+      screen.getByRole("button", { name: messages.push.decline }),
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole("link", { name: messages.conclusion.stats }),
+    );
   });
 });
 
-describe("denial stamps; a transient failure stamps nothing (T-WEB-S269)", () => {
-  it("a subscribe rejection with permission now 'denied' POSTs the permanent dismissal; the same rejection with permission still 'default' stamps nothing", async () => {
+describe("denial stamps and ends the card; a transient failure stamps nothing and re-arms it (T-WEB-S269)", () => {
+  it("a subscribe rejection with permission now 'denied' POSTs the permanent dismissal and the card leaves; the same rejection with permission still 'default' stamps nothing and the card returns to its enabled state", async () => {
     // Denial: the browser prompt was refused mid-flow.
     const notification = installNotification("default");
     installPushManager();
@@ -405,6 +492,10 @@ describe("denial stamps; a transient failure stamps nothing (T-WEB-S269)", () =>
     await waitFor(() => {
       expect(clientMock.dismissPushPrompt).toHaveBeenCalledTimes(1);
     });
+    // A denied browser is terminal: the card leaves after the stamp.
+    await waitFor(() => {
+      expect(screen.queryByText(messages.push.title)).toBeNull();
+    });
     expect(clientMock.postPushSubscription).not.toHaveBeenCalled();
     deniedView.unmount();
     clientMock.dismissPushPrompt.mockClear();
@@ -413,21 +504,81 @@ describe("denial stamps; a transient failure stamps nothing (T-WEB-S269)", () =>
     Reflect.deleteProperty(navigator, "serviceWorker");
 
     // Transient (network blip, a pushService 5xx): permission is still
-    // "default", so NOTHING is stamped — the card may return next visit.
+    // "default", so NOTHING is stamped. The POSITIVE post-condition (the
+    // step-6 F5 de-vacuation): the catch's own outcome is observable — the
+    // card re-arms, its buttons live again for an in-place retry — so the
+    // no-stamp assertions below cannot pass vacuously on a path that never
+    // ran.
     installNotification("default");
     installPushManager();
     const transient = installServiceWorker({ subscribeRejects: true });
     await renderShownCard();
     fireEvent.click(screen.getByRole("button", { name: messages.push.accept }));
+    expect(
+      screen.getByRole("button", { name: messages.push.accept }),
+    ).toBeDisabled();
     transient.settleReady();
     await waitFor(() => {
-      expect(transient.subscribe).toHaveBeenCalled();
+      expect(
+        screen.getByRole("button", { name: messages.push.accept }),
+      ).toBeEnabled();
     });
-    // Give the rejection path a tick to (wrongly) stamp, then assert it
-    // did not — with the denial arm above as the positive control.
-    await Promise.resolve();
+    expect(screen.getByText(messages.push.title)).toBeVisible();
+    expect(transient.subscribe).toHaveBeenCalled();
     expect(clientMock.dismissPushPrompt).not.toHaveBeenCalled();
     expect(clientMock.postPushSubscription).not.toHaveBeenCalled();
+  });
+});
+
+describe("a stored-nothing accept unwinds the browser subscription (T-WEB-S271)", () => {
+  it("a failed POST unsubscribes, stamps nothing and re-arms the card; a keyless subscription is unwound the same way with no POST at all — browser and server can never permanently disagree", async () => {
+    // The dead-end this closes (step-6 correctness F1): subscribe()
+    // succeeded — permission is now "granted" — but the server holds no
+    // row. Without the unwind, both render gates (permission === "default",
+    // no local subscription) exclude this install FOREVER while
+    // GET /notifications/state keeps answering eligible: an opt-in the
+    // player performed that can never deliver and that nothing can repair
+    // until #36. Unwinding makes browser and server agree again.
+
+    // Arm 1: the POST fails (network flake, 401 after cookie expiry, 5xx).
+    clientMock.postPushSubscription.mockResolvedValueOnce(false);
+    const failed = installSupportedBrowser();
+    const failedView = await renderShownCard();
+    fireEvent.click(screen.getByRole("button", { name: messages.push.accept }));
+    failed.serviceWorker.settleReady();
+    await waitFor(() => {
+      expect(failed.serviceWorker.unsubscribe).toHaveBeenCalledTimes(1);
+    });
+    expect(clientMock.postPushSubscription).toHaveBeenCalledTimes(1);
+    // No stamp: the player did not decline, and the browser did not deny.
+    expect(clientMock.dismissPushPrompt).not.toHaveBeenCalled();
+    // Re-armed, not gone: with permission granted, a retry is a silent
+    // one-click re-subscribe — no second browser prompt.
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: messages.push.accept }),
+      ).toBeEnabled();
+    });
+    failedView.unmount();
+    clientMock.postPushSubscription.mockClear();
+    Reflect.deleteProperty(window, "Notification");
+    Reflect.deleteProperty(window, "PushManager");
+    Reflect.deleteProperty(navigator, "serviceWorker");
+
+    // Arm 2: the browser hands back a subscription without its keys — a
+    // row the dispatcher could never send to (the strict contract would
+    // 400 it). Never posted, and unwound all the same.
+    installNotification("default");
+    installPushManager();
+    const keyless = installServiceWorker({ keylessSubscription: true });
+    await renderShownCard();
+    fireEvent.click(screen.getByRole("button", { name: messages.push.accept }));
+    keyless.settleReady();
+    await waitFor(() => {
+      expect(keyless.unsubscribe).toHaveBeenCalledTimes(1);
+    });
+    expect(clientMock.postPushSubscription).not.toHaveBeenCalled();
+    expect(clientMock.dismissPushPrompt).not.toHaveBeenCalled();
   });
 });
 

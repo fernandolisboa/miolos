@@ -64,6 +64,14 @@ export interface TermoPlay {
   readonly submit: () => void;
   /** Re-post a held turn. Offered only while `state.held`. */
   readonly retry: () => void;
+  /**
+   * Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
+   * root calls this when the server's claim wins the screen, so the 1 Hz
+   * tick stops behind the remote conclusion and the preserved in-progress
+   * record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
+   * timer is the timer reducer's no-op.
+   */
+  readonly pause: () => void;
 }
 
 export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
@@ -212,6 +220,15 @@ export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
   );
 
   const live = state.status === "playing";
+  // Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
+  // root calls this when the server's claim wins the screen, so the 1 Hz
+  // tick stops behind the remote conclusion and the preserved in-progress
+  // record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
+  // timer is the timer reducer's no-op.
+  const pause = useCallback(() => {
+    dispatch({ type: "pause", now: Date.now() });
+  }, []);
+
   return {
     state,
     used: state.guesses.length,
@@ -223,6 +240,7 @@ export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
     erase,
     submit,
     retry,
+    pause,
   };
 }
 
