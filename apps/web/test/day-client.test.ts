@@ -16,10 +16,11 @@ function jsonResponse(status: number, body: unknown): Response {
 const validBody = {
   date: "2026-08-19",
   games: {
-    termo: "completed",
-    sudoku: "pending",
-    nonogram: "played",
-    binairo: "pending",
+    termo: { status: "completed" },
+    sudoku: { status: "pending" },
+    nonogram: { status: "played" },
+    // A completed grid claim carries the stored duration (#141).
+    binairo: { status: "completed", elapsedMs: 407_000 },
   },
 };
 
@@ -83,13 +84,30 @@ describe("fetchDayTruth (T-WEB-S234)", () => {
       { ...validBody, streak: 3 },
       {
         ...validBody,
-        games: { ...validBody.games, xadrez: "pending" },
+        games: { ...validBody.games, xadrez: { status: "pending" } },
       },
       {
         date: "2026-08-19",
-        games: { termo: "completed", sudoku: "pending", nonogram: "played" },
+        games: {
+          termo: { status: "completed" },
+          sudoku: { status: "pending" },
+          nonogram: { status: "played" },
+        },
       },
-      { ...validBody, games: { ...validBody.games, sudoku: "late" } },
+      {
+        ...validBody,
+        games: { ...validBody.games, sudoku: { status: "late" } },
+      },
+      // The pre-#141 wire spelling: a bare status string is not a claim.
+      { ...validBody, games: { ...validBody.games, sudoku: "pending" } },
+      // A duration on a game nobody completed fails the claim's refinement.
+      {
+        ...validBody,
+        games: {
+          ...validBody.games,
+          sudoku: { status: "played", elapsedMs: 1 },
+        },
+      },
       { ...validBody, date: "19/08/2026" },
       "not an object",
     ];

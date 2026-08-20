@@ -6,6 +6,8 @@
 
 **Amended at #143** (Tier 2 at reduced ceremony — no plan document; the plan and its records section live in the PR body, per the #103 precedent) — **(a), a decision-level amendment**: decision 5's no-interval clause is superseded by a bounded visible-tab poll. The clause's own revisit trigger — *"a complaint, not a schedule"* — fired: Fernando asked, answering PR #135 veto decision 4. Annotated in place; nothing deleted. The annotation letters are their own series, distinct from this ADR's natively lettered Consequences (a)–(f): a bare "(a)" is ambiguous here, so references must qualify — "annotation (a)" or "consequence (a)".
 
+**Amended at #141** (Fernando's answer to PR #135 veto decision 1; the amending ticket ships no ADR of its own, and its PR body carries the plan section and the reciprocal records note) — **(b)–(e), continuing the annotation series #143 opened above; (b) and (c) are decision-level** (decision 2's no-duration clause is discharged for completed grid games — a consumer now exists — and decision 3's not-merged list narrows accordingly); **(d) corrects the one consequence made outright false; (e) sharpens a Rejected bullet's type claim.** Termo still publishes no duration anywhere and the guess count still does not ride this payload. Every edit annotated in place, nothing deleted.
+
 [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 10 and [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) decision 1 are **obeyed, not amended**, and this ADR says so in those words because a reviewer will ask about both. Decision 10 layer 3 is additionally **cited** by decision 8, as the precedent that makes a playable board behind a done tile acceptable; citing is not amending.
 
 ## Context
@@ -67,6 +69,22 @@ in the app that can **demote**.
    producer** of one value; ADR-0051 decision 3's hub-endpoint trigger
    therefore stands undischarged.
 
+   *(**Annotation (b) — decision-level, amended at #141.** The no-duration clause was
+   reasoned from "nothing consumes it", and a consumer now exists: Fernando's
+   answer to PR #135 veto decision 1 is that a game completed on another
+   device shows its time like a local one. Since #141 each per-game value is
+   a claim object — `dayGameStateSchema` in `packages/core/src/day.ts`,
+   `{status, elapsedMs?}` — and a **completed grid game's claim carries the
+   stored row's `elapsedMs`**, parsed strictly (`elapsedMs` on a non-completed
+   claim is a parse failure). This is NOT the second producer this clause
+   feared: `/stats` aggregates a history and never carries today's per-game
+   solve time, so the duration has exactly one producer on the wire. What
+   survives unchanged: **Termo's claim never carries a duration** — ADR-0045
+   decision 4 stands, `dayGamesFromRows` suppresses it, and the Termo tile's
+   `em 4/6` still comes from `/stats`'s `todayTermoGuesses` alone; the guess
+   count still does not ride this payload; and ADR-0051 decision 3's
+   hub-endpoint trigger still stands undischarged.)*
+
    **And no `onTime` field, because nothing consumes it**: the on-time rule is
    applied server-side and only its verdict travels, as one of the three
    verbs. The tempting warrant *"on-time never rides a wire contract"* is
@@ -119,6 +137,16 @@ in the app that can **demote**.
    crawler-facing route, and this endpoint answers about today only, on the
    authenticated surface ADR-0031 decision 4 routes server-sourced user facts
    to.
+
+   *(**Annotation (c) — decision-level, amended at #141.** "Durations" leaves
+   this list for the one case annotation (b) creates: a **completed** game's published duration now
+   travels WITH its claim, and — the invariant's own sentence, now with a
+   field to bind — it is never blended. Where the server claims, the entry is
+   the server's whole: its status and its `elapsedMs`; where it does not, the
+   device's whole, duration included (`entryFromMerge` in
+   `apps/web/src/play/day-state.ts`). An IN-PROGRESS board's `elapsedMs`
+   stays exactly where this list puts it — device-local, never on the wire —
+   and guess counts stay off the payload entirely.)*
 
 4. **In-progress board state is device-local, is never on the wire, and
    cross-device resume is not a v1 capability.** Nothing is persisted before a
@@ -218,7 +246,11 @@ in the app that can **demote**.
   the only honest spelling there. `/day`'s four are homogeneous, so
   `DayResponse["games"]` **is** `Record<Game, DayGameStatus>` by construction
   — literally the merge's input type, without a cast or a helper. The two
-  shapes differ because the payloads differ.
+  shapes differ because the payloads differ. *(**Annotation (e) — sharpened at
+  #141.** The rejection stands and the homogeneity argument with it; only the
+  type moved: `DayResponse["games"]` is `Record<Game, DayGameState>` — the
+  claim object `{status, elapsedMs?}` of annotation (b) — and the status half
+  is still what `mergeDayState` consumes.)*
 - **Reusing `listCompletionsForStats` instead of a narrow reader.** It needs
   no database change at all, which is its real merit, and it reads the user's
   entire completion history to produce four enum values on every hub view.
@@ -260,7 +292,13 @@ in the app that can **demote**.
 - **(b) A cross-device done tile carries no time.** The payload publishes no
   duration, so the tile renders the chip-only shape the hub already ships for
   a won Termo. A time this device did not measure is not this device's to
-  publish.
+  publish. *(**Annotation (d) — FALSE after #141**, which is the ticket Fernando opened
+  against exactly this consequence at PR #135. A cross-device done tile now
+  carries the SERVER-held time — a time the server did measure, from the
+  user's own completion row — rendered through the identical local path
+  (`formatElapsed`, the same composers; `T-WEB-S257` pins the byte-identity).
+  The chip-only shape remains the honest rendering of a claim that carries no
+  duration: a completed Termo, always, and any degraded payload.)*
 - **(c) The visual gate is unchanged in shape.** `impeccable detect` launches
   a clean browser profile: no session, `/day` answers 401, and both viewports
   still scan the pending composition (ADR-0031 consequence (e), which
