@@ -4,6 +4,8 @@ import type { DailyNonogramResponse } from "@miolos/core";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
+import { RemoteConclusionView } from "../play/conclusion-view";
+import { useServerDayClaim } from "../play/day-state";
 import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { submittedCells } from "./engine";
 import { NonogramConclusion } from "./nonogram-conclusion";
@@ -32,6 +34,12 @@ export function NonogramScreen({
   readonly daily: DailyNonogramResponse;
 }) {
   const play = useNonogramPlay(daily);
+  // The server's claim about this game (#142, ADR-0065), hoisted here — the
+  // top of the root, beside the play hook — by the rules of hooks: every
+  // early return below would make a later call conditional. Only the BRANCH
+  // on its answer sits after `isClosedAndFrozen`, so this device's own
+  // closed record always outranks the claim (ADR-0060 decision 7's mirror).
+  const claim = useServerDayClaim(daily.date, "nonogram");
 
   // The clues did not solve to an exact bitmap, so there is no picture to
   // compare against and the board could never close (§10.4). ADR-0021
@@ -102,6 +110,25 @@ export function NonogramScreen({
                 label: messages.games.nonogram.reveal.aria,
               }
         }
+      />
+    );
+  }
+
+  // The day was decided on ANOTHER device (#142, ADR-0065, amending
+  // ADR-0060 decision 8): the server claims this game and this device holds
+  // no closed record, so the completed view renders instead of a fresh
+  // playable board — over an in-progress board too, by the same render-time
+  // swap the local closure uses; the in-progress record is neither written
+  // nor deleted (ADR-0060 decision 4 untouched). The view renders NO
+  // picture: the solved bitmap is the solution, which is puzzle content and
+  // never on this wire (ADR-0004).
+  if (claim !== undefined) {
+    return (
+      <RemoteConclusionView
+        game="nonogram"
+        date={daily.date}
+        copy={messages.games.nonogram.conclusion}
+        claim={claim}
       />
     );
   }

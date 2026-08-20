@@ -1,0 +1,3 @@
+# Evidence — #142 cross-device completed view (ADR-0065)
+
+Step-5 evidence for a surface invisible on preview deploys (ADR-0060 consequence (c): the workflow's cold anonymous profile gets a 401 from `/day`, so no URL-mode scan can reach the remote states). Static-fixture screenshots of the three new compositions — grid completed (Sudoku), Termo completed, Termo played — at 1440×900 and 390×844, rendered from the real component and the real stylesheet (CSS-module names unhashed), embedded in the PR body. The same fixtures were scanned with `impeccable detect file://` at both viewports; the two findings and their dismissal reasons are in the PR body.

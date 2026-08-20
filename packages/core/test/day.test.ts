@@ -71,8 +71,9 @@ function rowOf(
   outcome: DayRow["outcome"],
   onTime: boolean,
   elapsedMs: number = ELAPSED_MS,
+  hintsUsed = 0,
 ): DayRow {
-  return { game, outcome, onTime, elapsedMs };
+  return { game, outcome, onTime, elapsedMs, hintsUsed };
 }
 
 const stateArb: fc.Arbitrary<DayState> = fc.record({
@@ -91,7 +92,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       termo: { status: "completed" },
       sudoku: { status: "pending" },
       nonogram: { status: "played" },
-      binairo: { status: "completed", elapsedMs: 407_000 },
+      binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 1 },
     },
   };
 
@@ -148,13 +149,14 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
     expect(Object.keys(dayResponseSchema.shape.games.shape).sort()).toEqual(
       [...GAMES].sort(),
     );
-    // And each game's claim is exactly {status, elapsedMs} (#141) — a third
-    // field is this tripwire's business before it is anyone's feature.
+    // And each game's claim is exactly {status, elapsedMs, hintsUsed}
+    // (#141, widened at #142) — a fourth field is this tripwire's business
+    // before it is anyone's feature.
     for (const game of GAMES) {
       expect(
         Object.keys(dayResponseSchema.shape.games.shape[game].shape).sort(),
         game,
-      ).toEqual(["elapsedMs", "status"]);
+      ).toEqual(["elapsedMs", "hintsUsed", "status"]);
     }
 
     // Nothing about a puzzle can be added without reddening this: the two
@@ -225,9 +227,9 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       ]),
     ).toEqual({
       termo: { status: "played" },
-      sudoku: { status: "completed", elapsedMs: 512_000 },
+      sudoku: { status: "completed", elapsedMs: 512_000, hintsUsed: 0 },
       nonogram: { status: "pending" },
-      binairo: { status: "completed", elapsedMs: 407_000 },
+      binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
     });
 
     // A completed TERMO publishes none either (ADR-0045 decision 4): its
@@ -250,6 +252,95 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
         games: dayGamesFromRows([rowOf("binairo", "won", true, 407_000)]),
       }).success,
     ).toBe(true);
+  });
+
+  it("T-CORE-S103: a claim carries `hintsUsed` only when completed, and the producer publishes it for completed grid games and never for Termo (#142)", () => {
+    // T-CORE-S99's shape exactly, one field over: both ends of the seam —
+    // the schema that parses the claim and the projection that produces it.
+
+    // The schema end: a hint count on a game nobody completed is a PARSE
+    // FAILURE, and so are a negative, a fractional, a non-numeric and an
+    // over-cap count — `.max(1)` mirrors the write contracts (one free hint
+    // per puzzle, plan 017 D21), so the read side never accepts what the
+    // write side would have refused to store.
+    const withGame = (game: unknown) => ({
+      ...valid,
+      games: { ...valid.games, sudoku: game },
+    });
+    for (const body of [
+      withGame({ status: "pending", hintsUsed: 0 }),
+      withGame({ status: "played", hintsUsed: 1 }),
+      withGame({ status: "completed", hintsUsed: -1 }),
+      withGame({ status: "completed", hintsUsed: 0.5 }),
+      withGame({ status: "completed", hintsUsed: "1" }),
+      withGame({ status: "completed", hintsUsed: 2 }),
+    ]) {
+      expect(
+        dayResponseSchema.safeParse(body).success,
+        JSON.stringify(body),
+      ).toBe(false);
+    }
+    // A completed claim WITHOUT a hint count stays legal — the deploy-skew
+    // shape (an old server behind a new client) and Termo's only completed
+    // shape. So does time-with-hints, hints alone being the degenerate case
+    // the per-line stamp rule covers.
+    expect(
+      dayResponseSchema.safeParse(withGame({ status: "completed" })).success,
+    ).toBe(true);
+    expect(
+      dayResponseSchema.safeParse(
+        withGame({ status: "completed", elapsedMs: 61_000, hintsUsed: 1 }),
+      ).success,
+    ).toBe(true);
+
+    // The producer end: a completed grid row's stored count is published —
+    // 0 and 1 both, so "published" is pinned rather than "defaulted" — and
+    // neither a played game nor a completed TERMO ever carries one. Termo
+    // ships no hint (ADR-0045 decision 1): "sem dicas" is not a virtue where
+    // a hint was never possible.
+    expect(
+      dayGamesFromRows([
+        rowOf("sudoku", "won", true, 512_000, 1),
+        rowOf("binairo", "won", true, 407_000, 0),
+        rowOf("termo", "won", true, 188_000, 0),
+        // A lost row's stored count is real and publishes nothing — the
+        // signature admits it even where the schema cannot produce it.
+        rowOf("nonogram", "lost", true, 99_000, 1),
+      ]),
+    ).toEqual({
+      termo: { status: "completed" },
+      sudoku: { status: "completed", elapsedMs: 512_000, hintsUsed: 1 },
+      nonogram: { status: "played" },
+      binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
+    });
+
+    // And the producer's output PARSES under the wire schema — the two ends
+    // agree with each other, not just with this test.
+    expect(
+      dayResponseSchema.safeParse({
+        date: valid.date,
+        games: dayGamesFromRows([rowOf("binairo", "won", true, 407_000, 1)]),
+      }).success,
+    ).toBe(true);
+  });
+
+  it("T-CORE-S104: the duplicate-row fold takes the LARGEST `hintsUsed` — the humbler claim, matching `elapsedMs`'s direction (#142)", () => {
+    // Impossible by the composite primary key, and defined anyway like the
+    // status fold (T-CORE-S96's argument): the never-overstate direction
+    // here is "more hints", so a duplicate pair publishes the larger count.
+    // Both orders, so this pins "max" and not merely "the last row wins".
+    const rows: readonly DayRow[] = [
+      rowOf("sudoku", "won", true, 400_000, 1),
+      rowOf("sudoku", "won", true, 500_000, 0),
+    ];
+    const expected = {
+      termo: { status: "pending" },
+      sudoku: { status: "completed", elapsedMs: 500_000, hintsUsed: 1 },
+      nonogram: { status: "pending" },
+      binairo: { status: "pending" },
+    };
+    expect(dayGamesFromRows(rows)).toEqual(expected);
+    expect(dayGamesFromRows([...rows].reverse())).toEqual(expected);
   });
 });
 
@@ -333,6 +424,9 @@ describe("dayStateFromRows — the server's projection of one day's rows", () =>
       outcome: fc.constantFrom(...COMPLETION_OUTCOMES),
       onTime: fc.boolean(),
       elapsedMs: fc.nat({ max: 86_400_000 }),
+      // The write contracts cap the stored count at 1 (#142); the fold's
+      // `max` needs both values reachable to be observable.
+      hintsUsed: fc.nat({ max: 1 }),
     });
     const rowsAndPermutation = fc
       .array(rowArb, { maxLength: 12 })
@@ -509,6 +603,7 @@ describe("the day projection and the streak agree (cross-endpoint)", () => {
               outcome,
               onTime,
               elapsedMs: ELAPSED_MS,
+              hintsUsed: 0,
             })),
         );
         const someCompleted = GAMES.some((game) => day[game] === "completed");

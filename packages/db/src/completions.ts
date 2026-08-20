@@ -141,7 +141,9 @@ export async function listCompletionsForStreak(
  * verdict travels, the instant does not. `elapsedMs` DOES travel since #141
  * — the hub tile consumes it (ADR-0060 decision 2 as annotated there) — and
  * it is a stored column, so projecting it changes neither the predicate nor
- * the index this read sits on.
+ * the index this read sits on. `hintsUsed` travels since #142 (ADR-0065) on
+ * exactly the same footing: a stored NOT NULL column, projected for the
+ * remote conclusion's stamp, no predicate and no index change, no migration.
  */
 export async function listCompletionsForDay(
   db: Db,
@@ -154,6 +156,7 @@ export async function listCompletionsForDay(
       outcome: completions.outcome,
       onTime: onTimeSql(),
       elapsedMs: completions.elapsedMs,
+      hintsUsed: completions.hintsUsed,
     })
     .from(completions)
     .where(and(eq(completions.userId, userId), eq(completions.date, date)));

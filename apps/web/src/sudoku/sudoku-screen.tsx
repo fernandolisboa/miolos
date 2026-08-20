@@ -3,7 +3,8 @@
 import type { DailySudokuResponse } from "@miolos/core";
 
 import { messages } from "../i18n";
-import { ConclusionView } from "../play/conclusion-view";
+import { ConclusionView, RemoteConclusionView } from "../play/conclusion-view";
+import { useServerDayClaim } from "../play/day-state";
 import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useSudokuPlay } from "./use-sudoku-play";
@@ -30,6 +31,12 @@ export function SudokuScreen({
   readonly daily: DailySudokuResponse;
 }) {
   const play = useSudokuPlay(daily);
+  // The server's claim about this game (#142, ADR-0065), hoisted here — the
+  // top of the root, beside the play hook — by the rules of hooks: every
+  // early return below would make a later call conditional. Only the BRANCH
+  // on its answer sits after `isClosedAndFrozen`, so this device's own
+  // closed record always outranks the claim (ADR-0060 decision 7's mirror).
+  const claim = useServerDayClaim(daily.date, "sudoku");
 
   // The record has not been read yet, so NOTHING derived from it may paint
   // (D28). Without this gate, reloading /sudoku on a day the player already
@@ -57,6 +64,23 @@ export function SudokuScreen({
           elapsedMs: play.elapsed,
           hintsUsed: play.state.hint.used,
         }}
+      />
+    );
+  }
+
+  // The day was decided on ANOTHER device (#142, ADR-0065, amending
+  // ADR-0060 decision 8): the server claims this game and this device holds
+  // no closed record, so the completed view renders instead of a fresh
+  // playable board — over an in-progress board too, by the same render-time
+  // swap the local closure uses; the in-progress record is neither written
+  // nor deleted (ADR-0060 decision 4 untouched).
+  if (claim !== undefined) {
+    return (
+      <RemoteConclusionView
+        game="sudoku"
+        date={daily.date}
+        copy={messages.games.sudoku.conclusion}
+        claim={claim}
       />
     );
   }

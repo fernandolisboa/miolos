@@ -320,6 +320,42 @@ export function useDayState(date: string): Readonly<Record<Game, DayEntry>> {
 }
 
 /**
+ * The SERVER's claim about one game of the rendered day, or `undefined`
+ * where it makes none (#142, ADR-0065). This is the seam the remote
+ * conclusion view reads — the payload's own claim object, `elapsedMs` and
+ * `hintsUsed` included — and it lives HERE so ADR-0060 consequence (d)
+ * stays true: `src/day/**` is imported by this module and by nothing else.
+ *
+ * THE SAME TWO GATES `applyDayTruth` APPLIES, deliberately re-spelled at
+ * this seam because the two consumers read different shapes:
+ *
+ * - the WHOLE-PAYLOAD date gate — a payload for another day is evidence
+ *   about a different question, and after the SP rollover it is what retires
+ *   the remote view (the tile gate's own mechanism, one surface more);
+ * - `pending` is the ABSENCE of a claim, never a denial (ADR-0060 decision
+ *   3), so it answers `undefined` — the caller falls through to the
+ *   playable board exactly as it did before this hook existed.
+ *
+ * IT NEVER WRITES ANYTHING: a projection of the payload, dying with the
+ * evidence for it (the store retires the payload only via the date gate).
+ * The HOOK CALL HOISTS to the top of each screen root, beside the play hook
+ * and before every early return (rules of hooks — each root returns early);
+ * only the BRANCH on its answer sits after `isClosedAndFrozen`, so a local
+ * closed record always outranks the claim (ADR-0060 decision 7's mirror).
+ */
+export function useServerDayClaim(
+  date: string,
+  game: Game,
+): DayGameState | undefined {
+  const truth = useDayTruth();
+  if (truth === undefined || truth.date !== date) {
+    return undefined;
+  }
+  const claim = truth.games[game];
+  return claim.status === "pending" ? undefined : claim;
+}
+
+/**
  * The file's first per-game branch, and it is the narrowest one that can
  * express ADR-0008 decision 3. It is NOT a widening of `readDayState`'s map,
  * which stays total over `Game` and gains no key.

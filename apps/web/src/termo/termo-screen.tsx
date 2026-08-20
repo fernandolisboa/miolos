@@ -4,6 +4,8 @@ import type { DailyTermoResponse } from "@miolos/core";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
+import { RemoteConclusionView } from "../play/conclusion-view";
+import { useServerDayClaim } from "../play/day-state";
 import { elapsedMs } from "../play/timer";
 import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { PlaySkeleton, PlayView } from "./play-view";
@@ -34,6 +36,13 @@ import { useTermoPlay } from "./use-termo-play";
  */
 export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
   const play = useTermoPlay(daily);
+  // The server's claim about this game (#142, ADR-0065), hoisted here — the
+  // top of the root, beside the play hook — by the rules of hooks: every
+  // early return below would make a later call conditional. Only the BRANCH
+  // on its answer sits after `isClosedAndFrozen`, so this device's own
+  // closed record always outranks the claim — including the decision-7
+  // mirror where a local WIN outranks a server `played`.
+  const claim = useServerDayClaim(daily.date, "termo");
 
   // The server told us this day is gone (a 404 from the guess route), so the
   // board the player is looking at can never be judged again. The same screen
@@ -85,6 +94,25 @@ export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
                 canonical: play.state.answer,
               }
         }
+      />
+    );
+  }
+
+  // The day was decided on ANOTHER device (#142, ADR-0065, amending
+  // ADR-0060 decision 8): the server claims this game — `completed` OR
+  // `played`, since a spent Termo has no turns left either way — and this
+  // device holds no closed record, so the completed view renders instead of
+  // a playable board. Over an in-progress board too: the guesses already
+  // judged on the other device decided the day, and the local in-progress
+  // record is neither written nor deleted (ADR-0060 decision 4 untouched).
+  // No guess grid and no answer word render — neither is stored server-side.
+  if (claim !== undefined) {
+    return (
+      <RemoteConclusionView
+        game="termo"
+        date={daily.date}
+        copy={messages.games.termo.conclusion}
+        claim={claim}
       />
     );
   }

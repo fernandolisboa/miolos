@@ -1,6 +1,11 @@
 "use client";
 
-import { timeBucketIndex, type Game } from "@miolos/core";
+import {
+  timeBucketIndex,
+  type DayGameState,
+  type Game,
+  type StatsResponse,
+} from "@miolos/core";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -17,7 +22,7 @@ import { useStats } from "../stats/use-stats";
 import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
-import { useDayState, type DayEntry } from "./day-state";
+import { useDayState, useServerDayClaim, type DayEntry } from "./day-state";
 import { picturePath } from "./picture-path";
 import { BLANK_VALUE, ShareButton } from "./share-button";
 import { startCompletionSync } from "./sync";
@@ -122,6 +127,12 @@ export function ConclusionView({
   // answer whenever the fetch does not land, which is what lets this screen
   // finish offline.
   const dayState = useDayState(date);
+  // The server's claim about THIS game (#142, ADR-0065) — hoisted here by
+  // the rules of hooks, consumed only by the empty branch below, where a
+  // day decided on another device renders the remote conclusion instead of
+  // the "ainda não concluiu" card. Every branch that reads a LOCAL proof
+  // (the skeleton, the loss, the result) stays ahead of it untouched.
+  const claim = useServerDayClaim(date, game);
 
   useEffect(() => {
     // "On mount of either route" (§9.2). On `/<jogo>` the play hook has
@@ -184,6 +195,20 @@ export function ConclusionView({
   const lost = outcome?.state === "lost";
 
   if (!lost && stamp === undefined) {
+    // No local proof — and, since #142, the server may hold one anyway: a
+    // claim here means the day was decided on another device, so the honest
+    // answer is the remote conclusion, never a "Jogar" card into a board
+    // whose day is already written (ADR-0065, amending ADR-0060 decision 8).
+    if (claim !== undefined) {
+      return (
+        <RemoteConclusionView
+          game={game}
+          date={date}
+          copy={copy}
+          claim={claim}
+        />
+      );
+    }
     return (
       <main
         className={`${styles.page} ${styles.pageEmpty}`}
@@ -442,6 +467,306 @@ export function ConclusionView({
 }
 
 /**
+ * Termo's turn budget as the WIRE contracts spell it: `guesses` is `1–6` in
+ * `contracts/completion.ts` and `todayTermoGuesses` is `.max(6)` in
+ * `contracts/stats.ts`. Declared here rather than imported from
+ * `@miolos/games/termo` because this module is on EVERY daily route's
+ * client graph and must not pull a game engine into the other three routes'
+ * chunks (the `play-record.ts` import note; the bundle markers of ADR-0047
+ * are route-scoped for exactly this class of leak). The engine's
+ * `MAX_GUESSES` and this value describe the same fact, pinned against each
+ * other by the write contract both feed.
+ */
+const TERMO_MAX_GUESSES = 6;
+
+/**
+ * The cross-device completed view (#142, ADR-0065): the day was decided on
+ * ANOTHER device — `claim` is the server's own claim for this game, never
+ * `pending` (the `useServerDayClaim` seam) — and this device holds no
+ * record, so the play route renders the conclusion the server can honestly
+ * back instead of a fresh playable board.
+ *
+ * CO-LOCATED in this file, not a sibling module, because it composes
+ * `ConclusionView`'s own internals (`ConclusionTopBar`, `ShippedStamp`,
+ * `OutcomeStamp`, `ConclusionStatsBody`, `StreakCard`, `DayChip`,
+ * `nextPendingDaily`) while `ConclusionView`'s empty branch renders IT — a
+ * two-file split would import in both directions (plan 060 §3).
+ *
+ * WHAT IT RENDERS is bounded by what the server stores (plan 060 §1):
+ *
+ * - a completed GRID game: the real stamp from the claim — the server-held
+ *   time and hint count, PER LINE (a deploy-skew claim carries the time and
+ *   no hint count; the stamp renders the line it has and never fabricates a
+ *   "sem dicas") — the stat block, the streak card, the day card and the
+ *   next-pending CTA. No picture: Nonogram's bitmap is the solution, which
+ *   is puzzle content and never on this wire (ADR-0004, ADR-0060 decision 2).
+ * - a completed TERMO: the win stamp with `em X/6` from the ONE `GET /stats`
+ *   this view fetches (date-gated, the `TermoDoneLink` rule; label-only
+ *   when the count has not landed or describes another day), and the guess
+ *   distribution. No guess grid and no answer word: neither is stored — the
+ *   guess route is stateless and the word has no read channel — and syncing
+ *   them is a different ticket, named in ADR-0065 rather than smuggled in.
+ * - a PLAYED Termo: the loss stamp shape, no celebration (ADR-0043's loss
+ *   discipline), no time, no word.
+ *
+ * NO SHARE BUTTON (`share-text.ts` composes from the local record, which
+ * does not exist here), NO REPLAY (no link into a playable board renders
+ * anywhere on this view), and NOTHING IS WRITTEN into local play records
+ * (ADR-0060 decision 4 stands verbatim): this is a projection of the
+ * claim, and it dies with the evidence for it — the date gate retires the
+ * payload at the SP rollover and the playable board returns, which is the
+ * understating direction the hub already ships.
+ *
+ * STATS AND STREAK GATE ON THE CLAIM ITSELF, not on `syncOutcome ===
+ * "recorded"`: a server claim is strictly stronger evidence than
+ * `recorded` — the row IS on the server, which is all `recorded` ever
+ * proved. `useStats()` is called ONCE, here, and handed down as a prop
+ * (`ConclusionStatsBody`); `StreakCard` keeps its own `useStreak`.
+ */
+export function RemoteConclusionView({
+  game,
+  date,
+  copy,
+  claim,
+}: {
+  readonly game: Game;
+  readonly date: string;
+  readonly copy: ConclusionCopy;
+  readonly claim: DayGameState;
+}) {
+  const dayState = useDayState(date);
+  // The ONE stats fetch (plan 060 §3): the Termo stamp's `em X/6` and the
+  // distribution both read this value; a second hook call site would be a
+  // second credentialed GET.
+  const stats = useStats();
+  const accent = accentVars(game);
+  const played = claim.status === "played";
+  const remote = messages.conclusion.remote;
+
+  // The merged day state already carries this game's server claim (the
+  // local side is pending — this view only mounts where no local record
+  // closed the day), so the chips and the chain read the same one seam
+  // every other conclusion reads.
+  const next = nextPendingDaily((dayGame) => dayState[dayGame]);
+
+  return (
+    <main
+      className={`${styles.page} ${styles.pageResult}`}
+      style={accent}
+      data-conclusion-state={played ? "lost" : "result"}
+      data-conclusion-remote=""
+    >
+      <ConclusionTopBar date={date} kicker={copy.kicker} />
+
+      <article className={styles.resultCard}>
+        <div aria-hidden className={styles.tape} />
+        <p className={styles.cardKicker}>{copy.kicker}</p>
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>{copy.title}</h1>
+        </div>
+        <div className={styles.stampRow}>
+          {game === "termo" ? (
+            <RemoteTermoStamp
+              title={copy.title}
+              played={played}
+              guesses={remoteTermoGuesses(stats, date)}
+            />
+          ) : (
+            <RemoteShippedStamp title={copy.title} claim={claim} />
+          )}
+        </div>
+        <p className={styles.remoteNote}>
+          {played ? remote.playedNote : remote.completedNote}
+        </p>
+        <p className={styles.remoteBody}>
+          {played ? remote.playedBody : remote.completedBody}
+        </p>
+        {/* Gated on the CLAIM, which this whole view already is — see the
+            header. `null` (the fetch settled without a value) unmounts to
+            the shipped absence, exactly like the local path. */}
+        {stats !== null && (
+          <ConclusionStatsBody
+            game={game}
+            date={date}
+            stats={stats}
+            elapsedMs={claim.elapsedMs}
+            lost={played}
+          />
+        )}
+      </article>
+
+      <aside className={styles.side}>
+        {/* The claim replaces `syncOutcome === "recorded"` as this card's
+            gate: the row is on the server — that is what a claim IS — so
+            the fetched number includes this day by the same construction
+            the local gate buys. */}
+        <StreakCard />
+        <section className={styles.dayCard}>
+          <p className={styles.dayCardTitle}>
+            {messages.conclusion.dayCard.title}
+          </p>
+          <div className={styles.chips}>
+            {DAY_GAMES.map((dayGame) => (
+              <DayChip key={dayGame} game={dayGame} entry={dayState[dayGame]} />
+            ))}
+          </div>
+        </section>
+        {next === undefined ? (
+          <Link className={styles.cta} href={routes.home}>
+            {messages.conclusion.ctaHome}
+          </Link>
+        ) : (
+          <Link
+            className={`${styles.cta} ${styles.ctaNext}`}
+            style={accentVars(next.game)}
+            href={next.route}
+          >
+            {messages.conclusion.ctaNext(messages.games[next.game].name)}
+          </Link>
+        )}
+        <Link className={styles.secondaryLink} href={routes.stats}>
+          {messages.conclusion.stats}
+        </Link>
+      </aside>
+    </main>
+  );
+}
+
+/**
+ * The Termo guess count the remote stamp may honestly caption — the
+ * `TermoDoneLink` rule verbatim: the server's own today value, only when
+ * the server's day IS the rendered day (`stats.date === date`), and
+ * `todayTermoGuesses` can be null even then (the value describes
+ * `stats.date`, not this screen). Anything else answers `undefined` and
+ * the stamp renders label-only, which claims nothing false.
+ */
+function remoteTermoGuesses(
+  stats: StatsResponse | null | undefined,
+  date: string,
+): number | undefined {
+  return stats !== null &&
+    stats !== undefined &&
+    stats.date === date &&
+    stats.todayTermoGuesses !== null
+    ? stats.todayTermoGuesses
+    : undefined;
+}
+
+/**
+ * The remote grid stamp, composed PER LINE from the claim (plan 060 §3):
+ *
+ * - time AND hint count → the local `ShippedStamp` itself, so the remote
+ *   stamp is byte-identical to a local one by construction (`T-WEB-S257`'s
+ *   discipline, pinned at `T-WEB-S275`);
+ * - time alone — the deploy-skew claim an old server publishes to a new
+ *   client — → the label and the time line, the hints line OMITTED. Never
+ *   a fabricated `hintsUsed: 0`: "sem dicas" is a claim about the solve,
+ *   and this device holds no evidence for it;
+ * - neither → the label alone. (A hint count without a time is unreachable
+ *   through the shipped producer — both come off the same NOT NULL row —
+ *   and falls to the label-only arm, which understates and never lies.)
+ */
+function RemoteShippedStamp({
+  title,
+  claim,
+}: {
+  readonly title: string;
+  readonly claim: DayGameState;
+}) {
+  if (claim.elapsedMs !== undefined && claim.hintsUsed !== undefined) {
+    return (
+      <ShippedStamp
+        title={title}
+        stamp={{ elapsedMs: claim.elapsedMs, hintsUsed: claim.hintsUsed }}
+      />
+    );
+  }
+  if (claim.elapsedMs === undefined) {
+    return (
+      <div
+        className={styles.stamp}
+        role="img"
+        aria-label={messages.conclusion.remote.stampBareAria(title)}
+      >
+        <span aria-hidden className={styles.stampLabel}>
+          {messages.conclusion.stampLabel}
+        </span>
+      </div>
+    );
+  }
+  const elapsed = formatElapsed(claim.elapsedMs);
+  return (
+    <div
+      className={styles.stamp}
+      role="img"
+      aria-label={messages.conclusion.remote.stampTimeAria(title, elapsed)}
+    >
+      <span aria-hidden className={styles.stampLabel}>
+        {messages.conclusion.stampLabel}
+      </span>
+      <span aria-hidden className={styles.stampTime}>
+        {elapsed}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The remote Termo stamp: the same `OutcomeStamp` the local conclusion
+ * renders, with its slots composed from what the SERVER holds. On a win the
+ * detail is `X/6` from `GET /stats` (the `remoteTermoGuesses` gate above);
+ * where the count has not landed the stamp is label-only rather than a
+ * fabricated fraction. On a loss it is the loss shape whole — stepped-down
+ * chrome, no settle, no time, no consolation flourish (ADR-0043).
+ */
+function RemoteTermoStamp({
+  title,
+  played,
+  guesses,
+}: {
+  readonly title: string;
+  readonly played: boolean;
+  readonly guesses: number | undefined;
+}) {
+  const copy = messages.games.termo.outcome;
+  if (played) {
+    return (
+      <OutcomeStamp
+        outcome={{
+          state: "lost",
+          label: copy.lostLabel,
+          detail: copy.lostDetail(TERMO_MAX_GUESSES),
+          aria: copy.lostAria(TERMO_MAX_GUESSES),
+        }}
+      />
+    );
+  }
+  if (guesses === undefined) {
+    return (
+      <div
+        className={styles.stamp}
+        role="img"
+        aria-label={messages.conclusion.remote.stampBareAria(title)}
+      >
+        <span aria-hidden className={styles.stampLabel}>
+          {copy.wonLabel}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <OutcomeStamp
+      outcome={{
+        state: "result",
+        label: copy.wonLabel,
+        detail: copy.wonDetail(guesses, TERMO_MAX_GUESSES),
+        aria: copy.wonAria(guesses, TERMO_MAX_GUESSES),
+      }}
+    />
+  );
+}
+
+/**
  * The streak card (#19, ADR-0048) — F5:54-56's sealing-wax card, first in
  * the side column. The CALLER gates it on `syncOutcome === "recorded"`, so
  * this component's own machine has three states:
@@ -540,6 +865,43 @@ function ConclusionStats({
   if (stats === null) {
     return null;
   }
+  return (
+    <ConclusionStatsBody
+      game={game}
+      date={date}
+      stats={stats}
+      elapsedMs={result?.elapsedMs}
+      lost={lost}
+    />
+  );
+}
+
+/**
+ * The stat block's PRESENTATIONAL body, split from `ConclusionStats` at
+ * #142 so the remote view can feed it the ONE `useStats()` answer it
+ * already fetched for the Termo stamp's `em X/6` — two hook call sites
+ * would be two credentialed GETs (plan 060 §3). The local path above keeps
+ * its own hook and renders this same body: zero change there.
+ *
+ * `stats` still has the three-state contract `useStats` defines, minus the
+ * `null` arm both callers unmount on. `elapsedMs` replaced the
+ * `ConclusionResult` prop because it is the only field this body ever read
+ * — and the remote claim may carry a time WITHOUT a hint count (deploy
+ * skew), which `ConclusionResult` cannot spell without fabricating a 0.
+ */
+function ConclusionStatsBody({
+  game,
+  date,
+  stats,
+  elapsedMs,
+  lost,
+}: {
+  readonly game: Game;
+  readonly date: string;
+  readonly stats: StatsResponse | undefined;
+  readonly elapsedMs: number | undefined;
+  readonly lost: boolean;
+}) {
   const loaded = stats !== undefined;
   // The server holds the record's day AS its today: string equality on
   // the contract's own `date`, the TermoDoneLink rule.
@@ -609,18 +971,19 @@ function ConclusionStats({
   const block = loaded ? stats[game] : undefined;
   const counts = block?.histogram ?? ([0, 0, 0, 0, 0, 0] as const);
   const max = Math.max(...counts, 1);
-  // The local record's duration, not the server's: this bucket is "where
-  // today's solve landed", and the local number is the one the stamp
-  // already shows. No local duration → no bucket highlighted; and no
+  // The CALLER's duration — the local record's on the local path, the
+  // server claim's on the remote one (#142); either way it is the number
+  // the stamp on the same card already shows, so this bucket is "where
+  // today's solve landed". No duration → no bucket highlighted; and no
   // highlight either unless the server holds the day AS today — a late
   // win is absent from the histogram, so its bucket may hold a count the
   // solve is not in (possibly zero). The render additionally marks only a
   // bucket whose own count is nonzero: the highlight claims "your solve
   // is in this bar", and an empty bar holds nothing to claim (step-6 F4).
   const todayBucket =
-    result === undefined || !dayMatches
+    elapsedMs === undefined || !dayMatches
       ? undefined
-      : timeBucketIndex(result.elapsedMs);
+      : timeBucketIndex(elapsedMs);
   const name = messages.games[game].name;
   return (
     <div
@@ -692,13 +1055,13 @@ function ConclusionStats({
           line. */}
       {loaded &&
         dayMatches &&
-        result !== undefined &&
+        elapsedMs !== undefined &&
         block !== undefined &&
         block.averageSampleCount >= 2 &&
         block.averageMs !== null &&
-        result.elapsedMs !== block.averageMs && (
+        elapsedMs !== block.averageMs && (
           <p className={styles.closingLine}>
-            {result.elapsedMs < block.averageMs
+            {elapsedMs < block.averageMs
               ? messages.conclusion.closingFaster
               : messages.conclusion.closingSlower}
           </p>

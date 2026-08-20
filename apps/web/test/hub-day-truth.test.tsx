@@ -393,8 +393,19 @@ describe("the conclusion still finishes offline (T-WEB-S241)", () => {
   });
 });
 
-describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S245)", () => {
-  it("keeps its href, and the play route behind it has no local record to restore", async () => {
+describe("a cross-device done tile keeps its href and writes no record (T-WEB-S245)", () => {
+  // THE PLAYABLE-BOARD ARM IS GONE, not re-aimed: "the /sudoku screen behind
+  // it renders a fresh PLAYABLE board" was ADR-0060 decision 8's sentence,
+  // and #142 amended that sentence false (ADR-0065). Its successor is
+  // `T-WEB-S273` below — the `T-WEB-S235` "installs NO interval" precedent
+  // at #143: a landed assertion removed because its claim was amended false
+  // is a pointer at a record, and the record is ADR-0060's decision-8
+  // annotation. The two arms that survive here are the claims S245 was
+  // always making and both are still true: the tile's href half of decision
+  // 8 STANDS (the play route itself now answers with the completed state,
+  // so a bookmark or a typed URL gets it too), and the payload still never
+  // becomes a play record (ADR-0060 decision 4, verbatim).
+  it("keeps its href — the route behind it now ANSWERS completed, so the link needs no rewrite", async () => {
     stubFetchByUrl(() =>
       jsonResponse(200, dayBody({ sudoku: { status: "completed" } })),
     );
@@ -407,41 +418,13 @@ describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S245)", () =
         messages.hoje.completedAria(messages.games.sudoku.name),
       ),
     );
-    // ADR-0060 decision 8, decided rather than discovered: the tile is a
-    // `<Link href="/sudoku">` and the screen behind it swaps to the
-    // conclusion only via `isClosedAndFrozen(play.state)`, which reads the
-    // LOCAL record. Cross-device there is none, so `/sudoku` renders a
-    // fresh playable board — ADR-0053 decision 10 layer 3's "honest gap",
-    // reached from the daily hub for the first time. The replay writes
-    // nothing (layer 1).
     expect(link).toHaveAttribute("href", playRoutes.sudoku);
     expect(playRoutes.sudoku).toBe(routes.sudoku);
-    // The premise the paragraph above rests on, asserted rather than
-    // assumed: the payload never becomes a play record, so there is nothing
-    // for the screen to restore.
+    // The payload never becomes a play record, so the completed view the
+    // route renders is a projection of the claim, not a synthesised record.
     expect(
       window.localStorage.getItem(playRecordKey("sudoku", DATE)),
     ).toBeNull();
-  });
-
-  it("the /sudoku screen behind it renders a fresh PLAYABLE board — asserted, not assumed", async () => {
-    // No local record, and the server says completed. `isClosedAndFrozen`
-    // reads the record, so the swap never happens and the board is live.
-    stubFetchByUrl(() =>
-      jsonResponse(200, dayBody({ sudoku: { status: "completed" } })),
-    );
-
-    const SudokuScreen = await loadSudokuScreen();
-
-    const { container } = render(<SudokuScreen daily={SUDOKU_DAILY} />);
-
-    await waitFor(() => {
-      expect(
-        container.querySelector('[data-play-state="playing"]'),
-      ).not.toBeNull();
-    });
-    // Not the conclusion: no stamp, no "Feito" — the honest gap, named.
-    expect(screen.queryByText(messages.conclusion.stampLabel)).toBeNull();
   });
 
   it("never writes the server's claim into a play record", async () => {
@@ -476,5 +459,56 @@ describe("a cross-device done tile leads to a PLAYABLE board (T-WEB-S245)", () =
       }
     }
     expect(keys).toEqual([playRecordKey("sudoku", DATE)]);
+  });
+});
+
+/**
+ * T-WEB-S245's deleted arm's SUCCESSOR (#142, ADR-0065): the same fixture —
+ * no local record, a server `completed` claim — now renders the COMPLETED
+ * view behind the tile's unchanged href, never a playable board.
+ */
+describe("a cross-device Feito tile's route renders the COMPLETED view, not a playable board (T-WEB-S273)", () => {
+  it("swaps /sudoku to the remote conclusion once the claim lands, with no playable board behind it", async () => {
+    stubFetchByUrl(() =>
+      jsonResponse(
+        200,
+        dayBody({
+          sudoku: {
+            status: "completed",
+            elapsedMs: SUDOKU_ELAPSED_MS,
+            hintsUsed: 0,
+          },
+        }),
+      ),
+    );
+
+    const SudokuScreen = await loadSudokuScreen();
+
+    const { container } = render(<SudokuScreen daily={SUDOKU_DAILY} />);
+
+    // The completed view, with the REAL stamp — the server-held time through
+    // the same composers a local conclusion uses.
+    expect(
+      await screen.findByLabelText(
+        messages.conclusion.stampAria(
+          messages.games.sudoku.conclusion.title,
+          formatElapsed(SUDOKU_ELAPSED_MS),
+          0,
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(container.querySelector("[data-conclusion-remote]")).not.toBeNull();
+    // Not a playable board: no live grid anywhere on the screen.
+    expect(container.querySelector('[data-play-state="playing"]')).toBeNull();
+    // And no CONCLUDED record was synthesised (ADR-0060 decision 4). The
+    // play hook at the root still runs its shipped lifecycle — restore,
+    // prune, queue flush — and that lifecycle writes its own PLAYING record
+    // on this route exactly as it did before #142; what may never happen is
+    // the claim becoming a closed record this view could be re-read from.
+    const raw = window.localStorage.getItem(playRecordKey("sudoku", DATE));
+    expect(raw).not.toBeNull();
+    expect((JSON.parse(raw ?? "{}") as { concluded?: boolean }).concluded).toBe(
+      false,
+    );
   });
 });
