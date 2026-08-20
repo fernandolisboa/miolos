@@ -30,7 +30,10 @@ on the Termo client.**
 - **The bundle.** `@miolos/games/termo`'s barrel re-exports `word-list`,
   which statically reaches `words.generated.ts` — 40,591 bytes of source,
   15,131 gzipped, holding both the 5,310-word validation dictionary and the
-  400-word answer pool. The client genuinely wants `isValidGuess` (offline
+  400-word answer pool. *(**Annotation (a) — as-of-writing, #140.** Sizes
+  and count measured at this ADR's time; the dictionary grows through
+  curated additions ([ADR-0062](./0062-termo-guess-dictionary-gaps-close-with-curated-additions.md)),
+  5,408 words as of #140, still inside decision 7's 76 KB budget.)* The client genuinely wants `isValidGuess` (offline
   "não está na lista", #27 AC 3). It has no use for `TERMO_ANSWERS`.
   Handoff 021 §4.3 required a re-measurement for termo — #25 measured
   tree-shaking on the *nonogram* barrel — and named the only sanctioned fix
