@@ -7,6 +7,7 @@ import {
 } from "@miolos/core";
 import type { Db } from "@miolos/db";
 import { bufferDepth, getRemoteConfig } from "@miolos/db/publishing";
+import { pruneSeenDays } from "@miolos/db/user";
 import type { NextRequest } from "next/server";
 
 import { getDb } from "../../../src/db";
@@ -171,6 +172,22 @@ export async function GET(request: NextRequest): Promise<Response> {
   // query keeps working unchanged as games are added.
   for (const [game, result] of Object.entries(games)) {
     console.log(JSON.stringify({ event: "cron-publish", game, ...result }));
+  }
+
+  // Seen-days retention (#58, ADR-0066): the credit only ever reads
+  // `today − 1`, so older rows are dead weight (~365/user/year, unioned
+  // forever by the merge). One idempotent delete on the day's existing cron
+  // rather than a job of its own — WRAPPED so its failure logs loudly and
+  // never masks the publish result this route exists to report. Widening
+  // the credit window widens `pruneSeenDays`'s predicate too.
+  try {
+    await pruneSeenDays(db);
+  } catch (thrown) {
+    console.error(
+      `seen-days retention delete failed (puzzles above published normally): ${
+        thrown instanceof Error ? thrown.message : String(thrown)
+      }`,
+    );
   }
 
   const body = cronPublishResponseSchema.parse({ games });

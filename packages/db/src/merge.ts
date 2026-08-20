@@ -2,7 +2,6 @@ import type { MergeableCompletion } from "@miolos/core";
 import { and, asc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 
 import type { Db } from "./client";
-import { onTimeSql } from "./completions";
 import {
   completions,
   hintGrants,
@@ -74,7 +73,7 @@ export async function listCompletionsForMerge(
       game: completions.game,
       date: completions.date,
       outcome: completions.outcome,
-      onTime: onTimeSql(),
+      onTime: completions.onTime,
       completedAtOrder: completedAtOrderSql(),
     })
     .from(completions)
@@ -106,8 +105,10 @@ export async function listCompletionsForMerge(
  * tables still acquire theirs HERE — the rewarded-ad ticket's same-day
  * hint grants if it ever wants them repointed instead (hint grants are
  * DELETED, never carried — day-scoped, structurally expiring, writer-less
- * in v1, plan 029 D12). #58's stored on_time joins the repoint
- * statement's explicit column list when it lands.
+ * in v1, plan 029 D12). #58 consumed the seat twice as reserved: its
+ * stored on_time joined the repoint statement's explicit column list, and
+ * `user_seen_days` acquired its merge duty as statements 4b/4c (union then
+ * empty — ADR-0066).
  */
 export async function mergeAccounts(
   db: Db,
@@ -224,16 +225,28 @@ export async function mergeAccounts(
   // 3. Statement (ii): repoint the loser's rows, ADR-0026's prescribed
   //    shape verbatim — ordered by completed_at ascending, ON CONFLICT DO
   //    NOTHING. completed_at is COPIED, never defaultNow(): re-stamping
-  //    would reclassify an on-time completion as late (recordCompletion's
-  //    own warning, at merge scale). The column list is exhaustive over
+  //    would move the recorded write instant (recordCompletion's own
+  //    warning, at merge scale). The column list is exhaustive over
   //    today's schema — MECHANICALLY pinned by T-DB-S24, which derives the
   //    live column set from the drizzle table and fails the suite the day
   //    a new column would silently default on merged rows. #58's stored
-  //    on_time joins this list when it lands.
+  //    on_time is in this list as its own comments always promised:
+  //    COPIED, never recomputed — this union moves rows, it computes
+  //    nothing (ADR-0066's invariant sentence; ADR-0009 untouched).
+  //
+  //    A FALSIFIED CORNER, RECORDED NOT PATCHED (#58, ADR-0066; pinned by
+  //    T-CORE-S106): ADR-0026's "a merge can never downgrade an on-time
+  //    completion to a late one" was a THEOREM of the read-time derivation
+  //    (earliest instant ⇒ most on-time). With the credit it is falsified:
+  //    an earlier LATE row (archive, unseen sync) beats a later CREDITED
+  //    row for the same puzzle, and earliest-wins keeps the late one — a
+  //    merge can therefore visibly break a streak the user saw. Fernando's
+  //    2026-08-02 call: the merge "needs no special case"; earliest-wins
+  //    stays, and ADR-0026's sentence is amended rather than defended.
   await db.execute(sql`
     insert into completions
-      (user_id, game, date, completed_at, outcome, elapsed_ms, hints_used, guesses)
-    select ${winnerId}::uuid, game, date, completed_at, outcome, elapsed_ms, hints_used, guesses
+      (user_id, game, date, completed_at, outcome, elapsed_ms, hints_used, guesses, on_time)
+    select ${winnerId}::uuid, game, date, completed_at, outcome, elapsed_ms, hints_used, guesses, on_time
       from completions where user_id = ${loserId}
       order by completed_at asc
     on conflict (user_id, game, date) do nothing
@@ -242,6 +255,25 @@ export async function mergeAccounts(
   // 4. Statement (iii): the loser's originals go, now that every key
   //    survives on the winner.
   await db.delete(completions).where(eq(completions.userId, loserId));
+
+  // 4b. The loser's seen days UNION onto the winner (#58, ADR-0066;
+  //     T-DB-S74) — ADR-0049 decision 6's extension point consumed in the
+  //     completions idiom: copied dates, ON CONFLICT DO NOTHING on the
+  //     composite PK, individually idempotent (a re-run selects zero loser
+  //     rows). A date is the whole fact, so there is no earliest-wins or
+  //     least() to arbitrate — presence is presence. The union COMPUTES
+  //     NOTHING and no streak ever reads this table (ADR-0066's invariant
+  //     sentence; ADR-0009 untouched).
+  await db.execute(sql`
+    insert into user_seen_days (user_id, date)
+    select ${winnerId}::uuid, date
+      from user_seen_days where user_id = ${loserId}
+    on conflict (user_id, date) do nothing
+  `);
+  // 4c. The loser's seen-day rows go — "emptied" means EMPTIED; no row may
+  //     keep referencing the tombstone (ADR-0049 decision 6). Trivially
+  //     idempotent.
+  await db.execute(sql`delete from user_seen_days where user_id = ${loserId}`);
 
   // 5. The loser's hint grants go with the rest of the loser-row cleanup:
   //    "emptied" means EMPTIED — no row may keep referencing the tombstone

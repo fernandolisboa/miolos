@@ -879,3 +879,78 @@ describe("the extension point #27 widens", () => {
     );
   });
 });
+
+describe("the late-sync credit needs NO client change (#58, ADR-0066) (T-WEB-S283)", () => {
+  // The server-side rule (a seen day credits a 1-day-late sync) is decided
+  // and stored entirely at the write; the decision's "schema/route/client
+  // identical" claim is pinned here from the client's side: a queued
+  // yesterday record posts the SAME five-key body every record always
+  // posted — no date assertion, no attestation, no new field — and the 200
+  // it settles on already carries `onTime` in the shipped response schema.
+  it("posts a queued yesterday record byte-unchanged in shape and settles recorded on the credited 200", async () => {
+    const YESTERDAY = "2026-08-13";
+    writePlayRecord(pendingRecord({ date: YESTERDAY }));
+    const fetchMock = stubFetch(() =>
+      jsonResponse(200, okBody({ date: YESTERDAY, onTime: true })),
+    );
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+
+    // The body is the ordinary completion request — parsed by the shipped
+    // contract, exactly the keys every completion posts, nothing about the
+    // credit rides the wire.
+    const calls = completionCalls(fetchMock);
+    expect(calls).toHaveLength(1);
+    const init = requestInitSchema.parse(calls[0]?.[1]);
+    const body: unknown = JSON.parse(init.body);
+    const parsed = completionRequestSchema.parse(body);
+    expect(parsed.date).toBe(YESTERDAY);
+    expect(Object.keys(body as Record<string, unknown>).sort()).toEqual([
+      "date",
+      "elapsedMs",
+      "game",
+      "grid",
+      "hintsUsed",
+    ]);
+
+    // The credited 200 settles the record — the response schema carried
+    // `onTime` since #18, so a `true` on a yesterday date is just a value.
+    expect(readPlayRecord("binairo", YESTERDAY)).toMatchObject({
+      pendingSync: false,
+      syncOutcome: "recorded",
+    });
+  });
+});
+
+describe("422 multi-date-sync settles the record with no retry (#58, ADR-0066) (T-WEB-S284)", () => {
+  // The guard's refusal is a 422, which has been terminal in
+  // `TERMINAL_STATUSES` since #18 — that pre-existing fact is exactly why
+  // the guard costs no client change. This pins it for the guard's own
+  // error token: the record settles `rejected`, and no retry rung fires.
+  it("marks the record rejected and never re-posts it", async () => {
+    vi.useFakeTimers();
+    writePlayRecord(pendingRecord());
+    const fetchMock = stubFetch(() =>
+      jsonResponse(422, { error: "multi-date-sync" }),
+    );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { flushPendingCompletions } = await freshSync();
+    const flushed = flushPendingCompletions();
+    await vi.runAllTimersAsync();
+    await flushed;
+
+    expect(readPlayRecord("binairo", DATE)).toMatchObject({
+      pendingSync: false,
+      syncOutcome: "rejected",
+    });
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    // The whole retry ladder elapses and nothing re-posts: a settled
+    // record is out of the queue, not merely deprioritised.
+    await vi.runAllTimersAsync();
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+    errorSpy.mockRestore();
+  });
+});

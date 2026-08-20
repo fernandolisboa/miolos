@@ -2021,6 +2021,7 @@ describe("POST /completions — the archive write window (#31, ADR-0053)", () =>
       completedAt: new Date(`${yesterday}T15:00:00Z`),
       elapsedMs: 42_000,
       hintsUsed: 1,
+      onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
     });
     const storedBefore = await ctx.db.select().from(completions);
 
@@ -2150,6 +2151,7 @@ describe("POST /completions — the archive write window (#31, ADR-0053)", () =>
         completedAt: new Date("2026-08-11T02:59:59Z"),
         elapsedMs: 61_000,
         hintsUsed: 0,
+        onTime: false, // #58 (ADR-0066): late seeds — the rows the ceiling counts
       })),
     );
 
@@ -2249,5 +2251,163 @@ describe("POST /completions — the archive write window (#31, ADR-0053)", () =>
       /const TERMINAL_STATUSES[^=]*=\s*new Set\(\[([^\]]*)\]/.exec(sync);
     expect(terminal?.[1]).toBeDefined();
     expect(terminal?.[1]).not.toContain("429");
+  });
+});
+
+describe("POST /completions — the late-sync credit (#58, ADR-0066)", () => {
+  /** GET /streak through its own real route (the archive describe's idiom). */
+  async function streakOf(token: string): Promise<StreakResponse> {
+    const response = await streakGet(
+      new NextRequest("http://localhost:3001/streak", {
+        method: "GET",
+        headers: new Headers({ cookie: `${SESSION_COOKIE_NAME}=${token}` }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    return streakResponseSchema.parse(await response.json());
+  }
+
+  /** GET /stats through its own real route, over the same PGlite db. */
+  async function statsOf(token: string): Promise<StatsResponse> {
+    const response = await statsGet(
+      new NextRequest("http://localhost:3001/stats", {
+        method: "GET",
+        headers: new Headers({ cookie: `${SESSION_COOKIE_NAME}=${token}` }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    return statsResponseSchema.parse(await response.json());
+  }
+
+  /** A seen-day row for a chosen date — the fixture's shortcut for "the
+   *  user was online on D": production writes it via the session hooks
+   *  (`recordSeenDay`, DB-clock-dated), which a yesterday fixture cannot
+   *  reach without a clock fake this test does not need. */
+  async function seedSeenDay(userId: string, date: string): Promise<void> {
+    await ctx.db.execute(
+      sql`insert into user_seen_days (user_id, date)
+          values (${userId}::uuid, ${date}::date)
+          on conflict do nothing`,
+    );
+  }
+
+  it("T-API-S137: a seen yesterday is credited — 200 with onTime true, and GET /streak counts the day", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const { token, userId } = await createSession();
+    await seedSeenDay(userId, yesterday);
+    const solution = await seedDaily("binairo", yesterday);
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: yesterday,
+          grid: solution,
+        }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toMatchObject(
+      { onTime: true, recorded: true, date: yesterday },
+    );
+
+    // The credit reaches the streak: yesterday counts, exactly as an
+    // on-time completion of that day always did (#18's promise made true).
+    const streak = await streakOf(token);
+    expect(streak.streak).toBe(1);
+  });
+
+  it("T-API-S138: an UNSEEN yesterday stays late — 200, recorded, onTime false; streak and Dia Perfeito unmoved", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const { token } = await createSession();
+    // NO seen row for yesterday. The session hooks record TODAY's presence
+    // on this very request — which is exactly why today's row can never
+    // credit yesterday: the credit reads (user, yesterday), not (user, now).
+    const solution = await seedDaily("binairo", yesterday);
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: yesterday,
+          grid: solution,
+        }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toMatchObject(
+      { onTime: false, recorded: true },
+    );
+
+    // The failure direction is the status quo: played/late, no streak day,
+    // no Dia Perfeito movement — and the row IS recorded (solved counts).
+    expect((await streakOf(token)).streak).toBe(0);
+    const stats = await statsOf(token);
+    expect(stats.perfectDays).toBe(0);
+    expect(stats.binairo.solved).toBe(1);
+  });
+
+  it("T-API-S139: the multi-past-date guard — a second distinct credited past date on one writing day is 422 multi-date-sync, no row", async () => {
+    // UNREACHABLE FOR ANY CLIENT under window = 1 (the guard is a widening
+    // tripwire — hasCreditedPastDateToday's doc block carries the proof),
+    // so the precondition is manufactured RAW, via the same direct-insert
+    // idiom every history seed in this file uses: a credited row for a
+    // PAST date, written on the current SP day — a state production cannot
+    // produce today, which is exactly what makes the guard's teeth
+    // testable at all.
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const { token, userId } = await createSession();
+    await ctx.db.insert(completions).values({
+      userId,
+      game: "sudoku",
+      date: addDays(today, -3), // a DIFFERENT past date than the POST's
+      outcome: "won",
+      // completed_at defaults to the DB clock's now — written on TODAY's
+      // SP day, so `writtenOnSaoPauloDay(today)` holds of it.
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+      onTime: true, // the credited shape
+    });
+
+    await seedSeenDay(userId, yesterday);
+    const solution = await seedDaily("binairo", yesterday);
+    const rowsBefore = await completionRows();
+    const refused = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "binairo",
+          date: yesterday,
+          grid: solution,
+        }),
+      }),
+    );
+    expect(refused.status).toBe(422);
+    expect(await errorOf(refused)).toEqual({ error: "multi-date-sync" });
+    expect(await completionRows()).toHaveLength(rowsBefore.length);
+
+    // The guard refuses CREDITED writes only: the same request shape with
+    // no credit claim (an unseen archive date) still lands as late.
+    const archived = addDays(today, -30);
+    const archivedSolution = await seedDaily("sudoku", archived, 33);
+    const late = await POST(
+      completionRequest({
+        token,
+        body: completionBody({
+          game: "sudoku",
+          date: archived,
+          grid: archivedSolution,
+        }),
+      }),
+    );
+    expect(late.status).toBe(200);
+    expect(completionResponseSchema.parse(await late.json())).toMatchObject({
+      onTime: false,
+    });
   });
 });

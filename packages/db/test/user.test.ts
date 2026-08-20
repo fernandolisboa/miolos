@@ -23,7 +23,8 @@ import {
   recordCompletion,
 } from "../src/completions";
 import * as schema from "../src/schema";
-import { completions, hintGrants, users } from "../src/schema";
+import { completions, hintGrants, userSeenDays, users } from "../src/schema";
+import { pruneSeenDays, recordSeenDay, wasSeenOn } from "../src/seen-days";
 import { createTestDb } from "../src/testing";
 
 /** The two dialects `Db` unions, named so T-DB-S58 can compare them. */
@@ -31,8 +32,9 @@ type Dialect = "neonHttp" | "pglite";
 
 // The user-scoped suite (issue #18, ADR-0026/ADR-0027, plan 017 §6).
 // Two things are proved here and nowhere else: a completion is written
-// EXACTLY ONCE and never reopened (D15), and `on_time` is DERIVED in SQL
-// from the DB clock (D16) — no JS timezone arithmetic exists in the path.
+// EXACTLY ONCE and never reopened (D15), and `on_time` is the STORED
+// write-time verdict (#58, ADR-0066, amending D16's read-time derivation)
+// — no JS timezone arithmetic exists in the path.
 // The hint-grant half proves the day key IS the expiry (D22), with no
 // runtime consumer in v1.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
@@ -121,6 +123,9 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "getUserSince", // #29 (plan 033): widened in the same commit as the export
       "grantHints",
       "grantedHintsToday",
+      // #58 (ADR-0066): the multi-past-date guard's read — widened in
+      // place, the T-DB-9a precedent.
+      "hasCreditedPastDateToday",
       "hintGrants",
       "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
       // #83 (ADR-0060): the day-truth reader. This tripwire is WIDENED IN
@@ -133,7 +138,13 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "listMedalGrants", // #30 (ADR-0052): widened in the same commit as the export
       "medalGrants", // #30 (ADR-0052): the curated-grant table, user entry only
       "mergeAccounts",
+      // #58 (ADR-0066): the seen-days statements — the retention delete,
+      // the session hooks' writer, and the route's credit read. The TABLE
+      // is deliberately NOT exported on any entry.
+      "pruneSeenDays",
       "recordCompletion",
+      "recordSeenDay",
+      "wasSeenOn",
     ]);
   });
 });
@@ -148,6 +159,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
       outcome: "won",
       elapsedMs: 272_000,
       hintsUsed: 1,
+      onTime: true,
     });
 
     expect(recorded).toBe(true);
@@ -168,6 +180,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
       outcome: "won",
       elapsedMs: 272_000,
       hintsUsed: 0,
+      onTime: true,
     });
     const firstRows = await ctx.db
       .select()
@@ -186,6 +199,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
       outcome: "won",
       elapsedMs: 999_000,
       hintsUsed: 1,
+      onTime: true,
     });
 
     expect(second.recorded).toBe(false);
@@ -202,7 +216,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
     expect(secondRows[0]?.hintsUsed).toBe(0);
   });
 
-  it("T-DB-13: the puzzle's own date carries the on-time case — no clock fake needed", async () => {
+  it("T-DB-13: the stored verdict travels — a today-dated true and a yesterday-dated false read back exactly (re-aimed at #58: the write-time rule itself is T-CORE-S105's claim)", async () => {
     const userId = await createUser();
     const today = await todaySaoPaulo(ctx.db);
 
@@ -213,6 +227,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: true,
     });
     const onYesterday = await recordCompletion(ctx.db, {
       userId,
@@ -221,13 +236,14 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: false,
     });
 
     expect(onToday.record.onTime).toBe(true);
     expect(onYesterday.record.onTime).toBe(false);
   });
 
-  it("T-DB-14: the rollover boundary, faked clock, two distinct identities", async () => {
+  it("T-DB-14: the rollover boundary, faked clock, two distinct identities — the stored verdict is the caller's at both sides (re-aimed at #58: the instant no longer decides)", async () => {
     // Two identities are MANDATORY: a same-user replay hits ON CONFLICT DO
     // NOTHING and re-reads the ORIGINAL completed_at, so a single-identity
     // version would assert `true` twice and prove nothing (plan 017 §19.4).
@@ -244,6 +260,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: true, // #58: the route's verdict for date === SP-today
     });
 
     vi.setSystemTime(new Date("2026-08-01T03:00:01Z")); // 00:00:01 in SP
@@ -255,6 +272,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: false, // #58: an unseen post-rollover flush stays late
     });
 
     expect(beforeMidnight.record.onTime).toBe(true);
@@ -270,12 +288,13 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: true,
     });
 
     const thrown = await thrownBy(
       ctx.db.execute(
-        sql`insert into completions (user_id, game, date, outcome, elapsed_ms)
-            values (${userId}, 'binairo', '2026-08-01', 'won', 5)`,
+        sql`insert into completions (user_id, game, date, outcome, elapsed_ms, on_time)
+            values (${userId}, 'binairo', '2026-08-01', 'won', 5, true)`,
       ),
     );
 
@@ -286,7 +305,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
 });
 
 describe("getCompletion", () => {
-  it("returns undefined when no row exists, and the SQL-derived record when one does", async () => {
+  it("returns undefined when no row exists, and the stored record when one does", async () => {
     const userId = await createUser();
     expect(
       await getCompletion(ctx.db, userId, "binairo", "2026-08-01"),
@@ -299,6 +318,7 @@ describe("getCompletion", () => {
       outcome: "won",
       elapsedMs: 42_000,
       hintsUsed: 0,
+      onTime: true,
     });
 
     const record = await getCompletion(ctx.db, userId, "binairo", "2026-08-01");
@@ -313,12 +333,12 @@ describe("getCompletion", () => {
 });
 
 describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
-  it("T-DB-S13: returns every row of the user — lost and late included — with the SQL-derived onTime, date descending", async () => {
+  it("T-DB-S13: returns every row of the user — lost and late included — with the STORED onTime (#58), date descending", async () => {
     const userId = await createUser();
     const today = await todaySaoPaulo(ctx.db);
     const yesterday = addDaysLocal(today, -1);
 
-    // An on-time win: written on its own SP day (T-DB-13's construction).
+    // An on-time win (#58: the verdict is stored at write).
     await recordCompletion(ctx.db, {
       userId,
       game: "binairo",
@@ -326,8 +346,9 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: true,
     });
-    // A LATE win: dated yesterday, completed_at is now — outside its day.
+    // A LATE win: dated yesterday, written now, unseen — stored false.
     await recordCompletion(ctx.db, {
       userId,
       game: "sudoku",
@@ -335,6 +356,7 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
       outcome: "won",
       elapsedMs: 2_000,
       hintsUsed: 0,
+      onTime: false,
     });
     // A lost Termo, on time: the row the reader must NOT filter — the pure
     // function in packages/core is the only place it is excluded (D3).
@@ -346,6 +368,7 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
       elapsedMs: 3_000,
       hintsUsed: 0,
       guesses: 6,
+      onTime: true,
     });
 
     const rows = await listCompletionsForStreak(ctx.db, userId);
@@ -380,6 +403,7 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: true,
     });
 
     expect(await listCompletionsForStreak(ctx.db, userId)).toEqual([]);
@@ -403,6 +427,9 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
         outcome: "won",
         elapsedMs: 1_000,
         hintsUsed: 0,
+        // #58 (ADR-0066): the guarded arm is reached only with a late
+        // verdict — the route passes a ceiling iff onTime === false.
+        onTime: false,
       },
       ceiling,
     );
@@ -441,6 +468,7 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
         completedAt: new Date("2026-08-10T12:00:00Z"),
         elapsedMs: 1_000,
         hintsUsed: 0,
+        onTime: false, // #58: late seeds — exactly what the ceiling counts
       })),
       {
         userId,
@@ -450,6 +478,7 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
         completedAt: new Date("2026-08-10T12:00:00Z"),
         elapsedMs: 1_000,
         hintsUsed: 0,
+        onTime: true, // stored true: must NOT spend the late budget
       },
       {
         userId: otherUserId,
@@ -459,6 +488,7 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
         completedAt: new Date("2026-08-10T12:00:00Z"),
         elapsedMs: 1_000,
         hintsUsed: 0,
+        onTime: false,
       },
     ]);
 
@@ -580,6 +610,7 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
             outcome: "won",
             elapsedMs: 1_000,
             hintsUsed: 0,
+            onTime: false,
           },
           { day: "2026-08-10", max: 50 },
         ),
@@ -705,8 +736,8 @@ describe("the migration's constraints (ADR-0006 guard, plan 017 §11)", () => {
 
     const badOutcome = await thrownBy(
       ctx.db.execute(
-        sql`insert into completions (user_id, game, date, outcome, elapsed_ms)
-            values (${userId}, 'binairo', '2026-08-01', 'draw', 5)`,
+        sql`insert into completions (user_id, game, date, outcome, elapsed_ms, on_time)
+            values (${userId}, 'binairo', '2026-08-01', 'draw', 5, true)`,
       ),
     );
     expect(messages(badOutcome)).toContain("completions_outcome_check");
@@ -756,8 +787,8 @@ describe("the migration's constraints (ADR-0006 guard, plan 017 §11)", () => {
     ): Promise<unknown> {
       return thrownBy(
         ctx.db.execute(
-          sql`insert into completions (user_id, game, date, outcome, elapsed_ms, guesses)
-              values (${userId}, ${game}, ${date}, 'won', 5, ${guesses})`,
+          sql`insert into completions (user_id, game, date, outcome, elapsed_ms, guesses, on_time)
+              values (${userId}, ${game}, ${date}, 'won', 5, ${guesses}, true)`,
         ),
       );
     }
@@ -806,6 +837,7 @@ describe("the migration's constraints (ADR-0006 guard, plan 017 §11)", () => {
       elapsedMs: 61_000,
       hintsUsed: 0,
       guesses: 6,
+      onTime: true,
     });
     // Omitted entirely for a grid game — drizzle emits the SQL keyword
     // `default` for an un-supplied column, which is NULL here. That is also
@@ -818,6 +850,7 @@ describe("the migration's constraints (ADR-0006 guard, plan 017 §11)", () => {
       outcome: "won",
       elapsedMs: 61_000,
       hintsUsed: 0,
+      onTime: true,
     });
 
     const rows = await ctx.db
@@ -845,6 +878,7 @@ describe("the migration's constraints (ADR-0006 guard, plan 017 §11)", () => {
       elapsedMs: 61_000,
       hintsUsed: 0,
       guesses: 4,
+      onTime: true,
     });
 
     const record = await getCompletion(ctx.db, userId, "termo", "2026-08-01");
@@ -864,11 +898,11 @@ describe("the migration's constraints (ADR-0006 guard, plan 017 §11)", () => {
  * The day-truth reader (#83, ADR-0060 decision 1): one user, one São Paulo
  * day, at most four rows. The two claims that matter are that the SCOPE is
  * in SQL — never another user's rows and never another day's — and that
- * `onTime` is the same `onTimeSql()` derivation every other reader here
- * projects, taken off the DB clock and never off a JS `Date`.
+ * `onTime` is the same STORED write-time verdict every other reader here
+ * projects (#58, ADR-0066) — never re-derived.
  */
 describe("listCompletionsForDay (#83, ADR-0060)", () => {
-  it("T-DB-S59: only that user's rows for exactly that date, with the SQL-derived onTime", async () => {
+  it("T-DB-S59: only that user's rows for exactly that date, with the STORED onTime (#58)", async () => {
     const userId = await createUser();
     const other = await createUser();
     const today = await todaySaoPaulo(ctx.db);
@@ -881,6 +915,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
       outcome: "won",
       elapsedMs: 61_000,
       hintsUsed: 0,
+      onTime: true,
     });
     await recordCompletion(ctx.db, {
       userId,
@@ -890,6 +925,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
       elapsedMs: 61_000,
       hintsUsed: 0,
       guesses: 6,
+      onTime: true,
     });
     // Another DAY for the same user, and the same day for another USER:
     // neither may appear.
@@ -900,6 +936,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
       outcome: "won",
       elapsedMs: 61_000,
       hintsUsed: 0,
+      onTime: false,
     });
     await recordCompletion(ctx.db, {
       userId: other,
@@ -908,6 +945,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
       outcome: "won",
       elapsedMs: 61_000,
       hintsUsed: 0,
+      onTime: true,
     });
 
     const rows = await listCompletionsForDay(ctx.db, userId, today);
@@ -950,8 +988,8 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
         hintsUsed: 0,
       },
     ]);
-    // Yesterday's row was WRITTEN today, so `onTimeSql()` derives false —
-    // the reader returns the row and packages/core turns it into `pending`
+    // Yesterday's row stored `false` at its write (#58) — the reader
+    // returns the row and packages/core turns it into `pending`
     // (ADR-0008 rule 2). The reader never filters; that is the point.
     expect(await listCompletionsForDay(ctx.db, userId, yesterday)).toEqual([
       {
@@ -981,6 +1019,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
       outcome: "won",
       elapsedMs: 512_000,
       hintsUsed: 1,
+      onTime: true,
     });
     await recordCompletion(ctx.db, {
       userId,
@@ -989,6 +1028,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
       outcome: "won",
       elapsedMs: 0, // the CHECK's own lower bound is a legal stored value
       hintsUsed: 0,
+      onTime: true,
     });
 
     const rows = await listCompletionsForDay(ctx.db, userId, today);
@@ -1010,7 +1050,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
     ]);
   });
 
-  it("T-DB-S60: the rollover boundary, faked clock — a write instant on the NEXT SP day reads onTime false", async () => {
+  it("T-DB-S60: the rollover pair reads back the stored verdicts — a post-rollover unseen flush stays false (#58)", async () => {
     // The T-DB-14 idiom: only `Date` is faked, and two identities are
     // mandatory because a same-user replay hits ON CONFLICT DO NOTHING and
     // re-reads the ORIGINAL completed_at.
@@ -1025,6 +1065,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: true, // #58: date === SP-today at the (faked) write instant
     });
 
     vi.setSystemTime(new Date("2026-08-01T03:00:01Z")); // 00:00:01 in SP
@@ -1036,6 +1077,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
+      onTime: false, // #58: an unseen post-rollover flush stays late
     });
 
     expect(
@@ -1092,5 +1134,269 @@ describe("users.onboarding_seen_at (migration 0006, #35, ADR-0061)", () => {
       .from(users)
       .where(eq(users.id, userId));
     expect(rows).toEqual([{ onboardingSeenAt: null }]);
+  });
+});
+
+describe("seen days (#58, ADR-0066)", () => {
+  it("T-DB-S71: recordSeenDay is idempotent — called twice on one SP day it leaves exactly one row, dated by the DB clock", async () => {
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+
+    await recordSeenDay(ctx.db, userId);
+    await recordSeenDay(ctx.db, userId);
+
+    const rows = await ctx.db
+      .select({ userId: userSeenDays.userId, date: userSeenDays.date })
+      .from(userSeenDays);
+    expect(rows).toEqual([{ userId, date: today }]);
+
+    // The PK-point read the route consults: today yes, yesterday no —
+    // and never another user's day.
+    expect(await wasSeenOn(ctx.db, userId, today)).toBe(true);
+    expect(await wasSeenOn(ctx.db, userId, addDaysLocal(today, -1))).toBe(
+      false,
+    );
+    const other = await createUser();
+    expect(await wasSeenOn(ctx.db, other, today)).toBe(false);
+  });
+
+  it("T-DB-S76: pruneSeenDays deletes only rows older than yesterday — today and yesterday survive, and a re-run is a no-op", async () => {
+    // Fresh post-reservation id, recorded in docs/agents/test-ids.md at
+    // commit time (the #63 idiom): the retention delete had no reserved
+    // slot in the on-issue range and the S75 tail names the ceiling
+    // exemption. Only `today − 1` is ever read (the credit window), so the
+    // predicate keeps exactly the readable band.
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+    await ctx.db.insert(userSeenDays).values([
+      { userId, date: today },
+      { userId, date: addDaysLocal(today, -1) },
+      { userId, date: addDaysLocal(today, -2) },
+      { userId, date: addDaysLocal(today, -40) },
+    ]);
+
+    await pruneSeenDays(ctx.db);
+    const survivorDates = (
+      await ctx.db.select({ date: userSeenDays.date }).from(userSeenDays)
+    )
+      .map((row) => row.date)
+      .sort();
+    expect(survivorDates).toEqual([addDaysLocal(today, -1), today].sort());
+
+    await pruneSeenDays(ctx.db);
+    expect(await ctx.db.select().from(userSeenDays)).toHaveLength(2);
+  });
+
+  it("T-DB-S72: both arms store the supplied onTime VERBATIM and every reader projects the stored value — pinned by rows whose stored value contradicts the old derivation", async () => {
+    // The contradiction is the whole instrument: a yesterday-dated row
+    // written NOW stored `true` (the credit shape — the old derivation
+    // would say false), and a guarded-arm row likewise. If any reader
+    // re-derived from `completed_at`, every assertion below flips.
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDaysLocal(today, -1);
+
+    // Plain arm (the credited flush's arm).
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "binairo",
+      date: yesterday,
+      outcome: "won",
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+      onTime: true,
+    });
+    // Guarded arm: the same verbatim-storage property, through
+    // `guardedInsertSelect`'s hand-spelled select list.
+    const guarded = await recordCompletion(
+      ctx.db,
+      {
+        userId,
+        game: "sudoku",
+        date: yesterday,
+        outcome: "won",
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        onTime: true,
+      },
+      { day: today, max: 50 },
+    );
+    expect(guarded).toMatchObject({ capped: false, recorded: true });
+
+    // Every reader projects the stored true — none re-derives false.
+    const record = await getCompletion(ctx.db, userId, "binairo", yesterday);
+    expect(record?.onTime).toBe(true);
+    const streakRows = await listCompletionsForStreak(ctx.db, userId);
+    expect(streakRows.map((row) => row.onTime)).toEqual([true, true]);
+    const dayRows = await listCompletionsForDay(ctx.db, userId, yesterday);
+    expect(dayRows.map((row) => row.onTime)).toEqual([true, true]);
+    // And the raw column agrees — the value was stored, not projected into
+    // existence by a reader.
+    const raw = await ctx.db
+      .select({ onTime: completions.onTime })
+      .from(completions)
+      .where(eq(completions.userId, userId));
+    expect(raw.map((row) => row.onTime)).toEqual([true, true]);
+  });
+
+  it("T-DB-S75: a credited row never consumes the ceiling, and a user AT the ceiling still lands the credited flush — the exemption pinned at the ceiling, not just the count", async () => {
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDaysLocal(today, -1);
+
+    // The user is AT a ceiling of 3: three late rows written today.
+    await ctx.db.insert(completions).values(
+      Array.from({ length: 3 }, (_unused, index) => ({
+        userId,
+        game: "binairo" as const,
+        date: addDaysLocal(today, -(index + 2)),
+        outcome: "won" as const,
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        onTime: false,
+      })),
+    );
+    // A fourth LATE write is refused — the ceiling is really met.
+    const refused = await recordCompletion(
+      ctx.db,
+      {
+        userId,
+        game: "sudoku",
+        date: addDaysLocal(today, -10),
+        outcome: "won",
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        onTime: false,
+      },
+      { day: today, max: 3 },
+    );
+    expect(refused).toEqual({ capped: true });
+
+    // The credited flush still lands: the route routes an onTime === true
+    // write down the PLAIN arm — no ceiling option at all (§3.3).
+    const credited = await recordCompletion(ctx.db, {
+      userId,
+      game: "nonogram",
+      date: yesterday,
+      outcome: "won",
+      elapsedMs: 1_000,
+      hintsUsed: 0,
+      onTime: true,
+    });
+    expect(credited).toMatchObject({ capped: false, recorded: true });
+    expect(credited.record.onTime).toBe(true);
+
+    // And the credited row did not consume the budget: the count predicate
+    // is `not on_time`, so a subsequent guarded write against max 4 (three
+    // late rows held, the credit invisible to the count) still lands.
+    const nextLate = await recordCompletion(
+      ctx.db,
+      {
+        userId,
+        game: "termo",
+        date: addDaysLocal(today, -20),
+        outcome: "lost",
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        guesses: 6,
+        onTime: false,
+      },
+      { day: today, max: 4 },
+    );
+    expect(nextLate).toMatchObject({ capped: false, recorded: true });
+  });
+
+  it("T-DB-S73: the migration backfill equals the old read-time derivation, promotes only, and re-runs as a no-op (a pin — ADR-0023's vocabulary)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const migration = readFileSync(
+      new URL("../migrations/0008_classy_ink.sql", import.meta.url),
+      "utf8",
+    );
+    const sweep = migration
+      .split("--> statement-breakpoint")
+      .find((statement) => statement.includes('UPDATE "completions"'));
+    if (sweep === undefined) {
+      throw new Error("migration 0008 lost its backfill UPDATE");
+    }
+
+    const userId = await createUser();
+    // Four shapes, all with explicit instants so no clock fake is needed:
+    // (a) instant inside its own SP day → derivation true, seeded false;
+    // (b) instant on the NEXT SP day → derivation false, seeded false;
+    // (c) THE STRADDLE: 02:00:00Z is 23:00 in São Paulo the EVE — UTC day
+    //     differs, SP day matches → derivation true, seeded false. This is
+    //     the row a UTC-spelled sweep would wrongly leave late;
+    // (d) a stored CREDIT (true where the derivation says false) — the
+    //     sweep is one-directional and must NOT demote it. This is what
+    //     makes the same statement safe as 0009's post-deploy re-run.
+    await ctx.db.insert(completions).values([
+      {
+        userId,
+        game: "binairo" as const,
+        date: "2026-08-01",
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-01T15:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        onTime: false,
+      },
+      {
+        userId,
+        game: "sudoku" as const,
+        date: "2026-08-01",
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-02T15:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        onTime: false,
+      },
+      {
+        userId,
+        game: "nonogram" as const,
+        date: "2026-08-01",
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-02T02:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        onTime: false,
+      },
+      {
+        userId,
+        game: "termo" as const,
+        date: "2026-08-01",
+        outcome: "won" as const,
+        completedAt: new Date("2026-08-03T15:00:00Z"),
+        elapsedMs: 1_000,
+        hintsUsed: 0,
+        guesses: 3,
+        onTime: true,
+      },
+    ]);
+
+    await ctx.db.execute(sql.raw(sweep));
+
+    // Stored equals the old derivation on every backfilled row, and the
+    // credit survives: the sweep can only promote false → derived-true.
+    const read = async () =>
+      ctx.db
+        .select({
+          game: completions.game,
+          onTime: completions.onTime,
+          derivation: sql<boolean>`(${completions.completedAt} at time zone 'America/Sao_Paulo')::date = ${completions.date}`,
+        })
+        .from(completions)
+        .orderBy(completions.game);
+    const after = await read();
+    expect(after).toEqual([
+      { game: "binairo", onTime: true, derivation: true },
+      { game: "nonogram", onTime: true, derivation: true },
+      { game: "sudoku", onTime: false, derivation: false },
+      // The credit: stored true, derivation false, untouched.
+      { game: "termo", onTime: true, derivation: false },
+    ]);
+
+    // Re-run-safe forever — 0009 is this statement, deliberately.
+    await ctx.db.execute(sql.raw(sweep));
+    expect(await read()).toEqual(after);
   });
 });

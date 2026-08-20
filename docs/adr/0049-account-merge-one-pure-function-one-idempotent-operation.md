@@ -118,6 +118,14 @@ them.
    closing [#134](https://github.com/fernandolisboa/miolos/issues/134));
    three columns as of #145, which folded `push_prompt_dismissed_at` in
    ([ADR-0064](./0064-streak-at-risk-is-a-derived-decision.md)).
+   *Annotation (#58, [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)):*
+   the "#58 needs no special case here" prediction held, and the seat was
+   consumed exactly as reserved — the stored `on_time` joined the repoint
+   statement's explicit column list (T-DB-S24), and `user_seen_days`
+   acquired its merge duty here as statements 4b/4c: union onto the winner
+   `ON CONFLICT DO NOTHING` (a date is the whole fact — no earliest-wins to
+   arbitrate), then the loser's delete ("emptied" means EMPTIED). Both
+   individually idempotent (T-DB-S74; T-DB-S20's double-run snapshot).
    The decision's "tables" names the seat, not the shape of the fact: the
    duty is still acquired in `mergeAccounts`, so nothing here goes false.
 

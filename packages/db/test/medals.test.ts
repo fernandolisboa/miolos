@@ -134,6 +134,10 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
       "push_subscriptions",
       "remote_config",
       "sessions",
+      // #58 (ADR-0066): one row per (user, SP day) the server saw the user
+      // online — two columns, no quantity, nothing accumulable. Widened in
+      // place, the T-DB-9a precedent.
+      "user_seen_days",
       "users",
     ]);
   });

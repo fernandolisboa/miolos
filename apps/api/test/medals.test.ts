@@ -111,6 +111,9 @@ async function insertLateWin(init: {
     elapsedMs: 61_000,
     hintsUsed: 0,
     guesses: init.game === "termo" ? 3 : undefined,
+    // #58 (ADR-0066): stored at write; the old derivation's verdict for
+    // these instants, i.e. migration 0008's backfill semantics.
+    onTime: init.today === init.date,
   });
 }
 

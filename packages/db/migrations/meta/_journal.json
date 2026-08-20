@@ -57,6 +57,20 @@
       "when": 1787198941705,
       "tag": "0007_aberrant_spiral",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787213962749,
+      "tag": "0008_classy_ink",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787213962750,
+      "tag": "0009_honest_repair",
+      "breakpoints": true
     }
   ]
 }

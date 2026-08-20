@@ -968,7 +968,13 @@ the text (the first is I42, from the step-7 round):
   flag — the only reason no late row exists today is that the route refuses
   the date. Which days are readable is the wall's SQL. Which days are
   writable is one route predicate. Nothing in the client decides any of the
-  three.
+  three. *(As of #58 —
+  [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md) —
+  the first layer's mechanism changed: lateness IS a column now, the stored
+  write-time verdict, and an archive write stores `false` because
+  `onTimeAtWrite` answers false for any unseen or older-than-one-day date.
+  The layer separation itself — readable is the wall, writable is the
+  route, nothing client-side — stands.)*
 - **`packages/db`'s surface grows by five and its export tripwires move with
   it**, in the same commit as each export, because pre-commit runs the full
   suite at every commit. The relational-query pin on the root client does not

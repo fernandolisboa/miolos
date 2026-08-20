@@ -15,6 +15,7 @@ import {
 
 import { OPTIONS, POST } from "../app/session/route";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
+import { createSessionForUser } from "../src/session/service";
 import { hashSessionToken } from "../src/session/token";
 
 // Seam 4: route handlers invoked as functions, responses parsed with the
@@ -329,6 +330,66 @@ describe("POST /session", () => {
     );
     const body = await mintedBody(response);
     expect(body.created).toBe(true);
+  });
+});
+
+describe("seen days at the session seam (#58, ADR-0066)", () => {
+  /** The whole table, ordered — small by construction in these fixtures. */
+  async function seenRows(): Promise<unknown[]> {
+    const result = await ctx.db.execute(
+      sql`select user_id, date::text as date from user_seen_days
+           order by user_id, date`,
+    );
+    return result.rows;
+  }
+
+  it("T-API-S140: presence at the seam — the mint records the DB clock's today once, a resolve adds nothing new, and attach-confirm's direct session records too", async () => {
+    const todayResult = await ctx.db.execute(
+      sql`select (now() at time zone 'America/Sao_Paulo')::date::text as today`,
+    );
+    const today = todayResult.rows[0]?.["today"];
+    expect(typeof today).toBe("string");
+
+    // Write point 2: the mint (the first visit) records exactly one row.
+    const minted = await POST(postRequest());
+    const { userId } = await mintedBody(minted);
+    expect(await seenRows()).toEqual([{ user_id: userId, date: today }]);
+
+    // Write point 1: a resolve of the same cookie on the same SP day adds
+    // NONE — the PK conflicts away (recordSeenDay's idempotence), so an
+    // active user costs one dead insert per request, never a second row.
+    const token = cookieTokenOf(minted);
+    const resolved = await POST(
+      postRequest({
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
+      }),
+    );
+    expect((await mintedBody(resolved)).created).toBe(false);
+    expect(await seenRows()).toEqual([{ user_id: userId, date: today }]);
+
+    // Write point 3: attach-confirm mints the clicking browser's session
+    // DIRECTLY (createSessionForUser), bypassing the two hooks above — the
+    // click proves presence, so it records too.
+    const inserted = await ctx.db.insert(users).values({}).returning();
+    const attachUser = inserted[0];
+    if (!attachUser) {
+      throw new Error("users insert returned no row");
+    }
+    await createSessionForUser(
+      ctx.db,
+      await hashSessionToken("attach-confirm-token"),
+      attachUser.id,
+    );
+    // Compared as SETS (JS-sorted on both sides): Postgres orders uuids by
+    // bytes, which need not match a JS string sort.
+    const byUser = (a: unknown, b: unknown) =>
+      JSON.stringify(a).localeCompare(JSON.stringify(b));
+    expect([...(await seenRows())].sort(byUser)).toEqual(
+      [
+        { user_id: userId, date: today },
+        { user_id: attachUser.id, date: today },
+      ].sort(byUser),
+    );
   });
 });
 

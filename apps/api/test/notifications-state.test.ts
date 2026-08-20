@@ -84,6 +84,7 @@ async function insertOnTimeWin(userId: string, date: string): Promise<void> {
     completedAt: new Date(`${date}T15:00:00Z`),
     elapsedMs: 61_000,
     hintsUsed: 0,
+    onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
   });
 }
 

@@ -1,5 +1,6 @@
 import type { SessionResponse } from "@miolos/core";
 import { eq, sessions, sql, users, type Db } from "@miolos/db";
+import { recordSeenDay } from "@miolos/db/user";
 
 import { hashSessionToken } from "./token";
 
@@ -8,6 +9,23 @@ import { hashSessionToken } from "./token";
  * Response construction here. Every timestamp is DB-side (`now()`,
  * column defaults): no JS-constructed date ever appears in a query, which
  * is the structural AC-5 guarantee.
+ *
+ * SEEN-DAY WRITE POINTS (#58, ADR-0066; T-API-S140): the three functions
+ * below that authenticate a user each record the DB clock's SP today in
+ * `user_seen_days` — `resolveSession` (every authenticated request funnels
+ * through it, via `requireUserId` or the session routes), `mintSession`
+ * (the first visit), and `createSessionForUser` (attach-confirm mints the
+ * clicking browser's session directly, bypassing the other two — the click
+ * proves presence). Awaited, not fire-and-forget: an error is the
+ * request's 500, never a silently unrecorded day. NOT gated on the 1-hour
+ * `last_seen_at` staleness send-gate below, deliberately — that gate
+ * under-records exactly the 23:58→00:05 persona the credit exists for (a
+ * day's requests can all fall within an hour of a pre-midnight bump).
+ * One softened edge, accepted in ADR-0066: puzzle pages are served by
+ * apps/web's direct DB read (ADR-0014) and the session bootstrap is a
+ * separate request, so a page load whose `ensureSession` failed can leave
+ * a day unrecorded — the failure direction is the status quo (late), and a
+ * later sync needs the cookie anyway.
  */
 
 const STALE_AFTER_MS = 60 * 60 * 1000; // 1 hour, mirrors the SQL predicate
@@ -47,6 +65,10 @@ export async function resolveSession(
         sql`${sessions.tokenHash} = ${tokenHash} and ${sessions.lastSeenAt} < now() - interval '1 hour'`,
       );
   }
+  // Seen-day write point 1 (#58, ADR-0066): a successful hash lookup IS
+  // presence. Unconditional — see the header on why the staleness gate
+  // above must not gate this write.
+  await recordSeenDay(db, row.userId);
   return { userId: row.userId, created: false };
 }
 
@@ -69,6 +91,8 @@ export async function mintSession(
     throw new Error("users insert returned no row");
   }
   await db.insert(sessions).values({ tokenHash, userId: user.id });
+  // Seen-day write point 2 (#58, ADR-0066): the mint is the first visit.
+  await recordSeenDay(db, user.id);
   return { userId: user.id, created: true };
 }
 
@@ -85,6 +109,10 @@ export async function createSessionForUser(
   userId: string,
 ): Promise<void> {
   await db.insert(sessions).values({ tokenHash, userId });
+  // Seen-day write point 3 (#58, ADR-0066): attach-confirm authenticates
+  // the clicking browser directly, bypassing resolveSession/mintSession —
+  // the click proves presence.
+  await recordSeenDay(db, userId);
 }
 
 /**

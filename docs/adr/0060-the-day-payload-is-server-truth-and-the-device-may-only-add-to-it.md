@@ -106,6 +106,11 @@ in the app that can **demote**.
    sentence is about the stats ADR's own payloads and the #58 boundary, which
    this ADR leaves untouched: `/day` adds no second producer of on-time, only
    a projection of the one `onTimeSql()` derivation (ADR-0026 decision 2).
+   *(As of #58 —
+   [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md) —
+   the one producer is `onTimeAtWrite` applied at the write and STORED;
+   `/day` projects the stored column. Still no second producer, which is
+   this paragraph's claim.)*
 
 3. **The merge invariant.**
 

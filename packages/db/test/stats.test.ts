@@ -12,9 +12,10 @@ import { createTestDb } from "../src/testing";
 // one user, unfiltered, with all seven facts — the pure functions in
 // packages/core are the only place lost and late rows are excluded (D3) —
 // and `getUserSince` derives the account's SP birth day from `created_at`
-// (D2's calendar anchor). On-time still has exactly one producer,
-// `onTimeSql()` (ADR-0026 decision 2): this suite manufactures a late row
-// through the same write path T-DB-13 uses, no clock fake needed.
+// (D2's calendar anchor). On-time still has exactly one producer —
+// since #58 (ADR-0066) it is `onTimeAtWrite`, applied at the route and
+// STORED: this suite passes the verdict through the same write path
+// T-DB-13 uses, no clock fake needed.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 // Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
@@ -72,6 +73,7 @@ describe("listCompletionsForStats (plan 033 D3, ADR-0049 decision 6)", () => {
       outcome: "won",
       elapsedMs: 272_000,
       hintsUsed: 1,
+      onTime: true,
     });
     // A LATE win: dated yesterday, completed_at is now — outside its day.
     await recordCompletion(ctx.db, {
@@ -81,6 +83,7 @@ describe("listCompletionsForStats (plan 033 D3, ADR-0049 decision 6)", () => {
       outcome: "won",
       elapsedMs: 480_000,
       hintsUsed: 0,
+      onTime: false,
     });
     // A lost Termo with its guess count — the rows the reader must NOT
     // filter, and the projection #29 finally adds (T-DB-S11 pinned the
@@ -94,6 +97,7 @@ describe("listCompletionsForStats (plan 033 D3, ADR-0049 decision 6)", () => {
       elapsedMs: 61_000,
       hintsUsed: 0,
       guesses: 6,
+      onTime: true,
     });
 
     const rows = await listCompletionsForStats(ctx.db, userId);

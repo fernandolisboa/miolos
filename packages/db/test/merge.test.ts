@@ -13,6 +13,7 @@ import {
   medalGrants,
   pushSubscriptions,
   sessions,
+  userSeenDays,
   users,
 } from "../src/schema";
 import { createTestDb } from "../src/testing";
@@ -103,6 +104,7 @@ async function insertCompletion(init: {
   outcome?: "won" | "lost";
   elapsedMs?: number;
   guesses?: number;
+  onTime?: boolean;
 }): Promise<void> {
   await ctx.db.insert(completions).values({
     userId: init.userId,
@@ -113,6 +115,13 @@ async function insertCompletion(init: {
     elapsedMs: init.elapsedMs ?? 61_000,
     hintsUsed: 0,
     guesses: init.guesses,
+    // #58 (ADR-0066): on_time is stored at write and the merge COPIES it.
+    // The default reproduces the pre-#58 derivation for this file's
+    // fixtures: every `onDay()` stamp is midday-ish UTC (12:00-15:00 in
+    // SP), so the instant's UTC date IS its SP date and the startsWith
+    // comparison equals "completed inside its own SP day". A test whose
+    // claim needs a different verdict passes `onTime` explicitly.
+    onTime: init.onTime ?? init.completedAt.toISOString().startsWith(init.date),
   });
 }
 
@@ -155,6 +164,12 @@ async function insertPushSubscription(
     .values({ endpoint, userId, p256dh: "p256dh-key", auth: "auth-key" });
 }
 
+/** A seen-day row with a chosen date (#58, ADR-0066) — production writes
+ *  only the DB clock's today (`recordSeenDay`); fixtures need history. */
+async function insertSeenDay(userId: string, date: string): Promise<void> {
+  await ctx.db.insert(userSeenDays).values({ userId, date });
+}
+
 /** Deterministic full-state snapshot for the double-run and no-op checks.
  *  Widened in place at #145 (the T-DB-9a precedent): `push_subscriptions`
  *  joins, so T-DB-S20's double-run equality covers statement 1b too. */
@@ -165,6 +180,7 @@ async function snapshotState(): Promise<{
   hintGrants: unknown[];
   medalGrants: unknown[];
   pushSubscriptions: unknown[];
+  userSeenDays: unknown[];
 }> {
   return {
     users: await ctx.db.select().from(users).orderBy(asc(users.id)),
@@ -192,6 +208,12 @@ async function snapshotState(): Promise<{
       .select()
       .from(pushSubscriptions)
       .orderBy(asc(pushSubscriptions.endpoint)),
+    // #58 (ADR-0066): the seen-days union (statements 4b/4c) joins the
+    // double-run equality — the #145 push_subscriptions precedent.
+    userSeenDays: await ctx.db
+      .select()
+      .from(userSeenDays)
+      .orderBy(asc(userSeenDays.userId), asc(userSeenDays.date)),
   };
 }
 
@@ -440,7 +462,7 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
 });
 
 describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)", () => {
-  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants+medal_grants+push_subscriptions state after run one deep-equals run two", async () => {
+  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants+medal_grants+push_subscriptions+user_seen_days state after run one deep-equals run two", async () => {
     // (push_subscriptions joined the title, the snapshot and this fixture
     // at #145 — an in-place widening, the T-DB-9a precedent.)
     const winner = await createUser(OLDER);
@@ -456,6 +478,14 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
     // survive untouched, which the snapshot's double-run equality sees.
     await insertPushSubscription(winner, "https://push.example.org/w1");
     await insertPushSubscription(loser, "https://push.example.org/l1");
+    // Seen days on BOTH sides, overlapping and disjoint (#58, ADR-0066):
+    // the loser's exercise the union+delete pair (4b/4c) on both runs, the
+    // overlap exercises ON CONFLICT DO NOTHING, and the winner's must
+    // survive untouched — the snapshot's double-run equality sees all three.
+    await insertSeenDay(winner, "2026-08-01");
+    await insertSeenDay(winner, "2026-08-02");
+    await insertSeenDay(loser, "2026-08-02");
+    await insertSeenDay(loser, "2026-08-03");
     // Collisions in both directions, a disjoint row, and a lost Termo, so
     // the second run crosses every statement's path.
     await insertCompletion({
@@ -702,8 +732,46 @@ describe("mergeAccounts — the repoint column-list tripwire (ADR-0049, step-6 f
       "elapsed_ms",
       "hints_used",
       "guesses",
+      // #58 (ADR-0066): the stored write-time verdict, COPIED by the
+      // repoint exactly as this tripwire's comment always named it.
+      "on_time",
     ].sort();
     expect(liveColumns).toEqual(repointedColumns);
+  });
+});
+
+describe("mergeAccounts — seen days union (#58, ADR-0066; ADR-0049 decision 6)", () => {
+  it("T-DB-S74: the winner gets the loser's dates, overlaps conflict away, the loser is emptied, and a re-run is a no-op", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await insertSeenDay(winner, "2026-08-01");
+    await insertSeenDay(winner, "2026-08-02"); // the overlap
+    await insertSeenDay(loser, "2026-08-02");
+    await insertSeenDay(loser, "2026-08-03");
+
+    await mergeAccounts(ctx.db, winner, loser);
+
+    const rows = await ctx.db
+      .select({ userId: userSeenDays.userId, date: userSeenDays.date })
+      .from(userSeenDays)
+      .orderBy(asc(userSeenDays.userId), asc(userSeenDays.date));
+    // The union, all on the winner; "emptied" means EMPTIED — zero loser
+    // rows reference the tombstone.
+    expect(rows).toEqual([
+      { userId: winner, date: "2026-08-01" },
+      { userId: winner, date: "2026-08-02" },
+      { userId: winner, date: "2026-08-03" },
+    ]);
+
+    // T-DB-S20's double-run posture, applied locally: re-running the merge
+    // changes nothing (the union selects zero loser rows).
+    await mergeAccounts(ctx.db, winner, loser);
+    expect(
+      await ctx.db
+        .select({ userId: userSeenDays.userId, date: userSeenDays.date })
+        .from(userSeenDays)
+        .orderBy(asc(userSeenDays.userId), asc(userSeenDays.date)),
+    ).toEqual(rows);
   });
 });
 
