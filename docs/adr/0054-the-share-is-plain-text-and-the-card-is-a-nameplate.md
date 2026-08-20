@@ -1166,7 +1166,14 @@ not come.
   the 5,310-word public validation list: one grid leaves a median **329**/400
   candidates under a no-assumption attacker, but a median **77** (min **4**,
   worst observed 18) assuming consistent play; **two** shares median 19
-  (min 1); three median 8; five median 3. **This changes no design** —
+  (min 1); three median 8; five median 3. *(**Annotation (a) —
+  as-of-writing, #140.** The bound was measured against a 5,310-word pool;
+  the dictionary grows through curated additions
+  ([ADR-0062](./0062-termo-guess-dictionary-gaps-close-with-curated-additions.md)),
+  5,408 as of #140. The answer pool is unchanged, and a larger public
+  validation list only weakens the intersection attack, so the drift is in
+  the safe direction: the recorded medians stay the pessimistic bound.)* **This changes
+  no design** —
   ADR-0004 `:11-13` scopes the threat to *spoiler broadcast*, and
   multi-grid intersection is deliberate solving against a product with no
   ranking (ADR-0006 `:51`: *"It is not an anti-cheat system, and no detection

@@ -204,8 +204,10 @@ mechanism, so no sentence of ADR-0008 is contradicted.
    rejected sample — ships in full; what it does not require — a
    deterministic producer pipeline — is honestly omitted, because ~23
    hand-sized records whose single source of truth is the TS module have no
-   upstream source to pipeline (Termo's 5,310 words did). Ids are wire
-   values and grant keys: stable forever once shipped.
+   upstream source to pipeline (Termo's 5,310 words did). *(**Annotation
+   (a) — as-of-writing, #140.** The figure is illustrative; 5,408 as of
+   [ADR-0062](./0062-termo-guess-dictionary-gaps-close-with-curated-additions.md).)*
+   Ids are wire values and grant keys: stable forever once shipped.
 
 8. **Display: rows inside `/estatisticas`, nothing at zero, and the ladder
    defence.** The section renders at the slot `stats-view.tsx` reserved,

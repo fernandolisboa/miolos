@@ -112,6 +112,46 @@ def main() -> None:
     collisions = {k: v for k, v in canon_by_norm.items() if len(v) > 1}
     print(f"normalized forms with >1 canonical spelling: {len(collisions)}")
 
+    # ---- curated additions (#140, ADR-0062) ----
+    # additions.txt closes membership gaps in the base lexicon: real, current
+    # pt-BR words the IME-USP list is missing (it is explicitly "possibly
+    # incomplete" — e.g. the standalone noun "áudio"). One canonical accented
+    # form per line, sorted by (normalized form, canonical), unique. Every
+    # line is reviewed content. Additions pass the same normalization as
+    # lexicon entries, and the blocklist, proper-noun and corruption filters
+    # bind on them too — as hard assertions, not the lexicon loop's silent
+    # `continue`s: a hand-reviewed line that hits one must fail loudly, never
+    # disappear. A line whose canonical form the base lexicon already carries
+    # is stale and fails loudly, so a future source refresh cannot silently
+    # duplicate curation; and a line whose NORMALIZED form the base lexicon
+    # already carries fails too — merging it would put the addition into the
+    # frequency-ranked canonical pick below and could silently flip an
+    # existing canonical-map.csv row.
+    with open(f"{BASE}/additions.txt", encoding="utf-8") as f:
+        additions = [line.strip() for line in f if line.strip()]
+    assert additions == sorted(
+        additions, key=lambda w: (normalize(w), w)
+    ), "additions.txt: not sorted by (normalized form, canonical)"
+    assert len(set(additions)) == len(additions), "additions.txt: duplicate lines"
+    n_new_norms = 0
+    for w in additions:
+        assert not any(ch.isupper() for ch in w), f"additions.txt: {w!r} is capitalized"
+        assert not re.search(r"[-'\s.]", w), f"additions.txt: {w!r} carries punctuation"
+        norm = normalize(w)
+        assert NORM_RE.fullmatch(norm), f"additions.txt: {w!r} is not 5 a-z letters normalized"
+        assert norm not in BLOCKLIST, f"additions.txt: {w!r} is blocklisted"
+        assert norm not in PROPER_NOUN_DUPLICATES, f"additions.txt: {w!r} is an excluded proper noun"
+        assert norm not in SOURCE_CORRUPTION, f"additions.txt: {w!r} is a known corrupted token"
+        assert w not in canon_by_norm[norm], f"additions.txt: {w!r} already in the base lexicon — stale line"
+        assert not canon_by_norm[norm], (
+            f"additions.txt: {w!r} normalizes to {norm!r}, a form the base lexicon already"
+            " carries — merging would let the frequency-ranked canonical pick silently flip"
+            " that row in canonical-map.csv; the guess is already valid, drop the line"
+        )
+        n_new_norms += 1
+        canon_by_norm[norm].add(w)
+    print(f"curated additions applied: {len(additions)} ({n_new_norms} new normalized forms)")
+
     # ---- frequency ----
     freq = {}
     with open(f"{BASE}/sources/pt_br_full.txt", encoding="utf-8") as f:
