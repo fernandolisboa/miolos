@@ -507,8 +507,8 @@ describe("a cross-device Feito tile's route renders the COMPLETED view, not a pl
     // the claim becoming a closed record this view could be re-read from.
     const raw = window.localStorage.getItem(playRecordKey("sudoku", DATE));
     expect(raw).not.toBeNull();
-    expect((JSON.parse(raw ?? "{}") as { concluded?: boolean }).concluded).toBe(
-      false,
-    );
+    // No cast — `toMatchObject` narrows by assertion, the sibling
+    // `remote-conclusion.test.tsx` spelling (#142 step 7, quality m5).
+    expect(JSON.parse(raw ?? "{}")).toMatchObject({ concluded: false });
   });
 });

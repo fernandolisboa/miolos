@@ -1,6 +1,7 @@
 "use client";
 
 import type { DailyNonogramResponse } from "@miolos/core";
+import { useEffect } from "react";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
@@ -40,6 +41,23 @@ export function NonogramScreen({
   // on its answer sits after `isClosedAndFrozen`, so this device's own
   // closed record always outranks the claim (ADR-0060 decision 7's mirror).
   const claim = useServerDayClaim(daily.date, "nonogram");
+
+  // The claim's swap below is render-time only, so the play hook keeps
+  // running behind the remote view (#142 step 7, step-6 correctness F3):
+  // left alone, its 1 Hz tick re-renders a static conclusion once a second
+  // and the next hide-persist rewrites the preserved in-progress record
+  // with an inflated `elapsedMs`. Freeze the clock instead. The timer term
+  // re-arms the effect when a visibility resume restarts the clock behind
+  // the view; `pause` is idempotent, and a locally-closed board is
+  // unaffected (its clock is already frozen when its conclusion swaps in).
+  const claimOwnsScreen =
+    claim !== undefined && play.state.timer.runningSince !== null;
+  const pause = play.pause;
+  useEffect(() => {
+    if (claimOwnsScreen) {
+      pause();
+    }
+  }, [claimOwnsScreen, pause]);
 
   // The clues did not solve to an exact bitmap, so there is no picture to
   // compare against and the board could never close (§10.4). ADR-0021

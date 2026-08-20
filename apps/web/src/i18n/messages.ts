@@ -298,8 +298,12 @@ export const messages = {
       completedNote: "Feito em outro aparelho.",
       playedNote: "Jogado em outro aparelho.",
       completedBody: "Você concluiu o jogo de hoje em outro aparelho.",
+      // Game-generic like `completedBody` above (#142 step 7, quality m6):
+      // only Termo can be `played` in v1, but this bundle is shared chrome
+      // and names no game — a future losable game inherits the sentence
+      // rather than unpicking a key.
       playedBody:
-        "Você jogou o Termo de hoje em outro aparelho. As tentativas ficaram lá.",
+        "Você jogou o jogo de hoje em outro aparelho. As tentativas ficaram lá.",
       /**
        * The stamp's accessible name where the claim carries a TIME and no
        * hint count — the deploy-skew shape (an old server behind a new

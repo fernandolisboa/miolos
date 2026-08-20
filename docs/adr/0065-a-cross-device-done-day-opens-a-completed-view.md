@@ -1,6 +1,7 @@
 # ADR-0065 — A cross-device done day opens a completed view, not a playable board
 
-**Status:** Accepted — 2026-08-20 (issue #142, shipped in the same PR; plan [060](../plans/060-issue-142-plan-cross-device-completed-view.md))
+**Status:** Accepted — 2026-08-20 (issue #142, shipped in #153)
+**Plan:** [060](../plans/060-issue-142-plan-cross-device-completed-view.md)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md), [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md)
 **Amends:** [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md) — **decision 8's playable-board sentence, and decision 2 gains the `hintsUsed` annotation** (annotations (f) and (g) there, continuing the #143/#141 series). `Amended by`, not `Superseded in part by`, and the warrant is one line: decision 8's **href sentence stands untouched** — the tile keeps its `href` and needs no rewrite, because the route itself now answers differently — so only the playable-board sentence is corrected while the decision stands, which is `docs/agents/domain.md`'s `Amended by` case (ADR-0031 consequence (d) is the precedent for correcting one sentence of a live decision in place).
 
@@ -36,12 +37,13 @@ never rides this wire (ADR-0004, ADR-0060 decision 2).
    | Game | Renders | Honest absences, named |
    |---|---|---|
    | Sudoku / Binairo / Nonogram, `completed` | The real conclusion composition: the `Concluído` stamp with the server-held time (`elapsedMs`, on the wire since #141) and hints line (`hintsUsed`, added here — decision 2), the stat block, the streak card, the day card, the next-pending CTA | Nonogram's picture (solution content, ADR-0004); the share button (its text composes from the local record, which does not exist) |
-   | Termo, `completed` | The win stamp (the local `OutcomeStamp` shape) with `em X/6` from `GET /stats`' `todayTermoGuesses` — date-gated, the `TermoDoneLink` rule, label-only when the count has not landed or describes another day — and the guess distribution with today's row | The guess grid (not stored), the day's word (no reveal channel), the share button |
-   | Termo, `played` | The loss stamp shape — no celebration, ADR-0043's loss discipline | The day's word, the guess grid, any time or hints line |
+   | Termo, `completed` | The win stamp (the local `OutcomeStamp` shape) with `em X/6` from `GET /stats`' `todayTermoGuesses` — date-gated, the `TermoDoneLink` rule, label-only when the count has not landed or describes another day — the guess distribution with today's row, the streak card, the day card and the next-pending CTA | The guess grid (not stored), the day's word (no reveal channel), the share button |
+   | Termo, `played` | The loss stamp shape — no celebration, ADR-0043's loss discipline — plus the guess distribution with the fail row highlighted, the streak card, the day card and the next-pending CTA: the local loss composition mirrored (its stat block and streak gate on the row being on the server, not on the outcome — ADR-0008 rule 3; plan 060 §13 deviation 3) | The day's word, the guess grid, any time or hints line |
 
    **Full Termo (guess grid + answer word) requires new server storage or a
-   new reveal endpoint — that is a different ticket**, named here rather
-   than smuggled in.
+   new reveal endpoint — that would be its own ticket if ever wanted.** None
+   is filed, by decision: nobody has asked for it. Named here rather than
+   smuggled in.
 
 2. **One wire field: optional `hintsUsed` on the per-game claim**, the #141
    template exactly. `dayGameStateSchema` gains
@@ -50,8 +52,14 @@ never rides this wire (ADR-0004, ADR-0060 decision 2).
    is a parse failure) and the same Termo suppression in `dayGamesFromRows`
    (Termo ships no hint — ADR-0045 decision 1 — so "sem dicas" would present
    as a virtue something that was never possible). `.max(1)` mirrors the
-   write contracts: the read side never accepts what the write side refused;
-   a future hint-grant ticket raises both ends in one diff.
+   write contracts: the read side never accepts what the write side refused.
+   A future hint-grant ticket (ADR-0006's convenience seam) must raise the
+   read cap, the write caps **and the DB check constraint**
+   (`completions_hints_used_check`, today only `hints_used >= 0` — no upper
+   bound) in one diff: the read side fails as a THROWN parse on `GET /day`
+   (the route `parse`s its own output), so a single over-cap row would 500
+   the whole day payload — hub, tiles and this view together — not just
+   drop a hint line (#142 step-6 correctness F1).
    `listCompletionsForDay` projects the stored NOT NULL column — same
    predicate, same index, **no migration**. Deploy skew is the #148
    precedent verbatim: the strict schema changes shape, a mismatched client
@@ -91,12 +99,17 @@ never rides this wire (ADR-0004, ADR-0060 decision 2).
    deleted** (ADR-0060 decision 4 untouched). Cost named: a stale device
    mid-solve loses the board *view*, not the record, when the poll lands.
 
-7. **No replay, not even read-only, and nothing written into local play
-   records.** No link into this game's playable board renders anywhere on
-   the remote view; the `notYet` "Jogar" CTA never appears there. The view
-   is a projection of the claim and dies with the evidence for it — the date
-   gate retires the payload at the São Paulo rollover and the old day's
-   playable board returns, the understating direction the hub already ships.
+7. **No replay, not even read-only, and the claim never becomes a play
+   record.** No link into this game's playable board renders anywhere on
+   the remote view; the `notYet` "Jogar" CTA never appears there. No
+   CONCLUDED record is ever synthesised from the claim (ADR-0060 decision 4
+   verbatim) — on `/​<jogo>` the play lifecycle behind the view keeps
+   writing its own PLAYING record exactly as it did before #142
+   (`T-WEB-S273` asserts both halves), and an in-progress record survives
+   the swap untouched (decision 6). The view is a projection of the claim
+   and dies with the evidence for it — the date gate retires the payload at
+   the São Paulo rollover and the old day's playable board returns, the
+   understating direction the hub already ships.
 
 8. **#145's push opt-in card does not render on the remote completed
    view.** That card belongs to a genuine post-solve conclusion — the moment
@@ -112,7 +125,8 @@ never rides this wire (ADR-0004, ADR-0060 decision 2).
   dishonest in the other direction.
 - **Option (b), the full per-game conclusion** — Termo's guess grid and the
   day's word are not stored and have no read channel; shipping them means
-  new storage or a reveal endpoint, a different ticket by decision.
+  new storage or a reveal endpoint — its own ticket if ever wanted, and
+  none is filed.
 - **A new route (`/​<jogo>/feito`)** — the tile's `href` already points at
   the play route, and a second URL for the same fact is a second thing to
   keep honest.

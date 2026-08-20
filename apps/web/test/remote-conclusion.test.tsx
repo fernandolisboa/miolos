@@ -1,6 +1,7 @@
 import {
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
+  TERMO_MAX_GUESSES,
   type DailySudokuResponse,
   type DailyTermoResponse,
   type DayResponse,
@@ -8,7 +9,7 @@ import {
   type StreakResponse,
 } from "@miolos/core";
 import { generateDailySudoku } from "@miolos/games/sudoku";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { formatElapsed, messages, playRoutes } from "../src/i18n";
@@ -29,12 +30,15 @@ import type { SudokuDigit } from "../src/sudoku/state";
  * `vi.resetModules()` really isolates the day-truth store's module-level
  * payload between cases.
  *
- * The tail of #142's T-WEB reservation (`S282` — spelled without the full
- * prefix so the frontier grep never mistakes this note for an allocation)
- * was the reserved review-round headroom and is BURNED unspent
- * (docs/agents/test-ids.md): #145's push opt-in card had not landed at this
- * branch's merge-from-main, so its exclusion from this view is stated in
- * ADR-0065 for #145's reviewers rather than asserted here.
+ * The tail of #142's T-WEB reservation was the reserved review-round
+ * headroom, burned unspent at step 5's exit — and UNBURNED AND SPENT at
+ * step 7, per the recorded unburn rule (docs/agents/test-ids.md, the
+ * plan-040 `T-LINT-S45` case): the issue-adherence lens required the
+ * ADR-0043 decision-10 announcer on the remote view, and its arm below
+ * spends the id inside the reservation rather than minting outside it.
+ * (#145's push opt-in card is still excluded by ADR-0065 decision 8 alone —
+ * the card had not landed at this branch's merge-from-main, so the first
+ * ticket that adds it owes that test arm.)
  */
 const DATE = "2026-07-31";
 const API_URL = "https://api.example.test";
@@ -237,7 +241,9 @@ describe("a played Termo opens the loss shape, with nothing fabricated (T-WEB-S2
     // The loss stamp's whole accessible name — ADR-0043's loss discipline,
     // through the same OutcomeStamp the local loss renders.
     expect(
-      await screen.findByLabelText(messages.games.termo.outcome.lostAria(6)),
+      await screen.findByLabelText(
+        messages.games.termo.outcome.lostAria(TERMO_MAX_GUESSES),
+      ),
     ).toBeInTheDocument();
     const main = container.querySelector("[data-conclusion-remote]");
     expect(main).not.toBeNull();
@@ -245,12 +251,18 @@ describe("a played Termo opens the loss shape, with nothing fabricated (T-WEB-S2
     expect(
       screen.getByText(messages.conclusion.remote.playedNote),
     ).toBeInTheDocument();
+    // TWO nodes carry the body sentence by design: the visible card line
+    // and the T-WEB-S282 announcer's live region.
     expect(
-      screen.getByText(messages.conclusion.remote.playedBody),
-    ).toBeInTheDocument();
-    // No celebration: the win label appears nowhere ("Concluído" is also
-    // the shared stamp label, so this covers both).
-    expect(screen.queryByText("Concluído")).toBeNull();
+      screen.getAllByText(messages.conclusion.remote.playedBody),
+    ).not.toHaveLength(0);
+    // No celebration: neither the win label nor the shared stamp label
+    // appears — asserted through THE KEYS, never the pt-BR literal, so a
+    // copy change cannot silently disarm this arm (#142 step 7, quality m1).
+    expect(
+      screen.queryByText(messages.games.termo.outcome.wonLabel),
+    ).toBeNull();
+    expect(screen.queryByText(messages.conclusion.stampLabel)).toBeNull();
     // No answer word — it is not stored and has no read channel.
     expect(screen.queryByText(messages.games.termo.dayWord.lead)).toBeNull();
     // No time and no hints line — a value beside a loss frames it as a
@@ -363,7 +375,12 @@ describe("the remote grid stamp — byte-identical where full, per-line where de
   });
 });
 
-describe("the remote view writes nothing into local play records (T-WEB-S276)", () => {
+// The title is scoped to the /concluido mount ON PURPOSE (#142 step 7,
+// correctness F4): this route has no play hook, so "leaves the keys empty"
+// is exactly what this mount can prove. The screen-root half — where the
+// play lifecycle writes its own PLAYING record and only a synthesised
+// CONCLUDED one is forbidden — is T-WEB-S273's claim.
+describe("the /concluido remote mount leaves the local play keys empty (T-WEB-S276)", () => {
   it("mounts, renders, and leaves localStorage's play keys empty", async () => {
     stubApi({
       day: () =>
@@ -471,8 +488,8 @@ describe("a closed LOCAL record outranks the claim (T-WEB-S278)", () => {
   });
 });
 
-describe("an in-progress board swaps to the remote view, record untouched (T-WEB-S279)", () => {
-  it("shows the completed view over a half-played board and neither writes nor deletes its record", async () => {
+describe("an in-progress board swaps to the remote view — clock frozen, record preserved (T-WEB-S279)", () => {
+  it("shows the completed view over a half-played board, and the preserved record's elapsedMs stops growing", async () => {
     const written = inProgressSudoku();
     writePlayRecord(written);
     stubApi({
@@ -506,6 +523,21 @@ describe("an in-progress board swaps to the remote view, record untouched (T-WEB
     const stored = window.localStorage.getItem(playRecordKey("sudoku", DATE));
     expect(stored).not.toBeNull();
     expect(JSON.parse(stored ?? "{}")).toEqual(written);
+
+    // And the claim FROZE the clock (#142 step 7, correctness F3): advance
+    // the wall clock and hide the tab — the hide-persist path that, with
+    // the timer still running, would rewrite the preserved record with an
+    // inflated elapsedMs (120 s here). This arm is red without the pause
+    // the screen root dispatches when the claim wins.
+    vi.setSystemTime(new Date(`${DATE}T12:00:30Z`));
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    const afterHide = window.localStorage.getItem(
+      playRecordKey("sudoku", DATE),
+    );
+    expect(JSON.parse(afterHide ?? "{}")).toEqual(written);
   });
 });
 
@@ -572,10 +604,14 @@ describe("stats and streak gate on the claim, one GET /stats, honest `em X/6` (T
     // The win stamp: `em 4/6` from the server's own count, through the
     // local outcome composers.
     expect(
-      await screen.findByLabelText(messages.games.termo.outcome.wonAria(4, 6)),
+      await screen.findByLabelText(
+        messages.games.termo.outcome.wonAria(4, TERMO_MAX_GUESSES),
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(messages.games.termo.outcome.wonDetail(4, 6)),
+      screen.getByText(
+        messages.games.termo.outcome.wonDetail(4, TERMO_MAX_GUESSES),
+      ),
     ).toBeInTheDocument();
     // The distribution rendered from the SAME fetch — today's row is the
     // server's value, and exactly ONE credentialed GET /stats fired (the
@@ -612,7 +648,9 @@ describe("stats and streak gate on the claim, one GET /stats, honest `em X/6` (T
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(messages.games.termo.outcome.wonDetail(4, 6)),
+      screen.queryByText(
+        messages.games.termo.outcome.wonDetail(4, TERMO_MAX_GUESSES),
+      ),
     ).toBeNull();
     first.unmount();
 
@@ -679,5 +717,61 @@ describe("stats and streak gate on the claim, one GET /stats, honest `em X/6` (T
     // which this view has no business claiming.
     expect(screen.queryByText(messages.conclusion.sync.pending)).toBeNull();
     expect(screen.queryByText(messages.conclusion.sync.rejected)).toBeNull();
+  });
+});
+
+describe("the remote swap announces itself — ADR-0043 decision 10's live region (T-WEB-S282)", () => {
+  it("carries the completed sentence over a mid-play swap, and the played one on a loss", async () => {
+    // The mid-play swap is the announcer's own case: ADR-0065 decision 6
+    // lets a poll tick replace an ACTIVE board with this view, focus falls
+    // to <body> on an in-place swap, and the role="status" region is the
+    // only account a blind player gets of why the board vanished — the
+    // exact gap ADR-0043 decision 10 closed for the local conclusion.
+    writePlayRecord(inProgressSudoku());
+    stubApi({
+      day: () =>
+        jsonResponse(
+          200,
+          dayBody({
+            sudoku: {
+              status: "completed",
+              elapsedMs: ELAPSED_MS,
+              hintsUsed: 0,
+            },
+          }),
+        ),
+    });
+    const SudokuScreen = await loadSudokuScreen();
+
+    const first = render(<SudokuScreen daily={SUDOKU_DAILY} />);
+    await waitFor(() => {
+      expect(
+        first.container.querySelector("[data-conclusion-remote]"),
+      ).not.toBeNull();
+    });
+    const region = first.getByRole("status");
+    expect(region).toHaveTextContent(messages.conclusion.remote.completedBody);
+    first.unmount();
+
+    // The played shape announces the loss sentence, never the win's.
+    vi.resetModules();
+    window.localStorage.clear();
+    stubApi({
+      day: () => jsonResponse(200, dayBody({ termo: { status: "played" } })),
+    });
+    const TermoScreen = await loadTermoScreen();
+    const second = render(<TermoScreen daily={TERMO_DAILY} />);
+    await waitFor(() => {
+      expect(
+        second.container.querySelector("[data-conclusion-remote]"),
+      ).not.toBeNull();
+    });
+    const playedRegion = second.getByRole("status");
+    expect(playedRegion).toHaveTextContent(
+      messages.conclusion.remote.playedBody,
+    );
+    expect(playedRegion).not.toHaveTextContent(
+      messages.conclusion.remote.completedBody,
+    );
   });
 });

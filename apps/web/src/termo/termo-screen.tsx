@@ -1,6 +1,7 @@
 "use client";
 
 import type { DailyTermoResponse } from "@miolos/core";
+import { useEffect } from "react";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
@@ -43,6 +44,23 @@ export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
   // closed record always outranks the claim — including the decision-7
   // mirror where a local WIN outranks a server `played`.
   const claim = useServerDayClaim(daily.date, "termo");
+
+  // The claim's swap below is render-time only, so the play hook keeps
+  // running behind the remote view (#142 step 7, step-6 correctness F3):
+  // left alone, its 1 Hz tick re-renders a static conclusion once a second
+  // and the next hide-persist rewrites the preserved in-progress record
+  // with an inflated `elapsedMs`. Freeze the clock instead. The timer term
+  // re-arms the effect when a visibility resume restarts the clock behind
+  // the view; `pause` is idempotent, and a locally-closed board is
+  // unaffected (its clock is already frozen when its conclusion swaps in).
+  const claimOwnsScreen =
+    claim !== undefined && play.state.timer.runningSince !== null;
+  const pause = play.pause;
+  useEffect(() => {
+    if (claimOwnsScreen) {
+      pause();
+    }
+  }, [claimOwnsScreen, pause]);
 
   // The server told us this day is gone (a 404 from the guess route), so the
   // board the player is looking at can never be judged again. The same screen

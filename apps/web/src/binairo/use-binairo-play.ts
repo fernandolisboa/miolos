@@ -56,6 +56,14 @@ export interface BinairoPlay {
   /** Pressing the active mode's button returns to cycle mode (D8). */
   readonly toggleMode: (mode: PaintMode) => void;
   readonly revealHint: () => void;
+  /**
+   * Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
+   * root calls this when the server's claim wins the screen, so the 1 Hz
+   * tick stops behind the remote conclusion and the preserved in-progress
+   * record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
+   * timer is the timer reducer's no-op.
+   */
+  readonly pause: () => void;
 }
 
 export function useBinairoPlay(daily: DailyBinairoResponse): BinairoPlay {
@@ -127,6 +135,15 @@ export function useBinairoPlay(daily: DailyBinairoResponse): BinairoPlay {
     dispatch({ type: "use-hint", solution });
   }, [solution]);
 
+  // Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
+  // root calls this when the server's claim wins the screen, so the 1 Hz
+  // tick stops behind the remote conclusion and the preserved in-progress
+  // record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
+  // timer is the timer reducer's no-op.
+  const pause = useCallback(() => {
+    dispatch({ type: "pause", now: Date.now() });
+  }, []);
+
   return {
     state,
     elapsed,
@@ -138,6 +155,7 @@ export function useBinairoPlay(daily: DailyBinairoResponse): BinairoPlay {
     paintOver,
     toggleMode,
     revealHint,
+    pause,
   };
 }
 

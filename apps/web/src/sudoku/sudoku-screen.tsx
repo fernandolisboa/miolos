@@ -1,6 +1,7 @@
 "use client";
 
 import type { DailySudokuResponse } from "@miolos/core";
+import { useEffect } from "react";
 
 import { messages } from "../i18n";
 import { ConclusionView, RemoteConclusionView } from "../play/conclusion-view";
@@ -37,6 +38,23 @@ export function SudokuScreen({
   // on its answer sits after `isClosedAndFrozen`, so this device's own
   // closed record always outranks the claim (ADR-0060 decision 7's mirror).
   const claim = useServerDayClaim(daily.date, "sudoku");
+
+  // The claim's swap below is render-time only, so the play hook keeps
+  // running behind the remote view (#142 step 7, step-6 correctness F3):
+  // left alone, its 1 Hz tick re-renders a static conclusion once a second
+  // and the next hide-persist rewrites the preserved in-progress record
+  // with an inflated `elapsedMs`. Freeze the clock instead. The timer term
+  // re-arms the effect when a visibility resume restarts the clock behind
+  // the view; `pause` is idempotent, and a locally-closed board is
+  // unaffected (its clock is already frozen when its conclusion swaps in).
+  const claimOwnsScreen =
+    claim !== undefined && play.state.timer.runningSince !== null;
+  const pause = play.pause;
+  useEffect(() => {
+    if (claimOwnsScreen) {
+      pause();
+    }
+  }, [claimOwnsScreen, pause]);
 
   // The record has not been read yet, so NOTHING derived from it may paint
   // (D28). Without this gate, reloading /sudoku on a day the player already

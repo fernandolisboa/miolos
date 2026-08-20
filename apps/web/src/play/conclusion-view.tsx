@@ -1,13 +1,14 @@
 "use client";
 
 import {
+  TERMO_MAX_GUESSES,
   timeBucketIndex,
   type DayGameState,
   type Game,
   type StatsResponse,
 } from "@miolos/core";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import {
   formatElapsed,
@@ -296,11 +297,7 @@ export function ConclusionView({
       <ConclusionTopBar date={date} kicker={copy.kicker} />
 
       <article className={styles.resultCard}>
-        <div aria-hidden className={styles.tape} />
-        <p className={styles.cardKicker}>{copy.kicker}</p>
-        <div className={styles.titleRow}>
-          <h1 className={styles.title}>{copy.title}</h1>
-        </div>
+        <ConclusionCardHead copy={copy} />
         <div className={styles.stampRow}>
           {outcome === undefined ? (
             // The `null` arm is unreachable: the guard above returns `empty`
@@ -411,73 +408,24 @@ export function ConclusionView({
         )}
       </article>
 
-      <aside className={styles.side}>
-        {/* Gated on the day being ON THE SERVER (plan 027 D8): a conclusion
-            reached offline has syncOutcome "pending", and a card claiming a
-            streak the server has not counted would be the client clock
-            backing a streak — the forbidden direction. Because the gate only
-            opens after the server holds the day, the fetched number includes
-            today by construction. Unfetched and offline states render the
-            shipped absence, which is today's state and therefore honest. */}
-        {syncOutcome === "recorded" && <StreakCard />}
-        <section className={styles.dayCard}>
-          <p className={styles.dayCardTitle}>
-            {messages.conclusion.dayCard.title}
-          </p>
-          <div className={styles.chips}>
-            {DAY_GAMES.map((dayGame) => (
-              <DayChip key={dayGame} game={dayGame} entry={dayEntry(dayGame)} />
-            ))}
-          </div>
-        </section>
-        {next === undefined ? (
-          /* Solid ink, not a game accent: in this system a per-game accent IS
-             that game's identity (DESIGN.md), and this CTA goes to Hoje.
-             F5's own non-game button treatment. */
-          <Link className={styles.cta} href={routes.home}>
-            {messages.conclusion.ctaHome}
-          </Link>
-        ) : (
-          /* …and by the same rule, a CTA that goes to a game wears THAT
-             game's accent — F5:66's own treatment for this exact button
-             (plan 018 S21, deviation 11). The pair is set on the element
-             rather than the root so the rest of the screen keeps the accent
-             of the game being celebrated — and so the LABEL follows the fill
-             it is painted on rather than the page it sits on, which is what
-             makes this button legible when it chains to Nonogram from the
-             shipped binairo and sudoku conclusions (step-6 finding ISS-A2). */
-          <Link
-            className={`${styles.cta} ${styles.ctaNext}`}
-            style={accentVars(next.game)}
-            href={next.route}
-          >
-            {messages.conclusion.ctaNext(messages.games[next.game].name)}
-          </Link>
-        )}
-        <ShareButton game={game} date={date} stored={stored} stamp={stamp} />
-        {/* Live since #29: /estatisticas is a real route, so the link
-            carries it — the same rule that kept it href-less while a dead
-            href would have been fake navigation. */}
-        <Link className={styles.secondaryLink} href={routes.stats}>
-          {messages.conclusion.stats}
-        </Link>
-      </aside>
+      <ConclusionAside
+        // Gated on the day being ON THE SERVER (plan 027 D8): a conclusion
+        // reached offline has syncOutcome "pending", and a card claiming a
+        // streak the server has not counted would be the client clock
+        // backing a streak — the forbidden direction. Because the gate only
+        // opens after the server holds the day, the fetched number includes
+        // today by construction. Unfetched and offline states render the
+        // shipped absence, which is today's state and therefore honest.
+        streak={syncOutcome === "recorded"}
+        entryOf={dayEntry}
+        next={next}
+        share={
+          <ShareButton game={game} date={date} stored={stored} stamp={stamp} />
+        }
+      />
     </main>
   );
 }
-
-/**
- * Termo's turn budget as the WIRE contracts spell it: `guesses` is `1–6` in
- * `contracts/completion.ts` and `todayTermoGuesses` is `.max(6)` in
- * `contracts/stats.ts`. Declared here rather than imported from
- * `@miolos/games/termo` because this module is on EVERY daily route's
- * client graph and must not pull a game engine into the other three routes'
- * chunks (the `play-record.ts` import note; the bundle markers of ADR-0047
- * are route-scoped for exactly this class of leak). The engine's
- * `MAX_GUESSES` and this value describe the same fact, pinned against each
- * other by the write contract both feed.
- */
-const TERMO_MAX_GUESSES = 6;
 
 /**
  * The cross-device completed view (#142, ADR-0065): the day was decided on
@@ -486,11 +434,18 @@ const TERMO_MAX_GUESSES = 6;
  * record, so the play route renders the conclusion the server can honestly
  * back instead of a fresh playable board.
  *
- * CO-LOCATED in this file, not a sibling module, because it composes
- * `ConclusionView`'s own internals (`ConclusionTopBar`, `ShippedStamp`,
- * `OutcomeStamp`, `ConclusionStatsBody`, `StreakCard`, `DayChip`,
- * `nextPendingDaily`) while `ConclusionView`'s empty branch renders IT — a
- * two-file split would import in both directions (plan 060 §3).
+ * CO-LOCATED in this file, not a sibling module. The naive TWO-file split
+ * really would import in both directions — this view composes
+ * `ConclusionView`'s own internals (`ConclusionTopBar`, `ConclusionCardHead`,
+ * `ConclusionAside`, `ShippedStamp`, `OutcomeStamp`, `ConclusionStatsBody`)
+ * while `ConclusionView`'s empty branch renders IT (plan 060 §3) — but that
+ * is not the only alternative: the shared leaves have no back-reference into
+ * either view, so a THREE-file split (`conclusion-parts.tsx` holding the
+ * leaves, both views importing DOWN into it, `conclusion-view.tsx` importing
+ * `remote-conclusion-view.tsx` one way) has no cycle. Co-location stands as
+ * the smaller change at this file's current weight; the leaf-module split is
+ * the recorded, viable follow-up refactor if the file keeps growing (#142
+ * step-6 quality M3).
  *
  * WHAT IT RENDERS is bounded by what the server stores (plan 060 §1):
  *
@@ -505,17 +460,30 @@ const TERMO_MAX_GUESSES = 6;
  *   when the count has not landed or describes another day), and the guess
  *   distribution. No guess grid and no answer word: neither is stored — the
  *   guess route is stateless and the word has no read channel — and syncing
- *   them is a different ticket, named in ADR-0065 rather than smuggled in.
+ *   them would be its own ticket if ever wanted (ADR-0065), none is filed.
  * - a PLAYED Termo: the loss stamp shape, no celebration (ADR-0043's loss
  *   discipline), no time, no word.
  *
+ * THE `game === "termo"` BRANCH BELOW CROSSES ADR-0029 DECISION 2 — the
+ * shared conclusion is game-blind; per-game JSX composes in per-game
+ * modules, and `termo-conclusion.tsx` states that rule with this exception
+ * annotated. The crossing is forced, not chosen: `ConclusionCopy` is plain
+ * data across the RSC boundary (types.ts — a function member there is an
+ * SSR 500), so `wonDetail(guesses, max)` cannot arrive pre-composed, and
+ * this stamp's detail exists only after a CLIENT fetch (`GET /stats`)
+ * resolves. This is the ONLY per-game JSX branch permitted in this module;
+ * a fifth game adds a claim field, never an arm.
+ *
  * NO SHARE BUTTON (`share-text.ts` composes from the local record, which
  * does not exist here), NO REPLAY (no link into a playable board renders
- * anywhere on this view), and NOTHING IS WRITTEN into local play records
- * (ADR-0060 decision 4 stands verbatim): this is a projection of the
- * claim, and it dies with the evidence for it — the date gate retires the
- * payload at the SP rollover and the playable board returns, which is the
- * understating direction the hub already ships.
+ * anywhere on this view), and THE CLAIM NEVER BECOMES A PLAY RECORD: no
+ * CONCLUDED record is ever synthesised from it (ADR-0060 decision 4
+ * verbatim). On `/<jogo>` the play lifecycle behind this view keeps
+ * writing its own PLAYING record exactly as it did before #142, and an
+ * in-progress record survives the swap untouched — this view is a
+ * projection of the claim, and it dies with the evidence for it: the date
+ * gate retires the payload at the SP rollover and the playable board
+ * returns, which is the understating direction the hub already ships.
  *
  * STATS AND STREAK GATE ON THE CLAIM ITSELF, not on `syncOutcome ===
  * "recorded"`: a server claim is strictly stronger evidence than
@@ -559,11 +527,7 @@ export function RemoteConclusionView({
       <ConclusionTopBar date={date} kicker={copy.kicker} />
 
       <article className={styles.resultCard}>
-        <div aria-hidden className={styles.tape} />
-        <p className={styles.cardKicker}>{copy.kicker}</p>
-        <div className={styles.titleRow}>
-          <h1 className={styles.title}>{copy.title}</h1>
-        </div>
+        <ConclusionCardHead copy={copy} />
         <div className={styles.stampRow}>
           {game === "termo" ? (
             <RemoteTermoStamp
@@ -575,6 +539,19 @@ export function RemoteConclusionView({
             <RemoteShippedStamp title={copy.title} claim={claim} />
           )}
         </div>
+        {/* ADR-0043 decision 10's live region, mirroring `ConclusionView`'s
+            own announcer: decision 6 of ADR-0065 makes the in-place swap
+            REAL for this view — a poll tick can replace an active board
+            mid-solve — and on an in-place swap focus falls to <body>, so
+            without a role="status" a blind player gets no account of why
+            the board vanished. The text is the card's own explanatory
+            sentence, externalised above; it is composed before mount and no
+            transition ever rewrites it, and this view renders no share
+            region, so ADR-0054 decision 4's disjoint-writers rule holds
+            trivially. */}
+        <p role="status" className={styles.announcer}>
+          {played ? remote.playedBody : remote.completedBody}
+        </p>
         <p className={styles.remoteNote}>
           {played ? remote.playedNote : remote.completedNote}
         </p>
@@ -590,44 +567,27 @@ export function RemoteConclusionView({
             date={date}
             stats={stats}
             elapsedMs={claim.elapsedMs}
+            // The DAY verb in, the BOARD verb out — deliberately, the same
+            // crossing `data-conclusion-state` above performs and the note
+            // on `ConclusionView`'s own root explains: `played` is
+            // CONTEXT.md's day verb (the claim's status), while `lost` is
+            // the board verb this presentational body's fail-row highlight
+            // is named for. Only Termo can be `played`, and a played Termo
+            // IS a lost board.
             lost={played}
           />
         )}
       </article>
 
-      <aside className={styles.side}>
-        {/* The claim replaces `syncOutcome === "recorded"` as this card's
-            gate: the row is on the server — that is what a claim IS — so
-            the fetched number includes this day by the same construction
-            the local gate buys. */}
-        <StreakCard />
-        <section className={styles.dayCard}>
-          <p className={styles.dayCardTitle}>
-            {messages.conclusion.dayCard.title}
-          </p>
-          <div className={styles.chips}>
-            {DAY_GAMES.map((dayGame) => (
-              <DayChip key={dayGame} game={dayGame} entry={dayState[dayGame]} />
-            ))}
-          </div>
-        </section>
-        {next === undefined ? (
-          <Link className={styles.cta} href={routes.home}>
-            {messages.conclusion.ctaHome}
-          </Link>
-        ) : (
-          <Link
-            className={`${styles.cta} ${styles.ctaNext}`}
-            style={accentVars(next.game)}
-            href={next.route}
-          >
-            {messages.conclusion.ctaNext(messages.games[next.game].name)}
-          </Link>
-        )}
-        <Link className={styles.secondaryLink} href={routes.stats}>
-          {messages.conclusion.stats}
-        </Link>
-      </aside>
+      <ConclusionAside
+        // The claim replaces `syncOutcome === "recorded"` as the streak
+        // card's gate: the row is on the server — that is what a claim IS —
+        // so the fetched number includes this day by the same construction
+        // the local gate buys.
+        streak
+        entryOf={(dayGame) => dayState[dayGame]}
+        next={next}
+      />
     </main>
   );
 }
@@ -1199,6 +1159,97 @@ function nextPendingDaily(
     (candidate) => entryOf(candidate).status === "pending",
   );
   return game === undefined ? undefined : { game, route: playRoutes[game] };
+}
+
+/**
+ * The result card's head — tape, kicker, title — extracted at #142 step 7 so
+ * the local and remote conclusions compose ONE head instead of two verbatim
+ * copies (step-6 quality M2). The empty card keeps its own head: its title
+ * class and copy differ, so folding it in would trade real variation for a
+ * prop.
+ */
+function ConclusionCardHead({ copy }: { readonly copy: ConclusionCopy }) {
+  return (
+    <>
+      <div aria-hidden className={styles.tape} />
+      <p className={styles.cardKicker}>{copy.kicker}</p>
+      <div className={styles.titleRow}>
+        <h1 className={styles.title}>{copy.title}</h1>
+      </div>
+    </>
+  );
+}
+
+/**
+ * The conclusion's side column — streak card, "O dia até agora", the
+ * next-pending CTA and the stats link — extracted at #142 step 7 so the
+ * local and remote conclusions compose ONE aside instead of two drifting
+ * copies (step-6 quality M2). The callers keep their own gates: `streak` is
+ * the local path's `syncOutcome === "recorded"` and the remote path's
+ * claim-backed `true`, each argued at its call site; `share` is the
+ * `ShareButton` only where a local record exists to compose from, and the
+ * remote view passes nothing. #145's push opt-in card, when it lands, is a
+ * decision about THIS component's props — one place to reason about, not a
+ * second <aside> to remember (ADR-0065 decision 8 assigns that ticket the
+ * test arm).
+ */
+function ConclusionAside({
+  streak,
+  entryOf,
+  next,
+  share,
+}: {
+  readonly streak: boolean;
+  readonly entryOf: (game: Game) => DayEntry;
+  readonly next: { readonly game: Game; readonly route: Route } | undefined;
+  readonly share?: ReactNode;
+}) {
+  return (
+    <aside className={styles.side}>
+      {streak && <StreakCard />}
+      <section className={styles.dayCard}>
+        <p className={styles.dayCardTitle}>
+          {messages.conclusion.dayCard.title}
+        </p>
+        <div className={styles.chips}>
+          {DAY_GAMES.map((dayGame) => (
+            <DayChip key={dayGame} game={dayGame} entry={entryOf(dayGame)} />
+          ))}
+        </div>
+      </section>
+      {next === undefined ? (
+        /* Solid ink, not a game accent: in this system a per-game accent IS
+           that game's identity (DESIGN.md), and this CTA goes to Hoje.
+           F5's own non-game button treatment. */
+        <Link className={styles.cta} href={routes.home}>
+          {messages.conclusion.ctaHome}
+        </Link>
+      ) : (
+        /* …and by the same rule, a CTA that goes to a game wears THAT
+           game's accent — F5:66's own treatment for this exact button
+           (plan 018 S21, deviation 11). The pair is set on the element
+           rather than the root so the rest of the screen keeps the accent
+           of the game being celebrated — and so the LABEL follows the fill
+           it is painted on rather than the page it sits on, which is what
+           makes this button legible when it chains to Nonogram from the
+           shipped binairo and sudoku conclusions (step-6 finding ISS-A2). */
+        <Link
+          className={`${styles.cta} ${styles.ctaNext}`}
+          style={accentVars(next.game)}
+          href={next.route}
+        >
+          {messages.conclusion.ctaNext(messages.games[next.game].name)}
+        </Link>
+      )}
+      {share}
+      {/* Live since #29: /estatisticas is a real route, so the link
+          carries it — the same rule that kept it href-less while a dead
+          href would have been fake navigation. */}
+      <Link className={styles.secondaryLink} href={routes.stats}>
+        {messages.conclusion.stats}
+      </Link>
+    </aside>
+  );
 }
 
 function ConclusionTopBar({
