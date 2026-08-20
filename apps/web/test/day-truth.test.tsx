@@ -310,6 +310,40 @@ describe("the visible-tab poll fires and never stacks (T-WEB-S259)", () => {
 });
 
 describe("the poll's off states: hidden, zero listeners, cleanup (T-WEB-S260)", () => {
+  it("a 0 -> 1 subscribe while hidden installs no timer — the mount fetch stands alone until re-show", async () => {
+    vi.useFakeTimers();
+    const fetchMock = stubFetch(() => jsonResponse(200, payload()));
+    const { useDayTruth } = await loadStore();
+
+    // Hidden BEFORE the 0 -> 1 subscribe: a hub opened into a background
+    // tab (ctrl-click, target=_blank). The arm below reaches hidden through
+    // `visibilitychange`, whose stopPoll would mask a subscribe that
+    // installs the timer regardless of visibility — this one starts hidden,
+    // so only the visible check in `subscribe` keeps it green. The 0 -> 1
+    // `refresh()` still fires even hidden (pre-existing, unchanged).
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("hidden");
+    const rendered = renderHook(() => useDayTruth());
+    await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Three whole periods, zero ticks: no timer exists to fire.
+    await advance(180_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // First re-show: the visibilitychange refetch fires (call 2) and the
+    // poll starts from a fresh period (call 3 one minute later).
+    visibility.mockRestore();
+    document.dispatchEvent(new Event("visibilitychange"));
+    await advance(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await advance(60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    rendered.unmount();
+  });
+
   it("does not poll while the document is hidden, and the re-show restart resumes it", async () => {
     vi.useFakeTimers();
     const fetchMock = stubFetch(() => jsonResponse(200, payload()));
