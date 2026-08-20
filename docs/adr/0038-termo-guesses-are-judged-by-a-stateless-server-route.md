@@ -275,7 +275,10 @@ extension point in that route with no tripwire on it.
   validation dictionary**, which does ship — and every one of the 400
   normalized answers is a member of it (verified against
   `content/termo/answers.csv` and `content/termo/validation.txt`). 5,310
-  hashes is still under a millisecond.
+  hashes is still under a millisecond. *(**Annotation (a) — as-of-writing,
+  #140.** 5,310 was the count when this was written; the dictionary grows
+  through curated additions ([ADR-0062](./0062-termo-guess-dictionary-gaps-close-with-curated-additions.md)),
+  5,408 as of #140. The argument is unchanged at any plausible size.)*
 - **An HMAC guess chain** (each response returns a token over the guesses
   so far, required with the next guess). Enumerated because it looks like
   the cheap middle path and is not: the client holds every earlier token,

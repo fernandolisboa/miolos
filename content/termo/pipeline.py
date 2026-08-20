@@ -117,11 +117,16 @@ def main() -> None:
     # pt-BR words the IME-USP list is missing (it is explicitly "possibly
     # incomplete" — e.g. the standalone noun "áudio"). One canonical accented
     # form per line, sorted by (normalized form, canonical), unique. Every
-    # line is reviewed content. Additions pass the same normalization and the
-    # same blocklist as lexicon entries; the proper-noun filters do not apply
-    # — each line being hand-reviewed is the point. A line whose canonical
-    # form the base lexicon already carries is stale and fails loudly, so a
-    # future source refresh cannot silently duplicate curation.
+    # line is reviewed content. Additions pass the same normalization as
+    # lexicon entries, and the blocklist, proper-noun and corruption filters
+    # bind on them too — as hard assertions, not the lexicon loop's silent
+    # `continue`s: a hand-reviewed line that hits one must fail loudly, never
+    # disappear. A line whose canonical form the base lexicon already carries
+    # is stale and fails loudly, so a future source refresh cannot silently
+    # duplicate curation; and a line whose NORMALIZED form the base lexicon
+    # already carries fails too — merging it would put the addition into the
+    # frequency-ranked canonical pick below and could silently flip an
+    # existing canonical-map.csv row.
     with open(f"{BASE}/additions.txt", encoding="utf-8") as f:
         additions = [line.strip() for line in f if line.strip()]
     assert additions == sorted(
@@ -138,8 +143,12 @@ def main() -> None:
         assert norm not in PROPER_NOUN_DUPLICATES, f"additions.txt: {w!r} is an excluded proper noun"
         assert norm not in SOURCE_CORRUPTION, f"additions.txt: {w!r} is a known corrupted token"
         assert w not in canon_by_norm[norm], f"additions.txt: {w!r} already in the base lexicon — stale line"
-        if not canon_by_norm[norm]:
-            n_new_norms += 1
+        assert not canon_by_norm[norm], (
+            f"additions.txt: {w!r} normalizes to {norm!r}, a form the base lexicon already"
+            " carries — merging would let the frequency-ranked canonical pick silently flip"
+            " that row in canonical-map.csv; the guess is already valid, drop the line"
+        )
+        n_new_norms += 1
         canon_by_norm[norm].add(w)
     print(f"curated additions applied: {len(additions)} ({n_new_norms} new normalized forms)")
 

@@ -61,11 +61,14 @@ Raw source downloads are not committed; the URLs above are the record, and
    `edite`, `tomas`, `rosa` are deliberately kept), and two corrupted source
    tokens (`ceemo`, `geemo` — truncated `-eemos` subjunctives).
 3. **Curated additions** (`additions.txt`): canonical forms for real pt-BR
-   words the base lexicon is missing, merged as if they were lexicon entries
-   (same normalization, same blocklist assertion; the proper-noun filters do
-   not apply because each line is hand-reviewed). A line already present in
-   the base lexicon fails the run — the file can never silently duplicate
-   the source.
+   words the base lexicon is missing, merged under the same normalization —
+   and the blocklist, proper-noun and corruption filters bind on them too,
+   as **hard assertions** rather than the lexicon path's silent skips: a
+   hand-reviewed line that hits one aborts the run instead of disappearing.
+   A line already present in the base lexicon fails the run — the file can
+   never silently duplicate the source — and a line whose *normalized form*
+   the base lexicon already carries fails too, so an addition can never
+   flip an existing `canonical-map.csv` row.
 4. **`validation.txt`** = all surviving normalized forms, sorted and deduplicated.
 5. **`canonical-map.csv`** = for each normalized form, the colliding canonical
    spelling with the highest OpenSubtitles frequency (alphabetical tiebreak).

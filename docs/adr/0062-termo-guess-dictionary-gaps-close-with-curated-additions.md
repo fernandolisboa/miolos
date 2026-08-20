@@ -22,15 +22,22 @@ frequency ≥ 200 found ordinary words the lexicon simply does not carry —
 the membership source with a full pt-BR hunspell unmunch, or curate an
 additions file.
 
+*Vocabulary:* `CONTEXT.md`'s glossary names this artifact the **Validation
+dictionary**; this ADR says *guess dictionary* when contrasting it with the
+answer list. Same concept — the glossary row records the alias.
+
 ## Decision
 
 1. **Gaps close through `content/termo/additions.txt`** — one canonical
    accented form per line, sorted by (normalized form, canonical), unique.
-   `pipeline.py` merges the file as if its lines were base-lexicon entries:
-   same normalization, same blocklist assertion, and a loud failure on any
-   line the base lexicon already carries, so a future source refresh cannot
-   silently duplicate curation. The proper-noun filters do not apply —
-   every line being hand-reviewed is the mechanism's point. This is
+   `pipeline.py` merges the file under the same normalization as
+   base-lexicon entries, and the blocklist, proper-noun and corruption
+   filters bind on additions too — as **hard assertions**, not the lexicon
+   path's silent skips: a hand-reviewed line that hits one aborts the run
+   instead of disappearing. A line whose canonical or normalized form the
+   base lexicon already carries also fails loudly, so a future source
+   refresh cannot silently duplicate curation and an addition can never
+   flip an existing `canonical-map.csv` row. This is
    ADR-0015's curation-under-mechanical-constraints applied to the guess
    dictionary: the judgment is recorded (a reviewable file, one word per
    diff line), the invariants are machine-checked (pipeline asserts +
@@ -80,7 +87,11 @@ additions file.
   98 rows; `VALIDATION_COUNT` and the codegen output move with them.
   *áudio*/*audio* are accepted, and the marker word `zurro` is unaffected.
 - Player-reported gaps now have a one-line fix with a visible diff, at
-  Tier 0/1 weight, instead of a source-swap project.
+  Tier 0/1 weight, instead of a source-swap project. Each addition line
+  spends a finite, ADR-governed resource: the dictionary ships in the
+  `/termo` and `/arquivo/[data]/termo` route chunks, both capped at 76 KB
+  under ADR-0045 decision 7, and `pnpm bundle-check` is what stops an
+  addition that no longer fits.
 - Deploy skew between `apps/web` and `apps/api` can briefly accept a new
   word on one side and 422 it on the other — anticipated and non-fatal per
   ADR-0038/ADR-0039, unchanged by this decision.
