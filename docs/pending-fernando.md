@@ -1,6 +1,6 @@
 # Pending on Fernando — living ledger
 
-**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found (NOW §2); POSTHOG_KEY activation added (NOW §3, PR #176), then rewritten at that PR's step-7 round: the `vercel env pull` step is gone (it dumped every miolos-web production secret to `/tmp` to read one publishable token), the `NEXT_PUBLIC_` twin removal is required rather than optional, the item carries a privacy-copy precondition, and its Blocks line no longer promises five event streams where Resend gates one. The PostHog-deletion residual is a new SOON row.
+**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found (NOW §2); POSTHOG_KEY activation added (NOW §3, PR #176), then rewritten at that PR's step-7 round: the `vercel env pull` step is gone (it dumped every miolos-web production secret to `/tmp` to read one publishable token), the `NEXT_PUBLIC_` twin removal is required rather than optional, the item carries a privacy-copy precondition, and its Blocks line no longer promises five event streams where Resend gates one. The PostHog-deletion residual is a new SOON row. Amended 2026-08-21 (day): NOW §2's agent fix path is withdrawn — production's `CRON_SECRET` reads back empty, so the item now branches on whether the value is readable at all, and carries a rotation fallback.
 
 **How to use it (Fernando):** when you have time, start a session with *"run /wizard over docs/pending-fernando.md, NOW section"* — the wizard walks you through each step, one at a time. Decisions marked ⚡ are answerable in one line on the named issue, from a phone.
 
@@ -26,19 +26,25 @@ Fernando (2026-08-20): *will do when ready to run the wizard — not yet.* Stays
 
 ### 2. Re-set the GitHub `CRON_SECRET` — the streak-notify tick is 401ing against production
 
-Found 2026-08-21 (night): a manual `Streak notify` dispatch (run 32439773422) got **HTTP 401** from `POST https://api.miolos.app/cron/notify`. The API's auth is fail-closed and expects `Bearer <CRON_SECRET>` (`apps/api/src/cron/auth.ts`); the daily publish cron works, so production's value is good — the **GitHub repo secret copy doesn't match it** (likely a stray newline or paste slip when it was set on 2026-08-20). Every hourly tick is red until this is fixed, and **no streak-at-risk push is being sent** even though VAPID and the dispatcher are live. An agent cannot pull the production value unattended (permission classifier, same class as #59).
+Found 2026-08-21 (night): a manual `Streak notify` dispatch (run 32439773422) got **HTTP 401** from `POST https://api.miolos.app/cron/notify`. The API's auth is fail-closed and expects `Bearer <CRON_SECRET>` (`apps/api/src/cron/auth.ts`). `.github/workflows/streak-notify.yml` is the **only** consumer of the GitHub repo secret; `/cron/publish` is a **Vercel** cron (`apps/api/vercel.json`), so Vercel signs it with the project's own env var and never touches the GitHub copy. Production is the receiver, so its value is authoritative by construction and the GitHub copy is the side to correct — set 2026-08-20T21:03:26Z, never exercised until the manual dispatch. Every hourly tick has been red since, and **no streak-at-risk push has ever been sent** even though VAPID and the dispatcher are live.
 
-- **Do (easiest):** start a session with *"fix the CRON_SECRET GitHub secret — pending-fernando NOW §2"* and approve the prompts; the agent pulls the value from Vercel and re-sets the secret. **Or by hand, in a real terminal:**
+> **Correction (2026-08-21, agent session).** This item used to argue "the daily publish cron works, so production's value is good". That inference is void: the publish cron's sender and receiver both read the same `CRON_SECRET`, so it succeeds whatever the value is. It proves the variable is *set*, not that it matches anything. The conclusion is unchanged, for the different reason given above.
+
+> **The agent path that used to be listed here does not work.** `vercel env run -e production --cwd apps/api` downloads the production set but delivers `CRON_SECRET` **empty** — verified twice, the second time with `apps/api/.env.local` moved aside to rule out local shadowing — while `vercel env ls production` lists the variable as present since ~2026-08-01. That signature matches a Vercel **Sensitive** variable: write-only, never readable back. `vercel env pull` was not tested, because reading the value is classifier-blocked for an agent (same class as #59). **So step 1 is to find out whether the value is readable by anyone at all.**
+
+- **Do (first, by hand in a real terminal):** the copy, unchanged — it is still the cheapest fix if the value is readable.
   ```
   cd ~/projects/miolos/apps/api
   vercel env pull /tmp/api.env --environment=production --yes
+  grep -c '^CRON_SECRET=' /tmp/api.env    # 0 → unreadable, stop and rotate instead
   gh secret set CRON_SECRET --body "$(grep '^CRON_SECRET=' /tmp/api.env | cut -d'"' -f2)"
   rm /tmp/api.env
   gh workflow run "Streak notify"
   ```
+- **Or (rotation — only if that `grep -c` prints 0):** the value cannot be copied, so replace it on both sides. Generate `openssl rand -hex 32`, set it as the GitHub secret, then on Vercel remove and re-add `CRON_SECRET` for production on **miolos-api** and **redeploy from the dashboard** (Deployments → ⋯ → Redeploy). The redeploy is not optional and must not be a plain `vercel --prod`: `apps/api/vercel.json` sets `"ignoreCommand": "npx turbo-ignore"`, so with no code change the build is skipped and the new value never gets baked into the function. Until the redeploy lands, Vercel's cron sender has the new value and the deployed route still checks the old one — do the whole rotation in one sitting, and well clear of the `0 6 * * *` UTC publish tick, which would 401 in that window.
 - **Verify:** `gh run list --workflow="Streak notify" -L1` shows `success`, and the run log's `cron-notify response:` line is a JSON body, not an error.
 - **Blocks:** the entire #146 dispatcher in practice — the hourly tick fails before reaching the API, so no nudge is ever dispatched; the ANY TIME phone ritual (push card + test nudge) will also fail until this is done.
-- **Source:** run 32439773422 (2026-08-21 manual dispatch); PR #171; `apps/api/src/cron/auth.ts` fail-closed comment.
+- **Source:** run 32439773422 (2026-08-21 manual dispatch); PR #171; `apps/api/src/cron/auth.ts` fail-closed comment; the 2026-08-21 agent session that found the value unreadable via `vercel env run`.
 
 ### 3. Set `POSTHOG_KEY` on miolos-api — the telemetry shipped in #33 sends nothing until you do
 
