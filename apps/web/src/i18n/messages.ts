@@ -468,16 +468,50 @@ export const messages = {
     backToIndex: "← Arquivo",
     backToIndexAria: "Voltar para o Arquivo",
 
-    recent: { heading: "Dias recentes" },
     months: { heading: "Por mês" },
     empty:
       "O arquivo começa quando o primeiro puzzle do dia sai. Volte amanhã.",
 
-    // A day row: the date, then the games that date holds. ONE composed
-    // sentence — the accent rules on the game names carry no meaning alone
-    // (ADR-0041 decision 5).
-    dayRowAria: (longDate: string, games: readonly string[]) =>
-      `${longDate} — ${games.join(", ")}`,
+    // The calendar (#163, plan 065 D3) — the grid that replaced the day
+    // rows on the index and the month pages. (`recent.heading` and
+    // `dayRowAria` went with the rows.)
+    //
+    // TWO 7-tuples, Sunday-first, indexed by the grid's own 0-Sunday
+    // column — deliberately NOT an `Intl.DateTimeFormat` weekday: a
+    // formatter would be a new module-scope instance for seven constant
+    // strings, and pt-BR's short weekday form carries a trailing "." the
+    // caller would have to trim (the `formatShortDate` problem, seven
+    // times over). The strings live here and not in the component for the
+    // standing reason (ADR-0018 :15) AND a mechanical one: both calendar
+    // source files sit under T-WEB-S181's pt-BR-literal scan, so an
+    // inlined "sáb" is a red test, not a style nit.
+    //
+    // `weekdays` is the aria-hidden header row — visual scaffolding, three
+    // characters per element, so impeccable's `all-caps-body` (>30 chars
+    // of DIRECT text per element) can never see a run. `weekdaysLong`
+    // feeds `dayAria`: the accessible name carries the weekday — the one
+    // fact the aria-hidden header withholds from assistive tech (column
+    // position; the parity the old "31 · segunda-feira" rows announced).
+    // Composed WHOLE here, the `backToDayAria` idiom; the visible numeral
+    // leads `longDate`, so WCAG 2.5.3 label-in-name holds.
+    //
+    // Audited: no string below uses `então`, `mamãe` or `época`
+    // (FORBIDDEN_EVERYWHERE) — moot while the calendar ships zero client
+    // JS, and cheap to keep true.
+    calendar: {
+      weekdays: ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
+      weekdaysLong: [
+        "domingo",
+        "segunda-feira",
+        "terça-feira",
+        "quarta-feira",
+        "quinta-feira",
+        "sexta-feira",
+        "sábado",
+      ],
+      dayAria: (longDate: string, weekday: string) =>
+        `${longDate} — ${weekday}`,
+    },
 
     month: {
       // formatMonth yields "agosto de 2026". These two are SIBLING

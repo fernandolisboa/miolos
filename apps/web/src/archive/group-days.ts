@@ -15,10 +15,11 @@ export interface ArchiveDayGroup {
 }
 
 /**
- * Group the reader's `(date, game)` pairs into day rows, preserving the
- * reader's own order (`date DESC, game ASC`) rather than re-sorting: the
- * order is a property of the SQL, and a second sort here would be a second
- * place for it to be decided.
+ * Group the reader's `(date, game)` pairs into per-day groups (the day
+ * page's cards; the sitemap's day entries), preserving the reader's own
+ * order (`date DESC, game ASC`) rather than re-sorting: the order is a
+ * property of the SQL, and a second sort here would be a second place for
+ * it to be decided.
  */
 export function groupArchivedDays(
   days: readonly ArchivedDay[],
@@ -35,25 +36,8 @@ export function groupArchivedDays(
   return groups;
 }
 
-/**
- * The index's "seven most recent days", from an OVER-FETCHED row window.
- *
- * The over-fetch is the fix for the ragged floor, and the arithmetic is the
- * reason it exists: `limit: 28` yields "the seven most recent days" only if
- * every date holds all four games, and with a gap 28 rows span eight dates
- * and the last one is silently truncated. So the reader is asked for
- * `limit` rows, and **if exactly `limit` came back the trailing date group
- * is discarded** — it may be cut mid-date — before the first `count` groups
- * are taken.
- *
- * When fewer than `limit` rows came back the window reached the archive's
- * own floor, so no group can be truncated and none is dropped.
- */
-export function recentDayGroups(
-  days: readonly ArchivedDay[],
-  options: { readonly limit: number; readonly count: number },
-): readonly ArchiveDayGroup[] {
-  const groups = groupArchivedDays(days);
-  const complete = days.length === options.limit ? groups.slice(0, -1) : groups;
-  return complete.slice(0, options.count);
-}
+// `recentDayGroups` — the index's "seven most recent days" over-fetch —
+// went with the day rows it fed (#163, plan 065 D2): the index derives its
+// newest-month calendar from the row window directly, in
+// `app/arquivo/page.tsx`, and no consumer of a truncation-safe recent
+// window remains.

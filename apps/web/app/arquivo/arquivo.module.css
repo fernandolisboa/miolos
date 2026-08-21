@@ -1,19 +1,22 @@
 /* Arquivo — the archive's three read-only surfaces (#31, ADR-0053): the
-   index, a month and a day. ONE sheet for all three, because the day row is
-   the same object on the index and on a month page and a second copy is how
-   they drift (plan 037 §7.5).
+   index, a month and a day. ONE sheet for all three, because the calendar is
+   the same object on the index and on a month page — as the day rows it
+   replaced were (#163, plan 065) — and a second copy is how they drift
+   (plan 037 §7.5).
 
    The /estatisticas editorial register on the chrome — ink on desk paper,
-   quiet headings, hairline separators — and the hub's Game-card vocabulary
+   quiet headings, 1px `--line` borders (the day rows' `--line-soft`
+   hairline separators went with the rows at #163, and `--line-soft` has no
+   consumer on this sheet any more) — and the hub's Game-card vocabulary
    on the day page, which is the one archive surface where a card is right:
    each card is a distinct destination with its own identity and there are at
    most four of them.
 
-   ADR-0041 throughout: an accent may colour a SHAPE (the row's 3px rule, the
-   card's border and hard shadow, the washi tape) and never a WORD. Every
-   word on this sheet is --ink or --ink-2. ADR-0036 on the dates: a column of
-   dates is a column of figures, so it is Instrument Sans + tabular-nums and
-   never Fraunces, which has no tabular figures at all. */
+   ADR-0041 throughout: an accent may colour a SHAPE (the card's border and
+   hard shadow, the washi tape) and never a WORD. Every word on this sheet is
+   --ink or --ink-2. ADR-0036 on the dates: a column of dates is a column of
+   figures, so it is Instrument Sans + tabular-nums and never Fraunces, which
+   has no tabular figures at all. */
 
 /* NORMAL BLOCK FLOW at every width, and that is a gate fix rather than a
    preference (step-6 F6). This sheet's own mobile block argued the point and
@@ -103,9 +106,10 @@
 }
 
 /* ——— sections ————————————————————————————————————————————————————————
-   BARE on desk paper, never a card. A day row inside a card inside a section
-   is exactly how card-inside-card happens, which the anti-references ban;
-   the rows are separated by hairlines instead, the F5 stat-row register. */
+   BARE on desk paper. The calendar card below sits directly in a section —
+   one card on paper, the stats-month shape — and nothing nests a second
+   card inside it, which is how card-inside-card would happen and the
+   anti-references ban it. */
 
 .section {
   margin-top: 40px;
@@ -118,82 +122,112 @@
   font-weight: 550;
 }
 
-.rows {
+/* ——— the calendar ————————————————————————————————————————————————————
+   The month grid that replaced the day rows on BOTH surfaces (#163, plan
+   065 D3) — the stats month register (`estatisticas/page.module.css:418`):
+   card paper, 1px line border, NEUTRAL hard shadow, because the archive
+   belongs to no game and this surface earns no accent (ADR-0041; the
+   months are a ledger, not a celebration). The card sits BARE in
+   `.section` on desk paper, like the stats months — a calendar wrapping
+   day rows would have been card-inside-card, the banned shape.
+
+   Cells are ≥44px on BOTH axes: the column floor is the track's
+   `minmax(var(--touch-target-min), 1fr)`, and the block axis rides
+   `aspect-ratio: 1` on every cell — the stats `.day`/`.dayPad` idiom —
+   because DESIGN.md's ≥44px is two-axis for an interactive tile, and a
+   width-only track would leave height to line-height. */
+
+.calendarCard {
+  width: fit-content;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md) var(--line);
+  padding: var(--space-5);
+}
+
+/* The header row and the grid carry the SAME column template and the same
+   gap, so the weekday labels sit over their columns by construction. Two
+   blocks rather than one grouped rule so `T-WEB-S311`'s line-anchored
+   block reader can see each; its identity arm is what keeps them in
+   lockstep. */
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(var(--touch-target-min), 1fr));
+  gap: var(--space-1);
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(var(--touch-target-min), 1fr));
+  gap: var(--space-1);
   list-style: none;
-  margin: 0;
+  margin: var(--space-2) 0 0;
   padding: 0;
 }
 
-/* A hairline BETWEEN rows — none above the first, none below the last. */
-.row + .row {
-  border-top: 1px solid var(--line-soft);
+/* The kicker register, one 3-character element per column — `aria-hidden`
+   at the call site (each link's accessible name states its own weekday),
+   and never one run of text, so impeccable's `all-caps-body` (>30 chars of
+   DIRECT text per element) cannot see it. */
+.weekday {
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  text-align: center;
 }
 
-/* One <Link> per row, one touch target. `min-height` rather than padding
-   alone, so a short row (a date holding one game) is the same target as a
-   full one. */
-.rowLink {
+/* A PUBLISHED PAST DAY — the link tile. Linked and inert cells differ by
+   three carriers: this border (geometry, survives greyscale), --ink vs
+   --ink-2 (15.6663:1 vs 5.3003:1 on card paper, both past the 4.5:1 text
+   floor — figures re-derived from the token hexes at #163, matching the
+   stats sheet's), and weight 600 vs 400. None stands alone: the link's
+   accessible name carries the meaning in words (`DESIGN.md:22` / WCAG
+   1.4.1 — not ADR-0041 decision 5, whose subject is an accent border
+   outlining a label, and this grid paints no accent at all).
+   Hover rides `.page a:hover`'s app-accent underline — a shape. */
+.dayCellLink {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  min-height: var(--touch-target-min);
-  padding: var(--space-2) 0;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-cell);
+  color: var(--ink);
+  font-weight: 600;
   text-decoration: none;
 }
 
-/* ADR-0036 decision 1's exact case: a column of dates is a column of
-   figures, so Instrument Sans with tabular figures — never the display
-   face, whose digits carry a ~2.2px spread. */
-.rowDate {
-  font-family: var(--font-ui);
-  font-variant-numeric: tabular-nums;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-/* A FIXED FOUR-COLUMN GRID, left-aligned, and the fixedness is the point
-   (step-6 F9). This was a wrapping flex with `justify-content: flex-end`, so
-   a day holding two games did not read as a day holding two games — the
-   cluster simply shifted left, names never aligned into columns down the
-   page, and absence was undetectable by eye. Plan 037's "no greyed slot, no
-   fake navigation" call is right; right-aligning a variable-length list is
-   what made the ragged state look incidental rather than designed. On a grid
-   an absent game is an empty cell: a gap, which is what it is. */
-.rowGames {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-  flex: 0 0 auto;
-  width: 400px;
-  max-width: 100%;
-}
-
-/* The game's accent as a LEFT RULE — a shape (ADR-0041 decision 1) — and the
-   name itself in --ink. The rule never carries meaning alone: the row's
-   accessible name is one composed sentence naming the date and the games
-   (ADR-0041 decision 5, `messages.archive.dayRowAria`).
-
-   3px on a padded line box, not 2px on a bare one (step-6 F10a). At 2×11px
-   the four accents rendered as `| BINAIRO | SUDOKU |` — indistinguishable
-   from punctuation, where DESIGN.md's rule is that accents carry IDENTITY.
-   The grid cell stretches, so with 4px of block padding the rule is a real
-   ~23px mark rather than a tick.
-
-   A SHORT day renders fewer names and nothing else: no placeholder, no
-   greyed slot, no "3 de 4". A disabled-looking affordance would be fake
-   navigation, which is the hub's own rule — and a killed game produces
-   exactly this same shape, which matters because the kill switch is the
-   whole reason these pages are uncached (ADR-0053 decision 2). */
-.rowGame {
+/* An INERT in-month day — unpublished, killed, today or future: the same
+   absence in the reader's answer, so the same bare numeral. No border, no
+   fill, no fake affordance. --ink-2 on card paper is 5.3003:1
+   (L 0.93262753 vs 0.13539008 — the same WCAG relative-luminance
+   arithmetic the stats sheet records at :375, re-run for this rule). */
+.dayCellInert {
   display: flex;
   align-items: center;
-  border-left: 3px solid var(--accent);
-  padding: var(--space-1) 0 var(--space-1) var(--space-2);
-  font: var(--text-kicker);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink);
+  justify-content: center;
+  aspect-ratio: 1;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+/* Out-of-month padding: empty, and still square, so every row of the grid
+   is the same height by construction. */
+.dayCellPad {
+  aspect-ratio: 1;
+}
+
+/* ADR-0036 decision 1's exact case: a grid of day numerals is a column of
+   aligning figures, so Instrument Sans with tabular figures — never the
+   display face, whose digits carry a ~2.2px spread. Size and weight come
+   from the cell (the carrier split above). */
+.dayNumeral {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
 }
 
 /* ——— months ————————————————————————————————————————————————————————
@@ -374,8 +408,10 @@
 }
 
 /* ——— the done chip's row ————————————————————————————————————————————
-   Kicker left, chip right, in ONE FLOW ROW — this sheet's own `.rowLink`
-   idiom. Nothing is positioned, so nothing can overlap the kicker, the tape
+   Kicker left, chip right, in ONE FLOW ROW. (It was named after this
+   sheet's own `.rowLink` idiom; #163 deleted `.rowLink` with the day rows,
+   so the shape is now the rule's own, cited from nowhere else.) Nothing is
+   positioned, so nothing can overlap the kicker, the tape
    or the title at any width, and `impeccable`'s `text-occlusion` rule (which
    was measured BLIND to the corner-stamp design it replaces, occFrac 0.286
    against a 0.45 bar) has nothing to be lenient about.
@@ -528,20 +564,31 @@
     font-size: 34px;
   }
 
-  /* The row stacks: a date above its games rather than beside them, so a
-     four-game day never squeezes the date column at 390px. */
-  .rowLink {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-1);
-    padding: var(--space-3) 0;
+  /* Full width on mobile, and the padding steps down so seven 44px columns
+     actually fit. The arithmetic, at the 390px reference viewport: `.page`
+     leaves 390 − 2 × 20 = 350px; the card spends 2 × 1 border + 2 × 12
+     padding = 26, leaving 324; the grid needs 7 × 44 + 6 × 2 = 320 ≤ 324.
+     At --space-5 card padding the grid would need 320 ≤ 308 — false — and
+     44px is the DESIGN.md floor, not a dial. */
+  .calendarCard {
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--space-3);
   }
 
-  /* Full width of the stacked row, so the four columns stay four columns and
-     an absent game keeps reading as an empty cell (step-6 F9). */
-  .rowGames {
-    width: 100%;
-    gap: var(--space-2);
+  /* 2px is OFF the 4pt scale, and that is forced, not chosen: the 350px
+     mobile content box minus the card's 26px leaves 324 for 308px of
+     44px-floor columns, so the six gaps have at most 16px ÷ 6 ≈ 2.6px each
+     — the scale's own 4px would overflow by 10px. The `.doneChip` 9px
+     precedent: the sheet records the forcing arithmetic beside the rule.
+     (Two blocks for T-WEB-S311's reader; its identity arm holds them
+     equal.) */
+  .weekdays {
+    gap: 2px;
+  }
+
+  .calendarGrid {
+    gap: 2px;
   }
 
   .cards {

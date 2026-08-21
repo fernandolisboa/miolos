@@ -39,9 +39,11 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     "src/nonogram/nonogram-board.module.css",
     "app/estatisticas/page.module.css",
     // #31 (ADR-0053): the archive's three read-only surfaces. It paints
-    // `var(--accent)` on the day row's 3px rule and on the day card's border
-    // and hard shadow — shapes, never words — and an unlisted sheet is
-    // invisible to the whole automated ADR-0041 gate.
+    // `var(--accent)` on the day card's border and hard shadow — shapes,
+    // never words — and an unlisted sheet is invisible to the whole
+    // automated ADR-0041 gate. (#163 deleted the day row's 3px accent rule
+    // with the rows themselves; the calendar that replaced them paints no
+    // accent at all, so the sheet stays listed on the card alone.)
     "app/arquivo/arquivo.module.css",
     // #31: the late-result panel paints the game's accent on the completion
     // stamp's RING and nowhere else. It is the state CI can never scan, so
