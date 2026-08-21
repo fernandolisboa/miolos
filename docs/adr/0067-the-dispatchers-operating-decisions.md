@@ -1,6 +1,6 @@
 # ADR-0067 — The dispatcher's operating decisions: write-side subscription ceiling, ledger merge duty, one-snapshot tick instant
 
-**Status:** Proposed — 2026-08-20 (issue #146)
+**Status:** Accepted — 2026-08-20 (issue #146, shipped in #171)
 **Depends on:** [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0064](./0064-streak-at-risk-is-a-derived-decision.md), [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)
 
 ## Context
