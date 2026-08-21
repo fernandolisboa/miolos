@@ -54,24 +54,52 @@ Fernando said "work the recommended issues, in parallel." Five tickets shipped t
 
 **The dispatcher is LIVE** — hourly `streak-notify.yml` against `POST /cron/notify`; migrations 0010+0011 applied to Neon pre-push. New: plan 063, ADR-0067/0068, issue **#169** (hub nav overflows at 390px with five links, found by #162's fixtures). Notable process facts: four `test-ids.md` merge collisions all resolved by the documented convention, nothing renumbered; one lens finding was *disproved with pixel evidence* (#170's "before" was genuine); the ADR-number collision (#170/#171 both minting 0067) was resolved by merge order + renumber sweep.
 
+## Addendum D — 2026-08-21, the telemetry-and-calendar night
+
+Four tickets closed. The session opened by finding a **live production bug that no test could have caught**.
+
+| Ticket | PR | What |
+|---|---|---|
+| — | #173 | **The dispatcher has never worked.** A manual `Streak notify` dispatch returned **401** from `POST /cron/notify`. The API gate is fail-closed and the daily publish cron shares production's value and works, so the **GitHub repo secret copy of `CRON_SECRET` is the mismatch**. No streak-at-risk push has ever been sent. Agents cannot pull production credentials unattended (the #59 class), so it is ledger **NOW §2** |
+| #169 hub links | #174 | Tier 1: the five-link row wraps at 390px (`flex-wrap` + row gap), `T-WEB-S307` |
+| #163 archive calendar | #175 | Tier 2: one shared server-rendered grid, **zero client JS** (bundle byte-identical), month + index, `DayRows` deleted |
+| #33 PostHog telemetry | #176 | Tier 2: five events, **zero dependencies**, server-truth capture + one relay → **ADR-0069** |
+
+**#64 is planned but not built** — steps 1–4 done, held before step 5 deliberately rather than opening a third front. Everything it needs is on the issue.
+
+### What the reviews caught, because this is why the flow exists
+
+- **An archive module-graph wall breach, twice, independently.** #64's plan review and #33's implementation both hit it: `sync.ts` and `play/day-state.ts` reach `src/day/**`, and the archive's play shells mount the same hook — so a "read the day claim" seam would fire a **credentialed `GET /day` from a crawler-facing route**. Both moved to passing the value *in*. The governing rule is **ADR-0053 decision 10** ("Why no endpoint"), *not* decision 9 — the wrong number was copied from `archive-day.test.tsx` on `main` and was fixed at nine sites.
+- **A false privacy promise, caught by two lenses independently.** `/privacidade` promised deletion of "todo o histórico, de uma vez" while nothing deleted the PostHog rows. The disclosure copy now ships, ADR-0069 decision 5's reasoning was rewritten as wrong, and the deletion gap is a SOON row owned by #37 (the real fix needs a PostHog *personal* API key).
+- **A runbook that would have leaked a Neon credential.** NOW §3 told Fernando to `vercel env pull` miolos-web's *entire* production environment to `/tmp` to read one publishable token. Rewritten to read from the dashboard.
+- **Two claims that were simply untrue**: "zero UI files touched" (four screen files were), and a comment asserting a strict-parse guard whose schemas had no runtime consumer. Both fixed rather than reworded.
+- The visual gate flagged **the fix agent's own copy** (`em-dash-overuse` on `/privacidade`); fixed, not dismissed.
+
+### Landmines
+
+- **Nothing streak-related reaches a phone until NOW §2 is done**, and nothing lands in PostHog until NOW §3 — whose **precondition is that the privacy copy ships first**, which it now has.
+- **Credits ran out mid-session on Fable 5**; three agents died with uncommitted work in worktrees. Nothing was lost because the work was on disk, but the lesson stands: **commit early**, and every agent writes its report to `~/miolos-session/` as its first act.
+- `T-WEB-S313`/`S314` and `T-CORE-S111` burned at step 8. Next free: `T-WEB-S323`, `T-CORE-S112`, `T-API-S176`, `T-LINT-S54`.
+
 ## Kickoff prompt for the next session
 
 ```
-Read docs/handoffs/062-handoff-the-answer-batch.md WITH Addenda A+B+C,
-then docs/pending-fernando.md.
+Read docs/handoffs/062-handoff-the-answer-batch.md — Addendum D FIRST
+(A+B+C are older) — then docs/pending-fernando.md.
 
-PREFLIGHT: #146/#158/#160/#161/#162 all CLOSED (PRs #166–#171 merged);
-main has f0c3f4a in history; ADR-0067 = Termo accent, ADR-0068 = the
-dispatcher; #169 OPEN needs-triage; zero open PRs.
-On mismatch: stop, read the newest addendum before acting.
+PREFLIGHT: #33/#163/#169 CLOSED (PRs #174/#175/#176 merged); main has
+651ec33; ADR-0069 = telemetry; ADR-0070 reserved for #64; zero open PRs.
+On mismatch: stop, read the newest addendum first.
 
-The dispatcher is LIVE (hourly tick). Frontier order: #33 (unblocked —
-token in NEXT_PUBLIC_POSTHOG_KEY ×3, region US), #169 (Tier 1, hub nav
-overflow at 390px), #163 (archive calendar), #64, #104, #149, #155,
-#106, the #74 pool extension. Reserve test ids on the ISSUE before step
-5 (T-WEB next free: re-derive by grep — S303 was highest at C's close).
-Take ~/miolos-session/gate-lock.sh before any suite run, git commit
-included. Update docs/pending-fernando.md in the same PR whenever a
+TWO production surfaces are dark on Fernando: NOW §2 (CRON_SECRET
+mismatch — the hourly tick 401s, no push ever sent) and NOW §3
+(POSTHOG_KEY). Offer §2 first; it is a real bug, not activation.
+
+Frontier: #64 (steps 1-4 DONE — plan ~/miolos-session/64-step2-plan.md,
+reserve ids on the issue, go to step 5), then #104, #149, #155, #106,
+#74. Re-derive the id frontier by grep; reserve on the ISSUE before
+step 5. Take ~/miolos-session/gate-lock.sh before any suite run, git
+commit included. Update docs/pending-fernando.md in the same PR when a
 Fernando item appears or is discharged. End with a handoff addendum
 ≤120 lines + kickoff ≤15 — never skip it.
 ```
