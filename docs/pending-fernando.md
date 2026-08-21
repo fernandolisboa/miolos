@@ -1,6 +1,6 @@
 # Pending on Fernando — living ledger
 
-**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-20 (evening) after Fernando's answer batch — see handoff 062.
+**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found; see handoff 062.
 
 **How to use it (Fernando):** when you have time, start a session with *"run /wizard over docs/pending-fernando.md, NOW section"* — the wizard walks you through each step, one at a time. Decisions marked ⚡ are answerable in one line on the named issue, from a phone.
 
@@ -24,13 +24,29 @@ Fernando (2026-08-20): *will do when ready to run the wizard — not yet.* Stays
 - **Blocks:** email attach / account recovery / merge — live-but-invisible since 2026-08-13; also the email-hedge slice of #32.
 - **Source:** `docs/handoffs/032-handoff-21-merged-m1-complete.md` §6; wizard form in `docs/plans/031` §15.
 
-*(§2 discharged 2026-08-20: PostHog region answered — US. See the Done table.)*
+### 2. Re-set the GitHub `CRON_SECRET` — the streak-notify tick is 401ing against production
+
+Found 2026-08-21 (night): a manual `Streak notify` dispatch (run 32439773422) got **HTTP 401** from `POST https://api.miolos.app/cron/notify`. The API's auth is fail-closed and expects `Bearer <CRON_SECRET>` (`apps/api/src/cron/auth.ts`); the daily publish cron works, so production's value is good — the **GitHub repo secret copy doesn't match it** (likely a stray newline or paste slip when it was set on 2026-08-20). Every hourly tick is red until this is fixed, and **no streak-at-risk push is being sent** even though VAPID and the dispatcher are live. An agent cannot pull the production value unattended (permission classifier, same class as #59).
+
+- **Do (easiest):** start a session with *"fix the CRON_SECRET GitHub secret — pending-fernando NOW §2"* and approve the prompts; the agent pulls the value from Vercel and re-sets the secret. **Or by hand, in a real terminal:**
+  ```
+  cd ~/projects/miolos/apps/api
+  vercel env pull /tmp/api.env --environment=production --yes
+  gh secret set CRON_SECRET --body "$(grep '^CRON_SECRET=' /tmp/api.env | cut -d'"' -f2)"
+  rm /tmp/api.env
+  gh workflow run "Streak notify"
+  ```
+- **Verify:** `gh run list --workflow="Streak notify" -L1` shows `success`, and the run log's `cron-notify response:` line is a JSON body, not an error.
+- **Blocks:** the entire #146 dispatcher in practice — the hourly tick fails before reaching the API, so no nudge is ever dispatched; the ANY TIME phone ritual (push card + test nudge) will also fail until this is done.
+- **Source:** run 32439773422 (2026-08-21 manual dispatch); PR #171; `apps/api/src/cron/auth.ts` fail-closed comment.
+
+*(Former §2 discharged 2026-08-20: PostHog region answered — US. See the Done table.)*
 
 ---
 
 ## SOON — decided or queued, agent-driven, nothing for you unless asked
 
-- **#146** streak-at-risk dispatcher — SHIPPED (plan 063, ADR-0068): the hourly tick is live on `main` and nothing here is a Fernando item; the phone ritual in ANY TIME covers the human verification. Email-hedge slice (slice C) still waits on NOW §1.
+- **#146** streak-at-risk dispatcher — SHIPPED (plan 063, ADR-0068): the hourly tick is live on `main`, **but every tick currently 401s — see NOW §2**; the phone ritual in ANY TIME covers the human verification once §2 is done. Email-hedge slice (slice C) still waits on NOW §1.
 - **#64** Nonogram picture name — decided (ship the name, amend ADR-0033), `ready-for-agent`.
 - **#104** archive OG cards — decided (index + month get cards), `ready-for-agent`.
 - **#158** terms-of-use page `/termos` — approved and filed, `ready-for-agent`.
