@@ -14,7 +14,7 @@ import { isPushConfigured } from "../../../src/push/config";
 // dynamic by definition, so the export would be a no-op dressed as one.
 
 /**
- * POST /cron/notify (#146, ADR-0064 decisions 6–9; ADR-0067) — the hourly
+ * POST /cron/notify (#146, ADR-0064 decisions 6–9; ADR-0068) — the hourly
  * streak-at-risk tick. POST because the tick causes writes and sends, and
  * this route is never Vercel-cron-driven (Vercel cron sends GET, which is
  * why /cron/publish is one; the Actions curl does `-X POST` trivially —
@@ -22,7 +22,7 @@ import { isPushConfigured } from "../../../src/push/config";
  * browser endpoint: no CORS, no OPTIONS, no body parsing (the publish
  * posture).
  *
- * Status semantics (ADR-0067 decision 4, recorded on
+ * Status semantics (ADR-0068 decision 4, recorded on
  * `cronNotifyResponseSchema` too): 401 unauthorized (the shared
  * fail-closed `isAuthorized`); 503 when push is unconfigured, BEFORE any
  * DB read — a red hourly Actions run on a misconfigured prod IS the alert
@@ -37,7 +37,7 @@ import { isPushConfigured } from "../../../src/push/config";
  * time: Actions jitter is absorbed by the hour-equality match. A tick
  * GitHub skips or delays past the hour loses that hour's cohort's nudge
  * for the day — priced by ADR-0064 decision 8's granularity choice,
- * restated in ADR-0067; no catch-up pass exists (`habitual_hour <= hour`
+ * restated in ADR-0068; no catch-up pass exists (`habitual_hour <= hour`
  * would change decision 6's closed equality).
  */
 export async function POST(request: NextRequest): Promise<Response> {

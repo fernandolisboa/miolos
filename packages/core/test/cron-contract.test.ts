@@ -223,7 +223,7 @@ describe("bufferDepthResponseSchema", () => {
   });
 });
 
-describe("cronNotifyResponseSchema (#146, ADR-0067 decision 4)", () => {
+describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4)", () => {
   it("T-CORE-S107: strict — an unknown key, a missing counter, a negative and a fractional count are all rejected; a legal tick body round-trips", () => {
     const tick = {
       candidates: 3,

@@ -9,10 +9,10 @@ import {
 import { notificationSends, pushSubscriptions, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
 
-// The dispatcher's db seams (#146, plan 063 §7; ADR-0064, ADR-0067).
+// The dispatcher's db seams (#146, plan 063 §7; ADR-0064, ADR-0068).
 // Every behavioral test here is REAL-CLOCK-FREE: `today` and `hour` are
 // explicit fixtures, and every `completed_at` is an explicit SP instant —
-// the one-snapshot parameterisation (ADR-0067 decision 3) is what makes
+// the one-snapshot parameterisation (ADR-0068 decision 3) is what makes
 // that possible. Only T-DB-S81 touches PGlite's unfakeable now(), with
 // range-only assertions.
 //
@@ -342,7 +342,7 @@ describe("listPushNudgeCandidates — the habitual hour (#146, ADR-0064 d1)", ()
   });
 });
 
-describe("readTickInstant (#146, ADR-0067 d3)", () => {
+describe("readTickInstant (#146, ADR-0068 d3)", () => {
   it("T-DB-S81: one statement answers an ISO SP date and an hour in 0..23 — the one real-clock test, range-only assertions", async () => {
     const instant = await readTickInstant(ctx.db);
     expect(instant.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);

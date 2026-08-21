@@ -15,9 +15,9 @@ import { nudgeCopy } from "./copy";
 import type { NudgeSend } from "./transport";
 
 /**
- * One dispatcher tick (#146, ADR-0064 decisions 6/7/9; ADR-0067) — the
+ * One dispatcher tick (#146, ADR-0064 decisions 6/7/9; ADR-0068) — the
  * product's ONLY notification code path. Takes `{today, hour}` from the
- * route's single `readTickInstant` snapshot (ADR-0067 decision 3) and the
+ * route's single `readTickInstant` snapshot (ADR-0068 decision 3) and the
  * transport as an injected function, so every test here is real-clock-free
  * and network-free without a single `vi.mock`.
  *
@@ -36,7 +36,7 @@ import type { NudgeSend } from "./transport";
  *    pins the sent number to `computeStreak`'s).
  * 3. `pushNudgePayloadSchema.parse(nudgeCopy(streak))` — Zod before the
  *    boundary; a malformed composition never reaches a push service.
- * 4. `listSubscriptions`, SERIAL sends (ADR-0067 decision 5: round-trips
+ * 4. `listSubscriptions`, SERIAL sends (ADR-0068 decision 5: round-trips
  *    dominate and concurrency multiplies connection pressure — the publish
  *    cron's measured reasoning; revisit trigger ~150 logged candidates).
  *    `ok` → sent++; 404/410 → `pruneSubscription` (ADR-0064 decision 9:

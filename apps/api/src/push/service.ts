@@ -12,7 +12,7 @@ import { eq, pushSubscriptions, sql, users, type Db } from "@miolos/db";
  */
 
 /**
- * The per-user subscription ceiling (#146, ADR-0067 decision 1 — the #145
+ * The per-user subscription ceiling (#146, ADR-0068 decision 1 — the #145
  * step-6 residual closed). 10 covers any real device fleet (phone +
  * desktop + tablet + spare browsers) with slack; the threat is one session
  * inserting unbounded DISTINCT endpoints — attacker-invented https URLs
@@ -31,7 +31,7 @@ export const PUSH_SUBSCRIPTION_CEILING = 10;
  * No transactions over neon-http: the upsert is the race-safety — two
  * concurrent POSTs of one endpoint both land, last write wins, one row.
  *
- * THE CEILING IS FOLDED INTO THE INSERT (#146, ADR-0067 decision 1 — the
+ * THE CEILING IS FOLDED INTO THE INSERT (#146, ADR-0068 decision 1 — the
  * `guardedInsertSelect` precedent in completions.ts, where check-then-act
  * was MEASURED broken): the proposed row is guarded by "the user is under
  * the ceiling, OR this exact (endpoint, user) row already exists". The

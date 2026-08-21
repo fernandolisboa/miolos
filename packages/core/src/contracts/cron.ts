@@ -57,7 +57,7 @@ export const cronPublishResponseSchema = z.strictObject({
 export type CronPublishResponse = z.infer<typeof cronPublishResponseSchema>;
 
 /**
- * Body of POST /cron/notify (#146, ADR-0067 decision 4) — the streak-at-risk
+ * Body of POST /cron/notify (#146, ADR-0068 decision 4) — the streak-at-risk
  * dispatcher's tick counters, strict on both ends (the publish precedent:
  * parsed before `Response.json`).
  *

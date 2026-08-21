@@ -30,7 +30,7 @@ Fernando (2026-08-20): *will do when ready to run the wizard — not yet.* Stays
 
 ## SOON — decided or queued, agent-driven, nothing for you unless asked
 
-- **#146** streak-at-risk dispatcher — SHIPPED (plan 063, ADR-0067): the hourly tick is live on `main` and nothing here is a Fernando item; the phone ritual in ANY TIME covers the human verification. Email-hedge slice (slice C) still waits on NOW §1.
+- **#146** streak-at-risk dispatcher — SHIPPED (plan 063, ADR-0068): the hourly tick is live on `main` and nothing here is a Fernando item; the phone ritual in ANY TIME covers the human verification. Email-hedge slice (slice C) still waits on NOW §1.
 - **#64** Nonogram picture name — decided (ship the name, amend ADR-0033), `ready-for-agent`.
 - **#104** archive OG cards — decided (index + month get cards), `ready-for-agent`.
 - **#158** terms-of-use page `/termos` — approved and filed, `ready-for-agent`.

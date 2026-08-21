@@ -355,7 +355,7 @@ export async function mergeAccounts(
   `);
 
   // 5e. The loser's notification-send ledger rows UNION onto the winner
-  //     (#146, ADR-0067 decision 2 — ADR-0049 decision 6's extension point
+  //     (#146, ADR-0068 decision 2 — ADR-0049 decision 6's extension point
   //     consumed in the seen-days 4b/4c idiom exactly). Without this pair,
   //     a same-day merge of a claimed loser into an unclaimed at-risk
   //     winner RE-NUDGES the winner, and the loser's rows would keep

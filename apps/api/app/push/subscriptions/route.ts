@@ -142,7 +142,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       auth: parsed.data.keys.auth,
     });
     if (!stored) {
-      // The per-user ceiling refused the row (#146, ADR-0067 decision 1 —
+      // The per-user ceiling refused the row (#146, ADR-0068 decision 1 —
       // the late-write-ceiling status precedent). The shipped client reads
       // `response.ok` only, so this takes T-WEB-S271's unwind path: the
       // browser-side subscription is rolled back and nothing is stamped.

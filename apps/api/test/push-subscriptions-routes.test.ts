@@ -391,7 +391,7 @@ describe("created_at is the consent evidence and attests to the CURRENT owner (#
   });
 });
 
-describe("the per-user subscription ceiling (#146, ADR-0067 decision 1 — the #145 residual closed)", () => {
+describe("the per-user subscription ceiling (#146, ADR-0068 decision 1 — the #145 residual closed)", () => {
   it("T-API-S151: the 10th endpoint lands, the 11th answers 429 and stores nothing, a same-user re-subscribe at the cap upserts with its stamp preserved, and a cross-user repoint at the cap answers 429 with ownership unchanged", async () => {
     const { token } = await createSession();
     const endpoint = (n: number) => `https://push.example.org/send/cap-${n}`;
@@ -444,7 +444,7 @@ describe("the per-user subscription ceiling (#146, ADR-0067 decision 1 — the #
     // A cross-user repoint AT the cap: another user's endpoint posted by
     // the full account is a 429 and ownership does not move — the repoint
     // would raise the posting user's fan-out past the ceiling. The honest
-    // residual (ADR-0067 decision 1): a full account cannot take over an
+    // residual (ADR-0068 decision 1): a full account cannot take over an
     // endpoint another user holds until it frees a slot.
     const other = await createSession();
     const otherEndpoint = "https://push.example.org/send/other-device";

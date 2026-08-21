@@ -194,7 +194,7 @@ export const pushSubscriptions = pgTable(
 );
 
 /**
- * The notification-send ledger (#146, ADR-0064 decision 7; ADR-0067):
+ * The notification-send ledger (#146, ADR-0064 decision 7; ADR-0068):
  * one row per (user, SP day, channel) = "this user's nudge for this day on
  * this channel is claimed". APPEND-ONLY — nothing updates or deletes a row
  * inside a day's lifetime; account deletion cascades, and the merge empties
@@ -215,10 +215,14 @@ export const pushSubscriptions = pgTable(
  * - `sent_at` is the DB clock at claim (the schema.ts law); the merge
  *   COPIES it, never re-stamps (presence is presence — whichever row
  *   survives a PK collision, its whole function is "do not send again").
- * - No index beyond the composite PK: the claim and the prefilter both hit
- *   the full key. The candidate query's habitual CTE aggregates over every
- *   user with in-window completions before the push_subscriptions join —
- *   harmless at v1 scale; the recorded restructure trigger is in notify.ts.
+ * - No index beyond the composite PK ON THIS TABLE: the claim and the
+ *   prefilter both hit the full key. The candidate query's completions
+ *   reads are indexed on THAT table — the counted-day CTE on the partial
+ *   `completions_counted_date_idx` (migration 0011), the `exists` probes
+ *   on `completions_user_date_idx` (notify.ts spells out which part rides
+ *   which). The CTE still aggregates over every user with in-window
+ *   completions before the push_subscriptions join — harmless at v1
+ *   scale; the recorded restructure trigger is in notify.ts.
  *
  * User-scoped: reachable only via `@miolos/db/user` (ADR-0026 decision 5)
  * — apps/web mechanically cannot name the ledger. The statements over it
@@ -475,6 +479,19 @@ export const completions = pgTable(
     // The PK covers (user_id) and (user_id, game); the streak recompute and
     // "the day so far" both read (user_id, date) across games.
     index("completions_user_date_idx").on(t.userId, t.date),
+    // The dispatcher's counted-day CTE (#146 step 7, migration 0011) reads
+    // by DATE RANGE with no user predicate — a shape nothing user-led can
+    // serve, so without this the hourly tick full-scans the table. Partial
+    // on won ∧ on-time because that conjunction IS "counted" (ADR-0048's
+    // prefilter): the index holds only rows the CTE can return. Measured
+    // choice (PGlite EXPLAIN probe, ~26k seeded rows, PR #171): the planner
+    // takes (date) for the range scan and REFUSES (date, user_id) — the
+    // wider key adds no selectivity to a range predicate and duplicates
+    // completions_user_date_idx for the point lookups, so the narrow index
+    // won on both counts.
+    index("completions_counted_date_idx")
+      .on(t.date)
+      .where(sql`${t.outcome} = 'won' and ${t.onTime}`),
   ],
 );
 

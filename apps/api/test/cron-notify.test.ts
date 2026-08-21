@@ -19,7 +19,7 @@ import { runNotifyTick } from "../src/notify/dispatcher";
 import type { NudgeSend, SendResult } from "../src/notify/transport";
 
 // The dispatcher suite (#146, plan 063 §7; ADR-0064 decisions 6–9,
-// ADR-0067). Two seams: the ROUTE as a function (auth, dormancy, contract
+// ADR-0068). Two seams: the ROUTE as a function (auth, dormancy, contract
 // shape — the cron-publish.test.ts harness) and the TICK via
 // `runNotifyTick` with explicit `{today, hour}` fixtures and a FAKE
 // injected transport recording calls — no `vi.mock` of web-push anywhere,
@@ -178,7 +178,7 @@ describe("POST /cron/notify — dormancy (the isPushConfigured triple)", () => {
   });
 });
 
-describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0067)", () => {
+describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", () => {
   it("T-API-S144: the claim lands BEFORE the transport is invoked, and the payload carries computeStreak's exact number in the §4.8 pt-BR copy — n≥2 and n=1 both", async () => {
     // A three-day streak ending yesterday: today-3, today-2, yesterday —
     // computeStreak(rows, TODAY) = 3 with today uncounted.
@@ -406,7 +406,7 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0067)", (
   });
 });
 
-describe("POST /cron/notify — the response contract (ADR-0067 decision 4)", () => {
+describe("POST /cron/notify — the response contract (ADR-0068 decision 4)", () => {
   it("T-API-S149: the real route body strict-parses, its counters match the seeded scenario, and the per-line cron-notify log is emitted", async () => {
     // An empty database is the expected first-tick reality: zero
     // candidates whatever the real clock's hour is — which is what makes

@@ -7,7 +7,7 @@
 # by this schedule's nominal fire time — Actions jitter is absorbed there.
 # A tick GitHub skips or delays past the hour loses that hour's cohort's
 # nudge for the day (ADR-0064 decision 8's priced granularity, restated in
-# ADR-0067); no catch-up pass exists, deliberately.
+# ADR-0068); no catch-up pass exists, deliberately.
 name: Streak notify
 permissions: {}
 on:

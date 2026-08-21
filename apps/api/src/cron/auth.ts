@@ -9,7 +9,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
  * out of the codebase, this endpoint does not reintroduce one. Vercel
  * sends `Authorization: Bearer <CRON_SECRET>` on cron invocations.
  *
- * Extracted VERBATIM from `app/cron/publish/route.ts` at #146 (ADR-0067):
+ * Extracted VERBATIM from `app/cron/publish/route.ts` at #146 (ADR-0068):
  * `POST /cron/notify` needs the same gate, and two copies of a secret
  * comparison is one copy too many. Both cron routes call this one
  * function; the publish route's auth behavior is byte-unchanged, pinned by

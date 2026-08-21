@@ -23,7 +23,7 @@ export type NudgeSend = (
  * environment activate the next tick, and the route's 503 gate has already
  * guaranteed the triple is present before this runs.
  *
- * TTL 3600 IS A DECISION (ADR-0067 decision 5): web-push's default TTL is
+ * TTL 3600 IS A DECISION (ADR-0068 decision 5): web-push's default TTL is
  * four weeks, and a streak nudge delivered tomorrow is worse than none —
  * one hour matches the mechanic's granularity (the next hourly tick would
  * have been the next chance anyway).

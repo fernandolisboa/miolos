@@ -46,7 +46,7 @@ export { getUserSince, listCompletionsForStats } from "./stats";
 // earnedMedals — rule-derived medals recompute over the stats reader
 // above and are never stored.
 export { listMedalGrants } from "./medals";
-// #146 (ADR-0064, ADR-0067): the dispatcher's statements — the candidate
+// #146 (ADR-0064, ADR-0068): the dispatcher's statements — the candidate
 // read, the claim-first ledger write, and the one-snapshot tick instant.
 // Cross-table, so they live in packages/db (the merge.ts rule); the
 // `pruneSeenDays` precedent already puts a cron-side duty on this entry.

@@ -23,7 +23,7 @@ import {
 // Never statically cached: every invocation must reconcile against the db.
 export const dynamic = "force-dynamic";
 
-// `isAuthorized` moved to src/cron/auth.ts at #146 (ADR-0067), doc block
+// `isAuthorized` moved to src/cron/auth.ts at #146 (ADR-0068), doc block
 // and behavior verbatim: POST /cron/notify shares the exact gate.
 
 /**

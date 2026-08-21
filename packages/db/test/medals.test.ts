@@ -127,7 +127,7 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
       "daily_puzzles",
       "hint_grants",
       "medal_grants",
-      // #146 (ADR-0064 d7, ADR-0067): the notification-send claim ledger —
+      // #146 (ADR-0064 d7, ADR-0068): the notification-send claim ledger —
       // one row per (user, SP day, channel), append-only, claim-first. A
       // "ledger" in the send-once sense, NOT the accumulable sense this
       // tripwire exists to forbid: no quantity column exists to accumulate

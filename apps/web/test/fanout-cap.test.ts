@@ -546,7 +546,7 @@ describe("the nightly full property proof cannot be deleted in silence (T-WEB-S2
 describe("the hourly streak-notify tick keeps its decided shape (T-WEB-S297)", () => {
   /**
    * The `T-WEB-S226`/`S233` register applied to #146's dispatcher tick
-   * (ADR-0064 decision 8, ADR-0067): the workflow is the only thing that
+   * (ADR-0064 decision 8, ADR-0068): the workflow is the only thing that
    * makes the hourly tick exist, and a workflow that does not run produces
    * no red. Same limits as the scans above: this reads the FILE — it pins
    * what the configuration says, never that a tick ran. The decided tokens

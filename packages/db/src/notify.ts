@@ -5,7 +5,7 @@ import { SAO_PAULO_TIME_ZONE } from "./published";
 import { notificationSends } from "./schema";
 
 /**
- * The streak-at-risk dispatcher's statements (#146, ADR-0064, ADR-0067) —
+ * The streak-at-risk dispatcher's statements (#146, ADR-0064, ADR-0068) —
  * cross-table (completions × push_subscriptions × notification_sends), so
  * they live in `packages/db` (merge.ts's recorded rule: this package owns
  * cross-table operations, apps/api owns route-shaped workflows).
@@ -20,7 +20,7 @@ import { notificationSends } from "./schema";
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * The one-snapshot tick instant (ADR-0067 decision 3): the SP calendar day
+ * The one-snapshot tick instant (ADR-0068 decision 3): the SP calendar day
  * and the SP hour, read in ONE statement so the pair can never straddle
  * midnight against each other. The route reads it once and passes it down —
  * everything below takes `{today, hour}` as parameters, which is what makes
@@ -78,7 +78,7 @@ export async function readTickInstant(
  * The sample deliberately NARROWS d1's "earliest on-time completion" to
  * won ∧ on-time rows — one predicate does both the counted-day job and the
  * sample job; a lost-but-on-time earlier play is excluded (recorded in
- * ADR-0067's prefilter note). An ADR-0066 credited yesterday satisfies the
+ * ADR-0068's prefilter note). An ADR-0066 credited yesterday satisfies the
  * conjuncts by design, and its `completed_at` — the sync instant, not a
  * play instant — feeds the median as a sample (accepted imperfection).
  *
@@ -88,7 +88,7 @@ export async function readTickInstant(
  *   not a second streak definition: `computeStreak` stays the only streak
  *   authority — the copy's number comes from it, and T-API-S144 pins the
  *   sent number to it. Running `computeStreak` over every user per tick is
- *   the rejected alternative (cost without a correctness gain; ADR-0067).
+ *   the rejected alternative (cost without a correctness gain; ADR-0068).
  * - The ledger `not exists` is a PREFILTER ONLY — `claimNudgeSend` below
  *   is the race authority. It matches the 'push' channel alone, so slice
  *   C's email arm claims independently on the same ledger.
@@ -97,7 +97,12 @@ export async function readTickInstant(
  *   the join through the GROUP BY). Harmless at v1 scale; the recorded
  *   restructure, if tick timings ever show it, is a subscriber prefilter
  *   inside the CTE.
- * - Rides `completions_user_date_idx`. No new index (schema.ts).
+ * - Index shapes, precisely (#146 step 7, migration 0011): the CTE's
+ *   date-range read carries no user predicate, so it rides the partial
+ *   `completions_counted_date_idx` ((date) WHERE won ∧ on-time — the
+ *   measured choice, schema.ts); the two `exists` probes are (user_id,
+ *   date) point lookups and ride `completions_user_date_idx`; the ledger
+ *   `not exists` hits the `notification_sends` composite PK.
  */
 export async function listPushNudgeCandidates(
   db: Db,

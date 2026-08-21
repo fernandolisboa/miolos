@@ -169,7 +169,7 @@ async function insertSeenDay(userId: string, date: string): Promise<void> {
   await ctx.db.insert(userSeenDays).values({ userId, date });
 }
 
-/** A notification-send claim with a CHOSEN sent_at (#146, ADR-0067) —
+/** A notification-send claim with a CHOSEN sent_at (#146, ADR-0068) —
  *  production stamps the DB clock (`claimNudgeSend`); the PK-collision
  *  assertion needs distinguishable instants. */
 async function insertNotificationSend(
@@ -227,7 +227,7 @@ async function snapshotState(): Promise<{
       .select()
       .from(userSeenDays)
       .orderBy(asc(userSeenDays.userId), asc(userSeenDays.date)),
-    // #146 (ADR-0067): the notification-send ledger union (statements
+    // #146 (ADR-0068): the notification-send ledger union (statements
     // 5e/5f) joins the double-run equality — the same precedent again.
     notificationSends: await ctx.db
       .select()
@@ -520,7 +520,7 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
     await insertSeenDay(loser, "2026-08-02");
     await insertSeenDay(loser, "2026-08-03");
     // Ledger claims on BOTH sides, overlapping and disjoint (#146,
-    // ADR-0067): the loser's exercise the union+delete pair (5e/5f) on
+    // ADR-0068): the loser's exercise the union+delete pair (5e/5f) on
     // both runs, the overlap exercises ON CONFLICT DO NOTHING, and the
     // winner's must survive untouched — the snapshot's double-run
     // equality sees all three.
@@ -829,7 +829,7 @@ describe("mergeAccounts — seen days union (#58, ADR-0066; ADR-0049 decision 6)
   });
 });
 
-describe("mergeAccounts — notification-sends union (#146, ADR-0067; ADR-0049 decision 6)", () => {
+describe("mergeAccounts — notification-sends union (#146, ADR-0068; ADR-0049 decision 6)", () => {
   it("T-DB-S82: the winner gets the loser's ledger rows, a PK collision keeps the winner's sent_at, the loser is emptied, and a re-run is a no-op", async () => {
     const winner = await createUser(OLDER);
     const loser = await createUser(NEWER);
