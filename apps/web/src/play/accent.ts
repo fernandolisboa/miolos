@@ -38,8 +38,11 @@ const ACCENTS: Readonly<Record<Game, string>> = {
  * ADR-0041 forbids outright: an accent may colour a shape, never a word.
  *
  * The property's range is "an ink that is legible on this accent", **not** "a
- * paper token" (ADR-0041 decision 2). Three of the four resolve to a paper
- * anyway and are unchanged to the byte:
+ * paper token" (ADR-0041 decision 2). Since #161 (ADR-0067) all four resolve
+ * to a paper — that is the harmonization the ticket asked for — but the range
+ * stays as decision 2 states it, because it is what allowed Termo's ink to be
+ * `--ink` while the accent was too light to carry any paper. Three are
+ * unchanged to the byte:
  *
  * - **Sudoku** `--paper-desk` on ink-blue — **7.5113:1**.
  * - **Binairo** `--paper-desk` on moss-green — **5.3066:1**.
@@ -53,23 +56,22 @@ const ACCENTS: Readonly<Record<Game, string>> = {
  *   because its label is a 24px Fraunces numeral, i.e. WCAG large text at a
  *   3:1 floor. A brush label is not, and neither is a button label.
  *
- * **Termo is the fourth and it takes `--ink`.** `--accent-termo` #C08A1E has
- * relative luminance 0.29477163 — a mid colour, greyscale 148/255 — so no
- * paper rescues it: desk is **2.7311:1**, card **2.8501:1** and tint
- * **2.5457:1**, and 2.8501:1 is the ceiling over the whole paper family
- * against a 4.5 floor. `--ink` #211D19 ON mustard is **5.4968:1**, which
- * clears AA for the 14px/600 labels with 22 % of headroom. Mustard is simply
- * the first of the four accents light enough to carry dark ink. (The figure
- * documented here before ADR-0041 was `2.736:1` for the card case; it was
- * quoted as measured evidence and it is wrong — the value is **2.8501:1**.
- * The conclusion never changed: both fail AA and both fail WCAG 1.4.11's 3:1
- * non-text floor.)
+ * - **Termo** `--paper-desk` on deep mustard — **4.8433:1**, since #161
+ *   (ADR-0067). The original mustard #C08A1E (L 0.29477163, greyscale
+ *   148/255) cleared no paper — desk was 2.7311:1, card 2.8501:1, tint
+ *   2.5457:1 — so Termo was the one game whose filled buttons carried
+ *   `--ink` (5.4968:1 on the old value), and its hub card read as the odd
+ *   one out beside three deep fills with light labels. ADR-0067 deepened
+ *   the token to #8D6212 (L 0.14441758) for exactly that reason, and this
+ *   row is the other half of the same decision: `--ink` ON the deep value
+ *   is 3.0996:1, an AA failure, so the ink flip and the token move are one
+ *   change, not two.
  *
- * The token values do not move — ADR-0041 decision 6. Darkening the palette
- * is the option #68 offered first and Fernando rejected on 2026-08-02.
+ * ADR-0041 decision 6 ("the token values do not move") is superseded for
+ * `--accent-termo` by ADR-0067, the new ADR that decision itself required.
  */
 const INKS_ON_ACCENT: Readonly<Record<Game, string>> = {
-  termo: "var(--ink)",
+  termo: "var(--paper-desk)",
   sudoku: "var(--paper-desk)",
   nonogram: "var(--paper-card)",
   binairo: "var(--paper-desk)",
@@ -86,12 +88,14 @@ const INKS_ON_ACCENT: Readonly<Record<Game, string>> = {
  * (landmine N12) — so a surface that renders outside an accent root still
  * paints the shipped desk ink instead of nothing.
  *
- * That fallback is per site rather than uniform (ADR-0041 consequence (c)):
- * desk is the safe default for a surface that can render any of the four
- * accents, but a surface that can only ever render mustard reads
- * `var(--ink-on-accent, var(--ink))`, because desk on mustard is 2.7311:1.
- * `apps/web/test/ink-on-accent.test.ts` carries the expected fallback per
- * site for exactly that reason.
+ * That fallback is per site rather than uniform (ADR-0041 consequence (c),
+ * as amended by ADR-0067): since #161 every game's ink resolves to a paper,
+ * so `var(--paper-desk)` is the safe fallback everywhere — including the
+ * Termo board and keys, which carried `var(--ink)` while the accent was the
+ * old light mustard (desk on #C08A1E was 2.7311:1). The per-site machinery
+ * stays, because it is what let the flip happen at the sites and not in a
+ * global constant; `apps/web/test/ink-on-accent.test.ts` still carries the
+ * expected fallback per site.
  */
 export function accentVars(game: Game): CSSProperties {
   return { "--accent": ACCENTS[game], "--ink-on-accent": INKS_ON_ACCENT[game] };

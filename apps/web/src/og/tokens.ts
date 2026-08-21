@@ -45,14 +45,14 @@ export const TEXTURE_DOT = "#211D190F";
  * are `DESIGN.md`'s own for those two surfaces.
  */
 export const ACCENT_SHADOW = {
-  termo: "#C08A1E38", // --accent-termo
+  termo: "#8D621238", // --accent-termo
   sudoku: "#2E4E7E38", // --accent-sudoku
   nonogram: "#B5563C38", // --accent-nonogram
   binairo: "#4E6B5238", // --accent-binairo
 } as const;
 
 export const ACCENT_TAPE = {
-  termo: "#C08A1E52", // --accent-termo
+  termo: "#8D621252", // --accent-termo
   sudoku: "#2E4E7E52", // --accent-sudoku
   nonogram: "#B5563C52", // --accent-nonogram
   binairo: "#4E6B5252", // --accent-binairo

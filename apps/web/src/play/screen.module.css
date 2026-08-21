@@ -58,11 +58,13 @@
    so (0.89161610 + 0.05) / (0.01272250 + 0.05) = **15.0124:1**. The state's
    carrier is the underline's PRESENCE, not its hue.
 
-   ACCEPTED EXCEPTION, with its ratio rather than a claim of compliance: the
-   2px mustard rule is `--accent-termo` #C08A1E (L 0.29477163) on desk paper,
-   (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1**, below WCAG
-   1.4.11's 3:1 non-text floor. Accepted on two grounds, neither of which is
-   "it complies" — hover is a POINTER-ONLY affordance that duplicates what the
+   ACCEPTED EXCEPTION (ADR-0041 decision 4), granted when the worst rule was
+   the old mustard #C08A1E at **2.7311:1** on desk paper, below WCAG 1.4.11's
+   3:1 non-text floor. Since ADR-0067 the worst of the four is nonogram
+   terracotta at 4.3182:1 on desk (the deep mustard #8D6212 is 4.8433:1), so
+   every hover rule now clears the floor — but the exception's grounds are
+   kept on the record because they are what makes the treatment safe for ANY
+   palette: hover is a POINTER-ONLY affordance that duplicates what the
    link already carries at 15.0124:1 and is not a state a user must perceive
    to operate the control; and a solid band appearing where there was none is
    a change of GEOMETRY, so the state survives greyscale. `:focus-visible`,
@@ -116,10 +118,13 @@
 }
 
 /* `--ink-2`, not `--accent` (ADR-0041): this sheet is SHARED, so the kicker
-   renders in whichever accent the game supplies, and mustard #C08A1E on
-   `--paper-desk` is (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1**
-   — an AA failure against PRODUCT.md's 4.5 floor. `--ink-2` #6E6659
-   (L 0.13539008) is (0.89161610 + 0.05) / (0.13539008 + 0.05) = **5.0791:1**.
+   renders in whichever accent the game supplies, and a shared `var(--accent)`
+   has no fixed value and therefore no ratio to measure — the rule that
+   forbids it does not soften with the palette (the forcing case was the old
+   mustard #C08A1E at 2.7311:1 on desk, deepened by ADR-0067; the worst
+   literal today is nonogram at 4.3182:1 on desk, which still fails the 4.5
+   text floor). `--ink-2` #6E6659 (L 0.13539008) is (0.89161610 + 0.05) /
+   (0.13539008 + 0.05) = **5.0791:1**.
 
    And the kicker is BRANDED, `var(--text-kicker)` at 600 with 0.16em, not the
    11px/400/0.14em it carried before (step-7 finding A-F6). Once the accent
@@ -170,8 +175,8 @@
   padding-top: 32px;
 }
 
-/* Same conversion, same arithmetic as `.barKicker` above: mustard on desk
-   paper is **2.7311:1** at 11px/600, `--ink-2` is **5.0791:1** (ADR-0041). */
+/* Same conversion, same argument as `.barKicker` above — a shared accent has
+   no ratio to measure; `--ink-2` on desk is **5.0791:1** (ADR-0041). */
 .titleKicker {
   margin: 0;
   font: var(--text-kicker);
@@ -250,11 +255,10 @@
 }
 
 /* On CARD paper, not desk, so the arithmetic differs from the two kickers
-   above (ADR-0041). Mustard #C08A1E on `--paper-card` #FBF7EF (L 0.93262753)
-   is (0.93262753 + 0.05) / (0.29477163 + 0.05) = **2.8501:1** — the ceiling
-   over the whole paper family, which is why no paper token was ever going to
-   rescue it. `--ink-2` #6E6659 on card is (0.93262753 + 0.05) /
-   (0.13539008 + 0.05) = **5.3003:1**. */
+   above (ADR-0041) — same shared-accent argument (the old mustard's
+   2.8501:1 on card was the forcing case, deepened by ADR-0067). `--ink-2`
+   #6E6659 on card is (0.93262753 + 0.05) / (0.13539008 + 0.05) =
+   **5.3003:1**. */
 .statLabel {
   font-size: 11px;
   letter-spacing: 0.14em;
@@ -299,11 +303,12 @@
   background: var(--accent);
   /* The label on an accent FILL, per game, with the shipped desk ink as the
      fallback — `play/accent.ts` sets both custom properties on the same root
-     that sets `--accent`. Binairo and Sudoku resolve it to `var(--paper-desk)`
-     and are unchanged to the byte; Nonogram resolves it to `var(--paper-card)`
-     because desk on terracotta is 4.318:1, an AA failure for a 14px label
-     (step-6 finding ISS-A2), and card is 4.506:1. Identical argument, identical
-     one-token remedy as `nonogram-board.module.css:461-463`'s `.controlActive`.
+     that sets `--accent`. Binairo, Sudoku and (since ADR-0067) Termo resolve
+     it to `var(--paper-desk)` — 5.3066:1, 7.5113:1 and 4.8433:1 on their
+     fills; Nonogram resolves it to `var(--paper-card)` because desk on
+     terracotta is 4.318:1, an AA failure for a 14px label (step-6 finding
+     ISS-A2), and card is 4.506:1. Identical argument, identical one-token
+     remedy as `nonogram-board.module.css:461-463`'s `.controlActive`.
      Unlike `--board-mobile-max` at :409 the fallback here is real. */
   color: var(--ink-on-accent, var(--paper-desk));
   border: 1.5px solid var(--accent);
@@ -351,13 +356,14 @@
 
    `outline-offset: 2px` puts `--paper-desk` on BOTH sides of the ring — the
    gap inside it and the page background outside — so the ring is measured
-   against desk paper and nothing else. `var(--accent)` is per game, and
-   mustard `--accent-termo` #C08A1E (L 0.29477163) on `--paper-desk` #F7F2E9
-   (L 0.89161610) is (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1**,
-   below the floor. The accent version passed only by accident of WHICH three
-   games shipped — nonogram 4.3182:1, binairo 5.3066:1, sudoku 7.5113:1 — and
-   would have gone illegal the instant `playRoutes` gained `termo` (#27), the
-   exact trigger ADR-0041 exists for.
+   against desk paper and nothing else. `var(--accent)` is per game, and when
+   this rule was converted the old mustard `--accent-termo` #C08A1E measured
+   **2.7311:1** there, below the floor: the accent version passed only by
+   accident of WHICH three games shipped (nonogram 4.3182:1, binairo
+   5.3066:1, sudoku 7.5113:1) and would have gone illegal the instant
+   `playRoutes` gained `termo` (#27), the exact trigger ADR-0041 exists for.
+   ADR-0067's deep mustard (4.8433:1 on desk) would pass today, but ink stays:
+   a shared sheet's legality must not depend on which accents happen to ship.
 
    `--ink` #211D19 (L 0.01272250) is (0.89161610 + 0.05) /
    (0.01272250 + 0.05) = **15.0124:1** for all four games at once.

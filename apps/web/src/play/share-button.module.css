@@ -13,8 +13,9 @@
    to say that sheet declares exactly one — `.share:focus-visible` — and after
    #103 it again declares none; the annotation there says so. The ring itself
    is unchanged: `--ink` at 15.0124:1 on desk, the `hub-attach` / `privacidade`
-   idiom, never `var(--accent)` (2.7311:1 for mustard), and 2.4.7 and 1.4.11
-   govern it.
+   idiom, never `var(--accent)` — a shared ring must not depend on which
+   accent renders (the forcing case was the old mustard at 2.7311:1,
+   deepened by ADR-0067) — and 2.4.7 and 1.4.11 govern it.
 
    Every rule is anchored on a local class: Next compiles CSS Modules in
    css-loader's `pure` mode, so a bare type selector either fails the build

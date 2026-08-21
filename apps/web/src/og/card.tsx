@@ -135,9 +135,10 @@ function deskDots(): ReactElement[] {
  * obeyed WITHOUT invoking its exception: `DESIGN.md`'s colour section says
  * outright that "the kicker is no longer among" the sanctioned accent
  * surfaces, so the reference frames' accent-coloured kickers predate ADR-0041
- * and are not copied. It also means Termo's mustard — the lowest-contrast
- * accent in the family — is never a question. `T-WEB-S200` walks the tree for
- * it, with the tape and the shadow as its counted floor.
+ * and are not copied. It also means no accent's contrast on paper is ever a
+ * question here — not even the old light mustard's, before ADR-0067 deepened
+ * it. `T-WEB-S200` walks the tree for it, with the tape and the shadow as
+ * its counted floor.
  */
 function paper(args: {
   readonly tape: string;
