@@ -31,6 +31,17 @@ const CAPTURE_TIMEOUT_MS = 3_000;
 // no-ops — but it must be visible in the Vercel logs of the exact
 // deployment where someone asks why the dashboard is empty (D8). T-API-S155
 // pins "logs once, sends nothing, never throws".
+//
+// IF YOU SEE THIS LINE IN A DEPLOYMENT WHERE `POSTHOG_KEY` IS SET, the
+// variable exists on the project but was never baked into this function:
+// `apps/api/vercel.json` sets `ignoreCommand: npx turbo-ignore`, so a
+// production build with no diff under `apps/api` is skipped (the ~6-second
+// `Canceled` rows in `vercel ls miolos-api --prod`) and the deployment keeps
+// the environment it was built with. `vercel env ls` will still list the key,
+// which is why that command cannot confirm activation — this log line and a
+// real event in PostHog can. Fix: land any commit touching `apps/api/**`.
+// The identical trap cost a day on `CRON_SECRET` (2026-08-21); the runbook
+// is `docs/pending-fernando.md`.
 let warnedMissingKey = false;
 
 /**
