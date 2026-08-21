@@ -170,8 +170,9 @@ describe("HubOnboarding reduced motion (T-WEB-S253)", () => {
     expect(decl(reduce, "animation")).toBe("none");
     expect(decl(reduce, "opacity")).toBe("1");
     // The rotation is decoration, not motion: dropping it would un-rotate
-    // the card, which is a different design, not a calmer one.
-    expect(decl(reduce, "transform")).toBe("rotate(-0.5deg)");
+    // the card, which is a different design, not a calmer one. -0.3deg is
+    // #162's one angle for every viewport (T-WEB-S303 pins the sites).
+    expect(decl(reduce, "transform")).toBe("rotate(-0.3deg)");
   });
 });
 
@@ -216,6 +217,54 @@ describe("HubOnboarding landmark and accessible name (T-WEB-S255)", () => {
       name: messages.onboarding.invitation,
     });
     expect(heading.id).toBe(labelledBy);
+  });
+});
+
+describe("HubOnboarding is a full-width band, not a half-width note (T-WEB-S303)", () => {
+  it("the desktop card declares no width cap and composes two columns, the mobile block returns it to block flow, and the rotation is ONE angle at every site", () => {
+    const css = stylesheet("app/hub-onboarding.module.css");
+    const card = bodyOf(css, ".intro");
+
+    // #162: under the full-width games grid, a `max-width: 560px` note sat
+    // bottom-left with dead desk to its right and read as misplaced. The
+    // page's flex column stretches its children, so declaring NO width cap
+    // is exactly what makes the band match the grid's width — the same
+    // full-bleed discipline centered-measure.test.ts documents for the
+    // hub's own `.page`.
+    expect(decl(card, "max-width")).toBeUndefined();
+    expect(decl(card, "width")).toBeUndefined();
+
+    // The band's composition: invitation left, body copy right.
+    expect(decl(card, "display")).toBe("grid");
+    expect(decl(card, "grid-template-columns")).toBe(
+      "minmax(0, 2fr) minmax(0, 3fr)",
+    );
+
+    // At phone widths the card was never the problem — it stays the
+    // stacked full-width paper #35 shipped, and block flow is what makes
+    // the children's grid placements inert there.
+    const mobile = bodyOf(css, "@media (max-width: 768px)");
+    const mobileCard = bodyOf(mobile, ".intro");
+    expect(decl(mobileCard, "display")).toBe("block");
+
+    // Step-7 widening of the same band-shape claim, SAME id (the T-DB-9a
+    // precedent): the body copy's 512px measure is declared once and the
+    // mobile block deliberately does NOT reset it. Below ~550px card width
+    // the cap never binds (390px is byte-identical to main), but at
+    // 550–768px it does — a deliberate copy measure, better typography
+    // than main's uncapped ~700px lines, not a desktop leak.
+    expect(decl(bodyOf(css, ".body"), "max-width")).toBe("512px");
+    expect(decl(bodyOf(mobile, ".body"), "max-width")).toBeUndefined();
+
+    // One static angle at every site — resting, settle start, and (per
+    // T-WEB-S253) the reduce block — so the rotation can never animate and
+    // the mobile block needs no angle of its own.
+    expect(decl(card, "transform")).toBe("rotate(-0.3deg)");
+    const starting = bodyOf(css, "@starting-style");
+    expect(decl(bodyOf(starting, ".intro"), "transform")).toBe(
+      "rotate(-0.3deg) translateY(2px)",
+    );
+    expect(decl(mobileCard, "transform")).toBeUndefined();
   });
 });
 
