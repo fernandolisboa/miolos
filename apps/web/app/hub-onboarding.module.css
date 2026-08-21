@@ -1,13 +1,24 @@
-/* The first-visit introduction card (#35, ADR-0061): card paper, 1px line
-   border, hard single-color offset shadow in the APP accent at 25% — the
-   register of the page's two other app-accent surfaces (the streak stamp
-   and the attach card), a CHOICE rather than a copy of the game cards' 22%
-   (blur 0 always) — static rotation, washi tape in the same accent.
-   Fraunces italic carries the one human line (an <h2>; .invitation is
-   element-agnostic); the body rides var(--text-body), this card being the
+/* The first-visit introduction (#35, ADR-0061; reshaped by #162): card
+   paper, 1px line border, hard single-color offset shadow in the APP accent
+   at 25% — the register of the page's two other app-accent surfaces (the
+   streak stamp and the attach card), a CHOICE rather than a copy of the game
+   cards' 22% (blur 0 always) — static rotation, washi tape in the same
+   accent. Fraunces italic carries the one human line (an <h2>; .invitation
+   is element-agnostic); the body rides var(--text-body), this card being the
    hub's first consumer of that token (identical to the sheets' 14px/1.5
    longhand). Accent colours SHAPES only (ADR-0041): every text run is
    --ink or --ink-2 on paper, so no contrast measurement is owed.
+
+   #162's reshape: the desktop card is a FULL-WIDTH editorial band, not a
+   560px note. As a note it sat bottom-left under the full-width games grid
+   with dead desk to its right and read as misplaced (Fernando's screenshot
+   on the issue). The band matches the grid's width for free — the page's
+   flex column stretches its children; the old `max-width: 560px` was the
+   whole cause — and composes two columns inside: the invitation left, the
+   three body lines and the dismiss right. The PLACEMENT is untouched: same
+   DOM slot after the grid (plan 057 §placement), still rendering null until
+   the server says show, so nothing above it ever moves (T-WEB-S247/S248).
+   T-WEB-S303 pins the band shape.
 
    Named .intro/.introTape rather than hub-attach's .card/.tape ON PURPOSE:
    CSS Modules hash per file so the names never collide in the app, but the
@@ -17,15 +28,27 @@
 
 .intro {
   position: relative;
+  display: grid;
+  /* Invitation left, body copy right. 2fr/3fr puts the fold at ~40% —
+     enough room for the 24px italic to wrap to two lines at 1440 while the
+     longest body line (the lead) wraps to two on the right, so neither
+     column reads as padding for the other. minmax(0, …) so a long word can
+     never blow the track open. */
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  column-gap: var(--space-12);
   margin-top: var(--space-8);
-  max-width: 560px;
-  padding: var(--space-6) var(--space-6) var(--space-5);
+  padding: var(--space-6) var(--space-7) var(--space-5);
   background: var(--paper-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-md)
     color-mix(in srgb, var(--accent-app) 25%, transparent);
-  transform: rotate(-0.5deg);
+  /* -0.3deg, the floor of DESIGN.md's ±0.3–2.4deg range and the angle the
+     mobile card already used: at this band's ~1220px width, the old -0.5deg
+     dropped ~11px corner to corner and read as sloppy rather than
+     hand-placed. One angle at every viewport also collapses the mobile
+     @starting-style this sheet used to need. */
+  transform: rotate(-0.3deg);
   opacity: 1;
   /* The one 200 ms settle (DESIGN.md "tinta que assenta", 150-250 ms, no
      bounce): fires once, when the island's state settles post-hydration —
@@ -45,7 +68,7 @@
 @starting-style {
   .intro {
     opacity: 0;
-    transform: rotate(-0.5deg) translateY(2px);
+    transform: rotate(-0.3deg) translateY(2px);
   }
 }
 
@@ -61,6 +84,14 @@
 }
 
 .invitation {
+  /* The left column, held for the whole band: `1 / 5` spans the four rows
+     the right column creates (three body lines + the dismiss). The count is
+     not load-bearing — align-self: start keeps the heading at the top
+     whatever the right column holds, and a shorter span would only leave a
+     zero-height implicit row. */
+  grid-column: 1;
+  grid-row: 1 / 5;
+  align-self: start;
   margin: 0;
   font-family: var(--font-display);
   font-style: italic;
@@ -70,14 +101,29 @@
 }
 
 .body {
-  margin: var(--space-2) 0 0;
+  grid-column: 2;
+  /* Bottom margin, not top: the first body line's top then aligns with the
+     invitation's across the gap, and the 8px rhythm between lines is the
+     one the note already had. */
+  margin: 0 0 var(--space-2);
+  /* A measure, because the track is not one: at 1440 the right column runs
+     ~705px and the lead sat on one ~100-character line (impeccable's
+     line-length, ~93 still at 70ch — this face's `0` is wide, so ch is not
+     the unit to reason in). 512px is the exact measure the #35 note gave
+     these lines (560px card minus 2 × 24px padding) and the scan passed it;
+     ragged-right on the band's paper is the editorial register anyway. */
+  max-width: 512px;
   font: var(--text-body);
   color: var(--ink-2);
   text-wrap: pretty;
 }
 
 .dismiss {
-  margin-top: var(--space-4);
+  grid-column: 2;
+  justify-self: start;
+  /* 8px here + the last body line's 8px below = the 16px the note gave the
+     button (grid item margins never collapse). */
+  margin-top: var(--space-2);
   min-height: var(--touch-target-min);
   padding: var(--space-3) var(--space-2);
   background: none;
@@ -100,10 +146,8 @@
   .intro {
     /* The rotation is decoration and stays; only the settle is stood down.
        Dropping the transform outright would un-rotate the card, which is a
-       different design, not a calmer one. (The mobile block below still
-       re-angles to -0.3deg; it sets no transition, so the stand-down
-       holds there too.) */
-    transform: rotate(-0.5deg);
+       different design, not a calmer one. */
+    transform: rotate(-0.3deg);
     transition: none;
     animation: none;
     opacity: 1;
@@ -112,22 +156,14 @@
 
 @media (max-width: 768px) {
   .intro {
+    /* The band is a desktop composition. At phone widths the card was
+       already full-width and stacked, and stays exactly as it shipped:
+       block flow makes the children's grid placements inert. */
+    display: block;
     margin-top: var(--space-6);
-    max-width: none;
     padding: var(--space-5) 18px var(--space-4);
     box-shadow: var(--shadow-sm)
       color-mix(in srgb, var(--accent-app) 25%, transparent);
-    transform: rotate(-0.3deg);
-  }
-
-  /* The mobile angle's own starting point: without it the settle would
-     animate the rotation -0.5deg → -0.3deg, and the rotation is held
-     CONSTANT through the transition at every viewport. */
-  @starting-style {
-    .intro {
-      opacity: 0;
-      transform: rotate(-0.3deg) translateY(2px);
-    }
   }
 
   .introTape {
@@ -139,5 +175,18 @@
 
   .invitation {
     font-size: 20px;
+  }
+
+  .body {
+    /* The 512px measure above deliberately PERSISTS here — this block
+       resets the margin only. At 390px the cap never binds (the card is
+       narrower than 512px; the render is byte-identical to #35's), but at
+       550–768px it does, and that is the point: a copy measure at those
+       widths, not a leak from the desktop band. T-WEB-S303 pins it. */
+    margin: var(--space-2) 0 0;
+  }
+
+  .dismiss {
+    margin-top: var(--space-4);
   }
 }
