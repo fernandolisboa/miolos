@@ -94,12 +94,12 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     // claiming a fallback is not evidence of one. Pinned literally.
     //
     // The fallback is PER SITE, not one literal for all of them (ADR-0041
-    // consequence (c)). Every surface below can render any of the four
-    // accents, so its fallback is the shipped `var(--paper-desk)`; a surface
-    // that can only ever render mustard takes `var(--ink)` instead, because
-    // desk on mustard is 2.7311:1. Termo's board and keys are the only such
-    // surfaces in the repo and they arrive with #27, so the third column
-    // exists before it has a second value rather than being reshaped later.
+    // consequence (c), as amended by ADR-0067). Every surface below can
+    // render any of the four accents, so its fallback is the shipped
+    // `var(--paper-desk)` — and since ADR-0067 deepened the termo accent,
+    // desk is legal on every game's fill (4.8433:1 on #8D6212), so the
+    // termo board's per-site `var(--ink)` value dissolved too. The column
+    // stays because the mechanism is what allowed both states to exist.
     const sites = [
       ["src/play/screen.module.css", ".hint", "var(--paper-desk)"],
       ["src/play/conclusion-view.module.css", ".ctaNext", "var(--paper-desk)"],
@@ -143,7 +143,7 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     expect(css).not.toMatch(/^\.page \.ctaNext:hover \{/m);
   });
 
-  it("moves Termo to ink, Nonogram to card paper, and nothing else", () => {
+  it("gives every game a light paper label — desk, with card for Nonogram — and nothing else", () => {
     // The byte-identity half. `--paper-desk` is the literal binairo's and
     // sudoku's filled buttons carried before either fix, so a change to
     // either is a visible change to a shipped screen and fails here.
@@ -155,13 +155,16 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
       "--accent": "var(--accent-sudoku)",
       "--ink-on-accent": "var(--paper-desk)",
     });
-    // ADR-0041 decision 2: the property's range is "an ink legible on this
-    // accent", not "a paper token". Desk on mustard is 2.7311:1, card is
-    // 2.8501:1 and tint is 2.5457:1 — no paper clears 4.5 — while `--ink`
-    // #211D19 ON mustard is 5.4968:1.
+    // ADR-0067 (#161): desk on the deep mustard #8D6212 is 4.8433:1, so
+    // Termo carries the family's light-label treatment. It carried
+    // `var(--ink)` while the accent was the old #C08A1E, on which no paper
+    // cleared 4.5 — the odd-one-out hub card #161 harmonized. ADR-0041
+    // decision 2's range ("an ink legible on this accent", not "a paper
+    // token") is unchanged; all four values happening to be papers is the
+    // harmonization, not a narrowing of the range.
     expect(accentVars("termo")).toEqual({
       "--accent": "var(--accent-termo)",
-      "--ink-on-accent": "var(--ink)",
+      "--ink-on-accent": "var(--paper-desk)",
     });
     expect(accentVars("nonogram")).toEqual({
       "--accent": "var(--accent-nonogram)",
@@ -176,10 +179,12 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
  * The sheets below are SHARED — every play screen and every conclusion
  * renders the first three with `--accent` bound to the game's own token, and
  * #29's stats sheet renders all four accents on one screen — so each of
- * them had to be legible against the worst of the four accents, and mustard
- * is 2.7311:1 on desk paper and 2.8501:1 on card. Both fail PRODUCT.md's
- * 4.5:1 floor, and 2.8501:1 is the ceiling over the whole paper family, so
- * no paper token was ever going to rescue them.
+ * them had to be legible against the worst of the four accents. When the
+ * rule landed that was the old mustard #C08A1E at 2.7311:1 on desk and
+ * 2.8501:1 on card (ADR-0067 has since deepened it to #8D6212); the worst
+ * literal today, nonogram terracotta at 4.3182:1 on desk, still fails
+ * PRODUCT.md's 4.5:1 text floor, and a shared `var(--accent)` has no fixed
+ * value to measure at all — the rule does not rest on any one palette.
  *
  * `impeccable detect` cannot see any of this and never will: `low-contrast`
  * and `cream-palette` are wildcard-ignored on every host CI scans
@@ -195,9 +200,9 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
  *
  * It is scoped to the SHARED sheets, and that scope is the whole of
  * ADR-0041 decision 1's exception: a shared sheet renders all four accents
- * and therefore has to survive mustard, while a single-accent per-game
- * board or control module renders exactly one and its ratio can simply be
- * measured. **ADR-0041 consequence (h) enumerates all thirteen surviving
+ * and therefore has to survive the worst of them, while a single-accent
+ * per-game board or control module renders exactly one and its ratio can
+ * simply be measured. **ADR-0041 consequence (h) enumerates all thirteen surviving
  * accent-coloured declarations with their measured ratios** — the list lives
  * there rather than being copied here, where the copy would go stale (the
  * one that used to sit in this comment said "five" and named four, omitting
@@ -242,9 +247,9 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
    * ADR-0048's amendment to ADR-0041 consequence (h)) sits on
    * `--paper-card` #FBF7EF, ADR-0041 decision 1's own recorded
    * **6.2980:1**. Both clear PRODUCT.md's 4.5 floor. `--accent-app` is one
-   * fixed hex on every screen, never per game, so it cannot become mustard
-   * the way `var(--accent)` can; that is exactly the case ADR-0041
-   * decision 1 carves out. The hub pair is faithful to
+   * fixed hex on every screen, never per game, so unlike `var(--accent)` it
+   * has exactly one measurable ratio per paper; that is exactly the case
+   * ADR-0041 decision 1 carves out. The hub pair is faithful to
    * `f1-hoje-desktop.dc.html:23-24` and the conclusion pair to
    * `f5-conclusao-desktop.dc.html:55-56` — the streak is the app's one
    * piece of first-party identity on both screens.
@@ -315,9 +320,11 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
   });
 
   it("paints the eleven converted sites in a neutral ink", () => {
-    // Every row is one of the eleven declarations plan 022 §16.2 enumerates,
-    // with the ratio it computes against MUSTARD — the accent `/termo` will
-    // ship and the worst of the four. `--ink-2` #6E6659 is 5.0791:1 on desk
+    // Every row is one of the eleven declarations plan 022 §16.2 enumerates.
+    // The per-row "was" figures are the conversion's own record, computed
+    // against the OLD mustard #C08A1E — the worst accent at the time;
+    // ADR-0067 has since deepened the token, and the neutral inks' figures
+    // are paper-side and unmoved: `--ink-2` #6E6659 is 5.0791:1 on desk
     // paper and 5.3003:1 on card; `--ink` #211D19 is 15.0124:1 and 15.6663:1.
     const sites = [
       // 11px/600 kicker on desk paper — was 2.7311:1, now 5.0791:1.
@@ -332,7 +339,8 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
       ["src/play/conclusion-view.module.css", ".cardKicker", "var(--ink-2)"],
       // The stamp's TEXT on card paper — was 2.8501:1, now 15.6663:1.
       ["src/play/conclusion-view.module.css", ".stamp", "var(--ink)"],
-      // 17px/550 on the 10% chip tint #F5ECDA — was 2.5949:1, now 14.2637:1.
+      // 17px/550 on the 10% chip tint — was 2.5949:1 on the old mustard's
+      // #F5ECDA; on ADR-0067's tint #F0E8D9 the ink is 13.7508:1.
       [
         "src/play/conclusion-view.module.css",
         ".chipDone .chipName",
@@ -379,16 +387,19 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
    * 6.0351:1 and 6.2980:1, and which are not this scan's business.
    *
    * The ratios, per ring and per PAPER, because the fourth ring does not sit
-   * on the same paper as the other three:
+   * on the same paper as the other three. Worst case per ring since ADR-0067
+   * is nonogram (termo's deep #8D6212 is 5.0542:1 on card / 4.8433:1 on
+   * desk; the old mustard's 2.8501:1 / 2.7311:1 were the figures that made
+   * the decorative exemption load-bearing rather than headroom):
    *
    * - `conclusion-view.module.css .stamp` — the daily's 3px postmark, ring
-   *   2.8501:1 on `--paper-card`, enclosing `--ink` at 15.6663:1.
+   *   4.5063:1 worst on `--paper-card`, enclosing `--ink` at 15.6663:1.
    * - `page.module.css .doneChip` — the hub's 1.5px chip, same paper, same
    *   two figures.
    * - `arquivo.module.css .doneChip` — #96's archive chip, same paper, same
    *   two figures.
    * - `late-result.module.css .stamp` — the archive's 3px postmark, on DESK
-   *   paper: ring 2.7311:1, enclosing `--ink` at 15.0124:1 (`.stampDay`) and
+   *   paper: ring 4.3182:1 worst, enclosing `--ink` at 15.0124:1 (`.stampDay`) and
    *   `--ink-2` at 5.0791:1 (`.stampLabel`, `.stampMonth`). The lowest
    *   enclosed word here is 5.0791:1, above PRODUCT.md's 4.5 floor, so this
    *   ring outlines an already-legible label too — and it is `aria-hidden`
@@ -459,9 +470,11 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
 
   it("moves the hover accent from the word to the rule under it", () => {
     // ADR-0041 decision 4, and its ACCEPTED EXCEPTION. The word is `--ink`
-    // (15.0124:1 on desk paper); the accent becomes a 2px underline, which
-    // is 2.7311:1 on desk and 2.8501:1 on card — BELOW WCAG 1.4.11's 3:1
-    // non-text floor. It is accepted on two grounds, neither of which is
+    // (15.0124:1 on desk paper); the accent becomes a 2px underline, whose
+    // worst case was the old mustard at 2.7311:1 on desk / 2.8501:1 on card,
+    // BELOW WCAG 1.4.11's 3:1 non-text floor (since ADR-0067 the worst is
+    // nonogram at 4.3182:1, above it). The exception was accepted — and its
+    // grounds are kept — on two grounds, neither of which is
     // "it complies": hover is a pointer-only affordance duplicating what the
     // link already carries at 15.0124:1, and a solid band appearing where
     // there was none is a change of GEOMETRY, so the state survives
@@ -487,13 +500,14 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // 3:1 non-text floor and 2.4.7 both bind.
     //
     // `var(--accent)` here is per game and BOTH neighbours are `--paper-desk`
-    // (the 2px offset gap inside the ring, the page background outside it), so
-    // mustard #C08A1E (L 0.29477163) on desk #F7F2E9 (L 0.89161610) is
-    // (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1** — below the
-    // floor. It passed only by accident of WHICH three games shipped
-    // (nonogram 4.3182:1, binairo 5.3066:1, sudoku 7.5113:1) and would have
-    // gone red the instant #27 added `termo` to `playRoutes` — the exact
-    // trigger ADR-0041 exists for (step-7 finding A-F1).
+    // (the 2px offset gap inside the ring, the page background outside it).
+    // When the rule was converted the old mustard #C08A1E measured
+    // **2.7311:1** there — below the floor: the accent ring passed only by
+    // accident of WHICH three games shipped (nonogram 4.3182:1, binairo
+    // 5.3066:1, sudoku 7.5113:1) and would have gone red the instant #27
+    // added `termo` to `playRoutes` — the exact trigger ADR-0041 exists for
+    // (step-7 finding A-F1). ADR-0067's deep value would pass today; ink
+    // stays, because a shared ring's legality must not depend on the palette.
     //
     // `--ink` #211D19 (L 0.01272250) is (0.89161610 + 0.05) /
     // (0.01272250 + 0.05) = **15.0124:1** for all four.
@@ -536,10 +550,11 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // ADR-0041 decision 4's exception is granted to "a solid band appearing
     // where there was none... a change of GEOMETRY". This link already HAD its
     // rule, so a bare `border-bottom-color` swap inherited the exception's
-    // words without its substance: the state delta would be `--line` #D8D0C2
-    // (L 0.63605722) against mustard #C08A1E (L 0.29477163) =
-    // (0.63605722 + 0.05) / (0.29477163 + 0.05) = **1.9899:1** and nothing
-    // else (step-7 finding A-F5).
+    // words without its substance: the state delta would have been `--line`
+    // against the OLD mustard #C08A1E at **1.9899:1** and nothing else
+    // (step-7 finding A-F5). Since ADR-0067 every accent clears 3:1 against
+    // `--line` (the deep mustard is 3.5288:1), and the geometry delta is
+    // kept because its grounds do not depend on the palette.
     //
     // 2px -> 3px is the delta, and the padding gives the pixel back through
     // the same custom property, so the box is 6px below the baseline in both

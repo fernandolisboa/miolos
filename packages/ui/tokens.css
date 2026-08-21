@@ -11,7 +11,7 @@
 
   /* accents */
   --accent-app: #9E3B2F;      /* sealing-wax red: streak, promo */
-  --accent-termo: #C08A1E;    /* mustard */
+  --accent-termo: #8D6212;    /* deep mustard (#161, ADR-0067 — was #C08A1E) */
   --accent-sudoku: #2E4E7E;   /* ink-blue */
   --accent-nonogram: #B5563C; /* terracotta */
   --accent-binairo: #4E6B52;  /* moss-green */

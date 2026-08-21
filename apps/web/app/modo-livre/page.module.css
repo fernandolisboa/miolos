@@ -96,9 +96,9 @@
 }
 
 /* A card is a link: the whole surface must announce focus, and the ring is
-   ink for the same arithmetic as the shared play layer's `.hint` — mustard
-   never renders here, but the rule is per-accent and ink clears every one
-   of them at once (ADR-0041). */
+   ink for the same reason as the shared play layer's `.hint` — termo never
+   renders here, but the rule is per-accent and ink clears every one of
+   them at once (ADR-0041). */
 .card:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;

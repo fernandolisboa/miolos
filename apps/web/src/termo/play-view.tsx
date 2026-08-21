@@ -15,15 +15,15 @@ import type { TermoPlay } from "./use-termo-play";
  * The shared layout's per-screen accent AND the ink that sits on it, set
  * inline because `play/screen.module.css` reads both throughout.
  *
- * Mustard #C08A1E is the worst of the four accents and no paper rescues it:
- * 2.7311:1 on `--paper-desk`, 2.8501:1 on `--paper-card`, 2.5457:1 on
- * `--paper-tint`, against a 4.5 floor for text and a 3:1 floor for a
- * state-bearing boundary. `--ink-on-accent` resolves to `var(--ink)` for
- * termo — 5.4968:1 ON the mustard fill — which is what makes the `correct`
- * tile and the `correct` key legible, and ADR-0041 is why no word and no
- * boundary on this screen is mustard at all. Every figure here is computed
- * (§12.2), because `low-contrast` is wildcard-ignored on every host CI scans
- * and a green detect run is not evidence.
+ * The accent is ADR-0067's deep mustard #8D6212 (4.8433:1 on `--paper-desk`,
+ * 5.0542:1 on `--paper-card`; the original #C08A1E cleared no paper at all,
+ * which is what shaped this screen). `--ink-on-accent` resolves to
+ * `var(--paper-desk)` for termo — 4.8433:1 ON the fill, the same light-label
+ * treatment as the other three games — which is what makes the `correct`
+ * tile and the `correct` key legible, and ADR-0041 is why no word on this
+ * screen wears the accent regardless. Every figure here is computed (§12.2),
+ * because `low-contrast` is wildcard-ignored on every host CI scans and a
+ * green detect run is not evidence.
  *
  * The four geometry custom properties ride on `.pageTermo` instead — a class
  * this module owns, so no cascade order is involved.

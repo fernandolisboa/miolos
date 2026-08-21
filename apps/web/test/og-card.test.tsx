@@ -58,7 +58,7 @@ function valuesOf(tree: ReactElement, property: string): string[] {
 
 /** The six accent tokens, in the 7-character form `tokens.css` spells. */
 const ACCENTS = [
-  "#C08A1E", // --accent-termo
+  "#8D6212", // --accent-termo (deep mustard since ADR-0067)
   "#2E4E7E", // --accent-sudoku
   "#B5563C", // --accent-nonogram
   "#4E6B52", // --accent-binairo

@@ -423,11 +423,12 @@
 
    The RING keeps the accent and the WORD does not (ADR-0041 decisions 1 and
    5). WCAG 1.4.11's decorative exemption applies because the enclosed word
-   carries the whole message: the ring is 2.8501:1 on card paper worst case
-   (mustard L 0.29477163 against `--paper-card` L 0.93262753) and the word is
-   `--ink` #211D19 at 15.6663:1. Termo is the only accent that needs the
-   exemption at all — sudoku 7.8385:1, binairo 5.5377:1 and nonogram 4.5063:1
-   clear the 3:1 non-text floor unaided. `impeccable`'s `low-contrast` never
+   carries the whole message: the ring is 4.5063:1 on card paper worst case
+   (nonogram, since ADR-0067 deepened termo to 5.0542:1; the old mustard's
+   2.8501:1 was the one ring that NEEDED the exemption) and the word is
+   `--ink` #211D19 at 15.6663:1. All four rings now clear the 3:1 non-text
+   floor unaided — sudoku 7.8385:1, binairo 5.5377:1, nonogram 4.5063:1,
+   termo 5.0542:1 — so the exemption is headroom. `impeccable`'s `low-contrast` never
    evaluates a border, so `T-WEB-S73`'s ring scan is the gate here, not the
    detector (ADR-0041 consequence (f)).
 
