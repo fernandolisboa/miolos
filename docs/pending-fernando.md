@@ -28,27 +28,25 @@ Fernando (2026-08-20): *will do when ready to run the wizard — not yet.* Stays
 
 Issue #33's PostHog integration ships in PR #176 and **deploys dormant**: the capture helper is server-side only (`apps/api/src/telemetry/capture.ts`, ADR-0069), it reads `POSTHOG_KEY` from the API's environment, and that variable does not exist there yet. The token itself already exists — it is the value sitting in `NEXT_PUBLIC_POSTHOG_KEY` on **miolos-web**, where nothing reads it, because the final design keeps the key off the client entirely. So this is a **move**, not a new credential. Until it is done the deployed API logs one line per instance (*"POSTHOG_KEY is unset: telemetry capture disabled…"*) and the PostHog dashboard stays empty. An agent cannot run `vercel env` unattended (permission classifier, the same class as #59 and the 2026-08-21 CRON_SECRET rotation in the Done table).
 
-**Do not do this until:** `/privacidade` names PostHog as a processor and says the measurements leave Brazil. **This shipped in PR #176 itself** (`privacy.collected.telemetry`, ADR-0069 decision 5), so the precondition is met the moment #176 is on production — check `https://miolos.app/privacidade` shows the PostHog sentence before setting the key. The ordering is what makes the deferral of the full LGPD review to **#37** (ADR-0012) safe: setting the key starts sending per-user play history to a US processor, and it must not start before the page says so.
+**Precondition — VERIFIED 2026-08-21, nothing left to check.** `https://miolos.app/privacidade` already carries the sentence: *"Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos)."* PR #176 is on production, so the page names the processor and says the data leaves Brazil **before** any event is sent. That ordering is what makes deferring the full LGPD review to **#37** (ADR-0012) safe.
 
-- **Do (easiest):** start a session with *"set POSTHOG_KEY — pending-fernando NOW §2"* and approve the prompts. **Or by hand, in a real terminal:**
+- **Do (Fernando, one paste in a real terminal — both writes are classifier-blocked for an agent):**
   ```
-  # Read the token from the DASHBOARD, not from `vercel env pull`:
-  #   vercel.com → miolos-web → Settings → Environment Variables
-  #   → NEXT_PUBLIC_POSTHOG_KEY → the eye icon → copy.
-  # `vercel env pull` would write the project's ENTIRE production
-  # environment — WEB_DATABASE_URL included — to a file, to copy one
-  # publishable token. Don't.
   cd ~/projects/miolos/apps/api
-  vercel env add POSTHOG_KEY production                   # paste the value
+  vercel env add POSTHOG_KEY production        # prompts; paste the phc_… token
 
-  # REQUIRED, same sitting — not optional (ADR-0069 decision 8):
+  # REQUIRED, same sitting — ADR-0069 decision 8. THREE copies exist,
+  # confirmed 2026-08-21; removing only production leaves the twin alive.
   cd ../web
-  vercel env rm NEXT_PUBLIC_POSTHOG_KEY production
+  vercel env rm NEXT_PUBLIC_POSTHOG_KEY production -y
+  vercel env rm NEXT_PUBLIC_POSTHOG_KEY preview -y
+  vercel env rm NEXT_PUBLIC_POSTHOG_KEY development -y
   ```
-  **Then ask an agent to land any commit touching `apps/api/**` — that, not `vercel --prod`, is the redeploy.** This line used to read `vercel --prod` and it would not have worked: `apps/api/vercel.json` sets `"ignoreCommand": "npx turbo-ignore"`, so a production build with no diff under `apps/api` is **skipped** — the 6-second `Canceled` rows in `vercel ls miolos-api --prod`. The key would never have been baked into the running function, `vercel env ls` would still have listed it, and the item would have looked done while the PostHog dashboard stayed empty. Proven the hard way by the CRON_SECRET rotation on 2026-08-21 (see the Done table), which is why a real `apps/api` diff is the instruction here.
-  If the dashboard's eye icon will not reveal `NEXT_PUBLIC_POSTHOG_KEY`, do not fight it — the same token is always readable at its source, in PostHog: **Settings → Project → Project API Key**.
-  The twin removal is a required step because ADR-0069 decision 8 rules the `NEXT_PUBLIC_` twin out outright — a public twin invites client use, and leaving it is exactly the state the ADR says must not exist. Nothing reads it, so removing it breaks nothing. (Preview/Development copies too, if any: `vercel env ls` from `apps/web` shows them.)
-- **Verify:** `vercel env ls` from `apps/api` lists `POSTHOG_KEY` and the same command from `apps/web` no longer lists `NEXT_PUBLIC_POSTHOG_KEY`; then play one puzzle on production and PostHog's *Verify installation* goes green on the first captured event (`puzzle_started` fires as soon as a board opens).
+  **Where to get the token:** PostHog → **Settings → Project → Project API Key**. That is its source and it is always readable there. Do not chase the value through Vercel: `vercel env pull` would dump miolos-web's entire production environment — `WEB_DATABASE_URL` included — to a file to read one publishable token, and the dashboard's eye icon may refuse if the variable is Sensitive (the `CRON_SECRET` lesson).
+  **No `--sensitive` decision to make:** the `phc_…` project token is publishable by design — write-only ingestion, normally shipped in client bundles — and ADR-0069 keeps it off *our* client for architectural reasons, not because it is a secret. Take Vercel's default; if it lands Sensitive it costs nothing, because PostHog holds the source of truth and we never need to read it back.
+  **Then ask an agent to land any commit touching `apps/api/**` — that, not `vercel --prod`, is the redeploy.** `apps/api/vercel.json` sets `"ignoreCommand": "npx turbo-ignore"`, so a production build with no diff under `apps/api` is **skipped** (the ~6-second `Canceled` rows in `vercel ls miolos-api --prod`), the key never reaches the running function, and `vercel env ls` still lists it — the item would look done while the dashboard stayed empty. Proven the hard way by the CRON_SECRET rotation (Done table).
+  **No timing pressure, unlike CRON_SECRET.** Nothing breaks in the gap between the env write and the redeploy: the API simply stays dormant, exactly as it is today. Removing the web twin breaks nothing either, because nothing reads it.
+- **Verify — `vercel env ls` is NOT sufficient** (it shows the variable on the project, not in the running function; that is the whole trap above). The real checks: the deployed API stops logging *"POSTHOG_KEY is unset: telemetry capture disabled…"*, and playing one puzzle on production turns PostHog's *Verify installation* green — `puzzle_started` fires as soon as a board opens. `vercel env ls` from `apps/web` should also no longer list `NEXT_PUBLIC_POSTHOG_KEY` in any of the three environments.
 - **Blocks:** four of the five telemetry events in production — `puzzle_started`, `puzzle_completed`, `streak_broken`, `notification_opt_in`. **`login_linked` additionally waits on NOW §1 (Resend):** the attach flow is dormant in production, so it fires zero times until that is done, and you should expect four streams here, not five. `notification_opt_in` also needs a real browser opt-in to happen — no longer blocked, since the CRON_SECRET rotation of 2026-08-21 turned the hourly tick green; it now waits only on the ANY TIME phone ritual. Nothing else: the API is unaffected by the absence, by design.
 - **Source:** issue #33; PR #176; ADR-0069 decisions 1, 5 and 8; `apps/api/.env.example`; step-6 security B1/B2 and issue B3 on #176.
 
