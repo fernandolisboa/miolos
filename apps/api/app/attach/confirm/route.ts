@@ -31,6 +31,7 @@ import {
   generateSessionToken,
   hashSessionToken,
 } from "../../../src/session/token";
+import { captureEvent, runAfterResponse } from "../../../src/telemetry/capture";
 
 // Never statically cached: every request claims against the token table.
 export const dynamic = "force-dynamic";
@@ -262,6 +263,23 @@ export async function POST(request: NextRequest): Promise<Response> {
     db,
     await hashSessionToken(sessionToken),
     resolved.winnerId,
+  );
+
+  // THE TELEMETRY SEAM (#33, ADR-0069): login_linked on success, with the
+  // resolver's `merged`. `distinct_id` is `resolved.winnerId` — this route
+  // deliberately requires no session (the recovery browser may have none),
+  // so `requireUserId` is not in scope and the winner is the one honest
+  // identity here. Never the email (T-API-S174 pins the wire body).
+  // Post-response and throw-proof via `runAfterResponse`. Dormant in
+  // production until Resend activates — wired, fires zero times.
+  const winnerId = resolved.winnerId;
+  const merged = resolved.merged;
+  runAfterResponse(() =>
+    captureEvent({
+      distinctId: winnerId,
+      event: "login_linked",
+      properties: { merged },
+    }),
   );
 
   const response = Response.json(

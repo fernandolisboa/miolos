@@ -215,3 +215,11 @@ export {
   type PushUnsubscribeRequest,
   type PushUnsubscribeResponse,
 } from "./contracts/notifications";
+export {
+  TELEMETRY_EVENTS,
+  telemetryEventPropertiesSchemas,
+  telemetryRelayRequestSchema,
+  type TelemetryEvent,
+  type TelemetryEventProperties,
+  type TelemetryRelayRequest,
+} from "./contracts/telemetry";

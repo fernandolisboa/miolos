@@ -18,6 +18,7 @@ import {
 import {
   getCompletion,
   hasCreditedPastDateToday,
+  listCompletionsForStreak,
   recordCompletion,
   wasSeenOn,
   type CompletionRecord,
@@ -37,6 +38,8 @@ import {
   warnIfGuardDegraded,
 } from "../../src/session/origin-guard";
 import { requireUserId } from "../../src/session/service";
+import { captureEvent, runAfterResponse } from "../../src/telemetry/capture";
+import { deriveStreakBroken } from "../../src/telemetry/streak-broken";
 import { judgeGuessList } from "../../src/termo/judge";
 
 // Never statically cached: every request judges against the database.
@@ -489,6 +492,48 @@ export async function POST(request: NextRequest): Promise<Response> {
     // it emits a plain-string `console.error`.)
     console.log(JSON.stringify({ event: "archive-cap", userId, day: today }));
     return errorResponse(429, "archive-cap");
+  }
+
+  // THE TELEMETRY SEAM (#33, ADR-0069 decisions 2 and 3) — after the write,
+  // before the response, and unable to touch either: `runAfterResponse`
+  // schedules the work post-response (Next `after()`) and swallows every
+  // throw, so a failed capture or a throwing derivation can never change
+  // what this route answers (T-API-S164). The idempotent short-circuit
+  // above already returned, so a replay (`recorded: false` there) fires
+  // nothing, mechanically (T-API-S163) — the write-once row IS the dedup.
+  if (written.recorded) {
+    // Counted = the streak predicate's own conjunction (computeStreak):
+    // only a counted insert can start a new run, so only one can owe the
+    // streak_broken derivation. Bound here, not inside the task — the
+    // task must read the request-scoped verdict, never re-derive it.
+    const counted = outcome === "won" && onTime;
+    runAfterResponse(async () => {
+      await captureEvent({
+        distinctId: userId,
+        event: "puzzle_completed",
+        properties: {
+          game: body.game,
+          date: body.date,
+          elapsed_ms: body.elapsedMs,
+          outcome,
+          on_time: onTime,
+        },
+      });
+      if (counted) {
+        // One read, at most once per counted insert; the four D3
+        // conditions (recorded is `written.recorded` above; the other
+        // three live in the derivation) decide the fire.
+        const rows = await listCompletionsForStreak(db, userId);
+        const broken = deriveStreakBroken(rows, body.date);
+        if (broken !== null) {
+          await captureEvent({
+            distinctId: userId,
+            event: "streak_broken",
+            properties: broken,
+          });
+        }
+      }
+    });
   }
   return completionResponse(written.record, written.recorded);
 }
