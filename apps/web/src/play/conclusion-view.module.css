@@ -31,10 +31,12 @@
    #211D19 (L 0.01272250) on `--paper-desk` #F7F2E9 (L 0.89161610) is
    (0.89161610 + 0.05) / (0.01272250 + 0.05) = **15.0124:1**.
 
-   ACCEPTED EXCEPTION, stated with its ratio rather than as compliance: the
-   2px mustard rule is `--accent-termo` #C08A1E (L 0.29477163) at
-   (0.89161610 + 0.05) / (0.29477163 + 0.05) = **2.7311:1** on desk and
-   **2.8501:1** on card, below WCAG 1.4.11's 3:1 non-text floor. Hover is a
+   ACCEPTED EXCEPTION (ADR-0041 decision 4), granted when the worst rule was
+   the old mustard #C08A1E at **2.7311:1** on desk / **2.8501:1** on card,
+   below WCAG 1.4.11's 3:1 non-text floor. Since ADR-0067 deepened the Termo
+   accent the worst literal is nonogram at 4.3182:1 on desk, above the floor
+   — the grounds stay on the record because they hold for ANY palette. Hover
+   is a
    pointer-only affordance duplicating what the link already carries at
    15.0124:1, and the underline's PRESENCE is a change of geometry that
    survives greyscale. See the twin block in `screen.module.css` for the full
@@ -49,9 +51,10 @@
    default every `<a>` here rides nor the shared layer's own ring
    (`screen.module.css`'s `.hint:focus-visible`, also `--ink` at 15.0124:1).
    Before #34 this sheet declared none, which was true and is why the
-   paragraph once said so. Never `var(--accent)`: that
-   is 2.7311:1 for mustard, which is what step-7 finding A-F1 corrected on the
-   shared layer. */
+   paragraph once said so. Never `var(--accent)`: a shared ring's legality
+   must not depend on which accent renders (the forcing case was the old
+   mustard at 2.7311:1, step-7 finding A-F1 on the shared layer; ADR-0067
+   deepened it, and the rule is unchanged). */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -127,9 +130,10 @@
 
 /* `--ink-2`, not `--accent` (ADR-0041). This sheet is SHARED across all four
    conclusions, so the kicker renders in whichever accent the page root
-   supplies: mustard #C08A1E (L 0.29477163) on `--paper-desk` #F7F2E9
-   (L 0.89161610) is (0.89161610 + 0.05) / (0.29477163 + 0.05) =
-   **2.7311:1** at 11px. `--ink-2` #6E6659 (L 0.13539008) is
+   supplies, and a shared `var(--accent)` has no fixed value to measure (the
+   forcing case was the old mustard at 2.7311:1 on desk, deepened by
+   ADR-0067; the worst literal today, nonogram's 4.3182:1 on desk, still
+   fails the 4.5 text floor). `--ink-2` #6E6659 (L 0.13539008) is
    (0.89161610 + 0.05) / (0.13539008 + 0.05) = **5.0791:1**.
 
    BRANDED — `var(--text-kicker)` at 600 with 0.16em, matching `.cardKicker`
@@ -183,12 +187,11 @@
   transform: rotate(-4deg);
 }
 
-/* Inside the result card, so this one is on CARD paper (ADR-0041): mustard on
-   `--paper-card` #FBF7EF (L 0.93262753) is (0.93262753 + 0.05) /
-   (0.29477163 + 0.05) = **2.8501:1** — the ceiling over the whole paper
-   family, against a 4.5 floor. `--ink-2` on card is (0.93262753 + 0.05) /
-   (0.13539008 + 0.05) = **5.3003:1**. The accent stays on the tape directly
-   above, which is a shape. */
+/* Inside the result card, so this one is on CARD paper (ADR-0041) — same
+   shared-accent argument as `.barKicker` above (the old mustard's 2.8501:1
+   on card was the forcing case, deepened by ADR-0067). `--ink-2` on card is
+   (0.93262753 + 0.05) / (0.13539008 + 0.05) = **5.3003:1**. The accent stays
+   on the tape directly above, which is a shape. */
 .cardKicker {
   margin: 0;
   font: var(--text-kicker);
@@ -224,11 +227,12 @@
 
    The RING keeps the accent and the WORDS do not (ADR-0041 decisions 1 and
    5). The ring is decoration under WCAG 1.4.11: it outlines "CONCLUÍDO /
-   06:47 / sem dicas", which carries the whole message on its own, so the
-   ring's **2.8501:1** on card paper — mustard #C08A1E (L 0.29477163) against
-   `--paper-card` #FBF7EF (L 0.93262753) — is recorded here rather than left
-   to be rediscovered. The text was the same 2.8501:1 and is now `--ink`
-   #211D19 (L 0.01272250): (0.93262753 + 0.05) / (0.01272250 + 0.05) =
+   06:47 / sem dicas", which carries the whole message on its own. Its worst
+   case was the old mustard's **2.8501:1** on card paper; since ADR-0067 the
+   worst is nonogram at 4.5063:1 (the deep mustard is 5.0542:1), so every
+   ring also clears 3:1 — recorded here rather than left to be rediscovered.
+   The text was 2.8501:1 under the old mustard and is now `--ink` #211D19
+   (L 0.01272250): (0.93262753 + 0.05) / (0.01272250 + 0.05) =
    **15.6663:1**.
 
    A uniform border never fires impeccable's `border-accent-on-rounded`:
@@ -658,12 +662,12 @@
 
 /* The done chip's NAME, on the 10 % accent tint `.chipDone` paints above.
    `color-mix(in srgb, var(--accent) 10%, transparent)` over card paper
-   composites to #F5ECDA for mustard (0.1x192 + 0.9x251 = 245, 0.1x138 +
-   0.9x247 = 236, 0.1x30 + 0.9x239 = 218), L 0.84465338 — so the accent on its
-   own tint was (0.84465338 + 0.05) / (0.29477163 + 0.05) = **2.5949:1**, the
-   worst of the eleven and worse than either plain paper. `--ink` #211D19
-   (L 0.01272250) on the same tint is (0.84465338 + 0.05) /
-   (0.01272250 + 0.05) = **14.2637:1** (ADR-0041). The state's carrier is the
+   composites to #F0E8D9 for ADR-0067's deep mustard (0.1x141 + 0.9x251 =
+   240, 0.1x98 + 0.9x247 = 232, 0.1x18 + 0.9x239 = 217, rounded 8-bit —
+   what a browser paints). `--ink` #211D19 on that tint is **13.7508:1**.
+   The conversion to ink predates the deepening: on the OLD mustard's tint
+   #F5ECDA the accent-as-text this rule replaced measured 2.5949:1, the
+   worst of ADR-0041's eleven converted sites. The state's carrier is the
    tint itself plus `.chipMissing`'s dashed border, not the word's hue. */
 .chipDone .chipName {
   color: var(--ink);
@@ -750,14 +754,15 @@
    anywhere (step-6 finding ISS-A2). `--paper-card` on the same fill is
    4.5063:1.
 
-   `--ink-on-accent` now resolves to THREE values, not two (ADR-0041 decision
-   2): `--paper-card` for nonogram, `--ink` for termo — desk on mustard is
-   2.7311:1 and no paper clears 4.5, while ink ON mustard is 5.4968:1 — and
-   the shipped `--paper-desk` for sudoku (7.5113:1) and binairo (5.3066:1),
-   which stay unchanged to the byte. This button is the reason termo's value
-   matters before `/termo` exists: it wears the DESTINATION game's accent, so
-   it renders mustard on the already-shipped binairo, sudoku and nonogram
-   conclusions the moment `playRoutes` gains a termo. */
+   `--ink-on-accent` resolves to TWO values again since ADR-0067 (#161):
+   `--paper-card` for nonogram, and `--paper-desk` for sudoku (7.5113:1),
+   binairo (5.3066:1) and termo — 4.8433:1 on the deep mustard #8D6212. It
+   resolved to `--ink` for termo while the accent was the old light #C08A1E
+   (no paper cleared 4.5 on it), which made this button the one dark-label
+   CTA in the family — the treatment #161 harmonized. This button is why
+   termo's value matters on every conclusion: it wears the DESTINATION
+   game's accent, so it renders termo's pair on the binairo, sudoku and
+   nonogram conclusions whenever the day still owes a termo. */
 .ctaNext {
   background: var(--accent);
   color: var(--ink-on-accent, var(--paper-desk));
@@ -805,17 +810,15 @@
    band appearing where there was none... a change of GEOMETRY"; a bare
    `border-bottom-color` swap has no geometry delta at all, so that rationale
    did not transfer to it and the comment that claimed it did was false. The
-   colour delta on its own is `--line` #D8D0C2 (L 0.63605722) against mustard
-   `--accent-termo` #C08A1E (L 0.29477163) = (0.63605722 + 0.05) /
-   (0.29477163 + 0.05) = **1.9899:1**, and the hovered rule against desk paper
-   #F7F2E9 (L 0.89161610) is (0.89161610 + 0.05) / (0.29477163 + 0.05) =
-   **2.7311:1** — both under WCAG 1.4.11's 3:1. Accepted on decision 4's two
-   grounds and neither is "it complies": hover is a POINTER-ONLY affordance
-   duplicating a word already at 15.0124:1, and the extra pixel is a change of
-   geometry that survives greyscale and a user who never sees the hue. The
-   other three accents do clear 3:1 against `--line` (sudoku 5.4727:1, binairo
-   3.8664:1, nonogram 3.1462:1); mustard is the one that does not, which is
-   exactly why the geometry carrier has to be real.
+   colour delta on its own measured **1.9899:1** against `--line` for the
+   OLD mustard #C08A1E, under WCAG 1.4.11's 3:1 — the case that proved a
+   bare colour swap could not carry the state. Since ADR-0067 all four
+   accents clear 3:1 against `--line` (sudoku 5.4727:1, binairo 3.8664:1,
+   nonogram 3.1462:1, deep mustard #8D6212 3.5288:1), but the geometry
+   carrier is kept: decision 4's grounds are palette-independent — hover is
+   a POINTER-ONLY affordance duplicating a word already at 15.0124:1, and
+   the extra pixel is a change of geometry that survives greyscale, a user
+   who never sees the hue, and any future accent too close to `--line`.
 
    The pixel comes OUT of the padding: `--rule-width` drives the border and
    the padding together, so the link's box is 6px below its baseline in either

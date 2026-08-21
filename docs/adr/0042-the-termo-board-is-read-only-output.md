@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-02
 **Depends on:** [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md)
+**Amended by:** [ADR-0067](./0067-termo-accent-deepens-to-carry-a-light-label.md) (#161) — `--accent-termo` deepened `#C08A1E` → `#8D6212`, so the state table's `correct` row reads `var(--ink-on-accent, var(--paper-desk))` at **4.8433:1** (the mustard figures 2.7311 / 2.8501 / 5.4968 in this file are the old value's). Everything this ADR decides survives: the board stays read-only, the accent still does exactly one job (the `correct` fill), the typographic marks still carry every distinction, and the chroma argument holds at the new value (chroma 123 ≥ 30).
 
 ## Context
 

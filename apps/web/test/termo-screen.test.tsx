@@ -721,13 +721,16 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
     expect(decl(bodyOf(css, ".keyAbsent"), "box-shadow")).toBe("none");
   });
 
-  it("reads the accent's ink through --ink-on-accent with --ink as the fallback", () => {
-    // The shipped fallback is `var(--paper-desk)`, and it is WRONG here: this
-    // surface can only ever render mustard, and desk on mustard is 2.7311:1
-    // (ADR-0041 consequence (c)). --ink ON mustard is 5.4968:1.
+  it("reads the accent's ink through --ink-on-accent with desk paper as the fallback", () => {
+    // Since #161 (ADR-0067) the accent is the deep #8D6212 and desk paper ON
+    // it is 4.8433:1, so this surface carries the same light-label treatment
+    // as the other three games and the fallback matches the resolved value.
+    // The old `var(--ink)` fallback was for the old light mustard, on which
+    // desk was 2.7311:1; --ink on the DEEP value is 3.0996:1 and illegal
+    // (ADR-0041 consequence (c) as amended by ADR-0067).
     for (const selector of [".tileCorrect", ".keyCorrect"]) {
       expect(decl(bodyOf(css, selector), "color")).toBe(
-        "var(--ink-on-accent, var(--ink))",
+        "var(--ink-on-accent, var(--paper-desk))",
       );
     }
   });

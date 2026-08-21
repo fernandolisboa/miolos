@@ -45,7 +45,7 @@ import type { NonogramPlay } from "./use-nonogram-play";
  * (0.1x181 + 0.9x251, 0.1x86 + 0.9x247, 0.1x60 + 0.9x239) =
  * (244.0, 230.9, 221.1) -> **#F4E7DD**, L 0.81605382 — the same arithmetic
  * `conclusion-view.module.css`'s `.chipDone .chipName` block spells out for
- * mustard. This line used to quote **3.969:1**, the unrounded composite's
+ * the termo accent. This line used to quote **3.969:1**, the unrounded composite's
  * value, beside a **13.8077:1** taken from the rounded one; the rounded
  * figure is **3.9717:1** and it is what every number in this repo now uses
  * (step-7 finding A-F10). Neither value changes any conclusion — both are

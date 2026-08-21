@@ -386,7 +386,7 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     //
     // Termo is closed out for the same reason as the case above, and this one
     // deliberately keeps SUDOKU as its destination: T-WEB-S101 covers the
-    // mustard pair, and ink-blue is the one that would silently keep passing
+    // termo pair, and ink-blue is the one that would silently keep passing
     // if `accentVars` were ever reduced to the celebrated game's accent.
     writePlayRecord(concluded());
     writePlayRecord(wonTermo());
@@ -477,12 +477,13 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
  * player has touched it.
  *
  * The accent assertion is the point of the test and not decoration. This is
- * #25's ISS-A2 regression class with the worst accent in the palette: mustard
- * is the one accent no paper token is legible on (desk 2.7311:1, card
- * 2.8501:1, tint 2.5457:1, against a 4.5 floor). PR A — merged as #73,
- * closing #68 — made `--ink-on-accent` for Termo `var(--ink)`, at 5.4968:1,
- * and this asserts the CTA carries the pair rather than inheriting the
- * celebrated game's ink onto Termo's fill.
+ * #25's ISS-A2 regression class: the CTA wears the DESTINATION game's pair,
+ * so a wrong or missing `--ink-on-accent` here paints the celebrated game's
+ * ink onto Termo's fill on three shipped screens at once. The pair's history
+ * is the sharpest in the palette — `var(--ink)` under the old light mustard
+ * (#73, closing #68: no paper cleared 4.5 on #C08A1E), `var(--paper-desk)`
+ * at 4.8433:1 since ADR-0067 (#161) deepened the token to #8D6212 — and both
+ * transitions were exactly the silent-inheritance bug this test exists for.
  */
 describe("the chaining CTA, re-pointed at Termo (T-WEB-S101)", () => {
   it("offers Termo first from a shipped conclusion, and links it", () => {
@@ -509,7 +510,7 @@ describe("the chaining CTA, re-pointed at Termo (T-WEB-S101)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("paints it with Termo's own ink on Termo's own fill", () => {
+  it("paints it with Termo's own light label on Termo's own fill", () => {
     writePlayRecord(concluded());
 
     render(
@@ -524,9 +525,12 @@ describe("the chaining CTA, re-pointed at Termo (T-WEB-S101)", () => {
       .getByText(messages.conclusion.ctaNext(messages.games.termo.name))
       .closest("a");
     expect(cta?.style.getPropertyValue("--accent")).toBe("var(--accent-termo)");
-    // ADR-0041: `--ink` on mustard, 5.4968:1. `var(--paper-desk)` here would
-    // be 2.7311:1 on a 14px/600 label, on three shipped screens at once.
-    expect(cta?.style.getPropertyValue("--ink-on-accent")).toBe("var(--ink)");
+    // ADR-0067: `--paper-desk` on the deep mustard #8D6212, 4.8433:1 — the
+    // family's light-label treatment. (Under the old #C08A1E this was
+    // `var(--ink)`, because desk measured 2.7311:1 on that fill.)
+    expect(cta?.style.getPropertyValue("--ink-on-accent")).toBe(
+      "var(--paper-desk)",
+    );
   });
 });
 
@@ -1570,7 +1574,8 @@ describe("the share button's treatment (T-WEB-S205)", () => {
     expect(decl(SHARE, "cursor")).toBe("pointer");
     expect(decl(bodyOf(CSS, ".share:disabled"), "opacity")).toBe("0.55");
     expect(decl(bodyOf(CSS, ".share:disabled"), "cursor")).toBe("default");
-    // `--ink` at 15.0124:1, never `var(--accent)` (2.7311:1 for mustard).
+    // `--ink` at 15.0124:1, never `var(--accent)` — a shared ring must not
+    // depend on which accent renders (ADR-0041 decision 8).
     expect(decl(bodyOf(CSS, ".share:focus-visible"), "outline")).toBe(
       "2px solid var(--ink)",
     );

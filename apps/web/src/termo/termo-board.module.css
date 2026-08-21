@@ -8,14 +8,17 @@
    css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
    either fails the build or leaks globally (plan 017 risk 15).
 
-   `var(--accent)` here is `--accent-termo` (mustard #C08A1E), set on the
-   screen's root by `play/accent.ts` — the same mechanism the shared sheet
-   uses, so one screen never has two accent sources. Mustard is 2.7311:1 on
-   --paper-desk and 2.8501:1 on --paper-card, so it may be neither text
-   (ADR-0041) nor a state-bearing boundary (WCAG 1.4.11's 3:1). It therefore
-   does exactly ONE job on this screen: it FILLS the tile and the key whose
-   letter is in the right place. Every distinction a player has to make is
-   carried by a mark that clears 3:1 in neutral ink.
+   `var(--accent)` here is `--accent-termo` (deep mustard #8D6212 since #161
+   / ADR-0067; the original #C08A1E measured 2.7311:1 on desk and cleared no
+   floor), set on the screen's root by `play/accent.ts` — the same mechanism
+   the shared sheet uses, so one screen never has two accent sources. The
+   deep value measures 4.8433:1 on --paper-desk and 5.0542:1 on --paper-card,
+   so the constraints that shaped this sheet are no longer FORCED — but the
+   design they forced is kept on its own merits: the accent still does
+   exactly ONE job on this screen, FILLING the tile and the key whose letter
+   is in the right place, and every distinction a player has to make is still
+   carried by a mark that clears 3:1 in neutral ink. Colour reinforces; it
+   never carries alone.
 
    FILE ORDER IS LOAD-BEARING (§12.6), because `test/css-source.ts`'s `bodyOf`
    is first-match and THROWS on a miss: every top-level rule first, then the
@@ -66,25 +69,30 @@
         the loudest thing on a screen whose accent has exactly one job. The
         blur is 0 and N is 3, 2 or 1, so the rest of the token's shape holds.
      5. Tile glyphs are --ink at weight 600, where DESIGN.md:50 says "player
-        cells on desk paper with accent numerals wt 500". The colour half is
-        FORCED and, after ADR-0041's amendment to that same line, is agreement
-        rather than divergence: mustard on desk paper is 2.7311:1 against a
-        4.5 floor, so `color: var(--accent-termo)` is inside decision 1's
-        exception shape and outside its condition on every paper. The weight
-        half is a judgement: DESIGN.md:50's 500/600 split separates a GIVEN
-        from a PLAYER entry, and a Termo board has no givens — every glyph on
-        it is the player's — so the split has no second term and the legible
-        weight is the one that ships. --ink 600 on --paper-desk is 15.0124:1.
+        cells on desk paper with accent numerals wt 500". The colour half was
+        FORCED when written (the old mustard measured 2.7311:1 on desk against
+        a 4.5 floor); since ADR-0067 deepened the token, #8D6212 on desk is
+        4.8433:1 — inside decision 1's exception condition — so the colour
+        half is now a JUDGEMENT, made and kept: a Termo glyph is typed before
+        it is judged, and painting the unjudged letters in the judgement's own
+        colour would give the accent a second job on the one screen where it
+        has exactly one. The weight half is a judgement too: DESIGN.md:50's
+        500/600 split separates a GIVEN from a PLAYER entry, and a Termo board
+        has no givens — every glyph on it is the player's — so the split has
+        no second term and the legible weight is the one that ships. --ink 600
+        on --paper-desk is 15.0124:1.
      6. The focus ring is --ink. After ADR-0041 decision 8 that is the repo's
         rule for a SHARED sheet rather than a Termo divergence — that decision
-        converted screen.module.css:347's `.hint:focus-visible` for exactly
-        this reason, since `outline-offset: 2px` puts --paper-desk on both
-        sides of the ring and mustard measures 2.7311:1 there against 1.4.11's
-        3:1 floor. What stays accent-coloured is per-game and measured
-        (sudoku 7.5113:1 / 7.8385:1, binairo 5.3066:1 / 5.5377:1). Termo's
-        ring is --ink at 15.0124:1 on desk and 15.6663:1 on card, because
-        mustard clears no paper. nonogram-board.module.css:400 and :445 were
-        the precedent.
+        converted screen.module.css's `.hint:focus-visible` because
+        `outline-offset: 2px` puts --paper-desk on both sides of the ring and
+        the OLD mustard measured 2.7311:1 there against 1.4.11's 3:1 floor.
+        The deep #8D6212 measures 4.8433:1 on desk, so a per-game accent ring
+        would now be legal here (sudoku 7.5113:1 / 7.8385:1 and binairo
+        5.3066:1 / 5.5377:1 are the shipped precedents) — it stays --ink at
+        15.0124:1 on desk and 15.6663:1 on card as a kept judgement, matching
+        the shared `.hint` ring on this same screen so one screen never shows
+        two focus treatments. nonogram-board.module.css:400 and :445 were the
+        precedent.
      7. Off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale".
         THREE VALUES, in four kinds of place — an earlier version of this item
         counted two and missed the gaps, which are the case the deviation
@@ -273,18 +281,20 @@
   text-underline-offset: 4px;
 }
 
-/* The one job mustard has on this screen. `--ink-on-accent` resolves to
-   `var(--ink)` for termo (accent.ts) — 5.4968:1 on #C08A1E — and the
-   FALLBACK is `var(--ink)` rather than the shipped `var(--paper-desk)`,
-   because this surface can only ever render mustard and desk on mustard is
-   2.7311:1 (ADR-0041 consequence (c)). The fill is 2.7311:1 against the desk
-   paper around it and is NEVER the sole carrier: the border steps from --line
-   (1.3725:1) to --ink, a 12.2750:1 step away from `absent`'s --line-soft, and
-   this is the only judged tile with no typographic mark. */
+/* The one job the accent has on this screen. `--ink-on-accent` resolves to
+   `var(--paper-desk)` for termo since #161 (ADR-0067) — 4.8433:1 on the deep
+   #8D6212, the same light-label treatment the other three games carry — and
+   the fallback matches (`--ink`, the old value's ink, is 3.0996:1 on the
+   deep fill and no longer legal on it). The fill is 4.8433:1 against the
+   desk paper around it — above 1.4.11's 3:1, where the old mustard's
+   2.7311:1 was below it — and is still NEVER the sole carrier: the border
+   steps from --line (1.3725:1) to --ink, a 12.2750:1 step away from
+   `absent`'s --line-soft, and this is the only judged tile with no
+   typographic mark. */
 .tileCorrect {
   background: var(--accent);
   border-color: var(--ink);
-  color: var(--ink-on-accent, var(--ink));
+  color: var(--ink-on-accent, var(--paper-desk));
 }
 
 /* The row reveal, "tinta que assenta" applied to five tiles in sequence
@@ -484,9 +494,10 @@
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
 }
 
-/* --ink, not var(--accent): mustard is 2.7311:1 on desk paper, below WCAG
-   1.4.11's 3:1 floor for a focus indicator, and `outline-offset: 2px` puts
-   desk paper on both sides of the ring. Deviation 6. */
+/* --ink, not var(--accent): a kept judgement since ADR-0067 deepened the
+   accent (the old mustard was 2.7311:1 on desk, below WCAG 1.4.11's 3:1
+   focus floor; the deep value clears it) — one screen, one focus treatment,
+   matching the shared `.hint` ring. Deviation 6. */
 .key:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -504,7 +515,7 @@
 .keyCorrect {
   background: var(--accent);
   border-color: var(--ink);
-  color: var(--ink-on-accent, var(--ink));
+  color: var(--ink-on-accent, var(--paper-desk));
 }
 
 .keyPresent {
