@@ -390,3 +390,86 @@ describe("created_at is the consent evidence and attests to the CURRENT owner (#
     expect((refreshed?.getTime() ?? 0) > (aged?.getTime() ?? 0)).toBe(true);
   });
 });
+
+describe("the per-user subscription ceiling (#146, ADR-0067 decision 1 — the #145 residual closed)", () => {
+  it("T-API-S151: the 10th endpoint lands, the 11th answers 429 and stores nothing, a same-user re-subscribe at the cap upserts with its stamp preserved, and a cross-user repoint at the cap answers 429 with ownership unchanged", async () => {
+    const { token, userId } = await createSession();
+    const endpoint = (n: number) => `https://push.example.org/send/cap-${n}`;
+    const post = (body: string, sessionToken = token) =>
+      POST(
+        subscriptionsRequest("POST", {
+          headers: jsonHeaders(sessionToken),
+          body,
+        }),
+      );
+
+    // Endpoints 1..9, then the 10th — all land.
+    for (let n = 1; n <= 9; n += 1) {
+      expect((await post(subscribeBody(endpoint(n)))).status).toBe(200);
+    }
+    expect((await post(subscribeBody(endpoint(10)))).status).toBe(200);
+
+    // The 11th DISTINCT endpoint: 429, nothing stored — the guard's
+    // count disjunct refused the row.
+    const eleventh = await post(subscribeBody(endpoint(11)));
+    expect(eleventh.status).toBe(429);
+    const stored = await ctx.db
+      .select({ endpoint: pushSubscriptions.endpoint })
+      .from(pushSubscriptions);
+    expect(stored).toHaveLength(10);
+    expect(stored.map((row) => row.endpoint)).not.toContain(endpoint(11));
+
+    // A same-user re-subscribe of an existing endpoint AT the cap: 200,
+    // keys updated, created_at preserved (T-API-S132's claim untouched by
+    // the ceiling — the `exists` disjunct scoped to (endpoint, user_id) is
+    // what proposes the row).
+    const beforeRotation = await ctx.db
+      .select()
+      .from(pushSubscriptions)
+      .where(sql`${pushSubscriptions.endpoint} = ${endpoint(3)}`);
+    const rotation = await post(
+      subscribeBody(endpoint(3), "rotated-p256dh", "rotated-auth"),
+    );
+    expect(rotation.status).toBe(200);
+    const afterRotation = await ctx.db
+      .select()
+      .from(pushSubscriptions)
+      .where(sql`${pushSubscriptions.endpoint} = ${endpoint(3)}`);
+    expect(afterRotation[0]?.p256dh).toBe("rotated-p256dh");
+    expect(afterRotation[0]?.createdAt.getTime()).toBe(
+      beforeRotation[0]?.createdAt.getTime(),
+    );
+    expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(10);
+
+    // A cross-user repoint AT the cap: another user's endpoint posted by
+    // the full account is a 429 and ownership does not move — the repoint
+    // would raise the posting user's fan-out past the ceiling. The honest
+    // residual (ADR-0067 decision 1): a full account cannot take over an
+    // endpoint another user holds until it frees a slot.
+    const other = await createSession();
+    const otherEndpoint = "https://push.example.org/send/other-device";
+    expect((await post(subscribeBody(otherEndpoint), other.token)).status).toBe(
+      200,
+    );
+    const takeover = await post(subscribeBody(otherEndpoint));
+    expect(takeover.status).toBe(429);
+    const contested = await ctx.db
+      .select({ userId: pushSubscriptions.userId })
+      .from(pushSubscriptions)
+      .where(sql`${pushSubscriptions.endpoint} = ${otherEndpoint}`);
+    expect(contested[0]?.userId).toBe(other.userId);
+
+    // And an under-cap user repointing is unaffected: the OTHER user (one
+    // row) can still take over one of the full user's endpoints — the cap
+    // binds the POSTING user's fan-out, nothing else.
+    const repoint = await post(subscribeBody(endpoint(10)), other.token);
+    expect(repoint.status).toBe(200);
+    const repointed = await ctx.db
+      .select({ userId: pushSubscriptions.userId })
+      .from(pushSubscriptions)
+      .where(sql`${pushSubscriptions.endpoint} = ${endpoint(10)}`);
+    expect(repointed[0]?.userId).toBe(other.userId);
+    // The full user is now at 9 and can subscribe a fresh endpoint again.
+    expect((await post(subscribeBody(endpoint(12)))).status).toBe(200);
+  });
+});

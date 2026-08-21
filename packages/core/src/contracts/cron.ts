@@ -57,6 +57,37 @@ export const cronPublishResponseSchema = z.strictObject({
 export type CronPublishResponse = z.infer<typeof cronPublishResponseSchema>;
 
 /**
+ * Body of POST /cron/notify (#146, ADR-0067 decision 4) — the streak-at-risk
+ * dispatcher's tick counters, strict on both ends (the publish precedent:
+ * parsed before `Response.json`).
+ *
+ * Status semantics, recorded here because the counters only make sense with
+ * them: 401 unauthorized; 503 when push is unconfigured, BEFORE any DB read
+ * (the subscribe routes' fail-closed posture — and a red hourly Actions run
+ * on a misconfigured prod IS the alert, `curl -fsS` makes it one); 200
+ * whenever the tick RAN, even with `failed > 0` — a lost nudge is ADR-0064
+ * decision 7's priced residual, not an outage. The observability channel for
+ * failures is the per-line `{event:"cron-notify", …}` JSON log (the publish
+ * idiom), never the HTTP status.
+ *
+ * - `candidates`: users the at-risk query answered for this tick's hour.
+ * - `claimed`: candidates whose ledger claim THIS tick won (a concurrent or
+ *   replayed tick loses claims, so `claimed <= candidates`).
+ * - `sent` / `pruned` / `failed` count SUBSCRIPTION ROWS, not users: one
+ *   user can hold several endpoints, each sent, pruned (404/410) or failed
+ *   independently.
+ */
+export const cronNotifyResponseSchema = z.strictObject({
+  candidates: z.number().int().min(0),
+  claimed: z.number().int().min(0),
+  sent: z.number().int().min(0),
+  pruned: z.number().int().min(0),
+  failed: z.number().int().min(0),
+});
+
+export type CronNotifyResponse = z.infer<typeof cronNotifyResponseSchema>;
+
+/**
  * Body of GET /buffer-depth, the monitoring read (issue #17 AC 3).
  * `threshold` is the EFFECTIVE alert threshold — min(constant, configured
  * depth) — so a deliberately tuned-low depth is healthy, not permanently

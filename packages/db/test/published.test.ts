@@ -1145,6 +1145,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "archiveDateClass", // #31 (ADR-0053): the four archive names, root entry
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
       "bufferDepth",
+      "claimNudgeSend", // #146 (ADR-0064 d7, ADR-0067): user entry only
       "completions",
       "createDb",
       "createPublishingDb",
@@ -1174,13 +1175,19 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
       "listCompletionsForStreak",
       "listMedalGrants", // #30 (ADR-0052): widened in the same commit as the export
+      "listPushNudgeCandidates", // #146 (ADR-0064, ADR-0067): user entry only
       "listUsedTermoAnswers",
       "medalGrants", // #30 (ADR-0052): the curated-grant table, user entry only
       "mergeAccounts",
+      // #146: the notification-send ledger table, USER entry only — unlike
+      // `user_seen_days` (no entry), because the schema-pin and merge tests
+      // are named readers of the table object.
+      "notificationSends",
       "pruneSeenDays", // #58 (ADR-0066): user entry only
       // #145 (ADR-0064): the push-subscriptions table, root entry only —
       // widened in place beside T-DB-9b, in the same commit as the export.
       "pushSubscriptions",
+      "readTickInstant", // #146 (ADR-0067 d3): user entry only
       "recordCompletion",
       "recordSeenDay", // #58 (ADR-0066): user entry only
       "remoteConfig",
@@ -1215,7 +1222,13 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // exactly four, all on the USER entry (ADR-0066): the three seen-days
     // statements plus the multi-past-date guard's read; the
     // `user_seen_days` TABLE itself is on no entry at all — only
-    // seen-days.ts and mergeAccounts name it.
-    expect(surface).toHaveLength(44);
+    // seen-days.ts and mergeAccounts name it. #146 moves it by exactly
+    // four, all on the USER entry (ADR-0064, ADR-0067): the dispatcher's
+    // candidate read, the claim, the one-snapshot tick instant, and the
+    // `notification_sends` TABLE — the table on the user entry (unlike
+    // user_seen_days) because the schema-pin and merge suites are named
+    // readers of the table object; never the root, so apps/web cannot name
+    // the ledger.
+    expect(surface).toHaveLength(48);
   });
 });

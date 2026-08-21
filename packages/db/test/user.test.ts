@@ -113,6 +113,9 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
     const user = await import("../src/user");
     expect(Object.keys(user).sort()).toEqual([
       "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
+      // #146 (ADR-0064 d7, ADR-0067): the dispatcher's claim-first ledger
+      // write. Widened in place, the T-DB-9a precedent.
+      "claimNudgeSend",
       "completions",
       // #31 adds NOTHING here. The late-write ceiling (ADR-0053
       // decision 13) is a guard folded into `recordCompletion`'s own
@@ -136,12 +139,22 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
       "listCompletionsForStreak",
       "listMedalGrants", // #30 (ADR-0052): widened in the same commit as the export
+      // #146 (ADR-0064 d6, ADR-0067): the dispatcher's candidate read —
+      // cross-table, user entry only, apps/web cannot name it.
+      "listPushNudgeCandidates",
       "medalGrants", // #30 (ADR-0052): the curated-grant table, user entry only
       "mergeAccounts",
+      // #146: the notification-send ledger TABLE, user entry only (unlike
+      // `user_seen_days`, which is on no entry: the schema-pin test and the
+      // merge suite are this one's named readers).
+      "notificationSends",
       // #58 (ADR-0066): the seen-days statements — the retention delete,
       // the session hooks' writer, and the route's credit read. The TABLE
       // is deliberately NOT exported on any entry.
       "pruneSeenDays",
+      // #146 (ADR-0067 d3): the one-snapshot tick instant — the SP day and
+      // hour in one statement, so the pair can never straddle midnight.
+      "readTickInstant",
       "recordCompletion",
       "recordSeenDay",
       "wasSeenOn",

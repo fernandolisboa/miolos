@@ -1,0 +1,28 @@
+# The hourly streak-at-risk tick (#146, ADR-0064 decision 8): Vercel Hobby
+# cannot tick hourly, so GitHub Actions curls the CRON_SECRET-guarded route.
+# Zero marketplace actions on purpose — nothing to SHA-pin (#41 satisfied by
+# construction); curl is preinstalled. -fsS: an HTTP error fails the job, and
+# a red scheduled run is itself the alert (503 = push misconfigured in prod).
+# Send timing is decided by the ROUTE against the DB clock's SP hour, never
+# by this schedule's nominal fire time — Actions jitter is absorbed there.
+# A tick GitHub skips or delays past the hour loses that hour's cohort's
+# nudge for the day (ADR-0064 decision 8's priced granularity, restated in
+# ADR-0067); no catch-up pass exists, deliberately.
+name: Streak notify
+permissions: {}
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+env:
+  API_ORIGIN: https://api.miolos.app
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tick the notify dispatcher
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          body="$(curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" "$API_ORIGIN/cron/notify")"
+          echo "cron-notify response: $body"

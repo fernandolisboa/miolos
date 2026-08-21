@@ -11,6 +11,7 @@ import {
   completions,
   hintGrants,
   medalGrants,
+  notificationSends,
   pushSubscriptions,
   sessions,
   userSeenDays,
@@ -168,6 +169,19 @@ async function insertSeenDay(userId: string, date: string): Promise<void> {
   await ctx.db.insert(userSeenDays).values({ userId, date });
 }
 
+/** A notification-send claim with a CHOSEN sent_at (#146, ADR-0067) —
+ *  production stamps the DB clock (`claimNudgeSend`); the PK-collision
+ *  assertion needs distinguishable instants. */
+async function insertNotificationSend(
+  userId: string,
+  date: string,
+  sentAt: Date,
+): Promise<void> {
+  await ctx.db
+    .insert(notificationSends)
+    .values({ userId, date, channel: "push", sentAt });
+}
+
 /** Deterministic full-state snapshot for the double-run and no-op checks.
  *  Widened in place at #145 (the T-DB-9a precedent): `push_subscriptions`
  *  joins, so T-DB-S20's double-run equality covers statement 1b too. */
@@ -179,6 +193,7 @@ async function snapshotState(): Promise<{
   medalGrants: unknown[];
   pushSubscriptions: unknown[];
   userSeenDays: unknown[];
+  notificationSends: unknown[];
 }> {
   return {
     users: await ctx.db.select().from(users).orderBy(asc(users.id)),
@@ -212,6 +227,16 @@ async function snapshotState(): Promise<{
       .select()
       .from(userSeenDays)
       .orderBy(asc(userSeenDays.userId), asc(userSeenDays.date)),
+    // #146 (ADR-0067): the notification-send ledger union (statements
+    // 5e/5f) joins the double-run equality — the same precedent again.
+    notificationSends: await ctx.db
+      .select()
+      .from(notificationSends)
+      .orderBy(
+        asc(notificationSends.userId),
+        asc(notificationSends.date),
+        asc(notificationSends.channel),
+      ),
   };
 }
 
@@ -469,9 +494,10 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
 });
 
 describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)", () => {
-  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants+medal_grants+push_subscriptions+user_seen_days state after run one deep-equals run two", async () => {
+  it("T-DB-S20: run it twice, get the same account — the full users+sessions+completions+hint_grants+medal_grants+push_subscriptions+user_seen_days+notification_sends state after run one deep-equals run two", async () => {
     // (push_subscriptions joined the title, the snapshot and this fixture
-    // at #145 — an in-place widening, the T-DB-9a precedent.)
+    // at #145, notification_sends at #146 — in-place widenings, the
+    // T-DB-9a precedent.)
     const winner = await createUser(OLDER);
     const loser = await createUser(NEWER);
     await ctx.db
@@ -493,6 +519,14 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
     await insertSeenDay(winner, "2026-08-02");
     await insertSeenDay(loser, "2026-08-02");
     await insertSeenDay(loser, "2026-08-03");
+    // Ledger claims on BOTH sides, overlapping and disjoint (#146,
+    // ADR-0067): the loser's exercise the union+delete pair (5e/5f) on
+    // both runs, the overlap exercises ON CONFLICT DO NOTHING, and the
+    // winner's must survive untouched — the snapshot's double-run
+    // equality sees all three.
+    await insertNotificationSend(winner, "2026-08-02", OLDER);
+    await insertNotificationSend(loser, "2026-08-02", NEWER);
+    await insertNotificationSend(loser, "2026-08-03", NEWER);
     // Collisions in both directions, a disjoint row, and a lost Termo, so
     // the second run crosses every statement's path.
     await insertCompletion({
@@ -792,6 +826,62 @@ describe("mergeAccounts — seen days union (#58, ADR-0066; ADR-0049 decision 6)
         .from(userSeenDays)
         .orderBy(asc(userSeenDays.userId), asc(userSeenDays.date)),
     ).toEqual(rows);
+  });
+});
+
+describe("mergeAccounts — notification-sends union (#146, ADR-0067; ADR-0049 decision 6)", () => {
+  it("T-DB-S82: the winner gets the loser's ledger rows, a PK collision keeps the winner's sent_at, the loser is emptied, and a re-run is a no-op", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    // The collision: both sides claimed 2026-08-02. Without the union, a
+    // same-day merge of a claimed loser into an unclaimed at-risk winner
+    // would re-nudge the winner; with it, presence is presence.
+    await insertNotificationSend(winner, "2026-08-02", OLDER);
+    await insertNotificationSend(loser, "2026-08-02", NEWER);
+    await insertNotificationSend(loser, "2026-08-03", NEWER);
+
+    await mergeAccounts(ctx.db, winner, loser);
+
+    const rows = await ctx.db
+      .select({
+        userId: notificationSends.userId,
+        date: notificationSends.date,
+        channel: notificationSends.channel,
+        sentAt: notificationSends.sentAt,
+      })
+      .from(notificationSends)
+      .orderBy(asc(notificationSends.userId), asc(notificationSends.date));
+    // The union, all on the winner; the collision kept the WINNER's
+    // sent_at (ON CONFLICT DO NOTHING — whichever survives is immaterial
+    // to sending, but the copied instant pins that nothing re-stamped);
+    // the disjoint row rode over with ITS OWN sent_at COPIED, never
+    // now(); "emptied" means EMPTIED — zero loser rows on the tombstone.
+    expect(
+      rows.map((row) => ({ ...row, sentAt: row.sentAt.toISOString() })),
+    ).toEqual([
+      {
+        userId: winner,
+        date: "2026-08-02",
+        channel: "push",
+        sentAt: OLDER.toISOString(),
+      },
+      {
+        userId: winner,
+        date: "2026-08-03",
+        channel: "push",
+        sentAt: NEWER.toISOString(),
+      },
+    ]);
+
+    // T-DB-S20's double-run posture, applied locally: re-running the
+    // merge changes nothing (the union selects zero loser rows).
+    await mergeAccounts(ctx.db, winner, loser);
+    expect(
+      await ctx.db
+        .select()
+        .from(notificationSends)
+        .orderBy(asc(notificationSends.userId), asc(notificationSends.date)),
+    ).toHaveLength(2);
   });
 });
 

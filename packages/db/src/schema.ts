@@ -194,6 +194,56 @@ export const pushSubscriptions = pgTable(
 );
 
 /**
+ * The notification-send ledger (#146, ADR-0064 decision 7; ADR-0067):
+ * one row per (user, SP day, channel) = "this user's nudge for this day on
+ * this channel is claimed". APPEND-ONLY — nothing updates or deletes a row
+ * inside a day's lifetime; account deletion cascades, and the merge empties
+ * the loser's rows onto the winner (below).
+ *
+ * - The ONLY writers are the dispatcher's claim — `INSERT … ON CONFLICT DO
+ *   NOTHING RETURNING`, BEFORE any send (claim-first, ADR-0064 decision 7:
+ *   a crash after the claim loses that day's nudge for that user, the
+ *   priced residual — never a double send) — and `mergeAccounts`'
+ *   union/empty pair (statements 5e/5f, the seen-days 4b/4c idiom).
+ * - The only reader is the candidate query's `not exists` PREFILTER
+ *   (notify.ts): the claim insert is the race authority, the prefilter just
+ *   keeps already-claimed users out of the candidate list.
+ * - `date` is the SP day the nudge protects (= today at claim time), string
+ *   mode like every date column here — no JS Date mangles it.
+ * - `channel` admits 'email' so slice C's arm (#32 Q1 = 1a) rides the same
+ *   ledger without a migration; nothing writes 'email' today.
+ * - `sent_at` is the DB clock at claim (the schema.ts law); the merge
+ *   COPIES it, never re-stamps (presence is presence — whichever row
+ *   survives a PK collision, its whole function is "do not send again").
+ * - No index beyond the composite PK: the claim and the prefilter both hit
+ *   the full key. The candidate query's habitual CTE aggregates over every
+ *   user with in-window completions before the push_subscriptions join —
+ *   harmless at v1 scale; the recorded restructure trigger is in notify.ts.
+ *
+ * User-scoped: reachable only via `@miolos/db/user` (ADR-0026 decision 5)
+ * — apps/web mechanically cannot name the ledger. The statements over it
+ * live in notify.ts and merge.ts.
+ */
+export const notificationSends = pgTable(
+  "notification_sends",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: date("date", { mode: "string" }).notNull(),
+    channel: text("channel").notNull(),
+    sentAt: timestamptz("sent_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.date, t.channel] }),
+    check(
+      "notification_sends_channel_check",
+      sql`${t.channel} in ('push', 'email')`,
+    ),
+  ],
+);
+
+/**
  * Magic-link attach tokens (#21, ADR-0050 decision 2) — the sessions idiom
  * plus expiry and single use. Only the SHA-256 hex of a 32-byte Web-Crypto
  * token is stored (hash PK): a database leak leaks no usable credential,
