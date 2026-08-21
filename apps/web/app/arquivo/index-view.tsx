@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import type { ArchiveDayGroup } from "../../src/archive/group-days";
 import {
   archiveMonthRoute,
   formatMonth,
@@ -8,12 +7,22 @@ import {
   routes,
 } from "../../src/i18n";
 import styles from "./arquivo.module.css";
-import { DayRows } from "./day-rows";
+import { ArchiveCalendar } from "./calendar-grid";
 
 /**
- * The archive index (#31, ADR-0053 decision 1) — the seven most recent
- * archived days as day rows, then every month that holds an archived day,
- * newest first.
+ * The archive index (#31, ADR-0053 decision 1; the calendar since #163,
+ * plan 065 D1) — the NEWEST archived month as a clickable calendar, then
+ * every month that holds an archived day, newest first, as chips.
+ *
+ * ONE month's grid, never all of them: every month as a grid would make
+ * the index's read unbounded and its height grow forever — the seasonal
+ * overflow shape this sheet's own `.page` comment records — while one
+ * grid plus the chips keeps every read bounded by construction (ADR-0053
+ * decision 4) and any other month one tap away. The chips are also the
+ * visual gate's URL discovery source: the workflow greps this page's body
+ * for the first `/arquivo/mes/YYYY-MM` href, so a redesign that dropped
+ * every month link would silently skip the date-bearing scans — the
+ * rewritten T-WEB-S167 pins that at least one such href stays.
  *
  * Synchronous and props-only, so tests render it directly: React Testing
  * Library cannot render an async server component, and the page above it is
@@ -24,14 +33,15 @@ import { DayRows } from "./day-rows";
  * the hairlines — stated so nobody adds tape here for texture.
  */
 export function ArchiveIndexView({
-  recent,
+  calendar,
   months,
 }: {
-  readonly recent: readonly ArchiveDayGroup[];
+  readonly calendar:
+    { readonly month: string; readonly dates: readonly string[] } | undefined;
   readonly months: readonly string[];
 }) {
   const copy = messages.archive;
-  const empty = recent.length === 0 && months.length === 0;
+  const empty = calendar === undefined && months.length === 0;
 
   return (
     <main className={styles.page} data-page="arquivo">
@@ -58,16 +68,28 @@ export function ArchiveIndexView({
       </div>
 
       {empty ? (
-        /* HTTP 200 with its marker, never a 404 and never a skeleton: the
-           resource exists and is empty (ADR-0053 decision 3 — the archive
-           starts when the first daily is published). */
+        /* HTTP 200 with its marker, never a 404 and never a skeleton grid:
+           the resource exists and is empty (ADR-0053 decision 3 — the
+           archive starts when the first daily is published). */
         <p className={styles.empty}>{copy.empty}</p>
       ) : (
         <>
-          <section className={styles.section}>
-            <h2 className={styles.sectionHeading}>{copy.recent.heading}</h2>
-            <DayRows groups={recent} />
-          </section>
+          {calendar === undefined ? null : (
+            <section className={styles.section}>
+              {/* The month name is the section's own heading — headings are
+                  exempt from the all-caps gate and not uppercase anyway —
+                  and the grid carries bare numerals under it. A sparse
+                  newest month (one linked day on the 2nd) is the ragged
+                  floor's own shape, not an edge case (ADR-0053 D3). */}
+              <h2 className={styles.sectionHeading}>
+                {formatMonth(`${calendar.month}-01`)}
+              </h2>
+              <ArchiveCalendar
+                month={calendar.month}
+                publishedDates={new Set(calendar.dates)}
+              />
+            </section>
+          )}
 
           <section className={styles.section}>
             <h2 className={styles.sectionHeading}>{copy.months.heading}</h2>

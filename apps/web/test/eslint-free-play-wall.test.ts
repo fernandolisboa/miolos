@@ -713,7 +713,10 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../archive/chrome",
       "../archive",
       "../../app/arquivo/page",
-      "../../app/arquivo/day-rows",
+      // Re-aimed at #163: the probe names a REAL module (`day-rows` was
+      // deleted with the calendar's landing), and the claim — any file
+      // under `app/arquivo/**` reds from free play — is unchanged.
+      "../../app/arquivo/calendar-grid",
     ];
     for (const door of doors) {
       const source = [

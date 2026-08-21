@@ -4,11 +4,11 @@ import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatDayInMonth, formatMonth, messages } from "../src/i18n";
+import { formatLongDate, formatMonth, messages } from "../src/i18n";
 
-// One month of the archive (#31 AC 1, ADR-0053 decision 1). The page is an
-// async server component, so it is invoked as a plain function; the view it
-// returns is rendered directly.
+// One month of the archive (#31 AC 1, ADR-0053 decision 1; the calendar
+// since #163, plan 065). The page is an async server component, so it is
+// invoked as a plain function; the view it returns is rendered directly.
 
 const spies = vi.hoisted(() => ({
   stubDb: {},
@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 describe("the archive month page (T-WEB-S169)", () => {
-  it("renders that month's day rows with previous/next month navigation", async () => {
+  it("renders that month's calendar grid with previous/next month navigation", async () => {
     spies.listArchivedDays.mockResolvedValue([
       { date: "2026-08-02", game: "binairo" },
       { date: "2026-08-02", game: "sudoku" },
@@ -54,7 +54,7 @@ describe("the archive month page (T-WEB-S169)", () => {
       "2026-07",
     ]);
 
-    render(
+    const { container } = render(
       await ArchiveMonthPage({ params: Promise.resolve({ mes: "2026-08" }) }),
     );
 
@@ -71,7 +71,39 @@ describe("the archive month page (T-WEB-S169)", () => {
         name: formatMonth("2026-08-01"),
       }),
     ).toBeInTheDocument();
+
+    // The grid replaced the rows (#163): whole weeks of cells — 2026-08
+    // starts on a Saturday and is the 6-week worst case, 42 <li> — of
+    // which only the PUBLISHED days are links, and only they are exposed
+    // to assistive tech (pads and inert days are aria-hidden).
+    const grid = container.querySelector("[class*='calendarGrid']");
+    expect(grid).not.toBeNull();
+    expect((grid as HTMLElement).querySelectorAll("li")).toHaveLength(42);
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
+
+    // A published day: one date link, its accessible name led by the
+    // visible numeral's own long date (WCAG 2.5.3) and carrying the
+    // weekday — the parity the aria-hidden header withholds. 2026-08-02
+    // is a Sunday.
+    expect(
+      screen.getByRole("link", {
+        name: messages.archive.calendar.dayAria(
+          formatLongDate("2026-08-02"),
+          "domingo",
+        ),
+      }),
+    ).toHaveAttribute("href", "/arquivo/2026-08-02");
+    // The cells carry bare numerals: the month and year live in the `<h1>`
+    // directly above and nowhere else (the step-6 F9 reasoning, kept).
+    expect(screen.queryByText("2 de agosto de 2026")).toBeNull();
+
+    // An unpublished day of the same month is inert: no link to it exists.
+    const anchors = [...container.querySelectorAll("a")].map(
+      (anchor) => anchor.getAttribute("href") ?? "",
+    );
+    expect(
+      anchors.filter((href) => /^\/arquivo\/\d{4}-\d{2}-\d{2}$/.test(href)),
+    ).toEqual(["/arquivo/2026-08-01", "/arquivo/2026-08-02"]);
 
     // `months` is newest-first, so NEXT is the neighbour before this one.
     // The composed sentence is the ACCESSIBLE NAME; the visible label is a
@@ -91,24 +123,6 @@ describe("the archive month page (T-WEB-S169)", () => {
     expect(
       screen.getByRole("link", { name: messages.archive.backToIndexAria }),
     ).toHaveAttribute("href", "/arquivo");
-
-    // The rows carry the DAY and its weekday, never the month and year the
-    // `<h1>` directly above has just stated (step-6 F9). With 31 rows the old
-    // shape left about six distinct words on the page, and the only varying
-    // token — the leading day number — was not the visual anchor.
-    expect(screen.getByText(formatDayInMonth("2026-08-02"))).toBeVisible();
-    expect(screen.getByText(formatDayInMonth("2026-08-01"))).toBeVisible();
-    expect(screen.queryByText("2 de agosto de 2026")).toBeNull();
-    // The SAME string is the row's accessible name, so WCAG 2.5.3's
-    // label-in-name holds in this mode too.
-    expect(
-      screen.getByRole("link", {
-        name: messages.archive.dayRowAria(formatDayInMonth("2026-08-02"), [
-          messages.games.binairo.name,
-          messages.games.sudoku.name,
-        ]),
-      }),
-    ).toHaveAttribute("href", "/arquivo/2026-08-02");
   });
 
   it("each sibling link is ABSENT at the archive's own edges", async () => {
@@ -201,9 +215,17 @@ describe("the archive month page (T-WEB-S169)", () => {
   // would have redded `detect` with no commit causing it and none able to fix
   // it. Nothing asserted the label's shape, exactly as nothing asserted the
   // row's before F9.
-  it("no sibling label can reach impeccable's all-caps gate, in any month", async () => {
+  it("no element of the month page can reach impeccable's all-caps gate, in any month", async () => {
     // Every month as `previous`, at a four-digit year — the year's length is
-    // constant, so this is the whole space.
+    // constant, so this is the whole space. The loop runs over the WHOLE
+    // page since #163 — grid cells, weekday header and siblings alike —
+    // because the calendar added new uppercase carriers (`.weekday`) and a
+    // nav-scoped loop would be blind to them. Headings are the rule's own
+    // exemption; everything else stays under 30 characters of direct text,
+    // which is stronger than the gate needs (it also requires the
+    // uppercase transform — pinned per selector in T-WEB-S311) and cheap
+    // to hold: the longest non-heading run on this page is a sibling
+    // month name, 17 characters in fevereiro.
     for (let m = 1; m <= 12; m += 1) {
       const previous = `2026-${String(m).padStart(2, "0")}`;
       spies.listArchivedDays.mockResolvedValue([
@@ -217,7 +239,10 @@ describe("the archive month page (T-WEB-S169)", () => {
 
       const nav = container.querySelector("nav");
       expect(nav).not.toBeNull();
-      for (const el of [nav!, ...nav!.querySelectorAll("*")]) {
+      for (const el of container.querySelectorAll("*")) {
+        if (/^H[1-6]$/.test(el.tagName)) {
+          continue;
+        }
         // impeccable's own predicate, element by element: the direct text
         // run is what `hasDirectText` reads, and 30 is its threshold.
         const direct = [...el.childNodes]
@@ -275,6 +300,13 @@ describe("the archive month page (T-WEB-S169)", () => {
     expect(block(".monthNavMonth")).not.toContain("text-transform");
     // Tracking follows the uppercase, for `wide-tracking`'s sake.
     expect(block(".monthNavMonth")).not.toContain("letter-spacing");
+    // The calendar's one uppercase carrier is the 3-character weekday
+    // label (#163); the cells and their numerals carry none — the
+    // per-selector sweep over the calendar's whole block list is
+    // T-WEB-S311's.
+    expect(block(".weekday")).toContain("text-transform: uppercase");
+    expect(block(".dayCellLink")).not.toContain("text-transform");
+    expect(block(".dayNumeral")).not.toContain("text-transform");
   });
 
   it("generateMetadata and the page share ONE parser — a hostile segment yields no canonical", async () => {

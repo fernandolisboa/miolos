@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import type { ArchiveDayGroup } from "../../src/archive/group-days";
 import {
   archiveMonthRoute,
   formatMonth,
@@ -8,14 +7,18 @@ import {
   routes,
 } from "../../src/i18n";
 import styles from "./arquivo.module.css";
-import { DayRows } from "./day-rows";
+import { ArchiveCalendar } from "./calendar-grid";
 
 /**
- * One month of the archive (#31, ADR-0053 decision 1) — identical row
- * anatomy to the index's "Dias recentes" section, which is the point of
- * having a day page at all: a month row is ONE date link instead of four
- * game links, so a 31-day month is ~31 touch targets rather than 124
- * anchors.
+ * One month of the archive (#31, ADR-0053 decision 1; the calendar since
+ * #163) — the identical grid anatomy to the index's newest-month section.
+ * A cell is ONE date link instead of four game links, which is the point
+ * of having a day page at all: a 31-day month is ~31 touch targets rather
+ * than 124 anchors, exactly as the day rows it replaced were.
+ *
+ * `dates` is the month's published days, deduplicated by the page from the
+ * reader's own `(date, game)` pairs — the reader stays the only authority
+ * on which days exist (ADR-0053 decision 3).
  *
  * `previous`/`next` are SIBLING navigation and each is absent when there is
  * no such month; the back affordance is the index (`backToIndex`), because
@@ -23,12 +26,12 @@ import { DayRows } from "./day-rows";
  */
 export function ArchiveMonthView({
   month,
-  groups,
+  dates,
   previous,
   next,
 }: {
   readonly month: string;
-  readonly groups: readonly ArchiveDayGroup[];
+  readonly dates: readonly string[];
   readonly previous: string | undefined;
   readonly next: string | undefined;
 }) {
@@ -54,9 +57,10 @@ export function ArchiveMonthView({
 
       <section className={styles.section}>
         {/* The month and the year are in the `<h1>` directly above, so the
-            rows carry the day number and its weekday and nothing else
+            grid carries bare day numerals and no duplicate title inside the
+            card — the same reasoning that kept them out of the rows
             (step-6 F9). */}
-        <DayRows groups={groups} dateFormat="dayInMonth" />
+        <ArchiveCalendar month={month} publishedDates={new Set(dates)} />
       </section>
 
       {/* Each sibling link is a kicker over a month, never one run of
