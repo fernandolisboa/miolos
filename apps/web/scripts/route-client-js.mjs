@@ -269,8 +269,15 @@ const BUDGETED = [
   // spelling (verified against `.next/diagnostics/route-bundle-stats.json`).
   //
   // The index and the month page ship near-zero client JS and ride the
-  // shared 40 KB with enormous slack — measured at -40.1 KB against `/`, i.e.
-  // LESS than the hub. The DAY PAGE no longer does, and this comment was
+  // shared 40 KB with enormous slack — LESS than the hub. #163 turned both
+  // into server-rendered calendars and re-measured over a fresh
+  // `rm -rf .next && pnpm build`: **-49.1 KB** against `/`, where the
+  // figure recorded here used to be -40.1. Neither route gained or lost
+  // anything — both sit at 789.6 KB, the same first-load set as `/termos`
+  // and `/modo-livre`, i.e. the floor for a route with no client JS of its
+  // own — so the widening delta is `/` growing, exactly the baseline drift
+  // this file's own "re-measure rather than quote" rule exists for.
+  // The DAY PAGE no longer ships near-zero, and this comment was
   // written to be re-checked by the first ticket that put JS on these routes:
   // #96 gives `/arquivo/[data]` a per-game done chip, so its card is a client
   // island carrying `use-record-snapshot` -> `play-record` (zod +

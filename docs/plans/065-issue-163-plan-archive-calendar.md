@@ -243,7 +243,7 @@ pasted (`--force` on typecheck/test — a turbo cache hit is a replay; `lint` ta
    classification and deltas unchanged (D5's proof).
 4. `Impeccable` workflow on the preview: both viewport steps ran, exit 0, silent; evidence =
    step-name-filtered log (`awk -F'\t' '$2 ~ /impeccable detect/'`) + the preflight lines
-   showing the **discovered** month/day/play paths still resolve (proves D2's invariant live).
+   showing the **discovered** month/day/play paths still resolve (shows D2's invariant live).
 5. PR body: tier named (Tier 2), what changed, gate output inline, screenshots, the design
    calls (D1–D3) summarised with reasons; "nothing needs Fernando" stated explicitly if true
    (expected: true — no pending-ledger item foreseen).
@@ -301,3 +301,35 @@ All eight findings applied; none disputed. **Test-id count unchanged: 6 new T-WE
 7. **Adj. 7** — the off-scale 2px gap gets a sheet arithmetic comment (`.doneChip` precedent).
 8. **Adj. 8** — review corrected: the `--ink-2` 5.3003:1 figure IS recorded (stats sheet
    :228/:375); applied as asked — step 5 copies it to `.dayCellInert` and re-verifies.
+
+## Step-7 deviations (2026-08-21; the six step-6 lenses — four REJECT, two ACCEPT)
+
+The plan is a snapshot. These five prescriptions are superseded by what step 7 shipped;
+everything else in it held. Reports: `163-step6-{correctness,quality,adr,issue,security,
+performance}.md`; resolutions in PR #175's body.
+
+1. **Slice 5's `NEWEST_MONTH_ROW_WINDOW = 124` is superseded.** The plan asked for the
+   literal with a comment stating "31 days × 4 games"; four lenses rejected it as a bound
+   that moves with a product decision no test observes. It is now
+   `31 * GAMES.length`, and it lives in `apps/web/src/archive/calendar.ts` rather than
+   `page.tsx`. The plan's arithmetic was right; leaving it unmechanised was the miss.
+2. **Slice 5's `newestMonthCalendar` stays out of `page.tsx`.** The plan left the
+   derivation private to the route, which is why it shipped with no test while this
+   ticket simultaneously deleted `recentDayGroups`' truncation pin. It is exported from
+   `src/archive/calendar.ts` and pinned by `T-WEB-S312`.
+3. **Slice 5's `{ calendar: { month, dates } | undefined }` is a NAMED type.**
+   `ArchiveIndexCalendar`, exported from the module that owns the model — the anonymous
+   shape had already been spelled twice with two different `readonly` modifiers.
+4. **Slices 4 and 5 pass a `ReadonlySet`, not an array.** Both routes were building a
+   Set, spreading it, and letting the view rebuild it. `archivedDates(days, month?)` is
+   the single spelling of that dedup and hands the grid the Set directly.
+5. **Slice 6's doc-comment list was incomplete.** It enumerated `month-view.tsx`'s
+   header and the sheet header; three further committed records outside the diff still
+   described the deleted row anatomy — `day-view.tsx:19-23` (which argued the OPPOSITE of
+   what shipped about `DESIGN.md`'s card-in-card rule), `ink-on-accent.test.ts`'s reason
+   for listing the archive sheet, and `archive-copy.test.ts`'s enumeration comment. A
+   deletion sweep is over the whole tree, never over the files the plan happens to name.
+
+Also corrected here: exit criterion 4 read "proves D2's invariant live" over a single
+workflow run — ADR-0023 reserves "prove" for construction-backed invariants, in docs as
+well as tests, so it now reads "shows".
