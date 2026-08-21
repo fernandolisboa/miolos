@@ -33,7 +33,7 @@ Make the change and nothing else. Tier 0's diff is small by definition, and an u
 
 Run it and **paste the real output**. `CLAUDE.md` § *Verification gates* is the list; `npx impeccable detect` only if the change touches UI.
 
-Serialise full-suite runs on the shared box: `~/miolos-session/gate-lock.sh acquire "<who>"` before, `release` after. Never `--no-verify`.
+Serialise full-suite runs on the shared box: `scripts/gate-lock.sh acquire "<who>"` before, `release` after. Never `--no-verify`.
 
 ## 5. PR and merge
 

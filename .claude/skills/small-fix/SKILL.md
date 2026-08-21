@@ -41,6 +41,6 @@ If the reviewer finds a design problem rather than a bug, that is the signal the
 
 ## 5. Gate, PR, merge
 
-Run the gate and **paste the real output** (`CLAUDE.md` § *Verification gates*). Serialise full-suite runs: `~/miolos-session/gate-lock.sh acquire "<who>"` before, `release` after. Never `--no-verify`.
+Run the gate and **paste the real output** (`CLAUDE.md` § *Verification gates*). Serialise full-suite runs: `scripts/gate-lock.sh acquire "<who>"` before, `release` after. Never `--no-verify`.
 
 PR body: what the defect was, the red-then-green evidence, the gate output, the reviewer's verdict, and the tier claim (`Tier 1`) in one line. Merge on green.
