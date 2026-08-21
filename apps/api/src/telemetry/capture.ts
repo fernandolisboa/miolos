@@ -7,8 +7,11 @@ import { after } from "next/server";
  * fetch to the capture API, zero dependencies, zero client SDK. A helper
  * this small structurally cannot autocapture, page-view, lazy-load remote
  * scripts or record a session — the five-event ceiling and the published
- * no-replay promise (messages.ts:839-840) hold by construction rather than
- * by an SDK kill-config a test would have to pin forever.
+ * no-replay promise (`messages.privacy.collected.telemetry`, cited by
+ * symbol because line numbers rot) hold by construction rather than by an
+ * SDK kill-config a test would have to pin forever. The mechanical halves
+ * of "stays disabled" are `T-LINT-S53` (the import ban) and `T-WEB-S322`
+ * (the manifest and lockfile scan).
  *
  * The host is a constant, not env: the project's region is confirmed US
  * (issue #33, 2026-08-20) and a configurable host would be surface without

@@ -836,8 +836,25 @@ export const messages = {
         "A conta anônima e o seu histórico de jogos — quais puzzles você concluiu e quando. É disso que a sequência é calculada. Puzzles antigos concluídos pelo arquivo são registrados do mesmo jeito, e ficam de fora da sequência.",
       email:
         "O seu e-mail, somente se você escolher vinculá-lo. Ninguém precisa vincular e-mail para jogar.",
+      // #33 (ADR-0069): the measurements are now recorded against the
+      // anonymous account and processed OUTSIDE Brazil, which is data
+      // about the user by this block's own criterion — the page states
+      // EXACTLY what this release ships, and deferring the line would be
+      // exactly that drift (the #30 medals and #145 push precedents,
+      // both widened in place in the PR that shipped their mechanism).
+      //
+      // THE LAST SENTENCE IS THE HONEST HALF, and it is why this line
+      // rather than the deletion section carries it: `POST /account/delete`
+      // is a `db.delete(users)` cascade over OUR tables and issues no
+      // PostHog deletion, so the immediate self-service erasure does not
+      // reach the provider's rows. Saying so here keeps the deletion
+      // section's "de uma vez" true of what it actually enumerates, and
+      // publishes the one path that does reach them. The residual and its
+      // owner are recorded in ADR-0069 decision 5 and in
+      // `docs/pending-fernando.md` (SOON), for #37's LGPD review
+      // (ADR-0012).
       telemetry:
-        "Medições técnicas mínimas de uso e desempenho. Não gravamos a sua tela nem as suas sessões.",
+        "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima — nunca ao seu e-mail — e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
       // #30 (ADR-0052): a `medal_grants` row is operator-written data
       // about the user, so the inventory names it the release it ships —
       // the page states EXACTLY what this release ships (this block's own

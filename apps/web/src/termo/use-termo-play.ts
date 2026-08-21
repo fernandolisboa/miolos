@@ -81,7 +81,7 @@ export interface TermoPlay {
  * It travels as a parameter rather than being read here because
  * `play/day-state.ts` reaches `src/day/**`, and the ARCHIVE shell — which
  * calls this same hook — may contain neither in its module graph (ADR-0053
- * decision 9, pinned by `archive-day.test.tsx`). Its only effect is to
+ * decision 10's "Why no endpoint", pinned by `archive-day.test.tsx`). Its only effect is to
  * suppress the `puzzle_started` report: looking at a finished day is not
  * starting an attempt. The archive omits it; an archived date's claim is
  * `undefined` by the payload's own date gate anyway.

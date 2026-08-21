@@ -103,8 +103,15 @@ export interface PlayLifecycle<S extends PlayCore> {
    * `play/day-state.ts`, which reaches `src/day/**`, and the ARCHIVE's play
    * shells mount this hook: `archive-day.test.tsx` asserts that no archive
    * page's module graph contains either, because a user-specific read on a
-   * public crawler-facing route is what ADR-0053 decision 9 forbids. So the
-   * four DAILY screen roots — which already hold the claim for their own
+   * public crawler-facing route is what ADR-0053 **decision 10's "Why no
+   * endpoint"** rules out — *"a user-specific fragment on a public page …
+   * speculative surface with one consumer and a per-request cost on a
+   * crawler-facing route"*, on the trade decision 2 makes for the archive's
+   * un-cached reads. (NOT decision 9, which is "there is no archive
+   * conclusion route" and concerns `ConclusionView`; step-6 ADR B1 caught
+   * the mis-citation at four sites and it is corrected at all of them.)
+   *
+   * So the four DAILY screen roots — which already hold the claim for their own
    * render-time swap — pass it in, and the archive shells pass nothing,
    * where an archived date's claim is `undefined` by the payload's own date
    * gate anyway.

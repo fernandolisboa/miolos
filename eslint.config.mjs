@@ -72,6 +72,42 @@ const webRequireCall = {
     "apps/web is client-serving ESM: require() is banned — it evades the @miolos/db import restrictions (ADR-0024, ADR-0026).",
 };
 
+// THE NO-SESSION-REPLAY WALL (#33, ADR-0069 decision 1; step-6 issue B1).
+// CLAUDE.md lists "No session replay in telemetry" as a VETO, and issue #33's
+// AC says "disabled AND STAYS DISABLED" — "stays" is the whole claim, and
+// until this group existed the protection was a convention (we chose not to
+// install an SDK) plus a copy assertion. This is the same argument the
+// free-play wall below makes about structural silence: a claim that rests on
+// nobody having added the import survives exactly until someone does.
+//
+// Named packages, not a heuristic: `posthog-js` and `posthog-js-lite` are the
+// two clients ADR-0069 decision 1 rejected by name, and `rrweb` is the
+// recorder every browser session-replay implementation is built on — banning
+// it closes the "roll our own replay" door as well as the SDK one.
+//
+// THIS IS THE SOURCE HALF ONLY, deliberately. `no-restricted-imports` cannot
+// see `await import("posthog-js")` and does not run on `package.json` at all.
+// The INSTALL half — which is upstream of every import shape, dynamic and
+// `require()` included — is `apps/web/test/no-session-replay.test.ts`
+// (T-WEB-S322), a manifest and lockfile scan. Neither half is sufficient
+// alone; together a replay-capable client cannot arrive in silence.
+const replayCapableClientGroups = [
+  {
+    group: [
+      "posthog-js",
+      "posthog-js/*",
+      "posthog-js-lite",
+      "posthog-js-lite/*",
+      "@posthog/*",
+      "rrweb",
+      "rrweb/*",
+      "@rrweb/*",
+    ],
+    message:
+      "no session replay, and no client PostHog SDK: telemetry is five server-anchored events over a hand-rolled capture in apps/api, so the ceiling and the published no-replay promise hold by construction (CLAUDE.md invariants, ADR-0069 decision 1, /privacidade's own copy).",
+  },
+];
+
 // The app-wide import wall's two halves (wall object (1) below), extracted to
 // named constants for the SAME reason `webDynamicDbImport` was: flat config
 // REPLACES a rule's whole configuration per matching file — it never merges —
@@ -142,6 +178,12 @@ const webWallImportPatterns = [
     message:
       "apps/web is client-serving: reach the contracts through the `@miolos/core` package entry, never by relative path into packages/core/src — the deep path reaches the SERVER-ONLY daily-content schemas, whose module is retained in the browser chunk of every route the moment anything names it (commit d5bb543, ADR-0024/ADR-0033).",
   },
+  // Carried by THIS array, not by an object of its own, so that apps/web's
+  // four repeaters — the app-wide wall (1), free play (3), the OG cards (4)
+  // and their intersection (5) — all inherit it with no fifth place to
+  // forget. apps/api and packages/** get it from their own object below;
+  // apps/web is the only tree where a browser SDK could actually run.
+  ...replayCapableClientGroups,
 ];
 
 const webWallImportPaths = [
@@ -588,6 +630,31 @@ export default tseslint.config(
     files: ["apps/web/public/sw.js"],
     languageOptions: {
       globals: globals.serviceworker,
+    },
+  },
+  {
+    // (0) THE NO-SESSION-REPLAY WALL OUTSIDE apps/web (#33, ADR-0069
+    // decision 1) — see the constant's header. apps/web carries it through
+    // `webWallImportPatterns`; this object is the rest of the repo, so a
+    // replay-capable client cannot arrive through apps/api or a package
+    // either.
+    //
+    // PLACED BEFORE the games object below, on purpose. `packages/**`
+    // intersects `packages/games/src/**`, and flat config REPLACES a rule's
+    // whole configuration per matching file — so the later, stricter games
+    // object becomes games source's entire `no-restricted-imports`, which is
+    // correct: it already bans every non-relative specifier, this list
+    // included. Placed AFTER it, this object would delete the purity
+    // backstop.
+    files: [
+      "apps/api/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
+      "packages/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: replayCapableClientGroups },
+      ],
     },
   },
   {

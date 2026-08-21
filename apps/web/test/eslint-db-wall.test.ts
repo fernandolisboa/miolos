@@ -850,6 +850,58 @@ describe("apps/web db wall — not a blanket ban", () => {
   });
 });
 
+describe("the no-session-replay wall (#33, ADR-0069 decision 1)", () => {
+  it("T-LINT-S53: a replay-capable client is an import error in every tree, and the ban is not a substring heuristic", async () => {
+    // Issue #33's AC 2 is "session replay is disabled AND STAYS DISABLED",
+    // and CLAUDE.md lists no-session-replay as a veto. Before this group the
+    // "stays" half was a convention plus a copy assertion — nothing in the
+    // tree went red if a later PR added `posthog-js`. THIS IS THE SOURCE
+    // HALF; the install half (which is what closes dynamic import and
+    // require, neither of which `no-restricted-imports` can see) is
+    // `no-session-replay.test.ts`, T-WEB-S322.
+    //
+    // The four apps/web paths are the four REPEATERS of
+    // `webWallImportPatterns`: drop the spread from any one of them — the
+    // failure mode the whole file exists for — and exactly one of these
+    // reds. `apps/api` and `packages/**` are the separate object (0).
+    const bannedAt = [
+      ["apps/web/src/eslint-probe.ts", 'import "posthog-js";'],
+      ["apps/web/src/free-play/eslint-probe.ts", 'import "posthog-js-lite";'],
+      ["apps/web/app/opengraph-image.tsx", 'import "rrweb";'],
+      [
+        "apps/web/app/modo-livre/opengraph-image.tsx",
+        'import "posthog-js/react";',
+      ],
+      ["apps/api/src/eslint-probe.ts", 'import "posthog-js";'],
+      ["packages/core/src/eslint-probe.ts", 'import "@posthog/nextjs";'],
+    ] as const;
+
+    for (const [path, source] of bannedAt) {
+      const messages = await lintProbe(path, `${source}\n`);
+      expect(
+        wallHits(messages),
+        `${path} did not report the replay ban`,
+      ).toContain("no-restricted-imports");
+    }
+
+    // ANTI-VACUITY. The list is exact names plus their subpaths, never a
+    // `posthog*` substring match, so a local module or an unrelated package
+    // whose name merely CONTAINS one of them stays clean. Without this
+    // control a future "simplification" to `["*posthog*"]` would pass every
+    // assertion above while banning files that have nothing to do with it.
+    for (const clean of [
+      'import "./posthog-js-notes";',
+      'import "../telemetry/client";',
+    ]) {
+      const messages = await lintProbe(
+        "apps/web/src/eslint-probe.ts",
+        `${clean}\n`,
+      );
+      expect(wallHits(messages), `${clean} should be clean`).toEqual([]);
+    }
+  });
+});
+
 /**
  * AC 2 as a TEST rather than a hand-run grep (#31, ADR-0014 :16 / ADR-0053
  * decision 4). The issue's second acceptance criterion is that `apps/web`'s

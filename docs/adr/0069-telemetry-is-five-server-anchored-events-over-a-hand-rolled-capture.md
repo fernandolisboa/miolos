@@ -231,8 +231,15 @@ moves ≤ 0.2 KB. No budget was retuned.
 (c) **`usePlayLifecycle` gained an input rather than a read.** The
 `puzzle_started` gate needs the server's day claim, and the claim lives in
 `play/day-state.ts`, which reaches `src/day/**` — which no archive page's
-module graph may contain (ADR-0053 decision 9, pinned by
-`archive-day.test.tsx`, and the archive's shells mount the same hook). So
+module graph may contain (ADR-0053 **decision 10's "Why no endpoint"** —
+*"a user-specific fragment on a public page … speculative surface with one
+consumer and a per-request cost on a crawler-facing route"* — on the
+un-cached-archive trade decision 2 makes; pinned by `archive-day.test.tsx`,
+and the archive's shells mount the same hook). **Not decision 9**, which is
+"there is no archive conclusion route" and concerns `ConclusionView`: this
+consequence and three other records cited it, copied from the pin's own
+comment, which carried the wrong number too (step-6 ADR B1). All are
+corrected, the pin included. So
 the four daily screen roots pass `remotelyClaimed` in, and the archive
 passes nothing. A first implementation that read the claim inside the hook
 made that test red; the wall was right.

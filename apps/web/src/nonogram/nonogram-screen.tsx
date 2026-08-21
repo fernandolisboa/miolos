@@ -73,7 +73,7 @@ export function NonogramScreen({
   // report when the server already claims the day, and it may not read the
   // claim itself — `play/day-state.ts` reaches `src/day/**`, which the
   // archive shell that mounts the same hook may not contain (ADR-0053
-  // decision 9). Both calls are unconditional, so the order is free.
+  // decision 10). Both calls are unconditional, so the order is free.
   const claim = useServerDayClaim(daily.date, "nonogram");
   const play = useNonogramPlay(daily, claim !== undefined);
 

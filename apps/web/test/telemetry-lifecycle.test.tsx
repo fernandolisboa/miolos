@@ -18,7 +18,8 @@ import { usePlayLifecycle } from "../src/play/use-play-lifecycle";
  * what these cases decide is WHETHER the hook calls it. The SERVER CLAIM is
  * an INPUT to the hook rather than something it reads — `play/day-state.ts`
  * reaches `src/day/**`, which no archive page's module graph may contain
- * (ADR-0053 decision 9, `archive-day.test.tsx`) — so the probe passes it the
+ * (ADR-0053 decision 10's "Why no endpoint", pinned by
+ * `archive-day.test.tsx`) — so the probe passes it the
  * way the four daily screen roots do.
  */
 const telemetry = vi.hoisted(() => ({ postPuzzleStarted: vi.fn() }));

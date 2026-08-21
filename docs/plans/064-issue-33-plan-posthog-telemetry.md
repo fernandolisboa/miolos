@@ -147,7 +147,10 @@ contradicts it, each with the reason and the record that now governs.
   `apps/web/test/archive-day.test.tsx` asserts that no archive page's module
   graph contains either, because the archive's play shells mount the same
   hook and a user-specific read on a public crawler-facing route is what
-  ADR-0053 decision 9 forbids. The first implementation did read it there
+  ADR-0053 decision 10's "Why no endpoint" rules out (**not** decision 9,
+  which is "there is no archive conclusion route" — step-6 ADR B1; the
+  correction landed at every site in the step-7 round). The first
+  implementation did read it there
   and **made that test red**. So `usePlayLifecycle` gained a
   `remotelyClaimed` input, the four daily screen roots pass what they
   already hold for their own render-time swap, and the archive shells pass
