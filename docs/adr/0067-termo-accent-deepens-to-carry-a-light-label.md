@@ -1,6 +1,6 @@
 # ADR-0067 — The Termo accent deepens to carry a light label
 
-**Status:** Accepted — 2026-08-20 (issue #161)
+**Status:** Accepted — 2026-08-20 (issue #161, shipped in #170)
 **Depends on:** [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0042](./0042-the-termo-board-is-read-only-output.md)
 **Supersedes in part:** [ADR-0041](./0041-accents-colour-shapes-never-words.md) — decision 6 (*"The token values do not move. `--accent-termo` stays `#C08A1E`."*) is **replaced outright** for `--accent-termo`, by exactly the instrument that decision demanded: *"no ticket may reopen it without a new ADR"* — this is that ADR. The other three game accents and `--accent-app` do not move. Decision 2's Termo value and consequence (c)'s Termo-only fallback are replaced by decisions 2–3 below.
 **Amends:** [ADR-0042](./0042-the-termo-board-is-read-only-output.md) — the state table's `correct` row now reads `var(--ink-on-accent, var(--paper-desk))` at **4.8433:1**, and every `2.7311:1`/`2.8501:1`/`5.4968:1` figure quoted for mustard is the OLD value's; the board's design (accent fills exactly one state, neutral-ink marks carry every distinction) is unchanged and its chroma argument survives (#8D6212's chroma is 123, still ≥ 30).
