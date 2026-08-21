@@ -104,7 +104,22 @@ export interface NonogramPlay {
   readonly pause: () => void;
 }
 
-export function useNonogramPlay(daily: DailyNonogramResponse): NonogramPlay {
+/**
+ * `remotelyClaimed` — the SERVER already claims this game on this day (#33,
+ * ADR-0069), which the daily screen root reads with `useServerDayClaim` for
+ * its own render-time swap to the remote completed view (#142, ADR-0065).
+ * It travels as a parameter rather than being read here because
+ * `play/day-state.ts` reaches `src/day/**`, and the ARCHIVE shell — which
+ * calls this same hook — may contain neither in its module graph (ADR-0053
+ * decision 9, pinned by `archive-day.test.tsx`). Its only effect is to
+ * suppress the `puzzle_started` report: looking at a finished day is not
+ * starting an attempt. The archive omits it; an archived date's claim is
+ * `undefined` by the payload's own date gate anyway.
+ */
+export function useNonogramPlay(
+  daily: DailyNonogramResponse,
+  remotelyClaimed = false,
+): NonogramPlay {
   const [state, dispatch] = useReducer(
     nonogramPlayReducer,
     daily,
@@ -135,6 +150,7 @@ export function useNonogramPlay(daily: DailyNonogramResponse): NonogramPlay {
     reduce: nonogramPlayReducer,
     dispatch,
     buildRecord,
+    remotelyClaimed,
     // `state.now` is deliberately NOT here (use-play-lifecycle.ts:66-69,
     // landmine 21). `solution` and `clues` are absent for a different reason:
     // `buildRecord` never reads them, and a dependency that cannot change the

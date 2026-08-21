@@ -9,6 +9,8 @@
  */
 import { sessionResponseSchema } from "@miolos/core";
 
+import { markSessionReady } from "../telemetry/client";
+
 // Module-level fire-once guard, now a SHARED PROMISE rather than a boolean:
 // callers need to await the mint, not merely skip it. Survives React
 // StrictMode's double effect and re-mounts, so one page load makes exactly
@@ -46,7 +48,21 @@ let remintSpent = false;
  * caller treats "no session" as a retryable state rather than an error.
  */
 export function ensureSession(): Promise<void> {
-  pending ??= mintSession().then(() => undefined);
+  pending ??= mintSession()
+    .then(() => undefined)
+    // THE TELEMETRY GATE OPENS WHEN THE MINT SETTLES (#33, ADR-0069) —
+    // success or failure alike, which is why this is `finally` and not
+    // `then`. `POST /telemetry` answers a cookieless request with a 204
+    // drop, so a `puzzle_started` fired while this request is still in
+    // flight would be lost on exactly the first-ever visits the event
+    // exists to measure; the client buffers until this call. A FAILED mint
+    // opens the gate too: the relay will drop those events, and buffering
+    // them forever would only grow a list nothing drains.
+    //
+    // `finally` also keeps this line behaviour-free: it neither changes the
+    // resolution value nor swallows a rejection, so `ensureSession`'s
+    // contract above is exactly what it was.
+    .finally(markSessionReady);
   return pending;
 }
 

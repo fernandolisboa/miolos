@@ -21,6 +21,7 @@
 import type { Game } from "@miolos/core";
 import { useEffect, useRef } from "react";
 
+import { postPuzzleStarted } from "../telemetry/client";
 import {
   prunePlayRecords,
   readPlayRecord,
@@ -93,6 +94,29 @@ export interface PlayLifecycle<S extends PlayCore> {
    * `tick` dispatches must produce zero `setItem` calls.
    */
   readonly persistDeps: readonly unknown[];
+  /**
+   * The SERVER already claims this game on this day (#33, ADR-0069) — the
+   * cross-device case ADR-0065 renders as the remote completed view.
+   *
+   * It is an INPUT rather than a read, and that is an architectural
+   * constraint rather than a preference. The claim lives in
+   * `play/day-state.ts`, which reaches `src/day/**`, and the ARCHIVE's play
+   * shells mount this hook: `archive-day.test.tsx` asserts that no archive
+   * page's module graph contains either, because a user-specific read on a
+   * public crawler-facing route is what ADR-0053 decision 9 forbids. So the
+   * four DAILY screen roots — which already hold the claim for their own
+   * render-time swap — pass it in, and the archive shells pass nothing,
+   * where an archived date's claim is `undefined` by the payload's own date
+   * gate anyway.
+   *
+   * Its ONLY effect is to suppress the `puzzle_started` report below: the
+   * remote view is a finished day being looked at, not an attempt being
+   * started, and counting it would inflate the start count of exactly the
+   * multi-device population the event is measured over. Nothing else in
+   * this hook reads it — the record write, the timer and the queue are all
+   * unchanged, which is what keeps the swap render-time only.
+   */
+  readonly remotelyClaimed?: boolean;
 }
 
 export function usePlayLifecycle<S extends PlayCore>({
@@ -102,7 +126,23 @@ export function usePlayLifecycle<S extends PlayCore>({
   dispatch,
   buildRecord,
   persistDeps,
+  remotelyClaimed = false,
 }: PlayLifecycle<S>): void {
+  /**
+   * CAPTURED AT THE FIRST RENDER AND NEVER UPDATED, deliberately. The
+   * question the `puzzle_started` gate asks is "was this day already claimed
+   * when this board mounted", and the mount effect below runs once — putting
+   * the live value in that effect's dependency array would re-run the
+   * restore, the prune and the sync registration every time a `GET /day`
+   * lands behind the board.
+   *
+   * The honest consequence, recorded in ADR-0069: on a COLD direct load the
+   * payload has not arrived at first render, so the report fires before the
+   * remote view swaps in. The case the gate really covers is the warm one —
+   * a client-side navigation from the hub, whose done tile links to the
+   * BOARD route — where the store's retained payload is already there.
+   */
+  const claimedAtMount = useRef(remotelyClaimed);
   // Event handlers need the CURRENT state without re-registering listeners on
   // every keystroke; a ref synced each commit is the cheapest honest way.
   const stateRef = useRef(state);
@@ -145,6 +185,30 @@ export function usePlayLifecycle<S extends PlayCore>({
     // the same set for the bookmarked route — the module-level guards in
     // sync.ts make the overlap free.
     const stopSync = startCompletionSync();
+
+    // THE `puzzle_started` SEAM (#33, ADR-0069 decision 2). The one
+    // game-generic moment a fresh attempt begins, so all four games and the
+    // archive are covered by one call and free play — which never mounts
+    // this hook — by none. `record === undefined` is the whole freshness
+    // test: a restored in-progress board and a concluded day both carry one,
+    // and neither is a start.
+    //
+    // THE SECOND CONDITION IS THE CROSS-DEVICE ONE (#142, ADR-0065). A day
+    // finished elsewhere opens the REMOTE COMPLETED VIEW on this device,
+    // where no local record exists — the screen root's swap is render-time
+    // only, so this hook mounts and this effect runs behind it. Reporting a
+    // start there would count a completed day as a new attempt. The daily
+    // roots pass the claim IN (`remotelyClaimed`; the interface says why it
+    // may not be read here), and the archive passes nothing — an archived
+    // date's claim is `undefined` by the payload's own date gate anyway.
+    // T-WEB-S321 pins the gate.
+    //
+    // Fire-and-forget and never awaited: `postPuzzleStarted` returns `void`
+    // synchronously and swallows every failure, so nothing on the play path
+    // waits on telemetry (T-WEB-S316).
+    if (record === undefined && !claimedAtMount.current) {
+      postPuzzleStarted(game, date);
+    }
 
     if (record?.concluded === true) {
       // A finished day never restarts its clock, and never invites a replay.

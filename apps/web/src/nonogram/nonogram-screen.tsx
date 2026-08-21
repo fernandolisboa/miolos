@@ -63,13 +63,19 @@ export function NonogramScreen({
 }: {
   readonly daily: DailyNonogramResponse;
 }) {
-  const play = useNonogramPlay(daily);
   // The server's claim about this game (#142, ADR-0065), hoisted here — the
   // top of the root, beside the play hook — by the rules of hooks: every
   // early return below would make a later call conditional. Only the BRANCH
   // on its answer sits after `isClosedAndFrozen`, so this device's own
   // closed record always outranks the claim (ADR-0060 decision 7's mirror).
+  // ...and it is now read BEFORE the play hook, because the play hook takes
+  // it (#33, ADR-0069): `usePlayLifecycle` suppresses the `puzzle_started`
+  // report when the server already claims the day, and it may not read the
+  // claim itself — `play/day-state.ts` reaches `src/day/**`, which the
+  // archive shell that mounts the same hook may not contain (ADR-0053
+  // decision 9). Both calls are unconditional, so the order is free.
   const claim = useServerDayClaim(daily.date, "nonogram");
+  const play = useNonogramPlay(daily, claim !== undefined);
 
   // The claim's swap below is render-time only, so the play hook keeps
   // running behind the remote view (#142 step 7, step-6 correctness F3):

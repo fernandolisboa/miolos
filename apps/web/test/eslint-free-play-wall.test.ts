@@ -901,6 +901,65 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S52: the telemetry relay client — and the bare barrel form — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
+    // #33's growth clause (the napkin's one-hop rule): the relay client
+    // reaches the network and, through the session cookie the request
+    // carries, a server-resolved identity, so ADR-0069's surface stays out
+    // of free play only because these names entered the list in the same
+    // change that created the module. Free play is ALREADY structurally
+    // silent — it never mounts `usePlayLifecycle`, the client's only caller
+    // — and that is exactly the sort of claim that survives until someone
+    // adds a second caller, which is why it is made mechanical here. The
+    // bare `../telemetry` form is listed because `**/telemetry/**` does not
+    // match it. One id over both arms — the T-LINT-S49/S50 shape: one claim
+    // ("free play cannot reach telemetry, by any import form"), one it.
+    const doors = ["../telemetry/client", "../telemetry"];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // The route-segment sibling, on the second glob (the T-LINT-S13
+      // pairing): `app/modo-livre/**` is walled by the same object.
+      expect
+        .soft(ruleIds(await lintProbe(ROUTE_PATH, source)), `route ${door}`)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — the play lifecycle imports the client.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+
+    // The dynamic-import arm: the regex closes the evasion.
+    for (const door of doors) {
+      const source = [
+        "export const load = () =>",
+        `  import("${door}");`,
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), `dynamic ${door}`)
+        .toContain("no-restricted-syntax");
+    }
+
+    // THE ANTI-VACUITY CONTROL, and the reason the glob's narrowness is
+    // checked rather than asserted: a local dynamic import that merely
+    // CONTAINS the word stays clean, so the regex is banning the module and
+    // not the substring.
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S18: the free-play directory's LEGAL surface lints clean — the wall is not a blanket ban", async () => {
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',

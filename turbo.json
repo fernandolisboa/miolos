@@ -11,7 +11,8 @@
         "DATABASE_URL",
         "DATABASE_URL_UNPOOLED",
         "WEB_DATABASE_URL",
-        "COOKIE_DOMAIN"
+        "COOKIE_DOMAIN",
+        "POSTHOG_KEY"
       ],
       "outputs": [".next/**", "!.next/cache/**"]
     },

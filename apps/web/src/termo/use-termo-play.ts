@@ -74,7 +74,22 @@ export interface TermoPlay {
   readonly pause: () => void;
 }
 
-export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
+/**
+ * `remotelyClaimed` — the SERVER already claims this game on this day (#33,
+ * ADR-0069), which the daily screen root reads with `useServerDayClaim` for
+ * its own render-time swap to the remote completed view (#142, ADR-0065).
+ * It travels as a parameter rather than being read here because
+ * `play/day-state.ts` reaches `src/day/**`, and the ARCHIVE shell — which
+ * calls this same hook — may contain neither in its module graph (ADR-0053
+ * decision 9, pinned by `archive-day.test.tsx`). Its only effect is to
+ * suppress the `puzzle_started` report: looking at a finished day is not
+ * starting an attempt. The archive omits it; an archived date's claim is
+ * `undefined` by the payload's own date gate anyway.
+ */
+export function useTermoPlay(
+  daily: DailyTermoResponse,
+  remotelyClaimed = false,
+): TermoPlay {
   const [state, dispatch] = useReducer(
     termoPlayReducer,
     daily,
@@ -94,6 +109,7 @@ export function useTermoPlay(daily: DailyTermoResponse): TermoPlay {
     reduce: termoPlayReducer,
     dispatch,
     buildRecord,
+    remotelyClaimed,
     // `[state.guesses]` AND NOTHING ELSE. The array identity changes on a
     // judged guess and on nothing else, which is exactly "the record's
     // CONTENT changed".

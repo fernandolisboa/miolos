@@ -406,6 +406,25 @@ const freePlayBannedModuleGroups = [
     message:
       "free play never touches the day: the day client and the day-truth store are banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0060).",
   },
+  {
+    // #33 (ADR-0069): the telemetry relay client reaches the network and,
+    // through the session cookie the request carries, a server-resolved
+    // identity — banned by name like the day group above (the napkin's
+    // one-hop rule). FREE PLAY FIRES NO EVENTS AT ALL (ADR-0069 decision
+    // 4): it is already structurally silent, because free play never mounts
+    // `usePlayLifecycle` and that hook is the only caller — but structural
+    // silence is exactly the kind of claim that survives until someone adds
+    // a second caller, so it is made mechanical here instead of assumed.
+    //
+    // Both specifier shapes on purpose: `**/telemetry/**` does not match a
+    // bare `../telemetry`, so a future `src/telemetry/index.ts` barrel must
+    // not become a door. The glob is narrower than it looks and was checked
+    // rather than assumed (T-LINT-S52's own control): nothing else shipped
+    // in apps/web is named `telemetry`.
+    group: ["**/telemetry", "**/telemetry/**"],
+    message:
+      "free play fires no telemetry: the puzzle_started relay client is banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0069).",
+  },
 ];
 
 // The dynamic-import evasion of the groups above: `no-restricted-imports`
@@ -419,9 +438,12 @@ const freePlayDynamicBannedModule = {
     // `../day/day-truth` and matches NEITHER `../play/day-state` NOR
     // `../../app/hub-day-state`, whose own literal names are already in this
     // alternation, where they belong.
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+    // `\\/telemetry(\\/|$)` follows the `\\/day` shape for the same reason
+    // (#33, T-LINT-S52): the leading slash keeps it to `../telemetry` and
+    // `../telemetry/client`.
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
   message:
-    "free play records nothing, fetches nothing, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064).",
+    "free play records nothing, fetches nothing, fires no telemetry, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };
 
 // (4) THE OG WALL's own ban (#34, ADR-0054 decisions 8 and 15). Everything
