@@ -1,6 +1,6 @@
 # Pending on Fernando — living ledger
 
-**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found; see handoff 062.
+**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found (NOW §2); POSTHOG_KEY activation added (NOW §3, PR for #33).
 
 **How to use it (Fernando):** when you have time, start a session with *"run /wizard over docs/pending-fernando.md, NOW section"* — the wizard walks you through each step, one at a time. Decisions marked ⚡ are answerable in one line on the named issue, from a phone.
 
@@ -39,6 +39,26 @@ Found 2026-08-21 (night): a manual `Streak notify` dispatch (run 32439773422) go
 - **Verify:** `gh run list --workflow="Streak notify" -L1` shows `success`, and the run log's `cron-notify response:` line is a JSON body, not an error.
 - **Blocks:** the entire #146 dispatcher in practice — the hourly tick fails before reaching the API, so no nudge is ever dispatched; the ANY TIME phone ritual (push card + test nudge) will also fail until this is done.
 - **Source:** run 32439773422 (2026-08-21 manual dispatch); PR #171; `apps/api/src/cron/auth.ts` fail-closed comment.
+
+### 3. Set `POSTHOG_KEY` on miolos-api — the telemetry shipped in #33 sends nothing until you do
+
+Issue #33's PostHog integration is merged and deployed, and it is **dormant**: the capture helper is server-side only (`apps/api/src/telemetry/capture.ts`, ADR-0069), it reads `POSTHOG_KEY` from the API's environment, and that variable does not exist there yet. The token itself already exists — it is the value sitting in `NEXT_PUBLIC_POSTHOG_KEY` on **miolos-web**, where nothing reads it, because the final design keeps the key off the client entirely. So this is a **move**, not a new credential. Until it is done the deployed API logs one line per instance (*"POSTHOG_KEY is unset: telemetry capture disabled…"*) and the PostHog dashboard stays empty. An agent cannot run `vercel env` unattended (permission classifier, the same class as NOW §2 and #59).
+
+- **Do (easiest):** start a session with *"set POSTHOG_KEY — pending-fernando NOW §3"* and approve the prompts. **Or by hand, in a real terminal:**
+  ```
+  cd ~/projects/miolos/apps/web
+  vercel env pull /tmp/web.env --environment=production --yes
+  grep '^NEXT_PUBLIC_POSTHOG_KEY=' /tmp/web.env          # this is the token
+  cd ../api
+  vercel env add POSTHOG_KEY production                   # paste the value
+  vercel --prod                                           # redeploy miolos-api
+  rm /tmp/web.env
+  ```
+  Optional, same sitting: remove `NEXT_PUBLIC_POSTHOG_KEY` from miolos-web (`vercel env rm NEXT_PUBLIC_POSTHOG_KEY production` from `apps/web`). Nothing reads it, and a `NEXT_PUBLIC_` twin invites client use, which ADR-0069 decision 8 rules out.
+- **Verify:** `vercel env ls` from `apps/api` lists `POSTHOG_KEY`; then play one puzzle on production and PostHog's *Verify installation* goes green on the first captured event (`puzzle_started` fires as soon as a board opens).
+- **Blocks:** all five telemetry events in production — `puzzle_started`, `puzzle_completed`, `streak_broken`, `notification_opt_in`, `login_linked`. Nothing else: the API is unaffected by the absence, by design.
+- **Source:** issue #33; PR for #33; ADR-0069 decisions 1 and 8; `apps/api/.env.example`.
+
 
 *(Former §2 discharged 2026-08-20: PostHog region answered — US. See the Done table.)*
 
