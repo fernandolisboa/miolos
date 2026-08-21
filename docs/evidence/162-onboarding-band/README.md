@@ -1,0 +1,3 @@
+# Evidence — #162 onboarding band (PR #168)
+
+Step-5/7 evidence for a surface invisible on preview deploys (ADR-0048: every credentialed call is anonymous on a `*.vercel.app` origin, so `GET /onboarding/state` 401s and the card never renders there). Static-fixture screenshots from the #35-style fixture (real markup, real stylesheets, committed fonts), embedded in PR #168's body: desktop 1440×900 before (the stranded 560px note) and after (the full-width band); mobile 390×844, where before and after are byte-identical (sha256 `2db8fd3e…`, so one file is both); and 700×900, the 550–768px band where the 512px body-copy measure deliberately binds (the step-7 correctness finding, made deliberate — T-WEB-S303 pins it).
