@@ -248,8 +248,14 @@ describe("cronNotifyResponseSchema (#146, ADR-0067 decision 4)", () => {
       cronNotifyResponseSchema.safeParse({ ...tick, skipped: 1 }).success,
     ).toBe(false);
     // A missing counter fails — the route can never under-report a field.
-    const { failed: _failed, ...missing } = tick;
-    expect(cronNotifyResponseSchema.safeParse(missing).success).toBe(false);
+    expect(
+      cronNotifyResponseSchema.safeParse({
+        candidates: 3,
+        claimed: 2,
+        sent: 2,
+        pruned: 1,
+      }).success,
+    ).toBe(false);
     // Counts are non-negative integers.
     expect(
       cronNotifyResponseSchema.safeParse({ ...tick, sent: -1 }).success,
