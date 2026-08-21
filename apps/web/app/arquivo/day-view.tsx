@@ -16,11 +16,15 @@ import styles from "./arquivo.module.css";
  * One archived day (#31, ADR-0053 decision 1) — the games that date actually
  * holds, one card each, plus a link up to its month.
  *
- * This is the ONE archive surface where a card is right: each card is a
+ * This is the ONE archive surface where a GAME card is right: each card is a
  * distinct destination with its own identity, and there are at most four of
- * them. The index and the month pages use hairline-separated rows instead,
- * because a day row inside a card inside a section is exactly how
- * card-inside-card happens — an anti-reference the brief names.
+ * them. The index and the month pages carry a calendar instead (#163), and
+ * that calendar is a single card sitting bare on desk paper in a `.section`
+ * which sets only `margin-top` — one card on paper, the stats-month shape,
+ * with nothing nested inside it. See `arquivo.module.css`'s `.section` and
+ * `.calendarCard` comments for the reading of `DESIGN.md`'s card-inside-card
+ * anti-reference that all three surfaces share; what the line bans is a card
+ * INSIDE a card, which is what a calendar wrapping day rows would have been.
  *
  * A short date renders fewer cards and nothing else: no placeholder, no
  * greyed slot. A `killed_at` takedown produces exactly the same shape.

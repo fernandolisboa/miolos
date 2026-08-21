@@ -5,7 +5,9 @@
    (plan 037 §7.5).
 
    The /estatisticas editorial register on the chrome — ink on desk paper,
-   quiet headings, hairline separators — and the hub's Game-card vocabulary
+   quiet headings, 1px `--line` borders (the day rows' `--line-soft`
+   hairline separators went with the rows at #163, and `--line-soft` has no
+   consumer on this sheet any more) — and the hub's Game-card vocabulary
    on the day page, which is the one archive surface where a card is right:
    each card is a distinct destination with its own identity and there are at
    most four of them.
@@ -181,7 +183,9 @@
    --ink-2 (15.6663:1 vs 5.3003:1 on card paper, both past the 4.5:1 text
    floor — figures re-derived from the token hexes at #163, matching the
    stats sheet's), and weight 600 vs 400. None stands alone: the link's
-   accessible name carries the meaning in words (ADR-0041 decision 5).
+   accessible name carries the meaning in words (`DESIGN.md:22` / WCAG
+   1.4.1 — not ADR-0041 decision 5, whose subject is an accent border
+   outlining a label, and this grid paints no accent at all).
    Hover rides `.page a:hover`'s app-accent underline — a shape. */
 .dayCellLink {
   box-sizing: border-box;
@@ -404,8 +408,10 @@
 }
 
 /* ——— the done chip's row ————————————————————————————————————————————
-   Kicker left, chip right, in ONE FLOW ROW — this sheet's own `.rowLink`
-   idiom. Nothing is positioned, so nothing can overlap the kicker, the tape
+   Kicker left, chip right, in ONE FLOW ROW. (It was named after this
+   sheet's own `.rowLink` idiom; #163 deleted `.rowLink` with the day rows,
+   so the shape is now the rule's own, cited from nowhere else.) Nothing is
+   positioned, so nothing can overlap the kicker, the tape
    or the title at any width, and `impeccable`'s `text-occlusion` rule (which
    was measured BLIND to the corner-stamp design it replaces, occFrac 0.286
    against a 0.45 bar) has nothing to be lenient about.

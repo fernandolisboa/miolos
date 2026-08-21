@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import type { ArchiveIndexCalendar } from "../../src/archive/calendar";
 import {
   archiveMonthRoute,
   formatMonth,
@@ -26,7 +27,10 @@ import { ArchiveCalendar } from "./calendar-grid";
  *
  * Synchronous and props-only, so tests render it directly: React Testing
  * Library cannot render an async server component, and the page above it is
- * a reader call plus a branch (the `app/sudoku/page.tsx` register).
+ * two reader calls and a derivation (the `app/sudoku/page.tsx` register).
+ * `ArchiveIndexCalendar` is NAMED and exported by the module that owns the
+ * archive calendar's model, so the producer and this consumer cannot drift
+ * into two spellings of one shape (step-6 quality B3).
  *
  * ONE static rotation on nothing and NO washi tape: tape marks a game, and
  * the index is not a game. The archive's texture is the desk dot pattern and
@@ -36,8 +40,7 @@ export function ArchiveIndexView({
   calendar,
   months,
 }: {
-  readonly calendar:
-    { readonly month: string; readonly dates: readonly string[] } | undefined;
+  readonly calendar: ArchiveIndexCalendar | undefined;
   readonly months: readonly string[];
 }) {
   const copy = messages.archive;
@@ -86,7 +89,7 @@ export function ArchiveIndexView({
               </h2>
               <ArchiveCalendar
                 month={calendar.month}
-                publishedDates={new Set(calendar.dates)}
+                publishedDates={calendar.dates}
               />
             </section>
           )}

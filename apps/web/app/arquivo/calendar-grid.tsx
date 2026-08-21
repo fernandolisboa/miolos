@@ -37,7 +37,11 @@ import styles from "./arquivo.module.css";
  * Cell anatomy (plan 065 D3): linked and inert cells differ by THREE
  * carriers — border presence (geometry, survives greyscale), `--ink` vs
  * `--ink-2`, weight 600 vs 400 — and the link's accessible name carries
- * the meaning in words, so no carrier stands alone (ADR-0041 decision 5).
+ * the meaning in words, so no carrier stands alone (`DESIGN.md:22` /
+ * WCAG 1.4.1, colour is never the only carrier. NOT ADR-0041 decision 5,
+ * which is about an accent border outlining an already-legible label: the
+ * calendar paints no accent anywhere, and the citation was inherited from
+ * the day rows this grid replaced, where there WAS an accent rule).
  * No per-day game names: they cannot fit a 44px tile, and the day page
  * one tap deeper carries them — the recorded design trade of #163.
  *

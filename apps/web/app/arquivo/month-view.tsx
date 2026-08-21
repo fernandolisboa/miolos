@@ -16,9 +16,11 @@ import { ArchiveCalendar } from "./calendar-grid";
  * of having a day page at all: a 31-day month is ~31 touch targets rather
  * than 124 anchors, exactly as the day rows it replaced were.
  *
- * `dates` is the month's published days, deduplicated by the page from the
- * reader's own `(date, game)` pairs — the reader stays the only authority
- * on which days exist (ADR-0053 decision 3).
+ * `dates` is the month's published days, deduplicated by the page through
+ * `archivedDates` from the reader's own `(date, game)` pairs — the reader
+ * stays the only authority on which days exist (ADR-0053 decision 3). It
+ * arrives as a Set and reaches the grid as the same Set: the membership
+ * question the grid asks is what the prop is FOR (step-6 correctness N5).
  *
  * `previous`/`next` are SIBLING navigation and each is absent when there is
  * no such month; the back affordance is the index (`backToIndex`), because
@@ -31,7 +33,7 @@ export function ArchiveMonthView({
   next,
 }: {
   readonly month: string;
-  readonly dates: readonly string[];
+  readonly dates: ReadonlySet<string>;
   readonly previous: string | undefined;
   readonly next: string | undefined;
 }) {
@@ -60,7 +62,7 @@ export function ArchiveMonthView({
             grid carries bare day numerals and no duplicate title inside the
             card — the same reasoning that kept them out of the rows
             (step-6 F9). */}
-        <ArchiveCalendar month={month} publishedDates={new Set(dates)} />
+        <ArchiveCalendar month={month} publishedDates={dates} />
       </section>
 
       {/* Each sibling link is a kicker over a month, never one run of

@@ -40,7 +40,7 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
   it("every archive string is reachable from messages.archive", () => {
     const copy = messages.archive;
     // The chrome, the sections, the empty state, the three back affordances
-    // with their aria twins, the day row's composed sentence, the month's
+    // with their aria twins, the calendar cell's composed name, the month's
     // sibling links, the day card's label, the play note, the result panel
     // and the metadata composers — all of it, in one block.
     expect(typeof copy.title).toBe("string");
@@ -59,8 +59,29 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
         expect(weekday.length).toBeGreaterThan(0);
       }
     }
-    expect(copy.calendar.weekdays[0]).toBe("dom");
-    expect(copy.calendar.weekdaysLong[0]).toBe("domingo");
+    // BOTH tuples in full, every index (step-6 correctness N1): the grid
+    // indexes them by COLUMN, so a pair swapped in the middle — terça for
+    // quarta — would ship a wrong weekday in every affected cell's
+    // accessible name with nothing else red. Sunday-first is the whole
+    // convention, and only the literal order states it.
+    expect([...copy.calendar.weekdays]).toEqual([
+      "dom",
+      "seg",
+      "ter",
+      "qua",
+      "qui",
+      "sex",
+      "sáb",
+    ]);
+    expect([...copy.calendar.weekdaysLong]).toEqual([
+      "domingo",
+      "segunda-feira",
+      "terça-feira",
+      "quarta-feira",
+      "quinta-feira",
+      "sexta-feira",
+      "sábado",
+    ]);
     // FIVE notes, one per state the device can distinguish (step-6
     // F3/F16), plus the two outcome titles, the stamp's label and the
     // archived Termo's word lead (F7, F23).
