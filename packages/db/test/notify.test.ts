@@ -252,7 +252,9 @@ describe("listPushNudgeCandidates — the at-risk conjunction (#146, ADR-0064 d6
     expect(stillAtRisk).toContain(candidate);
   });
 
-  it("T-DB-S79 (multi-subscription): a user with several endpoints appears exactly once", async () => {
+  // The sibling letter, not a second S79 (the T-DB-S53a/S53b lesson — a
+  // same-file, same-id duplicate is the defect that closed the bare space).
+  it("T-DB-S79a: a user with several endpoints appears exactly once", async () => {
     const candidate = await createUser();
     await subscribe(candidate);
     await subscribe(candidate);
@@ -311,7 +313,8 @@ describe("listPushNudgeCandidates — the habitual hour (#146, ADR-0064 d1)", ()
     ).toEqual([]);
   });
 
-  it("T-DB-S80 (window boundary): a day at today − 22 contributes no sample, today − 21 does; an even sample count takes percentile_disc's lower-middle", async () => {
+  // The sibling letter, not a second S80 (the T-DB-S53a/S53b lesson).
+  it("T-DB-S80a: a day at today − 22 contributes no sample, today − 21 does; an even sample count takes percentile_disc's lower-middle", async () => {
     // today − 21 = 2026-07-30; today − 22 = 2026-07-29.
     const boundary = await createUser();
     await subscribe(boundary);
