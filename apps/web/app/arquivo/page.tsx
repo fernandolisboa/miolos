@@ -1,7 +1,10 @@
 import { listArchivedDays, listArchivedMonths } from "@miolos/db";
 import type { Metadata } from "next";
 
-import { recentDayGroups } from "../../src/archive/group-days";
+import {
+  newestMonthCalendar,
+  NEWEST_MONTH_ROW_WINDOW,
+} from "../../src/archive/calendar";
 import { getDb } from "../../src/db";
 import { messages, routes } from "../../src/i18n";
 import { ArchiveIndexView } from "./index-view";
@@ -15,10 +18,6 @@ import { ArchiveIndexView } from "./index-view";
 // decision 6, obeyed), no `fetch` on this path at all.
 export const dynamic = "force-dynamic";
 
-/** How many ROWS the index over-fetches, and how many DAYS it renders. */
-const ROW_WINDOW = 32;
-const RECENT_DAYS = 7;
-
 export function generateMetadata(): Metadata {
   return {
     title: messages.archive.meta.indexTitle,
@@ -28,28 +27,26 @@ export function generateMetadata(): Metadata {
 }
 
 /**
- * The archive index (#31 AC 1, AC 5). Both reads in one round-trip window:
- * the row window the recent-days section is cut from, and the month list —
- * whose LAST element is the archive's floor, so nothing else records where
- * the archive starts (ADR-0053 decision 3).
+ * The archive index (#31 AC 1, AC 5; the calendar since #163). Both reads
+ * in one round-trip window: the row window the newest month's grid is cut
+ * from, and the month list — whose LAST element is the archive's floor, so
+ * nothing else records where the archive starts (ADR-0053 decision 3).
+ * The month list feeds only the chips; the grid's month comes from the
+ * row window's own newest row.
  *
- * Thin on purpose: two reader calls and a branch. All composition lives in
- * the synchronous view, which tests render directly.
+ * Thin on purpose: two reader calls and a derivation, and the derivation
+ * itself lives in `src/archive/calendar.ts` beside the window it depends
+ * on, where `T-WEB-S312` pins it. All composition lives in the synchronous
+ * view, which tests render directly.
  */
 export default async function ArchivePage() {
   const db = getDb();
   const [days, months] = await Promise.all([
-    listArchivedDays(db, { limit: ROW_WINDOW }),
+    listArchivedDays(db, { limit: NEWEST_MONTH_ROW_WINDOW }),
     listArchivedMonths(db),
   ]);
 
   return (
-    <ArchiveIndexView
-      recent={recentDayGroups(days, {
-        limit: ROW_WINDOW,
-        count: RECENT_DAYS,
-      })}
-      months={months}
-    />
+    <ArchiveIndexView calendar={newestMonthCalendar(days)} months={months} />
   );
 }

@@ -43,12 +43,6 @@ const shortDateFormat = new Intl.DateTimeFormat(locale, {
   timeZone: "UTC",
 });
 
-const dayInMonthFormat = new Intl.DateTimeFormat(locale, {
-  day: "numeric",
-  weekday: "long",
-  timeZone: "UTC",
-});
-
 const dayNumberFormat = new Intl.DateTimeFormat(locale, {
   day: "numeric",
   timeZone: "UTC",
@@ -82,32 +76,21 @@ export function formatShortDate(isoDate: string): string {
   return `${day} ${month.replace(/\.$/, "")}`.trim();
 }
 
-/**
- * "31 · segunda-feira" — a day row INSIDE a month page (#31 step-6 finding
- * F9). The month page's `<h1>` already states the month and the year, so
- * `formatLongDate` printed them again in every one of up to 31 rows: month
- * and year repeated verbatim below a heading that had just said them, the
- * only varying token was the leading day number, and it was not the visual
- * anchor. This leaves month and year to the heading and to the index's rows,
- * where they are the varying part.
- *
- * Composed from `formatToParts` for `formatShortDate`'s reason: pt-BR's own
- * combined form is "segunda-feira, 31", weekday first, and the day number is
- * what a reader scans a month page by.
- */
-export function formatDayInMonth(isoDate: string): string {
-  const parts = dayInMonthFormat.formatToParts(utcNoon(isoDate));
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  const weekday = parts.find((part) => part.type === "weekday")?.value ?? "";
-  return `${day} · ${weekday}`.trim();
-}
+// `formatDayInMonth` ("31 · segunda-feira") went with the day rows that
+// were its only consumer (#163): the calendar's cells carry the bare
+// numeral (`formatDayNumber` below), and the weekday moved into each
+// link's accessible name, composed whole in
+// `messages.archive.calendar.dayAria` from its `weekdaysLong` tuple.
 
 /**
- * "31" — the archive stamp's postmark figure (#31 step-6 finding F7). A lone
- * numeral, which is exactly the case ADR-0036 decision 2 leaves on Fraunces:
- * it never has to line up with another. Through `Intl` rather than a string
- * slice, so the locale owns its own numerals and the leading zero goes
- * without a hand-rolled trim.
+ * "31" — the archive stamp's postmark figure (#31 step-6 finding F7), and
+ * since #163 the archive calendar's cell numerals. The stamp is the lone
+ * numeral ADR-0036 decision 2 leaves on Fraunces; the calendar's grid of
+ * numerals is decision 1's aligning case, and its stylesheet puts the
+ * cells on `--font-ui` + `tabular-nums` — the face is the CALLER's call,
+ * this function only spells the figure. Through `Intl` rather than a
+ * string slice, so the locale owns its own numerals and the leading zero
+ * goes without a hand-rolled trim.
  */
 export function formatDayNumber(isoDate: string): string {
   return dayNumberFormat.format(utcNoon(isoDate));

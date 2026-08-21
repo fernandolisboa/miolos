@@ -2,7 +2,7 @@ import { listArchivedDays, listArchivedMonths } from "@miolos/db";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { groupArchivedDays } from "../../../../src/archive/group-days";
+import { archivedDates } from "../../../../src/archive/calendar";
 import {
   monthDayBounds,
   parseArchiveMonth,
@@ -77,7 +77,12 @@ export default async function ArchiveMonthPage({ params }: MonthPageProps) {
   return (
     <ArchiveMonthView
       month={month}
-      groups={groupArchivedDays(days)}
+      // The reader answers `(date, game)` pairs; the calendar wants days.
+      // ONE spelling of that dedup, shared with the index (step-6 quality
+      // N4): a Set keyed by the reader's own strings, and it reaches the
+      // grid as a Set, with no array round trip on the way (correctness
+      // N5, performance 3).
+      dates={archivedDates(days)}
       previous={index === -1 ? undefined : months[index + 1]}
       next={index <= 0 ? undefined : months[index - 1]}
     />
