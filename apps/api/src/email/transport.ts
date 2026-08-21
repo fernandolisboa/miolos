@@ -43,6 +43,21 @@ const SEND_TIMEOUT_MS = 10_000;
  * The dormancy switch (both halves — see the header): read at call time,
  * never cached, so keys added to the environment activate the flow on the
  * next invocation.
+ *
+ * "The next invocation" means the next invocation OF A DEPLOYMENT BUILT
+ * WITH THEM. A running function holds the environment it was deployed
+ * with, and `apps/api/vercel.json` sets `ignoreCommand: npx turbo-ignore`,
+ * so a production build with no diff under `apps/api` is skipped — the
+ * ~6-second `Canceled by Ignored Build Step` rows in
+ * `vercel ls miolos-api --prod`. `vercel env add RESEND_API_KEY production`
+ * followed by a dashboard Redeploy of the same commit therefore leaves this
+ * function returning false forever, with the key plainly visible in
+ * `vercel env ls` — that command reports the project, not the deployment,
+ * so it cannot confirm activation. Only a real `apps/api` diff can, and the
+ * tell is watching the deployment go `● Building` → `● Ready` rather than
+ * straight to `Canceled`. The identical trap cost a day on `CRON_SECRET`
+ * and was caught in review on `POSTHOG_KEY` (both 2026-08-21). Runbook:
+ * `docs/pending-fernando.md`.
  */
 export function isAttachConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY) && Boolean(process.env.WEB_ORIGIN);
