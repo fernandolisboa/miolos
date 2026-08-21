@@ -1,6 +1,6 @@
 # Pending on Fernando — living ledger
 
-**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found (NOW §2); POSTHOG_KEY activation added (NOW §3, PR for #33).
+**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found (NOW §2); POSTHOG_KEY activation added (NOW §3, PR #176).
 
 **How to use it (Fernando):** when you have time, start a session with *"run /wizard over docs/pending-fernando.md, NOW section"* — the wizard walks you through each step, one at a time. Decisions marked ⚡ are answerable in one line on the named issue, from a phone.
 
@@ -57,7 +57,7 @@ Issue #33's PostHog integration is merged and deployed, and it is **dormant**: t
   Optional, same sitting: remove `NEXT_PUBLIC_POSTHOG_KEY` from miolos-web (`vercel env rm NEXT_PUBLIC_POSTHOG_KEY production` from `apps/web`). Nothing reads it, and a `NEXT_PUBLIC_` twin invites client use, which ADR-0069 decision 8 rules out.
 - **Verify:** `vercel env ls` from `apps/api` lists `POSTHOG_KEY`; then play one puzzle on production and PostHog's *Verify installation* goes green on the first captured event (`puzzle_started` fires as soon as a board opens).
 - **Blocks:** all five telemetry events in production — `puzzle_started`, `puzzle_completed`, `streak_broken`, `notification_opt_in`, `login_linked`. Nothing else: the API is unaffected by the absence, by design.
-- **Source:** issue #33; PR for #33; ADR-0069 decisions 1 and 8; `apps/api/.env.example`.
+- **Source:** issue #33; PR #176; ADR-0069 decisions 1 and 8; `apps/api/.env.example`.
 
 
 *(Former §2 discharged 2026-08-20: PostHog region answered — US. See the Done table.)*

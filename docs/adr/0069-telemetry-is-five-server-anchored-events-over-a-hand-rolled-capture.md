@@ -1,6 +1,6 @@
 # ADR-0069 — Telemetry is five server-anchored events over a hand-rolled capture
 
-**Status:** Accepted — 2026-08-21 (issue #33, shipped in #175)
+**Status:** Accepted — 2026-08-21 (issue #33, shipped in #176)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0012](./0012-minimal-lgpd-ships-with-email-attach.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md), [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)
 
 ## Context
