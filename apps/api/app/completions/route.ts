@@ -508,22 +508,30 @@ export async function POST(request: NextRequest): Promise<Response> {
     // task must read the request-scoped verdict, never re-derive it.
     const counted = outcome === "won" && onTime;
     runAfterResponse(async () => {
-      await captureEvent({
-        distinctId: userId,
-        event: "puzzle_completed",
-        properties: {
-          game: body.game,
-          date: body.date,
-          elapsed_ms: body.elapsedMs,
-          outcome,
-          on_time: onTime,
-        },
-      });
-      if (counted) {
-        // One read, at most once per counted insert; the four D3
-        // conditions (recorded is `written.recorded` above; the other
-        // three live in the derivation) decide the fire.
-        const rows = await listCompletionsForStreak(db, userId);
+      // STARTED TOGETHER, not chained (step-6 performance NB-1). The
+      // capture carries a 3 s abort and the derivation read is independent
+      // of it — the row this task reads was committed before the response
+      // went out — so sequencing them only lengthens the held invocation
+      // when PostHog is slow, which is the case where the tail gets
+      // truncated and the SECOND event is the one lost. One read, at most
+      // once per counted insert; the four D3 conditions (recorded is
+      // `written.recorded` above; the other three live in the derivation)
+      // decide the fire.
+      const [, rows] = await Promise.all([
+        captureEvent({
+          distinctId: userId,
+          event: "puzzle_completed",
+          properties: {
+            game: body.game,
+            date: body.date,
+            elapsed_ms: body.elapsedMs,
+            outcome,
+            on_time: onTime,
+          },
+        }),
+        counted ? listCompletionsForStreak(db, userId) : Promise.resolve(null),
+      ]);
+      if (rows !== null) {
         const broken = deriveStreakBroken(rows, body.date);
         if (broken !== null) {
           await captureEvent({

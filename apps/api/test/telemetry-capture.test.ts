@@ -1,3 +1,4 @@
+import type { TelemetryEventProperties } from "@miolos/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -9,9 +10,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * `telemetrySettled()` chain.
  *
  * No `POSTHOG_KEY` rides any test environment — the no-key arm below is
- * also the standing proof that a test run sends nothing (D8's
- * never-send-in-tests requirement); the send-path tests stub the key AND
- * the global fetch, so nothing ever leaves the process either way.
+ * also where a test run's silence is CHECKED (D8's never-send-in-tests
+ * requirement); the send-path tests stub the key AND the global fetch, so
+ * nothing ever leaves the process either way. It is one arm of one test,
+ * not a construction-backed invariant (ADR-0023's reserved vocabulary):
+ * nothing structural stops a future test from stubbing a key and
+ * forgetting the fetch.
  */
 
 async function loadCapture() {
@@ -67,8 +71,11 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
       }),
     ).resolves.toBeUndefined();
 
-    // The abort path: the stub honours the AbortSignal the helper passes,
-    // so this is the 3 s timeout's rejection shape, not a mocked throw.
+    // The abort path. WHAT THIS PINS, precisely (step-6 quality NB-5): a
+    // fetch that never resolves on its own and later rejects leaves
+    // `captureEvent` resolved and silent. The abort is fired BY HAND below
+    // rather than waiting 3 s of wall clock, so `AbortSignal.timeout` is
+    // not itself exercised — only the rejection shape it produces.
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -140,6 +147,47 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
         // are built, so PostHog stores event rows and nothing person-shaped.
         $process_person_profile: false,
       },
+    });
+  });
+
+  it("T-API-S175: a property the event's schema does not declare DROPS the event — the strict schemas are parsed here, not only in packages/core's test", async () => {
+    vi.stubEnv("POSTHOG_KEY", "phc_test_key");
+    const fetchMock = vi.fn(() => Promise.resolve(new Response("{}")));
+    vi.stubGlobal("fetch", fetchMock);
+    const { captureEvent } = await loadCapture();
+
+    // The call site a future regression looks like: properties built from a
+    // wider source. The cast is what makes the hostile shape reachable —
+    // the compile-time half of the ceiling already rejects it, and this
+    // test exists for the half the types cannot see.
+    await captureEvent({
+      distinctId: "user-7",
+      event: "login_linked",
+      properties: {
+        merged: true,
+        email: "player@example.com",
+      } as unknown as TelemetryEventProperties["login_linked"],
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    // The control: the same event WITHOUT the smuggled key still sends, so
+    // the assertion above is the strict parse firing and not a broken stub.
+    await captureEvent({
+      distinctId: "user-7",
+      event: "login_linked",
+      properties: { merged: true },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(init.body as string)).toEqual({
+      api_key: "phc_test_key",
+      event: "login_linked",
+      distinct_id: "user-7",
+      properties: { merged: true, $process_person_profile: false },
     });
   });
 });

@@ -25,8 +25,14 @@ import { jsonHeaders, subscriptionsRequest } from "./push-helpers";
  * the write is `INSERT … ON CONFLICT DO UPDATE` and the DO UPDATE arm also
  * returns a row (key rotation, identical re-subscribe, cross-user repoint,
  * #36's future settings toggle). Insert-vs-update is detected inside
- * `upsertSubscription` via `(xmax = 0)` in the RETURNING list — a freshly
- * inserted row has xmax 0, an updated one does not.
+ * `upsertSubscription` by a pre-read `exists` scoped to
+ * `(endpoint, user_id)`: the plan's `(xmax = 0)` RETURNING form does not
+ * type through the `Db` union (ADR-0069 decision 6). That makes the
+ * detection CHECK-THEN-ACT, not atomic — two racing FIRST posts of one
+ * endpoint can both read an empty `held` and double-report `inserted`,
+ * accepted at telemetry grade only. The subscription CEILING is unaffected:
+ * it stays folded into the INSERT (ADR-0068 decision 1), which is where
+ * check-then-act was measured broken.
  *
  * Same observation seam as telemetry-completions.test.ts: stubbed global
  * fetch + stubbed POSTHOG_KEY, `telemetrySettled()` awaited (the direct

@@ -148,7 +148,7 @@ describe("the puzzle_started relay client", () => {
 
     const call = fetchMock.mock.calls[0];
     // The `??` is `noUncheckedIndexedAccess`'s price, not a real branch: the
-    // assertion two lines up already proved the call happened.
+    // assertion two lines up already pinned that the call happened.
     const [url, init] = call ?? ["", {}];
     expect(url).toBe(`${API_URL}/telemetry`);
     expect(init.method).toBe("POST");

@@ -1,4 +1,5 @@
 import type { TelemetryEvent, TelemetryEventProperties } from "@miolos/core";
+import { telemetryEventPropertiesSchemas } from "@miolos/core";
 import { after } from "next/server";
 
 /**
@@ -41,6 +42,14 @@ let warnedMissingKey = false;
  * is nothing to retry at telemetry grade. The event parameter is typed off
  * the closed `TELEMETRY_EVENTS` union, so a sixth event is a compile error
  * (the runtime half is T-CORE-S110).
+ *
+ * THE PAYLOAD IS PARSED, NOT SPREAD (step-6 quality B1). The per-event
+ * `z.strictObject` schemas are the boundary parse for the one boundary that
+ * leaves our infrastructure, and the parse runs HERE rather than only in
+ * `packages/core`'s own test: a call site that builds its properties from a
+ * wider source — a spread, a DB row, an `as`-cast — would otherwise send
+ * whatever it holds. A rejected payload lands in the swallow arm below, so
+ * a smuggled key drops the event instead of riding to PostHog (T-API-S175).
  */
 export async function captureEvent<E extends TelemetryEvent>(input: {
   distinctId: string;
@@ -58,7 +67,12 @@ export async function captureEvent<E extends TelemetryEvent>(input: {
     return;
   }
   try {
-    await fetch(POSTHOG_INGESTION_URL, {
+    // Throws on an extra key (every schema is strict) — deliberately
+    // inside the try, so a smuggled property is a dropped event.
+    const properties = telemetryEventPropertiesSchemas[input.event].parse(
+      input.properties,
+    );
+    const response = await fetch(POSTHOG_INGESTION_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -66,16 +80,22 @@ export async function captureEvent<E extends TelemetryEvent>(input: {
         event: input.event,
         distinct_id: input.distinctId,
         properties: {
-          ...input.properties,
+          ...properties,
           $process_person_profile: false,
         },
       }),
       signal: AbortSignal.timeout(CAPTURE_TIMEOUT_MS),
     });
+    // Undici holds the connection until the body is read, cancelled or
+    // collected; nothing here reads it, so release the socket rather than
+    // leave one parked per event on a serverless instance (step-6
+    // performance NB-5). Never awaited — cancelling is best-effort too.
+    void response.body?.cancel().catch(() => {});
   } catch {
-    // Swallowed on purpose: a network failure or the 3 s abort above is a
-    // lost telemetry event, never a route error. The message carries a
-    // publishable token and no user data, so there is nothing to salvage.
+    // Swallowed on purpose: a rejected payload, a network failure or the
+    // 3 s abort above is a lost telemetry event, never a route error. The
+    // message carries a publishable token and no user data, so there is
+    // nothing to salvage.
   }
 }
 
@@ -92,6 +112,20 @@ export function telemetrySettled(): Promise<void> {
 }
 
 /**
+ * The ONE `after()` throw this module expects: a handler called with no
+ * request work-store, which is how every seam suite here invokes them.
+ * Matched on the message substring rather than on the error class because
+ * Next exports no class for it — the literal is
+ * "`after` was called outside a request scope. Read more: …"
+ * (next@16.2.12, dist/server/after/after.js), read from the installed
+ * package rather than recalled.
+ */
+const AFTER_OUTSIDE_REQUEST_SCOPE = /outside a request scope/;
+
+/** Once-per-instance guard for the unexpected arm — see `runAfterResponse`. */
+let warnedAfterUnavailable = false;
+
+/**
  * Run a telemetry task AFTER the response is sent (ADR-0069 decision 2's
  * "no telemetry work ever delays a response"), and make it unable to fail
  * the route either way.
@@ -104,6 +138,15 @@ export function telemetrySettled(): Promise<void> {
  * fire-and-forget, chained onto `settled` so tests can await it. In a
  * deployed route the try arm always wins; the fallback is the test seam,
  * not a second production path.
+ *
+ * THE CATCH IS NARROWED TO THAT ONE MESSAGE (step-6 quality B2). "The try
+ * arm always wins in production" is an assumption about a third-party
+ * framework's throw conditions, and an unconditional catch would let a
+ * Next bump, an unsupported runtime or an unforeseen call context turn the
+ * test seam into a silent second production path. Anything that is NOT the
+ * known outside-a-request-scope throw still takes the fallback — dropping
+ * the event would be worse — but says so once per instance, the same
+ * loud-degrade idiom as the missing-key branch above.
  *
  * `safe` wraps the task in its own catch: a thrown derivation error (the
  * streak-broken read) must never surface anywhere — inside `after()` it
@@ -121,7 +164,16 @@ export function runAfterResponse(task: () => Promise<void>): void {
   };
   try {
     after(safe);
-  } catch {
+  } catch (error) {
+    if (!AFTER_OUTSIDE_REQUEST_SCOPE.test(String(error))) {
+      if (!warnedAfterUnavailable) {
+        warnedAfterUnavailable = true;
+        console.error(
+          "telemetry: after() unavailable, the task ran un-tracked (ADR-0069)",
+          error,
+        );
+      }
+    }
     settled = settled.then(safe);
   }
 }

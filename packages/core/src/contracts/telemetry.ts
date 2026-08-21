@@ -15,7 +15,13 @@ import { calendarDateString } from "./daily";
  * Property schemas are `z.strictObject` on every event: telemetry payloads
  * are minimal by decision (no PII, no puzzle content — ADR-0004 discipline),
  * and strictness is what turns "minimal" from a review promise into a parse
- * failure. T-CORE-S110 pins both halves.
+ * failure. THE PARSE IS REAL AND RUNS IN PRODUCTION: `captureEvent`
+ * (apps/api/src/telemetry/capture.ts) parses against these schemas before it
+ * builds the request body, so a call site that spread a wider object drops
+ * the event rather than sending it (step-6 quality B1 — until then the
+ * schemas were compile-time surface plus a test, which is exactly the
+ * "review promise" this sentence claims to have replaced). T-CORE-S110 pins
+ * the schemas; T-API-S175 pins the drop.
  */
 export const TELEMETRY_EVENTS = [
   "puzzle_started",
