@@ -46,7 +46,24 @@ export { getUserSince, listCompletionsForStats } from "./stats";
 // earnedMedals — rule-derived medals recompute over the stats reader
 // above and are never stored.
 export { listMedalGrants } from "./medals";
+// #146 (ADR-0064, ADR-0068): the dispatcher's statements — the candidate
+// read, the claim-first ledger write, and the one-snapshot tick instant.
+// Cross-table, so they live in packages/db (the merge.ts rule); the
+// `pruneSeenDays` precedent already puts a cron-side duty on this entry.
+export {
+  claimNudgeSend,
+  listPushNudgeCandidates,
+  readTickInstant,
+} from "./notify";
 // `attachTokens` (#21, ADR-0050): user-scoped like completions — the
 // statements over it live in apps/api/src/attach/service.ts, and apps/web
 // mechanically cannot name it through the root entry (ADR-0026 decision 5).
-export { attachTokens, completions, hintGrants, medalGrants } from "./schema";
+// `notificationSends` (#146): the ledger table, USER entry only — apps/web
+// must not be able to name it; the schema-pin test is its named reader.
+export {
+  attachTokens,
+  completions,
+  hintGrants,
+  medalGrants,
+  notificationSends,
+} from "./schema";

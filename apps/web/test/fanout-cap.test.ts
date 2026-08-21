@@ -542,3 +542,57 @@ describe("the nightly full property proof cannot be deleted in silence (T-WEB-S2
     expect(sabotagedLive).not.toMatch(/^\s*schedule:\s*$/m);
   });
 });
+
+describe("the hourly streak-notify tick keeps its decided shape (T-WEB-S297)", () => {
+  /**
+   * The `T-WEB-S226`/`S233` register applied to #146's dispatcher tick
+   * (ADR-0064 decision 8, ADR-0068): the workflow is the only thing that
+   * makes the hourly tick exist, and a workflow that does not run produces
+   * no red. Same limits as the scans above: this reads the FILE — it pins
+   * what the configuration says, never that a tick ran. The decided tokens
+   * pinned here, each a plan-063 §4 decision rather than a default: the
+   * hourly schedule (the granularity ADR-0064 d8 prices), `-X POST` (the
+   * route is POST because the tick writes and sends, and Vercel cron —
+   * which sends GET — is not the driver), `-fsS` (an HTTP error fails the
+   * job, so a red scheduled run IS the alert; 503 = push misconfigured),
+   * the secret bearer, and ZERO marketplace actions (`uses:` absent — the
+   * #41 convention satisfied by construction, pinned rather than assumed).
+   */
+  const notifyWorkflow = readRepoFile(
+    ".github",
+    "workflows",
+    "streak-notify.yml",
+  );
+
+  /** Comment-stripped, the S233 spelling: a `#` that merely MENTIONS a
+   * setting must not satisfy an assertion about it. */
+  const live = notifyWorkflow
+    .split("\n")
+    .filter((line) => !/^\s*#/.test(line))
+    .map((line) => line.replace(/\s+#.*$/, ""))
+    .join("\n");
+
+  it("ticks hourly, and can also be dispatched by hand for a drill", () => {
+    expect(live).toMatch(/^\s*schedule:\s*$/m);
+    expect(live).toMatch(/^\s*-\s*cron:\s*["']0 \* \* \* \*["']\s*$/m);
+    expect(live).toMatch(/^\s*workflow_dispatch:/m);
+  });
+
+  it("curls the route as a POST, with the secret bearer and -fsS, at the api origin", () => {
+    const curl = live.split("\n").find((line) => line.includes("curl"));
+    expect(curl).toBeDefined();
+    expect(curl).toContain("-fsS");
+    expect(curl).toContain("-X POST");
+    expect(curl).toContain("Authorization: Bearer $CRON_SECRET");
+    expect(curl).toContain("/cron/notify");
+    // The secret arrives from the repo secret, never a literal.
+    expect(live).toMatch(/CRON_SECRET:\s*\$\{\{\s*secrets\.CRON_SECRET\s*\}\}/);
+  });
+
+  it("takes zero marketplace actions and zero permissions", () => {
+    // No `uses:` line at all: nothing to SHA-pin, by construction.
+    expect(live).not.toMatch(/^\s*uses:/m);
+    // Least privilege — buffer-alert needs issues:write; this needs nothing.
+    expect(live).toMatch(/^permissions:\s*\{\}\s*$/m);
+  });
+});

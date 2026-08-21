@@ -108,7 +108,7 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
     ]);
   });
 
-  it("T-DB-S39: the public base-table set deep-equals the audited eight — no wallet, ledger, XP or ranking table exists anywhere in the schema", async () => {
+  it("T-DB-S39: the public base-table set deep-equals the audited set — no wallet, ledger, XP or ranking table exists anywhere in the schema", async () => {
     // AC 3's teeth (ADR-0052): any future wallet/ledger/XP/ranking TABLE
     // fails the suite rather than passing review. Drizzle's own
     // bookkeeping lives in the `drizzle` schema, so the public deep-equal
@@ -127,6 +127,13 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
       "daily_puzzles",
       "hint_grants",
       "medal_grants",
+      // #146 (ADR-0064 d7, ADR-0068): the notification-send claim ledger —
+      // one row per (user, SP day, channel), append-only, claim-first. A
+      // "ledger" in the send-once sense, NOT the accumulable sense this
+      // tripwire exists to forbid: no quantity column exists to accumulate
+      // (T-DB-S77 pins the column set exactly). Widened in place, the
+      // T-DB-9a precedent.
+      "notification_sends",
       // #145 (ADR-0064): per-browser-install Web Push subscriptions —
       // endpoint PK, keys, created_at-as-consent. Not a wallet, ledger or
       // ranking: no quantity column exists to accumulate (T-DB-S66 pins

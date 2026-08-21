@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   bufferDepthResponseSchema,
+  cronNotifyResponseSchema,
   cronPublishGameResultSchema,
   cronPublishResponseSchema,
   type BufferDepthResponse,
@@ -218,6 +219,49 @@ describe("bufferDepthResponseSchema", () => {
         ...depths,
         depths: { termo: -1, binairo: 7, nonogram: 7, sudoku: 7 },
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4)", () => {
+  it("T-CORE-S107: strict — an unknown key, a missing counter, a negative and a fractional count are all rejected; a legal tick body round-trips", () => {
+    const tick = {
+      candidates: 3,
+      claimed: 2,
+      sent: 2,
+      pruned: 1,
+      failed: 0,
+    };
+    expect(cronNotifyResponseSchema.parse(tick)).toEqual(tick);
+    // Zero across the board is the expected first-tick reality, and legal.
+    expect(
+      cronNotifyResponseSchema.parse({
+        candidates: 0,
+        claimed: 0,
+        sent: 0,
+        pruned: 0,
+        failed: 0,
+      }).sent,
+    ).toBe(0);
+    // Strict: an appended key fails every deployed reader's parse.
+    expect(
+      cronNotifyResponseSchema.safeParse({ ...tick, skipped: 1 }).success,
+    ).toBe(false);
+    // A missing counter fails — the route can never under-report a field.
+    expect(
+      cronNotifyResponseSchema.safeParse({
+        candidates: 3,
+        claimed: 2,
+        sent: 2,
+        pruned: 1,
+      }).success,
+    ).toBe(false);
+    // Counts are non-negative integers.
+    expect(
+      cronNotifyResponseSchema.safeParse({ ...tick, sent: -1 }).success,
+    ).toBe(false);
+    expect(
+      cronNotifyResponseSchema.safeParse({ ...tick, pruned: 1.5 }).success,
     ).toBe(false);
   });
 });

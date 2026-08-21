@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-20 (issue #32, shipped in #154)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0012](./0012-minimal-lgpd-ships-with-email-attach.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0025](./0025-remote-config-is-a-database-table.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md), [ADR-0061](./0061-onboarding-seen-is-a-users-timestamp-merged-earliest-wins.md)
 **Amends:** [ADR-0061](./0061-onboarding-seen-is-a-users-timestamp-merged-earliest-wins.md) — decision 2's two-column enumeration of statement 5d, which now folds three (annotation (a) there); the decision stands
+**Amended at #146** ([plan 063](../plans/063-issue-146-plan-streak-at-risk-dispatcher.md), [ADR-0068](./0068-the-dispatchers-operating-decisions.md)) — annotations (a)–(d) below; none decision-level: (a)–(c) each resolve a point this ADR itself left open to #146 (Q2's confirmable default, decision 10's open call, consequence (d)'s open Q1), and (d) records consequence (a) as discharged outright (VAPID activated 2026-08-20; the dispatcher live at #146's merge)
 
 ## Context
 
@@ -54,7 +55,10 @@ that only they exercise is recorded now so they attach rather than re-decide.
    fold). Eligibility for the ASK is `isPushConfigured() AND undismissed AND
    streak >= pushOptInStreakThreshold` (remote config, default 3, ADR-0025);
    the threshold gates the ask, never a send — once opted in, the nudge fires
-   for any live streak (Q2 on #32, Fernando's confirmable default). THE ASK
+   for any live streak (Q2 on #32, Fernando's confirmable default —
+   *annotation (a), #146, 2026-08-20: CONFIRMED, Q2 = 2a on #32; the
+   dispatcher's candidate SQL carries no `>= 3` gate anywhere, ADR-0068*).
+   THE ASK
    IS PER DEVICE, DELIBERATELY (#145 step-6 performance 2, dismissed in
    writing): a subscription is per browser install (decision 2), so the
    state endpoint does NOT suppress eligibility on an existing
@@ -134,6 +138,14 @@ that only they exercise is recorded now so they attach rather than re-decide.
     (deliberately not widened to "granted") means such an install is not
     re-asked until #36's settings toggle; #146 decides whether the sw gains
     the `pushsubscriptionchange` re-post alongside its pruning.
+    *Annotation (b) (#146, 2026-08-20): the call is made — DEFERRED to #36,
+    the settings-toggle ticket (ADR-0068 decision 6, and the comment posted
+    on #36). The handler would be a credentialed cross-origin re-POST from
+    worker context — a new network-capable surface in a worker whose whole
+    ADR-0004 argument is "no third capability" (T-WEB-S261 pins the exact
+    listener set); the event is rare and browser-initiated; the
+    granted-but-unsubscribed install is already re-askable at #36's toggle;
+    and the 404/410 pruning #146 ships keeps the table honest meanwhile.*
 
 ## Rejected
 
@@ -156,12 +168,29 @@ that only they exercise is recorded now so they attach rather than re-decide.
 
 - (a) Slice A (#145) is dormant and fail-closed until Fernando runs the
   VAPID activation (three `vercel env add`s); nothing sends until #146.
+  *Annotation (d) (#146, 2026-08-20): this whole sentence is DISCHARGED.
+  Fernando ran the VAPID activation on 2026-08-20 (the pending ledger's
+  Done table), and the dispatcher is live at #146's merge (PR #171; the
+  scheduled workflow runs from the default branch, so the hourly tick
+  starts with the merge itself — sends are real from the first top-of-hour
+  tick once a subscription exists). `isPushConfigured()` remains the
+  fail-closed guard for any environment missing the triple, but in
+  production nothing here is dormant any more. The live dispatcher's
+  operating shape and its priced residuals live in ADR-0068's
+  Consequences.*
 - (b) The #33 edge: the `notification_opt_in` event fires at successful
   `POST /push/subscriptions` and waits on slice A alone.
 - (c) The #36 edge: the settings push toggle consumes `DELETE
   /push/subscriptions`, live from slice A as its seam.
 - (d) The email hedge (slice C) shares the dispatcher and the ledger;
   hedge-not-chorus semantics is Q1 on #32, Fernando's call, and the ledger's
-  `channel` column supports either answer unchanged.
+  `channel` column supports either answer unchanged. *Annotation (c)
+  (#146, 2026-08-20): Q1 is ANSWERED — 1a (Fernando, 2026-08-20, recorded
+  on #32): dual-consent users get push only; email is the fallback when no
+  push subscription exists — slice C's rule. The `channel` column carries
+  it unchanged, and #146's candidate reader is push-named
+  (`listPushNudgeCandidates`, joins `push_subscriptions`) so slice C
+  writes its own reader with the `NOT EXISTS (push subscription)` conjunct
+  without touching this one (ADR-0068).*
 - (e) iOS Safari without home-screen install never sees the card (the triple
   feature detect) and is slice C's audience. No install nagging in v1.

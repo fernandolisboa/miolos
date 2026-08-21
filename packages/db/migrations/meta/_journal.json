@@ -71,6 +71,20 @@
       "when": 1787213962750,
       "tag": "0009_honest_repair",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787270580870,
+      "tag": "0010_glorious_hellion",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787273619657,
+      "tag": "0011_fair_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

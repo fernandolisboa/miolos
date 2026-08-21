@@ -4,6 +4,7 @@ import {
   notificationsDismissResponseSchema,
   notificationsDismissSchema,
   notificationsStateResponseSchema,
+  pushNudgePayloadSchema,
   pushSubscribeResponseSchema,
   pushSubscribeSchema,
   pushUnsubscribeResponseSchema,
@@ -199,5 +200,30 @@ describe("remoteConfigSchema.pushOptInStreakThreshold (#145, ADR-0064/ADR-0025)"
         String(bad),
       ).toBe(false);
     }
+  });
+});
+
+describe("pushNudgePayloadSchema (#146, ADR-0064 decision 6)", () => {
+  it("T-CORE-S108: strict — exactly title and body, both non-empty; an unknown key, an empty string and a missing field are all rejected", () => {
+    const payload = {
+      title: "Miolos",
+      body: "Sua sequência de 3 dias termina à meia-noite, no horário de Brasília. Jogue hoje para mantê-la.",
+    };
+    expect(pushNudgePayloadSchema.parse(payload)).toEqual(payload);
+    // Strict: sw.js reads exactly these two keys — a third never ships.
+    expect(
+      pushNudgePayloadSchema.safeParse({ ...payload, url: "/binairo" }).success,
+    ).toBe(false);
+    // Non-empty on both: a blank notification is a composition bug, caught
+    // BEFORE the send, not a fallback case for the worker.
+    expect(
+      pushNudgePayloadSchema.safeParse({ ...payload, title: "" }).success,
+    ).toBe(false);
+    expect(
+      pushNudgePayloadSchema.safeParse({ ...payload, body: "" }).success,
+    ).toBe(false);
+    expect(pushNudgePayloadSchema.safeParse({ title: "Miolos" }).success).toBe(
+      false,
+    );
   });
 });

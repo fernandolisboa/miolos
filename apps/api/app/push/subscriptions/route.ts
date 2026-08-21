@@ -135,12 +135,19 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse(400, "invalid-body");
     }
 
-    await upsertSubscription(context.db, {
+    const { stored } = await upsertSubscription(context.db, {
       userId: context.userId,
       endpoint: parsed.data.endpoint,
       p256dh: parsed.data.keys.p256dh,
       auth: parsed.data.keys.auth,
     });
+    if (!stored) {
+      // The per-user ceiling refused the row (#146, ADR-0068 decision 1 —
+      // the late-write-ceiling status precedent). The shipped client reads
+      // `response.ok` only, so this takes T-WEB-S271's unwind path: the
+      // browser-side subscription is rolled back and nothing is stamped.
+      return errorResponse(429, "too-many-requests");
+    }
 
     return Response.json(
       pushSubscribeResponseSchema.parse({ subscribed: true }),

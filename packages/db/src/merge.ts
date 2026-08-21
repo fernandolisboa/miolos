@@ -354,6 +354,29 @@ export async function mergeAccounts(
            )
   `);
 
+  // 5e. The loser's notification-send ledger rows UNION onto the winner
+  //     (#146, ADR-0068 decision 2 — ADR-0049 decision 6's extension point
+  //     consumed in the seen-days 4b/4c idiom exactly). Without this pair,
+  //     a same-day merge of a claimed loser into an unclaimed at-risk
+  //     winner RE-NUDGES the winner, and the loser's rows would keep
+  //     referencing the tombstone against decision 6's "emptied means
+  //     EMPTIED". `sent_at` is COPIED, never now() (the recorded-moment
+  //     rule); a PK collision keeps the winner's row — presence is
+  //     presence: whichever `sent_at` survives is immaterial, the row's
+  //     whole function is "do not send again". Individually idempotent
+  //     (a re-run selects zero loser rows); crash-prefix-safe.
+  await db.execute(sql`
+    insert into notification_sends (user_id, date, channel, sent_at)
+    select ${winnerId}::uuid, date, channel, sent_at
+      from notification_sends where user_id = ${loserId}
+    on conflict (user_id, date, channel) do nothing
+  `);
+  // 5f. The loser's ledger rows go — "emptied" means EMPTIED (ADR-0049
+  //     decision 6). Trivially idempotent.
+  await db.execute(
+    sql`delete from notification_sends where user_id = ${loserId}`,
+  );
+
   // 6. Empty the shell: every identity handle nulled — current AND future
   //    (the social ids have no writer today, so nulling them is provably
   //    inert) — so no handle can ever resolve to a tombstone. Consent

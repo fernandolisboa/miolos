@@ -1,0 +1,1 @@
+CREATE INDEX "completions_counted_date_idx" ON "completions" USING btree ("date") WHERE "completions"."outcome" = 'won' and "completions"."on_time";

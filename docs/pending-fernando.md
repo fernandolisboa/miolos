@@ -30,7 +30,7 @@ Fernando (2026-08-20): *will do when ready to run the wizard — not yet.* Stays
 
 ## SOON — decided or queued, agent-driven, nothing for you unless asked
 
-- **#146** streak-at-risk dispatcher — unblocked: `CRON_SECRET` is set (Done table) and #32's Q1/Q2 answered. Email-hedge slice still waits on NOW §1.
+- **#146** streak-at-risk dispatcher — SHIPPED (plan 063, ADR-0068): the hourly tick is live on `main` and nothing here is a Fernando item; the phone ritual in ANY TIME covers the human verification. Email-hedge slice (slice C) still waits on NOW §1.
 - **#64** Nonogram picture name — decided (ship the name, amend ADR-0033), `ready-for-agent`.
 - **#104** archive OG cards — decided (index + month get cards), `ready-for-agent`.
 - **#158** terms-of-use page `/termos` — approved and filed, `ready-for-agent`.
@@ -65,7 +65,7 @@ Accumulated across handoffs 024, 026, 028, 034; none ever marked done. One sessi
 - The 320 px `apagar` measurement (plan 022 §12.6's fallback ladder, never measured).
 - Free play in a real Network tab: one `POST /session` and nothing after; the DevTools offline toggle.
 - A seeded-data browser pass with screenshots over `/estatisticas` (CI's impeccable only ever sees the anonymous zero state).
-- New 2026-08-20: on a phone with a 3-day streak, confirm the push opt-in card appears and a test nudge arrives (VAPID is live as of today).
+- New 2026-08-20: on a phone with a 3-day streak, confirm the push opt-in card appears and a test nudge arrives (VAPID is live as of today, **and the hourly tick is live** — #146's dispatcher sends for real at the habitual hour once a subscription exists).
 
 ---
 

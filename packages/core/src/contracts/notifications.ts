@@ -40,7 +40,7 @@ export type NotificationsStateResponse = z.infer<
  *
  * THE ENDPOINT IS `https` ONLY, AND EVERY FIELD IS CAPPED (#145 step-6
  * security 1/2). Rows written here are the exact input set of #146's
- * dispatcher, which will make a server-side HTTP request per row — an
+ * dispatcher, which makes a server-side HTTP request per row — an
  * uncapped `z.url()` admits `http://169.254.169.254/…`, `file:`, `data:`
  * and `javascript:`, i.e. an attacker-written SSRF target list behind an
  * anonymously mintable session. A browser push service is always https,
@@ -82,6 +82,22 @@ export const pushUnsubscribeResponseSchema = z.strictObject({
 export type PushUnsubscribeResponse = z.infer<
   typeof pushUnsubscribeResponseSchema
 >;
+
+/**
+ * The push nudge payload (#146, ADR-0064 decision 6): exactly the two keys
+ * `apps/web/public/sw.js` reads, both non-empty, nothing else — parsed by
+ * the dispatcher BEFORE stringify (Zod at the boundary), so a malformed
+ * composition can never reach a push service. No puzzle content, ever: the
+ * body carries the streak number (from `computeStreak`, the only streak
+ * authority) and pt-BR copy, and nothing about any puzzle. This is the
+ * shipped shape the `pushSubscribeSchema` comment above points at — the
+ * dispatcher is live, no longer a forward reference.
+ */
+export const pushNudgePayloadSchema = z.strictObject({
+  title: z.string().min(1),
+  body: z.string().min(1),
+});
+export type PushNudgePayload = z.infer<typeof pushNudgePayloadSchema>;
 
 /**
  * Body of POST /notifications/dismiss — the strict EMPTY object (the

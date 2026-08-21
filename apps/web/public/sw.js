@@ -18,8 +18,10 @@ const FALLBACK_BODY =
   "Sua sequência está em risco: a virada é à meia-noite, no horário de Brasília.";
 
 self.addEventListener("push", (event) => {
-  // The payload is slice B's (#146) and carries zero puzzle content —
-  // title and body only. A missing or malformed payload still notifies,
+  // The payload is the dispatcher's `pushNudgePayloadSchema`
+  // (packages/core/src/contracts/notifications.ts, shipped by #146):
+  // exactly title and body, zero puzzle content, parsed server-side
+  // before the send. A missing or malformed payload still notifies,
   // with the baked-in pt-BR fallbacks.
   let title = FALLBACK_TITLE;
   let body = FALLBACK_BODY;
