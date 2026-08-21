@@ -144,7 +144,11 @@ describe("POST /attach/confirm — login_linked (#33, ADR-0069)", () => {
       event: "login_linked",
       // No collision: the requester IS the winner.
       distinct_id: requesterId,
-      properties: { merged: false, $process_person_profile: false },
+      properties: {
+        merged: false,
+        $process_person_profile: false,
+        $geoip_disable: true,
+      },
     });
   });
 
@@ -180,7 +184,11 @@ describe("POST /attach/confirm — login_linked (#33, ADR-0069)", () => {
       api_key: "phc_test_key",
       event: "login_linked",
       distinct_id: winnerId,
-      properties: { merged: true, $process_person_profile: false },
+      properties: {
+        merged: true,
+        $process_person_profile: false,
+        $geoip_disable: true,
+      },
     });
     // The PII pin: the wire body never carries the address — not as a
     // property, not as the distinct_id, not anywhere.

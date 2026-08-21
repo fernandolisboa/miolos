@@ -948,10 +948,13 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
         .toContain("no-restricted-syntax");
     }
 
-    // THE ANTI-VACUITY CONTROL, and the reason the glob's narrowness is
-    // checked rather than asserted: a local dynamic import that merely
-    // CONTAINS the word stays clean, so the regex is banning the module and
-    // not the substring.
+    // THE ANTI-VACUITY CONTROL: a dynamic import of an unrelated local
+    // module lints clean, so the selector is banning a named module and
+    // not every `import()` in the directory. (This comment used to claim
+    // it controlled for a specifier CONTAINING the word — which
+    // `import("./catalog")` does not; the over-match claim is covered by
+    // the DAILY_PATH scope assertions above, and by `T-LINT-S53`'s own
+    // exact-name control. Step-6 correctness N9.)
     const clean = [
       "export const load = () =>",
       '  import("./catalog");',

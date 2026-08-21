@@ -108,15 +108,25 @@ export function postPuzzleStarted(game: Game, date: string): void {
  * content type forces a CORS preflight (the body-less session POST avoids
  * one, this cannot) — accepted: nothing waits on this round trip.
  */
+let warnedMissingApiUrl = false;
+
 function send(game: Game, date: string): void {
   // Loud, not silent (the `streak-client.ts` / `bootstrap.ts` guard): without
   // the var the fetch would hit the relative URL "undefined/telemetry" and
   // the catch below would swallow the misconfiguration forever.
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   if (!apiUrl) {
-    console.error(
-      "NEXT_PUBLIC_API_URL is unset: puzzle_started not reported, telemetry stays blind",
-    );
+    // ONCE per module, not once per event — the same guard the server's
+    // `warnedMissingKey` uses, which this comment already cited as its
+    // model while logging per call (step-6 correctness N8). Bounded either
+    // way (a page load has few distinct starts), but the asymmetry was the
+    // kind a reader trusts the comment over.
+    if (!warnedMissingApiUrl) {
+      warnedMissingApiUrl = true;
+      console.error(
+        "NEXT_PUBLIC_API_URL is unset: puzzle_started not reported, telemetry stays blind",
+      );
+    }
     return;
   }
   try {

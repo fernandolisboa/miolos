@@ -125,7 +125,7 @@ describe("POST /push/subscriptions — notification_opt_in (#33, ADR-0069)", () 
       event: "notification_opt_in",
       distinct_id: userId,
       // Never the endpoint or the keys — the payload is empty by decision.
-      properties: { $process_person_profile: false },
+      properties: { $process_person_profile: false, $geoip_disable: true },
     });
   });
 

@@ -181,6 +181,16 @@ describe("POST /telemetry — the first-party relay (#33, ADR-0069)", () => {
       // Not a calendar date; not a game.
       startedBody("binairo", "2026-02-30"),
       startedBody("chess", today),
+      // THE HIGHEST-VALUE FORGERY, given its own line rather than left to
+      // the top-level `strictObject` (step-6 security N2): a body that
+      // asserts someone else's `distinct_id`. It is refused at the
+      // contract, and the route would ignore it anyway — `distinct_id`
+      // comes from `requireUserId`, never from the body.
+      JSON.stringify({
+        event: "puzzle_started",
+        distinct_id: "some-other-user",
+        properties: { game: "binairo", date: today },
+      }),
     ];
     for (const body of rejected) {
       const response = await POST(relayRequest({ body, token }));
@@ -233,6 +243,7 @@ describe("POST /telemetry — the first-party relay (#33, ADR-0069)", () => {
         date: today,
         archive: false,
         $process_person_profile: false,
+        $geoip_disable: true,
       },
     });
 

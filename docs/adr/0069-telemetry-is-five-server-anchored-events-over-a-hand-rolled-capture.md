@@ -1,7 +1,7 @@
 # ADR-0069 — Telemetry is five server-anchored events over a hand-rolled capture
 
 **Status:** Accepted — 2026-08-21 (issue #33, shipped in #176)
-**Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0012](./0012-minimal-lgpd-ships-with-email-attach.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md), [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)
+**Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0012](./0012-minimal-lgpd-ships-with-email-attach.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md), [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md), [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md), [ADR-0064](./0064-streak-at-risk-is-a-derived-decision.md), [ADR-0068](./0068-the-dispatchers-operating-decisions.md)
 
 ## Context
 
@@ -33,6 +33,15 @@ construction instead.
    the precedent. *Rejected:* `posthog-js` (~82 kB gz on every route's
    baseline plus the kill config); `posthog-js-lite` (~10–15 kB and still a
    client SDK holding its own device identity — see decision 5).
+   **THE REJECTION IS ENFORCED, not merely recorded** (step-6 issue B1):
+   issue #33's AC says session replay is disabled *and stays disabled*, and
+   "stays" cannot rest on nobody having installed an SDK. Both rejected
+   clients, `@posthog/*` and `rrweb` are banned as imports repo-wide
+   (`replayCapableClientGroups` in `eslint.config.mjs`, `T-LINT-S53`) and
+   as **dependencies** in every workspace manifest and in the lockfile
+   (`T-WEB-S322`) — the second of which is what closes dynamic `import()`
+   and `require()`, neither of which an import ban can see. A future ticket
+   that needs one supersedes this decision first, in the open.
    The host is a constant, not an env var: the region is confirmed US and a
    configurable host would be surface with no consumer.
 
@@ -90,6 +99,16 @@ construction instead.
    `gap_days = epochDay(inserted) − epochDay(prev) − 1` — the count of
    fully missed days.
 
+   **The number is `computeStreak`'s, never re-derived — but the PREDICATE
+   is spelled twice, and that is worth saying** (step-6 ADR N2).
+   `deriveStreakBroken` re-spells the conjunction `computeStreak` uses to
+   find a run boundary (`row.outcome !== "won" || !row.onTime`) in order to
+   locate the gap; ADR-0048's Rejected list warns against "a second streak
+   definition", and ADR-0068 set the precedent of naming this kind of
+   deliberate duplication in the ADR rather than only in a code comment.
+   ADR-0048's `computeStreak` remains the only streak authority, and the
+   number this event carries comes from it.
+
    **The recorded claim is "at most once per break; exactly once in the
    sequential single-client case"** — not "exactly once" unqualified.
    Three residuals, all accepted and named:
@@ -100,12 +119,25 @@ construction instead.
      and costs zero extra queries. *Rejected:* a `wasSeenOn` suppression
      read — it trades a spurious fire for a possible missed one and adds a
      round trip for telemetry-grade accuracy.
+   - **Partial retro-close: the fire survives with arithmetic that no
+     longer matches the rows** (step-6 correctness N1). `gap_days` and
+     `previous_streak` are computed from the rows visible AT FIRE TIME, and
+     under the newest-first flush that guard (iii) exists for, a credited
+     row can land BEHIND the fire and shorten the gap it described.
+     `T-API-S169`'s own fixture is an instance: the surviving fire reports
+     `broken_after_date: T−5, gap_days: 4`, and once the credited `T−1` row
+     lands the true gap is 3. The bullet above covers the gap being closed
+     ENTIRELY; this one covers it merely shrinking. Same trade, same
+     acceptance: telemetry grade, zero extra queries.
    - **Two-device same-day race.** The guards are check-then-act reads
      inside `after()` with no transaction available (neon-http, the
-     `guardedInsertSelect` constraint): two racing counted inserts can
-     double-fire or both stay silent. The READ COMMITTED reasoning ADR-0053
-     decision 13 already models; a single client is sequential
-     (`sync.ts`'s `flushing` guard).
+     `guardedInsertSelect` constraint). **The code is SAFER than this ADR
+     first claimed** (step-6 correctness N2): every reachable interleaving
+     yields one fire or zero, never two, because under READ COMMITTED each
+     post-insert read follows its own committed insert and so cannot miss
+     the sibling's row. The residual is UNDER-firing, not double-firing.
+     The READ COMMITTED reasoning ADR-0053 decision 13 already models; a
+     single client is sequential (`sync.ts`'s `flushing` guard).
    - **Timestamp is return-time, not break-time.** `broken_after_date`
      lets any analysis re-anchor. A player who never returns, or never
      lands a counted completion, never fires it — telemetry observes
@@ -139,14 +171,32 @@ construction instead.
    | `notification_opt_in` | `{}` — never the endpoint or the keys |
    | `login_linked` | `{merged}` — never the email |
 
+   `elapsed_ms` is `body.elapsedMs` — **the client-reported figure**, the
+   same number the stored completion row and every published statistic
+   already use (step-6 issue N4). Consistent by construction, but the
+   issue's *"with time"* is a client assertion, not a server measurement,
+   and that is worth knowing before anyone reads a percentile off it.
+
+   **The wall is a SOURCE-IMPORT wall, not a module-graph one** (step-6
+   security N5). `session/bootstrap.ts` imports `markSessionReady`, and
+   bootstrap is mounted in the root layout, so `src/telemetry/client.ts`
+   ships in every page's bundle — `app/modo-livre` included. Free play
+   fires zero events because `usePlayLifecycle` is the only caller and free
+   play never mounts it; the ESLint entries stop free-play SOURCE from
+   importing the module, which is what makes the claim mechanical rather
+   than merely true today. Both facts are load-bearing, and neither alone
+   is the whole claim.
+
+   **`notification_opt_in` means the BROWSER-PUSH subscription** (step-6
+   issue N2). #32's reminder-email consent is an independent flag collected
+   at attach and fires nothing here. That is the founding handoff's opt-in,
+   but it is a narrowing and is recorded as one.
+
 5. **`distinct_id` is the server `userId`. No new identity surface.**
    Three of the four server seams already hold it (`requireUserId`), the
    relay resolves it the same way, and `login_linked` uses the resolver's
    `winnerId`. **No PostHog device id, no new cookie, no `localStorage`
-   identifier** — so nothing new is stored on the device or about the user,
-   and `/privacidade`'s published inventory stays exactly true with **no
-   copy change** (the #30/#145 precedent extends it only when a new data
-   class is stored; none is). Captures set
+   identifier** — so nothing new is stored **on the device**. Captures set
    `$process_person_profile: false`: anonymous-class events, no person
    profiles. Merge (ADR-0009/0049) re-keys later events to the winner; no
    `alias` call — five events do not need cross-device identity. **No
@@ -154,10 +204,50 @@ construction instead.
    for, and its home is the first settings surface (#36) / the LGPD pass
    (#37).
 
+   **`/privacidade` IS EXTENDED IN THIS PR, and the first draft of this
+   decision was wrong to say otherwise** (step-6 security B1 and ADR B2,
+   converged independently). The declined-copy reasoning read *"the
+   #30/#145 precedent extends the inventory only when a new data class is
+   stored; none is"* — but that is not the criterion the page's own block
+   comment states. The criterion is *"the page states EXACTLY what this
+   release ships"*, and the #30 medals and #145 push comments each spell it
+   out as **"data about the user"**. Five behavioural event rows tied to an
+   account id are data about the user by that criterion, and both
+   precedents shipped their inventory line **in the same PR as the
+   mechanism**. The declining sentence also contradicted this decision's
+   own next paragraph, which concedes the fact and then defers it.
+   `privacy.collected.telemetry` is therefore widened in place — the #30
+   and #145 shape — to state which measurements, that they are keyed to the
+   anonymous account and never to the email, that PostHog processes them
+   outside Brazil, and how they are removed. It is an inventory and legal
+   statement, not a UI/UX call, so it is a professional decision made here
+   rather than a question for Fernando.
+
+   **THE DELETION RESIDUAL, stated rather than left implied.** `POST
+   /account/delete` is a single `db.delete(users)` cascade over OUR tables —
+   sessions, completions, hint grants, medal grants, attach tokens, push
+   subscriptions, seen days. **It issues no PostHog deletion**, so event
+   rows keyed to that `userId` survive the erasure, and the page's
+   *"apaga … de uma vez"* is true of what the deletion section enumerates
+   and not of the provider's copy. Closing it needs a PostHog **personal**
+   API key (the publishable token cannot delete) — a new credential, a new
+   pending-Fernando item and a new failure mode on the deletion path, which
+   is scope this issue did not ask for and cannot decide alone. So the
+   published copy carries the honest path instead (`privacidade@miolos.app`,
+   already the page's human channel), the gap is a **SOON** item in
+   `docs/pending-fernando.md`, and #37's LGPD review under ADR-0012 owns
+   the decision. **A fourth residual, related:** the loser of an account
+   merge keeps its own `userId` alive as a PostHog `distinct_id` — outside
+   the reach of `CONTEXT.md`'s Tombstone row and of `mergeAccounts`, which
+   moves completion rows by raw SQL. #37 inherits that too.
+
    **The genuinely new privacy fact, named so #37 cannot miss it:**
    PostHog (US) now holds event rows keyed by the server `userId` — a
    third-party processor. The full telemetry-vs-policy LGPD review stays
-   deferred to #37 under ADR-0012; this ADR is where that review starts.
+   deferred to #37 under ADR-0012; this ADR is where that review starts,
+   and the ORDERING that makes the deferral safe is written into the ledger
+   item rather than left to memory: the privacy copy ships before the key
+   does, and NOW §3 carries that as a hard precondition.
 
 6. **`notification_opt_in` fires on a genuine first insert, not on
    `stored: true`.** The subscribe write is `INSERT … ON CONFLICT DO
@@ -185,8 +275,15 @@ construction instead.
    `POST /session` is free and unminted-cookie-cheap, so a flood of relayed
    `puzzle_started` events is one minted cookie away. The cost is PostHog
    free-tier quota — telemetry blindness — never money and never data: the
-   route writes nothing, reads one published date, and the contract admits
-   one event with two properties. No rate limit at this traffic level; an
+   contract admits one event with two properties. **It is not free,
+   though, and the first draft of this sentence said "never money"** —
+   step-6 security N1 and performance NB-2: `requireUserId` resolves the
+   session (a read, an unconditional `recordSeenDay` write and sometimes a
+   `last_seen_at` update) and `todaySaoPaulo(db)` is a real round trip, so
+   one relayed event is 3–4 Neon round trips plus a Vercel invocation. The
+   conclusion is unchanged — `POST /session` is a strictly more expensive
+   unthrottled surface that already exists, so a limit here buys nothing —
+   but "the relay is cheap, not free" is the honest framing. No rate limit at this traffic level; an
    accepted, named residual in the ADR-0006 `:51` idiom. It also carries the
    sibling credentialed-POST preamble (origin guard, JSON content type), and
    **no session is a 204 drop rather than a 401** — a blocker or a bot gets
@@ -204,7 +301,11 @@ construction instead.
    the dashboard is empty. Tests and CI never send: no `POSTHOG_KEY` in any
    test env, and the once-guard keeps the output quiet.
    The key lives **server-side only, on miolos-api**, with **no
-   `NEXT_PUBLIC_` twin** — a public twin would invite client use. Its
+   `NEXT_PUBLIC_` twin** — a public twin would invite client use. One
+   exists today, unread, on miolos-web, so **removing it is a REQUIRED step
+   of the activation item, not an optional one** (step-6 security B2): an
+   ADR that forbids the twin beside a runbook that makes removing it
+   optional leaves exactly the state this decision says must not exist. Its
    production activation is a `docs/pending-fernando.md` NOW item, because
    production env work by agents is classifier-blocked unattended.
 
@@ -253,15 +354,49 @@ reports one `puzzle_started` before the remote view swaps in. The case the
 gate actually covers is the **warm** one — a client-side navigation from the
 hub, whose done tile links to the board route — which is the common path.
 
+**The ARCHIVE's version of this is structural, not a timing window**
+(step-6 correctness N7). The archive shells pass no `remotelyClaimed` at
+all — they may not, by (c) — so an archived date the player completed on
+another device reports one `puzzle_started` on every device that opens it,
+with `archive: true`. Unlike (d)'s cold-load case, no gate can ever cover
+it without putting a user-specific read back into the archive's module
+graph. `useServerDayClaim` would answer `undefined` for an archived date
+anyway, so the omitted flag is behaviourally identical to what a read
+would have produced.
+
 (e) `after()` throws outside a request scope, which is exactly how the API's
 test suites invoke route handlers (a direct `POST(request)` call, no Next
 server). `runAfterResponse` therefore falls back to immediate
 fire-and-forget scheduling, chained onto a `telemetrySettled()` promise so
 tests can await both positive and negative assertions. In a deployed route
 the `after()` arm always wins; the fallback is a test seam, not a second
-production path.
+production path — and that is an assumption about a framework, so the catch
+is narrowed to the known throw message and any OTHER throw logs once
+before taking the fallback (step-6 quality B2). It cannot become a silent
+second production path on a Next bump.
 
 (f) Until the `POSTHOG_KEY` ledger item is discharged, the deployed helper
 logs its one missing-key line and captures nothing. Exit criterion "the
 dashboard verifies installation" is **pending on that item**, not silently
-unmet.
+unmet. **`login_linked` additionally waits on Resend** (ledger NOW §1): the
+attach flow is dormant in production, so discharging the key alone yields
+four event streams, not five (step-6 issue B3). The ledger item says so.
+
+(g) **The unrelated API suites print the missing-key line.** Five
+pre-existing `apps/api` files exercise the four seam routes without stubbing
+a key, so each prints one `POSTHOG_KEY is unset` `console.error` into the
+gate log. That is decision 8's pin working, not a failure, and the
+once-per-instance guard is what keeps it at five lines rather than
+hundreds (step-6 quality NB-8).
+
+(h) **The relay accepts a FUTURE date and labels it `archive: true`.**
+`calendarDateString` validates that a string is a real calendar date, not
+that it is a date this product has a puzzle for, so a session can post
+`{game, date: "2030-01-01"}` and have it captured. No ADR-0004 exposure —
+nothing about a puzzle travels either way — and no legitimate client can do
+it, because a daily's date comes from the server payload and an archive
+date from the URL. Left as garbage-in at telemetry grade rather than
+closed, on the same footing as decision 7's unthrottled relay: a bound
+would be a second date-validity spelling on a route whose contract
+deliberately carries none (step-6 correctness N4, ADR N3). Whoever reads
+the archive-engagement metric filters on it.

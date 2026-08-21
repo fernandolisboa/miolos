@@ -215,6 +215,7 @@ describe("POST /completions — puzzle_completed (#33, ADR-0069 decision 2)", ()
         outcome: "won",
         on_time: true,
         $process_person_profile: false,
+        $geoip_disable: true,
       },
     });
   });
@@ -300,6 +301,7 @@ describe("POST /completions — streak_broken, derived on return (#33, ADR-0069 
       broken_after_date: addDays(today, -5),
       gap_days: 4,
       $process_person_profile: false,
+      $geoip_disable: true,
     });
   });
 
@@ -412,6 +414,7 @@ describe("POST /completions — streak_broken, derived on return (#33, ADR-0069 
       broken_after_date: addDays(today, -2),
       gap_days: 1,
       $process_person_profile: false,
+      $geoip_disable: true,
     });
   });
 });

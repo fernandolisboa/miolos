@@ -24,7 +24,8 @@ import {
  *        second game on an already-counted day re-breaks nothing;
  *  (iii) the inserted row is the MAXIMUM counted date. Load-bearing (the
  *        step-3 B1 finding): the sync queue flushes newest-date-first
- *        (sync.ts:108-121, deliberate) and ADR-0066 can credit the late
+ *        (`sync.ts`'s flush comparator, cited by symbol because line
+ *        numbers rot) and ADR-0066 can credit the late
  *        completion behind it, so without this guard a queued {D, D−1}
  *        over a D−5 history fires twice. With it, either ordering fires at
  *        most once.

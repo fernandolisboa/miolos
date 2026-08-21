@@ -62,7 +62,22 @@ export function ensureSession(): Promise<void> {
     // `finally` also keeps this line behaviour-free: it neither changes the
     // resolution value nor swallows a rejection, so `ensureSession`'s
     // contract above is exactly what it was.
-    .finally(markSessionReady);
+    //
+    // THE try/catch IS NOT DEFENSIVE NOISE (step-6 correctness N3). This
+    // module's own TSDoc calls `ensureSession()`'s never-rejecting property
+    // "load-bearing three times over" — a throw here would surface inside
+    // `postGuesses`, freeze a Termo board and kill a completion flush.
+    // `markSessionReady` cannot throw today (its only fallible call is
+    // inside a `try`), but it is FOREIGN code in a different module, and
+    // the invariant would otherwise be one edit away from breaking
+    // silently with no test that would catch it.
+    .finally(() => {
+      try {
+        markSessionReady();
+      } catch {
+        // A telemetry drain must never reach the session contract.
+      }
+    });
   return pending;
 }
 

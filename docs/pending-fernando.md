@@ -1,6 +1,6 @@
 # Pending on Fernando — living ledger
 
-**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found (NOW §2); POSTHOG_KEY activation added (NOW §3, PR #176).
+**Living document — no number, edited in place.** The single list of actions and decisions only Fernando can take. Created 2026-08-20 from every handoff, plan, ADR, issue, PR body and the napkin, cross-checked against live state. Last updated 2026-08-21 (night session) — CRON_SECRET mismatch found (NOW §2); POSTHOG_KEY activation added (NOW §3, PR #176), then rewritten at that PR's step-7 round: the `vercel env pull` step is gone (it dumped every miolos-web production secret to `/tmp` to read one publishable token), the `NEXT_PUBLIC_` twin removal is required rather than optional, the item carries a privacy-copy precondition, and its Blocks line no longer promises five event streams where Resend gates one. The PostHog-deletion residual is a new SOON row.
 
 **How to use it (Fernando):** when you have time, start a session with *"run /wizard over docs/pending-fernando.md, NOW section"* — the wizard walks you through each step, one at a time. Decisions marked ⚡ are answerable in one line on the named issue, from a phone.
 
@@ -42,25 +42,32 @@ Found 2026-08-21 (night): a manual `Streak notify` dispatch (run 32439773422) go
 
 ### 3. Set `POSTHOG_KEY` on miolos-api — the telemetry shipped in #33 sends nothing until you do
 
-Issue #33's PostHog integration is merged and deployed, and it is **dormant**: the capture helper is server-side only (`apps/api/src/telemetry/capture.ts`, ADR-0069), it reads `POSTHOG_KEY` from the API's environment, and that variable does not exist there yet. The token itself already exists — it is the value sitting in `NEXT_PUBLIC_POSTHOG_KEY` on **miolos-web**, where nothing reads it, because the final design keeps the key off the client entirely. So this is a **move**, not a new credential. Until it is done the deployed API logs one line per instance (*"POSTHOG_KEY is unset: telemetry capture disabled…"*) and the PostHog dashboard stays empty. An agent cannot run `vercel env` unattended (permission classifier, the same class as NOW §2 and #59).
+Issue #33's PostHog integration ships in PR #176 and **deploys dormant**: the capture helper is server-side only (`apps/api/src/telemetry/capture.ts`, ADR-0069), it reads `POSTHOG_KEY` from the API's environment, and that variable does not exist there yet. The token itself already exists — it is the value sitting in `NEXT_PUBLIC_POSTHOG_KEY` on **miolos-web**, where nothing reads it, because the final design keeps the key off the client entirely. So this is a **move**, not a new credential. Until it is done the deployed API logs one line per instance (*"POSTHOG_KEY is unset: telemetry capture disabled…"*) and the PostHog dashboard stays empty. An agent cannot run `vercel env` unattended (permission classifier, the same class as NOW §2 and #59).
+
+**Do not do this until:** `/privacidade` names PostHog as a processor and says the measurements leave Brazil. **This shipped in PR #176 itself** (`privacy.collected.telemetry`, ADR-0069 decision 5), so the precondition is met the moment #176 is on production — check `https://miolos.app/privacidade` shows the PostHog sentence before setting the key. The ordering is what makes the deferral of the full LGPD review to **#37** (ADR-0012) safe: setting the key starts sending per-user play history to a US processor, and it must not start before the page says so.
 
 - **Do (easiest):** start a session with *"set POSTHOG_KEY — pending-fernando NOW §3"* and approve the prompts. **Or by hand, in a real terminal:**
   ```
-  cd ~/projects/miolos/apps/web
-  vercel env pull /tmp/web.env --environment=production --yes
-  grep '^NEXT_PUBLIC_POSTHOG_KEY=' /tmp/web.env          # this is the token
-  cd ../api
+  # Read the token from the DASHBOARD, not from `vercel env pull`:
+  #   vercel.com → miolos-web → Settings → Environment Variables
+  #   → NEXT_PUBLIC_POSTHOG_KEY → the eye icon → copy.
+  # `vercel env pull` would write the project's ENTIRE production
+  # environment — WEB_DATABASE_URL included — to a file, to copy one
+  # publishable token. Don't.
+  cd ~/projects/miolos/apps/api
   vercel env add POSTHOG_KEY production                   # paste the value
   vercel --prod                                           # redeploy miolos-api
-  rm /tmp/web.env
+
+  # REQUIRED, same sitting — not optional (ADR-0069 decision 8):
+  cd ../web
+  vercel env rm NEXT_PUBLIC_POSTHOG_KEY production
   ```
-  Optional, same sitting: remove `NEXT_PUBLIC_POSTHOG_KEY` from miolos-web (`vercel env rm NEXT_PUBLIC_POSTHOG_KEY production` from `apps/web`). Nothing reads it, and a `NEXT_PUBLIC_` twin invites client use, which ADR-0069 decision 8 rules out.
-- **Verify:** `vercel env ls` from `apps/api` lists `POSTHOG_KEY`; then play one puzzle on production and PostHog's *Verify installation* goes green on the first captured event (`puzzle_started` fires as soon as a board opens).
-- **Blocks:** all five telemetry events in production — `puzzle_started`, `puzzle_completed`, `streak_broken`, `notification_opt_in`, `login_linked`. Nothing else: the API is unaffected by the absence, by design.
-- **Source:** issue #33; PR #176; ADR-0069 decisions 1 and 8; `apps/api/.env.example`.
+  The twin removal is a required step because ADR-0069 decision 8 rules the `NEXT_PUBLIC_` twin out outright — a public twin invites client use, and leaving it is exactly the state the ADR says must not exist. Nothing reads it, so removing it breaks nothing. (Preview/Development copies too, if any: `vercel env ls` from `apps/web` shows them.)
+- **Verify:** `vercel env ls` from `apps/api` lists `POSTHOG_KEY` and the same command from `apps/web` no longer lists `NEXT_PUBLIC_POSTHOG_KEY`; then play one puzzle on production and PostHog's *Verify installation* goes green on the first captured event (`puzzle_started` fires as soon as a board opens).
+- **Blocks:** four of the five telemetry events in production — `puzzle_started`, `puzzle_completed`, `streak_broken`, `notification_opt_in`. **`login_linked` additionally waits on NOW §1 (Resend):** the attach flow is dormant in production, so it fires zero times until that is done, and you should expect four streams here, not five. `notification_opt_in` also needs a real browser opt-in to happen, which NOW §2 currently blocks in practice. Nothing else: the API is unaffected by the absence, by design.
+- **Source:** issue #33; PR #176; ADR-0069 decisions 1, 5 and 8; `apps/api/.env.example`; step-6 security B1/B2 and issue B3 on #176.
 
-
-*(Former §2 discharged 2026-08-20: PostHog region answered — US. See the Done table.)*
+*(Former §2 discharged 2026-08-20: PostHog region answered — US. See the Done table. That row's "Where it was" column reads "NOW §2 (PostHog)"; PostHog is now §3, and the row is about the region question, not the key.)*
 
 ---
 
@@ -70,6 +77,7 @@ Issue #33's PostHog integration is merged and deployed, and it is **dormant**: t
 - **#64** Nonogram picture name — decided (ship the name, amend ADR-0033), `ready-for-agent`.
 - **#104** archive OG cards — decided (index + month get cards), `ready-for-agent`.
 - **#158** terms-of-use page `/termos` — approved and filed, `ready-for-agent`.
+- **#37** account deletion does not reach PostHog — **an honest residual, recorded here because the ledger is where a gap with no owner goes to get one.** `POST /account/delete` is a `db.delete(users)` cascade over our own tables and issues no PostHog deletion, so telemetry event rows keyed to that `userId` outlive the account. `/privacidade` says so and publishes the path that does work (`privacidade@miolos.app`), so nothing on the page is false — but the immediate self-service erasure is not complete on this axis. Closing it needs a PostHog **personal** API key (the publishable token cannot delete), which is a new credential and therefore a new NOW item the day someone decides to take it; **#37's LGPD review (ADR-0012) owns that decision**, and it also inherits a second row of the same shape: a merged-away loser account keeps its `userId` alive as a PostHog `distinct_id`, outside `mergeAccounts` and outside `CONTEXT.md`'s Tombstone row. Source: ADR-0069 decision 5; #176 step-6 security B1 / ADR B2. **Nothing for Fernando until #37 is picked up** — it sits beside NOW §3 rather than inside it, because the key move is not blocked on it.
 - **#160–#163** Fernando's UI feedback of 2026-08-20 (left-hugging layouts, the Termo accent, the onboarding card's look, the archive calendar) — filed, `ready-for-agent`. He announced **more gameplay feedback per game is coming**; when he gives it, file it the same way and add anything human-blocking here.
 
 ---
@@ -121,7 +129,7 @@ Accumulated across handoffs 024, 026, 028, 034; none ever marked done. One sessi
 
 | Item | Was pending in | Evidence done |
 |---|---|---|
-| PostHog account + project token + region | NOW §2 (PostHog) | 2026-08-20: Fernando signed up (Product Analytics + Error Tracking, no Session Replay), delivered the `phc_…` token (stored as `NEXT_PUBLIC_POSTHOG_KEY` ×3 envs on miolos-web) and confirmed **US** region; all on #33. Error Tracking may also discharge #37's monitoring AC |
+| PostHog account + project token + region | NOW (PostHog — the section renumbered to §3 when CRON_SECRET took §2) | 2026-08-20: Fernando signed up (Product Analytics + Error Tracking, no Session Replay), delivered the `phc_…` token (stored as `NEXT_PUBLIC_POSTHOG_KEY` ×3 envs on miolos-web) and confirmed **US** region; all on #33. Error Tracking may also discharge #37's monitoring AC |
 | #59 least-privilege web DB role | NOW §2 | 2026-08-20, Fernando present and approving: `miolos_web` role live (`relacl … miolos_web=r`, `sessions`/`delete` probes denied), `WEB_DATABASE_URL` in all 3 envs, code + ADR-0026 amendment in #59's PR |
 | #135 veto decision 2 (Termo cross-device rule) | STANDING | Fernando 2026-08-20: "fine" — rule confirmed, ADR-0060/0065 stand as shipped |
 | #74 answer-pool direction | STANDING | Fernando 2026-08-20: bulk-extension accepted for now; his live-generation preference recorded on #74 |

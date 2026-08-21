@@ -36,9 +36,10 @@ let warnedMissingKey = false;
 /**
  * Capture one of the five events for `distinctId` — the server `userId`
  * (ADR-0069 decision 5): no device id, no new cookie, nothing stored on the
- * client. `$process_person_profile: false` keeps the events anonymous-class
- * — PostHog builds no person profiles (verified against the capture API
- * docs at implement time).
+ * client. `$process_person_profile: false` keeps the events
+ * anonymous-class — PostHog builds no person profiles — and
+ * `$geoip_disable: true` stops it geo-tagging every event with a Vercel
+ * datacentre (both verified against the capture API docs).
  *
  * NEVER THROWS and never returns a failure: telemetry may not be able to
  * fail, delay or retry a route's work. A non-2xx answer is ignored — there
@@ -85,6 +86,13 @@ export async function captureEvent<E extends TelemetryEvent>(input: {
         properties: {
           ...properties,
           $process_person_profile: false,
+          // The captures are server->server from a Vercel function, so the
+          // IP PostHog sees is the function's egress, never the player's
+          // — better for privacy than a client SDK, and MISLEADING as
+          // data: without this every event would be geo-tagged with a
+          // datacentre (step-6 security N4). Not a leak; a lie about
+          // where our players are.
+          $geoip_disable: true,
         },
       }),
       signal: AbortSignal.timeout(CAPTURE_TIMEOUT_MS),
@@ -162,7 +170,15 @@ export function runAfterResponse(task: () => Promise<void>): void {
     try {
       await task();
     } catch (error) {
-      console.error("telemetry: post-response task failed", error);
+      // The MESSAGE, not the object (step-6 security N3). `captureEvent`
+      // cannot throw, so the only reachable thrower is the completions
+      // task's `listCompletionsForStreak` — and a drizzle/neon error can
+      // carry the failing query with its bound params, the `userId`
+      // included. Nothing here needs more than the message.
+      console.error(
+        "telemetry: post-response task failed",
+        error instanceof Error ? error.message : String(error),
+      );
     }
   };
   try {

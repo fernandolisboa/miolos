@@ -103,7 +103,7 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     await expect(pending).resolves.toBeUndefined();
   });
 
-  it("T-API-S157: the posted body is the capture contract — api_key, event, distinct_id, and properties carrying $process_person_profile: false", async () => {
+  it("T-API-S157: the posted body is the capture contract — api_key, event, distinct_id, and the two anonymity properties", async () => {
     vi.stubEnv("POSTHOG_KEY", "phc_test_key");
     const fetchMock = vi.fn(() => Promise.resolve(new Response("{}")));
     vi.stubGlobal("fetch", fetchMock);
@@ -146,6 +146,9 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
         // Anonymous-class events (ADR-0069 decision 5): no person profiles
         // are built, so PostHog stores event rows and nothing person-shaped.
         $process_person_profile: false,
+        // And no geo tag: the capture is server->server, so the only IP
+        // PostHog could see is a datacentre's (step-6 security N4).
+        $geoip_disable: true,
       },
     });
   });
@@ -187,7 +190,11 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
       api_key: "phc_test_key",
       event: "login_linked",
       distinct_id: "user-7",
-      properties: { merged: true, $process_person_profile: false },
+      properties: {
+        merged: true,
+        $process_person_profile: false,
+        $geoip_disable: true,
+      },
     });
   });
 });
