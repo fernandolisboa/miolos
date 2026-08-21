@@ -247,6 +247,15 @@ describe("HubOnboarding is a full-width band, not a half-width note (T-WEB-S303)
     const mobileCard = bodyOf(mobile, ".intro");
     expect(decl(mobileCard, "display")).toBe("block");
 
+    // Step-7 widening of the same band-shape claim, SAME id (the T-DB-9a
+    // precedent): the body copy's 512px measure is declared once and the
+    // mobile block deliberately does NOT reset it. Below ~550px card width
+    // the cap never binds (390px is byte-identical to main), but at
+    // 550–768px it does — a deliberate copy measure, better typography
+    // than main's uncapped ~700px lines, not a desktop leak.
+    expect(decl(bodyOf(css, ".body"), "max-width")).toBe("512px");
+    expect(decl(bodyOf(mobile, ".body"), "max-width")).toBeUndefined();
+
     // One static angle at every site — resting, settle start, and (per
     // T-WEB-S253) the reduce block — so the rotation can never animate and
     // the mobile block needs no angle of its own.

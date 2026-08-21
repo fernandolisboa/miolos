@@ -178,6 +178,11 @@
   }
 
   .body {
+    /* The 512px measure above deliberately PERSISTS here — this block
+       resets the margin only. At 390px the cap never binds (the card is
+       narrower than 512px; the render is byte-identical to #35's), but at
+       550–768px it does, and that is the point: a copy measure at those
+       widths, not a leak from the desktop band. T-WEB-S303 pins it. */
     margin: var(--space-2) 0 0;
   }
 
