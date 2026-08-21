@@ -451,7 +451,13 @@
   }
 
   .secondaryLinks {
+    /* Five links (#158 added Termos de Uso) no longer fit one 390px row:
+       the unwrapped flex row clipped its first and last links at the
+       viewport edges (#169). Wrap instead, with an explicit row-gap so
+       the wrapped rows do not sit the 28px column gap apart. */
+    flex-wrap: wrap;
     gap: var(--space-7);
+    row-gap: var(--space-3);
     margin-top: 26px;
   }
 
