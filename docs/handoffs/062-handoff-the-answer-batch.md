@@ -40,23 +40,38 @@ Frontier order: **#146** (dispatcher — fully unblocked today), then #64 / #104
 
 - **Fernando delivered the PostHog project token.** Stored as `NEXT_PUBLIC_POSTHOG_KEY` on miolos-web ×3 environments; recorded on #33 with the products-enabled note (no Session Replay) and the install-step-skipped note. **#33 is unblocked.** Region confirmed minutes later: **US cloud** (`api_host` targets `https://us.i.posthog.com`, or a first-party proxy — the plan's call). Nothing PostHog remains on Fernando.
 
+## Addendum C — 2026-08-21, the parallel night
+
+Fernando said "work the recommended issues, in parallel." Five tickets shipped through five PRs, serialized only at the gate lock and the merge queue:
+
+| Ticket | PR | What |
+|---|---|---|
+| #158 `/termos` | #166 | Terms of use, `/privacidade` mirror, Tier 2 reduced |
+| #160 left-hug pages | #167 | `margin-inline: auto` + the S292 sweep test (also fixed `/termos`) |
+| #162 onboarding card | #168 | Full-width band, no-shift preserved; step 7 fixed the tablet cap claim |
+| #161 Termo accent | #170 | `#8D6212` + light label 4.84:1, full sweep → **ADR-0067**; step 7 re-proved the before-evidence |
+| #146 dispatcher | #171 | Full eight steps, six lenses; step 7 added the partial index (migration **0011**, EXPLAIN-chosen, applied pre-push) and renumbered its ADR → **ADR-0068** |
+
+**The dispatcher is LIVE** — hourly `streak-notify.yml` against `POST /cron/notify`; migrations 0010+0011 applied to Neon pre-push. New: plan 063, ADR-0067/0068, issue **#169** (hub nav overflows at 390px with five links, found by #162's fixtures). Notable process facts: four `test-ids.md` merge collisions all resolved by the documented convention, nothing renumbered; one lens finding was *disproved with pixel evidence* (#170's "before" was genuine); the ADR-number collision (#170/#171 both minting 0067) was resolved by merge order + renumber sweep.
+
 ## Kickoff prompt for the next session
 
 ```
-Read docs/handoffs/062-handoff-the-answer-batch.md WITH Addenda A+B, then
-docs/pending-fernando.md.
+Read docs/handoffs/062-handoff-the-answer-batch.md WITH Addenda A+B+C,
+then docs/pending-fernando.md.
 
-PREFLIGHT: #59 CLOSED with its PR merged; #51 CLOSED; #160–#163 exist and
-are ready-for-agent; gh secret list shows CRON_SECRET; #33's last comment
-records the delivered PostHog token.
+PREFLIGHT: #146/#158/#160/#161/#162 all CLOSED (PRs #166–#171 merged);
+main has f0c3f4a in history; ADR-0067 = Termo accent, ADR-0068 = the
+dispatcher; #169 OPEN needs-triage; zero open PRs.
 On mismatch: stop, read the newest addendum before acting.
 
-Route work by CLAUDE.md § tiers. Frontier order: #146 first (fully
-unblocked), then #160–#163 (Fernando's own complaints — high signal),
-then #33 (unblocked: token in NEXT_PUBLIC_POSTHOG_KEY ×3, region US),
-then #64/#104/#158. Reserve test ids on the issue before step 5 (T-WEB
-S290 is spent by #59). Take ~/miolos-session/gate-lock.sh before any suite run,
-git commit included. Update docs/pending-fernando.md in the same PR
-whenever an item for Fernando appears or is discharged. End the session
-with a handoff ≤120 lines + kickoff ≤15 lines — never skip it.
+The dispatcher is LIVE (hourly tick). Frontier order: #33 (unblocked —
+token in NEXT_PUBLIC_POSTHOG_KEY ×3, region US), #169 (Tier 1, hub nav
+overflow at 390px), #163 (archive calendar), #64, #104, #149, #155,
+#106, the #74 pool extension. Reserve test ids on the ISSUE before step
+5 (T-WEB next free: re-derive by grep — S303 was highest at C's close).
+Take ~/miolos-session/gate-lock.sh before any suite run, git commit
+included. Update docs/pending-fernando.md in the same PR whenever a
+Fernando item appears or is discharged. End with a handoff addendum
+≤120 lines + kickoff ≤15 — never skip it.
 ```
