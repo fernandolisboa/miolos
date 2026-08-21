@@ -24,6 +24,7 @@ import {
   warnIfGuardDegraded,
 } from "../../../src/session/origin-guard";
 import { requireUserId } from "../../../src/session/service";
+import { captureEvent, runAfterResponse } from "../../../src/telemetry/capture";
 
 // Never statically cached: every request writes the caller's rows.
 export const dynamic = "force-dynamic";
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse(400, "invalid-body");
     }
 
-    const { stored } = await upsertSubscription(context.db, {
+    const { stored, inserted } = await upsertSubscription(context.db, {
       userId: context.userId,
       endpoint: parsed.data.endpoint,
       p256dh: parsed.data.keys.p256dh,
@@ -147,6 +148,24 @@ export async function POST(request: NextRequest): Promise<Response> {
       // `response.ok` only, so this takes T-WEB-S271's unwind path: the
       // browser-side subscription is rolled back and nothing is stamped.
       return errorResponse(429, "too-many-requests");
+    }
+
+    // THE TELEMETRY SEAM (#33, ADR-0069): a GENUINE first insert only —
+    // `inserted`, not `stored`, because the DO UPDATE arm also answers
+    // `stored: true` (key rotation, identical re-subscribe, cross-user
+    // repoint, #36's settings toggle) and each would re-count an opt-in
+    // that already happened. A new endpoint on a second device IS a real
+    // opt-in act and fires. Payload empty by decision: never the endpoint
+    // or the keys. Post-response and throw-proof via `runAfterResponse`.
+    if (inserted) {
+      const userId = context.userId;
+      runAfterResponse(() =>
+        captureEvent({
+          distinctId: userId,
+          event: "notification_opt_in",
+          properties: {},
+        }),
+      );
     }
 
     return Response.json(

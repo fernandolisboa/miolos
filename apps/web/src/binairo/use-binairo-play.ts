@@ -66,7 +66,22 @@ export interface BinairoPlay {
   readonly pause: () => void;
 }
 
-export function useBinairoPlay(daily: DailyBinairoResponse): BinairoPlay {
+/**
+ * `remotelyClaimed` — the SERVER already claims this game on this day (#33,
+ * ADR-0069), which the daily screen root reads with `useServerDayClaim` for
+ * its own render-time swap to the remote completed view (#142, ADR-0065).
+ * It travels as a parameter rather than being read here because
+ * `play/day-state.ts` reaches `src/day/**`, and the ARCHIVE shell — which
+ * calls this same hook — may contain neither in its module graph (ADR-0053
+ * decision 10's "Why no endpoint", pinned by `archive-day.test.tsx`). Its only effect is to
+ * suppress the `puzzle_started` report: looking at a finished day is not
+ * starting an attempt. The archive omits it; an archived date's claim is
+ * `undefined` by the payload's own date gate anyway.
+ */
+export function useBinairoPlay(
+  daily: DailyBinairoResponse,
+  remotelyClaimed = false,
+): BinairoPlay {
   const [state, dispatch] = useReducer(playReducer, daily, initPlayState);
   const [hintKind, setHintKind] = useState<BinairoHint["kind"] | null>(null);
 
@@ -93,6 +108,7 @@ export function useBinairoPlay(daily: DailyBinairoResponse): BinairoPlay {
     reduce: playReducer,
     dispatch,
     buildRecord,
+    remotelyClaimed,
     // `state.now` is deliberately NOT here (plan 018 §5.4, landmine 21):
     // `tick` returns a new state object every second while these three keep
     // their identities, so including it would write a readPlayRecord + Zod

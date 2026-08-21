@@ -42,6 +42,23 @@ describe("the privacy policy page (T-WEB-S141)", () => {
     expect(markup).toContain(messages.privacy.why.reminder);
     expect(markup).toContain(messages.privacy.noPassword.body);
     expect(markup).toContain(messages.privacy.collected.telemetry);
+    // #33 (ADR-0069): the telemetry line is the inventory row for the
+    // FIRST data leaving our infrastructure to a third-party processor,
+    // so the substance is asserted and not only the rendering. The page
+    // must name the processor, say the transfer is outside Brazil, and
+    // publish a removal path for the rows account deletion does not
+    // reach — the residual ADR-0069 decision 5 records for #37.
+    expect(messages.privacy.collected.telemetry).toContain("PostHog");
+    expect(messages.privacy.collected.telemetry).toContain("fora do Brasil");
+    expect(messages.privacy.collected.telemetry).toContain(
+      messages.privacy.deletion.contactEmail,
+    );
+    // And the no-replay half of the same line, which is the published form
+    // of a CLAUDE.md veto (T-WEB-S322 and T-LINT-S53 are its mechanical
+    // halves).
+    expect(messages.privacy.collected.telemetry).toContain(
+      "Não gravamos a sua tela",
+    );
     // #30 (ADR-0052): operator-recorded medal grants are data about the
     // user, so the inventory names them the release the table ships.
     expect(markup).toContain(messages.privacy.collected.medals);

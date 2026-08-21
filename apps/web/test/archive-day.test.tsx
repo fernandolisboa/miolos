@@ -348,11 +348,22 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
     for (const path of graph) {
       expect(readFileSync(path, "utf8")).not.toContain("readDayState");
     }
-    // WIDENED AT #83, and the ADR-0053 decision 9 claim moves with it:
+    // WIDENED AT #83, and THE DECISION THAT WARRANTS THE WIDENING IS
+    // ADR-0053 DECISION 10, not decision 9. Decision 9 is "there is no
+    // archive conclusion route" and owns the `conclusion-view` list above;
+    // the reason a user-specific READ may not appear here is decision 10's
+    // "Why no endpoint" — *"a user-specific fragment on a public page …
+    // speculative surface with one consumer and a per-request cost on a
+    // crawler-facing route"* — on the un-cached-archive trade decision 2
+    // makes. This comment said decision 9 and carried no number where it
+    // mattered, and #33 then copied the wrong number into four new records
+    // (step-6 ADR B1). The number is written here so the drift cannot
+    // recur from this pin.
+    //
     // `useDayState` now also FETCHES, so composing a daily screen root on an
-    // archived date would fire `GET /day` as well as `GET /streak` — a
-    // user-specific read on a public, crawler-facing route. `src/day` is
-    // reachable only through `play/day-state`, and neither may appear here.
+    // archived date would fire `GET /day` as well as `GET /streak` — exactly
+    // that user-specific read. `src/day` is reachable only through
+    // `play/day-state`, and neither may appear here.
     expect(graph.filter((path) => path.includes("/src/day/"))).toEqual([]);
     for (const path of graph) {
       expect(readFileSync(path, "utf8")).not.toContain("useDayTruth");

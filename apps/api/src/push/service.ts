@@ -55,6 +55,29 @@ export const PUSH_SUBSCRIPTION_CEILING = 10;
  * decision 13's exact bound); (ii) the at-cap cross-user-repoint refusal —
  * a full account cannot take over an endpoint another user holds until it
  * frees a slot.
+ *
+ * `inserted` (#33, ADR-0069): whether the row was a genuine FIRST insert
+ * for THIS (endpoint, user) pair, as opposed to the DO UPDATE arm landing
+ * on a row the caller already held. The telemetry seam needs the
+ * distinction — `notification_opt_in` fires on a new consent act, and
+ * `stored: true` also comes back on every re-post (key rotation, identical
+ * re-subscribe, #36's future settings toggle), so firing on it would
+ * re-count. The plan's first choice — `(xmax = 0)` in the RETURNING list —
+ * FAILS TO TYPE on a clean tree: `Db` is a union of two drizzle database
+ * classes (client.ts), and TypeScript cannot resolve the generic
+ * fields-overload of `.returning(fields)` through a union of overloaded
+ * methods — only the 0-arg signature survives, so the projected form is
+ * TS2554 (probed against both the `.select()` and `.values()` chains).
+ * The plan's named fallback lands instead: a pre-read `exists` scoped to
+ * the caller's `(endpoint, user_id)`, one read on the endpoint PK.
+ * Check-then-act is accepted AT TELEMETRY GRADE ONLY (two racing first
+ * posts of one endpoint can double-report `inserted`); the CEILING above
+ * is untouched — it stays folded into the insert, where check-then-act
+ * was measured broken. Scoping note: under the pair scope a CROSS-USER
+ * repoint reads as `inserted` for the posting user — a channel this user
+ * did not hold before, i.e. a real opt-in act by this user, which is the
+ * product meaning ADR-0069 records. T-API-S171/S172 exercise both arms
+ * over PGlite.
  */
 export async function upsertSubscription(
   db: Db,
@@ -64,7 +87,20 @@ export async function upsertSubscription(
     p256dh: string;
     auth: string;
   },
-): Promise<{ stored: boolean }> {
+): Promise<{ stored: boolean; inserted: boolean }> {
+  // The insert-vs-update pre-read (the fallback the header explains) —
+  // BEFORE the upsert, so its answer is about the world the write lands
+  // in. `sql` rather than `and(eq, eq)`: @miolos/db re-exports only `eq`
+  // and `sql` (the dismissPushPrompt spelling).
+  const held = await db
+    .select({ endpoint: pushSubscriptions.endpoint })
+    .from(pushSubscriptions)
+    .where(
+      sql`${pushSubscriptions.endpoint} = ${init.endpoint}
+            and ${pushSubscriptions.userId} = ${init.userId}::uuid`,
+    )
+    .limit(1);
+
   // The select list's column order is the TABLE's (drizzle builds the
   // INSERT column list from the table object): endpoint, user_id, p256dh,
   // auth, created_at. `now()` written out — INSERT … SELECT has no DEFAULT
@@ -102,7 +138,8 @@ export async function upsertSubscription(
       },
     })
     .returning();
-  return { stored: inserted.length > 0 };
+  const stored = inserted.length > 0;
+  return { stored, inserted: stored && held.length === 0 };
 }
 
 /**
