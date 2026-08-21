@@ -870,6 +870,15 @@ export const messages = {
         "A conta anônima e o seu histórico de jogos — quais puzzles você concluiu e quando. É disso que a sequência é calculada. Puzzles antigos concluídos pelo arquivo são registrados do mesmo jeito, e ficam de fora da sequência.",
       email:
         "O seu e-mail, somente se você escolher vinculá-lo. Ninguém precisa vincular e-mail para jogar.",
+      // COMMAS, NOT EM DASHES, in the sentence below. `impeccable detect`
+      // reported `em-dash-overuse` (advisory) on this page at BOTH
+      // viewports the first time this line shipped: the block was at six
+      // and the two dashes here took the page to eight, which is the
+      // detector's saturation threshold. Em-dash saturation is a named AI
+      // cadence tell, and this is the one page whose whole value is
+      // reading as though a person wrote it. Anything added here counts
+      // against that budget.
+      //
       // #33 (ADR-0069): the measurements are now recorded against the
       // anonymous account and processed OUTSIDE Brazil, which is data
       // about the user by this block's own criterion — the page states
@@ -888,7 +897,7 @@ export const messages = {
       // `docs/pending-fernando.md` (SOON), for #37's LGPD review
       // (ADR-0012).
       telemetry:
-        "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima — nunca ao seu e-mail — e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
+        "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
       // #30 (ADR-0052): a `medal_grants` row is operator-written data
       // about the user, so the inventory names it the release it ships —
       // the page states EXACTLY what this release ships (this block's own
