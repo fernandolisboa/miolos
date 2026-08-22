@@ -13,8 +13,8 @@ import {
 } from "../../src/termo/word-list";
 
 // ADR-0015 harness: proves the reviewed word list's invariants against the
-// real content/termo artifacts on every test run. This gate is what allows
-// #27 to trust @miolos/games/termo as the sole ingestion path for the list.
+// real content/termo artifacts on every test run, so the rest of the repo
+// can trust @miolos/games/termo as the sole ingestion path for the list.
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(testDir, "..", "..", "..", "..");
@@ -22,7 +22,7 @@ const contentDir = join(repoRoot, "content", "termo");
 const gamesDir = join(testDir, "..", "..");
 
 const ANSWER_COUNT = 400;
-const VALIDATION_COUNT = 5408; // 5310 from the IME-USP lexicon + 98 curated additions (#140, ADR-0062)
+const VALIDATION_COUNT = 5408; // 5310 from the IME-USP lexicon + 98 curated additions (ADR-0062)
 const NORMALIZED_SHAPE = /^[a-z]{5}$/;
 
 function readLines(file: string): string[] {
@@ -144,8 +144,9 @@ describe("termo word-list harness (ADR-0015)", () => {
   });
 
   it("TERMO_ANSWERS preserves answers.csv row order", () => {
-    // The order is contractual: #27's server-side seeded pick (ADR-0010)
-    // indexes into TERMO_ANSWERS; reordering is a breaking change.
+    // Order is contractual because the harness pins this array against
+    // answers.csv row by row. The daily draw does NOT index it — it filters
+    // used answers out and draws uniformly (see word-list.ts).
     const rows = readAnswersCsv();
     expect(TERMO_ANSWERS).toHaveLength(rows.length);
     expect(TERMO_ANSWERS.map((a) => ({ ...a }))).toEqual(rows);
@@ -173,7 +174,7 @@ describe("termo word-list harness (ADR-0015)", () => {
   });
 
   it("every additions.txt canonical is shaped, sorted, unique, and guessable through the shipped predicate", () => {
-    // Pins the curated-additions artifact (#140, ADR-0062) to the runtime:
+    // Pins the curated-additions artifact (ADR-0062) to the runtime:
     // pipeline.py enforces the same shape at generation time, but nothing on
     // that side can see the shipped dictionary. Sort order is the pipeline's
     // (normalized form, then canonical) — additions.txt carries accented

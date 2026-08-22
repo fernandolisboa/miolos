@@ -27,8 +27,8 @@ export const SUDOKU_MAX_GENERATION_ATTEMPTS = 1200;
  * default cap and the shipped criteria tables this error is practically
  * unreachable (measured: residual risk ≈ 5e-7 per seed for tier 5, lower for
  * the rest); it signals a generation bug or hand-rolled impossible criteria.
- * Pipeline #17 must catch it and alert — never publish a fallback puzzle
- * silently.
+ * The publishing pipeline must catch it and alert — never publish a
+ * fallback puzzle silently.
  */
 export class SudokuGenerationError extends Error {
   /** The normalized (uint32) base seed generation started from. */
@@ -124,7 +124,7 @@ function tryGenerate(
  * grid fill + repeated counting + grading): never derive them from
  * untrusted input — near-impossible-but-valid criteria under a huge cap is
  * an arbitrarily long synchronous loop (same duty as the Binairo grid-size
- * bound; downstream note for #23/#17).
+ * bound).
  */
 export function generateSudoku(options: {
   readonly seed: number;

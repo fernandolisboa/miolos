@@ -20,9 +20,9 @@ export const SUDOKU_TIER_CRITERIA: Readonly<
 
 /**
  * Weekday (ISO 8601, 1 = Monday … 7 = Sunday) → approval criteria, easiest
- * Monday → hardest Sunday (spec #18 ramp: tiers 1,2,2,3,3,4,5). Consumed by
- * pipeline #17, which maps America/Sao_Paulo dates to weekday numbers —
- * this package only ever sees the pure number.
+ * Monday → hardest Sunday (ramp: tiers 1,2,2,3,3,4,5). Consumed by the
+ * publishing pipeline, which maps America/Sao_Paulo dates to weekday
+ * numbers — this package only ever sees the pure number.
  */
 export const SUDOKU_WEEKDAY_CRITERIA: Readonly<
   Record<Weekday, SudokuApprovalCriteria>

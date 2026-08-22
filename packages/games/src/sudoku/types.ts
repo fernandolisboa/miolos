@@ -21,8 +21,8 @@ export interface SudokuPuzzle {
   readonly givens: SudokuGrid;
   /**
    * The unique full solution. NOTE (ADR-0004, downstream duty): the engine
-   * always carries the solution — the API layer (#23) must never serialize
-   * it into a client response for the daily.
+   * always carries the solution — the API layer must never serialize it
+   * into a client response for the daily.
    */
   readonly solution: SudokuGrid;
   /** Grade actually achieved; equals the criteria's tier by construction. */

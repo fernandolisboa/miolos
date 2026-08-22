@@ -20,7 +20,7 @@ Issue #23 makes the deferral untenable, for two independent reasons.
 reachable: a given must still be selectable, because a caret that skips
 givens jumps unpredictably across the grid. Tabbing past 81 stops to
 reach the keypad is materially worse than Binairo's 24–48 (64 cells
-minus that weekday's 16–40 givens, `packages/games/src/binairo/validate.ts:26-32`).
+minus that weekday's 16–40 givens, `BINAIRO_WEEKDAY_CRITERIA` in `packages/games/src/binairo/validate.ts`).
 #25's Nonogram is ≥15×15 — 225 — and #28's free play inherits whatever
 this ticket decides, so the number only grows.
 

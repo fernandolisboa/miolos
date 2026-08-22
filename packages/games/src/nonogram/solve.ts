@@ -11,14 +11,11 @@ export interface LineSolveResult {
 }
 
 /**
- * Per-line deduction (plan §3.2): classic reachability DP over
+ * Per-line deduction: classic reachability DP over
  * (cell index, run index). Computes, across ALL placements of `runs`
  * consistent with the current `states`, which cells are forced filled,
  * forced empty, or stay unknown. Forced-cells-only — the solver never
  * guesses. O(n²·m) worst case; trivial at n <= 15.
- *
- * Internal seam, exported for unit tests and future hint machinery; not part
- * of the public barrel.
  */
 export function solveLine(
   states: ReadonlyArray<NonogramCellState>,
@@ -183,7 +180,7 @@ export function isWellFormedClues(clues: NonogramClues): boolean {
 }
 
 /**
- * Full-grid fixpoint (plan §3.2): rows 0..n-1 then columns 0..n-1 per sweep,
+ * Full-grid fixpoint: rows 0..n-1 then columns 0..n-1 per sweep,
  * Gauss–Seidel style (deductions visible immediately within the sweep;
  * deterministic because the order is fixed), with dirty-line skipping. Ends
  * "solved" when no unknowns remain, "stuck" at a fixpoint with unknowns,
@@ -309,7 +306,7 @@ export function solveNonogram(clues: NonogramClues): NonogramSolveResult {
 }
 
 /**
- * Mechanical human-effort proxy (plan §3.2): more propagation sweeps and a
+ * Mechanical human-effort proxy: more propagation sweeps and a
  * thinner first-pass fill both mean more work. Higher = harder.
  */
 export function effortScore(result: NonogramSolveResult): number {

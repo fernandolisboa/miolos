@@ -1,7 +1,6 @@
 // Private solving machinery: mutable solver state, incremental placement
 // legality, and the tiered technique fixpoint that doubles as the
-// difficulty instrument (plan §3.4). Nothing here is exported from the
-// public barrel.
+// difficulty instrument. Nothing here is exported from the public barrel.
 
 import { cellAt, intAt, setCellAt, sideLength, toCellStates } from "./internal";
 import type { CellState } from "./internal";
@@ -220,7 +219,7 @@ function flip(value: 0 | 1): 0 | 1 {
 }
 
 /**
- * Tier 1, one full scan in fixed order (plan §3.4): windows (T1a surround
+ * Tier 1, one full scan in fixed order: windows (T1a surround
  * pair, T1b split pair) over rows then columns in index order, cells
  * left-to-right/top-to-bottom, then T1c count saturation over rows then
  * columns. Deductions are monotone, so the fixpoint is order-independent;
@@ -289,10 +288,9 @@ function applyTier1(state: SolverState): RuleOutcome {
 }
 
 /**
- * Tier 2, first applicable deduction in fixed order (plan §3.4):
- * T2a line lookahead (balance forcing), then T2b duplicate-line
- * avoidance. Returns after one deduction so the cheaper tier-1 rules
- * re-run first.
+ * Tier 2, first applicable deduction in fixed order: T2a line lookahead
+ * (balance forcing), then T2b duplicate-line avoidance. Returns after one
+ * deduction so the cheaper tier-1 rules re-run first.
  */
 function applyTier2(state: SolverState): RuleOutcome {
   const { n, cells } = state;
@@ -372,8 +370,8 @@ function applyTier2(state: SolverState): RuleOutcome {
 }
 
 /**
- * Propagate technique deductions to fixpoint, tiers 1..maxTier, in the
- * fixed order of plan §3.4. Returns false on contradiction.
+ * Propagate technique deductions to fixpoint, tiers 1..maxTier, in fixed
+ * order. Returns false on contradiction.
  */
 export function propagate(state: SolverState, maxTier: 1 | 2): boolean {
   for (;;) {

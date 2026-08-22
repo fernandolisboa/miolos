@@ -79,7 +79,7 @@ describe("countBinairoSolutions / solveBinairo (4×4 fixtures)", () => {
   });
 
   it("(d) enforces rule 4: a puzzle unique only because of unique lines", () => {
-    // Hand-verified rule-4 witness (from the reviewed plan):
+    // Hand-verified rule-4 witness:
     //   0 0 1 1
     //   1 1 0 0
     //   0 . 1 .

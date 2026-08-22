@@ -10,23 +10,18 @@ export const MIN_POOL = 14;
 
 /**
  * Effort thresholds splitting each shared size class into its easy/hard
- * weekday bands, half-open: easy = [0, T), hard = [T, ∞). Calibrated from
- * the measured effort distribution of the authored library (plan §1): the
- * threshold nearest the class median such that both sides keep >= MIN_POOL
- * effective entries, placed strictly inside a gap between two observed
- * scores so the partition is stable. Values recorded in ADR-0021:
- * T8 in (2.15625, 2.1875) -> 37 easy / 40 hard;
- * T10 in (2.18, 2.2) -> 32 easy / 35 hard;
- * T15 in (3.1155..., 3.1244...) -> 35 easy / 36 hard.
+ * weekday bands, half-open: easy = [0, T), hard = [T, ∞).
  */
+// T8/T10/T15 and MIN_POOL above are calibrated against the authored
+// library, not derived — see ADR-0021.
 export const T8 = 2.17;
 export const T10 = 2.19;
 export const T15 = 3.12;
 
 /**
- * The weekday difficulty ramp (plan §1), ISO keyed: Monday = 1 (easiest,
- * whole 5×5 class) → Sunday = 7 (hardest, 15×15 hard band). Size is the
- * dominant axis; within a shared class the effort band orders the days.
+ * The weekday difficulty ramp, ISO keyed: Monday = 1 (easiest, whole 5×5
+ * class) → Sunday = 7 (hardest, 15×15 hard band). Size is the dominant
+ * axis; within a shared class the effort band orders the days.
  */
 export const NONOGRAM_WEEKDAY_CRITERIA: Readonly<
   Record<Weekday, NonogramApprovalCriteria>
@@ -40,8 +35,10 @@ export const NONOGRAM_WEEKDAY_CRITERIA: Readonly<
   7: { size: 15, minEffort: T15, maxEffort: Number.POSITIVE_INFINITY },
 };
 
-/** Reverse each row. The only transform (plan §3.4): a mirrored anchor is
- * still an anchor; rotations and vertical flips destroy recognizability. */
+/**
+ * Reverse each row — the only transform: a mirrored anchor is still an
+ * anchor; rotations and vertical flips destroy recognizability.
+ */
 export function mirrorH(solution: NonogramSolution): NonogramSolution {
   return solution.map((row) => [...row].reverse());
 }

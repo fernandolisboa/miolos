@@ -14,12 +14,7 @@ export interface BinairoApprovalCriteria {
   readonly maxGivens: number;
 }
 
-/**
- * Weekday → approval criteria, ISO 8601 numbering (Monday = 1 … Sunday = 7).
- * The ramp shape is fixed and asserted by tests: givens bands monotonically
- * non-increasing Monday→Sunday, tiers non-decreasing, tier 3 never allowed.
- * Exported for the publishing cron (#17).
- */
+/** Weekday → approval criteria, ISO 8601 numbering (Monday = 1 … Sunday = 7). */
 export const BINAIRO_WEEKDAY_CRITERIA: Readonly<
   Record<Weekday, BinairoApprovalCriteria>
 > = {
@@ -55,12 +50,11 @@ export type BinairoValidationResult =
     };
 
 /**
- * The approval gate #17's publishing cron calls. Fixed to the daily 8×8.
- * Collects every applicable rejection reason; approves only a uniquely
- * solvable puzzle inside the weekday's tier and givens bands. Tier 3
- * (guessing) always rejects as too-hard. Throws a RangeError when
- * `weekday` is outside 1..7 at runtime (untyped boundaries) — Zod parsing
- * at the #17 boundary remains the caller's duty.
+ * Fixed to the daily 8×8. Collects every applicable rejection reason;
+ * approves only a uniquely solvable puzzle inside the weekday's tier and
+ * givens bands. Tier 3 (guessing) always rejects as too-hard. Throws a
+ * RangeError when `weekday` is outside 1..7 at runtime (untyped
+ * boundaries) — Zod parsing at the boundary remains the caller's duty.
  */
 export function validateBinairo(
   candidate: {

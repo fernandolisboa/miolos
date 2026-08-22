@@ -28,7 +28,6 @@ export class BinairoGenerationError extends Error {
   }
 }
 
-/** Backtracking full-grid construction (plan §3.2), driven only by `rng`. */
 function buildSolvedGrid(rng: SeededRandom): BinairoSolvedGrid {
   const state = emptyState(BINAIRO_SIZE);
   if (!fillFrom(state, 0, rng)) {
@@ -91,7 +90,6 @@ export function generateBinairo(options: {
     attempt <= BINAIRO_MAX_GENERATION_ATTEMPTS;
     attempt += 1
   ) {
-    // Derived sub-seed: a pure deterministic sequence from the base seed.
     const subSeed = Math.floor(seedRng.next() * 0x100000000);
     const rng = createSeededRandom(subSeed);
 
