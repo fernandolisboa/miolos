@@ -14,6 +14,8 @@
 
 **Amended by:** [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) (#64) — **(i), continuing the series, at TWO loci under the one letter** (ADR-0065 annotation (f)'s explicit precedent). Locus 1, decision 2: the *"no puzzle content of any kind"* clause narrows — a **completed Nonogram** claim carries an optional `motifName`, which is curated daily content and is post-completion by construction, so the ADR-0004 register stays product rather than confidentiality. Locus 2, decision 3's not-merged list: applying annotation (c)'s rule, and recording that #64 carves **nothing** out of it — `motifName` is not a device fact, has no device counterpart, and `entryFromMerge` never blends it, so the list stands literally true. Decision 5's poll clause is untouched: #64's refresh nudge is one-shot and event-driven, not a second interval. Annotated in place; nothing deleted; references qualify the letter ("annotation (i)").
 
+**Amended by:** [ADR-0072](./0072-the-day-truth-store-repairs-after-the-mint-rather-than-waiting-for-it.md) (#195) — **(j) and (k), continuing the series; (j) is decision-level.** Annotation (j), decision 5: its trigger list is closed (*"NOTHING ELSE."* in the module header) and gains a sixth entry — **one post-mint repair per page load**, fired when a fetch answers `undefined` while the store has never held a server truth. Nothing is deleted: *"all deduped by an in-flight guard"* and annotation (a)'s *"every tick goes through the same in-flight guard, so a slow answer is never stacked on"* are re-affirmed, because the guard is set synchronously and held for exactly one `GET /day` as before. Annotation (k), consequence (a): the hub's credentialed-GET count was **three** and is **four**, with a cold-load fifth — the consequence's own closing sentence is *"so the count has to be right"*. Annotated in place; nothing deleted; references qualify the letter ("annotation (j)").
+
 [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 10 and [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) decision 1 are **obeyed, not amended**, and this ADR says so in those words because a reviewer will ask about both. Decision 10 layer 3 is additionally **cited** by decision 8, as the precedent that makes a playable board behind a done tile acceptable; citing is not amending.
 
 ## Context
@@ -255,6 +257,32 @@ in the app that can **demote**.
    `apps/web/test/day-truth.test.tsx`, which replace the "installs NO
    interval" arm that lived under `T-WEB-S235`.)*
 
+   *(**Annotation (j) — decision-level, amended by [ADR-0072](./0072-the-day-truth-store-repairs-after-the-mint-rather-than-waiting-for-it.md)
+   at #195.** The trigger list above is **closed** — the module header spells
+   it *"NOTHING ELSE."* — and gains a **sixth** entry: **one post-mint repair
+   per page load**. When a fetch answers `undefined` **while the store has
+   never held a server truth on this page load**, the store awaits
+   `ensureSession()` once and refreshes once more. It exists because the store
+   is the eighth reader of the authenticated surface and the only one #149 did
+   not order against the session mint, so on a re-mint load its `GET /day`
+   raced `POST /session` into the 401 branch and the cross-device half of the
+   hub read as pending for that whole load.
+   **Nothing above is deleted or weakened.** *"All deduped by an in-flight
+   guard"* and annotation (a)'s *"every tick goes through the same in-flight
+   guard, so a slow answer is never stacked on"* are **re-affirmed**: the
+   guard is still set synchronously and still held for exactly one `GET /day`,
+   because the mint is awaited **after** the guard is released and never
+   under it — ADR-0072 decision 3's rule, *the guard is held across exactly
+   the one `GET /day` it exists to dedupe, and nothing else is ever awaited
+   under it*, which is what disqualified simply ordering the fetch
+   (`ensureSession()` has no timeout). The repair is a **bounded one-shot
+   retry keyed on the store's own empty answer** — not a second interval, and
+   not an external event either, which is where it differs from annotation
+   (i)'s #64 nudge. So this decision's no-second-loop claim and annotation
+   (a)'s bounded-poll clause both stand exactly as written. Asserted as
+   `T-WEB-S344`–`T-WEB-S346` in
+   `apps/web/test/day-truth-mint-repair.test.tsx`.)*
+
 6. **Every failure degrades to the local reader, and play never blocks on this
    fetch.** `NEXT_PUBLIC_API_URL` unset (loudly, as the sibling clients do),
    any non-2xx including 401, a network rejection and a parse failure all
@@ -357,6 +385,24 @@ in the app that can **demote**.
   per minute — decision 5's annotation (a). Whether these collapse into one hub
   read is ADR-0051 decision 3's trigger, which is sized against this count — so
   the count has to be right — and it is not pre-empted here.
+
+  *(**Annotation (k) — amended by [ADR-0072](./0072-the-day-truth-store-repairs-after-the-mint-rather-than-waiting-for-it.md)
+  at #195.** The count was wrong, and this consequence's own closing sentence
+  is why that matters. **The hub makes FOUR unconditional credentialed GETs on
+  a normal warm view** — `/streak`, `/day`, `/attach/state` and
+  **`/onboarding/state`**, whose `<HubOnboarding />` island (#35, ADR-0061)
+  postdates this ADR and was missing from the list — **five** once Termo is
+  done and `TermoDoneLink` fetches `/stats`. Re-derived from
+  `apps/web/app/page.tsx`'s islands rather than from this paragraph, which is
+  the discipline #195 exists to record: `<HubProgress />` and
+  `<HubCardAction />` share the one `/day` through the store; `<HubStreak />`,
+  `<HubAttach />` and `<HubOnboarding />` are one unconditional mount effect
+  each. `usePushState` (#145, ADR-0064) is **not** on this list — it mounts on
+  a conclusion surface, not the hub. **And #195 adds a cold-load fifth**: on a
+  load whose `/day` answers empty while the store holds no truth, the
+  post-mint repair (annotation (j)) spends **one extra `GET /day`**, once per
+  page load, ever. The recurring poll term from annotation (a) is unchanged,
+  and ADR-0051 decision 3's collapse trigger is still not pre-empted.)*
 - **(b) A cross-device done tile carries no time.** The payload publishes no
   duration, so the tile renders the chip-only shape the hub already ships for
   a won Termo. A time this device did not measure is not this device's to

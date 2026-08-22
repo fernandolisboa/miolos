@@ -26,7 +26,7 @@ Three sets of files are frozen point-in-time records that are still cited, so th
 
 ## Where plans and handoffs went
 
-`docs/plans/` (44 files), `docs/evidence/` (60 files) and 22 of the 23 handoffs were deleted in the process reset. They were point-in-time snapshots of finished work, and keeping them cost more than they returned: 45% of this repo's merged PRs touched no code at all.
+`docs/plans/` (45 files), `docs/evidence/` (60 files) and 22 of the 23 handoffs were deleted in the process reset. They were point-in-time snapshots of finished work, and keeping them cost more than they returned: 45% of this repo's merged PRs touched no code at all.
 
 Nothing is lost — every one of them is in git history, reachable at the commit before the reset:
 

@@ -24,7 +24,7 @@ Fernando's call, 2026-08-22: the ceremony goes, the review does not.
 
 2. **Code review is never skipped.** Any change touching production code gets at least one reviewer. This is the one thing the light rows do not drop. Feature-row changes get four parallel lenses — correctness, security, design, invariants — down from six; performance is added conditionally, and issue-adherence folds into correctness.
 
-3. **Plans, handoffs and evidence are not committed.** A plan is a comment on its issue; session state is `NEXT-SESSION.md`, overwritten; verification output is the PR body. `docs/plans/` (44 files), `docs/evidence/` (60 files) and 22 of 23 handoffs are deleted — 36,262 lines. Git history keeps them.
+3. **Plans, handoffs and evidence are not committed.** A plan is a comment on its issue; session state is `NEXT-SESSION.md`, overwritten; verification output is the PR body. `docs/plans/` (45 files), `docs/evidence/` (60 files) and 22 of 23 handoffs are deleted — 37,260 lines. Git history keeps them.
 
 4. **Comments are rare.** One exists only where the code is genuinely hard to follow, and then it says what it does *and* why it must be that complicated; plus invariants no test covers, security arguments, runtime workarounds, and `TODO`s with issue numbers. Rationale goes in an ADR, cited as `// see ADR-NNNN`. `/*#__PURE__*/` and `eslint-disable` directives are not comments and are never stripped.
 
