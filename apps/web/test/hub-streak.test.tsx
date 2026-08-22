@@ -8,6 +8,26 @@ import { messages } from "../src/i18n";
 // client-fetched, zero-state first. Every assertion goes through the
 // messages module — never string literals.
 
+// `ensureSession` is stubbed by SPREADING the real module (the
+// `hub-onboarding.test.tsx` discipline); the ORDERING itself is proved in
+// `mount-mint-order.test.tsx` (T-WEB-S340), and this suite is about the wire.
+//
+// It is stubbed rather than left real for a reason worth keeping: since #149
+// `useStreak` awaits the mint, and `ensureSession` caches a MODULE-LEVEL
+// fire-once promise. The first case below installs a `fetch` that never
+// settles, which is right for what it asserts — but with the real bootstrap
+// that unsettled `POST /session` becomes the cached promise for the whole
+// FILE, and every later case awaits a mint that can no longer resolve. One
+// page load is the singleton's real scope; a test file is five.
+const bootstrapMock = vi.hoisted(() => ({
+  ensureSession: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+}));
+vi.mock("../src/session/bootstrap", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/session/bootstrap")>();
+  return { ...actual, ensureSession: bootstrapMock.ensureSession };
+});
+
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
 }

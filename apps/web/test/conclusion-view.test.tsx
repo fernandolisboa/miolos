@@ -28,6 +28,30 @@ const sync = vi.hoisted(() => ({
 }));
 vi.mock("../src/play/sync", () => sync);
 
+// `ensureSession` is stubbed by SPREADING the real module (the
+// `hub-onboarding.test.tsx` discipline). Since #149 the streak and stats
+// reads await the mint, and `ensureSession` caches a MODULE-LEVEL fire-once
+// promise — one page load is that singleton's real scope, and a test file is
+// fifty-four.
+//
+// PRECISION, because the honest version is weaker than it first looks and a
+// reviewer measured it: this file passes 54/54 WITHOUT the mock today. Its
+// `beforeEach` installs a settling 401 stub, so the first mount caches a
+// RESOLVED `pending` before any of the deferred-fetch cases below runs. What
+// the mock buys is proofing against a reorder — put one of those deferred
+// cases first and the whole file would await a mint that never resolves,
+// which is exactly what happened in `hub-streak.test.tsx`, where the same
+// mock IS load-bearing (4 tests red without it). The ORDERING itself is
+// proved in `mount-mint-order.test.tsx` (T-WEB-S340/S342), not here.
+const bootstrapMock = vi.hoisted(() => ({
+  ensureSession: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+}));
+vi.mock("../src/session/bootstrap", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/session/bootstrap")>();
+  return { ...actual, ensureSession: bootstrapMock.ensureSession };
+});
+
 const DATE = "2026-07-30";
 const ELAPSED_MS = 407_000;
 const ELAPSED = formatElapsed(ELAPSED_MS);
@@ -1393,7 +1417,7 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
     return container.querySelector("[data-streak-state]");
   }
 
-  it("stays absent while the day is not on the server, and the fetch never fires", () => {
+  it("stays absent while the day is not on the server, and the fetch never fires", async () => {
     for (const syncOutcome of ["pending", "rejected"] as const) {
       window.localStorage.clear();
       writePlayRecord(concluded({ syncOutcome, pendingSync: true }));
@@ -1405,6 +1429,14 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
           copy={messages.games.binairo.conclusion}
         />,
       );
+
+      // KEPT HONEST AT #149: the streak read now follows the mint, so it
+      // lands a microtask after render and a bare synchronous "it did not
+      // fire" would pass for free. Drain to a macrotask first, so the read
+      // has had every chance the resolved path gives it. The claim itself is
+      // unchanged and structural — the gate is the card's MOUNT, and the card
+      // is null below, so the hook never runs at all.
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // The offline answer by construction: no card, no fake zero — and the
       // ordering half of the assertion: the STREAK fetch is gated behind the
@@ -1452,8 +1484,19 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
     // pending/rejected case above, where it may not) — StrictMode double
     // effects would make this 2 identical calls, so the assertion is on
     // "fired", not a count.
-    expect(fetchMock).toHaveBeenCalledWith("https://api.example.test/streak", {
-      credentials: "include",
+    //
+    // AWAITED SINCE #149, where it was a bare synchronous expect: the read
+    // now follows the mint, so it lands a microtask after render rather than
+    // inside it. The claim is unchanged — the assertion is still that this
+    // exact call happens, and the pending/rejected case above still proves it
+    // does NOT when the gate stays shut.
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api.example.test/streak",
+        {
+          credentials: "include",
+        },
+      );
     });
     // The PlaySkeleton discipline: the box is reserved, the values are
     // blank, and the unresolved card says nothing to a screen reader.

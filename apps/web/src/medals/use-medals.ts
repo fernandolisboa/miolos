@@ -3,6 +3,7 @@
 import type { MedalsResponse } from "@miolos/core";
 import { useEffect, useState } from "react";
 
+import { ensureSession } from "../session/bootstrap";
 import { fetchMedals } from "./medals-client";
 
 /**
@@ -35,11 +36,22 @@ export function useMedals(): MedalsResponse | null | undefined {
     // out-of-order resolutions harmless: the duplicate GET is idempotent
     // and cheap, and only the live effect's answer lands.
     let cancelled = false;
-    void fetchMedals().then((response) => {
-      if (!cancelled) {
-        setValue(response ?? null);
-      }
-    });
+    // THE MINT FIRST (#149) — the ordering and its full reasoning are in
+    // `attach/use-attach-state.ts`. On a re-mint load the 401 branch leaves
+    // the medals section empty for the whole load, which is indistinguishable
+    // from having earned nothing. Awaiting buys ORDERING, never identity.
+    void ensureSession()
+      .then(() => fetchMedals())
+      .then((response) => {
+        if (!cancelled) {
+          setValue(response ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setValue(null);
+        }
+      });
     return () => {
       cancelled = true;
     };

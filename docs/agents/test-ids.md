@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S89` | `S87` | `T-DB-21` |
 | `T-API` | `S182` | `S179` | `T-API-16` |
-| `T-WEB` | `S339` | `S336` | `T-WEB-23` |
+| `T-WEB` | `S344` | `S342` | `T-WEB-23` |
 | `T-LINT` | `S56` | `S54` | `T-LINT-10` |
 
 #64 (plan 066) reserved **`T-CORE S112…S115`, `T-DB S85…S88`,
@@ -93,6 +93,30 @@ precedent rather than a shortage. Frontier above re-derived by the documented
 grep against the merged tree, not read off this paragraph. No `T-CORE`,
 `T-DB` or `T-API` id was reserved or spent: `git diff main --stat --
 packages apps/api` came out empty, as the exit criteria require.
+
+#149 (Tier 1, no plan) reserved **`T-WEB-S339…S343`** — four planned plus one
+tail of review-round headroom, no `T-CORE`, `T-DB`, `T-API` or `T-LINT` id
+([the reservation](https://github.com/fernandolisboa/miolos/issues/149#issuecomment-5379014119),
+posted on the issue before step 5, with the frontier re-derived by the
+documented grep, which agreed with this table in both columns:
+`T-WEB` next free `S339`, highest in use `S336`). It spent
+**`T-WEB-S339…S342`** in the new `apps/web/test/mount-mint-order.test.tsx` —
+one suite per hook proving that `useAttachState`, `useStreak`, `useMedals`
+and the `useStats`/`useStatsCalendar` pair issue no read until
+`ensureSession()` resolves. `S342` deliberately carries **two hooks in one
+claim**: `use-stats-calendar.ts` is `use-stats.ts`'s twin over the same
+client module and its own doc block says so, and the single correctness
+reviewer's mutations red it through either half.
+
+The tail **`T-WEB-S343` went unspent and is burned** in the table below. It
+was live headroom through the review round and the round did not need it: the
+reviewer's five mutations found two gaps, and **both are unbindable rather
+than untested** — nothing observable distinguishes a hook that drops its
+`cancelled` flag under React 18+, and the `.catch` arms are unreachable
+through the shipped clients, which are total. Neither is a claim a new id
+could carry, so the tail burns rather than being spent on a test that would
+be green by construction. The two records fixes the round did ask for —
+this paragraph and a reworded mock comment — carry no id at all.
 
 **And one landed row's description drifts under #104, flagged here rather
 than silently left.** `T-WEB-S204` is described below as *"there is no ninth
@@ -251,6 +275,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-WEB-S228` | tail of plan 049's `T-WEB` range — #114's reserved review-round headroom, unspent at step 7's exit. Step 7 added assertions to `fanout-cap.test.ts` (the trailing-comment non-vacuity probe and the workflow-shape guard) **inside `T-WEB-S226`'s `describe`**, which is the same claim about the same gate — the `T-WEB-S100` burn precedent — so the tail was never needed |
 | `T-DB-S61`, `T-API-S116` | tails of plan 056's ranges — #83's reserved review-round headroom, unspent at step 7's exit. **The `T-CORE` and `T-WEB` tails are NOT here**: `T-CORE-S96`/`S97` and `T-WEB-S246` were spent at step 7 on the review's MAJOR-1 and MINOR-2, which is the case plan 040's `T-LINT-S45` row already sets |
 | `T-WEB-S337`, `T-WEB-S338`, `T-LINT-S55` | tails of plan 068's ranges — #104's reserved review-round headroom, unspent at step 7's exit (PR #190). Six step-6 lenses returned four REJECTs, and **every test change they caused widened a landed id in place**: `T-WEB-S201`'s reader-property scan (its regex needed a literal dot, so a reviewer's mutation leaking `days[0].game` into the caption passed it) and `T-WEB-S173`'s literal scan (anchored on the first occurrence of `generateMetadata`, which lands inside a doc comment, so it was policing ~4490 characters of mostly English). Same claim, same gate, no new id — the `T-WEB-S100` precedent |
+| `T-WEB-S343` | tail of the issue-#149 on-issue reservation — the reserved review-round headroom, unspent at the correctness review's exit. The round's two coverage gaps are **unbindable, not untested**: under React 18+ nothing observable distinguishes a hook that drops its `cancelled` flag, and the four `.catch` arms are unreachable through the shipped clients. An id spent on either would name a test that is green by construction, which is the opposite of what an id is for |
 | `T-WEB-S256` | tail of the issue-#35 on-issue reservation — #35's reserved review-round headroom, unspent at step 7's exit (#150). The step-7 round widened `T-DB-S63` in place and took no new id — the `T-WEB-S100` burn precedent |
 | `T-API-S134…S136` | tails of the issue-#142 on-issue reservation — the reserved review-round headroom, unspent at step 5's exit. A step-6/7 round that spends one removes it from this table (the plan-040 `T-LINT-S45` case) — which is exactly what happened to `T-WEB-S282`: burned here at step 5's exit, removed and **spent at step 7** on the remote view's ADR-0043 decision-10 announcer (`remote-conclusion.test.tsx`) |
 | `T-CORE-S6` | **predates #27.** Plan 018 reserved it for `completion-contract.test.ts` (`docs/plans/018-…:1376`); the assertion landed unmarked. Recorded here so the next re-derivation does not spend a pass re-investigating the gap |
