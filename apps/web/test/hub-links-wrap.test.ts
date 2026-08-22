@@ -8,8 +8,8 @@ import { bodyOf, decl, stylesheet } from "./css-source";
  * `.secondaryLinks` is a flex row, and flex rows do not wrap by default.
  * With the fifth link (#158's Termos de Uso) its min-content width exceeds
  * 390px minus the page padding, so the first and last links clip at the
- * viewport edges ("quivo", "Termos" cut — measured in a real browser for
- * the evidence in `docs/evidence/162-onboarding-band/`; jsdom implements
+ * viewport edges ("quivo", "Termos" cut — measured in a real browser;
+ * jsdom implements
  * no layout, so what lives here is the tripwire on the declarations, the
  * `css-source.ts` idiom, comments already stripped by `stylesheet()`
  * (T-LINT-S37's rule). The CI impeccable scan cannot catch it because the

@@ -1,6 +1,8 @@
 # ADR-0058 — Implementation flows are tiered
 
-**Status:** Accepted — 2026-08-19 (no issue — Tier 0/1 change, shipped in #127)
+**Status:** Superseded — 2026-08-22
+
+**Superseded by:** [ADR-0074](./0074-process-scales-to-the-work-and-comments-are-rare.md) — the tiers were right in diagnosis and did not move the number they were introduced to move; zero-code PRs went from 40% to 60% after them.
 
 ## Context
 

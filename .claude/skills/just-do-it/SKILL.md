@@ -1,25 +1,27 @@
 ---
 name: just-do-it
-description: Tier 0 flow — ship a typo, a comment or doc correction, a dependency bump, a one-line test fix, or a records-only change (ADR status flip, docs/README.md row, test-id frontier update) with no ticket, no plan and no review agents. Use when the change is on CLAUDE.md's Tier 0 row and you are about to reach for the eight-step flow anyway.
+description: Records row — ship a doc edit, an ADR status flip, a test-id frontier update, a label or workflow tweak with no ticket, no plan and no review agents. Nothing under apps/ or packages/ may change. Use when the change is on CLAUDE.md's Records row and you are about to reach for a heavier flow anyway.
 ---
 
-# Tier 0 — Just do it
+# Records — just do it
 
 One agent, one branch, one PR. No ticket, no plan document, no ADR, no handoff, no review subagents. The mechanical gate is the whole defence, and it binds here exactly as it binds on a feature slice.
 
-Routing lives in `CLAUDE.md` § *Implementation flows are tiered*. Read the table there; it is not repeated here.
+Routing lives in `CLAUDE.md` § *Pick the flow, then work*. Read the table there; it is not repeated here.
 
-## 1. Confirm the tier
+## 1. Confirm the row
 
-Check the change against the Tier 0 row. It is a **closed list**, not a judgement call — if the change is not literally one of those things, it is not Tier 0.
+Check the change against the Records row. It is a **closed list**, not a judgement call — if the change is not literally one of those things, it is not a Records change.
 
-Three disqualifiers, any one of which ends Tier 0 immediately:
+Four disqualifiers, any one of which ends the Records row immediately:
+
+- It changes **any file under `apps/` or `packages/`** — including a comment-only edit. That is a Quick change and it owes a reviewer.
 
 - It needs a **decision** — anything you would want an ADR to record.
 - It adds or changes a **surface** — a route, an export, a contract, a schema, a user-visible string.
-- It changes **behaviour** anyone could observe at runtime. A dependency bump that changes behaviour is Tier 1 or 2, not a bump.
+- It changes **behaviour** anyone could observe at runtime. A dependency bump belongs on the Quick change row, never here.
 
-**If you find yourself writing a plan, you are in the wrong tier.** Stop, say so, and re-tier — Tier 1 if it is a defect, Tier 2 otherwise. Escalating costs nothing. Continuing at the wrong weight is the failure this tier exists to prevent.
+**If you find yourself writing a plan, you are in the wrong row.** Stop, say so, and re-route — Defect if it is a bug, Feature otherwise. Escalating costs nothing. Continuing at the wrong weight is the failure this row exists to prevent.
 
 ## 2. Branch
 
@@ -27,7 +29,7 @@ Three disqualifiers, any one of which ends Tier 0 immediately:
 
 ## 3. Change
 
-Make the change and nothing else. Tier 0's diff is small by definition, and an unrelated "while I'm here" edit is how a Tier 0 PR earns a Tier 2 review it will not get.
+Make the change and nothing else. A Records diff is small by definition, and an unrelated "while I'm here" edit is how it earns a review it will not get.
 
 ## 4. Gate
 
@@ -41,6 +43,6 @@ The body is three things, in this order:
 
 1. **What changed** — a sentence or two.
 2. **Gate output** — pasted, not summarised.
-3. **The tier claim** — `Tier 0` and the routing-table row it matches, in one line.
+3. **The row claim** — `Records` and why the change matches that row, in one line.
 
 Then merge on green. If the diff of process artifacts you produced is larger than the code diff, the tier was wrong — say so in the PR rather than hiding it.

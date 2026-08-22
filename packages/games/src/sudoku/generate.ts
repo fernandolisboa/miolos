@@ -14,9 +14,9 @@ import { sudokuCriteriaForWeekday } from "./criteria";
 import { validateCriteria } from "./validate";
 
 /**
- * Default attempt cap. Sized from the measured tier-5 attempt distribution
- * (docs/plans/011 §8.1: p99 = 404 attempts, ~1.2% per-attempt approval);
- * residual cap-hit probability ≈ (1 − 0.012)^1200 ≈ 5e-7 per seed.
+ * Default attempt cap. Sized from the measured tier-5 attempt distribution:
+ * p99 = 404 attempts, ~1.2% per-attempt approval, so the residual cap-hit
+ * probability is (1 − 0.012)^1200 ≈ 5e-7 per seed.
  */
 export const SUDOKU_MAX_GENERATION_ATTEMPTS = 1200;
 
@@ -63,7 +63,7 @@ interface GenerationCandidate {
 }
 
 /**
- * One generation attempt (docs/plans/011 §3.3): randomized full-grid fill,
+ * One generation attempt: randomized full-grid fill,
  * then single-pass grade-capped clue removal over a shuffled cell order.
  * A clue is removed only if the puzzle stays unique (counter early-exits
  * at 2) and its grade stays within the target tier — uniqueness and
