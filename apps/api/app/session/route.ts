@@ -25,9 +25,9 @@ export function OPTIONS(): Response {
 }
 
 /**
- * Mint-on-miss anonymous identity (issue #15, ADR-0022). No request body is
- * read — there is nothing to accept. That structural absence of any time or
- * identity input in the request path IS the AC-5 guarantee: timestamps
+ * Mint-on-miss anonymous identity (see ADR-0022). No request body is
+ * read — there is nothing to accept. That structural absence of any time
+ * or identity input in the request path is the guarantee: timestamps
  * exist only as DB column defaults, never as request-derived values.
  */
 export async function POST(request: NextRequest): Promise<Response> {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       process.env.WEB_ORIGIN,
     )
   ) {
-    // D13: no Set-Cookie, no DB write.
+    // Fail closed: no Set-Cookie, no DB write.
     return new Response(null, { status: 403 });
   }
   const db = getDb();
@@ -65,7 +65,7 @@ function sessionResponse(body: SessionResponse, token: string): Response {
   const response = Response.json(sessionResponseSchema.parse(body), {
     headers: corsHeaders({ credentials: true }),
   });
-  // Always re-set: the sliding 400-day window (D6) restarts on every visit.
+  // Always re-set: the sliding 400-day window restarts on every visit.
   response.headers.append("Set-Cookie", buildSessionCookie(token));
   return response;
 }

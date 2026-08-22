@@ -9,26 +9,21 @@ import { effectiveThreshold } from "../../src/publishing/service";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /buffer-depth — the monitoring read (issue #17 AC 3). Public:
- * depth is not sensitive (no content, no dates). Always 200 — the
- * scheduled poller reads `shallow`, never the HTTP status; cron exit
- * codes are explicitly not the signal. `threshold` is the effective one:
- * min(BUFFER_ALERT_THRESHOLD, configured depth) (plan 014 A3).
+ * GET /buffer-depth — the monitoring read. Public: depth is not sensitive
+ * (no content, no dates). Always 200 — the scheduled poller reads
+ * `shallow`, never the HTTP status.
  *
- * `shallow` is the OR ACROSS GAMES (plan 018 S16). The failure mode this
- * shape exists to prevent is specific and silent: reporting `depths.sudoku`
- * while deriving `shallow` from binairo alone would REPORT a drained sudoku
- * buffer and never PAGE on it, because
- * `.github/workflows/buffer-alert.yml` reads `jq -r .shallow` and nothing
- * else.
+ * `shallow` is the OR across games, not per-game. Reporting a drained
+ * buffer under `depths` while deriving `shallow` from a different game
+ * would silently never page, because `.github/workflows/buffer-alert.yml`
+ * reads only `jq -r .shallow`.
  */
 export async function GET(): Promise<Response> {
   const db = getDb();
   const config = await getRemoteConfig(db);
-  // Keyed in the cron's cost-ascending order (termo first) so this object
-  // and `/cron/publish`'s read the same way. The order is cosmetic here —
-  // these are four independent counts — and that is exactly why it should
-  // match rather than drift.
+  // Keyed in the same order as `/cron/publish`'s read. Cosmetic — these
+  // are four independent counts — which is exactly why it should match
+  // rather than drift.
   const depths = {
     termo: await bufferDepth(db, "termo"),
     binairo: await bufferDepth(db, "binairo"),

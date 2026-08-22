@@ -22,7 +22,6 @@ import { requireUserId } from "../../../src/session/service";
 // Never statically cached: every request stamps against the users table.
 export const dynamic = "force-dynamic";
 
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
@@ -35,13 +34,10 @@ export function OPTIONS(): Response {
 }
 
 /**
- * POST /attach/dismiss (#21, ADR-0050 decision 9): "agora não", stamped
- * server-side so the prompt's one lifecycle per account survives cleared
- * site data — the exact user the feature serves. The body is the STRICT
- * empty object: the client posts a literal `{}` and any key is a 400
- * (nothing smuggled through the boundary). Idempotent: the UPDATE is
- * guarded on `attach_prompt_dismissed_at IS NULL`, so a re-post touches
- * zero rows and never re-bumps `updated_at`.
+ * "Agora não" — a permanent decline, stamped server-side so it survives
+ * cleared site data (see ADR-0050 decision 9). The body must be a literal
+ * `{}`; any key is a 400. Idempotent: the UPDATE is guarded on
+ * `attach_prompt_dismissed_at IS NULL`, so a re-post touches zero rows.
  */
 export async function POST(request: NextRequest): Promise<Response> {
   warnIfGuardDegraded();

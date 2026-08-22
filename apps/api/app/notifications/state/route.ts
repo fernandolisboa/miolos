@@ -18,26 +18,16 @@ import { requireUserId } from "../../../src/session/service";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /notifications/state (#145, ADR-0064) — the authenticated-READ
- * template, cloned from GET /attach/state (its own conventions: no OPTIONS
- * — a credentialed GET with no custom header never preflights — no origin
- * guard, no-store on every branch, whole body caught, cheap suppressions
- * before the streak read). Serves ONE derived boolean plus the VAPID
- * public key: the threshold never ships (ADR-0048's rule kept by a NEW
- * endpoint), and "exactly once" is fully server-owned — eligibility is
+ * GET /notifications/state — the authenticated-READ template (ADR-0048),
+ * cloned from GET /attach/state (see ADR-0064). Serves one derived
+ * boolean plus the VAPID public key; the threshold itself never ships.
  *
- *   isPushConfigured() — the SAME full triple the subscribe routes 503
- *       under, so a half-configured environment never renders a prompt
- *       whose accept would fail
- *   AND push_prompt_dismissed_at IS NULL
- *   AND streak >= pushOptInStreakThreshold (remote config, ADR-0025)
- *
- * `vapidPublicKey` is the env value whenever configured (public by design;
- * one source of truth, the api env — no `NEXT_PUBLIC_` twin to drift), and
- * null otherwise.
+ * `isPushConfigured()` is the SAME full triple the subscribe routes 503
+ * under, so a half-configured environment never renders a prompt whose
+ * accept would fail. `vapidPublicKey` is the env value whenever
+ * configured (public by design; one source of truth, the api env — no
+ * `NEXT_PUBLIC_` twin to drift), and null otherwise.
  */
-
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
@@ -61,12 +51,8 @@ function stateResponse(eligible: boolean, vapidPublicKey: string | null) {
 }
 
 export async function GET(request: NextRequest): Promise<Response> {
-  // The whole body is caught (the streak route's discipline): an unhandled
-  // throw would be the one branch without no-store and the CORS grant.
   try {
     const db = getDb();
-    // `requireUserId` never mints; auth stays first and a 401 costs zero
-    // further queries.
     const userId = await requireUserId(
       db,
       request.cookies.get(SESSION_COOKIE_NAME)?.value,
@@ -75,7 +61,6 @@ export async function GET(request: NextRequest): Promise<Response> {
       return errorResponse(401, "no-session");
     }
 
-    // The cheap suppressions first; the streak read is the expensive one.
     if (!isPushConfigured()) {
       return stateResponse(false, null);
     }

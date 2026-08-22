@@ -7,8 +7,8 @@
 ## Context
 
 The three shipped games are judged in one place: `POST /completions` reads
-the stored row and compares a submitted grid against it
-(`apps/api/app/completions/route.ts:207-241`). Termo is the first game
+the stored row and compares a submitted grid against it in `judgeGrid`
+(`apps/api/app/completions/route.ts`). Termo is the first game
 with a *mid-game* judgement at all — five tiles per guess, six times — and
 the first whose engine is stateless functions rather than a board
 (`packages/games/src/termo/index.ts`).
@@ -44,10 +44,10 @@ it: its rows are immutable and carry no user axis. So either a new table
 exists, or nothing does.
 
 **What the completion request carries.** `storedSolution`'s own TSDoc
-(`apps/api/app/completions/route.ts:73-83`) already refuses a core-level
+(`apps/api/app/completions/route.ts`) already refuses a core-level
 "get the solution" abstraction *because Termo has no grid*, and
-`outcome: "won"` is a hardcoded literal at `:247` — the one termo
-extension point in that route with no tripwire on it.
+`outcome: "won"` is a hardcoded literal in that route — the one termo
+extension point in it with no tripwire on it.
 
 ## Decision
 
@@ -154,8 +154,8 @@ extension point in that route with no tripwire on it.
 5. **`storedSolution` is narrowed, never widened.** Its parameter type
    becomes `Exclude<CompletionRequest["game"], "termo">`, so TypeScript
    proves the route narrowed `body.game` before calling it, and
-   `outcome: "won"` at `apps/api/app/completions/route.ts:247` becomes a
-   computed value.
+   `outcome: "won"` in `judgeGrid` (`apps/api/app/completions/route.ts`)
+   becomes a computed value.
 
 6. **`completions` gains a write-only `guesses integer` column, in this
    ticket.** ADR-0026 decision 1 makes the row write-once, so a row written
@@ -173,9 +173,9 @@ extension point in that route with no tripwire on it.
 7. **`GET /daily/termo` ships, returning `game` and `date` only, and
    `apps/web` does not consume it.** Its presence-or-absence IS its
    payload — it is the operator's machine-readable check that a `killed_at`
-   took effect, the same reason `apps/api/app/daily/nonogram/route.ts:20-24`
-   gives. The web app reads the wall directly under ADR-0028 decision 5. A
-   literal segment, never `[game]`.
+   took effect, the same reason `daily/nonogram/route.ts`'s `GET` doc
+   comment gives. The web app reads the wall directly under ADR-0028
+   decision 5. A literal segment, never `[game]`.
 
 8. **`ACCEPTED_DAYS_BACK` is hoisted to one module in `apps/api/src` and
    shared by both routes.** A player mid-game at the São Paulo rollover
@@ -300,12 +300,12 @@ extension point in that route with no tripwire on it.
   (`packages/core/src/contracts/completion.ts:136-141`) — and, for
   `outcome`, the same class of client-asserted input as the completion
   instant ADR-0026 rejects.
-- **A constant-work comparison in the Termo judge.**
-  `apps/api/app/completions/route.ts:224-230` anticipated one *"where the
-  answer word IS the product's one secret"*. There is no timing channel to
-  close: both routes return the judgement in the body. The grid loop stays
-  exactly as it is and the comment's forward reference is corrected in the
-  same commit.
+- **A constant-work comparison in the Termo judge.** `judgeGrid`'s
+  constant-work comparison (`apps/api/app/completions/route.ts`)
+  anticipated one *"where the answer word IS the product's one secret"*.
+  There is no timing channel to close: both routes return the judgement
+  in the body. The grid loop stays exactly as it is and the comment's
+  forward reference is corrected in the same commit.
 - **Widening `storedSolution` to return something Termo-shaped.** Its own
   TSDoc rejects it, and a `readonly number[]` return has no honest Termo
   meaning.
@@ -350,10 +350,11 @@ extension point in that route with no tripwire on it.
   day permanently; the `"playing" → 422, no row` rule is the guard, and it
   must not be relaxed.
 - **(d) A lost day cannot be reopened, with no new code.** The idempotent
-  short-circuit at `apps/api/app/completions/route.ts:185-188` runs before
-  the wall read and before any judging, so a replay carrying a winning list
-  returns the stored `lost` row. ADR-0008's *"a loss followed by an archive
-  replay does not reopen the daily"* is already enforced.
+  `getCompletion` short-circuit in `POST /completions`
+  (`apps/api/app/completions/route.ts`) runs before the wall read and
+  before any judging, so a replay carrying a winning list returns the
+  stored `lost` row. ADR-0008's *"a loss followed by an archive replay
+  does not reopen the daily"* is already enforced.
 - **(e) ADR-0032's byte-identity property does not survive, and its
   substance does.** Two honest winners on guess four post different bytes,
   because they guessed different words and there is no smaller canonical
@@ -374,7 +375,7 @@ extension point in that route with no tripwire on it.
   statement its own trip**, a fact this repo records at
   `resolveSession` in `apps/api/src/session/service.ts` (*"each statement is its own
   neon-http round trip"*). `GET /daily/<game>` is **one**
-  (`apps/api/app/daily/nonogram/route.ts:32`, a single `getTodayDaily`),
+  (`daily/nonogram/route.ts`'s `GET`, a single `getTodayDaily` call),
   and `apps/web` calls it **zero** times, where the guess route runs ~6× per
   player per day. So the posture rests on the corrected figure and not on a
   comparison: three indexed reads and no write, at a volume bounded by the
@@ -417,9 +418,9 @@ extension point in that route with no tripwire on it.
   first abuse signal, the rewarded-ad ticket, or the first time a guess
   response would reveal something a *published* row does not already imply.
 - **(g) `apps/web` now calls `apps/api` for a third thing.**
-  `apps/api/app/daily/nonogram/route.ts:19-20`'s *"the web app fetches
-  `/session` and `/completions` only"* becomes false and is corrected in
-  the same commit. ADR-0014's rule that `apps/api` owns *"all writes and the cron, without
+  `daily/nonogram/route.ts`'s `GET` doc comment, which listed only
+  `/session` and `/completions`, is corrected in the same commit to add
+  this one. ADR-0014's rule that `apps/api` owns *"all writes and the cron, without
   exception"* is untouched; this is a user-specific *read*, which ADR-0014 already routes
   the same way.
 - **(h) The migration is real operational work, and it is applied BEFORE

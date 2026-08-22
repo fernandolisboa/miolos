@@ -30,29 +30,24 @@ import { captureEvent, runAfterResponse } from "../../../src/telemetry/capture";
 export const dynamic = "force-dynamic";
 
 /**
- * POST + DELETE /push/subscriptions (#145, ADR-0064) — one file, the
- * onboarding-seen write template twice over. Both verbs 503 via
- * `isPushConfigured()` BEFORE any side effect (the fail-closed dormancy
- * switch, the full VAPID triple): an unconfigured environment must not
- * collect subscriptions the dispatcher (#146) can never serve, and must
- * not pretend to delete what it never stores. Zod-parsed bodies, never
- * cast (the mechanical gate's boundary rule).
+ * POST + DELETE /push/subscriptions; see ADR-0064. Both verbs 503 via
+ * `isPushConfigured()` BEFORE any side effect — fail-closed dormancy: an
+ * unconfigured environment must not collect subscriptions the dispatcher
+ * can never serve, and must not pretend to delete what it never stores.
+ * Zod-parsed bodies, never cast.
  *
  * - POST upserts on the endpoint PK: the browser install is the authority
- *   for its own capability URL — key rotation and the
- *   endpoint-follows-the-cookie case both land as an update, one row.
+ *   for its own capability URL — key rotation and a cookie's endpoint
+ *   changing both land as an update, one row.
  * - DELETE removes the caller's OWN row only (endpoint AND user id):
  *   knowing another account's capability URL deletes nothing. Idempotent
  *   `{removed: true}` — the caller reconciles browser-side state, not a
- *   row count. It is #36's settings-toggle seam and #146's pruning
- *   sibling, live from this slice.
+ *   row count.
  *
- * The whole body of each verb is caught (the onboarding-seen route's
- * discipline): a transient DB throw would otherwise be the one branch
- * without the CORS grant.
+ * The whole body of each verb is caught: a transient DB throw would
+ * otherwise be the one branch without the CORS grant.
  */
 
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
@@ -61,8 +56,8 @@ function errorResponse(status: number, error: string): Response {
 }
 
 export function OPTIONS(): Response {
-  // DELETE joins the grant (the preflightResponse doc's #145 note): the
-  // JSON content type forces a preflight on both verbs.
+  // DELETE joins the grant: the JSON content type forces a preflight on
+  // both verbs.
   return preflightResponse("POST, DELETE, OPTIONS");
 }
 
@@ -118,9 +113,9 @@ async function writePreamble(request: NextRequest): Promise<
   } catch {
     return { failure: errorResponse(400, "invalid-body") };
   }
-  // The handle rides the context (#145 step-6 quality m5): getDb() has
-  // deliberately no module-level cache, so returning this one saves each
-  // verb constructing a second client for the same request.
+  // The db handle rides the context: `getDb()` has no module-level cache,
+  // so returning it here saves each verb constructing a second client for
+  // the same request.
   return { db, userId, raw };
 }
 
@@ -143,20 +138,18 @@ export async function POST(request: NextRequest): Promise<Response> {
       auth: parsed.data.keys.auth,
     });
     if (!stored) {
-      // The per-user ceiling refused the row (#146, ADR-0068 decision 1 —
-      // the late-write-ceiling status precedent). The shipped client reads
-      // `response.ok` only, so this takes T-WEB-S271's unwind path: the
-      // browser-side subscription is rolled back and nothing is stamped.
+      // The ceiling refused the row. 429 rather than 200-with-stored-false
+      // because the client keys off `response.ok` and must unwind (ADR-0068
+      // decision 1).
       return errorResponse(429, "too-many-requests");
     }
 
-    // THE TELEMETRY SEAM (#33, ADR-0069): a GENUINE first insert only —
-    // `inserted`, not `stored`, because the DO UPDATE arm also answers
-    // `stored: true` (key rotation, identical re-subscribe, cross-user
-    // repoint, #36's settings toggle) and each would re-count an opt-in
-    // that already happened. A new endpoint on a second device IS a real
-    // opt-in act and fires. Payload empty by decision: never the endpoint
-    // or the keys. Post-response and throw-proof via `runAfterResponse`.
+    // Telemetry (see ADR-0069): a GENUINE first insert only — `inserted`,
+    // not `stored`, because the DO UPDATE arm also answers `stored: true`
+    // (key rotation, identical re-subscribe, cross-user repoint) and each
+    // would re-count an opt-in that already happened. Payload empty by
+    // decision: never the endpoint or the keys. Post-response and
+    // throw-proof via `runAfterResponse`.
     if (inserted) {
       const userId = context.userId;
       runAfterResponse(() =>

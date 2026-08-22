@@ -364,6 +364,6 @@ done would be a lie the player can catch."*
   than left implicit: an unparseable **Termo** record re-offers a spent
   board as playable, and what prevents the double count is not the client —
   it is the server's write-once row (ADR-0026 decision 1) plus the
-  idempotent `getCompletion` short-circuit at
-  `apps/api/app/completions/route.ts:185-188`, which returns the stored row
+  idempotent `getCompletion` short-circuit in `POST /completions`
+  (`apps/api/app/completions/route.ts`), which returns the stored row
   before any judging.

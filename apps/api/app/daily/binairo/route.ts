@@ -9,13 +9,12 @@ import { getDb } from "../../../src/db";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /daily/binairo — today's daily through the wall (issue #17 AC 5;
- * #18 builds the play UX on this route). The daily is public content
- * (ADR-0005): no auth, no cookies, no credentialed CORS.
+ * GET /daily/binairo — today's daily through the wall. The daily is
+ * public content (ADR-0005): no auth, no cookies, no credentialed CORS.
  *
- * Miss → 404 with an empty body: no on-demand generation fallback, ever
- * (plan 014 D13) — it would bypass "pre-generated and validated"
- * (ADR-0010) and open a CPU DoS. The 404 client copy is #18's.
+ * Miss → 404 with an empty body: no on-demand generation fallback,
+ * ever — that would bypass "pre-generated and validated" (ADR-0010) and
+ * open a CPU DoS.
  */
 export async function GET(): Promise<Response> {
   const db = getDb();
@@ -24,10 +23,9 @@ export async function GET(): Promise<Response> {
     return Response.json({}, { status: 404, headers: corsHeaders() });
   }
   // Defense in depth: the wall already returns a schema-shaped
-  // projection; the HTTP boundary independently re-parses it (two Zod
-  // gates, one per enforcement point). Narrowed from the union to the
-  // BINAIRO member: with `sudoku` in `dailyPuzzleResponseSchema` a union
-  // parse would now ACCEPT a sudoku row on this path (plan 018 §7.4).
+  // projection, and the HTTP boundary re-parses it against the BINAIRO
+  // member, never the union — a union parse would accept a mismatched
+  // row on this path.
   return Response.json(dailyBinairoResponseSchema.parse(daily), {
     headers: corsHeaders(),
   });

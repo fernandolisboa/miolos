@@ -25,7 +25,6 @@ import { requireUserId } from "../../../src/session/service";
 // Never statically cached: every request deletes against the users table.
 export const dynamic = "force-dynamic";
 
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
@@ -38,19 +37,15 @@ export function OPTIONS(): Response {
 }
 
 /**
- * POST /account/delete (#21, ADR-0050 decision 12): real, immediate,
- * self-service deletion — the LGPD path the /privacidade page hosts. One
- * cascade DELETE removes sessions, completions, hint_grants, medal_grants,
- * attach_tokens, push_subscriptions and user_seen_days with the row; the
- * cookie is cleared; the next visit mints a FRESH, empty identity through
- * the normal bootstrap.
+ * Real, immediate, self-service deletion — see ADR-0050 decision 12. One
+ * cascade DELETE removes every row the users table owns; the cookie is
+ * cleared and the next visit mints a fresh, empty identity.
  *
- * Structurally distinct from tombstones, and deliberately so: a tombstone
- * owns no session, so `requireUserId` can never resolve a cookie to one —
- * this route can never delete a tombstone, and deletion never conflicts
- * with ADR-0049's "retained forever". The literal `confirm: true` is a
- * second factor against drive-by fetches; the UI's two-step confirm
- * supplies it.
+ * A merge tombstone owns no session, so `requireUserId` can never resolve
+ * a cookie to one — this route can never reach a tombstone, so deletion
+ * never conflicts with ADR-0049's "retained forever". The literal
+ * `confirm: true` is a second factor against drive-by fetches; the UI's
+ * two-step confirm supplies it.
  */
 export async function POST(request: NextRequest): Promise<Response> {
   warnIfGuardDegraded();
@@ -90,10 +85,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     return errorResponse(400, "invalid-body");
   }
 
-  // The cascade is the whole footprint: sessions, completions,
-  // hint_grants, medal_grants, attach_tokens, push_subscriptions
-  // (#145, migration 0007) and user_seen_days (#58, migration 0008)
-  // all declare ON DELETE CASCADE.
   await db.delete(users).where(eq(users.id, userId));
 
   const response = Response.json(

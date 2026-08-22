@@ -42,6 +42,12 @@ in the candidate SQL).
    (ADR-0053 decision 13's exact bound); (ii) a full account cannot take
    over an endpoint another user holds until it frees a slot.
 
+   **Why 429-and-store-nothing rather than 200 with `stored: false`:** the
+   shipped client reads `response.ok` and nothing else (`push-client.ts`), so
+   a non-ok status is what makes the browser unwind its own subscription and
+   stamp nothing. A 200 would leave the browser subscribed to a push the
+   server will never send. Pinned by `T-WEB-S271`.
+
 2. **`notification_sends` acquires its merge duty: union then empty**
    (merge.ts statements 5e/5f — the seen-days 4b/4c idiom, consuming
    ADR-0049 decision 6's extension point). Without it, a same-day merge of

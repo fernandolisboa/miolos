@@ -22,7 +22,6 @@ import { requireUserId } from "../../../src/session/service";
 // Never statically cached: every request stamps against the users table.
 export const dynamic = "force-dynamic";
 
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
@@ -35,21 +34,11 @@ export function OPTIONS(): Response {
 }
 
 /**
- * POST /onboarding/seen (#35, ADR-0061): "Entendi", stamped server-side so
- * the introduction's one lifecycle per account survives cleared site data
- * AND attach/merge — the acceptance's own words (the attach-dismiss route's
- * template). The body is the STRICT empty object: the client posts a
- * literal `{}` and any key is a 400 (nothing smuggled through the
- * boundary). Idempotent: the UPDATE is guarded on
- * `onboarding_seen_at IS NULL`, so a re-post touches zero rows, never
- * re-bumps `updated_at` and never moves the recorded moment.
- *
- * The whole body is caught (the GET route's discipline, a step-6
- * correctness finding): a transient DB throw would otherwise be the one
- * branch without the CORS grant, and T-API-S122's "every branch of BOTH
- * routes" title would overclaim by exactly it. The three older write
- * routes (attach/dismiss, attach/confirm, completions) share the gap and
- * stay as-is — a template-wide observation, not this PR's scope.
+ * "Entendi" — stamped server-side so the introduction's one lifecycle per
+ * account survives cleared site data and account merge (see ADR-0061;
+ * the attach-dismiss route's template). The body must be a literal `{}`;
+ * any key is a 400. Idempotent: the UPDATE is guarded on
+ * `onboarding_seen_at IS NULL`, so a re-post touches zero rows.
  */
 export async function POST(request: NextRequest): Promise<Response> {
   try {

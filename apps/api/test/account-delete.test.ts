@@ -1,4 +1,4 @@
-import { sessions, sql, users } from "@miolos/db";
+import { pushSubscriptions, sessions, sql, users } from "@miolos/db";
 import { createTestDb } from "@miolos/db/testing";
 import {
   attachTokens,
@@ -106,6 +106,18 @@ async function mintViaSessionRoute(cookieToken?: string): Promise<string> {
 }
 
 describe("POST /account/delete — real self-service deletion (D13)", () => {
+  /** `user_seen_days` is on no package entry's export surface, so read it raw. */
+  const seenDayCount = async (): Promise<number> => {
+    type CountRow = { readonly n: number };
+    const result = (await ctx.db.execute(
+      sql`select count(*)::int as n from user_seen_days`,
+    )) as unknown as CountRow[] | { readonly rows?: CountRow[] };
+    const rows: CountRow[] = Array.isArray(result)
+      ? result
+      : (result.rows ?? []);
+    return rows[0]?.n ?? 0;
+  };
+
   it("T-API-S77: the cascade removes the whole footprint, the cookie is cleared, and only the literal confirm passes", async () => {
     const { token, userId } = await createSession(OLDER);
     await ctx.db.insert(completions).values({
@@ -126,6 +138,23 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
       userId,
       email: "jogadora@example.com",
     });
+    // Seeded so the two assertions below are not vacuous: this helper builds
+    // its user and session directly, so neither table gets a row otherwise.
+    await ctx.db.insert(pushSubscriptions).values({
+      endpoint: "https://push.example.test/endpoint-1",
+      userId,
+      p256dh: "p256dh-key",
+      auth: "auth-secret",
+    });
+    await ctx.db.execute(
+      sql`insert into user_seen_days (user_id, date) values (${userId}, '2026-08-01')`,
+    );
+    // Non-vacuity, asserted rather than assumed: a `toHaveLength(0)` after the
+    // delete proves nothing unless the row was there first, and mutating
+    // `schema.ts` cannot demonstrate it — PGlite runs the committed
+    // migrations, so the cascade lives in SQL, not in drizzle's model of it.
+    expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(1);
+    expect(await seenDayCount()).toBe(1);
 
     // The literal-true second factor: anything else is a 400 and deletes
     // nothing.
@@ -151,6 +180,11 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
     expect(await ctx.db.select().from(completions)).toHaveLength(0);
     expect(await ctx.db.select().from(hintGrants)).toHaveLength(0);
     expect(await ctx.db.select().from(attachTokens)).toHaveLength(0);
+    // push_subscriptions and user_seen_days are on the same LGPD cascade and
+    // were asserted by nothing until #205 — the comment enumerating the
+    // footprint was the only record that they are in it.
+    expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(0);
+    expect(await seenDayCount()).toBe(0);
 
     // The clearing Set-Cookie: same name, Max-Age=0 — the browser evicts.
     const setCookie = response.headers.get("set-cookie") ?? "";
