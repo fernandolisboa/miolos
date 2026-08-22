@@ -7,7 +7,7 @@ description: Defect row — fix a real bug that needs no new decision and no new
 
 Reproduce → fix → one reviewer → gate → merge. No plan document, no ADR, no handoff.
 
-Routing lives in `CLAUDE.md` § *Pick the flow, then work*. Read the table there; it is not repeated here. If the fix needs a decision, or adds a surface, it is Tier 2 — stop and re-tier. Escalating is always allowed.
+Routing lives in `CLAUDE.md` § *Pick the flow, then work*. Read the table there; it is not repeated here. If the fix needs a decision, or adds a surface, it is a Feature — stop and re-route. Escalating is always allowed.
 
 ## 1. Reproduce — before touching the fix
 
