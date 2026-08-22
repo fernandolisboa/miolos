@@ -7,16 +7,14 @@ import {
 import type { Db } from "./client";
 import { remoteConfig } from "./schema";
 
-// Once-per-process: a corrupted table should be loud in the logs, not
-// once per cron query (session route's warn-once precedent).
+// Warn once per process — loud in the logs without repeating on every
+// cron query.
 let warnedInvalidRemoteConfig = false;
 
 /**
- * All rows → { [key]: value } → remoteConfigSchema (ADR-0025). Missing
- * table rows fall back to the schema defaults, and invalid values fall
- * back to `defaultRemoteConfig` entirely (safeParse) — the cron must run
- * against an empty or corrupted table rather than crash or trust
- * garbage. Reachable only via `@miolos/db/publishing` (ADR-0024).
+ * Missing rows fall back to the schema defaults; any invalid value falls
+ * back to `defaultRemoteConfig` entirely — the cron must run against an
+ * empty or corrupted table rather than crash or trust garbage.
  */
 export async function getRemoteConfig(db: Db): Promise<RemoteConfig> {
   const rows = await db.select().from(remoteConfig);

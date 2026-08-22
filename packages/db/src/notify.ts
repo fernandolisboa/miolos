@@ -5,32 +5,14 @@ import { SAO_PAULO_TIME_ZONE } from "./published";
 import { notificationSends } from "./schema";
 
 /**
- * The streak-at-risk dispatcher's statements (#146, ADR-0064, ADR-0068) —
- * cross-table (completions × push_subscriptions × notification_sends), so
- * they live in `packages/db` (merge.ts's recorded rule: this package owns
- * cross-table operations, apps/api owns route-shaped workflows).
- * User-scoped: reachable only through `@miolos/db/user` (ADR-0026
- * decision 5), never the root entry — apps/web cannot name any of this.
- *
- * NO JS `Date` appears in any statement in this file (the schema.ts law):
- * `today` and `hour` arrive as values a single Postgres read produced
- * (`readTickInstant` below), and every cast and comparison runs in SQL.
+ * No JS `Date` appears in any statement in this file: `today` and `hour`
+ * come from one Postgres read (`readTickInstant` below), and every
+ * comparison runs in SQL.
  */
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/**
- * The one-snapshot tick instant (ADR-0068 decision 3): the SP calendar day
- * and the SP hour, read in ONE statement so the pair can never straddle
- * midnight against each other. The route reads it once and passes it down —
- * everything below takes `{today, hour}` as parameters, which is what makes
- * every behavioral test real-clock-free while "DB clock only" stays
- * literally true: the values originate in one Postgres read and JS never
- * computes a date or an hour.
- *
- * The `todaySaoPaulo` shape-check register (buffer.ts): parse the row,
- * throw on surprise.
- */
+/** The SP calendar day and hour, read in one statement so the pair can never straddle midnight against each other. */
 export async function readTickInstant(
   db: Db,
 ): Promise<{ today: string; hour: number }> {
@@ -59,50 +41,22 @@ export async function readTickInstant(
 }
 
 /**
- * The candidate read: every subscribed user whose streak is at risk today
- * AND whose habitual hour is `hour` AND whose nudge for `today` is not
- * already claimed. Returns user ids only — `completed_at` never leaves SQL,
- * and `CompletionRecord` is untouched.
+ * Every subscribed user whose streak is at risk today, whose habitual hour
+ * is `hour`, and whose push nudge for `today` isn't already claimed.
  *
- * ADR-0064 decision 1's spelling, implemented: "median SP minute-of-day …
- * rounded to the hour" is `percentile_disc(0.5)` over the per-counted-day
- * EARLIEST instant's EXTRACTED hour. Extraction is the floor of
- * minute-of-day to the hour — equivalent to flooring the median sample's
- * minute-of-day — and floor rather than round-half-up is deliberate:
- * half-up rounds a 23:40 habit to hour 0, and that nudge still fires, at
- * the worst possible moment — the 00:xx tick of the at-risk day itself
- * (yesterday counted, today not), ~24 h before the deadline and minutes
- * after the user habitually finished playing. Floor lands it at the 23:xx
- * tick: just before the habitual minute and ~1 h before the rollover.
+ * The habitual hour is `percentile_disc(0.5)` over each counted day's
+ * earliest on-time completion, floored to the hour rather than
+ * round-half-up: half-up would round a 23:40 habit to hour 0 and fire the
+ * nudge at the 00:xx tick of the at-risk day itself — minutes after the
+ * user finished playing and ~24h before the deadline. Floor lands it at
+ * 23:xx instead, just before the habitual minute.
  *
- * The sample deliberately NARROWS d1's "earliest on-time completion" to
- * won ∧ on-time rows — one predicate does both the counted-day job and the
- * sample job; a lost-but-on-time earlier play is excluded (recorded in
- * ADR-0068's prefilter note). An ADR-0066 credited yesterday satisfies the
- * conjuncts by design, and its `completed_at` — the sync instant, not a
- * play instant — feeds the median as a sample (accepted imperfection).
+ * A credited (synced-late) row's `completed_at` is the sync instant, not
+ * the play instant, and still feeds the median as a sample — an accepted
+ * imperfection.
  *
- * - The 21-day window is `[today − 21, today)`. Cold start is structurally
- *   absent: a candidate counted yesterday has ≥ 1 sample by construction.
- * - The counted-day conjuncts (won ∧ on-time) are ADR-0048's PREFILTER,
- *   not a second streak definition: `computeStreak` stays the only streak
- *   authority — the copy's number comes from it, and T-API-S144 pins the
- *   sent number to it. Running `computeStreak` over every user per tick is
- *   the rejected alternative (cost without a correctness gain; ADR-0068).
- * - The ledger `not exists` is a PREFILTER ONLY — `claimNudgeSend` below
- *   is the race authority. It matches the 'push' channel alone, so slice
- *   C's email arm claims independently on the same ledger.
- * - The habitual CTE aggregates over EVERY user with in-window completions
- *   before the push_subscriptions join (the planner will not reliably push
- *   the join through the GROUP BY). Harmless at v1 scale; the recorded
- *   restructure, if tick timings ever show it, is a subscriber prefilter
- *   inside the CTE.
- * - Index shapes, precisely (#146 step 7, migration 0011): the CTE's
- *   date-range read carries no user predicate, so it rides the partial
- *   `completions_counted_date_idx` ((date) WHERE won ∧ on-time — the
- *   measured choice, schema.ts); the two `exists` probes are (user_id,
- *   date) point lookups and ride `completions_user_date_idx`; the ledger
- *   `not exists` hits the `notification_sends` composite PK.
+ * The ledger's `not exists` is a prefilter only; `claimNudgeSend` below is
+ * the actual race authority.
  */
 export async function listPushNudgeCandidates(
   db: Db,
@@ -151,17 +105,12 @@ export async function listPushNudgeCandidates(
 }
 
 /**
- * The claim — the RACE AUTHORITY of the ledger (ADR-0064 decision 7):
- * `INSERT … ON CONFLICT DO NOTHING RETURNING`, the write-once idiom,
- * race-safe without transactions (neon-http is non-interactive-only —
- * merge.ts's recorded constraint). `true` = this call owns the send; a
- * loser of a concurrent double tick sees zero returned rows and sends
- * nothing. `sent_at` is the DB-side default — no JS Date.
+ * `INSERT … ON CONFLICT DO NOTHING RETURNING` — race-safe without a
+ * transaction, since neon-http supports only single-statement queries.
+ * `true` means this call owns the send.
  *
- * The claim runs BEFORE any send (claim-first): a crash between claim and
- * send loses that user's nudge for that day — decision 7's priced
- * residual, preferred over a double send. `channel` admits 'email' so
- * slice C rides the same ledger; nothing passes it today.
+ * Runs BEFORE any send (claim-first): a crash between claim and send
+ * drops that user's nudge for the day, chosen over risking a double send.
  */
 export async function claimNudgeSend(
   db: Db,
