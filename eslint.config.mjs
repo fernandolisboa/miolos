@@ -40,10 +40,26 @@ const webWallExtensions = "{ts,tsx,mts,cts,js,jsx,mjs,cjs}";
 //
 // `no-restricted-imports` matches the SPECIFIER STRING, never the resolved
 // path, which is why closing this needs a literal third spelling rather than
-// anything cleverer. The `/src`, `/src/*` and `/src/**` triple mirrors the
-// relative groups exactly: `**` does not match a bare `…/src` specifier, so a
-// future `packages/db/src/index.ts` barrel would walk through a `/src/**`-only
-// ban (the `@miolos/db` + `@miolos/db/*` discipline, applied one spelling over).
+// anything cleverer.
+//
+// WHICH OF THE THREE ARMS ACTUALLY BINDS, measured rather than reasoned —
+// because the obvious reading is backwards and a reviewer caught this comment
+// asserting the inverse. `no-restricted-imports` matches with gitignore
+// DIRECTORY semantics, so the bare `…/src` arm already covers the entire
+// subtree on its own:
+//
+//     bare arm only:  ../node_modules/@miolos/db          BLOCKED
+//                     ../node_modules/@miolos/db/src      BLOCKED
+//                     ../node_modules/@miolos/db/src/publishing  BLOCKED
+//     `/**` arm only: ../node_modules/@miolos/db          CLEAN
+//
+// So `/src/*` and `/src/**` are belt-and-braces here, not load-bearing: they
+// survive joint deletion with the suite green. They are kept because the four
+// relative groups below have carried the identical triple since #25 and a lone
+// divergent group is the kind of asymmetry that gets "fixed" in the wrong
+// direction later. Do NOT read the triple as three necessary globs, and do not
+// delete the BARE arm on the theory that `/**` covers it — that is the one
+// deletion the suite reds on (`T-LINT-S58`).
 //
 // This only ever ADDS bans. Nothing in the tree writes an import this way
 // (`grep -rn 'node_modules/@miolos' apps packages` is empty outside
@@ -382,12 +398,20 @@ const freePlayBannedModuleGroups = [
     // `symlinkSpelling()` covers it; here free play may not name `@miolos/db`
     // AT ALL, so `../../node_modules/@miolos/db` has to be banned too, or the
     // stricter-than-app-wide half of this group is reachable by a path the
-    // app-wide wall deliberately permits. Whether a relative import of that
-    // DIRECTORY resolves is bundler-dependent and is deliberately NOT claimed
-    // here — this arm is a defensive ban on a spelling nothing needs, not a
-    // measured evasion. The measured one is the `/src` reach that
-    // `symlinkSpelling()` closes; `**/node_modules/@miolos/db/**` covers that
-    // too, and the bare directory rides along for one glob's worth of cost.
+    // app-wide wall deliberately permits.
+    //
+    // THE BARE ARM IS THE LOAD-BEARING ONE AND `/**` IS DEAD CONFIG — measured,
+    // and this comment asserted the exact inverse until a reviewer ran the
+    // mutation. Because `no-restricted-imports` matches with gitignore
+    // DIRECTORY semantics, `**/node_modules/@miolos/db` alone blocks the
+    // directory AND every descendant; deleting `/**` leaves the suite 68/68
+    // green, while deleting the bare arm reds `T-LINT-S58`. `/**` is kept only
+    // for symmetry with the groups above — see `symlinkSpelling()`'s note.
+    //
+    // Whether a relative import of the bare DIRECTORY resolves is
+    // bundler-dependent and is deliberately NOT claimed here; this arm is a
+    // defensive ban on a spelling nothing needs. The measured evasion is the
+    // `/src` reach, and the bare arm covers it too.
     //
     // `@miolos/games/termo` needs no such arm, checked rather than assumed:
     // `packages/games` has no `termo` directory (it is an `exports` subpath

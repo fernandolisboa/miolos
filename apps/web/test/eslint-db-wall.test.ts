@@ -559,10 +559,12 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(db)).toContain("no-restricted-imports");
 
-    // The `/src` sibling, not just `/src/**`: `**` does not match a bare
-    // `…/src` specifier, so a future `packages/db/src/index.ts` barrel would
-    // walk through a `/src/**`-only ban. Same reason the relative groups carry
-    // the triple, and the same `@miolos/db` + `@miolos/db/*` discipline.
+    // The BARE `/src` arm, which is the one that binds — measured, and the
+    // opposite of how the triple reads. `no-restricted-imports` matches with
+    // gitignore DIRECTORY semantics, so `**/node_modules/@miolos/db/src` alone
+    // covers `…/src` AND every descendant, while a `/src/**`-only ban misses
+    // the bare directory. Deleting the two starred arms leaves this file green;
+    // deleting this one does not. The config comment carries the measurement.
     const dbIndex = await lintProbe(
       SOURCE_PATH,
       [
