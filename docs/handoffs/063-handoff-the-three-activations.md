@@ -52,7 +52,7 @@ Nothing is pending on Fernando. The frontier is ordinary agent work:
 ## Kickoff prompt — retired
 
 **This handoff is superseded. The live one is
-[`069-issue-104-handoff-archive-og-cards.md`](./069-issue-104-handoff-archive-og-cards.md);
+[`070-issue-104-handoff-archive-og-cards.md`](./070-issue-104-handoff-archive-og-cards.md);
 start there.**
 
 Two whole tickets used to sit below this line as addenda. Neither corrected
@@ -60,8 +60,8 @@ anything 063 says, and together they pushed this file to 240 lines — second
 only to handoff 058, which `CLAUDE.md` names as the anti-example. Both were
 moved out on 2026-08-22:
 
-- #64 → [handoff 070](./070-issue-64-handoff-nonogram-motif-name.md)
-- #104 → [handoff 069](./069-issue-104-handoff-archive-og-cards.md)
+- #64 → [handoff 069](./069-issue-64-handoff-nonogram-motif-name.md)
+- #104 → [handoff 070](./070-issue-104-handoff-archive-og-cards.md)
 
 The rule they broke is now explicit: **a session closes with its own
 numbered handoff; an addendum is only for correcting what its handoff

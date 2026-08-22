@@ -1,7 +1,7 @@
-# Handoff 069 — #104 shipped: the archive gets its own OG cards
+# Handoff 070 — #104 shipped: the archive gets its own OG cards
 
-Session of 2026-08-22. Supersedes handoff 063 and its addenda A–B, whose
-kickoff is now dead. Nothing pends on Fernando; `docs/pending-fernando.md`
+Session of 2026-08-22. The newest handoff; start here.
+Supersedes handoff 063, and follows handoff 069 (#64). Nothing pends on Fernando; `docs/pending-fernando.md`
 NOW is still empty.
 
 **State at close:** `main` = `4ae6212`. #104 closed via PR #190. No open PRs.
@@ -111,7 +111,7 @@ code half then measured false. Land the measurement first.
 ## Kickoff prompt for the next session
 
 ```
-Read docs/handoffs/069-issue-104-handoff-archive-og-cards.md, then
+Read docs/handoffs/070-issue-104-handoff-archive-og-cards.md, then
 docs/pending-fernando.md. Check live state with gh/git and trust
 that over anything written here.
 
