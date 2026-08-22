@@ -1,6 +1,5 @@
-/* Miolos — "Ateliê" direction tokens (light theme) — for packages/ui */
+/* light theme */
 :root {
-  /* paper and ink */
   --paper-desk: #F7F2E9;
   --paper-card: #FBF7EF;
   --paper-tint: #F1EADD;
@@ -9,14 +8,12 @@
   --line: #D8D0C2;
   --line-soft: #E4DCCB;
 
-  /* accents */
-  --accent-app: #9E3B2F;      /* sealing-wax red: streak, promo */
-  --accent-termo: #8D6212;    /* deep mustard (#161, ADR-0067 — was #C08A1E) */
-  --accent-sudoku: #2E4E7E;   /* ink-blue */
-  --accent-nonogram: #B5563C; /* terracotta */
-  --accent-binairo: #4E6B52;  /* moss-green */
+  --accent-app: #9E3B2F;      /* streak, promo */
+  --accent-termo: #8D6212;
+  --accent-sudoku: #2E4E7E;
+  --accent-nonogram: #B5563C;
+  --accent-binairo: #4E6B52;
 
-  /* typography */
   --font-display: 'Fraunces', serif;
   --font-ui: 'Instrument Sans', sans-serif;
   --text-kicker: 600 11px/1 var(--font-ui);        /* + uppercase + ls .16em */
@@ -26,7 +23,6 @@
   --text-screen-title: 550 54px/1 var(--font-display);
   --text-numeral-lg: 600 44px/1 var(--font-display); /* single, non-aligning numeral — tabular-nums is a no-op on Fraunces (ADR-0036) */
 
-  /* shape */
   --radius: 6px;
   --radius-cell: 5px;
   --radius-tape: 2px;
@@ -36,22 +32,18 @@
   --shadow-md: 4px 4px 0;
   --shadow-lg: 6px 6px 0;
 
-  /* desk texture */
   --texture-dots: radial-gradient(rgba(33,29,25,0.06) 1px, transparent 1px);
   --texture-dots-size: 26px 26px; /* 24px on mobile */
 
-  /* spacing (4pt scale) */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 32px;
   --space-11: 44px; --space-12: 48px;
 
-  /* motion — "ink that settles" */
   --duration-fast: 150ms;
   --duration-base: 200ms;
   --duration-slow: 250ms;
   --ease-settle: cubic-bezier(0.2, 0.8, 0.3, 1.05);
 
-  /* misc */
   --touch-target-min: 44px;
   --rotate-card-max: 2.4deg;
 }
