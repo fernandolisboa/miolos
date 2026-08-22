@@ -3,6 +3,7 @@
 import type { StreakResponse } from "@miolos/core";
 import { useEffect, useState } from "react";
 
+import { ensureSession } from "../session/bootstrap";
 import { fetchStreak } from "./streak-client";
 
 /**
@@ -34,11 +35,24 @@ export function useStreak(): StreakResponse | null | undefined {
     // out-of-order resolutions harmless: the duplicate GET is idempotent
     // and cheap, and only the live effect's answer lands.
     let cancelled = false;
-    void fetchStreak().then((response) => {
-      if (!cancelled) {
-        setValue(response ?? null);
-      }
-    });
+    // THE MINT FIRST (#149) — the ordering and its full reasoning are in
+    // `attach/use-attach-state.ts`, which carries it verbatim. Here the cost
+    // of losing the race is the sharpest of the five: on a re-mint load the
+    // 401 branch reads as `null`, the hub's `?.` chain turns that into 0, and
+    // a real streak is shown to its owner as broken. Awaiting buys ORDERING,
+    // never identity — a failed mint still reaches the same honest branch.
+    void ensureSession()
+      .then(() => fetchStreak())
+      .then((response) => {
+        if (!cancelled) {
+          setValue(response ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setValue(null);
+        }
+      });
     return () => {
       cancelled = true;
     };

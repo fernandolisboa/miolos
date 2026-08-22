@@ -3,6 +3,7 @@
 import type { StatsResponse } from "@miolos/core";
 import { useEffect, useState } from "react";
 
+import { ensureSession } from "../session/bootstrap";
 import { fetchStats } from "./stats-client";
 
 /**
@@ -34,11 +35,23 @@ export function useStats(): StatsResponse | null | undefined {
     // out-of-order resolutions harmless: the duplicate GET is idempotent
     // and cheap, and only the live effect's answer lands.
     let cancelled = false;
-    void fetchStats().then((response) => {
-      if (!cancelled) {
-        setValue(response ?? null);
-      }
-    });
+    // THE MINT FIRST (#149) — the ordering and its full reasoning are in
+    // `attach/use-attach-state.ts`. On a re-mint load the 401 branch renders
+    // real aggregates as zeros, which is the same wrong-in-both-directions
+    // failure the no-cache decision above exists to avoid. Awaiting buys
+    // ORDERING, never identity.
+    void ensureSession()
+      .then(() => fetchStats())
+      .then((response) => {
+        if (!cancelled) {
+          setValue(response ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setValue(null);
+        }
+      });
     return () => {
       cancelled = true;
     };
