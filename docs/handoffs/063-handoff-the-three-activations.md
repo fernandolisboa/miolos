@@ -138,22 +138,103 @@ lead.
 
 ---
 
+## Addendum B — #104 shipped (2026-08-22, PR #190, `main` = 9155275)
+
+**#104 is closed.** All three archive shells have OG cards. Steps 1–8 ran
+from plan `docs/plans/068`; **ADR-0071** shipped, amending ADR-0054, ADR-0053
+and ADR-0028. Frontier is now **#149 → #155 → #106 → #74**, plus #32's
+email-hedge slice. Nothing pends on Fernando; NOW is still empty.
+
+### The shape, in one paragraph
+
+The ticket looked like three route files and was not. ADR-0054 D9 measured
+that an `opengraph-image` **module** on a segment joins every descendant's
+metadata graph and drags `next/og` + `sharp` into their payloads — these
+exact three segments went 23.5 MB → 2.7 MB at #34. So the dateless index
+card is a **committed PNG** (`app/arquivo/opengraph-image.png`, zero read,
+zero function) and the two dated cards are `force-dynamic` handlers at
+**`/cartao/<YYYY-MM-DD>`** and **`/cartao/mes/<YYYY-MM>`**, referenced by an
+explicit `openGraph.images` composed in `generateMetadata`. That takes D9's
+deferred relief for these three routes only; the eight game cards stay #37's,
+which has been told. Measured, both sides built from source: shells hold at
+2.7 MB (+1.2–4.1 KB, ≤0.15 %), the two handlers carry 22.9 MB each.
+
+### The one lesson this ticket is worth remembering for
+
+**An unmeasured claim about framework behaviour propagates into every record
+before anyone measures it.** Four of six step-6 lenses rejected, and every
+blocking finding traced to a single plan sentence — that a malformed segment
+would inherit the new index card. False twice over (Next discards a page's
+`generateMetadata` on `notFound()`; a metadata file needs a `layout.tsx` to be
+inherited, and this app has one, at the root). By the time it was measured it
+sat in **eleven places across four records**, including a shipped ADR's
+decision justification and an annotation that turned a *true standing
+residual* into a *false repair*. Napkin § Execution 10 now carries it.
+
+Two smaller ones, both now in the napkin:
+
+- **A `:NNN` written into a file the same PR edits is stale before merge.**
+  ADR-0054's lines moved **three times inside this PR**. Cite by quoted text;
+  the number is a hint. Two review rounds were spent almost entirely on drift.
+- **Widest ≠ longest.** Fraunces' figures are not tabular, so `"20 de
+  novembro de 2028"` (22 chars) beats `"22 de fevereiro de 2026"` (23). The
+  measurement changed the design — the year moved to a second line. Also:
+  yoga's `width` is a border box, so the card's inner width is **890 px**,
+  not the 896 the plan and a landed ADR consequence both claimed.
+
+### Landmines and calls worth carrying
+
+- **`archiveCard({display, caption})` takes two arbitrary strings**, so "no
+  game reaches the card" is enforced by `T-WEB-S334`, **not** by the
+  signature. My first design call on #104 claimed the opposite; a reviewer's
+  mutation disproved it and the issue carries a correction. Do not restate
+  the structural version.
+- **The one accepted residual:** `/arquivo/<hoje>` 307s to `/` with a **full
+  12.5 KB HTML body** carrying `og:image`, so a scraper that does not follow
+  the redirect reads a `/cartao/<hoje>` URL that 404s. One date, self-healing
+  at São Paulo midnight, on a URL the product never emits, degrading
+  generic-card → no-card and never to anything false. Three fixes named and
+  refused in ADR-0071 (a fallback card breaks ADR-0054 D8; suppressing
+  `openGraph` needs a second clock; a 302 ends the card's life as an
+  existence proof).
+- **Denial of wallet is now on #37 as an explicit abuse item.** The sizing
+  models a *crawler*, not an adversary: with `no-store` and no middleware,
+  one attacker on one URL costs N rasterisations for N requests, unbounded.
+  Pre-existing across the eight existing card routes; #104 widened it 25.8 %.
+- **Parallel step-5 halves (code + records) cost one round.** They serialise
+  on the pre-commit hook anyway, and the records half wrote three claims the
+  code half then measured false. Next time, land the measurement first.
+- `Explore` and `Plan` subagents are **read-only** — they cannot write their
+  own report files, whatever the brief says. Persist their output yourself.
+
+### Records worth knowing about
+
+- Live maxima: `T-CORE-S114`, `T-DB-S87`, `T-API-S179`, **`T-WEB-S336`**,
+  **`T-LINT-S54`**. `T-WEB-S337`/`S338` and `T-LINT-S55` burned unspent —
+  both step-7 test changes widened landed ids in place.
+- `docs/evidence/104-archive-og-cards/` holds the three cards at their
+  measured worst case, with a README stating what they do **not** prove. The
+  "before" is the root site card, SHA-pinned rather than duplicated.
+- Plan 040 carries a **prepended amendment table** (its body is a snapshot
+  and is never rewritten); its three broken `](./docs/adr/…)` links are
+  pre-existing on `main` and are Tier 0 fodder for whoever wants them.
+
+---
+
 ## Kickoff prompt for the next session
 
 ```
-Read docs/handoffs/063-handoff-the-three-activations.md — including
-ADDENDUM A, which supersedes the frontier above — then
-docs/pending-fernando.md.
-
-PREFLIGHT: main = 69e4d35; #188 merged; #64 CLOSED; no open PRs;
-NOW EMPTY (two new STANDING rows); ADR-0070 landed. On mismatch:
-stop and read the newest addendum first.
+Read docs/handoffs/063-handoff-the-three-activations.md, ADDENDUM B
+last — it supersedes the frontier above — then
+docs/pending-fernando.md. Check live state with gh/git and trust
+that over anything below.
 
 Nothing pends on Fernando — do not offer him credential work.
-Frontier: #104 (tier-2, OG cards, decided), then #149, #155, #106,
-#74. #32's email-hedge slice is also unblocked.
+Frontier: #149, #155, #106, #74, plus #32's email-hedge slice.
 scripts/gate-lock.sh acquire "<who>" before ANY suite run, git commit
 included; release after. Reserve test ids on the ISSUE before step 5.
+Cite records by quoted text, never by line number alone.
+Measure any claim about framework behaviour before it enters a record.
 Update docs/pending-fernando.md in the same PR on any Fernando item.
 End with a handoff addendum <=120 lines + regenerated kickoff <=15.
 ```
