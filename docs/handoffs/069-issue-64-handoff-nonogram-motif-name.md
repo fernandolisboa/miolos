@@ -1,4 +1,4 @@
-# Handoff 070 — #64 shipped: the Nonogram conclusion names its picture
+# Handoff 069 — #64 shipped: the Nonogram conclusion names its picture
 
 Session of 2026-08-21/22. Was filed as "Addendum A" on handoff 063; moved to
 its own file on 2026-08-22 because a session closes with its own numbered
@@ -7,7 +7,7 @@ says.
 
 **State at close:** `main` = `69e4d35`, PR #188, #64 closed. Nothing pended
 on Fernando. *(The frontier below has since moved on — #104 shipped too. The
-live handoff is [069](./069-issue-104-handoff-archive-og-cards.md).)*
+live handoff is [070](./070-issue-104-handoff-archive-og-cards.md).)*
 
 **#64 is closed.** The daily Nonogram conclusion names its motif. Steps 5–8
 ran from plan `docs/plans/066`; **ADR-0070** shipped, superseding ADR-0033
