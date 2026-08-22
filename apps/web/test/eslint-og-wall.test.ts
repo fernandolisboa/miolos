@@ -133,6 +133,17 @@ const FREE_PLAY_CARD_PATH = "apps/web/app/modo-livre/opengraph-image.tsx";
 /** Its control: the shipped free-play route, matched by object (3) alone. */
 const FREE_PLAY_PAGE_PATH = "apps/web/app/modo-livre/page.tsx";
 
+/**
+ * The two ARCHIVE SHELL card handlers (#104, ADR-0071). These are the reason
+ * object (4) gained a third glob: `apps/web/app/**\/opengraph-image.*` does
+ * NOT match a file called `route.ts`, so without
+ * `apps/web/app/cartao/**\/*.{…}` these two would have landed OUTSIDE the
+ * wall — two more files calling `getDb()` on an unauthenticated
+ * crawler-facing path, with no games ban and no db-wall bans on them.
+ */
+const DAY_CARD_ROUTE_PATH = "apps/web/app/cartao/[data]/route.ts";
+const MONTH_CARD_ROUTE_PATH = "apps/web/app/cartao/mes/[mes]/route.ts";
+
 /** Every path the OG wall must reach. */
 const OG_PATHS = [
   OG_SOURCE_PATH,
@@ -140,6 +151,8 @@ const OG_PATHS = [
   DAILY_CARD_PATH,
   ARCHIVE_CARD_PATH,
   TWITTER_CARD_PATH,
+  DAY_CARD_ROUTE_PATH,
+  MONTH_CARD_ROUTE_PATH,
 ];
 
 /** Scope controls: the identical source is legal from these. */
@@ -314,19 +327,108 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
     // This is exactly what the shipped handlers and card import.
     const clean = [
       'import type { ProjectedGame } from "@miolos/core";',
-      'import { getPublishedDaily, getTodayDaily } from "@miolos/db";',
+      "import {",
+      "  getPublishedDaily,",
+      "  getTodayDaily,",
+      // #104's one new reader, on the same wall-safe root entry.
+      "  listArchivedDays,",
+      '} from "@miolos/db";',
       'import { ImageResponse } from "next/og";',
       "",
       "export const legal = {",
       "  getPublishedDaily,",
       "  getTodayDaily,",
+      "  listArchivedDays,",
       "  ImageResponse,",
       "};",
       "export type G = ProjectedGame;",
       "",
     ].join("\n");
+    // The path list gained the two `/cartao` handlers at #104: the anti-vacuity
+    // control has to cover every path the four probes above now red at, or the
+    // new wall entry would be untested in the one direction that matters most.
     for (const path of OG_PATHS) {
       expect.soft(wallHits(await lintProbe(path, clean)), path).toEqual([]);
+    }
+  });
+
+  it("T-LINT-S54: the wall reaches the two /cartao card handlers, games ban AND db wall", async () => {
+    // #104, ADR-0071. `apps/web/app/**/opengraph-image.*` does not match
+    // `route.ts`, so before object (4) gained `apps/web/app/cartao/**` these
+    // two files were outside every OG ban — and they are the ninth and tenth
+    // files in the app that call `getDb()` on an unauthenticated
+    // crawler-facing path. The glob's mechanics are proved rather than
+    // assumed: `webWallExtensions` includes `ts`, and the `[data]` / `[mes]`
+    // brackets live in the SUBJECT and not in the pattern, so they are inert.
+    const cardPaths = [DAY_CARD_ROUTE_PATH, MONTH_CARD_ROUTE_PATH];
+
+    // Half one: the games ban, in both spellings.
+    const games = [
+      'import { solveNonogram } from "@miolos/games/nonogram";',
+      "",
+      "export const probe = solveNonogram;",
+      "",
+    ].join("\n");
+    const dynamicGames =
+      'export const load = () => import("@miolos/games/nonogram");\n';
+    for (const path of cardPaths) {
+      expect
+        .soft(ruleIds(await lintProbe(path, games)), `games @ ${path}`)
+        .toContain("no-restricted-imports");
+      expect
+        .soft(ruleIds(await lintProbe(path, dynamicGames)), `dynamic @ ${path}`)
+        .toContain("no-restricted-syntax");
+    }
+
+    // Half two: `T-LINT-S43`'s replacement regression, at the new paths. Flat
+    // config replaces a rule's whole configuration per matching file, so the
+    // db wall survives here only because object (4) REPEATS it verbatim.
+    const dbProbes: [string, string, string][] = [
+      [
+        "db subpath",
+        'import { getPublishedDailyWithSolution } from "@miolos/db/publishing";\nexport const p = getPublishedDailyWithSolution;\n',
+        "no-restricted-imports",
+      ],
+      [
+        "relative into packages/db/src",
+        'import { dailyPuzzles } from "../../../../packages/db/src/schema";\nexport const p = dailyPuzzles;\n',
+        "no-restricted-imports",
+      ],
+      [
+        "table-name literal",
+        'export const t = "daily_puzzles";\n',
+        "no-restricted-syntax",
+      ],
+      [
+        "computed dynamic import",
+        "export const load = (s: string) => import(s);\n",
+        "no-restricted-syntax",
+      ],
+    ];
+    for (const path of cardPaths) {
+      for (const [label, source, rule] of dbProbes) {
+        expect
+          .soft(ruleIds(await lintProbe(path, source)), `${label} @ ${path}`)
+          .toContain(rule);
+      }
+    }
+
+    // And the MESSAGE is the app-wide wall's own, which is what proves the
+    // repetition carried the original rule rather than shadowing it with a
+    // lookalike (the `T-LINT-S14` idiom, as `T-LINT-S43` uses it).
+    for (const path of cardPaths) {
+      const subpath = await lintProbe(
+        path,
+        'import { getPublishedDailyWithSolution } from "@miolos/db/publishing";\nexport const p = getPublishedDailyWithSolution;\n',
+      );
+      expect
+        .soft(
+          subpath.some((message) =>
+            message.message.includes("wall-safe root entry"),
+          ),
+          path,
+        )
+        .toBe(true);
     }
   });
 

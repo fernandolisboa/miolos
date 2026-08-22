@@ -24,6 +24,9 @@ const spies = vi.hoisted(() => ({
   getTodayDaily: vi.fn(),
   getArchivedDaily: vi.fn(),
   archiveDateClass: vi.fn(),
+  // #104: the three archive SHELL pages import these at module scope.
+  listArchivedDays: vi.fn(),
+  listArchivedMonths: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
@@ -35,14 +38,17 @@ vi.mock("@miolos/db", () => ({
   getTodayDaily: spies.getTodayDaily,
   getArchivedDaily: spies.getArchivedDaily,
   archiveDateClass: spies.archiveDateClass,
+  listArchivedDays: spies.listArchivedDays,
+  listArchivedMonths: spies.listArchivedMonths,
 }));
 vi.mock("next/navigation", () => ({
   notFound: spies.notFound,
   redirect: spies.redirect,
 }));
 
-const { locale, messages, ogLocale } = await import("../src/i18n");
+const { formatMonth, locale, messages, ogLocale } = await import("../src/i18n");
 const { OG_DEFAULTS } = await import("../src/og/defaults");
+const { CARD_HEIGHT, CARD_WIDTH } = await import("../src/og/card");
 const layout = await import("../app/layout");
 
 /**
@@ -232,6 +238,143 @@ describe("the per-game archive routes' openGraph (T-WEB-S207)", () => {
   });
 });
 
+// ── T-WEB-S335 ──────────────────────────────────────────────────────────
+
+const SHELL_PAGES = {
+  index: await import("../app/arquivo/page"),
+  month: await import("../app/arquivo/mes/[mes]/page"),
+  day: await import("../app/arquivo/[data]/page"),
+} as const;
+
+describe("the archive SHELL routes' openGraph (T-WEB-S335)", () => {
+  /**
+   * #104, ADR-0071 decision 3. The day and month shells reference their card
+   * by an explicit `openGraph.images` entry rather than by the file
+   * convention, so what is asserted here is the pair of Next behaviours the
+   * whole route shape depends on — and both were confirmed on a real
+   * production build before any of this was written:
+   *
+   *   1. a leaf `openGraph` carrying `images` SUPPRESSES the inherited
+   *      file-convention image, and
+   *   2. `twitter:image` auto-fills from it, so no `twitter-image.*` is owed.
+   *
+   * The object-level half is here. The head-level half is preview `curl`
+   * evidence, and this file does not overclaim about a rendered head —
+   * `T-WEB-S207` already draws that line for the per-game routes.
+   */
+  const arms = [
+    {
+      name: "month",
+      metadata: () =>
+        SHELL_PAGES.month.generateMetadata({
+          params: Promise.resolve({ mes: "2026-08" }),
+        }),
+      url: "/cartao/mes/2026-08",
+      dated: formatMonth("2026-08-01"),
+    },
+    {
+      name: "day",
+      metadata: () =>
+        SHELL_PAGES.day.generateMetadata({
+          params: Promise.resolve({ data: "2026-08-03" }),
+        }),
+      url: "/cartao/2026-08-03",
+      dated: "3 de agosto de 2026",
+    },
+  ] as const;
+
+  it.each(arms)(
+    "the $name shell spreads OG_DEFAULTS and carries exactly ONE dated card image",
+    async ({ name, metadata, url, dated }) => {
+      const resolved = await metadata();
+      // Without the spread these two routes would lose `og:type`,
+      // `og:locale` and `og:site_name`: Next does not deep-merge a leaf
+      // `openGraph` into the root layout, the nearest declaration wins whole.
+      expect(resolved.openGraph, name).toMatchObject(OG_DEFAULTS);
+
+      const images = resolved.openGraph?.images;
+      expect(Array.isArray(images), name).toBe(true);
+      expect(images, name).toHaveLength(1);
+      const image = (images as Record<string, unknown>[])[0] ?? {};
+
+      // The URL is the card ROUTE, in pt-BR, and it is not the page.
+      expect(image["url"], name).toBe(url);
+      // The dimensions come off the card module, never re-typed.
+      expect(image["width"], name).toBe(CARD_WIDTH);
+      expect(image["height"], name).toBe(CARD_HEIGHT);
+      expect(image["type"], name).toBe("image/png");
+      // And the `alt` CARRIES THE DATE — which is the whole point of shape
+      // (b): a metadata route's `alt` is a module export and cannot read
+      // `params`, so `ogCopy.altGame` is dateless by constraint. An
+      // `images[].alt` composed here can be, and is.
+      expect(image["alt"], name).toContain(dated);
+      expect(image["alt"], name).toBe(
+        name === "day"
+          ? ogCopy.altArchiveDay(dated)
+          : ogCopy.altArchiveMonth(dated),
+      );
+    },
+  );
+
+  it("the INDEX shell declares no openGraph at all — its card is a FILE", () => {
+    // `app/arquivo/opengraph-image.png` attaches by the file convention, so
+    // this function stays byte-unmoved and `T-WEB-S173`'s index arm never
+    // reds. The claim is about the RETURN VALUE: the resolved head for
+    // `/arquivo` certainly carries `openGraph`, because the file convention
+    // injects the image and the root layout supplies `OG_DEFAULTS`.
+    const resolved = SHELL_PAGES.index.generateMetadata();
+    expect(Object.keys(resolved).sort()).toEqual([
+      "alternates",
+      "description",
+      "title",
+    ]);
+    expect(resolved.openGraph).toBeUndefined();
+  });
+
+  it("a HOSTILE shell segment carries no openGraph and no alternates", async () => {
+    // The malformed branch composes NOTHING, so no `/cartao/…` URL is ever
+    // built out of attacker text — which is the claim this test makes, and
+    // the only one it can make at the object level.
+    //
+    // WHAT IT DOES NOT CLAIM, because plan 068 claimed it and a real build
+    // says otherwise: that such a segment then inherits the ARCHIVE index
+    // card. It does not. It answers 404 through `notFound()`, Next discards
+    // the route's composed metadata, and the head carries the ROOT card —
+    // unchanged from before #104. ADR-0054 decision 8's malformed-segment
+    // residual is therefore untouched by this ticket rather than narrowed.
+    for (const raw of [
+      "//evil.example.com",
+      "https://evil.example.com",
+      "0000-01-01",
+      "2026-08-03/../../evil",
+    ]) {
+      for (const [name, resolved] of [
+        [
+          "month",
+          await SHELL_PAGES.month.generateMetadata({
+            params: Promise.resolve({ mes: raw }),
+          }),
+        ],
+        [
+          "day",
+          await SHELL_PAGES.day.generateMetadata({
+            params: Promise.resolve({ data: raw }),
+          }),
+        ],
+      ] as const) {
+        expect.soft(resolved, `${name} ${raw}`).toEqual({
+          robots: { index: false },
+        });
+        expect.soft(resolved.openGraph, `${name} ${raw}`).toBeUndefined();
+        expect.soft(resolved.alternates, `${name} ${raw}`).toBeUndefined();
+        expect
+          .soft(JSON.stringify(resolved), `${name} ${raw}`)
+          .not.toContain("cartao");
+      }
+    }
+  });
+});
+
 // ── T-WEB-S206a ─────────────────────────────────────────────────────────
 
 describe("the OG deck's accent audit (T-WEB-S206a)", () => {
@@ -276,9 +419,15 @@ describe("the OG deck's accent audit (T-WEB-S206a)", () => {
     // Termo canonicals the script ships today are the ones this claim names.
     expect(FORBIDDEN.length).toBeGreaterThanOrEqual(3);
     expect(FORBIDDEN).toContain("então");
+    // ONE NEUTRAL PROBE for every function member, because this claim is
+    // about the WORDS in the templates and never about the argument. It used
+    // to be `"Nonogram"`, which reads as a mistake once #104 joins the deck:
+    // `altArchiveDay` takes a long date and `archiveDayCaption` takes a year,
+    // so a game name was being passed as both.
+    const PROBE = "PROBE";
     const deck = JSON.stringify(
       Object.values(ogCopy).map((value) =>
-        typeof value === "function" ? value("Nonogram") : value,
+        typeof value === "function" ? value(PROBE) : value,
       ),
     );
     for (const word of FORBIDDEN) {
@@ -288,6 +437,57 @@ describe("the OG deck's accent audit (T-WEB-S206a)", () => {
     expect(deck).toContain(ogCopy.siteTagline);
     expect(deck).toContain(ogCopy.altSite);
     expect(deck.length).toBeGreaterThan(100);
+    // #104's five new strings are named, so the loop above is provably over
+    // them and not only over #34's. `Object.values` would cover them either
+    // way; naming them is what reds if one is later moved to `messages`.
+    expect(deck).toContain(ogCopy.archiveTagline);
+    expect(deck).toContain(ogCopy.altArchiveIndex);
+    expect(deck).toContain(ogCopy.altArchiveDay(PROBE));
+    expect(deck).toContain(ogCopy.altArchiveMonth(PROBE));
+    expect(deck).toContain(ogCopy.archiveDayCaption(PROBE));
+  });
+
+  it("archiveTagline is the SHIPPED sentence, not a second spelling of it", () => {
+    // #104, ADR-0071. The index card's caption is the first sentence of
+    // `messages.archive.lead`, already rendered on `/arquivo` — the very page
+    // this card serves. It is written out in the deck rather than sliced at
+    // runtime (a copy deck holding string surgery is worse than one holding a
+    // string, which is the call `siteTagline` already records), so THIS is
+    // what keeps the two from drifting apart: `messages.ts`'s own words are
+    // that "a second copy is how two screens drift apart", and two spellings
+    // of one claim would sit on one surface.
+    expect(messages.archive.lead.startsWith(ogCopy.archiveTagline)).toBe(true);
+    // Counted floor: a prefix assertion against an empty string is free.
+    expect(ogCopy.archiveTagline.length).toBeGreaterThan(20);
+    expect(ogCopy.archiveTagline.endsWith(".")).toBe(true);
+    // And it really is a TAGLINE and not the description: the alternative was
+    // `meta.indexDescription`, a 90-character wall of body copy where the
+    // composition wants one line.
+    expect(messages.archive.meta.indexDescription.length).toBeGreaterThan(
+      ogCopy.archiveTagline.length,
+    );
+  });
+
+  it("the archive alt strings compose 'Arquivo' and the wordmark from messages", () => {
+    // Never re-typed, and capitalised mid-sentence the way the product
+    // already writes it (`backToIndexAria`, `meta.monthTitle`).
+    for (const alt of [
+      ogCopy.altArchiveIndex,
+      ogCopy.altArchiveMonth(formatMonth("2026-08-01")),
+    ]) {
+      expect.soft(alt, alt).toContain(messages.archive.title);
+      expect.soft(alt, alt).toContain(messages.brand.wordmark);
+    }
+    // The two DATED ones carry their date — the mirror image of `altGame`'s
+    // dateless-by-constraint rule, not an exception to it.
+    expect(ogCopy.altArchiveDay("3 de agosto de 2026")).toContain(
+      "3 de agosto de 2026",
+    );
+    expect(ogCopy.altArchiveMonth("agosto de 2026")).toContain(
+      "agosto de 2026",
+    );
+    expect(ogCopy.archiveDayCaption("2026")).toContain("2026");
+    expect(ogCopy.archiveDayCaption("2026")).toContain(messages.archive.title);
   });
 
   it("the deck is OUT of `messages` and out of the i18n barrel, both directions", () => {

@@ -4,7 +4,15 @@ import { join } from "node:path";
 import { isValidElement, type ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
-import { gameCard, siteCard } from "../src/og/card";
+import { formatDayAndMonth, formatMonth, messages } from "../src/i18n";
+import {
+  archiveCard,
+  archiveIndexCard,
+  gameCard,
+  siteCard,
+} from "../src/og/card";
+import { ogCopy } from "../src/og/copy";
+import { ACCENT_APP_SHADOW, ACCENT_APP_TAPE } from "../src/og/tokens";
 
 /**
  * The OG card's element tree, asserted WITHOUT a rasteriser (#34, ADR-0054).
@@ -79,6 +87,23 @@ describe("the OG card paints the accent on the tape and the shadow only (T-WEB-S
     // that "the kicker is no longer among" the sanctioned accent surfaces.
     const trees: [string, ReactElement][] = [
       ["site", siteCard()],
+      // #104's three archive cards walk the same absence: one builder, three
+      // call shapes, and no accent-coloured word on any of them.
+      ["archive index", archiveIndexCard()],
+      [
+        "archive month",
+        archiveCard({
+          display: formatMonth("2026-02-01"),
+          caption: messages.archive.title,
+        }),
+      ],
+      [
+        "archive day",
+        archiveCard({
+          display: formatDayAndMonth("2026-02-22"),
+          caption: ogCopy.archiveDayCaption("2026"),
+        }),
+      ],
       ["termo", gameCard({ game: "termo", longDate: "1 de maio de 2026" })],
       ["sudoku", gameCard({ game: "sudoku", longDate: "1 de maio de 2026" })],
       [
@@ -360,11 +385,81 @@ describe("nothing but a game and a date reaches the card builder (T-WEB-S201)", 
     }
   });
 
-  it("the ONLY property read off a reader's return value is .date", () => {
-    const read = new Set(
-      [...handlerSource.matchAll(/\bdaily\.(\w+)/g)].map((match) => match[1]),
+  it("the ONLY properties read off a reader's return value are .date and .length", () => {
+    // THE READER-BOUND IDENTIFIERS ARE DISCOVERED, NEVER HARDCODED. Until
+    // #104 this scan was `/\bdaily\.(\w+)/g`, bound to the local variable name
+    // the two shipped handlers happen to use — so the two new archive handlers,
+    // which bind `days`, would have been INVISIBLE to it and `toEqual(["date"])`
+    // would have stayed green whatever they read. A scan that cannot see new
+    // code is not a gate. So: find every `<name> = await <reader>(` instead.
+    const bindings = [
+      ...handlerSource.matchAll(
+        /(\w+)\s*=\s*await\s+(getPublishedDaily|getTodayDaily|listArchivedDays)\(/g,
+      ),
+    ];
+    // COUNTED FLOOR FIRST, which is the failure this row exists to close: a
+    // renamed reader or a reshaped call must not make the scan pass over an
+    // empty set. Four reads, in four handlers.
+    expect(bindings).toHaveLength(4);
+
+    const byIdentifier = new Map<string, Set<string>>();
+    for (const binding of bindings) {
+      const identifier = binding[1] ?? "";
+      if (!byIdentifier.has(identifier)) {
+        byIdentifier.set(identifier, new Set());
+      }
+      // THE OPTIONAL `[…]` IS LOAD-BEARING, and it was missing until step 7.
+      // Without it the pattern needs a literal `.` right after the
+      // identifier, so `days[0].game` — the exact access the comment below
+      // says is stopped — was INVISIBLE to this scan. Measured: with the day
+      // handler mutated to `archiveDayCaption(days[0].game)` this test stayed
+      // green (only `T-WEB-S334` rows (2) and (10) went red), which made the
+      // claim in the comment false of the test asserting it.
+      for (const read of handlerSource.matchAll(
+        new RegExp(
+          String.raw`\b${identifier}\s*(?:\[[^\]]*\])?\s*\.(\w+)`,
+          "g",
+        ),
+      )) {
+        byIdentifier.get(identifier)?.add(read[1] ?? "");
+      }
+    }
+
+    expect([...byIdentifier.keys()].sort()).toEqual(["daily", "days"]);
+    // `daily` supplies the ONE non-content value the game card names.
+    expect([...(byIdentifier.get("daily") ?? [])]).toEqual(["date"]);
+    // `days` supplies nothing at all: the archive read is an EXISTENCE proof,
+    // so its return is read only for its length. `ArchivedDay` is
+    // `{date, game}` and `days[0].game` is one property access away — this is
+    // what stops that access being written, and `archiveCard`'s signature is
+    // what makes it useless if it ever were.
+    expect([...(byIdentifier.get("days") ?? [])]).toEqual(["length"]);
+
+    // And the same claim stated directly, so a BARE `days[0]` handed to
+    // something is caught too: an existence probe never indexes its result.
+    const indexed = [...byIdentifier.keys()].filter((identifier) =>
+      new RegExp(String.raw`\b${identifier}\s*\[`).test(handlerSource),
     );
-    expect([...read]).toEqual(["date"]);
+    expect(indexed).toEqual([]);
+  });
+
+  it("archiveCard's declared parameter type admits no Game and no ArchivedDay", () => {
+    // #104's structural guarantee, in the same terms as `gameCard`'s below:
+    // two already-formatted strings, neither optional, and no parameter a
+    // `Game` or an `ArchivedDay` can enter through. This is what makes "the
+    // archive card names no game" a type-level property rather than a
+    // convention — `limit: 1` bounds the read, it does not hide a game.
+    const declaration = code(cardSource).match(
+      /export function archiveCard\(args: \{([\s\S]*?)\}\): ReactElement/,
+    );
+    expect(declaration).not.toBeNull();
+    const members = [
+      ...(declaration?.[1] ?? "").matchAll(/readonly\s+(\w+)(\??): (\w+);/g),
+    ];
+    expect(members.map((member) => member[1])).toEqual(["display", "caption"]);
+    expect(members.map((member) => member[2])).toEqual(["", ""]);
+    // And both are plain `string`s — not `Game`, not `ArchivedDay`.
+    expect(members.map((member) => member[3])).toEqual(["string", "string"]);
   });
 
   it("gameCard's declared parameter type admits no other member", () => {
@@ -380,5 +475,186 @@ describe("nothing but a game and a date reaches the card builder (T-WEB-S201)", 
     expect(members.map((member) => member[1])).toEqual(["game", "longDate"]);
     // Neither is optional.
     expect(members.map((member) => member[2])).toEqual(["", ""]);
+  });
+});
+
+describe("the archive card is a dated nameplate (T-WEB-S333)", () => {
+  /**
+   * #104, ADR-0071. One builder, three call shapes, and the rule the
+   * composition rests on: THE DISPLAY SLOT HOLDS THE MOST SPECIFIC THING THE
+   * URL NAMES. The alternative — the constant word "Arquivo" at 96px on all
+   * three — would make ~1,096 day cards visually interchangeable with the
+   * index card, which is the ticket's own stated failure.
+   */
+  const MONTH = formatMonth("2026-11-01");
+  const DAY = formatDayAndMonth("2026-11-20");
+
+  const cards = {
+    index: {
+      display: messages.archive.title,
+      caption: ogCopy.archiveTagline,
+    },
+    month: { display: MONTH, caption: messages.archive.title },
+    day: { display: DAY, caption: ogCopy.archiveDayCaption("2026") },
+  } as const;
+
+  /** Every element whose child is a string: display, caption, wordmark. */
+  function lines(tree: ReactElement): { text: string; size: unknown }[] {
+    return elements(tree)
+      .filter(
+        (element) =>
+          typeof (element.props as { readonly children?: unknown }).children ===
+          "string",
+      )
+      .map((element) => ({
+        text: String((element.props as { readonly children: string }).children),
+        size: styleOf(element)["fontSize"],
+      }));
+  }
+
+  it("archiveIndexCard IS the index row of this table — one composition, one home", () => {
+    // #104 step 7 (quality S8). The index card's `{display, caption}` used to
+    // exist only as copies in this file and in `og-image.node.test.ts`, one of
+    // which defines what the committed `app/arquivo/opengraph-image.png` is.
+    // It now has a named zero-arg builder beside `siteCard`, and this is what
+    // stops the fixture below drifting from it.
+    expect(lines(archiveIndexCard())).toEqual(lines(archiveCard(cards.index)));
+    expect(cards.index.display).toBe(messages.archive.title);
+    expect(cards.index.caption).toBe(ogCopy.archiveTagline);
+  });
+
+  it("each card's three lines are display, caption, wordmark — in that order", () => {
+    for (const [name, args] of Object.entries(cards)) {
+      const found = lines(archiveCard(args));
+      // Exactly three text lines: one display, ONE caption, and the wordmark
+      // LAST. No kicker line, and no second caption.
+      expect
+        .soft(
+          found.map((line) => line.text),
+          name,
+        )
+        .toEqual([args.display, args.caption, messages.brand.wordmark]);
+      // The display slot is the 96px one and the other two are 39px — the
+      // hierarchy is what the rule above is about, not merely the order.
+      expect
+        .soft(
+          found.map((line) => line.size),
+          name,
+        )
+        .toEqual([96, 39, 39]);
+    }
+  });
+
+  it("the display slot holds the most specific thing the URL names", () => {
+    // Stated as three DIFFERENCES rather than three equalities, because the
+    // failure this guards is all three cards showing the same word.
+    const displays = Object.values(cards).map((args) => args.display);
+    expect(new Set(displays).size).toBe(3);
+    // Neither dated card's display line is "Arquivo" — the failure this row
+    // exists to catch is all three cards showing the same word.
+    //
+    // `expect(cards.month.display).toBe(MONTH)` and its two siblings were
+    // here until step 7 and are deleted rather than kept: `cards` is built
+    // FROM those constants four lines above, so each was a tautology over the
+    // fixture. The handler-to-slot mapping — the thing that could actually
+    // regress — is `T-WEB-S334` row (10), which asserts the exact argument
+    // object each handler passes.
+    expect(cards.day.display).not.toBe(messages.archive.title);
+    expect(cards.month.display).not.toBe(messages.archive.title);
+    // Only the index card, which has no date, puts the section name up top —
+    // and it is the ONLY one of the three that does.
+    expect(
+      Object.entries(cards)
+        .filter(([, args]) => args.display === messages.archive.title)
+        .map(([name]) => name),
+    ).toEqual(["index"]);
+  });
+
+  it("the day card takes RUNG 2: the year is on the caption, not the display line", () => {
+    // MEASURED, not chosen (plan 068 §12.2). The full `formatLongDate` output
+    // at 96px Fraunces runs to 1111px against 890px of card and satori
+    // overflows silently, so the year moved down a line.
+    //
+    // WHAT REDS IF A LATER TICKET PUTS THE YEAR BACK: `T-WEB-S334` row (10),
+    // which asserts the handler's own argument object. This row never touches
+    // a handler — it asserts the SHAPE the rung produces, so it reds on a
+    // change to `formatDayAndMonth` or to `archiveDayCaption` instead. Both
+    // guards are needed and neither is the other.
+    expect(cards.day.display).not.toMatch(/\d{4}/);
+    expect(cards.day.caption).toContain("2026");
+    expect(cards.day.caption).toContain(messages.archive.title);
+    // And the month card did NOT split: it fits at 96px (843px worst case).
+    expect(cards.month.display).toMatch(/\d{4}/);
+  });
+
+  it("no kicker on any archive card, and the accent is the APP accent only", () => {
+    // `DESIGN.md:29` — kickers are a game-category system, not a generic
+    // section eyebrow, so "ARQUIVO" as a 33px uppercase line is the banned
+    // use. `siteCard` is the precedent: a non-game card has no kicker. The
+    // two properties below are the kicker's own signature in this module.
+    for (const [name, args] of Object.entries(cards)) {
+      const tree = archiveCard(args);
+      expect.soft(valuesOf(tree, "textTransform"), name).toEqual([]);
+      expect.soft(valuesOf(tree, "letterSpacing"), name).toEqual([]);
+      // And the kicker's own 33px level is absent too — `fontSize` is a
+      // NUMBER here, so it is collected numerically rather than through
+      // `valuesOf`, which filters to strings and would pass vacuously.
+      const sizes = elements(tree)
+        .map((element) => styleOf(element)["fontSize"])
+        .filter((size): size is number => typeof size === "number");
+      expect.soft(sizes, `${name} sizes`).not.toContain(33);
+      expect
+        .soft([...new Set(sizes)].sort(), `${name} sizes`)
+        .toEqual([39, 96]);
+
+      // The card is not any one game's, so it takes `--accent-app` on the
+      // tape and the shadow — and no OTHER accent reaches it at all.
+      const tape = valuesOf(tree, "backgroundColor").filter(mentionsAnAccent);
+      const shadow = valuesOf(tree, "boxShadow").filter(mentionsAnAccent);
+      expect.soft(tape, `${name} tape`).toEqual([ACCENT_APP_TAPE]);
+      expect
+        .soft(shadow, `${name} shadow`)
+        .toEqual([`15px 15px 0 ${ACCENT_APP_SHADOW}`]);
+      // And no word is accent-coloured — `DESIGN.md`'s colour section, *"the
+      // shared per-game accent may never colour a word"*, which is also the
+      // reason a row of four game names could never have worked.
+      expect
+        .soft(valuesOf(tree, "color").filter(mentionsAnAccent), `${name} words`)
+        .toEqual([]);
+    }
+  });
+
+  it("every multi-child node declares display:flex — satori THROWS otherwise", () => {
+    // Landmine 1 of `card.tsx`'s four, and jsdom does not catch it: a plain
+    // `<div>` with two children throws at RASTERISATION, which is a 500 on a
+    // crawler-facing route. Asserted on the tree so it reds in jsdom instead.
+    for (const [name, args] of Object.entries(cards)) {
+      const offenders = elements(archiveCard(args)).filter((element) => {
+        const children = (element.props as { readonly children?: unknown })
+          .children;
+        const count = Array.isArray(children) ? children.flat().length : 1;
+        return count > 1 && styleOf(element)["display"] !== "flex";
+      });
+      expect.soft(offenders.map(styleOf), name).toEqual([]);
+    }
+    // Counted floor: the tree really does have multi-child nodes to get
+    // wrong — the desk (dots + card), the card box (tape + column) and the
+    // column itself (four children).
+    const multi = elements(archiveCard(cards.day)).filter((element) => {
+      const children = (element.props as { readonly children?: unknown })
+        .children;
+      return Array.isArray(children) && children.flat().length > 1;
+    });
+    expect(multi.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("the archive card's own module graph reaches no reader", () => {
+    // The builder takes two strings, so it cannot import a reader — asserted
+    // on the shipped source rather than argued, in `T-WEB-S204`'s terms.
+    expect(code(cardSource)).not.toContain("@miolos/db");
+    expect(code(cardSource)).not.toContain("getDb");
+    expect(code(cardSource)).not.toContain("listArchivedDays");
+    // Anti-vacuity: the file really was read and really does build the card.
+    expect(code(cardSource)).toContain("export function archiveCard");
   });
 });

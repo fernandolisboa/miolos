@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { formatLongDate, formatMonth, messages } from "../src/i18n";
+import { ogCopy } from "../src/og/copy";
+import { OG_DEFAULTS } from "../src/og/defaults";
 
 // Every archive route's metadata (#31 AC 1, ADR-0053 decision 1 / plan 037
 // D6). Titles and descriptions are DISTINCT across dates and across games —
@@ -47,36 +49,113 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+/**
+ * The file with its comments removed. The same stripper `og-card.test.tsx`,
+ * `og-image.node.test.ts`, `eslint-db-wall.test.ts` and `archive-routes.test.ts`
+ * use, and it is what makes the literal scan below a scan of CODE.
+ *
+ * ADDED AT #104 STEP 7, and it repairs a trap rather than tidying one. The
+ * scan used to slice from `source.indexOf("generateMetadata")` over the RAW
+ * file — and in `app/arquivo/[data]/page.tsx` the first textual occurrence of
+ * that word is inside the doc block, about fifty lines above the function. So
+ * a test whose title is about string literals in a metadata function was
+ * policing fifty lines of English, where the effective rule was "no line of
+ * prose may carry two apostrophes". The implementer met it by writing "this
+ * function result" for "this function's result" and leaving a warning for the
+ * next editor; both are now gone, because the scan no longer reaches prose.
+ */
+function code(source: string): string {
+  return source
+    .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+    .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
+/**
+ * The body of a file's `generateMetadata`, comments stripped, anchored on the
+ * DECLARATION rather than on the bare identifier — `function generateMetadata`
+ * matches `export function` and `export async function` alike, and cannot
+ * match a mention of the name.
+ */
+function metadataBody(file: string): string {
+  const source = code(
+    readFileSync(join(import.meta.dirname, "..", file), "utf8"),
+  );
+  const body = source.slice(source.indexOf("function generateMetadata"));
+  return body.slice(0, body.indexOf("\n}\n") + 3);
+}
+
 describe("archive metadata (T-WEB-S173)", () => {
   it("every route composes its title and description from messages.archive, with a SELF-REFERENTIAL canonical", async () => {
+    // THE INDEX ARM IS BYTE-UNMOVED at #104, and that is a claim rather than
+    // an omission: the index card attaches by the FILE convention
+    // (`app/arquivo/opengraph-image.png`), so this function returns no
+    // `openGraph` key. The RESOLVED metadata for `/arquivo` certainly will
+    // carry one — the file convention injects the image and the root layout
+    // supplies `OG_DEFAULTS` — and this assertion is about the return value,
+    // not the rendered head.
     expect(index.generateMetadata()).toEqual({
       title: messages.archive.meta.indexTitle,
       description: messages.archive.meta.indexDescription,
       alternates: { canonical: "/arquivo" },
     });
 
+    // The month and day arms DO grow an `openGraph`, because their cards are
+    // referenced by an explicit `images` entry (#104, ADR-0071 decision 3).
+    // The card URLs are spelled as literals here for the same reason the
+    // canonicals are: a URL asserted through the same builder the route calls
+    // would agree with itself no matter what either did.
+    const monthName = formatMonth("2026-08-01");
+    const monthTitle = messages.archive.meta.monthTitle(monthName);
+    const monthDescription = messages.archive.meta.monthDescription(monthName);
     expect(
       await month.generateMetadata({
         params: Promise.resolve({ mes: "2026-08" }),
       }),
     ).toEqual({
-      title: messages.archive.meta.monthTitle(formatMonth("2026-08-01")),
-      description: messages.archive.meta.monthDescription(
-        formatMonth("2026-08-01"),
-      ),
+      title: monthTitle,
+      description: monthDescription,
       alternates: { canonical: "/arquivo/mes/2026-08" },
+      openGraph: {
+        ...OG_DEFAULTS,
+        title: monthTitle,
+        description: monthDescription,
+        images: [
+          {
+            url: "/cartao/mes/2026-08",
+            width: 1200,
+            height: 630,
+            alt: ogCopy.altArchiveMonth(monthName),
+            type: "image/png",
+          },
+        ],
+      },
     });
 
+    const longDate = formatLongDate("2026-08-03");
+    const dayTitle = messages.archive.meta.dayTitle(longDate);
+    const dayDescription = messages.archive.meta.dayDescription(longDate);
     expect(
       await day.generateMetadata({
         params: Promise.resolve({ data: "2026-08-03" }),
       }),
     ).toEqual({
-      title: messages.archive.meta.dayTitle(formatLongDate("2026-08-03")),
-      description: messages.archive.meta.dayDescription(
-        formatLongDate("2026-08-03"),
-      ),
+      title: dayTitle,
+      description: dayDescription,
       alternates: { canonical: "/arquivo/2026-08-03" },
+      openGraph: {
+        ...OG_DEFAULTS,
+        title: dayTitle,
+        description: dayDescription,
+        images: [
+          {
+            url: "/cartao/2026-08-03",
+            width: 1200,
+            height: 630,
+            alt: ogCopy.altArchiveDay(longDate),
+            type: "image/png",
+          },
+        ],
+      },
     });
   });
 
@@ -141,19 +220,17 @@ describe("archive metadata (T-WEB-S173)", () => {
       join("app", "arquivo", "mes", "[mes]", "page.tsx"),
       join("app", "arquivo", "[data]", "page.tsx"),
     ]) {
-      const source = readFileSync(
-        join(import.meta.dirname, "..", file),
-        "utf8",
-      );
-      const body = source.slice(source.indexOf("generateMetadata"));
-      const metadataBlock = body.slice(0, body.indexOf("\n}\n") + 3);
+      const metadataBlock = metadataBody(file);
       // Anti-vacuity: the slice really is the metadata function's body, so
       // an empty match list below means "no literals", not "no text".
-      expect(metadataBlock).toContain("canonical");
+      expect(metadataBlock, file).toContain("canonical");
       // Only the Metadata KEYS may appear here; a pt-BR sentence or a path
       // fragment would show up as quoted text.
       const literals = [...metadataBlock.matchAll(/(["'])(?:(?!\1).){2,}\1/g)];
-      expect(literals.map((match) => match[0])).toEqual([]);
+      expect(
+        literals.map((match) => match[0]),
+        file,
+      ).toEqual([]);
     }
   });
 });
@@ -227,20 +304,9 @@ describe("the four per-game archive routes' own metadata (T-WEB-S209)", () => {
     // OWN token and not the set of four: allowing all four would let the
     // sudoku route name binairo with this scan still green.
     for (const game of PER_GAME) {
-      const source = readFileSync(
-        join(
-          import.meta.dirname,
-          "..",
-          "app",
-          "arquivo",
-          "[data]",
-          game,
-          "page.tsx",
-        ),
-        "utf8",
+      const metadataBlock = metadataBody(
+        join("app", "arquivo", "[data]", game, "page.tsx"),
       );
-      const body = source.slice(source.indexOf("generateMetadata"));
-      const metadataBlock = body.slice(0, body.indexOf("\n}\n") + 3);
       // Anti-vacuity, both halves: the slice really is the metadata
       // function's body, and the one literal that IS allowed was really
       // found — so the empty set below is "no other literals" rather than

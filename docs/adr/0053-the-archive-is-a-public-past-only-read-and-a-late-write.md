@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-14 (issue #31, shipped in #94 and #95)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0005](./0005-all-content-is-free.md), [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md), [ADR-0039](./0039-termo-cannot-be-played-offline.md), [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md), [ADR-0044](./0044-a-lost-termo-is-played-not-pending.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md)
 **Amended by:** [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md) — **decision 2's route enumeration and its `revalidatePath` path list both grow, and decision 4's 404-vs-500 rule is narrowed at the caller.** #34 adds an `opengraph-image.tsx` beside each of the four archive play routes, so *"on all seven pages, on `sitemap.ts` and on `robots.ts`"* — nine `force-dynamic` route modules — becomes **thirteen**. *(Quotation corrected at step 7, finding W7: the line first read *"all seven pages, `sitemap.ts` and `robots.ts`"*, which is the same claim in fewer words and not what `:210` says. This pull request's own standard is verbatim, so it is repaired rather than defended.)* The path list is the one that matters: a future `killed_at` writer built from *"day, month, index, play, sitemap"* as written would **not** invalidate `/arquivo/<YYYY-MM-DD>/{binairo,sudoku,nonogram,termo}/opengraph-image`, so a withdrawn puzzle's card would keep serving after its page 404s — decision 2's own failure mode on a surface it predates. The precondition itself is **obeyed, not weakened**: no `revalidate` is added anywhere, and the new routes are `force-dynamic` for exactly the reason this decision gives. Decision 4's *"the two shipped readers keep throwing"* stays true — `packages/db` is byte-unmoved — but on the eight image routes the **caller** now catches a projection-class throw by name, logs it and answers 404, while an outage, a pool error or a missing `DATABASE_URL` still re-throws to the 500 that clause defends. See the annotations at decisions 2 and 4, and the qualification in Consequences.
+**Amended by:** [ADR-0071](./0071-the-archive-cards-are-nameplates-and-two-leave-the-file-convention.md) — **decision 2's route enumeration and its `revalidatePath` path list both grow again, and the #34 annotation's own closing clause becomes false.** #104 gives the three archive shells Open Graph cards: a committed asset for `/arquivo`, and two `force-dynamic` route handlers at `/cartao/<YYYY-MM-DD>` and `/cartao/mes/<YYYY-MM>`. So *"all seven pages, on `sitemap.ts` and on `robots.ts`"* — nine modules at #31, thirteen at #34 — becomes **fifteen**, and the path list must also name the two `/cartao` paths, because those two cards **read the wall** where the #34 annotation said the day and month pages *"inherit the root card, which reads nothing and cannot go stale"*. That clause is now false for two of the three routes it covers. The precondition itself is **obeyed and not narrowed**: #104 adds no `revalidate` and no CDN TTL, and both handlers carry `private, no-cache, no-store` on the 404 arm as well as the 200. Decision 3's ragged floor is quoted as one of the three reasons the day card names no game; decision 4's *"Three archive readers"* is **unchanged** (#104 adds no reader), and decision 10's *"Why no endpoint"* is **obeyed** — nothing user-specific reaches any card. See the annotations at decision 2. Multiple `Amended by:` lines stack.
 **Amends:** eight standing records. Every sentence below is quoted from the file as it stands; every amended file carries the reciprocal `**Amended by:**` line **and an in-place annotation of the amended sentence**, because in this repo "amended" means the file was edited ([ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md) consequence (b)).
 
 - **[ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md) rule 2** — *"**Archive completions are recorded, and marked late.** The stats calendar shows the date as solved with a visually distinct 'solved later' state."* For a late won row dated before the account's clamped range start there is no calendar entry at all — a class #31 and nothing else creates (decision 7). Rule 2's exclusion list and the three-visual-states consequence are untouched.
@@ -244,6 +245,24 @@ the text (the first is I42, from the step-7 round):
    does not confer it. So this family carries **thirteen** `force-dynamic`
    route modules, not nine.*
 
+   *(**Grown again at #104** —
+   [ADR-0071](./0071-the-archive-cards-are-nameplates-and-two-leave-the-file-convention.md)
+   decision 3. **Fifteen.** `app/cartao/[data]/route.ts` and
+   `app/cartao/mes/[mes]/route.ts` each carry their own
+   `export const dynamic = "force-dynamic"`, for the reason the #34
+   annotation already gives: the export is required per file, since segment
+   config comes from the layouts on the path plus the leaf, and a sibling
+   `page.tsx` does not confer it. **These two do not live under `/arquivo`,
+   and counting them into this family is a definitional move stated out loud
+   rather than performed silently**: they exist only to serve archive shells,
+   they read the same wall through the same helper, and the kill switch that
+   justifies `force-dynamic` reaches them for exactly that reason — so they
+   belong to the family this sentence describes even though they do not match
+   `app/arquivo/**`. A reader who counts thirteen files under `app/arquivo/**`
+   and concludes the number has rotted should read this clause. The committed
+   `app/arquivo/opengraph-image.png` is **not** a module, carries no segment
+   config, and does not count.)*
+
    ***Second, and this is a live hole rather than a count: the path list
    above is a FORWARD PRESCRIPTION, and a path absent from it is a path the
    future writer will not invalidate.** It must also name*
@@ -258,6 +277,18 @@ the text (the first is I42, from the step-7 round):
    `/<jogo>/opengraph-image` belong to ADR-0028 decision 4's family and not
    to this one, and the index, month and day pages inherit the root card,
    which reads nothing and cannot go stale.*
+
+   *(**Grown again at #104** —
+   [ADR-0071](./0071-the-archive-cards-are-nameplates-and-two-leave-the-file-convention.md)
+   decisions 2 and 3, on this annotation's own stated ground that the path
+   list is a forward prescription. **The list must also name*
+   `/cartao/<YYYY-MM-DD>` *and* `/cartao/mes/<YYYY-MM>`. *And the closing
+   sentence directly above is **replaced**: after #104 the index card is a
+   committed asset that reads nothing and cannot go stale, but the **day and
+   month cards read the wall** through `listArchivedDays` and are on the list
+   above. A writer built from the un-annotated list would leave a killed day's
+   `/cartao/<data>` serving after its page 404s — the same failure this
+   annotation was written to close one surface earlier.)*
 
    *The precondition itself is obeyed and not narrowed: #34 adds no
    `revalidate` anywhere, and it adds no CDN TTL either — the emitted
@@ -320,6 +351,16 @@ the text (the first is I42, from the step-7 round):
    `(date, game)` list reader, a months reader, and — reading no table and
    carrying no wall — a date classifier answering `past | today | future`.
    `wallPredicate`'s signature, semantics and callers are unchanged.
+
+   *(**Checked at #104** —
+   [ADR-0071](./0071-the-archive-cards-are-nameplates-and-two-leave-the-file-convention.md)
+   decision 4. **Still three readers, and one clock classifier.** The two new
+   `/cartao` card handlers call the existing `listArchivedDays` — the
+   `(date, game)` list reader above — with `limit: 1`, and add no reader,
+   no predicate and no second clock. `git diff main --stat -- packages` comes
+   out empty and is an exit criterion. A day-level existence read that included
+   **today** would have grown this enumeration, and ADR-0071 rejects it in
+   those words. Recorded as a checked row rather than by silence.)*
 
    **Why the extraction rather than a second copy.** The new readers
    genuinely cannot call `wallPredicate` (it takes `game` as required and

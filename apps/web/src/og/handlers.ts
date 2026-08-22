@@ -1,15 +1,26 @@
 import type { ProjectedGame } from "@miolos/core";
-import { getPublishedDaily, getTodayDaily } from "@miolos/db";
+import { getPublishedDaily, getTodayDaily, listArchivedDays } from "@miolos/db";
 import { ImageResponse } from "next/og";
 
-import { parseArchiveDate } from "../archive/parse-params";
+import {
+  monthDayBounds,
+  parseArchiveDate,
+  parseArchiveMonth,
+} from "../archive/parse-params";
 import { getDb } from "../db";
-import { formatLongDate } from "../i18n";
-import { gameCard, CARD_HEIGHT, CARD_WIDTH } from "./card";
+import {
+  formatDayAndMonth,
+  formatLongDate,
+  formatMonth,
+  messages,
+} from "../i18n";
+import { archiveCard, gameCard, CARD_HEIGHT, CARD_WIDTH } from "./card";
+import { ogCopy } from "./copy";
 import { FONTS } from "./fonts";
 
 /**
- * The two handlers behind the eight dated OG image routes (#34, ADR-0054).
+ * The four handlers behind the eight dated OG image routes (#34, ADR-0054)
+ * and the two `/cartao` archive shell cards (#104, ADR-0071).
  *
  * Each route file is a table entry: the segment config, the static `alt`, and
  * one call. Everything that could differ between them lives here, once.
@@ -44,6 +55,57 @@ import { FONTS } from "./fonts";
  * predicate re-typed per route." Both readers carry the conjuncts through
  * `packages/db`'s single private `publishedConjuncts()`. No fallback card
  * exists, ever: a fallback would be an unpublished day rendering *something*.
+ *
+ * ## The two ARCHIVE SHELL handlers, and why they have NO catch (#104)
+ *
+ * `archiveDayCardHandler` and `archiveMonthCardHandler` serve the `/cartao`
+ * family. Each card's existence proof is its PAGE's, through one bounded
+ * `listArchivedDays(…, { limit: 1 })` — the smallest read that answers the
+ * question the page itself asks (`days.length === 0`), so the card's truth
+ * value is its page's by construction and no game SET is ever in scope.
+ * Existence is the DAY, not a game's row: a day holding one game renders a
+ * card, exactly as the page renders one game (ADR-0053 decision 3's ragged
+ * floor).
+ *
+ * **`limit: 1` IS NOT WHAT KEEPS A GAME OFF THE CARD, and this is the one
+ * place that argument is written down.** It bounds the read to an existence
+ * answer, so no game SET is in scope — but `ArchivedDay` is `{date, game}`
+ * and `days[0].game` is one access away, so a bound is not a guarantee. The
+ * guarantee is `archiveCard`'s SIGNATURE, two formatted strings with no
+ * parameter a `Game` can enter through. `T-WEB-S201` polices the access from
+ * the source side and `T-WEB-S334` row (10) pins the argument object.
+ *
+ * **The rule above produces no catch here, and the omission is the argument
+ * rather than a gap.** `listArchivedDays` selects two columns, runs no
+ * projection and parses nothing (`packages/db/src/published.ts:372-396`), so
+ * no member of `PROJECTION_ERROR_NAMES` can arise from it. Every callee on
+ * the path was traced: `parseArchiveDate` and `parseArchiveMonth` use
+ * `safeParse`, never `parse`, so neither can throw a `ZodError`; `getDb()`
+ * throws a plain `Error("WEB_DATABASE_URL is not set")`. A narrowed catch
+ * here would be unreachable code that re-throws everything. Every throw these
+ * handlers can see — a Neon timeout, a pool error, a missing credential — is
+ * exactly the class the name set was always designed to send to a 500.
+ * `T-WEB-S334` pins both directions so the absence can go red.
+ *
+ * The `ImageResponse` construction stays outside any read for the same reason
+ * it is outside the `try` above: a SYNCHRONOUS throw from the builder or from
+ * the constructor must surface as a 500, never be converted into a silent 404
+ * by a `try` some later edit widened to the whole handler.
+ *
+ * **Narrower than "a satori throw must be a 500", because that is not what
+ * the runtime does** (step-6 security S4). In
+ * `next/dist/server/og/image-response.js` the body is a `ReadableStream` whose
+ * `async start()` is where satori and resvg actually run, and `super(readable,
+ * { status })` has already committed the 200 and its headers before that. A
+ * throw INSIDE satori therefore errors the stream after the 200 — a truncated
+ * 200, not a 500 — on all ten card routes, and no `try` placement here can
+ * change that. What the placement does govern is the synchronous half, which
+ * is the half `T-WEB-S203` row (6) and `T-WEB-S334` row (9) actually prove:
+ * both mock the BUILDER, which throws before the constructor is reached.
+ *
+ * `parseArchiveMonth` carries the year-zero floor that fixed a real
+ * unauthenticated 500 (`archive/parse-params.ts`), and the card inherits it
+ * by calling the same parser rather than a second regex.
  */
 
 /**
@@ -110,7 +172,7 @@ const CARD_HEADERS = {
 const refuse = (): Response =>
   new Response(null, { status: 404, headers: CARD_HEADERS });
 
-export async function archiveCardHandler(
+export async function archiveGameCardHandler(
   game: ProjectedGame,
   segment: string,
 ): Promise<Response> {
@@ -133,14 +195,94 @@ export async function archiveCardHandler(
     return refuse(); // future, unpublished, killed, or no such day
   }
 
-  // OUTSIDE the try, and `T-WEB-S203` row (6) pins that: a satori or
-  // `ImageResponse` throw must surface as a 500, never be converted into a
-  // silent 404 by a `try` some later edit widened to the whole handler.
+  // OUTSIDE the try, and `T-WEB-S203` row (6) pins that: a SYNCHRONOUS throw
+  // from the builder or the constructor must surface as a 500, never be
+  // converted into a silent 404 by a `try` some later edit widened to the
+  // whole handler. (A throw from satori itself lands after the 200 is on the
+  // wire — see the module doc block.)
   return new ImageResponse(gameCard({ game, longDate: formatLongDate(date) }), {
     ...SIZE,
     fonts: FONTS,
     headers: CARD_HEADERS,
   });
+}
+
+/**
+ * `/cartao/<YYYY-MM-DD>` — the card for `/arquivo/<data>` (#104, ADR-0071).
+ *
+ * The display line is the day and month and the caption carries the year,
+ * which is a MEASUREMENT and not a preference: see `archiveCard`'s doc block
+ * for the rung ladder and the 1111px that failed it. Both strings are
+ * composed from the URL's own date, never from the row — the read decides
+ * only *render or 404*.
+ */
+export async function archiveDayCardHandler(
+  segment: string,
+): Promise<Response> {
+  const date = parseArchiveDate(segment);
+  if (date === undefined) {
+    return refuse(); // Zod before any read: a hostile segment costs nothing.
+  }
+
+  const days = await listArchivedDays(getDb(), {
+    from: date,
+    to: date,
+    limit: 1,
+  });
+  if (days.length === 0) {
+    // Future, unpublished, killed, no such day — and TODAY, which the
+    // archive wall excludes by definition (`archivedWallPredicate`).
+    return refuse();
+  }
+
+  return new ImageResponse(
+    archiveCard({
+      display: formatDayAndMonth(date),
+      // A RAW SLICE, DELIBERATELY, and it is the one place on this surface
+      // that does date surgery. `format.ts`'s `formatDayNumber` states the
+      // opposite rule — *"Through `Intl` rather than a string slice, so the
+      // locale owns its own numerals and the leading zero goes without a
+      // hand-rolled trim"* — and that rule is about a NUMERAL the locale
+      // owns. This is not a numeral: it is the four characters the URL
+      // already carries, and the caption's job is to put the year the display
+      // line dropped back beside a date the reader can see in the address
+      // bar. An `Intl` year would be free to disagree with it — `formatMonth`
+      // prints "janeiro de 1" where `/cartao/0001-01-01` says `0001`. The
+      // shape is guaranteed: `parseArchiveDate` returned, so `date` is
+      // `YYYY-MM-DD` with a real calendar day.
+      caption: ogCopy.archiveDayCaption(date.slice(0, 4)),
+    }),
+    { ...SIZE, fonts: FONTS, headers: CARD_HEADERS },
+  );
+}
+
+/**
+ * `/cartao/mes/<YYYY-MM>` — the card for `/arquivo/mes/<mês>`. The same shape
+ * over the month's own day bounds, which is the same read its page makes.
+ */
+export async function archiveMonthCardHandler(
+  segment: string,
+): Promise<Response> {
+  const month = parseArchiveMonth(segment);
+  if (month === undefined) {
+    return refuse();
+  }
+
+  const days = await listArchivedDays(getDb(), {
+    ...monthDayBounds(month),
+    limit: 1,
+  });
+  if (days.length === 0) {
+    return refuse();
+  }
+
+  return new ImageResponse(
+    archiveCard({
+      display: formatMonth(`${month}-01`),
+      caption: messages.archive.title,
+    }),
+    { ...SIZE, fonts: FONTS, headers: CARD_HEADERS },
+  );
 }
 
 export async function dailyCardHandler(game: ProjectedGame): Promise<Response> {
