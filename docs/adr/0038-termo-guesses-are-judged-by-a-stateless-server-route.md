@@ -372,7 +372,7 @@ extension point in that route with no tripwire on it.
   through `requireUserId`, `todaySaoPaulo(db)` for the accepted-window bound,
   and `getPublishedDailyWithSolution` — because neon-http gives **each
   statement its own trip**, a fact this repo records at
-  `createSessionForUser` in `apps/api/src/session/service.ts` (*"each statement is its own
+  `resolveSession` in `apps/api/src/session/service.ts` (*"each statement is its own
   neon-http round trip"*). `GET /daily/<game>` is **one**
   (`apps/api/app/daily/nonogram/route.ts:32`, a single `getTodayDaily`),
   and `apps/web` calls it **zero** times, where the guess route runs ~6× per

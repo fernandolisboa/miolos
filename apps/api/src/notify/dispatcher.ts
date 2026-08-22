@@ -42,6 +42,9 @@ import type { NudgeSend } from "./transport";
  *
  * Each candidate is wrapped in try/catch with a loud console.error: one
  * user's blowup never starves the rest of the tick.
+ *
+ * See ADR-0064 (streak-at-risk is a derived decision) and ADR-0068 (the
+ * dispatcher's operating decisions).
  */
 export async function runNotifyTick(
   db: Db,

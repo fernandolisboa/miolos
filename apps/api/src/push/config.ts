@@ -11,6 +11,8 @@
  * only the public key: a half-configured environment must not collect
  * subscriptions the dispatcher can never serve. Activation is
  * `vercel env add` for all three vars.
+ *
+ * See ADR-0064.
  */
 export function isPushConfigured(): boolean {
   return (

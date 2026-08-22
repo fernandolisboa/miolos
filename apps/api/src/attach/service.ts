@@ -10,6 +10,8 @@ import { attachTokens } from "@miolos/db/user";
  * No JS `Date` appears in any statement: every timestamp is DB-side
  * `now()` or a column default, and both the token expiry and the rate
  * window are DB-side predicates.
+ *
+ * See ADR-0049 and ADR-0050.
  */
 
 /**

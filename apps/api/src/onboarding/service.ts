@@ -7,6 +7,8 @@ import { eq, sql, users, type Db } from "@miolos/db";
  * returns plain data — no Response construction here.
  *
  * No JS `Date` appears in any statement: the stamp is DB-side `now()`.
+ *
+ * See ADR-0061.
  */
 
 /**

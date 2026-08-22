@@ -61,6 +61,7 @@ export async function captureEvent<E extends TelemetryEvent>(input: {
         distinct_id: input.distinctId,
         properties: {
           ...properties,
+          // Anonymous-class events only — no person profiles (ADR-0069 d5).
           $process_person_profile: false,
           // Server->server from a Vercel function, so the IP PostHog sees
           // is the function's egress, not the player's — without this it

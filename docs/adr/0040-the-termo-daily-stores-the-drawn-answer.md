@@ -121,9 +121,9 @@ is *"tightening a constraint and regenerating"*.
    can reject and no weekday ramp; the only non-throwing failure is
    deterministic schema drift, which retrying cannot fix. The three existing
    per-date seed-retry constants — `MAX_SEED_RETRIES_PER_DATE`
-   (`service.ts:89`, module-private and unprefixed),
-   `MAX_SUDOKU_SEED_RETRIES_PER_DATE` (`:210`) and
-   `MAX_NONOGRAM_SEED_RETRIES_PER_DATE` (`:393`) — get no termo analogue, and one
+   (module-private and unprefixed, in `apps/api/src/publishing/service.ts`),
+   `MAX_SUDOKU_SEED_RETRIES_PER_DATE` and
+   `MAX_NONOGRAM_SEED_RETRIES_PER_DATE` — get no termo analogue, and one
    added later "for symmetry" would guard nothing. `failures[].reason` for
    termo has exactly two values: the exhaustion string and `content schema
    rejected: …`. `drawUniformIndex`'s 64-attempt cap is a draw-termination

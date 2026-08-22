@@ -3,6 +3,8 @@
  * the externalization: one module, pt-BR strings only, imported by the
  * transport and by nothing else. The body is plain text plus one link —
  * no tracking pixels, no remote assets.
+ *
+ * See ADR-0050.
  */
 
 export const magicLinkSubject = "Seu link mágico do Miolos";

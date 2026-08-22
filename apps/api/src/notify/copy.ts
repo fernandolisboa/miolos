@@ -8,6 +8,8 @@
  * comes from `computeStreak` (the single streak authority), and it is
  * COPY ONLY — never the send condition (the candidate SQL decides who is
  * nudged).
+ *
+ * See ADR-0064.
  */
 export function nudgeCopy(streak: number): { title: string; body: string } {
   const dias = streak === 1 ? "1 dia" : `${streak} dias`;

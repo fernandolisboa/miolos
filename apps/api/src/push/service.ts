@@ -3,6 +3,9 @@ import { eq, pushSubscriptions, sql, users, type Db } from "@miolos/db";
 // Per-user ceiling, enforced write-side folded into the subscribe INSERT
 // (not a dispatch-side cap, which would bound neither storage nor sends) —
 // see ADR-0068 decision 1.
+// 10 covers any real device fleet — phone, desktop, tablet, spare browsers
+// — with slack. ADR-0068 decision 1 has the threat and the mechanism, not
+// this number.
 export const PUSH_SUBSCRIPTION_CEILING = 10;
 
 /**

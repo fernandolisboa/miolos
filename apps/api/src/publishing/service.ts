@@ -190,7 +190,8 @@ export async function topUpBinairoBuffer(
 
 /**
  * Per-DATE seed-retry budget for sudoku — deliberately 2, not binairo's 8:
- * sudoku's generation cost per attempt is orders of magnitude higher, so
+ * sudoku runs 1200 internal attempts per seed against binairo's 64, each
+ * attempt costlier, so
  * bounding one date's total time needs far fewer retries here.
  *
  * Exported so the tests bind to the constant rather than to a copied
@@ -202,8 +203,10 @@ export const MAX_SUDOKU_SEED_RETRIES_PER_DATE = 2;
  * RUN-scoped seed-retry budget, spent across every uncovered date in ONE
  * invocation — not the per-date bound. Without a run-level cap the total
  * run time would scale with `depth`; with this budget the run is bounded
- * independent of `depth`, which is why `vercel.json` pins `maxDuration`
- * against it. When it is exhausted every remaining uncovered date lands in
+ * independent of `depth`, which is why `vercel.json` pins `maxDuration: 60`
+ * against it. The measured basis, recorded here because nothing else in the
+ * repo holds it: ~1.7 ms per sudoku attempt, so an exhausted seed costs ~2 s
+ * and this budget bounds a run at ~8 s. When it is exhausted every remaining uncovered date lands in
  * `failures`, and GET /buffer-depth catches the shortfall on its next poll.
  */
 export const MAX_SUDOKU_SEED_RETRIES_PER_RUN = 4;

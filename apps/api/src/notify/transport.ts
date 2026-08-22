@@ -6,6 +6,8 @@ import { sendNotification, setVapidDetails, WebPushError } from "web-push";
  * recorded composition-crypto exception, `apps/api` only; `packages/games`
  * stays dependency-free. Injected into the dispatcher as a plain function,
  * so every tick test runs a fake transport with zero `vi.mock`.
+ *
+ * See ADR-0068.
  */
 
 /** One send's verdict — never a throw for a send failure. */

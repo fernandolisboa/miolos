@@ -17,8 +17,9 @@ const STALE_AFTER_MS = 60 * 60 * 1000; // 1 hour, mirrors the SQL predicate
 
 /**
  * Look up a session by token hash. On a hit, bump `last_seen_at` only when
- * it is more than 1 hour stale — the JS comparison is just the send-gate
- * for the UPDATE round trip; the DB-side predicate is the actual guard.
+ * it is more than 1 hour stale (each statement is its own neon-http round
+ * trip); the JS comparison is only the send-gate, and the DB-side predicate
+ * is the actual guard.
  *
  * `lastSeenAt` is bumped on reads too, cross-site top-level GETs included
  * (GET /streak has no origin guard by design). It must never become
