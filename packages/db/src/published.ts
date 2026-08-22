@@ -21,37 +21,23 @@ import type { Db } from "./client";
 import { dailyPuzzles } from "./schema";
 
 /**
- * This module is ADR-0004's entire wall (ADR-0010): every exported reader
- * carries `published_at <= now() AND killed_at IS NULL` in SQL — `now()`
- * is the DATABASE clock, never `new Date()`. Default readers additionally
- * strip inside the wall (ADR-0024): they return the solution-free public
- * projection, so no consumer — RSC pages included — can serialize what it
- * never received. The dedicated suite in test/published.test.ts may never
- * be weakened (issue #17 AC 1), and its export-list tripwires pin this
- * module's surface: a new reader added here without wall tests fails the
- * suite.
- *
- * NOT EVERY READER RETURNS A ROW. `getPublishedNonogramMotifName` (#64,
- * ADR-0070) returns ONE STRING read out of `content` behind the same wall,
- * which is the strip-inside-the-wall rule taken to its limit rather than an
- * exception to it: the caller cannot over-serialize what it never received,
- * and a reader that hands back a single curated field is narrower than one
- * that hands back a projection. `listUsedTermoAnswers` is the precedent for
- * reading stored `content` back for one value.
+ * This module is ADR-0004's entire wall: every exported reader carries
+ * `published_at <= now() AND killed_at IS NULL` in SQL — `now()` is the
+ * DATABASE clock, never `new Date()`. Default readers additionally strip
+ * inside the wall: they return the solution-free public projection, so no
+ * consumer — RSC pages included — can serialize what it never received.
+ * See ADR-0004.
  */
 
-/** The one spelling of the product timezone (CLAUDE.md invariant). */
+/** The one spelling of the product timezone. */
 export const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 
 /** Full row shape, solution-bearing — only ever leaves via `@miolos/db/publishing`. */
 export type DailyPuzzleRow = typeof dailyPuzzles.$inferSelect;
 
 /**
- * The publication conjuncts, and the ONLY spelling of them (ADR-0010 :20,
- * ADR-0014 :16, ADR-0053 decision 4). Both predicates below spread this;
- * neither re-types it. ADR-0026 :92-95 protects the wall's SEMANTICS from
- * acquiring a write-side bound — it is not a rule against factoring the
- * conjuncts two readers share.
+ * The publication conjuncts, and the ONLY spelling of them — both
+ * predicates below spread this, neither re-types it. See ADR-0004.
  */
 function publishedConjuncts(): readonly SQL[] {
   return [
@@ -61,31 +47,19 @@ function publishedConjuncts(): readonly SQL[] {
 }
 
 /**
- * The DB clock's São Paulo day, and the ONLY spelling of it in this module.
- * `wallPredicate`'s today branch, `archivedWallPredicate`'s past bound and
- * `archiveDateClass` all interpolate this one fragment; a second timezone
- * cast of the clock anywhere in this file is the divergence T-DB-S53b
- * reds on.
- *
- * The wording avoids the scanned phrase deliberately: T-DB-S53b counts
- * occurrences in the source, so a doc block quoting the expression would
- * make the scan count its own comment. The scan additionally strips
- * comments before counting, so this is belt and braces.
+ * The DB clock's São Paulo day, the ONLY spelling of it in this module —
+ * `wallPredicate`, `archivedWallPredicate` and `archiveDateClass` all
+ * interpolate this one fragment. A test counts spellings by source scan
+ * (comments stripped first), so this doc block avoids quoting the
+ * expression itself.
  */
 function saoPauloToday(): SQL {
   return sql`(now() at time zone ${SAO_PAULO_TIME_ZONE})::date`;
 }
 
 /**
- * The wall predicate, shared by every reader. `date` omitted means
- * "the DB clock's America/Sao_Paulo calendar day" (ADR-0010 single
- * authority — no server-clock skew).
- *
- * UNCHANGED BEHAVIOUR at #31: same signature, same required `game`, same
- * "date omitted means the DB clock's SP day". Only the two publication
- * conjuncts and the clock fragment are now spread instead of re-typed
- * (ADR-0053 decision 4); T-DB-S53a pins that the three shipped readers
- * answer identically over the same seeds.
+ * The wall predicate, shared by every reader. `date` omitted means "the
+ * DB clock's America/Sao_Paulo calendar day" — no server-clock skew.
  */
 function wallPredicate(game: Game, date?: string): SQL | undefined {
   return and(
@@ -98,20 +72,16 @@ function wallPredicate(game: Game, date?: string): SQL | undefined {
 }
 
 /**
- * The ARCHIVE wall (ADR-0053 decision 4): the same conjuncts plus
- * "strictly before the DB clock's São Paulo day". Today's daily is not
- * archive content — it has its own route, and the archive's today URL
- * redirects to it (decision 1) — and no write ever originates from an
- * archive path.
+ * The ARCHIVE wall: the same conjuncts plus "strictly before the DB
+ * clock's São Paulo day". Today's daily is not archive content — it has
+ * its own route, and the archive's today URL redirects to it.
  *
- * The date bound here is a READ bound on new readers. ADR-0026 decision 6's
- * rule that the WRITE bound lives in the route and never in SQL is
- * untouched, and `wallPredicate` above is byte-identical in behaviour.
+ * The date bound here is a READ bound only; the WRITE bound lives in the
+ * route and never in SQL, and `wallPredicate` above is untouched.
  *
  * `game` and `date` are both optional because the three readers over this
  * predicate ask three different questions: one row, a date range, or every
- * month. Range bounds ride beside it in the readers rather than in the
- * signature, so the wall itself stays one shape.
+ * month.
  */
 function archivedWallPredicate(game?: Game, date?: string): SQL | undefined {
   return and(
@@ -125,32 +95,17 @@ function archivedWallPredicate(game?: Game, date?: string): SQL | undefined {
 /**
  * Solution-free projection of today's daily (DB-clock SP today).
  * `undefined` = nothing published — the route answers 404, never
- * generates on demand (plan 014 D13).
+ * generates on demand.
  *
  * Generic in `game` so a caller gets the response of the game it asked
- * for, not the whole union: once `DailyPuzzleResponse` carries two
- * members, an un-narrowed return type forces every page to branch on a
- * discriminator it already knows (plan 018 S11).
- *
- * `ProjectedGame`, NOT `Game`, and that is load-bearing: a game with no
- * projection has `Extract<DailyPuzzleResponse, { game: G }>` = `never`, so a
- * `Game`-keyed reader would type the call as `Promise<undefined>` while
- * `stripDailyContent` threw for it at runtime. The bound is what keeps an
- * unprojected game off the wall at COMPILE time, and it is the reason
- * `ProjectedGame` exists as a separate name from `Game`.
- *
- * **Termo closed at #27** — it has a projection (`game` and `date` only,
- * ADR-0038 decision 7), `ProjectedGame` covers all four M2 games
- * (`daily.ts`'s extension point is discharged), and `getTodayDaily(db,
- * "termo")` is a live call in `apps/web`'s two Termo segments. The bound
- * therefore constrains nothing today and must NOT be removed as dead: it is
- * the guard the fifth game meets. **The invariant is stated without a
- * ticket, deliberately** (step-6 F22): this sentence has already had its
- * justification moved from one unshipped ticket to another (#31 → #34) and a
- * third move would falsify it again. The standing fact is that this reader is
- * the TODAY-inclusive one — any caller that needs today's projected daily
- * wants this signature and not the archive's past-only twin below, whose
- * extra conjunct excludes today in SQL.
+ * for, not the whole union. Bounded to `ProjectedGame`, NOT `Game`: a game
+ * with no projection has `Extract<DailyPuzzleResponse, { game: G }>` =
+ * `never`, so a `Game`-keyed reader would type the call as
+ * `Promise<undefined>` while `stripDailyContent` threw for it at runtime —
+ * the bound is what keeps an unprojected game off the wall at COMPILE
+ * time. Every shipped game currently has a projection, so the bound
+ * constrains nothing today; it is the guard the next unprojected game
+ * meets.
  */
 export async function getTodayDaily<G extends ProjectedGame>(
   db: Db,
@@ -170,18 +125,14 @@ export async function getTodayDaily<G extends ProjectedGame>(
   // through the per-game response schema, whose `game` is `z.literal(game)`,
   // so the discriminator cannot disagree. TypeScript cannot follow a
   // discriminant through a generic type parameter, which is the only reason
-  // this line exists. Pinned by T-DB-S3 (a game-scoped read never returns
-  // another game's row) and T-DB-S4 (`game === "sudoku"` at runtime on every
-  // seeded row shape), so the claim is machine-checked rather than asserted.
+  // this line exists.
   return projected as Extract<DailyPuzzleResponse, { game: G }>;
 }
 
 /**
- * Same wall, explicit date — future dates return `undefined` by the
- * predicate, never by argument checks. Narrowed to the requested game for
- * the same reason `getTodayDaily` is, with the same `ProjectedGame` bound —
- * including its #27 status: all four M2 games are projected, so the bound
- * constrains nothing today and is kept for the fifth.
+ * Same wall as `getTodayDaily`, explicit date — future dates return
+ * `undefined` by the predicate, never by argument checks. Same
+ * `ProjectedGame` bound and reasoning.
  */
 export async function getPublishedDaily<G extends ProjectedGame>(
   db: Db,
@@ -198,22 +149,20 @@ export async function getPublishedDaily<G extends ProjectedGame>(
     return undefined;
   }
   const projected = stripDailyContent(game, row.date, row.content);
-  // Same restatement, same runtime proof, same tests — see `getTodayDaily`
-  // above for why TypeScript needs it (plan 018 §6.5).
+  // Same restatement, same runtime proof — see `getTodayDaily` above.
   return projected as Extract<DailyPuzzleResponse, { game: G }>;
 }
 
 /**
- * Full row including the solution, for judging completions (#18). Same
+ * Full row including the solution, for judging completions. Same
  * predicate: only PUBLISHED, unkilled rows — the buffer module is the
  * sole reader of unpublished rows. Exported ONLY from
- * `@miolos/db/publishing` (ADR-0024, plan 014 D16), never from the root
- * entry.
+ * `@miolos/db/publishing`, never from the root entry.
  *
  * Deliberately NOT narrowed like the two default readers: it returns the
- * raw row and never calls `stripDailyContent`, so it has no projection to
- * be missing and stays keyed on the full `Game` — the judge must be able
- * to read a row for any game the buffer can hold (plan 018 §6.5).
+ * raw row and never calls `stripDailyContent`, so it stays keyed on the
+ * full `Game` — the judge must be able to read a row for any game the
+ * buffer can hold.
  */
 export async function getPublishedDailyWithSolution(
   db: Db,
@@ -229,47 +178,26 @@ export async function getPublishedDailyWithSolution(
 }
 
 /**
- * Today's Nonogram MOTIF NAME, and nothing else from the row (#64,
- * ADR-0070, which supersedes ADR-0033 decision 1's name clause).
+ * Today's Nonogram MOTIF NAME, and nothing else from the row (see
+ * ADR-0070). Same wall as every reader here, parsed INSIDE it, so the
+ * caller receives one string and never a row it could over-serialize.
  *
- * Same wall as every reader here — `published_at <= now() AND killed_at IS
- * NULL`, the DB clock — and the parse happens INSIDE it (ADR-0024), so the
- * caller receives one string and never a row it could over-serialize. It
- * returns `reveal.name` only: `motifId`, `mirrored` and `reveal.solution`
- * stay server-side on every projection, exactly as ADR-0033 decision 1
- * still says of them.
+ * IT NEVER THROWS, and the WHOLE body is guarded, not just the parse:
+ * `/day` touches only the clock and `completions` today, and this read
+ * couples it to `daily_puzzles` for the first time. An escaping throw — a
+ * parse failure, a dropped connection, a statement timeout — would 500
+ * the ENTIRE day payload for a user whose only sin was finishing the
+ * Nonogram. The name is progressive enhancement; the log line is the
+ * alarm.
  *
- * IT IS THE CALLER'S JOB TO ASK ONLY AFTER THE DAY IS DECIDED. This reader
- * enforces publication, not completion — the completion half lives in
- * `dayGamesFromRows`, which attaches the name only to a `completed` nonogram
- * claim. `/day` calls this only when its own status derivation already said
- * `completed`, so most callers pay for no extra query at all.
+ * An EMPTY stored name normalises to `undefined` — load-bearing, not
+ * tidy: `nonogramRevealSchema` has no `.min(1)`, so a stored `name: ""`
+ * parses fine here, but would fail the wire's `.min(1)` and 500 the whole
+ * payload if returned as-is.
  *
- * **IT NEVER THROWS, and the WHOLE body is guarded rather than just the
- * parse** — `getArchivedDaily`'s log-and-`undefined` idiom, for a sharper
- * reason. `/day` touches only the clock and `completions` today; this read
- * couples it to `daily_puzzles` for the first time, so an escaping throw —
- * a parse failure, a dropped connection, a statement timeout — would 500 the
- * ENTIRE day payload (hub, four tiles, every completed view) for a user
- * whose only sin was finishing the Nonogram. The name is progressive
- * enhancement; its absence is the honest degraded case, and the log line is
- * the alarm.
- *
- * **An EMPTY stored name normalises to `undefined`, and that is load-bearing
- * rather than tidy.** `nonogramRevealSchema` has no `.min(1)` —
- * `validateNonogram`'s `reveal-name-empty` rejection lives in
- * `packages/games` at GENERATION time, not on this read path — so a stored
- * `name: ""` parses fine here. Left alone it would attach `motifName: ""`,
- * fail `dayGameStateSchema`'s `.min(1)` inside the route's own
- * `dayResponseSchema.parse`, and 500 the whole payload: verbatim the failure
- * ADR-0065 decision 2 records for the `hintsUsed` cap. Tightening the
- * content schema instead would be a WRITE-side change that can drain the
- * buffer, so the normalisation lives here, at the read, where it costs
- * nothing.
- *
- * Exported from `@miolos/db/publishing` ONLY, never the root entry
- * (ADR-0024): the root entry is `apps/web`'s, and a root export would hand
- * an RSC segment a one-line channel to today's motif name.
+ * Exported from `@miolos/db/publishing` ONLY, never the root entry: the
+ * root entry is `apps/web`'s, and a root export would hand an RSC segment
+ * a one-line channel to today's motif name.
  */
 export async function getPublishedNonogramMotifName(
   db: Db,
@@ -286,16 +214,10 @@ export async function getPublishedNonogramMotifName(
       return undefined;
     }
     const name = nonogramDailyContentSchema.parse(row.content).reveal.name;
-    // BLANK is wider than `trim()`'s idea of blank, on purpose.
-    // `String.prototype.trim` strips WhiteSpace and LineTerminator only, so
-    // a stored U+200B (zero-width space) or U+FEFF (BOM) survives it,
-    // passes the wire's `.min(1)`, and renders an INVISIBLE `.pictureName`
-    // under a perfectly visible "A FIGURA DE HOJE ERA" — a lead labelling
-    // nothing, which is the one shape `ConclusionPicture` says must not
-    // happen. `\p{Cf}` covers the format characters; the curated library
-    // cannot produce any of this (`name-length.test.ts` pins it), so this
-    // guards a hand-edited row, which is exactly the class of row the rest
-    // of this function's `catch` exists for.
+    // BLANK is wider than `trim()`'s idea of blank, on purpose: a stored
+    // U+200B (zero-width space) or U+FEFF (BOM) survives `trim()` and
+    // would render an INVISIBLE name under a visible lead. `\p{Cf}` covers
+    // the format characters that `\s` does not.
     return /^[\s\p{Cf}]*$/u.test(name) ? undefined : name;
   } catch (error) {
     console.error(
@@ -313,20 +235,18 @@ export interface ArchivedDay {
 }
 
 /**
- * The archive's per-day read (ADR-0053 decision 4). `getPublishedDaily`'s
- * twin plus "strictly before the DB clock's SP day": today's daily is not
- * archive content and its URL redirects to the daily route (decision 1).
+ * The archive's per-day read. `getPublishedDaily`'s twin plus "strictly
+ * before the DB clock's SP day": today's daily is not archive content and
+ * its URL redirects to the daily route.
  *
  * `undefined` = the route answers Next's `notFound()` — a real 404, which
  * the daily route deliberately does NOT do (it renders an unavailable card
  * at 200, because "no puzzle today" is not "no such resource").
  *
- * **It never throws on a bad row.** If a historical row's content fails
- * `stripDailyContent`, this logs game and date and returns `undefined`, so
- * the page 404s. The URL is one the sitemap advertises to crawlers, and a
- * 500 there is worse than a 404 in every dimension — it pages nobody, it is
- * not cacheable-negative for a crawler, and it hides which row is bad. The
- * log line IS the alarm. `getTodayDaily` and `getPublishedDaily` still
+ * It never throws on a bad row: if a historical row's content fails to
+ * parse, this logs and returns `undefined` so the page 404s. The URL is
+ * one the sitemap advertises to crawlers, and a 500 there is worse than a
+ * 404 in every dimension. `getTodayDaily` and `getPublishedDaily` still
  * throw, because on those a bad row is a live incident.
  */
 export async function getArchivedDaily<G extends ProjectedGame>(
@@ -353,21 +273,18 @@ export async function getArchivedDaily<G extends ProjectedGame>(
     );
     return undefined;
   }
-  // Same restatement, same runtime proof, same tests — see `getTodayDaily`
-  // above for why TypeScript needs it (plan 018 §6.5).
+  // Same restatement, same runtime proof — see `getTodayDaily` above.
   return projected as Extract<DailyPuzzleResponse, { game: G }>;
 }
 
 /**
- * Which `(date, game)` pairs the archive holds (ADR-0053 decision 4).
- * `date` and `game` are the ONLY columns selected — no `content` is named,
- * so ADR-0024's strip-inside-the-wall holds by construction rather than by
- * a projection step.
+ * Which `(date, game)` pairs the archive holds. `date` and `game` are the
+ * ONLY columns selected — no `content` is named, so the strip-inside-the-
+ * wall rule holds by construction rather than by a projection step.
  *
  * Deterministic order: `date DESC, game ASC`. `from`/`to` are inclusive
- * `YYYY-MM-DD` bounds compared as `date` values in SQL, never string-sliced
- * in JS. Serves the index (`limit`, over-fetched), the month pages (the
- * month's edges), the day page (`from = to`) and the sitemap (unbounded).
+ * `YYYY-MM-DD` bounds compared as `date` values in SQL, never
+ * string-sliced in JS.
  */
 export async function listArchivedDays(
   db: Db,
@@ -396,13 +313,10 @@ export async function listArchivedDays(
 }
 
 /**
- * The months the archive spans, `'YYYY-MM'`, newest first (ADR-0053
- * decision 4). One grouped scan instead of an unbounded row read on the
- * crawler-facing index. Its LAST element IS the archive's floor — no second
- * value records it anywhere (decision 3).
+ * The months the archive spans, `'YYYY-MM'`, newest first. One grouped
+ * scan instead of an unbounded row read on the crawler-facing index.
  *
- * `to_char` runs in Postgres, so no JS `Date` appears in the statement —
- * this module's own law.
+ * `to_char` runs in Postgres, so no JS `Date` appears in the statement.
  */
 export async function listArchivedMonths(db: Db): Promise<readonly string[]> {
   const month = sql<string>`to_char(${dailyPuzzles.date}, 'YYYY-MM')`;
@@ -416,17 +330,13 @@ export async function listArchivedMonths(db: Db): Promise<readonly string[]> {
 }
 
 /**
- * Which side of the DB clock's São Paulo day a date falls on (ADR-0053
- * decision 4). Reads no table and carries no wall — it answers a question
- * ABOUT the clock, and its callers have already been through one.
+ * Which side of the DB clock's São Paulo day a date falls on. Reads no
+ * table and carries no wall — it answers a question ABOUT the clock.
  *
- * It exists so `apps/web` never needs a second clock (decision 1):
- * `todaySaoPaulo` stays on `@miolos/db/publishing`, which ESLint bans in
- * `apps/web`, and `todaySaoPauloDate(new Date())` would be the WEB SERVER's
- * clock — on a different machine from Postgres — deciding a question
- * `archivedWallPredicate` answers from the database's. In the rollover
- * window where the two disagree, a URL the sitemap advertises would neither
- * redirect nor render.
+ * It exists so `apps/web` never needs a second clock: this function stays
+ * on `@miolos/db/publishing`, which ESLint bans in `apps/web`, so no route
+ * ever decides this question from the WEB SERVER's clock — on a different
+ * machine from Postgres — instead of the database's.
  *
  * Called ONLY after a walled read came back empty, to tell "today,
  * redirect" from "absent, 404".

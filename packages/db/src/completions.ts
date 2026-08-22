@@ -14,29 +14,21 @@ import { completions, hintGrants } from "./schema";
 
 /**
  * User-scoped accessors (ADR-0026, ADR-0027) — reachable only through
- * `@miolos/db/user` (plan 017 D17), never the root entry: apps/web holds
- * the db dependency for the public wall read and must not be able to name
- * these tables at all.
+ * `@miolos/db/user`, never the root entry: apps/web must not be able to
+ * name these tables at all.
  *
  * NO JS `Date` appears in any statement in this file. `completed_at` and
  * `granted_at` are column defaults, and every day-scoped predicate is a
  * SQL expression over `now() at time zone 'America/Sao_Paulo'` — the DB
- * clock is the only clock (CLAUDE.md invariant, ADR-0010).
+ * clock is the only clock (ADR-0010).
  */
 
 /**
  * A completion as the rest of the system sees it. `onTime` is the STORED
- * write-time verdict (#58, ADR-0066, amending ADR-0026 decision 2 and plan
- * 017 D16): the rule is `onTimeAtWrite` (packages/core), applied once by
- * `POST /completions` and persisted — never re-derived at read time,
- * because once a seen day can credit a late sync the old SQL derivation
- * stops being the definition, and consulting `user_seen_days` on reads
- * would break ADR-0009's "a streak is derivable from completion rows
- * alone". Every reader projects the column; `onTimeSql()`, the deleted
- * read-time producer, promised in its own doc block that #58 would do
- * exactly this.
- * `completedAt` is deliberately absent — nothing outside this module has a
- * use for the raw instant, and exposing it invites JS timezone arithmetic.
+ * write-time verdict, decided once by `POST /completions` and persisted —
+ * never re-derived at read time (ADR-0066). `completedAt` is deliberately
+ * absent: nothing outside this module needs the raw instant, and exposing
+ * it invites JS timezone arithmetic.
  */
 export interface CompletionRecord {
   readonly game: Game;
@@ -49,9 +41,7 @@ export interface CompletionRecord {
 
 /**
  * Read a completion back with its STORED `on_time`; `undefined` when
- * the player has not finished that puzzle. A projected `.select({...})` is
- * proven to work on the union `Db` (the `resolveSession` precedent) —
- * unlike `.returning({...})`, which does not (see `recordCompletion`).
+ * the player has not finished that puzzle.
  */
 export async function getCompletion(
   db: Db,
@@ -82,17 +72,9 @@ export async function getCompletion(
 
 /**
  * Every completion row of one user, shaped for `computeStreak` (ADR-0009).
- * Deliberately UNFILTERED — no `where outcome`, no `where on_time`: the
- * pure function in packages/core is the only place lost and late rows are
- * excluded, so the API seam exercises the authority AC 1 names (plan 027
- * D3). Two filters would be two definitions of the streak; there is one.
- *
- * No limit in v1: the composite PK bounds the result at ≤4 rows per day,
- * and `completions_user_date_idx` was built for exactly this read
- * (schema.ts). A windowed read is a later optimisation with a measured
- * trigger (plan 027 §16 risk 6), never a semantic change. The descending
- * order is not required by the (permutation-invariant) function — it keeps
- * the planner on the index and test fixtures readable.
+ * Deliberately UNFILTERED: the pure function in packages/core is the only
+ * place lost and late rows are excluded, so there is one definition of the
+ * streak, not two.
  */
 export async function listCompletionsForStreak(
   db: Db,
@@ -111,36 +93,12 @@ export async function listCompletionsForStreak(
 
 /**
  * One user's completions for ONE São Paulo day, shaped for
- * `dayStateFromRows` (#83, ADR-0060 decision 1). At most four rows, by the
- * composite primary key.
+ * `dayStateFromRows` (ADR-0060). At most four rows, by the composite
+ * primary key.
  *
- * DATE-SCOPED IN SQL, unlike `listCompletionsForStreak` above and
- * `listCompletionsForStats`. Those two are unfiltered because the EXCLUSION
- * RULES — lost, late — must live in one place, and that place is
- * packages/core. Scoping to one date is not an exclusion rule: it is the
- * question. `getCompletion` two functions up already scopes
- * `(user, game, date)` in SQL for exactly that reason.
- *
- * NO SCHEMA CHANGE WAS OWED FOR IT, and the evidence is in the schema:
- * `completions_user_date_idx` on `(user_id, date)` exists, and its own
- * comment names *"the day so far"* as one of the two reads it was built
- * for. The read is <= 4 rows on an index built for it — constant cost
- * forever, on the most-hit route in the app. Reusing
- * `listCompletionsForStats` instead would need no db change at all, which
- * is its real merit, and it reads the user's ENTIRE history (~2 900 rows
- * after two years) to produce four enum values on every hub view: building
- * ADR-0051 decision 3's narrow endpoint with the wide read is building it
- * and skipping the point.
- *
- * `onTime` is the STORED write-time verdict (#58, ADR-0066), projected like
- * every other reader here — never re-derived. No second spelling, and no
- * `completedAt`: the verdict travels, the instant does not. `elapsedMs`
- * DOES travel since #141
- * — the hub tile consumes it (ADR-0060 decision 2 as annotated there) — and
- * it is a stored column, so projecting it changes neither the predicate nor
- * the index this read sits on. `hintsUsed` travels since #142 (ADR-0065) on
- * exactly the same footing: a stored NOT NULL column, projected for the
- * remote conclusion's stamp, no predicate and no index change, no migration.
+ * DATE-SCOPED IN SQL, unlike `listCompletionsForStreak` above: scoping to
+ * one date is the question, not an exclusion rule, so it stays here
+ * rather than in packages/core with lost/late.
  */
 export async function listCompletionsForDay(
   db: Db,
@@ -160,43 +118,26 @@ export async function listCompletionsForDay(
 }
 
 /**
- * THE write-instant day predicate: did this row's `completed_at` land on
- * the São Paulo calendar day `day`? One spelling, one owner (ADR-0026
- * decision 2's rule). NOT the on-time question: since #58 (ADR-0066)
- * on-time is a stored write-time verdict, and this predicate's two
- * consumers — the ceiling's count and the multi-past-date guard — ask
- * about the WRITE instant's day, which no stored column carries.
+ * Did this row's `completed_at` land on the São Paulo calendar day `day`?
+ * NOT the on-time question — on-time is a stored write-time verdict; this
+ * predicate's two consumers ask about the WRITE instant's day, which no
+ * stored column carries, never against the puzzle's own `date` (that rule
+ * lives in the route's `isWritableDate`).
  *
- * `day` is compared against the WRITE instant, never against the puzzle's
- * own `date`: the ceiling below is a per-day rate rule on the writer, not
- * a date rule on the puzzle. The date rule lives in the route
- * (`isWritableDate`, ADR-0026 decision 6 as amended by ADR-0053), and
- * after #31 it has no lower bound at all — which is exactly why the
- * ceiling exists.
- *
- * No JS `Date`: the day arrives as a 'YYYY-MM-DD' string the caller read
- * off the DB clock, and the cast runs in Postgres.
+ * No JS `Date`: `day` arrives as a 'YYYY-MM-DD' string read off the DB
+ * clock, and the cast runs in Postgres.
  */
 function writtenOnSaoPauloDay(day: string) {
   return sql`(${completions.completedAt} at time zone ${SAO_PAULO_TIME_ZONE})::date = ${day}`;
 }
 
-/**
- * The LATE-write ceiling (#31, ADR-0053 decision 13): at most `max` late
- * rows per user per São Paulo `day`. Passed only on the late branch, so
- * the daily ritual's INSERT is byte-identical to the one it always was.
- * Not an *archive*-write ceiling: the branch also admits ADR-0026
- * decision 7's post-rollover flush, which is inside it by construction.
- */
+/** At most `max` late completions per user per São Paulo `day`. */
 interface LateWriteCeiling {
   readonly day: string;
   readonly max: number;
 }
 
-/**
- * What a guarded write answers. `capped: true` is the ONLY shape carrying
- * no record: the ceiling refused the row and nothing was written.
- */
+/** `capped: true` is the only shape with no record: the ceiling refused the write. */
 type CompletionWrite =
   | {
       readonly capped: false;
@@ -206,12 +147,9 @@ type CompletionWrite =
   | { readonly capped: true };
 
 /**
- * The write input, named ONCE (#58 step-6 quality m2): before this type the
- * same eight-field literal was inlined at `guardedInsertSelect` and all
- * three `recordCompletion` signatures, and every new column paid the edit
- * four times (`hintsUsed`, `guesses`, `onTime` each did). `onTime` is the
- * write-time verdict, decided by the route and stored verbatim — see
- * `recordCompletion`'s doc block for the arm rule it travels with.
+ * The write input shared by `guardedInsertSelect` and both
+ * `recordCompletion` overloads. `onTime` is the write-time verdict,
+ * decided by the route and stored verbatim.
  */
 interface CompletionWriteInput {
   userId: string;
@@ -225,48 +163,23 @@ interface CompletionWriteInput {
 }
 
 /**
- * The ceiling folded INTO the insert, as one statement.
+ * The ceiling folded INTO the insert, as one statement — a correctness
+ * property, not a round-trip saving. A `count(*)` read followed by an
+ * INSERT is check-then-act: concurrent writers can all read the same
+ * count and all pass, overshooting the ceiling. `INSERT ... SELECT ...
+ * WHERE (subquery) < max` renders as ONE statement, so no transaction is
+ * needed to close the race — this repo has none available anyway
+ * (neon-http is non-interactive-only, PGlite has no batch; see merge.ts).
+ * The honest residual is READ COMMITTED's: each statement takes its own
+ * snapshot at its own start, so writes whose statements overlap in time
+ * can still overshoot by the number in flight (see ADR-0053).
  *
- * This is the whole point of the shape and it is a correctness property,
- * not a round-trip saving. A `count(*)` read followed by an INSERT is
- * check-then-act: `Promise.all` over N requests reads one snapshot of the
- * count in all N and writes N rows, so the "50 per day" bound held only
- * against a strictly sequential client (step-6 finding F1). Measured on
- * the test stack: 20 concurrent writes against a ceiling of 10 wrote 20
- * rows in the two-statement form and 10 in this one.
- *
- * `INSERT ... SELECT ... WHERE (subquery) < max` renders as ONE SQL
- * statement — byte-identical through the neon-http and PGlite dialects,
- * PINNED by T-DB-S58 rather than probed once (production runs `neon-http`
- * and every other assertion about this guard runs on PGlite, so the
- * equality is load-bearing) — which matters because `neon-http` is
- * non-interactive-only and
- * PGlite has no batch, so this repo has no transaction to put the pair in
- * (merge.ts's recorded constraint, and why `pg_advisory_lock` is not
- * available either). The honest residual is READ COMMITTED's: each
- * statement takes its own snapshot at its own start, so writes whose
- * statements overlap in time can still overshoot by the number in flight.
- * ADR-0053 decision 13 states that bound rather than claiming a stricter
- * one.
- *
- * Two spellings that must be read together:
- *
- * - **Lateness is the STORED `on_time` negated** (#58, ADR-0066 — before it,
- *   the read-time derivation negated), never re-derived, so the ceiling
- *   counts exactly the rows every reader projects as late. A CREDITED row
- *   (`on_time = true` on a past date) never enters this count — and never
- *   enters this ARM at all: the route passes a ceiling only when the
- *   write-time verdict is `false` (the §3.3 exemption, T-DB-S75 — a
- *   call-site discipline enforced by review plus T-DB-S72/S75, not by
- *   types; S72 itself calls this arm with `onTime: true` on purpose).
- * - **`completed_at` is `now()` written out**, because `INSERT ... SELECT`
- *   has no `DEFAULT` keyword available in its select list. It is the same
- *   DB clock the column's own `defaultNow()` would have used — still no JS
- *   `Date` anywhere in this file — and drizzle builds the column list from
- *   the table, so a new column makes this select too short and the suite
- *   reds loudly rather than defaulting silently. `on_time` joined this
- *   select list exactly that way (#58): the loud red this doc block always
- *   promised.
+ * Lateness is the STORED `on_time` negated, never re-derived, so the
+ * ceiling counts exactly the rows every reader projects as late; a
+ * CREDITED row never enters this ARM (the route passes a ceiling only
+ * when the write-time verdict is `false`). `completed_at` is `now()`
+ * written out explicitly, because `INSERT ... SELECT` has no `DEFAULT`
+ * keyword in its select list — still the DB clock, still no JS `Date`.
  */
 function guardedInsertSelect(
   input: CompletionWriteInput,
@@ -282,47 +195,31 @@ function guardedInsertSelect(
 }
 
 /**
- * Write-once completion (plan 017 D15). Returns the stored record and
- * whether THIS call wrote it, so an idempotent replay can be answered with
- * the row the server already holds instead of a conflict.
+ * Write-once completion. Returns the stored record and whether THIS call
+ * wrote it, so an idempotent replay can be answered with the row the
+ * server already holds instead of a conflict.
  *
  * Never `ON CONFLICT DO UPDATE`: an upsert would bump `completed_at` and
  * silently reclassify an on-time completion as late — the one thing the
  * streak mechanic cannot survive.
  *
- * `guesses` is Termo's and only Termo's (#27, ADR-0038 decision 6). It is
- * OPTIONAL here rather than a discriminated per-game input because the
- * database is what enforces the pairing: `completions_guesses_check` is an
- * equality, so a termo row without it and a grid row with it both fail the
- * write. Omitted, drizzle emits the SQL keyword `default` — i.e. NULL — which
- * is the only legal value for the other three games.
+ * `guesses` is Termo's and only Termo's. It is OPTIONAL here rather than a
+ * discriminated per-game input because the database enforces the pairing:
+ * `completions_guesses_check` is an equality, so a termo row without it
+ * and a grid row with it both fail the write.
  *
- * `ceiling` is the late-write ceiling (#31, ADR-0053 decision 13) and is
- * supplied ONLY when the write-time verdict is late — `onTime === false`
- * (#58, ADR-0066): a CREDITED write always takes the plain-values arm.
- * Without the exemption a player at the ceiling would 429 the credited
- * flush; 429 is correctly non-terminal, so the record would retry after
- * the next rollover, land two days back, and store `false` — a permanently
- * lost streak day on a write-once row, the exact outcome #58 exists to
- * prevent. Safe: the credit is server-derived and unforgeable (a seen row
- * plus the 1-day window, never client input), bounded at ≤4 rows per user
- * per day by construction — one creditable date × four games. Not three:
- * ADR-0039's scope note bounds offline PLAY, not this path — a
- * fully-judged online Termo whose POST failed can queue and flush
- * post-rollover as a credited Termo row. The pairing "ceiling supplied
- * iff `onTime === false`" is a CALL-SITE DISCIPLINE, enforced by review
- * plus T-DB-S72/S75 rather than by types: a discriminated input would ban
- * the `{ onTime: true } + ceiling` call T-DB-S72 deliberately makes to
- * prove verbatim storage through the guarded arm (the written dismissal
- * is in PR #156). T-DB-S75 pins it at the ceiling.
- * With a ceiling the INSERT carries its own guard (`guardedInsertSelect`
- * above) and the result may be `capped`; without it — every daily and
- * every credited write — the statement and the return shape are exactly
- * what they always were, which is what the two overloads say.
+ * `ceiling` is supplied ONLY when the write-time verdict is late
+ * (`onTime === false`); a CREDITED write always takes the plain-values
+ * arm. Without that exemption a player at the ceiling would 429 the
+ * credited flush and retry after the next rollover, landing two days back
+ * and storing `false` — a permanently lost streak day on a write-once
+ * row. Safe: the credit is server-derived and unforgeable, bounded at ≤4
+ * rows per user per day by construction. This pairing is a CALL-SITE
+ * DISCIPLINE, enforced by review and tests rather than by types.
  *
  * A capped caller can still REPLAY: the guard suppresses the insert, the
- * unconditional read-back still runs, and a row already held comes back as
- * `recorded: false`. Only "guard refused AND no row is readable" is
+ * unconditional read-back still runs, and a row already held comes back
+ * as `recorded: false`. Only "guard refused AND no row is readable" is
  * `capped`.
  */
 export async function recordCompletion(
@@ -339,10 +236,10 @@ export async function recordCompletion(
   input: CompletionWriteInput,
   ceiling?: LateWriteCeiling,
 ): Promise<CompletionWrite> {
-  // Bare .returning(): on the union Db type only the no-argument overload
-  // survives TS's union-signature collapse (session/service.ts and
-  // buffer.ts precedents). The row shape is discarded anyway — `on_time`
-  // has to come from SQL, so the read-back below is unconditional.
+  // Bare .returning(): on the union `Db` type only the no-argument overload
+  // survives TS's union-signature collapse. The row shape is discarded
+  // anyway — `on_time` has to come from SQL, so the read-back below is
+  // unconditional.
   const inserted = ceiling
     ? await db
         .insert(completions)
@@ -373,54 +270,39 @@ export async function recordCompletion(
   if (!record) {
     if (ceiling && !recorded) {
       // The guard refused AND the caller holds no row: the ceiling is met.
-      // `!recorded` is load-bearing, not decoration — `!record` alone would
-      // answer 429 for a row this call DID write, where the unguarded arm
-      // throws. That asymmetry has no justification, and the doc block
-      // above already promises the conjunction.
+      // `!recorded` is load-bearing — `!record` alone would 429 a row this
+      // call DID write, where the unguarded arm throws instead.
       return { capped: true };
     }
     // The row vanished between the two statements: a bug, a manual
-    // truncate, or a concurrent `mergeAccounts` (merge.ts deletes the
-    // loser's completions, reachable through POST /attach/confirm — so
-    // "the schema has no delete path", which this comment used to say, is
-    // false). Whatever the cause, it is not the ceiling, and both arms
-    // treat it the same way.
+    // truncate, or a concurrent `mergeAccounts` deleting the loser's
+    // completions. Whatever the cause, it is not the ceiling, and both
+    // arms treat it the same way.
     throw new Error("completions insert left no readable row");
   }
   return { capped: false, record, recorded };
 }
 
 /**
- * The multi-past-date guard's read (#58, ADR-0066; T-API-S139): has this
- * user, on the current São Paulo day (`today`, read off the DB clock by
- * the route), already written a CREDITED row — `on_time = true` — for an
- * IN-WINDOW past date other than `excludingDate`? `POST /completions`
- * refuses the write with `422 multi-date-sync` when it answers true, which
- * is the enforceable form of the decision's "refuse a sync carrying
- * completions for more than one distinct past date": each POST carries one
- * completion, so "a sync" is invisible server-side, and the property
- * enforced is *per user per writing day, at most one distinct past date is
- * ever credited*. Distinct DATES, not games — three grid games for one
- * date is legitimate, which is exactly what `date <> excludingDate`
- * leaves alone.
+ * The multi-past-date guard's read: has this user, on the current São
+ * Paulo day (`today`), already written a CREDITED row for an IN-WINDOW
+ * past date other than `excludingDate`? `POST /completions` refuses the
+ * write with `422 multi-date-sync` when this answers true: per user per
+ * writing day, at most one distinct past date is ever credited. Distinct
+ * DATES, not games — three grid games for one date is legitimate.
  *
  * A WIDENING TRIPWIRE, provably empty under the 1-day credit window: the
- * predicate carries the window itself (`date >= today −
- * LATE_SYNC_CREDIT_DAYS_BACK`), so its match set is
+ * predicate carries the window itself, so its match set is
  * `date ∈ [today − 1, today) ∧ date ≠ today − 1` — empty by CONSTRUCTION.
  * The window conjunct is load-bearing, not belt-and-braces: without it the
- * guard matched the rollover-straddle artefact (a credit whose `today`
- * was read at 23:59:59.9 and whose INSERT landed after midnight stores
- * `date = today − 2` relative to the NEXT writing day, `on_time = true`,
- * written today) and answered 422 — terminal in the sync client — to the
- * next day's legitimate credited flush: silent permanent loss of a streak
- * day, the exact outcome #58 exists to prevent (step-6 correctness
- * blocker; T-API-S139 pins the boundary). It ships because widening the
- * window is one constant edit away, and the moment more than one
- * in-window date exists the guard goes live and correct. Read-then-act is
- * accepted WITH ITS REASON (ADR-0066): under a 1-day window a concurrent
- * double-credit of two distinct dates is structurally impossible; any
- * widening must fold this guard into the insert (the step-6 F1 precedent).
+ * guard would catch the rollover-straddle artefact (a credit whose
+ * `today` was read just before midnight but whose INSERT landed after)
+ * and answer 422 — terminal in the sync client — to the next day's
+ * legitimate credited flush, a silent permanent loss of a streak day. It
+ * ships inert on purpose: read-then-act is safe only because a 1-day
+ * window makes a concurrent double-credit of two distinct dates
+ * structurally impossible, and any widening must fold this guard into the
+ * insert instead (the ceiling's precedent).
  */
 export async function hasCreditedPastDateToday(
   db: Db,
@@ -445,14 +327,10 @@ export async function hasCreditedPastDateToday(
 }
 
 /**
- * DORMANT (plan 017 D22). Hints GRANTED for the DB clock's SP today; 0
- * when none. Named for what it computes: v1 records no consumption of
- * granted hints, so this is not "available" — ADR-0027 names the seam the
- * rewarded-ad ticket must add.
- *
- * The day scope is the whole expiry mechanism: nothing decrements and
- * nothing carries over, so a grant is gone the moment its date key falls
- * behind SP-today. No job, no TTL column.
+ * DORMANT: v1 records no consumption, so this is hints GRANTED for the DB
+ * clock's SP today, not "available"; 0 when none. The day scope is the
+ * whole expiry mechanism — nothing decrements or carries over, so a grant
+ * is gone once its date key falls behind SP-today. No job, no TTL column.
  */
 export async function grantedHintsToday(
   db: Db,
@@ -476,11 +354,9 @@ export async function grantedHintsToday(
 }
 
 /**
- * DORMANT (plan 017 D22) — append-only grant event, never a balance
- * top-up. `date` is the SP day the grant is valid for, and the row is the
- * whole record: nothing here reads or mutates a running total.
- *
- * EXTENSION POINT: the rewarded-ad ticket is the first caller.
+ * DORMANT — append-only grant event, never a balance top-up. `date` is
+ * the SP day the grant is valid for, and the row is the whole record:
+ * nothing here reads or mutates a running total.
  */
 export async function grantHints(
   db: Db,

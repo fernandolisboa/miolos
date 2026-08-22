@@ -5,45 +5,30 @@ import { SAO_PAULO_TIME_ZONE } from "./published";
 import { userSeenDays } from "./schema";
 
 /**
- * Seen days (#58, ADR-0066) — user-scoped accessors reachable only through
- * `@miolos/db/user` (ADR-0026 decision 5), never the root entry.
+ * No JS `Date` appears in any statement in this file — the DB clock names
+ * the day (ADR-0010).
  *
- * NO JS `Date` appears in any statement in this file (the completions.ts
- * header law): the DB clock names the day (ADR-0010 single authority).
- *
- * THE INVARIANT SENTENCE (ADR-0066): the seen-days table is consulted
- * exactly once per completion, at write time, inside `POST /completions`
- * (`wasSeenOn` below); no streak, statistics, medal or day-state
- * computation reads it, and the pure merge recompute (`mergeCompletions`)
- * never consults it — `mergeAccounts` only UNIONS its rows, computing
- * nothing — so a streak remains derivable from completion rows alone
- * (ADR-0009, untouched). The full reference set: this module, the session
- * service's three hooks, `POST /completions`, `mergeAccounts` and the
- * `/cron/publish` retention delete. Nothing else may name the table.
+ * The seen-days table is consulted exactly once per completion, at write
+ * time (`wasSeenOn` below) — no streak, statistics or medal computation
+ * reads it, so a streak stays derivable from completion rows alone
+ * (ADR-0009).
  */
 
 /**
- * Record that `userId` was seen online on the DB clock's São Paulo today
- * (T-DB-S71). Idempotent, and still one statement / one round trip — but
- * shaped `INSERT … SELECT … WHERE NOT EXISTS` rather than bare
- * `VALUES … ON CONFLICT` (step-6 security M2): this runs on EVERY
- * authenticated request, and after the day's first request the row exists,
- * so the common case is the conflict. A bare `ON CONFLICT DO NOTHING`
- * resolves that via speculative insertion — heap tuple written, then
- * super-deleted, plus WAL — N requests, N dead tuples. The `WHERE NOT
- * EXISTS` pre-filter makes the common case a pure index probe that writes
- * nothing; the `ON CONFLICT DO NOTHING` stays for the one race it still
- * covers, two concurrent first-requests of the day. The DB clock names the
- * day both places: no date crosses this seam at all.
+ * Record that `userId` was seen online on the DB clock's São Paulo today.
+ * Idempotent, one round trip.
  *
- * Called from the session service's three write points (`resolveSession`,
- * `mintSession`, `createSessionForUser`) — awaited, not fire-and-forget:
- * an error here is the request's 500, never a silently unrecorded day.
+ * Shaped `INSERT … SELECT … WHERE NOT EXISTS` rather than bare
+ * `ON CONFLICT DO NOTHING`: this runs on every authenticated request, and
+ * after the day's first request the common case is the conflict — the
+ * `WHERE NOT EXISTS` prefilter makes that case a pure index probe that
+ * writes nothing, where speculative insertion would still write a dead
+ * tuple. `ON CONFLICT DO NOTHING` stays for the one race it still covers:
+ * two concurrent first-requests of the day.
  *
- * Rejected shapes, recorded in ADR-0066 rather than re-litigated here: a
- * `last_seen_at`-staleness send-gate (under-records the 23:58→00:05
- * persona), and the data-modifying-CTE fold / per-instance memo (unmeasured
- * wins; the ADR names this call as the seam if the +1 round trip shows up).
+ * Called from the session service's three write points, always awaited —
+ * an error here becomes the request's 500 rather than a silently
+ * unrecorded day.
  */
 export async function recordSeenDay(db: Db, userId: string): Promise<void> {
   await db.execute(
@@ -58,11 +43,6 @@ export async function recordSeenDay(db: Db, userId: string): Promise<void> {
   );
 }
 
-/**
- * Was `userId` seen online on São Paulo day `date`? A PK-point read; the
- * ONE consumer is `POST /completions`, deciding a late sync's credit (the
- * invariant sentence above — a second consumer is an ADR-0066 amendment).
- */
 export async function wasSeenOn(
   db: Db,
   userId: string,
@@ -77,16 +57,10 @@ export async function wasSeenOn(
 }
 
 /**
- * Bounded retention (ADR-0066): only `today − LATE_SYNC_CREDIT_DAYS_BACK`
- * is ever read, so older rows are dead weight (~365/user/year, unioned
- * forever by the merge). One idempotent delete, run by the existing daily
- * `/cron/publish` route — wrapped THERE so its failure logs without masking
- * the publish result. Widening the credit window widens this predicate too
- * (the constant's comment in packages/core names this edit). Unbounded by
- * design and trivially cheap in steady state (≤2 days of rows survive) —
- * but after a multi-day cron outage the recovery is one arbitrarily large
- * DELETE on the publish route's critical path; a `LIMIT`ed loop is the
- * shape to reach for if the window widens or cron reliability changes.
+ * Deletes rows older than `today − 1`, mirroring
+ * `LATE_SYNC_CREDIT_DAYS_BACK` (packages/core) — only that range is ever
+ * read by `wasSeenOn`. Widening that constant means widening this
+ * predicate too. Run by the existing daily `/cron/publish` route.
  */
 export async function pruneSeenDays(db: Db): Promise<void> {
   await db.execute(
