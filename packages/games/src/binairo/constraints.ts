@@ -2,6 +2,10 @@ import { cellAt, intAt, sideLength, toCellStates } from "./internal";
 import type { CellState } from "./internal";
 import type { BinairoGrid, BinairoSolvedGrid } from "./types";
 
+/**
+ * A responsiveness affordance for the client, never a source of truth
+ * (ADR-0004) — the same rule `getSudokuConflicts` carries.
+ */
 export interface BinairoViolation {
   readonly rule: "run" | "balance" | "duplicate-line";
   /** Row-major indices involved. */

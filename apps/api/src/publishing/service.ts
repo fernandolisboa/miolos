@@ -244,7 +244,7 @@ const RUN_BUDGET_EXHAUSTED = "run seed-retry budget exhausted";
  * this file and its four structural deltas, of which the load-bearing one is
  * that it has no retry budget at all. #25 corrected the other half of this
  * claim: Nonogram IS that loop
- * (`packages/games/src/nonogram/generate.ts:23-70`) — but its validator takes
+ * (``generateNonogram` in packages/games/src/nonogram/generate.ts`) — but its validator takes
  * no external weekday, so `topUpNonogramBuffer` carries an assertion the
  * other two get from their validators.
  *

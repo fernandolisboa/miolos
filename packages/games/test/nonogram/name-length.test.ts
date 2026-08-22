@@ -28,8 +28,10 @@ import { MOTIFS } from "../../src/nonogram/motifs";
  * the one screen a URL-mode impeccable scan can never reach: it needs a
  * SOLVED day, and a clean profile's `GET /day` answers 401 (ADR-0065
  * consequence (c) records the same unreachability). This rule has already
- * been broken from the other direction once — a label template that only
- * grew too long months after shipping, invisible to CI the whole time.
+ * been broken from the other direction TWICE — a first-viewport column
+ * overflow at 21 archived rows, and an all-caps body at 31 chars — both
+ * invisible to CI, and both arriving in four months of twelve rather than
+ * once. The label breaks on a recurring schedule, not by accident.
  * Measuring the worst case here makes a too-long motif red at commit time
  * instead of at a preview scan nobody can run.
  *

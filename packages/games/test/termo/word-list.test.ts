@@ -144,8 +144,9 @@ describe("termo word-list harness (ADR-0015)", () => {
   });
 
   it("TERMO_ANSWERS preserves answers.csv row order", () => {
-    // The order is contractual: the server-side seeded pick (ADR-0010)
-    // indexes into TERMO_ANSWERS; reordering is a breaking change.
+    // Order is contractual because the harness pins this array against
+    // answers.csv row by row. The daily draw does NOT index it — it filters
+    // used answers out and draws uniformly (see word-list.ts).
     const rows = readAnswersCsv();
     expect(TERMO_ANSWERS).toHaveLength(rows.length);
     expect(TERMO_ANSWERS.map((a) => ({ ...a }))).toEqual(rows);

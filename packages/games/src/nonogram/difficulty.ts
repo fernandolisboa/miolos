@@ -12,6 +12,8 @@ export const MIN_POOL = 14;
  * Effort thresholds splitting each shared size class into its easy/hard
  * weekday bands, half-open: easy = [0, T), hard = [T, ∞).
  */
+// T8/T10/T15 and MIN_POOL above are calibrated against the authored
+// library, not derived — see ADR-0021.
 export const T8 = 2.17;
 export const T10 = 2.19;
 export const T15 = 3.12;

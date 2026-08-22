@@ -69,7 +69,15 @@ describe("generateBinairo", () => {
     // P1 and P2 share one timeout: same generator, arbitraries and seed
     // domain, differing only by run count, so both take the pair's measured
     // maximum rather than a per-test figure that would pin a scheduling
-    // accident.
+    // accident. Anchor = P2's 5922 ms (contended local, pooled over 11
+    // samples); 5922 x4 = 23 688 -> 25 000 ms. P1's own were 3246 ms CI /
+    // 5051 ms local. Tripwire: over budget / 2 = 12 500 ms is a defect to
+    // diagnose and record while still green, never a number to raise.
+    // In-file because ADR-0017 forbids a vitest config in this package;
+    // the run count is floored by ADR-0023 and time is never bought by
+    // sampling less. Reproduce contended figures with
+    // `pnpm test --force --concurrency=10`, not a bare `pnpm test` (#114
+    // caps turbo at 2).
   }, 25_000);
 
   it("P2 — determinism: same (seed, weekday) yields a deep-equal puzzle", () => {
@@ -82,8 +90,15 @@ describe("generateBinairo", () => {
       { numRuns: 100 },
     );
     // Same 25 000 ms ceiling as P1, and for the same reason (see above).
+    // P2 IS the pair's anchor at 5922 ms, and the only one of the two with a
+    // recorded real CI failure — killed at >= 5165 ms against vitest's bare
+    // 5000 ms default.
   }, 25_000);
 
+  // P3 is deliberately left bare, and the verdict is recorded rather than
+  // left to inference: 1776 ms contended local (35.5%) and 581 ms on CI
+  // (11.6%), both under ADR-0055's 40%-of-budget trigger, so it earns no
+  // explicit ceiling.
   it("P3 — seed normalization: seeds alias modulo 2^32", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {

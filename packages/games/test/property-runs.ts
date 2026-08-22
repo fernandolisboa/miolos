@@ -1,9 +1,11 @@
 // Reduced per-pull-request sample of the ADR-0023 property floor; the full
-// proof runs nightly under MIOLOS_FULL_PROPERTIES=1. See ADR-0059.
+// proof runs nightly under MIOLOS_FULL_PROPERTIES=1. See ADR-0059. Run
+// counts and timeouts live in the test files rather than a vitest config
+// because ADR-0017 forbids one in this package.
 //
-// Must stay in test/, not src/: purity.test.ts scans src/** for import
-// specifiers and does not check `process.env` usage, so moving this file
-// there would breach the package's zero-Node invariant silently.
+// Must stay in test/, not src/: the package tsconfig sets `types: []` over
+// `src` only, so `process.env` there is a typecheck error, not a silent
+// breach of the zero-Node invariant (ADR-0059 decision 2).
 
 /**
  * `true` only for the exact string `"1"` — fails closed, so neither

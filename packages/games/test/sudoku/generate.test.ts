@@ -119,6 +119,13 @@ describe("generateSudoku / generateDailySudoku", () => {
       // 100 on the nightly (the ADR-0023 floor); 25 on the pull-request gate.
       { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
+    // 625_000 = anchor x4, rounded up to the next 5000 (ADR-0055 decision 2).
+    // In-file rather than in a vitest config: ADR-0017 forbids one here.
+    // Anchor 155 025 ms on CI, the pooled max over seven genuine gate runs;
+    // contended local was 40 844 ms. Tripwire: over budget / 2 = 312 500 ms
+    // is a defect to diagnose and record BEFORE anything moves, while still
+    // green. What this measures on CI is CPU SHARE, not the generator — the
+    // engine is byte-identical across a 35 220 -> 155 025 ms move.
   }, 625_000);
 
   it("P1 — pinned regression: the literal expected puzzle for a fixed seed", () => {
@@ -152,6 +159,10 @@ describe("generateSudoku / generateDailySudoku", () => {
       // 100 on the nightly (the ADR-0023 floor); 25 on the pull-request gate.
       { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
+    // Anchor 62 009 ms on CI (pooled max, same seven runs) = 25.8% of this
+    // ceiling, under the 40% trigger and under budget / 2 = 120 000 ms.
+    // Decision 2's arithmetic would give 250 000; the one-step disagreement
+    // is recorded and deliberately not moved, because nothing fires.
   }, 240_000);
 
   it("P3 — weekday ramp / approval on every instance", () => {
@@ -173,6 +184,7 @@ describe("generateSudoku / generateDailySudoku", () => {
       // floor and left at the count it has always had); 25 on the gate.
       { seed: FC_SEED, numRuns: propertyRuns(35) },
     );
+    // Anchor 24 386 ms on CI; budget / 2 = 50 000 ms is the tripwire.
   }, 100_000);
 
   it("P3 — deterministic full-week coverage for fixed seeds", () => {
