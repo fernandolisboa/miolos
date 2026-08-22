@@ -35,9 +35,11 @@ type CronGame = keyof CronPublishResponse["games"];
 
 /**
  * One game's top-up, fault-isolated: this try/catch is deliberate, not a
- * detail. No top-up catches its own errors, so with four games composed
- * serially and no isolation here, ONE game's transient failure would
- * silently stop every LATER game's buffer from being topped up.
+ * detail. A top-up catches nothing but its own `*GenerationError` — so
+ * `insertDailyPuzzle`, `bufferDepth`, `todaySaoPaulo` and the derived-weekday
+ * `RangeError` all propagate — and with four games composed serially, one
+ * game's transient failure would stop every LATER game's buffer without
+ * this isolation.
  *
  * On a throw, `depth` is re-read from the database rather than zeroed, and
  * `generated`/`failures` are the counters `TopUpAbortedError` carried out
@@ -53,8 +55,9 @@ async function runTopUp(
     const result = await topUp(db, configuredDepth);
     return { ...result, error: null };
   } catch (thrown) {
-    // Depth is re-read separately so a failed read still forces 0, which
-    // trips the alert threshold below rather than reporting stale health.
+    // Depth is re-read because `TopUpAbortedError` carries none — the
+    // `.catch(() => 0)` is the fallback, not the point — and 0 both trips
+    // the alert threshold below and keeps the strict body parseable.
     const depth = await bufferDepth(db, game).catch(() => 0);
     // Rows inserted before a mid-loop throw are durable (no transaction
     // wraps the loop); `TopUpAbortedError` carries their count out of the
@@ -63,7 +66,8 @@ async function runTopUp(
     const aborted = thrown instanceof TopUpAbortedError ? thrown : undefined;
     // SECURITY: Drizzle's `DrizzleQueryError` embeds the bound parameters
     // in its own message (separator "\nparams: "). For termo those
-    // parameters include the drawn answer word, and this string reaches
+    // parameters include the drawn answer word (and, for the grid games, a
+    // nonogram `reveal.solution`), and this string reaches
     // both the /cron/publish response body and the Vercel log line — so
     // keep the query text an operator needs and drop everything from
     // "\nparams:" on. Splitting on a comma would not work: Drizzle joins

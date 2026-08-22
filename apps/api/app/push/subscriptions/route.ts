@@ -138,7 +138,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       auth: parsed.data.keys.auth,
     });
     if (!stored) {
-      // The per-user subscription ceiling refused the row (ADR-0068
+      // The ceiling refused the row. 429 rather than 200-with-stored-false
+      // because the client keys off `response.ok` and must unwind (ADR-0068
       // decision 1).
       return errorResponse(429, "too-many-requests");
     }

@@ -129,14 +129,16 @@ function judgeGrid(
 ): CompletionOutcome | null {
   const solution = storedSolution(body.game, content);
 
-  // Binairo (.length(64)) and sudoku (.length(81)) can never fail this,
-  // but a nonogram grid's size varies (25/64/100/225) and only the STORED
-  // row decides which — without this check, a longer grid whose prefix
-  // matched the shorter solution would score zero mismatches in the loop
-  // below and be recorded as a win. Kept outside the constant-work
-  // comparison: comparing two lengths reveals nothing about the picture
-  // (ADR-0032 consequence (c)). 422, not 400 — the body is well-formed, it
-  // just is not this puzzle, and 422 is terminal client-side.
+  // THE CHECK IS GAME-GENERIC AND MUST NOT BE SIMPLIFIED AWAY (ADR-0032
+  // consequence (c)). It is a no-op for binairo (.length(64)) and sudoku
+  // (.length(81)) — which is exactly what makes it look like dead code to a
+  // later reader — but a nonogram grid's size varies (25/64/100/225) and only
+  // the STORED row decides which, so without it a longer grid whose prefix
+  // matched the shorter solution would score zero mismatches below and be
+  // recorded as a win. Kept outside the constant-work comparison because two
+  // lengths reveal nothing about the picture (ADR-0038, Rejected). 422, not
+  // 400 — the body is well-formed, it just is not this puzzle, and 422 is
+  // terminal client-side.
   if (body.grid.length !== solution.length) {
     return null;
   }
@@ -353,9 +355,9 @@ export async function POST(request: NextRequest): Promise<Response> {
   // date (ADR-0066): an `onTime === true` write never takes the guarded
   // arm, because a capped credited flush would retry after the next
   // rollover, land two days back and store `false` — a permanently lost
-  // streak day on a write-once row. See `recordCompletion`'s own doc for
-  // why the guard is folded into the insert and why the exemption is
-  // safe.
+  // streak day on a write-once row. See `guardedInsertSelect`'s doc for why
+  // the guard is folded into the insert, and `recordCompletion`'s for why
+  // the exemption is safe.
   const written = onTime
     ? await recordCompletion(db, input)
     : await recordCompletion(db, input, {
