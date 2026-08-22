@@ -953,6 +953,67 @@ describe("the picture reveal (T-WEB-S50)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("renders the caption it is HANDED, and none when it is handed none (#64)", () => {
+    // WIDENED IN PLACE AT #64, no new id: the same claim about the same
+    // gate — this game-blind module renders the picture member it is given
+    // and composes nothing. The name and its lead are the third and fourth
+    // fields of that member, and Termo's `answer` prop is the shipped
+    // precedent for the shape.
+    writePlayRecord(nonogramRecord());
+    const NAME = "Âncora";
+
+    const { container, rerender } = render(
+      <ConclusionView
+        game="nonogram"
+        date={DATE}
+        copy={messages.games.nonogram.conclusion}
+        picture={{
+          ...PICTURE,
+          name: NAME,
+          lead: messages.games.nonogram.reveal.lead,
+          label: messages.games.nonogram.reveal.namedAria(NAME),
+        }}
+      />,
+    );
+
+    expect(screen.getByText(NAME)).toBeInTheDocument();
+    expect(
+      screen.getByText(messages.games.nonogram.reveal.lead),
+    ).toBeInTheDocument();
+    // The label is the caller's, verbatim, exactly as the unnamed arm above
+    // asserts for the description — this module composes neither.
+    expect(
+      screen.getByRole("img", {
+        name: messages.games.nonogram.reveal.namedAria(NAME),
+      }),
+    ).toBeInTheDocument();
+    // NEITHER CAPTION LINE IS A HEADING, and this is the assertion that
+    // stops the obvious "semantic improvement": `kicker-above-heading` and
+    // `hero-eyebrow-chip` anchor on `h1`–`h4` and `[role="heading"]`, and
+    // the lead-over-name pair is legal only while both stay `<p>`.
+    expect(screen.getByText(NAME).tagName).toBe("P");
+    expect(container.querySelector("[role='heading']")).toBeNull();
+    expect(screen.queryAllByRole("heading", { name: NAME })).toHaveLength(0);
+
+    // And the same picture with no name renders no caption at all — the
+    // degraded path is a real branch here, not only in the wrapper.
+    rerender(
+      <ConclusionView
+        game="nonogram"
+        date={DATE}
+        copy={messages.games.nonogram.conclusion}
+        picture={PICTURE}
+      />,
+    );
+    expect(screen.queryByText(NAME)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.games.nonogram.reveal.lead),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: PICTURE.label }),
+    ).toBeInTheDocument();
+  });
+
   it("leaves binairo's and sudoku's conclusions exactly as they were", () => {
     // The widening is ONE optional prop and ONE conditional block, so a game
     // that passes no picture renders the markup it rendered before this

@@ -12,6 +12,8 @@
 
 **Amended by:** [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md) (#58) — **(h), continuing the series.** Annotation (h): decision 2's on-time provenance paragraph cited "the one `onTimeSql()` derivation"; that symbol is deleted at #58 — the one producer is now `onTimeAtWrite`, applied at write time and STORED, and `/day` projects the stored column. The paragraph's claim — no second producer — stands. Annotated in place; nothing deleted; references qualify the letter ("annotation (h)").
 
+**Amended by:** [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) (#64) — **(i), continuing the series, at TWO loci under the one letter** (ADR-0065 annotation (f)'s explicit precedent). Locus 1, decision 2: the *"no puzzle content of any kind"* clause narrows — a **completed Nonogram** claim carries an optional `motifName`, which is curated daily content and is post-completion by construction, so the ADR-0004 register stays product rather than confidentiality. Locus 2, decision 3's not-merged list: applying annotation (c)'s rule, and recording that #64 carves **nothing** out of it — `motifName` is not a device fact, has no device counterpart, and `entryFromMerge` never blends it, so the list stands literally true. Decision 5's poll clause is untouched: #64's refresh nudge is one-shot and event-driven, not a second interval. Annotated in place; nothing deleted; references qualify the letter ("annotation (i)").
+
 [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 10 and [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) decision 1 are **obeyed, not amended**, and this ADR says so in those words because a reviewer will ask about both. Decision 10 layer 3 is additionally **cited** by decision 8, as the precedent that makes a playable board behind a done tile acceptable; citing is not amending.
 
 ## Context
@@ -100,6 +102,24 @@ in the app that can **demote**.
    second producer exists — `/stats` carries no per-game hint count
    anywhere. Everything else this decision refuses, it still refuses.)*
 
+   *(**Annotation (i), locus 1 — decision-level, amended by ADR-0070 at #64.**
+   The clause *"**No puzzle content of any kind**"* is narrowed: a
+   **completed Nonogram** claim carries an optional `motifName`, the curated
+   pt-BR name of the day's motif — which IS daily content, and the annotation
+   says so plainly rather than reclassifying it. It does not breach ADR-0004,
+   and the argument is the register one ADR-0027 already fixed and this ADR
+   restates: a claim is a projection of the **user's own completion rows**, so
+   the name cannot exist on a claim before the server judged **that user's**
+   day. A post-completion motif name is metadata about a day already decided
+   for that person, not playable content, and the register stays **product**
+   (a payoff not spoiled early), never confidentiality. Everything else the
+   clause refuses, it still refuses **and now refuses more explicitly**: no
+   puzzle id, no `motifId`, no `mirrored`, no answer, no board, no solution,
+   no day but the server's own today, and the route still takes no parameter.
+   The wire field is `motifName`, not `name` — ADR-0033 decision 4's rename
+   route — so `FORBIDDEN_DAILY_KEYS` is untouched and every leak scan on this
+   payload keeps passing on merit.)*
+
    **And no `onTime` field, because nothing consumes it**: the on-time rule is
    applied server-side and only its verdict travels, as one of the three
    verbs. The tempting warrant *"on-time never rides a wire contract"* is
@@ -172,6 +192,16 @@ in the app that can **demote**.
    WITH its claim since #142 and is never blended, while an IN-PROGRESS
    board's `hintsUsed` stays where this list puts it, device-local and off
    the wire.)*
+
+   *(**Annotation (i), locus 2 — amended by ADR-0070 at #64**, applying
+   annotation (c)'s rule to this list — and honestly, because unlike (c) and
+   (f) it carves **nothing** out. `motifName` is not a device fact at all: it
+   is server-only, it has no device counterpart, no play record holds it, and
+   `entryFromMerge` never blends it. **The list above stands literally true as
+   written.** What the annotation records is that the claim gained a field
+   which is outside this list's subject entirely — the list enumerates device
+   facts the merge refuses to blend, and a curated name the device could never
+   have produced is not one of them.)*
 
 4. **In-progress board state is device-local, is never on the wire, and
    cross-device resume is not a v1 capability.** Nothing is persisted before a

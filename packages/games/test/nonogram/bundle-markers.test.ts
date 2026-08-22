@@ -8,10 +8,18 @@ import { MOTIFS } from "../../src/nonogram/motifs";
  *
  * WHY IT IS HERE AND NOT IN apps/web — the same reason as `clue-bounds.test.ts`
  * beside it. `apps/web` deliberately never imports `MOTIFS`: no motif name may
- * reach the client bundle (ADR-0033 consequence (d)), which is exactly what
- * makes a string grep over the built chunks a real check on the engine
- * barrel's tree-shaking. So the only place these names can be enumerated is
- * inside this package.
+ * reach the client BUNDLE, which is exactly what makes a string grep over the
+ * built chunks a real check on the engine barrel's tree-shaking. So the only
+ * place these names can be enumerated is inside this package.
+ *
+ * THE RULE ABOVE SURVIVED #64 AND ITS WARRANT CHANGED (ADR-0070). ADR-0033
+ * consequence (d) promised this check would die the day a motif name shipped
+ * to a user, and it has not: the daily conclusion names its motif from the
+ * user's own completed `/day` claim — an authenticated wire — and an API JSON
+ * response is never a chunk. The grep still scans `.next/static/chunks/**`
+ * only, so this file is unchanged, still non-vacuous, and still the only
+ * thing standing between a careless client import and 184 curated pt-BR names
+ * in the browser.
  *
  * THE CONSUMER, BY NAME. `apps/web/scripts/route-client-js.mjs`'s
  * `FORBIDDEN_DAILY_SCOPE` array hard-codes the five markers below and asserts

@@ -34,9 +34,17 @@ import { isoDateString } from "./daily";
  * WHAT IT DOES NOT CARRY, and each absence is a decision (ADR-0060 decision
  * 2, as annotated at #141):
  *
- * - no puzzle content of any kind — no id, no answer, no board — and no
- *   date but the server's own today. The route takes NO parameters, so
- *   there is no way to ask about tomorrow (ADR-0004);
+ * - no PLAYABLE puzzle content — no id, no answer, no board — and no date
+ *   but the server's own today. The route takes NO parameters, so there is
+ *   no way to ask about tomorrow (ADR-0004). **This clause read "no puzzle
+ *   content of any kind" until #64** (ADR-0070) and is narrowed rather than
+ *   quietly left standing: a completed Nonogram claim now carries
+ *   `motifName`, which IS curated daily content. It does not breach ADR-0004
+ *   because the claim is a projection of the user's own completion rows, so
+ *   the name cannot reach a payload before the server judged that user's day
+ *   — the register is product (a payoff not spoiled early), not
+ *   confidentiality (ADR-0027's rule). No id, no `mirrored` and no solution
+ *   travel, on any status;
  * - no streak: `/streak` owns it and this payload never derives it;
  * - no guess count, and no `elapsedMs` for TERMO. `todayTermoGuesses`
  *   already exists on `statsResponseSchema` — carrying it here would be a

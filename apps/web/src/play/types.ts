@@ -217,4 +217,27 @@ export interface ConclusionPicture {
   readonly cells: readonly (0 | 1)[];
   /** Composed by the caller from its own i18n bundle. */
   readonly label: string;
+  /**
+   * The motif's curated pt-BR name (#64, ADR-0070) — "Âncora". Present only
+   * once the server has published it on the user's own completed day claim,
+   * so its ABSENCE is the ordinary case, not a defect: offline finish,
+   * pre-sync render, deploy skew and a killed daily row all render exactly
+   * what shipped before #64.
+   *
+   * It arrives as DATA rather than being looked up downstream, which is the
+   * whole reason it is here: `<ConclusionView/>` is game-blind and may not
+   * import `messages.games.nonogram.*`. Termo's `ConclusionAnswer`
+   * `{result, lead, canonical}` is the shipped precedent for the shape.
+   */
+  readonly name?: string;
+  /**
+   * The caption's kicker, beside `name` and travelling with it for the same
+   * reason — "A figura de hoje era". Present exactly when `name` is: a lead
+   * with nothing under it is a label for a missing value.
+   *
+   * It is a SECOND field on this member rather than a second member on
+   * `ConclusionSummary`, which keeps ADR-0034 consequence (c)'s one-payoff-
+   * member-per-game budget intact.
+   */
+  readonly lead?: string;
 }

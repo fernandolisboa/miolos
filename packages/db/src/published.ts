@@ -1,4 +1,5 @@
 import {
+  nonogramDailyContentSchema,
   stripDailyContent,
   type DailyPuzzleResponse,
   type Game,
@@ -29,6 +30,14 @@ import { dailyPuzzles } from "./schema";
  * be weakened (issue #17 AC 1), and its export-list tripwires pin this
  * module's surface: a new reader added here without wall tests fails the
  * suite.
+ *
+ * NOT EVERY READER RETURNS A ROW. `getPublishedNonogramMotifName` (#64,
+ * ADR-0070) returns ONE STRING read out of `content` behind the same wall,
+ * which is the strip-inside-the-wall rule taken to its limit rather than an
+ * exception to it: the caller cannot over-serialize what it never received,
+ * and a reader that hands back a single curated field is narrower than one
+ * that hands back a projection. `listUsedTermoAnswers` is the precedent for
+ * reading stored `content` back for one value.
  */
 
 /** The one spelling of the product timezone (CLAUDE.md invariant). */
@@ -217,6 +226,84 @@ export async function getPublishedDailyWithSolution(
     .where(wallPredicate(game, date))
     .limit(1);
   return rows[0];
+}
+
+/**
+ * Today's Nonogram MOTIF NAME, and nothing else from the row (#64,
+ * ADR-0070, which supersedes ADR-0033 decision 1's name clause).
+ *
+ * Same wall as every reader here — `published_at <= now() AND killed_at IS
+ * NULL`, the DB clock — and the parse happens INSIDE it (ADR-0024), so the
+ * caller receives one string and never a row it could over-serialize. It
+ * returns `reveal.name` only: `motifId`, `mirrored` and `reveal.solution`
+ * stay server-side on every projection, exactly as ADR-0033 decision 1
+ * still says of them.
+ *
+ * IT IS THE CALLER'S JOB TO ASK ONLY AFTER THE DAY IS DECIDED. This reader
+ * enforces publication, not completion — the completion half lives in
+ * `dayGamesFromRows`, which attaches the name only to a `completed` nonogram
+ * claim. `/day` calls this only when its own status derivation already said
+ * `completed`, so most callers pay for no extra query at all.
+ *
+ * **IT NEVER THROWS, and the WHOLE body is guarded rather than just the
+ * parse** — `getArchivedDaily`'s log-and-`undefined` idiom, for a sharper
+ * reason. `/day` touches only the clock and `completions` today; this read
+ * couples it to `daily_puzzles` for the first time, so an escaping throw —
+ * a parse failure, a dropped connection, a statement timeout — would 500 the
+ * ENTIRE day payload (hub, four tiles, every completed view) for a user
+ * whose only sin was finishing the Nonogram. The name is progressive
+ * enhancement; its absence is the honest degraded case, and the log line is
+ * the alarm.
+ *
+ * **An EMPTY stored name normalises to `undefined`, and that is load-bearing
+ * rather than tidy.** `nonogramRevealSchema` has no `.min(1)` —
+ * `validateNonogram`'s `reveal-name-empty` rejection lives in
+ * `packages/games` at GENERATION time, not on this read path — so a stored
+ * `name: ""` parses fine here. Left alone it would attach `motifName: ""`,
+ * fail `dayGameStateSchema`'s `.min(1)` inside the route's own
+ * `dayResponseSchema.parse`, and 500 the whole payload: verbatim the failure
+ * ADR-0065 decision 2 records for the `hintsUsed` cap. Tightening the
+ * content schema instead would be a WRITE-side change that can drain the
+ * buffer, so the normalisation lives here, at the read, where it costs
+ * nothing.
+ *
+ * Exported from `@miolos/db/publishing` ONLY, never the root entry
+ * (ADR-0024): the root entry is `apps/web`'s, and a root export would hand
+ * an RSC segment a one-line channel to today's motif name.
+ */
+export async function getPublishedNonogramMotifName(
+  db: Db,
+  date: string,
+): Promise<string | undefined> {
+  try {
+    const rows = await db
+      .select({ content: dailyPuzzles.content })
+      .from(dailyPuzzles)
+      .where(wallPredicate("nonogram", date))
+      .limit(1);
+    const row = rows[0];
+    if (!row) {
+      return undefined;
+    }
+    const name = nonogramDailyContentSchema.parse(row.content).reveal.name;
+    // BLANK is wider than `trim()`'s idea of blank, on purpose.
+    // `String.prototype.trim` strips WhiteSpace and LineTerminator only, so
+    // a stored U+200B (zero-width space) or U+FEFF (BOM) survives it,
+    // passes the wire's `.min(1)`, and renders an INVISIBLE `.pictureName`
+    // under a perfectly visible "A FIGURA DE HOJE ERA" — a lead labelling
+    // nothing, which is the one shape `ConclusionPicture` says must not
+    // happen. `\p{Cf}` covers the format characters; the curated library
+    // cannot produce any of this (`name-length.test.ts` pins it), so this
+    // guards a hand-edited row, which is exactly the class of row the rest
+    // of this function's `catch` exists for.
+    return /^[\s\p{Cf}]*$/u.test(name) ? undefined : name;
+  } catch (error) {
+    console.error(
+      `getPublishedNonogramMotifName: could not read the motif name for ${date}`,
+      error,
+    );
+    return undefined;
+  }
 }
 
 /** One archived `(date, game)` pair — no content, by construction. */

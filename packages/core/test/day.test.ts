@@ -149,19 +149,35 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
     expect(Object.keys(dayResponseSchema.shape.games.shape).sort()).toEqual(
       [...GAMES].sort(),
     );
-    // And each game's claim is exactly {status, elapsedMs, hintsUsed}
-    // (#141, widened at #142) — a fourth field is this tripwire's business
-    // before it is anyone's feature.
+    // And each game's claim is exactly {status, elapsedMs, hintsUsed,
+    // motifName} (#141, widened at #142, widened again at #64) — a FIFTH
+    // field is this tripwire's business before it is anyone's feature.
+    //
+    // DELIBERATELY REWRITTEN IN PLACE AT #64, id kept: this tripwire fired
+    // exactly as designed when `motifName` landed, and the correct response
+    // to a tripwire that fires for a decided reason is to restate its claim
+    // at the new value, never to loosen it into a `toContain`.
+    //
+    // The residual this pins is named rather than hidden (ADR-0070): the
+    // list is asserted for ALL FOUR games because all four share
+    // `dayGameStateSchema`, so `motifName` is wire-LEGAL on termo, sudoku
+    // and binairo too. Only `dayGamesFromRows` scopes it to nonogram — the
+    // same producer-side arrangement as Termo's duration suppression.
     for (const game of GAMES) {
       expect(
         Object.keys(dayResponseSchema.shape.games.shape[game].shape).sort(),
         game,
-      ).toEqual(["elapsedMs", "hintsUsed", "status"]);
+      ).toEqual(["elapsedMs", "hintsUsed", "motifName", "status"]);
     }
 
     // Nothing about a puzzle can be added without reddening this: the two
     // assertions above pin the key set, and the scan below pins the ban on
     // the leak keys every daily payload is measured against.
+    //
+    // The scan below still passes ON MERIT at #64, which is the point of
+    // ADR-0033 decision 4's rename route: `"name"` is still banned and
+    // `motifName` is not it, so nothing here was relaxed to let the feature
+    // through. `motifId`, `mirrored` and `solution` stay banned outright.
     const keys = collectKeys(dayResponseSchema.parse(valid));
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect([...keys], forbidden).not.toContain(forbidden);
@@ -341,6 +357,158 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
     };
     expect(dayGamesFromRows(rows)).toEqual(expected);
     expect(dayGamesFromRows([...rows].reverse())).toEqual(expected);
+  });
+
+  it("T-CORE-S112: the producer attaches `motifName` to a COMPLETED NONOGRAM claim and to no other game (#64, ADR-0070)", () => {
+    // The name is not a field of any row — it is curated daily content the
+    // caller read from behind the publication wall and handed in. So this
+    // pins the two halves of the producer's rule together: the game it
+    // lands on, and the games it does not.
+    const rows: readonly DayRow[] = [
+      rowOf("nonogram", "won", true, 512_000, 1),
+      rowOf("sudoku", "won", true, 407_000, 0),
+      rowOf("termo", "won", true, 188_000, 0),
+      rowOf("binairo", "won", true, 99_000, 0),
+    ];
+    expect(
+      dayGamesFromRows(rows, { nonogramMotifName: "Âncora" }),
+    ).toStrictEqual({
+      termo: { status: "completed" },
+      sudoku: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
+      nonogram: {
+        status: "completed",
+        elapsedMs: 512_000,
+        hintsUsed: 1,
+        motifName: "Âncora",
+      },
+      binairo: { status: "completed", elapsedMs: 99_000, hintsUsed: 0 },
+    });
+
+    // `toStrictEqual` above is doing real work and is not stylistic:
+    // `toEqual` treats a present-but-undefined key as absent, which is
+    // exactly the distinction the spread-per-field discipline exists to
+    // protect (the wire schema is strict and `sameGame` compares claims
+    // field for field). Asserted again, directly, so the reason survives a
+    // future matcher swap.
+    const named = dayGamesFromRows(rows, { nonogramMotifName: "Âncora" });
+    for (const game of ["termo", "sudoku", "binairo"] as const) {
+      expect(Object.keys(named[game]), game).not.toContain("motifName");
+    }
+
+    // And the producer's output PARSES under the wire schema — the two ends
+    // agree with each other, not just with this test.
+    expect(
+      dayResponseSchema.safeParse({ date: valid.date, games: named }).success,
+    ).toBe(true);
+  });
+
+  it("T-CORE-S113: no status but `completed` carries a name, and absent extras carry none — the publication rule at the producer (#64)", () => {
+    const extras = { nonogramMotifName: "Âncora" };
+    // Every non-completed shape a nonogram row can take, each fed the SAME
+    // extras: the caller supplies a string and this fold decides whether a
+    // claim may carry it. `pending` from no row at all, `played` from a lost
+    // row, and `pending` from the LATE WIN — the row that exists and still
+    // yields no claim (ADR-0060 consequence (f)).
+    const cases: readonly [string, readonly DayRow[]][] = [
+      ["no row at all", []],
+      ["a lost row → played", [rowOf("nonogram", "lost", true, 99_000, 0)]],
+      ["a late win → pending", [rowOf("nonogram", "won", false, 512_000, 1)]],
+      [
+        "a duplicate pair whose weakest claim is played",
+        [
+          rowOf("nonogram", "won", true, 512_000, 1),
+          rowOf("nonogram", "lost", true, 99_000, 0),
+        ],
+      ],
+    ];
+    for (const [label, rows] of cases) {
+      const claim = dayGamesFromRows(rows, extras).nonogram;
+      expect(claim.status, label).not.toBe("completed");
+      expect(Object.keys(claim), label).not.toContain("motifName");
+      expect(claim.motifName, label).toBeUndefined();
+    }
+
+    // Absent extras on a genuinely completed nonogram: the honest degraded
+    // case — a killed row, an unpublished day, a parse failure or a blank
+    // stored name all arrive as `undefined` and the claim simply has no
+    // name. It is progressive enhancement, never a fabricated value.
+    const completed = [rowOf("nonogram", "won", true, 512_000, 1)];
+    for (const extra of [
+      undefined,
+      {},
+      { nonogramMotifName: undefined },
+      // The empty and whitespace-only names the wall read normalises. The
+      // fold guards on TRUTHINESS anyway, because `motifName: ""` would fail
+      // the schema's `.min(1)` inside the route's own parse and 500 the
+      // WHOLE day payload — the ADR-0065 `hintsUsed`-cap failure verbatim.
+      { nonogramMotifName: "" },
+    ]) {
+      const claim = dayGamesFromRows(completed, extra).nonogram;
+      expect(claim.status, JSON.stringify(extra)).toBe("completed");
+      expect(Object.keys(claim), JSON.stringify(extra)).not.toContain(
+        "motifName",
+      );
+    }
+  });
+
+  it("T-CORE-S114: the wire rejects a name on a non-completed claim and rejects an empty one — the publication rule at the schema (#64)", () => {
+    const withGame = (game: unknown) => ({
+      ...valid,
+      games: { ...valid.games, nonogram: game },
+    });
+    for (const body of [
+      // The publication rule: a name on a game nobody completed is a PARSE
+      // FAILURE, not a value the client has to decide about. This is the
+      // ADR-0004 guarantee at the contract, independent of the producer.
+      withGame({ status: "pending", motifName: "Âncora" }),
+      withGame({ status: "played", motifName: "Âncora" }),
+      // `.min(1)`: an empty name is not a name. The producer normalises it
+      // away, and the wire refuses it even if a producer ever forgot to.
+      withGame({ status: "completed", motifName: "" }),
+      withGame({ status: "completed", motifName: 7 }),
+      withGame({ status: "completed", motifName: null }),
+    ]) {
+      expect(
+        dayResponseSchema.safeParse(body).success,
+        JSON.stringify(body),
+      ).toBe(false);
+    }
+
+    // Its ABSENCE is legal on every status, on every game — the field is
+    // optional, so today's payloads and a deploy-skewed old server both
+    // still parse.
+    for (const status of DAY_STATUSES) {
+      expect(
+        dayResponseSchema.safeParse(withGame({ status })).success,
+        status,
+      ).toBe(true);
+    }
+    expect(
+      dayResponseSchema.safeParse(
+        withGame({
+          status: "completed",
+          elapsedMs: 512_000,
+          hintsUsed: 1,
+          motifName: "Âncora",
+        }),
+      ).success,
+    ).toBe(true);
+
+    // THE RESIDUAL, asserted rather than only described (ADR-0070): all four
+    // games share `dayGameStateSchema`, so a name is wire-LEGAL on a
+    // completed termo, sudoku or binairo claim. Only `dayGamesFromRows`
+    // scopes it to nonogram (T-CORE-S112). A `superRefine` on
+    // `dayResponseSchema.games` would close this at the schema; it was
+    // declined, and this assertion is the record of what that costs.
+    expect(
+      dayResponseSchema.safeParse({
+        ...valid,
+        games: {
+          ...valid.games,
+          termo: { status: "completed", motifName: "Âncora" },
+        },
+      }).success,
+    ).toBe(true);
   });
 });
 

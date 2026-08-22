@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-12 (issue #28, shipped in #81)
 **Depends on:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0005](./0005-all-content-is-free.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md)
+**Amended by:** [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) (#64) — consequence 1's *"non-user-facing **everywhere**"* narrows to FREE PLAY, which stays unnamed permanently. A narrowing, not a reversal.
 
 ## Context
 
@@ -67,6 +68,8 @@ transfers. Termo is excluded by project invariant (ADR-0005/ADR-0015).
   daily-route and shared chunks by ADR-0047, whose route-scoped tripwire
   keeps daily chunks as forbidden as ever. CONTEXT.md's Motif row is
   rewritten accordingly.
+
+  > **Narrowed at #64 ([ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md)) to FREE PLAY, and it is a narrowing rather than a reversal.** *"Non-user-facing everywhere"* is no longer true of the product: the DAILY Nonogram conclusion names its motif. It is still exactly true **here**, and permanently so — free play generates infinitely, motifs recur across generated puzzles, there is no day for a server to judge and no server read to make, so `use-free-nonogram.ts` still drops `reveal` at the parse and the solved card still shows the painted picture and never `reveal.name`. The daily name is WIRE-delivered, from the user's own completed `/day` claim, so this consequence's actual subject — the motif tables in the free-play chunk — is untouched, and the tables are still never bundled for a daily route.
 - Free play never touches streak, statistics distributions or medals
   (ADR-0008 rule 5) — enforced by an ESLint wall around the free-play
   directories banning the sync/record/lifecycle/session/db/termo modules,

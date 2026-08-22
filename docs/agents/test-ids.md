@@ -37,11 +37,39 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S112` | `S110` | never used |
-| `T-DB` | `S85` | `S82` | `T-DB-21` |
-| `T-API` | `S176` | `S175` | `T-API-16` |
-| `T-WEB` | `S323` | `S322` | `T-WEB-23` |
+| `T-CORE` | `S116` | `S114` | never used |
+| `T-DB` | `S89` | `S87` | `T-DB-21` |
+| `T-API` | `S182` | `S179` | `T-API-16` |
+| `T-WEB` | `S333` | `S330` | `T-WEB-23` |
 | `T-LINT` | `S54` | `S53` | `T-LINT-10` |
+
+#64 (plan 066) reserved **`T-CORE S112…S115`, `T-DB S85…S88`,
+`T-API S176…S181`, `T-WEB S323…S332`** and no `T-LINT` id
+([the reservation](https://github.com/fernandolisboa/miolos/issues/64#issuecomment-5376854444),
+made at step 5 with the frontier re-derived by the documented grep, which
+agreed with this table in both columns). It spent `T-CORE-S112…S114`,
+`T-DB-S85…S87`, `T-API-S176…S179` and `T-WEB-S323…S330` — **17 planned plus
+`T-WEB-S330` taken from the reserved headroom at step 5**, for the
+`all-caps-body` worst case over the motif library, a gate the plan's test
+list did not anticipate because it is data-dependent rather than
+behavioural (the #31 lesson, napkin § Impeccable 8). The remaining tails —
+`T-CORE-S115`, `T-DB-S88`, `T-API-S180`/`S181`, `T-WEB-S331`/`S332` — are
+the rest of that headroom and went **unspent through the six-lens step-6
+round and its step-7 fixes** — the round rewrote `T-WEB-S329` in place and
+widened `T-DB-S86` and `T-API-S177` in place, taking no fresh id, which is
+the widened-in-place precedent working rather than a shortage. They are
+**burned** at step 8, in the table below. The rows above sit at the true
+maxima with "next free" jumping the whole reservation, so the next allocator
+starts past everyone.
+
+**`packages/games/test/nonogram/name-length.test.ts` carries NO id**, which
+is that package's convention and is load-bearing here rather than
+incidental: `T-WEB-S330` and that file are two halves of ONE claim, split
+across two packages because `apps/web` may never import `MOTIFS` — the
+import ban that keeps the bundle grep a real tree-shaking check (ADR-0070
+consequence (c)). The `bundle-markers.test.ts` ↔ `route-client-js.mjs` pair
+is the same shape, and neither half is a precedent for spreading one id
+across two files.
 
 The "next free" values above jump over #146's reserved review-round
 headroom (`T-CORE-S109`, `T-DB-S83`/`S84`, `T-API-S152…S154`,
@@ -202,6 +230,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-WEB-S313`, `T-WEB-S314` | tails of the issue-#163 on-issue reservation — the reserved review-round headroom, still unspent when PR #175 merged at step 8 (`d10e33d`). Its step-7 round spent `T-WEB-S312` out of the same headroom, so these two are what was left. Burned unspent per the rule above |
 | `T-CORE-S111` | tail of the issue-#33 on-issue reservation — the reserved review-round headroom, still unspent when PR #176 merged at step 8 (`651ec33`). **The only one of that reservation's four tails to burn:** the step-7 round spent `T-API-S175`, `T-WEB-S322` and `T-LINT-S53`, the plan-040 `T-LINT-S45` case working as intended, and spent headroom is never listed here. Burned unspent per the rule above |
 | `T-WEB-S286`, `T-WEB-S287`, `T-API-S141` | the whole of #140's on-issue reservation — reserved as headroom in case the fix needed web/api-side tests, and it needed none: the change is content and `packages/games` (which carries no ids), and the deploy-skew behaviour the issue names is already recorded in ADR-0038/ADR-0039. Burned unspent per the rule above |
+| `T-CORE-S115`, `T-DB-S88`, `T-API-S180`, `T-API-S181`, `T-WEB-S331`, `T-WEB-S332` | tails of the issue-#64 on-issue reservation ([plan 066](../plans/066-issue-64-plan-nonogram-motif-name.md)) — the reserved review-round headroom, unspent when PR #188 merged at step 8. **The six-lens step-6 round produced four blocking findings and took NO fresh id**, which is the widened-in-place precedent rather than a quiet shortage: `T-WEB-S329` was rewritten in place after a reviewer killed it by mutation, and `T-DB-S86` and `T-API-S177` were widened in place. `T-WEB-S330` is NOT here — it is spent headroom (the plan-040 `T-LINT-S45` case), taken at step 5 for the `all-caps-body` worst case over the motif library. Burned unspent per the rule above |
 | `T-CORE-S102`, `T-DB-S70`, `T-LINT-S51` | tails of the issue-#145 on-issue reservation — the reserved review-round headroom left unspent at step 7's exit. **`T-DB-S69` is NOT here (spent headroom, the plan-040 `T-LINT-S45` case — the users-column catalog pin), and neither are `T-API-S131`/`S132` and `T-WEB-S271`/`S272`, spent at step 7 on the review round** (the #83/`T-WEB-S282` precedent; the #145 paragraph below has each claim) |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.

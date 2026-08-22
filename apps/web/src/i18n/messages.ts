@@ -727,9 +727,15 @@ export const messages = {
       backHome: "Voltar para Hoje",
       /**
        * The painted picture's accessible name. NOT `games.nonogram.reveal.aria`:
-       * that string says "de hoje", which is daily language, and the motif's
-       * curated name is withheld here exactly as it is on the conclusion
-       * (ADR-0033, amended by ADR-0047 for the bundle only — never for copy).
+       * that string says "de hoje", which is daily language.
+       *
+       * FREE PLAY STAYS UNNAMED, PERMANENTLY, and #64 narrowed the rule
+       * rather than reversing it (ADR-0070): the DAILY conclusion now names
+       * its motif from the wire, because the server judged that one day for
+       * that one user. Free play generates infinitely, motifs recur, there
+       * is no day to judge and no server read to make — so ADR-0046
+       * consequence 1 and ADR-0047's "to generate and never to name" hold
+       * here exactly as written. The tables are still never bundled.
        */
       pictureAria:
         "A figura revelada, formada pelas células preenchidas da sua grade.",
@@ -1284,13 +1290,39 @@ export const messages = {
           cta: "Jogar o Nonogram de hoje",
         },
       },
-      // ADR-0033: the reveal has no curated name on the client, so the
-      // accessible name DESCRIBES the figure rather than naming it. A sibling
-      // of `conclusion`, read only by the Nonogram conclusion wrapper — it may
-      // not go inside `conclusion`, which is `ConclusionCopy`'s exact shape and
-      // is rendered by two other games.
+      // The reveal's copy. A sibling of `conclusion`, read only by the
+      // Nonogram conclusion wrapper — it may not go inside `conclusion`,
+      // which is `ConclusionCopy`'s exact shape and is rendered by two other
+      // games. That rule is why `lead` and `namedAria` live HERE and travel
+      // to `<ConclusionView/>` as DATA on `ConclusionPicture`: the shared
+      // module is game-blind and imports no `games.nonogram.*` string.
+      //
+      // SINCE #64 (ADR-0070) THE DAILY REVEAL CAN BE NAMED. ADR-0033's
+      // no-name rule stood until then, and `aria` below is what it produced:
+      // a description rather than a name. It is not dead copy — it is the
+      // honest degraded label whenever the name is absent (offline finish,
+      // pre-sync, deploy skew, a killed daily row), and free play keeps its
+      // own unnamed string (`freePlay.nonogram.pictureAria`) permanently.
       reveal: {
         aria: "A figura do Nonogram de hoje, formada pelas células preenchidas da sua grade.",
+        /**
+         * The caption's kicker. IMPERSONAL, and that is the register of the
+         * slot it borrows: Termo's `dayWord.lead` ("A palavra de hoje era")
+         * is the 11px tracked-uppercase line above the answer, while the
+         * second-person sentence sits in `result`. "VOCÊ REVELOU" there
+         * would shout a second-person sentence at kicker size and break the
+         * shape the shipped card established. The second person lives in
+         * `namedAria`, where it reads naturally.
+         */
+        lead: "A figura de hoje era",
+        /**
+         * The accessible name once the motif is known — composed HERE, never
+         * in a component, on `cellAria`'s rule. The em dash matters: "Você
+         * revelou Âncora: a figura…" would read the name as a label for the
+         * clause after it.
+         */
+        namedAria: (name: string) =>
+          `Você revelou ${name} — a figura do Nonogram de hoje, formada pelas células preenchidas da sua grade.`,
       },
     },
     binairo: {

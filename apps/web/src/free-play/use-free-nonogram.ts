@@ -8,8 +8,12 @@
  * THE REVEAL NEVER LEAVES THIS MODULE. `generateNonogram` returns
  * `reveal: {motifId, name, mirrored, solution}` — the motif library
  * legitimately rides the free-play chunk (ADR-0047), but the curated name
- * stays non-user-facing everywhere (ADR-0033's copy rule, unamended): the
- * parse below keeps only the playable projection `{size, clues}`, and the
+ * stays non-user-facing **in free play** (ADR-0033's copy rule as narrowed
+ * by ADR-0070 — a narrowing, not a reversal: since #64 the DAILY conclusion
+ * names its motif, from the user's own completed `/day` claim over the wire,
+ * never from these tables; free play generates infinitely, motifs recur, and
+ * there is no day for a server to judge, so it stays unnamed permanently):
+ * the parse below keeps only the playable projection `{size, clues}`, and the
  * reducer derives its own solution from the clues (`solutionMarks`), so no
  * screen ever holds `reveal` at all.
  */

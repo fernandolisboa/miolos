@@ -5,7 +5,9 @@
  * board closes — no navigation, so finishing offline works, exactly the
  * daily's trick. A paper card in the game's accent: the "Resolvido!" stamp,
  * the Nonogram's painted picture where applicable (its curated name is
- * withheld EVERYWHERE — ADR-0033 as amended by ADR-0047), then "Mais um",
+ * withheld on this card and on every free-play surface — ADR-0033 as amended
+ * by ADR-0047 and narrowed by ADR-0070, which names the DAILY reveal only),
+ * then "Mais um",
  * back to the index, and a quiet link to Hoje.
  *
  * No elapsed time (ADR-0046 decision 6: free play has no timer) and no

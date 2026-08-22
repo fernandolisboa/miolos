@@ -89,6 +89,43 @@ export const dayGameStateSchema = z
     // dicas" is not a virtue where a hint was never possible (ADR-0045
     // decision 1).
     hintsUsed: z.number().int().min(0).max(1).optional(),
+    /**
+     * The revealed Nonogram picture's curated pt-BR motif name (#64,
+     * ADR-0070, which supersedes ADR-0033 decision 1's name clause).
+     *
+     * THE PUBLICATION RULE, and it is enforced twice on purpose: the name is
+     * published ONLY on a `completed` claim. The refinement below is the
+     * wire's half — a payload naming a motif on an unfinished game is a
+     * PARSE FAILURE, never a value the client has to decide about — and the
+     * producer's half is `dayGamesFromRows`, which attaches it only to the
+     * NONOGRAM claim and only from a status its own fold computed. Together
+     * they make ADR-0004 hold BY CONSTRUCTION rather than by care: a claim
+     * is a projection of the user's own completion rows, so the name cannot
+     * exist on a claim before the server judged the day.
+     *
+     * SPELLED `motifName`, NOT `name`, and that is ADR-0033 decision 4's own
+     * prescribed route rather than a dodge: `"name"` stays on
+     * `FORBIDDEN_DAILY_KEYS` (`packages/core/src/testing.ts`) as both a key
+     * ban and a markup-substring ban, and a payload that needs a name
+     * renames its field. Every existing key scan keeps passing on merit.
+     *
+     * NO `.max()`: a read-side length cap would invent a constraint no
+     * writer enforces. `.min(1)` is safe only because the producer
+     * normalises an empty stored name to `undefined` inside the wall
+     * (`getPublishedNonogramMotifName`) — without that, one content row with
+     * `reveal.name: ""` would fail this parse inside the route and 500 the
+     * WHOLE day payload, which is verbatim the failure ADR-0065 decision 2
+     * records for the `hintsUsed` cap.
+     *
+     * RESIDUAL, recorded rather than schema-fixed (ADR-0070):
+     * `dayResponseSchema.shape.games` maps all four games to this schema, so
+     * `motifName` is wire-LEGAL on a termo, sudoku or binairo claim too.
+     * Only the producer scopes it to nonogram — the same arrangement as
+     * Termo's duration suppression. A `superRefine` on `dayResponseSchema`
+     * scoping it to `games.nonogram` was declined: it costs a whole-object
+     * refine to buy a schema-level guarantee the producer already gives.
+     */
+    motifName: z.string().min(1).optional(),
   })
   .refine(
     (game) => game.elapsedMs === undefined || game.status === "completed",
@@ -100,6 +137,12 @@ export const dayGameStateSchema = z
     (game) => game.hintsUsed === undefined || game.status === "completed",
     {
       message: "hintsUsed is published only on a completed game",
+    },
+  )
+  .refine(
+    (game) => game.motifName === undefined || game.status === "completed",
+    {
+      message: "motifName is published only on a completed game",
     },
   );
 
@@ -231,6 +274,14 @@ function statusForGame(rows: readonly DayRow[], game: Game): DayGameStatus {
  * there — ADR-0045 decision 1 — so "sem dicas" would present as a virtue
  * something that was never a choice), never on `played` or `pending`.
  *
+ * `motifName` RIDES THE SAME PUBLICATION RULE since #64 (ADR-0070) and
+ * differs from the other two in WHERE IT COMES FROM: it is not a field of
+ * any row. It is curated daily content, read from the published puzzle
+ * behind the publication wall by the caller and handed in through `extras`,
+ * and attached to the NONOGRAM claim only, only when this fold's own status
+ * derivation says `completed`. The caller cannot bypass that: it supplies a
+ * string, and this function decides whether a claim may carry it.
+ *
  * TWO ROWS FOR ONE GAME ARE IMPOSSIBLE (the composite primary key), and this
  * is total over them anyway, like the fold it composes: a `completed` status
  * means every row of that game read completed (weakest claim), and the
@@ -240,20 +291,51 @@ function statusForGame(rows: readonly DayRow[], game: Game): DayGameStatus {
  */
 export function dayGamesFromRows(
   rows: readonly DayRow[],
+  extras?: DayClaimExtras,
 ): Readonly<Record<Game, DayGameState>> {
   const statuses = dayStateFromRows(rows);
   return {
     termo: claimForGame(rows, "termo", statuses.termo),
     sudoku: claimForGame(rows, "sudoku", statuses.sudoku),
-    nonogram: claimForGame(rows, "nonogram", statuses.nonogram),
+    nonogram: claimForGame(rows, "nonogram", statuses.nonogram, extras),
     binairo: claimForGame(rows, "binairo", statuses.binairo),
   };
+}
+
+/**
+ * Daily CONTENT a claim may carry, which no completion row can supply (#64,
+ * ADR-0070).
+ *
+ * Separate from `DayRow` because it is a different kind of fact with a
+ * different source: a row is the user's own play record, this is the day's
+ * published puzzle read from behind the publication wall (ADR-0024). Keeping
+ * them apart is what stops a caller from smuggling content in as though the
+ * user had produced it, and keeps `DayRow` exactly the shape the SQL
+ * projection returns.
+ *
+ * OPTIONAL AT EVERY LEVEL. The whole object is optional (most callers pay
+ * for no extra read at all — the route only performs it when the nonogram
+ * already reads completed), and the field is optional within it. An absent
+ * name is the honest degraded case, never an error: a killed row, an
+ * unpublished day, a parse failure and an empty stored name all arrive here
+ * as `undefined` and the claim simply carries no name.
+ */
+export interface DayClaimExtras {
+  /**
+   * Today's Nonogram motif name, already normalised by the wall read —
+   * `undefined` rather than `""` for a missing, killed, unparseable or
+   * blank stored name. `dayGamesFromRows` still guards on truthiness, so a
+   * caller that skips that normalisation cannot produce a `motifName: ""`
+   * that would fail `dayGameStateSchema`'s `.min(1)` and 500 the payload.
+   */
+  readonly nonogramMotifName?: string;
 }
 
 function claimForGame(
   rows: readonly DayRow[],
   game: Game,
   status: DayGameStatus,
+  extras?: DayClaimExtras,
 ): DayGameState {
   if (status !== "completed" || game === "termo") {
     return { status };
@@ -280,10 +362,21 @@ function claimForGame(
   // Spread-per-field rather than a key set to `undefined`: the wire schema
   // is strict and a consumer compares claims field for field, so an absent
   // field must be ABSENT, not present-and-undefined.
+  // Truthiness, never `!== undefined` (#64): an empty stored name that
+  // slipped past the wall read's normalisation would otherwise attach
+  // `motifName: ""`, fail `dayGameStateSchema`'s `.min(1)` inside the
+  // route's own `dayResponseSchema.parse`, and 500 the entire day payload —
+  // hub, four tiles and every completed view — for a user who merely
+  // finished the Nonogram.
+  const motifName =
+    game === "nonogram" && extras?.nonogramMotifName
+      ? extras.nonogramMotifName
+      : undefined;
   return {
     status,
     ...(elapsedMs === undefined ? {} : { elapsedMs }),
     ...(hintsUsed === undefined ? {} : { hintsUsed }),
+    ...(motifName === undefined ? {} : { motifName }),
   };
 }
 

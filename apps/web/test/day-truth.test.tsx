@@ -227,6 +227,47 @@ describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
     expect(rendered.result.current?.games.sudoku.hintsUsed).toBe(1);
     rendered.unmount();
   });
+
+  it("T-WEB-S328: a refetch that changes ONLY the motif name IS a change — and this one is not hypothetical (#64, ADR-0070)", async () => {
+    // The third field on the same warrant, and the one where the racing
+    // payload is a REAL production path rather than an account merge. A
+    // first read that lands while today's nonogram row is killed, missing or
+    // malformed answers `completed` with NO name; the corrected payload one
+    // trigger later differs in nothing else at all. Without `motifName` in
+    // the comparator, `samePayload` swallows it and the caption never
+    // appears for that user today.
+    // Initialised explicitly: `let x;` with a single later assignment reads
+    // to `prefer-const` as a constant, and it is not one — the closure below
+    // reads it afresh on every fetch, which is the whole mechanism here.
+    let motifName: string | undefined = undefined;
+    stubFetch(() =>
+      jsonResponse(
+        200,
+        payload({
+          nonogram: {
+            status: "completed",
+            elapsedMs: 512_000,
+            hintsUsed: 0,
+            ...(motifName === undefined ? {} : { motifName }),
+          },
+        }),
+      ),
+    );
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await flush();
+    const first = rendered.result.current;
+    expect(first?.games.nonogram.status).toBe("completed");
+    expect(first?.games.nonogram.motifName).toBeUndefined();
+
+    motifName = "Âncora"; // the daily row is readable now
+    window.dispatchEvent(new Event("focus"));
+    await flush();
+    expect(rendered.result.current).not.toBe(first);
+    expect(rendered.result.current?.games.nonogram.motifName).toBe("Âncora");
+    rendered.unmount();
+  });
 });
 
 describe("the day-truth store's triggers (T-WEB-S236)", () => {

@@ -360,9 +360,17 @@
    #FBF7EF = 4.51:1, against WCAG 1.4.11's 3:1 for a meaningful non-text
    graphic. Nothing here may use --accent-app #9E3B2F, which is 1.40:1 against
    terracotta and invisible (N13). */
+/* COLUMN since #64, where it was a centred row: the motif caption stacks
+   under the picture. With one child the two are identical — a lone `.picture`
+   is horizontally centred either way — so nothing about the unnamed reveal
+   moves. Same no-background/no-border/no-radius/no-shadow discipline
+   `.dayWordRow` records: `isCardLikeFromProps` must return false on its FIRST
+   guard here, or `nested-cards` fires on the payoff, and "card dentro de card"
+   is a DESIGN.md anti-reference verbatim. */
 .pictureRow {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   margin-top: var(--space-6);
 }
 
@@ -400,6 +408,52 @@
 }
 
 /* ── the day's word (#27, ADR-0043 decision 6) ───────────────────────── */
+
+/* The motif caption (#64, ADR-0070) — `.dayWordRow`'s vocabulary one row
+   over, deliberately, so the two payoff cards read as the same system. It
+   renders only when the server published a name, so it is absent on an
+   offline finish and on every pre-sync paint. Unanimated: `.picture` above it
+   already carries the card's second settle, and a third would make the payoff
+   busy. */
+.pictureCaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  text-align: center;
+}
+
+/* `.dayWordLead`'s exact register — 11px tracked uppercase --ink-2 #6E6659
+   (L 0.13539008) on --paper-card #FBF7EF (L 0.93262753), 5.3003:1. */
+.pictureLead {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* The name. NOT a heading and never `role="heading"` — `.pictureLead` above
+   it is textbook `kicker-above-heading` shape, and the pair is legal only
+   because both that rule and `hero-eyebrow-chip` anchor exclusively on
+   `h1`–`h4` and `[role="heading"]` (checks.mjs:2492). The component carries
+   the same sentence.
+
+   --ink #211D19 (L 0.01272250) on --paper-card is 15.6663:1. 22px, not
+   `.dayWord`'s 34: on the Termo card the word IS the payoff, here the
+   PICTURE is and the name annotates it, so the caption must not out-shout
+   the 132px figure it sits under — and it stays well below `.stampTime`'s
+   40px, keeping the stamp the card's largest element on a win. */
+.pictureName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
 
 /* Renders in `.pictureRow`'s slot, on BOTH outcomes, unanimated. No
    background, no border, no radius and no box-shadow, so
@@ -1077,6 +1131,19 @@
   .picture {
     width: 104px;
     height: 104px;
+  }
+
+  .pictureCaption {
+    margin-top: var(--space-3);
+  }
+
+  /* Stepped WITH the picture and with `.dayWord`, by the same ratio the rest
+     of this block holds: 22 × 0.85 = 18.7, and 18px is the 4pt-scale value
+     under it. (The arithmetic sits on the rule whose `font-size` it explains,
+     like `.dayWord`'s above — it briefly sat on `.pictureCaption`, which only
+     moves a margin.) */
+  .pictureName {
+    font-size: 18px;
   }
 
   .sync {
