@@ -853,8 +853,12 @@ export default tseslint.config(
       // must be inside this wall. `apps/web/app/cartao/**` is a strict subset
       // of (1)'s and (2)'s globs, whose arrays this object already repeats
       // verbatim, and it intersects neither (3) (free play) nor (5)
-      // (modo-livre ∩ OG) — an intersection ANALYSIS, per ADR-0054 `:981-983`,
-      // not a claim that there is no intersection.
+      // (modo-livre ∩ OG) — an intersection ANALYSIS, not a claim that there
+      // is no intersection. That is ADR-0054 decision 15's widened rule, in
+      // its own words: the header comment is corrected from "a subset of
+      // (1)'s or (2)'s" to **any intersection with any earlier object**.
+      // (Quoted, not cited by line: this PR annotates ADR-0054 in place, so a
+      // `:NNN` here would be stale on arrival.)
       `apps/web/app/cartao/**/*.${webWallExtensions}`,
     ],
     rules: {

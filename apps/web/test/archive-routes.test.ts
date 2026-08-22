@@ -4,8 +4,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  archiveDayCardRoute,
   archiveDayRoute,
   archiveGameRoute,
+  archiveMonthCardRoute,
   archiveMonthRoute,
   routes,
   routeSlugs,
@@ -22,6 +24,21 @@ const SOURCE = /\.(?:tsx?|mts|cts|jsx?|mjs|cjs)$/;
 
 /** A quoted `/arquivo` path — the shape a hardcoded route takes in code. */
 const ARCHIVE_LITERAL = /["'`]\/arquivo/;
+
+/**
+ * The same shape for #104's second pt-BR route family (ADR-0071). `/cartao`
+ * gained two builders in `routes.ts` and nothing was policing the slug, so a
+ * hand-typed `/cartao/mes/${m}` in a future `generateMetadata` would have red
+ * nothing — `T-WEB-S173`'s literal scan only covers the three archive shells.
+ */
+const CARD_LITERAL = /["'`]\/cartao/;
+
+/**
+ * `/cartao` is a rasteriser endpoint, never a destination. `routes.ts` states
+ * it — *"the only two builders here whose output is never an `<a href>`"* —
+ * and this is the mechanical half.
+ */
+const CARD_LINK = /(?:href\s*=|<Link\b)[^\n]*\/cartao/;
 
 /**
  * The file with its comments removed. Load-bearing rather than hygiene: this
@@ -88,6 +105,45 @@ describe("the archive's paths have one home (T-WEB-S166)", () => {
       .filter((path) => !path.endsWith(join("src", "i18n", "routes.ts")))
       .filter((path) => ARCHIVE_LITERAL.test(code(readFileSync(path, "utf8"))));
     expect(offenders).toEqual([]);
+  });
+
+  it("no `/cartao` string literal exists outside routes.ts, and nothing LINKS one", () => {
+    // #104 (ADR-0071). The same single-home rule, applied to the second pt-BR
+    // route family the app gained — and one rule more, because these two
+    // paths are card endpoints rather than pages: they are composed into an
+    // `openGraph.images` entry and nothing may put one behind an anchor.
+    const files = sourceFiles().map(
+      (path) => [path, code(readFileSync(path, "utf8"))] as const,
+    );
+    // Counted floor: a broken walker or a typo'd extension list would make
+    // both assertions below pass over an empty set.
+    expect(files.length).toBeGreaterThan(50);
+
+    const literals = files
+      .filter(([path]) => !path.endsWith(join("src", "i18n", "routes.ts")))
+      .filter(([, source]) => CARD_LITERAL.test(source))
+      .map(([path]) => path);
+    expect(literals).toEqual([]);
+
+    const links = files
+      .filter(([, source]) => CARD_LINK.test(source))
+      .map(([path]) => path);
+    expect(links).toEqual([]);
+  });
+
+  it("the `/cartao` scans are not vacuous — both regexes match a real offender", () => {
+    expect(CARD_LITERAL.test('const u = "/cartao/2026-08-01";')).toBe(true);
+    expect(CARD_LITERAL.test("const u = `/cartao/mes/${month}`;")).toBe(true);
+    expect(CARD_LINK.test('<a href="/cartao/2026-08-01">card</a>')).toBe(true);
+    expect(CARD_LINK.test("<Link href={archiveDayCardRoute(d)}>x</Link>")).toBe(
+      false,
+    );
+    expect(CARD_LINK.test('<Link href="/cartao/mes/2026-08" />')).toBe(true);
+    // And the slug really is what the builders compose, so the two scans are
+    // about the path the app actually serves.
+    expect(routeSlugs.card).toBe("cartao");
+    expect(archiveDayCardRoute("2026-08-01")).toBe("/cartao/2026-08-01");
+    expect(archiveMonthCardRoute("2026-08")).toBe("/cartao/mes/2026-08");
   });
 
   it("the scan is not vacuous — routes.ts itself matches it, and comment-stripping does not hide code", () => {

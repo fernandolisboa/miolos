@@ -1,7 +1,7 @@
 import { messages } from "../../../../src/i18n";
 import { CARD_HEIGHT, CARD_WIDTH } from "../../../../src/og/card";
 import { ogCopy } from "../../../../src/og/copy";
-import { archiveCardHandler } from "../../../../src/og/handlers";
+import { archiveGameCardHandler } from "../../../../src/og/handlers";
 
 // ADR-0053 decision 2 — see `app/sudoku/opengraph-image.tsx` for the
 // kill-switch argument. The archive family is where it bites hardest: these
@@ -16,5 +16,5 @@ export default async function Image({
 }: {
   readonly params: Promise<{ readonly data: string }>;
 }) {
-  return archiveCardHandler("sudoku", (await params).data);
+  return archiveGameCardHandler("sudoku", (await params).data);
 }

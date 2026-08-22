@@ -37,15 +37,25 @@ interface MonthPageProps {
 
 /**
  * The SAME parser the page body calls (ADR-0053 decision 1 / plan 037 D6a).
- * In the App Router `generateMetadata` and the page resolve INDEPENDENTLY, so
- * a `notFound()` in the page does not stop this function from having already
- * composed a canonical out of the raw segment — and a segment beginning `//`
- * or `https://` resolves against `metadataBase` to an off-site absolute URL.
- * On failure: no `alternates` at all, and `index: false`.
+ * On failure: no `alternates` at all, and `index: false` — because a segment
+ * beginning `//` or `https://` resolves against `metadataBase` to an off-site
+ * absolute URL, and a canonical composed from attacker text must not exist
+ * even in a value nothing reads.
+ *
+ * **It is that last clause that carries the rule, not a race.** The comment
+ * here used to say that `generateMetadata` and the page resolve
+ * INDEPENDENTLY, so a `notFound()` in the page cannot stop this function from
+ * having already composed a canonical. That is not what Next 16.2.12 does:
+ * `collectMetadata` reads the LAYOUT's metadata export, never the page's,
+ * whenever an error convention is in play, so the page's result is discarded
+ * rather than raced. The refusal above is still right — it is right because
+ * this function should not build a URL out of hostile input at all, which is
+ * a rule about this code and not about the framework's timing. See
+ * `app/arquivo/[data]/page.tsx` for the source citation.
  *
  * The `openGraph` block mirrors the day page, with the month builders — see
- * `app/arquivo/[data]/page.tsx` for why `OG_DEFAULTS` must be spread, why
- * `images` must be present, and why the prose here carries no apostrophes.
+ * `app/arquivo/[data]/page.tsx` for why `OG_DEFAULTS` must be spread and why
+ * `images` must be present.
  */
 export async function generateMetadata({
   params,
@@ -66,7 +76,10 @@ export async function generateMetadata({
       title,
       description,
       images: [
-        cardImage(archiveMonthCardRoute(month), ogCopy.altArchiveMonth(name)),
+        cardImage({
+          url: archiveMonthCardRoute(month),
+          alt: ogCopy.altArchiveMonth(name),
+        }),
       ],
     },
   };

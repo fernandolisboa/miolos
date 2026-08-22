@@ -33,19 +33,29 @@ interface DayPageProps {
  * hand-rolled regex: it is the repo's one calendar-day validator and it
  * rejects `2026-02-30`, which a shape regex accepts.
  *
- * **A WELL-FORMED date the wall refuses still gets a canonical and a title,
- * and that asymmetry is deliberate** (step-6 F23). Metadata and the page
- * resolve independently in the App Router, so a `notFound()` below cannot
- * un-compose a `<head>` this function has already produced: `/arquivo/1999-
- * 01-01` answers **404** with a self-referential canonical and a title
- * naming puzzles that do not exist. The blast radius is exactly one 404
- * response — the status is what crawlers act on, the URL is never in the
- * sitemap because the sitemap is built from the reader, and the alternative
- * (a second reader call inside `generateMetadata`) doubles the query count
- * on every archive page view to tidy the head of a page nobody indexes. The
- * malformed case is different and is handled: it yields `robots.index:
- * false` with **no** `alternates`, because there the segment is attacker
- * text and a canonical composed from it is the poisoning hazard.
+ * **A WELL-FORMED date the wall refuses composes a canonical and a title that
+ * are then DISCARDED, and this function composing them anyway is deliberate**
+ * (step-6 F23, corrected at #104 against the measured mechanism below).
+ * `/arquivo/1999-01-01` answers **404**, and the `<head>` it answers with is
+ * the not-found one — the root title, the root card, no canonical — not the
+ * one composed here. The blast radius is therefore nil, and the alternative
+ * (a second reader call inside `generateMetadata`, so this function could
+ * refuse in advance) doubles the query count on every archive page view to
+ * suppress a head that Next already throws away. The malformed case is
+ * different for a different reason: it yields `robots.index: false` with
+ * **no** `alternates` because the segment is attacker text, and a canonical
+ * composed from it must not exist even in a value nothing reads.
+ *
+ * **THE MECHANISM, read off Next 16.2.12's own source rather than reasoned.**
+ * `lib/metadata/resolve-metadata.js`'s `collectMetadata` opens with
+ * `if (errorConvention) { mod = await getComponentTypeModule(tree, 'layout') }`
+ * — when an error convention is in play, the module whose metadata export is
+ * read is the LAYOUT, never the page. So a `notFound()` below does not race
+ * this function or un-compose its result: the result is simply never
+ * collected. The older claim here — that metadata and the page resolve
+ * independently, so a `notFound()` cannot un-compose a head already produced
+ * — was the opposite of what the runtime does, and it stood ~30 lines above a
+ * paragraph added at #104 that says so correctly.
  *
  * **The `openGraph` block below is what attaches the card for this page**
  * (#104, ADR-0071), and it has two rules it must not break. `OG_DEFAULTS`
@@ -63,22 +73,16 @@ interface DayPageProps {
  * The malformed branch above composes NO `openGraph`, and MEASURED on a real
  * production build that changes nothing about what such a segment advertises:
  * it answers 404 through `notFound()` below, and Next then renders the
- * not-found metadata rather than this function result — so the head carries
+ * not-found metadata rather than this function's result — so the head carries
  * the ROOT card, the root title and no canonical, exactly as it did before
  * #104. Two facts behind that, both measured rather than reasoned. First, a
- * `notFound()` DISCARDS the route composed metadata in Next 16.2.12. Second,
- * an `opengraph-image` file is inherited by descendant segments only from a
- * segment that owns a `layout.tsx`, and `app/arquivo/` owns none — the only
- * layout in the app is the root — so `app/arquivo/opengraph-image.png` serves
- * `/arquivo` and nothing under it. Plan 068 claimed the opposite in three
- * places; the measurement is in the step-5 evidence and the records were
- * corrected against it.
- *
- * NOTE for whoever edits the prose from here down: `T-WEB-S173` slices this
- * file from the first occurrence of the word above to the first line that is
- * a bare closing brace, and rejects any quoted run of two characters or more
- * inside it — which a pair of apostrophes in ordinary English is. Write
- * around it; the scan is not the thing to weaken.
+ * `notFound()` DISCARDS the route's composed metadata in Next 16.2.12 (the
+ * mechanism is quoted above). Second, an `opengraph-image` file is inherited
+ * by descendant segments only from a segment that owns a `layout.tsx`, and
+ * `app/arquivo/` owns none — the only layout in the app is the root — so
+ * `app/arquivo/opengraph-image.png` serves `/arquivo` and nothing under it.
+ * Plan 068 claimed the opposite in three places; the measurement is in the
+ * step-5 evidence and the records were corrected against it.
  */
 export async function generateMetadata({
   params,
@@ -99,7 +103,10 @@ export async function generateMetadata({
       title,
       description,
       images: [
-        cardImage(archiveDayCardRoute(date), ogCopy.altArchiveDay(longDate)),
+        cardImage({
+          url: archiveDayCardRoute(date),
+          alt: ogCopy.altArchiveDay(longDate),
+        }),
       ],
     },
   };

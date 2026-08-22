@@ -17,10 +17,11 @@ export const routeSlugs = {
   // which `calendarDateString` rejects -> 404.
   month: "mes",
   // #104 (ADR-0071): the OG card endpoints for the archive's day and month
-  // shells. **This table is mixed-purpose from here on, and that is the price
-  // of the choice rather than an oversight**: the twelve slugs around it are
-  // segments a person visits, and this one is a machine endpoint a rasteriser
-  // answers on — not linked, deliberately out of `sitemap.ts`, never
+  // shells. **THIS ONE ENTRY is mixed-purpose, and that is the price of the
+  // choice rather than an oversight**: every other slug in this table — above
+  // it and below it alike — is a segment a person visits, and this one is a
+  // machine endpoint a rasteriser answers on — not linked, deliberately out
+  // of `sitemap.ts`, never
   // navigated to. It lives here anyway because a chosen slug is a chosen
   // slug: ADR-0013 `:38` puts route slugs with the i18n strings from the
   // first route, and without this entry a pt-BR literal enters a builder body

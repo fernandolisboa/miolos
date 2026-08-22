@@ -35,8 +35,9 @@ import { messages } from "../i18n";
  * archive PLAY routes add no copy at all — they reuse the
  * `messages.archive.meta` strings they already compose. The three archive
  * SHELL cards do add copy (#104, ADR-0071): a tagline for the index card,
- * which has no date to print, and three `alt` strings. Two of those three are
- * DATED, which is the mirror image of `altGame`'s constraint above rather
+ * which has no date to print, a caption for the day card, which carries the
+ * year its display line dropped, and three `alt` strings. Two of those three
+ * are DATED, which is the mirror image of `altGame`'s constraint above rather
  * than an exception to it: the day and month cards are referenced by an
  * explicit `openGraph.images` entry composed inside `generateMetadata`, which
  * CAN read `params`, so the reason `altGame` is dateless does not reach them.
@@ -66,8 +67,8 @@ export const ogCopy = {
    * **This is the SHIPPED sentence, not a new one.** It is the first sentence
    * of `messages.archive.lead`, already rendered on `/arquivo` — the very
    * page this card serves. Minting a second wording of one claim is what
-   * `messages.ts:23-25` polices in its own words ("a second copy is how two
-   * screens drift apart"), and the two would sit on the same surface. It is
+   * `messages.ts` polices in its own words — *"a second copy is how two
+   * screens drift apart"* — and the two would sit on the same surface. It is
    * written out here rather than sliced off `lead` at runtime, because a copy
    * deck holding string surgery is worse than a copy deck holding a string —
    * the same call `siteTagline` above records. `T-WEB-S206a` asserts this is

@@ -82,7 +82,7 @@ export function formatMonth(isoDate: string): string {
  * caption line brings the worst case to 729px. The year is not lost — the
  * card prints it one line down.
  *
- * A THIRD `Intl` instance and not a `.replace()` on `formatLongDate`'s
+ * A SEPARATE `Intl` instance and not a `.replace()` on `formatLongDate`'s
  * output: "the long date minus its year" is a locale-specific string surgery
  * that pt-BR happens to make look easy, and the connective is the formatter's
  * to decide, not this module's. It rides the same `utcNoon` anchor as its

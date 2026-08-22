@@ -17,12 +17,13 @@ import {
 } from "./tokens";
 
 /**
- * The Open Graph card, as two pure builders (#34, ADR-0054).
+ * The Open Graph card, as three pure builders (#34, ADR-0054; #104, ADR-0071
+ * added the third).
  *
- * NEITHER constructs an `ImageResponse`. Both return a plain element tree, so
- * both are renderable and assertable in jsdom without a rasteriser
- * (`T-WEB-S200`/`S208`), and the one file that genuinely rasterises is
- * quarantined to `// @vitest-environment node` (`T-WEB-S202`).
+ * NONE of them constructs an `ImageResponse`. All three return a plain element
+ * tree, so all three are renderable and assertable in jsdom without a
+ * rasteriser (`T-WEB-S200`/`S208`), and the one file that genuinely rasterises
+ * is quarantined to `// @vitest-environment node` (`T-WEB-S202`).
  *
  * ## The card draws NO puzzle content, and the signature is the mechanism
  *
@@ -280,17 +281,18 @@ export function gameCard(args: {
  *
  * Two already-formatted `string`s, and no parameter a `Game` or an
  * `ArchivedDay` can enter through — the same argument `gameCard` makes above,
- * for a builder that takes no game at all. `limit: 1` on the handler's read
- * bounds it to an existence answer so no game SET is in scope; it is NOT what
- * hides a game, because `ArchivedDay` is `{date, game}` and `days[0].game` is
- * one property access away. The signature is what makes this structural.
+ * for a builder that takes no game at all. THE SIGNATURE IS THE WHOLE
+ * MECHANISM here; the handler's `limit: 1` is not, and the reason it is not is
+ * written once, in `handlers.ts`, where the read actually lives. This builder
+ * takes two strings and knows nothing about the call that produced them.
  *
  * The product reasons are recorded in ADR-0071 decision 5: the archive's
  * oldest days hold one, two or three games (ADR-0053 decision 3), so a card
  * naming four is false on exactly those days; four game names could not be
- * told apart even in principle, because `DESIGN.md:19` forbids the accent on
- * any word at any size; and ADR-0054 decision 1a's archive surface is a
- * narrower surface than the daily's, never a wider one.
+ * told apart even in principle, because `DESIGN.md`'s colour section says the
+ * shared per-game accent *"may never colour a word"*, at any size and on any
+ * paper; and ADR-0054 decision 1a's archive surface is a narrower surface than
+ * the daily's, never a wider one.
  *
  * ## No kicker, and one tape
  *
@@ -379,5 +381,29 @@ export function siteCard(): ReactElement {
         <div style={{ ...bodyStyle, marginTop: 12 }}>{ogCopy.siteTagline}</div>
       </div>
     ),
+  });
+}
+
+/**
+ * The archive INDEX card — the family's second STATIC card, and the identity
+ * of the committed `app/arquivo/opengraph-image.png` (#104, ADR-0071).
+ *
+ * A zero-argument named builder for the same reason `siteCard` above is one.
+ * The two dynamic archive cards take `{display, caption}` because their
+ * handlers own the strings and the two-string signature is the structural
+ * guarantee that no game reaches the tree. The index card has no handler and
+ * no date: its composition is a CONSTANT, and a constant with no home gets
+ * copied. It was, four times over, into the two test files — including into
+ * the `WRITE_ARCHIVE_CARD=1` generator that decides what the committed PNG
+ * actually is (step-6 quality S8).
+ *
+ * It delegates rather than duplicating the tree, so the three archive cards
+ * stay one composition, and it gives `ogCopy.archiveTagline` and
+ * `ogCopy.altArchiveIndex` the same kind of consumer `ogCopy.siteTagline` has.
+ */
+export function archiveIndexCard(): ReactElement {
+  return archiveCard({
+    display: messages.archive.title,
+    caption: ogCopy.archiveTagline,
   });
 }

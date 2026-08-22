@@ -5,7 +5,12 @@ import { isValidElement, type ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { formatDayAndMonth, formatMonth, messages } from "../src/i18n";
-import { archiveCard, gameCard, siteCard } from "../src/og/card";
+import {
+  archiveCard,
+  archiveIndexCard,
+  gameCard,
+  siteCard,
+} from "../src/og/card";
 import { ogCopy } from "../src/og/copy";
 import { ACCENT_APP_SHADOW, ACCENT_APP_TAPE } from "../src/og/tokens";
 
@@ -84,13 +89,7 @@ describe("the OG card paints the accent on the tape and the shadow only (T-WEB-S
       ["site", siteCard()],
       // #104's three archive cards walk the same absence: one builder, three
       // call shapes, and no accent-coloured word on any of them.
-      [
-        "archive index",
-        archiveCard({
-          display: messages.archive.title,
-          caption: ogCopy.archiveTagline,
-        }),
-      ],
+      ["archive index", archiveIndexCard()],
       [
         "archive month",
         archiveCard({
@@ -409,8 +408,18 @@ describe("nothing but a game and a date reaches the card builder (T-WEB-S201)", 
       if (!byIdentifier.has(identifier)) {
         byIdentifier.set(identifier, new Set());
       }
+      // THE OPTIONAL `[…]` IS LOAD-BEARING, and it was missing until step 7.
+      // Without it the pattern needs a literal `.` right after the
+      // identifier, so `days[0].game` — the exact access the comment below
+      // says is stopped — was INVISIBLE to this scan. Measured: with the day
+      // handler mutated to `archiveDayCaption(days[0].game)` this test stayed
+      // green (only `T-WEB-S334` rows (2) and (10) went red), which made the
+      // claim in the comment false of the test asserting it.
       for (const read of handlerSource.matchAll(
-        new RegExp(String.raw`\b${identifier}\.(\w+)`, "g"),
+        new RegExp(
+          String.raw`\b${identifier}\s*(?:\[[^\]]*\])?\s*\.(\w+)`,
+          "g",
+        ),
       )) {
         byIdentifier.get(identifier)?.add(read[1] ?? "");
       }
@@ -425,6 +434,13 @@ describe("nothing but a game and a date reaches the card builder (T-WEB-S201)", 
     // what stops that access being written, and `archiveCard`'s signature is
     // what makes it useless if it ever were.
     expect([...(byIdentifier.get("days") ?? [])]).toEqual(["length"]);
+
+    // And the same claim stated directly, so a BARE `days[0]` handed to
+    // something is caught too: an existence probe never indexes its result.
+    const indexed = [...byIdentifier.keys()].filter((identifier) =>
+      new RegExp(String.raw`\b${identifier}\s*\[`).test(handlerSource),
+    );
+    expect(indexed).toEqual([]);
   });
 
   it("archiveCard's declared parameter type admits no Game and no ArchivedDay", () => {
@@ -496,6 +512,17 @@ describe("the archive card is a dated nameplate (T-WEB-S333)", () => {
       }));
   }
 
+  it("archiveIndexCard IS the index row of this table — one composition, one home", () => {
+    // #104 step 7 (quality S8). The index card's `{display, caption}` used to
+    // exist only as copies in this file and in `og-image.node.test.ts`, one of
+    // which defines what the committed `app/arquivo/opengraph-image.png` is.
+    // It now has a named zero-arg builder beside `siteCard`, and this is what
+    // stops the fixture below drifting from it.
+    expect(lines(archiveIndexCard())).toEqual(lines(archiveCard(cards.index)));
+    expect(cards.index.display).toBe(messages.archive.title);
+    expect(cards.index.caption).toBe(ogCopy.archiveTagline);
+  });
+
   it("each card's three lines are display, caption, wordmark — in that order", () => {
     for (const [name, args] of Object.entries(cards)) {
       const found = lines(archiveCard(args));
@@ -523,21 +550,36 @@ describe("the archive card is a dated nameplate (T-WEB-S333)", () => {
     // failure this guards is all three cards showing the same word.
     const displays = Object.values(cards).map((args) => args.display);
     expect(new Set(displays).size).toBe(3);
-    // The month card names its month, the day card names its day — and the
-    // DAY card's display line is NOT "Arquivo".
-    expect(cards.month.display).toBe(MONTH);
-    expect(cards.day.display).toBe(DAY);
+    // Neither dated card's display line is "Arquivo" — the failure this row
+    // exists to catch is all three cards showing the same word.
+    //
+    // `expect(cards.month.display).toBe(MONTH)` and its two siblings were
+    // here until step 7 and are deleted rather than kept: `cards` is built
+    // FROM those constants four lines above, so each was a tautology over the
+    // fixture. The handler-to-slot mapping — the thing that could actually
+    // regress — is `T-WEB-S334` row (10), which asserts the exact argument
+    // object each handler passes.
     expect(cards.day.display).not.toBe(messages.archive.title);
     expect(cards.month.display).not.toBe(messages.archive.title);
-    // Only the index card, which has no date, puts the section name up top.
-    expect(cards.index.display).toBe(messages.archive.title);
+    // Only the index card, which has no date, puts the section name up top —
+    // and it is the ONLY one of the three that does.
+    expect(
+      Object.entries(cards)
+        .filter(([, args]) => args.display === messages.archive.title)
+        .map(([name]) => name),
+    ).toEqual(["index"]);
   });
 
   it("the day card takes RUNG 2: the year is on the caption, not the display line", () => {
     // MEASURED, not chosen (plan 068 §12.2). The full `formatLongDate` output
     // at 96px Fraunces runs to 1111px against 890px of card and satori
-    // overflows silently, so the year moved down a line. If a later ticket
-    // puts it back, this reds.
+    // overflows silently, so the year moved down a line.
+    //
+    // WHAT REDS IF A LATER TICKET PUTS THE YEAR BACK: `T-WEB-S334` row (10),
+    // which asserts the handler's own argument object. This row never touches
+    // a handler — it asserts the SHAPE the rung produces, so it reds on a
+    // change to `formatDayAndMonth` or to `archiveDayCaption` instead. Both
+    // guards are needed and neither is the other.
     expect(cards.day.display).not.toMatch(/\d{4}/);
     expect(cards.day.caption).toContain("2026");
     expect(cards.day.caption).toContain(messages.archive.title);
@@ -573,7 +615,8 @@ describe("the archive card is a dated nameplate (T-WEB-S333)", () => {
       expect
         .soft(shadow, `${name} shadow`)
         .toEqual([`15px 15px 0 ${ACCENT_APP_SHADOW}`]);
-      // And no word is accent-coloured — `DESIGN.md:19`, which is also the
+      // And no word is accent-coloured — `DESIGN.md`'s colour section, *"the
+      // shared per-game accent may never colour a word"*, which is also the
       // reason a row of four game names could never have worked.
       expect
         .soft(valuesOf(tree, "color").filter(mentionsAnAccent), `${name} words`)

@@ -49,6 +49,41 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+/**
+ * The file with its comments removed. The same stripper `og-card.test.tsx`,
+ * `og-image.node.test.ts`, `eslint-db-wall.test.ts` and `archive-routes.test.ts`
+ * use, and it is what makes the literal scan below a scan of CODE.
+ *
+ * ADDED AT #104 STEP 7, and it repairs a trap rather than tidying one. The
+ * scan used to slice from `source.indexOf("generateMetadata")` over the RAW
+ * file — and in `app/arquivo/[data]/page.tsx` the first textual occurrence of
+ * that word is inside the doc block, about fifty lines above the function. So
+ * a test whose title is about string literals in a metadata function was
+ * policing fifty lines of English, where the effective rule was "no line of
+ * prose may carry two apostrophes". The implementer met it by writing "this
+ * function result" for "this function's result" and leaving a warning for the
+ * next editor; both are now gone, because the scan no longer reaches prose.
+ */
+function code(source: string): string {
+  return source
+    .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+    .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
+/**
+ * The body of a file's `generateMetadata`, comments stripped, anchored on the
+ * DECLARATION rather than on the bare identifier — `function generateMetadata`
+ * matches `export function` and `export async function` alike, and cannot
+ * match a mention of the name.
+ */
+function metadataBody(file: string): string {
+  const source = code(
+    readFileSync(join(import.meta.dirname, "..", file), "utf8"),
+  );
+  const body = source.slice(source.indexOf("function generateMetadata"));
+  return body.slice(0, body.indexOf("\n}\n") + 3);
+}
+
 describe("archive metadata (T-WEB-S173)", () => {
   it("every route composes its title and description from messages.archive, with a SELF-REFERENTIAL canonical", async () => {
     // THE INDEX ARM IS BYTE-UNMOVED at #104, and that is a claim rather than
@@ -185,19 +220,17 @@ describe("archive metadata (T-WEB-S173)", () => {
       join("app", "arquivo", "mes", "[mes]", "page.tsx"),
       join("app", "arquivo", "[data]", "page.tsx"),
     ]) {
-      const source = readFileSync(
-        join(import.meta.dirname, "..", file),
-        "utf8",
-      );
-      const body = source.slice(source.indexOf("generateMetadata"));
-      const metadataBlock = body.slice(0, body.indexOf("\n}\n") + 3);
+      const metadataBlock = metadataBody(file);
       // Anti-vacuity: the slice really is the metadata function's body, so
       // an empty match list below means "no literals", not "no text".
-      expect(metadataBlock).toContain("canonical");
+      expect(metadataBlock, file).toContain("canonical");
       // Only the Metadata KEYS may appear here; a pt-BR sentence or a path
       // fragment would show up as quoted text.
       const literals = [...metadataBlock.matchAll(/(["'])(?:(?!\1).){2,}\1/g)];
-      expect(literals.map((match) => match[0])).toEqual([]);
+      expect(
+        literals.map((match) => match[0]),
+        file,
+      ).toEqual([]);
     }
   });
 });
@@ -271,20 +304,9 @@ describe("the four per-game archive routes' own metadata (T-WEB-S209)", () => {
     // OWN token and not the set of four: allowing all four would let the
     // sudoku route name binairo with this scan still green.
     for (const game of PER_GAME) {
-      const source = readFileSync(
-        join(
-          import.meta.dirname,
-          "..",
-          "app",
-          "arquivo",
-          "[data]",
-          game,
-          "page.tsx",
-        ),
-        "utf8",
+      const metadataBlock = metadataBody(
+        join("app", "arquivo", "[data]", game, "page.tsx"),
       );
-      const body = source.slice(source.indexOf("generateMetadata"));
-      const metadataBlock = body.slice(0, body.indexOf("\n}\n") + 3);
       // Anti-vacuity, both halves: the slice really is the metadata
       // function's body, and the one literal that IS allowed was really
       // found — so the empty set below is "no other literals" rather than

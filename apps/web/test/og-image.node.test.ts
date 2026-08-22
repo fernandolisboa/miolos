@@ -57,7 +57,9 @@ vi.mock("@miolos/db", () => ({
 }));
 /**
  * The card builder is spied THROUGH, not replaced: every row below renders the
- * real tree, and only row (6) makes it throw. That row needs a genuine
+ * real tree, and only `T-WEB-S203` row (6) and `T-WEB-S334` row (9) make one
+ * throw. Both are named with their suite, because this file has two numbered
+ * row tables and "row (6)" means something in each. Those rows need a genuine
  * builder failure — a throwing field on the mocked row does not reach the
  * archive handler at all, because the archive card's date comes from the URL
  * segment and never from the row (the first green run proved it by passing on
@@ -132,9 +134,9 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
     ][] = [
       [
         "archive",
-        () => handlers.archiveCardHandler(game, PUBLISHED_DATE),
+        () => handlers.archiveGameCardHandler(game, PUBLISHED_DATE),
         spies.getPublishedDaily,
-        (date) => handlers.archiveCardHandler(game, date),
+        (date) => handlers.archiveGameCardHandler(game, date),
       ],
       [
         "daily",
@@ -299,7 +301,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
     it("(8) a malformed segment 404s with the reader NEVER called", async () => {
       // Zod before any read: a hostile `[data]` costs no database round trip.
       for (const segment of ["lixo", "2026-02-30", "", "../../etc/passwd"]) {
-        const response = await handlers.archiveCardHandler(game, segment);
+        const response = await handlers.archiveGameCardHandler(game, segment);
         expect.soft(response.status, segment).toBe(404);
         // The pre-read refusal is a third `return refuse()` and carries the
         // same header as the other two (K2).
@@ -316,7 +318,10 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
       // the today case needs no classifier and no second round trip, and the
       // midnight race a three-read path would have is structurally absent.
       spies.getPublishedDaily.mockResolvedValue(row(game));
-      const response = await handlers.archiveCardHandler(game, "2026-08-15");
+      const response = await handlers.archiveGameCardHandler(
+        game,
+        "2026-08-15",
+      );
       expect(response.status).toBe(200);
       expect(spies.getPublishedDaily).toHaveBeenCalledTimes(1);
       expect(spies.getPublishedDaily).toHaveBeenCalledWith(
@@ -329,7 +334,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
     it("(10) the bad-row log line carries the game AND the date", async () => {
       const error = vi.spyOn(console, "error").mockImplementation(() => {});
       spies.getPublishedDaily.mockRejectedValue(named("ZodError"));
-      await handlers.archiveCardHandler(game, PUBLISHED_DATE);
+      await handlers.archiveGameCardHandler(game, PUBLISHED_DATE);
       const line = String(error.mock.calls[0]?.[0]);
       expect(line).toContain(game);
       expect(line).toContain(PUBLISHED_DATE);
@@ -357,7 +362,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
       spies.getPublishedDaily.mockResolvedValue(row(game));
       const fromUrl = Buffer.from(
         await (
-          await handlers.archiveCardHandler(game, PUBLISHED_DATE)
+          await handlers.archiveGameCardHandler(game, PUBLISHED_DATE)
         ).arrayBuffer(),
       );
       // COUNTED FLOOR, and the red run is what asked for it: against the stub
@@ -528,13 +533,7 @@ describe("the committed fonts are the faces the card was designed against (T-WEB
           caption: messages.archive.title,
         }),
       ],
-      [
-        "archive index card",
-        actualCard.archiveCard({
-          display: messages.archive.title,
-          caption: ogCopy.archiveTagline,
-        }),
-      ],
+      ["archive index card", actualCard.archiveIndexCard()],
     ] as const) {
       const png = Buffer.from(
         await new ImageResponse(tree, {
@@ -675,8 +674,12 @@ const CARD_SOURCE = join(import.meta.dirname, "..", "src", "og", "card.tsx");
 describe("the OG route family, as files (T-WEB-S204)", () => {
   const appDir = APP_DIR;
   const cardSource = CARD_SOURCE;
-  const dailyCard = (game: string) => join(appDir, game, "opengraph-image.tsx");
-  const archiveCard = (game: string) =>
+  // PATH builders, named `*File` since #104: `archiveCard` is now an exported
+  // BUILDER in `src/og/card.tsx`, and one identifier meaning a path here, a
+  // spy above and a React tree there is three meanings of one word in one file.
+  const dailyCardFile = (game: string) =>
+    join(appDir, game, "opengraph-image.tsx");
+  const archiveCardFile = (game: string) =>
     join(appDir, "arquivo", "[data]", game, "opengraph-image.tsx");
 
   it("the ROOT site card reaches no database, transitively", () => {
@@ -704,7 +707,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // game routes reaches `src/og/handlers.ts`, whose source DOES contain
     // `@miolos/db`. Same walker, same grep, opposite answer.
     for (const game of GAMES) {
-      for (const entry of [dailyCard(game), archiveCard(game)]) {
+      for (const entry of [dailyCardFile(game), archiveCardFile(game)]) {
         const reachesTheWall = moduleGraph(entry).filter((path) =>
           code(readFileSync(path, "utf8")).includes("@miolos/db"),
         );
@@ -720,7 +723,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // and `find apps/web/app -name layout.tsx` returns exactly one file — the
     // root — so the export is required on each of the eight, not decorative.
     for (const game of GAMES) {
-      for (const entry of [dailyCard(game), archiveCard(game)]) {
+      for (const entry of [dailyCardFile(game), archiveCardFile(game)]) {
         expect
           .soft(code(readFileSync(entry, "utf8")), entry)
           .toContain('export const dynamic = "force-dynamic"');
@@ -771,8 +774,8 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // The `T-WEB-S185` byte-identity idiom: eight near-identical files are
     // exactly where a per-game divergence hides.
     for (const [family, of] of [
-      ["daily", dailyCard],
-      ["archive", archiveCard],
+      ["daily", dailyCardFile],
+      ["archive", archiveCardFile],
     ] as const) {
       const normalised = GAMES.map((game) =>
         readFileSync(of(game), "utf8").replaceAll(game, "<jogo>"),
@@ -794,8 +797,8 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // image route" sentence higher in the file (plan 040 D43/D44).
     expect(GAMES).toHaveLength(4);
     for (const game of GAMES) {
-      expect.soft(existsSync(dailyCard(game)), game).toBe(true);
-      expect.soft(existsSync(archiveCard(game)), game).toBe(true);
+      expect.soft(existsSync(dailyCardFile(game)), game).toBe(true);
+      expect.soft(existsSync(archiveCardFile(game)), game).toBe(true);
       const name = messages.games[game].name;
       expect.soft(ogCopy.altGame(name), game).toContain(name);
     }
@@ -848,11 +851,7 @@ describe("every committed card is the code's own render (T-WEB-S212)", () => {
     [
       "app/arquivo/opengraph-image.png",
       ARCHIVE_CARD_ASSET,
-      () =>
-        actualCard.archiveCard({
-          display: messages.archive.title,
-          caption: ogCopy.archiveTagline,
-        }),
+      actualCard.archiveIndexCard,
       "WRITE_ARCHIVE_CARD",
     ],
   ];
@@ -952,11 +951,11 @@ describe("the two archive shell cards are existence proofs (T-WEB-S334)", () => 
   });
 
   it("(2) the reader is called with limit: 1, and its return is read ONLY for length", async () => {
-    // `limit: 1` is the smallest read that answers the page's own question,
-    // so no game SET is ever in scope. It is NOT what stops the card naming a
-    // game — `ArchivedDay` is `{date, game}` and `days[0].game` is one access
-    // away. `archiveCard`'s signature is what does that (`T-WEB-S201`), and
-    // the byte-identity below is the runtime half of the same claim.
+    // The bound is asserted here; the argument for why a bound is NOT what
+    // keeps a game off the card lives once, in `handlers.ts`'s module doc
+    // block, beside the read. The byte-identity below is the runtime half of
+    // the same claim — `archiveCard`'s signature is the structural half, and
+    // `T-WEB-S201` polices it from the source side.
     spies.listArchivedDays.mockResolvedValue([pair(DAY, "binairo")]);
     const first = Buffer.from(
       await (await handlers.archiveDayCardHandler(DAY)).arrayBuffer(),
@@ -1101,11 +1100,19 @@ describe("the two archive shell cards are existence proofs (T-WEB-S334)", () => 
     }
   });
 
-  it("(9) a throwing CARD BUILDER propagates too — a satori throw is a 500", async () => {
+  it("(9) a throwing CARD BUILDER propagates too, and is not converted into a 404", async () => {
     // The `ImageResponse` construction is OUTSIDE any read for exactly this
     // reason, and this is `T-WEB-S203` row (6)'s claim for the new family: a
-    // rasteriser failure must not be converted into a silent 404 by a `try`
-    // some later edit widened to the whole handler.
+    // SYNCHRONOUS builder failure must not be converted into a silent 404 by a
+    // `try` some later edit widened to the whole handler.
+    //
+    // WHAT THIS ROW DOES NOT PROVE (step-6 security S4): it mocks the
+    // BUILDER, which throws before `new ImageResponse(...)` is reached. A
+    // throw inside satori itself lands in the response body's `async start()`,
+    // after Next has already committed the 200 and its headers — a truncated
+    // 200, not a 500. That is true of all ten card routes and no `try`
+    // placement can change it, so the claim is written as the synchronous
+    // half rather than as "a satori throw is a 500".
     spies.listArchivedDays.mockResolvedValue([pair(DAY, "binairo")]);
     spies.archiveCard.mockImplementation(() => {
       throw new Error("synthetic satori failure");

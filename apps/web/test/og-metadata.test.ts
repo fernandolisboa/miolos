@@ -295,7 +295,7 @@ describe("the archive SHELL routes' openGraph (T-WEB-S335)", () => {
       const images = resolved.openGraph?.images;
       expect(Array.isArray(images), name).toBe(true);
       expect(images, name).toHaveLength(1);
-      const image = (images as { url: string }[])[0] as Record<string, unknown>;
+      const image = (images as Record<string, unknown>[])[0] ?? {};
 
       // The URL is the card ROUTE, in pt-BR, and it is not the page.
       expect(image["url"], name).toBe(url);
@@ -419,9 +419,15 @@ describe("the OG deck's accent audit (T-WEB-S206a)", () => {
     // Termo canonicals the script ships today are the ones this claim names.
     expect(FORBIDDEN.length).toBeGreaterThanOrEqual(3);
     expect(FORBIDDEN).toContain("então");
+    // ONE NEUTRAL PROBE for every function member, because this claim is
+    // about the WORDS in the templates and never about the argument. It used
+    // to be `"Nonogram"`, which reads as a mistake once #104 joins the deck:
+    // `altArchiveDay` takes a long date and `archiveDayCaption` takes a year,
+    // so a game name was being passed as both.
+    const PROBE = "PROBE";
     const deck = JSON.stringify(
       Object.values(ogCopy).map((value) =>
-        typeof value === "function" ? value("Nonogram") : value,
+        typeof value === "function" ? value(PROBE) : value,
       ),
     );
     for (const word of FORBIDDEN) {
@@ -436,9 +442,9 @@ describe("the OG deck's accent audit (T-WEB-S206a)", () => {
     // way; naming them is what reds if one is later moved to `messages`.
     expect(deck).toContain(ogCopy.archiveTagline);
     expect(deck).toContain(ogCopy.altArchiveIndex);
-    expect(deck).toContain(ogCopy.altArchiveDay("Nonogram"));
-    expect(deck).toContain(ogCopy.altArchiveMonth("Nonogram"));
-    expect(deck).toContain(ogCopy.archiveDayCaption("Nonogram"));
+    expect(deck).toContain(ogCopy.altArchiveDay(PROBE));
+    expect(deck).toContain(ogCopy.altArchiveMonth(PROBE));
+    expect(deck).toContain(ogCopy.archiveDayCaption(PROBE));
   });
 
   it("archiveTagline is the SHIPPED sentence, not a second spelling of it", () => {
@@ -447,9 +453,9 @@ describe("the OG deck's accent audit (T-WEB-S206a)", () => {
     // this card serves. It is written out in the deck rather than sliced at
     // runtime (a copy deck holding string surgery is worse than one holding a
     // string, which is the call `siteTagline` already records), so THIS is
-    // what keeps the two from drifting apart: `messages.ts:23-25`'s own words
-    // are that "a second copy is how two screens drift apart", and two
-    // spellings of one claim would sit on one surface.
+    // what keeps the two from drifting apart: `messages.ts`'s own words are
+    // that "a second copy is how two screens drift apart", and two spellings
+    // of one claim would sit on one surface.
     expect(messages.archive.lead.startsWith(ogCopy.archiveTagline)).toBe(true);
     // Counted floor: a prefix assertion against an empty string is free.
     expect(ogCopy.archiveTagline.length).toBeGreaterThan(20);

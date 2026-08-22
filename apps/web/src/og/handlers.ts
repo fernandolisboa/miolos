@@ -19,7 +19,8 @@ import { ogCopy } from "./copy";
 import { FONTS } from "./fonts";
 
 /**
- * The two handlers behind the eight dated OG image routes (#34, ADR-0054).
+ * The four handlers behind the eight dated OG image routes (#34, ADR-0054)
+ * and the two `/cartao` archive shell cards (#104, ADR-0071).
  *
  * Each route file is a table entry: the segment config, the static `alt`, and
  * one call. Everything that could differ between them lives here, once.
@@ -66,6 +67,14 @@ import { FONTS } from "./fonts";
  * card, exactly as the page renders one game (ADR-0053 decision 3's ragged
  * floor).
  *
+ * **`limit: 1` IS NOT WHAT KEEPS A GAME OFF THE CARD, and this is the one
+ * place that argument is written down.** It bounds the read to an existence
+ * answer, so no game SET is in scope — but `ArchivedDay` is `{date, game}`
+ * and `days[0].game` is one access away, so a bound is not a guarantee. The
+ * guarantee is `archiveCard`'s SIGNATURE, two formatted strings with no
+ * parameter a `Game` can enter through. `T-WEB-S201` polices the access from
+ * the source side and `T-WEB-S334` row (10) pins the argument object.
+ *
  * **The rule above produces no catch here, and the omission is the argument
  * rather than a gap.** `listArchivedDays` selects two columns, runs no
  * projection and parses nothing (`packages/db/src/published.ts:372-396`), so
@@ -79,7 +88,20 @@ import { FONTS } from "./fonts";
  * `T-WEB-S334` pins both directions so the absence can go red.
  *
  * The `ImageResponse` construction stays outside any read for the same reason
- * it is outside the `try` above: a satori throw must be a 500.
+ * it is outside the `try` above: a SYNCHRONOUS throw from the builder or from
+ * the constructor must surface as a 500, never be converted into a silent 404
+ * by a `try` some later edit widened to the whole handler.
+ *
+ * **Narrower than "a satori throw must be a 500", because that is not what
+ * the runtime does** (step-6 security S4). In
+ * `next/dist/server/og/image-response.js` the body is a `ReadableStream` whose
+ * `async start()` is where satori and resvg actually run, and `super(readable,
+ * { status })` has already committed the 200 and its headers before that. A
+ * throw INSIDE satori therefore errors the stream after the 200 — a truncated
+ * 200, not a 500 — on all ten card routes, and no `try` placement here can
+ * change that. What the placement does govern is the synchronous half, which
+ * is the half `T-WEB-S203` row (6) and `T-WEB-S334` row (9) actually prove:
+ * both mock the BUILDER, which throws before the constructor is reached.
  *
  * `parseArchiveMonth` carries the year-zero floor that fixed a real
  * unauthenticated 500 (`archive/parse-params.ts`), and the card inherits it
@@ -150,7 +172,7 @@ const CARD_HEADERS = {
 const refuse = (): Response =>
   new Response(null, { status: 404, headers: CARD_HEADERS });
 
-export async function archiveCardHandler(
+export async function archiveGameCardHandler(
   game: ProjectedGame,
   segment: string,
 ): Promise<Response> {
@@ -173,9 +195,11 @@ export async function archiveCardHandler(
     return refuse(); // future, unpublished, killed, or no such day
   }
 
-  // OUTSIDE the try, and `T-WEB-S203` row (6) pins that: a satori or
-  // `ImageResponse` throw must surface as a 500, never be converted into a
-  // silent 404 by a `try` some later edit widened to the whole handler.
+  // OUTSIDE the try, and `T-WEB-S203` row (6) pins that: a SYNCHRONOUS throw
+  // from the builder or the constructor must surface as a 500, never be
+  // converted into a silent 404 by a `try` some later edit widened to the
+  // whole handler. (A throw from satori itself lands after the 200 is on the
+  // wire — see the module doc block.)
   return new ImageResponse(gameCard({ game, longDate: formatLongDate(date) }), {
     ...SIZE,
     fonts: FONTS,
@@ -214,6 +238,18 @@ export async function archiveDayCardHandler(
   return new ImageResponse(
     archiveCard({
       display: formatDayAndMonth(date),
+      // A RAW SLICE, DELIBERATELY, and it is the one place on this surface
+      // that does date surgery. `format.ts`'s `formatDayNumber` states the
+      // opposite rule — *"Through `Intl` rather than a string slice, so the
+      // locale owns its own numerals and the leading zero goes without a
+      // hand-rolled trim"* — and that rule is about a NUMERAL the locale
+      // owns. This is not a numeral: it is the four characters the URL
+      // already carries, and the caption's job is to put the year the display
+      // line dropped back beside a date the reader can see in the address
+      // bar. An `Intl` year would be free to disagree with it — `formatMonth`
+      // prints "janeiro de 1" where `/cartao/0001-01-01` says `0001`. The
+      // shape is guaranteed: `parseArchiveDate` returned, so `date` is
+      // `YYYY-MM-DD` with a real calendar day.
       caption: ogCopy.archiveDayCaption(date.slice(0, 4)),
     }),
     { ...SIZE, fonts: FONTS, headers: CARD_HEADERS },
