@@ -17,6 +17,7 @@ import {
   type NonogramPlayRecord,
 } from "../src/play/play-record";
 import type { NonogramMark } from "../src/nonogram/state";
+import { bodyOf, decl, stylesheet } from "./css-source";
 
 /**
  * The named Nonogram reveal (#64, ADR-0070, superseding ADR-0033 decision
@@ -468,6 +469,49 @@ describe("no motif name reaches server markup (T-WEB-S327)", () => {
     expect(page).toContain("<NonogramConclusion date={daily.date} />");
     expect(page).not.toContain("motifName");
     expect(page).not.toContain("useServerDayClaim");
+  });
+});
+
+describe("the caption's impeccable worst case (T-WEB-S330)", () => {
+  it("no curated motif name can trip `all-caps-body` — measured over the whole shipped library, not over today's motif", () => {
+    // THE #31 LESSON, applied before it costs anything. `all-caps-body` fires
+    // on **> 30 chars of DIRECT text** under `text-transform: uppercase`,
+    // with no interactive or `nav` exemption — and both caption lines are
+    // uppercase. `.pictureLead` is a fixed string, but `.pictureName` renders
+    // CONTENT: 185 curated names, a library that grows, on the one screen a
+    // URL-mode impeccable scan can never reach (it needs a solved day, and a
+    // clean profile's `/day` answers 401 — ADR-0065 consequence (c)'s
+    // precedent). So the gate has to live here, measured over the worst case
+    // rather than over whatever motif today happens to publish.
+    //
+    // Today: 185 names, longest "Bolo de aniversário" at 19. The margin is
+    // 11 characters, and a 31-character motif added years from now must red
+    // at commit time instead of at a preview scan nobody can run.
+    //
+    // THE CHECK IS TWO-SIDED, and this half deliberately does NOT enumerate
+    // the names. `apps/web` may never import `MOTIFS` — that is exactly what
+    // makes the bundle grep in `scripts/route-client-js.mjs` a real check on
+    // tree-shaking, and #64 kept that grep armed rather than spending it
+    // (ADR-0070 consequence (c)). So this side owns the CSS facts and the
+    // threshold; `packages/games/test/nonogram/name-length.test.ts` owns the
+    // library scan and cites this constant by name. The same arrangement
+    // `bundle-markers.test.ts` and this script already use for the markers.
+    const sheet = stylesheet("src/play/conclusion-view.module.css");
+    const uppercase = (selector: string) =>
+      decl(bodyOf(sheet, selector), "text-transform") === "uppercase";
+    // Anti-vacuity: the threshold below only matters while these really are
+    // uppercase. If a redesign drops the transform, this test should stop
+    // claiming to guard anything.
+    expect(uppercase(".pictureName")).toBe(true);
+    expect(uppercase(".pictureLead")).toBe(true);
+
+    // `ALL_CAPS_BODY_MAX` is the literal impeccable threshold, restated in
+    // `packages/games/test/nonogram/name-length.test.ts`. When it moves,
+    // both files move.
+    const ALL_CAPS_BODY_MAX = 30;
+    expect(messages.games.nonogram.reveal.lead.length).toBeLessThanOrEqual(
+      ALL_CAPS_BODY_MAX,
+    );
   });
 });
 
