@@ -7,7 +7,13 @@ import { GAMES, type Game } from "@miolos/core";
 import { ImageResponse } from "next/og";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatLongDate, messages } from "../src/i18n";
+import {
+  formatDayAndMonth,
+  formatLongDate,
+  formatMonth,
+  messages,
+  todaySaoPauloDate,
+} from "../src/i18n";
 import { ogCopy } from "../src/og/copy";
 import { FONTS } from "../src/og/fonts";
 
@@ -36,13 +42,18 @@ const spies = vi.hoisted(() => ({
   getDb: vi.fn(),
   getPublishedDaily: vi.fn(),
   getTodayDaily: vi.fn(),
+  // #104: the archive SHELL cards' one reader. It is the same wall helper the
+  // index, month and day PAGES call, bounded to `limit: 1`.
+  listArchivedDays: vi.fn(),
   gameCard: vi.fn(),
+  archiveCard: vi.fn(),
 }));
 
 vi.mock("../src/db", () => ({ getDb: spies.getDb }));
 vi.mock("@miolos/db", () => ({
   getPublishedDaily: spies.getPublishedDaily,
   getTodayDaily: spies.getTodayDaily,
+  listArchivedDays: spies.listArchivedDays,
 }));
 /**
  * The card builder is spied THROUGH, not replaced: every row below renders the
@@ -55,6 +66,7 @@ vi.mock("@miolos/db", () => ({
 vi.mock("../src/og/card", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/og/card")>()),
   gameCard: spies.gameCard,
+  archiveCard: spies.archiveCard,
 }));
 
 const actualCard =
@@ -89,6 +101,7 @@ function named(name: string): Error {
 beforeEach(() => {
   spies.getDb.mockReturnValue(spies.stubDb);
   spies.gameCard.mockImplementation(actualCard.gameCard);
+  spies.archiveCard.mockImplementation(actualCard.archiveCard);
 });
 
 afterEach(() => {
@@ -495,6 +508,33 @@ describe("the committed fonts are the faces the card was designed against (T-WEB
         }),
       ],
       ["site card", actualCard.siteCard()],
+      // #104's three archive cards, at the worst cases plan 068 §12.2
+      // MEASURED rather than guessed. The widest day-and-month is
+      // "20 de novembro" (729px of 890px inner width) and the widest month is
+      // "novembro de 2028" (843px) — neither is the longest by character
+      // count, because Fraunces' figures are not tabular. The full
+      // `formatLongDate` output was 1111px and is why the day card splits.
+      [
+        "widest archive day card",
+        actualCard.archiveCard({
+          display: formatDayAndMonth("2028-11-20"),
+          caption: ogCopy.archiveDayCaption("2028"),
+        }),
+      ],
+      [
+        "widest archive month card",
+        actualCard.archiveCard({
+          display: formatMonth("2028-11-01"),
+          caption: messages.archive.title,
+        }),
+      ],
+      [
+        "archive index card",
+        actualCard.archiveCard({
+          display: messages.archive.title,
+          caption: ogCopy.archiveTagline,
+        }),
+      ],
     ] as const) {
       const png = Buffer.from(
         await new ImageResponse(tree, {
@@ -557,58 +597,78 @@ const ROOT_CARD_ASSET = join(APP_DIR, "opengraph-image.png");
 const ROOT_CARD_ALT = join(APP_DIR, "opengraph-image.alt.txt");
 const ROOT_CARD_MODULE = join(APP_DIR, "opengraph-image.tsx");
 
-describe("the OG route family, as files (T-WEB-S204)", () => {
-  const appDir = APP_DIR;
-  /** The module that BUILDS the root card, now that no route file does. */
-  const cardSource = join(import.meta.dirname, "..", "src", "og", "card.tsx");
-  const dailyCard = (game: string) => join(appDir, game, "opengraph-image.tsx");
-  const archiveCard = (game: string) =>
-    join(appDir, "arquivo", "[data]", game, "opengraph-image.tsx");
+/**
+ * THE SECOND STATIC ASSET PAIR (#104, ADR-0071 decision 2). The archive INDEX
+ * card is dateless, its page never 404s and it reads nothing, so it can be a
+ * file — and a file in a segment costs no trace on any descendant page route,
+ * which is exactly what D9's measurement proved when the root module became a
+ * PNG. It is also what a MALFORMED `[data]` or `[mes]` segment now inherits by
+ * nearest ancestor, in place of the root site card.
+ */
+const ARCHIVE_CARD_ASSET = join(APP_DIR, "arquivo", "opengraph-image.png");
+const ARCHIVE_CARD_ALT = join(APP_DIR, "arquivo", "opengraph-image.alt.txt");
 
-  /**
-   * The file with its comments removed, so every scan below counts CODE and
-   * not the doc blocks that discuss the wall at length. The same stripper
-   * `eslint-db-wall.test.ts` and `archive-routes.test.ts` use, and it is
-   * load-bearing here: `src/i18n/sao-paulo-day.ts` says "Declared here rather
-   * than imported from `@miolos/db`" in a comment and imports nothing of the
-   * kind, and `src/og/card.tsx`'s own doc blocks discuss the wall at length.
-   */
-  function code(source: string): string {
-    return source
-      .replaceAll(/\/\*[\s\S]*?\*\//g, "")
-      .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
-  }
+/** The two `/cartao` route handlers — functions, at their own URLs. */
+const DAY_CARD_ROUTE = join(APP_DIR, "cartao", "[data]", "route.ts");
+const MONTH_CARD_ROUTE = join(APP_DIR, "cartao", "mes", "[mes]", "route.ts");
 
-  /** Every module reachable from `entry` by RELATIVE import — the walker idiom. */
-  function moduleGraph(entry: string): string[] {
-    const seen = new Set<string>();
-    const queue = [entry];
-    while (queue.length > 0) {
-      const current = queue.pop();
-      if (current === undefined || seen.has(current)) {
-        continue;
-      }
-      seen.add(current);
-      for (const match of readFileSync(current, "utf8").matchAll(
-        /(?:from|import)\s*\(?\s*"(\.[^"]*)"/g,
-      )) {
-        const base = join(dirname(current), match[1] ?? "");
-        for (const candidate of [
-          base,
-          `${base}.ts`,
-          `${base}.tsx`,
-          join(base, "index.ts"),
-          join(base, "index.tsx"),
-        ]) {
-          if (existsSync(candidate) && statSync(candidate).isFile()) {
-            queue.push(candidate);
-            break;
-          }
+/**
+ * The file with its comments removed, so every scan below counts CODE and
+ * not the doc blocks that discuss the wall at length. The same stripper
+ * `eslint-db-wall.test.ts` and `archive-routes.test.ts` use, and it is
+ * load-bearing here: `src/i18n/sao-paulo-day.ts` says "Declared here rather
+ * than imported from `@miolos/db`" in a comment and imports nothing of the
+ * kind, and `src/og/card.tsx`'s own doc blocks discuss the wall at length.
+ *
+ * Hoisted out of `T-WEB-S204`'s describe at #104, unchanged, because
+ * `T-WEB-S336` needs the same two helpers over the two `/cartao` handlers.
+ */
+function code(source: string): string {
+  return source
+    .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+    .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
+/** Every module reachable from `entry` by RELATIVE import — the walker idiom. */
+function moduleGraph(entry: string): string[] {
+  const seen = new Set<string>();
+  const queue = [entry];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (current === undefined || seen.has(current)) {
+      continue;
+    }
+    seen.add(current);
+    for (const match of readFileSync(current, "utf8").matchAll(
+      /(?:from|import)\s*\(?\s*"(\.[^"]*)"/g,
+    )) {
+      const base = join(dirname(current), match[1] ?? "");
+      for (const candidate of [
+        base,
+        `${base}.ts`,
+        `${base}.tsx`,
+        join(base, "index.ts"),
+        join(base, "index.tsx"),
+      ]) {
+        if (existsSync(candidate) && statSync(candidate).isFile()) {
+          queue.push(candidate);
+          break;
         }
       }
     }
-    return [...seen];
   }
+  return [...seen];
+}
+
+/** The module that BUILDS the root card, now that no route file does. */
+const CARD_SOURCE = join(import.meta.dirname, "..", "src", "og", "card.tsx");
+
+describe("the OG route family, as files (T-WEB-S204)", () => {
+  const appDir = APP_DIR;
+  const cardSource = CARD_SOURCE;
+  const dailyCard = (game: string) => join(appDir, game, "opengraph-image.tsx");
+  const archiveCard = (game: string) =>
+    join(appDir, "arquivo", "[data]", game, "opengraph-image.tsx");
 
   it("the ROOT site card reaches no database, transitively", () => {
     // A MODULE-GRAPH SCAN, and the mechanism is a source grep over each node
@@ -646,7 +706,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     expect(graph.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("the eight dated routes are force-dynamic, and there is no NINTH route", () => {
+  it("the eight dated routes are force-dynamic, and the card INVENTORY is complete", () => {
     // Route segment config comes from the layouts on the path plus the leaf,
     // and `find apps/web/app -name layout.tsx` returns exactly one file — the
     // root — so the export is required on each of the eight, not decorative.
@@ -670,6 +730,32 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     // export, and Next uses the file's content verbatim — so the deck stays
     // the single source and a translator still edits one place.
     expect(readFileSync(ROOT_CARD_ALT, "utf8")).toBe(ogCopy.altSite);
+
+    // RE-AIMED AT #104 (ADR-0071). "There is no ninth route" was true of #34's
+    // tree and is the wrong shape now: the inventory is EIGHT dated `.tsx`
+    // routes, TWO static asset pairs and TWO `/cartao` route handlers, and it
+    // is stated as an inventory so a later ticket cannot grow it by accident.
+    // The second pair is the archive index card. It is a `.png` and NOT a
+    // `.tsx`, which is the whole point — `T-WEB-S336` is the tripwire that
+    // stops it becoming a module.
+    expect(existsSync(ARCHIVE_CARD_ASSET)).toBe(true);
+    expect(existsSync(ARCHIVE_CARD_ALT)).toBe(true);
+    // Byte-equal to the deck string, and with NO trailing newline: Next reads
+    // this file with `readFile(altPath, "utf8")` and uses the bytes verbatim
+    // as `og:image:alt`, so a formatter adding a final `\n` would ship it into
+    // a meta tag. The root file has none either.
+    expect(readFileSync(ARCHIVE_CARD_ALT, "utf8")).toBe(ogCopy.altArchiveIndex);
+    expect(readFileSync(ARCHIVE_CARD_ALT).at(-1)).not.toBe(0x0a);
+    expect(readFileSync(ROOT_CARD_ALT).at(-1)).not.toBe(0x0a);
+
+    // And the two card handlers carry their own segment config, for the same
+    // reason the eight routes do: segment config comes from the layouts on
+    // the path plus the leaf, and a sibling `page.tsx` confers nothing.
+    for (const entry of [DAY_CARD_ROUTE, MONTH_CARD_ROUTE]) {
+      expect
+        .soft(code(readFileSync(entry, "utf8")), entry)
+        .toContain('export const dynamic = "force-dynamic"');
+    }
   });
 
   it("within each family the four files differ ONLY in the game token", () => {
@@ -709,7 +795,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
 
 // ── T-WEB-S212 ────────────────────────────────────────────────────────
 
-describe("the committed root card is the code's own render (T-WEB-S212)", () => {
+describe("every committed card is the code's own render (T-WEB-S212)", () => {
   /**
    * WHAT KEEPS AC 2 TRUE AFTER B1. "Generated in code" was enforced by the
    * card being a runtime module; with the module deleted, the PNG on disk
@@ -718,61 +804,416 @@ describe("the committed root card is the code's own render (T-WEB-S212)", () => 
    * This is that guard: re-render the tree the same way the deleted route
    * did and compare the bytes.
    *
-   * **To regenerate** after an intentional change to `siteCard()`, the
-   * tokens or the faces:
+   * **A TWO-ROW TABLE SINCE #104**, because the repo now commits a SECOND
+   * binary: the archive index card at `app/arquivo/opengraph-image.png`. That
+   * second binary is the price of ADR-0071 decision 2, and this row is
+   * exactly the guard #34 built for the first one — the same render, the same
+   * SHA-256, its own `WRITE_` variable.
+   *
+   * **To regenerate** after an intentional change to a builder, the tokens or
+   * the faces:
    *
    * ```
-   * WRITE_SITE_CARD=1 pnpm --filter @miolos/web test og-image
+   * WRITE_SITE_CARD=1    pnpm --filter @miolos/web test og-image
+   * WRITE_ARCHIVE_CARD=1 pnpm --filter @miolos/web test og-image
    * ```
    *
-   * which rewrites `app/opengraph-image.png` from the current tree and
-   * then asserts against what it wrote. CI never sets it, so the gate here
-   * is a plain equality.
+   * which rewrites that row's PNG from the current tree and then asserts
+   * against what it wrote. CI never sets either, so the gate here is a plain
+   * equality. Neither variable is on `turbo.json`'s `test.env`, and neither
+   * should be: `WRITE_SITE_CARD` is not either, for the same reason — this is
+   * a direct package-script invocation, not a turbo task.
    */
-  it("app/opengraph-image.png equals a fresh siteCard() rasterisation", async () => {
-    const rendered = Buffer.from(
-      await new ImageResponse(actualCard.siteCard(), {
-        width: 1200,
-        height: 630,
-        fonts: FONTS,
-      }).arrayBuffer(),
-    );
+  const committedCards: [
+    string,
+    string,
+    () => ReturnType<typeof actualCard.siteCard>,
+    string,
+  ][] = [
+    [
+      "app/opengraph-image.png",
+      ROOT_CARD_ASSET,
+      actualCard.siteCard,
+      "WRITE_SITE_CARD",
+    ],
+    [
+      "app/arquivo/opengraph-image.png",
+      ARCHIVE_CARD_ASSET,
+      () =>
+        actualCard.archiveCard({
+          display: messages.archive.title,
+          caption: ogCopy.archiveTagline,
+        }),
+      "WRITE_ARCHIVE_CARD",
+    ],
+  ];
 
-    if (process.env["WRITE_SITE_CARD"] === "1") {
-      writeFileSync(ROOT_CARD_ASSET, rendered);
-    }
+  it.each(committedCards)(
+    "%s equals a fresh rasterisation of its own builder",
+    async (label, assetPath, build, variable) => {
+      const rendered = Buffer.from(
+        await new ImageResponse(build(), {
+          width: 1200,
+          height: 630,
+          fonts: FONTS,
+        }).arrayBuffer(),
+      );
 
-    const committed = readFileSync(ROOT_CARD_ASSET);
-    // Counted floors first, so a mismatch reports WHICH half moved rather
-    // than "two buffers differ": both are real 1200x630 PNGs.
-    for (const [label, png] of [
-      ["rendered", rendered],
-      ["committed", committed],
-    ] as const) {
-      expect
-        .soft([...png.subarray(0, 4)], label)
-        .toEqual([0x89, 0x50, 0x4e, 0x47]);
-      expect.soft(png.readUInt32BE(16), label).toBe(1200);
-      expect.soft(png.readUInt32BE(20), label).toBe(630);
-      expect.soft(png.length, label).toBeGreaterThan(10_000);
-    }
+      if (process.env[variable] === "1") {
+        writeFileSync(assetPath, rendered);
+      }
 
-    expect(
-      createHash("sha256").update(committed).digest("hex"),
-      "app/opengraph-image.png is stale — see this suite's doc block to regenerate",
-    ).toBe(createHash("sha256").update(rendered).digest("hex"));
-  });
+      const committed = readFileSync(assetPath);
+      // Counted floors first, so a mismatch reports WHICH half moved rather
+      // than "two buffers differ": both are real 1200x630 PNGs.
+      for (const [half, png] of [
+        ["rendered", rendered],
+        ["committed", committed],
+      ] as const) {
+        expect
+          .soft([...png.subarray(0, 4)], `${label} ${half}`)
+          .toEqual([0x89, 0x50, 0x4e, 0x47]);
+        expect.soft(png.readUInt32BE(16), `${label} ${half}`).toBe(1200);
+        expect.soft(png.readUInt32BE(20), `${label} ${half}`).toBe(630);
+        expect.soft(png.length, `${label} ${half}`).toBeGreaterThan(10_000);
+      }
 
-  it("the committed card is the SITE card and not a game card", async () => {
-    // Anti-vacuity for the equality above, in the `T-WEB-S202` idiom: two
-    // different trees through the same rasteriser must not agree, or the
-    // hash comparison would pass on any card at all.
+      expect(
+        createHash("sha256").update(committed).digest("hex"),
+        `${label} is stale — see this suite's doc block to regenerate`,
+      ).toBe(createHash("sha256").update(rendered).digest("hex"));
+    },
+  );
+
+  it("each committed card is its OWN card and not another one", async () => {
+    // Anti-vacuity for the equalities above, in the `T-WEB-S202` idiom: two
+    // different trees through the same rasteriser must not agree, or the hash
+    // comparison would pass on any card at all. Extended at #104 to the
+    // sharpest confusion available — the site card and the archive index card
+    // share their paper, their tape, their shadow and their two type levels,
+    // and differ only in two strings.
     const gameCardPng = Buffer.from(
       await new ImageResponse(
         actualCard.gameCard({ game: "termo", longDate: "1 de maio de 2026" }),
         { width: 1200, height: 630, fonts: FONTS },
       ).arrayBuffer(),
     );
-    expect(readFileSync(ROOT_CARD_ASSET).equals(gameCardPng)).toBe(false);
+    const root = readFileSync(ROOT_CARD_ASSET);
+    const archive = readFileSync(ARCHIVE_CARD_ASSET);
+    expect(root.equals(gameCardPng)).toBe(false);
+    expect(archive.equals(gameCardPng)).toBe(false);
+    expect(root.equals(archive)).toBe(false);
+  });
+});
+
+// ── T-WEB-S334 ────────────────────────────────────────────────────────
+
+describe("the two archive shell cards are existence proofs (T-WEB-S334)", () => {
+  /**
+   * #104, ADR-0071 decision 4. Each card's existence semantics is its PAGE's,
+   * through one bounded `listArchivedDays(…, { limit: 1 })` — the same read
+   * the page makes, asked the same question (`days.length === 0`).
+   *
+   * A refusal is a BARE `Response`, never `notFound()`: there is no page to
+   * render a not-found boundary into. And it carries `CARD_HEADERS` for the
+   * step-6 finding K2 reason the eight game routes already do — a refusal is
+   * exactly the response whose truth flips at São Paulo midnight.
+   */
+  const DAY = "2026-08-21";
+  const MONTH = "2026-02";
+  const REFUSAL = "private, no-cache, no-store, max-age=0, must-revalidate";
+
+  /** One archived `(date, game)` pair — no content, by construction. */
+  const pair = (date: string, game: Game) => ({ date, game });
+
+  it("(1) a past day with a PARTIAL game set renders a 1200x630 PNG", async () => {
+    // THE RAGGED FLOOR IS THE POINT (ADR-0053 decision 3). The archive's
+    // oldest days hold one, two or three games, and a `killed_at` takedown
+    // produces the same shape. One row is a day, so one row is a card — and
+    // the card names no game, so nothing about it is false on such a day.
+    spies.listArchivedDays.mockResolvedValue([pair(DAY, "binairo")]);
+    const response = await handlers.archiveDayCardHandler(DAY);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("cache-control")).toBe(REFUSAL);
+    const png = Buffer.from(await response.arrayBuffer());
+    expect([...png.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect(png.readUInt32BE(16)).toBe(1200);
+    expect(png.readUInt32BE(20)).toBe(630);
+  });
+
+  it("(2) the reader is called with limit: 1, and its return is read ONLY for length", async () => {
+    // `limit: 1` is the smallest read that answers the page's own question,
+    // so no game SET is ever in scope. It is NOT what stops the card naming a
+    // game — `ArchivedDay` is `{date, game}` and `days[0].game` is one access
+    // away. `archiveCard`'s signature is what does that (`T-WEB-S201`), and
+    // the byte-identity below is the runtime half of the same claim.
+    spies.listArchivedDays.mockResolvedValue([pair(DAY, "binairo")]);
+    const first = Buffer.from(
+      await (await handlers.archiveDayCardHandler(DAY)).arrayBuffer(),
+    );
+    expect(spies.listArchivedDays).toHaveBeenCalledWith(spies.stubDb, {
+      from: DAY,
+      to: DAY,
+      limit: 1,
+    });
+
+    // A DIFFERENT game, and three more rows: the bytes must not move.
+    spies.listArchivedDays.mockResolvedValue([
+      pair(DAY, "termo"),
+      pair(DAY, "sudoku"),
+      pair(DAY, "nonogram"),
+    ]);
+    const second = Buffer.from(
+      await (await handlers.archiveDayCardHandler(DAY)).arrayBuffer(),
+    );
+    expect(first.equals(second)).toBe(true);
+    // Counted floor: a real render, and the DATE does move it — so the
+    // identity above is a real exclusion and not a dead renderer.
+    expect(first.length).toBeGreaterThan(10_000);
+    const other = Buffer.from(
+      await (await handlers.archiveDayCardHandler("2026-05-01")).arrayBuffer(),
+    );
+    expect(other.equals(first)).toBe(false);
+  });
+
+  it("(3) an empty day 404s, with CARD_HEADERS", async () => {
+    spies.listArchivedDays.mockResolvedValue([]);
+    const response = await handlers.archiveDayCardHandler("1999-01-01");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe(REFUSAL);
+    expect(await response.arrayBuffer()).toHaveProperty("byteLength", 0);
+  });
+
+  it("(4) TODAY is not special-cased: the same walled read, and its empty answer 404s", async () => {
+    // `listArchivedDays` carries `archivedWallPredicate()` — the publication
+    // conjuncts PLUS strictly before the DB clock's São Paulo day — so today
+    // comes back empty and the card refuses. Pinned so the semantics cannot
+    // change silently. This row is about `/cartao/<hoje>` and makes NO claim
+    // about what `/arquivo/<hoje>` emits: that page 307s to `/` with a full
+    // HTML body, which is plan 068 §4.2 case B, accepted there.
+    // The clock is passed IN, never read inside the helper — which is the
+    // shape `sao-paulo-day.ts` requires and the reason this test can name
+    // "today" at all without the handler having a clock of its own.
+    const today = todaySaoPauloDate(new Date());
+    spies.listArchivedDays.mockResolvedValue([]);
+    const response = await handlers.archiveDayCardHandler(today);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe(REFUSAL);
+    // No clock branch: the segment goes to the reader unchanged.
+    expect(spies.listArchivedDays).toHaveBeenCalledWith(spies.stubDb, {
+      from: today,
+      to: today,
+      limit: 1,
+    });
+  });
+
+  it("(5) a malformed day segment 404s with the reader NEVER called", async () => {
+    // Zod before any read, so a hostile segment costs no round trip. The
+    // year-zero case is the one that was a real unauthenticated 500 on the
+    // month page, and the card inherits the fix by calling the same parser.
+    //
+    // `"mes"` IS IN THIS SET DELIBERATELY: `/cartao/mes` with nothing after it
+    // matches `app/cartao/[data]/route.ts` with `data = "mes"`, because the
+    // `mes` node registers no handler of its own. It parses as no date and
+    // refuses, which is correct — and it is exactly the kind of cross-handler
+    // shadowing a later tidy-up changes silently.
+    for (const segment of [
+      "mes",
+      "lixo",
+      "2026-02-30",
+      "0000-01-01",
+      "",
+      "../../etc/passwd",
+      "//evil.example.com",
+    ]) {
+      const response = await handlers.archiveDayCardHandler(segment);
+      expect.soft(response.status, segment).toBe(404);
+      expect.soft(response.headers.get("cache-control"), segment).toBe(REFUSAL);
+    }
+    expect(spies.listArchivedDays).not.toHaveBeenCalled();
+  });
+
+  it("(6) a month with days renders, over the month's OWN bounds", async () => {
+    spies.listArchivedDays.mockResolvedValue([pair("2026-02-22", "sudoku")]);
+    const response = await handlers.archiveMonthCardHandler(MONTH);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    // 2026 is not a leap year, so February ends on the 28th — the bounds come
+    // from `monthDayBounds`, the same helper the month PAGE uses.
+    expect(spies.listArchivedDays).toHaveBeenCalledWith(spies.stubDb, {
+      from: "2026-02-01",
+      to: "2026-02-28",
+      limit: 1,
+    });
+  });
+
+  it("(7) an empty or future month 404s, and a malformed one never reads", async () => {
+    spies.listArchivedDays.mockResolvedValue([]);
+    for (const segment of ["9999-01", "1999-12"]) {
+      const response = await handlers.archiveMonthCardHandler(segment);
+      expect.soft(response.status, segment).toBe(404);
+      expect.soft(response.headers.get("cache-control"), segment).toBe(REFUSAL);
+    }
+    expect(spies.listArchivedDays).toHaveBeenCalledTimes(2);
+
+    spies.listArchivedDays.mockClear();
+    for (const segment of ["lixo", "2026-13", "2026-00", "0000-01", ""]) {
+      const response = await handlers.archiveMonthCardHandler(segment);
+      expect.soft(response.status, segment).toBe(404);
+      expect.soft(response.headers.get("cache-control"), segment).toBe(REFUSAL);
+    }
+    expect(spies.listArchivedDays).not.toHaveBeenCalled();
+  });
+
+  it("(8) a throwing READER propagates — these handlers have NO catch, on purpose", async () => {
+    // THE ABSENCE IS THE ARGUMENT (plan 068 §4.1). `listArchivedDays` runs no
+    // projection and parses nothing, so no member of `PROJECTION_ERROR_NAMES`
+    // can arise from it and a narrowed catch would be unreachable code that
+    // re-throws everything. Every throw these handlers can see — a Neon
+    // timeout, a pool error, a missing credential — is the class that must be
+    // a 500. A 404 here would be negative-cached by scrapers for days while
+    // the incident went unpaged.
+    //
+    // `ZodError` is in the table BECAUSE it is the name the game handlers
+    // narrow on: if someone ever pastes their catch in here, this reds.
+    for (const error of [
+      named("ZodError"),
+      named("DailyProjectionUnsupportedError"),
+      new Error("neon: connection terminated"),
+    ]) {
+      spies.listArchivedDays.mockRejectedValue(error);
+      await expect
+        .soft(handlers.archiveDayCardHandler(DAY), error.name)
+        .rejects.toThrow(error.message);
+      await expect
+        .soft(handlers.archiveMonthCardHandler(MONTH), error.name)
+        .rejects.toThrow(error.message);
+    }
+  });
+
+  it("(9) a throwing CARD BUILDER propagates too — a satori throw is a 500", async () => {
+    // The `ImageResponse` construction is OUTSIDE any read for exactly this
+    // reason, and this is `T-WEB-S203` row (6)'s claim for the new family: a
+    // rasteriser failure must not be converted into a silent 404 by a `try`
+    // some later edit widened to the whole handler.
+    spies.listArchivedDays.mockResolvedValue([pair(DAY, "binairo")]);
+    spies.archiveCard.mockImplementation(() => {
+      throw new Error("synthetic satori failure");
+    });
+    await expect(handlers.archiveDayCardHandler(DAY)).rejects.toThrow(
+      "synthetic satori failure",
+    );
+    await expect(handlers.archiveMonthCardHandler(MONTH)).rejects.toThrow(
+      "synthetic satori failure",
+    );
+  });
+
+  it("(10) the card's two strings come from the URL, never from the row", async () => {
+    // The day card is RUNG 2: day-and-month at 96px, the year on the caption.
+    // Both strings are composed from the segment the URL carried, which is
+    // what keeps the read an existence proof rather than a source of pixels.
+    spies.listArchivedDays.mockResolvedValue([pair(DAY, "binairo")]);
+    await handlers.archiveDayCardHandler("2026-11-20");
+    expect(spies.archiveCard).toHaveBeenCalledWith({
+      display: formatDayAndMonth("2026-11-20"),
+      caption: ogCopy.archiveDayCaption("2026"),
+    });
+
+    spies.archiveCard.mockClear();
+    await handlers.archiveMonthCardHandler("2026-11");
+    expect(spies.archiveCard).toHaveBeenCalledWith({
+      display: formatMonth("2026-11-01"),
+      caption: messages.archive.title,
+    });
+  });
+});
+
+// ── T-WEB-S336 ────────────────────────────────────────────────────────
+
+describe("the archive cards' trace shape cannot be simplified back (T-WEB-S336)", () => {
+  /**
+   * THE TRIPWIRE UNDER ADR-0071 DECISION 3. The whole reason the day and
+   * month cards live at `/cartao/…` is that a metadata image MODULE on an
+   * archive shell segment is resolved into the metadata graph of every
+   * descendant route: ADR-0054 decision 9 measured `/arquivo`,
+   * `/arquivo/[data]` and `/arquivo/mes/[mes]` at 23.5–23.6 MB with one, and
+   * 2.7 MB without. A later ticket "simplifying" a card back into its segment
+   * would re-inflate three routes silently, and no test in the repo would say
+   * so. This is that test.
+   *
+   * SCOPED BY EXACT PATH AND BY EXTENSION, not by a subtree glob. Four
+   * `opengraph-image.tsx` modules DO live under `app/arquivo/**` — the play
+   * routes — and must keep existing; and this ticket ships
+   * `app/arquivo/opengraph-image.png` at the very stem the negative assertion
+   * names, so the assertion has to be about MODULE extensions.
+   */
+  const MODULE_EXTENSIONS = ["ts", "tsx", "js", "jsx"];
+  const SHELL_STEMS = [
+    join(APP_DIR, "arquivo", "opengraph-image"),
+    join(APP_DIR, "arquivo", "[data]", "opengraph-image"),
+    join(APP_DIR, "arquivo", "mes", "[mes]", "opengraph-image"),
+  ];
+
+  it("no opengraph-image MODULE exists on any of the three archive SHELL segments", () => {
+    const found = SHELL_STEMS.flatMap((stem) =>
+      MODULE_EXTENSIONS.map((extension) => `${stem}.${extension}`),
+    ).filter((path) => existsSync(path));
+    expect(found).toEqual([]);
+
+    // THE COUNTED FLOOR, the repo's own idiom against a typo'd path making a
+    // negative assertion pass vacuously: the FOUR play-route modules under
+    // `app/arquivo/[data]/<jogo>/` do exist and are untouched by #104.
+    const playRouteModules = GAMES.map((game) =>
+      join(APP_DIR, "arquivo", "[data]", game, "opengraph-image.tsx"),
+    ).filter((path) => existsSync(path));
+    expect(playRouteModules).toHaveLength(4);
+
+    // And the index card really is the PNG at that first stem, which is what
+    // makes "by extension, not by stem" load-bearing rather than pedantic.
+    expect(existsSync(`${SHELL_STEMS[0]}.png`)).toBe(true);
+  });
+
+  it("both card handlers reach the wall and NOTHING from the play surface", () => {
+    for (const entry of [DAY_CARD_ROUTE, MONTH_CARD_ROUTE]) {
+      const graph = moduleGraph(entry);
+      // COUNTED FLOOR, in the same terms as the absences: the graph really
+      // does reach the reader, so an empty or broken walk cannot pass below.
+      const reachesTheWall = graph.filter((path) =>
+        code(readFileSync(path, "utf8")).includes("@miolos/db"),
+      );
+      expect.soft(reachesTheWall, entry).not.toEqual([]);
+      expect.soft(graph.length, entry).toBeGreaterThanOrEqual(5);
+
+      // THE ABSENCES. `T-WEB-S183`'s archive page wall is a list of PAGE
+      // files and these are not pages, so the same protection is asserted
+      // here instead (plan 068 §10.3) — a card must never reach a user's own
+      // day state, which is ADR-0053 decision 10's "why no endpoint".
+      for (const path of graph) {
+        const source = code(readFileSync(path, "utf8"));
+        for (const forbidden of [
+          "/src/play/",
+          "/src/day/",
+          "readDayState",
+          "useDayTruth",
+        ]) {
+          expect
+            .soft(source, `${forbidden} in ${path}`)
+            .not.toContain(forbidden);
+        }
+      }
+    }
+  });
+
+  it("the archive card BUILDER's own graph reaches no reader at all", () => {
+    // The builder takes two formatted strings, so nothing in its graph may
+    // touch a database — the same claim `T-WEB-S204` makes for the site card,
+    // and the reason the committed index PNG can be rendered at commit time.
+    for (const path of moduleGraph(CARD_SOURCE)) {
+      const source = code(readFileSync(path, "utf8"));
+      expect.soft(source, path).not.toContain("@miolos/db");
+      expect.soft(source, path).not.toContain("getDb");
+    }
+    expect(moduleGraph(CARD_SOURCE).length).toBeGreaterThanOrEqual(3);
   });
 });

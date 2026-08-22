@@ -265,6 +265,92 @@ export function gameCard(args: {
 }
 
 /**
+ * The three ARCHIVE shell cards, as one builder (#104, ADR-0071).
+ *
+ * ## The display slot holds the most specific thing the URL names
+ *
+ * One rule, three captions — `/arquivo` puts "Arquivo" over a tagline,
+ * `/arquivo/mes/<mês>` puts the month over "Arquivo", `/arquivo/<data>` puts
+ * the day over its year and "Arquivo". The alternative (the constant word
+ * "Arquivo" at 96px on all three) would make ~1,096 day cards visually
+ * interchangeable with the index card, and it inverts what the product's own
+ * `<title>`s already get right: `meta.dayTitle` leads with the date.
+ *
+ * ## The card names NO GAME, and the signature is the mechanism
+ *
+ * Two already-formatted `string`s, and no parameter a `Game` or an
+ * `ArchivedDay` can enter through — the same argument `gameCard` makes above,
+ * for a builder that takes no game at all. `limit: 1` on the handler's read
+ * bounds it to an existence answer so no game SET is in scope; it is NOT what
+ * hides a game, because `ArchivedDay` is `{date, game}` and `days[0].game` is
+ * one property access away. The signature is what makes this structural.
+ *
+ * The product reasons are recorded in ADR-0071 decision 5: the archive's
+ * oldest days hold one, two or three games (ADR-0053 decision 3), so a card
+ * naming four is false on exactly those days; four game names could not be
+ * told apart even in principle, because `DESIGN.md:19` forbids the accent on
+ * any word at any size; and ADR-0054 decision 1a's archive surface is a
+ * narrower surface than the daily's, never a wider one.
+ *
+ * ## No kicker, and one tape
+ *
+ * `DESIGN.md:29` makes kickers "a deliberate brand system, used for game
+ * categories, not as a generic section eyebrow", so "ARQUIVO" as a 33px
+ * uppercase eyebrow would be the banned use. `siteCard` below is the
+ * precedent: a non-game card has no kicker. The card DOES take one washi
+ * tape, in `ACCENT_APP_*`, and that does not contradict
+ * `index-view.tsx:35-37`'s "no washi tape, tape marks a game": that sentence
+ * is about the archive index PAGE, which has no paper card with a top edge to
+ * tape. On THIS surface the tape marks a card and the ACCENT marks a game —
+ * and `ACCENT_APP_*` is the non-game accent, exactly as `siteCard` takes it.
+ *
+ * ## The sizing rung, MEASURED (plan 068 §12.2), because it was not obvious
+ *
+ * `paper()`'s inner width is **890px** — `CARD_BOX_WIDTH − 2 × CARD_PADDING −
+ * 2 × border` = `1040 − 144 − 6`, since yoga's `width` is a border box — and
+ * satori overflows a fixed container SILENTLY rather than wrapping visibly,
+ * so an overflow is invisible until someone opens the PNG.
+ *
+ * Enumerated over all 366 day-and-month combinations at 96px, rung 1 (the
+ * full `formatLongDate` output) FAILS: `"20 de novembro de 2028"` measures
+ * **1111px**, a 25 % overflow. So the day card takes **rung 2** — the day and
+ * month at 96px, the year moved onto the caption line, worst case
+ * `"20 de novembro"` at **729px**. The worst case is `novembro` and not the
+ * longest string by character count, because Fraunces' figures are NOT
+ * tabular (`0` is 63px, `1` is 43px), which is also why `"20"` beats `"22"`.
+ *
+ * The month card stays at rung 1: worst `"novembro de 2028"` at **843px**.
+ *
+ * Rung 2 costs no new type level, no new absolute length and no new
+ * derivation: every value in the stack below already exists in this module.
+ */
+export function archiveCard(args: {
+  /** Already formatted — `formatDayAndMonth`, `formatMonth`, or a message. */
+  readonly display: string;
+  readonly caption: string;
+}): ReactElement {
+  return paper({
+    tape: ACCENT_APP_TAPE,
+    shadow: ACCENT_APP_SHADOW,
+    children: (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+          height: "100%",
+        }}
+      >
+        <div style={displayStyle}>{args.display}</div>
+        <div style={{ ...bodyStyle, marginTop: 12 }}>{args.caption}</div>
+        <div style={{ display: "flex", flexGrow: 1 }} />
+        <div style={wordmarkStyle}>{messages.brand.wordmark}</div>
+      </div>
+    ),
+  });
+}
+
+/**
  * The root site card — the one static card in the family. It reads nothing,
  * has no dynamic segment and no dynamic API, so Next prerenders it at build.
  *

@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { formatLongDate, formatMonth, messages } from "../src/i18n";
+import { ogCopy } from "../src/og/copy";
+import { OG_DEFAULTS } from "../src/og/defaults";
 
 // Every archive route's metadata (#31 AC 1, ADR-0053 decision 1 / plan 037
 // D6). Titles and descriptions are DISTINCT across dates and across games —
@@ -49,34 +51,76 @@ afterEach(() => {
 
 describe("archive metadata (T-WEB-S173)", () => {
   it("every route composes its title and description from messages.archive, with a SELF-REFERENTIAL canonical", async () => {
+    // THE INDEX ARM IS BYTE-UNMOVED at #104, and that is a claim rather than
+    // an omission: the index card attaches by the FILE convention
+    // (`app/arquivo/opengraph-image.png`), so this function returns no
+    // `openGraph` key. The RESOLVED metadata for `/arquivo` certainly will
+    // carry one — the file convention injects the image and the root layout
+    // supplies `OG_DEFAULTS` — and this assertion is about the return value,
+    // not the rendered head.
     expect(index.generateMetadata()).toEqual({
       title: messages.archive.meta.indexTitle,
       description: messages.archive.meta.indexDescription,
       alternates: { canonical: "/arquivo" },
     });
 
+    // The month and day arms DO grow an `openGraph`, because their cards are
+    // referenced by an explicit `images` entry (#104, ADR-0071 decision 3).
+    // The card URLs are spelled as literals here for the same reason the
+    // canonicals are: a URL asserted through the same builder the route calls
+    // would agree with itself no matter what either did.
+    const monthName = formatMonth("2026-08-01");
+    const monthTitle = messages.archive.meta.monthTitle(monthName);
+    const monthDescription = messages.archive.meta.monthDescription(monthName);
     expect(
       await month.generateMetadata({
         params: Promise.resolve({ mes: "2026-08" }),
       }),
     ).toEqual({
-      title: messages.archive.meta.monthTitle(formatMonth("2026-08-01")),
-      description: messages.archive.meta.monthDescription(
-        formatMonth("2026-08-01"),
-      ),
+      title: monthTitle,
+      description: monthDescription,
       alternates: { canonical: "/arquivo/mes/2026-08" },
+      openGraph: {
+        ...OG_DEFAULTS,
+        title: monthTitle,
+        description: monthDescription,
+        images: [
+          {
+            url: "/cartao/mes/2026-08",
+            width: 1200,
+            height: 630,
+            alt: ogCopy.altArchiveMonth(monthName),
+            type: "image/png",
+          },
+        ],
+      },
     });
 
+    const longDate = formatLongDate("2026-08-03");
+    const dayTitle = messages.archive.meta.dayTitle(longDate);
+    const dayDescription = messages.archive.meta.dayDescription(longDate);
     expect(
       await day.generateMetadata({
         params: Promise.resolve({ data: "2026-08-03" }),
       }),
     ).toEqual({
-      title: messages.archive.meta.dayTitle(formatLongDate("2026-08-03")),
-      description: messages.archive.meta.dayDescription(
-        formatLongDate("2026-08-03"),
-      ),
+      title: dayTitle,
+      description: dayDescription,
       alternates: { canonical: "/arquivo/2026-08-03" },
+      openGraph: {
+        ...OG_DEFAULTS,
+        title: dayTitle,
+        description: dayDescription,
+        images: [
+          {
+            url: "/cartao/2026-08-03",
+            width: 1200,
+            height: 630,
+            alt: ogCopy.altArchiveDay(longDate),
+            type: "image/png",
+          },
+        ],
+      },
     });
   });
 

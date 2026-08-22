@@ -8,7 +8,15 @@ import {
   parseArchiveMonth,
 } from "../../../../src/archive/parse-params";
 import { getDb } from "../../../../src/db";
-import { archiveMonthRoute, formatMonth, messages } from "../../../../src/i18n";
+import {
+  archiveMonthCardRoute,
+  archiveMonthRoute,
+  formatMonth,
+  messages,
+} from "../../../../src/i18n";
+import { ogCopy } from "../../../../src/og/copy";
+import { OG_DEFAULTS } from "../../../../src/og/defaults";
+import { cardImage } from "../../../../src/og/images";
 import { ArchiveMonthView } from "../../month-view";
 
 // ADR-0053 decision 2 — see `app/arquivo/page.tsx` for the kill-switch
@@ -34,6 +42,10 @@ interface MonthPageProps {
  * composed a canonical out of the raw segment — and a segment beginning `//`
  * or `https://` resolves against `metadataBase` to an off-site absolute URL.
  * On failure: no `alternates` at all, and `index: false`.
+ *
+ * The `openGraph` block mirrors the day page, with the month builders — see
+ * `app/arquivo/[data]/page.tsx` for why `OG_DEFAULTS` must be spread, why
+ * `images` must be present, and why the prose here carries no apostrophes.
  */
 export async function generateMetadata({
   params,
@@ -43,10 +55,20 @@ export async function generateMetadata({
     return { robots: { index: false } };
   }
   const name = formatMonth(`${month}-01`);
+  const title = messages.archive.meta.monthTitle(name);
+  const description = messages.archive.meta.monthDescription(name);
   return {
-    title: messages.archive.meta.monthTitle(name),
-    description: messages.archive.meta.monthDescription(name),
+    title,
+    description,
     alternates: { canonical: archiveMonthRoute(month) },
+    openGraph: {
+      ...OG_DEFAULTS,
+      title,
+      description,
+      images: [
+        cardImage(archiveMonthCardRoute(month), ogCopy.altArchiveMonth(name)),
+      ],
+    },
   };
 }
 

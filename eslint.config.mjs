@@ -817,10 +817,13 @@ export default tseslint.config(
     // — the db subpath, the relative reach into packages/db/src, `sql` and
     // `users` off the root entry, `stripDailyContent` off @miolos/core, the
     // two table-name selectors, the computed dynamic import and require().
-    // These are the eight files in the app that call `getDb()` on an
-    // unauthenticated crawler-facing path, i.e. the most consequential place
-    // in the repo to lose those bans, and a file-diff criterion cannot see
-    // the loss. T-LINT-S43/S44 and T-LINT-S8a are the regression controls.
+    // These are the TEN files in the app that call `getDb()` on an
+    // unauthenticated crawler-facing path — the eight dated image routes plus
+    // `app/cartao/[data]/route.ts` and `app/cartao/mes/[mes]/route.ts` (#104,
+    // ADR-0071), which reach it through `listArchivedDays` rather than a
+    // projected reader. That is the most consequential place in the repo to
+    // lose those bans, and a file-diff criterion cannot see the loss.
+    // T-LINT-S43/S44/S54 and T-LINT-S8a are the regression controls.
     // Do not "de-duplicate" the spreads away.
     //
     // THIS WALL IS NOT TRANSITIVE, and it does not pretend to be (step-6
@@ -843,6 +846,16 @@ export default tseslint.config(
       // defaults mean none will ever be needed: if one ever is, it must not
       // arrive OUTSIDE the wall, and the cost is one token and one probe.
       `apps/web/app/**/twitter-image.${webWallExtensions}`,
+      // #104 (ADR-0071): the two archive shell cards are ROUTE HANDLERS at
+      // their own URLs, not metadata modules, so the two globs above do not
+      // match them — `app/cartao/[data]/route.ts` ends in `route.ts`. They
+      // call `getDb()` on the same unauthenticated crawler-facing path and
+      // must be inside this wall. `apps/web/app/cartao/**` is a strict subset
+      // of (1)'s and (2)'s globs, whose arrays this object already repeats
+      // verbatim, and it intersects neither (3) (free play) nor (5)
+      // (modo-livre ∩ OG) — an intersection ANALYSIS, per ADR-0054 `:981-983`,
+      // not a claim that there is no intersection.
+      `apps/web/app/cartao/**/*.${webWallExtensions}`,
     ],
     rules: {
       "no-restricted-imports": [

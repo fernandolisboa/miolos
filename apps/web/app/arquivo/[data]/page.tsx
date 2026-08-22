@@ -6,11 +6,15 @@ import { groupArchivedDays } from "../../../src/archive/group-days";
 import { parseArchiveDate } from "../../../src/archive/parse-params";
 import { getDb } from "../../../src/db";
 import {
+  archiveDayCardRoute,
   archiveDayRoute,
   formatLongDate,
   messages,
   routes,
 } from "../../../src/i18n";
+import { ogCopy } from "../../../src/og/copy";
+import { OG_DEFAULTS } from "../../../src/og/defaults";
+import { cardImage } from "../../../src/og/images";
 import { ArchiveDayView } from "../day-view";
 
 // ADR-0053 decision 2 — see `app/arquivo/page.tsx` for the kill-switch
@@ -42,6 +46,29 @@ interface DayPageProps {
  * malformed case is different and is handled: it yields `robots.index:
  * false` with **no** `alternates`, because there the segment is attacker
  * text and a canonical composed from it is the poisoning hazard.
+ *
+ * **The `openGraph` block below is what attaches the card for this page**
+ * (#104, ADR-0071), and it has two rules it must not break. `OG_DEFAULTS`
+ * MUST be spread: a leaf `openGraph` REPLACES the root layout declaration
+ * rather than merging into it, so without the spread this route loses
+ * `og:type`, `og:locale` and `og:site_name`. And `images` MUST be present:
+ * `mergeStaticMetadata` re-adds a file-convention image only when the level
+ * declares no `images` of its own, so an `openGraph` without one here would
+ * delete the card silently. The card is a route handler at `/cartao/<data>`
+ * rather than a metadata module in this segment, because a metadata module
+ * would re-inflate the traced payload of this page from 2.7 MB to ~23 MB
+ * (ADR-0054 decision 9). `twitter:image` needs nothing: it auto-fills from
+ * `openGraph.images`, measured on a real build.
+ *
+ * The malformed branch above composes NO `openGraph`, which narrows ADR-0054
+ * decision 8 residual: a malformed segment now inherits the card of the
+ * archive index by nearest ancestor instead of advertising one that 404s.
+ *
+ * NOTE for whoever edits the prose from here down: `T-WEB-S173` slices this
+ * file from the first occurrence of the word above to the first line that is
+ * a bare closing brace, and rejects any quoted run of two characters or more
+ * inside it — which a pair of apostrophes in ordinary English is. Write
+ * around it; the scan is not the thing to weaken.
  */
 export async function generateMetadata({
   params,
@@ -51,10 +78,20 @@ export async function generateMetadata({
     return { robots: { index: false } };
   }
   const longDate = formatLongDate(date);
+  const title = messages.archive.meta.dayTitle(longDate);
+  const description = messages.archive.meta.dayDescription(longDate);
   return {
-    title: messages.archive.meta.dayTitle(longDate),
-    description: messages.archive.meta.dayDescription(longDate),
+    title,
+    description,
     alternates: { canonical: archiveDayRoute(date) },
+    openGraph: {
+      ...OG_DEFAULTS,
+      title,
+      description,
+      images: [
+        cardImage(archiveDayCardRoute(date), ogCopy.altArchiveDay(longDate)),
+      ],
+    },
   };
 }
 

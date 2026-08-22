@@ -21,11 +21,12 @@ function utcNoon(isoDate: string): Date {
   return new Date(`${isoDate}T12:00:00Z`);
 }
 
-// The three `Intl.DateTimeFormat` instances live at module scope: locale
-// and options are module constants, and construction is the expensive
-// part (measured at step 6: a per-call construct ran ~40× per calendar
+// The `Intl.DateTimeFormat` instances live at module scope: locale and
+// options are module constants, and construction is the expensive part
+// (measured at step 6: a per-call construct ran ~40× per calendar
 // render, 160–260 ms on a mid-range phone). `format` on a shared
-// instance is cheap and stateless.
+// instance is cheap and stateless. (The count is deliberately not written
+// out — it was already stale at "three" when #104 added the fifth.)
 const longDateFormat = new Intl.DateTimeFormat(locale, {
   dateStyle: "long",
   timeZone: "UTC",
@@ -34,6 +35,12 @@ const longDateFormat = new Intl.DateTimeFormat(locale, {
 const monthFormat = new Intl.DateTimeFormat(locale, {
   month: "long",
   year: "numeric",
+  timeZone: "UTC",
+});
+
+const dayAndMonthFormat = new Intl.DateTimeFormat(locale, {
+  day: "numeric",
+  month: "long",
   timeZone: "UTC",
 });
 
@@ -61,6 +68,28 @@ export function formatLongDate(isoDate: string): string {
  */
 export function formatMonth(isoDate: string): string {
   return monthFormat.format(utcNoon(isoDate));
+}
+
+/**
+ * "20 de novembro" — the SAME long date as `formatLongDate`, without its
+ * year. The archive day card's display line (#104, ADR-0071), and its only
+ * caller.
+ *
+ * It exists because the year does not fit: enumerated over all 366
+ * day-and-month combinations, `formatLongDate` at the card's 96px Fraunces
+ * measures up to 1111px against 890px of card, and satori overflows a fixed
+ * container silently (plan 068 §12.2). Dropping the year to the card's 39px
+ * caption line brings the worst case to 729px. The year is not lost — the
+ * card prints it one line down.
+ *
+ * A THIRD `Intl` instance and not a `.replace()` on `formatLongDate`'s
+ * output: "the long date minus its year" is a locale-specific string surgery
+ * that pt-BR happens to make look easy, and the connective is the formatter's
+ * to decide, not this module's. It rides the same `utcNoon` anchor as its
+ * siblings and therefore inherits their reasoning wholesale.
+ */
+export function formatDayAndMonth(isoDate: string): string {
+  return dayAndMonthFormat.format(utcNoon(isoDate));
 }
 
 /**

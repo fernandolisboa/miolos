@@ -1,11 +1,21 @@
 import type { ProjectedGame } from "@miolos/core";
-import { getPublishedDaily, getTodayDaily } from "@miolos/db";
+import { getPublishedDaily, getTodayDaily, listArchivedDays } from "@miolos/db";
 import { ImageResponse } from "next/og";
 
-import { parseArchiveDate } from "../archive/parse-params";
+import {
+  monthDayBounds,
+  parseArchiveDate,
+  parseArchiveMonth,
+} from "../archive/parse-params";
 import { getDb } from "../db";
-import { formatLongDate } from "../i18n";
-import { gameCard, CARD_HEIGHT, CARD_WIDTH } from "./card";
+import {
+  formatDayAndMonth,
+  formatLongDate,
+  formatMonth,
+  messages,
+} from "../i18n";
+import { archiveCard, gameCard, CARD_HEIGHT, CARD_WIDTH } from "./card";
+import { ogCopy } from "./copy";
 import { FONTS } from "./fonts";
 
 /**
@@ -44,6 +54,36 @@ import { FONTS } from "./fonts";
  * predicate re-typed per route." Both readers carry the conjuncts through
  * `packages/db`'s single private `publishedConjuncts()`. No fallback card
  * exists, ever: a fallback would be an unpublished day rendering *something*.
+ *
+ * ## The two ARCHIVE SHELL handlers, and why they have NO catch (#104)
+ *
+ * `archiveDayCardHandler` and `archiveMonthCardHandler` serve the `/cartao`
+ * family. Each card's existence proof is its PAGE's, through one bounded
+ * `listArchivedDays(…, { limit: 1 })` — the smallest read that answers the
+ * question the page itself asks (`days.length === 0`), so the card's truth
+ * value is its page's by construction and no game SET is ever in scope.
+ * Existence is the DAY, not a game's row: a day holding one game renders a
+ * card, exactly as the page renders one game (ADR-0053 decision 3's ragged
+ * floor).
+ *
+ * **The rule above produces no catch here, and the omission is the argument
+ * rather than a gap.** `listArchivedDays` selects two columns, runs no
+ * projection and parses nothing (`packages/db/src/published.ts:372-396`), so
+ * no member of `PROJECTION_ERROR_NAMES` can arise from it. Every callee on
+ * the path was traced: `parseArchiveDate` and `parseArchiveMonth` use
+ * `safeParse`, never `parse`, so neither can throw a `ZodError`; `getDb()`
+ * throws a plain `Error("WEB_DATABASE_URL is not set")`. A narrowed catch
+ * here would be unreachable code that re-throws everything. Every throw these
+ * handlers can see — a Neon timeout, a pool error, a missing credential — is
+ * exactly the class the name set was always designed to send to a 500.
+ * `T-WEB-S334` pins both directions so the absence can go red.
+ *
+ * The `ImageResponse` construction stays outside any read for the same reason
+ * it is outside the `try` above: a satori throw must be a 500.
+ *
+ * `parseArchiveMonth` carries the year-zero floor that fixed a real
+ * unauthenticated 500 (`archive/parse-params.ts`), and the card inherits it
+ * by calling the same parser rather than a second regex.
  */
 
 /**
@@ -141,6 +181,72 @@ export async function archiveCardHandler(
     fonts: FONTS,
     headers: CARD_HEADERS,
   });
+}
+
+/**
+ * `/cartao/<YYYY-MM-DD>` — the card for `/arquivo/<data>` (#104, ADR-0071).
+ *
+ * The display line is the day and month and the caption carries the year,
+ * which is a MEASUREMENT and not a preference: see `archiveCard`'s doc block
+ * for the rung ladder and the 1111px that failed it. Both strings are
+ * composed from the URL's own date, never from the row — the read decides
+ * only *render or 404*.
+ */
+export async function archiveDayCardHandler(
+  segment: string,
+): Promise<Response> {
+  const date = parseArchiveDate(segment);
+  if (date === undefined) {
+    return refuse(); // Zod before any read: a hostile segment costs nothing.
+  }
+
+  const days = await listArchivedDays(getDb(), {
+    from: date,
+    to: date,
+    limit: 1,
+  });
+  if (days.length === 0) {
+    // Future, unpublished, killed, no such day — and TODAY, which the
+    // archive wall excludes by definition (`archivedWallPredicate`).
+    return refuse();
+  }
+
+  return new ImageResponse(
+    archiveCard({
+      display: formatDayAndMonth(date),
+      caption: ogCopy.archiveDayCaption(date.slice(0, 4)),
+    }),
+    { ...SIZE, fonts: FONTS, headers: CARD_HEADERS },
+  );
+}
+
+/**
+ * `/cartao/mes/<YYYY-MM>` — the card for `/arquivo/mes/<mês>`. The same shape
+ * over the month's own day bounds, which is the same read its page makes.
+ */
+export async function archiveMonthCardHandler(
+  segment: string,
+): Promise<Response> {
+  const month = parseArchiveMonth(segment);
+  if (month === undefined) {
+    return refuse();
+  }
+
+  const days = await listArchivedDays(getDb(), {
+    ...monthDayBounds(month),
+    limit: 1,
+  });
+  if (days.length === 0) {
+    return refuse();
+  }
+
+  return new ImageResponse(
+    archiveCard({
+      display: formatMonth(`${month}-01`),
+      caption: messages.archive.title,
+    }),
+    { ...SIZE, fonts: FONTS, headers: CARD_HEADERS },
+  );
 }
 
 export async function dailyCardHandler(game: ProjectedGame): Promise<Response> {

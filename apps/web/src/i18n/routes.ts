@@ -16,6 +16,18 @@ export const routeSlugs = {
   // `/arquivo/mes` with nothing after it matches `[data]` with `data = "mes"`,
   // which `calendarDateString` rejects -> 404.
   month: "mes",
+  // #104 (ADR-0071): the OG card endpoints for the archive's day and month
+  // shells. **This table is mixed-purpose from here on, and that is the price
+  // of the choice rather than an oversight**: the twelve slugs around it are
+  // segments a person visits, and this one is a machine endpoint a rasteriser
+  // answers on — not linked, deliberately out of `sitemap.ts`, never
+  // navigated to. It lives here anyway because a chosen slug is a chosen
+  // slug: ADR-0013 `:38` puts route slugs with the i18n strings from the
+  // first route, and without this entry a pt-BR literal enters a builder body
+  // with no home. `cartao` is the product's OWN word for the artifact — it is
+  // already what `ogCopy.altSite` says out loud to a screen reader — and the
+  // unaccented spelling matches `estatisticas` and `modo-livre`.
+  card: "cartao",
   freePlay: "modo-livre",
   stats: "estatisticas",
   // #21 (ADR-0013, ADR-0050): the magic-link landing page and the privacy
@@ -107,6 +119,29 @@ export function archiveDayRoute(date: string): string {
 
 export function archiveGameRoute(date: string, game: Game): string {
   return `${archiveDayRoute(date)}/${routeSlugs[game]}`;
+}
+
+/**
+ * The two archive OG card endpoints (#104, ADR-0071). Same single-home rule
+ * as the three builders above, applied to two paths that are not pages.
+ *
+ * **At the root, not under `/arquivo`.** The nested shape mirrors `mes`
+ * exactly and costs nothing on the trace argument, and it was refused on one
+ * forward argument: when #37 takes the rest of ADR-0054 decision 9's relief
+ * it needs `/cartao/<data>/<jogo>` AND the four daily game cards, and the
+ * daily four do not live under `/arquivo` at all. A nested family would host
+ * half of that and leave the other half homeless.
+ *
+ * These are the only two builders here whose output is never an `<a href>`.
+ * They are composed into an `openGraph.images` entry, and nothing else may
+ * link them.
+ */
+export function archiveDayCardRoute(date: string): string {
+  return `/${routeSlugs.card}/${date}`;
+}
+
+export function archiveMonthCardRoute(month: string): string {
+  return `/${routeSlugs.card}/${routeSlugs.month}/${month}`;
 }
 
 /**
