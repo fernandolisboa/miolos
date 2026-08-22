@@ -71,6 +71,31 @@ consequence (c)). The `bundle-markers.test.ts` ↔ `route-client-js.mjs` pair
 is the same shape, and neither half is a precedent for spreading one id
 across two files.
 
+**#104 (plan 068) reserved `T-WEB-S333…S338` and `T-LINT-S54…S55`** —
+four `T-WEB` planned plus two tails of review-round headroom, one `T-LINT`
+planned plus one tail
+([the reservation](https://github.com/fernandolisboa/miolos/issues/104#issuecomment-5377646183),
+made at step 5 with the frontier re-derived by the documented two-stage
+grep at step 2 and again at step 4, agreeing with this table in both
+columns: `T-WEB` highest in use `S330`, `T-LINT` highest in use `S53`).
+`T-WEB`'s next free is `S333` rather than `S331` because `S331`/`S332` are
+#64's burned tails, recorded above. **This is a LIVE reservation: the rows
+above are deliberately NOT moved, and the unspent tails are deliberately
+NOT in the Burned slots table yet.** Both happen at #104's step 8, with the
+frontier re-derived by the grep against the merged tree rather than off this
+paragraph — the rule at the top of this section, applied to the ticket
+writing it. No `T-CORE`, `T-DB` or `T-API` id is reserved: `git diff main
+--stat -- packages apps/api` is one of #104's exit criteria and must come
+out empty.
+
+**And one landed row's description drifts under #104, flagged here rather
+than silently left.** `T-WEB-S204` is described below as *"there is no ninth
+route, and the asset pair exists"*. #104 re-aims it in place — no new id,
+the `T-WEB-S100` precedent — because after this ticket `src/og/card.tsx`
+builds **three** cards and there are **two** committed asset pairs
+(`app/opengraph-image.*` and `app/arquivo/opengraph-image.*`). The
+description is corrected at step 8 with the frontier, in the same pass.
+
 The "next free" values above jump over #146's reserved review-round
 headroom (`T-CORE-S109`, `T-DB-S83`/`S84`, `T-API-S152…S154`,
 `T-WEB-S298` — the #146 paragraph below), and over two ranges that were
