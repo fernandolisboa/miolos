@@ -225,7 +225,7 @@ function judgeGrid(
  * `apps/web/src/play/sync.ts`, so the record would settle `rejected` and the
  * day would be lost for the streak, permanently, on a row that can never be
  * reopened. It also bought nothing: a non-word cannot manufacture a win,
- * because the win test is `guess === answer`. `src/termo/judge.ts` carries
+ * because the win test is `guess === answer`. ADR-0038 §4(i) carries
  * the full argument.
  *
  * The ladder itself is `src/termo/judge.ts`, shared verbatim with

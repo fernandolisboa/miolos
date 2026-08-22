@@ -1,6 +1,6 @@
 /**
- * Opaque session token primitives (ADR-0022). Web Crypto only — no Node
- * import — so the module is edge-safe by construction.
+ * Opaque session token primitives — see ADR-0022. Web Crypto only — no
+ * Node import — so the module is edge-safe by construction.
  */
 
 /** 32 random bytes (256 bits, above the 128-bit floor), base64url. */

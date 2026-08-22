@@ -39,7 +39,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
-| `T-API` | `S182` | `S179` | `T-API-16` |
+| `T-API` | `S183` | `S182` | `T-API-16` |
 | `T-WEB` | `S351` | `S347` | `T-WEB-23` |
 | `T-LINT` | `S61` | `S59` | `T-LINT-10` |
 

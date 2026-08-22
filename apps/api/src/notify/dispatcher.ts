@@ -15,38 +15,36 @@ import { nudgeCopy } from "./copy";
 import type { NudgeSend } from "./transport";
 
 /**
- * One dispatcher tick (#146, ADR-0064 decisions 6/7/9; ADR-0068) — the
- * product's ONLY notification code path. Takes `{today, hour}` from the
- * route's single `readTickInstant` snapshot (ADR-0068 decision 3) and the
+ * One dispatcher tick — the product's ONLY notification code path. Takes
+ * `{today, hour}` from the route's single tick-instant snapshot and the
  * transport as an injected function, so every test here is real-clock-free
  * and network-free without a single `vi.mock`.
  *
  * Per candidate, IN THIS ORDER:
  *
- * 1. `claimNudgeSend` — the CLAIM COMES BEFORE THE SEND (ADR-0064
- *    decision 7): a crash or timeout between a user's claim and their send
- *    loses that user's nudge for that day. That is the priced residual,
- *    preferred over its inverse (claim-after-send double-sends on every
- *    crash, and a double tick double-sends everyone). Not claimed → a
- *    concurrent or replayed tick owns it: skip, counting toward
- *    `candidates` only.
+ * 1. `claimNudgeSend` — the CLAIM COMES BEFORE THE SEND: a crash or
+ *    timeout between a user's claim and their send loses that user's
+ *    nudge for that day. That is the priced residual, preferred over its
+ *    inverse (claim-after-send double-sends on every crash, and a double
+ *    tick double-sends everyone). Not claimed → a concurrent or replayed
+ *    tick owns it: skip, counting toward `candidates` only.
  * 2. The streak number via `listCompletionsForStreak` + `computeStreak` —
- *    ADR-0048's single streak authority; the candidate SQL's counted-day
- *    conjuncts are a PREFILTER, never a second definition (T-API-S144
- *    pins the sent number to `computeStreak`'s).
+ *    the single streak authority; the candidate SQL's counted-day
+ *    conjuncts are a PREFILTER, never a second definition.
  * 3. `pushNudgePayloadSchema.parse(nudgeCopy(streak))` — Zod before the
  *    boundary; a malformed composition never reaches a push service.
- * 4. `listSubscriptions`, SERIAL sends (ADR-0068 decision 5: round-trips
- *    dominate and concurrency multiplies connection pressure — the publish
- *    cron's measured reasoning; revisit trigger ~150 logged candidates).
- *    `ok` → sent++; 404/410 → `pruneSubscription` (ADR-0064 decision 9:
- *    the push service's verdict about the endpoint) + pruned++; anything
- *    else → failed++, the ROW STAYS and the CLAIM STANDS — no retry this
- *    day, decision 7's residual as behavior (T-API-S148).
+ * 4. `listSubscriptions`, SERIAL sends (round-trips dominate and
+ *    concurrency multiplies connection pressure; revisit if the run ever
+ *    logs ~150 candidates). `ok` → sent++; 404/410 →
+ *    `pruneSubscription` (the push service's verdict about the endpoint)
+ *    + pruned++; anything else → failed++, the ROW STAYS and the CLAIM
+ *    STANDS — no retry this day.
  *
- * Each candidate is wrapped in try/catch with a loud console.error (the
- * `runTopUp` fault-isolation precedent): one user's blowup never starves
- * the rest of the tick.
+ * Each candidate is wrapped in try/catch with a loud console.error: one
+ * user's blowup never starves the rest of the tick.
+ *
+ * See ADR-0064 (streak-at-risk is a derived decision) and ADR-0068 (the
+ * dispatcher's operating decisions).
  */
 export async function runNotifyTick(
   db: Db,
@@ -88,8 +86,8 @@ export async function runNotifyTick(
         }
       }
     } catch (thrown) {
-      // The error object rides as the second argument (the publish route's
-      // idiom) so the stack and any `cause` survive into the log.
+      // The error object rides as the second argument so the stack and any
+      // `cause` survive into the log.
       console.error(`cron-notify: candidate ${userId} failed`, thrown);
       failed += 1;
     }

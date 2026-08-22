@@ -4,7 +4,7 @@ export const SESSION_COOKIE_NAME = "miolos_session";
 const MAX_AGE_SECONDS = 34_560_000;
 
 /**
- * Manual serialization per plan 009 D10 — no dependency, unit-testable.
+ * Manual serialization — no dependency, unit-testable.
  *
  * - `Domain` comes from COOKIE_DOMAIN alone (prod: miolos.app so web and
  *   api subdomains share the cookie; never hardcoded, ADR-0013). Unset →
@@ -30,11 +30,10 @@ export function buildSessionCookie(token: string): string {
 }
 
 /**
- * The clearing twin (#21, ADR-0050 decision 12): POST /account/delete
- * evicts the cookie whose user no longer exists. Same attributes as
- * `buildSessionCookie` — Domain and Secure included — because a browser
- * only replaces a cookie whose name/Domain/Path all match; `Max-Age=0` is
- * the eviction.
+ * The clearing twin: POST /account/delete evicts the cookie whose user no
+ * longer exists. Same attributes as `buildSessionCookie` — Domain and
+ * Secure included — because a browser only replaces a cookie whose
+ * name/Domain/Path all match; `Max-Age=0` is the eviction.
  */
 export function buildSessionClearingCookie(): string {
   const cookieDomain = process.env.COOKIE_DOMAIN;

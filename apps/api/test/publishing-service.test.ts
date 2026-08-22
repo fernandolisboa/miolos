@@ -38,7 +38,7 @@ import {
 } from "../src/publishing/service";
 
 // The top-up called directly over PGlite — the route is not in the picture
-// here. This file owns the engine mocks deliberately (plan 018 T-API-S7): a
+// here. This file owns the engine mocks deliberately (T-API-S7): a
 // file-wide `vi.mock("@miolos/games/sudoku", …)` must never leak into
 // cron-publish.test.ts, which needs the real generators end to end.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;

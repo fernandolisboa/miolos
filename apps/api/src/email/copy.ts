@@ -1,8 +1,10 @@
 /**
- * The magic-link mail copy (#21, ADR-0050 decision 10). apps/api has no
- * i18n module — this file IS the externalization: one module, pt-BR
- * strings only, imported by the transport and by nothing else. The body is
- * plain text plus one link — no tracking pixels, no remote assets.
+ * The magic-link mail copy. `apps/api` has no i18n module — this file IS
+ * the externalization: one module, pt-BR strings only, imported by the
+ * transport and by nothing else. The body is plain text plus one link —
+ * no tracking pixels, no remote assets.
+ *
+ * See ADR-0050.
  */
 
 export const magicLinkSubject = "Seu link mágico do Miolos";
