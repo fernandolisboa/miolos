@@ -41,7 +41,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-DB` | `S89` | `S87` | `T-DB-21` |
 | `T-API` | `S182` | `S179` | `T-API-16` |
 | `T-WEB` | `S344` | `S342` | `T-WEB-23` |
-| `T-LINT` | `S56` | `S54` | `T-LINT-10` |
+| `T-LINT` | `S61` | `S59` | `T-LINT-10` |
 
 #64 (plan 066) reserved **`T-CORE S112…S115`, `T-DB S85…S88`,
 `T-API S176…S181`, `T-WEB S323…S332`** and no `T-LINT` id
@@ -117,6 +117,33 @@ through the shipped clients, which are total. Neither is a claim a new id
 could carry, so the tail burns rather than being spent on a test that would
 be green by construction. The two records fixes the round did ask for —
 this paragraph and a reworded mock comment — carry no id at all.
+
+#106 (Tier 1, no plan) reserved **`T-LINT-S56…S60`** — four planned plus one
+tail of review-round headroom, no `T-CORE`, `T-DB`, `T-API` or `T-WEB` id
+([the reservation](https://github.com/fernandolisboa/miolos/issues/106#issuecomment-5380728340),
+posted on the issue before step 5, with the frontier re-derived by the
+documented grep, which agreed with this table in both columns: `T-LINT` next
+free `S56`, highest in use `S54`). It spent **`T-LINT-S56`, `S57`, `S58` and
+`S59`** — the `node_modules/@miolos/<pkg>/src` symlink spelling of the deep
+reach, one probe per wall in the suite that already owns that wall, plus the
+package-scoped control. The tail **`T-LINT-S60` is the reserved review-round
+headroom and is burned if unspent** per the rule below.
+
+The ticket's own body says *"the frontier is `T-LINT-S47`"*; that was true
+when it was filed at #34 and nine ids have landed since, which is the
+standing reason the rule is re-derive-at-step-5 rather than read-off-the-
+ticket. `S55` is skipped because it is #104's burned tail.
+
+**`T-LINT-S59` is the batch's non-vacuity control and that is why it earns a
+number rather than a letter.** `S56`–`S58` are three BAN probes, and the
+cheapest wrong fix for what they assert — a blanket
+`**/node_modules/@miolos/**` — passes every one of them while banning
+`@miolos/ui`, which apps/web imports legitimately. `S59` is the arm that
+rejects it: the symlink bans are package-scoped, and the wall-safe root
+entries are still permitted. The `T-LINT-S18` and `T-LINT-S45` precedent, in
+which a wall's LEGAL surface gets its own id for exactly this reason. It is
+also the one of the four that is **green both before and after the fix** —
+correctly, since it asserts what must not move.
 
 **And one landed row's description drifts under #104, flagged here rather
 than silently left.** `T-WEB-S204` is described below as *"there is no ninth

@@ -534,6 +534,91 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     expect(ruleIds(index)).toContain("no-restricted-imports");
   });
 
+  it("T-LINT-S56: the node_modules/@miolos SYMLINK spelling of that same reach is restricted too, static and dynamic", async () => {
+    // #106, found at #34 step 6 as finding P1 and filed rather than fixed there
+    // because the hole is pre-existing on `main`. `T-LINT-3c` above and
+    // `T-LINT-S6` cover two spellings of the deep reach — the bare subpath and
+    // the relative path into `packages/<pkg>/src`. In a pnpm workspace there is
+    // a THIRD: `apps/web/node_modules/@miolos/db` is a symlink to
+    // `packages/db`, so the specifier below resolves to the same file,
+    // typechecks and bundles identically, and matched neither glob.
+    //
+    // Not theoretical, and not reasoned — MEASURED on the shipped config before
+    // the fix: this exact probe and six siblings linted CLEAN with every
+    // bare/relative control BLOCKED. The symlink is real
+    // (`db -> ../../../../packages/db`) and
+    // `apps/web/node_modules/@miolos/db/src/publishing.ts` is a real file.
+    const db = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { completions } from "../node_modules/@miolos/db/src/schema";',
+        "",
+        "export const table = completions;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(db)).toContain("no-restricted-imports");
+
+    // The `/src` sibling, not just `/src/**`: `**` does not match a bare
+    // `…/src` specifier, so a future `packages/db/src/index.ts` barrel would
+    // walk through a `/src/**`-only ban. Same reason the relative groups carry
+    // the triple, and the same `@miolos/db` + `@miolos/db/*` discipline.
+    const dbIndex = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { createDb } from "../node_modules/@miolos/db/src";',
+        "",
+        "export const make = createDb;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(dbIndex)).toContain("no-restricted-imports");
+
+    // packages/core has the identical hole and the identical stake — the
+    // server-only daily-content schemas, whose module is retained in every
+    // route's browser chunk the moment anything names it (commit d5bb543).
+    const core = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { stripDailyContent } from "../node_modules/@miolos/core/src/contracts/daily-content";',
+        "",
+        "export const strip = stripDailyContent;",
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(core)).toContain("no-restricted-imports");
+
+    // And the dynamic halves, which `no-restricted-imports` cannot see at all.
+    // `webDynamicPackageSource`'s regex had the same hole: it matched
+    // `packages/(db|core)/src` only, and the node_modules path spells the
+    // package `@miolos/db`, not `db`.
+    const dynamic = await lintProbe(
+      SOURCE_PATH,
+      [
+        "export const load = () =>",
+        '  import("../node_modules/@miolos/db/src/publishing");',
+        "",
+      ].join("\n"),
+    );
+    expect(ruleIds(dynamic)).toContain("no-restricted-syntax");
+
+    // The depth of the `../` prefix is not what makes this fire — checked
+    // rather than assumed, because `**` and a leading `..` segment is exactly
+    // the kind of minimatch question that reads as obvious and is not.
+    for (const prefix of ["./", "../", "../../", "../../../"]) {
+      const atDepth = await lintProbe(
+        SOURCE_PATH,
+        [
+          `import { completions } from "${prefix}node_modules/@miolos/db/src/schema";`,
+          "",
+          "export const table = completions;",
+          "",
+        ].join("\n"),
+      );
+      expect(ruleIds(atDepth)).toContain("no-restricted-imports");
+    }
+  });
+
   it("T-LINT-3d: `users` and `sessions` are banned by name off the root entry", async () => {
     // Step 6 finding root-entry-users-and-sessions-are-importable-from-apps-web:
     // `db.select().from(users)` needs neither `sql` nor `eq`, so restricting
@@ -806,6 +891,46 @@ describe("apps/web db wall — not a blanket ban", () => {
       ].join("\n"),
     );
     expect(messages).toEqual([]);
+  });
+
+  it("T-LINT-S59: the symlink bans are PACKAGE-SCOPED — @miolos/ui through node_modules stays legal", async () => {
+    // The non-vacuity control for `T-LINT-S56`, `T-LINT-S57` and `T-LINT-S58`
+    // (#106), and the reason it earns an id of its own: `T-LINT-S18` and
+    // `T-LINT-S45` are the precedent — a wall that reds on everything proves
+    // nothing about what it bans, so a batch of four new BAN probes needs a
+    // legal-surface probe beside it or the cheapest wrong fix (a blanket
+    // `**/node_modules/@miolos/**`) passes every one of them.
+    //
+    // `@miolos/ui` is the right subject: it holds tokens and primitives
+    // (ADR-0002) and is deliberately NOT walled, so its symlink spelling must
+    // stay clean. `packages/games` is the other unwalled-app-wide one, but it
+    // is banned on the OG surface, which would make it a confusing control.
+    const ui = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { spacing } from "../node_modules/@miolos/ui/src/tokens";',
+        "",
+        "export const gap = spacing;",
+        "",
+      ].join("\n"),
+    );
+    expect(wallHits(ui)).toEqual([]);
+
+    // And the app-wide wall still PERMITS the wall-safe root entries it always
+    // permitted. #106 only ever adds bans; if this ticket had moved what a wall
+    // permits rather than only what it bans, that is a different ticket and the
+    // issue says so out loud.
+    const rootEntry = await lintProbe(
+      SOURCE_PATH,
+      [
+        'import { getTodayDaily } from "@miolos/db";',
+        'import { isoDateString } from "@miolos/core";',
+        "",
+        "export const surface = { getTodayDaily, isoDateString };",
+        "",
+      ].join("\n"),
+    );
+    expect(wallHits(rootEntry)).toEqual([]);
   });
 
   it("T-LINT-S3: the wall fires from apps/web/src/nonogram/**, and a clean nonogram file reports zero", async () => {
