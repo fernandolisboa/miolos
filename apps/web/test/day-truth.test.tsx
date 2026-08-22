@@ -16,6 +16,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * The module holds state, so every test re-imports it after
  * `vi.resetModules()` — the store is the unit under test and a leaked
  * payload between cases would make each of these vacuous.
+ *
+ * THIS FILE IS IMMUNE TO THE SESSION MINT BY DESIGN, NOT BY LUCK, and since
+ * #195 the store it loads genuinely reaches `session/bootstrap.ts` (the
+ * post-mint repair, ADR-0072). Nothing here is mocked at that seam, so the
+ * REAL `ensureSession()` — whose cached promise is scoped to one page load,
+ * and a vitest file is N of them (napkin § Domain 7) — is what would run.
+ * THREE facts keep every count below stable, and each is one edit from
+ * vanishing:
+ *
+ *  1. `beforeEach` calls `vi.resetModules()`, so each case builds a FRESH
+ *     `bootstrap.ts` with a fresh `pending`. Without it, the two
+ *     never-settling `fetch` stubs below would become the cached mint for
+ *     every later case in the file.
+ *  2. There is NO static top-level import of the store: every case loads it
+ *     through the dynamic `loadStore()`, after the reset. A static import
+ *     would evaluate the module once, before any reset, and the reset would
+ *     no longer reach it.
+ *  3. Every stubbed `/day` answer here is a 2xx or a promise that never
+ *     settles, so the repair arm — `undefined` while no truth is held — is
+ *     UNREACHABLE from this file and no `POST /session` is ever issued. Add
+ *     one `jsonResponse(401, …)` and the thirty exact call counts below start
+ *     counting two endpoints as one.
+ *
+ * `T-WEB-S347` at the foot of this file is a source-scan tripwire on all
+ * three, so removing one fails loudly and by name rather than as a drift in
+ * some other case's count.
  */
 
 const API_URL = "https://api.example.test";
@@ -573,5 +599,81 @@ describe("the day-truth seam is one function body wide (T-WEB-S244)", () => {
     // not around it: one seam means one date gate and one merge, and it is
     // what keeps ADR-0053 decision 9's archive claim true.
     expect(importers).toEqual(["src/play/day-state.ts"]);
+  });
+});
+
+describe("this file's immunity from the session mint is designed (T-WEB-S347)", () => {
+  /**
+   * A module's source with its comments removed, the `T-WEB-S244` /
+   * `og-image.node.test.ts` source-scan idiom.
+   *
+   * STRIPPING IS NOT FASTIDIOUSNESS: the header paragraph above names all
+   * three facts this scan checks, `jsonResponse(401, …)` included, so a scan
+   * over raw text would red on its own documentation. Character by character
+   * rather than two regexes — a `/*` inside a line comment opens a block the
+   * naive version never closes, which is the trap `nonogram-motif-name.test.tsx`
+   * records having fallen into. A third copy of that helper rather than a
+   * shared one, on this repo's existing practice (`test/css-source.ts` carries
+   * its own): the scan and the file it scans travel together.
+   */
+  function withoutComments(source: string): string {
+    let out = "";
+    let inBlock = false;
+    for (const line of source.split("\n")) {
+      let kept = "";
+      for (let i = 0; i < line.length; i += 1) {
+        if (inBlock) {
+          if (line.startsWith("*/", i)) {
+            inBlock = false;
+            i += 1;
+          }
+          continue;
+        }
+        if (line.startsWith("//", i)) {
+          break;
+        }
+        if (line.startsWith("/*", i)) {
+          inBlock = true;
+          i += 1;
+          continue;
+        }
+        kept += line[i];
+      }
+      out += `${kept}\n`;
+    }
+    return out;
+  }
+
+  const source = withoutComments(
+    readFileSync(join(import.meta.dirname, "day-truth.test.tsx"), "utf8"),
+  );
+
+  it("keeps the resetModules, the dynamic load and the all-2xx stubs that make the counts above stable", () => {
+    // 1. The reset, and inside `beforeEach` specifically — a `resetModules`
+    //    parked in one `it` would satisfy a bare `toContain` and leave the
+    //    file's other cases sharing one `bootstrap.ts`.
+    const beforeEachBody = /beforeEach\(\(\) => \{([\s\S]*?)\n\}\);/.exec(
+      source,
+    );
+    expect(beforeEachBody).not.toBeNull();
+    expect(beforeEachBody?.[1] ?? "").toContain("vi.resetModules();");
+
+    // 2. No static top-level import of the store. The dynamic `loadStore()`
+    //    spells it `import("…")`, with parentheses and no `from`, so this
+    //    catches exactly the static form.
+    expect(source).not.toMatch(/from\s+["'][^"']*\/day\/day-truth["']/);
+
+    // 3. Every stubbed answer is a 2xx. The helper's own definition reads
+    //    `jsonResponse(status`, which carries no digit and is not matched.
+    const statuses = [...source.matchAll(/jsonResponse\(\s*(\d+)/g)].map(
+      // The `?? ""` is `noUncheckedIndexedAccess`'s price on a group the
+      // pattern makes unconditional, not a real branch (napkin § Shell 10).
+      (match) => Number(match[1] ?? ""),
+    );
+    expect(statuses.length).toBeGreaterThan(0);
+    for (const status of statuses) {
+      expect(status).toBeGreaterThanOrEqual(200);
+      expect(status).toBeLessThan(300);
+    }
   });
 });
