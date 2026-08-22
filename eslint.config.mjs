@@ -18,6 +18,59 @@ const appGlobs = ["apps/web/**/*.{ts,tsx}", "apps/api/**/*.{ts,tsx}"];
 // typechecks — it must not be able to import the solution-bearing reader.
 const webWallExtensions = "{ts,tsx,mts,cts,js,jsx,mjs,cjs}";
 
+// THE THIRD SPELLING OF A DEEP REACH (#106, found at #34 step 6 as finding P1
+// and filed rather than fixed there, because the hole is pre-existing on main
+// and belongs to the app-wide wall rather than to the OG ticket).
+//
+// Every deep-path group below bans a workspace package's source by TWO
+// spellings — the bare subpath (`@miolos/db/publishing`) and the relative path
+// (`**/packages/db/src/**`). In a pnpm workspace there is a third:
+// `apps/web/node_modules/@miolos/<pkg>` is a SYMLINK to `packages/<pkg>`
+// (verified, not assumed — `db -> ../../../../packages/db`, and
+// `apps/web/node_modules/@miolos/db/src/publishing.ts` is a real file), so
+//
+//     import { completions } from "../../node_modules/@miolos/db/src/publishing";
+//
+// resolves, typechecks and bundles identically to the banned relative path
+// while matching neither glob. Measured on the shipped config before this
+// helper existed: SEVEN probes lint CLEAN with every bare/relative control
+// BLOCKED — both static walls #106 names, plus `packages/core`, plus the
+// free-play Termo ban, plus all three DYNAMIC selectors, which have the same
+// hole in their regexes and which #106's scope section is right to call out.
+//
+// `no-restricted-imports` matches the SPECIFIER STRING, never the resolved
+// path, which is why closing this needs a literal third spelling rather than
+// anything cleverer.
+//
+// WHICH OF THE THREE ARMS ACTUALLY BINDS, measured rather than reasoned —
+// because the obvious reading is backwards and a reviewer caught this comment
+// asserting the inverse. `no-restricted-imports` matches with gitignore
+// DIRECTORY semantics, so the bare `…/src` arm already covers the entire
+// subtree on its own:
+//
+//     bare arm only:  ../node_modules/@miolos/db          BLOCKED
+//                     ../node_modules/@miolos/db/src      BLOCKED
+//                     ../node_modules/@miolos/db/src/publishing  BLOCKED
+//     `/**` arm only: ../node_modules/@miolos/db          CLEAN
+//
+// So `/src/*` and `/src/**` are belt-and-braces here, not load-bearing: they
+// survive joint deletion with the suite green. They are kept because the four
+// relative groups below have carried the identical triple since #25 and a lone
+// divergent group is the kind of asymmetry that gets "fixed" in the wrong
+// direction later. Do NOT read the triple as three necessary globs, and do not
+// delete the BARE arm on the theory that `/**` covers it — that is the one
+// deletion the suite reds on (`T-LINT-S58`).
+//
+// This only ever ADDS bans. Nothing in the tree writes an import this way
+// (`grep -rn 'node_modules/@miolos' apps packages` is empty outside
+// node_modules itself), so no wall's PERMIT set moves — which #106 requires,
+// since a change to what a wall permits is a different ticket.
+const symlinkSpelling = (pkg) => [
+  `**/node_modules/@miolos/${pkg}/src`,
+  `**/node_modules/@miolos/${pkg}/src/*`,
+  `**/node_modules/@miolos/${pkg}/src/**`,
+];
+
 // Part of the apps/web db wall (ADR-0024 §5). Named because they have to appear
 // in BOTH wall config objects below — see the comment at their second use.
 const webDynamicDbImport = {
@@ -43,8 +96,14 @@ const webDynamicDbImport = {
 // legitimately importable for its client half. That form is left to the
 // bundle tripwire, deliberately, rather than banning the entry outright.
 const webDynamicPackageSource = {
+  // `(packages|@miolos)` is the symlink spelling's dynamic half (#106): the
+  // node_modules path carries the package as `@miolos/db`, not as `db`, so the
+  // alternation is over the PARENT segment and covers
+  // `../../node_modules/@miolos/db/src/publishing` as well as
+  // `../../../packages/db/src/publishing`. Unanchored on purpose — a dynamic
+  // specifier is a relative path with an arbitrary number of `../` in front.
   selector:
-    "ImportExpression > Literal[value=/packages\\/(db|core)\\/src(\\/|$)/]",
+    "ImportExpression > Literal[value=/(packages|@miolos)\\/(db|core)\\/src(\\/|$)/]",
   message:
     "apps/web is client-serving: dynamic import of a relative path into packages/db/src or packages/core/src is banned — it evades the deep-path import restrictions (ADR-0024, ADR-0026, ADR-0033).",
 };
@@ -150,6 +209,7 @@ const webWallImportPatterns = [
       "**/packages/db/src",
       "**/packages/db/src/*",
       "**/packages/db/src/**",
+      ...symlinkSpelling("db"),
     ],
     message:
       "apps/web is client-serving: reach the db through the `@miolos/db` package entry, never by relative path into packages/db/src — the deep path hands out every server-internal table (ADR-0024, ADR-0026).",
@@ -174,6 +234,7 @@ const webWallImportPatterns = [
       "**/packages/core/src",
       "**/packages/core/src/*",
       "**/packages/core/src/**",
+      ...symlinkSpelling("core"),
     ],
     message:
       "apps/web is client-serving: reach the contracts through the `@miolos/core` package entry, never by relative path into packages/core/src — the deep path reaches the SERVER-ONLY daily-content schemas, whose module is retained in the browser chunk of every route the moment anything names it (commit d5bb543, ADR-0024/ADR-0033).",
@@ -331,7 +392,38 @@ const freePlayBannedModuleGroups = [
     // ALL of db, root entry included — stricter than the app-wide wall,
     // which permits the wall-safe root entry: free play reads no wall and
     // has no legitimate db surface at all.
-    group: ["@miolos/db", "@miolos/db/*"],
+    // The symlink spelling here is the ROOT entry as well as the subpaths
+    // (#106), which is what makes this group's third spelling different from
+    // every other one in this file. Elsewhere the ban is on `<pkg>/src`, so
+    // `symlinkSpelling()` covers it; here free play may not name `@miolos/db`
+    // AT ALL, so `../../node_modules/@miolos/db` has to be banned too, or the
+    // stricter-than-app-wide half of this group is reachable by a path the
+    // app-wide wall deliberately permits.
+    //
+    // THE BARE ARM IS THE LOAD-BEARING ONE AND `/**` IS DEAD CONFIG — measured,
+    // and this comment asserted the exact inverse until a reviewer ran the
+    // mutation. Because `no-restricted-imports` matches with gitignore
+    // DIRECTORY semantics, `**/node_modules/@miolos/db` alone blocks the
+    // directory AND every descendant; deleting `/**` leaves the suite 68/68
+    // green, while deleting the bare arm reds `T-LINT-S58`. `/**` is kept only
+    // for symmetry with the groups above — see `symlinkSpelling()`'s note.
+    //
+    // Whether a relative import of the bare DIRECTORY resolves is
+    // bundler-dependent and is deliberately NOT claimed here; this arm is a
+    // defensive ban on a spelling nothing needs. The measured evasion is the
+    // `/src` reach, and the bare arm covers it too.
+    //
+    // `@miolos/games/termo` needs no such arm, checked rather than assumed:
+    // `packages/games` has no `termo` directory (it is an `exports` subpath
+    // onto `./src/termo/index.ts`), and a relative path never consults
+    // `exports` — so `**/node_modules/@miolos/games/src/termo` on the group
+    // below is the whole of that hole.
+    group: [
+      "@miolos/db",
+      "@miolos/db/*",
+      "**/node_modules/@miolos/db",
+      "**/node_modules/@miolos/db/**",
+    ],
     message:
       "free play is generated on the client and reads no database at all — not even the wall-safe root entry (ADR-0011, ADR-0046).",
   },
@@ -341,6 +433,8 @@ const freePlayBannedModuleGroups = [
       "@miolos/games/termo/*",
       "**/packages/games/src/termo",
       "**/packages/games/src/termo/**",
+      "**/node_modules/@miolos/games/src/termo",
+      "**/node_modules/@miolos/games/src/termo/**",
     ],
     message:
       "Termo is excluded from free play by project invariant: its word list is finite curated content and free play would burn it (ADR-0005, ADR-0015, ADR-0046).",
@@ -483,7 +577,14 @@ const freePlayDynamicBannedModule = {
     // `\\/telemetry(\\/|$)` follows the `\\/day` shape for the same reason
     // (#33, T-LINT-S52): the leading slash keeps it to `../telemetry` and
     // `../telemetry/client`.
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|^@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|packages\\/games\\/src\\/termo)/]",
+    // #106 loosened two arms by exactly one alternation each, and no more:
+    // `^@miolos\\/db` became `(^|\\/)@miolos\\/db` so the node_modules symlink
+    // spelling matches mid-path, and `packages\\/games\\/src\\/termo` became
+    // `(packages|@miolos)\\/games\\/src\\/termo` for the same reason. The
+    // `^@miolos\\/games\\/termo(\\/|$)` arm stays ANCHORED on purpose — see the
+    // static group above: `packages/games` has no `termo` directory, so there
+    // is no symlink spelling of that arm to miss.
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|(packages|@miolos)\\/games\\/src\\/termo)/]",
   message:
     "free play records nothing, fetches nothing, fires no telemetry, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };
@@ -510,6 +611,7 @@ const ogBannedGameGroups = [
       "**/packages/games/src",
       "**/packages/games/src/*",
       "**/packages/games/src/**",
+      ...symlinkSpelling("games"),
     ],
     message:
       "an OG card draws no puzzle content: @miolos/games is banned from the card and the image routes — `solveNonogram(clues)` recovers the Nonogram picture from the published clues, and refusing to draw it is the product decision ADR-0033 decision 2 records (ADR-0054 decision 8).",
@@ -517,8 +619,12 @@ const ogBannedGameGroups = [
 ];
 
 const ogDynamicGamesImport = {
+  // The first alternative is ANCHORED (`^@miolos/games`) because it is the
+  // bare specifier, and an anchored alternative cannot see the symlink
+  // spelling, whose `@miolos/games` sits mid-path behind `node_modules/`.
+  // `(packages|@miolos)\/games\/src` is the unanchored one that does (#106).
   selector:
-    "ImportExpression > Literal[value=/(^@miolos\\/games(\\/|$)|packages\\/games\\/src)/]",
+    "ImportExpression > Literal[value=/(^@miolos\\/games(\\/|$)|(packages|@miolos)\\/games\\/src)/]",
   message:
     'an OG card draws no puzzle content, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/nonogram")`, and one dynamic import is all `solveNonogram` needs (ADR-0033 decision 2, ADR-0054 decision 8).',
 };

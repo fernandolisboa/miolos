@@ -214,6 +214,68 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
     expect(wallHits(await lintProbe(OG_SOURCE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S57: the node_modules/@miolos symlink spelling of the games ban reds too, static and dynamic", async () => {
+    // #106. `T-LINT-S41` and `T-LINT-S42` above cover the bare specifier and
+    // the relative path into `packages/games/src`. The pnpm workspace has a
+    // third spelling — `apps/web/node_modules/@miolos/games` is a symlink to
+    // `packages/games` — and it matched neither the `patterns` array nor
+    // `ogDynamicGamesImport`'s regex, whose first alternative is ANCHORED
+    // (`^@miolos/games`) and so cannot see an `@miolos/games` sitting mid-path
+    // behind `node_modules/`.
+    //
+    // Measured CLEAN on the shipped config before the fix, at every OG path,
+    // with the bare and relative controls in `T-LINT-S41`/`S42` BLOCKED —
+    // which is what makes this a hole rather than a hypothetical. The stake is
+    // unchanged and is ADR-0033 decision 2's: `solveNonogram(clues)` recovers
+    // the Nonogram picture from the PUBLISHED clues, and an OG route already
+    // holds `daily.clues`, so refusing to draw it is a product decision that
+    // one import undoes.
+    const staticDoors = [
+      "../../../node_modules/@miolos/games/src/nonogram",
+      "../node_modules/@miolos/games/src",
+    ];
+    for (const door of staticDoors) {
+      const source = [
+        `import { solveNonogram } from "${door}";`,
+        "",
+        "export const probe = solveNonogram;",
+        "",
+      ].join("\n");
+      for (const path of OG_PATHS) {
+        expect
+          .soft(ruleIds(await lintProbe(path, source)), `${door} @ ${path}`)
+          .toContain("no-restricted-imports");
+      }
+      // The same scope control `T-LINT-S41` carries: the ban is the OG
+      // SURFACE's, not the app's. `@miolos/games` is legitimately on apps/web's
+      // client graph everywhere else — it is in `transpilePackages` and every
+      // play screen needs it — so a symlink ban that fired app-wide would be a
+      // different and much larger change than #106 claims to be.
+      expect
+        .soft(wallHits(await lintProbe(SHARE_TEXT_PATH, source)), door)
+        .toEqual([]);
+      expect
+        .soft(wallHits(await lintProbe(PAGE_PATH, source)), door)
+        .toEqual([]);
+    }
+
+    for (const door of staticDoors) {
+      const source = [
+        "export const load = () =>",
+        `  import("${door}");`,
+        "",
+      ].join("\n");
+      for (const path of OG_PATHS) {
+        expect
+          .soft(ruleIds(await lintProbe(path, source)), `dyn ${door} @ ${path}`)
+          .toContain("no-restricted-syntax");
+      }
+      expect
+        .soft(wallHits(await lintProbe(SHARE_TEXT_PATH, source)), `dyn ${door}`)
+        .toEqual([]);
+    }
+  });
+
   it("T-LINT-S43: replacement regression — the app-wide db wall still fires inside the OG surface", async () => {
     // The eight probes measured red-to-clean against an OG object declaring
     // only the games ban. Nine MESSAGES across eight probes: the root-entry

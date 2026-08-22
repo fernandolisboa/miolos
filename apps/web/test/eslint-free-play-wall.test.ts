@@ -194,6 +194,79 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S58: the node_modules/@miolos symlink spellings of the Termo ban AND the db ROOT ban red from free play", async () => {
+    // #106. Free play carries TWO shapes of this hole, and only one of them is
+    // the `/src` deep reach the other walls have.
+    //
+    // (a) Termo, the ordinary shape. `T-LINT-S12` above bans the bare
+    // specifier and the relative path into `packages/games/src/termo`; the
+    // pnpm symlink is a third spelling of the same reach, and it matched
+    // neither the `patterns` array nor `freePlayDynamicBannedModule`'s regex.
+    // The stake is a project VETO — Termo's word list is finite curated
+    // content (ADR-0015) and free play would burn it.
+    const termoStatic = [
+      'import * as termo from "../node_modules/@miolos/games/src/termo/words";',
+      "",
+      "export const probe = termo;",
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(FREE_PATH, termoStatic))).toContain(
+      "no-restricted-imports",
+    );
+
+    const termoDynamic = [
+      "export const load = () =>",
+      '  import("../node_modules/@miolos/games/src/termo/words");',
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(FREE_PATH, termoDynamic))).toContain(
+      "no-restricted-syntax",
+    );
+
+    // (b) The db ROOT entry, which is this wall's own shape and exists
+    // NOWHERE else in the config. Every other group bans `<pkg>/src`, so the
+    // symlink fix is a `/src` spelling; here free play may not name
+    // `@miolos/db` AT ALL (`T-LINT-S11`, stricter than the app-wide wall), so
+    // the bare directory needs banning too — otherwise the stricter half is
+    // reachable by a path the app-wide wall deliberately PERMITS, which is the
+    // one way a hole here differs from a hole anywhere else.
+    const dbRootStatic = [
+      'import { getTodayDaily } from "../node_modules/@miolos/db";',
+      "",
+      "export const read = getTodayDaily;",
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(FREE_PATH, dbRootStatic))).toContain(
+      "no-restricted-imports",
+    );
+
+    const dbRootDynamic = [
+      "export const load = () =>",
+      '  import("../node_modules/@miolos/db");',
+      "",
+    ].join("\n");
+    expect(ruleIds(await lintProbe(FREE_PATH, dbRootDynamic))).toContain(
+      "no-restricted-syntax",
+    );
+
+    // `T-LINT-S11`'s control, one spelling over: "stricter than the app-wide
+    // wall" has to stay a MEASURED claim, so the db root through the symlink
+    // must still be clean from a daily path. If this arm ever goes red, #106
+    // has moved what the app-wide wall permits — which the issue says is a
+    // different ticket.
+    expect(wallHits(await lintProbe(DAILY_PATH, dbRootStatic))).toEqual([]);
+
+    // And the engines free play exists to consume stay reachable through the
+    // symlink spelling too — the ban is Termo's, not `@miolos/games`'.
+    const clean = [
+      'import { generateBinairo } from "../node_modules/@miolos/games/src/binairo";',
+      "",
+      "export const generate = generateBinairo;",
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S13: the app/modo-livre glob carries the same wall", async () => {
     const source = [
       'import * as sync from "../../../src/play/sync";',
