@@ -3,6 +3,7 @@
 import type { DayResponse } from "@miolos/core";
 import { useSyncExternalStore } from "react";
 
+import { ensureSession } from "../session/bootstrap";
 import { fetchDayTruth } from "./day-client";
 
 /**
@@ -55,6 +56,10 @@ import { fetchDayTruth } from "./day-client";
  *   because the motif name is the payoff moment's whole point, and waiting
  *   up to 60 s for the poll to reveal it is not a payoff. It is EVENT-DRIVEN
  *   AND ONE-SHOT, not a second interval, so the clause above stays exact.
+ * - ONE POST-MINT REPAIR PER PAGE LOAD (#195, ADR-0072), when a fetch
+ *   answered `undefined` while this store had never held a server truth.
+ *   Fire-unordered-then-repair: see `refresh()` below for why the mint is
+ *   NOT awaited before the first read.
  * - NOTHING ELSE.
  *
  * CLEANUP DROPS THE LISTENERS AND RETAINS THE PAYLOAD. The last unsubscribe
@@ -102,6 +107,27 @@ const listeners = new Set<() => void>();
 
 /** One fetch at a time: the dedupe every trigger above relies on. */
 let inFlight = false;
+
+/**
+ * ONE post-mint repair per page load (#195, ADR-0072). Spent, never refilled.
+ *
+ * WHY PAGE-LOAD SCOPE IS RIGHT HERE, when the header says page-load scope is
+ * WRONG for the fetch itself. The header's warning is about freshness —
+ * *"a store that fetched once per page load would answer the most frequent
+ * way a player looks at the hub with the payload from the session's first
+ * mount"* — and that is a PER-VIEW fact: a client-side navigation is a new
+ * view and deserves a new answer. The repair's need is a per-IDENTITY fact,
+ * and the identity is minted once per page load: `ensureSession()`'s own
+ * cached `pending` is page-load-scoped for exactly the same reason. Matching
+ * the mint's scope is the point. Matching the view's would re-arm a retry
+ * against a mint that cannot change between views, which buys nothing and
+ * costs one failing request per navigation.
+ *
+ * BOTH ENTRY POINTS SHARE THIS ONE FLAG — `subscribe`'s 0 -> 1 and
+ * `refreshDayTruth()` alike — so the bound is one repair per page load and
+ * not one per caller (`T-WEB-S346`).
+ */
+let mintRepairSpent = false;
 
 /**
  * `getSnapshot` must return a referentially stable value or
@@ -186,15 +212,72 @@ function samePayload(previous: DayResponse, next: DayResponse): boolean {
  * failure answers `undefined`" and there is nothing here to report that
  * `day-client.ts` has not already decided not to report (ADR-0060 decision
  * 4's silent-degradation path).
+ *
+ * THE MINT IS NOT AWAITED BEFORE THE FETCH, and that is a decision rather
+ * than an oversight (#195, ADR-0072). Seven hooks await `ensureSession()`
+ * before their mount read (#149); this store is the eighth reader and
+ * deliberately the only one that does not, for two reasons:
+ *
+ *  1. `ensureSession()` HAS NO TIMEOUT and its cached promise never settles
+ *     if `POST /session` hangs. Awaiting it here would hold `inFlight` across
+ *     the mint, and a hanging mint would then leave `inFlight === true` for
+ *     the lifetime of the page WITH NO REJECTION for `finally` to release —
+ *     the exact wedge the paragraph above exists to prevent, reached by a
+ *     path that has nothing to throw. That is a disqualification, not a cost.
+ *  2. `/day` decides whether a hub tile paints as a call to action or as
+ *     `Feito`, and ordering it would charge EVERY warm load a round trip —
+ *     `ensureSession()` POSTs unconditionally, with no client-side cookie
+ *     check — to fix only the loads whose cookie had expired.
+ *
+ * SO THE STORE REPAIRS INSTEAD OF WAITING. A fetch that answers `undefined`
+ * WHILE THIS STORE HAS NEVER HELD A SERVER TRUTH on this page load spends the
+ * one-shot above: await the mint, then refresh once more. Five things about
+ * the shape are load-bearing:
+ *
+ *  - THE MINT IS REACHED THROUGH `.then`, NEVER `await`ed inside the chain
+ *    that holds `inFlight`. That is what keeps the guard released while the
+ *    mint runs: a hanging mint parks a dangling continuation and nothing
+ *    else, and every later trigger keeps working (`T-WEB-S346`(b)).
+ *    `inFlight = false` is written first for readability; its position is
+ *    NOT the safety, because `ensureSession().then` defers to a later
+ *    microtask either way.
+ *  - THE TRIGGER IS THE `next === undefined` ARM ONLY, NEVER `.catch`. The
+ *    catch arm is unreachable through the shipped client, and `T-WEB-S246`
+ *    stubs a rejecting client precisely to prove the guard's correctness is
+ *    LOCAL; wiring the repair to it would borrow that guarantee back.
+ *  - `payload === undefined` NARROWS IT FURTHER, to "no server truth at all".
+ *    A transient blip mid-session does not spend the one-shot — and does not
+ *    repair one either (ADR-0072 consequence (g)).
+ *  - IT IS A STATE, NOT A CAUSE. `fetchDayTruth` answers `undefined` for five
+ *    reasons — unset env var, ANY `!response.ok`, a 200 the schema refuses, a
+ *    thrown fetch, and only within the second of those the 401 this exists
+ *    for — so a 5xx degenerates the repair into a zero-delay retry-once.
+ *    Accepted and bounded at one per page load; ADR-0072 consequences (j)
+ *    and (k) carry the argument.
+ *  - IT FIRES BLIND. `ensureSession(): Promise<void>` discards whether an
+ *    identity actually landed, so a mint that resolved `false` still spends
+ *    the one-shot. Reading that boolean means `remintSession()`, which is not
+ *    for read paths (ADR-0072 consequence (l)).
+ *  - IT JOINS A MINT, IT NEVER STARTS ONE — and that is a property of the
+ *    APP, not of this module. `app/layout.tsx` is the only layout and renders
+ *    `<SessionBootstrap/>` ahead of `{children}`, so `ensureSession()`'s
+ *    cached promise is always already pending by the time a full `GET /day`
+ *    round trip has come back. Render this store under a layout that does
+ *    NOT bootstrap and a read path mints an anonymous user per load. Pinned
+ *    by `T-WEB-S345`'s third case; ADR-0072 consequence (d).
  */
 function refresh(): void {
   if (inFlight) {
     return;
   }
   inFlight = true;
+  let noTruthYet = false;
   void fetchDayTruth()
     .then((next) => {
       if (next === undefined) {
+        // Only while the store has NEVER held a server truth on this page
+        // load — #195's defect shape exactly, and nothing wider.
+        noTruthYet = payload === undefined;
         return;
       }
       if (payload !== undefined && samePayload(payload, next)) {
@@ -208,10 +291,27 @@ function refresh(): void {
     .catch(() => {
       // Unreachable through the shipped client, and swallowed on purpose —
       // see the header. The retained payload stands; the guard is released
-      // by the `finally` below either way.
+      // by the `finally` below either way. Deliberately NOT a repair
+      // trigger: `noTruthYet` is still `false` here.
     })
     .finally(() => {
       inFlight = false;
+      if (noTruthYet && !mintRepairSpent) {
+        // Set BEFORE the await, so a mint that never settles cannot leave the
+        // one-shot re-armed and the chain is bounded at length two.
+        mintRepairSpent = true;
+        void ensureSession().then(
+          () => {
+            refresh();
+          },
+          () => {
+            // `ensureSession()` does not reject today, but that is a property
+            // of a sibling module's body — the borrowed guarantee this file
+            // refuses elsewhere. A dead mint costs the page one repair, not
+            // an unhandled rejection.
+          },
+        );
+      }
     });
 }
 
@@ -303,6 +403,14 @@ export function useDayTruth(): DayResponse | undefined {
  * `settle(_, "recorded")` has exactly ONE call site (`acceptResponse` in
  * `play/sync.ts`, covering both the `recorded: true` and `recorded: false`
  * arms), so this is one condition and not two branches.
+ *
+ * THE PROOF EXTENDS RATHER THAN BREAKS UNDER #195's POST-MINT REPAIR. The new
+ * edge is `refresh -> (empty, and no truth held) -> ensureSession -> refresh`,
+ * and it fires AT MOST ONCE PER PAGE LOAD: `mintRepairSpent` is set before
+ * the mint is awaited and is never cleared, so the chain is bounded at length
+ * two and the second link cannot schedule a third. This entry point and
+ * `subscribe`'s 0 -> 1 share the one flag, so that is ONE bound over both and
+ * not one each (`T-WEB-S346`(c)).
  *
  * Re-exported by `play/day-state.ts` as `refreshServerDay`, which is how the
  * play layer reaches it: ADR-0060 consequence (d)'s single-importer rule says
