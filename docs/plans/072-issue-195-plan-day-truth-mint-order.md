@@ -950,3 +950,49 @@ or does not.
   argues it does not (§7.1 consequence (e)) and records the argument so a step-6
   lens can check it rather than re-derive it. If the lens disagrees, the remedy is
   an annotation, not a redesign.
+
+---
+
+## 11. Deviations at step 5
+
+Appended by the implementing session (napkin § Execution 4). The design shipped
+unchanged; these are the places where reality did not match the plan's text.
+
+1. **Exit criterion 6(ii) binds as a WORKER CRASH, not as a count.** The plan
+   predicted deleting the `!mintRepairSpent` condition would red `T-WEB-S346`(a)
+   because *"the count reaches three or more"*. Measured, it does something
+   worse and more instructive: with `/day` answering 401 on every call, the
+   repair re-arms on every empty answer and the chain is unbounded **inside the
+   microtask queue**, so `setTimeout(0)` never fires and the vitest worker dies
+   (`[vitest-pool]: Worker forks emitted error … Worker exited unexpectedly`,
+   5 passed → 1 passed). The mutation **binds** — that is a red, and only
+   `T-WEB-S345`, which never reaches the repair arm, survives it — but the
+   signal is a crash rather than an assertion, and the fact it exposes belongs
+   in the record: **the one-shot is not bounding an extra request, it is
+   bounding an infinite loop.** §4 point 4's *"bounded at length two"* is the
+   property that matters, and it is stronger than the plan realised.
+2. **All five mutations bound; there are no survivors to classify.** (i) reds
+   `T-WEB-S345` at `expect(ensureSession).not.toHaveBeenCalled()` and reds
+   `S344` and `S346` besides; (ii) above; (iii), (iv) and (v) each red
+   `T-WEB-S347` on their own assertion, by name. Criterion 6's *"classify the
+   survivors"* clause therefore has nothing to discharge.
+3. **The bundle delta for `/` is +0.1 KB raw and 0.0 KB gzip, not exactly
+   zero** (840.5 → 840.6 raw, 226.7 → 226.7 gzip). The plan expected zero
+   because `bootstrap.ts` is already in every route's client graph via
+   `SessionBootstrap`; that is confirmed — the tenth of a kilobyte is the new
+   import statement and nothing else — but the measured figure is the one
+   published, per napkin § Domain 3.
+4. **`T-WEB-S347`'s comment stripper is a THIRD local copy**, not a shared
+   helper. `nonogram-motif-name.test.tsx` carries `withoutComments` and
+   `test/css-source.ts` carries its own `stripComments`; extracting all three
+   is a cross-file refactor this ticket did not plan and does not need. Stated
+   here so a step-6 quality lens rules on it rather than discovering it.
+5. **`pnpm build` did not dirty `apps/api/next-env.d.ts`** on this branch, so
+   the `git checkout` the plan's environment note prescribes was a no-op. Left
+   in the runbook; it costs nothing when it is unnecessary.
+6. **ADR-0072's `**Status:**` line cites PR #203, which is a PREDICTION.** The
+   implementing session commits and pushes the branch but does not open the PR
+   (203 was simply the next free number: 202 was the highest issue-or-PR at the
+   time). Whoever opens it **checks the real number and corrects that one line**
+   before merge. `docs/agents/domain.md`'s lifecycle wants the citation to be a
+   fact, and this is the only place in the diff where it is not yet one.
