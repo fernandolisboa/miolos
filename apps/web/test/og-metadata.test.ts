@@ -332,10 +332,16 @@ describe("the archive SHELL routes' openGraph (T-WEB-S335)", () => {
   });
 
   it("a HOSTILE shell segment carries no openGraph and no alternates", async () => {
-    // The malformed branch composes NOTHING, which is what NARROWS ADR-0054
-    // decision 8's residual rather than widening it: such a segment now
-    // inherits the archive index card by nearest ancestor — a 200 — instead
-    // of advertising a card URL that 404s.
+    // The malformed branch composes NOTHING, so no `/cartao/…` URL is ever
+    // built out of attacker text — which is the claim this test makes, and
+    // the only one it can make at the object level.
+    //
+    // WHAT IT DOES NOT CLAIM, because plan 068 claimed it and a real build
+    // says otherwise: that such a segment then inherits the ARCHIVE index
+    // card. It does not. It answers 404 through `notFound()`, Next discards
+    // the route's composed metadata, and the head carries the ROOT card —
+    // unchanged from before #104. ADR-0054 decision 8's malformed-segment
+    // residual is therefore untouched by this ticket rather than narrowed.
     for (const raw of [
       "//evil.example.com",
       "https://evil.example.com",

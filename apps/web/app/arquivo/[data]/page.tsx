@@ -60,9 +60,19 @@ interface DayPageProps {
  * (ADR-0054 decision 9). `twitter:image` needs nothing: it auto-fills from
  * `openGraph.images`, measured on a real build.
  *
- * The malformed branch above composes NO `openGraph`, which narrows ADR-0054
- * decision 8 residual: a malformed segment now inherits the card of the
- * archive index by nearest ancestor instead of advertising one that 404s.
+ * The malformed branch above composes NO `openGraph`, and MEASURED on a real
+ * production build that changes nothing about what such a segment advertises:
+ * it answers 404 through `notFound()` below, and Next then renders the
+ * not-found metadata rather than this function result — so the head carries
+ * the ROOT card, the root title and no canonical, exactly as it did before
+ * #104. Two facts behind that, both measured rather than reasoned. First, a
+ * `notFound()` DISCARDS the route composed metadata in Next 16.2.12. Second,
+ * an `opengraph-image` file is inherited by descendant segments only from a
+ * segment that owns a `layout.tsx`, and `app/arquivo/` owns none — the only
+ * layout in the app is the root — so `app/arquivo/opengraph-image.png` serves
+ * `/arquivo` and nothing under it. Plan 068 claimed the opposite in three
+ * places; the measurement is in the step-5 evidence and the records were
+ * corrected against it.
  *
  * NOTE for whoever edits the prose from here down: `T-WEB-S173` slices this
  * file from the first occurrence of the word above to the first line that is

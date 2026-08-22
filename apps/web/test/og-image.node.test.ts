@@ -602,8 +602,17 @@ const ROOT_CARD_MODULE = join(APP_DIR, "opengraph-image.tsx");
  * card is dateless, its page never 404s and it reads nothing, so it can be a
  * file — and a file in a segment costs no trace on any descendant page route,
  * which is exactly what D9's measurement proved when the root module became a
- * PNG. It is also what a MALFORMED `[data]` or `[mes]` segment now inherits by
- * nearest ancestor, in place of the root site card.
+ * PNG.
+ *
+ * **It serves `/arquivo` AND NOTHING UNDER IT**, and plan 068 said otherwise
+ * in three places. Measured on a real production build: `/arquivo` shows this
+ * card, while `/arquivo/<malformada>` and `/arquivo/mes/<malformado>` both
+ * show the ROOT card. Two independent reasons — a `notFound()` DISCARDS the
+ * route's composed metadata in Next 16.2.12, and an `opengraph-image` file
+ * reaches descendant segments only from a segment owning a `layout.tsx`,
+ * which `app/arquivo/` does not (the app has exactly one layout, the root).
+ * So ADR-0054 decision 8's malformed-segment residual is UNCHANGED by #104,
+ * not narrowed, and the index card's justification is its own page.
  */
 const ARCHIVE_CARD_ASSET = join(APP_DIR, "arquivo", "opengraph-image.png");
 const ARCHIVE_CARD_ALT = join(APP_DIR, "arquivo", "opengraph-image.alt.txt");
