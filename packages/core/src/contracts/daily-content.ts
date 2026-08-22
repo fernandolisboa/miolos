@@ -2,10 +2,10 @@
  * The SERVER-ONLY daily contracts: the shape of `daily_puzzles.content` per
  * game, and the strip that projects it for the wire.
  *
- * SEPARATE FROM `./daily.ts` FOR A BUNDLE REASON, not a filing one — see that
- * file's header. Nothing here may ever be imported by a client component.
- * `packages/db/src/published.ts` (the wall), `apps/api`'s cron and completion
- * routes are the only consumers.
+ * Separate from `./daily.ts` for a bundle reason, not a filing one — see
+ * that file's header. Nothing here may ever be imported by a client
+ * component. `packages/db/src/published.ts` (the wall), `apps/api`'s cron
+ * and completion routes are the only consumers.
  */
 import { z } from "zod";
 
@@ -28,18 +28,15 @@ const binairoSolvedCellSchema = z.union([z.literal(0), z.literal(1)]);
 
 /**
  * Server-side shape of `daily_puzzles.content` for binairo — mirrors
- * `BinairoPuzzle` exactly. Parsed by the cron BEFORE insert and by the
- * wall AFTER read: jsonb is untyped at the boundary, so it is Zod-parsed,
- * never cast.
+ * `BinairoPuzzle` exactly. Parsed by the cron before insert and by the wall
+ * after read: jsonb is untyped at the boundary, so it is Zod-parsed, never
+ * cast.
  *
  * Strict, deliberately (ADR-0024): an engine-added field fails the cron's
- * pre-insert parse → the buffer drains → the depth alert fires.
- * Fail-closed against unreviewed content-shape drift, at the cost of a
- * loud, wanted alarm on benign additive fields. Corollaries: changing an
- * engine's content shape means updating this schema in the same PR, and
- * because rows are immutable and the buffer is ~`bufferDepth` days deep,
- * the read side must keep parsing rows generated up to `bufferDepth`
- * days earlier (ADR-0024 operational semantics).
+ * pre-insert parse before it reaches the buffer. Corollary: because rows
+ * are immutable and the buffer is `bufferDepth` days deep, the read side
+ * must keep parsing rows generated up to `bufferDepth` days earlier — an
+ * engine's content-shape change updates this schema in the same PR.
  */
 export const binairoDailyContentSchema = z.strictObject({
   size: z.literal(8),
@@ -58,10 +55,8 @@ const sudokuSolvedCellSchema = sudokuDigitSchema;
 
 /**
  * Server-side shape of `daily_puzzles.content` for sudoku — mirrors
- * `SudokuPuzzle` exactly: `givens`, `solution`, `tier`, `clueCount`,
- * `seed`, and no `size` or `weekday` (unlike binairo, the sudoku engine
- * carries neither). Strict for the same fail-closed reason
- * `binairoDailyContentSchema` is, with the same operational corollaries.
+ * `SudokuPuzzle` exactly. Strict for the same fail-closed reason as
+ * `binairoDailyContentSchema` above, same operational corollaries.
  */
 export const sudokuDailyContentSchema = z.strictObject({
   givens: z.array(sudokuGivenCellSchema).length(81),
@@ -75,23 +70,17 @@ export type SudokuDailyContent = z.infer<typeof sudokuDailyContentSchema>;
 
 /**
  * Mirrors `NonogramReveal` exactly. The whole object is withheld from every
- * DEFAULT read (ADR-0033) — `stripDailyContent` never picks a field of it,
- * and `motifId`, `mirrored` and `solution` reach no payload at all.
+ * default read (ADR-0033) — `stripDailyContent` never picks a field of it.
+ * The one exception: `getPublishedNonogramMotifName`
+ * (`packages/db/src/published.ts`) parses a published row with this schema
+ * behind the wall and returns `reveal.name` alone, for a day already judged
+ * completed (ADR-0070).
  *
- * ONE NARROW READER IS THE EXCEPTION, and it is named here so "every" does
- * not read as absolute: `getPublishedNonogramMotifName`
- * (`packages/db/src/published.ts`, on the `@miolos/db/publishing` entry)
- * parses a published row with this schema behind the wall and returns
- * `reveal.name` alone, for a day the caller has already judged completed
- * (#64, ADR-0070).
- *
- * NOTE THE MISSING `.min(1)` ON `name`, and that it is not an oversight to
- * "fix" in passing: `validateNonogram`'s `reveal-name-empty` rejection lives
- * in `packages/games` at GENERATION time, so nothing that reaches this READ
- * path re-checks it, and a stored `name: ""` parses here. Tightening it is a
- * WRITE-side change that can drain the buffer. The read normalises a blank
- * name to `undefined` instead — see that reader's own TSDoc for what a
- * returned `""` would cost.
+ * No `.min(1)` on `name`, deliberately: `validateNonogram` rejects an empty
+ * name at generation time, so nothing on this read path re-checks it and a
+ * stored `name: ""` parses here. Tightening it is a write-side change that
+ * can drain the buffer — the read instead normalises a blank name to
+ * `undefined`.
  */
 const nonogramRevealSchema = z.strictObject({
   motifId: z.string(),
@@ -102,14 +91,10 @@ const nonogramRevealSchema = z.strictObject({
 
 /**
  * Server-side shape of `daily_puzzles.content` for nonogram — mirrors
- * `NonogramPuzzle` (nonogram/types.ts:32-41) exactly, `game` INCLUDED:
- * unlike `BinairoPuzzle` and `SudokuPuzzle`, the nonogram engine writes a
- * `game: "nonogram"` field (generate.ts:48). Omitting it from this
- * strictObject fails every pre-insert parse and drains the buffer (plan 020
- * N2). Strict for the same fail-closed reason `binairoDailyContentSchema`
- * is, with the same operational corollaries — see that schema's TSDoc above.
- * (A line-number self-citation used to sit here and pointed at the import
- * block; a reference that cannot drift when the imports grow replaces it.)
+ * `NonogramPuzzle` exactly, `game` included: unlike binairo and sudoku, the
+ * nonogram engine writes a `game: "nonogram"` field, and omitting it here
+ * fails every pre-insert parse. Strict for the same fail-closed reason as
+ * `binairoDailyContentSchema` above.
  */
 export const nonogramDailyContentSchema = z
   .strictObject({
@@ -134,52 +119,29 @@ export type NonogramDailyContent = z.infer<typeof nonogramDailyContentSchema>;
 
 /**
  * Server-side shape of `daily_puzzles.content` for termo — mirrors
- * `TermoAnswer` (packages/games/src/termo/word-list.ts) exactly and carries
- * nothing else. Strict for the same fail-closed reason
- * `binairoDailyContentSchema` is, with the same operational corollaries.
+ * `TermoAnswer` exactly and carries nothing else. Strict for the same
+ * fail-closed reason as `binairoDailyContentSchema` above.
  *
- * THREE ABSENCES, each deliberate, because each is the obvious thing to add
- * and each would be wrong (ADR-0040):
+ * Three deliberate absences (ADR-0040), each the obvious thing to add and
+ * each wrong:
  *
- * - NO `index`. The word is stored, never its position in `TERMO_ANSWERS`.
- *   The order is contractual but ADR-0015's own remedy for a bad word is to
- *   REGENERATE the list, and a regeneration can reorder. Rows are immutable
- *   and the buffer is up to 30 days deep (`remoteConfigSchema`'s clamp,
- *   ADR-0025), so an index would let one content commit silently rewrite a
- *   month of unpublished answers and retroactively change what every
- *   archived row meant — with every gate green. Storing the word makes a
- *   regeneration a no-op for every existing row, which is ADR-0024
- *   decision 1's "an engine redeploy must never change a published puzzle
- *   mid-day".
+ * - no `index`: the word is stored, never its position in the curated list.
+ *   The list can be regenerated and reordered, and rows are immutable, so
+ *   an index would let a content commit silently rewrite what an
+ *   already-published row meant.
+ * - no `seed`: the other three engines are deterministic from a seed;
+ *   Termo draws by rejection sampling over a run-scoped pool, so replaying
+ *   the same seed against a different pool reproduces nothing.
+ * - no `game` literal: every read is already keyed by `game` in SQL.
  *
- * - NO `seed`. The other three carry one because their ENGINES emit one and
- *   it regenerates the puzzle. Termo's pick is a rejection draw over a
- *   RUN-SCOPED eligible pool, so replaying the same uint32 against a
- *   different pool yields a different word: a stored seed here would
- *   reproduce nothing and would invite a future reader to try. The
- *   `daily_puzzles.seed` COLUMN still receives the accepted draw — the
- *   entropy this row was written from, and nothing more.
- *
- * - NO `game` literal. Nonogram's exists only because its engine writes one;
- *   binairo's and sudoku's do not. Every read is already keyed by `game` in
- *   SQL (published.ts's `wallPredicate`).
- *
- * `normalized` is stored though it is derivable, and the reason is the
- * no-repeat rule: it is `^[a-z]{5}$` by the word-list harness
- * (packages/games/test/termo/word-list.test.ts), so `listUsedTermoAnswers`
+ * `normalized` is stored though it is derivable, so the no-repeat check
  * compares pure ASCII and cannot be defeated by a jsonb round-trip that
- * composes a diacritic differently. `canonical` is the reveal (#27 AC 2);
- * nothing else in the runtime can recover an accented spelling, because
- * `content/termo/canonical-map.csv` is harness input and does not ship.
+ * composes a diacritic differently. `canonical` is the reveal — nothing
+ * else in the runtime can recover an accented spelling.
  *
- * `.length(5)` and not a pt-BR charset regex: the DIMENSION check, matching
- * the engine's `WORD_LENGTH` and pinned to it by T-CORE-S18a. A charset regex
- * would fail every insert if a regeneration ever introduced `à`, `ô`, `õ` or
- * `â` — all in the domain the word-list arbitraries declare, none present in
- * today's 400. Membership in `TERMO_ANSWERS` is the rule-validity half; it
- * holds by construction at the single write site (`topUpTermoBuffer`) and is
- * pinned by T-CORE-S17 over all 400, because `@miolos/games` is a DEV
- * dependency of this package and `src/` may not import it.
+ * `.length(5)`, not a charset regex: a dimension check matching the
+ * engine's `WORD_LENGTH`. A charset regex would fail every insert the day a
+ * regeneration introduces an accented letter outside today's word list.
  */
 export const termoDailyContentSchema = z.strictObject({
   canonical: z.string().length(5),
@@ -190,19 +152,14 @@ export type TermoDailyContent = z.infer<typeof termoDailyContentSchema>;
 
 /**
  * Thrown by `stripDailyContent` for a game whose projection is not
- * implemented — a throw is stronger than a strip: no leak path exists at
- * all (ADR-0024 fail-closed dispatch).
+ * implemented (ADR-0024 fail-closed dispatch) — a throw is stronger than a
+ * strip: no leak path exists at all.
  *
- * UNREACHABLE SINCE #27, and kept anyway. All four games project, so the
- * switch below has no arm left that can throw this. Three things break on
- * its removal, none of them obvious from here: `eslint.config.mjs`'s
- * `importNames` bans the name from `apps/web`, `T-LINT-S7`
- * (apps/web/test/eslint-db-wall.test.ts) asserts that ban list EQUALS this
- * module's own export set, and `packages/core/src/index.ts` re-exports it.
- * It also stays as the landing place for a fifth game: a new `Game` member
- * makes the switch non-exhaustive, which is a compile error rather than a
- * use for this class — but a projection that is scaffolded before it is
- * written has one arm to write, not a class to reinvent.
+ * Unreachable today (all four games project) and kept anyway:
+ * `eslint.config.mjs` bans this name from `apps/web` by a list derived from
+ * this module's exports, and it is the landing place for a fifth game — a
+ * new `Game` member makes the switch below non-exhaustive, a compile error
+ * rather than a silent gap.
  */
 export class DailyProjectionUnsupportedError extends Error {
   readonly game: Game;
@@ -219,40 +176,28 @@ export class DailyProjectionUnsupportedError extends Error {
 
 /**
  * Build the solution-free public projection of a stored `content` value —
- * by allowlist pick, never by deleting `solution` (ADR-0024). Called
- * inside the wall (`packages/db/src/published.ts`) so no consumer ever
- * receives what it must not send.
+ * by allowlist pick, never by deleting `solution` (ADR-0024). Called inside
+ * the wall (`packages/db/src/published.ts`) so no consumer ever receives
+ * what it must not send.
  *
- * Strip table (ADR-0024, the per-game M2 contract):
+ * Strip table (ADR-0024):
  *
- * | Game     | Public projection (allowlist) | Withheld (never in a default read)                                              | Implemented          |
- * | -------- | ----------------------------- | ------------------------------------------------------------------------------- | -------------------- |
- * | binairo  | `game, date, size, givens`    | `solution`, `seed`, `weekday`, `givensCount`, `requiredTier`                     | #17 (this file)      |
- * | sudoku   | `game, date, givens, tier`    | `solution`, `seed`, `clueCount`                                                  | #23 (this file)      |
- * | nonogram | `game, date, size, clues`     | entire `reveal` (`motifId`, `name`, `mirrored`, `solution`), `seed`, `weekday` | #25 (this file)      |
- * | termo    | `game, date` only             | the answer word, in any field; guesses are judged server-side                    | #27 (this file)      |
+ * | Game     | Public projection           | Withheld (never in a default read)                           |
+ * | -------- | ---------------------------- | -------------------------------------------------------------- |
+ * | binairo  | `game, date, size, givens`   | `solution`, `seed`, `weekday`, `givensCount`, `requiredTier`    |
+ * | sudoku   | `game, date, givens, tier`   | `solution`, `seed`, `clueCount`                                 |
+ * | nonogram | `game, date, size, clues`    | entire `reveal`, `seed`, `weekday`                              |
+ * | termo    | `game, date` only            | the answer word, in any field; guesses are judged server-side   |
+ *
+ * `seed` is withheld for every game: engines are deterministic, so a seed
+ * is the solution.
  *
  * The nonogram row is a PRODUCT withhold, not a confidentiality one
- * (ADR-0033). `solveNonogram(clues)` recovers the bitmap in under a
- * millisecond by construction (ADR-0021 decision 3), so the picture's shape
- * is client-derivable and the strip protects nothing about it. What it
- * withholds is the curated `name`, which is NOT derivable from the clues,
- * and casual inspection of the rest — ADR-0027's own words, never a
- * security claim.
- *
- * THE TABLE ABOVE IS STILL EXACT AFTER #64, and the distinction is worth
- * stating here because it is easy to misread. This is the DAILY-PAYLOAD
- * projection — what a player is handed to play with — and `reveal` is
- * withheld from it whole, on every status, as written. The motif NAME is
- * published on a different payload entirely: the user's own completed `/day`
- * claim (`motifName`, ADR-0070), read by `getPublishedNonogramMotifName`,
- * which is its own narrow reader on `@miolos/db/publishing` and never goes
- * through this function. `motifId`, `mirrored` and `reveal.solution` reach no
- * payload at all, anywhere. The register is unchanged: product, not
- * confidentiality.
- *
- * `seed` is withheld for EVERY game: engines are deterministic, so a seed
- * is the solution.
+ * (ADR-0033): `solveNonogram(clues)` recovers the bitmap client-side in
+ * under a millisecond, so what is actually kept back is the curated
+ * `name`. That name is published on a different payload entirely — the
+ * user's own completed `/day` claim (ADR-0070), through
+ * `getPublishedNonogramMotifName`, never through this function.
  */
 export function stripDailyContent(
   game: Game,
@@ -279,11 +224,7 @@ export function stripDailyContent(
       });
     }
     case "nonogram": {
-      // A PRODUCT withhold, never a confidentiality one: `solveNonogram(clues)`
-      // recovers the bitmap in under a millisecond, so what is actually held
-      // back is the curated `name` and casual inspection of the rest
-      // (ADR-0033, ADR-0027). Do not re-describe this as protecting the
-      // solution — it does not, and cannot.
+      // Product withhold, not confidentiality (ADR-0033) — see doc above.
       const parsed = nonogramDailyContentSchema.parse(content);
       return dailyNonogramResponseSchema.parse({
         game: "nonogram",
@@ -293,20 +234,10 @@ export function stripDailyContent(
       });
     }
     case "termo": {
-      // The projection carries NOTHING from the row — the strip table's
-      // termo row, made mechanical. An answer is not a board and a guess is
-      // judged server-side (ADR-0040, ADR-0038).
-      //
-      // The content is parsed anyway, and strictly: with an empty projection
-      // the 200 IS the whole message, so it has to mean "playable", not
-      // merely "a row exists". A drifted row 500s here (getTodayDaily does
-      // not catch — published.ts) rather than serving a date the game cannot
-      // be played on. That is also the mechanism that makes a post-seeding
-      // schema change loud rather than silent (plan 022 §21.4).
-      //
-      // This is not a confidentiality boundary and must never be argued as
-      // one (ADR-0027). The answer is absent because the client has no use
-      // for it, not because we are defending it.
+      // Parsed though the projection carries nothing from the row: with an
+      // empty projection the 200 IS the whole message, so it must mean
+      // "playable", not merely "a row exists". A drifted row 500s here
+      // rather than serving a date the game cannot be played on.
       termoDailyContentSchema.parse(content);
       return dailyTermoResponseSchema.parse({ game: "termo", date });
     }

@@ -1,18 +1,10 @@
 /**
- * The medal catalog (#30, ADR-0052) — AI-curated at implement time against
- * the written constraints in `content/medals/README.md` (the ADR-0015
- * method, scaled: constraints + mechanical harness + rejected sample; no
- * producer pipeline, because these ~23 hand-sized records have no upstream
- * source). T-CORE-S70 is the harness; T-WEB-S163 pins README parity and
- * the pt-BR copy rules (the copy itself lives web-side in `medalCopy`,
- * ADR-0018 — this module carries ids and rules only).
+ * The medal catalog (ADR-0052). Copy lives web-side in `medalCopy`
+ * (ADR-0018) — this module carries only ids and rules.
  *
- * The `MedalRule` union is deliberately CLOSED and NARROW: `hintsUsed`,
- * `elapsedMs`, time-of-day, device state and free play are structurally
- * inexpressible — no variant has a field that could carry them (ADR-0027,
- * ADR-0031 decision 6, handoff 034 §5). Widening the union is an
- * ADR-0052-touching decision, and T-CORE-S70 pins the discriminant set so
- * widening is a deliberate test edit, never a drive-by.
+ * `MedalRule` is deliberately closed and narrow: `hintsUsed`, `elapsedMs`,
+ * time-of-day, device state and free play are structurally inexpressible —
+ * no variant has a field that could carry them.
  *
  * Ids are wire values and grant keys (`medal_grants.medal_id`): stable
  * forever once shipped. Renaming copy is free; renaming an id is a
@@ -41,11 +33,7 @@ export interface MedalDefinition {
   readonly rule: MedalRule;
 }
 
-/**
- * Catalog order IS display order (no date exists on the wire to sort by —
- * ADR-0052/D6) and matches the README's own table. 23 definitions; the
- * quota arithmetic is shown in the README and asserted by T-CORE-S70.
- */
+/** Catalog order is display order — there is no wire date to sort by. */
 export const MEDAL_DEFINITIONS = [
   // totalWins, all games (late wins included — a late solve is honestly a
   // solve): 1, 10, 50, 100, 500.
@@ -64,14 +52,14 @@ export const MEDAL_DEFINITIONS = [
   },
   { id: "termo-30", rule: { kind: "totalWins", game: "termo", count: 30 } },
   // streakReached (monotone by construction — reached once, earned
-  // forever; ADR-0052): 3, 7, 30, 100, 365.
+  // forever): 3, 7, 30, 100, 365.
   { id: "streak-3", rule: { kind: "streakReached", days: 3 } },
   { id: "streak-7", rule: { kind: "streakReached", days: 7 } },
   { id: "streak-30", rule: { kind: "streakReached", days: 30 } },
   { id: "streak-100", rule: { kind: "streakReached", days: 100 } },
   { id: "streak-365", rule: { kind: "streakReached", days: 365 } },
   // perfectDaysReached (counts only — no run-length over perfect days
-  // exists or can be expressed; ADR-0051): 1, 5, 10, 30.
+  // exists or can be expressed): 1, 5, 10, 30.
   { id: "perfect-1", rule: { kind: "perfectDaysReached", count: 1 } },
   { id: "perfect-5", rule: { kind: "perfectDaysReached", count: 5 } },
   { id: "perfect-10", rule: { kind: "perfectDaysReached", count: 10 } },
@@ -93,10 +81,9 @@ export const MEDAL_DEFINITIONS = [
   },
   // Breadth: every game won at least once (late included — volume class).
   { id: "all-games", rule: { kind: "eachGameWon" } },
-  // Curated (ADR-0052/D2): the launch-window founder grant — #37's launch
-  // checklist owns the one-shot bulk insert; the definition ships FIRST
-  // because the drop-unknown client rule would render a grant without its
-  // definition as nothing.
+  // Curated: the founder grant. This definition must ship before the
+  // one-shot grant insert — an id with no matching definition is silently
+  // dropped, never an error.
   { id: "founder", rule: { kind: "curated" } },
 ] as const satisfies readonly MedalDefinition[];
 

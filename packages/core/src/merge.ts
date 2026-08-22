@@ -1,30 +1,20 @@
 /**
- * The account-merge union — the pure half of ADR-0009's merge rule, made
- * concrete by ADR-0049: union both accounts' completion rows, dedupe per
- * (game, date) keeping the earliest, return the merged history. One
- * semantics, no mode parameter, no flow variants: the attach flow (#21)
- * consumes it through `mergeAccounts` (@miolos/db), whose SQL the
- * agreement test pins to this function; read-only callers — nightly
- * consistency checks, support previews — consume this function directly
- * and get "what WOULD the merged history be" without a write path.
+ * The account-merge union (ADR-0009, ADR-0049): union both accounts'
+ * completion rows, dedupe per (game, date) keeping the earliest, return the
+ * merged history. `packages/db`'s `mergeAccounts` consumes it for the write
+ * path; nightly consistency checks and support previews consume it directly
+ * for a read-only preview.
  *
  * No clock, no timezone, no I/O, no Zod enters this module: rows in, rows
- * out, the `computeStreak` shape. Derived state is never merged here —
- * streak, stats and medals are the pure derivations' job over this
- * function's output (ADR-0049 decision 6); nothing is filtered, because
- * lost and late rows are history (#29's fail row and calendar need them).
+ * out. Nothing is filtered — lost and late rows are history, needed by the
+ * fail row and the calendar.
  */
 import type { CompletionOutcome } from "./completion";
 import type { Game } from "./game";
 
-/**
- * One completion row as merge arithmetic sees it. Structurally a
- * `StreakRow` plus the dedupe key's `game` and an ordering key, so
- * `computeStreak(mergeCompletions(a, b), today)` typechecks directly —
- * one row fetch serves both the merge and the recompute. `onTime` is row
- * data carried through the union UNCHANGED — never recomputed, no
- * timestamp consulted (#58's decided direction, ADR-0026 decision 2).
- */
+/** One completion row as merge arithmetic sees it — structurally a
+ *  `StreakRow` plus the dedupe key's `game` and an ordering key, so
+ *  `computeStreak(mergeCompletions(a, b), today)` typechecks directly. */
 export interface MergeableCompletion {
   readonly game: Game;
   /** 'YYYY-MM-DD', the puzzle's own SP day. */
@@ -32,11 +22,9 @@ export interface MergeableCompletion {
   readonly outcome: CompletionOutcome;
   readonly onTime: boolean;
   /**
-   * Opaque, totally ordered, fixed-width key supplied by the row's producer
-   * — today the DB projects a fixed-width UTC instant string
-   * (`listCompletionsForMerge`, plan 029 §6). Compared lexicographically
-   * and NEVER parsed: no timestamp arithmetic, no timezone, no Date enters
-   * this module (the #18 discipline, kept).
+   * Opaque, totally ordered, fixed-width key supplied by the row's producer.
+   * Compared lexicographically and never parsed — no timestamp arithmetic,
+   * no timezone, no Date enters this module.
    */
   readonly completedAtOrder: string;
 }
@@ -47,19 +35,15 @@ function keyOf(completion: MergeableCompletion): string {
 }
 
 /**
- * Union-earliest-dedupe (ADR-0009: "the earliest completion wins and the
- * other row is dropped"). Roles matter only at an exact ordering-key tie,
- * where the `canonical` side's row survives — mirroring the db operation's
- * strict inequality (ADR-0049 decision 2), so callers pass the winner's
- * rows first. Winner SELECTION is not this function's job (`mergeAccounts`
- * owns it, DB-side): choosing winners here would drag identity data into a
+ * Union-earliest-dedupe (ADR-0009: the earliest completion wins, the other
+ * row is dropped). At an exact ordering-key tie the `canonical` side's row
+ * survives, mirroring the DB operation's strict inequality — callers pass
+ * the winner's rows first. Winner selection is not this function's job:
+ * `mergeAccounts` (DB-side) owns it, keeping identity data out of this
  * row-arithmetic module.
  *
- * Survivors are returned BY REFERENCE — the output row for a key IS one of
- * the input rows — sorted by (date asc, game asc) so deep equality is the
- * whole idempotence assertion. Same-input duplicate keys cannot exist via
- * the PK; their behavior (earliest wins, first occurrence on a tie) is
- * defined and pinned rather than left undefined (T-CORE-S41).
+ * Survivors are returned by reference, sorted by (date asc, game asc), so
+ * deep equality is the whole idempotence assertion.
  */
 export function mergeCompletions(
   canonical: readonly MergeableCompletion[],

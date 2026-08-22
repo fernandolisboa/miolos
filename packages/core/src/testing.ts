@@ -1,43 +1,18 @@
 /**
  * Test-only helpers behind the `@miolos/core/testing` subpath — never part
  * of the runtime surface. Single source for the ADR-0004 leak-scan probe
- * used by the suites in packages/core, packages/db and apps/api, so
- * extending the forbidden set for a new game lands in every suite at once.
+ * used by suites across packages/core, packages/db and apps/api.
  */
 
 /**
- * Keys that must never appear at ANY depth of a client-facing daily
- * payload. #27 closed the extension this sentence used to promise, and it
- * did so in a way the promise did not anticipate: `"answer"` was ALREADY
- * here, and what termo actually needed was the two keys its stored content
- * is spelled with — `"canonical"` and `"normalized"` (ADR-0040).
+ * Keys that must never appear at any depth of a client-facing daily payload.
+ * Also a substring ban on three `apps/web` page suites' rendered markup —
+ * adding a member constrains both the payload shape and that markup.
  *
- * `clueCount` is sudoku's, added by #23: it appears in no shipped payload,
- * so every landed scan kept passing unchanged — adding it is what makes
- * the scan meaningful for the game whose content actually carries it
- * (plan 018 S22).
- *
- * TWO HALVES, not one. All ten consumers scan KEYS (`collectKeys` below),
- * and `apps/web`'s THREE page suites — `binairo-page.test.tsx`,
- * `sudoku-page.test.tsx`, `nonogram-page.test.tsx` — additionally assert
- * `expect(renderToStaticMarkup(element)).not.toContain(forbidden)`. So a
- * member of this list is also a SUBSTRING banned from those pages'
- * rendered HTML — for `"name"` that means no lowercase `name` anywhere in
- * `/binairo`'s, `/sudoku`'s or `/nonogram`'s markup, a `<meta name>`, an
- * `<input name>` and a lowercase `name*` CSS-module local included
- * (ADR-0033, plan 020 §7.7). Adding a member is a standing constraint on
- * every future daily payload AND on that markup.
- *
- * `"name"` STAYS BANNED, AND #64 IS THE REASON THAT IS WORTH SPELLING OUT.
- * The daily Nonogram conclusion now publishes its motif name (ADR-0070,
- * superseding ADR-0033 decision 1's name clause) — and it does so on a field
- * called `motifName`, which is ADR-0033 decision 4's own prescribed route: a
- * payload that needs a name RENAMES ITS FIELD rather than spending a generic
- * standing ban. So every scan in every consumer keeps passing ON MERIT, not
- * by exemption, and `motifName`/`.pictureName` both carry a capital `N`, so
- * neither is a substring of the banned lowercase `"name"` in the three
- * markup scans either. `motifId`, `mirrored` and the solution are banned
- * outright and reach no payload at all.
+ * `"name"` stays banned even though the daily Nonogram conclusion publishes
+ * `motifName` (ADR-0070): the field is deliberately spelled with a capital
+ * `N` so it is not a substring of the banned lowercase `"name"`. A payload
+ * that needs a name renames its field rather than lifting the ban.
  */
 export const FORBIDDEN_DAILY_KEYS = [
   "solution",
@@ -45,26 +20,14 @@ export const FORBIDDEN_DAILY_KEYS = [
   "reveal",
   "answer",
   "clueCount",
-  // #25 (ADR-0033): the nonogram reveal's identity. `name` is a GENERIC key
-  // and that is deliberate — no daily payload has ever carried one, and this
-  // decision is the reason none may. A future payload that genuinely needs a
-  // `name` renames its field or amends this list with a written reason.
   "motifId",
   "name",
   "mirrored",
-  // #27 (ADR-0040): termo's stored content is `{canonical, normalized}` and
-  // those are the two keys that carry the answer. `"answer"` above is not
-  // enough on its own — a projection that flattened the stored shape to
-  // top-level keys would pass every scan, the exact vacuity ADR-0033
-  // decision 3 refused for `"reveal"`. T-CORE-S20 is the anti-vacuity half.
-  //
-  // `"canonical"` is a GENERIC key and Next names one: `alternates.canonical`
-  // renders `<link rel="canonical">`, and ADR-0013 makes miolos.app a
-  // canonical domain, so an SEO ticket would red the page suites' SUBSTRING
-  // half for a reason unrelated to any leak. That is the cost of the ban and
-  // it is accepted on the `"name"` precedent above; the response is to
-  // rename the markup or amend this list with a written reason, never to
-  // weaken the scan.
+  // Termo's stored content is `{canonical, normalized}` (ADR-0040) — both
+  // keys carry the answer, so `"answer"` alone would miss a flattened
+  // projection. `"canonical"` is also a generic word Next.js uses for SEO
+  // (`<link rel="canonical">`); an unrelated SEO change tripping this scan
+  // is a known, accepted cost of the ban.
   "canonical",
   "normalized",
 ] as const;
