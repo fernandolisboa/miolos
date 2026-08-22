@@ -1,8 +1,7 @@
 /**
- * Pure, timezone-free date math for the publishing cron (plan 014 §5.3).
- * Weekday-of-a-fixed-date needs no timezone; only "what date is today in
- * São Paulo" does, and that is the DB clock's job (todaySaoPaulo,
- * ADR-0010 single authority). Never hardcode UTC-3 here.
+ * Pure, timezone-free date math for the publishing cron. Weekday of a fixed
+ * date needs no timezone; only "what date is today in São Paulo" does, and
+ * that is the DB clock's job (`todaySaoPaulo`). Never hardcode UTC-3 here.
  */
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -13,42 +12,19 @@ const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
  * yesterday's completion). Its ONE consumer is the stats calendar's range
  * clamp — `computeCalendar(rows, since, today, rolloverSlackDays)`.
  *
- * It is NOT the write bound, it never was the same idea, and it must never
- * be used as one again: #31 widened the write window to the whole archive
- * (ADR-0053), and a clamp that followed it would drag the calendar's range
- * back arbitrarily and paint "missed" over days the account did not exist
- * for — the exact failure ADR-0051's Rejected list names under *"An
- * unbounded `min()` at the range edge"* (cited by title, not by line: #31
- * itself moves that entry down the file).
- *
- * One constant, one owner. Until #31 this value and the write window were a
- * SINGLE constant holding two ideas; splitting the name is what makes
- * `isWritableDate`'s widening safe (ADR-0053 decision 6).
+ * It is NOT the write bound and must never become one again: the write
+ * window is unbounded below (the archive is every published past day), and
+ * a clamp that followed it would drag the calendar's range back arbitrarily
+ * and paint "missed" over days the account did not exist for.
  */
 export const ROLLOVER_SLACK_DAYS = 1;
 
 /**
- * The write window (ADR-0026 decision 6 as amended by ADR-0053).
- *
- * UPPER bound only: a completion or a guess may target any day up to and
- * including the DB clock's São Paulo today. The LOWER bound is GONE — the
- * archive is every published past day, and the WALL is the only authority
- * on which those are. Bounded in the ROUTE, never in SQL: decision 6's
- * layer rule is unchanged, and `wallPredicate` is untouched.
- *
- * The upper bound is a TIGHTENING, not a preservation: before #31 neither
- * write route refused a future date in the route at all — the wall refused
- * it one statement later. Now the route refuses it first.
- *
- * ONE PREDICATE, SHARED BY BOTH ROUTES (#27, ADR-0038 decision 8, whose
- * substance survives whole even though its title names the deleted
- * constant). Two copies of the window is exactly the drift ADR-0026 warns
- * about, and an archived Termo needs both windows to agree or it is
- * unfinishable.
- *
- * The volume ceiling this removal owes lives in the completion route
- * (`ARCHIVE_WRITES_PER_DAY`, ADR-0053 decision 13), not here: it is a rate
- * rule, not a date rule. String comparison is exact for 'YYYY-MM-DD'.
+ * The write window: a completion or guess may target any day up to and
+ * including the DB clock's São Paulo today — upper bound only. The lower
+ * bound is gone (ADR-0053 decision 5): the archive is every published past
+ * day. One predicate, shared by both write routes, so it can't drift
+ * between them. String comparison is exact for 'YYYY-MM-DD'.
  */
 export function isWritableDate(date: string, today: string): boolean {
   return date <= today;
@@ -56,36 +32,32 @@ export function isWritableDate(date: string, today: string): boolean {
 
 /**
  * Inside the write window, is this a LATE write — a day strictly before
- * the DB clock's São Paulo today? The late-write ceiling's branch
- * (ADR-0053 decision 13), and the daily ritual's exemption from it.
+ * the DB clock's São Paulo today?
  *
- * IT HAS A NAME BECAUSE "LATE" IS SPELLED IN THREE LAYERS AND THEY MUST
- * CONVERGE. This is the route layer's spelling, in JS over two date
- * strings. The database's spelling is the STORED `on_time` negated (#58,
- * ADR-0066 — the old `(completed_at at time zone …)::date <> date`
- * derivation, `onTimeSql()`, is deleted) — which is what the ceiling's
- * guard counts and what every reader projects. The archive's read layer
- * will add a third when it lands (`archiveDateClass`, ADR-0053 decision
- * 4); it takes this predicate's meaning, not a fourth one.
+ * "Late" is spelled in three layers and they must converge. This is the
+ * route layer's spelling, in JS over two date strings. The database's
+ * spelling is the stored `on_time` negated, which is what the late-write
+ * ceiling's guard counts and what every reader projects. The archive read
+ * layer's is `archiveDateClass` in `packages/db`, which takes this
+ * predicate's meaning rather than a fourth one.
  *
  * The two spellings agree because the verdict is decided from the same
  * `today` this predicate reads: a row this predicate calls late stores
  * `on_time = false` unless the seen-day credit applies. THE ONE
- * DISAGREEMENT IS THE ROLLOVER ITSELF, and it is bounded at ≤4 rows per
- * user per rollover by the composite PK: a `today` read at 23:59:59.9
- * lets a same-day write past the ceiling branch, and the row's INSERT
- * lands at 00:00:00.1 on the next SP day.
+ * DISAGREEMENT IS THE ROLLOVER ITSELF, bounded at ≤4 rows per user per
+ * rollover by the composite PK: a `today` read at 23:59:59.9 lets a
+ * same-day write past the ceiling branch, and the row's INSERT lands at
+ * 00:00:00.1 on the next SP day.
  *
- * SINCE #58 THE STRADDLE ROW ESCAPES BOTH THE CHECK AND THE COUNT, and
- * that is accepted with its reason. Its verdict was decided with
- * `today = D` and `date = D`, so it STORES `on_time = true` — where the
- * old derivation called it late and made every guarded write on D+1 count
- * it. The row now escapes the check (the branch was not taken) AND the
- * count (`not on_time` excludes it). This favours the player and matches
- * what they did — the completion WAS made on its own day by the only
- * clock read the request took — and the exposure is ≤4 rows per user per
- * rollover, sub-second window. Do not "fix" it: costing that is the
- * correct trade against reading the clock twice inside one write.
+ * That straddle row escapes BOTH the check and the count, and that is
+ * accepted with its reason: its verdict was decided with `today = date`,
+ * so it stores `on_time = true` and escapes the late-write check (the
+ * branch was not taken) as well as the count (`not on_time` excludes it).
+ * This favours the player and matches what they did — the completion WAS
+ * made on its own day by the only clock read the request took — and the
+ * exposure is ≤4 rows per user per rollover, a sub-second window. Do not
+ * "fix" it: the correct trade costs that against reading the clock twice
+ * inside one write.
  */
 export function isLateDate(date: string, today: string): boolean {
   return date < today;

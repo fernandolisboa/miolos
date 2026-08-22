@@ -2,11 +2,10 @@ import type { PushNudgePayload } from "@miolos/core";
 import { sendNotification, setVapidDetails, WebPushError } from "web-push";
 
 /**
- * The one place the product talks to a push service (#146, ADR-0064
- * decision 9 — `web-push` is the recorded composition-crypto exception,
- * apps/api only; `packages/games` stays dependency-free). Injected into
- * the dispatcher as a plain function, so every tick test runs a fake
- * transport with zero `vi.mock`.
+ * The one place the product talks to a push service — `web-push` is the
+ * recorded composition-crypto exception, `apps/api` only; `packages/games`
+ * stays dependency-free. Injected into the dispatcher as a plain function,
+ * so every tick test runs a fake transport with zero `vi.mock`.
  */
 
 /** One send's verdict — never a throw for a send failure. */
@@ -19,19 +18,19 @@ export type NudgeSend = (
 
 /**
  * The real transport. VAPID details are read at CALL time, never cached at
- * module load (the `isPushConfigured` posture): keys added to the
- * environment activate the next tick, and the route's 503 gate has already
- * guaranteed the triple is present before this runs.
+ * module load: keys added to the environment activate the next tick, and
+ * the route's 503 gate has already guaranteed the triple is present before
+ * this runs.
  *
- * TTL 3600 IS A DECISION (ADR-0068 decision 5): web-push's default TTL is
- * four weeks, and a streak nudge delivered tomorrow is worse than none —
- * one hour matches the mechanic's granularity (the next hourly tick would
- * have been the next chance anyway).
+ * TTL 3600 IS A DECISION: web-push's default TTL is four weeks, and a
+ * streak nudge delivered tomorrow is worse than none — one hour matches
+ * the mechanic's granularity (the next hourly tick would have been the
+ * next chance anyway).
  *
  * `WebPushError` is caught and its `statusCode` surfaced — the dispatcher
  * prunes on 404/410 and counts anything else as `failed`. A non-WebPushError
  * throw (DNS, TLS, a broken key) surfaces as `{ok: false}` with no status:
- * the row stays, the claim stands (ADR-0064 decision 7's residual).
+ * the row stays, the claim stands.
  */
 export const sendWebPush: NudgeSend = async (subscription, payload) => {
   // Non-null assertions are avoided on purpose: the route 503s before this

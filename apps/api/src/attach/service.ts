@@ -2,26 +2,25 @@ import { eq, sessions, sql, users, type Db } from "@miolos/db";
 import { attachTokens } from "@miolos/db/user";
 
 /**
- * The attach-flow statements (#21, ADR-0050) — the session/service.ts
- * precedent: auth plumbing is the api's; `packages/db` owns tables and
- * cross-table OPERATIONS (the merge), never route-shaped workflows. Takes
- * the db, returns plain data — no Response construction here.
+ * The attach-flow statements — auth plumbing is the api's; `packages/db`
+ * owns tables and cross-table operations (the merge), never route-shaped
+ * workflows. Takes the db, returns plain data — no Response construction
+ * here.
  *
- * NO JS `Date` appears in any statement (the schema.ts law): every
- * timestamp is DB-side `now()` or a column default, and both the token
- * expiry and the rate window are DB-side predicates.
+ * No JS `Date` appears in any statement: every timestamp is DB-side
+ * `now()` or a column default, and both the token expiry and the rate
+ * window are DB-side predicates.
  */
 
 /**
- * The rate-window cleanup (ADR-0050 decision 11): delete ALL rows older
- * than the ONE-HOUR rate window — never the 30-minute expiry. Cleanup at
- * expiry would empty the 30–60-minute band the rolling-hour count needs
- * and silently double the limit; expired-but-recent rows stay as the
- * ledger for their remaining half hour. Global on purpose (step-7 finding
- * I): a row past the hour is invisible to both rolling-hour counts and
- * expired for the claim WHOEVER owns it, so a per-user predicate bought
- * nothing and left abandoned users' rows for a sweep — this way any
- * request sweeps the whole ledger.
+ * The rate-window cleanup: delete ALL rows older than the ONE-HOUR rate
+ * window — never the 30-minute expiry. Cleanup at expiry would empty the
+ * 30–60-minute band the rolling-hour count needs and silently double the
+ * limit; expired-but-recent rows stay as the ledger for their remaining
+ * half hour. Global on purpose: a row past the hour is invisible to both
+ * rolling-hour counts and expired for the claim WHOEVER owns it, so a
+ * per-user predicate bought nothing and left abandoned users' rows for a
+ * sweep — this way any request sweeps the whole ledger.
  */
 export async function cleanupStaleTokens(db: Db): Promise<void> {
   await db
@@ -45,9 +44,9 @@ export async function countRecentTokens(
 
 /**
  * This EMAIL's rows inside the rolling hour, across all users — the cheap
- * closer for the mint-fresh-users mail-bombing shape (ADR-0050 decision
- * 11): POST /session mints users unthrottled, so a per-user cap alone is
- * per-attacker-unlimited. The email arrives already normalized (D6).
+ * closer for the mint-fresh-users mail-bombing shape: POST /session mints
+ * users unthrottled, so a per-user cap alone is per-attacker-unlimited.
+ * The email arrives already normalized.
  */
 export async function countRecentTokensForEmail(
   db: Db,
@@ -81,12 +80,11 @@ export async function mintAttachToken(
 }
 
 /**
- * The atomic claim (ADR-0050 decision 2): one
- * `DELETE … WHERE hash AND fresh RETURNING` statement IS the single-use
- * semantics — two concurrent confirms of the same token cannot both win
- * even over transactionless neon-http, and the loser (like any expired or
- * unknown token) sees zero rows. The 30-minute expiry is the DB-side
- * predicate; no JS clock.
+ * The atomic claim: one `DELETE … WHERE hash AND fresh RETURNING`
+ * statement IS the single-use semantics — two concurrent confirms of the
+ * same token cannot both win even over transactionless neon-http, and the
+ * loser (like any expired or unknown token) sees zero rows. The 30-minute
+ * expiry is the DB-side predicate; no JS clock.
  */
 export async function claimAttachToken(
   db: Db,
@@ -114,8 +112,8 @@ export async function claimAttachToken(
 }
 
 /**
- * The verified holder of an email — D4's second identity: a verified
- * identity by definition, and by D6 at most one row can match.
+ * The verified holder of an email: a verified identity by definition, and
+ * at most one row can match.
  */
 export async function findVerifiedHolder(
   db: Db,
@@ -131,9 +129,9 @@ export async function findVerifiedHolder(
 }
 
 /**
- * Requester liveness (D4): a requester tombstoned by a concurrent merge
- * owns zero sessions — confirm answers 410 rather than writing to a
- * tombstone. (Deletion is not this case: it cascades the token away.)
+ * Requester liveness: a requester tombstoned by a concurrent merge owns
+ * zero sessions — confirm answers 410 rather than writing to a tombstone.
+ * (Deletion is not this case: it cascades the token away.)
  */
 export async function userOwnsSession(
   db: Db,
@@ -148,18 +146,17 @@ export async function userOwnsSession(
 }
 
 /**
- * Post-merge session revocation (step-7 finding A, ADR-0050 decision 13):
- * after a CROSS-ACCOUNT merge at confirm, no PRE-EXISTING session may
- * survive onto the winner — an attacker who requested the token for a
- * victim's verified email holds a cookie that the merge's statement 1 just
- * remapped onto the victim's account, and this one delete retires it
- * (both accounts' old sessions sit on the winner after the remap, so one
- * user_id catches them all). The confirm route mints the clicking
- * browser's fresh session immediately after; the plain-attach no-collision
- * path never calls this. Deliberately NOT inside `mergeAccounts`:
- * ADR-0049's remap-never-delete protects crash-recovery resolvability
- * INSIDE the operation — this is an account-security action on a
- * COMPLETED merge, at the confirm seam only.
+ * Post-merge session revocation: after a CROSS-ACCOUNT merge at confirm,
+ * no PRE-EXISTING session may survive onto the winner — an attacker who
+ * requested the token for a victim's verified email holds a cookie that
+ * the merge just remapped onto the victim's account, and this one delete
+ * retires it (both accounts' old sessions sit on the winner after the
+ * remap, so one user_id catches them all). The confirm route mints the
+ * clicking browser's fresh session immediately after; the plain-attach
+ * no-collision path never calls this. Deliberately NOT inside
+ * `mergeAccounts`: remap-never-delete protects crash-recovery
+ * resolvability INSIDE the operation — this is an account-security action
+ * on a COMPLETED merge, at the confirm seam only.
  */
 export async function revokeSessionsForUser(
   db: Db,
@@ -169,18 +166,17 @@ export async function revokeSessionsForUser(
 }
 
 /**
- * The one attach UPDATE (D7), on the resolved WINNER at confirm: email +
- * `email_verified_at = now()` (non-null email implies verified, D2),
+ * The one attach UPDATE, on the resolved WINNER at confirm: email +
+ * `email_verified_at = now()` (non-null email implies verified),
  * `recovery_consent_at = now()` always (the confirmed attach IS the
  * consent act), `reminder_consent_at = now()` ONLY when the token carries
  * `true` — a `false` leaves any existing value untouched (an unchecked box
  * is the absence of new consent, never a withdrawal). `updated_at` set
- * explicitly (the schema's own law; this is the second production UPDATE
- * writer of users).
+ * explicitly (the schema's own law).
  *
  * A `users_verified_email_uq` violation here is the concurrent-confirm
- * window (D6 layer 3) — the route catches it and answers the same 409 as
- * an exhausted merge retry.
+ * window — the route catches it and answers the same 409 as an exhausted
+ * merge retry.
  */
 export async function attachEmailToUser(
   db: Db,
@@ -199,8 +195,8 @@ export async function attachEmailToUser(
 }
 
 /**
- * The explicit, permanent dismissal (D9): idempotent by the DB-side guard
- * — a re-post matches zero rows and never re-bumps `updated_at`.
+ * The explicit, permanent dismissal: idempotent by the DB-side guard — a
+ * re-post matches zero rows and never re-bumps `updated_at`.
  */
 export async function dismissAttachPrompt(
   db: Db,
@@ -215,8 +211,8 @@ export async function dismissAttachPrompt(
 }
 
 /**
- * The account half of GET /attach/state's conjunction (D10): email and
- * dismissal state for the eligibility derivation.
+ * The account half of GET /attach/state's conjunction: email and dismissal
+ * state for the eligibility derivation.
  */
 export async function getAttachAccountState(
   db: Db,

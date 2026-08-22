@@ -372,7 +372,7 @@ extension point in that route with no tripwire on it.
   through `requireUserId`, `todaySaoPaulo(db)` for the accepted-window bound,
   and `getPublishedDailyWithSolution` — because neon-http gives **each
   statement its own trip**, a fact this repo records at
-  `apps/api/src/session/service.ts:19-20` (*"each statement is its own
+  `createSessionForUser` in `apps/api/src/session/service.ts` (*"each statement is its own
   neon-http round trip"*). `GET /daily/<game>` is **one**
   (`apps/api/app/daily/nonogram/route.ts:32`, a single `getTodayDaily`),
   and `apps/web` calls it **zero** times, where the guess route runs ~6× per
@@ -410,9 +410,9 @@ extension point in that route with no tripwire on it.
 
   Two honest caveats: the cross-site guard is *not* load-bearing here, because
   `isCrossSiteWrite` denies on positive evidence only
-  (`apps/api/src/session/origin-guard.ts:13-31`) and `curl` walks past it — what
+  (`isCrossSiteWrite` in `apps/api/src/session/origin-guard.ts`) and `curl` walks past it — what
   stops a hostile browser page reading a response is the exact-origin CORS
-  grant (`apps/api/src/cors.ts:12-25`); and minting is unthrottled, so "one
+  grant (`corsHeaders` in `apps/api/src/cors.ts`); and minting is unthrottled, so "one
   session cookie" is not a real cost to an attacker. Revisit trigger: the
   first abuse signal, the rewarded-ad ticket, or the first time a guess
   response would reveal something a *published* row does not already imply.

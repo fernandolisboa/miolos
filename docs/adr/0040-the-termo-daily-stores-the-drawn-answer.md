@@ -109,7 +109,7 @@ is *"tightening a constraint and regenerating"*.
    self-explanatory reason, nothing is inserted, `depths.termo` drains one
    per day, `shallow` flips and `buffer-alert.yml` opens the issue. The
    runway that gives is **~3 days** — `effectiveThreshold` is
-   `min(4, bufferDepth)` (`apps/api/src/publishing/service.ts:82-84`) and
+   `min(4, bufferDepth)` (`effectiveThreshold` in `apps/api/src/publishing/service.ts`) and
    the poller runs daily at 07:30 UTC — which is not enough to regenerate a
    word list, so the top-up additionally logs
    `{"event":"termo-answer-pool-low"}` at 30 remaining, roughly 30 days'
