@@ -21,6 +21,7 @@ import { calendarDateString, isoDateString } from "./daily";
  * would put `words.generated.ts` (~40 KB) on the import path of every
  * `@miolos/core` consumer, `apps/web` included.
  */
+// Pinned equal to the engine's own constant by T-CORE-S18b.
 export const TERMO_MAX_GUESSES = 6;
 export const TERMO_WORD_LENGTH = 5;
 

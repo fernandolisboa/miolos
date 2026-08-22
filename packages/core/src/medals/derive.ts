@@ -24,6 +24,11 @@ function countsAnyWon(row: StatsRow): boolean {
 /** The five computable kinds — `curated` is resolved against grants, never here. */
 type ComputableRule = Exclude<MedalRule, { readonly kind: "curated" }>;
 
+/**
+ * `today` is the DB clock's Sao Paulo day (`todaySaoPaulo`), NEVER the client
+ * clock — a caller-side rule no test in this package can reach, because the
+ * caller lives in `apps/api`.
+ */
 export function earnedMedals(
   rows: readonly StatsRow[],
   grants: readonly string[],

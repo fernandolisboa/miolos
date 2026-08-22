@@ -8,10 +8,15 @@ import { isoDateString } from "./daily";
  * (`./day.ts`) behind its own endpoint.
  *
  * Strict on both ends — the route parses before `Response.json`, the web
- * client parses what it receives — so growth must arrive as a new endpoint
- * and contract, never an appended field: that would fail every deployed
- * client's parse. Other contracts in this directory cite this as "the
- * streak.ts register".
+ * client parses what it receives — so a payload answering a NEW QUESTION
+ * arrives as a new endpoint and contract, never as a field appended here:
+ * that would fail every deployed client's parse. Other contracts in this
+ * directory cite this as "the streak.ts register".
+ *
+ * Stated at exactly that width on purpose. The stronger form ("growth always
+ * arrives as a new endpoint") was overclaimed and is falsified in this very
+ * directory: `/day`'s per-game claim grew `elapsedMs`, `hintsUsed` and
+ * `motifName` in place (ADR-0060 annotations (b), (f), (i)).
  */
 export const streakResponseSchema = z.strictObject({
   /** The DB clock's SP date the value was computed against (ADR-0010). */
