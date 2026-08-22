@@ -40,6 +40,32 @@ function reportTiming(fields: Record<string, string | number>): void {
  * committed migrations from ./migrations — the same SQL artifact Neon gets.
  * Only reachable via the `@miolos/db/testing` subpath so app bundles never
  * touch PGlite.
+ *
+ * THE HOOK BUDGET FOR EVERY CALLER: 30_000 ms, over vitest's bare 10_000 ms
+ * hook default. The figures live here, at the cost driver, and the 39 test
+ * files that spend the budget point at this symbol rather than restating
+ * them — ADR-0055 decision 1 as amended by #114. Do not move them; do not
+ * copy them.
+ *
+ *  - Anchors: CI 9 733.8 ms (2 vCPU runner, `--concurrency=10`), local
+ *    uncapped 10 283.1 ms. ADR-0055 decision 2's ×4 procedure on those
+ *    yields 38 935 → 40 000 and 41 132 → 45 000, both ABOVE the shipped
+ *    30 000, so 30 000 is deliberately NOT re-derived — ADR-0057 decision 5
+ *    spends the gate reading on the tripwire below instead.
+ *  - The class is AVOIDED BY THE CAP, not closed: uncapped, one run reached
+ *    29 389.9 ms against this exact 30 000 wall.
+ *  - Tripwire: over 40 % of the budget a test acquires a re-read obligation
+ *    (ADR-0055 decision 1); over 15 000 ms — `budget / 2`, decision 4 — it
+ *    is a defect.
+ *  - Cost drivers for that re-read: this function, `../migrations/**`, the
+ *    `@electric-sql/pglite` version, and the concurrency on the root `test`
+ *    script.
+ *  - Two facts recorded nowhere else: this class HAS fired on CI at the bare
+ *    10 000 ms default, on a docs-only PR; and `daily-binairo`, `session`
+ *    and `buffer` were the last files riding that default.
+ *
+ * The 186-line derivation this replaces was removed at #205; ADR-0057
+ * decision 5 carries it in full.
  */
 export async function createTestDb(): Promise<{
   db: PgliteDatabase<typeof schema>;

@@ -45,17 +45,17 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 #205's `packages/db` comment tranche spent **`T-DB-S89`** on
 `packages/db/test/no-js-date.test.ts` — the DB-clock law (ADR-0010) as a
-source scan over the seven modules whose headers state it, with an
+source scan over the nine modules whose headers state it, with an
 anti-vacuity control and a planted-date mutation both run. One id, no tail
 reserved: a Quick-change row takes no review-round headroom.
 
 Why it exists is worth a line, because it is the shape the whole comment
-campaign should take. Seven module headers asserted *"no JS Date appears in
+campaign should take. Nine module headers asserted *"no JS Date appears in
 any statement in this file"* and exactly one of them — `published.ts`, via
 `T-DB-S53b` — had a scan behind it, and that one counts wall spellings, not
 dates. The sweep's rule is that a comment stating a rule no test covers may
 not be deleted; the preferred discharge is to write the test rather than keep
-the prose. Six comments became one enforced invariant.
+the prose. Eight comments became one enforced invariant.
 
 #64 (plan 066) reserved **`T-CORE S112…S115`, `T-DB S85…S88`,
 `T-API S176…S181`, `T-WEB S323…S332`** and no `T-LINT` id

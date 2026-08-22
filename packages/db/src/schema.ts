@@ -49,6 +49,9 @@ export const users = pgTable(
     /** NULL = never dismissed, including a denied browser permission (#145, ADR-0064). */
     pushPromptDismissedAt: timestamptz("push_prompt_dismissed_at"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
+    // No trigger and no `$onUpdate` maintain this: every UPDATE of a users
+    // row must set it explicitly. The shipped writers are each pinned by a
+    // test, but a NEW writer that forgets is caught by nothing.
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [
@@ -185,6 +188,8 @@ export const completions = pgTable(
     elapsedMs: integer("elapsed_ms").notNull(),
     hintsUsed: integer("hints_used").notNull().default(0),
     /** The Termo guess count; NULL for every other game (see the CHECK below). */
+    // The `1 and 6` bound below is kept in sync BY HAND with
+    // TERMO_MAX_GUESSES (@miolos/core); T-DB-S11 pins it, hardcoding 6 too.
     guesses: integer("guesses"),
     /** The write-time on-time verdict (#58, ADR-0066). */
     onTime: boolean("on_time").notNull(),
