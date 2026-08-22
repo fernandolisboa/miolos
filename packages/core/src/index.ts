@@ -57,8 +57,6 @@ export {
   type MedalRule,
 } from "./medals/definitions";
 export { earnedMedals } from "./medals/derive";
-// #58 (ADR-0066): the write-time on-time rule and its 1-day credit window.
-// One caller — POST /completions; no read path re-derives on-time.
 export {
   LATE_SYNC_CREDIT_DAYS_BACK,
   isWithinCreditWindow,
@@ -97,10 +95,10 @@ export {
   type NonogramSize,
   type ProjectedGame,
 } from "./contracts/daily";
-// SERVER-ONLY, and re-exported here rather than behind a subpath because the
+// Server-only, and re-exported here rather than behind a subpath: the
 // module is dropped from the client bundle by `"sideEffects": false` the
-// moment nothing in a browser chunk names one of these. Do not import any of
-// them from a client component (`./contracts/daily-content.ts` header).
+// moment nothing in a browser chunk names one of these. Do not import any
+// of them from a client component.
 export {
   binairoDailyContentSchema,
   DailyProjectionUnsupportedError,

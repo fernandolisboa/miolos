@@ -84,8 +84,8 @@ export function buildShareText(
             ? messages.share.termoWon(subject.guesses.length, TERMO_MAX_GUESSES)
             : messages.share.termoLost(TERMO_MAX_GUESSES),
           "",
-          // `tiles` is a 5-TUPLE, not an array
-          // (`packages/core/src/contracts/termo-guess.ts:62-68`), and
+          // `tiles` is a 5-TUPLE, not an array (`termoTilesSchema` in
+          // `@miolos/core`), and
           // `guesses` is `.max(TERMO_MAX_GUESSES)`, so the grid is at most
           // 6x5 by type. Every tile in it is a SERVER verdict (ADR-0038).
           ...subject.guesses.map((row) =>
