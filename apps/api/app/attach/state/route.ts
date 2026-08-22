@@ -17,24 +17,6 @@ import { requireUserId } from "../../../src/session/service";
 // Never statically cached: every request reads the caller's rows.
 export const dynamic = "force-dynamic";
 
-/**
- * GET /attach/state (#21, ADR-0050 decision 9) — the authenticated-READ
- * template (the streak route's own conventions: no OPTIONS, no origin
- * guard, no-store on every branch, whole body caught). Serves ONE derived
- * boolean: the threshold never ships to the client (ADR-0048's rule kept
- * by a NEW endpoint, never a field appended to /streak), and "exactly
- * once" is fully server-owned — eligibility is
- *
- *   streak >= attachStreakThreshold (remote config, ADR-0025)
- *   AND email IS NULL
- *   AND attach_prompt_dismissed_at IS NULL
- *   AND the attach flow is configured — `isAttachConfigured`, the SAME
- *       full switch (RESEND_API_KEY and WEB_ORIGIN) the request route
- *       503s under, so a half-configured environment never renders a
- *       form whose submit would 503 (step-7 finding H).
- */
-
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
@@ -54,13 +36,19 @@ function stateResponse(eligible: boolean): Response {
   });
 }
 
+/**
+ * GET /attach/state — the authenticated-READ template (ADR-0048),
+ * following ADR-0050 decision 9. Serves one derived boolean; the threshold
+ * itself never ships to the client, so eligibility got a NEW endpoint
+ * rather than a field appended to /streak.
+ *
+ * `isAttachConfigured` is the SAME full switch (RESEND_API_KEY and
+ * WEB_ORIGIN) the request route 503s under, so a half-configured
+ * environment never renders a form whose submit would fail.
+ */
 export async function GET(request: NextRequest): Promise<Response> {
-  // The whole body is caught (the streak route's discipline): an unhandled
-  // throw would be the one branch without no-store and the CORS grant.
   try {
     const db = getDb();
-    // `requireUserId` never mints; auth stays first and a 401 costs zero
-    // further queries.
     const userId = await requireUserId(
       db,
       request.cookies.get(SESSION_COOKIE_NAME)?.value,
@@ -69,7 +57,6 @@ export async function GET(request: NextRequest): Promise<Response> {
       return errorResponse(401, "no-session");
     }
 
-    // The cheap suppressions first; the streak read is the expensive one.
     if (!isAttachConfigured()) {
       return stateResponse(false);
     }

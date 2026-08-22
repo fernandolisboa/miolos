@@ -20,50 +20,24 @@ import { requireUserId } from "../../src/session/service";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /day — the server day-truth payload (#83, ADR-0060). A verbatim clone
- * of the `GET /streak` authenticated-read template (ADR-0048, plan 027 §7),
- * including its deliberate absences, each of which is a decision rather
- * than an omission:
+ * GET /day — the server day-truth payload; see ADR-0060.
  *
- * - No OPTIONS handler and no `preflightResponse` change: a credentialed
- *   GET with no custom request headers is a CORS simple request — the
- *   browser never preflights it (the same Fetch-spec reasoning
- *   `session/bootstrap.ts` records for the body-less POST). Widening the
- *   shared preflight's "POST, OPTIONS" for a preflight that never occurs
- *   would be change without a caller.
- * - No origin guard: it protects writes; a read mutates nothing, and its
- *   confidentiality is the CORS allowlist plus the cookie.
- * - No content-type check: there is no body.
- * - No request parameters at all: the user is the cookie, the day is the DB
- *   clock. A `?date=` would be an archive feature and ADR-0053 decision 10
- *   refuses it; it is also the ADR-0004 surface — with no parameter there
- *   is no way to ask this route about tomorrow. `T-API-S113` pins that a
- *   query string is ignored rather than honoured. **This is what makes #64's
- *   motif name safe to carry** (ADR-0070): the payload is the caller's own
- *   day and nothing else, so a name that rides a `completed` claim rides a
- *   day this user has already finished. There is no parameter to point at
- *   someone else's day or at a future one.
+ * SECURITY: this route takes NO parameters — the user comes from the
+ * cookie, the day from the DB clock. A `?date=` would be the archive read
+ * ADR-0053 decision 10 already refused, and it is the ADR-0004 surface:
+ * with nothing to ask, there is no way to request tomorrow. That absence is
+ * also what makes the Nonogram motif name (ADR-0070) safe to carry — it
+ * only ever rides the caller's OWN completed day.
  *
- * SINCE #64 THIS ROUTE READS `daily_puzzles`, which it never did before —
- * it touched only the clock and `completions`. The read is conditional (only
- * for a caller whose Nonogram already reads `completed`) and the helper
- * behind it never throws, both of which matter: an escaping error there
- * would 500 the whole day payload — hub, four tiles, every completed view —
- * over a field that is progressive enhancement.
+ * `Cache-Control: no-store` and the credentialed CORS grant apply on every
+ * branch including the catch: this is per-user data, and a shared cache
+ * serving one user's day to another is the failure this discipline exists
+ * to prevent.
  *
- * `Cache-Control: no-store` on EVERY branch including the catch, and the
- * CORS grant with it: this is user data, and a shared cache serving one
- * user's day to another is the failure the discipline exists for (step-6
- * finding security LOW 1; `T-API-S53`'s shape, `T-API-S111` here).
- *
- * ANONYMOUS-TOLERANT WAS REJECTED. A 200 with four `pending`s for a caller
- * with no session is indistinguishable from a real answer and would cost a
- * branch on every consumer to tell them apart. 401 is the shipped
- * precedent, and the web client treats every non-200 identically — it
- * degrades to the local reader, which is the honest offline answer anyway.
+ * No OPTIONS handler: a credentialed GET with no custom request headers is
+ * a CORS simple request, so the browser never preflights it.
  */
 
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
@@ -76,14 +50,13 @@ function errorResponse(status: number, error: string): Response {
 
 export async function GET(request: NextRequest): Promise<Response> {
   // The whole body is caught: an unhandled throw would otherwise be the one
-  // branch whose response carries neither `no-store` nor the CORS grant, so
-  // the failure mode would leak the discipline every intentional branch
-  // keeps (step-6 finding security LOW 1). T-API-S111 pins it.
+  // branch without `no-store` and the CORS grant every intentional branch
+  // carries.
   try {
     const db = getDb();
-    // `requireUserId` never mints (service.ts): a GET from a cookieless
-    // client is 401, and SessionBootstrap owns minting. Auth stays FIRST
-    // and sequential — a 401 must cost zero queries (T-API-S110).
+    // `requireUserId` never mints: a cookieless GET is 401, and
+    // SessionBootstrap owns minting. Auth runs FIRST and sequential — a 401
+    // must cost zero queries.
     const userId = await requireUserId(
       db,
       request.cookies.get(SESSION_COOKIE_NAME)?.value,
@@ -92,44 +65,17 @@ export async function GET(request: NextRequest): Promise<Response> {
       return errorResponse(401, "no-session");
     }
 
-    // SEQUENTIAL, where `/streak` runs its two reads in one round-trip
-    // window: the day read is SCOPED BY the day, so it cannot start before
-    // the clock answers. That is the cost of a narrow read and it is the
-    // trade ADR-0051 decision 3 asks for — two round trips against four
-    // rows, instead of one against the user's whole history.
+    // SEQUENTIAL: the completions read is scoped by `today`, so it cannot
+    // start before the clock answers (ADR-0051 decision 3).
     const today = await todaySaoPaulo(db);
     const rows = await listCompletionsForDay(db, userId, today);
 
-    // The motif name (#64, ADR-0070), READ CONDITIONALLY.
-    //
-    // The condition is the same status derivation the claim fold itself
-    // uses — `dayStateFromRows`, exported for exactly this — never a
-    // hand-rolled "did they win the nonogram" scan, which would be a second
-    // spelling of the publication rule and free to drift from the first.
-    // Because of it most callers pay for no extra query at all: the read
-    // only happens for a user who has already finished today's Nonogram.
-    //
-    // THE FOLD ITSELF RUNS TWICE — here and inside `dayGamesFromRows` — and
-    // that is accepted, not overlooked. It is ≤4 rows × 4 games of pure
-    // arithmetic, sub-microsecond against a ~15–25 ms HTTPS round trip
-    // (`neon-http` gives every statement its own request). Threading the
-    // computed statuses through `dayGamesFromRows` would widen a core API to
-    // buy a microsecond and put the publication rule's condition in two
-    // places. One spelling is worth more than the microsecond.
-    //
-    // PARALLELISING with the completions read was considered and REJECTED.
-    // `Promise.all` would take a completed-nonogram caller from 4 round
-    // trips to 3, and it is safe (both reads need only `today`, and the fold
-    // re-gates on status anyway, so a speculatively-read name is discarded
-    // harmlessly). But it makes EVERY caller pay the query, on every 60 s
-    // poll tick — a permanent ~33% rise in query volume across all users, to
-    // save latency on a background tick where nobody is waiting.
-    //
-    // The `motifName ? … : undefined` below is TRUTHINESS, deliberately, never
-    // `!== undefined`: `getPublishedNonogramMotifName` already normalises a
-    // blank stored name away, and this is the second guard on the path that
-    // would otherwise put `motifName: ""` into the parse two lines down and
-    // 500 the entire payload.
+    // The motif name (ADR-0070) is read CONDITIONALLY, on the same status
+    // derivation the claim fold itself uses (`dayStateFromRows`), never a
+    // hand-rolled "did they win the nonogram" scan that could drift from
+    // it. Most callers pay no extra query: the read only runs for a user
+    // whose Nonogram is already `completed`. The helper never throws — a
+    // bad row degrades to no name rather than 500ing the whole payload.
     const motifName =
       dayStateFromRows(rows).nonogram === "completed"
         ? await getPublishedNonogramMotifName(db, today)
@@ -137,16 +83,13 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     return Response.json(
       // Parse, never cast (boundary rule) — the same strict schema the web
-      // client parses on arrival. `dayGamesFromRows` (#141) is
-      // `dayStateFromRows` plus the completed grid row's `elapsedMs`, plus
-      // since #142 its `hintsUsed` and since #64 the completed Nonogram's
-      // `motifName`; the per-game publication rules all live in
-      // packages/core, beside the fold, and this route supplies content
-      // rather than deciding who may see it.
+      // client parses on arrival.
       dayResponseSchema.parse({
         date: today,
         games: dayGamesFromRows(
           rows,
+          // Truthiness, not `!== undefined`: belt-and-suspenders with the
+          // wall read's own blank-name normalisation above.
           motifName ? { nonogramMotifName: motifName } : undefined,
         ),
       }),

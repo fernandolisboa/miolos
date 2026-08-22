@@ -8,37 +8,26 @@ import { runNotifyTick } from "../../../src/notify/dispatcher";
 import { sendWebPush } from "../../../src/notify/transport";
 import { isPushConfigured } from "../../../src/push/config";
 
-// NO `export const dynamic = "force-dynamic"` here, unlike the publish
-// route, and that asymmetry is a decision (#146, plan 063 §4.1): only GET
-// handlers participate in Next's static optimisation — a POST handler is
-// dynamic by definition, so the export would be a no-op dressed as one.
+// No `dynamic` export here, unlike /cron/publish: a POST handler is
+// dynamic by definition, so the export would be a no-op.
+
+// No `export const dynamic` here, unlike the publish route: only GET
+// handlers participate in Next static optimisation, so on a POST the export
+// would be a no-op dressed as a decision.
 
 /**
- * POST /cron/notify (#146, ADR-0064 decisions 6–9; ADR-0068) — the hourly
- * streak-at-risk tick. POST because the tick causes writes and sends, and
- * this route is never Vercel-cron-driven (Vercel cron sends GET, which is
- * why /cron/publish is one; the Actions curl does `-X POST` trivially —
- * `.github/workflows/streak-notify.yml`, ADR-0064 decision 8). Not a
- * browser endpoint: no CORS, no OPTIONS, no body parsing (the publish
- * posture).
+ * POST /cron/notify — the hourly streak-at-risk tick (see ADR-0064
+ * decisions 6-9, ADR-0068 decisions 3-4). POST because the tick writes and
+ * sends; Vercel cron always drives GET, so `.github/workflows/streak-notify.yml`
+ * triggers this route with `curl -X POST` instead. Not a browser endpoint:
+ * no CORS, no OPTIONS, no body parsing.
  *
- * Status semantics (ADR-0068 decision 4, recorded on
- * `cronNotifyResponseSchema` too): 401 unauthorized (the shared
- * fail-closed `isAuthorized`); 503 when push is unconfigured, BEFORE any
- * DB read — a red hourly Actions run on a misconfigured prod IS the alert
- * (`curl -fsS` makes it one); 200 whenever the tick ran, even with
- * `failed > 0` — a lost nudge is decision 7's priced residual, not an
- * outage, and the per-line `{event:"cron-notify"}` log line carries the
- * observability (the publish idiom). An escaped throw 500s naturally.
- *
- * SEND TIMING IS DECIDED HERE, against the DB clock's SP hour, in ONE
- * snapshot (`readTickInstant` — the day and the hour can never straddle
- * midnight against each other), never by the workflow's nominal fire
- * time: Actions jitter is absorbed by the hour-equality match. A tick
- * GitHub skips or delays past the hour loses that hour's cohort's nudge
- * for the day — priced by ADR-0064 decision 8's granularity choice,
- * restated in ADR-0068; no catch-up pass exists (`habitual_hour <= hour`
- * would change decision 6's closed equality).
+ * 401 unauthorized; 503 when push is unconfigured, before any DB read (a
+ * red hourly Actions run on a misconfigured prod IS the alert); 200
+ * whenever the tick ran, even with `failed > 0`. `readTickInstant` reads
+ * the day and hour in one snapshot so they can never straddle midnight;
+ * there is no catch-up pass, so a skipped or delayed tick loses that
+ * hour's cohort's nudge for the day.
  */
 export async function POST(request: NextRequest): Promise<Response> {
   if (!isAuthorized(request.headers.get("authorization"))) {

@@ -23,32 +23,25 @@ import {
 // Never statically cached: every invocation must reconcile against the db.
 export const dynamic = "force-dynamic";
 
-// `isAuthorized` moved to src/cron/auth.ts at #146 (ADR-0068), doc block
-// and behavior verbatim: POST /cron/notify shares the exact gate.
+// Auth: see src/cron/auth.ts (CRON_SECRET-gated, fail-closed). POST
+// /cron/notify shares the same check.
 
 /**
  * The games this cron tops up, taken from the response contract rather than
  * from `Game`: widening `cronPublishResponseSchema` is what admits a new
- * game here, in the same PR, and nothing else can (plan 018 S15).
+ * game here, and nothing else can.
  */
 type CronGame = keyof CronPublishResponse["games"];
 
 /**
- * One game's top-up, fault-isolated. This try/catch is a decision, not a
- * detail: no top-up catches anything but its own `*GenerationError`, so
- * `insertDailyPuzzle`, `bufferDepth`, `todaySaoPaulo` and the
- * derived-weekday `RangeError` all propagate. With four games composed
- * serially and no isolation, ONE game's transient Neon blip silently stops
- * every LATER game's buffer from being topped up — and against
- * `BUFFER_ALERT_THRESHOLD = 4` on a default depth of 7 each victim drains
- * one day per occurrence and pages only after three-plus consecutive days
- * (plan 018 §7.2). The drain arithmetic is per game and unchanged by the
- * fourth one, which now runs FIRST and so has every other game downstream
- * of it.
+ * One game's top-up, fault-isolated: this try/catch is deliberate, not a
+ * detail. No top-up catches its own errors, so with four games composed
+ * serially and no isolation here, ONE game's transient failure would
+ * silently stop every LATER game's buffer from being topped up.
  *
- * The result on a throw is still the run that happened, not a zeroed one:
- * `depth` is re-read from the database, and `generated`/`failures` are the
- * counters the top-up carried out on `TopUpAbortedError`.
+ * On a throw, `depth` is re-read from the database rather than zeroed, and
+ * `generated`/`failures` are the counters `TopUpAbortedError` carried out
+ * of the rejected promise — the result reflects the run that happened.
  */
 async function runTopUp(
   db: Db,
@@ -60,38 +53,28 @@ async function runTopUp(
     const result = await topUp(db, configuredDepth);
     return { ...result, error: null };
   } catch (thrown) {
-    // Depth is read separately so the strict body still parses AND the
-    // threshold gate below still sees this game's real coverage. If that
-    // read throws too the database is gone: 0 forces the 500 and the alert.
+    // Depth is re-read separately so a failed read still forces 0, which
+    // trips the alert threshold below rather than reporting stale health.
     const depth = await bufferDepth(db, game).catch(() => 0);
-    // A throw does NOT mean nothing was written: there is no transaction
-    // around the loop, so the rows inserted before it are durable, and
-    // `TopUpAbortedError` is what carries their count out of the rejected
-    // promise (finding `cron-generated-understated-on-partial-failure`).
-    // `error` stays the ORIGINAL failure — never the wrapper's own message,
-    // which is the operator's only string here.
+    // Rows inserted before a mid-loop throw are durable (no transaction
+    // wraps the loop); `TopUpAbortedError` carries their count out of the
+    // rejected promise. `error` is the ORIGINAL failure, never the
+    // wrapper's own message.
     const aborted = thrown instanceof TopUpAbortedError ? thrown : undefined;
-    // Drizzle's `DrizzleQueryError` embeds the BOUND PARAMETERS in its own
-    // message (drizzle-orm/errors.js, separator "\nparams: ", verified
-    // empirically and identical on the neon-http and pglite sessions). For
-    // termo those parameters are `{"canonical":…,"normalized":…}` for a date
-    // that may be up to 30 days in the FUTURE and is by definition
-    // unpublished — and this string goes into the /cron/publish RESPONSE
-    // BODY below and into the Vercel log line. Keep the query text, which is
-    // what an operator actually needs; drop the tail. Fixes the three grid
-    // games at the same time — a nonogram `reveal.solution` was leaking the
-    // same way (plan 022 §10.3.1, T-API-S41).
+    // SECURITY: Drizzle's `DrizzleQueryError` embeds the bound parameters
+    // in its own message (separator "\nparams: "). For termo those
+    // parameters include the drawn answer word, and this string reaches
+    // both the /cron/publish response body and the Vercel log line — so
+    // keep the query text an operator needs and drop everything from
+    // "\nparams:" on. Splitting on a comma would not work: Drizzle joins
+    // params with `Array.prototype.toString()`, so a JSON payload's own
+    // commas are indistinguishable from parameter separators.
     //
-    // LANDMINE N46: this sanitizes the MESSAGE only. `query`, `params` and
-    // `cause` are own ENUMERABLE properties of the thrown error, so a future
-    // `JSON.stringify(thrown)`, structured-log call or error-reporting SDK
-    // re-opens the channel with the answer word in it. Nothing does today.
-    // A "log the whole error for debuggability" change is the trap, and it
-    // will look like an improvement.
-    //
-    // Splitting on "\nparams:" and not on a comma: drizzle joins the params
-    // with `Array.prototype.toString()`, so commas inside a JSON payload are
-    // indistinguishable from parameter separators.
+    // LANDMINE: this sanitizes the MESSAGE only. `query`, `params` and
+    // `cause` are still enumerable properties of the thrown error itself,
+    // so a future `JSON.stringify(thrown)` or error-reporting SDK reopens
+    // the leak. Nothing does today — do not "helpfully" log the whole
+    // error.
     const cause = aborted ? aborted.cause : thrown;
     const error =
       cause instanceof Error
@@ -108,22 +91,18 @@ async function runTopUp(
 
 /**
  * GET /cron/publish — idempotent top-up of every game's buffer to the
- * remote-configured depth (issue #17 AC 2/AC 4, #23, ADR-0010). Not a
- * browser endpoint: no CORS, no OPTIONS. The non-2xx on a shallow post-run
- * depth or an escaped throw is Vercel-log observability only — the real
- * alerting reads GET /buffer-depth (AC 3; cron exit codes are not the
- * signal).
+ * remote-configured depth; see ADR-0010. Not a browser endpoint: no CORS,
+ * no OPTIONS. The non-2xx on a shallow post-run depth or an escaped throw
+ * is Vercel-log observability only — the real alerting reads
+ * GET /buffer-depth, never this route's exit code.
  *
- * The top-ups run SERIALLY in a fixed COST-ASCENDING order — termo
- * (0.019 ms) → binairo (~7 ms) → nonogram (~34-80 ms) → sudoku (~150 ms) per
- * cold week: Neon round-trips dominate, so concurrency buys nothing and
- * multiplies connection pressure, and running the games cheapest-first means
- * a CPU overrun in an expensive one can never starve a cheaper one (plan 018
- * §7.2, plan 020 P7). It is the principle that fixes the order, not the
- * shape of the list: appending each new game last would keep the diff
- * smaller and is exactly what this rule refuses — and #27 is where that
- * stopped being hypothetical, because termo is both the last game added and
- * the cheapest by two orders of magnitude, so its property goes FIRST.
+ * The top-ups run SERIALLY in a fixed COST-ASCENDING order: Neon
+ * round-trips dominate, so concurrency buys nothing, and running
+ * cheapest-first means a CPU overrun in an expensive game can never starve
+ * a cheaper one. It is the principle that fixes the order, not the shape of
+ * the list — termo is the last game added and the cheapest by orders of
+ * magnitude, so its property is what sends it FIRST rather than appended
+ * last.
  *
  * The `await` order below IS the execution order; the key order in the
  * object literal is what the log loop and the response body inherit.
@@ -157,18 +136,13 @@ export async function GET(request: NextRequest): Promise<Response> {
     console.log(JSON.stringify({ event: "cron-publish", game, ...result }));
   }
 
-  // Seen-days retention (#58, ADR-0066): the credit only ever reads
-  // `today − 1`, so older rows are dead weight (~365/user/year, unioned
-  // forever by the merge). One idempotent delete on the day's existing cron
-  // rather than a job of its own — WRAPPED so its failure logs loudly and
-  // never masks the publish result this route exists to report. Widening
-  // the credit window widens `pruneSeenDays`'s predicate too.
+  // Seen-days retention (see ADR-0066): the credit only ever reads
+  // `today − 1`, so older rows are dead weight. Piggybacked on this cron
+  // rather than a job of its own, and WRAPPED so a failure here never masks
+  // the publish result this route exists to report.
   try {
     await pruneSeenDays(db);
   } catch (thrown) {
-    // The error object rides as the second argument (the attach/confirm
-    // idiom) so the stack, class and any `cause` survive into the log of a
-    // failure nobody watches happen.
     console.error(
       "cron-publish: seen-days retention delete failed (puzzles above published normally)",
       thrown,

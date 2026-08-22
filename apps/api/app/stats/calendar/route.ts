@@ -17,42 +17,27 @@ import { requireUserId } from "../../../src/session/service";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /stats/calendar — the #29 day-by-day enumeration (plan 033 §5,
- * ADR-0051), a verbatim clone of the GET /streak authenticated-READ
- * template (ADR-0048). Everything write-shaped is deliberately absent,
- * each absence a decision (plan 027 D6, inherited whole):
+ * GET /stats/calendar — the day-by-day enumeration; see ADR-0051.
  *
- * - No OPTIONS handler and no `preflightResponse` change: a credentialed
- *   GET with no custom request headers is a CORS simple request — the
- *   browser never preflights it.
- * - No origin guard: it protects writes; a read mutates nothing, and its
- *   confidentiality is the CORS allowlist plus the cookie.
- * - No content-type check: there is no body.
- * - No request parameters at all: the user is the cookie, the day is the
- *   DB clock, the range anchor is the account's own birth day. A
- *   `?month=`/`?from=` would be speculative surface — windowing arrives
- *   on a NEW contract if the D4 trigger (1,100 days or 64 KB) ever fires.
+ * SECURITY: no request parameters at all — the user is the cookie, the day
+ * is the DB clock, the range anchor is the account's own birth day. A
+ * `?month=`/`?from=` would be speculative surface; windowing arrives on a
+ * new contract if the size trigger (ADR-0051 decision 3) ever fires.
  *
  * The payload is exactly what core derived: range start = days[0].date,
- * range end = days.at(-1).date — NO envelope fields (plan 033 §3.3).
+ * range end = days.at(-1).date — no envelope fields.
+ *
  * `ROLLOVER_SLACK_DAYS` is passed into core as a parameter: the bound
  * lives in the route layer (ADR-0053 decision 6, amending ADR-0051
  * decision 2), and this route is its ONE consumer — one constant, one
- * owner. The citation is deliberately NOT ADR-0026 decision 6: after #31's
- * split that decision governs the WRITE window and nothing else, and
- * following it from here is exactly the re-joining the constant's own doc
- * block forbids.
+ * owner. It is deliberately NOT the write window: a clamp that followed
+ * the write window would drag the calendar's range back arbitrarily and
+ * paint "missed" over days the account did not exist for.
  *
- * It is deliberately NOT the write window. Until #31 both were ONE
- * constant; #31 removed the write window's lower bound
- * entirely (`isWritableDate`, ADR-0053 decision 5) and this clamp stayed
- * at one day, because a clamp that followed the write window would drag
- * the calendar's range back arbitrarily and paint "missed" over days the
- * account did not exist for. This one line is what makes ADR-0053
- * decision 7 true.
+ * No OPTIONS handler: a credentialed GET with no custom request headers is
+ * a CORS simple request, so the browser never preflights it.
  */
 
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
@@ -65,13 +50,12 @@ function errorResponse(status: number, error: string): Response {
 
 export async function GET(request: NextRequest): Promise<Response> {
   // The whole body is caught: an unhandled throw would otherwise be the
-  // one branch whose response carries neither `no-store` nor the CORS
-  // grant, so the failure mode would leak the discipline every intentional
-  // branch keeps (the T-API-S53 pin's reasoning; T-API-S89 pins it here).
+  // one branch without `no-store` and the CORS grant every intentional
+  // branch carries.
   try {
     const db = getDb();
-    // `requireUserId` never mints (service.ts): a GET from a cookieless
-    // client is 401, and SessionBootstrap owns minting.
+    // `requireUserId` never mints: a cookieless GET is 401, and
+    // SessionBootstrap owns minting.
     const userId = await requireUserId(
       db,
       request.cookies.get(SESSION_COOKIE_NAME)?.value,

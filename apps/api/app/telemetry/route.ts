@@ -23,30 +23,19 @@ import { captureEvent, runAfterResponse } from "../../src/telemetry/capture";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /telemetry — the first-party relay (#33, ADR-0069 decision 2), and
- * the ONE client-originated telemetry path: `puzzle_started` has no server
- * fact behind it (no row exists before completion), so the client posts it
- * here and the server captures — the PostHog key never ships in a bundle,
- * `distinct_id` stays the session's server userId, and the closed relay
- * contract (a single event literal) means the other four events cannot be
- * forged through this door.
+ * POST /telemetry — the first-party relay, and the ONE client-originated
+ * telemetry path (see ADR-0069 decisions 2 and 7): `puzzle_started` has
+ * no server fact behind it, so the client posts it here and the server
+ * captures — the PostHog key never ships in a bundle, and the closed
+ * relay contract (a single event literal) means the other four events
+ * cannot be forged through this door.
  *
- * The write preamble is the sibling credentialed-POST shape (origin guard,
- * JSON content type, session, Zod), with ONE deliberate divergence: NO
- * SESSION IS A 204 DROP, not a 401. A blocker or a bot with no cookie gets
- * no error surface to probe, and there is nothing for a legitimate caller
- * to retry — a started event with no identity is simply not a fact this
- * system records. `archive` is DERIVED against the DB clock's SP today
- * (`todaySaoPaulo`), never client-asserted.
- *
- * Abuse posture, recorded in ADR-0069 (the ADR-0006 :51 residual idiom):
- * POST /session is free and unthrottled, so a flood of relayed events is
- * one minted cookie away; the cost is PostHog free-tier quota (telemetry
- * blindness), never money or data. No rate limit at this traffic level —
- * an accepted, named residual.
+ * One deliberate divergence from the sibling credentialed-POST shape: no
+ * session is a 204 drop, not a 401 — there is no error surface to probe,
+ * and a started event with no identity is not a fact this system
+ * records. `archive` is derived against the DB clock's SP today, never
+ * client-asserted.
  */
-
-/** The per-route error envelope (the completions route's own convention). */
 function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
     status,
