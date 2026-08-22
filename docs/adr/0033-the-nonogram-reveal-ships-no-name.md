@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md), [ADR-0021](./0021-nonogram-pictures-are-a-curated-motif-library.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md)
 **Amended by:** [ADR-0047](./0047-bundle-markers-are-route-scoped.md) — decision 1's "not by shipping the motif library into the bundle" clause and consequence (d)'s "no motif name may reach `apps/web`" premise narrow to daily-route and shared chunks; free play (ADR-0046) legitimately ships the library in its own chunks, to generate and never to name. The payload and completion-response guarantees below are untouched.
+**Superseded in part by:** [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) (#64) — **decision 1's name clause is replaced for `reveal.name` only**, on the exact path decision 5 below prescribed: an authenticated post-completion server read, delivered as an optional `motifName` on the user's own completed `/day` claim. `reveal.motifId` and `reveal.mirrored` still reach no client payload on any status, the daily-payload and completion-response guarantees stand as written, and decision 3's `FORBIDDEN_DAILY_KEYS` additions are untouched — #64 took decision 4's rename route instead of amending the list. Decision 5 is DISCHARGED (#64 is the ticket it named). Consequence (a) is discharged too, and consequence (d)'s "that check dies" prediction did NOT come true — see the annotations below. **The title stays as written:** it is the record of what this ADR decided, on ADR-0041's precedent under ADR-0067's partial supersession.
 
 ## Context
 
@@ -46,6 +47,8 @@ what it costs to deliver, on each of the three paths available?
    the two shipped games already record: a seed *is* the solution, and the
    weekday is derivable from the date.
 
+   > **Superseded in part at #64 ([ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md)), for `reveal.name` ONLY.** The name now reaches the client on exactly one path: an optional `motifName` on the user's own **completed** `/day` claim, which is post-completion by construction — a claim is a projection of that user's own completion rows, so the name cannot exist on a claim before the server judged their day. Everything else here is exact and unchanged: the daily *public projection* is still `{game, date, size, clues}`, the completion response still carries no name, `reveal.motifId` and `reveal.mirrored` reach no client payload at any status, and `seed`/`weekday` are still out.
+
 2. **This is a PRODUCT decision, not a security one, and it is stated in
    those words wherever it is cited.** The picture's shape is
    client-derivable in under a millisecond by construction; what the strip
@@ -67,10 +70,14 @@ what it costs to deliver, on each of the three paths available?
    not a nonogram-local one. A payload that genuinely needs a name renames
    its field or amends the list on the record.
 
+   > **Satisfied at #64 ([ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md)), not amended.** The named reveal took the RENAME route this decision prescribes: the wire field is `motifName`, `FORBIDDEN_DAILY_KEYS` is untouched, and every landed leak scan keeps passing **on merit** rather than by exemption. `motifName` and the CSS local `.pictureName` both carry a capital `N`, so neither is a substring of the banned lowercase `"name"` in the three markup scans consequence (b) describes.
+
 5. **A named reveal, if it is ever wanted, is an authenticated
    post-completion server read** — the same shape ADR-0027 already
    specifies for granted hints. It is owed as its own feature ticket, not
    built here, and it is not blocked by anything in this decision.
+
+   > **Discharged at #64 ([ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md)).** #64 is that feature ticket. The read is the `/day` claim rider — `GET /day` is credentialed and parameterless, and this decision asked for a *read*, not a route — with the wall read `getPublishedNonogramMotifName` behind it on `@miolos/db/publishing`. A dedicated endpoint was considered and rejected on ADR-0051 decision 3's endpoint-count trigger.
 
 ## Rejected
 
@@ -116,6 +123,8 @@ what it costs to deliver, on each of the three paths available?
   to drop the `role="img"` claim — `aria-hidden` on the figure plus a
   visible pt-BR line stating the picture was revealed — rather than invent
   a name the curated library owns.
+
+  > **Discharged at #64 ([ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) decision 8).** The daily figure is now NAMED: the `<svg role="img">` keeps its role and composes the curated name into its `aria-label`, and a visible caption carries the lead and the name. The pre-agreed remedy above was never needed. The description survives as the honest degraded label whenever no name is published (offline finish, pre-sync, deploy skew, a killed row), so the cost stated here is retired for the ordinary case and still exactly describes the degraded one. **One residual replaces it, named rather than discovered** (ADR-0070 consequence (d)): when the claim lands late, the accessible name of an already-mounted `<svg role="img">` changes — legal, not a live-region write, and a known AT pitfall, which rides the same VoiceOver/NVDA pass ADR-0042 consequence (e) owes.
 - **(b) `"name"` is simultaneously a key ban and a substring ban, and the
   second one will fire for an unrelated reason one day.** Three of the ten
   consumers of `FORBIDDEN_DAILY_KEYS` — `apps/web/test/binairo-page.test.tsx`,
@@ -145,6 +154,8 @@ what it costs to deliver, on each of the three paths available?
   by `packages/games/test/nonogram/bundle-markers.test.ts`, so a grep for a
   renamed motif cannot pass vacuously. That check dies the day a name ships —
   **#64** — which is a cost the named-reveal ticket inherits.
+
+  > **That prediction did NOT come true, and the check LIVES ([ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) consequence (c)).** The premise was about the wrong thing: `route-client-js.mjs` greps `.next/static/chunks/**` and nothing else, and an API JSON response is never a chunk. #64's name arrives over an **authenticated wire**, so the grep is fully armed exactly as before. Its warrant is rewritten — **"no motif name may reach a daily-scope chunk; the daily name arrives over an authenticated wire, never from the bundle"** — and its markers, scopes, exit code and the `bundle-markers.test.ts` pin are all unchanged. Only bundling the motif tables would kill it, and #64 rejected that again. Fernando's instruction on #64 authorised *spending* this tripwire; nothing had to be spent, and the PR surfaced the contradiction rather than deciding it silently.
 - **(e) Nothing here decides anything for Termo.** Its public projection
   is `game, date` only and its answer is judged server-side; the questions
   this ADR answers do not arise there.

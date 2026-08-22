@@ -26,6 +26,7 @@ export {
   dayStateFromRows,
   mergeDayState,
   mergeDayStatus,
+  type DayClaimExtras,
   type DayGameState,
   type DayGameStatus,
   type DayRow,

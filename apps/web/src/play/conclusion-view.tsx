@@ -25,7 +25,12 @@ import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
 import styles from "./conclusion-view.module.css";
 
-import { useDayState, useServerDayClaim, type DayEntry } from "./day-state";
+import {
+  refreshServerDay,
+  useDayState,
+  useServerDayClaim,
+  type DayEntry,
+} from "./day-state";
 import { picturePath } from "./picture-path";
 import { BLANK_VALUE, ShareButton } from "./share-button";
 import { startCompletionSync } from "./sync";
@@ -180,6 +185,35 @@ export function ConclusionView({
   // Offline the line still arrives, one poll tick later, which is strictly
   // better than a false claim on every successful solve.
   const syncOutcome = stored?.syncOutcome;
+
+  // THE PAYOFF-MOMENT NUDGE (#64, ADR-0070). When a completion settles
+  // `recorded`, the server's day truth genuinely changed — so ask for it
+  // once, instead of waiting up to 60 s for the poll to reveal the motif
+  // name on the one screen whose whole point is the payoff.
+  //
+  // GAME-BLIND ON PURPOSE: no nonogram import, no nonogram copy, no per-game
+  // branch. This module renders what it is handed, and the nonogram copy
+  // travels the other way, as data on `ConclusionPicture`. A `recorded`
+  // settle is worth a refetch for every game.
+  //
+  // IT LIVES HERE AND NOT IN `sync.ts`, and that is a hard constraint rather
+  // than a preference. `sync.ts` IS in the archive routes' module graph
+  // (`use-play-lifecycle.ts` imports it), and `apps/web/test/archive-day.
+  // test.tsx` asserts that graph reaches neither `src/play/day-state` nor
+  // `src/day/**`. Worse than the red tests: a trigger in `sync.ts` would
+  // fire a credentialed `GET /day` from an ARCHIVE late write, on a public
+  // crawler-facing route, falsifying ADR-0053 decision 9 and ADR-0060
+  // consequence (d). This module is on that same test's FORBIDDEN list, so
+  // it can never be in the archive graph and adds no edge.
+  //
+  // KEYED ON THE OUTCOME, never a dep-less effect, which would refetch on
+  // every re-render of this component. `refreshServerDay`'s own TSDoc
+  // carries the proof that no loop is reachable through it.
+  useEffect(() => {
+    if (syncOutcome === "recorded") {
+      refreshServerDay();
+    }
+  }, [syncOutcome]);
 
   if (!hydrated) {
     // A beat of nothing, never the "ainda não concluído" card: flashing it
@@ -398,6 +432,42 @@ export function ConclusionView({
             >
               <path d={picturePath(picture)} />
             </svg>
+            {picture.name !== undefined && (
+              /* The motif's name (#64, ADR-0070), on the `.dayWordRow`
+                 shape one row over and under the SAME hard rule: NEITHER
+                 LINE MAY BECOME A HEADING or take `role="heading"`.
+                 `.pictureLead` is an 11px tracked-uppercase line sitting
+                 immediately above `.pictureName` — textbook
+                 `kicker-above-heading` — and the pair is legal only because
+                 that rule and `hero-eyebrow-chip` anchor exclusively on
+                 `h1`–`h4` and `[role="heading"]`. Promoting the name to an
+                 `<h2>` is the obvious "semantic improvement" and lights the
+                 rule up at both viewports, on a card no URL-mode scan
+                 reaches.
+
+                 NOT A LIVE REGION, and not a write into the announcer
+                 above. The name can arrive AFTER mount (an offline finish
+                 that syncs later), and the announcer's text is a prop
+                 composed before mount — mutating it here would break the
+                 DISJOINT-WRITERS rule ADR-0042 decision 10 requires and
+                 ADR-0054 decision 4 records. A caption appearing is not a
+                 status. What DOES change post-mount is the `<svg>`'s
+                 accessible name, which is legal and is named as an AT
+                 pitfall in ADR-0070 rather than left to be discovered.
+
+                 Both strings are composed by the game's own wrapper and
+                 handed down as data: this module is game-blind and imports
+                 no `messages.games.nonogram.*`. T-WEB-S326 scans this
+                 source for that path — with comments stripped first, so
+                 this sentence can say the thing plainly rather than being
+                 written around the scanner. */
+              <div className={styles.pictureCaption}>
+                {picture.lead !== undefined && (
+                  <p className={styles.pictureLead}>{picture.lead}</p>
+                )}
+                <p className={styles.pictureName}>{picture.name}</p>
+              </div>
+            )}
           </div>
         )}
         {/* The StreakCard's gate, on the stat block too (ADR-0048 decision
@@ -488,6 +558,14 @@ export function ConclusionView({
  *   "sem dicas") — the stat block, the streak card, the day card and the
  *   next-pending CTA. No picture: Nonogram's bitmap is the solution, which
  *   is puzzle content and never on this wire (ADR-0004, ADR-0060 decision 2).
+ *   **AND NO MOTIF NAME, deliberately, since #64** (ADR-0070): `motifName`
+ *   IS on the claim this view reads, and this view does not read it. "Você
+ *   revelou: Âncora" with no picture, on a device where the player did
+ *   nothing, is a caption for a missing image — so the picture's absence row
+ *   in ADR-0065 decision 1's honest-absence table gains the NAME as a second
+ *   recorded absence, rather than a fabricated composition. An unread
+ *   optional claim field is exactly what that table is for. A later ticket
+ *   can reverse this cheaply; nothing here has to change for it to.
  * - a completed TERMO: the win stamp with `em X/6` from the ONE `GET /stats`
  *   this view fetches (date-gated, the `TermoDoneLink` rule; label-only
  *   when the count has not landed or describes another day), and the guess
@@ -506,6 +584,14 @@ export function ConclusionView({
  * this stamp's detail exists only after a CLIENT fetch (`GET /stats`)
  * resolves. This is the ONLY per-game JSX branch permitted in this module;
  * a fifth game adds a claim field, never an arm.
+ *
+ * #64 REINFORCED THAT SENTENCE RATHER THAN FALSIFYING IT, which is worth
+ * recording because a ticket that puts one game's copy on the conclusion is
+ * exactly the shape that usually breaks it: the Nonogram's motif name added
+ * NO arm here — the remote view is a recorded non-goal (above) — and on the
+ * LOCAL conclusion the name travels as data on `ConclusionPicture`, composed
+ * in `nonogram-conclusion.tsx`, so this module reads no Nonogram string. The
+ * rule is intact and was tested against.
  *
  * NO SHARE BUTTON (`share-text.ts` composes from the local record, which
  * does not exist here), NO REPLAY (no link into a playable board renders

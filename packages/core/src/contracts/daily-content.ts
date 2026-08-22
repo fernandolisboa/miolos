@@ -73,7 +73,26 @@ export const sudokuDailyContentSchema = z.strictObject({
 
 export type SudokuDailyContent = z.infer<typeof sudokuDailyContentSchema>;
 
-/** Mirrors `NonogramReveal` exactly. The whole object is withheld from every default read (ADR-0033). */
+/**
+ * Mirrors `NonogramReveal` exactly. The whole object is withheld from every
+ * DEFAULT read (ADR-0033) — `stripDailyContent` never picks a field of it,
+ * and `motifId`, `mirrored` and `solution` reach no payload at all.
+ *
+ * ONE NARROW READER IS THE EXCEPTION, and it is named here so "every" does
+ * not read as absolute: `getPublishedNonogramMotifName`
+ * (`packages/db/src/published.ts`, on the `@miolos/db/publishing` entry)
+ * parses a published row with this schema behind the wall and returns
+ * `reveal.name` alone, for a day the caller has already judged completed
+ * (#64, ADR-0070).
+ *
+ * NOTE THE MISSING `.min(1)` ON `name`, and that it is not an oversight to
+ * "fix" in passing: `validateNonogram`'s `reveal-name-empty` rejection lives
+ * in `packages/games` at GENERATION time, so nothing that reaches this READ
+ * path re-checks it, and a stored `name: ""` parses here. Tightening it is a
+ * WRITE-side change that can drain the buffer. The read normalises a blank
+ * name to `undefined` instead — see that reader's own TSDoc for what a
+ * returned `""` would cost.
+ */
 const nonogramRevealSchema = z.strictObject({
   motifId: z.string(),
   name: z.string(),
@@ -220,6 +239,17 @@ export class DailyProjectionUnsupportedError extends Error {
  * withholds is the curated `name`, which is NOT derivable from the clues,
  * and casual inspection of the rest — ADR-0027's own words, never a
  * security claim.
+ *
+ * THE TABLE ABOVE IS STILL EXACT AFTER #64, and the distinction is worth
+ * stating here because it is easy to misread. This is the DAILY-PAYLOAD
+ * projection — what a player is handed to play with — and `reveal` is
+ * withheld from it whole, on every status, as written. The motif NAME is
+ * published on a different payload entirely: the user's own completed `/day`
+ * claim (`motifName`, ADR-0070), read by `getPublishedNonogramMotifName`,
+ * which is its own narrow reader on `@miolos/db/publishing` and never goes
+ * through this function. `motifId`, `mirrored` and `reveal.solution` reach no
+ * payload at all, anywhere. The register is unchanged: product, not
+ * confidentiality.
  *
  * `seed` is withheld for EVERY game: engines are deterministic, so a seed
  * is the solution.

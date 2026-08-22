@@ -23,6 +23,13 @@ export {
 export { createPublishingDb } from "./client";
 export {
   getPublishedDailyWithSolution,
+  // #64 (ADR-0070): today's Nonogram motif NAME, for a day the caller has
+  // already judged completed. It sits on this entry rather than the root's
+  // for the ADR-0024 reason the header states — the root entry is
+  // `apps/web`'s, and a root export would hand an RSC segment a one-line
+  // channel to today's name. It is the whole reason the surface tripwires
+  // move by one on THIS entry and stay byte-identical on the root's.
+  getPublishedNonogramMotifName,
   type DailyPuzzleRow,
 } from "./published";
 export { getRemoteConfig } from "./remote-config";

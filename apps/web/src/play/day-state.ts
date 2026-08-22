@@ -356,6 +356,24 @@ export function useServerDayClaim(
 }
 
 /**
+ * Ask the day-truth store to refetch, once (#64, ADR-0070). Renamed on the
+ * way through — `refreshDayTruth` inside `src/day/**`, `refreshServerDay`
+ * out here — on `useServerDayClaim`'s own precedent: the play layer's
+ * vocabulary is "server day", the store's is "day truth", and the two names
+ * being different is what keeps a reader from thinking the play layer owns
+ * the store.
+ *
+ * THE RE-EXPORT IS THE POINT, not a convenience. ADR-0060 consequence (d)
+ * makes this module the SINGLE importer of `src/day/**` (`T-WEB-S244` pins
+ * the list, and `apps/web/test/archive-day.test.tsx` proves the archive's
+ * module graph reaches neither), so a caller in `src/play/**` that imported
+ * `day-truth` directly would spend a live architectural guard to save one
+ * hop. See `refreshDayTruth`'s own TSDoc for what it does and does not
+ * guard, and for the no-loop proof.
+ */
+export { refreshDayTruth as refreshServerDay } from "../day/day-truth";
+
+/**
  * The file's first per-game branch, and it is the narrowest one that can
  * express ADR-0008 decision 3. It is NOT a widening of `readDayState`'s map,
  * which stays total over `Game` and gains no key.

@@ -1098,8 +1098,23 @@ describe("the four branches (T-WEB-S47)", () => {
 /**
  * The picture reveal (T-WEB-S51, plan 020 §13, ADR-0034). Two mounts, two
  * sources, one bitmap: the play state on the in-place swap, and the concluded
- * record on `/nonogram/concluido` — and the second is the reason the reveal
- * survives a reload with no name, no server round trip and no new read path.
+ * record on `/nonogram/concluido`.
+ *
+ * THE SENTENCE THAT USED TO CLOSE THIS BLOCK IS GONE, not softened — it read
+ * *"and the second is the reason the reveal survives a reload with no name,
+ * no server round trip and no new read path"*, and #64 (ADR-0070) falsified
+ * all three clauses at once. The BITMAP still survives a reload from the
+ * record alone, which is the claim this id has always been about and every
+ * case below still proves. What is new is that the picture is now also
+ * NAMED, from a server round trip over a new read path — the motif name on
+ * this user's own `/day` claim.
+ *
+ * The name is deliberately NOT asserted here. Its own suite is
+ * `nonogram-motif-name.test.tsx` (T-WEB-S323…S327, S329), which owns the
+ * fetch stub and the module-reset discipline the day-truth store needs; this
+ * block stays about the bitmap, and `REVEAL` below is the composed
+ * DESCRIPTION, which is still the honest label whenever no name is
+ * published.
  */
 describe("the picture reveal (T-WEB-S51)", () => {
   /**

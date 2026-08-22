@@ -2,8 +2,12 @@ import {
   apiErrorResponseSchema,
   dayGamesFromRows,
   dayResponseSchema,
+  dayStateFromRows,
 } from "@miolos/core";
-import { todaySaoPaulo } from "@miolos/db/publishing";
+import {
+  getPublishedNonogramMotifName,
+  todaySaoPaulo,
+} from "@miolos/db/publishing";
 import { listCompletionsForDay } from "@miolos/db/user";
 import type { NextRequest } from "next/server";
 
@@ -34,7 +38,18 @@ export const dynamic = "force-dynamic";
  *   clock. A `?date=` would be an archive feature and ADR-0053 decision 10
  *   refuses it; it is also the ADR-0004 surface — with no parameter there
  *   is no way to ask this route about tomorrow. `T-API-S113` pins that a
- *   query string is ignored rather than honoured.
+ *   query string is ignored rather than honoured. **This is what makes #64's
+ *   motif name safe to carry** (ADR-0070): the payload is the caller's own
+ *   day and nothing else, so a name that rides a `completed` claim rides a
+ *   day this user has already finished. There is no parameter to point at
+ *   someone else's day or at a future one.
+ *
+ * SINCE #64 THIS ROUTE READS `daily_puzzles`, which it never did before —
+ * it touched only the clock and `completions`. The read is conditional (only
+ * for a caller whose Nonogram already reads `completed`) and the helper
+ * behind it never throws, both of which matter: an escaping error there
+ * would 500 the whole day payload — hub, four tiles, every completed view —
+ * over a field that is progressive enhancement.
  *
  * `Cache-Control: no-store` on EVERY branch including the catch, and the
  * CORS grant with it: this is user data, and a shared cache serving one
@@ -85,12 +100,40 @@ export async function GET(request: NextRequest): Promise<Response> {
     const today = await todaySaoPaulo(db);
     const rows = await listCompletionsForDay(db, userId, today);
 
+    // The motif name (#64, ADR-0070), folded ONCE and read CONDITIONALLY.
+    //
+    // The condition is the same status derivation the claim fold itself
+    // uses — `dayStateFromRows`, exported for exactly this — never a
+    // hand-rolled "did they win the nonogram" scan, which would be a second
+    // spelling of the publication rule and free to drift from the first.
+    // Because of it most callers pay for no extra query at all: the read
+    // only happens for a user who has already finished today's Nonogram.
+    //
+    // `if (motifName)` below is TRUTHINESS, deliberately, never
+    // `!== undefined`: `getPublishedNonogramMotifName` already normalises a
+    // blank stored name away, and this is the second guard on the path that
+    // would otherwise put `motifName: ""` into the parse two lines down and
+    // 500 the entire payload.
+    const motifName =
+      dayStateFromRows(rows).nonogram === "completed"
+        ? await getPublishedNonogramMotifName(db, today)
+        : undefined;
+
     return Response.json(
       // Parse, never cast (boundary rule) — the same strict schema the web
       // client parses on arrival. `dayGamesFromRows` (#141) is
-      // `dayStateFromRows` plus the completed grid row's `elapsedMs`; the
-      // per-game publication rules live in packages/core, beside the fold.
-      dayResponseSchema.parse({ date: today, games: dayGamesFromRows(rows) }),
+      // `dayStateFromRows` plus the completed grid row's `elapsedMs`, plus
+      // since #142 its `hintsUsed` and since #64 the completed Nonogram's
+      // `motifName`; the per-game publication rules all live in
+      // packages/core, beside the fold, and this route supplies content
+      // rather than deciding who may see it.
+      dayResponseSchema.parse({
+        date: today,
+        games: dayGamesFromRows(
+          rows,
+          motifName ? { nonogramMotifName: motifName } : undefined,
+        ),
+      }),
       {
         headers: {
           ...corsHeaders({ credentials: true }),

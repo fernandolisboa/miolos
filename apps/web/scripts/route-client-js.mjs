@@ -166,8 +166,25 @@
  * `NONOGRAM_WEEKDAY_CRITERIA` from `difficulty.ts`, which imports the motif
  * tables at module scope — so one careless client-side import puts every
  * curated pt-BR picture name in the browser, and 59 KB is a delta a reviewer
- * might wave through. The name greps are the real check, and they only work
- * for as long as ADR-0033 holds that no motif name ships (consequence (d)).
+ * might wave through. The name greps are the real check.
+ *
+ * THE WARRANT WAS REWRITTEN AT #64 AND THE CHECK LIVES. It used to read
+ * *"they only work for as long as ADR-0033 holds that no motif name ships
+ * (consequence (d))"*, and consequence (d) said the check dies the day a
+ * name ships. #64 ships one — and the premise turns out to be about the
+ * wrong thing. This script greps `.next/static/chunks/**` and nothing else
+ * (`CHUNKS`, below): an API JSON response is never a chunk. The daily motif
+ * name arrives on an AUTHENTICATED WIRE, from the user's own completed `/day`
+ * claim, and never from the bundle. So the grep is fully armed exactly as
+ * before, and its warrant is now the sharper sentence:
+ *
+ *   **No motif name may reach a daily-scope CHUNK. The daily name arrives
+ *   over an authenticated wire, never from the bundle.**
+ *
+ * Only bundling the motif tables would kill this check, and that is still
+ * rejected. Nothing here was retired to spend a licence (ADR-0070 records
+ * the call, and the PR body surfaces it as a decision point).
+ *
  * The POSITIVE greps exist so a scan that quietly stopped looking at the
  * right files cannot pass by finding nothing.
  *
@@ -350,8 +367,13 @@ const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;
 /**
  * Strings that must NOT appear in any client chunk.
  *
- * The first group is curated motif content (ADR-0033: no name may reach
- * `apps/web`, which is what keeps this grep meaningful). The second is the
+ * The first group is curated motif content. ADR-0033 read *"no name may
+ * reach `apps/web`"*; since #64 (ADR-0070) the rule this grep enforces is
+ * **no motif name may reach a daily-scope CHUNK** — the daily conclusion
+ * names its motif from the wire, never from the bundle, and this scan walks
+ * `.next/static/chunks/**` only, so it is unchanged and still meaningful.
+ * The markers, the scopes and the exit code are all as they were. The second
+ * is the
  * server-only daily-content schemas — their key strings and refine messages —
  * which `packages/core/src/contracts/daily-content.ts` plus that package's
  * `"sideEffects": false` keep out of the browser. A hit on the second group

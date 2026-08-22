@@ -11,6 +11,7 @@ import {
   getArchivedDaily,
   getPublishedDaily,
   getPublishedDailyWithSolution,
+  getPublishedNonogramMotifName,
   getTodayDaily,
   listArchivedDays,
   listArchivedMonths,
@@ -1051,6 +1052,133 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
   });
 });
 
+describe("the motif-name read (#64, ADR-0070)", () => {
+  /**
+   * Seeds a nonogram row whose `reveal.name` is whatever the caller says,
+   * fixture-derived in every other respect. The fixtures module cannot do
+   * this — its whole point is a VALID content object — and the empty-name
+   * case below is precisely a row the generator would have refused to write
+   * and the read path must survive anyway.
+   */
+  async function insertNamed(options: {
+    date: string;
+    name: string;
+    publishedAt: ReturnType<typeof sql>;
+    killedAt?: ReturnType<typeof sql>;
+  }): Promise<void> {
+    const content = nonogramContentFixture();
+    const reveal = content["reveal"] as Record<string, unknown>;
+    await ctx.db.insert(dailyPuzzles).values({
+      game: "nonogram",
+      date: options.date,
+      seed: 4242,
+      content: { ...content, reveal: { ...reveal, name: options.name } },
+      publishedAt: options.publishedAt,
+      killedAt: options.killedAt,
+    });
+  }
+
+  it("T-DB-S85: a published row yields its stored `reveal.name`, and nothing else from the row", async () => {
+    await insertNamed({
+      date: "2026-08-01",
+      name: "Âncora",
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    expect(await getPublishedNonogramMotifName(ctx.db, "2026-08-01")).toBe(
+      "Âncora",
+    );
+
+    // A STRING, not a row and not a projection — so there is nothing here a
+    // caller could over-serialize. The parse happens inside the wall
+    // (ADR-0024) and `motifId`, `mirrored` and `reveal.solution` never leave
+    // this function, which is ADR-0033 decision 1 still holding for
+    // everything but the name.
+    const value = await getPublishedNonogramMotifName(ctx.db, "2026-08-01");
+    expect(typeof value).toBe("string");
+    for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+      expect([...collectKeys(value)], forbidden).not.toContain(forbidden);
+    }
+  });
+
+  it("T-DB-S86: the wall holds — a future-dated row, a killed row and a missing date all yield `undefined`", async () => {
+    const today = await saoPauloToday();
+    // Published in the FUTURE: the row exists, the wall hides it. This is
+    // the ADR-0004 guarantee for the name specifically — a completed claim
+    // is the only thing that can carry it, and an unpublished day can never
+    // produce one.
+    await insertNamed({
+      date: today,
+      name: "Amanhã",
+      publishedAt: sql`now() + interval '1 day'`,
+    });
+    expect(await getPublishedNonogramMotifName(ctx.db, today)).toBeUndefined();
+
+    // KILLED: published once, withdrawn since (ADR-0004's kill switch).
+    await insertNamed({
+      date: "2026-07-31",
+      name: "Morto",
+      publishedAt: sql`now() - interval '1 hour'`,
+      killedAt: sql`now()`,
+    });
+    expect(
+      await getPublishedNonogramMotifName(ctx.db, "2026-07-31"),
+    ).toBeUndefined();
+
+    // No row at all — the ordinary degraded case, and no throw.
+    expect(
+      await getPublishedNonogramMotifName(ctx.db, "2026-06-15"),
+    ).toBeUndefined();
+
+    // A row for ANOTHER game on a date that has one: the predicate is
+    // game-scoped, so a published binairo never answers for the nonogram.
+    await insertRow({
+      game: "binairo",
+      date: "2026-06-20",
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    expect(
+      await getPublishedNonogramMotifName(ctx.db, "2026-06-20"),
+    ).toBeUndefined();
+  });
+
+  it("T-DB-S87: an EMPTY or whitespace-only stored name normalises to `undefined` — the read that would otherwise 500 the whole day payload", async () => {
+    // `nonogramRevealSchema` has no `.min(1)`: the `reveal-name-empty`
+    // rejection lives in `packages/games` at GENERATION time, so a stored
+    // `name: ""` parses fine on this read path. Returned as-is it would
+    // reach `dayGameStateSchema`'s `.min(1)` inside the route's own
+    // `dayResponseSchema.parse` and take down the hub, the four tiles and
+    // every completed view for a user who merely finished the Nonogram.
+    // This is the normalisation that makes the wire's `.min(1)` safe.
+    const cases: readonly [string, string][] = [
+      ["2026-08-02", ""],
+      ["2026-08-03", "   "],
+      ["2026-08-04", "\t\n "],
+    ];
+    for (const [date, name] of cases) {
+      await insertNamed({
+        date,
+        name,
+        publishedAt: sql`now() - interval '1 hour'`,
+      });
+      expect(
+        await getPublishedNonogramMotifName(ctx.db, date),
+        JSON.stringify(name),
+      ).toBeUndefined();
+    }
+
+    // A name with surrounding whitespace is NOT blank and is returned
+    // UNCHANGED — the trim decides emptiness, it does not edit content.
+    await insertNamed({
+      date: "2026-08-05",
+      name: " Âncora ",
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    expect(await getPublishedNonogramMotifName(ctx.db, "2026-08-05")).toBe(
+      " Âncora ",
+    );
+  });
+});
+
 describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", () => {
   it("T-DB-9a: the wall module exports exactly the audited set", async () => {
     const published = await import("../src/published");
@@ -1058,12 +1186,16 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // all wall-carrying, plus `archiveDateClass`, which carries no wall
     // because it reads no table — it answers a question about the clock,
     // and every caller has already been through the wall. 4 names became 8.
+    // #64 (ADR-0070) adds exactly one — `getPublishedNonogramMotifName`,
+    // wall-carrying like the rest, returning one curated string rather than
+    // a row. 8 became 9, widened in place in the same commit as the export.
     expect(Object.keys(published).sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
       "archiveDateClass",
       "getArchivedDaily",
       "getPublishedDaily",
       "getPublishedDailyWithSolution",
+      "getPublishedNonogramMotifName",
       "getTodayDaily",
       "listArchivedDays",
       "listArchivedMonths",
@@ -1102,6 +1234,13 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "createPublishingDb",
       "dailyPuzzles",
       "getPublishedDailyWithSolution",
+      // #64 (ADR-0070): today's motif NAME, read back out of stored
+      // `content` behind the wall. It belongs on THIS entry and not the
+      // root's — the root entry is `apps/web`'s, and a root export would
+      // hand an RSC segment a one-line channel to today's name (ADR-0024).
+      // 10 names became 11. T-DB-9b and T-DB-9d come out byte-identical,
+      // and that is the proof the export went to the right surface.
+      "getPublishedNonogramMotifName",
       "getRemoteConfig",
       "insertDailyPuzzle",
       "listBufferedDates",
@@ -1156,6 +1295,8 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "getCompletion",
       "getPublishedDaily",
       "getPublishedDailyWithSolution",
+      // #64 (ADR-0070): the motif-name read, PUBLISHING entry only.
+      "getPublishedNonogramMotifName",
       "getRemoteConfig",
       "getTodayDaily",
       "getUserSince", // #29 (plan 033): widened in the same commit as the export
@@ -1198,7 +1339,11 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "wasSeenOn", // #58 (ADR-0066): user entry only
     ]);
     // A duplicate across two entries would be hidden by the Set above, so
-    // pin the count too: 44 distinct names, 44 exports. #27 moved it by
+    // pin the count too — one name per export, the list above and the
+    // length below agreeing. (The prose here read "44 distinct names, 44
+    // exports" while the assertion said 48; the two drifted apart as the
+    // history below grew, and a count is now stated once, at the assertion,
+    // where it cannot go stale silently.) #27 moved it by
     // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
     // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
     // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
@@ -1228,7 +1373,10 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     // `notification_sends` TABLE — the table on the user entry (unlike
     // user_seen_days) because the schema-pin and merge suites are named
     // readers of the table object; never the root, so apps/web cannot name
-    // the ledger.
-    expect(surface).toHaveLength(48);
+    // the ledger. #64 moves it by exactly ONE:
+    // `getPublishedNonogramMotifName` on the PUBLISHING entry (ADR-0070),
+    // never the root — the same shape `listUsedTermoAnswers` took, and for
+    // the same reason. 48 → 49.
+    expect(surface).toHaveLength(49);
   });
 });

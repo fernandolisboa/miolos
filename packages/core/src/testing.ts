@@ -27,6 +27,17 @@
  * `<input name>` and a lowercase `name*` CSS-module local included
  * (ADR-0033, plan 020 §7.7). Adding a member is a standing constraint on
  * every future daily payload AND on that markup.
+ *
+ * `"name"` STAYS BANNED, AND #64 IS THE REASON THAT IS WORTH SPELLING OUT.
+ * The daily Nonogram conclusion now publishes its motif name (ADR-0070,
+ * superseding ADR-0033 decision 1's name clause) — and it does so on a field
+ * called `motifName`, which is ADR-0033 decision 4's own prescribed route: a
+ * payload that needs a name RENAMES ITS FIELD rather than spending a generic
+ * standing ban. So every scan in every consumer keeps passing ON MERIT, not
+ * by exemption, and `motifName`/`.pictureName` both carry a capital `N`, so
+ * neither is a substring of the banned lowercase `"name"` in the three
+ * markup scans either. `motifId`, `mirrored` and the solution are banned
+ * outright and reach no payload at all.
  */
 export const FORBIDDEN_DAILY_KEYS = [
   "solution",

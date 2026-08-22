@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-12 (issue #28, shipped in #81)
 **Depends on:** [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md), [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md)
 **Amends:** [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md) — decision 1's *"not by shipping the motif library into the bundle"* clause narrows to daily-route and shared chunks, and consequence (d)'s premise that no motif name may reach `apps/web` narrows likewise; the payload and completion-response guarantees, and `FORBIDDEN_DAILY_KEYS`, are not touched. Its Rejected entry on shipping the motif tables stays rejected for what it argued — naming the daily reveal client-side; free play ships the tables to generate, never to name.
+**Amended by:** [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) (#64) — the *"to generate and never to name"* clause above stays true **of the bundle**, which is all it was ever about, and this ADR's route-scoped tripwire is unchanged in every part: markers, scopes, exit code and the `bundle-markers.test.ts` pin. The daily conclusion names its motif from an authenticated WIRE (the user's own completed `/day` claim), never from a chunk, and ADR-0033's Rejected entry on bundling the tables to name the daily reveal is still rejected. Non-vacuity survives in both directions.
 
 ## Context
 

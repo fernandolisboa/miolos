@@ -49,6 +49,12 @@ import { fetchDayTruth } from "./day-client";
  *   re-show, so a hidden tab owes the server nothing — and at zero
  *   listeners, where cleanup clears it; each tick goes through `refresh()`,
  *   so the in-flight guard below means a slow answer is never stacked on.
+ * - A ONE-SHOT NUDGE WHEN A COMPLETION SETTLES `recorded` (#64, ADR-0070),
+ *   fired by the conclusion through `refreshDayTruth()`. Honest independent
+ *   of #64 — the server's day truth genuinely just changed — and it exists
+ *   because the motif name is the payoff moment's whole point, and waiting
+ *   up to 60 s for the poll to reveal it is not a payoff. It is EVENT-DRIVEN
+ *   AND ONE-SHOT, not a second interval, so the clause above stays exact.
  * - NOTHING ELSE.
  *
  * CLEANUP DROPS THE LISTENERS AND RETAINS THE PAYLOAD. The last unsubscribe
@@ -63,16 +69,26 @@ import { fetchDayTruth } from "./day-client";
  * screen returns to the hub with a Next `<Link>` — a CLIENT-SIDE navigation,
  * so this module is never re-evaluated and the pre-swap payload is what
  * `getSnapshot` answers on the first paint after linking. The store has no
- * notion of "the session changed". This is NOT a cross-person leak: ADR-0009
- * merges the two identities into one human, the payload carries only four
- * claims and a date (no puzzle content, no guess count — since #141 a
- * completed grid game's claim does carry its `elapsedMs`, which is the same
- * one human's own solve time), the 0 -> 1 `refresh()` the hub's remount
- * fires corrects it within one round trip, and the date precondition bounds
- * it to the same day. It is recorded
- * here as a named residual rather than fixed with a `resetDayTruth()` export
- * because the correction is already one round trip away and an extra
- * cross-module hook into the attach flow would buy a frame.
+ * notion of "the session changed". This is NOT a cross-person leak, and the
+ * argument had to be REBUILT at #64 rather than left standing: it used to
+ * rest partly on "the payload carries only four claims and a date, no puzzle
+ * content", and that clause is now false — a completed Nonogram claim
+ * carries `motifName`, which IS curated daily content (ADR-0070). What
+ * actually holds the residual safe never depended on that clause:
+ *
+ * - ADR-0009 merges the two identities into ONE HUMAN, so a stale pre-swap
+ *   payload is that same person's own day, not a stranger's;
+ * - the DATE PRECONDITION in `day-state.ts` bounds it to the same day, and
+ *   the motif name is today's, published to a person who has today's row;
+ * - the 0 -> 1 `refresh()` the hub's remount fires corrects it within ONE
+ *   ROUND TRIP.
+ *
+ * The one thing #64 adds is that a stale claim could name a motif the
+ * post-swap identity had also completed — the same day, the same published
+ * puzzle, the same name. It is recorded here as a named residual rather than
+ * fixed with a `resetDayTruth()` export because the correction is already
+ * one round trip away and an extra cross-module hook into the attach flow
+ * would buy a frame.
  *
  * NO `localStorage` CACHE of the payload (ADR-0048 decision 4's argument): a
  * stale server answer presented as current is wrong in both directions, and
@@ -109,10 +125,15 @@ function getServerSnapshot(): DayResponse | undefined {
 
 /**
  * Field for field: date plus the four claims — each a status AND, since
- * #141, its optional `elapsedMs`, AND, since #142, its optional `hintsUsed`.
- * Comparing the status alone would swallow a payload whose only change is a
- * duration or a hint count (an account merge swapping in the other device's
- * row), and the stale value would stand for the session.
+ * #141, its optional `elapsedMs`, AND, since #142, its optional `hintsUsed`,
+ * AND, since #64, the Nonogram's optional `motifName`. Comparing the status
+ * alone would swallow a payload whose only change is a duration, a hint
+ * count or a motif NAME, and the stale value would stand for the session.
+ *
+ * `motifName` is the case where that is not hypothetical: a first read that
+ * raced a killed or malformed daily row answers `completed` with no name,
+ * and the corrected payload one poll later differs in NOTHING ELSE. Without
+ * this line the caption would never appear for that user today.
  */
 function sameGame(
   previous: DayResponse["games"]["termo"],
@@ -121,7 +142,8 @@ function sameGame(
   return (
     previous.status === next.status &&
     previous.elapsedMs === next.elapsedMs &&
-    previous.hintsUsed === next.hintsUsed
+    previous.hintsUsed === next.hintsUsed &&
+    previous.motifName === next.motifName
   );
 }
 
@@ -258,4 +280,35 @@ function subscribe(onStoreChange: () => void): () => void {
 /** The server's day truth, live. `undefined` until (or unless) one lands. */
 export function useDayTruth(): DayResponse | undefined {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+/**
+ * Ask the store to refetch, once, now (#64, ADR-0070). Fire-and-forget: the
+ * store notifies its subscribers if anything changed and does nothing if not.
+ *
+ * WHAT ITS GUARD ACTUALLY IS, stated exactly rather than assumed: `refresh()`
+ * is guarded by `inFlight` and by NOTHING ELSE. The subscriber and visibility
+ * conditions live on `startPoll`/`stopPoll`/`subscribe`, and
+ * `window.addEventListener("focus", refresh)` calls it unconditionally too.
+ * So this CAN fire a credentialed `GET /day` with no listener subscribed.
+ * Accepted explicitly, and bounded: at most four completions per user per
+ * day, and in the common case it is a no-op anyway, because the caller's
+ * effect is declared after `useDayState`'s subscribe in the same component
+ * and `inFlight` is already true.
+ *
+ * NO LOOP IS REACHABLE, and this is a proof rather than an assurance:
+ * `refresh()` never writes a play record, so `settle` cannot be re-entered
+ * from it; `settle` drops the record from the fallback queue, so the trigger
+ * fires at most once per record; `inFlight` dedupes concurrent triggers; and
+ * `settle(_, "recorded")` has exactly ONE call site (`acceptResponse` in
+ * `play/sync.ts`, covering both the `recorded: true` and `recorded: false`
+ * arms), so this is one condition and not two branches.
+ *
+ * Re-exported by `play/day-state.ts` as `refreshServerDay`, which is how the
+ * play layer reaches it: ADR-0060 consequence (d)'s single-importer rule says
+ * `src/day/**` is imported by `src/play/day-state.ts` and nothing else
+ * (`T-WEB-S244`), and #64 does not spend that rule to save one hop.
+ */
+export function refreshDayTruth(): void {
+  refresh();
 }

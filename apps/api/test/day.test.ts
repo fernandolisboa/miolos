@@ -1,8 +1,11 @@
 import { dayResponseSchema, type DayResponse } from "@miolos/core";
+import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { sessions, sql, users } from "@miolos/db";
-import { todaySaoPaulo } from "@miolos/db/publishing";
+import { insertDailyPuzzle, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
+import { isWeekday } from "@miolos/games";
+import { generateNonogram } from "@miolos/games/nonogram";
 import { NextRequest } from "next/server";
 import {
   afterAll,
@@ -16,7 +19,7 @@ import {
 } from "vitest";
 
 import { GET } from "../app/day/route";
-import { addDays } from "../src/publishing/dates";
+import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
@@ -131,6 +134,35 @@ async function insertHistoryRow(init: {
     // #58 (ADR-0066): stored at write; the old derivation's verdict for
     // these instants, i.e. migration 0008's backfill semantics.
     onTime: init.completedAtDate === init.date,
+  });
+}
+
+/**
+ * A motif name no curated table holds, so a hit in a response body is the
+ * leak and never a coincidence — the marker-name discipline the route-ssr
+ * scans in `apps/web` already use.
+ */
+const MOTIF_MARKER = "MOTIVO-VAZADO-64";
+
+/**
+ * Publishes today's Nonogram with a chosen `reveal.name`, through the same
+ * write the cron uses so `published_at` is derived exactly as in production.
+ * The content is a REAL generated puzzle with only the name replaced: a
+ * hand-written object would have to satisfy the strict content schema's two
+ * refinements, and a fixture that drifts from the engine proves nothing
+ * about the row the wall will actually meet.
+ */
+async function seedNonogram(date: string, name: string): Promise<void> {
+  const weekday = isoWeekdayOf(date);
+  if (!isWeekday(weekday)) {
+    throw new Error(`unreachable: bad weekday for ${date}`);
+  }
+  const content = generateNonogram(7, weekday);
+  await insertDailyPuzzle(ctx.db, {
+    game: "nonogram",
+    date,
+    seed: 7,
+    content: { ...content, reveal: { ...content.reveal, name } },
   });
 }
 
@@ -283,6 +315,178 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
       },
     });
+  });
+
+  it("T-API-S176: a completed on-time Nonogram publishes the STORED motif name, and no other game carries one (#64, ADR-0070)", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedNonogram(today, MOTIF_MARKER);
+    const { token, userId } = await createSession();
+
+    await insertHistoryRow({
+      userId,
+      game: "nonogram",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 512_000,
+      hintsUsed: 1,
+    });
+    // A completed SUDOKU on the same day: the name is scoped to the nonogram
+    // claim by the producer, not merely by which row exists.
+    await insertHistoryRow({
+      userId,
+      game: "sudoku",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 407_000,
+      hintsUsed: 0,
+    });
+
+    expect(await readDay(token)).toEqual({
+      date: today,
+      games: {
+        termo: { status: "pending" },
+        sudoku: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
+        nonogram: {
+          status: "completed",
+          elapsedMs: 512_000,
+          hintsUsed: 1,
+          motifName: MOTIF_MARKER,
+        },
+        binairo: { status: "pending" },
+      },
+    });
+  });
+
+  it("T-API-S177: a Nonogram that is not completed carries no motif name — the whole-payload key scan (#64)", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedNonogram(today, MOTIF_MARKER);
+    const { token, userId } = await createSession();
+
+    // Every not-completed shape a nonogram can take on the DAY payload, each
+    // with today's row published and holding a name the route could have
+    // reached for. `pending` from no row; `played` from a lost row; and the
+    // LATE WIN — a row that exists and yields no claim (ADR-0060 consequence
+    // (f)), written for YESTERDAY's date so it is genuinely late.
+    const cases: readonly [string, () => Promise<void>][] = [
+      ["no row at all", async () => {}],
+      [
+        "a lost row → played",
+        () =>
+          insertHistoryRow({
+            userId,
+            game: "nonogram",
+            date: today,
+            outcome: "lost",
+            completedAtDate: today,
+          }),
+      ],
+    ];
+    for (const [label, seed] of cases) {
+      await ctx.db.execute(sql`truncate table completions`);
+      await seed();
+      const response = await GET(dayRequest(token));
+      expect(response.status, label).toBe(200);
+      const raw: unknown = await response.json();
+
+      // ANTI-VACUITY FIRST, and it is not decoration: `collectKeys` returns
+      // an EMPTY set for any non-object input — an HTML error page,
+      // `undefined`, a number — so every negative below would pass trivially
+      // over a body that was never walked. This is the first key scan in
+      // this file; the four apps/api scans that predate it learned this the
+      // hard way (daily-nonogram.test.ts's own block).
+      const keys = collectKeys(raw);
+      expect(keys.has("games"), label).toBe(true);
+      expect(keys.has("status"), label).toBe(true);
+
+      expect(keys.has("motifName"), label).toBe(false);
+      // The standing bans hold too, unchanged: `motifName` is ADR-0033
+      // decision 4's RENAME route, not a relaxation of the list.
+      for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+        expect(keys.has(forbidden), `${label} / ${forbidden}`).toBe(false);
+      }
+    }
+  });
+
+  it("T-API-S178: the seeded motif name appears nowhere in the raw body of a not-completed day — the ADR-0004 VALUE scan (#64)", async () => {
+    // A key scan cannot catch a value. T-API-S177 proves no field is named
+    // `motifName`; this proves the NAME ITSELF is not in the response under
+    // any other key, at any depth, which is the actual ADR-0004 claim. The
+    // marker is a string no motif table contains, so a hit is the leak and
+    // never a coincidence.
+    const today = await todaySaoPaulo(ctx.db);
+    await seedNonogram(today, MOTIF_MARKER);
+    const { token, userId } = await createSession();
+    await insertHistoryRow({
+      userId,
+      game: "nonogram",
+      date: today,
+      outcome: "lost",
+      completedAtDate: today,
+    });
+
+    const response = await GET(dayRequest(token));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    // Anti-vacuity: the scan is worthless over an empty or error body.
+    expect(body).toContain(`"nonogram":{"status":"played"}`);
+    expect(body).not.toContain(MOTIF_MARKER);
+
+    // And the positive control, so this test cannot pass because the route
+    // never publishes a name at all: the same user, the same seeded row,
+    // completed — the marker IS in the body.
+    await ctx.db.execute(sql`truncate table completions`);
+    await insertHistoryRow({
+      userId,
+      game: "nonogram",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+    });
+    expect(await (await GET(dayRequest(token))).text()).toContain(MOTIF_MARKER);
+  });
+
+  it("T-API-S179: a completed Nonogram whose daily row is killed or missing yields the claim with no name and no 500 (#64)", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    await insertHistoryRow({
+      userId,
+      game: "nonogram",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 512_000,
+      hintsUsed: 0,
+    });
+
+    // NO daily row at all — reachable in production for a completion whose
+    // day was published and later purged, and the plainest proof that the
+    // route does not depend on `daily_puzzles` answering.
+    const completedNoName = {
+      status: "completed",
+      elapsedMs: 512_000,
+      hintsUsed: 0,
+    };
+    expect((await readDay(token)).games.nonogram).toEqual(completedNoName);
+
+    // KILLED after publication (ADR-0004's kill switch): the wall hides the
+    // row, the user's completion still stands, and the claim degrades to
+    // exactly today's pre-#64 shape rather than failing the day.
+    await seedNonogram(today, MOTIF_MARKER);
+    await ctx.db.execute(
+      sql`update daily_puzzles set killed_at = now() where game = 'nonogram' and date = ${today}`,
+    );
+    expect((await readDay(token)).games.nonogram).toEqual(completedNoName);
+
+    // And a BLANK stored name — the row the generator would have refused to
+    // write, normalised at the wall read. Without that normalisation this
+    // is a 500 for the WHOLE payload, not a missing caption.
+    await ctx.db.execute(sql`truncate table daily_puzzles`);
+    await seedNonogram(today, "   ");
+    const response = await GET(dayRequest(token));
+    expect(response.status).toBe(200);
+    expect((await readDay(token)).games.nonogram).toEqual(completedNoName);
   });
 
   it("T-API-S110: a cookieless GET is 401 no-session and costs ZERO queries; an unknown cookie costs only the session lookup", async () => {
