@@ -286,7 +286,17 @@ export async function getPublishedNonogramMotifName(
       return undefined;
     }
     const name = nonogramDailyContentSchema.parse(row.content).reveal.name;
-    return name.trim() === "" ? undefined : name;
+    // BLANK is wider than `trim()`'s idea of blank, on purpose.
+    // `String.prototype.trim` strips WhiteSpace and LineTerminator only, so
+    // a stored U+200B (zero-width space) or U+FEFF (BOM) survives it,
+    // passes the wire's `.min(1)`, and renders an INVISIBLE `.pictureName`
+    // under a perfectly visible "A FIGURA DE HOJE ERA" — a lead labelling
+    // nothing, which is the one shape `ConclusionPicture` says must not
+    // happen. `\p{Cf}` covers the format characters; the curated library
+    // cannot produce any of this (`name-length.test.ts` pins it), so this
+    // guards a hand-edited row, which is exactly the class of row the rest
+    // of this function's `catch` exists for.
+    return /^[\s\p{Cf}]*$/u.test(name) ? undefined : name;
   } catch (error) {
     console.error(
       `getPublishedNonogramMotifName: could not read the motif name for ${date}`,

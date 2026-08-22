@@ -174,13 +174,50 @@ function caption(): HTMLElement | null {
  * and its "the wording avoids the scanned phrase" note is the alternative
  * this replaces.
  *
- * Block comments then line comments, in that order. The naive `//` rule is
- * safe over the files scanned here — none contains a `//` inside a string
- * literal — and this helper stays in this file rather than becoming a shared
- * utility, so the next scan has to make that check for itself.
+ * SCANNED CHARACTER BY CHARACTER, AND THE TWO-REGEX VERSION IS A TRAP THIS
+ * FILE ALREADY FELL INTO. The obvious spelling —
+ * `.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "")` — strips BLOCK
+ * comments first, so a `/*` appearing inside a LINE comment opens a block
+ * that runs to the next real close. This repo writes glob paths like
+ * `src/day/` + `**` in prose constantly, and one of them sits in
+ * `conclusion-view.tsx`'s own trigger comment: that version deleted **515 of
+ * its 1478 lines**, including the `refreshServerDay()` call the trigger is
+ * about and the whole skeleton branch, and the scans below went quietly
+ * blind over the region they exist to police. Measured, not imagined.
+ *
+ * So: one pass, left to right, line comments winning on the line they open,
+ * which is what a real tokenizer does. Still not a parser — a `//` or `/*`
+ * inside a string literal or a regex would fool it — and that is checked
+ * against the four scanned files rather than assumed, by the anti-vacuity
+ * assertions at the call sites. It stays in this file rather than becoming a
+ * shared utility, so the next scan has to make that check for itself.
  */
 function withoutComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  let out = "";
+  let inBlock = false;
+  for (const line of source.split("\n")) {
+    let kept = "";
+    for (let i = 0; i < line.length; i += 1) {
+      if (inBlock) {
+        if (line.startsWith("*/", i)) {
+          inBlock = false;
+          i += 1;
+        }
+        continue;
+      }
+      if (line.startsWith("//", i)) {
+        break;
+      }
+      if (line.startsWith("/*", i)) {
+        inBlock = true;
+        i += 1;
+        continue;
+      }
+      kept += line[i];
+    }
+    out += `${kept}\n`;
+  }
+  return out;
 }
 
 beforeEach(() => {
@@ -420,6 +457,12 @@ describe("the name is composed once, in the wrapper (T-WEB-S326)", () => {
     const shared = source("src/play/conclusion-view.tsx");
     expect(shared).not.toContain("messages.games.nonogram");
     expect(shared).toContain("messages.games.termo.outcome");
+    // ANTI-VACUITY, and it is here because the stripper WAS broken and this
+    // is the assertion that would have caught it: `refreshServerDay(` sits in
+    // the middle of the region the two-regex stripper silently deleted. If a
+    // future edit reintroduces that bug, the negative above goes blind and
+    // this line goes red instead of nothing happening.
+    expect(shared).toContain("refreshServerDay()");
   });
 });
 
@@ -472,19 +515,118 @@ describe("no motif name reaches server markup (T-WEB-S327)", () => {
   });
 });
 
+describe("the payoff-moment refresh (T-WEB-S329)", () => {
+  /**
+   * The record poll is 1 s (`use-record-snapshot.ts`), and this suite fakes
+   * only `Date`, so `setTimeout` is real and has to be waited out for a
+   * record written after mount to reach the component.
+   */
+  async function waitOutRecordPoll(): Promise<void> {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1300));
+    });
+  }
+
+  it("a completion that settles `recorded` AFTER mount asks the store for today's truth", async () => {
+    // Without this the just-solved player waits up to 60 s for the poll to
+    // reveal the name on the one screen whose whole point is the payoff. The
+    // refetch is honest independent of #64: a recorded completion means the
+    // server's day truth genuinely changed.
+    //
+    // IT MUST BE A TRANSITION, and the first version of this test got that
+    // wrong in a way worth recording. It mounted a record ALREADY carrying
+    // `syncOutcome: "recorded"` and asserted the `/day` call count was
+    // "between 1 and 2" — which admits the nudge never firing, and in that
+    // scenario it provably never can: `useDayState`'s `useSyncExternalStore`
+    // subscribe is hook-ordered BEFORE this effect and sets `inFlight`
+    // synchronously, so a nudge at mount is always deduped away. A step-6
+    // reviewer deleted decision 9 outright and the test stayed green.
+    //
+    // So the scenario here is the real payoff path: mount PENDING, let the
+    // completion settle afterwards, and assert the count STRICTLY grew.
+    const fetchMock = stubApi(() =>
+      jsonResponse(200, dayBody(completedClaim(MOTIF))),
+    );
+    const dayCalls = () =>
+      fetchMock.mock.calls.filter((call) => urlOf(call[0]) === `${API_URL}/day`)
+        .length;
+
+    const { writePlayRecord } = await import("../src/play/play-record");
+    window.localStorage.setItem(
+      playRecordKey("nonogram", DATE),
+      JSON.stringify(concludedRecord({ syncOutcome: "pending" })),
+    );
+    const NonogramConclusion = await loadConclusion();
+
+    const view = render(<NonogramConclusion date={DATE} />);
+    await flush();
+    const afterMount = dayCalls();
+    // Anti-vacuity: the mount fetch really happened, so a later increase is
+    // the nudge and not the store waking up for the first time.
+    expect(afterMount).toBeGreaterThanOrEqual(1);
+
+    // The sync lands: the same record, now recorded.
+    writePlayRecord(concludedRecord({ syncOutcome: "recorded" }));
+    await waitOutRecordPoll();
+    await flush();
+
+    expect(dayCalls()).toBeGreaterThan(afterMount);
+
+    // AND IT DOES NOT FIRE AGAIN on re-renders that change nothing about the
+    // settle — the property a dep-less effect would break, and the reason
+    // the effect is keyed rather than bare.
+    const afterNudge = dayCalls();
+    view.rerender(<NonogramConclusion date={DATE} />);
+    view.rerender(<NonogramConclusion date={DATE} />);
+    await flush();
+    expect(dayCalls()).toBe(afterNudge);
+    view.unmount();
+  });
+
+  it("a `rejected` settle asks for nothing", async () => {
+    // The negative half, on the same transition shape: a completion the
+    // server refused changed no day truth, so it must buy no request.
+    const fetchMock = stubApi(() =>
+      jsonResponse(200, dayBody(completedClaim(MOTIF))),
+    );
+    const dayCalls = () =>
+      fetchMock.mock.calls.filter((call) => urlOf(call[0]) === `${API_URL}/day`)
+        .length;
+
+    const { writePlayRecord } = await import("../src/play/play-record");
+    window.localStorage.setItem(
+      playRecordKey("nonogram", DATE),
+      JSON.stringify(concludedRecord({ syncOutcome: "pending" })),
+    );
+    const NonogramConclusion = await loadConclusion();
+
+    const view = render(<NonogramConclusion date={DATE} />);
+    await flush();
+    const afterMount = dayCalls();
+    expect(afterMount).toBeGreaterThanOrEqual(1);
+
+    writePlayRecord(concludedRecord({ syncOutcome: "rejected" }));
+    await waitOutRecordPoll();
+    await flush();
+
+    expect(dayCalls()).toBe(afterMount);
+    view.unmount();
+  });
+});
+
 describe("the caption's impeccable worst case (T-WEB-S330)", () => {
   it("no curated motif name can trip `all-caps-body` — measured over the whole shipped library, not over today's motif", () => {
     // THE #31 LESSON, applied before it costs anything. `all-caps-body` fires
     // on **> 30 chars of DIRECT text** under `text-transform: uppercase`,
     // with no interactive or `nav` exemption — and both caption lines are
     // uppercase. `.pictureLead` is a fixed string, but `.pictureName` renders
-    // CONTENT: 185 curated names, a library that grows, on the one screen a
+    // CONTENT: 184 curated names, a library that grows, on the one screen a
     // URL-mode impeccable scan can never reach (it needs a solved day, and a
     // clean profile's `/day` answers 401 — ADR-0065 consequence (c)'s
     // precedent). So the gate has to live here, measured over the worst case
     // rather than over whatever motif today happens to publish.
     //
-    // Today: 185 names, longest "Bolo de aniversário" at 19. The margin is
+    // Today: 184 names, longest "Bolo de aniversário" at 19. The margin is
     // 11 characters, and a 31-character motif added years from now must red
     // at commit time instead of at a preview scan nobody can run.
     //
@@ -512,72 +654,5 @@ describe("the caption's impeccable worst case (T-WEB-S330)", () => {
     expect(messages.games.nonogram.reveal.lead.length).toBeLessThanOrEqual(
       ALL_CAPS_BODY_MAX,
     );
-  });
-});
-
-describe("the payoff-moment refresh (T-WEB-S329)", () => {
-  it("a `recorded` settle asks the store for today's truth once; a `rejected` settle asks for nothing", async () => {
-    // Without this the just-solved player waits up to 60 s for the poll to
-    // reveal the name on the one screen whose whole point is the payoff. The
-    // refetch is honest independent of #64: a recorded completion means the
-    // server's day truth genuinely changed.
-    //
-    // THE TRIGGER IS COUNTED THROUGH `fetch`, not through a spy on the
-    // re-export, because the claim is about the request the user's device
-    // actually makes. The mount fetch is subtracted rather than assumed
-    // away.
-    const fetchMock = stubApi(() =>
-      jsonResponse(200, dayBody(completedClaim(MOTIF))),
-    );
-    const dayCalls = () =>
-      fetchMock.mock.calls.filter((call) => urlOf(call[0]) === `${API_URL}/day`)
-        .length;
-
-    window.localStorage.setItem(
-      playRecordKey("nonogram", DATE),
-      JSON.stringify(concludedRecord({ syncOutcome: "rejected" })),
-    );
-    const NonogramConclusion = await loadConclusion();
-
-    const rejected = render(<NonogramConclusion date={DATE} />);
-    await flush();
-    // A `rejected` settle adds NOTHING over the store's own mount fetch.
-    const afterRejected = dayCalls();
-    expect(afterRejected).toBe(1);
-    rejected.unmount();
-
-    // A fresh module instance, so the store's payload and its `inFlight`
-    // guard cannot carry over and make the count meaningless.
-    vi.resetModules();
-    const fresh = stubApi(() =>
-      jsonResponse(200, dayBody(completedClaim(MOTIF))),
-    );
-    const freshDayCalls = () =>
-      fresh.mock.calls.filter((call) => urlOf(call[0]) === `${API_URL}/day`)
-        .length;
-    window.localStorage.setItem(
-      playRecordKey("nonogram", DATE),
-      JSON.stringify(concludedRecord({ syncOutcome: "recorded" })),
-    );
-    const Recorded = await loadConclusion();
-
-    const recorded = render(<Recorded date={DATE} />);
-    await flush();
-    // The mount fetch plus the nudge. It is deduped by the store's
-    // `inFlight` guard when they overlap, so this asserts "at least the
-    // mount fetch, at most one more" rather than a brittle exact count —
-    // and the ceiling is what matters: the effect is keyed on the settle
-    // outcome, so it can never loop.
-    expect(freshDayCalls()).toBeGreaterThanOrEqual(1);
-    expect(freshDayCalls()).toBeLessThanOrEqual(2);
-
-    // AND IT DOES NOT FIRE AGAIN on re-renders that change nothing about the
-    // settle — the property a dep-less effect would break.
-    const before = freshDayCalls();
-    recorded.rerender(<Recorded date={DATE} />);
-    recorded.rerender(<Recorded date={DATE} />);
-    await flush();
-    expect(freshDayCalls()).toBe(before);
-    recorded.unmount();
   });
 });

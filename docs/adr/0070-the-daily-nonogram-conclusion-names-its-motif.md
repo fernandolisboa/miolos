@@ -1,12 +1,12 @@
 # ADR-0070 — The daily Nonogram conclusion names its motif, over the wire
 
 **Status:** Accepted — 2026-08-21 (issue #64, shipped in #188)
-**Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0034](./0034-the-conclusion-is-one-shared-view-with-a-per-game-payoff.md), [ADR-0060](./0060-the-day-truth-is-one-endpoint-one-store-one-merge.md), [ADR-0065](./0065-the-cross-device-completed-view-is-honest-about-absence.md)
+**Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md)
 **Supersedes in part:** [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md) — decision 1's **name clause only** (*"`reveal.motifId`, `reveal.name` and `reveal.mirrored` never reach the client in v1"*) is replaced for `reveal.name`, on the exact path decision 5 itself specified. `motifId` and `mirrored` never reach any client payload, on any status; the daily-payload and completion-response guarantees stand as written; decision 2's product-not-security register, decision 3's `FORBIDDEN_DAILY_KEYS` additions and decision 4's rename rule are untouched and are what this decision is built on.
-**Amends:** [ADR-0046](./0046-free-play-generates-on-the-client.md) — consequence 1's *"names remain non-user-facing everywhere"* narrows to FREE PLAY, which stays permanently unnamed. It is a narrowing, not a reversal: `use-free-nonogram.ts` still drops `reveal` at the parse.
-**Amends:** [ADR-0047](./0047-bundle-markers-are-route-scoped.md) — its *"to generate and never to name"* clause stays true **of the bundle**, which is the only thing it was ever about. The daily name is wire-delivered and no motif table is bundled.
-**Amends:** [ADR-0060](./0060-the-day-truth-is-one-endpoint-one-store-one-merge.md) — annotation **(i)**, at two loci: decision 2's *"no puzzle content of any kind"*, and decision 3's not-merged list.
-**Amends:** [ADR-0065](./0065-the-cross-device-completed-view-is-honest-about-absence.md) — decision 1's honest-absence table gains the motif NAME as a second recorded absence on the remote completed view; decision 2's *"one wire field"* template is the one `motifName` is built to.
+**Amends:** [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) — consequence 1's *"names remain non-user-facing everywhere"* narrows to FREE PLAY, which stays permanently unnamed. It is a narrowing, not a reversal: `use-free-nonogram.ts` still drops `reveal` at the parse.
+**Amends:** [ADR-0047](./0047-bundle-markers-are-route-scoped.md) — its *"to generate, never to name"* clause stays true **of the bundle**, which is the only thing it was ever about. The daily name is wire-delivered and no motif table is bundled.
+**Amends:** [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md) — annotation **(i)**, at two loci: decision 2's *"no puzzle content of any kind"*, and decision 3's not-merged list.
+**Amends:** [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md) — decision 1's honest-absence table gains the motif NAME as a second recorded absence on the remote completed view; decision 2's *"one wire field"* template is the one `motifName` is built to.
 
 ## Context
 
@@ -29,7 +29,7 @@ guarantee has to survive the change by construction rather than by care.
 ## Decision
 
 1. **The name ships as an optional `motifName` on the `/day` per-game
-   claim** — [ADR-0065](./0065-the-cross-device-completed-view-is-honest-about-absence.md)
+   claim** — [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md)
    decision 2's `hintsUsed` template verbatim. It is **post-completion by
    construction**, which is the whole reason this seam was chosen over a new
    endpoint: a claim is a projection of the user's own completion rows, so
@@ -80,7 +80,7 @@ guarantee has to survive the change by construction rather than by care.
    `nonogram-conclusion.tsx` and handed down as data. `ConclusionView` stays
    game-blind and reads no Nonogram string; Termo's `ConclusionAnswer` is the
    shipped precedent. This adds no member to the payoff budget
-   ([ADR-0034](./0034-the-conclusion-is-one-shared-view-with-a-per-game-payoff.md)
+   ([ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md)
    consequence (c)) and no per-game arm.
 
 7. **The archive, free play and the cross-device REMOTE completed view are
@@ -121,7 +121,7 @@ guarantee has to survive the change by construction rather than by care.
   schema, which decision 10 below refuses.
 - **A new post-completion endpoint.** A whole route, its CORS, its contract
   and a credentialed GET, for one string —
-  [ADR-0051](./0051-stats-are-computed-server-side-on-read.md) decision 3's
+  [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md) decision 3's
   endpoint-count trigger is sized against exactly that. Its one advantage
   over the claim rider is a `?date=`, which buys nothing while the archive is
   a non-goal.
@@ -197,15 +197,33 @@ guarantee has to survive the change by construction rather than by care.
   pins it.
 - **(h) No loop is reachable through decision 9's nudge, and this is a proof
   rather than an assurance.** `refresh()` never writes a play record, so
-  `settle` cannot be re-entered from it; `settle` drops the record from the
-  fallback queue, so the trigger fires at most once per record; `inFlight`
-  dedupes concurrent triggers; and `settle(_, "recorded")` has exactly ONE
-  call site (`acceptResponse`, covering both the `recorded: true` and
-  `recorded: false` arms), so this is one condition and not two branches. The
-  nudge can fire with no listener subscribed — `refresh()` is guarded by
-  `inFlight` and by nothing else — which is accepted explicitly and bounded
-  at four completions per user per day.
-- **(i) The copy register is the shipped card's, not the issue's phrasing.**
+  `settle` cannot be re-entered from it; `inFlight` dedupes concurrent
+  triggers; and `settle(_, "recorded")` has exactly ONE call site
+  (`acceptResponse`, covering both the `recorded: true` and `recorded: false`
+  arms), so this is one condition and not two branches. The nudge can fire
+  with no listener subscribed — `refresh()` is guarded by `inFlight` and by
+  nothing else — which is accepted explicitly.
+  **The frequency bound is conclusion MOUNTS, not completions**, and the
+  looser phrasing is corrected here rather than left flattering: `syncOutcome`
+  is a persisted play-record field, so the effect's dependency transitions
+  `undefined → "recorded"` on every hydration of an already-recorded day's
+  conclusion, not only on the day's four real settles. Every one of those is
+  deduped to nothing by `inFlight`, because `useDayState`'s
+  `useSyncExternalStore` subscribe is hook-ordered before the effect and sets
+  the guard synchronously. Net new requests stay at most one per genuine
+  `pending → recorded` transition.
+- **(i) The nudge is DROPPABLE in the moment it exists for, and degrades to
+  the old behaviour.** `refresh()` discards a trigger that arrives while
+  `inFlight`; it does not coalesce a trailing fetch. So if the mount's own
+  `GET /day` is still open when the completion settles, the nudge is lost and
+  the caption waits for the 60 s poll — precisely the latency decision 9 was
+  written against. It is unlikely in practice (the record poll puts ≥1 s
+  between mount and settle) and it fails toward the pre-#64 behaviour rather
+  than toward a wrong render, so it ships as a named residual. A
+  `refreshAgain` flag set under `inFlight` and consumed in the existing
+  `finally` would close it, and is not worth a second piece of store state
+  today.
+- **(j) The copy register is the shipped card's, not the issue's phrasing.**
   The caption borrows Termo's `dayWordRow` slot, where the kicker is an 11px
   tracked-uppercase **impersonal** line and the second person lives in the
   sentence above it. So the lead is *"A figura de hoje era"* and the second

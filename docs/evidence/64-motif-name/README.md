@@ -8,9 +8,13 @@ tracked-uppercase kicker over the curated pt-BR name.
 | `after-reveal-*.png` | the caption, with the name published on the day claim |
 | `before-reveal-*.png` | the same composition with no name — today's shipped reveal, unchanged |
 
-Both viewports: 390×844 and 1440×900. The fixture uses the **longest** name
-in the shipped library, `Caranguejo`-class content rather than today's motif,
-for the reason the worst-case rule below exists.
+Both viewports: 390×844 and 1440×900. The fixture renders the **longest name
+in the shipped library — `Bolo de aniversário`, 19 characters** — rather than
+today's motif, because a mid-length name shows none of the behaviour worth
+looking at. At 390 px it wraps to two lines (`BOLO DE` / `ANIVERSÁRIO`), which
+is the shape to judge; a first version of these screenshots used `Caranguejo`
+(10 chars) while the text below claimed it was the longest, and the two
+contradicted each other.
 
 ## How these were produced, and what they do NOT prove
 
@@ -60,7 +64,7 @@ what keeps the bundle grep meaningful, ADR-0070 consequence (c)):
 
 - `T-WEB-S330` (`apps/web/test/nonogram-motif-name.test.tsx`) — both lines
   really are uppercase, and the fixed lead fits;
-- `packages/games/test/nonogram/name-length.test.ts` — every one of the 185
+- `packages/games/test/nonogram/name-length.test.ts` — every one of the 184
   curated names fits, and none is blank.
 
 Today's worst case is **`Bolo de aniversário`, 19 characters**, against a

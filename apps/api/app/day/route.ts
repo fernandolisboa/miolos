@@ -100,7 +100,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const today = await todaySaoPaulo(db);
     const rows = await listCompletionsForDay(db, userId, today);
 
-    // The motif name (#64, ADR-0070), folded ONCE and read CONDITIONALLY.
+    // The motif name (#64, ADR-0070), READ CONDITIONALLY.
     //
     // The condition is the same status derivation the claim fold itself
     // uses — `dayStateFromRows`, exported for exactly this — never a
@@ -109,7 +109,23 @@ export async function GET(request: NextRequest): Promise<Response> {
     // Because of it most callers pay for no extra query at all: the read
     // only happens for a user who has already finished today's Nonogram.
     //
-    // `if (motifName)` below is TRUTHINESS, deliberately, never
+    // THE FOLD ITSELF RUNS TWICE — here and inside `dayGamesFromRows` — and
+    // that is accepted, not overlooked. It is ≤4 rows × 4 games of pure
+    // arithmetic, sub-microsecond against a ~15–25 ms HTTPS round trip
+    // (`neon-http` gives every statement its own request). Threading the
+    // computed statuses through `dayGamesFromRows` would widen a core API to
+    // buy a microsecond and put the publication rule's condition in two
+    // places. One spelling is worth more than the microsecond.
+    //
+    // PARALLELISING with the completions read was considered and REJECTED.
+    // `Promise.all` would take a completed-nonogram caller from 4 round
+    // trips to 3, and it is safe (both reads need only `today`, and the fold
+    // re-gates on status anyway, so a speculatively-read name is discarded
+    // harmlessly). But it makes EVERY caller pay the query, on every 60 s
+    // poll tick — a permanent ~33% rise in query volume across all users, to
+    // save latency on a background tick where nobody is waiting.
+    //
+    // The `motifName ? … : undefined` below is TRUTHINESS, deliberately, never
     // `!== undefined`: `getPublishedNonogramMotifName` already normalises a
     // blank stored name away, and this is the second guard on the path that
     // would otherwise put `motifName: ""` into the parse two lines down and

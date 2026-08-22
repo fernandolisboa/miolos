@@ -1131,9 +1131,21 @@ describe("the motif-name read (#64, ADR-0070)", () => {
 
     // A row for ANOTHER game on a date that has one: the predicate is
     // game-scoped, so a published binairo never answers for the nonogram.
-    await insertRow({
+    //
+    // THE CONTENT IS NONOGRAM CONTENT FILED UNDER `game: "binairo"`, which
+    // looks perverse and is the only shape that proves anything. With a real
+    // binairo row this assertion is VACUOUS — a step-6 reviewer removed
+    // `eq(dailyPuzzles.game, game)` from the reader's predicate and all 46
+    // tests here still passed, because binairo content fails
+    // `nonogramDailyContentSchema.parse` inside the `try` and the `catch`
+    // swallows it. The parse was doing the scoping, not the wall. With
+    // parseable content under the wrong game, only the predicate can answer
+    // `undefined`.
+    await ctx.db.insert(dailyPuzzles).values({
       game: "binairo",
       date: "2026-06-20",
+      seed: 99,
+      content: nonogramContentFixture(),
       publishedAt: sql`now() - interval '1 hour'`,
     });
     expect(
@@ -1153,6 +1165,11 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       ["2026-08-02", ""],
       ["2026-08-03", "   "],
       ["2026-08-04", "\t\n "],
+      // The two `trim()` does NOT strip, and the reason the guard is a
+      // `\p{Cf}` regex rather than a trim: a zero-width space and a BOM both
+      // render an invisible name under a visible lead.
+      ["2026-08-06", "​"],
+      ["2026-08-07", "﻿​ "],
     ];
     for (const [date, name] of cases) {
       await insertNamed({

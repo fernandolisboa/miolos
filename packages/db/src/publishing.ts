@@ -2,7 +2,17 @@
  * Server-internal surface — the dangerous side of the wall (ADR-0024,
  * plan 014 D16). Everything that can bypass the published-predicate wall
  * lives here and ONLY here: the raw table objects, the buffer writers/
- * readers, remote config, and the solution-bearing reader.
+ * readers, remote config, the solution-bearing reader, and — since #64
+ * (ADR-0070) — a CURATED-CONTENT reader that returns neither a row nor a
+ * solution but one withheld string, today's Nonogram motif name.
+ *
+ * That last one widens what this entry is FOR, so it is named rather than
+ * left to be inferred from the export list: the entry is not only "readers
+ * that can see unpublished rows" and "readers that carry a solution". It is
+ * every read whose result `apps/web` must not be able to name. A single
+ * curated field is exactly that — the daily payload strips `reveal` whole,
+ * and a root export of this reader would hand an RSC segment a one-line
+ * channel to today's name.
  *
  * apps/web must NEVER import `@miolos/db/publishing` (ADR-0024 records
  * the rule; #18 adds the ESLint no-restricted-imports ban when web gains

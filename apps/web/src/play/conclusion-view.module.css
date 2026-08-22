@@ -1133,13 +1133,15 @@
     height: 104px;
   }
 
-  /* Stepped WITH the picture and with `.dayWord`, by the same ratio the rest
-     of this block holds: 22 × 0.85 = 18.7, and 18px is the 4pt-scale value
-     under it. */
   .pictureCaption {
     margin-top: var(--space-3);
   }
 
+  /* Stepped WITH the picture and with `.dayWord`, by the same ratio the rest
+     of this block holds: 22 × 0.85 = 18.7, and 18px is the 4pt-scale value
+     under it. (The arithmetic sits on the rule whose `font-size` it explains,
+     like `.dayWord`'s above — it briefly sat on `.pictureCaption`, which only
+     moves a margin.) */
   .pictureName {
     font-size: 18px;
   }

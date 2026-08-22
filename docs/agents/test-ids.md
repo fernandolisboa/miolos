@@ -37,11 +37,36 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S112` | `S110` | never used |
-| `T-DB` | `S85` | `S82` | `T-DB-21` |
-| `T-API` | `S176` | `S175` | `T-API-16` |
-| `T-WEB` | `S323` | `S322` | `T-WEB-23` |
+| `T-CORE` | `S116` | `S114` | never used |
+| `T-DB` | `S89` | `S87` | `T-DB-21` |
+| `T-API` | `S182` | `S179` | `T-API-16` |
+| `T-WEB` | `S333` | `S330` | `T-WEB-23` |
 | `T-LINT` | `S54` | `S53` | `T-LINT-10` |
+
+#64 (plan 066) reserved **`T-CORE S112…S115`, `T-DB S85…S88`,
+`T-API S176…S181`, `T-WEB S323…S332`** and no `T-LINT` id
+([the reservation](https://github.com/fernandolisboa/miolos/issues/64#issuecomment-5376854444),
+made at step 5 with the frontier re-derived by the documented grep, which
+agreed with this table in both columns). It spent `T-CORE-S112…S114`,
+`T-DB-S85…S87`, `T-API-S176…S179` and `T-WEB-S323…S330` — **17 planned plus
+`T-WEB-S330` taken from the reserved headroom at step 5**, for the
+`all-caps-body` worst case over the motif library, a gate the plan's test
+list did not anticipate because it is data-dependent rather than
+behavioural (the #31 lesson, napkin § Impeccable 8). The remaining tails —
+`T-CORE-S115`, `T-DB-S88`, `T-API-S180`/`S181`, `T-WEB-S331`/`S332` — are
+the rest of that headroom and are **burned if unspent** per the rule below;
+step 8 reconciles. The rows above already sit at the true maxima with "next
+free" jumping the whole reservation, so the next allocator starts past
+everyone either way.
+
+**`packages/games/test/nonogram/name-length.test.ts` carries NO id**, which
+is that package's convention and is load-bearing here rather than
+incidental: `T-WEB-S330` and that file are two halves of ONE claim, split
+across two packages because `apps/web` may never import `MOTIFS` — the
+import ban that keeps the bundle grep a real tree-shaking check (ADR-0070
+consequence (c)). The `bundle-markers.test.ts` ↔ `route-client-js.mjs` pair
+is the same shape, and neither half is a precedent for spreading one id
+across two files.
 
 The "next free" values above jump over #146's reserved review-round
 headroom (`T-CORE-S109`, `T-DB-S83`/`S84`, `T-API-S152…S154`,

@@ -66,6 +66,7 @@ Accumulated across handoffs 024, 026, 028, 034; none ever marked done. One sessi
 ## STANDING — no action unless you disagree
 
 - **Copy/design flags left open, revise only if you dislike them:** medals names/placement (handoff 036), five stats copy flags (handoff 034), four sharing deviations (handoff 041).
+- **#64's two departures from your instructions, both deliberate and both reversible in a one-line ticket** (PR #188, ADR-0070). **(1) The bundle tripwire is KEPT, not spent.** You said the implementing PR must "replace or retire" ADR-0033 consequence (d)'s grep. It turned out nothing had to be spent: the grep scans `.next/static/chunks` only, the name ships over an authenticated wire, and an API response is never a chunk — so the check is still fully armed, proved by a `bundle-check` run with the name live (ADR-0070 consequence (c)). Keeping it costs nothing; only bundling the motif tables would kill it. **(2) The caption's copy register is the shipped card's, not your phrasing.** Your "Você revelou: Âncora" reads as a second-person sentence at 11px tracked-uppercase kicker size, which breaks the register Termo's `dayWordRow` established; the lead is "A figura de hoje era" with the name under it, and the second person lives in the accessible label — "Você revelou Âncora — …" (ADR-0070 consequence (j)). Per CLAUDE.md copy register is the agent's call, so this is recorded rather than asked. **Say the word on #64 if you disagree with either.**
 
 ---
 

@@ -366,9 +366,8 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
 
     // Every not-completed shape a nonogram can take on the DAY payload, each
     // with today's row published and holding a name the route could have
-    // reached for. `pending` from no row; `played` from a lost row; and the
-    // LATE WIN — a row that exists and yields no claim (ADR-0060 consequence
-    // (f)), written for YESTERDAY's date so it is genuinely late.
+    // reached for: `pending` from no row, `played` from a lost row, and
+    // `pending` from the late win.
     const cases: readonly [string, () => Promise<void>][] = [
       ["no row at all", async () => {}],
       [
@@ -380,6 +379,24 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
             date: today,
             outcome: "lost",
             completedAtDate: today,
+          }),
+      ],
+      [
+        "a LATE WIN → pending",
+        // The sharpest negative at this layer, and the one the route's
+        // condition is the ONLY thing withholding the name from: the row
+        // exists, it is a WIN, it is for today — and it was written on a
+        // later SP day, so `onTime` is false and `statusOfRow` yields
+        // `pending` (ADR-0060 consequence (f)). A `!== "pending"` or a
+        // "did they win it" condition would both publish the name here.
+        () =>
+          insertHistoryRow({
+            userId,
+            game: "nonogram",
+            date: today,
+            outcome: "won",
+            completedAtDate: addDays(today, 1),
+            elapsedMs: 512_000,
           }),
       ],
     ];
