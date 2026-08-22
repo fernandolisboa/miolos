@@ -39,8 +39,18 @@ only the cross-device half reads as pending. It is also self-healing, on
    has been released. `mintRepairSpent` is set *before* the mint is awaited
    and is never cleared, and both entry points share it.
 3. **`inFlight` keeps both of its properties** — set synchronously (P1), and
-   held for exactly one `GET /day` (P2). The general rule, stated once so it
-   can be cited: **no promise that can hang is ever awaited under the guard.**
+   held for exactly one `GET /day` (P2). The rule, stated once so it can be
+   cited: **the guard is held across exactly the one `GET /day` it exists to
+   dedupe, and nothing else is ever awaited under it.**
+
+   Stated that way deliberately, rather than as "no promise that can hang is
+   ever awaited under the guard" — which would be false of the code it
+   governs. `fetchDayTruth()` calls `fetch` with no `AbortSignal` and no
+   timeout, so the one request held under the guard *can itself* hang, and
+   that residual is accepted unmitigated: it is the request the guard exists
+   for, and a mitigation would be a second decision. What the rule forbids is
+   *widening* the guard to cover anything else — which is what disqualified
+   ordering the fetch behind `ensureSession()`.
 4. **The repair is wired to the `next === undefined` arm only, never
    `.catch`.** The catch arm is unreachable through the shipped client, and
    `T-WEB-S246` stubs a rejecting client precisely to prove the guard's
@@ -130,6 +140,16 @@ which nothing here has measured (consequence (i)).
   itself, and the free-play wall bans `../day/**` and `src/session` from free
   play by name and non-transitively (free play imports neither). The bundle
   delta for `/` is measured in the PR, not assumed.
+
+  **The store therefore becomes a surface that CAN mint, and what stops it is
+  a property of the app rather than of this module.** `app/layout.tsx` is the
+  only layout and renders `<SessionBootstrap/>` ahead of `{children}`, so
+  `ensureSession()`'s cached promise is always already pending by the time a
+  full `GET /day` round trip has returned — the repair joins a mint, never
+  starts one. Render the day island under a layout that does not bootstrap —
+  a new route group, an embedded hub, a screenshot harness — and a pure read
+  path mints one anonymous user per load. Pinned by `T-WEB-S345`'s third
+  case rather than left as an unwritten assumption.
 - **(e)** **ADR-0070 consequence (h) stays true as written and is deliberately
   not annotated.** Its bound is *"at most one per genuine `pending →
   recorded` transition"* — per transition — while this repair is per page load

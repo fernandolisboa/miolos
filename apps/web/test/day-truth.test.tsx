@@ -5,6 +5,8 @@ import { join, relative, sep } from "node:path";
 import { StrictMode, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { withoutComments } from "./ts-source";
+
 /**
  * The day-truth store (#83, ADR-0060 decision 5): ONE shared value for N
  * consumers, refreshed on listener count 0 -> 1, on the three events a
@@ -603,47 +605,6 @@ describe("the day-truth seam is one function body wide (T-WEB-S244)", () => {
 });
 
 describe("this file's immunity from the session mint is designed (T-WEB-S347)", () => {
-  /**
-   * A module's source with its comments removed, the `T-WEB-S244` /
-   * `og-image.node.test.ts` source-scan idiom.
-   *
-   * STRIPPING IS NOT FASTIDIOUSNESS: the header paragraph above names all
-   * three facts this scan checks, `jsonResponse(401, …)` included, so a scan
-   * over raw text would red on its own documentation. Character by character
-   * rather than two regexes — a `/*` inside a line comment opens a block the
-   * naive version never closes, which is the trap `nonogram-motif-name.test.tsx`
-   * records having fallen into. A third copy of that helper rather than a
-   * shared one, on this repo's existing practice (`test/css-source.ts` carries
-   * its own): the scan and the file it scans travel together.
-   */
-  function withoutComments(source: string): string {
-    let out = "";
-    let inBlock = false;
-    for (const line of source.split("\n")) {
-      let kept = "";
-      for (let i = 0; i < line.length; i += 1) {
-        if (inBlock) {
-          if (line.startsWith("*/", i)) {
-            inBlock = false;
-            i += 1;
-          }
-          continue;
-        }
-        if (line.startsWith("//", i)) {
-          break;
-        }
-        if (line.startsWith("/*", i)) {
-          inBlock = true;
-          i += 1;
-          continue;
-        }
-        kept += line[i];
-      }
-      out += `${kept}\n`;
-    }
-    return out;
-  }
-
   const source = withoutComments(
     readFileSync(join(import.meta.dirname, "day-truth.test.tsx"), "utf8"),
   );

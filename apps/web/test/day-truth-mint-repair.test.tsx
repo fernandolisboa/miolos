@@ -183,6 +183,61 @@ describe("a healthy load pays nothing for the repair (T-WEB-S345)", () => {
 
     rendered.unmount();
   });
+
+  it("a store that already holds today's truth does not spend the one-shot on a later empty answer — the `payload === undefined` narrowing, not just `next === undefined`", async () => {
+    // The arm the case above cannot reach: its second answer is another 200,
+    // so `next === undefined` never runs with a payload held. Without this,
+    // `noTruthYet = true` survives as a mutation and the retry-amplification
+    // ADR-0072 consequence (k) accepts once on a COLD load fires on a warm
+    // one — every 5xx, 429 or schema-refused 200 mid-session buying an extra
+    // mint plus an extra `GET /day`. Widened in place under `T-WEB-S345`
+    // rather than taking a new id: same claim about the same guard.
+    let answer = (): Response => jsonResponse(200, payload());
+    const dayCalls = stubApi(() => answer());
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await flush();
+
+    expect(dayCalls()).toBe(1);
+    expect(rendered.result.current).toEqual(payload());
+
+    // Mid-session blip: the store holds a truth, so the empty answer is not
+    // the "no server truth at all" state the repair is armed by.
+    answer = () => jsonResponse(500, { error: "internal" });
+    window.dispatchEvent(new Event("focus"));
+    await flush();
+
+    expect(dayCalls()).toBe(2);
+    expect(bootstrapMock.ensureSession).not.toHaveBeenCalled();
+    expect(rendered.result.current).toEqual(payload());
+
+    rendered.unmount();
+  });
+
+  it("the repair JOINS a mint and never starts one — `ensureSession()` is called, but no second `POST /session` is issued", async () => {
+    // The store is now structurally capable of minting from a pure read path,
+    // and what stops it is a property of the APP: `app/layout.tsx` renders
+    // `<SessionBootstrap/>` ahead of `{children}`, so the cached promise is
+    // always already pending by the time a `GET /day` round trip returns.
+    // That invariant is unwritten anywhere a checker can see, so it is pinned
+    // here: the repair must reach the SHARED promise, never a fresh mint.
+    const mint = vi.fn(() => Promise.resolve());
+    bootstrapMock.ensureSession.mockImplementation(mint);
+
+    const dayCalls = stubApi(() => jsonResponse(401, { error: "no-session" }));
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await flush();
+
+    expect(dayCalls()).toBe(2);
+    // One call into the shared, already-cached mint — not one mint per empty
+    // answer. `remintSession()` is never reached from a read path.
+    expect(mint).toHaveBeenCalledTimes(1);
+
+    rendered.unmount();
+  });
 });
 
 describe("the repair is one per page load, and a hanging mint never wedges the store (T-WEB-S346)", () => {

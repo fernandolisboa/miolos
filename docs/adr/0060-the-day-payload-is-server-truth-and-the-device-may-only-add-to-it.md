@@ -272,12 +272,14 @@ in the app that can **demote**.
    guard, so a slow answer is never stacked on"* are **re-affirmed**: the
    guard is still set synchronously and still held for exactly one `GET /day`,
    because the mint is awaited **after** the guard is released and never
-   under it — ADR-0072 decision 3's rule, *no promise that can hang is ever
-   awaited under the guard*, which is what disqualified simply ordering the
-   fetch (`ensureSession()` has no timeout). The repair is **event-driven and
-   one-shot, not a second interval**, so this decision's no-second-loop claim
-   and annotation (a)'s bounded-poll clause both stand exactly as written —
-   the same reading annotation (i) gave #64's nudge. Asserted as
+   under it — ADR-0072 decision 3's rule, *the guard is held across exactly
+   the one `GET /day` it exists to dedupe, and nothing else is ever awaited
+   under it*, which is what disqualified simply ordering the fetch
+   (`ensureSession()` has no timeout). The repair is a **bounded one-shot
+   retry keyed on the store's own empty answer** — not a second interval, and
+   not an external event either, which is where it differs from annotation
+   (i)'s #64 nudge. So this decision's no-second-loop claim and annotation
+   (a)'s bounded-poll clause both stand exactly as written. Asserted as
    `T-WEB-S344`–`T-WEB-S346` in
    `apps/web/test/day-truth-mint-repair.test.tsx`.)*
 

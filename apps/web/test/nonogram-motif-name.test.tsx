@@ -18,6 +18,7 @@ import {
 } from "../src/play/play-record";
 import type { NonogramMark } from "../src/nonogram/state";
 import { bodyOf, decl, stylesheet } from "./css-source";
+import { withoutComments } from "./ts-source";
 
 /**
  * The named Nonogram reveal (#64, ADR-0070, superseding ADR-0033 decision
@@ -192,33 +193,6 @@ function caption(): HTMLElement | null {
  * assertions at the call sites. It stays in this file rather than becoming a
  * shared utility, so the next scan has to make that check for itself.
  */
-function withoutComments(source: string): string {
-  let out = "";
-  let inBlock = false;
-  for (const line of source.split("\n")) {
-    let kept = "";
-    for (let i = 0; i < line.length; i += 1) {
-      if (inBlock) {
-        if (line.startsWith("*/", i)) {
-          inBlock = false;
-          i += 1;
-        }
-        continue;
-      }
-      if (line.startsWith("//", i)) {
-        break;
-      }
-      if (line.startsWith("/*", i)) {
-        inBlock = true;
-        i += 1;
-        continue;
-      }
-      kept += line[i];
-    }
-    out += `${kept}\n`;
-  }
-  return out;
-}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });

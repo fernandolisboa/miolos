@@ -234,11 +234,13 @@ function samePayload(previous: DayResponse, next: DayResponse): boolean {
  * one-shot above: await the mint, then refresh once more. Five things about
  * the shape are load-bearing:
  *
- *  - `inFlight = false` RUNS FIRST, in the same synchronous `finally` body.
- *    The repair is scheduled against an already-released guard, so a hanging
- *    mint parks a dangling `.then` and nothing else and every later trigger
- *    keeps working (`T-WEB-S346`(b)). This is not a microtask-ordering claim:
- *    both statements sit in one function body.
+ *  - THE MINT IS REACHED THROUGH `.then`, NEVER `await`ed inside the chain
+ *    that holds `inFlight`. That is what keeps the guard released while the
+ *    mint runs: a hanging mint parks a dangling continuation and nothing
+ *    else, and every later trigger keeps working (`T-WEB-S346`(b)).
+ *    `inFlight = false` is written first for readability; its position is
+ *    NOT the safety, because `ensureSession().then` defers to a later
+ *    microtask either way.
  *  - THE TRIGGER IS THE `next === undefined` ARM ONLY, NEVER `.catch`. The
  *    catch arm is unreachable through the shipped client, and `T-WEB-S246`
  *    stubs a rejecting client precisely to prove the guard's correctness is
@@ -256,6 +258,13 @@ function samePayload(previous: DayResponse, next: DayResponse): boolean {
  *    identity actually landed, so a mint that resolved `false` still spends
  *    the one-shot. Reading that boolean means `remintSession()`, which is not
  *    for read paths (ADR-0072 consequence (l)).
+ *  - IT JOINS A MINT, IT NEVER STARTS ONE — and that is a property of the
+ *    APP, not of this module. `app/layout.tsx` is the only layout and renders
+ *    `<SessionBootstrap/>` ahead of `{children}`, so `ensureSession()`'s
+ *    cached promise is always already pending by the time a full `GET /day`
+ *    round trip has come back. Render this store under a layout that does
+ *    NOT bootstrap and a read path mints an anonymous user per load. Pinned
+ *    by `T-WEB-S345`'s third case; ADR-0072 consequence (d).
  */
 function refresh(): void {
   if (inFlight) {
@@ -286,16 +295,22 @@ function refresh(): void {
       // trigger: `noTruthYet` is still `false` here.
     })
     .finally(() => {
-      // FIRST, always: the repair below is scheduled against a released
-      // guard, which is what keeps `inFlight` held for one `GET /day` only.
       inFlight = false;
       if (noTruthYet && !mintRepairSpent) {
         // Set BEFORE the await, so a mint that never settles cannot leave the
         // one-shot re-armed and the chain is bounded at length two.
         mintRepairSpent = true;
-        void ensureSession().then(() => {
-          refresh();
-        });
+        void ensureSession().then(
+          () => {
+            refresh();
+          },
+          () => {
+            // `ensureSession()` does not reject today, but that is a property
+            // of a sibling module's body — the borrowed guarantee this file
+            // refuses elsewhere. A dead mint costs the page one repair, not
+            // an unhandled rejection.
+          },
+        );
       }
     });
 }
