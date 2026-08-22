@@ -15,9 +15,9 @@ export interface NonogramClues {
 
 /**
  * The payoff. Deliberately a single strippable field: everything outside
- * `reveal` is the complete playable projection, so the API layer (#17) can
+ * `reveal` is the complete playable projection, so the API layer can
  * withhold the picture identity pre-completion with a one-field omit
- * (ADR-0004 seam — see plan §6).
+ * (ADR-0004 seam).
  */
 export interface NonogramReveal {
   /** Stable kebab-case English id, e.g. "anchor" (pt-BR display name lives in `name`: "Âncora"). */
@@ -43,7 +43,7 @@ export interface NonogramPuzzle {
 export interface NonogramSolveResult {
   readonly status: "solved" | "stuck" | "contradiction";
   readonly grid: ReadonlyArray<ReadonlyArray<NonogramCellState>>;
-  /** Full sweeps that made progress (plan §3.2). */
+  /** Full sweeps that made progress. */
   readonly passes: number;
   /** Fraction of cells determined after sweep 1, in [0, 1]. */
   readonly firstPassFill: number;
@@ -60,8 +60,8 @@ export interface NonogramApprovalCriteria {
   readonly minEffort: number;
   /**
    * Exclusive upper bound: entry qualifies iff score < maxEffort. T for easy
-   * bands, Infinity for hard/whole-class bands. Half-open
-   * [minEffort, maxEffort) — matches the weekday table (plan §1) exactly.
+   * bands, Infinity for hard/whole-class bands. Half-open [minEffort,
+   * maxEffort).
    */
   readonly maxEffort: number;
 }

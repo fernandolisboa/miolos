@@ -13,15 +13,14 @@ import {
  * `test/nonogram/bundle-markers.test.ts`, and here for the same reason.
  *
  * WHAT THE GREPS PROVE. `word-list.ts` carries two `/*#__PURE__*\/`
- * annotations (ADR-0045 decision 5) so that a client importing `isValidGuess`
- * — which #27 ships, because "não está na lista" must be instant and offline
- * — does NOT drag `TERMO_ANSWERS` along with it. The annotations are
- * invisible to typecheck, to lint and to the whole test suite, and ADR-0045's
- * measurement E4 proves they are fragile to their own placement: annotating
- * only the outer `Object.freeze` left the full 2.8 KB in the bundle. A string
- * grep over the built chunks is the only instrument that can see the
- * difference, and it needs markers that discriminate between the two lists
- * inside one generated module.
+ * annotations (ADR-0045) so that a client importing `isValidGuess` — needed
+ * because "não está na lista" must be instant and offline — does NOT drag
+ * `TERMO_ANSWERS` along with it. The annotations are invisible to typecheck,
+ * to lint and to the whole test suite, and are fragile to their own
+ * placement: annotating only the outer `Object.freeze` left the full list in
+ * the bundle. A string grep over the built chunks is the only instrument
+ * that can see the difference, and it needs markers that discriminate
+ * between the two lists inside one generated module.
  *
  * WHY THESE FIVE. `content/termo/validation.txt` is US-ASCII and
  * `answers.csv` carries 49 accented canonicals, so an accented canonical can
@@ -38,15 +37,14 @@ import {
  *
  * THE CONSUMER, BY NAME: `apps/web/scripts/route-client-js.mjs` hard-codes
  * `então`, `mamãe` and `época` in `FORBIDDEN_EVERYWHERE` (every chunk,
- * free-play chunks included — since #28 the scan is route-scoped, ADR-0047)
- * and `zurro` in `EXPECTED_DAILY_SCOPE` plus `FORBIDDEN_FREE_PLAY_SCOPE`
+ * free-play chunks included — the scan is route-scoped per ADR-0047) and
+ * `zurro` in `EXPECTED_DAILY_SCOPE` plus `FORBIDDEN_FREE_PLAY_SCOPE`
  * (expected in `/termo`'s chunks, forbidden in every `/modo-livre*` route's
- * first-load set). A
- * grep for a word that no longer exists in the shipped list passes trivially,
- * and nothing on the web side can notice — the script holds no link back to
- * this package. WHEN THIS REDS, pick a replacement that the shipped list
- * actually carries and update BOTH this file and the script. Never relax the
- * assertion here.
+ * first-load set). A grep for a word that no longer exists in the shipped
+ * list passes trivially, and nothing on the web side can notice — the script
+ * holds no link back to this package. WHEN THIS REDS, pick a replacement
+ * that the shipped list actually carries and update BOTH this file and the
+ * script. Never relax the assertion here.
  */
 const FORBIDDEN_MARKERS: readonly string[] = ["então", "mamãe", "época"];
 

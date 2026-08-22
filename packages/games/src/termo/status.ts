@@ -5,8 +5,8 @@ export const MAX_GUESSES = 6;
 /**
  * Board-level status only. Day-level semantics (won ⇒ Completed if on-time;
  * lost ⇒ Played, fail row of the distribution — ADR-0008 rules 3-4) are
- * server interpretations of won/lost and ship with #27. The name is
- * TermoBoardStatus, not game/day status, to keep that line sharp.
+ * server interpretations of won/lost. The name is TermoBoardStatus, not
+ * game/day status, to keep that line sharp.
  */
 export type TermoBoardStatus = "playing" | "won" | "lost";
 

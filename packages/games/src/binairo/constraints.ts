@@ -2,18 +2,12 @@ import { cellAt, intAt, sideLength, toCellStates } from "./internal";
 import type { CellState } from "./internal";
 import type { BinairoGrid, BinairoSolvedGrid } from "./types";
 
-/**
- * A rule violation in a (possibly partial) grid — the #18 local-validation
- * affordance (ADR-0004: local validation is a responsiveness affordance,
- * never a source of truth).
- */
 export interface BinairoViolation {
   readonly rule: "run" | "balance" | "duplicate-line";
   /** Row-major indices involved. */
   readonly cells: readonly number[];
 }
 
-/** Row-major indices of a line: rows first (isRow), then columns. */
 function lineIndices(n: number, isRow: boolean, line: number): number[] {
   const indices: number[] = [];
   for (let i = 0; i < n; i += 1) {
@@ -22,11 +16,6 @@ function lineIndices(n: number, isRow: boolean, line: number): number[] {
   return indices;
 }
 
-/**
- * All rule violations in a partial grid. Empty cells never violate;
- * a complete grid with no violations satisfies rules 2–4. Side length is
- * capped at BINAIRO_SIZE (RangeError above it), matching the solver.
- */
 export function findBinairoViolations(
   grid: BinairoGrid,
 ): readonly BinairoViolation[] {

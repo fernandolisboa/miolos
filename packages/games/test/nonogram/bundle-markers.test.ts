@@ -12,7 +12,7 @@ import { MOTIFS } from "../../src/nonogram/motifs";
  * built chunks a real check on the engine barrel's tree-shaking. So the only
  * place these names can be enumerated is inside this package.
  *
- * THE RULE ABOVE SURVIVED #64 AND ITS WARRANT CHANGED (ADR-0070). ADR-0033
+ * THE RULE ABOVE SURVIVED, AND ITS WARRANT CHANGED (ADR-0070). ADR-0033
  * consequence (d) promised this check would die the day a motif name shipped
  * to a user, and it has not: the daily conclusion names its motif from the
  * user's own completed `/day` claim — an authenticated wire — and an API JSON
@@ -23,8 +23,8 @@ import { MOTIFS } from "../../src/nonogram/motifs";
  *
  * THE CONSUMER, BY NAME. `apps/web/scripts/route-client-js.mjs`'s
  * `FORBIDDEN_DAILY_SCOPE` array hard-codes the five markers below and asserts
- * they appear in ZERO daily-scope or unattributed chunks — since #28 the scan
- * is route-scoped (ADR-0047 amends ADR-0033's bundle clause): free-play
+ * they appear in ZERO daily-scope or unattributed chunks — the scan is
+ * route-scoped (ADR-0047 amends ADR-0033's bundle clause): free-play
  * chunks legitimately carry the motif library, and `EXPECTED_FREE_PLAY_SCOPE`
  * requires `Escada` THERE, so the same string is red on one side and required
  * on the other. A grep for a string that no longer exists passes trivially —

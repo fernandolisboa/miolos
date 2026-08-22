@@ -7,7 +7,6 @@ import { motifBitmap } from "./motifs";
 import { NonogramGenerationError, type NonogramPuzzle } from "./types";
 import { validateNonogram } from "./validate";
 
-/** Deterministic retry cap (orchestrator convention; plan §3.3). */
 export const NONOGRAM_MAX_GENERATION_ATTEMPTS = 8;
 
 /**

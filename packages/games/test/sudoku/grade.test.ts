@@ -15,13 +15,13 @@ import {
 import { FULL_GRID, TWO_SOLUTION_GRID } from "./fixtures";
 
 // Every fc.assert in test/sudoku/** pins { seed: FC_SEED, numRuns } so the
-// sampled puzzle-seed set is identical on every CI run (plan §5, review B2).
+// sampled puzzle-seed set is identical on every CI run.
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
 
-// Engine-generated literal puzzles, one per detection rule (plan §5.2),
-// produced with the engine during implementation and pinned as literals.
+// Engine-generated literal puzzles, one per detection rule, produced with
+// the engine during implementation and pinned as literals.
 // No unchecked trust rides on how each was found: the test below fully
 // re-verifies every fixture (exact tier AND the named technique firing in
 // the gradeInternal trace). To regenerate after a ladder change: scan
@@ -159,8 +159,8 @@ describe("gradeSudoku", () => {
   });
 
   it("solves generated puzzles to the recorded solution end-to-end (redundant cross-check)", () => {
-    // Belt-and-suspenders (plan §5.2): follows from P2 + counter correctness;
-    // kept because it exercises solveSudoku's public path and catches gross
+    // Belt-and-suspenders: follows from P2 + counter correctness; kept
+    // because it exercises solveSudoku's public path and catches gross
     // wiring mistakes cheaply.
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {

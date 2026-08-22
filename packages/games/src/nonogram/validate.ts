@@ -92,7 +92,7 @@ export function validateNonogram(
     failures.push("clues-malformed");
   } else {
     // Line-solvability = solvable + unique + human-completable in one run
-    // (the central property, plan §5).
+    // (the central property).
     const solveResult = solveNonogram(clues);
     if (solveResult.status !== "solved") {
       failures.push("not-line-solvable");

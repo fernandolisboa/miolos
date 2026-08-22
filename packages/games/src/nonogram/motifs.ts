@@ -22,15 +22,15 @@ import type { NonogramSolution } from "./types";
  *   pt-BR names; `mirrorable` implies the mirrored bitmap differs.
  * - Line-solvable: solveNonogram(deriveClues(bitmap)) is "solved" and
  *   reproduces the bitmap exactly — for the motif AND its mirrored variant.
- * - Class floors and per-weekday pool minimums (plan §4).
+ * - Class floors and per-weekday pool minimums.
  * - Density guideline 30–65% is a warning-level diagnostic, not a gate.
  */
 export interface Motif {
   /**
-   * Unique kebab-case English id: "anchor". Ids are globally unique across
-   * size classes, so when a subject recurs in a larger class the larger
-   * entry takes a `-big` suffix (e.g. "owl" 8×8 vs "owl-big" 15×15) —
-   * never numeric suffixes or reordered words.
+   * Unique kebab-case English id (e.g. "anchor"), globally unique across
+   * size classes: a subject recurring in a larger class takes a `-big`
+   * suffix ("owl" 8×8 vs "owl-big" 15×15), never a numeric suffix or
+   * reordered words.
    */
   readonly id: string;
   /** pt-BR display name: "Âncora". */
@@ -49,7 +49,6 @@ export const MOTIFS: ReadonlyArray<Motif> = [
   ...MOTIFS_15,
 ];
 
-/** Parse a motif's row strings into the boolean solution bitmap. */
 export function motifBitmap(motif: Motif): NonogramSolution {
   return motif.rows.map((row) => [...row].map((ch) => ch === "#"));
 }

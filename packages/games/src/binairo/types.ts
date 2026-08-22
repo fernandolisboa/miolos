@@ -1,6 +1,5 @@
 import type { Weekday } from "../weekday";
 
-/** Daily Binairo grid side length — fixed 8×8 (design brief line 85). */
 export const BINAIRO_SIZE = 8;
 
 /** A single cell: 0, 1, or null when empty. */
@@ -12,10 +11,7 @@ export type BinairoGrid = readonly BinairoCell[];
 /** Row-major complete grid. */
 export type BinairoSolvedGrid = readonly (0 | 1)[];
 
-/**
- * Solving-technique tiers (see techniques.ts). Tier 3 = guessing, never
- * approved for a daily puzzle.
- */
+/** Solving-technique tiers. Tier 3 = guessing, never approved for a daily puzzle. */
 export type BinairoTier = 1 | 2;
 
 /**
@@ -23,8 +19,8 @@ export type BinairoTier = 1 | 2;
  * `solution` is server-side only (ADR-0004). The type separates the two
  * as sibling fields so callers can ship givens without the solution by
  * destructuring — but serializing the whole object ships the solution, so
- * the actual stripping is enforced at the #17 server boundary (a Zod
- * response schema without `solution`), not by this type.
+ * the actual stripping is enforced at the server boundary (a Zod response
+ * schema without `solution`), not by this type.
  */
 export interface BinairoPuzzle {
   readonly size: typeof BINAIRO_SIZE;

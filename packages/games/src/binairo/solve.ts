@@ -13,8 +13,8 @@ import type { BinairoGrid, BinairoSolvedGrid, BinairoTier } from "./types";
 /**
  * Count solutions under rules 1–4, early-exiting at `limit` (default 2 —
  * enough to decide unsolvable / unique / ambiguous). Propagate-then-branch
- * DFS; propagation runs tier 1 only (plan §3.3 latitude — propagation
- * strength affects speed, never the count), branching is fixed row-major.
+ * DFS; propagation runs tier 1 only (propagation strength affects speed,
+ * never the count), branching is fixed row-major.
  * Grids larger than BINAIRO_SIZE per side throw a RangeError (DFS cost
  * bound); smaller even sizes are accepted for test fixtures.
  */
@@ -96,7 +96,7 @@ export interface BinairoGrade {
 }
 
 /**
- * Grade a puzzle with the technique-tier instrument (plan §3.4): tier 1 if
+ * Grade a puzzle with the technique-tier instrument: tier 1 if
  * the tier-1 fixpoint completes the grid, tier 2 if the tier-1+2 fixpoint
  * does, tier 3 otherwise (branching required). Soundness: every technique
  * is a forced deduction under rules 1–4, so a tier-T completion is a proof

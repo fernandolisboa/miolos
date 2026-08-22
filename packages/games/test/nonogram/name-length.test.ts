@@ -4,23 +4,22 @@ import { MOTIFS } from "../../src/nonogram/motifs";
 
 /**
  * Every curated motif name fits the daily conclusion's uppercase caption
- * (#64, ADR-0070), pinned on THIS side of the wall.
+ * (ADR-0070), pinned on THIS side of the wall.
  *
  * WHY IT IS HERE AND NOT IN apps/web — the same reason as
  * `bundle-markers.test.ts` beside it. `apps/web` deliberately never imports
  * `MOTIFS`: no motif name may reach a daily-scope chunk, which is exactly
  * what makes the string grep in `apps/web/scripts/route-client-js.mjs` a
- * real check on the engine barrel's tree-shaking. #64 ships a motif NAME to
- * users and kept that grep fully armed by delivering it over an
- * authenticated wire instead of from the bundle — so enumerating the names
- * for a length check has to happen inside this package.
+ * real check on the engine barrel's tree-shaking. The motif name ships to
+ * users over an authenticated wire instead, keeping that grep armed — so
+ * enumerating the names for a length check has to happen inside this
+ * package.
  *
- * THE CONSUMER, BY NAME. `apps/web`'s `T-WEB-S330`
- * (`test/nonogram-motif-name.test.tsx`) owns the other half: that
- * `.pictureName` and `.pictureLead` really are `text-transform: uppercase`,
- * and that the fixed lead string fits. It restates `ALL_CAPS_BODY_MAX = 30`
- * as a literal, because it cannot import anything from here either. When the
- * threshold moves, both files move.
+ * THE CONSUMER, BY NAME. `apps/web`'s `test/nonogram-motif-name.test.tsx`
+ * owns the other half: that `.pictureName` and `.pictureLead` really are
+ * `text-transform: uppercase`, and that the fixed lead string fits. It
+ * restates `ALL_CAPS_BODY_MAX = 30` as a literal, because it cannot import
+ * anything from here either. When the threshold moves, both files move.
  *
  * WHAT IT GUARDS, and why a unit test rather than the design gate.
  * `impeccable`'s `all-caps-body` rule fires on **more than 30 characters of
@@ -28,11 +27,11 @@ import { MOTIFS } from "../../src/nonogram/motifs";
  * `nav` exemption. The caption renders CONTENT from a library that grows, on
  * the one screen a URL-mode impeccable scan can never reach: it needs a
  * SOLVED day, and a clean profile's `GET /day` answers 401 (ADR-0065
- * consequence (c) records the same unreachability). #31 met this rule twice
- * from the other direction — a label template that only got too long in four
- * months of twelve — and both breaks were invisible to CI and to any commit.
- * Measuring the worst case here makes a 31-character motif red at commit
- * time instead of at a preview scan nobody can run.
+ * consequence (c) records the same unreachability). This rule has already
+ * been broken from the other direction once — a label template that only
+ * grew too long months after shipping, invisible to CI the whole time.
+ * Measuring the worst case here makes a too-long motif red at commit time
+ * instead of at a preview scan nobody can run.
  *
  * `packages/games` carries no test ids by convention, and this file keeps it
  * that way.

@@ -12,10 +12,12 @@ import {
 } from "../../src/binairo/index";
 import { WEEKDAYS } from "../../src/index";
 
-// The acceptance-criteria proofs (plan §4): every invariant is re-proved
-// by the independent counting solver — validated against hand-built
-// fixtures in solver.test.ts — over the full uint32 seed domain × all
-// seven weekdays. Run counts are a floor: never below 100 for P1/P2.
+// The acceptance-criteria proofs: every invariant is re-proved by the
+// independent counting solver — validated against hand-built fixtures in
+// solver.test.ts — over the full uint32 seed domain x all seven weekdays.
+// Run counts are a floor: never below 100 for P1/P2 (ADR-0023). Per-test
+// timeouts follow ADR-0055 (CI/contended-local anchor x4, rounded up): a
+// ceiling to diagnose against on failure, not a target to raise.
 
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom(...WEEKDAYS);
@@ -54,7 +56,7 @@ describe("generateBinairo", () => {
         expect(grade.requiredTier).toBe(puzzle.requiredTier);
         expect(puzzle.requiredTier).toBeGreaterThanOrEqual(criteria.minTier);
         expect(puzzle.requiredTier).toBeLessThanOrEqual(criteria.maxTier);
-        // The validator approves its own generator — the #17 contract.
+        // The validator approves its own generator.
         expect(
           validateBinairo(
             { givens: puzzle.givens, solution: puzzle.solution },
@@ -64,28 +66,10 @@ describe("generateBinairo", () => {
       }),
       { numRuns: 150 },
     );
-    // Explicit timeout (ADR-0055 decisions 2 and 4). P1 and P2 are ONE
-    // population: two properties over the same generator, the same
-    // arbitraries and the same seed domain, differing only by 50 runs — and
-    // their local ordering reverses between measurement sessions, so both
-    // take the population maximum rather than a per-test figure that would
-    // pin a scheduling accident. P1's own figures: 3246 ms on CI (gate run
-    // 31888933252 — 64.9 % of vitest's 5000 ms default) and 5051 ms under
-    // contended local fan-out. The pair's maximum is P2's 5922 ms (contended
-    // local, pooled over 11 samples), so 5922 x 4 = 23 688 -> 25 000 ms.
-    // Every contended figure here was measured at default fan-out; after
-    // #114 the root `test` script caps turbo at 2, so reproduce them with
-    // `pnpm test --force --concurrency=10` and not with a bare `pnpm test`.
-    // P3 is deliberately left bare: 1776 ms contended local (35.5 %) and
-    // 581 ms on CI (11.6 %), both under ADR-0055's 40 %-of-budget trigger.
-    // A ceiling, not a target: over budget / 2 = 12 500 ms is a defect to
-    // diagnose and record, never a number to raise — budget / 2 and not
-    // budget / 4 because budget = anchor x 4, so budget / 4 IS the anchor
-    // and would fire on any session that sets a new sample maximum, which
-    // ADR-0055 decision 2 predicts as normal. In-file because
-    // ADR-0017 forbids a vitest config here; the run count above is
-    // untouched, because ADR-0023 floors it and time is never bought by
-    // sampling less.
+    // P1 and P2 share one timeout: same generator, arbitraries and seed
+    // domain, differing only by run count, so both take the pair's measured
+    // maximum rather than a per-test figure that would pin a scheduling
+    // accident.
   }, 25_000);
 
   it("P2 — determinism: same (seed, weekday) yields a deep-equal puzzle", () => {
@@ -97,23 +81,7 @@ describe("generateBinairo", () => {
       }),
       { numRuns: 100 },
     );
-    // Explicit timeout (ADR-0055 decisions 2 and 4), the same 25 000 ms as
-    // P1 for the same reason: one population, one number. P2's own figures
-    // are the pair's anchor — 5922 ms under contended local fan-out (pooled
-    // over 11 samples, the largest either property has produced) and 2667 ms
-    // on CI (gate run 31888933252 — 53.3 % of vitest's 5000 ms default); it
-    // is also the only one of the two with a recorded real CI failure,
-    // killed at >= 5165 ms in gate run 31846743499. 5922 x 4 = 23 688 ->
-    // 25 000 ms. The contended figure was measured at default fan-out;
-    // after #114 the root `test` script caps turbo at 2, so reproduce it
-    // with `pnpm test --force --concurrency=10` and not with a bare
-    // `pnpm test`. A ceiling, not a target: over budget / 2 = 12 500 ms is a
-    // defect to diagnose and record, never a number to raise — budget / 2
-    // and not budget / 4 because budget = anchor x 4, so budget / 4 IS the
-    // anchor and fires on the new sample maximum ADR-0055 decision 2
-    // predicts as normal. In-file
-    // because ADR-0017 forbids a vitest config here; the run count above is
-    // untouched per ADR-0023.
+    // Same 25 000 ms ceiling as P1, and for the same reason (see above).
   }, 25_000);
 
   it("P3 — seed normalization: seeds alias modulo 2^32", () => {
