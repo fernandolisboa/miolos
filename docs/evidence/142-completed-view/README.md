@@ -1,5 +1,0 @@
-# Evidence — #142 cross-device completed view (ADR-0065)
-
-Step-5 evidence for a surface invisible on preview deploys (ADR-0060 consequence (c): the workflow's cold anonymous profile gets a 401 from `/day`, so no URL-mode scan can reach the remote states). Static-fixture screenshots of the three new compositions — grid completed (Sudoku), Termo completed, Termo played — at 1440×900 and 390×844, rendered from the real component and the real stylesheet (CSS-module names unhashed), embedded in the PR body. The same fixtures were scanned with `impeccable detect file://` at both viewports; the two findings and their dismissal reasons are in the PR body.
-
-Step 7 re-shot the two `142-termo-played-*.png` files only: the review round made the card's body sentence game-generic ("o jogo de hoje", quality m6), the one visible change of the fix round. The other four are unchanged — the step-7 fixture regeneration showed the local view byte-identical and the remote views differing only by a visually-hidden `role="status"` announcer — and the six `impeccable detect` re-runs on the fixed head reproduced the step-5 findings exactly (outputs pasted in the step-7 PR comment).

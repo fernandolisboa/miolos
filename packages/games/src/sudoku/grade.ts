@@ -2,8 +2,8 @@
 // public entry points reject grids of the wrong length (assertSudokuGrid).
 //
 // NOTE: the grade is defined RELATIVE TO THIS LADDER — our house difficulty
-// scale, not a universal one. Both ordering levels are normative spec (plan
-// docs/plans/011 §3.5): within a tier the techniques run in the order listed
+// scale, not a universal one. Both ordering levels are normative spec:
+// within a tier the techniques run in the order listed
 // below and the first one that progresses wins the pass; within a technique,
 // units/cells/digits scan in fixed ascending order and the first finding is
 // applied. Any change to the ladder, the technique set, or either ordering

@@ -2,98 +2,136 @@
 
 Daily-puzzle **web app** in pt-BR — Termo-like, Sudoku, Nonogram, Binairo. One fresh puzzle per game per day, identical for every user, published by the server. Streak is the core mechanic. Native iOS and Android follow the web launch. Solo developer, agent-driven workflow, largely driven from a phone.
 
-**Source of truth: [`docs/handoffs/001-handoff-project-foundation.md`](./docs/handoffs/001-handoff-project-foundation.md)**, as amended by the ADRs in [`docs/adr/`](./docs/adr/). The handoff is a snapshot, not a living document: where an ADR supersedes it, the ADR wins, and the handoff's amendment table lists every such point. Everywhere else the handoff is final. If this file, a ticket or a plan contradicts either, surface the contradiction to Fernando rather than silently picking a side.
+**Source of truth: [`docs/handoffs/001-handoff-project-foundation.md`](./docs/handoffs/001-handoff-project-foundation.md)**, as amended by the ADRs in [`docs/adr/`](./docs/adr/). The handoff is a snapshot, not a living document: where an ADR supersedes it, the ADR wins. Everywhere else the handoff is final. If this file or a ticket contradicts either, surface the contradiction to Fernando rather than silently picking a side.
 
 **Language.** English for code, filenames, commits, PRs and every document written from here on. pt-BR for user-facing product content, and for the two founding documents, which stay as written.
 
-## Agent skills
+## The four documents that exist
 
-### Issue tracker
+Nothing else is committed. If a document is not on this list, it does not get written.
 
-Issues live as GitHub issues on `fernandolisboa/miolos`, managed via the `gh` CLI. See [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md).
+| Path | What it is |
+|---|---|
+| `CLAUDE.md` | This file. How agents work here. |
+| `CONTEXT.md`, `PRODUCT.md`, `DESIGN.md` | Living domain, product and design context. Edited in place. |
+| `docs/adr/` | Decisions. The only place a "why" is stored long-term. |
+| `docs/pending-fernando.md` | The wizard-ready ledger of what only Fernando can do. |
 
-### Triage labels
+Plus four small convention files under [`docs/agents/`](./docs/agents/) (issue tracker, triage labels, domain, test ids), `NEXT-SESSION.md`, the design snapshots under `docs/design/`, the primary-source research under `docs/research/` that ADRs 0001, 0002 and 0013 cite as evidence, and the founding handoff.
 
-The five canonical triage roles, each label string equal to its name. See [`docs/agents/triage-labels.md`](./docs/agents/triage-labels.md).
+**Plans are not documents.** A plan lives as a comment on its GitHub issue, or in the PR body. It is never a file, never numbered, never committed. Same for review findings, verification output and session notes.
 
-### Domain docs
+**Handoffs are one file.** `NEXT-SESSION.md` at the root, overwritten each time, at most ~40 lines. There is no `docs/handoffs/` for new work.
 
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See [`docs/agents/domain.md`](./docs/agents/domain.md).
+**The ledger.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) is the living list of actions and decisions only Fernando can take — credentials, production actions, money, legal, product scope. Any session that surfaces one **adds it there in the same change**; a discharged item moves to its Done table with date and evidence, and is never re-asked. Fernando works through it with `/wizard`. An item that lives only in a PR body is a bug in the process.
 
-### Test ids
+## Pick the flow, then work
 
-`T-<AREA>-[S]<n>[<letter>]` on every named test; a new series letter is opened only when the previous space has become ambiguous. See [`docs/agents/test-ids.md`](./docs/agents/test-ids.md) for the per-area frontier and the burned slots.
+The flow scales with the work. Choose before starting and name the row in the PR body.
 
-### Pending-on-Fernando ledger
-
-[`docs/pending-fernando.md`](./docs/pending-fernando.md) is the living list of actions and decisions only Fernando can take (credentials, production actions, product calls). Any PR, review or session that surfaces a new one **adds it there in the same change**; a discharged item moves to its Done table with date and evidence, never gets deleted, and is never re-asked. Fernando works through it with `/wizard`. An item that lives only in a PR body or issue comment is a bug in the process.
-
-## Pipeline
-
-Development runs in phases. Each phase is a fresh session, started by pasting the previous phase's kickoff prompt.
-
-1. **Spec** — `/to-spec`, using the founding handoff **plus every ADR in `docs/adr/`** as its input. The handoff alone is pre-amendment and would produce a spec for the wrong product.
-2. **Tickets** — `/to-tickets`, slicing the spec into tracer-bullet vertical slices with explicit blocking edges, published to GitHub Issues.
-3. **Development** — per issue, at the tier the work earns. The eight-step flow is Tier 2, not the universal default; the routing table is below.
-
-Once `CONTEXT.md` and ADRs exist, `/grill-with-docs` runs on every new plan. `/wayfinder` is reserved for large foggy blocks (pt-BR crosswords, monetization activation, the native clients) — not for ordinary tickets.
-
-Select the right skill automatically during development — `just-do-it`, `small-fix`, `/implement`, `/tdd`, `/diagnosing-bugs`, `/code-review`, `/request-refactor-plan`, `/run` — without Fernando naming it.
-
-## Implementation flows are tiered
-
-**One flow for every task is how a typo pays a feature's ceremony.** The eight steps below are Tier 2 — they work, and every shipped feature came through them. They are not the default for everything. See [ADR-0058](./docs/adr/0058-implementation-flows-are-tiered.md).
-
-| The work | Tier | Flow |
+| The work | Plan | Review after implementation |
 |---|---|---|
-| Typo, comment or doc correction, dependency bump, a one-line test fix, a records-only change (an ADR status flip, a `docs/README.md` row, a frontier update) | **0 — Just do it** | One agent: branch → change → gate → PR → merge |
-| A real defect, roughly ≤ 50 lines, no new decision and no new surface | **1 — Small fix** | Reproduce → fix → one reviewer, correctness lens → gate → merge |
-| A vertical slice, a new surface, a schema or contract change, or anything needing an ADR | **2 — Feature slice** | The eight steps, unchanged |
-| Architecture, or work whose shape is unclear | **3 — Foggy** | Find the shape first, then Tier 2 on the pieces |
+| **Records** — a doc edit, an ADR status line, a label or workflow tweak. **Nothing under `apps/` or `packages/` changes.** | none | none — the gate is the whole defence |
+| **Quick change** — a small change with no new surface and no new decision. Includes a comment sweep and a dependency bump: both touch code files. | 3–5 lines in the PR body | **1 reviewer, correctness lens** |
+| **Defect** — a real bug | reproduce first, then a short plan in the PR body | **1 reviewer, correctness lens**; add security if it touches auth, secrets or user data |
+| **Feature** — a vertical slice, a new surface, a schema or contract change, anything needing an ADR | a real plan as an issue comment, reviewed before any code | **4 reviewers in parallel** — see below |
+| **Foggy** — architecture, or work whose shape is unclear | find the shape first (`/wayfinder`, `/grill-with-docs`), then split into Features | as the pieces earn |
 
-### Tier 0 — Just do it
+Three rules make this hold:
 
-No ticket, no plan, no ADR, no handoff, no review agents. One agent: branch, make the change, run the gate, open the PR, merge. The gate still binds — that is what makes this safe. Driven with the `just-do-it` skill.
+1. **Code review is never skipped.** Any change that touches production code gets at least one reviewer, at every size. Dropping documents is how the light rows get light; dropping the review is not on offer.
+2. **Escalation is free, skipping is not.** A quick change that turns out to need a decision becomes a Feature. Nothing moves *down* a row because it is taking long.
+3. **If a change's process artifacts outweigh its diff, it was the wrong row.** Apply this after the fact, on every PR.
 
-### Tier 1 — Small fix
+### The Feature flow
 
-Reproduce first: a failing test, or a pasted repro. Never a described one. Then fix, then **one** reviewer with the correctness lens, then the gate, then merge. No plan document, no ADR, no handoff. Driven with the `small-fix` skill.
+Each step runs in a **freshly spawned subagent with clean context**. Never carry one step's context into the next.
 
-### Tier 2 — Feature slice (the eight steps)
+1. **Explore** — read the code and the ADRs touching the area. Read `CONTEXT.md` first.
+2. **Plan** — post it as an issue comment.
+3. **Review the plan** — reply on the issue with what must change. Fix the plan before writing code.
+4. **Implement** — TDD at the agreed seams. Typecheck and run single test files while working, the full suite at the end. Split into parallel subagents where the work genuinely splits.
+5. **Review** — four reviewers in parallel, one lens each:
+   - **Correctness** — bugs, edge cases, and whether the originating issue is actually satisfied
+   - **Security** — auth, secrets, input validation, data exposure
+   - **Design** — SOLID, DRY, KISS, YAGNI; duplication; dead abstractions; comment discipline
+   - **Invariants** — the project invariants below, plus every ADR touching the area
+   
+   Add a **performance** lens when the change touches `packages/games` generation or a render loop.
+6. **Fix and close** — apply the findings, then merge with everything green.
 
-**Eight steps is the floor, not the target.** Each step runs in a **freshly spawned specialised subagent with clean context** — never carry one step's context into the next.
+If a review rejects, go back to the earliest step that can fix the cause. Never patch forward over a bad plan.
 
-1. **Explore** — read the codebase and any external material needed to understand the work. Read `CONTEXT.md` and every ADR touching the area first.
-2. **Plan** — produce the implementation plan.
-3. **Review the plan** — validate correctness, name the adjustments needed.
-4. **Fix the plan** — if the review found anything.
-5. **Implement** — real code, driven with the `/implement` skill: TDD at the agreed seams, typecheck and single test files run regularly while working, the full suite once at the end. Spawn parallel subagents where the work genuinely splits. The skill is a tool inside this step, not a substitute for the flow — its own trailing code review and commit never replace steps 6–8.
-6. **Code review** — spawn **multiple** specialised reviewers in parallel, one lens each: correctness and bugs; security; quality and maintainability; performance; adherence to the ADRs and `CONTEXT.md`; adherence to the originating issue.
-7. **Fix** — apply the review findings.
-8. **Validate and close** — only with everything green (tests, lint, types, reviews satisfied): merge the PR and close the issue.
+## Which model runs which step
 
-Adding steps is always allowed. Removing one never is. If a review at step 3 or 6 rejects, go back to the earliest step that can actually fix the cause — never patch forward over a bad plan.
+Subagents are spawned with the model the step earns, not with whatever the session is running. Definitions live in [`.claude/agents/`](./.claude/agents/); the `model:` there is the binding one.
 
-### Tier 3 — Foggy
+| Step | Model | Why |
+|---|---|---|
+| Explore, map the codebase | **Sonnet** | high-volume reading and summarising |
+| Plan a feature, review a plan | **Opus** | trade-offs and architecture — where being wrong costs most |
+| Implement | **Sonnet** | the default for writing code |
+| Implement `packages/games`, auth, secrets, or work crossing 3+ packages | **Opus** | algorithmic and security errors survive the gate |
+| Review — correctness, security, invariants | **Opus** | catches what no checker can express |
+| Review — design | **Sonnet** | pattern-matching against known conventions |
+| Mechanical sweeps — comment removal, renames, id updates | **Haiku** | deterministic edits, no judgement needed |
 
-`/wayfinder` or `/grill-with-docs` first, to find the shape. Then Tier 2 on the pieces it produces. Tier 3 is not a flow of its own — it is the step that turns fog into Tier 2 tickets.
+## How code is written
 
-### The rules that make the tiers hold
+Four principles, in this order when they conflict:
 
-1. **Choose the tier before the work, and name it in the PR body.** A tier is a claim. If the work outgrows it, stop and re-tier rather than continuing at the wrong weight.
-2. **If a ticket's process artifacts outweigh its code diff, it was the wrong tier.** It is the cheapest test we have — apply it in that form, after the fact, on every ticket.
-3. **No ticket may be filed whose entire content is an observation about the test suite or the tooling.** A tracker entry needs an action. Observations go in `.claude/napkin.md`, or as an annotation on the ADR that owns the area.
-4. **Handoffs at session end or milestone close, not per ticket.**
-5. **Escalation is always allowed; skipping is not.** Tier 0 work that turns out to need a decision becomes Tier 2. Nothing goes *down* a tier because it is taking long.
-6. **Records work — plans, handoffs, ADR annotations — is Tier 0 or 1 by default**, never Tier 2 on its own.
+- **YAGNI** — build what the ticket asks for. No option, flag, parameter or abstraction with one caller and no second consumer in sight. Delete speculative generality on sight.
+- **KISS** — the simplest thing that passes the gate. A reader should not need the ADR to follow the control flow.
+- **DRY** — the same logic in two places is a defect, not a style issue. This especially means the four games: if `termo`, `sudoku`, `nonogram` and `binairo` each carry their own copy of the same date, fetch, session or completion logic, extract it.
+- **SOLID** — one reason to change per module. A growing `switch` on game type is the signal to make it polymorphic.
+
+DRY has one limit: two things that merely *look* alike are not duplication. Extract when the logic must change together, not when it happens to match today.
+
+## Comments
+
+**Comments are rare.** The code says what it does; the ADR says why the decision was made. A comment only exists when the code is genuinely hard to follow, and then it says both what it does *and* why it has to be that complicated.
+
+Write a comment for: a non-obvious algorithm, an invariant no test covers, a security-critical argument, a browser or runtime workaround, or a `TODO` with an issue number.
+
+Delete on sight — do not write, and remove when you touch the file:
+
+- Restating what the next line plainly does
+- Decision history, superseded decisions, ADR narration, "this used to be…"
+- Code-review finding IDs, plan or handoff cross-references, contrast-ratio tables
+- Prose about alternatives not taken
+- File-header block comments explaining a module's biography
+- JSDoc on a function whose signature already says it
+
+When code needs a recorded "why", cite it in one line: `// see ADR-0041`. The ADR carries the argument; the file does not.
+
+A comment that would be longer than the code it describes is a sign the rationale belongs in an ADR.
+
+**Two things that look like comments and are not.** Never strip them, and never let a sweep regex reach them:
+
+- `/*#__PURE__*/` — a bundler directive. Deleting the four in `packages/games/src/termo/word-list.ts` ships the whole answer pool to every client.
+- `// eslint-disable-…` and its trailing `-- reason`. The reason is part of the directive.
+
+**Before deleting a comment that states a rule, check whether a test covers it.** If nothing does, you are about to delete the only copy. Write the test, move the rule to an ADR or to `docs/pending-fernando.md`, or leave the comment — in that order of preference. Never just cut it.
+
+## ADRs
+
+An ADR records a **decision between real alternatives** — one a future agent could otherwise reverse by accident. It is not a record of work done. No ADR for "we added a button".
+
+ADRs matter more now, not less: they are where the "why" goes when it leaves the source comments. But they are short.
+
+- **~40 lines.** Context, Decision, Consequences — a few lines each. Not an essay.
+- **Two statuses.** `Proposed` while the decision has no code on `main`; `Accepted` once it ships. The PR that ships the code flips the line in the same diff.
+- A reversed decision gets a new ADR that says `Supersedes: ADR-NNNN`, and the old one gets `Superseded by:`. That is the whole lifecycle.
+- Cite symbols and file paths, never line numbers.
+- If your work contradicts an existing ADR, say so explicitly instead of silently overriding it.
 
 ## Verification gates
 
-Fernando reviews pull requests, not code. That only works if the machine — not the agent's judgement — decides what "done" means.
+**Fernando is not in the review loop.** The reviewers and the gate decide what "done" means; PRs merge without him. Bring him exactly two things: an item for `docs/pending-fernando.md`, and anything that would change what the product *is*. Never a code question, never a UI/UX choice, never a process question this file already answers.
 
-**Evidence rule.** Never report a step as passing without pasting the real command output. "Should pass", "looks correct" and "I've verified" are not results. An agent that cannot run the check reports that it could not run it.
+**Evidence rule.** Never report a step as passing without pasting the real command output. "Should pass", "looks correct" and "I've verified" are not results. An agent that cannot run a check reports that it could not run it.
 
-**Mechanical gate.** A PR merges only when all of these are green, with output shown. **The gate binds identically at every tier** — a Tier 0 typo passes the same checks as a Tier 2 slice. That is what makes the lighter tiers safe: they drop agents and documents, never checks. Each gate binds from the ticket that introduces it — an M0 PR is not blocked by a checker that does not exist yet, but no PR may remove or weaken one that does:
+**Mechanical gate.** A PR merges only when all of these are green, with output shown. **The gate binds identically on every row of the table** — a records change passes the same checks as a feature. That is what makes the light rows safe: they drop documents, never checks. No PR may remove or weaken a gate that exists:
 
 - `pnpm typecheck` — `strict: true`, no `any` without a comment justifying it, no `@ts-ignore` without a written reason
 - `pnpm lint`
@@ -101,11 +139,11 @@ Fernando reviews pull requests, not code. That only works if the machine — not
 - **Property-based tests for `packages/games`** — a generator ships with its invariants proved, not sampled. Every generated Sudoku has a unique solution; every generated puzzle is solvable; seed → puzzle is deterministic.
 - **Zod validation at every boundary** — API contracts and anything crossing the client/server line are parsed, never cast.
 - `npx impeccable detect` — required on any change that touches UI. Visual quality is a gate, not an aspiration.
-- Pre-commit (Husky + lint-staged + typecheck + tests) must stay green. Set up in M0; never bypassed with `--no-verify`.
+- Pre-commit (Husky + lint-staged + typecheck + tests) must stay green. Never bypassed with `--no-verify`.
 
-**Adversarial review.** Reviewers default to rejecting — Tier 2's six step-6 lenses and Tier 1's single correctness lens alike. A finding is dismissed only with a written reason in the PR, never by silence. Tier 0 has no reviewer at all; the gate is its whole defence, which is why the routing table's Tier 0 row is a closed list rather than a judgement call.
+**Adversarial review.** Reviewers default to rejecting. A finding is dismissed only with a written reason in the PR, never by silence.
 
-**PR description.** State what changed, what was verified with the command output inline, and any decision Fernando actually needs to make. If nothing needs him, say so explicitly.
+**PR description.** What changed, which row of the flow table it took, the command output inline, and any decision Fernando actually needs. If nothing needs him, say so.
 
 ## Project invariants
 
@@ -126,20 +164,20 @@ Vetoes, not gaps. Do not propose working around them.
 
 ## Dependencies
 
-**Use current versions. Default to latest stable; never go below active LTS.** This is a security posture, not a preference — being behind is how known vulnerabilities get shipped, and the volume of disclosed supply-chain issues makes staleness an active liability rather than a neutral choice.
+**Use current versions. Default to latest stable; never go below active LTS.** This is a security posture, not a preference — being behind is how known vulnerabilities get shipped.
 
 - When adding a dependency, check the actual current version rather than recalling one. Training data lags reality.
 - Never pin to an older major "for stability" without an ADR saying why.
 - Prefer fewer dependencies. The cheapest vulnerability to patch is the one you never installed.
-- Keep the lockfile committed, and treat a dependency bump as ordinary work rather than a special event.
+- Keep the lockfile committed, and treat a dependency bump as ordinary work.
 
 ## Design
 
-Direction is editorial/paper, detailed in [`docs/design/002-brief-design-direction.md`](./docs/design/002-brief-design-direction.md). The Claude Design exploration is done and the winner is chosen: **variation F "Ateliê"** — paper on paper, hard single-color offset shadows, washi tape per game, subtle static rotations.
+Direction is editorial/paper, detailed in [`docs/design/002-brief-design-direction.md`](./docs/design/002-brief-design-direction.md). The winner is chosen: **variation F "Ateliê"** — paper on paper, hard single-color offset shadows, washi tape per game, subtle static rotations.
 
-The system is recorded (issue #11): `PRODUCT.md` + `DESIGN.md` at the repo root are the living design context (`/impeccable` reads them), tokens live in `packages/ui/tokens.css`, and the six high-fidelity reference frames are snapshotted in [`docs/design/006-handoff-design-winner-atelie/`](./docs/design/006-handoff-design-winner-atelie/) — open them in a browser with `support.js` beside them; they are visual specs, never production code. The anti-references in section 5 of the brief are in `DESIGN.md` verbatim as hard rules.
+`PRODUCT.md` + `DESIGN.md` at the repo root are the living design context (`/impeccable` reads them), tokens live in `packages/ui/tokens.css`, and the six high-fidelity reference frames are snapshotted in [`docs/design/006-handoff-design-winner-atelie/`](./docs/design/006-handoff-design-winner-atelie/) — open them in a browser with `support.js` beside them; they are visual specs, never production code.
 
-Later screens (Sudoku, Nonogram, Termo, archive, free play, stats, settings, onboarding) are designed just-in-time per milestone against that system.
+Later screens are designed just-in-time per milestone against that system.
 
 ## Commits and branches
 
@@ -149,33 +187,17 @@ Later screens (Sudoku, Nonogram, Termo, archive, free play, stats, settings, onb
 - Never commit secrets or API keys, test ones included.
 - `main` is merged into only through a pull request that passed the mechanical gate.
 
-## Handoffs between sessions
-
-Long work spans several sessions. At the end of a session that produces one — or at a milestone close — run `/handoff`. **Never per ticket:** a handoff records a session's transferable state, and a ticket that fits in one sitting has none.
-
-**Project override:** the `/handoff` skill saves to the OS temp directory by default. In this repo, handoffs are **committed** to `docs/handoffs/` under the naming convention in [`docs/README.md`](./docs/README.md) — `NNN[-issue-<n>]-handoff-<slug>.md`. A handoff that lives in `/tmp` is lost work.
-
-A handoff is self-contained and grounded in the real code, not in other documents: scope, what to read first, order and dependencies, non-negotiable principles, landmines, exit criteria, environment gotchas. Reference specs, ADRs, issues and commits by path or URL rather than duplicating them.
-
-**Size cap (Fernando, 2026-08-19): a handoff is at most ~120 lines, the kickoff prompt at most ~15.** Fernando reads these on a phone. A handoff that wants more length is restating records it should only point at — the detail belongs in the PR bodies, ADRs, plans and issue comments it links. Handoff 058 (345 lines) is the anti-example.
-
-Immediately after writing it, emit a **copy-pasteable kickoff prompt** as the last block of the response — lean, pointing at the handoff rather than repeating it, so the next session starts without re-deriving context.
-
-**The kickoff prompt is not snapshot content.** It is the one part of a handoff that is regenerated whenever the handoff gains an addendum, and it lives at the very end of the file, after any addenda, so it can never be orphaned above one. It opens with a **preflight assertion** — the expected `main` SHA and the state of every issue it names — and the instruction that if any of that does not match, the session stops and reads the newest addendum before doing anything else.
-
-Pre-issue implementation plans go to `docs/plans/` under the same numbering. Both are point-in-time snapshots, never living specs.
-
 ## Writing for Fernando
 
-English is not Fernando's first language. Plain words, short sentences, no flourishes. Anything that asks him for input — a PR decision point, a grilling question, a wizard step — must be answerable in one word or one line, multiple-choice where possible, and must say plainly what happens under each choice.
+English is not Fernando's first language. Plain words, short sentences, no flourishes. Anything that asks him for input — a PR decision point, a wizard step — must be answerable in one word or one line, multiple-choice where possible, and must say plainly what happens under each choice.
 
-Do not bring him UI/UX choices. Layout, copy wording, spacing, ordering and the like are professional design decisions (Fernando, 2026-08-19): make them with the design system, measurement, `/impeccable` and screenshots, and record the call and its reason on the issue. Bring him product scope, money, legal, and anything only he can do (credentials, store listings, production actions).
+Do not bring him UI/UX choices. Layout, copy wording, spacing and ordering are professional design decisions: make them with the design system, measurement, `/impeccable` and screenshots, and record the call on the issue. Bring him product scope, money, legal, and anything only he can do.
 
 ## When in doubt
 
-- Product or scope question → the founding handoff, as amended by the table at its top. Where an ADR supersedes it, the ADR is the final word; everywhere else the handoff is.
+- Product or scope question → the founding handoff, as amended by the ADRs.
 - Recorded technical decision → `docs/adr/`.
-- Domain term → `CONTEXT.md`. Use its vocabulary in issue titles, test names and proposals; don't drift to synonyms.
-- Which flow a piece of work takes → the routing table in § *Implementation flows are tiered*. When two rows both look right, take the heavier one; escalating later is free, and skipping is not.
-- New technical decision of any weight → propose an ADR before implementing, even a short one. It stays `Proposed` until the PR that ships its code flips it to `Accepted` in that same diff — owner, forms and edge cases in [`docs/agents/domain.md`](./docs/agents/domain.md).
+- Domain term → `CONTEXT.md`. Use its vocabulary; don't drift to synonyms.
+- Which flow to take → the table in § *Pick the flow, then work*. When two rows both look right, take the heavier one.
+- A new decision between real alternatives → propose a short ADR before implementing. Anything less than that is not an ADR.
 - A "small improvement" nobody asked for → sanity-check it first. If it doesn't hold up, say so and drop it. Don't execute on autopilot.
