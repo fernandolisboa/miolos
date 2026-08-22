@@ -3,7 +3,7 @@
 **Status:** Accepted — 2026-08-15 (issue #34, shipped in #105)
 **Amended at #103** (the archive's late-result panel gains this share button — the first item on the Rejected list below, taken up; Tier 2 under [ADR-0058](./0058-implementation-flows-are-tiered.md), plan section in the PR body rather than a plan document). **No decision moves.** What changes is where decision 1's control LIVES, how far decision 1a's third state REACHES, and **one entry on decision 15's free-play wall list** — all three annotated in place below, plus the Rejected entry marked taken up. The late-share question #103 owns — *what may a late share honestly say?* — is answered by decision 3 as written rather than by anything new: **a late share is byte-identical to the on-time share of the same record**, which is why this record grows no clause. `T-WEB-S231` is that identity as a gate.
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md), [ADR-0039](./0039-termo-cannot-be-played-offline.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
-**Amended by:** [ADR-0071](./0071-the-archive-cards-are-nameplates-and-two-leave-the-file-convention.md) — **#104 gives the three archive shells cards of their own, and takes decision 9's deferred non-segment relief for those three routes only.** What moves, each annotated in place below: decision 7's *"Eight image routes and one static asset"* enumeration (`:373-374`) and the twelve-route inheritance block it feeds (`:409`, `:418-420`, `:431`); decision 9's deferred relief (`:611-613`), its `sharp` production-function count (`:615-616`) and its denial-of-wallet sizing (`:645-650`, with the sibling at `:1170-1175`); decision 11's leaf-declaration count (`:714-718`); decision 12's `FONTS` call-site count (`:836-839`); decision 15's two-glob wall enumeration (`:940-941`) and its `getDb()`-caller count (`:962`); the `cache-control` route count (`:1143-1147`); the Rejected entry at `:1096`; the English-segment URL count (`:1243`); the open OG-card follow-up (`:1120-1131`). Two are not counts. Decision 8's residual at `:521-531` is **narrowed** — its word *"every"* becomes false — and the consequence at `:1253-1259` is **outright false** and is replaced. Decision 9's measured figures at `:583` and `:588-591` are **unchanged after #104**, which is the point of ADR-0071 decision 3, and `:1250-1252`'s fifth-game recipe is unchanged because #104's cards are not per-game; both are recorded as checked rows rather than left to silence. **Every `:NNN` on this line is as of `main` at `ee4df9b`, i.e. before the annotations it points at were inserted** — each in-place annotation moves every line under it, so find the sentence by its quoted text and treat the number as a hint. Multiple `Amended by:` lines stack, and this file already carries `**Amended at #103**` above.
+**Amended by:** [ADR-0071](./0071-the-archive-cards-are-nameplates-and-two-leave-the-file-convention.md) — **#104 gives the three archive shells cards of their own, and takes decision 9's deferred non-segment relief for those three routes only.** What moves, each annotated in place below: decision 7's *"Eight image routes and one static asset"* enumeration (`:373-374`) and the twelve-route inheritance block it feeds (`:409`, `:418-420`, `:431`); decision 9's deferred relief (`:611-613`), its `sharp` production-function count (`:615-616`) and its denial-of-wallet sizing (`:645-650`, with the sibling at `:1170-1175`); decision 11's leaf-declaration count (`:714-718`); decision 12's `FONTS` call-site count (`:836-839`); decision 15's two-glob wall enumeration (`:940-941`) and its `getDb()`-caller count (`:962`); the `cache-control` route count (`:1143-1147`); the Rejected entry at `:1096`; the English-segment URL count (`:1243`); the open OG-card follow-up (`:1120-1131`). One is not a count: the consequence at `:1253-1259` is **outright false** and is replaced. Decision 9's measured figures at `:583` and `:588-591` are **unchanged after #104**, which is the point of ADR-0071 decision 3; `:1250-1252`'s fifth-game recipe is unchanged because #104's cards are not per-game; and **decision 8's residual at `:521-531` is checked and unchanged too — its word *"every"* still holds**, because that sentence is about the four archive **play** routes, which #104 does not touch. All three are recorded as checked rows rather than left to silence, and the third is written out at length because this branch's first draft claimed the residual was narrowed and the implementation measured that claim false. **Every `:NNN` on this line is as of `main` at `ee4df9b`, i.e. before the annotations it points at were inserted** — each in-place annotation moves every line under it, so find the sentence by its quoted text and treat the number as a hint. Multiple `Amended by:` lines stack, and this file already carries `**Amended at #103**` above.
 **Amends:** four standing records. Three go by one mechanism — a **per-route enumeration that #34 grows** — and the fourth, added at step 7 (finding B2/W1), is the only one where a decision's sentence is **outright false** rather than merely short. Every sentence below is quoted from the file as it stands; every amended file carries the reciprocal `**Amended by:**` line **and an in-place annotation of the amended sentence**, because in this repo "amended" means the file was edited ([ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md) consequence (b), restated at [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) `:6`).
 
 - **[ADR-0028](./0028-daily-play-routes-and-the-conclusion.md)** — decision 4's *"**Both segments** are `force-dynamic` async server components"* and its closing *"When the helper returns nothing — no puzzle, or a killed one — **both routes render the same pt-BR unavailable screen**."* The **segment** count is unchanged: an `opengraph-image.tsx` is a metadata route *inside* the existing `/<jogo>` segment, so *"both"* stays true. What grows is the number of `force-dynamic` route **modules** under the slug, two → three, and the unavailable-screen clause now has a sibling module that answers the same helper-returned-nothing condition with a **404 and an empty body** (decision 8). Decision 5's per-route enumeration of the ADR-0014 direct-read extension **grows** to the eight image routes; the consequence *"#23/#25/#27 add a slug, a `routes` entry, **two** `force-dynamic` server segments and a conclusion view"* and #31's own *"the archive's four play screens add … **one** `force-dynamic` server segment each"* are both one item short — three per daily game, two per archive play screen (decisions 7, 9, 10).
@@ -460,10 +460,13 @@ verdicts, so this record is readable without it:
    /arquivo/<data>       og:image → /cartao/<data>      (ƒ, explicit openGraph.images)
    ```
 
-   *A **malformed** `[data]` or `[mes]` segment composes no `openGraph` at all,
-   so it inherits `/arquivo/opengraph-image.png` by the same nearest-ancestor
-   rule — the archive card, not the root card. The other nine rows are
-   unchanged.)*
+   *A **malformed** `[data]` or `[mes]` segment composes no `openGraph` at
+   all — but it answers 404 through `notFound()`, and a not-found **discards**
+   the route's composed metadata, so its head still carries the ROOT card
+   exactly as it did before #104. The committed `app/arquivo/opengraph-image.png`
+   serves `/arquivo` only: a metadata file is inherited by descendants only
+   from a segment owning a `layout.tsx`, and `app/arquivo/` owns none — this
+   app has exactly one layout, the root. The other nine rows are unchanged.)*
 
    So twelve routes take the site card and the four `concluido` routes take
    their game's dated card; neither group needs a file of its own. **The words
@@ -572,19 +575,26 @@ verdicts, so this record is readable without it:
    archive title is composed from a game name and a date, and the malformed
    case composes nothing at all.
 
-   *(**Narrowed at #104** —
+   *(**Checked at #104** —
    [ADR-0071](./0071-the-archive-cards-are-nameplates-and-two-leave-the-file-convention.md)
-   decision 2. The word ***every*** **is now false for the archive shells.**
-   After #104 a malformed `[data]` or `[mes]` segment composes no `openGraph`
-   and therefore inherits the committed `app/arquivo/opengraph-image.png`, a
-   **200** — the malformed case is repaired rather than merely disclosed. What
-   survives is narrower: a **well-formed** date or month the publication wall
-   refuses now advertises a `/cartao/…` URL that 404s, which plan 068 §4.2
-   accepts on this decision's own ground that the status is what scrapers act
-   on. The daily four and the four archive play routes are untouched, and
-   their sentence above stands as written. A residual a later ticket narrowed,
-   left written as though it still bound, is a record that gets
-   re-litigated.)*
+   consequence (d). **This residual is UNCHANGED, and the word *every* still
+   holds.** #104 gives the archive **shells** cards of their own; it touches
+   none of the four archive play routes `/arquivo/<data>/<jogo>`, each of which
+   keeps its own `opengraph-image.tsx`, so the family this sentence describes
+   is untouched. Plan 068 §2.2/§2.3 claimed the word became false, and was
+   wrong twice over. Measured on a real build: a malformed `[data]`/`[mes]`
+   segment answers 404 through `notFound()`, Next 16.2.12 discards the route's
+   composed metadata on a not-found, and the head carries the ROOT card — and
+   `app/arquivo/opengraph-image.png` reaches no descendant anyway, because
+   inheritance of a metadata file needs a `layout.tsx` on the owning segment
+   and `app/arquivo/` has none. The same measurement kills the other half of
+   that claim: a **well-formed** date or month the wall refuses also
+   `notFound()`s, so its head never carries a `/cartao/…` URL either. What #104
+   does change on this surface is one date and one date only, and it is
+   recorded at ADR-0071 consequence (c) case B. Written out as a checked row
+   rather than left to silence, because the branch shipped the opposite claim
+   first — a residual recorded as narrowed when it was not is worse than one
+   left undisclosed.)*
 
    **And nothing puzzle-derived is drawn** (flag F5). The card carries the
    wordmark, the game's kicker, the game's name, the long date, and the game's
@@ -646,13 +656,25 @@ verdicts, so this record is readable without it:
    decision 3. **The archive row and the recovery paragraph below are both
    unchanged after #104, and that is the point.** Re-measured on a real
    Turbopack build at `ee4df9b`: `/arquivo`, `/arquivo/[data]` and
-   `/arquivo/mes/[mes]` stay at **2.7 MB, unchanged to the file** — 113, 115
-   and 114 file entries before and after — because the two dated archive cards
-   moved to their own URLs instead of into these segments. The new figures are
+   `/arquivo/mes/[mes]` stay at **2.7 MB** — because the two dated archive
+   cards moved to their own URLs instead of into these segments. **"Unchanged"
+   is to 0.1 MB, not byte-for-byte**, and the difference is written down
+   because an earlier draft of this annotation claimed exactness: the shipped
+   tree measures `/arquivo` **+1,221 B**, `/arquivo/[data]` **+4,065 B** and
+   `/arquivo/mes/[mes]` **+4,069 B**, all **≤ 0.15 %**, from the `.alt.txt`
+   metadata module the static card brings into every `app/arquivo/**` graph
+   plus shared-chunk churn from the new i18n strings. The new figures are
    `/cartao/[data]` at **22.4 MB** as its own `ƒ` entry, its `mes` sibling the
    same, and a new ~1.7 MB row for `app/arquivo/opengraph-image.png/route`;
-   totals go 508.5 MB over 40 entries → 530.9 MB over 41 for one probe. #104's
-   PR body carries the full table in this format.)*
+   totals go 508.5 MB over 40 entries → 530.9 MB over 41 **for one probe**, and
+   **556.1 MB over 43** for the shipped pair, whose handlers measure 22.9 MB
+   each because they carry the archive reader the probe did not. That 47.6 MB
+   is a **sum of per-function traces**, which is the right unit for cold-start
+   payload and the wrong one for deployed code: the union of unique traced
+   files grew only **+111,441 B** (26,380,889 → 26,492,330), because `next/og`
+   → `@vercel/og` + `resvg.wasm` + `sharp` + libvips were already deployed for
+   the eight game cards. #104's PR body carries the full table in this
+   format.)*
 
    Thirteen routes recover, five of them `ƒ` dynamic functions — `/`,
    `/vincular`, `/arquivo`, `/arquivo/[data]`, `/arquivo/mes/[mes]` — the
@@ -748,9 +770,17 @@ verdicts, so this record is readable without it:
    publishes `/arquivo`, every archived month and every archived day, and
    after #104 each of those heads advertises a `/cartao/…` card. The
    three-year figure grows by ~1,096 day cards and ~36 month cards
-   (**+25.8 %**); the index card adds none, being a committed asset with no
-   function and no read. The extra billed sweep time is ≈**58 s** at the same
-   48–55 ms warm median. On READS the percentage depends on the base, so both
+   (**+25.8 %**, and that is a **floor** — on ADR-0053 decision 3's ragged
+   days, which hold one, two or three games, it is +33 % to +100 %); the index
+   card adds none, being a committed asset with no function and no read. The
+   extra billed sweep time is **≈75–109 s**, not the ≈58 s an earlier draft
+   wrote off `gameCard`'s median: re-derived off `archiveCard`'s own measured
+   p50s (day 45.9 ms, month 51.3 ms) that is ≈52 s of rasterisation, **plus the
+   1,132 Neon round trips this same paragraph counts**, which Vercel bills as
+   wall-clock GB-seconds — ≈75 s at a 20 ms round trip, ≈109 s at 50 ms. The
+   round trip is unmeasured, so the range is given rather than a point. **The
+   4–8 minutes above omits the same round trips** and is left as written, its
+   method now named. On READS the percentage depends on the base, so both
    are given with their derivation rather than one asserted: pages-only,
    5,516 → 6,648 (**+20.5 %**); like-for-like against the base this very
    paragraph counts — pages **plus** the archive card reads — 9,900 → 11,032
@@ -821,13 +851,18 @@ verdicts, so this record is readable without it:
 
     *(**Amended at #104** —
     [ADR-0071](./0071-the-archive-cards-are-nameplates-and-two-leave-the-file-convention.md)
-    decision 3. **Ten.** Measured on this branch: `grep -rln "openGraph"
-    apps/web/app` returns exactly the four `app/<jogo>/page.tsx`, the four
-    `app/arquivo/[data]/<jogo>/page.tsx`, the root `layout.tsx` and
-    `sitemap.ts`. `app/arquivo/[data]/page.tsx` and
+    decision 3. **Ten.** Measured on `main` at `ee4df9b`, `grep -rln
+    "openGraph" apps/web/app` returned exactly **ten** files: the four
+    `app/<jogo>/page.tsx`, the four `app/arquivo/[data]/<jogo>/page.tsx`, the
+    root `layout.tsx` and `sitemap.ts`. On this branch the same command returns
+    **twelve** — `app/arquivo/[data]/page.tsx` and
     `app/arquivo/mes/[mes]/page.tsx` declared no `openGraph` before #104 and
     are its **ninth and tenth** leaf declarations, both spreading
-    `OG_DEFAULTS`. **This is not bookkeeping:** this sentence is what an
+    `OG_DEFAULTS`. (Ten leaves, twelve files: `layout.tsx` is the root spread
+    rather than a leaf, and `sitemap.ts` is not a metadata declaration at all.
+    An earlier draft of this annotation wrote "Measured on this branch" beside
+    the `main` result, which is a claim labelled measured that was not — plan
+    040's own lesson (i), and the reason both bases are now named.) **This is not bookkeeping:** this sentence is what an
     eleventh leaf's author reads, and leaving it at eight is how the next leaf
     ships without the spread and silently loses `og:type`, `og:locale` and
     `og:site_name`. The same paragraph's other trap now has a second edge —
@@ -1367,7 +1402,14 @@ not come.
   card space 4,388 → 5,520, **+25.8 %**. The sentence's substance is unchanged
   — nothing in #104's scope fixes it either, and #37 still inherits it as an
   abuse item. The derivation is in the decision-9 annotation above and in plan
-  068 §13.)*
+  068 §13. **And one thing every figure on both sides of this amendment leaves
+  implicit, stated here because #37 needs it: the URL count is a CRAWLER model,
+  and per-URL cost has no ceiling.** With `no-store` on every arm, no
+  `middleware.ts` in `apps/web`, no rate limit anywhere in the repo for reads
+  and no firewall rule in `vercel.json`, one attacker on one URL costs N Neon
+  round trips and N rasterisations for N requests. The class is pre-existing
+  across all eight routes this sentence already counts; #104 widens it by
+  25.8 % and adds no ceiling of its own.)*
 - **The third-party scraper cache is outside the kill switch, and always
   was.** `force-dynamic` bounds *our own* serving. Facebook, X, WhatsApp, Slack
   and Discord scrape once and hold the image on their own infrastructure for
