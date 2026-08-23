@@ -2,7 +2,7 @@
  * All user-facing copy lives here (ADR-0013, ADR-0018): components never
  * carry string literals. Pure values and pure value-returning functions.
  *
- * SHAPE (plan 018 S19, §13.1). Shared chrome sits at the top level —
+ * SHAPE. Shared chrome sits at the top level —
  * `brand`, `hoje`, `play`, `conclusion` — and everything a game owns sits
  * under `games.<game>.{name,kicker,description,play,conclusion}`. ADR-0018
  * makes `Messages` the migration contract, so the shape is a decision and
@@ -10,7 +10,7 @@
  * have guaranteed four copies of the same play and conclusion chrome by #27.
  */
 
-// One product name, one source of truth (plan 017 §12.6). Hoje, /binairo
+// One product name, one source of truth. Hoje, /binairo
 // and the conclusion all render this same value; a second copy is how two
 // screens drift apart.
 const wordmark = "Miolos";
@@ -21,44 +21,19 @@ const wordmark = "Miolos";
 const back = "← Hoje";
 const backAria = "Voltar para Hoje";
 
-// The Game-card chip's two words, hoisted for the same reason `back` is: the
-// hub's tile and the archive day card are the same DESIGN.md register, and a
-// second copy is how two screens drift apart (#96, ADR-0056 decision 2).
-//
-// The archive's completions are LATE ones (CONTEXT.md:12,
-// `Conclusão tardia`), so `done` is being applied there to the state the hub's
-// on-time word does not name. That collapse is deliberate and it is
-// reversible in one line — point `archive.day` at its own literals and update
-// `T-WEB-S222`, which exists to make exactly that split a decision rather than
-// a drift. This file has already split such a pair on purpose once: see
-// `hoje.played` and the day card's lowercase tabular `jogado`.
 const done = "Feito";
 const played = "Jogado";
 
-// Hoisted so the invalid-cell name can be COMPOSED here rather than joined
-// in grid.tsx with a separator no editor of this module can see (ADR-0018:
-// `Messages` is the migration contract, so every user-facing string has to
-// be expressible from it). Row and column are 1-based for a reader.
 const cellAria = (row: number, column: number, value: 0 | 1 | null) =>
   `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
 
-// The same hoist for Sudoku (plan 018 §13.2): `cellInvalidAria` composes
-// the plain name and appends its clause, so the separator lives here.
 const cellAriaSudoku = (row: number, column: number, value: number | null) =>
   `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
 
-// "sem dicas" / "com 1 dica" — hoisted because both the stamp's visible
-// suffix and its composed accessible name need it, and the two must never be
-// able to disagree.
 const hintsUsed = (used: number) => (used === 0 ? "sem dicas" : "com 1 dica");
 
-// The board's dimensions in one place: the mobile progress bar and the stats
-// card render the same string, and two copies are how they drift.
 const boardSize = (size: number) => `${size} × ${size}`;
 
-// Nonogram's cell names (plan 020 §16.1): `preenchida` / `marcada` / `vazia`,
-// one spelling per concept. `vazia` is `cellAria`'s own word for a null
-// Binairo cell, so a player meets one vocabulary across three games.
 const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
   `linha ${row}, coluna ${column}: ${
     value === null ? "vazia" : value === 1 ? "preenchida" : "marcada"
@@ -70,9 +45,6 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
 const runsText = (runs: readonly number[]) =>
   runs.length === 0 ? "0" : runs.join(", ");
 
-// Termo's three tile states in pt-BR, one spelling per concept (#27). The
-// engine's identifiers are correct/present/absent; these are the words a
-// player hears. They are in CONTEXT.md's Termo rows.
 const TERMO_TILE = {
   correct: "certa",
   present: "na palavra",
@@ -111,50 +83,24 @@ export const messages = {
   brand: {
     wordmark,
   },
-  /**
-   * Hub chrome ONLY — the per-game name, kicker and description moved to
-   * `games.<game>` (plan 018 S19), which deletes the duplication `hoje.games`
-   * used to carry. `hoje.wordmark` was a deliberate alias of `brand.wordmark`
-   * "while the migration finishes"; this is that finish, and `app/page.tsx`
-   * reads `brand.wordmark` directly.
-   */
   hoje: {
     completedOfTotal: (done: number, total: number) =>
       `${done} de ${total} concluídos`,
     streak: {
       label: "sequência",
-      // Screen-reader copy is composed here, never in a component.
       aria: (count: number) =>
         `sequência de ${count} ${count === 1 ? "dia" : "dias"}`,
     },
     playCta: "Jogar hoje",
     playCtaShort: "Jogar",
-    // The done tile (plan 018 §11.3): an outlined stamp chip plus a tabular
-    // result, per DESIGN.md's "Game card" entry. Two result strings rather
-    // than a runtime truncation, matching the dayCard's nonogram precedent.
     done,
     doneResultLong: (elapsed: string) => `em ${elapsed}`,
     doneResultShort: (elapsed: string) => elapsed,
     doneAria: (game: string, elapsed: string) =>
       `${game} concluído em ${elapsed}`,
-    // The accessible name of a completed Termo tile once the server's
-    // guess count lands (#29, plan 033 D5). (n is the guess count, 1..6;
-    // "1 de 6 tentativas" is correct — tentativas agrees with 6.)
     doneGuessesAria: (game: string, n: number) =>
       `${game} concluído em ${n} de 6 tentativas`,
-    /**
-     * The chip on a PLAYED game's tile (#27, ADR-0008 decision 3, ADR-0044).
-     * Capitalised, beside `done: "Feito"` — the hub's chip register. The day
-     * card's equivalent is lowercase `jogado`, because that is a tabular
-     * VALUE slot beside a duration rather than a chip, and the difference is
-     * deliberate (plan 022 §15.3).
-     */
     played,
-    /**
-     * The whole accessible name of a PLAYED tile, composed here (ADR-0018).
-     * Takes NO duration: `doneAria` is `"${game} concluído em ${elapsed}"`
-     * and both halves of that sentence are false for a lost Termo.
-     */
     playedAria: (game: string) => `${game} jogado`,
     /**
      * The accessible name of a COMPLETED tile that publishes no duration —
@@ -172,21 +118,17 @@ export const messages = {
      * without a value, or answering for a different SP day (the DB clock
      * and the web server can disagree across midnight), this string is the
      * honest name — completed, with nothing false about a count the client
-     * does not hold (plan 033 D5).
+     * does not hold.
      */
     completedAria: (game: string) => `${game} concluído`,
     links: {
       archive: "Arquivo",
       freePlay: "Modo livre",
       stats: "Estatísticas",
-      // Live: /privacidade since #21, /estatisticas since #29, and
-      // /arquivo since #31 — a real route is what earns the href, and all
-      // five now have one (#158 gave the terms theirs).
       privacy: "Política de Privacidade",
       terms: "Termos de Uso",
     },
   },
-  /** Chrome every play screen shares (plan 018 §5.2, §13.1). */
   play: {
     back,
     backAria,
@@ -194,22 +136,11 @@ export const messages = {
     timerAria: (elapsed: string) => `tempo decorrido: ${elapsed}`,
     progressLabel: "Progresso",
   },
-  /** Chrome every conclusion shares (was the top-level `conclusao`). */
   conclusion: {
     back,
     backAria,
     stampLabel: "Concluído",
     hints: hintsUsed,
-    /**
-     * The stamp's whole accessible name, composed here rather than per game
-     * (ADR-0018). Shared chrome and NOT part of `games.<game>.conclusion`
-     * for a mechanical reason: that bundle is a prop passed from a server
-     * component into `<ConclusionView/>`, which is `"use client"`, and React
-     * refuses to serialize a function across the RSC boundary — a per-game
-     * `stampAria` there is an SSR 500, not a type error. `ConclusionCopy` is
-     * data-only; every conclusion string that needs a runtime value is
-     * composed from this object, which the client component imports directly.
-     */
     stampAria: (game: string, elapsed: string, hints: number) =>
       `${game} concluído em ${elapsed}, ${hintsUsed(hints)}`,
     sync: {
@@ -217,7 +148,7 @@ export const messages = {
         "Resultado guardado neste aparelho — sincroniza quando a conexão voltar.",
       // Not cosmetic: without it the "Concluído" stamp would stand while the
       // server holds no completion, making the client's own verdict the
-      // user-visible authority (plan 017 §9.2, ADR-0004).
+      // user-visible authority (ADR-0004).
       rejected: "Não foi possível registrar este resultado no dia de hoje.",
     },
     dayCard: {
@@ -241,127 +172,46 @@ export const messages = {
         termo: "Termo",
         sudoku: "Sudoku",
         nonogram: "Nonogram",
-        // A distinct mobile string, never a runtime truncation.
         nonogramShort: "Nono.",
         binairo: "Binairo",
       },
     },
-    /**
-     * The streak card (#19, ADR-0048), server-computed and fetched only
-     * once the day is on the server. Shared chrome and composed HERE, never
-     * in `ConclusionCopy` (the `stampAria` mechanism above: that bundle is
-     * plain-data-only and a function member is an SSR 500).
-     *
-     * `value` is the numeral's companion line — F5:56's "dias de sequência"
-     * — and deliberately does NOT repeat the count the numeral already
-     * shows; the accessible name (`aria`) carries it. `maintained` renders
-     * ONLY when the server says today itself is a counted day
-     * (`todayCounts`, ADR-0048 decision 2): on a lost-Termo day or a late
-     * solve the streak may be alive through yesterday, but *this* day did
-     * not maintain it and the copy must not claim it did (ADR-0008 rules
-     * 1–3). CONTEXT.md's word — "sequência", never "dias seguidos".
-     */
     streak: {
+      // CONTEXT.md's word — "sequência", never "dias seguidos".
       value: (count: number) => `${count === 1 ? "dia" : "dias"} de sequência`,
       maintained: "— mantida por hoje.",
       aria: (count: number) =>
         `sequência de ${count} ${count === 1 ? "dia" : "dias"}`,
     },
-    /**
-     * The stat block's closing italic line (#29, plan 033 §6.4) — F5:50's
-     * own sentence, one string per direction and never joined in the
-     * component (ADR-0018). Gated by the component on
-     * `averageSampleCount >= 2` and a local duration; equal renders
-     * neither.
-     */
     closingFaster: "hoje você foi mais rápido que a sua média.",
     closingSlower: "hoje você foi mais devagar que a sua média.",
     ctaHome: "Fechar o dia — voltar para Hoje",
-    // F5:65's own phrasing for this exact button — "Fechar o dia — jogar
-    // Nonogram". Both CTA variants keep the "Fechar o dia" anchor and one
-    // register; a colon-led label appears nowhere else in the copy deck.
     ctaNext: (game: string) => `Fechar o dia — jogar ${game}`,
     stats: "Ver estatísticas",
     notYet: {
       body: "O resumo aparece assim que a grade fechar.",
     },
-    /**
-     * The cross-device completed view (#142, ADR-0065): the day was decided
-     * on another device and this one holds no record, so the play route
-     * renders the conclusion the server can honestly back instead of a
-     * fresh playable board. The note is a single quiet line inside the
-     * result card, beside the stamp — never a banner — and the body is the
-     * card's one explanatory sentence. No consolation flourish, no emoji
-     * (DESIGN.md); "aparelho" is the register the sync line above already
-     * uses ("guardado neste aparelho").
-     */
     remote: {
       completedNote: "Feito em outro aparelho.",
       playedNote: "Jogado em outro aparelho.",
       completedBody: "Você concluiu o jogo de hoje em outro aparelho.",
-      // Game-generic like `completedBody` above (#142 step 7, quality m6):
-      // only Termo can be `played` in v1, but this bundle is shared chrome
-      // and names no game — a future losable game inherits the sentence
-      // rather than unpicking a key.
       playedBody:
         "Você jogou o jogo de hoje em outro aparelho. As tentativas ficaram lá.",
-      /**
-       * The stamp's accessible name where the claim carries a TIME and no
-       * hint count — the deploy-skew shape (an old server behind a new
-       * client). Never a fabricated "sem dicas": the aria renders exactly
-       * the lines the stamp does (§3's per-line rule, plan 060).
-       */
       stampTimeAria: (game: string, elapsed: string) =>
         `${game} concluído em ${elapsed}`,
-      /** The stamp's accessible name where the claim carries no value at all. */
       stampBareAria: (game: string) => `${game} concluído`,
     },
   },
-  /**
-   * The share (#34, ADR-0054) — shared chrome, imported by the client
-   * component rather than passed to it, exactly like `conclusion` above.
-   *
-   * `então`, `mamãe` and `época` are FORBIDDEN_EVERYWHERE in client chunks —
-   * `scripts/route-client-js.mjs`'s `const FORBIDDEN_EVERYWHERE`, cited by
-   * SYMBOL and not by line — the line has moved four times (`:285` → `:314`
-   * → `:350` → and again in this very commit), which is the whole argument
-   * for the symbol. Audited: no string below uses one,
-   * and T-WEB-S206 keeps it audited (it also pins that neither this module
-   * nor `share-text.ts` imports from `@miolos/games/termo`).
-   *
-   * THE THREE SQUARES ARE CONTENT, NOT DECORATION, and they live here rather
-   * than in `share-text.ts` so that every user-visible character in the app
-   * keeps one auditable home. DESIGN.md:58 bans "emoji decorativo" — emoji
-   * that decorate a RENDERED PAGE, where the design system could set a word
-   * instead. A share text has no CSS, no fonts and no tokens; there the
-   * square is the only available encoding of a per-cell verdict, and it is
-   * the encoding the genre already uses. The same test forbids inventing
-   * squares for the three games that have no per-cell verdict (ADR-0054
-   * decisions 2 and 3).
-   */
   share: {
     label: "Compartilhar",
-    /** After the clipboard fallback writes. Announced, because nothing visible happened. */
     copied: "Resultado copiado.",
-    /** Both mechanisms refused. The only failure the player can see. */
     failed: "Não foi possível copiar o resultado.",
     tiles: { correct: "🟩", present: "🟨", absent: "⬜" },
-    /** "Miolos · Termo · 14 ago" */
     header: (game: string, shortDate: string) =>
       `${wordmark} · ${game} · ${shortDate}`,
-    /** Termo's result line. "4/6" won, "X/6" lost — the genre's own notation. */
     termoWon: (used: number, max: number) => `${used}/${max}`,
     termoLost: (max: number) => `X/${max}`,
   },
-  /**
-   * The statistics screen (#29, ADR-0051). The stat-row labels are F5's
-   * exact register — `Seu melhor tempo` / `Sua média (30 dias)` /
-   * `<Jogo>s resolvidos` (f5-conclusao-desktop.dc.html:33-35) — adopted on
-   * BOTH the conclusion (where F5 is the spec) and the stats screen: one
-   * register, no drift. The average's label carries its own `(30 dias)`
-   * because its population is the 30-day window while best and solved are
-   * all-time (ADR-0051 decision 6 — the labels carry the distinction).
-   */
   stats: {
     title: "Estatísticas",
     perfectDays: {
@@ -377,8 +227,7 @@ export const messages = {
     emptyValue: "—",
     histogram: {
       labels: ["<4", "4–5", "5–6", "6–7", "7–9", ">9"], // minutes, F5's exact glyph set — VISUAL only
-      // Spoken names per bucket — real words, never the glyph labels ("<4" is
-      // unreadable aloud). Index-aligned with TIME_BUCKET_BOUNDS_MS.
+      // Index-aligned with TIME_BUCKET_BOUNDS_MS.
       bucketNames: [
         "menos de 4 minutos",
         "entre 4 e 5 minutos",
@@ -389,7 +238,6 @@ export const messages = {
       ],
       aria: (bucketName: string, n: number) =>
         `${n} ${n === 1 ? "jogo" : "jogos"} ${bucketName ? `— ${bucketName}` : ""}`.trim(),
-      // rendered e.g. "3 jogos — entre 4 e 5 minutos", "1 jogo — menos de 4 minutos"
     },
     termo: {
       fail: "X",
@@ -407,8 +255,6 @@ export const messages = {
       // jogado" (false for a played-lost day) are both rejected. Fernando
       // may adjust.
       legend: { onTime: "no dia", late: "mais tarde", missed: "sem conclusão" },
-      // Complete per-state day composers — the formatted date goes IN here,
-      // never joined in the component. `date` is formatLongDate(day.date).
       dayAria: {
         onTime: (date: string) => `${date}: concluído no dia`,
         onTimePerfect: (date: string) =>
@@ -416,50 +262,15 @@ export const messages = {
         late: (date: string) => `${date}: concluído mais tarde`,
         missed: (date: string) => `${date}: sem conclusão`,
       },
-      // (no separate perfectAria — the perfect marker's meaning rides the day
-      // composer above, so no composer declares a parameter it ignores)
     },
   },
-  /**
-   * The medal section's CHROME only (#30, ADR-0052) — the 23 per-medal
-   * name/description records live in `src/medals/copy.ts` (`medalCopy`),
-   * NOT here, and never may: measured on this branch, a second export of
-   * this module kept the ~2 KB of prose in the shared chunk of every
-   * route that imports `messages` for anything else (plan 035 §14 watch
-   * item 2's recorded fallback, applied). Only the medal section's own
-   * module graph carries the prose.
-   */
   medals: {
     title: "Medalhas",
-    // No aria composer: the medal rows' visible name/description text IS
-    // the accessible content (a composed li label is name-PROHIBITED on
-    // WebKit once `list-style: none` strips the list semantics — step-6
-    // correctness finding; stats-view.tsx records the fix).
   },
-  /**
-   * The archive (#31, ADR-0053, plan 037 §7.6) — shared-chrome position,
-   * like `play`, `conclusion` and `freePlay` above. Game names and kickers
-   * are reused from `games.<game>`, never duplicated (plan 018 S19).
-   *
-   * Every aria sentence ships whole, never assembled in a component
-   * (ADR-0018 :15), and the metadata composers live here for the same
-   * reason: `generateMetadata` may build no string of its own.
-   *
-   * `então`, `mamãe` and `época` are FORBIDDEN_EVERYWHERE in client chunks
-   * (`scripts/route-client-js.mjs`) — audited: no string below uses one.
-   */
   archive: {
     title: "Arquivo",
     lead: "Todos os puzzles do dia desde o começo. Jogue quando quiser — o arquivo não move a sua sequência.",
 
-    // THREE back affordances, THREE destinations, one string each. Every
-    // archive surface goes exactly one level up (plan 037 §7.5), so the
-    // label names where it goes:
-    //   play screen  → the day page   → backToDay
-    //   day page     → its month page → backToMonth
-    //   month page   → the index      → backToIndex
-    // The late-result panel's two links out reuse backToDay and backToMonth,
-    // so no destination has two spellings.
     backToDay: (longDate: string) => `← ${longDate}`,
     backToDayAria: (longDate: string) =>
       `Voltar para os puzzles de ${longDate}`,
@@ -472,32 +283,6 @@ export const messages = {
     empty:
       "O arquivo começa quando o primeiro puzzle do dia sai. Volte amanhã.",
 
-    // The calendar (#163, plan 065 D3) — the grid that replaced the day
-    // rows on the index and the month pages. (`recent.heading` and
-    // `dayRowAria` went with the rows.)
-    //
-    // TWO 7-tuples, Sunday-first, indexed by the grid's own 0-Sunday
-    // column — deliberately NOT an `Intl.DateTimeFormat` weekday: a
-    // formatter would be a new module-scope instance for seven constant
-    // strings, and pt-BR's short weekday form carries a trailing "." the
-    // caller would have to trim (the `formatShortDate` problem, seven
-    // times over). The strings live here and not in the component for the
-    // standing reason (ADR-0018 :15) AND a mechanical one: both calendar
-    // source files sit under T-WEB-S181's pt-BR-literal scan, so an
-    // inlined "sáb" is a red test, not a style nit.
-    //
-    // `weekdays` is the aria-hidden header row — visual scaffolding, three
-    // characters per element, so impeccable's `all-caps-body` (>30 chars
-    // of DIRECT text per element) can never see a run. `weekdaysLong`
-    // feeds `dayAria`: the accessible name carries the weekday — the one
-    // fact the aria-hidden header withholds from assistive tech (column
-    // position; the parity the old "31 · segunda-feira" rows announced).
-    // Composed WHOLE here, the `backToDayAria` idiom; the visible numeral
-    // leads `longDate`, so WCAG 2.5.3 label-in-name holds.
-    //
-    // Audited: no string below uses `então`, `mamãe` or `época`
-    // (FORBIDDEN_EVERYWHERE) — moot while the calendar ships zero client
-    // JS, and cheap to keep true.
     calendar: {
       weekdays: ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
       weekdaysLong: [
@@ -514,65 +299,12 @@ export const messages = {
     },
 
     month: {
-      // formatMonth yields "agosto de 2026". These two are SIBLING
-      // navigation, not a back affordance — the month page's back is
-      // `backToIndex` above — and they deliberately DO NOT SPEND `←`
-      // (step-6 F11). In this product `←` means one level up: `play.back`
-      // ("← Hoje"), `freePlay.back` ("← Modo livre") and the archive's own
-      // three back labels all use it that way, and the late-result panel
-      // renders "← 1 de agosto de 2026" beside "← agosto de 2026". A fourth
-      // meaning for the same glyph — sideways, on the timeline — on the very
-      // page where both appear is one glyph doing two jobs. The words say
-      // which job this is.
-      //
-      // The DIRECTION and the MONTH are two strings, not one, and the view
-      // renders them as two elements — an uppercase kicker over the month in
-      // sentence case. `impeccable`'s `all-caps-body` fires on any non-heading
-      // element carrying more than 30 characters of DIRECT text under
-      // `text-transform: uppercase` (`checks.mjs:3463-3467`), with no
-      // interactive or `nav` exemption; the single composed string reached 32
-      // characters in fevereiro and 31 in setembro, novembro and dezembro, so
-      // four months in every twelve would have redded the detect gate on the
-      // newest month page — the one the CI job discovers — with no commit
-      // causing it and no commit able to fix it. Split, no element carries
-      // more than 17. Same reason `.monthNavMonth` is not uppercase.
-      //
-      // The composed sentence survives as the link's `aria-label`, the
-      // `backToIndex`/`backToIndexAria` idiom this file already uses: the
-      // accessible name contains the visible words, so WCAG 2.5.3's
-      // label-in-name holds.
       previous: "Mês anterior",
       previousAria: (month: string) => `Mês anterior · ${month}`,
       next: "Próximo mês",
       nextAria: (month: string) => `Próximo mês · ${month}`,
     },
 
-    /**
-     * The day page's cards (#31), and their per-game done chip (#96,
-     * ADR-0056).
-     *
-     * `done` and `played` are the HUB'S OWN consts, not copies: this card is
-     * declared to be the hub's Game-card register (`arquivo.module.css`), and
-     * one word on one register has one definition. `T-WEB-S222` asserts both
-     * the identity and the literal, so a re-point and a rename each go red.
-     *
-     * THREE ACCESSIBLE NAMES, because the chip is `aria-hidden` and an
-     * anchor's `aria-label` REPLACES its content: on a done card the name is
-     * the only channel carrying state to assistive tech. `cardAriaDone` and
-     * `cardAriaPlayed` are therefore different sentences — collapsing them
-     * would show a sighted user FEITO and JOGADO while telling a screen-reader
-     * user the same thing about a won Sudoku and a lost Termo, which is the
-     * false done ADR-0031 decision 2 forbids, in the one place the player
-     * cannot catch it.
-     *
-     * All three keep the VERB FIRST. WCAG 2.4.4 (Level A) asks a link's name
-     * to make its destination determinable, and a card whose name states a
-     * state while its three siblings state a purpose is the one a
-     * screen-reader user cannot act on. "Ver o resultado" is accurate exactly
-     * when it renders: the chip's predicate and ADR-0053 decision 10 layer
-     * 2's local-restore predicate are the same predicate on the same record,
-     * so a card carrying this name really does open closed on this device.
-     */
     day: {
       cardAria: (game: string, longDate: string) =>
         `Jogar ${game} de ${longDate}`,
@@ -584,53 +316,15 @@ export const messages = {
       played,
     },
 
-    // The play chrome (ADR-0053 decision 9). ONE string: the line that makes
-    // the archive's semantics visible to the person they apply to. There is
-    // no mode chip — the back label and the top bar's date already say where
-    // you are, and a chip saying "Arquivo" could not have said what this
-    // sentence says. (The reason this comment used to give — that a chip
-    // needs a class in `src/play/screen.module.css`, which #31 does not edit
-    // — was a scope fact standing in for a design one, and step-6 F10b
-    // struck it down: the note itself now carries a class from the archive's
-    // OWN stylesheet, `src/archive/play-note.module.css`, and nothing under
-    // `src/play/` is edited for it.) The back affordance uses `backToDay`
-    // above, for the reason `freePlay`'s own comment gives: a shared
-    // "← Hoje" would lie about the destination.
     play: {
       note: "Puzzle do dia arquivado. Não conta para a sequência nem para os seus tempos.",
     },
 
-    // FIVE notes, one per state the DEVICE can actually distinguish, and the
-    // set is closed by that criterion rather than by taste (#31 step-6
-    // findings F3/F5/F16). The panel reads the local play record and nothing
-    // else — there is no archive read endpoint (ADR-0053 decision 10) — so
-    // every string below is checkable from the record alone, and none of them
-    // asserts anything about WHEN the server's row was written. That is the
-    // half `sync.ts` throws away: `acceptResponse` parses and discards both
-    // `completionResponseSchema.onTime` and `.outcome`, and carrying either to
-    // this panel would be a versioned change to the local record schema (plan
-    // 037 §14 I29, I42).
     result: {
       wonTitle: "Concluído",
       lostTitle: "Não foi dessa vez",
-      // The stamp's 11px tracked label, over the archived day's number and
-      // its month — a postmark, the daily stamp's own anatomy with the one
-      // figure the archive is allowed to show (step-6 F7). It is
-      // `aria-hidden` at the call site: the two links below already name the
-      // day and the month, so it announces nothing new.
       stampLabel: "Arquivo",
-      // AC 4's UI half: this device already held a concluded record for the
-      // day when the archive page mounted, so the result on screen is one the
-      // player had before and NOT a late completion this visit produced.
       already: "Você já tinha concluído este dia — nada foi registrado agora.",
-      // The settled-`recorded` note. It says the row EXISTS and deliberately
-      // does not say when it was written: the same 200 covers "the server
-      // wrote a late row just now" and "the server already held an on-time
-      // row and wrote nothing" (`recorded: false`, the idempotent
-      // short-circuit), and the client cannot tell them apart. The previous
-      // wording — "Conclusão tardia — registrada" — asserted the first on
-      // both, which is false on exactly ADR-0053 decision 10 layer 3's own
-      // case: a day solved on time, replayed later from another device.
       late: "Resultado registrado — o arquivo não conta para a sua sequência.",
       // NOT `messages.conclusion.sync.pending`: that string names
       // connectivity, and the archive's own cause is the daily late-write
@@ -638,38 +332,13 @@ export const messages = {
       // both, and it never claims a registration that did not happen.
       pending:
         "Resultado guardado neste aparelho — ainda não registrado. O envio se completa mais tarde.",
-      // The server REFUSED the completion — `sync.ts`'s `TERMINAL_STATUSES`,
-      // whose 404 arm is the kill switch, the one operation ADR-0053 decision
-      // 2's whole `force-dynamic` posture is built around. Without this arm
-      // the panel told the player the result was registered while the server
-      // held no completion at all, which is the client's own verdict standing
-      // as the user-visible authority — the thing ADR-0004 forbids, and the
-      // reason `messages.conclusion.sync.rejected` exists on the daily.
       rejected:
         "Não foi possível registrar este resultado — o servidor recusou o envio.",
-      // No record on this device AT ALL, which on a concluded panel means
-      // `localStorage` is unusable (DOM storage off in a WebView, site data
-      // blocked): `sync.ts`'s `memoryQueue` still posts, but nothing readable
-      // survives for this panel to report. It claims neither a registration
-      // nor a failure, because the device knows neither.
       notStored:
         "Este aparelho não guardou o resultado — o arquivo não conta para a sua sequência.",
-      // The archived Termo's word, on BOTH outcomes (#31 step-6 finding F23,
-      // ADR-0043 decision 6's rule applied where it was missing). A lost
-      // archived Termo showed "Não foi dessa vez" and nothing else, where the
-      // daily's conclusion reveals the answer — so the one game whose loss
-      // can teach you something taught nothing in the archive. NOT
-      // `games.termo.dayWord.lead`: that string says "de hoje",
-      // which is false of every date this panel renders.
       wordLead: "A palavra desse dia era",
-      // The two links out reuse `backToDay` and `backToMonth`; no duplicate
-      // spellings live here.
     },
 
-    // Metadata (ADR-0053 decision 1 / plan 037 D6). Distinct per date and per
-    // (date, game), which is what stops ~5 near-identical board pages a day
-    // from being thin duplicates — T-WEB-S173 asserts the distinctness, not
-    // just the shape.
     meta: {
       indexTitle: "Arquivo — Miolos",
       indexDescription:
@@ -686,13 +355,6 @@ export const messages = {
         `Jogue o ${game} do dia ${longDate} no Miolos. De graça, sem cadastro.`,
     },
   },
-  /**
-   * Free-play chrome (#28, ADR-0046) — shared-chrome position, like `play`
-   * and `conclusion` above. Game names and kickers are reused from
-   * `games.<game>`, never duplicated (plan 018 S19). No completion
-   * language anywhere in this section: **Conclusão** is a daily verb
-   * (CONTEXT.md) and free play records nothing (ADR-0008 rule 5).
-   */
   freePlay: {
     title: "Modo livre",
     lead: "Puzzles infinitos, gerados aqui no seu aparelho. Nada daqui conta para a sequência nem para as estatísticas.",
@@ -707,7 +369,6 @@ export const messages = {
       leve: "Leve",
       medio: "Médio",
       dificil: "Difícil",
-      // Composed here, never joined at a call site (ADR-0018).
       aria: (level: string) => `Nível: ${level}`,
     },
     generating: "Preparando o puzzle…",
@@ -718,8 +379,6 @@ export const messages = {
     },
     solved: {
       stamp: "Resolvido!",
-      // Composed here, never joined at a call site (ADR-0018) — the card's
-      // "Modo livre · Binairo · Leve" line.
       modeLine: (mode: string, game: string, level: string) =>
         `${mode} · ${game} · ${level}`,
       again: "Mais um",
@@ -741,14 +400,6 @@ export const messages = {
         "A figura revelada, formada pelas células preenchidas da sua grade.",
     },
   },
-  /**
-   * The attach prompt card (#21, ADR-0050 decision 9; ADR-0012's
-   * purpose-limited consent language). The invitation is the human voice —
-   * Fraunces italic, protecting the streak — and every consent label says
-   * exactly what its checkbox does: recovery is the account function
-   * (required to submit), the reminder defaults UNCHECKED and its absence
-   * signs the player up for nothing.
-   */
   attach: {
     invitation: "Sua sequência merece um plano B.",
     lead: "Vincule um e-mail e a sequência sobrevive a qualquer aparelho perdido ou limpo.",
@@ -757,17 +408,12 @@ export const messages = {
       "Quero vincular este e-mail para recuperar e mover a minha sequência.",
     reminderLabel:
       "Quero receber um lembrete por e-mail quando a minha sequência estiver em risco.",
-    // The consent copy's link into the policy (T-WEB-S143). #158 appends
-    // the terms to the same line (T-WEB-S294): one quiet legal-links row,
-    // so the consent labels above stay about consent only.
     privacyLinkLead: "Como cuidamos dos seus dados:",
     privacyLinkLabel: "Política de Privacidade",
     termsLinkLabel: "Termos de Uso",
     submit: "Enviar link mágico",
     dismiss: "agora não",
     sending: "Enviando…",
-    // The sent state replaces the form (D15): the normalized address is
-    // rendered so the player sees exactly where the link went.
     sent: (email: string) => `Enviamos um link para ${email}.`,
     sentNote: "Vale por 30 minutos e funciona uma única vez.",
     errors: {
@@ -777,17 +423,6 @@ export const messages = {
       alreadyAttached: "Esta conta já tem um e-mail vinculado.",
     },
   },
-  /**
-   * The first-visit introduction (#35, ADR-0061). Sells the ritual — the
-   * four dailies, the sequência, the virada — and nothing else: per-game
-   * rules live on the play screens. Deliberately short; the card is read in
-   * seconds or dismissed, and a first visitor came here to play. Five
-   * strings, no aria string: the card's accessible name comes from the
-   * rendered invitation heading via `aria-labelledby`, so it cannot drift
-   * from the copy. "Horário de Brasília" is the term Brazilians actually
-   * use for this timezone (approved on issue #35); the CODE invariant
-   * stays `America/Sao_Paulo` — a code concern, never a copy concern.
-   */
   onboarding: {
     invitation: "Quatro puzzles do dia, iguais para todo mundo.",
     lead: "Termo, Sudoku, Nonogram e Binairo. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
@@ -795,42 +430,19 @@ export const messages = {
     noAccount: "Sem cadastro — é só jogar.",
     dismiss: "Entendi",
   },
-  /**
-   * The push pre-prompt card (#145, ADR-0064; plan 061 §5) — the soft ask
-   * on the conclusion surface, CONTEXT.md vocabulary throughout
-   * (*sequência*, *virada*, *lembrete*). Four strings, no aria string: the
-   * card's accessible name comes from the rendered title via
-   * `aria-labelledby`, so it cannot drift from the copy (the onboarding
-   * card's shape). The service worker's own fallback strings live in
-   * apps/web/public/sw.js — the recorded i18n exception (a plain unbundled
-   * worker cannot import this module).
-   */
   push: {
     title: "Quer proteger sua sequência?",
     body: "A gente te avisa antes da virada quando a sua sequência estiver em risco. No máximo um lembrete por dia — e nunca propaganda.",
     accept: "Quero o lembrete",
     decline: "Agora não",
   },
-  /**
-   * The /vincular confirm page (#21, ADR-0050 decision 3): an inert shell
-   * plus ONE explicit button — the human click is what spends the token,
-   * so an email scanner's GET consumes nothing.
-   */
   confirm: {
     title: "Vincular e-mail",
     ready: {
       lead: "Um clique e este e-mail fica vinculado à sua conta do Miolos.",
-      // The honest-copy warning (step-7 finding A): a magic link can be
-      // requested by anyone who knows the address — the words are part of
-      // the defense against an attacker-requested link.
       warn: "Só confirme se foi você quem pediu este link agora mesmo. Se você não pediu, feche esta página.",
       cta: "Confirmar vínculo",
     },
-    // The switch-account acknowledgement (step-7 finding D): this browser
-    // already carries a played account, and confirming replaces its
-    // session with the linked account's — an explicit checkbox, never a
-    // silent cookie swap. Zero-history and cookieless browsers never see
-    // this block.
     switchAccount: {
       lead: "Este aparelho já tem uma sequência própria. Ao confirmar, ele passa a usar a conta deste e-mail — a conta atual deste aparelho deixa de aparecer aqui.",
       label: "Entendi: quero trocar de conta neste aparelho.",
@@ -856,13 +468,11 @@ export const messages = {
       title: "Não deu para confirmar com este link.",
       body: "Aconteceu um imprevisto por aqui. Peça um novo link na página inicial.",
     },
-    // A settled network/server failure: the token may still be alive, so
-    // the state returns to the button with this line beside it.
     failed: "Não foi possível confirmar agora. Tente de novo.",
     backHome: "Voltar para Hoje",
   },
   /**
-   * The privacy policy (#21, ADR-0012, ADR-0050 decision 12) — the largest
+   * The privacy policy (ADR-0012, ADR-0050 decision 12) — the largest
    * single copy block in the app, and deliberately so: the page states
    * EXACTLY what this release ships, so page and mechanism cannot drift.
    */
@@ -889,8 +499,7 @@ export const messages = {
       // anonymous account and processed OUTSIDE Brazil, which is data
       // about the user by this block's own criterion — the page states
       // EXACTLY what this release ships, and deferring the line would be
-      // exactly that drift (the #30 medals and #145 push precedents,
-      // both widened in place in the PR that shipped their mechanism).
+      // exactly that drift.
       //
       // THE LAST SENTENCE IS THE HONEST HALF, and it is why this line
       // rather than the deletion section carries it: `POST /account/delete`
@@ -914,12 +523,6 @@ export const messages = {
       // the inventory names it the release the table ships — the page
       // states EXACTLY what this release ships (this block's own doc
       // comment), and deferring the line would be exactly that drift.
-      // The withdrawal sentence describes what a player can actually DO in
-      // this release (#145 step-6 security 4): no in-app unsubscribe
-      // surface exists until #36's settings toggle, so the honest path is
-      // revoking the browser permission — delivery stops at once — with
-      // the dead-endpoint pruning (#146, ADR-0064 decision 10) removing
-      // the row, and account deletion cascading it (migration 0007).
       push: "O lembrete no navegador, somente se você ativar: guardamos o endereço técnico da inscrição e as chaves que o navegador gera, usados só para avisar quando a sua sequência estiver em risco. Para parar, revogue a permissão de notificações nas configurações do navegador — os avisos param na hora e a inscrição, que deixa de funcionar, é removida dos nossos registros. Excluir a conta apaga tudo.",
     },
     why: {
@@ -948,14 +551,6 @@ export const messages = {
     revision:
       "Esta política cresce junto com o produto: uma versão completa acompanha as próximas funcionalidades.",
   },
-  /**
-   * The terms of use (#158) — /privacidade's sibling page, in the same
-   * plain-words register (ADR-0012's posture: say exactly what the product
-   * does, nothing it doesn't). Each section states what this release
-   * actually ships: free content is ADR-0005, the no-signup account is
-   * ADR-0003/ADR-0050, and the contact address is the same one the policy
-   * publishes — one door for both legal pages.
-   */
   terms: {
     title: "Termos de Uso",
     intro:
@@ -996,7 +591,6 @@ export const messages = {
     revision:
       "Estes termos crescem junto com o produto: uma versão completa acompanha as próximas funcionalidades.",
   },
-  /** The self-service deletion island on /privacidade (D13). */
   deleteAccount: {
     heading: "Excluir minha conta e dados",
     explain:
@@ -1048,8 +642,6 @@ export const messages = {
         rowHeldAria: (row: number, max: number, guess: string) =>
           `tentativa ${row} de ${max}: ${termoLetters(guess)}, aguardando resposta`,
 
-        // Fired on EVERY type and EVERY erase, into the announcer. Terse on
-        // purpose: this is heard five times a word, thirty times a game.
         letterTypedAria: (letter: string, filled: number, length: number) =>
           `${letter}, ${filled} de ${length}`,
         letterErasedAria: (letter: string, filled: number, length: number) =>
@@ -1059,15 +651,10 @@ export const messages = {
         // quotes, so this one string does not take the sentence register the
         // two below do. The same string is the local rejection's line AND the
         // answer to a 422 `invalid-guess`: both mean the same thing to the
-        // player (plan 022 §13.1b).
+        // player.
         notInList: "não está na lista",
-        // The held-turn and rejected-turn lines (plan 022 §11.4). Distinct in
-        // copy from `notInList`, deliberately: one is the player's mistake,
-        // the other is ours. Full sentences, matching every shipped system
-        // line.
         offline: "Sem conexão — a tentativa vai assim que a conexão voltar.",
         failed: "Não foi possível enviar a tentativa.",
-        // Capitalised, like every shipped CTA in this bundle.
         retry: "Tentar de novo",
 
         keyboard: {
@@ -1082,8 +669,6 @@ export const messages = {
             letter: string,
             state: "correct" | "present" | "absent",
           ) => `letra ${letter}: ${TERMO_TILE[state]}`,
-          // Desktop-only: a phone has no keyboard to advertise. The shape is
-          // nonogram's shipped affordance verbatim.
           affordance:
             "ou use o teclado: letras escrevem, Enter envia, Backspace apaga",
         },
@@ -1094,13 +679,6 @@ export const messages = {
           cta: "Voltar para Hoje",
         },
       },
-      /**
-       * The conclusion's copy bundle (#27, plan 022 §18.2). Plain data only —
-       * it crosses the RSC boundary into `<ConclusionView/>`, and a function
-       * member there is an SSR 500 rather than a type error (types.ts).
-       * The play bundle and Termo's own `outcome`/`dayWord` siblings arrive
-       * with the screen.
-       */
       conclusion: {
         title: "Termo",
         kicker: "Palavras",
@@ -1109,17 +687,6 @@ export const messages = {
           cta: "Jogar o Termo de hoje",
         },
       },
-      /**
-       * The stamp's two slots and its whole accessible name, on BOTH outcomes
-       * (#27, ADR-0043 decisions 1, 3 and 5).
-       *
-       * A SIBLING of `conclusion`, never a member of it: `ConclusionCopy` is
-       * the exact shape three other games render and it is plain data crossing
-       * the RSC boundary, so a composer inside it would be an SSR 500 rather
-       * than a type error (types.ts). Same placement rule as
-       * `nonogram.reveal`. The Termo conclusion wrapper reads these and hands
-       * `<ConclusionView/>` finished strings.
-       */
       outcome: {
         wonLabel: "Concluído",
         wonDetail: (used: number, max: number) => `${used}/${max}`,
@@ -1139,7 +706,7 @@ export const messages = {
           `Termo jogado: as ${max} tentativas acabaram sem acerto.`,
       },
       /**
-       * The day's word in its canonical accented spelling (#27 AC 2, ADR-0043
+       * The day's word in its canonical accented spelling (ADR-0043
        * decision 6), rendered on BOTH outcomes. On a win it is not redundant:
        * the player typed the word accent-free and the accents are the thing
        * they have not seen.
@@ -1163,8 +730,6 @@ export const messages = {
           "Preencha a grade de 1 a 9. Cada linha, cada coluna e cada bloco de 3×3 tem os nove dígitos, sem repetir nenhum.",
         progressLong: (filled: number, total: number) =>
           `${filled} de ${total} células`,
-        // The mobile `.progressBar` slot carries the level too (plan 018
-        // §12.5), so the difficulty is not desktop-only: "Médio · 24 de 81".
         progressShort: (level: string, filled: number, total: number) =>
           `${level} · ${filled} de ${total}`,
         levelLabel: "Nível",
@@ -1176,7 +741,6 @@ export const messages = {
         cellAria: cellAriaSudoku,
         cellGivenAria: (row: number, column: number, value: number) =>
           `linha ${row}, coluna ${column}: ${value}, célula fixa`,
-        /** The whole accessible name of a repeating cell, separator included. */
         cellInvalidAria: (row: number, column: number, value: number | null) =>
           `${cellAriaSudoku(row, column, value)} — esta célula repete um número`,
         keypad: {
@@ -1225,15 +789,11 @@ export const messages = {
         // The denominator is the PICTURE's cell count, summed from the clues
         // — not the board's. A player finishes without crossing a single
         // cell, so a `de size²` readout would stand at 21% at the moment
-        // they win (P13).
+        // they win.
         progressLong: (filled: number, total: number) =>
           `${filled} de ${total} preenchidas`,
-        // The mobile `.progressBar` slot carries the board's size too, the
-        // way Sudoku's carries the level.
         progressShort: (size: number, filled: number, total: number) =>
           `${boardSize(size)} · ${filled} de ${total}`,
-        // The stats card's third row, Sudoku's `levelLabel`/`level` pair
-        // exactly: `.sizeCard` in the game's own module declares its box.
         sizeLabel: "Tamanho",
         size: boardSize,
         boardAria: (size: number) => `grade do Nonogram, ${size} por ${size}`,
@@ -1255,8 +815,8 @@ export const messages = {
           // Undecided row), so "marcar células vazias" told a non-sighted
           // player the brush marks the cells they have not decided. It marks
           // the ones they have ruled OUT of the picture, whatever state those
-          // are in — which is the wording the hint copy 30 lines down already
-          // uses (step-6 round-4 finding Q4).
+          // are in — which is the wording the hint copy in `hint.explain.cross`
+          // below already uses.
           crossAria: "marcar células fora da figura",
           eraseAria: "apagar células",
           affordance: "ou use o teclado: 1 preenche, 2 marca, 0 apaga",
@@ -1265,11 +825,9 @@ export const messages = {
           available: "Usar dica — 1 disponível",
           used: "Dica usada",
           explain: {
-            // One truthful sentence for both directions: a correction may
-            // fill OR cross.
             correction: "Corrigimos uma célula que não fecha com os números.",
             fill: "Preenchemos uma célula da figura para você.",
-            // The defined-unreachable branch (§15.2): the selector only falls
+            // The defined-unreachable branch: the selector only falls
             // back to a cross when no undecided picture cell is left, which is
             // a board that is already solved. It ships rather than rendering
             // `undefined`.
@@ -1290,37 +848,9 @@ export const messages = {
           cta: "Jogar o Nonogram de hoje",
         },
       },
-      // The reveal's copy. A sibling of `conclusion`, read only by the
-      // Nonogram conclusion wrapper — it may not go inside `conclusion`,
-      // which is `ConclusionCopy`'s exact shape and is rendered by two other
-      // games. That rule is why `lead` and `namedAria` live HERE and travel
-      // to `<ConclusionView/>` as DATA on `ConclusionPicture`: the shared
-      // module is game-blind and imports no `games.nonogram.*` string.
-      //
-      // SINCE #64 (ADR-0070) THE DAILY REVEAL CAN BE NAMED. ADR-0033's
-      // no-name rule stood until then, and `aria` below is what it produced:
-      // a description rather than a name. It is not dead copy — it is the
-      // honest degraded label whenever the name is absent (offline finish,
-      // pre-sync, deploy skew, a killed daily row), and free play keeps its
-      // own unnamed string (`freePlay.nonogram.pictureAria`) permanently.
       reveal: {
         aria: "A figura do Nonogram de hoje, formada pelas células preenchidas da sua grade.",
-        /**
-         * The caption's kicker. IMPERSONAL, and that is the register of the
-         * slot it borrows: Termo's `dayWord.lead` ("A palavra de hoje era")
-         * is the 11px tracked-uppercase line above the answer, while the
-         * second-person sentence sits in `result`. "VOCÊ REVELOU" there
-         * would shout a second-person sentence at kicker size and break the
-         * shape the shipped card established. The second person lives in
-         * `namedAria`, where it reads naturally.
-         */
         lead: "A figura de hoje era",
-        /**
-         * The accessible name once the motif is known — composed HERE, never
-         * in a component, on `cellAria`'s rule. The em dash matters: "Você
-         * revelou Âncora: a figura…" would read the name as a label for the
-         * clause after it.
-         */
         namedAria: (name: string) =>
           `Você revelou ${name} — a figura do Nonogram de hoje, formada pelas células preenchidas da sua grade.`,
       },
@@ -1331,7 +861,7 @@ export const messages = {
       description: "Zeros e uns, em perfeito equilíbrio.",
       play: {
         title: "Binairo",
-        // States rule 4 for rows AND columns (plan 017 deviation 1): ADR-0020
+        // States rule 4 for rows AND columns: ADR-0020
         // rule 4 covers both, and the reference frame's shorter wording would
         // teach the player a rule the engine does not enforce.
         rules:
@@ -1349,12 +879,9 @@ export const messages = {
           eraseAria: "apagar células",
           affordance: "ou clique na célula para alternar",
         },
-        // Every aria-* string is composed here, never in a component (the
-        // hoje.streak.aria precedent) — including the invalid variant's join.
         cellAria,
         cellGivenAria: (row: number, column: number, value: 0 | 1) =>
           `linha ${row}, coluna ${column}: ${value}, célula fixa`,
-        /** The whole accessible name of a rule-breaking cell, separator included. */
         cellInvalidAria: (row: number, column: number, value: 0 | 1 | null) =>
           `${cellAria(row, column, value)} — esta célula quebra uma regra`,
         hint: {

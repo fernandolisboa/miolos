@@ -66,10 +66,9 @@ export function ArchiveMonthView({
       </section>
 
       {/* Each sibling link is a kicker over a month, never one run of
-          uppercase text: `messages.archive.month` records why (impeccable's
-          `all-caps-body` gate fires at 30 characters, which the composed
-          label passed in four months of every twelve). The composed sentence
-          is the accessible name. */}
+          uppercase text: impeccable's `all-caps-body` gate fires at 30
+          characters, which the composed label passed in four months of every
+          twelve. The composed sentence is the accessible name. */}
       <nav className={styles.monthNav}>
         {previous === undefined ? null : (
           <Link
