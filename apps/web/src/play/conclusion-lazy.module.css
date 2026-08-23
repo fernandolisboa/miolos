@@ -1,11 +1,12 @@
-/* A separate sheet from `conclusion-view.module.css` on purpose: importing
-   that sheet here would put the conclusion's full CSS back into every play
-   route's first paint, which is the regression ADR-0053 decision 4 and
-   `T-WEB-S183` exist to prevent. `.skeletonCard` below therefore RESTATES
-   the conclusion's silhouette rather than `composes`-ing it.
+/* A separate sheet from
+   `conclusion-view.module.css` on purpose — importing that sheet here would
+   put the conclusion's full CSS back into every play route's first paint,
+   and CSS Modules hash per file anyway (the `hub-day-state.tsx` reason).
+   `.skeletonCard` below therefore RESTATES the conclusion's silhouette
+   rather than `composes`-ing it (ADR-0054 decision 15 owns the boundary).
 
    Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, where a bare type selector either fails the build
+   css-loader's `pure` mode, so a bare type selector either fails the build
    or leaks globally. */
 
 .page {

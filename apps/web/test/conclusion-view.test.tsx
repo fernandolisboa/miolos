@@ -1122,9 +1122,16 @@ describe("the conclusion's layout (tripwires)", () => {
       );
     }
     // The picture's `from` is fully transparent, so its end state has to
-    // restore opacity explicitly; the stamp's 0.6 start does not read as
-    // hidden and the rule leaves it to the animation-less default.
+    // restore opacity explicitly.
     expect(decl(bodyOf(reduced, ".picture"), "opacity")).toBe("1");
+    // And neither stand-down may hide the payoff. `stamp-settle` opens at
+    // `opacity: 0.6`, so pinning "not the start value, and not invisible"
+    // is what stops the one celebration this product ships from being
+    // switched off for every reduced-motion user.
+    for (const selector of [".stamp", ".picture"] as const) {
+      const opacity = decl(bodyOf(reduced, selector), "opacity");
+      expect(opacity === undefined || opacity === "1", selector).toBe(true);
+    }
     // Anti-vacuity: the keyframes really do open where this test claims.
     expect(CSS).toMatch(/@keyframes stamp-settle/);
     expect(CSS).toMatch(/@keyframes picture-settle/);

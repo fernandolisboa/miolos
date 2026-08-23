@@ -139,7 +139,8 @@
    inside --rotate-card-max (2.4deg); the tape inside DESIGN.md:37's 3-5deg.
 
    `--board-mobile-max` is declared UNCONDITIONALLY and is not optional:
-   `screen.module.css`'s `.gridCard` is `max-width: var(--board-mobile-max)` with NO
+   `screen.module.css`'s `@media (max-width: 768px)` `.gridCard` is
+   `max-width: var(--board-mobile-max)` with NO
    fallback, so omitting it here makes the declaration invalid at
    computed-value time, falls back to `none`, and deletes the <=768px cap in
    silence. 254 = 5 x 44 board + 4 x 3 gaps + 2 x 10 padding + 2 x 1 border. */
@@ -648,7 +649,7 @@
      viewport — browser-verified before the fix: `none` at 1440,
      `rgba(33,29,25,0.1) 2px 2px 0px` at 390. Pinned by a stylesheet-TEXT
      assertion, because jsdom computes no cascade. The per-viewport step down
-     is the frame set's own move (screen.module.css's `.gridCard` ships 5px 5px 0
+     is the frame set's own move (screen.module.css's mobile `.gridCard` ships 5px 5px 0
      against --shadow-lg's 6px). */
   .key:not(.keyAbsent) {
     box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
@@ -682,7 +683,7 @@
 /* ── reduced motion ──────────────────────────────────────────────────── */
 
 /* In THIS module, and it has to be: CSS Modules hash per file, so the shared
-   block at screen.module.css's `.hint` covers it and can never reach
+   sheet's own reduced-motion block covers its `.hint` and can never reach
    `.tile` or `.key`. */
 @media (prefers-reduced-motion: reduce) {
   .tile,

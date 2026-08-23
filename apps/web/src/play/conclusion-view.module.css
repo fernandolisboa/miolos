@@ -1,6 +1,9 @@
-/* Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, where a bare type selector either fails the
-   build or leaks globally. */
+/* Every accent here is `var(--accent)`, set inline on the root from
+   `play/accent.ts` — one sheet, four games.
+
+   Every rule is anchored on a local class: Next compiles CSS Modules in
+   css-loader's `pure` mode, so a bare type selector either fails the build
+   or leaks globally. */
 
 .page {
   box-sizing: border-box;
@@ -8,8 +11,7 @@
   padding: var(--space-11) 80px;
 }
 
-/* Anchored on .page, never a bare `a:hover`, which would turn Hoje's hover
-   green. */
+/* Per-screen hover accent — anchored on .page, never a bare `a:hover`. */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -18,6 +20,8 @@
   text-underline-offset: 4px;
 }
 
+/* Named areas, never `display: contents` — the top bar's per-viewport
+   members have to survive the reflow. */
 .pageResult {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
@@ -185,8 +189,13 @@
   composes: stampTime;
 }
 
-/* Declared AFTER `.stamp` so same-specificity-later-wins carries the
-   override without raising specificity. */
+/* Declared AFTER `.stamp` so
+   same-specificity-later-wins carries the two overrides.
+
+   IT DECLARES NO `animation`, and the absence is not what stands the settle
+   down — `.stampStill` below is, applied by `OutcomeStamp` from
+   `outcome.state === "lost"` rather than by this class. Motion is a property
+   of the OUTCOME, not of the loss chrome. */
 .stampLost {
   border: 1.5px solid var(--ink-2);
   color: var(--ink-2);
@@ -203,6 +212,8 @@
   margin-top: var(--space-6);
 }
 
+/* Nothing here may use --accent-app #9E3B2F, which is 1.40:1 against
+   terracotta and invisible. */
 .picture {
   width: 132px;
   height: 132px;
@@ -296,6 +307,8 @@
    clip-path element as VISIBLE, so this is not scored as hidden text. No
    font-size at all, so it inherits and `undersized-ui-text` cannot reach
    it. */
+/* The recipe is `termo-board.module.css`'s `.announcer`, which cannot be
+   reused across files — CSS Modules hash per file. */
 .announcer {
   position: absolute;
   width: 1px;
@@ -415,10 +428,13 @@
   margin-top: 14px;
 }
 
-/* Non-zero padding on BOTH axes: impeccable's `cramped-padding` reads
-   computed padding, and a label flush against a filled boundary is exactly
-   its shape. `.emptyCta` and the mobile rule below carry it for the same
-   reason. */
+/* Non-zero padding on BOTH axes, and the horizontal half is a gate fix rather
+   than a taste one: `.chipDone` paints a background and `.chipMissing` a
+   1.5px dashed border, so at `padding: 12px 0` the chip's two block children
+   sat flush against a VISIBLE boundary and `impeccable detect` fired
+   `cramped-padding` five times per viewport on the concluded card — the one
+   card no URL-mode scan reaches, because a clean browser profile has no
+   concluded record and always renders the empty branch. */
 .chip {
   box-sizing: border-box;
   flex: 1;
@@ -501,8 +517,9 @@
     color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-/* (0,4,0), so it beats `.page .cta:hover` (0,3,0) on specificity rather
-   than on source order. */
+/* (0,4,0), so it beats `.page .cta:hover` (0,3,0) above on specificity rather
+   than on source order — the hover must not drop the destination game's ink
+   back to desk on a terracotta fill. */
 .page .cta.ctaNext:hover {
   color: var(--ink-on-accent, var(--paper-desk));
 }
@@ -663,8 +680,10 @@
   }
 }
 
-/* Page padding is 20px, not 18px: impeccable's body-text-viewport-edge
-   fires on a >40-char <p> whose rect.left < 16. */
+/* Page padding is 20px, not F6's 18px:
+   impeccable's body-text-viewport-edge fires on a >40-char <p> whose
+   rect.left < 16, and a card at 18px with sub-pixel rounding sits too close
+   to that edge. Hoje ships 20px for the same reason. */
 @media (max-width: 768px) {
   .page {
     padding: var(--space-5) var(--space-5) var(--space-6);
@@ -704,15 +723,15 @@
   }
 
   .stampLabel {
-    /* 11px is the legibility floor the detect gate enforces for functional
-     text. */
+    /* F6 draws 9px; 11px is the legibility floor the detect gate enforces
+       for functional text, same rule Hoje's kicker follows. */
     font-size: 11px;
     letter-spacing: 0.16em;
   }
 
   /* `.stampGuesses` needs no block of its own here: it `composes: stampTime`,
-     so the element carries both class names and this rule already reaches
-     it. */
+     so the element carries both class names and this rule already governs
+     "4/6" and "X/6" as well as a duration. */
   .stampTime {
     font-size: 28px;
   }
@@ -730,7 +749,7 @@
   }
 
   /* Inside the ONE `@media (max-width: 768px)` block this module declares, so
-     `bodyOf`'s first-match lookup cannot resolve to a different band. */
+     `bodyOf`'s first-match lookup cannot be handed the wrong body. */
   .pictureRow {
     margin-top: var(--space-4);
   }

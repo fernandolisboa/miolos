@@ -1,12 +1,24 @@
 /* Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, where a bare type selector (`a:hover`, `button`)
-   either fails the build or leaks globally. */
+   css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
+   either fails the build or leaks globally.
 
-/* The two-column fold is set by the widest board this layer serves: Binairo
-   needs 1040px and Sudoku 1108px, so the shared fold sits at or above 1108.
-   Below it the fixed cells cannot shrink and the layout overflows — and
-   neither scanned viewport (1440x900, 390x844) is in that band, so no CI
-   scan reaches it. */
+   Three things differ per game and none of them is a cascade override — CSS
+   Modules hash class names per file, so a `.gridCard` declared in a game's
+   module would resolve against this one by stylesheet INJECTION ORDER, which
+   Next does not guarantee. */
+
+/* The two-column hard minimum is set by the widest board this
+   layer serves: Binairo needs 80 + 330 + 72 + (8×52 + 7×4 + 2×16 + 2) + 80 =
+   1040px and Sudoku needs 80 + 330 + 72 + 546 + 80 = 1108px, so one shared
+   fold has to sit at or above 1108 — 1140 leaves margin.
+   Below it the fixed cells cannot shrink, so the two-column layout overflows,
+   and neither scanned viewport (1440×900, 390×844) is in that band, so CI
+   would never catch it.
+
+   Named areas rather than `display: contents`: the reflow has to move the
+   timer and the progress readout ACROSS subtrees (.statsCard is a child of
+   the sidebar column, .topBar its sibling), which `display: contents`
+   cannot do. */
 .page {
   box-sizing: border-box;
   min-height: 100dvh;
@@ -23,8 +35,8 @@
   padding: var(--space-11) 80px;
 }
 
-/* Anchored on .page, never a bare `a:hover`, which would turn Hoje's hover
-   green. */
+/* Per-screen hover accent — anchored on .page, never a bare `a:hover`,
+   which would turn Hoje's hover green. */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -185,7 +197,7 @@
 
 /* The "free" grid row between .stats and .hint is a 1fr spacer with no
    element in it — that is what pins the button to the bottom of the
-   sidebar. */
+   sidebar, as F3 draws it. */
 .hint {
   grid-area: hint;
   box-sizing: border-box;
@@ -194,8 +206,8 @@
   justify-content: center;
   width: 100%;
   /* Horizontal padding is visually inert on a full-width, centre-aligned
-     button, but impeccable's `cramped-padding` reads computed padding and a
-     14px label flush against a filled boundary is exactly its shape. */
+     button — but impeccable's `cramped-padding` reads computed padding, and
+     a 14px label flush against a filled boundary is exactly its shape. */
   padding: 14px var(--space-5);
   background: var(--accent);
   color: var(--ink-on-accent, var(--paper-desk));
@@ -215,8 +227,8 @@
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-/* Three carriers — fill, border and label — so the state survives
-   grayscale. */
+/* Three carriers —
+   fill, border and label — so the state survives grayscale. */
 .hintUsed {
   background: var(--paper-card);
   border: 1.5px solid var(--line);
@@ -268,8 +280,10 @@
 /* The skeleton's hint bar borrows .hint so its box is the shipped size by
    construction — but that rule also carries `cursor: pointer` and a 1px
    press, and an inert box that presses is a lie the player can see.
-   `pointer-events: none` retires both, and it has to sit AFTER .hint:
-   same specificity, later wins. */
+   `pointer-events: none` retires both at once, and it has to sit AFTER
+   .hint here: same specificity, later wins. Each game's module carries
+   its own copy for its own input row, because a class hashed in this file
+   cannot reach one hashed in that one. */
 .placeholder {
   cursor: default;
   pointer-events: none;
@@ -324,17 +338,21 @@
 
   .hint {
     margin-top: 14px;
-    /* Padding + min-height rather than a fixed height, so the computed vertical
-       padding is non-zero and impeccable's `cramped-padding` stays down. */
+    /* F4 draws a 50px bar. Expressed as padding + min-height rather than a
+       fixed height so the computed vertical padding is non-zero: with
+       box-sizing border-box, 14px line + 2×16px + 3px border = 49px, and
+       min-height pins the frame's 50px exactly. */
     padding: var(--space-4) var(--space-5);
     min-height: 50px;
     height: auto;
   }
 }
 
-/* Page padding is 20px, not 16px: impeccable's body-text-viewport-edge
-   fires on a >40-char <p> whose rect.left < 16, and 16.0 is tipped red by
-   one sub-pixel of layout rounding. */
+/* Page padding is 20px, not F4's 16px:
+   impeccable's body-text-viewport-edge fires on a >40-char <p> whose
+   rect.left < 16, and the mobile rules paragraph lands exactly on 16.0 —
+   one sub-pixel of layout rounding tips it red. Hoje ships 20px for the
+   same reason. */
 @media (max-width: 768px) {
   .page {
     padding: var(--space-5) var(--space-5) var(--space-6);
@@ -352,16 +370,17 @@
 
   .gridCard {
     box-sizing: border-box;
-    /* .board is `align-items: center`, so the card is shrink-to-fit by default.
-       `width: 100%` + a cap makes the board fluid instead. Width rather than
-       `align-self: stretch`, because .board is a COLUMN flex container — its
-       cross axis is the horizontal one, where stretch and a centring margin
-       fight each other. */
+    /* .board is `align-items: center`, so the card is shrink-to-fit by
+       default. `width: 100%` + a cap makes the board FLUID instead: the
+       per-game cap at 390 and above, the page's own width below that. Width
+       rather than `align-self: stretch`, because .board is a COLUMN flex
+       container — its cross axis is the horizontal one, where stretch and a
+       centring margin fight each other. */
     width: 100%;
     max-width: var(--board-mobile-max);
     padding: 10px;
-    /* 5px 5px 0 is intentional: no token carries the value between
-       --shadow-md and --shadow-lg. */
+    /* 5px 5px 0 is intentional: F4 draws the mobile board shadow between
+       --shadow-md and --shadow-lg; no token carries that value. */
     box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 20%, transparent);
   }
 }

@@ -92,7 +92,7 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
 
   it("reads the label colour through the property, with the site's own safe fallback", () => {
     // The fallback is real and load-bearing — `--board-mobile-max` is read at
-    // `screen.module.css`'s `.gridCard` with none (landmine N12), so a header comment
+    // `screen.module.css`'s mobile `.gridCard` with none (landmine N12), so a header comment
     // claiming a fallback is not evidence of one. Pinned literally.
     //
     // The fallback is PER SITE, not one literal for all of them (ADR-0041
@@ -345,10 +345,16 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
       /var\(\s*--accent[a-z-]*[,)]/.exec(css)?.[0],
       "the transient and degraded frames are paper, line and ink only",
     ).toBeUndefined();
-    // Anti-vacuity, both ways: the sheet really was read, and the matcher
-    // really does fire on a sheet that carries an accent.
+    // Anti-vacuity, three ways: the sheet really was read, the matcher fires
+    // on a sheet that carries an accent, and — the arm that pins the `[,)]`
+    // above — it fires on the FALLBACK spelling too. Without this last one,
+    // reverting to `\)` is invisible, because every accent in the control
+    // sheet is the bare form that both spellings match.
     expect(css).toContain(".stamp");
     expect(stylesheet("src/archive/late-result.module.css")).toMatch(
+      /var\(\s*--accent[a-z-]*[,)]/,
+    );
+    expect("border: 3px solid var(--accent, var(--ink))").toMatch(
       /var\(\s*--accent[a-z-]*[,)]/,
     );
   });

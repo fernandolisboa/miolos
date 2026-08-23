@@ -387,8 +387,8 @@ three screens #27 does not otherwise touch.
 - **(g) The accent inventory was swept for `color:`, `border:` and
   `background:` declarations only.** A `fill:`, a `stroke:`, a
   `text-decoration-color:` or a `caret-color:` carrying `var(--accent)`
-  would not have been found. `conclusion-view.module.css`'s `.picture` `fill:
-  var(--accent)` on `.picture` is a *shape* and is correct under decision 1;
+  would not have been found. `conclusion-view.module.css`'s `.picture` carries
+  `fill: var(--accent)`, which is a *shape* and is correct under decision 1;
   no exhaustive sweep for others has happened, and this ADR does not claim
   one. The `color:` half **is** now exhaustive for the three shared sheets,
   because (f)'s scan is a scan rather than a list; outside them it is the

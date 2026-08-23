@@ -1,5 +1,5 @@
 /* Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, where a bare type selector either fails the build
+   css-loader's `pure` mode, so a bare type selector either fails the build
    or leaks globally. */
 
 .shareBlock {
@@ -8,6 +8,10 @@
   gap: var(--space-2);
 }
 
+/* THREE STATES AND NO `:hover`, DELIBERATELY: the shared play layer's own
+   native button, `screen.module.css`'s `.hint`, declares `:active` and
+   `:focus-visible` and no `:hover` at all, so this control follows the
+   shipped idiom for a BUTTON. */
 .share {
   box-sizing: border-box;
   display: flex;
