@@ -9,34 +9,35 @@ import { ensureSession } from "../session/bootstrap";
  * nothing has settled, `null` the read SETTLED without a value (env unset,
  * non-200, network, parse), or the server's answer.
  *
- * `enabled` must be a MODULE-LEVEL predicate: it is evaluated inside the
- * effect, so the SSR paint is unaffected, but an inline closure is a fresh
- * value per render and would re-run the effect on every settle. Same for
- * `fetcher` — `T-WEB-S352` scans the call sites for both.
+ * Both arguments are FROZEN AT MOUNT, and that is the whole safety argument.
+ * The seven hooks this replaces each hard-coded `[]`, so no caller could make
+ * them refetch. Depending on `[fetcher, enabled]` instead would hand that
+ * property to every call site: a per-render closure re-runs the effect,
+ * `setValue` re-renders, and the credentialed GET loops without bound.
+ * `exhaustive-deps` cannot see it, because inside this hook the deps are
+ * correct. Freezing restores the guarantee for every possible caller rather
+ * than policing how they spell the arguments.
  */
 export function useMountFetch<T>(
   fetcher: () => Promise<T | undefined>,
   enabled?: () => boolean,
 ): T | null | undefined {
   const [value, setValue] = useState<T | null | undefined>(undefined);
+  const [mountArgs] = useState(() => ({ fetcher, enabled }));
 
   useEffect(() => {
-    if (enabled !== undefined && !enabled()) {
+    const { fetcher: read, enabled: gate } = mountArgs;
+    if (gate !== undefined && !gate()) {
       return;
     }
     // The effect-scoped flag makes React 19 strict-mode double effects and
     // out-of-order resolutions harmless: the duplicate GET is idempotent
     // and cheap, and only the live effect's answer lands.
     let cancelled = false;
-    // THE MINT FIRST — see ADR-0072's Context: on a re-mint load a bare
-    // mount fetch races `POST /session` into the 401 branch and the surface
-    // reads empty for that whole load. Awaiting buys ORDERING, never
-    // identity; a failed mint reaches the same honest `null`. And no
-    // re-mint on the 401 either: `remintSession`'s one allowance per page
-    // load exists for a WRITE that would otherwise strand a completion, and
-    // spending it on a read would leave that write without one.
+    // The mint goes first — see ADR-0072's Context. No re-mint on a 401:
+    // see ADR-0072 consequence (g).
     void ensureSession()
-      .then(() => fetcher())
+      .then(() => read())
       .then((response) => {
         if (!cancelled) {
           setValue(response ?? null);
@@ -50,7 +51,7 @@ export function useMountFetch<T>(
     return () => {
       cancelled = true;
     };
-  }, [fetcher, enabled]);
+  }, [mountArgs]);
 
   return value;
 }

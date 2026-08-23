@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useMountFetch } from "../src/api/use-mount-fetch";
@@ -43,7 +43,7 @@ function sources(): readonly string[] {
       recursive: true,
       withFileTypes: true,
     })) {
-      if (entry.isFile() && /\.tsx?$/.test(entry.name)) {
+      if (entry.isFile() && /\.[cm]?[jt]sx?$/.test(entry.name)) {
         found.push(relative(webRoot, join(entry.parentPath, entry.name)));
       }
     }
@@ -55,6 +55,37 @@ function sources(): readonly string[] {
 function codeOf(sourcePath: string): string {
   return withoutComments(readFileSync(join(webRoot, sourcePath), "utf8"));
 }
+
+describe("no caller can make useMountFetch refetch (T-WEB-S353)", () => {
+  it("freezes both arguments at mount — inline arrows, an aliased import, and a changing prop all buy exactly one read", async () => {
+    // The wall is STRUCTURAL, not a spelling rule. A source scan for bare
+    // identifiers was the first attempt and a reviewer broke it twice: a
+    // per-render closure bound to a `const` passes such a scan and produced
+    // ~17k requests in 300ms, and an aliased import evades it outright.
+    // Freezing at mount is what makes every one of those harmless.
+    let reads = 0;
+    const { useMountFetch: useRead } =
+      await import("../src/api/use-mount-fetch");
+    const { rerender } = renderHook(
+      ({ id }: { id: string }) =>
+        useRead(
+          () => {
+            reads += 1;
+            return Promise.resolve(id);
+          },
+          () => id !== "",
+        ),
+      { initialProps: { id: "a" } },
+    );
+    for (let i = 0; i < 20; i += 1) {
+      rerender({ id: `a${i}` });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+    expect(reads).toBe(1);
+  });
+});
 
 describe("the mint-first mount fetch has ONE owner (T-WEB-S351)", () => {
   it("`ensureSession` is named in code by exactly six modules — the declarer, the bootstrap island, the two write paths, the day-truth store and this hook", () => {

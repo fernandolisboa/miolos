@@ -168,7 +168,8 @@ one suite per hook proving that `useAttachState`, `useStreak`, `useMedals`
 and the `useStats`/`useStatsCalendar` pair issue no read until
 `ensureSession()` resolves. `S342` deliberately carries **two hooks in one
 claim**: `use-stats-calendar.ts` is `use-stats.ts`'s twin over the same
-client module and its own doc block says so, and the single correctness
+client module — since #206 cluster 3 they are literally the same three-line
+delegation over `useMountFetch` — and the single correctness
 reviewer's mutations red it through either half.
 
 The tail **`T-WEB-S343` went unspent and is burned** in the table below. It
@@ -207,8 +208,9 @@ statement and the same flag, and **no mutation reddens one while sparing the
 other**. Under this repo's rule an id is a distinct claim; an id whose only
 defence is that it reads well is not one. Same call as the `T-WEB-S100`
 precedent, taken at plan-fix time rather than at step 8. `T-WEB-S349` and
-`T-WEB-S350` are the reserved review-round headroom and are **live until step
-8**, burned there if the six lenses do not need them.
+`T-WEB-S350` were the reserved review-round headroom and went **unspent**:
+#195 landed at PR #203 (`6b963d9`) without either, so both are **burned** and
+are in the table below.
 
 **Cross-stream collision, resolved rather than deferred.** Plan 073 (#74,
 running in parallel and unlanded at the time) reserved `T-WEB S344…S346`
@@ -408,6 +410,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-WEB-S337`, `T-WEB-S338`, `T-LINT-S55` | tails of plan 068's ranges — #104's reserved review-round headroom, unspent at step 7's exit (PR #190). Six step-6 lenses returned four REJECTs, and **every test change they caused widened a landed id in place**: `T-WEB-S201`'s reader-property scan (its regex needed a literal dot, so a reviewer's mutation leaking `days[0].game` into the caption passed it) and `T-WEB-S173`'s literal scan (anchored on the first occurrence of `generateMetadata`, which lands inside a doc comment, so it was policing ~4490 characters of mostly English). Same claim, same gate, no new id — the `T-WEB-S100` precedent |
 | `T-LINT-S60` | tail of the issue-#106 on-issue reservation — the reserved review-round headroom, unspent at the correctness review's exit (PR #198). The round returned no BLOCKER and its two required edits were **comment corrections, which carry no claim and take no id**: a config comment asserted the inverse of the measurement (it said `**/node_modules/@miolos/db/**` carried the coverage; measured, `no-restricted-imports` matches with gitignore DIRECTORY semantics, so the BARE arm covers the subtree alone and `/**` is dead config). The round's one new-test-shaped finding is a **fourth spelling** — `../node_modules/@miolos/db/../core/src/…`, which lints clean and typechecks — and it is deliberately NOT spent here: the `..`-traversal evasion is pre-existing for the relative form too, so it is its own ticket rather than this tail |
 | `T-WEB-S348` | planned by #195 (plan 072) and **folded into `T-WEB-S346`(c) at step 4, burned before it was ever spent**. It was to name `refreshDayTruth()`'s entry point into the post-mint repair; `refreshDayTruth()` is a bare delegation to `refresh()` with no branch, so it and the mount path share one statement and one flag and no mutation reddens one while sparing the other. An id is a distinct claim, and this was not one — the `T-WEB-S100` precedent, applied at plan-fix time |
+| `T-WEB-S349`, `T-WEB-S350` | tails of the issue-#195 on-issue reservation — the reserved review-round headroom, unspent at step 8's exit (PR #203, `6b963d9`). Burned per the rule above; the reserving plan already gave them a meaning |
 | `T-WEB-S343` | tail of the issue-#149 on-issue reservation — the reserved review-round headroom, unspent at the correctness review's exit. The round's two coverage gaps are **unbindable, not untested**: under React 18+ nothing observable distinguishes a hook that drops its `cancelled` flag, and the four `.catch` arms are unreachable through the shipped clients. An id spent on either would name a test that is green by construction, which is the opposite of what an id is for |
 | `T-WEB-S256` | tail of the issue-#35 on-issue reservation — #35's reserved review-round headroom, unspent at step 7's exit (#150). The step-7 round widened `T-DB-S63` in place and took no new id — the `T-WEB-S100` burn precedent |
 | `T-API-S134…S136` | tails of the issue-#142 on-issue reservation — the reserved review-round headroom, unspent at step 5's exit. A step-6/7 round that spends one removes it from this table (the plan-040 `T-LINT-S45` case) — which is exactly what happened to `T-WEB-S282`: burned here at step 5's exit, removed and **spent at step 7** on the remote view's ADR-0043 decision-10 announcer (`remote-conclusion.test.tsx`) |
