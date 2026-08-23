@@ -39,7 +39,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
-| `T-API` | `S184` | `S183` | `T-API-16` |
+| `T-API` | `S185` | `S184` | `T-API-16` |
 | `T-WEB` | `S351` | `S347` | `T-WEB-23` |
 | `T-LINT` | `S61` | `S59` | `T-LINT-10` |
 
@@ -53,6 +53,12 @@ id exists at all rather than the extraction shipping bare: deleting the
 per-route envelope prose would otherwise drop the no-OPTIONS rule from
 `stats`, `stats/calendar` and `medals`, which had it in comments only. One
 id, no tail reserved.
+
+#206 cluster 1 spent **`T-API-S184`** on `apps/api/test/error-response.test.ts` — the
+error envelope has one owner, and the GET/mutation `Cache-Control` split is
+asserted in the one file that can hold it rather than in eighteen that
+remembered to. Verified by pasting a local `errorResponse` back into
+`telemetry/route.ts`: red, restored: green.
 
 #205's `packages/db` comment tranche spent **`T-DB-S89`** on
 `packages/db/test/no-js-date.test.ts` — the DB-clock law (ADR-0010) as a

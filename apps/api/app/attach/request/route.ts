@@ -1,8 +1,4 @@
-import {
-  apiErrorResponseSchema,
-  attachRequestResponseSchema,
-  attachRequestSchema,
-} from "@miolos/core";
+import { attachRequestResponseSchema, attachRequestSchema } from "@miolos/core";
 import type { NextRequest } from "next/server";
 
 import {
@@ -17,6 +13,7 @@ import {
   isJsonContentType,
   preflightResponse,
 } from "../../../src/cors";
+import { errorResponse } from "../../../src/http/responses";
 import { getDb } from "../../../src/db";
 import {
   isAttachConfigured,
@@ -43,13 +40,6 @@ export const dynamic = "force-dynamic";
  * many addresses remains the accepted v1 risk.
  */
 const MAX_REQUESTS_PER_HOUR = 3;
-
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: corsHeaders({ credentials: true }),
-  });
-}
 
 export function OPTIONS(): Response {
   return preflightResponse();

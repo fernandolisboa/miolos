@@ -1,10 +1,7 @@
-import {
-  apiErrorResponseSchema,
-  attachDismissResponseSchema,
-  attachDismissSchema,
-} from "@miolos/core";
+import { attachDismissResponseSchema, attachDismissSchema } from "@miolos/core";
 import type { NextRequest } from "next/server";
 
+import { errorResponse } from "../../../src/http/responses";
 import { dismissAttachPrompt } from "../../../src/attach/service";
 import {
   corsHeaders,
@@ -21,13 +18,6 @@ import { requireUserId } from "../../../src/session/service";
 
 // Never statically cached: every request stamps against the users table.
 export const dynamic = "force-dynamic";
-
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: corsHeaders({ credentials: true }),
-  });
-}
 
 export function OPTIONS(): Response {
   return preflightResponse();

@@ -1,5 +1,4 @@
 import {
-  apiErrorResponseSchema,
   termoDailyContentSchema,
   termoGuessRequestSchema,
   termoGuessResponseSchema,
@@ -16,6 +15,7 @@ import {
   isJsonContentType,
   preflightResponse,
 } from "../../../src/cors";
+import { errorResponse } from "../../../src/http/responses";
 import { getDb } from "../../../src/db";
 import { isWritableDate } from "../../../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
@@ -28,23 +28,6 @@ import { judgeGuessList } from "../../../src/termo/judge";
 
 // Never statically cached: every request judges against the database.
 export const dynamic = "force-dynamic";
-
-/**
- * Every response carries the credentialed CORS grant, 4xx included — same
- * rule as `POST /completions`, applied to a TURN rather than a result. A
- * credentialed cross-origin fetch without these headers is unreadable to
- * JS (a TypeError, indistinguishable from being offline), and on this
- * route the STATUS is the screen's control flow: a 422 clears the guess
- * with "não está na lista", a 5xx or a network failure HOLDS the turn
- * (ADR-0039 decision 3). Losing the distinction would cost the player a
- * guess or hang the board.
- */
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: corsHeaders({ credentials: true }),
-  });
-}
 
 export function OPTIONS(): Response {
   return preflightResponse();

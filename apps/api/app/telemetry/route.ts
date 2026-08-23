@@ -1,7 +1,4 @@
-import {
-  apiErrorResponseSchema,
-  telemetryRelayRequestSchema,
-} from "@miolos/core";
+import { telemetryRelayRequestSchema } from "@miolos/core";
 import { todaySaoPaulo } from "@miolos/db/publishing";
 import type { NextRequest } from "next/server";
 
@@ -10,6 +7,7 @@ import {
   isJsonContentType,
   preflightResponse,
 } from "../../src/cors";
+import { errorResponse } from "../../src/http/responses";
 import { getDb } from "../../src/db";
 import { SESSION_COOKIE_NAME } from "../../src/session/cookie";
 import {
@@ -21,27 +19,6 @@ import { captureEvent, runAfterResponse } from "../../src/telemetry/capture";
 
 // Never statically cached: every request resolves the caller's session.
 export const dynamic = "force-dynamic";
-
-/**
- * POST /telemetry — the first-party relay, and the ONE client-originated
- * telemetry path (see ADR-0069 decisions 2 and 7): `puzzle_started` has
- * no server fact behind it, so the client posts it here and the server
- * captures — the PostHog key never ships in a bundle, and the closed
- * relay contract (a single event literal) means the other four events
- * cannot be forged through this door.
- *
- * One deliberate divergence from the sibling credentialed-POST shape: no
- * session is a 204 drop, not a 401 — there is no error surface to probe,
- * and a started event with no identity is not a fact this system
- * records. `archive` is derived against the DB clock's SP today, never
- * client-asserted.
- */
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: corsHeaders({ credentials: true }),
-  });
-}
 
 /** The success shape either way: nothing to say, only the CORS grant. */
 function dropResponse(): Response {
@@ -82,7 +59,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     request.cookies.get(SESSION_COOKIE_NAME)?.value,
   );
   if (!userId) {
-    // The 204 drop (see the header): no error surface, nothing captured.
+    // No session is a 204 drop, not a 401 — no error surface to probe.
+    // ADR-0069 D2; T-API-S158.
     return dropResponse();
   }
 

@@ -1,5 +1,4 @@
 import {
-  apiErrorResponseSchema,
   binairoDailyContentSchema,
   completionRequestSchema,
   completionResponseSchema,
@@ -30,6 +29,7 @@ import {
   isJsonContentType,
   preflightResponse,
 } from "../../src/cors";
+import { errorResponse } from "../../src/http/responses";
 import { getDb } from "../../src/db";
 import { isLateDate, isWritableDate } from "../../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../../src/session/cookie";
@@ -55,23 +55,6 @@ export const dynamic = "force-dynamic";
  * at 4 rows per user per day.
  */
 const ARCHIVE_WRITES_PER_DAY = 50;
-
-/**
- * Every response carries the credentialed CORS grant, 4xx included: a
- * credentialed cross-origin fetch without those headers is unreadable to
- * JS (a TypeError, indistinguishable from being offline), and on this
- * route the STATUS is the offline queue's control flow — 404/422/400/415/403
- * are terminal, 401/429/5xx are retried (429 deliberately, since the
- * late-write ceiling is a rate refusal the record must survive; ADR-0053
- * decision 13). `/session` skips them because an unreadable error there is
- * harmless.
- */
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: corsHeaders({ credentials: true }),
-  });
-}
 
 function completionResponse(
   record: CompletionRecord,
