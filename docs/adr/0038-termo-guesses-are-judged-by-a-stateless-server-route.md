@@ -29,7 +29,7 @@ at `packages/core/src/contracts/daily-content.ts:146` (*"termo | `game,
 date` only | the answer word, in any field; guesses are judged
 server-side"*),
 [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md)
-consequence (g), `apps/web/src/play/grid-hint.ts:16-21`'s own header
+consequence (g), `apps/web/src/play/grid-hint.ts`'s own module header
 (*"Termo's answer is never on the wire … and its guesses are judged
 server-side, so #27 inherits neither this module nor ADR-0027's
 reasoning"*), and issue #27's acceptance criterion — *"the answer never
@@ -66,9 +66,9 @@ extension point in it with no tripwire on it.
    ([ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md)
    decision 6). It is never delivered through the completion response,
    which parses every response through `completionResponseSchema` and
-   therefore strips unknown fields (`apps/web/src/play/sync.ts:401`) before
-   `settle` copies only `elapsedMs` and `hintsUsed` out of it
-   (`sync.ts:411-423`) — the argument
+   therefore strips unknown fields, before it copies only `elapsedMs` and
+   `hintsUsed` out of it — both in `acceptResponse`
+   (`apps/web/src/play/sync.ts`) — the argument
    [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md) already makes).
 
 3. **The completion request carries `guesses` and nothing else new.** Five
@@ -338,7 +338,7 @@ extension point in it with no tripwire on it.
   (b)'s sink list for a self-reported Termo row now includes the share text,
   and (f)'s revisit trigger should read the share as one more consumer of the
   guess count. No header: no decision moves and no route enumeration grows —
-  the `0034:164` / ADR-0045 `:186-191` annotation-only shape.)*
+  the `0034:164` / ADR-0045 dead-share-button annotation-only shape.)*
 - **(b) A Termo `lost` row is self-reported in the same sense `hints_used`
   is.** A client can suppress a loss or fabricate a win. Both failure
   directions are safe — suppression grants nothing, and a fabricated win
@@ -447,7 +447,7 @@ extension point in it with no tripwire on it.
   against a pre-migration database every `POST /completions` 500s —
   Binairo, Sudoku and Nonogram included. **Nothing "rejects" anything at
   the CHECK**: the CHECK ships in the same migration and is never reached.
-  The 500 is not in `apps/web/src/play/sync.ts:47`'s `TERMINAL_STATUSES`,
+  The 500 is not in `apps/web/src/play/sync.ts`'s `TERMINAL_STATUSES`,
   so those records stay `pendingSync` and replay — and because `on_time` is
   derived at read from `completed_at` (`completions.ts:55`), a replay window
   that crosses São Paulo midnight silently reclassifies every one of them as

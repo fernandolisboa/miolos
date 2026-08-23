@@ -22,7 +22,8 @@ import { isPictureComplete, nextNonogramHint, solutionMarks } from "./engine";
 /**
  * 1 = preenchida, 0 = marcada (crossed out).
  *
- * The `0` is FORCED, not chosen (P11, ADR-0032). `grid-hint.ts:64` reads
+ * The `0` is FORCED, not chosen (ADR-0032). `grid-hint.ts`'s `nextHint`
+ * reads
  * `if (entry !== null && entry !== target)`, and the shared solution's empty
  * cell is `0`; if a cross were a third value distinct from it, EVERY
  * correctly-crossed cell would come back as a `correction` and the day's one

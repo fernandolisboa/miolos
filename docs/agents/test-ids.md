@@ -40,8 +40,41 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S354` | `S353` | `T-WEB-23` |
+| `T-WEB` | `S355` | `S354` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#205's `apps/web/src/play` tranche spent **`T-WEB-S354`** in the new
+`apps/web/test/client-graph-engine-free.test.ts`. Re-derived by grep before
+allocating, which agreed with this table in both columns (next free `S354`,
+highest in use `S353`).
+
+- **`T-WEB-S354`** — `apps/web/test/client-graph-engine-free.test.ts`, six
+  assertions over two describes. **`src/play/play-record.ts` and
+  `src/play/day-state.ts` import no game engine**, walked as a transitive
+  closure over **relative and workspace hops** — `@miolos/core` is in
+  `next.config.ts`'s `transpilePackages`, so an engine one package away lands
+  on a route exactly as a local one does, and a relative-only walk left that
+  edge unwatched (found by review, with a mutation). `eslint.config.mjs`'s
+  `@miolos/games/termo` ban is attached only to `apps/web/src/free-play/**`
+  and `apps/web/app/modo-livre/**`, so neither module was covered.
+
+  The second describe **measures the scope instead of asserting it.** Both
+  files used to claim they were on "every route"; re-derived, 17 route entries
+  reach `play-record.ts` and 9 reach `day-state.ts`, and the gap is required
+  rather than incidental — ADR-0053 decision 9 and `T-WEB-S183` keep the day
+  store out of the archive's graph, and the free-play wall bans the day client
+  under `app/modo-livre/**`. So one arm asserts no archive or free-play route
+  reaches it, one pins the nine that do, and one asserts `play-record.ts`'s
+  route set is a strict superset. An archive route importing `readDayState`
+  reds two of them.
+
+  Non-vacuity has three legs: a control running the matcher over
+  `src/termo/state.ts`, a real engine importer; an arm asserting the closure
+  reaches `packages/core/src/day.ts`, so losing workspace resolution cannot
+  pass quietly; and `workspaceBase` throwing on an `@miolos/*` specifier it
+  cannot resolve rather than narrowing the walk in silence. Mutation-proven on
+  nine planted imports, including a second workspace hop, a dynamic `import()`,
+  a type-only import and the archive leak.
 
 #206's cluster 3 spent **`T-WEB-S351…S353`** in the new
 `apps/web/test/mount-fetch.test.tsx` and **`T-LINT-S61`** in

@@ -283,7 +283,7 @@ describe("the day's answer never reaches the share (T-WEB-S190)", () => {
   it("two records differing ONLY in the answer compose byte-identical text", () => {
     // Strictly stronger than the substring sweep: `answer` is
     // `z.string().length(5).optional()`, constrained only by the
-    // present-iff-concluded rule (`play-record.ts:341,:361-367`), so both of
+    // present-iff-concluded rule (`termoPlayRecordSchema`'s `superRefine`), so both of
     // these are valid concluded records. Byte-identity proves the field
     // cannot influence the output AT ALL, where the sweep proves only that
     // one spelling did not surface.
@@ -490,7 +490,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
 
   it("(c) each record member's key set is written down, so a new field is a decision", () => {
     // The Sudoku tier is guarded HERE and nowhere else: it is not on the
-    // record at all (`play-record.ts:106-118` is a `z.strictObject` with ten
+    // record at all (`sudokuPlayRecordSchema` is a `z.strictObject` with ten
     // members), so a fixture carrying one fails Zod and typecheck and could
     // never go red. The day a ticket puts it — or anything else — on a
     // record, the share's exclusion list gets a red test.
@@ -566,7 +566,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
 
   it("(d) the composer's second parameter declares exactly one member, url", () => {
     // The streak's realistic regression is an ARGUMENT, not an import:
-    // `conclusion-view.tsx:394` already holds the server streak in scope at
+    // `conclusion-view.tsx` already holds the server streak in scope at
     // the call site, so `buildShareText(record, { url, streak })` is the edit
     // that breaks the rule — and the module-graph scan above cannot see it.
     const body = composerBody();

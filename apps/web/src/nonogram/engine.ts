@@ -187,7 +187,8 @@ export type NonogramHintKind = "correction" | "fill" | "cross";
  * a wrongly CROSSED one is what blocks the player.
  *
  * PASS 2 exists because `nextHint`'s fill branch returns the row-major first
- * `null` (`grid-hint.ts:69-71`), which silently assumes `entries` records
+ * `null` (`nextHint` in `grid-hint.ts`), which silently assumes `entries`
+ * records
  * what the player KNOWS. That holds for Sudoku and Binairo, where every cell
  * must be written to finish, and it does NOT hold here, where crossing is
  * optional: measured, the unmodified fill branch returns a cross **239 times

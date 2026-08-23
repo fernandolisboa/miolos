@@ -1,30 +1,27 @@
 "use client";
 
 /**
- * The push pre-prompt card (#145, ADR-0064; plan 061 §5) — the soft ask on
- * the conclusion surface, which IS the habitual play moment by construction
- * (the #32 shape §1: no derivation times the ask; placement does). Quiet
- * in-flow paper card LAST in `ConclusionView`'s side column (the
- * `ConclusionAside` `prompt` slot): the card mounts hundreds of ms after
- * paint, so the last position is what makes the insertion shift nothing
- * (#145 step-6 perf minor 4). Never a modal, never floating, never
- * blocking (PRODUCT.md principle 4). `--accent-app`, never the game
- * accent: the streak is app identity (the StreakCard's own rule).
+ * The push pre-prompt card — the soft ask on the conclusion surface, which
+ * IS the habitual play moment by construction. Quiet in-flow paper card
+ * LAST in `ConclusionView`'s side column (the `ConclusionAside` `prompt`
+ * slot): the card mounts hundreds of ms after paint, so the last position
+ * is what makes the insertion shift nothing. Never a modal, never
+ * floating, never blocking (PRODUCT.md principle 4). `--accent-app`, never
+ * the game accent: the streak is app identity (the StreakCard's own rule).
  *
- * Coordination with #142: its cross-device completed view
- * (`RemoteConclusionView`) is a second conclusion-like surface and the
- * card NEVER renders there — the remote view leaves `ConclusionAside`'s
- * `prompt` slot empty, per ADR-0065 decision 8, whose owed test arm is
- * T-WEB-S272. This component is mounted by the local `ConclusionView`
+ * Its cross-device completed view (`RemoteConclusionView`) is a second
+ * conclusion-like surface and the card NEVER renders there — the remote
+ * view leaves `ConclusionAside`'s `prompt` slot empty, per ADR-0065
+ * decision 8. This component is mounted by the local `ConclusionView`
  * alone.
  *
  * It renders `null` until EVERY gate says yes, so server markup, first
  * paint and `impeccable detect`'s clean profile are unchanged (the
  * hub-onboarding precedent). The two synchronous gates below additionally
- * SUPPRESS THE STATE FETCH (#145 step-6 performance 1): each one
- * conclusively proves the card can never render here, so a browser that
- * fails them fires no credentialed GET at all — `usePushState(enabled)`
- * carries the switch. The gates, all required (plan 061 §5):
+ * SUPPRESS THE STATE FETCH: each one conclusively proves the card can
+ * never render here, so a browser that fails them fires no credentialed
+ * GET at all — `usePushState(enabled)` carries the switch. The gates, all
+ * required:
  *
  * - the TRIPLE feature detect — `"Notification" in window`,
  *   `"serviceWorker" in navigator`, `"PushManager" in window` — checked
@@ -67,14 +64,13 @@ function browserSupportsPush(): boolean {
 }
 
 /**
- * The two FREE synchronous gates as `usePushState`'s fetch switch (#145
- * step-6 performance 1): each one conclusively proves the card can never
- * render here, so a browser that fails either fires NO credentialed GET —
- * which runs the account's whole streak read server-side — on any
- * conclusion, ever. Module-level so its identity is stable and the hook's
- * effect runs once; evaluated inside that effect, never during render, so
- * the server markup and the pre-hydration paint stay byte-for-byte
- * identical.
+ * The two FREE synchronous gates as `usePushState`'s fetch switch: each
+ * one conclusively proves the card can never render here, so a browser
+ * that fails either fires NO credentialed GET — which runs the account's
+ * whole streak read server-side — on any conclusion, ever. Module-level
+ * so its identity is stable and the hook's effect runs once; evaluated
+ * inside that effect, never during render, so the server markup and the
+ * pre-hydration paint stay byte-for-byte identical.
  */
 function askableHere(): boolean {
   return browserSupportsPush() && Notification.permission === "default";
@@ -82,22 +78,21 @@ function askableHere(): boolean {
 
 /**
  * On accept or decline the card leaves the DOM, so focus must be placed
- * deliberately or it falls to `<body>` (the #67 class of focus-order
- * failure — the hub-onboarding `moveFocusToFirstGame` lesson). It goes to
- * the side column's first control AFTER the card — POSITIONALLY, via
- * `compareDocumentPosition` (#145 step-6 correctness F2): the old
- * first-non-card-match walk was only correct by accident of the layout,
- * and a control gaining a link above the card would have silently sent
- * focus backwards. In the shipped layout the card is the aside's LAST
- * child, so no following control exists and focus falls back to the
- * nearest PRECEDING control (the stats link) — the element adjacent to
- * where the card just was, which is where a sighted keyboard user expects
- * to land. Found structurally rather than by class (CSS-Modules names are
- * hashed) or by href (the CTA's target varies with the day's state).
- * Called BEFORE the card unmounts, while `closest` still works; absent an
- * enclosing `<aside>` — a test rendering the card alone — nothing happens.
- * Programmatic focus after a pointer click does not match
- * `:focus-visible`, so a touch player sees no ring.
+ * deliberately or it falls to `<body>`. It goes to the side column's
+ * first control AFTER the card — POSITIONALLY, via
+ * `compareDocumentPosition`: the old first-non-card-match walk was only
+ * correct by accident of the layout, and a control gaining a link above
+ * the card would have silently sent focus backwards. In the shipped
+ * layout the card is the aside's LAST child, so no following control
+ * exists and focus falls back to the nearest PRECEDING control (the
+ * stats link) — the element adjacent to where the card just was, which is
+ * where a sighted keyboard user expects to land. Found structurally
+ * rather than by class (CSS-Modules names are hashed) or by href (the
+ * CTA's target varies with the day's state). Called BEFORE the card
+ * unmounts, while `closest` still works; absent an enclosing `<aside>` —
+ * a test rendering the card alone — nothing happens. Programmatic focus
+ * after a pointer click does not match `:focus-visible`, so a touch
+ * player sees no ring.
  */
 function moveFocusPastCard(card: HTMLElement | null): void {
   const aside = card?.closest("aside");
@@ -126,27 +121,22 @@ function moveFocusPastCard(card: HTMLElement | null): void {
 type SubscribeOutcome = "stored" | "denied" | "retriable";
 
 /**
- * The accept flow, in the order that works (plan 061 §2): `register()`
- * resolves while the worker is still installing, and the Push API rejects
- * `subscribe()` with `InvalidStateError` when the registration has no
- * active worker — so the `ready` wait between them is load-bearing;
- * without it the first click ever fails silently. All inside the user
- * gesture: transient activation is time-based and survives the awaits (the
- * sw is tiny and activates in milliseconds).
+ * The accept flow, in the order that works: `register()` resolves while
+ * the worker is still installing, and the Push API rejects `subscribe()`
+ * with `InvalidStateError` when the registration has no active worker —
+ * so the `ready` wait between them is load-bearing; without it the first
+ * click ever fails silently. All inside the user gesture: transient
+ * activation is time-based and survives the awaits (the sw is tiny and
+ * activates in milliseconds).
  *
- * Failure semantics (plan 061 §5, hardened at step 7 — correctness F1): a
- * `subscribe()` rejection with the permission now `"denied"` stamps the
- * permanent dismissal — the browser remembers the denial anyway; our stamp
- * keeps every other surface honest. A TRANSIENT subscribe failure
- * (permission still `"default"`/`"granted"`) stamps nothing. And when the
- * browser subscription EXISTS but the server never stored it — a keyless
- * subscription, or a failed POST — the subscription is UNWOUND with
- * `unsubscribe()`, best-effort, so the browser and the server can never
- * permanently disagree: without the unwind, the "no local subscription"
- * render gate would exclude this install forever while the server still
- * answered `eligible: true` for it, an unrecoverable dead-end with no
- * repair surface until #36. The residual (a granted browser with no
- * subscription is not re-asked until #36/#146) is recorded on ADR-0064.
+ * Failure semantics: a `subscribe()` rejection with the permission now
+ * `"denied"` stamps the permanent dismissal — the browser remembers the
+ * denial anyway; our stamp keeps every other surface honest. A TRANSIENT
+ * subscribe failure (permission still `"default"`/`"granted"`) stamps
+ * nothing. And when the browser subscription EXISTS but the server never
+ * stored it — a keyless subscription, or a failed POST — the subscription
+ * is UNWOUND with `unsubscribe()`, best-effort, so the browser and the
+ * server can never permanently disagree.
  */
 async function subscribeAndStore(
   vapidPublicKey: string,
@@ -184,8 +174,8 @@ async function subscribeAndStore(
       await subscription.unsubscribe();
     } catch {
       // Best-effort: an unsubscribe that itself fails leaves the browser
-      // subscribed with no server row — the state #146's 410-pruning can
-      // never repair — but there is nothing further to do from here.
+      // subscribed with no server row, but there is nothing further to do
+      // from here.
     }
     return "retriable";
   }
@@ -197,10 +187,10 @@ export function PushPromptCard() {
   const [browserGate, setBrowserGate] = useState(false);
   const [gone, setGone] = useState(false);
   // The accept flow in flight: the card STAYS on screen with its buttons
-  // disabled until the permission dialog and the store settle (#145
-  // step-6 correctness F4) — the card's copy is the browser prompt's only
-  // on-screen framing, so unmounting it synchronously would leave a bare
-  // permission dialog with no context.
+  // disabled until the permission dialog and the store settle — the
+  // card's copy is the browser prompt's only on-screen framing, so
+  // unmounting it synchronously would leave a bare permission dialog with
+  // no context.
   const [inFlight, setInFlight] = useState(false);
   const cardRef = useRef<HTMLElement | null>(null);
 
@@ -244,14 +234,14 @@ export function PushPromptCard() {
   }
   const vapidPublicKey = state.vapidPublicKey;
 
-  // The two handlers deliberately differ (#145 step-6 correctness F1):
-  // DECLINE removes the card on the click, before the network answers
-  // (the hub-onboarding dismiss shape) — a failed stamp costs one more
-  // sighting on a later visit, because the permission is untouched.
-  // ACCEPT cannot make that promise: it changes the browser's permission,
-  // so the card stays (disabled) until the flow settles, leaves only on a
-  // terminal outcome, and re-arms on a transient one so the player can
-  // retry in place. Focus moves while the card is still in the DOM.
+  // The two handlers deliberately differ: DECLINE removes the card on the
+  // click, before the network answers (the hub-onboarding dismiss shape)
+  // — a failed stamp costs one more sighting on a later visit, because the
+  // permission is untouched. ACCEPT cannot make that promise: it changes
+  // the browser's permission, so the card stays (disabled) until the flow
+  // settles, leaves only on a terminal outcome, and re-arms on a transient
+  // one so the player can retry in place. Focus moves while the card is
+  // still in the DOM.
   function accept(): void {
     setInFlight(true);
     void subscribeAndStore(vapidPublicKey).then((outcome) => {

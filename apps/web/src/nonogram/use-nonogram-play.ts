@@ -151,8 +151,8 @@ export function useNonogramPlay(
     dispatch,
     buildRecord,
     remotelyClaimed,
-    // `state.now` is deliberately NOT here (use-play-lifecycle.ts:66-69,
-    // landmine 21). `solution` and `clues` are absent for a different reason:
+    // `state.now` is deliberately NOT here — see `persistDeps` in
+    // `use-play-lifecycle.ts`. `solution` and `clues` are absent for a different reason:
     // `buildRecord` never reads them, and a dependency that cannot change the
     // record's content does not belong in the array that means "the record's
     // CONTENT changed".

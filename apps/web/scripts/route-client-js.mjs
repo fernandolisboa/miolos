@@ -237,8 +237,9 @@ const MAX_DELTA_BYTES = 40 * 1024;
  * ordinary copy edits, tight
  * enough that a SECOND `packages/games` module lands it in the red. That is
  * the failure this arms against — someone importing a value from
- * `@miolos/games/termo` into `play-record.ts` (whose `212-244` block warns
- * about it by name, because that module is on every route's client graph)
+ * `@miolos/games/termo` into `play-record.ts` (which warns about it by name,
+ * because that module is on every route's client graph, and `T-WEB-S354` is
+ * the gate)
  * would pass all three FORBIDDEN accent greps and every existing budget while
  * `/termo` grew silently.
  */
@@ -404,7 +405,7 @@ const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;
  * `apps/web` genuinely imports: `/termo` ships `isValidGuess` on purpose,
  * because "não está na lista" has to be instant and offline, and the
  * validation dictionary and the 400-word answer pool are the SAME generated
- * module. What keeps the pool out is two `/*#__PURE__*\/` annotations in
+ * module. What keeps the pool out is the four `/*#__PURE__*\/` annotations in
  * `packages/games/src/termo/word-list.ts`, which typecheck, lint and the whole
  * test suite are blind to and which ADR-0045's measurement E4 proves are
  * fragile to their own placement. This grep is the only instrument that can

@@ -39,13 +39,13 @@ record.
 floor.** No paper token rescues mustard. That is what makes this a decision
 about the system rather than a bug in one screen.
 
-`--ink-on-accent` (`apps/web/src/play/accent.ts:65-77`) already fixed the
-half where a light label sits ON an accent fill, for Nonogram, by choosing
-a different paper. Its remaining half — accent-coloured TEXT on paper — is
-filed as [#68](https://github.com/fernandolisboa/miolos/issues/68), whose
-own "what a fix probably looks like" offers two shapes: darken the four
-accent tokens, or make `--accent` decorative-only and pair it with a
-derived text token.
+`--ink-on-accent` (`INKS_ON_ACCENT` in `apps/web/src/play/accent.ts`)
+already fixed the half where a light label sits ON an accent fill, for
+Nonogram, by choosing a different paper. Its remaining half —
+accent-coloured TEXT on paper — is filed as
+[#68](https://github.com/fernandolisboa/miolos/issues/68), whose own "what a
+fix probably looks like" offers two shapes: darken the four accent tokens,
+or make `--accent` decorative-only and pair it with a derived text token.
 
 Fernando decided it on 2026-08-02, recorded in
 `docs/handoffs/021-handoff-m2-termo-and-free-play.md:173`: *"accents colour

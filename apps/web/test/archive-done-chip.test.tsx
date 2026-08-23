@@ -266,7 +266,7 @@ beforeEach(() => {
  *
  * Its claim is narrow by design — *the two read the same record the same way*
  * — and explicitly NOT that the two surfaces' states mean the same thing,
- * which `day-state.ts:26-30` says they do not.
+ * which `DAY_STATUSES` in `packages/core` says they do not.
  *
  * The agreement arm cannot hold the sync cases on its own, because agreement
  * is invariant under both sides moving together: if a later edit made the hub
