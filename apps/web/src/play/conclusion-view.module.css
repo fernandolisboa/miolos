@@ -189,7 +189,7 @@
   composes: stampTime;
 }
 
-/* The loss chrome, declared AFTER `.stamp` so
+/* The loss chrome (ADR-0043 decision 3), declared AFTER `.stamp` so
    same-specificity-later-wins carries the two overrides.
 
    IT DECLARES NO `animation`, and the absence is not what stands the settle

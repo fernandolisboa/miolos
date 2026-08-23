@@ -1124,6 +1124,7 @@ describe("the conclusion's layout (tripwires)", () => {
       const leftover = (decl(body, "transform") ?? "")
         .replace(endRotation ?? "", "")
         .replace(/scale\(\s*1\s*\)/, "")
+        .replace("!important", "")
         .trim();
       expect(decl(body, "transform"), selector).toContain(endRotation);
       expect(
@@ -1139,18 +1140,42 @@ describe("the conclusion's layout (tripwires)", () => {
     // `clip-path`, `content-visibility`, `filter`, a zero `scaleX`, a
     // translate off-screen — and a list of banned properties grows forever
     // while the next spelling walks past it. So this CLOSES the block
-    // instead, the way `ACCENT_BORDERS` closes the ring scan two files
-    // over: these selectors may declare these properties and nothing else.
-    // A new property here is a red that has to be argued for, which is the
-    // only shape that catches a spelling nobody thought of.
+    // instead, the way `ACCENT_BORDERS` closes the ring scan two files over.
+    //
+    // BOTH axes have to close. Closing only the properties still let a
+    // SECOND `.stamp { opacity: 0 }` block, or a `.page .stamp` one, hide
+    // the payoff from elsewhere in the same media query — `bodyOf` reads
+    // only the first block with a given prelude. `.page`-anchoring to win
+    // the cascade is a technique this very sheet teaches twice, so it is
+    // the likely spelling, not an exotic one.
+    const preludes = [...reduced.matchAll(/(?:^|\})\s*([^{}]+?)\s*\{/g)].map(
+      (match) => (match[1] ?? "").replaceAll(/\s+/g, " ").trim(),
+    );
+    expect(
+      [...preludes].sort(),
+      "the reduced-motion block's selectors",
+    ).toEqual([".cta, .emptyCta", ".picture", ".stamp"]);
     for (const [selector, allowed] of [
       [".stamp", ["animation", "transform"]],
       [".picture", ["animation", "transform", "opacity"]],
     ] as const) {
-      const declared = [
-        ...bodyOf(reduced, selector).matchAll(/^\s*([a-z-]+)\s*:/gm),
-      ].map((match) => match[1]);
-      expect([...declared].sort(), selector).toEqual([...allowed].sort());
+      // Union across every block whose prelude mentions the selector, so a
+      // duplicate or more-specific block is folded in rather than skipped.
+      const declared = preludes
+        .filter((prelude) => prelude.includes(selector))
+        .flatMap((prelude) => [
+          // `;` prefix: `bodyOf` strips the opening brace, so the first
+          // declaration has no separator in front of it. Anchoring on
+          // `[{;]` rather than a line start is what stops two declarations
+          // sharing one line from hiding the second.
+          ...`;${bodyOf(reduced, prelude)}`.matchAll(
+            /[{;]\s*([a-zA-Z-]+)\s*:/g,
+          ),
+        ])
+        .map((match) => (match[1] ?? "").toLowerCase());
+      expect([...new Set(declared)].sort(), selector).toEqual(
+        [...allowed].sort(),
+      );
     }
     // Anti-vacuity: the keyframes really do OPEN hidden-ish, which is what
     // makes standing them down at the start state a defect worth gating.
