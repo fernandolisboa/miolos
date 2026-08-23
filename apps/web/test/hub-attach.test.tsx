@@ -97,6 +97,16 @@ describe("HubAttach dismissal (T-WEB-S136)", () => {
       "src/push/push-client.ts",
       "src/push/use-push-state.ts",
       "src/play/push-prompt-card.tsx",
+      // #206 cluster 3: the three hooks above are now three lines each over
+      // one shared mount fetch, and that module is where a cache would go
+      // — for these three and for the streak, medals and stats reads whose
+      // own doc blocks carried ADR-0048 decision 4's "no localStorage" and
+      // are now delegations. Same widened claim, no new id.
+      "src/api/use-mount-fetch.ts",
+      "src/streak/use-streak.ts",
+      "src/medals/use-medals.ts",
+      "src/stats/use-stats.ts",
+      "src/stats/use-stats-calendar.ts",
     ]) {
       expect(
         readFileSync(join(webRoot, sourcePath), "utf8"),

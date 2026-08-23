@@ -1,62 +1,10 @@
 "use client";
 
 import type { StreakResponse } from "@miolos/core";
-import { useEffect, useState } from "react";
 
-import { ensureSession } from "../session/bootstrap";
+import { useMountFetch } from "../api/use-mount-fetch";
 import { fetchStreak } from "./streak-client";
 
-/**
- * The mount-time streak read (ADR-0048, plan 027 §8). A plain mount
- * effect: consumers that need a gate mount the consuming component
- * conditionally (the conclusion card's `syncOutcome` gate does exactly
- * that), so the hook takes no options. Three states, each an honest claim:
- *
- * - `undefined` — nothing has settled (unfetched or in flight).
- *   Consumers render the zero state / skeleton; server markup and the
- *   pre-hydration paint agree byte-for-byte because the fetch fires in a
- *   mount effect only.
- * - `null` — the fetch SETTLED without a value (env unset, non-200,
- *   network, parse). The conclusion card unmounts to absence on this
- *   (plan 027 D8); the hub reads it as 0 through the same `?.` chain.
- * - a `StreakResponse` — the server's answer.
- *
- * No `localStorage` cache, deliberately (plan 027 D7): a stale server
- * number presented as current is wrong in both directions, while zero is
- * the honest unknown of a value the client can never compute.
- */
 export function useStreak(): StreakResponse | null | undefined {
-  const [value, setValue] = useState<StreakResponse | null | undefined>(
-    undefined,
-  );
-
-  useEffect(() => {
-    // The effect-scoped flag makes React 19 strict-mode double effects and
-    // out-of-order resolutions harmless: the duplicate GET is idempotent
-    // and cheap, and only the live effect's answer lands.
-    let cancelled = false;
-    // THE MINT FIRST (#149) — the ordering and its full reasoning are in
-    // `attach/use-attach-state.ts`, which carries it verbatim. Here the cost
-    // of losing the race is the sharpest of the five: on a re-mint load the
-    // 401 branch reads as `null`, the hub's `?.` chain turns that into 0, and
-    // a real streak is shown to its owner as broken. Awaiting buys ORDERING,
-    // never identity — a failed mint still reaches the same honest branch.
-    void ensureSession()
-      .then(() => fetchStreak())
-      .then((response) => {
-        if (!cancelled) {
-          setValue(response ?? null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setValue(null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return value;
+  return useMountFetch(fetchStreak);
 }

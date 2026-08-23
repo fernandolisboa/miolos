@@ -1039,6 +1039,63 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
+  it("T-LINT-S61: the shared authenticated mount fetch — and the bare barrel form — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
+    // #206's growth clause (the napkin's one-hop rule): `src/api/` is the
+    // authenticated-read surface, and the streak, medals, stats, attach,
+    // onboarding and push hooks — every one of them already banned above —
+    // are now three lines each over it. `no-restricted-imports` is NOT
+    // transitive, so their entries do not cover a direct reach into the
+    // shared module, and it linted CLEAN from free play until these names
+    // entered the list (eight probes, zero wall hits). The bare `../api`
+    // form is listed because `**/api/**` does not match it. One id over
+    // both arms — the T-LINT-S49/S50 shape: one claim ("free play cannot
+    // reach the authenticated mount fetch, by any import form"), one it.
+    const doors = ["../api/use-mount-fetch", "../api"];
+    for (const door of doors) {
+      const source = [
+        `import * as banned from "${door}";`,
+        "",
+        "export const probe = banned;",
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      // The route-segment sibling, on the second glob (the T-LINT-S13
+      // pairing): `app/modo-livre/**` is walled by the same object.
+      expect
+        .soft(ruleIds(await lintProbe(ROUTE_PATH, source)), `route ${door}`)
+        .toContain("no-restricted-imports");
+      // Scope control: the identical specifiers are ordinary architecture
+      // from a daily path — every daily hook imports the module.
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+
+    // The dynamic-import arm: the regex closes the evasion.
+    for (const door of doors) {
+      const source = [
+        "export const load = () =>",
+        `  import("${door}");`,
+        "",
+      ].join("\n");
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), `dynamic ${door}`)
+        .toContain("no-restricted-syntax");
+    }
+
+    // The anti-vacuity control (T-LINT-S52's): an unrelated local dynamic
+    // import stays clean, so the selector bans a named module rather than
+    // every `import()` in the directory.
+    const clean = [
+      "export const load = () =>",
+      '  import("./catalog");',
+      "",
+    ].join("\n");
+    expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
   it("T-LINT-S18: the free-play directory's LEGAL surface lints clean — the wall is not a blanket ban", async () => {
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',

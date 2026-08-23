@@ -561,6 +561,25 @@ const freePlayBannedModuleGroups = [
     message:
       "free play fires no telemetry: the puzzle_started relay client is banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0069).",
   },
+  {
+    // #206: `src/api/` is the AUTHENTICATED-READ SURFACE — the shared
+    // mint-first mount fetch that the streak, medals, stats, attach,
+    // onboarding and push hooks are each now three lines over. Every one of
+    // those hooks is already banned above, and `no-restricted-imports` is
+    // NOT transitive (the napkin's one-hop rule), so without this entry the
+    // shared module is an unnamed door onto `ensureSession` and a
+    // credentialed GET. Measured CLEAN before this entry existed — eight
+    // probes (both spellings x both arms x both walled paths), zero hits.
+    //
+    // Both specifier shapes on purpose: `**/api/**` does not match a bare
+    // `../api`, so a future `src/api/index.ts` barrel must not become a
+    // door. The glob is narrower than it looks and was checked rather than
+    // assumed (T-LINT-S61's own control): nothing else importable from
+    // apps/web is named `api`.
+    group: ["**/api", "**/api/**"],
+    message:
+      "free play fetches nothing and mints no session: the shared authenticated mount fetch is banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0048).",
+  },
 ];
 
 // The dynamic-import evasion of the groups above: `no-restricted-imports`
@@ -576,7 +595,8 @@ const freePlayDynamicBannedModule = {
     // alternation, where they belong.
     // `\\/telemetry(\\/|$)` follows the `\\/day` shape for the same reason
     // (#33, T-LINT-S52): the leading slash keeps it to `../telemetry` and
-    // `../telemetry/client`.
+    // `../telemetry/client`. `\\/api(\\/|$)` is the same shape again (#206,
+    // T-LINT-S61) for the shared authenticated mount fetch.
     // #106 loosened two arms by exactly one alternation each, and no more:
     // `^@miolos\\/db` became `(^|\\/)@miolos\\/db` so the node_modules symlink
     // spelling matches mid-path, and `packages\\/games\\/src\\/termo` became
@@ -584,7 +604,7 @@ const freePlayDynamicBannedModule = {
     // `^@miolos\\/games\\/termo(\\/|$)` arm stays ANCHORED on purpose — see the
     // static group above: `packages/games` has no `termo` directory, so there
     // is no symlink spelling of that arm to miss.
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|(packages|@miolos)\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|(packages|@miolos)\\/games\\/src\\/termo)/]",
   message:
     "free play records nothing, fetches nothing, fires no telemetry, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };
