@@ -89,7 +89,7 @@ the loss.
    merge (finding B-11): every call site and every test paired `"lost"` with
    `false` and `"result"` with `true`, so the other two combinations were
    unreachable and untestable — the same shape
-   `apps/web/src/i18n/messages.ts:343-350` rejects by name for `lostAria`,
+   `apps/web/src/i18n/messages.ts`'s `lostAria` rejects by name,
    *"a runtime branch on a compile-time constant whose false arm is
    unreachable and untestable"*. **The decision the field encoded is
    untouched and still normative: a loss does not settle.** Only the
