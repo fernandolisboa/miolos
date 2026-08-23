@@ -50,6 +50,27 @@ describe("every authenticated GET goes through one envelope (T-API-S183)", () =>
   });
 
   it.each([...authenticatedGets])(
+    "%s reads nothing off the request — the no-parameter wall, by gate not by prose",
+    (_name, source) => {
+      // ADR-0004's wall is that an authenticated read takes no parameter. The
+      // helper's signature does NOT enforce it: every callback is an arrow
+      // function written inside `GET(request)`, so `request` stays in the
+      // closure and a route can still reach `searchParams`. This is the
+      // tripwire the per-route prose used to be.
+      expect(
+        [
+          "nextUrl",
+          "searchParams",
+          "request.headers",
+          "request.cookies",
+          "next/headers",
+        ].filter((token) => source.includes(token)),
+      ).toEqual([]);
+      expect(source.match(/authenticatedRead\(request,/g)).toHaveLength(1);
+    },
+  );
+
+  it.each([...authenticatedGets])(
     "%s names no response header, CORS grant or Response.json of its own",
     (_name, source) => {
       expect(

@@ -129,7 +129,8 @@ exists and no reciprocal `Amended by:` line is owed anywhere.
    and no endpoint is added, ADR-0065 consequence (a) sizes the count)*; `GET /stats/calendar` (`apps/api/app/stats/calendar/route.ts`)
    carries the unbounded-growing day enumeration for its one consumer
    (the stats screen). Both are verbatim clones of the `GET /streak`
-   authenticated-READ template (ADR-0048): `z.strictObject` contracts
+   authenticated-READ template (ADR-0048; since #206 the template is
+   `authenticatedRead`, not `GET /streak`): `z.strictObject` contracts
    parsed on both ends, `Cache-Control: no-store` on every branch, no
    request parameters, 401/500 only. Growth is a **new**
    endpoint/contract — #30's medals arrive on their own, never as fields
