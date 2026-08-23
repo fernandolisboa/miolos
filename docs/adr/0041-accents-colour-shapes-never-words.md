@@ -54,7 +54,7 @@ colour on paper."*
 
 The trigger is #27. `apps/web/src/i18n/routes.ts:52-56`'s `playRoutes`
 gains `termo` and, in the same instant, four surfaces begin painting a
-2.7311:1 label — including `conclusion-view.module.css`'s `.pictureLead`
+2.7311:1 label — including `conclusion-view.module.css`'s
 `.ctaNext`, which wears the **destination** game's accent and therefore
 renders on the already-shipped `/binairo`, `/sudoku` and `/nonogram`
 conclusions. That is #25's ISS-A2 regression repeated with mustard, on

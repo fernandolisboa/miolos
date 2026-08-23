@@ -1,4 +1,10 @@
-/* Every rule is anchored on a local class: Next compiles CSS Modules in
+/* A separate sheet from `conclusion-view.module.css` on purpose: importing
+   that sheet here would put the conclusion's full CSS back into every play
+   route's first paint, which is the regression ADR-0053 decision 4 and
+   `T-WEB-S183` exist to prevent. `.skeletonCard` below therefore RESTATES
+   the conclusion's silhouette rather than `composes`-ing it.
+
+   Every rule is anchored on a local class: Next compiles CSS Modules in
    css-loader's `pure` mode, where a bare type selector either fails the build
    or leaks globally. */
 

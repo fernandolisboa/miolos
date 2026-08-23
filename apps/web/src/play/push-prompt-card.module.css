@@ -1,4 +1,14 @@
-/* Named .prompt/.promptTape rather than the sibling sheets' .card/.tape:
+/* The APP accent, never the game accent: the streak this card asks to
+   protect is app identity, and the accent stays on SHAPES — the shadow and
+   the washi tape. Every text run is --ink or --ink-2 on paper except the
+   accept button's, which is the shipped solid-ink CTA treatment.
+
+   Hub-onboarding's @starting-style settle is REFUSED here, not forgotten:
+   this card appears mid-visit on the conclusion, whose only motion is the
+   win settle. With no transition and no animation it owes no
+   prefers-reduced-motion block either — the absence is the decision.
+
+   Named .prompt/.promptTape rather than the sibling sheets' .card/.tape:
    the #35 visual ritual emits a NON-SCOPED fixture that links this sheet
    beside conclusion-view.module.css, which owns the generic names. */
 

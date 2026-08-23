@@ -241,9 +241,12 @@
   color: var(--ink-2);
 }
 
-/* NOT a heading and never `role="heading"` — the lead above it is textbook
-   `kicker-above-heading` for impeccable, which reads the pair and not the
-   tag. The same holds for `.dayWord` below. */
+/* NOT a heading and never `role="heading"` — `.pictureLead` above it is
+   textbook `kicker-above-heading` shape, and the pair is legal only because
+   both that rule and `hero-eyebrow-chip` anchor exclusively on `h1`-`h4` and
+   `[role="heading"]`. Promoting the name to an `<h2>` is the obvious
+   "semantic improvement" and lights the rule up. The same holds for
+   `.dayWord` below. */
 .pictureName {
   margin: 0;
   font-family: var(--font-display);
@@ -289,8 +292,10 @@
   color: var(--ink);
 }
 
-/* clip-path, not opacity/visibility: both are `content-hidden` to a screen
-   reader, which would silence the live region it exists to announce. */
+/* clip-path, not opacity/visibility: `content-hidden-at-rest` counts a
+   clip-path element as VISIBLE, so this is not scored as hidden text. No
+   font-size at all, so it inherits and `undersized-ui-text` cannot reach
+   it. */
 .announcer {
   position: absolute;
   width: 1px;
@@ -474,10 +479,11 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* Anchored on `.page` because ADR-0041 gave `.page a:hover` an accent
-   colour and underline that this filled button has to opt out of — the
-   plain class loses to it on specificity. Every `:hover` rule on this
-   sheet is that opt-out, never an affordance. */
+/* ANCHORED ON `.page`, and the extra class is the whole point (finding
+   `chaining-cta-label-vanishes-on-hover`): a bare `.cta:hover` (0,2,0) loses
+   the cascade to `.page a:hover` (0,2,1), and the label would resolve to the
+   SAME `--accent` as `.ctaNext`'s background — an invisible label for as long
+   as the pointer is on it. (0,3,0) wins. */
 .page .cta:hover {
   color: var(--paper-desk);
   text-decoration: none;

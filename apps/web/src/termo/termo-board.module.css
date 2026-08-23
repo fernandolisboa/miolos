@@ -101,7 +101,7 @@
         drift again.
         - `margin-top: 30px` on `.keyboard`. INHERITED — screen.module.css
           ships `margin-top: 30px` on `.statsCard` and `margin: 18px 0 0` on
-          `margin: 18px 0 0` on `.rules`, so the shared sheet already carries
+          `.rules`, so the shared sheet already carries
           off-scale vertical rhythm and matching it is what makes the keyboard
           sit where the sidebar card sits.
         - `text-underline-offset: 3px`, on `.keyPresent` and on
@@ -217,8 +217,8 @@
 /* The HELD turn — the sixth tile state, which ADR-0039 consequence (g)
    creates and a "five states" reading drops. Its carrier is a SHAPE
    difference from `typed` (solid -> dashed), this repo's shipped mark for
-   "not settled" (conclusion-view.module.css's `.stampStill` ships
-   `.chipMissing { border: 1.5px dashed var(--line) }` with the same reason),
+   "not settled" (conclusion-view.module.css's `.chipMissing` ships
+   `border: 1.5px dashed var(--line)` for the same reason),
    so it owes no ratio of its own. `border-style` is NOT an animatable
    property, so this snaps at every motion setting and owes no reduced-motion
    rule either. The glyph stays --ink 600: the letters are still the player's
@@ -350,8 +350,8 @@
 }
 
 /* Non-zero padding on BOTH axes: `cramped-padding`'s flush branch reads a
-   visible boundary and `padding <= 2`. screen.module.css's `.statsCard` records the
-   same reason for `.hint`. */
+   visible boundary and `padding <= 2`. screen.module.css's `.hint` records
+   the same reason. */
 .notice {
   margin: 0;
   padding: var(--space-1) var(--space-2);
@@ -692,8 +692,8 @@
 
   /* The stagger goes down WITH the transition. A delay on a paint that no
      longer animates is 390ms of a reduced-motion user staring at a stale row
-     — the same class of subtlety conclusion-view.module.css's `.remoteNote` records
-     for a keyframe's END state. */
+     — the same class of subtlety conclusion-view.test.tsx's "stands both
+     settles down at the keyframe's END state" gates for the conclusion. */
   .tileJudged:nth-child(1),
   .tileJudged:nth-child(2),
   .tileJudged:nth-child(3),

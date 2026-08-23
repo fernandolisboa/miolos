@@ -240,6 +240,11 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // shadow and its washi tape and nothing else. It carried the
     // shapes-only claim in a header comment and in no gate at all.
     "src/play/push-prompt-card.module.css",
+    // #205: the lazy conclusion's pending and degraded frames. Listing it
+    // here is what puts it inside the CLOSED ring scan below — it earns no
+    // ACCENT_BORDERS entry, and that absence is now asserted rather than
+    // described in a comment.
+    "src/play/conclusion-lazy.module.css",
   ] as const;
 
   /**
@@ -333,15 +338,18 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // without this the rule had no gate at all. Stronger than either scan:
     // no accent token in ANY property, which is what a RING would use.
     const css = stylesheet("src/play/conclusion-lazy.module.css");
+    // `[,)]` and not `\)`: the literal closing paren required the token to
+    // be the whole argument and let `var(--accent, var(--ink))` — the
+    // fallback form this repo already ships — straight through.
     expect(
-      /var\(--accent[a-z-]*\)/.exec(css)?.[0],
+      /var\(\s*--accent[a-z-]*[,)]/.exec(css)?.[0],
       "the transient and degraded frames are paper, line and ink only",
     ).toBeUndefined();
     // Anti-vacuity, both ways: the sheet really was read, and the matcher
     // really does fire on a sheet that carries an accent.
     expect(css).toContain(".stamp");
     expect(stylesheet("src/archive/late-result.module.css")).toMatch(
-      /var\(--accent[a-z-]*\)/,
+      /var\(\s*--accent[a-z-]*[,)]/,
     );
   });
 

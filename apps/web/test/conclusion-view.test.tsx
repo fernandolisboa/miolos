@@ -1102,13 +1102,24 @@ describe("the conclusion's layout (tripwires)", () => {
     // block that forgot the end state would freeze the payoff at `opacity:
     // 0.6` for the stamp and at `opacity: 0` — invisible — for the picture.
     const reduced = bodyOf(CSS, "@media (prefers-reduced-motion: reduce)");
-    for (const [selector, rotation] of [
-      [".stamp", "rotate(-6deg)"],
-      [".picture", "rotate(-2deg)"],
+    for (const [selector, keyframes] of [
+      [".stamp", "@keyframes stamp-settle"],
+      [".picture", "@keyframes picture-settle"],
     ] as const) {
+      // Read the expected rotation out of the keyframe's own `to` block, so
+      // retuning the animation and forgetting the stand-down reds here. A
+      // hardcoded literal would silently desync from the keyframe. Only the
+      // rotation is compared: the keyframes end on an identity `scale(1)`
+      // that the stand-down has no reason to restate.
+      const end = decl(bodyOf(bodyOf(CSS, keyframes), "to"), "transform");
+      const endRotation = /rotate\([^)]*\)/.exec(end ?? "")?.[0];
+      expect(endRotation, `${keyframes} to`).toBeDefined();
       const body = bodyOf(reduced, selector);
       expect(decl(body, "animation"), selector).toBe("none");
-      expect(decl(body, "transform"), selector).toBe(rotation);
+      expect(decl(body, "transform"), selector).toContain(endRotation);
+      expect(decl(body, "transform"), selector).not.toMatch(
+        /scale\(\s*(?!1\s*\))/,
+      );
     }
     // The picture's `from` is fully transparent, so its end state has to
     // restore opacity explicitly; the stamp's 0.6 start does not read as
