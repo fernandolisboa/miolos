@@ -1084,6 +1084,117 @@ describe("the conclusion's layout (tripwires)", () => {
     );
   });
 
+  it("settles the stamp once on mount, on the system's own tokens", () => {
+    // `.picture`'s twin is gated in `nonogram-screen.test.tsx`; the stamp —
+    // the older and the one every game renders — was gated by nothing.
+    // impeccable's `bounce-easing` rule matches the animation NAME.
+    const animation = decl(bodyOf(CSS, ".stamp"), "animation");
+    expect(animation).toContain("stamp-settle");
+    expect(animation).not.toMatch(/bounce|elastic|wobble|jiggle|spring/i);
+    expect(animation).not.toMatch(/infinite|alternate/);
+    expect(animation).toContain("var(--duration-slow)");
+    expect(animation).toContain("var(--ease-settle)");
+  });
+
+  it("stands both settles down at the keyframe's END state, never its start", () => {
+    // Standing an animation down must leave the figure visible. Both
+    // keyframes open under-scale and part-transparent, so a reduced-motion
+    // block that forgot the end state would freeze the payoff at `opacity:
+    // 0.6` for the stamp and at `opacity: 0` — invisible — for the picture.
+    // `bodyOf` is first-match at EVERY level, the outer at-rule included, so
+    // a second reduced-motion block appended to the sheet would win the
+    // cascade and never be read. Closing the inner axes is worth nothing
+    // until the sheet is known to declare exactly one of these.
+    expect(
+      CSS.match(/@media[^{]*prefers-reduced-motion[^{]*\{/g),
+      "the sheet declares exactly one reduced-motion block — the one this reads",
+    ).toHaveLength(1);
+    const reduced = bodyOf(CSS, "@media (prefers-reduced-motion: reduce)");
+    for (const [selector, keyframes] of [
+      [".stamp", "@keyframes stamp-settle"],
+      [".picture", "@keyframes picture-settle"],
+    ] as const) {
+      // Read the expected rotation out of the keyframe's own `to` block, so
+      // retuning the animation and forgetting the stand-down reds here. A
+      // hardcoded literal would silently desync from the keyframe. Only the
+      // rotation is compared: the keyframes end on an identity `scale(1)`
+      // that the stand-down has no reason to restate.
+      const end = decl(bodyOf(bodyOf(CSS, keyframes), "to"), "transform");
+      const endRotation = /rotate\([^)]*\)/.exec(end ?? "")?.[0];
+      expect(endRotation, `${keyframes} to`).toBeDefined();
+      const body = bodyOf(reduced, selector);
+      expect(decl(body, "animation"), selector).toBe("none");
+      // The transform may be the end ROTATION and nothing else. Asserting
+      // the leftover is empty closes the value side the way the property
+      // set below closes the property side: `scaleX(0)`, `scale3d(0,0,1)`
+      // and `translate(-200vw)` are all hiding spellings that live on this
+      // one allowed property, so a ban-list of function names would leak.
+      const leftover = (decl(body, "transform") ?? "")
+        .replace(endRotation ?? "", "")
+        .replace(/scale\(\s*1\s*\)/, "")
+        .replace("!important", "")
+        .trim();
+      expect(decl(body, "transform"), selector).toContain(endRotation);
+      expect(
+        leftover,
+        `${selector} transform carries more than the rotation`,
+      ).toBe("");
+    }
+    // The picture's `from` is fully transparent, so its end state has to
+    // restore opacity explicitly.
+    expect(decl(bodyOf(reduced, ".picture"), "opacity")).toBe("1");
+    // And neither stand-down may hide the payoff. "Hidden" has too many
+    // spellings to enumerate — `opacity`, `visibility`, `display`,
+    // `clip-path`, `content-visibility`, `filter`, a zero `scaleX`, a
+    // translate off-screen — and a list of banned properties grows forever
+    // while the next spelling walks past it. So this CLOSES the block
+    // instead, the way `ACCENT_BORDERS` closes the ring scan two files over.
+    //
+    // BOTH axes have to close. Closing only the properties still let a
+    // SECOND `.stamp { opacity: 0 }` block, or a `.page .stamp` one, hide
+    // the payoff from elsewhere in the same media query — `bodyOf` reads
+    // only the first block with a given prelude. `.page`-anchoring to win
+    // the cascade is a technique this very sheet teaches twice, so it is
+    // the likely spelling, not an exotic one.
+    const preludes = [...reduced.matchAll(/(?:^|\})\s*([^{}]+?)\s*\{/g)].map(
+      (match) => (match[1] ?? "").replaceAll(/\s+/g, " ").trim(),
+    );
+    expect(
+      [...preludes].sort(),
+      "the reduced-motion block's selectors",
+    ).toEqual([".cta, .emptyCta", ".picture", ".stamp"]);
+    for (const [selector, allowed] of [
+      [".stamp", ["animation", "transform"]],
+      [".picture", ["animation", "transform", "opacity"]],
+    ] as const) {
+      // Union across every block whose prelude mentions the selector, so a
+      // duplicate or more-specific block is folded in rather than skipped.
+      const declared = preludes
+        .filter((prelude) => prelude.includes(selector))
+        .flatMap((prelude) => [
+          // `;` prefix: `bodyOf` strips the opening brace, so the first
+          // declaration has no separator in front of it. Anchoring on
+          // `[{;]` rather than a line start is what stops two declarations
+          // sharing one line from hiding the second.
+          ...`;${bodyOf(reduced, prelude)}`.matchAll(
+            /[{;]\s*([a-zA-Z-]+)\s*:/g,
+          ),
+        ])
+        .map((match) => (match[1] ?? "").toLowerCase());
+      expect([...new Set(declared)].sort(), selector).toEqual(
+        [...allowed].sort(),
+      );
+    }
+    // Anti-vacuity: the keyframes really do OPEN hidden-ish, which is what
+    // makes standing them down at the start state a defect worth gating.
+    expect(
+      decl(bodyOf(bodyOf(CSS, "@keyframes stamp-settle"), "from"), "opacity"),
+    ).toBe("0.6");
+    expect(
+      decl(bodyOf(bodyOf(CSS, "@keyframes picture-settle"), "from"), "opacity"),
+    ).toBe("0");
+  });
+
   it("packs the stacked result rows to the start instead of stretching them", () => {
     // finding `mobile-conclusion-rows-stretch-instead-of-row-gap`: three
     // `auto` rows on a `min-height: 100dvh` page default to

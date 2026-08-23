@@ -99,9 +99,9 @@
         actually governs (step-6 finding B-13). `T-WEB-S102` now reads them
         off the stylesheet rather than out of this prose, so the count cannot
         drift again.
-        - `margin-top: 30px` on `.keyboard`. INHERITED — screen.module.css:161
-          ships `margin-top: 30px` on `.statsCard` and :146 ships
-          `margin: 18px 0 0` on `.rules`, so the shared sheet already carries
+        - `margin-top: 30px` on `.keyboard`. INHERITED — screen.module.css
+          ships `margin-top: 30px` on `.statsCard` and `margin: 18px 0 0` on
+          `.rules`, so the shared sheet already carries
           off-scale vertical rhythm and matching it is what makes the keyboard
           sit where the sidebar card sits.
         - `text-underline-offset: 3px`, on `.keyPresent` and on
@@ -139,7 +139,8 @@
    inside --rotate-card-max (2.4deg); the tape inside DESIGN.md:37's 3-5deg.
 
    `--board-mobile-max` is declared UNCONDITIONALLY and is not optional:
-   `screen.module.css:490` is `max-width: var(--board-mobile-max)` with NO
+   `screen.module.css`'s `@media (max-width: 768px)` `.gridCard` is
+   `max-width: var(--board-mobile-max)` with NO
    fallback, so omitting it here makes the declaration invalid at
    computed-value time, falls back to `none`, and deletes the <=768px cap in
    silence. 254 = 5 x 44 board + 4 x 3 gaps + 2 x 10 padding + 2 x 1 border. */
@@ -217,8 +218,8 @@
 /* The HELD turn — the sixth tile state, which ADR-0039 consequence (g)
    creates and a "five states" reading drops. Its carrier is a SHAPE
    difference from `typed` (solid -> dashed), this repo's shipped mark for
-   "not settled" (conclusion-view.module.css:339-343 ships
-   `.chipMissing { border: 1.5px dashed var(--line) }` with the same reason),
+   "not settled" (conclusion-view.module.css's `.chipMissing` ships
+   `border: 1.5px dashed var(--line)` for the same reason),
    so it owes no ratio of its own. `border-style` is NOT an animatable
    property, so this snaps at every motion setting and owes no reduced-motion
    rule either. The glyph stays --ink 600: the letters are still the player's
@@ -350,8 +351,8 @@
 }
 
 /* Non-zero padding on BOTH axes: `cramped-padding`'s flush branch reads a
-   visible boundary and `padding <= 2`. screen.module.css:224-229 records the
-   same reason for `.hint`. */
+   visible boundary and `padding <= 2`. screen.module.css's `.hint` records
+   the same reason. */
 .notice {
   margin: 0;
   padding: var(--space-1) var(--space-2);
@@ -648,7 +649,7 @@
      viewport — browser-verified before the fix: `none` at 1440,
      `rgba(33,29,25,0.1) 2px 2px 0px` at 390. Pinned by a stylesheet-TEXT
      assertion, because jsdom computes no cascade. The per-viewport step down
-     is the frame set's own move (screen.module.css:419-421 ships 5px 5px 0
+     is the frame set's own move (screen.module.css's mobile `.gridCard` ships 5px 5px 0
      against --shadow-lg's 6px). */
   .key:not(.keyAbsent) {
     box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
@@ -682,7 +683,7 @@
 /* ── reduced motion ──────────────────────────────────────────────────── */
 
 /* In THIS module, and it has to be: CSS Modules hash per file, so the shared
-   block at screen.module.css:322-326 covers `.hint` and can never reach
+   sheet's own reduced-motion block covers its `.hint` and can never reach
    `.tile` or `.key`. */
 @media (prefers-reduced-motion: reduce) {
   .tile,
@@ -692,8 +693,8 @@
 
   /* The stagger goes down WITH the transition. A delay on a paint that no
      longer animates is 390ms of a reduced-motion user staring at a stale row
-     — the same class of subtlety conclusion-view.module.css:553-556 records
-     for a keyframe's END state. */
+     — the same class of subtlety conclusion-view.test.tsx's "stands both
+     settles down at the keyframe's END state" gates for the conclusion. */
   .tileJudged:nth-child(1),
   .tileJudged:nth-child(2),
   .tileJudged:nth-child(3),

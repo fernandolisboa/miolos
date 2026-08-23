@@ -1,67 +1,18 @@
-/* The share button — SHARED by the daily conclusions and by the archive's
-   late-result panel (#34, ADR-0054 decision 13; #103).
-
-   THE RULES BELOW ARE BYTE-UNMOVED FROM `conclusion-view.module.css`; only
-   their file changed, at #103. They moved with the component for a bundle
-   reason rather than a tidiness one: the archive play routes exist precisely
-   so the conclusion tree stays outside their module graphs (ADR-0053
-   decision 4's measured read-cost posture, `T-WEB-S183` as its gate), and a
-   `.shareBlock` reached through the conclusion's own 1,400-line sheet would
-   have shipped that sheet onto all four of them for one button.
-
-   THE FOCUS RING LIVES HERE NOW. `conclusion-view.module.css`'s header used
-   to say that sheet declares exactly one — `.share:focus-visible` — and after
-   #103 it again declares none; the annotation there says so. The ring itself
-   is unchanged: `--ink` at 15.0124:1 on desk, the `hub-attach` / `privacidade`
-   idiom, never `var(--accent)` — a shared ring must not depend on which
-   accent renders (the forcing case was the old mustard at 2.7311:1,
-   deepened by ADR-0067) — and 2.4.7 and 1.4.11 govern it.
-
-   Every rule is anchored on a local class: Next compiles CSS Modules in
+/* Every rule is anchored on a local class: Next compiles CSS Modules in
    css-loader's `pure` mode, so a bare type selector either fails the build
-   or leaks globally (plan 017 risk 15). */
+   or leaks globally. */
 
-/* ── the share (#34, ADR-0054 decision 13) ────────────────────────────────
-   Third in a three-level ladder, and the level is what the treatment says:
-   close the day (the ink/accent fill of `conclusion-view.module.css`'s
-   `.cta`) → share (paper, hard shadow) → statistics (text + rule, that
-   sheet's `.secondaryLink`). The two neighbours are named by FILE since #103
-   — they used to be "above" and "below". F5 gave the ink fill to
-   the share button, but the shipped conclusion had already spent it on the
-   chaining CTA and turned `Ver estatísticas` into a text link, so F5's
-   two-button row no longer exists to slot into (plan 040 V7).
-
-   The button and its status line are ONE block rather than two `.side`
-   children: at `.side`'s 26px gap the confirmation would read as detached
-   from the control that produced it, and the reserved line would spend 26px
-   of the mobile first viewport on nothing. */
 .shareBlock {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-/* THE CONCLUSION'S FIRST NATIVE BUTTON — every other interactive element on
-   this screen is an `<a>` on the UA default, which is why the three states
-   below are declared here rather than inherited from anything. `border-box`
-   is explicit because this app ships no global reset and the 44px floor is
-   a BORDER-box promise (DESIGN.md:40).
-
-   THREE STATES AND NO `:hover`, DELIBERATELY (step-6 finding G4, whose
-   premise is corrected here rather than acted on). Every `:hover` rule on
-   the conclusion's sheet — `.page .cta:hover`, `.page .cta.ctaNext:hover`,
-   `.page .emptyCta:hover` — exists because its subject is an `<a>` caught by
-   `.page a:hover` (ADR-0041), and each one is an OPT-OUT from an inherited
-   accent colour and underline, not an affordance the element wanted. Only
-   `.secondaryLink:hover` is a real hover treatment, and it is a link. The
-   archive's panel carries the same shape one file over — `.panel a:hover` in
-   `archive/late-result.module.css` — and this control is a `<button>` on
-   both, so neither inherits anything from either. The
+/* THREE STATES AND NO `:hover`, DELIBERATELY. The
    shared play layer's own native button, `screen.module.css`'s `.hint`,
    declares `:active` and `:focus-visible` and no `:hover` at all — so this
    control follows the shipped idiom for a BUTTON rather than diverging from
-   it. `cursor: pointer`, the 1px press and the focus ring carry the
-   affordance; a pointer-only state is the one DESIGN.md never asks for. */
+   it. */
 .share {
   box-sizing: border-box;
   display: flex;
@@ -73,8 +24,6 @@
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  /* Hard, blur 0 — DESIGN.md:36's offset shadow, `--line` rather than an
-     accent because the share is app chrome and not the game's identity. */
   box-shadow: var(--shadow-sm) var(--line);
   font: var(--text-button);
   cursor: pointer;
@@ -83,35 +32,21 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* `.cta:active`'s idiom (DESIGN.md:44): the element slides one pixel toward
-   its shadow and the shadow shrinks by the same amount. No animation name. */
 .share:active {
   transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 var(--line);
 }
 
-/* One commit of the in-place swap, and not a user-visible condition in
-   practice (ADR-0034 consequence (a) measured the swap at a median 11.7 ms)
-   — but the box is reserved either way, so nothing reflows. `low-contrast`
-   is globally ignored on scanned URLs, so a UA-grey label on paper would be
-   caught by nothing: the treatment is the `hub-attach` / `privacidade`
-   idiom, opacity on the whole control rather than a colour swap. */
 .share:disabled {
   opacity: 0.55;
   cursor: default;
 }
 
-/* `--ink` at 15.0124:1 on desk, never `var(--accent)` — this sheet's header
-   carries the full argument, and 2.4.7 and 1.4.11 govern this ring. */
 .share:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 
-/* The reserved box (DESIGN.md:52), applied to the announcement for the same
-   reason D1a applies it to the button: the column must not reflow the moment
-   a share succeeds. One line of `--text-body` — 14px x 1.5 — held open at
-   all times, with only the text content changing. */
 .shareStatus {
   margin: 0;
   min-height: 21px;
@@ -120,29 +55,7 @@
   text-wrap: pretty;
 }
 
-/* The one `@media (max-width: 768px)` block this module declares, carrying
-   the mobile height override exactly as it stood in the conclusion's sheet.
-   768px is the repo-wide breakpoint (`globals.css:31` and seventeen other
-   sheets), and it is the breakpoint the rule was already inside. */
 @media (max-width: 768px) {
-  /* 52px IS `.cta`'s HEIGHT, NOT F6's SHARE BUTTON'S (step-6 finding G5).
-     `f6:61`'s share button is 48px; 52px is `f6:59`'s PRIMARY, which
-     `conclusion-view.module.css`'s `.cta` takes (named by FILE since #103 —
-     it used to be "above", and it is one file over now). Matching the primary is plan 040 V7's recorded deviation —
-     `.share` is not F6's secondary but a third level whose paper-plus-shadow
-     is its emphasis, and it stacks full-width rather than sharing a row — so
-     the height is the CTA's by choice. The old wording called it "F6's mobile
-     button height", which is the sentence the next reader would have
-     believed. And ONLY the height moves here.
-
-     Plan 040 C12 had `.share` copy `.cta`'s `padding: 0` here on the grounds
-     that `min-height` plus centring supplies the vertical box; measured in
-     file mode at 390x844 (I6a), `cramped-padding` fires on the SHIPPED sheet
-     at exactly that declaration, and the URL scan never sees it because a
-     clean browser profile always renders the empty conclusion. So the
-     desktop inset carries through unchanged — with `border-box` and a 52px
-     floor it is visually inert, and this control adds no second instance of
-     a finding the card already carries (plan 040 deviation D2). */
   .share {
     min-height: 52px;
   }

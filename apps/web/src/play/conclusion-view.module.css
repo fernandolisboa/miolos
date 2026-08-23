@@ -1,22 +1,9 @@
-/* The conclusion — SHARED by every game (ADR-0029, plan 018 §5.2).
-   Desktop-first per f5-conclusao-desktop, mobile per f6-conclusao-mobile,
-   with the scope table of plan 017 §12.3 applied as amended by #19, #29
-   and #34, and now fully discharged: the stat rows, the histogram and the
-   closing italic line are live (`.statsBlock` below, plan 033 D13), and so
-   is the share button — paper on paper with the hard offset shadow,
-   third in the side column's emphasis ladder under the ink CTA.
-   *(**Amended at #103** — the button's rules were "`.share` and
-   `.shareBlock` below" until the archive's late-result panel needed the
-   same control; they are byte-unmoved in `share-button.module.css`, which
-   is where the component now lives.)* The streak card is live since #19 (ADR-0048) —
-   F5:54-56's sealing-wax card, `.streakCard` below.
-
-   Every accent here is `var(--accent)`, set inline on the root from
-   `play/accent.ts` — one sheet, four games (plan 018 §5.2 edit 1).
+/* Every accent here is `var(--accent)`, set inline on the root from
+   `play/accent.ts` — one sheet, four games.
 
    Every rule is anchored on a local class: Next compiles CSS Modules in
    css-loader's `pure` mode, so a bare type selector either fails the build
-   or leaks globally (plan 017 risk 15). */
+   or leaks globally. */
 
 .page {
   box-sizing: border-box;
@@ -24,37 +11,7 @@
   padding: var(--space-11) 80px;
 }
 
-/* Per-screen hover accent — anchored on .page, never a bare `a:hover`
-   (plan 017 §12.5).
-
-   ADR-0041: the accent moved off the WORD and onto a rule under it. `--ink`
-   #211D19 (L 0.01272250) on `--paper-desk` #F7F2E9 (L 0.89161610) is
-   (0.89161610 + 0.05) / (0.01272250 + 0.05) = **15.0124:1**.
-
-   ACCEPTED EXCEPTION (ADR-0041 decision 4), granted when the worst rule was
-   the old mustard #C08A1E at **2.7311:1** on desk / **2.8501:1** on card,
-   below WCAG 1.4.11's 3:1 non-text floor. Since ADR-0067 deepened the Termo
-   accent the worst literal is nonogram at 4.3182:1 on desk, above the floor
-   — the grounds stay on the record because they hold for ANY palette. Hover
-   is a
-   pointer-only affordance duplicating what the link already carries at
-   15.0124:1, and the underline's PRESENCE is a change of geometry that
-   survives greyscale. See the twin block in `screen.module.css` for the full
-   argument. `:focus-visible`, which 2.4.7 and 1.4.11 DO govern, rests on none
-   of this. *(**Amended at #103** — this paragraph used to read "this sheet
-   declares exactly ONE focus ring — `.share:focus-visible` below". It
-   declares NONE again, and the ring is unchanged: it moved, with the button
-   it belongs to, to `share-button.module.css`, so the archive's late-result
-   panel renders the same control without dragging this sheet onto four
-   archive routes.)* The ring's reason is unchanged: #34's share button is
-   the first native `<button>` on either screen, inheriting neither the UA
-   default every `<a>` here rides nor the shared layer's own ring
-   (`screen.module.css`'s `.hint:focus-visible`, also `--ink` at 15.0124:1).
-   Before #34 this sheet declared none, which was true and is why the
-   paragraph once said so. Never `var(--accent)`: a shared ring's legality
-   must not depend on which accent renders (the forcing case was the old
-   mustard at 2.7311:1, step-7 finding A-F1 on the shared layer; ADR-0067
-   deepened it, and the rule is unchanged). */
+/* Per-screen hover accent — anchored on .page, never a bare `a:hover`. */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -63,9 +20,8 @@
   text-underline-offset: 4px;
 }
 
-/* Two columns at F5's 1.3 : 1, the result card left and the day card, CTA
-   and secondary link right. Named areas, never `display: contents` — the
-   top bar's per-viewport members have to survive the reflow (§12.2). */
+/* Named areas, never `display: contents` — the top bar's per-viewport
+   members have to survive the reflow. */
 .pageResult {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
@@ -93,13 +49,6 @@
   gap: var(--space-3);
 }
 
-/* Grid-only, never on the shared rule: `align-self: start` is the BLOCK axis
-   in .pageResult's grid but the CROSS (horizontal) axis in .pageEmpty's flex
-   column, so as a shared declaration it collapsed the empty and skeleton
-   headers to fit-content — 261.8px inside a 1280px content box at 1440, and
-   the three members bunched left instead of spread (finding
-   `conclusion-topbar-collapses-in-flex-column`). §12.3 asks for a header
-   "identical to the populated one". */
 .pageResult .topBar {
   align-self: start;
 }
@@ -122,30 +71,11 @@
   color: var(--ink-2);
 }
 
-/* Mobile-only members of the top bar; the media queries below swap them in. */
 .barKicker,
 .topDateShort {
   display: none;
 }
 
-/* `--ink-2`, not `--accent` (ADR-0041). This sheet is SHARED across all four
-   conclusions, so the kicker renders in whichever accent the page root
-   supplies, and a shared `var(--accent)` has no fixed value to measure (the
-   forcing case was the old mustard at 2.7311:1 on desk, deepened by
-   ADR-0067; the worst literal today, nonogram's 4.3182:1 on desk, still
-   fails the 4.5 text floor). `--ink-2` #6E6659 (L 0.13539008) is
-   (0.89161610 + 0.05) / (0.13539008 + 0.05) = **5.0791:1**.
-
-   BRANDED — `var(--text-kicker)` at 600 with 0.16em, matching `.cardKicker`
-   below and `screen.module.css`'s own `.barKicker` (step-7 finding A-F6).
-   At <=1140px `.cardKicker` is `display: none` and this span is the only
-   thing on the screen saying which game the player just finished, while
-   `.dayCardTitle` — a generic section eyebrow, "O DIA DE HOJE" — is visible
-   at the same time. Before this, the two were identical in every property:
-   11px, 400, 0.14em, uppercase, `--ink-2`. The accent was the sole
-   differentiator and ADR-0041 took it away, so the brand system DESIGN.md's
-   typography section describes had to be carried by the weight and the
-   tracking instead. Mobile is the primary form factor. */
 .barKicker {
   font: var(--text-kicker);
   letter-spacing: 0.16em;
@@ -170,12 +100,9 @@
   box-shadow: var(--shadow-lg)
     color-mix(in srgb, var(--accent) 22%, transparent);
   padding: var(--space-12);
-  /* Static rotation, never animated (DESIGN.md). */
   transform: rotate(-0.5deg);
 }
 
-/* Tape geometry from F5:23 / F6:22 — Hoje's shipped .tape is CENTRED, so
-   copying it produces a visibly wrong tape here. */
 .tape {
   position: absolute;
   top: -12px;
@@ -187,11 +114,6 @@
   transform: rotate(-4deg);
 }
 
-/* Inside the result card, so this one is on CARD paper (ADR-0041) — same
-   shared-accent argument as `.barKicker` above (the old mustard's 2.8501:1
-   on card was the forcing case, deepened by ADR-0067). `--ink-2` on card is
-   (0.93262753 + 0.05) / (0.13539008 + 0.05) = **5.3003:1**. The accent stays
-   on the tape directly above, which is a shape. */
 .cardKicker {
   margin: 0;
   font: var(--text-kicker);
@@ -200,10 +122,6 @@
   color: var(--ink-2);
 }
 
-/* Structural, not cosmetic: the wrapper makes `h1.previousElementSibling`
-   null, which is what stands impeccable's hero-eyebrow-chip and
-   kicker-above-heading rules down (§12.2). The 52px h1 here would fire the
-   first rule, and `<article>` does not exempt it. */
 .titleRow {
   margin-top: 10px;
 }
@@ -222,23 +140,6 @@
   margin-top: 36px;
 }
 
-/* The completion stamp: 3px circle in the game accent, typographic content
-   only (DESIGN.md). This is the product's one celebration.
-
-   The RING keeps the accent and the WORDS do not (ADR-0041 decisions 1 and
-   5). The ring is decoration under WCAG 1.4.11: it outlines "CONCLUÍDO /
-   06:47 / sem dicas", which carries the whole message on its own. Its worst
-   case was the old mustard's **2.8501:1** on card paper; since ADR-0067 the
-   worst is nonogram at 4.5063:1 (the deep mustard is 5.0542:1), so every
-   ring also clears 3:1 — recorded here rather than left to be rediscovered.
-   The text was 2.8501:1 under the old mustard and is now `--ink` #211D19
-   (L 0.01272250): (0.93262753 + 0.05) / (0.01272250 + 0.05) =
-   **15.6663:1**.
-
-   A uniform border never fires impeccable's `border-accent-on-rounded`:
-   `checks.mjs:47` needs a dominant edge (`w >= 2 && (maxOther <= 1 || w >=
-   maxOther*2)`), and a 3px ring on all four sides has `maxOther = 3`, so
-   `3 >= 6` is false and every side is skipped. */
 .stamp {
   display: flex;
   flex-direction: column;
@@ -253,10 +154,6 @@
   animation: stamp-settle var(--duration-slow) var(--ease-settle) both;
 }
 
-/* Exactly one mount keyframe, no repeat. The name deliberately avoids
-   /bounce|elastic|wobble|jiggle|spring/i, which impeccable's bounce-easing
-   rule matches on the animation NAME; --ease-settle's 1.05 is inside the
-   rule's allowed [-0.1, 1.1] band, so the token is not a finding either. */
 @keyframes stamp-settle {
   from {
     transform: scale(1.06) rotate(-9deg);
@@ -288,20 +185,6 @@
   font-size: 13px;
 }
 
-/* Termo's big slot, where a grid game shows a duration (#27, ADR-0043
-   decision 5): "4/6" on a win, "X/6" on a loss — the genre's own notation,
-   spelled out in the composed accessible name. `.stampTime`'s register
-   exactly, because a guess count is a numeric slot in the same way a
-   duration is, and 40px keeps the stamp the card's largest element (the
-   day-word row below is 34px). A separate NAME, because `.stampTime` on "4/6"
-   would be a lie — but names and values are separable, and two
-   character-for-character identical rule bodies are not a reuse (finding
-   B-10). `composes` keeps both honest names over ONE source of truth: the
-   element carries both class names, so `.stampTime`'s ≤768px override reaches
-   it too and there is no second mobile block to forget. Change `.stampTime`'s
-   register in #29 and this moves with it, which is what the file's own
-   `.dayWord` comment depends on — the stamp must stay the card's largest
-   element, 40/34 desktop and 28/24 mobile. */
 .stampGuesses {
   composes: stampTime;
 }
@@ -309,64 +192,20 @@
 /* The loss chrome (ADR-0043 decision 3), declared AFTER `.stamp` so
    same-specificity-later-wins carries the two overrides.
 
-   --ink-2 #6E6659 (L 0.13539008) on --paper-card #FBF7EF (L 0.93262753) is
-   (0.93262753 + 0.05) / (0.13539008 + 0.05) = 5.3003:1, clearing AA for the
-   label with 18 % of headroom; the ring is the same value at the same ratio
-   and is a SHAPE carrier besides. A uniform border never fires impeccable's
-   `border-accent-on-rounded`: checks.mjs:47 needs a dominant edge
-   (`w >= 2 && (maxOther <= 1 || w >= maxOther*2)`), and a 1.5px ring on all
-   four sides fails both halves.
-
    IT DECLARES NO `animation`, and the absence is not what stands the settle
    down — `.stampStill` below is, applied by `OutcomeStamp` from
    `outcome.state === "lost"` rather than by this class. Motion is a property
    of the OUTCOME, not of the loss chrome, so the two are separable if a
-   future game ever wants a still stamp on a win. (It was briefly a
-   `ConclusionOutcome.settle` boolean; every caller and every test paired it
-   exactly with `state`, so the other two combinations were unreachable and
-   untestable and the field went — finding B-11.) */
+   future game ever wants a still stamp on a win. */
 .stampLost {
   border: 1.5px solid var(--ink-2);
   color: var(--ink-2);
 }
 
-/* Carried only when `state === "lost"`. The third and loudest of the loss's
-   three steps down; also the reason nothing here needs a
-   `prefers-reduced-motion` counterpart, since the shared block below already
-   stands `.stamp` down for everyone. */
 .stampStill {
   animation: none;
 }
 
-/* The picture reveal (ADR-0034), for the one game whose payoff is an image.
-   Additive to the stamp, never instead of it. The rule this answers is
-   DESIGN.md:44 ("Celebration = the stamp settling; never confetti") and
-   PRODUCT.md:33 ("Celebration is contained... Never confetti, never a modal
-   takeover") — NOT DESIGN.md:39, which is the stamp's shape spec (3px circle,
-   -6deg, typographic content only) and carries no exclusivity rule at all.
-   The positive sanction is docs/design/002-brief-design-direction.md:76, which
-   names "o traço que se completa" alongside the stamp as a contained
-   celebration.
-
-   No background, no border, no radius, no box-shadow — impeccable's
-   isCardLikeFromProps (checks.mjs:227-230 in 3.4.0; NOT :4155, which is inside
-   isCardLike, a different function) returns false on its FIRST guard when an
-   element has neither shadow nor border, so this cannot fire nested-cards, and
-   "card dentro de card" is a DESIGN.md anti-reference verbatim. Line numbers
-   belong to impeccable 3.4.0; a bump moves them.
-
-   Contrast, computed because CI is blind here (`low-contrast` is wildcard-
-   ignored on every scanned host): --accent-nonogram #B5563C on --paper-card
-   #FBF7EF = 4.51:1, against WCAG 1.4.11's 3:1 for a meaningful non-text
-   graphic. Nothing here may use --accent-app #9E3B2F, which is 1.40:1 against
-   terracotta and invisible (N13). */
-/* COLUMN since #64, where it was a centred row: the motif caption stacks
-   under the picture. With one child the two are identical — a lone `.picture`
-   is horizontally centred either way — so nothing about the unnamed reveal
-   moves. Same no-background/no-border/no-radius/no-shadow discipline
-   `.dayWordRow` records: `isCardLikeFromProps` must return false on its FIRST
-   guard here, or `nested-cards` fires on the payoff, and "card dentro de card"
-   is a DESIGN.md anti-reference verbatim. */
 .pictureRow {
   display: flex;
   flex-direction: column;
@@ -374,28 +213,16 @@
   margin-top: var(--space-6);
 }
 
+/* Nothing here may use --accent-app #9E3B2F, which is 1.40:1 against
+   terracotta and invisible. */
 .picture {
   width: 132px;
   height: 132px;
   fill: var(--accent);
-  /* Exactly one mount keyframe, no repeat. The name deliberately avoids
-     /bounce|elastic|wobble|jiggle|spring/i, which impeccable's bounce-easing
-     rule matches on the animation NAME; --ease-settle's 1.05 y2 is inside the
-     rule's allowed [-0.1, 1.1] band (checks.mjs:495-499). Transform and
-     opacity only — never width/height/padding/margin, which fire
-     layout-transition. A 150ms offset STAGGERS the two settles rather than
-     sequencing them: the stamp runs 0–250ms and the picture 150–400ms, so
-     they overlap for 100ms and the picture finishes 150ms after the stamp.
-     Two settles starting together read as a flourish; offset, they read as
-     ink drying. (The comment used to say the stamp "lands first", which the
-     numbers do not produce — step-6 round-4 finding Q8. The timing is
-     deliberate and unchanged; only the description was wrong.) */
   animation: picture-settle var(--duration-slow) var(--ease-settle) both;
   animation-delay: var(--duration-fast);
 }
 
-/* -2deg is inside --rotate-card-max and deliberately unequal to the stamp's
-   -6deg, so the two do not read as one sheet. */
 @keyframes picture-settle {
   from {
     transform: scale(0.94) rotate(-3deg);
@@ -409,12 +236,6 @@
 
 /* ── the day's word (#27, ADR-0043 decision 6) ───────────────────────── */
 
-/* The motif caption (#64, ADR-0070) — `.dayWordRow`'s vocabulary one row
-   over, deliberately, so the two payoff cards read as the same system. It
-   renders only when the server published a name, so it is absent on an
-   offline finish and on every pre-sync paint. Unanimated: `.picture` above it
-   already carries the card's second settle, and a third would make the payoff
-   busy. */
 .pictureCaption {
   display: flex;
   flex-direction: column;
@@ -424,8 +245,6 @@
   text-align: center;
 }
 
-/* `.dayWordLead`'s exact register — 11px tracked uppercase --ink-2 #6E6659
-   (L 0.13539008) on --paper-card #FBF7EF (L 0.93262753), 5.3003:1. */
 .pictureLead {
   margin: 0;
   font-size: 11px;
@@ -437,14 +256,7 @@
 /* The name. NOT a heading and never `role="heading"` — `.pictureLead` above
    it is textbook `kicker-above-heading` shape, and the pair is legal only
    because both that rule and `hero-eyebrow-chip` anchor exclusively on
-   `h1`–`h4` and `[role="heading"]` (checks.mjs:2492). The component carries
-   the same sentence.
-
-   --ink #211D19 (L 0.01272250) on --paper-card is 15.6663:1. 22px, not
-   `.dayWord`'s 34: on the Termo card the word IS the payoff, here the
-   PICTURE is and the name annotates it, so the caption must not out-shout
-   the 132px figure it sits under — and it stays well below `.stampTime`'s
-   40px, keeping the stamp the card's largest element on a win. */
+   `h1`–`h4` and `[role="heading"]`. */
 .pictureName {
   margin: 0;
   font-family: var(--font-display);
@@ -455,11 +267,6 @@
   color: var(--ink);
 }
 
-/* Renders in `.pictureRow`'s slot, on BOTH outcomes, unanimated. No
-   background, no border, no radius and no box-shadow, so
-   `isCardLikeFromProps` (checks.mjs:227-230) returns false on its FIRST guard
-   and `nested-cards` cannot fire — `.picture`'s recorded argument, reused,
-   and "card dentro de card" is a DESIGN.md anti-reference verbatim. */
 .dayWordRow {
   display: flex;
   flex-direction: column;
@@ -469,12 +276,9 @@
   text-align: center;
 }
 
-/* The sentence that states the result. 15px/1.6 --ink-2 is `.emptyBodyText`'s
-   shipped pairing in this same file — the one body register the conclusion
-   already has. --ink-2 #6E6659 (L 0.13539008) on --paper-card #FBF7EF
-   (L 0.93262753) is 5.3003:1. Kept short deliberately: `line-length`
-   (checks.mjs:3136-3142) needs textLen > 80 AND charsPerLine > 85, and at 34
-   and 21 characters the two lines never enter the rule at all. */
+/* Kept short deliberately: `line-length` needs textLen > 80 AND
+   charsPerLine > 85, and at 34 and 21 characters the two lines never enter
+   the rule at all. */
 .dayWordResult {
   margin: 0;
   font-size: 15px;
@@ -483,9 +287,6 @@
   text-wrap: pretty;
 }
 
-/* The label above the word — `.dayCardTitle`'s shipped kicker idiom verbatim:
-   11px / 0.14em / uppercase / --ink-2 at 5.3003:1, and 11px is
-   `undersized-ui-text`'s floor EXACTLY rather than under it. */
 .dayWordLead {
   margin: 0;
   font-size: 11px;
@@ -494,15 +295,6 @@
   color: var(--ink-2);
 }
 
-/* The word. NOT a heading and never `role="heading"` — `.dayWordLead` above
-   it is textbook `kicker-above-heading` shape, and the pair is legal only
-   because both that rule and `hero-eyebrow-chip` anchor exclusively on
-   `h1`–`h4` and `[role="heading"]` (checks.mjs:2492). The component carries
-   the same sentence.
-
-   --ink #211D19 (L 0.01272250) on --paper-card is 15.6663:1. 34px sits
-   deliberately BELOW `.stampTime`/`.stampGuesses`' 40px, so the stamp stays
-   the card's largest element on a win. */
 .dayWord {
   margin: 0;
   font-family: var(--font-display);
@@ -513,11 +305,10 @@
   color: var(--ink);
 }
 
-/* The terminal sentence's live region (ADR-0043 decision 10). clip-path, not
-   opacity/visibility: `content-hidden-at-rest` (checks.mjs:4939-5010) counts
-   a clip-path element as VISIBLE, so this is not scored as hidden text. No
-   font-size at all, so it inherits and `undersized-ui-text` cannot reach it.
-   The recipe is `termo-board.module.css`'s `.announcer`, which cannot be
+/* clip-path, not opacity/visibility: `content-hidden-at-rest` counts a
+   clip-path element as VISIBLE, so this is not scored as hidden text. No
+   font-size at all, so it inherits and `undersized-ui-text` cannot reach
+   it. The recipe is `termo-board.module.css`'s `.announcer`, which cannot be
    reused across files — CSS Modules hash per file. */
 .announcer {
   position: absolute;
@@ -571,13 +362,6 @@
   gap: 26px;
 }
 
-/* The streak card (#19, ADR-0048) — F5:54's sealing-wax treatment: card
-   paper, 1.5px --accent-app ring, the hard 0.25-alpha offset shadow and a
-   slight rotation, with the tape scrap as a pseudo-element (F5's inline
-   div; the shipped `.tape` is the GAME accent and this card is app
-   identity, so it does not reuse it). Always `--accent-app`, never
-   `var(--accent)`: the streak is the app's own value on every game's
-   conclusion — the hub stamp's rule. */
 .streakCard {
   position: relative;
   display: flex;
@@ -604,13 +388,6 @@
   transform: rotate(4deg);
 }
 
-/* F5:55 — Fraunces at 52px, the conclusion's own size for the sanctioned
-   single non-aligning numeral (the hub stamp's 44px `--text-numeral-lg` is
-   the token's case; ADR-0036 decision 2 sanctions the KIND, not one size).
-   The min-width holds the skeleton's box at one-digit width so the value
-   arriving is a settle, not a reflow of the whole card. This `color` is an
-   ADR-0041 decision 1 exception, named in `ink-on-accent.test.ts`:
-   `--accent-app` #9E3B2F on `--paper-card` #FBF7EF = 6.2980:1. */
 .streakCardNumeral {
   font: 600 52px/1 var(--font-display);
   min-width: 34px;
@@ -618,17 +395,12 @@
   color: var(--accent-app);
 }
 
-/* F5:56 — the numeral's companion line. The second named ADR-0041
-   exception, same pair, same 6.2980:1. */
 .streakCardLabel {
   font-size: 14px;
   line-height: 1.45;
   color: var(--accent-app);
 }
 
-/* The "mantida por hoje." tail — F5:56's italic Fraunces, rendered only
-   when the server says today itself is a counted day (ADR-0048). Inherits
-   the label's accent; no third color declaration. */
 .streakCardTail {
   font-family: var(--font-display);
   font-style: italic;
@@ -638,8 +410,6 @@
   background: var(--paper-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  /* The solid --line shadow is the only non-accent card shadow in the frame
-     set (F5:58) — pinned here so it is not re-derived as an accent one. */
   box-shadow: var(--shadow-md) var(--line);
   padding: var(--space-6) var(--space-7);
   transform: rotate(-0.6deg);
@@ -665,9 +435,7 @@
    sat flush against a VISIBLE boundary and `impeccable detect` fired
    `cramped-padding` five times per viewport on the concluded card — the one
    card no URL-mode scan reaches, because a clean browser profile has no
-   concluded record and always renders the empty branch (finding
-   `chip-is-cramped-on-the-card-the-scan-cannot-see`). The text is centred and
-   far narrower than the chip, so the inset costs nothing visually. */
+   concluded record and always renders the empty branch. */
 .chip {
   box-sizing: border-box;
   flex: 1;
@@ -680,28 +448,10 @@
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-/* The dashed border is the second carrier of "not done", so the state never
-   rests on colour alone (DESIGN.md). */
 .chipMissing {
   border: 1.5px dashed var(--line);
 }
 
-/* The third day state (#27, ADR-0008 decision 3, ADR-0044): a lost Termo is
-   PLAYED, never completed. A SOLID border, deliberately not `.chipMissing`'s
-   dashed one — reusing that would make `played` and `missing` pixel-identical
-   (same 1.5px dashed --line, no tint, `.chipName` unchanged), so three day
-   states would render as TWO shapes and the one new state would be invisible.
-
-   `missing` = dashed (nothing here yet); `played` = SOLID (something
-   happened, just not a completion); `done` = a tinted fill and no border at
-   all. Three border treatments, no colour involved, all three legible in
-   greyscale.
-
-   --line on --paper-card is 1.4323:1, so this border is a SHAPE carrier and
-   not a contrast one — exactly what `.chipMissing` above already is. The
-   state's 3:1 carrier is the VALUE STRING itself (`jogado` vs `falta` vs a
-   duration, --ink-2 on --paper-card at 5.3003:1); the border only tells the
-   two non-done chips apart at a glance. */
 .chipPlayed {
   border: 1.5px solid var(--line);
 }
@@ -714,15 +464,6 @@
   color: var(--ink-2);
 }
 
-/* The done chip's NAME, on the 10 % accent tint `.chipDone` paints above.
-   `color-mix(in srgb, var(--accent) 10%, transparent)` over card paper
-   composites to #F0E8D9 for ADR-0067's deep mustard (0.1x141 + 0.9x251 =
-   240, 0.1x98 + 0.9x247 = 232, 0.1x18 + 0.9x239 = 217, rounded 8-bit —
-   what a browser paints). `--ink` #211D19 on that tint is **13.7508:1**.
-   The conversion to ink predates the deepening: on the OLD mustard's tint
-   #F5ECDA the accent-as-text this rule replaced measured 2.5949:1, the
-   worst of ADR-0041's eleven converted sites. The state's carrier is the
-   tint itself plus `.chipMissing`'s dashed border, not the word's hue. */
 .chipDone .chipName {
   color: var(--ink);
 }
@@ -739,17 +480,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Non-zero padding on BOTH axes, for exactly the reason `.chip` above carries:
-   this button paints a filled background (`--ink`, or the destination game's
-   accent through `.ctaNext`), so at `padding: 14px 0` its label sat flush
-   against a VISIBLE boundary and `impeccable detect` fired `cramped-padding`
-   on the CONCLUDED conclusion at both scanned viewports — the card #25's AC 2
-   gates and the one no URL-mode scan reaches, because a clean browser profile
-   has no concluded record and always renders the empty branch (step-6 round-3
-   finding ISS-A3). Pre-existing and cross-game: binairo and sudoku render this
-   same class. The inset is visually inert — the button is a full-width flex
-   item with a centred label, which is why `.emptyCta` has carried `14px 26px`
-   all along. T-WEB-S65a is the only gate on it. */
 .cta {
   display: flex;
   align-items: center;
@@ -771,18 +501,9 @@
    on hover, but a bare `.cta:hover` (0,2,0) loses the cascade to
    `.page a:hover` (0,2,1) above, and the label would resolve to the SAME
    `--accent` as `.ctaNext`'s background — an invisible label at 1:1 contrast
-   for as long as the pointer is on it. (0,3,0) wins. It stays `--paper-desk`
-   rather than `--ink-on-accent`, because THIS rule's subject is the button on
-   the `--ink` fill; the accent-filled variant re-states its own label colour
-   below at (0,4,0) so no source order decides it. */
+   for as long as the pointer is on it. (0,3,0) wins. */
 .page .cta:hover {
   color: var(--paper-desk);
-  /* And the same cascade, one property later: ADR-0041 gave `.page a:hover`
-     (0,2,1) an accent underline, and `.cta`'s own `text-decoration: none` is
-     (0,1,0), so without this every filled button on this page would grow a
-     2px rule under its label under the pointer. The accent underline is a
-     LINK affordance; a button already carries its hover in the fill. (0,3,0)
-     wins, and it covers `.ctaNext` too, which also carries `.cta`. */
   text-decoration: none;
 }
 
@@ -791,32 +512,6 @@
   box-shadow: 2px 2px 0 var(--line);
 }
 
-/* The chaining variant (plan 018 S21): when the CTA points at a game it wears
-   THAT game's accent, which the component sets as `--accent` on this element
-   — F5:66 draws exactly this button in the destination game's colour, and F6
-   gives it the accent-tinted hard shadow. Paper-on-accent is the same pair
-   the hub's four play buttons already ship.
-
-   The label colour is therefore the DESTINATION game's, not the page's, and
-   that is the whole reason `play/accent.ts` hands `--accent` and
-   `--ink-on-accent` out together: the component sets the pair on THIS element,
-   so both override what the page root supplies. This button renders on the
-   SHIPPED binairo and sudoku conclusions whenever the day still owes a
-   nonogram, where desk on terracotta measured 4.318:1 — a regression #25
-   causes on two screens it does not otherwise touch, because before #25
-   `playRoutes` had no nonogram and this button never rendered terracotta
-   anywhere (step-6 finding ISS-A2). `--paper-card` on the same fill is
-   4.5063:1.
-
-   `--ink-on-accent` resolves to TWO values again since ADR-0067 (#161):
-   `--paper-card` for nonogram, and `--paper-desk` for sudoku (7.5113:1),
-   binairo (5.3066:1) and termo — 4.8433:1 on the deep mustard #8D6212. It
-   resolved to `--ink` for termo while the accent was the old light #C08A1E
-   (no paper cleared 4.5 on it), which made this button the one dark-label
-   CTA in the family — the treatment #161 harmonized. This button is why
-   termo's value matters on every conclusion: it wears the DESTINATION
-   game's accent, so it renders termo's pair on the binairo, sudoku and
-   nonogram conclusions whenever the day still owes a termo. */
 .ctaNext {
   background: var(--accent);
   color: var(--ink-on-accent, var(--paper-desk));
@@ -841,42 +536,12 @@
   font-weight: 550;
   font-size: 19px;
   text-decoration: none;
-  /* The rule and the gap above it are ONE 6px box, driven by a single custom
-     property, so the hover below can thicken the rule and take the pixel back
-     out of the padding. At rest that is 4px + 2px — the shipped
-     `var(--space-1)` + 2px, unchanged to the pixel. */
   --rule-width: 2px;
   border-bottom: var(--rule-width) solid var(--line);
   padding-bottom: calc(6px - var(--rule-width));
-  /* Live since #29: the anchor carries the statistics route, so the
-     pointer returns. Not shared with any href-less sibling — a plain rule
-     is enough here, unlike the hub's scoped `.secondaryLink[href]`. */
   cursor: pointer;
 }
 
-/* This link already HAS the shape ADR-0041 decision 4 asks for — a rule under
-   it — so the hover moves the accent onto that rule instead of stacking
-   `.page a:hover`'s underline beneath the border it already draws. (0,3,0)
-   beats `.page a:hover`'s (0,2,1).
-
-   And the rule GROWS, 2px -> 3px, which is the point rather than a flourish
-   (step-7 finding A-F5). Decision 4's exception is granted to "a solid 2px
-   band appearing where there was none... a change of GEOMETRY"; a bare
-   `border-bottom-color` swap has no geometry delta at all, so that rationale
-   did not transfer to it and the comment that claimed it did was false. The
-   colour delta on its own measured **1.9899:1** against `--line` for the
-   OLD mustard #C08A1E, under WCAG 1.4.11's 3:1 — the case that proved a
-   bare colour swap could not carry the state. Since ADR-0067 all four
-   accents clear 3:1 against `--line` (sudoku 5.4727:1, binairo 3.8664:1,
-   nonogram 3.1462:1, deep mustard #8D6212 3.5288:1), but the geometry
-   carrier is kept: decision 4's grounds are palette-independent — hover is
-   a POINTER-ONLY affordance duplicating a word already at 15.0124:1, and
-   the extra pixel is a change of geometry that survives greyscale, a user
-   who never sees the hue, and any future accent too close to `--line`.
-
-   The pixel comes OUT of the padding: `--rule-width` drives the border and
-   the padding together, so the link's box is 6px below its baseline in either
-   state and hovering it never reflows the column it is centred in. */
 .page .secondaryLink:hover {
   --rule-width: 3px;
   text-decoration: none;
@@ -928,10 +593,6 @@
   margin-top: var(--space-7);
   padding: 14px 26px;
   background: var(--accent);
-  /* The page root's game, since this button goes back into the game whose
-     conclusion is being read — see `.ctaNext` above for the pair, and
-     `play/accent.ts` for the per-game values. Terracotta measured 4.318:1 on
-     desk here too (ISS-A2). */
   color: var(--ink-on-accent, var(--paper-desk));
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm)
@@ -943,13 +604,8 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* Same cascade, same fix: this one is on `.pageEmpty`, and its background is
-   the accent too — it lost to `.page a:hover` on `main` as well. */
 .page .emptyCta:hover {
   color: var(--ink-on-accent, var(--paper-desk));
-  /* Same reason as `.page .cta:hover` above — this button is on `.pageEmpty`
-     and carries no `.cta`, so it needs its own opt-out from `.page a:hover`'s
-     underline (ADR-0041). */
   text-decoration: none;
 }
 
@@ -958,9 +614,6 @@
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-/* A beat of blank paper before the record is read — no pulse, nothing that
-   nags (PRODUCT.md principle 4). It holds the card's footprint so the real
-   one does not shift the page in. */
 .skeletonCard {
   box-sizing: border-box;
   width: 100%;
@@ -980,11 +633,6 @@
     transform: rotate(-6deg);
   }
 
-  /* The keyframe's END state, never its start: standing the animation down
-     must leave the figure visible, not at `opacity: 0`. It lives in THIS
-     block rather than a new one because CSS Modules hash per file and a
-     reduced-motion block in another module could never reach `.picture`
-     (landmine 24). */
   .picture {
     animation: none;
     transform: rotate(-2deg);
@@ -997,12 +645,6 @@
   }
 }
 
-/* ≤1140px — single column, and the top bar swaps to F6's members. This
-   conclusion's own hard minimum is 1040 (it has no board), but the fold has
-   to match the play screen's: the top bar swaps MEMBERS at it, so two
-   different folds would change the bar's character mid-session when
-   navigating /<jogo> → /<jogo>/concluido at 1100px. One shared layer, one
-   fold; the cost is folding ~100px early (plan 018 §12.2, T3). */
 @media (max-width: 1140px) {
   .pageResult {
     grid-template-columns: 1fr;
@@ -1013,13 +655,6 @@
       "side";
     column-gap: 0;
     align-items: start;
-    /* Three `auto` rows on a `min-height: 100dvh` page default to
-       `align-content: normal` = stretch, which inflates every track with the
-       leftover viewport height: the declared 16px row-gap rendered as 51px
-       on a 390×667, 110px on a 390×844 and 140px on a 390×932, so the
-       composition changed character per device (finding
-       `mobile-conclusion-rows-stretch-instead-of-row-gap`). The slack now
-       falls once, after the last row. */
     align-content: start;
   }
 
@@ -1033,7 +668,6 @@
 
   .wordmark,
   .topDateLong,
-  /* F6's card carries no kicker — the top bar does. */
   .cardKicker {
     display: none;
   }
@@ -1048,7 +682,7 @@
   }
 }
 
-/* ≤768px — F6's type and geometry. Page padding is 20px, not F6's 18px:
+/* Page padding is 20px, not F6's 18px:
    impeccable's body-text-viewport-edge fires on a >40-char <p> whose
    rect.left < 16, and a card at 18px with sub-pixel rounding sits too close
    to that edge. Hoje ships 20px for the same reason. */
@@ -1081,9 +715,6 @@
     margin-top: 0;
   }
 
-  /* The card stacks rather than reproducing F6's stamp-left / stats-right
-     row, which loses its right-hand column once best and média are out of
-     scope (deviation 8). */
   .stampRow {
     margin: 18px auto 0;
   }
@@ -1115,9 +746,6 @@
     margin-top: var(--space-4);
   }
 
-  /* Stepped WITH the stamp, and by the same 0.85 the desktop pair holds
-     (34/40): 28 × 0.85 = 23.8, and 24px is the 4pt-scale value that keeps the
-     stamp the card's largest element at this viewport too. */
   .dayWord {
     font-size: 24px;
   }
@@ -1137,11 +765,6 @@
     margin-top: var(--space-3);
   }
 
-  /* Stepped WITH the picture and with `.dayWord`, by the same ratio the rest
-     of this block holds: 22 × 0.85 = 18.7, and 18px is the 4pt-scale value
-     under it. (The arithmetic sits on the rule whose `font-size` it explains,
-     like `.dayWord`'s above — it briefly sat on `.pictureCaption`, which only
-     moves a margin.) */
   .pictureName {
     font-size: 18px;
   }
@@ -1154,8 +777,6 @@
     padding: var(--space-4) 18px;
   }
 
-  /* The streak card shrinks the way the hub stamp does (page.module.css):
-     tighter box, the small shadow, a smaller Fraunces numeral. */
   .streakCard {
     padding: var(--space-4) 18px;
     gap: var(--space-4);
@@ -1173,8 +794,6 @@
     margin-top: 12px;
   }
 
-  /* The horizontal inset survives the mobile band for the same reason it
-     exists at all — `cramped-padding` fires at 390 and 320 too. */
   .chip {
     padding: 9px 6px;
   }
@@ -1194,7 +813,6 @@
   }
 
   .chipValue {
-    /* F6 draws 11px and that is already the floor — kept, not lowered. */
     font-size: 11px;
   }
 
@@ -1205,9 +823,6 @@
 
   .secondaryLink {
     font-size: 15px;
-    /* The same one-box arithmetic as the desktop rule, at F6's tighter 5px:
-       3px + 2px at rest, 2px + 3px hovered. The shipped resting value is
-       unchanged. */
     padding-bottom: calc(5px - var(--rule-width));
   }
 
@@ -1270,10 +885,6 @@
   text-align: right;
 }
 
-/* DESIGN.md's Histogram: today's bucket solid accent + bold label, the
-   others rgba(accent, 0.25) — the system's own component spec, carried by
-   `data-today` (a geometry-and-weight hook, so the state survives a
-   colour-blind reading through the bold label). */
 .histogram {
   display: flex;
   align-items: flex-end;
@@ -1315,8 +926,6 @@
   font-weight: 700;
 }
 
-/* Termo's rows: today's row solid + bold count, the others tinted — the
-   same data-today carrier as the histogram. */
 .distribution {
   display: flex;
   flex-direction: column;
@@ -1364,7 +973,6 @@
   font-weight: 700;
 }
 
-/* F5:50 verbatim: italic Fraunces, --ink-2 (5.3003:1 on card paper). */
 .closingLine {
   margin: var(--space-6) 0 0;
   font-family: var(--font-display);
@@ -1383,7 +991,6 @@
   }
 
   .closingLine {
-    /* F6:42 draws 13px — its own composition, not a truncation. */
     font-size: 13px;
   }
 }

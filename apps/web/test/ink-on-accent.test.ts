@@ -92,7 +92,7 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
 
   it("reads the label colour through the property, with the site's own safe fallback", () => {
     // The fallback is real and load-bearing — `--board-mobile-max` is read at
-    // `screen.module.css:409` with none (landmine N12), so a header comment
+    // `screen.module.css`'s mobile `.gridCard` with none (landmine N12), so a header comment
     // claiming a fallback is not evidence of one. Pinned literally.
     //
     // The fallback is PER SITE, not one literal for all of them (ADR-0041
@@ -236,6 +236,15 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // one set of rules, which is precisely the class this scan exists for. It
     // ships with ZERO accent-coloured text and its focus ring is `--ink`.
     "src/play/share-button.module.css",
+    // #205: the push pre-prompt card, which paints `--accent-app` on its
+    // shadow and its washi tape and nothing else. It carried the
+    // shapes-only claim in a header comment and in no gate at all.
+    "src/play/push-prompt-card.module.css",
+    // #205: the lazy conclusion's pending and degraded frames. Listing it
+    // here is what puts it inside the CLOSED ring scan below — it earns no
+    // ACCENT_BORDERS entry, and that absence is now asserted rather than
+    // described in a comment.
+    "src/play/conclusion-lazy.module.css",
   ] as const;
 
   /**
@@ -319,6 +328,37 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
       ).toBe(true);
     }
     expect(ALLOWED_ACCENT_TEXT.size).toBe(4);
+  });
+
+  it("keeps the lazy conclusion's two frames free of every accent token", () => {
+    // `conclusion-lazy.module.css` renders before any game context exists —
+    // `next/dynamic`'s loading component receives no props — so there is no
+    // accent for it to be right about, and the degraded fallback keeps the
+    // same neutral chrome. `SHEETS` does not reach this file, and `SHARED`
+    // reaches it only because of the `#205` entry above — deleting that entry
+    // drops the closed ring scan over this sheet, so it is load-bearing and
+    // not tidy-up. This scan is the wider one either way: no accent token in
+    // ANY property, which is what a RING would use.
+    const css = stylesheet("src/play/conclusion-lazy.module.css");
+    // `[,)]` and not `\)`: the literal closing paren required the token to
+    // be the whole argument and let `var(--accent, var(--ink))` — the
+    // fallback form this repo already ships — straight through.
+    expect(
+      /var\(\s*--accent[a-z-]*[,)]/.exec(css)?.[0],
+      "the transient and degraded frames are paper, line and ink only",
+    ).toBeUndefined();
+    // Anti-vacuity, three ways: the sheet really was read, the matcher fires
+    // on a sheet that carries an accent, and — the arm that pins the `[,)]`
+    // above — it fires on the FALLBACK spelling too. Without this last one,
+    // reverting to `\)` is invisible, because every accent in the control
+    // sheet is the bare form that both spellings match.
+    expect(css).toContain(".stamp");
+    expect(stylesheet("src/archive/late-result.module.css")).toMatch(
+      /var\(\s*--accent[a-z-]*[,)]/,
+    );
+    expect("border: 3px solid var(--accent, var(--ink))").toMatch(
+      /var\(\s*--accent[a-z-]*[,)]/,
+    );
   });
 
   it("paints the eleven converted sites in a neutral ink", () => {

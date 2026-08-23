@@ -54,7 +54,7 @@ colour on paper."*
 
 The trigger is #27. `apps/web/src/i18n/routes.ts:52-56`'s `playRoutes`
 gains `termo` and, in the same instant, four surfaces begin painting a
-2.7311:1 label — including `conclusion-view.module.css:431-436`'s
+2.7311:1 label — including `conclusion-view.module.css`'s
 `.ctaNext`, which wears the **destination** game's accent and therefore
 renders on the already-shipped `/binairo`, `/sudoku` and `/nonogram`
 conclusions. That is #25's ISS-A2 regression repeated with mustard, on
@@ -117,16 +117,16 @@ three screens #27 does not otherwise touch.
 
    | site | → | ratio after |
    |---|---|---|
-   | `play/screen.module.css:120` `.titleKicker` | `var(--ink-2)` | 5.0791:1 |
-   | `play/screen.module.css:98` `.barKicker` | `var(--ink-2)` | 5.0791:1 |
-   | `play/screen.module.css:196` `.statLabel` | `var(--ink-2)` | 5.3003:1 |
-   | `play/conclusion-view.module.css:97` `.barKicker` | `var(--ink-2)` | 5.0791:1 |
-   | `play/conclusion-view.module.css:139` `.cardKicker` | `var(--ink-2)` | 5.3003:1 |
-   | `play/conclusion-view.module.css:176` `.stamp` (text) | `var(--ink)` | 15.6663:1 |
-   | `play/conclusion-view.module.css:354` `.chipDone .chipName` | `var(--ink)` | 14.2637:1 |
+   | `play/screen.module.css` `.titleKicker` | `var(--ink-2)` | 5.0791:1 |
+   | `play/screen.module.css` `.barKicker` | `var(--ink-2)` | 5.0791:1 |
+   | `play/screen.module.css` `.statLabel` | `var(--ink-2)` | 5.3003:1 |
+   | `play/conclusion-view.module.css` `.barKicker` | `var(--ink-2)` | 5.0791:1 |
+   | `play/conclusion-view.module.css` `.cardKicker` | `var(--ink-2)` | 5.3003:1 |
+   | `play/conclusion-view.module.css` `.stamp` (text) | `var(--ink)` | 15.6663:1 |
+   | `play/conclusion-view.module.css` `.chipDone .chipName` | `var(--ink)` | 14.2637:1 |
    | `app/page.module.css:150` `.kicker` | `var(--ink-2)` | 5.3003:1 |
    | `app/page.module.css:222` `.doneChip` (text) | `var(--ink)` | 15.6663:1 |
-   | `play/screen.module.css:56` + `play/conclusion-view.module.css:25` `.page a:hover` | see decision 4 | 15.0124:1 |
+   | `play/screen.module.css` + `play/conclusion-view.module.css` `.page a:hover` | see decision 4 | 15.0124:1 |
 
 4. **A hover affordance keeps its per-game identity by moving the accent to
    a shape.** `.page a:hover` becomes `color: var(--ink)` plus a 2px
@@ -387,8 +387,8 @@ three screens #27 does not otherwise touch.
 - **(g) The accent inventory was swept for `color:`, `border:` and
   `background:` declarations only.** A `fill:`, a `stroke:`, a
   `text-decoration-color:` or a `caret-color:` carrying `var(--accent)`
-  would not have been found. `conclusion-view.module.css:246`'s `fill:
-  var(--accent)` on `.picture` is a *shape* and is correct under decision 1;
+  would not have been found. `conclusion-view.module.css`'s `.picture` carries
+  `fill: var(--accent)`, which is a *shape* and is correct under decision 1;
   no exhaustive sweep for others has happened, and this ADR does not claim
   one. The `color:` half **is** now exhaustive for the three shared sheets,
   because (f)'s scan is a scan rather than a list; outside them it is the

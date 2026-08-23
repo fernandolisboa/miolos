@@ -1,19 +1,11 @@
-/* The lazy conclusion boundary's OWN two frames (#145 step 7b): the pending
-   skeleton `ConclusionLoading` and the chunk-failure card
-   `ConclusionChunkFallback`. A separate sheet from
+/* A separate sheet from
    `conclusion-view.module.css` on purpose — importing that sheet here would
    put the conclusion's full CSS back into every play route's first paint,
    and CSS Modules hash per file anyway (the `hub-day-state.tsx` reason).
 
-   DELIBERATELY ACCENT-FREE. The pending frame renders before any game
-   context exists (`next/dynamic`'s loading component receives no props), and
-   the fallback keeps the same neutral chrome: `ink-on-accent.test.ts` pins a
-   CLOSED list of accent rings (T-WEB-S73) and this transient/degraded pair
-   earns no entry in it. Paper, line and ink tokens only.
-
    Every rule is anchored on a local class: Next compiles CSS Modules in
    css-loader's `pure` mode, so a bare type selector either fails the build
-   or leaks globally (plan 017 risk 15). */
+   or leaks globally. */
 
 .page {
   box-sizing: border-box;
@@ -25,7 +17,8 @@
 }
 
 /* The same card silhouette as `conclusion-view.module.css`'s
-   `.skeletonCard`, minus the accent-tinted shadow (see the header). */
+   `.skeletonCard`, minus the accent-tinted shadow — this sheet is
+   accent-free, which `ink-on-accent.test.ts` now gates. */
 .skeletonCard {
   box-sizing: border-box;
   width: 100%;
@@ -71,11 +64,6 @@
   line-height: 1.15;
 }
 
-/* The stamp's honest minimum: label and frozen time, ink ring rather than
-   the accent ring (the closed-list reason above), no settle animation — a
-   degraded frame celebrates quietly. No `font-variant-numeric` on the time:
-   `tabular-nums` on Fraunces is a measured no-op (ADR-0036) and the pairing
-   is what `aligning-numerals.test.ts` hunts; this is a single frozen value. */
 .stamp {
   display: flex;
   flex-direction: column;
