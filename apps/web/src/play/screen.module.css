@@ -2,7 +2,7 @@
    css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
    either fails the build or leaks globally.
 
-   Three things differ per game and none of them is a cascade override — CSS
+   What differs per game is never a cascade override — CSS
    Modules hash class names per file, so a `.gridCard` declared in a game's
    module would resolve against this one by stylesheet INJECTION ORDER, which
    Next does not guarantee. */

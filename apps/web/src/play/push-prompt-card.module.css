@@ -6,7 +6,8 @@
    Washi tape in the same accent, subtle static rotation — never animated
    per interaction. Accent colours SHAPES only (ADR-0041): every text run
    is --ink or --ink-2 on paper except the accept button's, which is the
-   shipped solid-ink CTA treatment.
+   shipped solid-ink CTA treatment (--paper-desk on --ink, the
+   conclusion-view .cta pair) — ink on paper inverted, not an accent.
 
    Named .prompt/.promptTape rather than the sibling sheets' .card/.tape on
    purpose: CSS Modules hash per file, but the visual gate for this surface
@@ -89,9 +90,9 @@
 }
 
 /* Explicit colours rather than an opacity fade: a whole-button opacity
-   washes the label below AA, while a lightened fill keeps --paper-desk text
-   readable and the lost shadow is what reads as "not pressable" in this
-   system. */
+   washes the label below AA (the step-7 detect run caught exactly that),
+   while a lightened fill keeps --paper-desk text readable and the lost
+   shadow is what reads as "not pressable" in this system. */
 .promptAccept:disabled,
 .promptDecline:disabled {
   cursor: default;

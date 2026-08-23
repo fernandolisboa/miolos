@@ -17,7 +17,8 @@
 }
 
 /* The same card silhouette as `conclusion-view.module.css`'s
-   `.skeletonCard`, minus the accent-tinted shadow (see the header). */
+   `.skeletonCard`, minus the accent-tinted shadow — this sheet is
+   accent-free, which `ink-on-accent.test.ts` now gates. */
 .skeletonCard {
   box-sizing: border-box;
   width: 100%;

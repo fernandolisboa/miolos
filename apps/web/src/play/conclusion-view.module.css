@@ -189,13 +189,14 @@
   composes: stampTime;
 }
 
-/* Declared AFTER `.stamp` so
+/* The loss chrome, declared AFTER `.stamp` so
    same-specificity-later-wins carries the two overrides.
 
    IT DECLARES NO `animation`, and the absence is not what stands the settle
    down — `.stampStill` below is, applied by `OutcomeStamp` from
    `outcome.state === "lost"` rather than by this class. Motion is a property
-   of the OUTCOME, not of the loss chrome. */
+   of the OUTCOME, not of the loss chrome, so the two are separable if a
+   future game ever wants a still stamp on a win. */
 .stampLost {
   border: 1.5px solid var(--ink-2);
   color: var(--ink-2);
@@ -493,10 +494,11 @@
 }
 
 /* ANCHORED ON `.page`, and the extra class is the whole point (finding
-   `chaining-cta-label-vanishes-on-hover`): a bare `.cta:hover` (0,2,0) loses
-   the cascade to `.page a:hover` (0,2,1), and the label would resolve to the
-   SAME `--accent` as `.ctaNext`'s background — an invisible label for as long
-   as the pointer is on it. (0,3,0) wins. */
+   `chaining-cta-label-vanishes-on-hover`): the solid CTA keeps its paper ink
+   on hover, but a bare `.cta:hover` (0,2,0) loses the cascade to
+   `.page a:hover` (0,2,1) above, and the label would resolve to the SAME
+   `--accent` as `.ctaNext`'s background — an invisible label at 1:1 contrast
+   for as long as the pointer is on it. (0,3,0) wins. */
 .page .cta:hover {
   color: var(--paper-desk);
   text-decoration: none;
@@ -721,7 +723,7 @@
 
   .stampLabel {
     /* F6 draws 9px; 11px is the legibility floor the detect gate enforces
-       for functional text, same rule Hoje's kicker follows. */
+       for functional text (deviation 4), same rule Hoje's kicker follows. */
     font-size: 11px;
     letter-spacing: 0.16em;
   }

@@ -1116,31 +1116,50 @@ describe("the conclusion's layout (tripwires)", () => {
       expect(endRotation, `${keyframes} to`).toBeDefined();
       const body = bodyOf(reduced, selector);
       expect(decl(body, "animation"), selector).toBe("none");
+      // The transform may be the end ROTATION and nothing else. Asserting
+      // the leftover is empty closes the value side the way the property
+      // set below closes the property side: `scaleX(0)`, `scale3d(0,0,1)`
+      // and `translate(-200vw)` are all hiding spellings that live on this
+      // one allowed property, so a ban-list of function names would leak.
+      const leftover = (decl(body, "transform") ?? "")
+        .replace(endRotation ?? "", "")
+        .replace(/scale\(\s*1\s*\)/, "")
+        .trim();
       expect(decl(body, "transform"), selector).toContain(endRotation);
-      expect(decl(body, "transform"), selector).not.toMatch(
-        /scale\(\s*(?!1\s*\))/,
-      );
+      expect(
+        leftover,
+        `${selector} transform carries more than the rotation`,
+      ).toBe("");
     }
     // The picture's `from` is fully transparent, so its end state has to
     // restore opacity explicitly.
     expect(decl(bodyOf(reduced, ".picture"), "opacity")).toBe("1");
-    // And neither stand-down may hide the payoff. `stamp-settle` opens at
-    // `opacity: 0.6`, so pinning "not the start value, and not invisible"
-    // is what stops the one celebration this product ships from being
-    // switched off for every reduced-motion user.
-    for (const selector of [".stamp", ".picture"] as const) {
-      const body = bodyOf(reduced, selector);
-      const opacity = decl(body, "opacity");
-      expect(opacity === undefined || opacity === "1", selector).toBe(true);
-      // `opacity` is not the only spelling of "gone": `visibility: hidden`
-      // and `display: none` hide the payoff just as completely and were
-      // invisible to the opacity arm alone.
-      expect(decl(body, "visibility"), selector).toBeUndefined();
-      expect(decl(body, "display"), selector).toBeUndefined();
+    // And neither stand-down may hide the payoff. "Hidden" has too many
+    // spellings to enumerate — `opacity`, `visibility`, `display`,
+    // `clip-path`, `content-visibility`, `filter`, a zero `scaleX`, a
+    // translate off-screen — and a list of banned properties grows forever
+    // while the next spelling walks past it. So this CLOSES the block
+    // instead, the way `ACCENT_BORDERS` closes the ring scan two files
+    // over: these selectors may declare these properties and nothing else.
+    // A new property here is a red that has to be argued for, which is the
+    // only shape that catches a spelling nobody thought of.
+    for (const [selector, allowed] of [
+      [".stamp", ["animation", "transform"]],
+      [".picture", ["animation", "transform", "opacity"]],
+    ] as const) {
+      const declared = [
+        ...bodyOf(reduced, selector).matchAll(/^\s*([a-z-]+)\s*:/gm),
+      ].map((match) => match[1]);
+      expect([...declared].sort(), selector).toEqual([...allowed].sort());
     }
-    // Anti-vacuity: the keyframes really do open where this test claims.
-    expect(CSS).toMatch(/@keyframes stamp-settle/);
-    expect(CSS).toMatch(/@keyframes picture-settle/);
+    // Anti-vacuity: the keyframes really do OPEN hidden-ish, which is what
+    // makes standing them down at the start state a defect worth gating.
+    expect(
+      decl(bodyOf(bodyOf(CSS, "@keyframes stamp-settle"), "from"), "opacity"),
+    ).toBe("0.6");
+    expect(
+      decl(bodyOf(bodyOf(CSS, "@keyframes picture-settle"), "from"), "opacity"),
+    ).toBe("0");
   });
 
   it("packs the stacked result rows to the start instead of stretching them", () => {
