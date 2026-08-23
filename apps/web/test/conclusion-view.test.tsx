@@ -1084,6 +1084,41 @@ describe("the conclusion's layout (tripwires)", () => {
     );
   });
 
+  it("settles the stamp once on mount, on the system's own tokens", () => {
+    // `.picture`'s twin is gated in `nonogram-screen.test.tsx`; the stamp —
+    // the older and the one every game renders — was gated by nothing.
+    // impeccable's `bounce-easing` rule matches the animation NAME.
+    const animation = decl(bodyOf(CSS, ".stamp"), "animation");
+    expect(animation).toContain("stamp-settle");
+    expect(animation).not.toMatch(/bounce|elastic|wobble|jiggle|spring/i);
+    expect(animation).not.toMatch(/infinite|alternate/);
+    expect(animation).toContain("var(--duration-slow)");
+    expect(animation).toContain("var(--ease-settle)");
+  });
+
+  it("stands both settles down at the keyframe's END state, never its start", () => {
+    // Standing an animation down must leave the figure visible. Both
+    // keyframes open under-scale and part-transparent, so a reduced-motion
+    // block that forgot the end state would freeze the payoff at `opacity:
+    // 0.6` for the stamp and at `opacity: 0` — invisible — for the picture.
+    const reduced = bodyOf(CSS, "@media (prefers-reduced-motion: reduce)");
+    for (const [selector, rotation] of [
+      [".stamp", "rotate(-6deg)"],
+      [".picture", "rotate(-2deg)"],
+    ] as const) {
+      const body = bodyOf(reduced, selector);
+      expect(decl(body, "animation"), selector).toBe("none");
+      expect(decl(body, "transform"), selector).toBe(rotation);
+    }
+    // The picture's `from` is fully transparent, so its end state has to
+    // restore opacity explicitly; the stamp's 0.6 start does not read as
+    // hidden and the rule leaves it to the animation-less default.
+    expect(decl(bodyOf(reduced, ".picture"), "opacity")).toBe("1");
+    // Anti-vacuity: the keyframes really do open where this test claims.
+    expect(CSS).toMatch(/@keyframes stamp-settle/);
+    expect(CSS).toMatch(/@keyframes picture-settle/);
+  });
+
   it("packs the stacked result rows to the start instead of stretching them", () => {
     // finding `mobile-conclusion-rows-stretch-instead-of-row-gap`: three
     // `auto` rows on a `min-height: 100dvh` page default to

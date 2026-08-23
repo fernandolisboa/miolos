@@ -1,39 +1,12 @@
-/* The play screen's SHARED layout (ADR-0029, plan 018 §5.2/§12.2), extracted
-   from the /binairo screen — desktop-first per f3-binairo-desktop, mobile per
-   f4-binairo-mobile. The board geometry, the cell states and the input row
-   stay in each game's own module; what lives here is the chrome every play
-   screen has.
+/* Every rule is anchored on a local class: Next compiles CSS Modules in
+   css-loader's `pure` mode, where a bare type selector (`a:hover`, `button`)
+   either fails the build or leaks globally. */
 
-   Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
-   either fails the build or leaks globally (plan 017 risk 15). Rotations are
-   static transforms, never animation.
-
-   Three things differ per game and none of them is a cascade override — CSS
-   Modules hash class names per file, so a `.gridCard` declared in a game's
-   module would resolve against this one by stylesheet INJECTION ORDER, which
-   Next does not guarantee (plan 018 landmine 24). So:
-     - the accent is `var(--accent)`, set inline on the root from
-       `play/accent.ts`;
-     - the rotations and the mobile board cap are custom properties with
-       Binairo's shipped values as their fallbacks, declared by a per-game
-       class carried on the SAME element as `.page`;
-     - `prefers-reduced-motion` is declared here for `.hint` and in each
-       game's own module for its own classes. */
-
-/* >1140px — F3. The two-column hard minimum is set by the widest board this
-   layer serves: Binairo needs 80 + 330 + 72 + (8×52 + 7×4 + 2×16 + 2) + 80 =
-   1040px and Sudoku needs 80 + 330 + 72 + 546 + 80 = 1108px, so one shared
-   fold has to sit at or above 1108 — 1140 leaves margin (plan 018 §12.2).
-   Below it the fixed cells cannot shrink, so the two-column layout overflows,
-   and neither scanned viewport (1440×900, 390×844) is in that band, so CI
-   would never catch it.
-
-   Named areas rather than `display: contents`: the reflow has to move the
-   timer and the progress readout ACROSS subtrees (.statsCard is a child of
-   the sidebar column, .topBar its sibling), which `display: contents`
-   cannot do. Both readouts therefore exist twice and one of each pair is
-   hidden per viewport — the shipped .ctaLong/.ctaShort precedent. */
+/* The two-column fold is set by the widest board this layer serves: Binairo
+   needs 1040px and Sudoku 1108px, so the shared fold sits at or above 1108.
+   Below it the fixed cells cannot shrink and the layout overflows — and
+   neither scanned viewport (1440x900, 390x844) is in that band, so no CI
+   scan reaches it. */
 .page {
   box-sizing: border-box;
   min-height: 100dvh;
@@ -50,30 +23,8 @@
   padding: var(--space-11) 80px;
 }
 
-/* Per-screen hover accent — anchored on .page, never a bare `a:hover`,
-   which would turn Hoje's hover green (plan 017 §12.5).
-
-   ADR-0041: the accent moved off the WORD and onto a rule under it. The word
-   is `--ink` #211D19 on `--paper-desk` #F7F2E9 — L 0.01272250 and 0.89161610,
-   so (0.89161610 + 0.05) / (0.01272250 + 0.05) = **15.0124:1**. The state's
-   carrier is the underline's PRESENCE, not its hue.
-
-   ACCEPTED EXCEPTION (ADR-0041 decision 4), granted when the worst rule was
-   the old mustard #C08A1E at **2.7311:1** on desk paper, below WCAG 1.4.11's
-   3:1 non-text floor. Since ADR-0067 the worst of the four is nonogram
-   terracotta at 4.3182:1 on desk (the deep mustard #8D6212 is 4.8433:1), so
-   every hover rule now clears the floor — but the exception's grounds are
-   kept on the record because they are what makes the treatment safe for ANY
-   palette: hover is a POINTER-ONLY affordance that duplicates what the
-   link already carries at 15.0124:1 and is not a state a user must perceive
-   to operate the control; and a solid band appearing where there was none is
-   a change of GEOMETRY, so the state survives greyscale. `:focus-visible`,
-   which 2.4.7 and 1.4.11 DO govern, rests on none of this: the one focus ring
-   this layer declares is `.hint:focus-visible` below, and it is `--ink`
-   (15.0124:1). It was `var(--accent)` when this paragraph first claimed
-   otherwise — step-7 finding A-F1 — and the claim is now true because the
-   declaration moved, not because the wording did. This line may not be cited
-   to put a mustard rule under a STATE-BEARING boundary. */
+/* Anchored on .page, never a bare `a:hover`, which would turn Hoje's hover
+   green. */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -110,36 +61,12 @@
   color: var(--ink-2);
 }
 
-/* Mobile-only members of the top bar; the media queries below swap them in. */
 .barKicker,
 .timerBar,
 .progressBar {
   display: none;
 }
 
-/* `--ink-2`, not `--accent` (ADR-0041): this sheet is SHARED, so the kicker
-   renders in whichever accent the game supplies, and a shared `var(--accent)`
-   has no fixed value and therefore no ratio to measure — the rule that
-   forbids it does not soften with the palette (the forcing case was the old
-   mustard #C08A1E at 2.7311:1 on desk, deepened by ADR-0067; the worst
-   literal today is nonogram at 4.3182:1 on desk, which still fails the 4.5
-   text floor). `--ink-2` #6E6659 (L 0.13539008) is (0.89161610 + 0.05) /
-   (0.13539008 + 0.05) = **5.0791:1**.
-
-   And the kicker is BRANDED, `var(--text-kicker)` at 600 with 0.16em, not the
-   11px/400/0.14em it carried before (step-7 finding A-F6). Once the accent
-   left, 11px/400/0.14em/uppercase/`--ink-2` was every property of a generic
-   section eyebrow — `.statLabel` below, and `conclusion-view`'s
-   `.dayCardTitle` — and DESIGN.md's typography section makes kickers "a
-   deliberate brand system, used for game categories, not as a generic section
-   eyebrow". This is the ONLY carrier of game identity at <=1140px, where
-   `.titleKicker` is `display: none`, and mobile is the primary form factor.
-   PRODUCT.md principle 1 — identity from typography, not ornament — is what
-   the weight and the tracking are FOR; it does not survive the two treatments
-   being byte-identical. Matches `.titleKicker` below, and
-   `conclusion-view.module.css`'s own `.barKicker`, so the kicker does not
-   change character at the 1140 fold or when the player crosses
-   /<jogo> -> /<jogo>/concluido. */
 .barKicker {
   font: var(--text-kicker);
   letter-spacing: 0.16em;
@@ -147,20 +74,6 @@
   color: var(--ink-2);
 }
 
-/* THE RUNNING CLOCK, AND THE ONE REASON IT IS NOT ON THE DISPLAY FACE (#63).
-   It ships `var(--font-ui)` because it is a numeral that has to align with
-   ITSELF across time: the value is replaced every second, and a digit whose
-   advance changes moves every digit to its right. Fraunces has no tabular
-   figures — no OpenType feature tag responds on it at all — so the
-   `font-variant-numeric` below was a measured no-op on it and the clock swung
-   ≈6.1px per digit at 30px (ADR-0036 decision 5 measured it; decision 1 is
-   the rule this now follows). Instrument Sans collapses every digit to one
-   advance — 6.609375px at 11px, spread 0.000000 — so the clock ticks in
-   place. `.timerCard` below is the same readout at the desktop size and
-   carries the same pair for the same reason; the two are swapped together or
-   not at all. What does NOT move to this face is a single non-aligning
-   numeral — the streak stamp, a board cell, the conclusion's frozen
-   `.stampTime` — which decision 2 leaves on Fraunces deliberately. */
 .timerBar {
   font-family: var(--font-ui);
   font-size: 20px;
@@ -175,8 +88,6 @@
   padding-top: 32px;
 }
 
-/* Same conversion, same argument as `.barKicker` above — a shared accent has
-   no ratio to measure; `--ink-2` on desk is **5.0791:1** (ADR-0041). */
 .titleKicker {
   margin: 0;
   font: var(--text-kicker);
@@ -187,7 +98,7 @@
 
 /* The wrapper is structural, not cosmetic: it makes
    `h1.previousElementSibling` null, which is what stands impeccable's
-   hero-eyebrow-chip and kicker-above-heading rules down (§12.2). */
+   hero-eyebrow-chip and kicker-above-heading rules down. */
 .titleRow {
   display: flex;
   align-items: baseline;
@@ -230,13 +141,9 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow-md)
     color-mix(in srgb, var(--accent) 22%, transparent);
-  /* Per game, through a custom property rather than a cascade override
-     (§12.2). Binairo's shipped value is the fallback. */
   transform: rotate(var(--stats-card-rot, -0.5deg));
 }
 
-/* Tape geometry from F3:27 — Hoje's shipped .tape is CENTRED, so copying
-   it produces a visibly wrong tape here. */
 .tape {
   position: absolute;
   top: -10px;
@@ -254,11 +161,6 @@
   justify-content: space-between;
 }
 
-/* On CARD paper, not desk, so the arithmetic differs from the two kickers
-   above (ADR-0041) — same shared-accent argument (the old mustard's
-   2.8501:1 on card was the forcing case, deepened by ADR-0067). `--ink-2`
-   #6E6659 on card is (0.93262753 + 0.05) / (0.13539008 + 0.05) =
-   **5.3003:1**. */
 .statLabel {
   font-size: 11px;
   letter-spacing: 0.14em;
@@ -266,9 +168,6 @@
   color: var(--ink-2);
 }
 
-/* The >1140px half of the running clock — same readout, same face, same
-   reason as `.timerBar` above (#63, ADR-0036 decision 1). This is the 30px
-   surface the ≈6.1px-per-digit measurement was taken on. */
 .timerCard {
   font-family: var(--font-ui);
   font-size: 30px;
@@ -286,7 +185,7 @@
 
 /* The "free" grid row between .stats and .hint is a 1fr spacer with no
    element in it — that is what pins the button to the bottom of the
-   sidebar, as F3 draws it. */
+   sidebar. */
 .hint {
   grid-area: hint;
   box-sizing: border-box;
@@ -295,21 +194,10 @@
   justify-content: center;
   width: 100%;
   /* Horizontal padding is visually inert on a full-width, centre-aligned
-     button — but impeccable's `cramped-padding` reads computed padding, and
-     a 14px label flush against a filled boundary is exactly its shape (1).
-     F3 draws `padding: 14px 0`; the inline value is the frame's, the block
-     value is ours. Verified against the rule at 1440x900. */
+     button, but impeccable's `cramped-padding` reads computed padding and a
+     14px label flush against a filled boundary is exactly its shape. */
   padding: 14px var(--space-5);
   background: var(--accent);
-  /* The label on an accent FILL, per game, with the shipped desk ink as the
-     fallback — `play/accent.ts` sets both custom properties on the same root
-     that sets `--accent`. Binairo, Sudoku and (since ADR-0067) Termo resolve
-     it to `var(--paper-desk)` — 5.3066:1, 7.5113:1 and 4.8433:1 on their
-     fills; Nonogram resolves it to `var(--paper-card)` because desk on
-     terracotta is 4.318:1, an AA failure for a 14px label (step-6 finding
-     ISS-A2), and card is 4.506:1. Identical argument, identical one-token
-     remedy as `nonogram-board.module.css:461-463`'s `.controlActive`.
-     Unlike `--board-mobile-max` at :409 the fallback here is real. */
   color: var(--ink-on-accent, var(--paper-desk));
   border: 1.5px solid var(--accent);
   border-radius: var(--radius);
@@ -322,15 +210,13 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* Pressed = the element slides 1px toward its shadow and the shadow shrinks
-   by the same 1px (DESIGN.md, verbatim). --shadow-sm is 3px, hence 2px. */
 .hint:active {
   transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-/* Exhausted / unavailable (§10.5, undrawn in the frames). Three carriers —
-   fill, border and label — so the state survives grayscale. */
+/* Three carriers — fill, border and label — so the state survives
+   grayscale. */
 .hintUsed {
   background: var(--paper-card);
   border: 1.5px solid var(--line);
@@ -344,32 +230,6 @@
   box-shadow: none;
 }
 
-/* INK, not the accent, and the reason is arithmetic rather than taste
-   (step-7 finding A-F1). This was the only focus indicator the SHARED play
-   layer declared until #34; `.share:focus-visible` in
-   `conclusion-view.module.css` is the second, declared in the same terms and
-   for the same reason, and its own header comment carries the argument
-   (step-6 finding W2 — one sheet moved, the twin's clause did not). Unlike
-   the hover underline above this is not a pointer-only affordance — it is the
-   whole of what tells a keyboard user where they are, so WCAG 2.4.7 and
-   1.4.11's 3:1 non-text floor both bind.
-
-   `outline-offset: 2px` puts `--paper-desk` on BOTH sides of the ring — the
-   gap inside it and the page background outside — so the ring is measured
-   against desk paper and nothing else. `var(--accent)` is per game, and when
-   this rule was converted the old mustard `--accent-termo` #C08A1E measured
-   **2.7311:1** there, below the floor: the accent version passed only by
-   accident of WHICH three games shipped (nonogram 4.3182:1, binairo
-   5.3066:1, sudoku 7.5113:1) and would have gone illegal the instant
-   `playRoutes` gained `termo` (#27), the exact trigger ADR-0041 exists for.
-   ADR-0067's deep mustard (4.8433:1 on desk) would pass today, but ink stays:
-   a shared sheet's legality must not depend on which accents happen to ship.
-
-   `--ink` #211D19 (L 0.01272250) is (0.89161610 + 0.05) /
-   (0.01272250 + 0.05) = **15.0124:1** for all four games at once.
-   `nonogram-board.module.css:444-446` already ships this identical rule for
-   its own `.control`, so this is that precedent applied, not a new idea.
-   Pinned by `apps/web/test/ink-on-accent.test.ts`. */
 .hint:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -393,7 +253,6 @@
   box-shadow: var(--shadow-lg)
     color-mix(in srgb, var(--accent) 20%, transparent);
   padding: var(--space-4);
-  /* Per game, same mechanism as .statsCard above. */
   transform: rotate(var(--grid-card-rot, 0.4deg));
 }
 
@@ -409,11 +268,8 @@
 /* The skeleton's hint bar borrows .hint so its box is the shipped size by
    construction — but that rule also carries `cursor: pointer` and a 1px
    press, and an inert box that presses is a lie the player can see.
-   `pointer-events: none` retires both at once, and it has to sit AFTER
-   .hint here: same specificity, later wins (finding
-   `play-skeleton-is-not-at-final-dimensions`). Each game's module carries
-   its own copy for its own input row, because a class hashed in this file
-   cannot reach one hashed in that one (landmine 24). */
+   `pointer-events: none` retires both, and it has to sit AFTER .hint:
+   same specificity, later wins. */
 .placeholder {
   cursor: default;
   pointer-events: none;
@@ -425,8 +281,6 @@
   }
 }
 
-/* ≤1140px — single column, desktop type. The sidebar's card folds into the
-   top bar and the title row. */
 @media (max-width: 1140px) {
   .page {
     grid-template-columns: 1fr;
@@ -470,22 +324,17 @@
 
   .hint {
     margin-top: 14px;
-    /* F4 draws a 50px bar. Expressed as padding + min-height rather than a
-       fixed height so the computed vertical padding is non-zero: with
-       box-sizing border-box, 14px line + 2×16px + 3px border = 49px, and
-       min-height pins the frame's 50px exactly. Same reason as the desktop
-       rule above. */
+    /* Padding + min-height rather than a fixed height, so the computed vertical
+       padding is non-zero and impeccable's `cramped-padding` stays down. */
     padding: var(--space-4) var(--space-5);
     min-height: 50px;
     height: auto;
   }
 }
 
-/* ≤768px — F4's type step-down. Page padding is 20px, not F4's 16px:
-   impeccable's body-text-viewport-edge fires on a >40-char <p> whose
-   rect.left < 16, and the mobile rules paragraph lands exactly on 16.0 —
-   one sub-pixel of layout rounding tips it red. Hoje ships 20px for the
-   same reason. */
+/* Page padding is 20px, not 16px: impeccable's body-text-viewport-edge
+   fires on a >40-char <p> whose rect.left < 16, and 16.0 is tipped red by
+   one sub-pixel of layout rounding. */
 @media (max-width: 768px) {
   .page {
     padding: var(--space-5) var(--space-5) var(--space-6);
@@ -503,21 +352,16 @@
 
   .gridCard {
     box-sizing: border-box;
-    /* .board is `align-items: center`, so the card is shrink-to-fit by
-       default. `width: 100%` + a cap makes the board FLUID instead: the
-       per-game cap at 390 and above, the page's own width below that. Width
-       rather than `align-self: stretch`, because .board is a COLUMN flex
-       container — its cross axis is the horizontal one, where stretch and a
-       centring margin fight each other. The cap itself is per game
-       (`--board-mobile-max`, declared on the game's own page class): 347px
-       for Binairo's 38px cells (finding
-       `board-overflows-horizontally-below-369px`), 350px for Sudoku's nine
-       columns. */
+    /* .board is `align-items: center`, so the card is shrink-to-fit by default.
+       `width: 100%` + a cap makes the board fluid instead. Width rather than
+       `align-self: stretch`, because .board is a COLUMN flex container — its
+       cross axis is the horizontal one, where stretch and a centring margin
+       fight each other. */
     width: 100%;
     max-width: var(--board-mobile-max);
     padding: 10px;
-    /* 5px 5px 0 is intentional: F4 draws the mobile board shadow between
-       --shadow-md and --shadow-lg; no token carries that value. */
+    /* 5px 5px 0 is intentional: no token carries the value between
+       --shadow-md and --shadow-lg. */
     box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 20%, transparent);
   }
 }

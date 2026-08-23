@@ -1,27 +1,6 @@
-/* The push pre-prompt card (#145, ADR-0064): card paper, 1px line border,
-   hard single-color offset shadow in the APP accent at 25% — the register
-   of the side column's other app-accent surface (the streak card above it)
-   and of the hub-onboarding card, never the game accent: the streak this
-   card asks to protect is app identity (DESIGN.md, the StreakCard rule).
-   Washi tape in the same accent, subtle static rotation — never animated
-   per interaction. Accent colours SHAPES only (ADR-0041): every text run
-   is --ink or --ink-2 on paper except the accept button's, which is the
-   shipped solid-ink CTA treatment (--paper-desk on --ink, the
-   conclusion-view .cta pair) — ink on paper inverted, not an accent.
-
-   Named .prompt/.promptTape rather than the sibling sheets' .card/.tape on
-   purpose: CSS Modules hash per file, but the visual gate for this surface
-   is a NON-SCOPED fixture emission (the #35 ritual) that links this sheet
-   beside conclusion-view.module.css, which owns generic names.
-
-   Hub-onboarding's 200ms @starting-style settle is REFUSED here, not
-   forgotten (#145 step-6 quality m7): that card mounts at the end of the
-   hub with nothing after it, while this one appears mid-visit on the
-   conclusion — a surface whose only motion is the win settle, already
-   over by then. A second, unrelated entrance animation would compete
-   with it for the "one settle per screen" budget (DESIGN.md), so the
-   card simply IS there on its render, and with no transition and no
-   animation it owes no prefers-reduced-motion block either. */
+/* Named .prompt/.promptTape rather than the sibling sheets' .card/.tape:
+   the #35 visual ritual emits a NON-SCOPED fixture that links this sheet
+   beside conclusion-view.module.css, which owns the generic names. */
 
 .prompt {
   position: relative;
@@ -68,9 +47,6 @@
   margin-top: var(--space-4);
 }
 
-/* The solid-ink CTA treatment (conclusion-view .cta — the shipped
-   non-game button pair): this action goes to the app's own value, so it
-   wears no game accent. */
 .promptAccept {
   display: flex;
   align-items: center;
@@ -92,13 +68,8 @@
   outline-offset: 2px;
 }
 
-/* The in-flight state (#145 step-7, correctness F4): while the accept
-   flow awaits the permission dialog and the store, the card stays as the
-   dialog's framing with both buttons inert — quieted, never hidden.
-   Explicit colours rather than an opacity fade: a whole-button opacity
-   washes the label below AA (the step-7 detect run caught exactly that),
-   while a lightened fill keeps --paper-desk text readable and the lost
-   shadow is what reads as "not pressable" in this system. */
+/* Explicit colours rather than an opacity fade: a whole-button opacity
+   washes the label below AA. */
 .promptAccept:disabled,
 .promptDecline:disabled {
   cursor: default;
@@ -114,8 +85,6 @@
   text-decoration-color: transparent;
 }
 
-/* The quiet decline (the hub-onboarding .dismiss treatment): underlined
-   text, no chrome — "Agora não" must never compete with the puzzle. */
 .promptDecline {
   min-height: var(--touch-target-min);
   padding: var(--space-3) var(--space-2);

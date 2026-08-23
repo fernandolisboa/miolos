@@ -229,7 +229,8 @@ the loss.
      would render as **two** shapes and the one new state would be
      invisible. What ships is three border treatments, still with no colour
      involved and all three legible in greyscale
-     (`apps/web/src/play/conclusion-view.module.css:521-549`): `missing`
+     (`apps/web/src/play/conclusion-view.module.css` — `.chipMissing`,
+     `.chipPlayed`, `.chipDone`): `missing`
      **dashed** (nothing here yet), `played` **solid** (something happened,
      just not a completion), `done` a **tinted fill and no border at all**.
      `--line` on `--paper-card` is 1.4323:1, so the border is a shape

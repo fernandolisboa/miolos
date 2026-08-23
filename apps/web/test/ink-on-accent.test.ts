@@ -92,7 +92,7 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
 
   it("reads the label colour through the property, with the site's own safe fallback", () => {
     // The fallback is real and load-bearing — `--board-mobile-max` is read at
-    // `screen.module.css:409` with none (landmine N12), so a header comment
+    // `screen.module.css`'s `.gridCard` with none (landmine N12), so a header comment
     // claiming a fallback is not evidence of one. Pinned literally.
     //
     // The fallback is PER SITE, not one literal for all of them (ADR-0041
@@ -236,6 +236,10 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // one set of rules, which is precisely the class this scan exists for. It
     // ships with ZERO accent-coloured text and its focus ring is `--ink`.
     "src/play/share-button.module.css",
+    // #205: the push pre-prompt card, which paints `--accent-app` on its
+    // shadow and its washi tape and nothing else. It carried the
+    // shapes-only claim in a header comment and in no gate at all.
+    "src/play/push-prompt-card.module.css",
   ] as const;
 
   /**
@@ -319,6 +323,26 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
       ).toBe(true);
     }
     expect(ALLOWED_ACCENT_TEXT.size).toBe(4);
+  });
+
+  it("keeps the lazy conclusion's two frames free of every accent token", () => {
+    // `conclusion-lazy.module.css` renders before any game context exists —
+    // `next/dynamic`'s loading component receives no props — so there is no
+    // accent for it to be right about, and the degraded fallback keeps the
+    // same neutral chrome. Neither SHEETS nor SHARED reaches this file, so
+    // without this the rule had no gate at all. Stronger than either scan:
+    // no accent token in ANY property, which is what a RING would use.
+    const css = stylesheet("src/play/conclusion-lazy.module.css");
+    expect(
+      /var\(--accent[a-z-]*\)/.exec(css)?.[0],
+      "the transient and degraded frames are paper, line and ink only",
+    ).toBeUndefined();
+    // Anti-vacuity, both ways: the sheet really was read, and the matcher
+    // really does fire on a sheet that carries an accent.
+    expect(css).toContain(".stamp");
+    expect(stylesheet("src/archive/late-result.module.css")).toMatch(
+      /var\(--accent[a-z-]*\)/,
+    );
   });
 
   it("paints the eleven converted sites in a neutral ink", () => {

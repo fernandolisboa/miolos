@@ -9,7 +9,7 @@
    — a 148×57 PILL. Rendered at 1440×900 the panel was one small lozenge and
    two grey lines on an empty desk: it read as an error state, not as a
    completion. DESIGN.md's completion-stamp register is a circle, the daily's
-   own is a real 150×150 one (`play/conclusion-view.module.css:224-261`), and
+   own is a real 150×150 one (`play/conclusion-view.module.css`'s `.stamp`), and
    this is now that circle with that anatomy — an 11px tracked label over a
    display-scale figure, a postmark rather than a badge.
 
