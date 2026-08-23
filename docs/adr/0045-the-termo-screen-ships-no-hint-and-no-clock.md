@@ -20,7 +20,7 @@ on the Termo client.**
   consequence (g) records that
   [ADR-0027](./0027-the-hint-is-computed-on-the-client.md)'s argument does
   not transfer — *"#27 decides Termo's hint on its own evidence; nothing
-  here has decided it"* — and `apps/web/src/play/grid-hint.ts:16-21` says
+  here has decided it"* — and `apps/web/src/play/grid-hint.ts` says
   the same in the module's own header. ADR-0027:125-131 additionally
   forecloses the reverse move: *"Any future feature whose security rests on
   'the client does not have today's solution' is built on a false premise —
@@ -58,7 +58,7 @@ on the Termo client.**
    acceptance criteria contain one. #27's do not.
 
 2. **Termo's state carries no `HintState`.** `HintState`
-   (`apps/web/src/play/types.ts:44-50`) is a standalone interface, composed
+   (in `apps/web/src/play/types.ts`) is a standalone interface, composed
    by each game rather than part of `PlayCore`, so Termo simply omits the
    field. Nothing is widened, and `HintState.lastIndex: number | null` —
    *"the cell the hint filled"*, a flat board index with no Termo meaning —
@@ -99,7 +99,7 @@ on the Termo client.**
    own reason: the number is dominated by per-guess round trips and idle
    time, no Termo statistic will ever reflect it, and #29 puts `em 4/6`
    there instead. So `entryFor` returns `elapsedMs: undefined` for every
-   Termo record (`apps/web/src/play/day-state.ts:168-175`), and a
+   Termo record (`entryFor` in `apps/web/src/play/day-state.ts`), and a
    `"completed"` entry without a duration is a legal shape rather than a bug
    — which is why ADR-0044 decision 4's rule reads *never set unless
    completed*, one-directionally, and why `DayChip` branches on the status
@@ -190,8 +190,8 @@ on the Termo client.**
   `apps/web/src/play/screen.module.css` is explicit that `.placeholder`
   exists so the **skeleton's** hint bar is at final dimensions — a
   pre-hydration affordance for a button that will exist. A permanent inert
-  box for one that never will is the "dead share button"
-  `conclusion-view.tsx` rejects by name.
+  box for one that never will is the "dead share button" this repo rejects
+  by name.
   *(Citation repaired at #34 —
   [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)
   decision 1. **This entry is not amended: it is DISCHARGED on its own
@@ -201,9 +201,12 @@ on the Termo client.**
   on the argument above, untouched. What moved is the **citation**: the
   `conclusion-view.tsx` comment named here used to read *"the share button
   remains out (#34 — a dead share button is a broken promise, unlike a dead
-  link)"* and is rewritten to shipped tense in the same pull request. The
-  rule now lives in that comment as discharged, and here as its source. No
-  header is taken: no decision moves and no enumeration grows.)*
+  link)"* and was rewritten to shipped tense at #34. **#205 then deleted it**,
+  so the rule no longer has an in-source home: it lives here as its source,
+  in ADR-0054 decision 1, and mechanically in `conclusion-share.test.tsx`
+  (*"is absent from `empty` and from `skeleton` — the dead-share-button rule,
+  mechanically"*). No header is taken: no decision moves and no enumeration
+  grows.)*
 - **Rendering the clock on the Termo screen for parity.** It would be the
   one number on screen that no statistic ever reflects, on a game whose
   elapsed time is mostly network latency.

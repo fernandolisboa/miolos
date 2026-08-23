@@ -10,34 +10,33 @@ decision 3 has been in the repo since M0: *"A lost Termo is **played**, not
 completed. The loss records in the Termo guess distribution as the fail row
 — standard Termo behavior — but counts for neither streak nor Dia
 Perfeito."* Nothing has ever produced one. `PlayCore.status`'s `"lost"`
-member (`apps/web/src/play/types.ts:31`) is a declared-but-dead union
-member, carried by
+member (`PlayCore` in `apps/web/src/play/types.ts`) is a
+declared-but-dead union member, carried by
 [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md)
 decision 5 *"from day one"* for exactly this ticket.
 
 Issue #27 is the first producer, and it forces three questions the shipped
 layer cannot answer:
 
-- **The play record has no shape for a Termo.** All three members are a
-  flat `entries` array plus an optional solved `grid`
-  (`apps/web/src/play/play-record.ts:64-203`). Termo's state is a sequence
-  of judged guess rows, and its tiles cannot be re-derived on the client:
-  the answer is on no payload, and `evaluateGuess` needs it.
+- **The play record has no shape for a Termo.** All three members are a flat
+  `entries` array plus an optional solved `grid` (the three grid schemas in
+  `apps/web/src/play/play-record.ts`). Termo's state is a sequence of judged
+  guess rows, and its tiles cannot be re-derived on the client: the answer
+  is on no payload, and `evaluateGuess` needs it.
 - **`DayEntry` collapses "played" and "completed" into one boolean.**
-  `DayEntry.concluded` (`apps/web/src/play/day-state.ts:25`) is read by the
-  hub's meta line, every hub card's action, the conclusion's day chips and
-  the conclusion's chaining CTA. Under it a lost Termo is either a lie
+  `DayEntry.concluded` (then in `apps/web/src/play/day-state.ts`) is read by
+  the hub's meta line, every hub card's action, the conclusion's day chips
+  and the conclusion's chaining CTA. Under it a lost Termo is either a lie
   (`concluded: true` on a game that completed nothing, counted in "X de 4
   concluídos" on a day ADR-0008 decision 4 says is not perfect) or a trap
   (pending on a board with no guesses left — and `nextPendingDaily` chains
-  on `!entryOf(candidate).concluded` with termo FIRST in `DAY_GAMES`
-  (`apps/web/src/play/conclusion-view.tsx:24`, `:337`), so it would be
-  offered as the next pending daily on every other game's conclusion,
-  forever).
+  on `!entryOf(candidate).concluded` with termo FIRST in `DAY_GAMES` (both
+  in `apps/web/src/play/conclusion-view.tsx`), so it would be offered as the
+  next pending daily on every other game's conclusion, forever).
 - **`sync.ts`'s per-game dispatch is fail-closed and fires immediately.**
-  `const unhandled: never = record` (`apps/web/src/play/sync.ts:270`) makes
-  a new `playRecordSchema` member a red typecheck until `buildBody` has its
-  case.
+  `const unhandled: never = record` (`buildBody` in
+  `apps/web/src/play/sync.ts`) makes a new `playRecordSchema` member a red
+  typecheck until `buildBody` has its case.
 
 [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md)
 decision 2 constrains any fix: *"A false pending is invisible — … A false
@@ -75,7 +74,7 @@ done would be a lie the player can catch."*
    [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md)'s rejected list
    makes for the motif name: `acceptResponse` copies only `elapsedMs` and
    `hintsUsed`, and only on the `recorded: false` branch
-   (`apps/web/src/play/sync.ts:411-423`), and the replay path returns before
+   (in `apps/web/src/play/sync.ts`), and the replay path returns before
    the wall read by
    [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md)
    decision 4's design. Without the record, `/termo/concluido` cannot show
@@ -100,8 +99,8 @@ done would be a lie the player can catch."*
    engine and the wire speak `"playing" | "won" | "lost"`
    (`packages/games/src/termo/status.ts:11`). `PlayCore.status` is
    `"playing" | "solved" | "lost"` and has **no `"won"` member**
-   (`apps/web/src/play/types.ts:31`). The reducer's `judged` transition maps
-   `won → solved` and passes `lost` through, in one place.
+   (`PlayCore` in `apps/web/src/play/types.ts`). The reducer's `judged`
+   transition maps `won → solved` and passes `lost` through, in one place.
 
    **`outcome` is stored on the RECORD and is not duplicated into the
    state.** `TermoPlayState` carries no `outcome` field: it would be a
@@ -122,7 +121,7 @@ done would be a lie the player can catch."*
    is NEVER set unless `status === "completed"`.** The verbs are
    `CONTEXT.md`'s own, minus the late completion a local reader cannot see.
    A lost Termo carries **no duration**: `DayEntry.elapsedMs`'s own contract
-   (`apps/web/src/play/day-state.ts:26-30`) is *"publishing that as the
+   (in `apps/web/src/play/day-state.ts`) is *"publishing that as the
    day's result would put a time on a game nobody finished,"* and a lost
    Termo is exactly that.
 
@@ -130,7 +129,7 @@ done would be a lie the player can catch."*
    biconditional — *"`elapsedMs` is set iff `status === "completed"`"* —
    which the same PR then broke by design.** `"completed"` does not imply a
    duration: `entryFor` returns `{status: "completed", elapsedMs: undefined}`
-   for a **won** Termo (`apps/web/src/play/day-state.ts:168-175`), because
+   for a **won** Termo (in `apps/web/src/play/day-state.ts`), because
    [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
    decision 4 declines to publish this game's elapsed time on any projection
    — the number is dominated by per-guess latency and #29 replaces it with
@@ -283,8 +282,8 @@ done would be a lie the player can catch."*
   case"* — it named one check the `superRefine` does not perform and omitted
   two it does. This paragraph is what a future author reads to reason about
   what a parsed record guarantees, so it states the shipped split
-  (`apps/web/src/play/play-record.ts:318-382`, the `superRefine` itself at
-  `:350-382`):
+  (`termoPlayRecordSchema` in `apps/web/src/play/play-record.ts`, and its
+  `superRefine`):
 
   - **`superRefine`, four issue branches, all four covered by `T-WEB-S75`:**
     a win not in the last row; `answer` present exactly when `concluded`;
@@ -310,7 +309,7 @@ done would be a lie the player can catch."*
     render** and leaves it on disk.
 - **(f) A tampered local `outcome` produces a false COMPLETED on this
   device, and the honest statement of that is the one ADR-0031 cares
-  about.** `entryFor` (`apps/web/src/play/day-state.ts:102-108`) reads the
+  about.** `entryFor` (in `apps/web/src/play/day-state.ts`) reads the
   record's fields without consulting the engine — it cannot consult it,
   because decision 3 keeps `day-state.ts` engine-free — so a hand-edited
   `{concluded: true, outcome: "won"}` on a six-loss board yields
@@ -352,18 +351,18 @@ done would be a lie the player can catch."*
 - **(j) Records already on disk are untouched, and an unreadable one fails
   toward PENDING.** `DayEntry` is **derived, never persisted**: `entryFor`
   builds it in memory from `readPlayRecord` on every read
-  (`apps/web/src/play/day-state.ts:102-108`), so reshaping it costs nothing
-  in storage and needs no migration. `v` stays **1** and the three shipped
-  `playRecordSchema` members are untouched
-  (`apps/web/src/play/play-record.ts:65`, `:102`, `:163` — three
-  `v: z.literal(1)`), so a Binairo, Sudoku or Nonogram record written before
-  this PR parses identically after it. A record that *does* fail to parse
-  returns `undefined` from `parseAt` (`play-record.ts:247-260`), so
-  `entryFor` returns `PENDING` — it **fails toward pending**, the safe
-  direction ADR-0031 decision 2 names. The honest corollary, stated rather
-  than left implicit: an unparseable **Termo** record re-offers a spent
-  board as playable, and what prevents the double count is not the client —
-  it is the server's write-once row (ADR-0026 decision 1) plus the
-  idempotent `getCompletion` short-circuit in `POST /completions`
-  (`apps/api/app/completions/route.ts`), which returns the stored row
-  before any judging.
+  (in `apps/web/src/play/day-state.ts`), so reshaping it costs nothing in
+  storage and needs no migration. `v` stays **1** and the three shipped
+  `playRecordSchema` members are untouched (the binairo, sudoku and nonogram
+  schemas in `apps/web/src/play/play-record.ts` — three `v: z.literal(1)`),
+  so a Binairo, Sudoku or Nonogram record written before this PR parses
+  identically after it. A record that *does* fail to parse returns
+  `undefined` from `parseAt` (`play-record.ts`), so `entryFor` returns
+  `PENDING` — it **fails toward pending**, the safe direction ADR-0031
+  decision 2 names. The honest corollary, stated rather than left implicit:
+  an unparseable **Termo** record re-offers a spent board as playable, and
+  what prevents the double count is not the client — it is the server's
+  write-once row (ADR-0026 decision 1) plus the idempotent `getCompletion`
+  short-circuit in `POST /completions`
+  (`apps/api/app/completions/route.ts`), which returns the stored row before
+  any judging.

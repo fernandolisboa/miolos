@@ -113,7 +113,8 @@ built on it.
 ## Consequences
 
 - **(a) MEASURED — the solved board persists exactly one frame.** The
-  mechanism predicts it: `use-play-lifecycle.ts:206-212` freezes the clock
+  mechanism predicts it: `use-play-lifecycle.ts`'s clock-freeze effect
+  freezes the clock
   in a **passive** effect (*"an entry action carries no `now`"*), which
   React flushes after paint, and the screen's swap is gated on
   `status !== "playing" && timer.runningSince === null`. The prediction
@@ -181,7 +182,8 @@ built on it.
   supplied only by a client component that owns the local play record
   (decision 3), orthogonal to every member already there, and passed by no
   game that does not need it. Of the three shipped members
-  (`picture`, `outcome`, `answer` — `apps/web/src/play/conclusion-view.tsx:94-96`),
+  (`picture`, `outcome`, `answer` — `<ConclusionView/>`'s props in
+  `apps/web/src/play/conclusion-view.tsx`),
   **two games pass none, and the third passes only `picture`**: binairo and
   sudoku render byte-identically to what they rendered before any of the
   three existed, and nonogram takes `picture` alone

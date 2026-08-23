@@ -13,22 +13,17 @@ import type { ConclusionCopy } from "./types";
 
 /**
  * The conclusion tree behind a `next/dynamic` boundary, for the four PLAY
- * screen roots only — ADR-0054 decision 15's recorded relief, taken up at
- * #145 step 7, the night it stopped being a forecast: #142 and #145 landed
- * together and `route-client-js.mjs` redded `/binairo` (+41.1) and
- * `/nonogram` (+43.2) against their 40 KB budgets, exactly as the script's
- * own forecast paragraph predicted ("one more conclusion-sized feature
- * reds `/nonogram`… the structural move is `next/dynamic`"). The
- * conclusion only renders after the grid closes, so it is a natural lazy
- * boundary: the play routes' first-load sets drop the whole tree.
+ * screen roots only (ADR-0054 decision 15). The conclusion only renders
+ * after the grid closes, so it is a natural lazy boundary: the play
+ * routes' first-load sets drop the whole tree.
  *
  * THREE RULES MAKE THIS SAFE:
  *
  * - `/<jogo>/concluido` pages and their per-game wrappers keep their
  *   STATIC imports of `conclusion-view` — that segment exists for a
- *   bookmark, a reload and `impeccable detect` (D26/D27), and its server
- *   render must keep carrying the real markup. Only the in-place swap on
- *   the play routes rides this module.
+ *   bookmark, a reload and `impeccable detect`, and its server render
+ *   must keep carrying the real markup. Only the in-place swap on the
+ *   play routes rides this module.
  * - every screen root calls its preload function below in a mount effect,
  *   so the chunk downloads in the background while the player is still
  *   solving and the win-moment swap resolves from the module cache — no
@@ -36,22 +31,19 @@ import type { ConclusionCopy } from "./types";
  *   content, so ADR-0004 is untouched. The preloads live HERE, as named
  *   exports, so the warm is one observable seam a test can spy on
  *   (T-WEB-S289) — an inline `import()` inside a screen's effect was
- *   coverage-proof, and stripping it left every gate green (#145 step-7b
- *   review, major 4).
- * - the swap has a FAILURE STORY (#145 step-7b review, blocker 2). Before
- *   this boundary the conclusion was in the first-load set and its
- *   presence was guaranteed; lazy, a chunk fetch can fail — connectivity
- *   lost inside the preload window, an aborted fetch, a cold cache on a
- *   flaky link — and `sw.js` deliberately caches nothing (ADR-0064
- *   decision 5). So: while the chunk resolves, `ConclusionLoading` paints
- *   the conclusion-shaped skeleton (never a blank frame — the D28
- *   discipline); on a failed load, `ConclusionChunkBoundary` retries the
+ *   coverage-proof.
+ * - the swap has a FAILURE STORY. Before this boundary the conclusion was
+ *   in the first-load set and its presence was guaranteed; lazy, a chunk
+ *   fetch can fail — connectivity lost inside the preload window, an
+ *   aborted fetch, a cold cache on a flaky link — and `sw.js` deliberately
+ *   caches nothing (ADR-0064 decision 5). So: while the chunk resolves,
+ *   `ConclusionLoading` paints the conclusion-shaped skeleton (never a
+ *   blank frame); on a failed load, `ConclusionChunkBoundary` retries the
  *   import ONCE and, if that also fails, renders
  *   `ConclusionChunkFallback` — the stamp word and the frozen time from
  *   props already in memory, no fetch, no rich module. The win is never a
  *   blank page and never Next's generic error screen, which is what keeps
- *   ADR-0028 D26's "finishing offline works" true now that the tree is
- *   lazy.
+ *   ADR-0028's "finishing offline works" true now that the tree is lazy.
  *
  * `ssr: false` changes nothing the play routes ever painted: a record is
  * localStorage and a claim is a client fetch, so no conclusion branch was
@@ -101,8 +93,8 @@ type ChunkBoundaryState<T> =
   | { readonly phase: "failed" };
 
 /**
- * The error boundary around the lazy conclusion mount (#145 step-7b
- * review, blocker 2). On the first catch it retries `retry()` — webpack
+ * The error boundary around the lazy conclusion mount. On the first catch
+ * it retries `retry()` — webpack
  * clears a failed chunk from its cache, so a second `import()` is a real
  * second network attempt — and renders the recovered module DIRECTLY:
  * `React.lazy` caches a rejection, so re-rendering the same lazy element
@@ -148,7 +140,7 @@ export class ConclusionChunkBoundary<T> extends Component<
         return this.props.children;
       case "retrying":
         // The same pending frame the loading path paints: the retry is a
-        // network round trip and the D28 rule (nothing unproven paints)
+        // network round trip and the rule that nothing unproven paints
         // holds across it.
         return <ConclusionLoading />;
       case "recovered":

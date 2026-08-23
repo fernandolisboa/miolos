@@ -226,7 +226,7 @@ describe("the termo record's superRefine (T-WEB-S75)", () => {
   it("refuses a closed board with no judged guess at all", () => {
     // This branch is what makes `termoBody`'s `undefined` return unreachable
     // for a legitimately closed record — and `undefined` there PERMANENTLY
-    // settles the record as rejected (sync.ts:199-206).
+    // settles the record as rejected (`syncRecord` in sync.ts).
     expect(playRecordSchema.safeParse(won({ guesses: [] })).success).toBe(
       false,
     );

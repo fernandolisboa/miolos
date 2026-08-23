@@ -1,21 +1,10 @@
 /**
- * Deferred completion sync (plan 017 §9.2, AC 3/AC 4). The local play record
- * IS the queue (D18): there is exactly one pending item per (game, date), and
- * its natural key is the same key that makes `POST /completions`
- * idempotent, so no second store and no dedup logic exist.
- *
- * Everything here runs with no play screen mounted — that is the point.
- * The body is built from `record.grid` alone, so a flush needs neither the
- * givens nor a rendered board (§9.1), which is what makes "syncs on
- * reconnect" true on a cold mount, on an `online` event and on
- * /<jogo>/concluido.
- *
  * THIS MODULE IS EXACTLY ONE MODULE, for every game, and that is a
- * correctness constraint rather than a tidiness one (ADR-0029, plan 018
- * S1/S18): the guards below are module-level and the queue they guard
- * (`listPendingRecords()`) is game-blind, so a second copy mounted in the
- * same SPA session would double every POST and settle the other copy's
- * records out from under it.
+ * correctness constraint rather than a tidiness one: the guards below are
+ * module-level and the queue they guard (`listPendingRecords()`) is
+ * game-blind, so a second copy mounted in the same SPA session would double
+ * every POST and settle the other copy's records out from under it.
+ * See ADR-0029.
  */
 import {
   completionRequestSchema,
@@ -39,32 +28,23 @@ import {
 } from "./play-record";
 
 /**
- * Statuses a retry can never turn into an acceptance: the body was
- * rejected, the puzzle was killed, or this client is not allowed to write
- * at all. Clearing `pendingSync` on these is what stops an unsyncable
- * record from being posted on every mount for the rest of its life.
+ * Statuses a retry can never turn into an acceptance. Clearing `pendingSync`
+ * on these is what stops an unsyncable record from being posted on every
+ * mount for the rest of its life. 429 and 5xx are deliberately absent.
+ * See ADR-0038, ADR-0053.
  */
 const TERMINAL_STATUSES = new Set([400, 403, 404, 415, 422]);
 
 /**
- * The completion route's late-write ceiling (#31, ADR-0053 decision 13).
- * Deliberately NOT in the set above and never to be added to it: the record
- * is a real completion refused by a per-day RATE rule, and settling it would
- * discard a puzzle the player actually solved. It is named here because the
- * flush loop treats it differently from every other retryable status — it is
- * the one refusal that is certain to repeat for every sibling in the queue.
+ * Never terminal: the record is a real completion refused by a per-day RATE
+ * rule, and settling it would discard a puzzle the player actually solved.
+ * See ADR-0053.
  */
 const CAPPED_STATUS = 429;
 
-/**
- * The bounded in-page retry ladder. It is what makes AC 3 true for a
- * player who finishes, sees the pending line and closes the tab: the other
- * triggers all need a new mount or an event that may never arrive.
- * Four attempts, then stop — a page load is not a background job.
- */
+/** Four attempts, then stop — a page load is not a background job. */
 const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 60_000] as const;
 
-// Module-level, so it survives re-mounts (the session-bootstrap precedent).
 let flushing = false;
 let retryStep = 0;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -74,10 +54,7 @@ let retryTimer: ReturnType<typeof setTimeout> | undefined;
  * storage off in an Android WebView, site data blocked. `writePlayRecord`
  * is a silent no-op there and `listPendingRecords()` reads back empty, so
  * without this a solved board would never be posted AT ALL and the day
- * would be lost for the streak (finding
- * `completion-lost-when-localstorage-is-unavailable`). It is a fallback,
- * not a second queue: the record is dropped from it the moment the sync
- * settles, and the store still wins on a key collision.
+ * would be lost for the streak.
  */
 const memoryQueue = new Map<string, PlayRecord>();
 
@@ -85,26 +62,15 @@ const queueKey = (record: PlayRecord) => `${record.game}:${record.date}`;
 
 /**
  * The queue as this flush sees it: the durable records first, plus anything
- * the store could not hold. A stale memory copy of a record the store has
- * already settled costs one extra POST, which the route answers
- * idempotently — the alternative is dropping a completion.
+ * the store could not hold.
  *
- * **NEWEST DATE FIRST, and the order is what makes the loop's `break` sound**
- * (#31 step-6 finding F1). `listPendingRecords()` walks `localStorage` key
- * order, which is neither date order nor insertion order; the flush below
- * stops at the first 429 on the argument that every remaining record is
- * certain to be refused for the same reason. That argument is only true of
- * records the ceiling can refuse — the cap's branch is `isLateDate(date,
- * server today)`, so a TODAY-dated write is never capped. In an unordered
- * queue a stale archive record could therefore stop the flush before today's
- * daily was ever posted, and the deferred write would land after the São
- * Paulo rollover with `on_time = false`: the streak day lost, permanently,
- * on the mechanic CLAUDE.md calls the core one.
- *
- * Date-descending removes the case rather than papering over it. Today's
- * daily, if queued, is always first; and a record that took the 429 has
- * proved its own date is `< server today`, so every record after it in this
- * order is also late and also certain to be capped.
+ * **NEWEST DATE FIRST, and the order is what makes the loop's `break` sound.**
+ * `listPendingRecords()` walks `localStorage` key order, which is neither date
+ * order nor insertion order, and the cap's branch is `isLateDate(date, server
+ * today)`, so a TODAY-dated write is never capped. Date-descending puts
+ * today's daily first, and a record that took the 429 has proved its own date
+ * is `< server today`, so every record after it in this order is also late and
+ * also certain to be capped. See ADR-0053.
  */
 function pendingQueue(): PlayRecord[] {
   const stored = listPendingRecords();
@@ -122,9 +88,8 @@ function pendingQueue(): PlayRecord[] {
 }
 
 /**
- * POST every pending record; terminal statuses clear `pendingSync`.
- * `record` is the completion the caller has just built — passing it makes
- * the flush independent of whether the store accepted the write.
+ * POST every pending record. Passing `record` makes the flush independent of
+ * whether the store accepted the write.
  */
 export async function flushPendingCompletions(
   record?: PlayRecord,
@@ -133,19 +98,12 @@ export async function flushPendingCompletions(
     memoryQueue.set(queueKey(record), record);
   }
   if (flushing) {
-    // The POST is idempotent, so a duplicate flush is free — but a
-    // concurrent one would double the requests for nothing.
-    //
-    // Arming the ladder for the record we just queued is NOT optional here,
-    // and returning bare is how a completion goes missing on a perfectly
-    // online device (finding `handed-completion-dropped-by-a-concurrent-
-    // flush`): the in-flight flush read `pendingQueue()` before this record
+    // Arming the ladder for the record we just queued is NOT optional, and
+    // returning bare is how a completion goes missing on a perfectly online
+    // device: the in-flight flush read `pendingQueue()` before this record
     // existed, so it will not post it, and if its own records all settle it
-    // calls `cancelRetries()` — clearing the timer and resetting the step.
-    // The conclusion then shows "pendente" until a new mount, an `online` or
-    // a `visibilitychange`. `scheduleRetry` no-ops while a timer is pending
-    // and its handler re-reads the queue, so the skipped record is picked up
-    // on the first rung instead.
+    // calls `cancelRetries()`. `scheduleRetry` no-ops while a timer is pending
+    // and its handler re-reads the queue.
     if (record?.pendingSync === true) {
       scheduleRetry();
     }
@@ -159,8 +117,6 @@ export async function flushPendingCompletions(
       return;
     }
 
-    // Loud, not silent: a relative "undefined/completions" fetch would 404
-    // against the web app itself and look like a rejected completion.
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
       console.error(
@@ -177,37 +133,21 @@ export async function flushPendingCompletions(
     for (const record of pending) {
       const verdict = await syncRecord(apiUrl, record);
       stillPending = verdict.stillPending || stillPending;
-      // BREAK on the first 429, and this is not an optimisation (#31,
-      // ADR-0053 decision 13). The late-write ceiling is per USER per São
-      // Paulo day, and the queue is DATE-DESCENDING (see `pendingQueue`
-      // above), so the record that took this 429 has proved its own date is
-      // strictly before the server's today and every record still ahead of it
-      // is older still — every one of them is certain to be refused for the
-      // same reason. Without that ordering the claim is false, and a stale
-      // archive record head-of-line-blocks today's daily into a late,
-      // streak-losing write (step-6 F1). A player who closes
-      // 200 archive boards in one day syncs 50 and holds 150 permanently
-      // pending, and 429 is correctly non-terminal, so without this the whole
-      // tail is re-posted on every mount, every `online` and every
-      // `visibilitychange` — four retry rungs each, all certain to fail. The
-      // records stay queued and the ladder stays armed; what stops is paying
-      // for refusals we already know the answer to.
+      // BREAK on the first 429, and this is not an optimisation: the queue is
+      // DATE-DESCENDING (see `pendingQueue` above), so every record still
+      // ahead of this one is older and certain to be refused for the same
+      // reason. The records stay queued and the ladder stays armed; what stops
+      // is paying for refusals we already know the answer to.
       if (verdict.capped) {
         stillPending = true;
         break;
       }
     }
 
-    // The queue is RE-READ, never inferred from `pending`. That array was
+    // The queue is RE-READ, never inferred from `pending`: that array was
     // built before the first `await`, so a completion handed to this flush
-    // while it was in flight is not in it — and answering "none of MY records
-    // are still pending" with `cancelRetries()` would clear the ladder the
-    // handed record just armed and strand it until a new mount, an `online`
-    // or a `visibilitychange`, with the conclusion showing "pendente" to a
-    // player who is online (finding
-    // `handed-completion-dropped-by-a-concurrent-flush`). A record that
-    // cannot be posted at all is settled by `syncRecord`, so this cannot
-    // spin: everything left here is genuinely retryable.
+    // while it was in flight is not in it. A record that cannot be posted at
+    // all is settled by `syncRecord`, so this cannot spin.
     if (stillPending || pendingQueue().length > 0) {
       scheduleRetry();
     } else {
@@ -219,10 +159,9 @@ export async function flushPendingCompletions(
 }
 
 /**
- * Register the ambient sync triggers and flush once for the mount. Returns
- * the teardown. `online` covers the reconnect; `visibilitychange` covers a
- * tab that was backgrounded while offline and comes back already online,
- * which fires no `online` event at all.
+ * Register the ambient sync triggers and flush once for the mount.
+ * `visibilitychange` covers a tab that was backgrounded while offline and
+ * comes back already online, which fires no `online` event at all.
  */
 export function startCompletionSync(): () => void {
   const onOnline = () => {
@@ -245,22 +184,15 @@ export function startCompletionSync(): () => void {
   };
 }
 
-/**
- * The outcome of one record's POST, as the flush loop needs it: whether the
- * record is still queued, and whether the server refused it for a reason
- * that will refuse every SIBLING too.
- */
 interface SyncVerdict {
   readonly stillPending: boolean;
   /**
-   * The late-write ceiling answered (#31, ADR-0053 decision 13). The cap is
-   * per USER per São Paulo day, so record N+1 fails identically to record N —
-   * this is what tells the loop to stop rather than pay the whole queue.
+   * The late-write ceiling answered. It is per USER per São Paulo day, so
+   * record N+1 fails identically to record N.
    */
   readonly capped: boolean;
 }
 
-/** Sync one record. */
 async function syncRecord(
   apiUrl: string,
   record: PlayRecord,
@@ -277,30 +209,19 @@ async function syncRecord(
 
   let response = await post(apiUrl, body);
   if (response?.status === 401) {
-    // The cookie the first mint produced is gone or expired. THE ALLOWANCE IS
-    // NOT THIS MODULE'S: `remintSession()` owns it, because `termo/guess-
-    // client.ts` re-mints on the same rule and two local booleans over one
-    // shared mint promise put two cookieless `POST /session` calls in flight
-    // at once — two identities, one surviving cookie, and a completion
-    // written for the loser (finding B-1). A spent allowance resolves `false`
-    // and nothing is re-posted, which is the same request count this module
-    // made before the hoist.
+    // The one-shot re-mint allowance is `remintSession()`'s, not this
+    // module's: two local booleans over one shared mint promise put two
+    // cookieless `POST /session` calls in flight at once — two identities, one
+    // surviving cookie, and a completion written for the loser.
     if (await remintSession()) {
       response = await post(apiUrl, body);
       if (response?.ok === true) {
-        // The fresh identity is serving requests, so a cookie that expires
-        // LATER in this same page load is recoverable (finding B-2). `ok` and
-        // not `status !== 401`: a 403 and a 415 are decided before
-        // `requireUserId`, and a 429 or a 5xx without regard to it, so none of
-        // them proves the cookie was honoured (finding E-7). The rule lives in
-        // `confirmSession`'s own TSDoc.
         confirmSession();
       }
     }
   }
 
   if (response === undefined) {
-    // Network failure: the record is the only copy, so it stays queued.
     return { stillPending: true, capped: false };
   }
 
@@ -320,24 +241,14 @@ async function syncRecord(
   }
 
   // 401 (after the one re-mint), 429 and 5xx: retryable, keep it queued.
-  // 429 is the completion route's late-write ceiling (#31, ADR-0053
-  // decision 13) and it is deliberately NOT in the set above: the record
-  // is a real completion refused by a per-day RATE rule, so it must
-  // survive to flush after the next São Paulo rollover. Settling it would
-  // discard a puzzle the player actually solved.
   return { stillPending: true, capped: response.status === CAPPED_STATUS };
 }
 
 /**
- * The POST body, built from the record ALONE (§9.2) and parsed before it
- * leaves — the request contract is a boundary, so it is validated rather
- * than trusted. `undefined` means the record cannot produce one.
- *
- * This switch is the module's ONLY per-game branch, and it is deliberate
- * (plan 018 S18, ADR-0029 consequence (f)): a grid body is a grid body, but
- * Termo's completion request carries GUESSES, not a grid (#27) — so it adds
- * a non-grid case HERE rather than a second sync module, which S1 rejects
- * on the correctness argument at the top of this file.
+ * The POST body, built from the record ALONE. `undefined` means the record
+ * cannot produce one. This switch is the module's only per-game branch — a
+ * second sync module is refused by the correctness argument at the top of
+ * this file.
  */
 function buildBody(record: PlayRecord): string | undefined {
   switch (record.game) {
@@ -349,19 +260,11 @@ function buildBody(record: PlayRecord): string | undefined {
       return termoBody(record);
     default: {
       // A new member of `playRecordSchema` with no case here is a RED
-      // TYPECHECK, never a dropped completion (finding
-      // `buildbody-switch-fails-open-for-a-new-game`). Falling off the end
-      // returns `undefined`, which `syncRecord` reads as "no result to post"
-      // and answers with `settle(record, "rejected")` — permanently clearing
-      // `pendingSync`, so a game whose case went missing — #25's Nonogram is
-      // the one that landed under this guard — would silently lose the day for
-      // the streak. TS cannot catch that on its own: `string | undefined` is a
-      // legitimate return here (`gridBody` on a record with no grid), so
-      // TS2366 never fires. This assignment is what fails instead — the same
-      // guarantee `storedSolution` gets for free in
-      // apps/api/app/completions/route.ts, where the return type excludes
-      // undefined. An unhandled game throws, keeping the record queued
-      // rather than settling it.
+      // TYPECHECK, never a dropped completion: falling off the end returns
+      // `undefined`, which `syncRecord` reads as "no result to post" and
+      // permanently settles as rejected. TS cannot catch that on its own —
+      // `string | undefined` is a legitimate return here — so this assignment
+      // is what fails instead.
       const unhandled: never = record;
       throw new Error(
         `no completion body builder for ${JSON.stringify(unhandled)}`,
@@ -370,13 +273,6 @@ function buildBody(record: PlayRecord): string | undefined {
   }
 }
 
-/**
- * Nonogram rides here rather than adding a branch (ADR-0029 consequence (f),
- * plan 020 §14.2): its `grid` is `(0|1)[]` exactly like binairo's, and its
- * completion request carries the same five keys — no `size` on the wire (P4).
- * The only per-game work was the `case` label above, and forgetting it is a
- * RED TYPECHECK on the `never` assignment, never a dropped completion.
- */
 function gridBody(
   record: BinairoPlayRecord | NonogramPlayRecord | SudokuPlayRecord,
 ): string | undefined {
@@ -387,14 +283,10 @@ function gridBody(
     game: record.game,
     date: record.date,
     grid: record.grid,
-    // Clamped at BOTH ends, and not merely re-stating what the schema
-    // already proved on read: `memoryQueue` holds a record that never
-    // reached the store, so on the very devices the fallback exists for
-    // (DOM storage off) `buildBody` is the FIRST bound this number meets.
-    // A backwards wall-clock step makes it negative, `min(0)` in the
-    // request contract then fails the parse, and the flush would drop an
-    // intact completion as "no solved grid to post" (finding
-    // `memory-queue-record-bypasses-the-two-sided-clamp`).
+    // Clamped at BOTH ends, and not merely re-stating what the schema already
+    // proved on read: `memoryQueue` holds a record that never reached the
+    // store, so on the very devices the fallback exists for this is the FIRST
+    // bound the number meets.
     elapsedMs: Math.min(Math.max(record.elapsedMs, 0), ELAPSED_CAP_MS),
     hintsUsed: record.hintsUsed,
   });
@@ -402,43 +294,24 @@ function gridBody(
 }
 
 /**
- * Termo's completion body: the GUESS WORDS, oldest first, and no verdict
- * (#27, ADR-0044 decision 7). The server re-judges them against its stored
- * answer with `evaluateGuess`/`deriveBoardStatus` and decides won or lost
- * itself — the client never asserts an outcome, which keeps `outcome` off the
- * one surface ADR-0026's rejected list calls forgeable.
- *
- * The TILES stay on the device. They are the client's rendering state, and
- * posting them would be a second copy of a fact the server derives — the
- * "second place for the client to lie" ADR-0032 decision 4 refuses when it
- * keeps `size` off the nonogram wire.
- *
- * TWO PLAYERS WHO BOTH WON ON GUESS 4 POST DIFFERENT BYTES, and that is a
- * real departure from ADR-0032's canonical-body pattern rather than an
- * oversight. It is warranted because the guess SEQUENCE is itself
- * outcome-bearing state: ADR-0008 requires the fail row and #29's
- * distribution is a function of the guess count. Nothing beyond the sequence
- * is carried.
+ * Termo's completion body: the GUESS WORDS, oldest first, and no verdict —
+ * the server re-judges them and decides won or lost itself. The TILES stay on
+ * the device.
  *
  * IT CANNOT RETURN `undefined` FOR A LEGITIMATELY CLOSED RECORD, and that is
  * load-bearing: `syncRecord` reads `undefined` as "no result to post" and
  * PERMANENTLY settles the record as rejected. The record schema requires at
- * least one judged guess when `concluded` (its `superRefine`, T-WEB-S75), so
- * the empty-list path is unreachable and the only way here is a failed
- * contract parse — exactly as it is for `gridBody`.
+ * least one judged guess when `concluded`, so the empty-list path is
+ * unreachable and the only way here is a failed contract parse.
  *
- * A six-guess LOSS is a 200 with `outcome: "lost"`, never a 422
- * (ADR-0044 decision 8): 422 stays in `TERMINAL_STATUSES` and keeps
- * ADR-0032 decision 4's meaning — well-formed, but not this puzzle.
+ * See ADR-0044.
  */
 function termoBody(record: TermoPlayRecord): string | undefined {
   const parsed = completionRequestSchema.safeParse({
     game: "termo",
     date: record.date,
     guesses: record.guesses.map((row) => row.guess),
-    // Clamped at BOTH ends for the memory-queue path, exactly as `gridBody`
-    // does and for the same reason (finding
-    // `memory-queue-record-bypasses-the-two-sided-clamp`).
+    // Clamped at BOTH ends for the memory-queue path, as `gridBody` does.
     elapsedMs: Math.min(Math.max(record.elapsedMs, 0), ELAPSED_CAP_MS),
     hintsUsed: record.hintsUsed,
   });
@@ -454,9 +327,8 @@ async function post(
     return await fetch(`${apiUrl}/completions`, {
       method: "POST",
       credentials: "include",
-      // Required by the route (plan 017 D30): a JSON content type forces a
-      // CORS preflight, which is what makes the WEB_ORIGIN grant
-      // load-bearing rather than the origin guard alone.
+      // A JSON content type forces a CORS preflight, which is what makes the
+      // WEB_ORIGIN grant load-bearing rather than the origin guard alone.
       headers: { "Content-Type": "application/json" },
       body,
     });
@@ -482,9 +354,8 @@ async function acceptResponse(
     );
     return false;
   }
-  // On `recorded: false` the server is reporting the values it already
-  // holds (a second device, a partial sync), so the conclusion never shows
-  // a time the server does not have.
+  // On `recorded: false` the server is reporting the values it already holds,
+  // so the conclusion never shows a time the server does not have.
   settle(
     stored.recorded
       ? record
@@ -499,9 +370,9 @@ async function acceptResponse(
 }
 
 function settle(record: PlayRecord, outcome: "recorded" | "rejected"): void {
-  // The fallback queue is dropped here and nowhere else: a settled record
-  // is one the server has answered, and re-posting it on the next trigger
-  // would be the resurrection D15 exists to prevent.
+  // The fallback queue is dropped here and nowhere else: a settled record is
+  // one the server has answered, and re-posting it on the next trigger would
+  // resurrect it.
   memoryQueue.delete(queueKey(record));
   writePlayRecord({ ...record, pendingSync: false, syncOutcome: outcome });
 }

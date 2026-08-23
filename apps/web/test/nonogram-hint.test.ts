@@ -105,7 +105,7 @@ function fullyCrossed(
 
 describe("the encoding tripwire (N9)", () => {
   it("never reads a correctly CROSSED cell as a contradiction, on any of the 280 boards", () => {
-    // P11 is a derived constraint, not a taste: `grid-hint.ts:64` is
+    // P11 is a derived constraint, not a taste: `grid-hint.ts`'s `nextHint` is
     // `if (entry !== null && entry !== target)`. If a cross were a third
     // value distinct from the solution's empty cell, every correctly-crossed
     // cell would come back as a `correction` and the day's one hint would

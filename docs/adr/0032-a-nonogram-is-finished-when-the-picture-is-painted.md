@@ -32,8 +32,8 @@ the identical puzzle post different bytes.
 
 **What a cell is encoded as on the client.** This one is not open at all,
 and the constraint comes from a module this ticket does not touch.
-`apps/web/src/play/grid-hint.ts:64` is `if (entry !== null && entry !==
-target)` — the shared contradiction test. If a cross were a third value
+`apps/web/src/play/grid-hint.ts`'s `nextHint` is `if (entry !== null && entry
+!== target)` — the shared contradiction test. If a cross were a third value
 distinct from the solution's empty value, **every correctly-crossed cell
 would return a `correction`**, and the day's one free hint would
 systematically tell the player to un-cross a cell they crossed correctly.
@@ -65,7 +65,7 @@ was performed" on the fourth.
 
 2. **The client encodes a cell `1` = preenchida (filled), `0` = marcada
    (crossed), `null` = vazia (undecided).** This is *forced*, not chosen:
-   it is the only encoding under which `grid-hint.ts:64`'s contradiction
+   it is the only encoding under which `nextHint`'s contradiction
    test is correct for a crossed cell. Verified against a verbatim copy of
    `nextHint` over 280 real boards, all four cases.
 
@@ -138,7 +138,7 @@ was performed" on the fourth.
   player which of their paints are wrong, for free, forever.
 - **A cross as a third client value distinct from the solution's empty
   value.** It would make every correctly-crossed cell a contradiction
-  under `grid-hint.ts:64` and turn the day's single hint into an
+  under `grid-hint.ts`'s `nextHint` and turn the day's single hint into an
   instruction to undo correct work.
 - **A `size` key on the completion request.** A second place for the
   client to lie, it breaks the audited five-field tripwire in

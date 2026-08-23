@@ -96,14 +96,14 @@ project's shared layer would get bent around Termo one guess at a time.
      response is *parsed, never cast* — `CLAUDE.md`'s boundary gate — and a
      parse failure is a server bug, not a verdict, so the turn is neither
      judged nor rejected. It is the one row in this list where the status
-     code says nothing, and it is exactly the direction `sync.ts:399-410`
-     already takes for the completion: *"A 200 the contract does not
+     code says nothing, and it is exactly the direction `acceptResponse` in
+     `sync.ts` already takes for the completion: *"A 200 the contract does not
      recognize is a server bug, not a player problem: keep the only copy of
      the completion queued rather than discarding it on a body we cannot
      read."* Applied to a turn, that means the guess stays in the pending
      row and is re-postable. **A live turn must survive a server bug.**
    - **429 is never terminal.** This repo emits none today — the vocabulary
-     borrowed here is `sync.ts:47`'s `TERMINAL_STATUSES = new Set([400, 403,
+     borrowed here is `sync.ts`'s `TERMINAL_STATUSES = new Set([400, 403,
      404, 415, 422])`, which contains no 429 — and the case exists because
      the platform firewall can emit one. Settling a live turn as "rejected"
      on a load spike would cost the player a guess.
@@ -122,12 +122,13 @@ project's shared layer would get bent around Termo one guess at a time.
 
 4. **`sync.ts` is NOT the vehicle for a guess, and this is a decision rather
    than an omission.** Its queue is a *completions* queue keyed on
-   `pendingSync` (`sync.ts:82-91`, posting to `/completions` at `:380`);
-   `settle(record, "rejected")` clears that flag permanently
-   (`sync.ts:427-433`), which is the opposite of what a live turn needs; its
-   ladder is deliberately un-urgent (`[2_000, 5_000, 15_000, 60_000]`,
-   `sync.ts:55`) and bails in a hidden tab (`:448-455`); and its
-   module-level guards (`:57-60`) exist to keep ONE game-blind queue
+   `pendingSync` (`pendingQueue` in `sync.ts`, posting to `/completions`
+   from `post`);
+   `settle(record, "rejected")` clears that flag permanently, which is the
+   opposite of what a live turn needs; its
+   ladder is deliberately un-urgent (`RETRY_DELAYS_MS`, `[2_000, 5_000,
+   15_000, 60_000]`) and `scheduleRetry` bails in a hidden tab; and its
+   module-level guards exist to keep ONE game-blind queue
    coherent, so pushing a foreground turn through them would let a
    background flush reset a live retry. The guess POST is a foreground
    awaited fetch in Termo's own module, sharing only `ensureSession()` and
@@ -158,7 +159,7 @@ project's shared layer would get bent around Termo one guess at a time.
    `remintSpent` (the once-per-page-load allowance, re-armed by
    `confirmSession()` when the fresh identity is seen to serve a request).
    Both callers keep their own independent decision to **ask** —
-   `sync.ts:213-234` for the completion flush, `termo/guess-client.ts:152-166`
+   `syncRecord` in `sync.ts` for the completion flush, `termo/guess-client.ts`
    for the turn — and the **mint** stays singular. The request count is
    unchanged; only the ambiguity is gone. A contributor "enforcing" the
    original sentence by restoring a local boolean reopens the race in full.
@@ -191,7 +192,8 @@ project's shared layer would get bent around Termo one guess at a time.
 8. **The timer keeps running through a network stall.** Adding an offline
    pause would put a second pause authority beside
    `use-play-lifecycle.ts`'s `visibilitychange`/`pagehide` path
-   (`use-play-lifecycle.ts:129-155`, both listeners registered at `:175-177`), in a module ADR-0029 decision 2 makes
+   (its mount effect registers both listeners), in a module ADR-0029
+   decision 2 makes
    shared. Termo's `elapsedMs` therefore includes network waits and is not
    comparable to a grid time — which is one of the reasons
    [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
@@ -263,8 +265,8 @@ project's shared layer would get bent around Termo one guess at a time.
   asserting the guess list would assert something false.
 - **(e) `buildBody`'s `undefined` return is a trap for this game.** An
   unbuildable body permanently settles a record as rejected
-  (`sync.ts:202-210`), so Termo's builder may only return `undefined` on a
-  state a closed record cannot reach.
+  (`syncRecord` in `sync.ts`), so Termo's builder may only return `undefined`
+  on a state a closed record cannot reach.
 - **(f) The native clients inherit this whole.** A native Termo client
   re-implements the screen against this document, including the held-turn
   behaviour and the pending conclusion — not against the web client's

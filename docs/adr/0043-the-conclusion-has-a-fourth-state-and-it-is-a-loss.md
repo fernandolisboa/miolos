@@ -7,16 +7,16 @@
 ## Context
 
 `<ConclusionView/>` has three states — `skeleton`, `empty`, `result`
-(`apps/web/src/play/conclusion-view.tsx:126`, `:141`, `:188`) — and all
-three assume the stamp is an achievement. `stampLabel` is `"Concluído"`;
-`stampAria` is *"X concluído em MM:SS, sem dicas"*; the 150px circle's
-three slots are a label, a time and a hints line.
+(`apps/web/src/play/conclusion-view.tsx`) — and all three assume the stamp
+is an achievement. `stampLabel` is `"Concluído"`; `stampAria` is *"X
+concluído em MM:SS, sem dicas"*; the 150px circle's three slots are a label,
+a time and a hints line.
 
 Three games have shipped and none of them can lose.
 [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md)
 rule 3: *"A lost Termo is played, not completed."* `PlayCore.status` has
 carried `"lost"` since day one for exactly this ticket
-(`apps/web/src/play/types.ts:31`,
+(`PlayCore` in `apps/web/src/play/types.ts`,
 [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md)
 decision 5), with **zero producers**. #27 is the first.
 
@@ -32,12 +32,11 @@ is the worked example.
 accented form revealed at the end."* ADR-0033's Rejected list already
 establishes the wrong channel for it, in terms that transfer exactly: the
 completion **response** is broken as a reveal carrier because
-`acceptResponse` copies only `elapsedMs`/`hintsUsed`, only on the
-`recorded: false` branch (`apps/web/src/play/sync.ts:411-423`), and
-`settle` writes `{...record, pendingSync, syncOutcome}` (`:427-433`) — so a
-word on the response is discarded before a reload could show it, and the
-replay path returns before the wall read, so a second visit gets a response
-with nothing to name from.
+`acceptResponse` copies only `elapsedMs`/`hintsUsed`, only on the `recorded:
+false` branch, and `settle` writes `{...record, pendingSync, syncOutcome}` —
+both in `apps/web/src/play/sync.ts`. So a word on the response is discarded
+before a reload could show it, and the replay path returns before the wall
+read, so a second visit gets a response with nothing to name from.
 
 And [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
 decision 4 removes the clock and the hint line from this game entirely,
@@ -92,14 +91,14 @@ the loss.
    unreachable and untestable — the same shape
    `apps/web/src/i18n/messages.ts:343-350` rejects by name for `lostAria`,
    *"a runtime branch on a compile-time constant whose false arm is
-   unreachable and untestable"*. **The decision
-   the field encoded is untouched and still normative: a loss does not
-   settle.** Only the mechanism moved. `OutcomeStamp` reads
-   `const lost = outcome.state === "lost"` and composes `.stampLost` and
-   `.stampStill` from it (`apps/web/src/play/conclusion-view.tsx:452-460`),
-   which makes the pairing unfalsifiable rather than merely conventional —
-   a still `"result"` stamp is now unrepresentable instead of untested. The
-   shipped interface is `apps/web/src/play/types.ts:125-133`. A game that
+   unreachable and untestable"*. **The decision the field encoded is
+   untouched and still normative: a loss does not settle.** Only the
+   mechanism moved. `OutcomeStamp` reads `const lost = outcome.state ===
+   "lost"` and composes `.stampLost` and `.stampStill` from it (in
+   `apps/web/src/play/conclusion-view.tsx`), which makes the pairing
+   unfalsifiable rather than merely conventional — a still `"result"` stamp
+   is now unrepresentable instead of untested. The shipped interface is
+   `ConclusionOutcome` in `apps/web/src/play/types.ts`. A game that
    genuinely wants that degree of freedom adds it then, with a caller that
    exercises it.
 
@@ -140,7 +139,8 @@ the loss.
 
 4. **No time-as-achievement framing on a loss.** No `.stampTime`, no hints
    line, no `elapsedMs` anywhere in the branch. A time on a game nobody won
-   is the same lie `apps/web/src/play/day-state.ts:26-30` already refuses
+   is the same lie `DayEntry.elapsedMs`'s own contract in
+   `apps/web/src/play/day-state.ts` already refuses
    for a part-played board.
 
 5. **On a WIN, the Termo stamp shows the guess count where a grid game
@@ -196,10 +196,10 @@ the loss.
    `ConclusionOutcome` and `ConclusionAnswer` — including `aria`, the whole
    composed accessible name — is composed by the Termo wrapper from
    `messages.ts` and handed across as a finished string.
-   `apps/web/src/play/types.ts:73-83`'s rule holds: **plain data
-   only, never a function, however tempting** — a function crossing the RSC
-   boundary is an HTTP 500 that only `test/route-ssr.test.tsx` can see, and
-   #23 shipped exactly that bug in exactly this file.
+   `ConclusionCopy`'s rule in `apps/web/src/play/types.ts` holds: **plain
+   data only, never a function, however tempting** — a function crossing the
+   RSC boundary is an HTTP 500 that only `test/route-ssr.test.tsx` can see,
+   and #23 shipped exactly that bug in exactly this file.
 
 9. **A played-but-not-completed game reads `jogado` on the day card, and
    the chaining CTA skips it.** The data shape is
@@ -213,7 +213,7 @@ the loss.
    rests on colour. Without the chaining change a lost Termo is offered as
    the next pending daily forever, from every game's conclusion, and —
    because `DAY_GAMES` puts termo first
-   (`apps/web/src/play/conclusion-view.tsx:29`) — as the **default** target.
+   (in `apps/web/src/play/conclusion-view.tsx`) — as the **default** target.
 
    **Corrected at #27's step 6, on two counts.** This decision was written
    before the screen existed and got the border and the arithmetic wrong.
@@ -239,7 +239,7 @@ the loss.
      border only tells the two non-done chips apart at a glance.
    - **Two values become FOUR, not three.** The draft counted a duration and
      `falta` going to three. `DayChip` ships a duration, `feito`, `jogado`
-     and `falta` (`apps/web/src/play/conclusion-view.tsx:586-594`). The
+     and `falta` (`DayChip` in `apps/web/src/play/conclusion-view.tsx`). The
      fourth exists only because
      [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
      decision 4 withholds a **won** Termo's duration — a consequence this

@@ -123,7 +123,7 @@ for recording its deviations with their arithmetic.
    to the keystroke, not only to the comparison, and it reuses the engine's
    one normalization function rather than adding a second. Window-scoped
    listeners are established practice in this layer
-   (`use-play-lifecycle.ts:176-177` — `pagehide` and `pageshow`; `:175`'s
+   (`use-play-lifecycle.ts` — `pagehide` and `pageshow`; its
    `visibilitychange` is `document`-scoped — and `use-pointer-stroke.ts`'s
    `armWindowEnd`).
 
@@ -193,8 +193,8 @@ for recording its deviations with their arithmetic.
    `--board-mobile-max: 254px`, **declared unconditionally**, because
    `play/screen.module.css:490` reads it with no fallback and omitting it
    deletes the ≤768px cap in silence. (That line is `:490` in tree, not the
-   `:409` two shipped comments still cite — `screen.module.css:290` and
-   `accent.ts:85`, both stale and neither this ticket's to move.) Keyboard: one 20-column grid, letter
+   `:409` one shipped comment still cites — `screen.module.css:290`; the
+   `accent.ts` copy went with #205's sweep.) Keyboard: one 20-column grid, letter
    keys span 2 and command keys span 3, `width: 552px` / `gap: 8px` / rows
    52px on desktop → `C = (552 − 19×8)/20 = 20px`, a 48px letter key and a
    76px command key; `max-width: 350px` / `gap: 4px` / rows 48px below 768px

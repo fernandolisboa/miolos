@@ -4,8 +4,7 @@
  *
  * `M{col} {row}h1v1h-1z` — an absolute move to the cell's top-left corner and
  * a closed unit square, so every subpath is independent and the fill rule
- * never has to reconcile overlapping ones. Pure and module-scope, so it is
- * testable without React and cannot close over a render.
+ * never has to reconcile overlapping ones.
  *
  * Shared by the daily conclusion and the free-play solved card; it lives in
  * its own module because `conclusion-view` is banned by name inside the

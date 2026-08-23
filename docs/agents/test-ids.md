@@ -40,8 +40,27 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S354` | `S353` | `T-WEB-23` |
+| `T-WEB` | `S355` | `S354` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#205's `apps/web/src/play` tranche spent **`T-WEB-S354`** in the new
+`apps/web/test/client-graph-engine-free.test.ts`. Re-derived by grep before
+allocating, which agreed with this table in both columns (next free `S354`,
+highest in use `S353`).
+
+- **`T-WEB-S354`** — the transitive relative-import closure of
+  `src/play/day-state.ts`, the module every route reaches, imports
+  `@miolos/games` from nowhere. Three modules in that closure carried the
+  rule as prose and nothing enforced it: `eslint.config.mjs`'s
+  `@miolos/games/termo` ban is attached only to `apps/web/src/free-play/**`
+  and `apps/web/app/modo-livre/**`, so a value import in `play-record.ts`
+  would ship the Termo answer pool to `/` and red nothing. Three arms, on the
+  `T-LINT-S49`/`S50` one-id-both-halves shape: a positive arm asserting the
+  walk actually reaches the three modules (so a broken walker cannot pass by
+  finding nothing), the negative scan itself, and a control running the same
+  matcher over `src/termo/state.ts`, a real engine importer. Mutation-proven:
+  planting `import { TERMO_MAX_GUESSES } from "@miolos/games/termo"` in
+  `play-record.ts` reds the negative arm and names the module.
 
 #206's cluster 3 spent **`T-WEB-S351…S353`** in the new
 `apps/web/test/mount-fetch.test.tsx` and **`T-LINT-S61`** in

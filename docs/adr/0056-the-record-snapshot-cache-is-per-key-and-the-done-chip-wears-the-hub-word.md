@@ -44,7 +44,8 @@ term — `Late completion · Conclusão tardia`, *"never feeds streak, time stat
 or Dia Perfeito"* — and the hub's chip says `Feito`, which `CONTEXT.md:11`
 reserves for an on-time `Conclusão`. Every completion this chip can render is
 a late one, so the hub's word is being applied to the state the hub's own
-projection was built to exclude (`src/play/day-state.ts:26-30`).
+projection was built to exclude (`DayEntry.elapsedMs` in
+`src/play/day-state.ts`).
 
 ## Decision
 
@@ -120,8 +121,8 @@ projection was built to exclude (`src/play/day-state.ts:26-30`).
    reversal touches. **Two verbs (`Feito` / `Jogado`) are not
    reversible**: a lost Termo showing *Feito* is the false done ADR-0031
    decision 2 forbids by name. Sharpening the record: the union this
-   projection re-derives (`day-state.ts:26-30`) was built to exclude *"the one
-   a local reader cannot see: a LATE completion"* — on the archive, the
+   projection re-derives (`DAY_STATUSES` in `packages/core/src/day.ts`) was
+   built to exclude the one a local reader cannot see, a LATE completion — on the archive, the
    excluded state is the only state.
 
    **The counter-precedent, engaged rather than left for a future reader to
@@ -282,7 +283,7 @@ side and the terms are `24 + g/2` and `8 + g/2`.
 semantics goes red there rather than diverging quietly. **Its claim is narrow
 by design** — *the two read the same record the same way* — and explicitly
 **not** that the two surfaces' states mean the same thing, which
-`day-state.ts:26-30` says they do not. **Agreement alone cannot hold the
+`DAY_STATUSES` in `packages/core/src/day.ts` says they do not. **Agreement alone cannot hold the
 `pendingSync` / `syncOutcome` case**, because agreement is invariant under
 both sides moving together; the absolute arm on `pendingSync: true` and
 `syncOutcome: "rejected"` is what pins it, and it is a separate assertion for

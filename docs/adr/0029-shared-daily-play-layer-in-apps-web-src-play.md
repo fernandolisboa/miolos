@@ -20,8 +20,8 @@ modules, or share them?
 **The trigger for answering it now is a correctness argument, not a
 style one.** `apps/web/src/binairo/sync.ts` holds module-level
 singletons — `flushing`, `reminted`, `retryStep`, `retryTimer` and the
-`memoryQueue` map (`sync.ts:45-60`) — and they guard a **game-blind**
-queue: `listPendingRecords()` (`play-record.ts:151`) scans the whole
+`memoryQueue` map (in that `sync.ts`) — and they guard a **game-blind**
+queue: `listPendingRecords()` (in that `play-record.ts`) scans the whole
 `miolos:play:` `localStorage` prefix and returns *every* game's pending
 records. `startCompletionSync()` is already registered twice in one
 session (the play hook and the conclusion), and the module-level guards
@@ -34,7 +34,7 @@ That is a bug, not a duplication smell.
 
 A second fact forces part of the move regardless of taste:
 `readPlayRecord(date)` hardcodes `playRecordKey("binairo", date)`
-(`play-record.ts:113`), so a Sudoku screen calling the shipped signature
+(in that `play-record.ts`), so a Sudoku screen calling the shipped signature
 restores a 64-cell Binairo board into an 81-cell grid. The signature has
 to change whether or not the module moves.
 

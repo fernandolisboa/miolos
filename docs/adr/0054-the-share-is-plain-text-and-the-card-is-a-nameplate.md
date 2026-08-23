@@ -104,17 +104,16 @@ verdicts, so this record is readable without it:
   region renders on every conclusion — the fourth record, added at step 7,
   and the only one of the four where a sentence is contradicted rather than
   an enumeration grown)**.
-- **Annotated, no header** — the sentence gains a term or a qualification, no
-  decision moves and no route enumeration grows: ADR-0028 `:35-40` and its
-  echo ADR-0053 `:1030-1034` (*"neither cacheable nor an SEO surface"*, which
-  decision 10 qualifies rather than contradicts); ADR-0045 `:186-191` (the
-  dead-share-button rule, **discharged** by the live button, with the
-  `conclusion-view.tsx` comment it cites rewritten); ADR-0002 `:41` (*"static
-  instances of Fraunces **at chosen weights**"* — what must be chosen is
-  `{weight, opsz}`, decision 12); and **ADR-0038 consequence (a) `:316-326`
-  (*"It cheats only its owner"* — a fabricated `n/6` and tile grid now reach
-  an audience, though the prohibition half, never a medal and never an
-  entitlement, is untouched)**.
+- **Annotated, no header** — the sentence gains a term or a qualification,
+  no decision moves and no route enumeration grows: ADR-0028 `:35-40` and
+  its echo ADR-0053 `:1030-1034` (*"neither cacheable nor an SEO surface"*,
+  which decision 10 qualifies rather than contradicts); ADR-0045's
+  dead-share-button rule, **discharged** by the live button; ADR-0002 `:41`
+  (*"static instances of Fraunces **at chosen weights**"* — what must be
+  chosen is `{weight, opsz}`, decision 12); and **ADR-0038 consequence (a)
+  `:316-326` (*"It cheats only its owner"* — a fabricated `n/6` and tile
+  grid now reach an audience, though the prohibition half, never a medal and
+  never an entitlement, is untouched)**.
 - **Obeyed, not amended:** ADR-0010 `:20` (both readers spread
   `publishedConjuncts()`; neither re-types it); ADR-0046 (the free-play wall
   gains a class, which strengthens the guarantee it describes); ADR-0047 (a
@@ -188,8 +187,8 @@ verdicts, so this record is readable without it:
    true of the swap and false of a browser with no `localStorage` — Safari
    private mode, a site-data-blocked profile — where `readPlayRecord` returns
    `undefined` forever. There the shipped control never enabled and never
-   explained itself, which **is** ADR-0045 `:186-191`'s dead share button,
-   reached from the other side. The composer now takes a `ShareSubject`: a
+   explained itself, which **is** ADR-0045's dead share button, reached from
+   the other side. The composer now takes a `ShareSubject`: a
    `TermoPlayRecord`, or `{ game, date, elapsedMs }` for the three grid games,
    whose entire share is a header and an elapsed time and whose elapsed time
    `ConclusionResult` already carries. Termo genuinely cannot be composed that

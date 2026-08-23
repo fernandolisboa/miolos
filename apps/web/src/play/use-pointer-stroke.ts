@@ -1,58 +1,6 @@
 /**
- * The pointer-stroke machinery every dragging board shares, moved out of
- * `binairo/grid.tsx` (plan 020 §5.3, P19/P20).
- *
- * **Why it is here and why only now.** ADR-0029 consequence (b) is the
- * standing rule — *"a later contributor who wants to 'finish the job' by
- * hoisting the board into `play/` is undoing decision 2, not completing
- * it"* — and this is not the board: there is no JSX, no geometry, no game
- * vocabulary and no `styles` import below. Consequence (c) then names the
- * trigger in writing: *"the pointer-stroke machinery stays in
- * `binairo/grid.tsx` until #25 gives it a second consumer"*. #25's Nonogram
- * board drags, so the condition is met and this move is the execution of a
- * decision already recorded, not a new one.
- *
- * **The move WAS a move, at commit `89d9f86`.** Every #18 comment arrived
- * here kept where it was written: the primary-button guard, the pointer-id
- * scoping, the `elementFromPoint` resolution, the capture net, and the reason
- * a tap in paint mode is resolved on `pointerup` rather than by the cell's own
- * `click`. A tidy-up while moving is how those findings come back. Read that
- * as provenance for the relocation, not as a claim about HEAD: two decisions
- * landed on top of it, and `endStroke`'s TSDoc below was rewritten (rather
- * than kept) to describe them.
- *
- * **THREE things here are new**, and all three are decisions rather than
- * relocations:
- *
- * 1. **`onStrokeEnd`** — ADR-0037 decision (2) owns it, and the Binairo
- *    retrofit is instructed to use it rather than derive a second mechanism.
- *    It exists because pointer capture retargets the trailing `click` to the
- *    container, so on a board whose caret lives in state a stroke would
- *    otherwise leave DOM focus where it was.
- * 2. **The window-scoped end net** (`armWindowEnd` / `detachWindowEnd` and the
- *    unmount cleanup) — step-6 finding NONO-C6, pinned by `T-WEB-S59` in
- *    `test/pointer-stroke.test.tsx`. It closes the latch a capture-failed
- *    stroke leaves when its pointer lifts outside the container.
- * 3. **`onPointerUp` resolves the end cell UNCONDITIONALLY** — Binairo's
- *    pre-move code called `cellIndexAt` inside the tap condition, after
- *    `dragging.current` had short-circuited, so in its default cycle mode
- *    (`painting: false`, `dragging` always false) the call never ran. Here it
- *    runs on every `pointerup`, because the end cell is read ONCE and reused
- *    as both the tap comparison and `onStrokeEnd`'s argument — two readings
- *    could disagree about where the pointer lifted, and that is a correctness
- *    property worth a `document.elementFromPoint` (see `onPointerUp` below).
- *
- * Nets (2) and (3) are NOT inert for Binairo, and the "behaviour-free" wording
- * in `89d9f86`'s message is scoped to that commit rather than to this module:
- * Binairo's default cycle mode passes `painting: false`, never requests
- * capture, and so takes the `if (!captured) armWindowEnd()` branch on every
- * `pointerdown`, where the pre-move code returned early and armed nothing.
- * Nothing user-visible breaks — the container's own `onPointerUp` runs first
- * and detaches — and it fixes a latent cycle-mode latch, but it is a runtime
- * change to a shipped game and must not be read as one. (3) is likewise not
- * user-visible (Binairo passes no `onStrokeEnd`, so the value is discarded)
- * but it is one style+layout flush per tap on a shipped game, on the
- * interaction-latency path **#66** tracks.
+ * The pointer-stroke machinery every dragging board shares. See ADR-0037
+ * decision 2.
  */
 import {
   useEffect,
@@ -214,8 +162,7 @@ export function usePointerStroke(input: {
     // cell still cost 42 hit tests. Whether that matters is unmeasured in a
     // real browser (`elementFromPoint` forces a style+layout flush there, and
     // jsdom has no layout engine to measure it with), so the guard is not
-    // reordered on a jsdom count alone — **#66** carries the trace and the
-    // rect cache it would justify.
+    // reordered on a jsdom count alone.
     const index = cellIndexAt(event.clientX, event.clientY);
     if (index === null || index === lastIndex.current) {
       return;
@@ -263,8 +210,7 @@ export function usePointerStroke(input: {
    * takes pointer capture on this container, and the browser then retargets
    * the trailing `click` to the container too — so the cell button's own
    * handler is never in that event's propagation path and a stationary tap
-   * would write nothing at all. Issue #18 asks for "tap-to-cycle plus a
-   * paint mode"; without this, paint and erase are drag-only.
+   * would write nothing at all.
    *
    * Both latches below are set here and cleared by the NEXT `pointerdown`,
    * so the state a `click` reads always belongs to the stroke that produced

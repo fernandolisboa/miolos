@@ -4,16 +4,17 @@ import { formatElapsed, formatShortDate, messages } from "../i18n";
 import type { TermoPlayRecord } from "./play-record";
 
 /**
- * The share text (#34, ADR-0054 decisions 2–5). PURE: a play record in, one
+ * The share text (ADR-0054 decisions 2–5). PURE: a play record in, one
  * string out. No React, no DOM, no clipboard, no `@miolos/db`, no
  * `@miolos/games` — which is what lets `apps/web/test/share-text.test.ts`
  * assert the whole contract without rendering anything.
  *
  * WHAT IT MAY NOT SAY: the day's answer (it is in the record it reads,
- * `play-record.ts:341`), any guess word, the Nonogram bitmap, any board, the
+ * `termoPlayRecordSchema`'s `answer`), any guess word, the Nonogram bitmap, any board, the
  * Nonogram size, the hint count, the sync outcome, the streak, any medal, any
  * solved total, and the word "hoje" — `onTime` is parsed and DISCARDED
- * client-side (`sync.ts:485-495`), so nothing here can honestly claim when
+ * client-side (`acceptResponse` in `sync.ts`), so nothing here can honestly
+ * claim when
  * the day was solved. The DATE is fine: it is the server's day, handed down
  * by the page shell.
  *
@@ -35,26 +36,19 @@ import type { TermoPlayRecord } from "./play-record";
 
 /**
  * WHAT A SHARE IS COMPOSED FROM — a `PlayRecord` for Termo, and THREE FIELDS
- * for the grid games (step-6 blocker K3).
- *
- * The parameter used to be `PlayRecord`, and that made the button's enabled
- * state depend on `localStorage`. With site data blocked — Safari private
- * mode, a cleared-on-exit profile — `readPlayRecord` returns `undefined`
- * FOREVER, so a control the view renders in both terminal states never
- * enabled and never explained itself: ADR-0045 `:186-191`'s dead share
- * button, arrived at from the other side.
+ * for the grid games.
  *
  * Three of the four games do not need the record at all. Their whole share is
  * the header and an elapsed time, and `ConclusionResult` — the prop the play
  * screen hands down precisely BECAUSE it must work where storage throws
- * (`conclusion-view.tsx:44-50`) — carries the elapsed time already. So the
+ * (`ConclusionResult` in `play/types.ts`) — carries the elapsed time
+ * already. So the
  * union widens to what each half genuinely needs.
  *
  * TERMO STAYS A RECORD, and that is not an oversight: its grid is
  * `guesses[].tiles`, which exists nowhere but the stored record — no prop
- * carries it, and a Termo share without the grid is not the thing AC 1 names.
- * The view's answer for a store-less Termo is to render nothing rather than a
- * control that can never work.
+ * carries it. The view's answer for a store-less Termo is to render nothing
+ * rather than a control that can never work.
  */
 export type ShareSubject =
   | TermoPlayRecord
