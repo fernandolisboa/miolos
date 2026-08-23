@@ -1,17 +1,10 @@
-import {
-  apiErrorResponseSchema,
-  computeCalendar,
-  statsCalendarResponseSchema,
-} from "@miolos/core";
+import { computeCalendar, statsCalendarResponseSchema } from "@miolos/core";
 import { todaySaoPaulo } from "@miolos/db/publishing";
 import { getUserSince, listCompletionsForStats } from "@miolos/db/user";
 import type { NextRequest } from "next/server";
 
-import { corsHeaders } from "../../../src/cors";
-import { getDb } from "../../../src/db";
+import { authenticatedRead } from "../../../src/http/authenticated-read";
 import { ROLLOVER_SLACK_DAYS } from "../../../src/publishing/dates";
-import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
-import { requireUserId } from "../../../src/session/service";
 
 // Never statically cached: every request reads the caller's rows.
 export const dynamic = "force-dynamic";
@@ -33,40 +26,11 @@ export const dynamic = "force-dynamic";
  * owner. It is deliberately NOT the write window: a clamp that followed
  * the write window would drag the calendar's range back arbitrarily and
  * paint "missed" over days the account did not exist for.
- *
- * No OPTIONS handler: a credentialed GET with no custom request headers is
- * a CORS simple request, so the browser never preflights it.
  */
-
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: {
-      ...corsHeaders({ credentials: true }),
-      "Cache-Control": "no-store",
-    },
-  });
-}
-
-export async function GET(request: NextRequest): Promise<Response> {
-  // The whole body is caught: an unhandled throw would otherwise be the
-  // one branch without `no-store` and the CORS grant every intentional
-  // branch carries.
-  try {
-    const db = getDb();
-    // `requireUserId` never mints: a cookieless GET is 401, and
-    // SessionBootstrap owns minting.
-    const userId = await requireUserId(
-      db,
-      request.cookies.get(SESSION_COOKIE_NAME)?.value,
-    );
-    if (!userId) {
-      return errorResponse(401, "no-session");
-    }
-
+export function GET(request: NextRequest): Promise<Response> {
+  return authenticatedRead(request, async (db, userId) => {
     // Post-auth, the three reads are independent, so they share one
-    // round-trip window. Auth stays FIRST and sequential: a 401 must cost
-    // zero queries.
+    // round-trip window.
     const [today, rows, since] = await Promise.all([
       todaySaoPaulo(db),
       listCompletionsForStats(db, userId),
@@ -78,20 +42,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       throw new Error("stats/calendar: user row vanished mid-request");
     }
 
-    return Response.json(
-      // Parse, never cast (boundary rule) — the same strict schema the web
-      // client parses on arrival.
-      statsCalendarResponseSchema.parse({
-        days: computeCalendar(rows, since, today, ROLLOVER_SLACK_DAYS),
-      }),
-      {
-        headers: {
-          ...corsHeaders({ credentials: true }),
-          "Cache-Control": "no-store",
-        },
-      },
-    );
-  } catch {
-    return errorResponse(500, "internal");
-  }
+    // Parse, never cast (boundary rule) — the same strict schema the web
+    // client parses on arrival.
+    return statsCalendarResponseSchema.parse({
+      days: computeCalendar(rows, since, today, ROLLOVER_SLACK_DAYS),
+    });
+  });
 }

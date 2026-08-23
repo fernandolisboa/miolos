@@ -134,7 +134,8 @@ mechanism, so no sentence of ADR-0008 is contradicted.
 5. **`GET /medals` carries the earned id set only, strict on shape, additive
    on content.** The contract (`packages/core/src/contracts/medals.ts`) is
    `{ medals: [id, …] }` — `z.strictObject`, no request parameters,
-   `Cache-Control: no-store`, the ADR-0048 authenticated-read template.
+   `Cache-Control: no-store`, the ADR-0048 authenticated-read template
+   (since #206: `authenticatedRead` in `apps/api/src/http/`).
    Three deliberate choices:
    - **No names or descriptions on the wire.** The client owns them:
      `medalCopy` lives in its own module, `apps/web/src/medals/copy.ts`,

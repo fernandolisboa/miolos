@@ -39,9 +39,20 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
-| `T-API` | `S183` | `S182` | `T-API-16` |
+| `T-API` | `S184` | `S183` | `T-API-16` |
 | `T-WEB` | `S351` | `S347` | `T-WEB-23` |
 | `T-LINT` | `S61` | `S59` | `T-LINT-10` |
+
+#206's cluster 2 spent **`T-API-S183`** on
+`apps/api/test/authenticated-read.test.ts` — one id over four assertions
+about the same claim: the authenticated GETs under `app/` are exactly the
+known eight, none of them names `Cache-Control`, `corsHeaders` or
+`Response.json` of its own, each imports `authenticatedRead`, and each
+module exports exactly `GET` and `dynamic`. The fourth assertion is why the
+id exists at all rather than the extraction shipping bare: deleting the
+per-route envelope prose would otherwise drop the no-OPTIONS rule from
+`stats`, `stats/calendar` and `medals`, which had it in comments only. One
+id, no tail reserved.
 
 #205's `packages/db` comment tranche spent **`T-DB-S89`** on
 `packages/db/test/no-js-date.test.ts` — the DB-clock law (ADR-0010) as a

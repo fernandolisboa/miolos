@@ -16,6 +16,8 @@
 
 **Amended by:** [ADR-0072](./0072-the-day-truth-store-repairs-after-the-mint-rather-than-waiting-for-it.md) (#195) — **(j) and (k), continuing the series; (j) is decision-level.** Annotation (j), decision 5: its trigger list is closed (*"NOTHING ELSE."* in the module header) and gains a sixth entry — **one post-mint repair per page load**, fired when a fetch answers `undefined` while the store has never held a server truth. Nothing is deleted: *"all deduped by an in-flight guard"* and annotation (a)'s *"every tick goes through the same in-flight guard, so a slow answer is never stacked on"* are re-affirmed, because the guard is set synchronously and held for exactly one `GET /day` as before. Annotation (k), consequence (a): the hub's credentialed-GET count was **three** and is **four**, with a cold-load fifth — the consequence's own closing sentence is *"so the count has to be right"*. Annotated in place; nothing deleted; references qualify the letter ("annotation (j)").
 
+**Amended at #206** (cluster 2, the authenticated-read extraction; the ticket ships no ADR of its own) — **(l), continuing the series.** Annotation (l), decision 1: the *"verbatim clone of the `GET /streak` authenticated-read template"* sentence is true of the BEHAVIOUR and no longer of the LOCATION. The template is now `authenticatedRead` in `apps/api/src/http/authenticated-read.ts`, which all eight authenticated GETs call; `GET /streak` is one caller among them and documents nothing. Of decision 1's three deliberate absences, **no OPTIONS handler** is now pinned by `T-API-S183` rather than by prose, **no request parameters** by that same test's request-token scan (the callback signature does not enforce it — the callback closes over `request`), and the **no origin guard** argument still lives in ADR-0066's SameSite-Lax consequence. Nothing is deleted.
+
 [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decision 10 and [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) decision 1 are **obeyed, not amended**, and this ADR says so in those words because a reviewer will ask about both. Decision 10 layer 3 is additionally **cited** by decision 8, as the precedent that makes a playable board behind a done tile acceptable; citing is not amending.
 
 ## Context
@@ -47,7 +49,9 @@ in the app that can **demote**.
    `streakResponseSchema` or `statsResponseSchema` (ADR-0048 decision 3,
    obeyed: both are strict on both ends, so an appended field would fail every
    deployed client's parse). The route is a verbatim clone of the `GET
-   /streak` authenticated-read template: cookie → `requireUserId` which never
+   /streak` authenticated-read template *(**annotation (l)**, #206: true of the
+   behaviour, no longer of the location — the template is `authenticatedRead`
+   in `apps/api/src/http/`, and `GET /streak` is one caller among eight)*: cookie → `requireUserId` which never
    mints, **401 `no-session`** for a cookieless caller, whole-body try/catch →
    500 `internal`, `Cache-Control: no-store` **and** the credentialed CORS
    grant on every branch including the catch, `dynamic = "force-dynamic"`, no
