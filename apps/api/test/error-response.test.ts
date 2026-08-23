@@ -2,6 +2,8 @@ import { readdir, readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
 
+import { errorResponse, readResponse } from "../src/http/responses";
+
 /**
  * One error envelope, and the GET/mutation split is structural.
  *
@@ -42,7 +44,29 @@ describe("the error envelope has one owner (T-API-S184)", () => {
     },
   );
 
-  it("no mutation route sends Cache-Control, and every authenticated GET does", async () => {
+  it.each([...sources])(
+    "%s that calls errorResponse imports it — the POSITIVE half, which a negative scan cannot give",
+    (_n, s) => {
+      // A copy written as `const errorResponse = (status, error) => …` evades
+      // both scans above. Requiring the import is what catches it.
+      if (!s.includes("errorResponse(")) return;
+      expect(s).toMatch(/from "(\.\.\/)+src\/http\/responses"/);
+    },
+  );
+
+  it("the stripper is not vacuous — it cannot hide a real occurrence", () => {
+    const planted = [
+      'const a = "Cache-Control";',
+      "// Cache-Control",
+      "/** Cache-Control */",
+    ].join("\n");
+    const code = planted
+      .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+      .replaceAll(/^[ \t]*\/\/.*$/gm, "");
+    expect(code.match(/Cache-Control/g)).toHaveLength(1);
+  });
+
+  it("no mutation route sends Cache-Control, and the authenticated-read envelope does", async () => {
     const responses = await readFile(
       new URL("../src/http/responses.ts", import.meta.url),
       "utf8",
@@ -54,6 +78,13 @@ describe("the error envelope has one owner (T-API-S184)", () => {
       .replaceAll(/\/\*[\s\S]*?\*\//g, "")
       .replaceAll(/^[ \t]*\/\/.*$/gm, "");
     expect(code.match(/Cache-Control/g)).toHaveLength(1);
+    // Bound to the FUNCTIONS, not to a count: swapping the header between the
+    // two is the exact inversion of this module's thesis, and a file-wide
+    // count cannot see it.
+    expect(readResponse({}).headers.get("cache-control")).toBe("no-store");
+    expect(errorResponse(500, "internal").headers.get("cache-control")).toBe(
+      null,
+    );
     for (const [, source] of sources) {
       expect(source).not.toMatch(/Cache-Control/);
     }

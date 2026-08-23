@@ -59,7 +59,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     request.cookies.get(SESSION_COOKIE_NAME)?.value,
   );
   if (!userId) {
-    // The 204 drop (see the header): no error surface, nothing captured.
+    // No session is a 204 drop, not a 401 — no error surface to probe.
+    // ADR-0069 D2; T-API-S158.
     return dropResponse();
   }
 

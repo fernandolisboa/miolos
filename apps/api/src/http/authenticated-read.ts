@@ -1,12 +1,11 @@
 // see ADR-0048 D3 (no-store, no OPTIONS) and ADR-0060 D1 (401 `no-session`,
 // whole-body catch -> 500 `internal`, the credentialed CORS grant on every
 // branch including the catch)
-import { apiErrorResponseSchema } from "@miolos/core";
 import type { Db } from "@miolos/db";
 import type { NextRequest } from "next/server";
 
 import { getDb } from "../db";
-import { readResponse } from "./responses";
+import { readErrorResponse, readResponse } from "./responses";
 import { SESSION_COOKIE_NAME } from "../session/cookie";
 import { requireUserId } from "../session/service";
 
@@ -24,17 +23,11 @@ export async function authenticatedRead(
       request.cookies.get(SESSION_COOKIE_NAME)?.value,
     );
     if (!userId) {
-      return readResponse(
-        apiErrorResponseSchema.parse({ error: "no-session" }),
-        401,
-      );
+      return readErrorResponse(401, "no-session");
     }
 
     return readResponse(await read(db, userId));
   } catch {
-    return readResponse(
-      apiErrorResponseSchema.parse({ error: "internal" }),
-      500,
-    );
+    return readErrorResponse(500, "internal");
   }
 }

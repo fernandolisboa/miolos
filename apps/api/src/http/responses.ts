@@ -7,7 +7,10 @@ import { corsHeaders } from "../cors";
  * deliberately no `Cache-Control` — browsers and intermediaries do not cache
  * POST or DELETE responses, so the header the reads carry would be noise here.
  * `readResponse` below is the read side, and the split is the whole point:
- * every GET gets `no-store`, no mutation does.
+ * every AUTHENTICATED GET — the eight that go through `authenticatedRead` —
+ * gets `no-store`, and no mutation does. The public GETs (the four `daily/*`,
+ * `buffer-depth`, `health`, `cron/publish` and the root) set no
+ * `Cache-Control` at all; this rule does not reach them.
  */
 export function errorResponse(status: number, error: string): Response {
   return Response.json(apiErrorResponseSchema.parse({ error }), {
@@ -29,4 +32,14 @@ export function readResponse(body: unknown, status = 200): Response {
       "Cache-Control": "no-store",
     },
   });
+}
+
+/**
+ * The error envelope for an authenticated READ: the same body as
+ * `errorResponse`, with the read side's `no-store`. Both of
+ * `authenticatedRead`'s error branches go through it, so the body is built in
+ * one place rather than once per cache posture.
+ */
+export function readErrorResponse(status: number, error: string): Response {
+  return readResponse(apiErrorResponseSchema.parse({ error }), status);
 }
