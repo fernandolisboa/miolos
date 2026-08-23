@@ -197,7 +197,7 @@ export { refreshDayTruth as refreshServerDay } from "../day/day-truth";
 
 /**
  * `outcome` is READ rather than derived from the tiles because this module is
- * on every route's client graph and must never import a game engine — see the
+ * on every daily route's client graph and must never import a game engine — see the
  * import note in `play-record.ts`. The derivation keeps exactly one
  * definition, in the Termo reducer's `restore`. The honest consequence is
  * ADR-0044 consequence (f): a hand-edited `{concluded: true, outcome: "won"}`

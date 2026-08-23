@@ -48,24 +48,33 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 allocating, which agreed with this table in both columns (next free `S354`,
 highest in use `S353`).
 
-- **`T-WEB-S354`** — the transitive import closure of
-  `src/play/day-state.ts`, the module every route reaches, imports
-  `@miolos/games` from nowhere. The walk follows **relative and workspace
-  hops**: `@miolos/core` is in `next.config.ts`'s `transpilePackages`, so an
-  engine one package away lands on the same client chunk as a local one, and a
-  relative-only walk left that edge unwatched (found by review, with a
-  mutation). Two modules carried the rule as prose and nothing enforced it —
-  `day-state.ts` and `play-record.ts`; `eslint.config.mjs`'s
+- **`T-WEB-S354`** — `apps/web/test/client-graph-engine-free.test.ts`, six
+  assertions over two describes. **`src/play/play-record.ts` and
+  `src/play/day-state.ts` import no game engine**, walked as a transitive
+  closure over **relative and workspace hops** — `@miolos/core` is in
+  `next.config.ts`'s `transpilePackages`, so an engine one package away lands
+  on a route exactly as a local one does, and a relative-only walk left that
+  edge unwatched (found by review, with a mutation). `eslint.config.mjs`'s
   `@miolos/games/termo` ban is attached only to `apps/web/src/free-play/**`
-  and `apps/web/app/modo-livre/**`, so a value import in `play-record.ts`
-  would ship the Termo answer pool to `/` and red nothing. Three arms: a
-  positive arm asserting the walk reaches `day-state.ts`, `play-record.ts`
-  and `packages/core/src/day.ts` — the last is the workspace-hop canary, not
-  a prose site, and losing workspace resolution reds it while the negative
-  scan stays green; the negative scan itself; and a control running the same
-  matcher over `src/termo/state.ts`, a real engine importer. Mutation-proven
-  on six planted imports, including a second workspace hop and a type-only
-  import.
+  and `apps/web/app/modo-livre/**`, so neither module was covered.
+
+  The second describe **measures the scope instead of asserting it.** Both
+  files used to claim they were on "every route"; re-derived, 17 route entries
+  reach `play-record.ts` and 9 reach `day-state.ts`, and the gap is required
+  rather than incidental — ADR-0053 decision 9 and `T-WEB-S183` keep the day
+  store out of the archive's graph, and the free-play wall bans the day client
+  under `app/modo-livre/**`. So one arm asserts no archive or free-play route
+  reaches it, one pins the nine that do, and one asserts `play-record.ts`'s
+  route set is a strict superset. An archive route importing `readDayState`
+  reds two of them.
+
+  Non-vacuity has three legs: a control running the matcher over
+  `src/termo/state.ts`, a real engine importer; an arm asserting the closure
+  reaches `packages/core/src/day.ts`, so losing workspace resolution cannot
+  pass quietly; and `workspaceBase` throwing on an `@miolos/*` specifier it
+  cannot resolve rather than narrowing the walk in silence. Mutation-proven on
+  nine planted imports, including a second workspace hop, a dynamic `import()`,
+  a type-only import and the archive leak.
 
 #206's cluster 3 spent **`T-WEB-S351…S353`** in the new
 `apps/web/test/mount-fetch.test.tsx` and **`T-LINT-S61`** in

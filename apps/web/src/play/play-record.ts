@@ -152,8 +152,8 @@ export const nonogramPlayRecordSchema = z
 export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
 
 // THIS MODULE IMPORTS NOTHING FROM `@miolos/games/termo` — not a value, and
-// not even a type. It is on EVERY route's client graph (`day-state.ts` reads
-// it for the hub's meta line and every card's action), so a value import would
+// not even a type. It is on the client graph of every route that renders a
+// board, a conclusion or the hub — 17 of them — so a value import would
 // put the Termo engine, and the word list with it, on `/` (ADR-0045).
 // `T-WEB-S354` is the gate. The bounds this member needs come from
 // `@miolos/core`'s client-safe `contracts/termo-guess.ts` instead.
@@ -175,7 +175,7 @@ export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
  * `recorded: false` branch; without it /termo/concluido cannot show the word.
  *
  * `outcome` is STORED, not derived from the tiles, because `day-state.ts`
- * reads this record on every route and must never import a game engine (see
+ * reads this record on every daily route and must never import a game engine (see
  * the import note above).
  *
  * THE SUPERREFINE IS NOT DECORATION. `deriveBoardStatus` raises RangeError for
@@ -208,12 +208,7 @@ export const termoPlayRecordSchema = z
     /** Never posted — the server judges. */
     outcome: completionOutcomeSchema.optional(),
     elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-    /**
-     * Keeps binairo's bound unchanged even though Termo ships no hint
-     * (ADR-0045): one free hint per puzzle is a PRODUCT rule, not a per-game
-     * one, and `.max(0)` would encode one ticket's decision into a
-     * product-level bound. `buildRecord` writes the literal 0.
-     */
+    /** Why the bound stays `.max(1)` here: see `termo/use-termo-play.ts`. */
     hintsUsed: z.number().int().min(0).max(1),
     concluded: z.boolean(),
     pendingSync: z.boolean(),
