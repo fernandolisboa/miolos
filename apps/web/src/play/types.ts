@@ -89,7 +89,7 @@ export interface ConclusionOutcome {
  * server segment must never compute it: `/termo/concluido` renders for
  * players who have NOT finished, and a server-computed word would turn a
  * bookmarkable page into the only spoiler channel this game has (ADR-0004,
- * ADR-0043 decision 7).
+ * ADR-0034 decision 3, ADR-0043 decision 7).
  */
 export interface ConclusionAnswer {
   /** "Você acertou em 4 de 6 tentativas." | "As 6 tentativas acabaram." */
@@ -106,7 +106,7 @@ export interface ConclusionAnswer {
  * Supplied ONLY by a client component that owns the local play record. A
  * server segment must never compute it: /<jogo>/concluido renders for
  * players who have NOT solved, and its RSC payload would become a spoiler
- * channel (ADR-0004, ADR-0033).
+ * channel (ADR-0004, ADR-0027's rejected list, ADR-0033).
  *
  * `size` is a plain `number`, not a game's size union: this type is
  * game-blind by construction and must not name one game's shape.

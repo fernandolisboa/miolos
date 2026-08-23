@@ -44,8 +44,8 @@ term — `Late completion · Conclusão tardia`, *"never feeds streak, time stat
 or Dia Perfeito"* — and the hub's chip says `Feito`, which `CONTEXT.md:11`
 reserves for an on-time `Conclusão`. Every completion this chip can render is
 a late one, so the hub's word is being applied to the state the hub's own
-projection was built to exclude (`DayEntry.elapsedMs` in
-`src/play/day-state.ts`).
+projection was built to exclude (`DAY_STATUSES` in
+`packages/core/src/day.ts`).
 
 ## Decision
 

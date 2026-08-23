@@ -203,9 +203,9 @@ on the Termo client.**
   remains out (#34 — a dead share button is a broken promise, unlike a dead
   link)"* and was rewritten to shipped tense at #34. **#205 then deleted it**,
   so the rule no longer has an in-source home: it lives here as its source,
-  in ADR-0054 decision 1, and mechanically in `conclusion-share.test.tsx`
-  (*"is absent from `empty` and from `skeleton` — the dead-share-button rule,
-  mechanically"*). No header is taken: no decision moves and no enumeration
+  in ADR-0054 decision 1, and mechanically in `T-WEB-S195` (b)
+  (*"TERMO with no store renders NOTHING rather than a permanently dead
+  control"*). No header is taken: no decision moves and no enumeration
   grows.)*
 - **Rendering the clock on the Termo screen for parity.** It would be the
   one number on screen that no statistic ever reflects, on a game whose

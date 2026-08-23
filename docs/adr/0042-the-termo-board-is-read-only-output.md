@@ -191,14 +191,17 @@ for recording its deviations with their arithmetic.
    `DESIGN.md:50`'s 38px mobile cell because a 5-column board at 38px is
    202px inside a 350px field. Card 310×366 desktop, 254×301 mobile;
    `--board-mobile-max: 254px`, **declared unconditionally**, because
-   `play/screen.module.css:490` reads it with no fallback and omitting it
-   deletes the ≤768px cap in silence. (That line is `:490` in tree, not the
-   `:409` one shipped comment still cites — `screen.module.css:290`; the
-   `accent.ts` copy went with #205's sweep.) Keyboard: one 20-column grid, letter
-   keys span 2 and command keys span 3, `width: 552px` / `gap: 8px` / rows
-   52px on desktop → `C = (552 − 19×8)/20 = 20px`, a 48px letter key and a
-   76px command key; `max-width: 350px` / `gap: 4px` / rows 48px below 768px
-   → `C = 13.7px`, a 31.4px letter key at 390 and **24.4px at 320**. The
+   `play/screen.module.css`'s `max-width: var(--board-mobile-max)` reads it
+   with no fallback and omitting it deletes the ≤768px cap in silence.
+   (Three shipped comments cite that read by a line number it has long since
+   moved past — two in `screen.module.css` and `ink-on-accent.test.ts`, one
+   in `termo-board.module.css`. The `accent.ts` copy went with #205's sweep;
+   the other three are part 2's, with the CSS.) Keyboard: one 20-column
+   grid, letter keys span 2 and command keys span 3, `width: 552px` / `gap:
+   8px` / rows 52px on desktop → `C = (552 − 19×8)/20 = 20px`, a 48px letter
+   key and a 76px command key; `max-width: 350px` / `gap: 4px` / rows 48px
+   below 768px → `C = 13.7px`, a 31.4px letter key at 390 and **24.4px at
+   320**. The
    keyboard, not the board, is the widest thing in `.board`: 552px against
    the 578px the shared 1140px fold leaves (`1140 − 2×80 − 330 − 72`),
    **26px of margin**. Every number here is computed from the shipped

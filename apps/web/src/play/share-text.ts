@@ -41,7 +41,7 @@ import type { TermoPlayRecord } from "./play-record";
  * Three of the four games do not need the record at all. Their whole share is
  * the header and an elapsed time, and `ConclusionResult` — the prop the play
  * screen hands down precisely BECAUSE it must work where storage throws
- * (`ConclusionResult` in `play/types.ts`) — carries the elapsed time
+ * (`ConclusionResult` in `play/conclusion-view.tsx`) — carries the elapsed time
  * already. So the
  * union widens to what each half genuinely needs.
  *

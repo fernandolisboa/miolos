@@ -126,6 +126,11 @@ export const nonogramPlayRecordSchema = z
       .max(MAX_NONOGRAM_CELLS)
       .optional(),
     elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+    /**
+     * `.max(1)` even though Termo ships no hint (ADR-0045): one free hint per
+     * puzzle is a PRODUCT rule, not a per-game one, and `.max(0)` would encode
+     * one ticket's decision into a product-level bound.
+     */
     hintsUsed: z.number().int().min(0).max(1),
     concluded: z.boolean(),
     pendingSync: z.boolean(),
@@ -154,10 +159,9 @@ export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
 // THIS MODULE IMPORTS NOTHING FROM `@miolos/games/termo` — not a value, and
 // not even a type. It is on EVERY route's client graph (`day-state.ts` reads
 // it for the hub's meta line and every card's action), so a value import would
-// put the Termo engine, and the word list with it, on `/` (ADR-0045). Nothing
-// enforces this: the `@miolos/games/termo` lint ban is scoped to free play.
-// The bounds this member needs come from `@miolos/core`'s client-safe
-// `contracts/termo-guess.ts` instead.
+// put the Termo engine, and the word list with it, on `/` (ADR-0045).
+// `T-WEB-S354` is the gate. The bounds this member needs come from
+// `@miolos/core`'s client-safe `contracts/termo-guess.ts` instead.
 
 /**
  * WHAT IT HOLDS: the JUDGED GUESS ROWS, and nothing in flight. A guess the

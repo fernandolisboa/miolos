@@ -237,9 +237,9 @@ const MAX_DELTA_BYTES = 40 * 1024;
  * ordinary copy edits, tight
  * enough that a SECOND `packages/games` module lands it in the red. That is
  * the failure this arms against — someone importing a value from
- * `@miolos/games/termo` into `play-record.ts` (whose `termoPlayRecordSchema`
- * warns about it by name, because that module is on every route's client
- * graph, and `T-WEB-S354` is the gate)
+ * `@miolos/games/termo` into `play-record.ts` (which warns about it by name,
+ * because that module is on every route's client graph, and `T-WEB-S354` is
+ * the gate)
  * would pass all three FORBIDDEN accent greps and every existing budget while
  * `/termo` grew silently.
  */
