@@ -40,8 +40,40 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S351` | `S347` | `T-WEB-23` |
-| `T-LINT` | `S61` | `S59` | `T-LINT-10` |
+| `T-WEB` | `S354` | `S353` | `T-WEB-23` |
+| `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#206's cluster 3 spent **`T-WEB-S351…S353`** in the new
+`apps/web/test/mount-fetch.test.tsx` and **`T-LINT-S61`** in
+`apps/web/test/eslint-free-play-wall.test.ts`, for the seven mount-fetch
+hooks becoming three lines each over `src/api/use-mount-fetch.ts`. Re-derived
+by grep before allocating, which agreed with this table in both columns
+(`T-WEB` next free `S351`, highest in use `S347` — `S348` appears in
+`day-truth-mint-repair.test.tsx` only as the cross-reference that records its
+folding, not as an allocation; `T-LINT` next free `S61`, highest in use
+`S59`).
+
+- **`T-WEB-S351`** — set equality over the modules whose comment-stripped
+  code names `ensureSession`. A wall rather than a negative scan: an eighth
+  hand-rolled mount fetch reds it, and `day/day-truth.ts` sits on the list
+  because ADR-0072 keeps it off the hook deliberately.
+- **`T-WEB-S352`** — one id over two arms, the `T-LINT-S49` shape. The
+  behavioural arm proves a rerender re-runs neither the mint nor the fetch;
+  the source arm is the one that binds, because the deps array moved from
+  `[]` to `[fetcher, enabled]` and `react-hooks/exhaustive-deps` fires inside
+  the hook, never at the call site. An inline arrow for either argument would
+  loop a credentialed GET without bound. Verified by planting one at each
+  argument position: red both times.
+- **`T-WEB-S353`** — a rejecting fetcher and a rejecting mint both settle to
+  the honest `null`, and a failed mint issues no read.
+- **`T-LINT-S61`** — `src/api/` needed its own free-play wall entry or the
+  ban leaked: measured CLEAN over twelve probes before the entry existed.
+
+No tail reserved. `T-WEB-S136`'s no-localStorage scan list was widened in
+place with the shared module and the four streak/medals/stats hooks — the
+same claim over more files, no new id (the `T-WEB-S100` burn precedent). It
+is where ADR-0048 decision 4's rule lands now that the doc blocks stating it
+are gone.
 
 #206's cluster 2 spent **`T-API-S183`** on
 `apps/api/test/authenticated-read.test.ts` — one id over four assertions
