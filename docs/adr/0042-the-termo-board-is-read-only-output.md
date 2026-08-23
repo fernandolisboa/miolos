@@ -196,7 +196,9 @@ for recording its deviations with their arithmetic.
    (Three shipped comments cite that read by a line number it has long since
    moved past — two in `screen.module.css` and `ink-on-accent.test.ts`, one
    in `termo-board.module.css`. The `accent.ts` copy went with #205's sweep;
-   the other three are part 2's, with the CSS.) Keyboard: one 20-column
+   of the rest, `screen.module.css` is part 2's, `ink-on-accent.test.ts`
+   belongs to the `apps/web/test` tranche and `termo-board.module.css` to the
+   `apps/web/src` remainder.) Keyboard: one 20-column
    grid, letter keys span 2 and command keys span 3, `width: 552px` / `gap:
    8px` / rows 52px on desktop → `C = (552 − 19×8)/20 = 20px`, a 48px letter
    key and a 76px command key; `max-width: 350px` / `gap: 4px` / rows 48px

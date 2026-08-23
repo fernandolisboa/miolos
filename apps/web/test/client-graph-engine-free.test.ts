@@ -48,14 +48,19 @@ function resolveSpecifier(fromFile: string, specifier: string): string | null {
 
 /** `@miolos/core` → `packages/core/src`, `@miolos/core/x` → `packages/core/src/x`. */
 function workspaceBase(specifier: string): string | null {
-  const match = /^@miolos\/([a-z-]+)(?:\/(.*))?$/.exec(specifier);
-  if (match === null || match[1] === undefined) {
+  if (!specifier.startsWith("@miolos/")) {
     return null;
+  }
+  const match = /^@miolos\/([a-z0-9-]+)(?:\/(.*))?$/.exec(specifier);
+  if (match?.[1] === undefined) {
+    // Loud rather than a silently narrowed walk: a new workspace package
+    // whose name this regex misses would shrink the closure with no signal.
+    throw new Error(`unresolvable workspace specifier: ${specifier}`);
   }
   return join(REPO_ROOT, "packages", match[1], "src", match[2] ?? "");
 }
 
-/** Every `.ts`/`.tsx` module reachable from `entry` through relative imports. */
+/** Every `.ts`/`.tsx` module reachable from `entry`, relative or workspace. */
 function closureOf(entry: string): readonly string[] {
   const seen = new Set<string>();
   const queue = [entry];

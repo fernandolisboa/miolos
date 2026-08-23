@@ -126,11 +126,6 @@ export const nonogramPlayRecordSchema = z
       .max(MAX_NONOGRAM_CELLS)
       .optional(),
     elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-    /**
-     * `.max(1)` even though Termo ships no hint (ADR-0045): one free hint per
-     * puzzle is a PRODUCT rule, not a per-game one, and `.max(0)` would encode
-     * one ticket's decision into a product-level bound.
-     */
     hintsUsed: z.number().int().min(0).max(1),
     concluded: z.boolean(),
     pendingSync: z.boolean(),
@@ -213,6 +208,12 @@ export const termoPlayRecordSchema = z
     /** Never posted — the server judges. */
     outcome: completionOutcomeSchema.optional(),
     elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+    /**
+     * Keeps binairo's bound unchanged even though Termo ships no hint
+     * (ADR-0045): one free hint per puzzle is a PRODUCT rule, not a per-game
+     * one, and `.max(0)` would encode one ticket's decision into a
+     * product-level bound. `buildRecord` writes the literal 0.
+     */
     hintsUsed: z.number().int().min(0).max(1),
     concluded: z.boolean(),
     pendingSync: z.boolean(),

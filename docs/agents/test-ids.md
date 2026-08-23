@@ -48,19 +48,24 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 allocating, which agreed with this table in both columns (next free `S354`,
 highest in use `S353`).
 
-- **`T-WEB-S354`** — the transitive relative-import closure of
+- **`T-WEB-S354`** — the transitive import closure of
   `src/play/day-state.ts`, the module every route reaches, imports
-  `@miolos/games` from nowhere. Three modules in that closure carried the
-  rule as prose and nothing enforced it: `eslint.config.mjs`'s
+  `@miolos/games` from nowhere. The walk follows **relative and workspace
+  hops**: `@miolos/core` is in `next.config.ts`'s `transpilePackages`, so an
+  engine one package away lands on the same client chunk as a local one, and a
+  relative-only walk left that edge unwatched (found by review, with a
+  mutation). Two modules carried the rule as prose and nothing enforced it —
+  `day-state.ts` and `play-record.ts`; `eslint.config.mjs`'s
   `@miolos/games/termo` ban is attached only to `apps/web/src/free-play/**`
   and `apps/web/app/modo-livre/**`, so a value import in `play-record.ts`
-  would ship the Termo answer pool to `/` and red nothing. Three arms, on the
-  `T-LINT-S49`/`S50` one-id-both-halves shape: a positive arm asserting the
-  walk actually reaches the three modules (so a broken walker cannot pass by
-  finding nothing), the negative scan itself, and a control running the same
-  matcher over `src/termo/state.ts`, a real engine importer. Mutation-proven:
-  planting `import { TERMO_MAX_GUESSES } from "@miolos/games/termo"` in
-  `play-record.ts` reds the negative arm and names the module.
+  would ship the Termo answer pool to `/` and red nothing. Three arms: a
+  positive arm asserting the walk reaches `day-state.ts`, `play-record.ts`
+  and `packages/core/src/day.ts` — the last is the workspace-hop canary, not
+  a prose site, and losing workspace resolution reds it while the negative
+  scan stays green; the negative scan itself; and a control running the same
+  matcher over `src/termo/state.ts`, a real engine importer. Mutation-proven
+  on six planted imports, including a second workspace hop and a type-only
+  import.
 
 #206's cluster 3 spent **`T-WEB-S351…S353`** in the new
 `apps/web/test/mount-fetch.test.tsx` and **`T-LINT-S61`** in
