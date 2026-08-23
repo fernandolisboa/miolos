@@ -1101,6 +1101,14 @@ describe("the conclusion's layout (tripwires)", () => {
     // keyframes open under-scale and part-transparent, so a reduced-motion
     // block that forgot the end state would freeze the payoff at `opacity:
     // 0.6` for the stamp and at `opacity: 0` — invisible — for the picture.
+    // `bodyOf` is first-match at EVERY level, the outer at-rule included, so
+    // a second reduced-motion block appended to the sheet would win the
+    // cascade and never be read. Closing the inner axes is worth nothing
+    // until the sheet is known to declare exactly one of these.
+    expect(
+      CSS.match(/@media[^{]*prefers-reduced-motion[^{]*\{/g),
+      "the sheet declares exactly one reduced-motion block — the one this reads",
+    ).toHaveLength(1);
     const reduced = bodyOf(CSS, "@media (prefers-reduced-motion: reduce)");
     for (const [selector, keyframes] of [
       [".stamp", "@keyframes stamp-settle"],

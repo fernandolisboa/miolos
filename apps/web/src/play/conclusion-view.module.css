@@ -276,6 +276,9 @@
   text-align: center;
 }
 
+/* Kept short deliberately: `line-length` needs textLen > 80 AND
+   charsPerLine > 85, and at 34 and 21 characters the two lines never enter
+   the rule at all. */
 .dayWordResult {
   margin: 0;
   font-size: 15px;
