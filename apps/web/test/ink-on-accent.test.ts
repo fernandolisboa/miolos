@@ -334,9 +334,11 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     // `conclusion-lazy.module.css` renders before any game context exists —
     // `next/dynamic`'s loading component receives no props — so there is no
     // accent for it to be right about, and the degraded fallback keeps the
-    // same neutral chrome. Neither SHEETS nor SHARED reaches this file, so
-    // without this the rule had no gate at all. Stronger than either scan:
-    // no accent token in ANY property, which is what a RING would use.
+    // same neutral chrome. `SHEETS` does not reach this file, and `SHARED`
+    // reaches it only because of the `#205` entry above — deleting that entry
+    // drops the closed ring scan over this sheet, so it is load-bearing and
+    // not tidy-up. This scan is the wider one either way: no accent token in
+    // ANY property, which is what a RING would use.
     const css = stylesheet("src/play/conclusion-lazy.module.css");
     // `[,)]` and not `\)`: the literal closing paren required the token to
     // be the whole argument and let `var(--accent, var(--ink))` — the

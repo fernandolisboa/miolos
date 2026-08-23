@@ -1129,8 +1129,14 @@ describe("the conclusion's layout (tripwires)", () => {
     // is what stops the one celebration this product ships from being
     // switched off for every reduced-motion user.
     for (const selector of [".stamp", ".picture"] as const) {
-      const opacity = decl(bodyOf(reduced, selector), "opacity");
+      const body = bodyOf(reduced, selector);
+      const opacity = decl(body, "opacity");
       expect(opacity === undefined || opacity === "1", selector).toBe(true);
+      // `opacity` is not the only spelling of "gone": `visibility: hidden`
+      // and `display: none` hide the payoff just as completely and were
+      // invisible to the opacity arm alone.
+      expect(decl(body, "visibility"), selector).toBeUndefined();
+      expect(decl(body, "display"), selector).toBeUndefined();
     }
     // Anti-vacuity: the keyframes really do open where this test claims.
     expect(CSS).toMatch(/@keyframes stamp-settle/);

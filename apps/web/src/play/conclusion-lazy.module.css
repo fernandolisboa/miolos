@@ -2,8 +2,6 @@
    `conclusion-view.module.css` on purpose — importing that sheet here would
    put the conclusion's full CSS back into every play route's first paint,
    and CSS Modules hash per file anyway (the `hub-day-state.tsx` reason).
-   `.skeletonCard` below therefore RESTATES the conclusion's silhouette
-   rather than `composes`-ing it (ADR-0054 decision 15 owns the boundary).
 
    Every rule is anchored on a local class: Next compiles CSS Modules in
    css-loader's `pure` mode, so a bare type selector either fails the build
@@ -18,6 +16,8 @@
   padding: var(--space-11) var(--space-6);
 }
 
+/* The same card silhouette as `conclusion-view.module.css`'s
+   `.skeletonCard`, minus the accent-tinted shadow (see the header). */
 .skeletonCard {
   box-sizing: border-box;
   width: 100%;

@@ -252,12 +252,10 @@
   color: var(--ink-2);
 }
 
-/* NOT a heading and never `role="heading"` — `.pictureLead` above it is
-   textbook `kicker-above-heading` shape, and the pair is legal only because
-   both that rule and `hero-eyebrow-chip` anchor exclusively on `h1`-`h4` and
-   `[role="heading"]`. Promoting the name to an `<h2>` is the obvious
-   "semantic improvement" and lights the rule up. The same holds for
-   `.dayWord` below. */
+/* The name. NOT a heading and never `role="heading"` — `.pictureLead` above
+   it is textbook `kicker-above-heading` shape, and the pair is legal only
+   because both that rule and `hero-eyebrow-chip` anchor exclusively on
+   `h1`–`h4` and `[role="heading"]`. */
 .pictureName {
   margin: 0;
   font-family: var(--font-display);
@@ -306,8 +304,7 @@
 /* clip-path, not opacity/visibility: `content-hidden-at-rest` counts a
    clip-path element as VISIBLE, so this is not scored as hidden text. No
    font-size at all, so it inherits and `undersized-ui-text` cannot reach
-   it. */
-/* The recipe is `termo-board.module.css`'s `.announcer`, which cannot be
+   it. The recipe is `termo-board.module.css`'s `.announcer`, which cannot be
    reused across files — CSS Modules hash per file. */
 .announcer {
   position: absolute;
