@@ -1,8 +1,4 @@
-import {
-  apiErrorResponseSchema,
-  attachConfirmResponseSchema,
-  attachConfirmSchema,
-} from "@miolos/core";
+import { attachConfirmResponseSchema, attachConfirmSchema } from "@miolos/core";
 import { isWinnerLivenessError, mergeAccounts } from "@miolos/db/user";
 import type { Db } from "@miolos/db";
 import type { NextRequest } from "next/server";
@@ -20,6 +16,7 @@ import {
   isJsonContentType,
   preflightResponse,
 } from "../../../src/cors";
+import { errorResponse } from "../../../src/http/responses";
 import { getDb } from "../../../src/db";
 import { buildSessionCookie } from "../../../src/session/cookie";
 import {
@@ -35,13 +32,6 @@ import { captureEvent, runAfterResponse } from "../../../src/telemetry/capture";
 
 // Never statically cached: every request claims against the token table.
 export const dynamic = "force-dynamic";
-
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: corsHeaders({ credentials: true }),
-  });
-}
 
 export function OPTIONS(): Response {
   return preflightResponse();

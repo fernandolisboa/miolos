@@ -5,20 +5,10 @@ import { apiErrorResponseSchema } from "@miolos/core";
 import type { Db } from "@miolos/db";
 import type { NextRequest } from "next/server";
 
-import { corsHeaders } from "../cors";
 import { getDb } from "../db";
+import { readResponse } from "./responses";
 import { SESSION_COOKIE_NAME } from "../session/cookie";
 import { requireUserId } from "../session/service";
-
-function readResponse(body: unknown, status = 200): Response {
-  return Response.json(body, {
-    status,
-    headers: {
-      ...corsHeaders({ credentials: true }),
-      "Cache-Control": "no-store",
-    },
-  });
-}
 
 export async function authenticatedRead(
   request: NextRequest,

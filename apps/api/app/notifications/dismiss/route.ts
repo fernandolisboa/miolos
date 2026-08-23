@@ -1,5 +1,4 @@
 import {
-  apiErrorResponseSchema,
   notificationsDismissResponseSchema,
   notificationsDismissSchema,
 } from "@miolos/core";
@@ -10,6 +9,7 @@ import {
   isJsonContentType,
   preflightResponse,
 } from "../../../src/cors";
+import { errorResponse } from "../../../src/http/responses";
 import { getDb } from "../../../src/db";
 import { dismissPushPrompt } from "../../../src/push/service";
 import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
@@ -21,13 +21,6 @@ import { requireUserId } from "../../../src/session/service";
 
 // Never statically cached: every request stamps against the users table.
 export const dynamic = "force-dynamic";
-
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: corsHeaders({ credentials: true }),
-  });
-}
 
 export function OPTIONS(): Response {
   return preflightResponse();

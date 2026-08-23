@@ -1,5 +1,4 @@
 import {
-  apiErrorResponseSchema,
   pushSubscribeResponseSchema,
   pushSubscribeSchema,
   pushUnsubscribeResponseSchema,
@@ -12,6 +11,7 @@ import {
   isJsonContentType,
   preflightResponse,
 } from "../../../src/cors";
+import { errorResponse } from "../../../src/http/responses";
 import { getDb } from "../../../src/db";
 import { isPushConfigured } from "../../../src/push/config";
 import {
@@ -47,13 +47,6 @@ export const dynamic = "force-dynamic";
  * The whole body of each verb is caught: a transient DB throw would
  * otherwise be the one branch without the CORS grant.
  */
-
-function errorResponse(status: number, error: string): Response {
-  return Response.json(apiErrorResponseSchema.parse({ error }), {
-    status,
-    headers: corsHeaders({ credentials: true }),
-  });
-}
 
 export function OPTIONS(): Response {
   // DELETE joins the grant: the JSON content type forces a preflight on
