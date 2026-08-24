@@ -94,6 +94,18 @@ let inFlight = false;
 /**
  * ONE post-mint repair per page load (#195, ADR-0072). Spent, never refilled.
  *
+ * WHY PAGE-LOAD SCOPE IS RIGHT HERE, when the header says page-load scope is
+ * WRONG for the fetch itself. The header's warning is about freshness —
+ * *"a store that fetched once per page load would answer the most frequent
+ * way a player looks at the hub with the payload from the session's first
+ * mount"* — and that is a PER-VIEW fact: a client-side navigation is a new
+ * view and deserves a new answer. The repair's need is a per-IDENTITY fact,
+ * and the identity is minted once per page load: `ensureSession()`'s own
+ * cached `pending` is page-load-scoped for exactly the same reason. Matching
+ * the mint's scope is the point. Matching the view's would re-arm a retry
+ * against a mint that cannot change between views, which buys nothing and
+ * costs one failing request per navigation.
+ *
  * BOTH ENTRY POINTS SHARE THIS ONE FLAG — `subscribe`'s 0 -> 1 and
  * `refreshDayTruth()` alike — so the bound is one repair per page load and
  * not one per caller (`T-WEB-S346`).
@@ -172,7 +184,20 @@ function samePayload(previous: DayResponse, next: DayResponse): boolean {
  * 4's silent-degradation path).
  *
  * THE MINT IS NOT AWAITED BEFORE THE FETCH, and that is a decision rather
- * than an oversight (#195, ADR-0072).
+ * than an oversight (#195, ADR-0072). Seven hooks await `ensureSession()`
+ * before their mount read (#149); this store is the eighth reader and
+ * deliberately the only one that does not, for two reasons:
+ *
+ *  1. `ensureSession()` HAS NO TIMEOUT and its cached promise never settles
+ *     if `POST /session` hangs. Awaiting it here would hold `inFlight` across
+ *     the mint, and a hanging mint would then leave `inFlight === true` for
+ *     the lifetime of the page WITH NO REJECTION for `finally` to release —
+ *     the exact wedge the paragraph above exists to prevent, reached by a
+ *     path that has nothing to throw. That is a disqualification, not a cost.
+ *  2. `/day` decides whether a hub tile paints as a call to action or as
+ *     `Feito`, and ordering it would charge EVERY warm load a round trip —
+ *     `ensureSession()` POSTs unconditionally, with no client-side cookie
+ *     check — to fix only the loads whose cookie had expired.
  */
 function refresh(): void {
   if (inFlight) {

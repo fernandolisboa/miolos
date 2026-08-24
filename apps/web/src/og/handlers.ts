@@ -73,7 +73,7 @@ import { FONTS } from "./fonts";
  *
  * **The rule above produces no catch here, and the omission is the argument
  * rather than a gap.** `listArchivedDays` selects two columns, runs no
- * projection and parses nothing (`packages/db`'s `listArchivedDays`), so
+ * projection and parses nothing, so
  * no member of `PROJECTION_ERROR_NAMES` can arise from it. A narrowed catch
  * here would be unreachable code that re-throws everything. Every throw these
  * handlers can see — a Neon timeout, a pool error, a missing credential — is

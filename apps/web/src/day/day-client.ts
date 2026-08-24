@@ -12,6 +12,10 @@ import { dayResponseSchema, type DayResponse } from "@miolos/core";
  * projection, which is ADR-0031 decision 1's first fact and the reason a
  * conclusion can finish offline at all. NOTHING ON A PLAY PATH AWAITS THIS
  * FETCH.
+ *
+ * BEHIND THE FREE-PLAY WALL: this module and its sibling store are banned
+ * from apps/web/src/free-play and app/modo-livre by name (eslint.config.mjs,
+ * ADR-0046) — free play never touches the day, the streak or the statistics.
  */
 export async function fetchDayTruth(): Promise<DayResponse | undefined> {
   // Loud, not silent (the session/bootstrap.ts guard): without the var the
@@ -38,6 +42,8 @@ export async function fetchDayTruth(): Promise<DayResponse | undefined> {
       // way, and it is never blank.
       return undefined;
     }
+    // Parsed, never cast (boundary rule) — the same strict schema the route
+    // parsed before sending.
     const parsed = dayResponseSchema.safeParse(await response.json());
     return parsed.success ? parsed.data : undefined;
   } catch {
