@@ -1,8 +1,8 @@
 /**
  * Anonymous-identity bootstrap (issue #15), extracted from
  * `components/session-bootstrap.tsx` so the completion flush can await the
- * same mint (plan 017 §9.2). Without that ordering, a fast solve on a cold
- * first visit reliably races the in-flight mint and takes the 401 branch.
+ * same mint. Without that ordering, a fast solve on a cold first visit
+ * reliably races the in-flight mint and takes the 401 branch.
  *
  * No `Date` appears here or in anything it calls — the client clock is
  * never an identity input (#15 AC 5).
@@ -14,8 +14,7 @@ import { markSessionReady } from "../telemetry/client";
 // Module-level fire-once guard, now a SHARED PROMISE rather than a boolean:
 // callers need to await the mint, not merely skip it. Survives React
 // StrictMode's double effect and re-mounts, so one page load makes exactly
-// one mint/resolve request (plan 009 D11 — the client half of the
-// concurrency story).
+// one mint/resolve request.
 let pending: Promise<void> | undefined;
 
 /**
@@ -59,11 +58,7 @@ export function ensureSession(): Promise<void> {
     // opens the gate too: the relay will drop those events, and buffering
     // them forever would only grow a list nothing drains.
     //
-    // `finally` also keeps this line behaviour-free: it neither changes the
-    // resolution value nor swallows a rejection, so `ensureSession`'s
-    // contract above is exactly what it was.
-    //
-    // THE try/catch IS NOT DEFENSIVE NOISE (step-6 correctness N3). This
+    // THE try/catch IS NOT DEFENSIVE NOISE. This
     // module's own TSDoc calls `ensureSession()`'s never-rejecting property
     // "load-bearing three times over" — a throw here would surface inside
     // `postGuesses`, freeze a Termo board and kill a completion flush.
@@ -88,13 +83,13 @@ export function ensureSession(): Promise<void> {
  * forever.
  *
  * THE ALLOWANCE RESETS ON EXACTLY TWO EVENTS, and "a mint answered 200" is
- * neither of them (finding B-2):
+ * neither of them:
  *
  *  1. `confirmSession()` — a caller's re-post came back OK, so the fresh
  *     identity is SEEN TO WORK. Resetting on the mint itself instead would
  *     reopen B-1 sequentially, below.
  *  2. A mint that resolved `false` — the handler below. Nothing was spent,
- *     because nothing was minted (finding E-6).
+ *     because nothing was minted.
  *
  * Without any reset the first spent re-mint is terminal for the rest of the
  * page load: a cookie that expires forty minutes into a session leaves
@@ -137,7 +132,7 @@ export function remintSession(): Promise<boolean> {
   remintSpent = true;
   const attempt = mintSession()
     // NORMALIZED BEFORE ANYTHING READS IT, so nothing below depends on the
-    // invariant that `mintSession` never rejects (finding E-5). It does not
+    // invariant that `mintSession` never rejects. It does not
     // today — both early returns are synchronous and everything else is
     // inside its `try` — but the invariant is now load-bearing three times
     // over, and a `.then`-only chain latches ALL THREE on the day it breaks:
@@ -167,9 +162,9 @@ export function remintSession(): Promise<boolean> {
  * "The identity I re-minted is serving requests." Called by a caller whose
  * re-post came back OK, and by nobody else: it is what arms the NEXT re-mint,
  * so a cookie that expires later in the same page load is recoverable without
- * a reload (finding B-2).
+ * a reload.
  *
- * `response.ok`, AND NOT MERELY `status !== 401` (finding E-7). A 403 and a
+ * `response.ok`, AND NOT MERELY `status !== 401`. A 403 and a
  * 415 are decided BEFORE `requireUserId` in both routes, and a 429 or a 5xx is
  * decided without regard to it, so none of them is evidence that the fresh
  * cookie was honoured — and this function's whole claim is that it was. A 404
@@ -188,7 +183,7 @@ export function confirmSession(): void {
  * the cookie, not about the body.
  *
  * That distinction is load-bearing since `remintSession` re-arms its one
- * allowance on `false` (finding E-6): every `false` below has to mean "the
+ * allowance on `false`: every `false` below has to mean "the
  * server created nothing", or a re-arm could mint a second identity into the
  * sequential shape of B-1. So a 200 whose body the session contract refuses
  * is LOUD and still `true` — the server already set the cookie, and the body

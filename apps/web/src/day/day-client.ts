@@ -2,26 +2,13 @@ import { dayResponseSchema, type DayResponse } from "@miolos/core";
 
 /**
  * The client half of GET /day (#83, ADR-0060) — fetch and parse only, no
- * React, so it is testable without rendering. A line-by-line sibling of
- * `streak/streak-client.ts`, deliberately: three clients that read the
- * authenticated surface should fail the same way, and one spelling is the
- * rule this repo enforces hardest.
+ * React, so it is testable without rendering.
  *
  * EVERY FAILURE PATH ANSWERS `undefined`, and `undefined` means "no server
  * truth, for any reason" — the caller falls back to the device's own
  * projection, which is ADR-0031 decision 1's first fact and the reason a
  * conclusion can finish offline at all. NOTHING ON A PLAY PATH AWAITS THIS
  * FETCH.
- *
- * THE SILENT PARSE FAILURE IS CHOSEN, NOT OVERLOOKED. The env guard is
- * loud, the parse failure is not — exactly as `streak-client.ts` and
- * `stats-client.ts` split it. A third client that shouted would make `/day`
- * the only one of three that does; if loud parse failures are wanted, they
- * are a three-client ticket of their own.
- *
- * BEHIND THE FREE-PLAY WALL: this module and its sibling store are banned
- * from apps/web/src/free-play and app/modo-livre by name (eslint.config.mjs,
- * ADR-0046) — free play never touches the day, the streak or the statistics.
  */
 export async function fetchDayTruth(): Promise<DayResponse | undefined> {
   // Loud, not silent (the session/bootstrap.ts guard): without the var the
@@ -48,8 +35,6 @@ export async function fetchDayTruth(): Promise<DayResponse | undefined> {
       // way, and it is never blank.
       return undefined;
     }
-    // Parsed, never cast (boundary rule) — the same strict schema the route
-    // parsed before sending.
     const parsed = dayResponseSchema.safeParse(await response.json());
     return parsed.success ? parsed.data : undefined;
   } catch {

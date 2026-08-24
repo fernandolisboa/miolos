@@ -7,10 +7,7 @@ import { CARD_HEIGHT, CARD_WIDTH } from "./card";
  * **The dimensions and the MIME type get ONE home.** Both are read off
  * `./card` or written once here rather than re-typed at each `generateMetadata`
  * call site, so a card that ever changed size could not advertise the old
- * numbers, and `"image/png"` cannot drift between two routes. That `./card`
- * import is also the reason this module can sit in a PAGE's graph at no trace
- * cost: `card.tsx` imports no `next/og`, and a production build measured the
- * day page unchanged at 2.7 MB / 115 traced files with it in place.
+ * numbers, and `"image/png"` cannot drift between two routes.
  *
  * A side effect of the same single home, worth knowing before someone inlines
  * this: `T-WEB-S173` (`archive-metadata.test.ts`, *"no metadata function
@@ -22,9 +19,7 @@ import { CARD_HEIGHT, CARD_WIDTH } from "./card";
  * literal into a module — never to weaken the scan.
  *
  * `alt` is a parameter and not a constant, because these two cards' `alt`
- * strings are DATED — the mirror image of `ogCopy.altGame`'s constraint. A
- * metadata route's `alt` is a module export and cannot read `params`; an
- * `images[].alt` composed inside `generateMetadata` can.
+ * strings are DATED — the mirror image of `ogCopy.altGame`'s constraint.
  *
  * **NAMED ARGUMENTS, not two positional strings.** `url` and `alt` are both
  * `string` and both computed at every call site, so a positional pair
