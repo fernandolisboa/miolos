@@ -1,15 +1,15 @@
 /**
- * The whole Nonogram gameplay state machine (plan 020 §10), as one pure
+ * The whole Nonogram gameplay state machine, as one pure
  * reducer over one immutable value: no React, no DOM, no clock. Every action
  * that needs the time carries it, so the reducer stays pure and the screen
  * stays thin — most of the gameplay test surface is plain unit tests.
  *
- * The input model is BRUSH-FIRST (P21): a sticky brush plus a gesture. A
+ * The input model is BRUSH-FIRST: a sticky brush plus a gesture. A
  * Nonogram stroke carries no value of its own, so `paint-over` must be a
  * plain SET and the value it sets can only come from sticky state. There is
- * deliberately no cycle mode — `binairo/state.ts:100-104` ignores
- * `paint-over` entirely in cycle mode, and here the drag IS the primary
- * gesture (N28).
+ * deliberately no cycle mode — `binairo/state.ts`'s `paint-over` case
+ * ignores it entirely in cycle mode, and here the drag IS the primary
+ * gesture.
  */
 import type { DailyNonogramResponse, NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
@@ -22,8 +22,7 @@ import { isPictureComplete, nextNonogramHint, solutionMarks } from "./engine";
 /**
  * 1 = preenchida, 0 = marcada (crossed out).
  *
- * The `0` is FORCED, not chosen (ADR-0032). `grid-hint.ts`'s `nextHint`
- * reads
+ * The `0` is FORCED, not chosen (ADR-0032). `grid-hint.ts`'s `nextHint` reads
  * `if (entry !== null && entry !== target)`, and the shared solution's empty
  * cell is `0`; if a cross were a third value distinct from it, EVERY
  * correctly-crossed cell would come back as a `correction` and the day's one
@@ -34,8 +33,7 @@ import { isPictureComplete, nextNonogramHint, solutionMarks } from "./engine";
  * `Mark` here is the DECIDED-VALUE union — either mark, fill included — and
  * is deliberately NOT the pt-BR *marcada*, which names the cross alone
  * (`controls.cross`, CONTEXT.md's Crossed row). So `markCell` / `mark-cell` /
- * `asMark` are the game-generic write and none of them is the cross brush
- * (step-6 round-4 finding Q4).
+ * `asMark` are the game-generic write and none of them is the cross brush.
  */
 export type NonogramMark = 0 | 1;
 
@@ -43,7 +41,7 @@ export type NonogramMark = 0 | 1;
 export type NonogramCellValue = NonogramMark | null;
 
 /**
- * The sticky brush. NO cycle mode (P21): a cycle drag is a no-op, and on
+ * The sticky brush. NO cycle mode: a cycle drag is a no-op, and on
  * this board the drag is the primary gesture, so a cycle default would ship
  * the game with its main input dead on first paint.
  */
@@ -105,14 +103,13 @@ export type NonogramPlayAction =
  * false`, and NO caret — it appears on first interaction, so the first paint
  * carries no state the record might contradict.
  *
- * Takes `DailyNonogramResponse`, never the union (plan 018 S11): `daily.size`
+ * Takes `DailyNonogramResponse`, never the union: `daily.size`
  * on the union is a binairo literal or a nonogram one, and no component may
  * narrow it internally.
  *
  * The solve runs HERE, once, in the `useReducer` initializer — 0.084 ms at
  * 15×15, on the server render too. `solutionMarks` never throws, so an
- * unsolvable clue set is a `null` the screen has a branch for (§10.4), never
- * a crash.
+ * unsolvable clue set is a `null` the screen has a branch for, never a crash.
  */
 export function initNonogramPlayState(
   daily: DailyNonogramResponse,
@@ -145,8 +142,8 @@ export function nonogramPlayReducer(
 
     case "select":
       // An OFF-BOARD index is refused, exactly as every writing case refuses
-      // one (step-6 round-4 finding NONO-C4-5). `selected` was the only field
-      // on this state that could hold a value outside `0..size²-1`, and the
+      // one. `selected` was the only field on this state that could hold a
+      // value outside `0..size²-1`, and the
       // failure it produces is not graceful: `board.tsx` computes
       // `tabbable = selected ?? 0`, so an out-of-range caret matches no cell
       // and the composite widget loses its single roving tab stop entirely —
@@ -177,7 +174,7 @@ export function nonogramPlayReducer(
 
     case "set-brush":
       // Pressing the active brush is a no-op returning the SAME state: there
-      // is no cycle to fall back to (P21).
+      // is no cycle to fall back to.
       return state.brush === action.brush
         ? state
         : { ...state, brush: action.brush };
@@ -188,7 +185,8 @@ export function nonogramPlayReducer(
         return state;
       }
       // Re-applying the brush's own value clears it: a one-tap undo,
-      // mirroring Binairo's "re-tapping clears" and `sudoku/state.ts:150-157`.
+      // mirroring Binairo's "re-tapping clears" and `sudoku/state.ts`'s
+      // `enter-digit`.
       const value = brushValue(state.brush);
       return withEntry(state, action.index, current === value ? null : value);
     }
@@ -224,7 +222,7 @@ export function nonogramPlayReducer(
 
     case "paint-over": {
       // A plain SET, never a toggle: a drag must be idempotent over the cells
-      // it crosses (`binairo/state.ts:100-104`).
+      // it crosses (`binairo/state.ts`'s `paint-over` case).
       const current = cellValue(state, action.index);
       if (current === undefined) {
         return state;
@@ -248,8 +246,7 @@ export function nonogramPlayReducer(
       // `selected` is deliberately UNTOUCHED: the caret is the player's and
       // the highlight is the app's. Moving it would make the hinted cell
       // always also the selected cell, and `.cellHinted` — the one visual
-      // payload the free hint has — could never render on its own (plan 018
-      // finding D3).
+      // payload the free hint has — could never render on its own.
       const revealed = withEntry(state, hint.index, hint.value);
       return {
         ...revealed,
@@ -275,7 +272,7 @@ export function nonogramPlayReducer(
 /**
  * The value a brush writes. `erase` writes `null`; the two marking brushes
  * write their own mark. There is no `violating` set and no error colour on
- * this board, deliberately (§10.3): a Nonogram has no local rule, so the
+ * this board, deliberately: a Nonogram has no local rule, so the
  * only cheap per-cell check is against the SOLUTION — and rendering that is
  * a per-cell oracle (paint a cell, watch it turn red, brute-force the
  * picture). The stuck player's escape hatch is the hint's correction branch.
@@ -352,30 +349,16 @@ function clamp(value: number, size: number): number {
  * deliberately carries no `now`.
  *
  * A CLOSED BOARD TAKES NO WRITE, and that guard lives here rather than in the
- * four entry cases so a future action inherits it (step-6 round-4 finding
- * NONO-C4-1). The window it closes is one commit wide and this board is the
- * one that can fall into it: the freeze above is an EFFECT, so between the
- * commit that sets `status: "solved"` and the flush that pauses the clock the
- * play screen is still mounted (`nonogram-screen.tsx` swaps to the conclusion
- * only on `solved` AND `runningSince === null`) and still handling
- * `pointermove`. `derive` recomputes `status` from scratch, so one
- * `paint-over` landing in that window used to hand back `status: "playing"`
- * with `timer.runningSince` already null — and nothing re-dispatches `resume`
- * without a `visibilitychange`/`pageshow`, so the clock stayed frozen for the
- * rest of the session and the `elapsedMs` finally written to the write-once
- * completion row under-reported every second after it. On Binairo and Sudoku
- * leaving `solved` takes a deliberate CLEAR; here it is overshooting a run by
- * one cell during the game's primary gesture (ADR-0037).
- *
- * `pendingSync` was already latched against this (`derive` never clears it),
- * so the day was never un-queued — the clock was the casualty. The plan's
- * §10.3 wording, which left the reducer free to leave `solved`, is superseded
- * on this point.
+ * four entry cases so a future action inherits it. The window it closes is one
+ * commit wide and this board is the one that can fall into it: the freeze
+ * above is an EFFECT, so between the commit that sets `status: "solved"` and
+ * the flush that pauses the clock the play screen is still mounted
+ * (`nonogram-screen.tsx` swaps to the conclusion only on `solved` AND
+ * `runningSince === null`) and still handling `pointermove`.
  *
  * The identity guard is NEW in this game, and it is required rather than an
- * optimisation (CLI-8): a drag dispatches `paint-over` per `pointermove`,
- * and the caller cannot bail because it does not cheaply know the current
- * value. Sudoku's and Binairo's `withEntry` allocate a new `entries` array
+ * optimisation: a drag dispatches `paint-over` per `pointermove`, and the
+ * caller cannot bail because it does not cheaply know the current value. Sudoku's and Binairo's `withEntry` allocate a new `entries` array
  * unconditionally — at 225 cells that is a fresh array and a persist-effect
  * run per move event. Binairo's absence of this guard is a latent
  * inefficiency filed as #62, not fixed here.
@@ -413,12 +396,12 @@ function withEntry(
 /**
  * Everything that follows from the entries. `status` is the ONLY derived
  * field: there is no rule-local verdict to compute, so completion is the
- * picture comparison and nothing else (§10.3).
+ * picture comparison and nothing else.
  *
  * The server still re-judges against the stored row — this verdict only
  * decides what the UI shows (ADR-0004: local validation is never a source of
  * truth). With `solution === null` the board can never close, which is
- * correct: the screen renders the unavailable card instead (§10.4).
+ * correct: the screen renders the unavailable card instead.
  */
 function derive(
   state: NonogramPlayState,
@@ -448,7 +431,7 @@ function derive(
  * `selected` stays as it is — a caret is a session thing, never persisted.
  *
  * A record whose `size` or `entries.length` disagrees with TODAY's board is
- * DISCARDED, never migrated (P16/N11). `readPlayRecord` proves the record
+ * DISCARDED, never migrated. `readPlayRecord` proves the record
  * addresses its own key and the schema proves `entries.length === size²` for
  * the record's OWN size — only this compares it against today's, and it is
  * the ONLY thing that does.
@@ -461,10 +444,7 @@ function derive(
  * weekday, so a same-date record always carries today's size. No product path
  * reaches this branch, which is why the suite has to hand-build the record it
  * reproduces the hazard with (`nonogram-state.test.ts`, the size-15 record
- * under a Monday state). An earlier version of this paragraph motivated the
- * guard with a cross-day carry-over the keying already prevents (step-6
- * round-3 finding NONO-Q4); the guard is right and cheap, its reachability
- * was overstated.
+ * under a Monday state).
  *
  * The damage a mismatched array WOULD do is the LONG direction:
  * `isPictureComplete` iterates the solution (`engine.ts`), so a 225-cell array
@@ -500,7 +480,7 @@ function restore(
 /**
  * The record union's nonogram member, or nothing. `readPlayRecord` already
  * discards a record that does not address the key it was found under — `game`
- * and `date` both (plan 018 S17) — so this branch is unreachable in practice:
+ * and `date` both — so this branch is unreachable in practice:
  * it exists because the reducer takes the whole union and a 64-cell binairo
  * `entries` array must never reach a nonogram board.
  */
