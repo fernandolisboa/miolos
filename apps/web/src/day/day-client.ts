@@ -2,7 +2,10 @@ import { dayResponseSchema, type DayResponse } from "@miolos/core";
 
 /**
  * The client half of GET /day (#83, ADR-0060) — fetch and parse only, no
- * React, so it is testable without rendering.
+ * React, so it is testable without rendering. A line-by-line sibling of
+ * `streak/streak-client.ts`, deliberately: three clients that read the
+ * authenticated surface should fail the same way, and one spelling is the
+ * rule this repo enforces hardest.
  *
  * EVERY FAILURE PATH ANSWERS `undefined`, and `undefined` means "no server
  * truth, for any reason" — the caller falls back to the device's own

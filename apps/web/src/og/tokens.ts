@@ -11,7 +11,8 @@
  * assertable.** `T-WEB-S200` matches each literal's leading SEVEN characters
  * against `packages/ui/tokens.css`, so `#2E4E7E38` ties back to
  * `--accent-sudoku: #2E4E7E` by substring while `rgba(46,78,126,0.22)` would
- * tie back to nothing.
+ * tie back to nothing. Verified that satori accepts 8-digit hex and renders
+ * it identically to the `rgba()` form.
  */
 
 /** `--paper-desk` — the desk the card sits on. */

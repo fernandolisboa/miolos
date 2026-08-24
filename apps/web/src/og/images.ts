@@ -7,7 +7,10 @@ import { CARD_HEIGHT, CARD_WIDTH } from "./card";
  * **The dimensions and the MIME type get ONE home.** Both are read off
  * `./card` or written once here rather than re-typed at each `generateMetadata`
  * call site, so a card that ever changed size could not advertise the old
- * numbers, and `"image/png"` cannot drift between two routes.
+ * numbers, and `"image/png"` cannot drift between two routes. That `./card`
+ * import is also the reason this module can sit in a PAGE's graph at no trace
+ * cost: `card.tsx` imports no `next/og`, and a production build measured the
+ * day page unchanged at 2.7 MB / 115 traced files with it in place.
  *
  * A side effect of the same single home, worth knowing before someone inlines
  * this: `T-WEB-S173` (`archive-metadata.test.ts`, *"no metadata function

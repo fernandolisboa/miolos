@@ -91,7 +91,9 @@ import { FONTS } from "./fonts";
  * { status })` has already committed the 200 and its headers before that. A
  * throw INSIDE satori therefore errors the stream after the 200 — a truncated
  * 200, not a 500 — on all ten card routes, and no `try` placement here can
- * change that. What the placement does govern is the synchronous half.
+ * change that. What the placement does govern is the synchronous half, which
+ * is the half `T-WEB-S203` row (6) and `T-WEB-S334` row (9) actually prove:
+ * both mock the BUILDER, which throws before the constructor is reached.
  *
  * `parseArchiveMonth` carries the year-zero floor that fixed a real
  * unauthenticated 500 (`archive/parse-params.ts`), and the card inherits it

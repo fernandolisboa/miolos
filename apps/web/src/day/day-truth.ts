@@ -163,6 +163,14 @@ function samePayload(previous: DayResponse, next: DayResponse): boolean {
  * local and stays local. `T-WEB-S246` stubs a rejecting `fetchDayTruth` and
  * asserts the next trigger still fetches.
  *
+ * The `catch` beside it is not decoration: `finally` RE-THROWS, so without it
+ * the same escaping rejection becomes an unhandled rejection — noise in a
+ * test run, and a `unhandledrejection` handler's problem in a browser. It
+ * SWALLOWS deliberately, because the client's contract is already "every
+ * failure answers `undefined`" and there is nothing here to report that
+ * `day-client.ts` has not already decided not to report (ADR-0060 decision
+ * 4's silent-degradation path).
+ *
  * THE MINT IS NOT AWAITED BEFORE THE FETCH, and that is a decision rather
  * than an oversight (#195, ADR-0072).
  */

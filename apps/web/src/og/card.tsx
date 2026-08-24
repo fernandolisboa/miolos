@@ -32,7 +32,10 @@ import {
  * content on the card" a TYPE-LEVEL property rather than a runtime scan
  * (ADR-0054 decision 8). For Nonogram this is a refusal and not an
  * impossibility, and ADR-0033 decision 2 `:49-55` insists on the distinction
- * being stated in those words: **it is a PRODUCT decision, not a
+ * being stated in those words: `solveNonogram(clues)` recovers the picture
+ * from the PUBLISHED clues alone — measured over 280 dailies, 0 mismatches,
+ * worst 0.338 ms (ADR-0033 Context `:26-30`) — so withholding it protects
+ * nothing about the picture's shape. **It is a PRODUCT decision, not a
  * confidentiality one.** The OG ESLint wall is the mechanical half.
  *
  * ## The scale rule: every absolute LENGTH is the f6 MOBILE frame's × 3
@@ -47,8 +50,9 @@ import {
  *
  * **Three quantities are not lengths and do not take the rule.** An angle
  * looks like itself at every scale, so the rotation is f6's −0.5 deg
- * unchanged. Optical size is the one property that must be DIVIDED by three.
- * And two lengths are rounded off the ×3
+ * unchanged. Optical size is the one property that must be DIVIDED by three
+ * (the committed cut is the 36 pt instance, chosen against the
+ * 32 px display size of the name). And two lengths are rounded off the ×3
  * value deliberately: the card width (1040, not 1062 — the largest 4pt width
  * leaving a whole-number 80px desk margin) and the padding (72, not 66 — the
  * 4pt-scale value nearest it).
