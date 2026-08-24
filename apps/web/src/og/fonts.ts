@@ -27,15 +27,9 @@ import { join } from "node:path";
  * blew up during prerender in the same probe. There is no
  * `outputFileTracingIncludes` escape hatch — it is a no-op under Turbopack.
  *
- * **Blast radius, stated.** A throw here fails the WHOLE build rather than
- * one route. That is the correct failure mode for a missing font — fail
- * closed, at build, visibly — and it is why `T-WEB-S202` also re-computes
- * the digests in `assets/fonts/SHA256SUMS` against the files on disk.
- *
  * **The family names below are what satori matches on**, not the TTFs'
  * internal ones, so the `36pt` in the Fraunces filename never reaches the
- * card's `fontFamily`. Which optical cut that file holds is derived in plan
- * 040 §7.2a and asserted intrinsically by `T-WEB-S202`.
+ * card's `fontFamily`.
  */
 const FONT_DIR = join(process.cwd(), "assets/fonts");
 

@@ -22,8 +22,8 @@ import {
  *
  * NONE of them constructs an `ImageResponse`. All three return a plain element
  * tree, so all three are renderable and assertable in jsdom without a
- * rasteriser (`T-WEB-S200`/`S208`), and the one file that genuinely rasterises
- * is quarantined to `// @vitest-environment node` (`T-WEB-S202`).
+ * rasteriser, and the one file that genuinely rasterises is quarantined to
+ * `// @vitest-environment node`.
  *
  * ## The card draws NO puzzle content, and the signature is the mechanism
  *
@@ -51,7 +51,7 @@ import {
  * **Three quantities are not lengths and do not take the rule.** An angle
  * looks like itself at every scale, so the rotation is f6's −0.5 deg
  * unchanged. Optical size is the one property that must be DIVIDED by three
- * (plan 040 §7.2a; the committed cut is the 36 pt instance, chosen against the
+ * (the committed cut is the 36 pt instance, chosen against the
  * 32 px display size of the name). And two lengths are rounded off the ×3
  * value deliberately: the card width (1040, not 1062 — the largest 4pt width
  * leaving a whole-number 80px desk margin) and the padding (72, not 66 — the
@@ -97,11 +97,6 @@ const CARD_PADDING = 72; // --space-6 × 3
  * **The count is DERIVED, never a literal.** `ceil(1200/72) × ceil(630/72)`
  * is 17 × 9 = 153, emitted ROW-MAJOR, so any hand-written count below 153
  * truncates the lattice from the bottom-right and the texture simply stops.
- * The illustrative figure is computed rather than eyeballed (step-6 finding
- * Q5): at 120 the last dot drawn is index 119 — row 7, column 0, at
- * `(0, 504)` — so the whole of row 7 from `x = 72` and the whole of row 8 go
- * unpainted, about the bottom 126 px of a 630 px card and a fifth of its
- * area. `T-WEB-S200` asserts the derivation and the 153.
  */
 function deskDots(): ReactElement[] {
   const columns = Math.ceil(CARD_WIDTH / DOT_TILE);
@@ -136,10 +131,7 @@ function deskDots(): ReactElement[] {
  * obeyed WITHOUT invoking its exception: `DESIGN.md`'s colour section says
  * outright that "the kicker is no longer among" the sanctioned accent
  * surfaces, so the reference frames' accent-coloured kickers predate ADR-0041
- * and are not copied. It also means no accent's contrast on paper is ever a
- * question here — not even the old light mustard's, before ADR-0067 deepened
- * it. `T-WEB-S200` walks the tree for it, with the tape and the shadow as
- * its counted floor.
+ * and are not copied.
  */
 function paper(args: {
   readonly tape: string;
@@ -232,10 +224,7 @@ const wordmarkStyle = {
  *
  * `longDate` is REQUIRED, not optional: every game card is dated, so there is
  * no dateless variant, and the absence of a fallback is what makes the
- * signature a guarantee rather than a convention. It is the ONLY value
- * derived from a wall read that reaches this tree — and it is a date, the
- * same value the archive URL carries in plain sight and the sitemap
- * publishes, not puzzle content.
+ * signature a guarantee rather than a convention.
  */
 export function gameCard(args: {
   readonly game: Game;
@@ -268,45 +257,15 @@ export function gameCard(args: {
 /**
  * The three ARCHIVE shell cards, as one builder (#104, ADR-0071).
  *
- * ## The display slot holds the most specific thing the URL names
- *
- * One rule, three captions — `/arquivo` puts "Arquivo" over a tagline,
- * `/arquivo/mes/<mês>` puts the month over "Arquivo", `/arquivo/<data>` puts
- * the day over its year and "Arquivo". The alternative (the constant word
- * "Arquivo" at 96px on all three) would make ~1,096 day cards visually
- * interchangeable with the index card, and it inverts what the product's own
- * `<title>`s already get right: `meta.dayTitle` leads with the date.
- *
  * ## The card names NO GAME, and the signature is the mechanism
  *
  * Two already-formatted `string`s, and no parameter a `Game` or an
  * `ArchivedDay` can enter through — the same argument `gameCard` makes above,
  * for a builder that takes no game at all. THE SIGNATURE IS THE WHOLE
  * MECHANISM here; the handler's `limit: 1` is not, and the reason it is not is
- * written once, in `handlers.ts`, where the read actually lives. This builder
- * takes two strings and knows nothing about the call that produced them.
+ * written once, in `handlers.ts`, where the read actually lives.
  *
- * The product reasons are recorded in ADR-0071 decision 5: the archive's
- * oldest days hold one, two or three games (ADR-0053 decision 3), so a card
- * naming four is false on exactly those days; four game names could not be
- * told apart even in principle, because `DESIGN.md`'s colour section says the
- * shared per-game accent *"may never colour a word"*, at any size and on any
- * paper; and ADR-0054 decision 1a's archive surface is a narrower surface than
- * the daily's, never a wider one.
- *
- * ## No kicker, and one tape
- *
- * `DESIGN.md:29` makes kickers "a deliberate brand system, used for game
- * categories, not as a generic section eyebrow", so "ARQUIVO" as a 33px
- * uppercase eyebrow would be the banned use. `siteCard` below is the
- * precedent: a non-game card has no kicker. The card DOES take one washi
- * tape, in `ACCENT_APP_*`, and that does not contradict
- * `index-view.tsx:35-37`'s "no washi tape, tape marks a game": that sentence
- * is about the archive index PAGE, which has no paper card with a top edge to
- * tape. On THIS surface the tape marks a card and the ACCENT marks a game —
- * and `ACCENT_APP_*` is the non-game accent, exactly as `siteCard` takes it.
- *
- * ## The sizing rung, MEASURED (plan 068 §12.2), because it was not obvious
+ * ## The sizing rung, MEASURED, because it was not obvious
  *
  * `paper()`'s inner width is **890px** — `CARD_BOX_WIDTH − 2 × CARD_PADDING −
  * 2 × border` = `1040 − 144 − 6`, since yoga's `width` is a border box — and
@@ -323,8 +282,6 @@ export function gameCard(args: {
  *
  * The month card stays at rung 1: worst `"novembro de 2028"` at **843px**.
  *
- * Rung 2 costs no new type level, no new absolute length and no new
- * derivation: every value in the stack below already exists in this module.
  */
 export function archiveCard(args: {
   /** Already formatted — `formatDayAndMonth`, `formatMonth`, or a message. */
@@ -358,10 +315,7 @@ export function archiveCard(args: {
  *
  * It is not any one game's, so it takes `--accent-app` ("sealing-wax red:
  * streak, promo"), and `DESIGN.md:37` describes ONE tape over a card's top
- * edge rather than four. The tagline is `ogCopy.siteTagline`, written
- * for this surface: `meta.title` already contains the wordmark this card sets
- * at 96px, and `meta.description` is 133 characters — three wrapped lines of
- * body copy where the composition wants one line.
+ * edge rather than four.
  */
 export function siteCard(): ReactElement {
   return paper({
@@ -389,17 +343,9 @@ export function siteCard(): ReactElement {
  * of the committed `app/arquivo/opengraph-image.png` (#104, ADR-0071).
  *
  * A zero-argument named builder for the same reason `siteCard` above is one.
- * The two dynamic archive cards take `{display, caption}` because their
- * handlers own the strings and the two-string signature is the structural
- * guarantee that no game reaches the tree. The index card has no handler and
+ * The index card has no handler and
  * no date: its composition is a CONSTANT, and a constant with no home gets
- * copied. It was, four times over, into the two test files — including into
- * the `WRITE_ARCHIVE_CARD=1` generator that decides what the committed PNG
- * actually is (step-6 quality S8).
- *
- * It delegates rather than duplicating the tree, so the three archive cards
- * stay one composition, and it gives `ogCopy.archiveTagline` and
- * `ogCopy.altArchiveIndex` the same kind of consumer `ogCopy.siteTagline` has.
+ * copied.
  */
 export function archiveIndexCard(): ReactElement {
   return archiveCard({

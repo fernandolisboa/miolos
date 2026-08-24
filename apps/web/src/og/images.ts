@@ -22,9 +22,7 @@ import { CARD_HEIGHT, CARD_WIDTH } from "./card";
  * literal into a module — never to weaken the scan.
  *
  * `alt` is a parameter and not a constant, because these two cards' `alt`
- * strings are DATED — the mirror image of `ogCopy.altGame`'s constraint. A
- * metadata route's `alt` is a module export and cannot read `params`; an
- * `images[].alt` composed inside `generateMetadata` can.
+ * strings are DATED — the mirror image of `ogCopy.altGame`'s constraint.
  *
  * **NAMED ARGUMENTS, not two positional strings.** `url` and `alt` are both
  * `string` and both computed at every call site, so a positional pair

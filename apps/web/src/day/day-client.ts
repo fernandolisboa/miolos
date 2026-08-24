@@ -13,12 +13,6 @@ import { dayResponseSchema, type DayResponse } from "@miolos/core";
  * conclusion can finish offline at all. NOTHING ON A PLAY PATH AWAITS THIS
  * FETCH.
  *
- * THE SILENT PARSE FAILURE IS CHOSEN, NOT OVERLOOKED. The env guard is
- * loud, the parse failure is not — exactly as `streak-client.ts` and
- * `stats-client.ts` split it. A third client that shouted would make `/day`
- * the only one of three that does; if loud parse failures are wanted, they
- * are a three-client ticket of their own.
- *
  * BEHIND THE FREE-PLAY WALL: this module and its sibling store are banned
  * from apps/web/src/free-play and app/modo-livre by name (eslint.config.mjs,
  * ADR-0046) — free play never touches the day, the streak or the statistics.

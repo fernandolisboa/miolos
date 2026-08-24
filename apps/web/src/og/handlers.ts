@@ -49,10 +49,7 @@ import { FONTS } from "./fonts";
  * server-truthful source of today's São Paulo date is the DB clock, which that
  * reader's predicate interpolates. No client clock, no `new Date()`.
  *
- * ADR-0010 `:20` is the governing sentence and it names this surface: "Every
- * read path — daily, archive, OG images, anything — filters
- * `published_at <= now()`, and does so through one shared query helper, not a
- * predicate re-typed per route." Both readers carry the conjuncts through
+ * Both readers carry the conjuncts through
  * `packages/db`'s single private `publishedConjuncts()`. No fallback card
  * exists, ever: a fallback would be an unpublished day rendering *something*.
  *
@@ -72,20 +69,15 @@ import { FONTS } from "./fonts";
  * answer, so no game SET is in scope — but `ArchivedDay` is `{date, game}`
  * and `days[0].game` is one access away, so a bound is not a guarantee. The
  * guarantee is `archiveCard`'s SIGNATURE, two formatted strings with no
- * parameter a `Game` can enter through. `T-WEB-S201` polices the access from
- * the source side and `T-WEB-S334` row (10) pins the argument object.
+ * parameter a `Game` can enter through.
  *
  * **The rule above produces no catch here, and the omission is the argument
  * rather than a gap.** `listArchivedDays` selects two columns, runs no
- * projection and parses nothing (`packages/db/src/published.ts:372-396`), so
- * no member of `PROJECTION_ERROR_NAMES` can arise from it. Every callee on
- * the path was traced: `parseArchiveDate` and `parseArchiveMonth` use
- * `safeParse`, never `parse`, so neither can throw a `ZodError`; `getDb()`
- * throws a plain `Error("WEB_DATABASE_URL is not set")`. A narrowed catch
+ * projection and parses nothing, so
+ * no member of `PROJECTION_ERROR_NAMES` can arise from it. A narrowed catch
  * here would be unreachable code that re-throws everything. Every throw these
  * handlers can see — a Neon timeout, a pool error, a missing credential — is
  * exactly the class the name set was always designed to send to a 500.
- * `T-WEB-S334` pins both directions so the absence can go red.
  *
  * The `ImageResponse` construction stays outside any read for the same reason
  * it is outside the `try` above: a SYNCHRONOUS throw from the builder or from
@@ -93,7 +85,7 @@ import { FONTS } from "./fonts";
  * by a `try` some later edit widened to the whole handler.
  *
  * **Narrower than "a satori throw must be a 500", because that is not what
- * the runtime does** (step-6 security S4). In
+ * the runtime does**. In
  * `next/dist/server/og/image-response.js` the body is a `ReadableStream` whose
  * `async start()` is where satori and resvg actually run, and `super(readable,
  * { status })` has already committed the 200 and its headers before that. A
@@ -156,18 +148,11 @@ const CARD_HEADERS = {
 
 /**
  * There is no page to render a not-found boundary into, so: a bare 404 — and
- * it carries `CARD_HEADERS` for a stronger reason than the 200 does (step-6
- * finding K2).
- *
- * The doc block above argues that "a 404 on this surface is negative-cached
- * by social scrapers for days". A refusal is exactly the response whose truth
- * flips at São Paulo midnight: `/termo/opengraph-image` 404s until the day is
- * published and renders the moment it is, and `/arquivo/<amanhã>/…` 404s
- * today and is a real card tomorrow. Shipping that with NO cache-control left
- * it to whatever the platform defaults to, on the one arm where a stale copy
- * outlives its truth by a day rather than by a revalidation. `killed_at` is
- * the other direction of the same argument and it is why the 200 path carries
- * the header; the 404 needs it at least as much.
+ * it carries `CARD_HEADERS` for a stronger reason than the 200 does. A
+ * refusal is exactly the response whose truth flips at São Paulo midnight:
+ * `/termo/opengraph-image` 404s until the day is published and renders the
+ * moment it is, and `/arquivo/<amanhã>/…` 404s today and is a real card
+ * tomorrow.
  */
 const refuse = (): Response =>
   new Response(null, { status: 404, headers: CARD_HEADERS });
@@ -195,11 +180,7 @@ export async function archiveGameCardHandler(
     return refuse(); // future, unpublished, killed, or no such day
   }
 
-  // OUTSIDE the try, and `T-WEB-S203` row (6) pins that: a SYNCHRONOUS throw
-  // from the builder or the constructor must surface as a 500, never be
-  // converted into a silent 404 by a `try` some later edit widened to the
-  // whole handler. (A throw from satori itself lands after the 200 is on the
-  // wire — see the module doc block.)
+  // OUTSIDE the try, deliberately — see the module doc block.
   return new ImageResponse(gameCard({ game, longDate: formatLongDate(date) }), {
     ...SIZE,
     fonts: FONTS,
@@ -239,17 +220,10 @@ export async function archiveDayCardHandler(
     archiveCard({
       display: formatDayAndMonth(date),
       // A RAW SLICE, DELIBERATELY, and it is the one place on this surface
-      // that does date surgery. `format.ts`'s `formatDayNumber` states the
-      // opposite rule — *"Through `Intl` rather than a string slice, so the
-      // locale owns its own numerals and the leading zero goes without a
-      // hand-rolled trim"* — and that rule is about a NUMERAL the locale
-      // owns. This is not a numeral: it is the four characters the URL
-      // already carries, and the caption's job is to put the year the display
-      // line dropped back beside a date the reader can see in the address
-      // bar. An `Intl` year would be free to disagree with it — `formatMonth`
-      // prints "janeiro de 1" where `/cartao/0001-01-01` says `0001`. The
-      // shape is guaranteed: `parseArchiveDate` returned, so `date` is
-      // `YYYY-MM-DD` with a real calendar day.
+      // that does date surgery. An `Intl` year would be free to disagree with
+      // it — `formatMonth` prints "janeiro de 1" where `/cartao/0001-01-01`
+      // says `0001`. The shape is guaranteed: `parseArchiveDate` returned, so
+      // `date` is `YYYY-MM-DD` with a real calendar day.
       caption: ogCopy.archiveDayCaption(date.slice(0, 4)),
     }),
     { ...SIZE, fonts: FONTS, headers: CARD_HEADERS },
@@ -293,10 +267,6 @@ export async function dailyCardHandler(game: ProjectedGame): Promise<Response> {
     if (!isBadRow(error)) {
       throw error;
     }
-    // GAME ONLY, AND THAT IS NOT AN OVERSIGHT. There is no date in scope
-    // here: this handler never parses one, and the date it would log lives on
-    // the row `getTodayDaily` threw instead of returning. Naming the reader is
-    // what makes the line actionable — "today" is implicit in it.
     console.error(`og daily card: unreadable today row for ${game}`, error);
     return refuse();
   }

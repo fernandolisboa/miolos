@@ -13,19 +13,10 @@ import { fetchDayTruth } from "./day-client";
  * WHY A MODULE-LEVEL STORE AND NOT `useStreak`'s MOUNT EFFECT: `useDayState`
  * is called FIVE TIMES on one hub render — one `HubProgress` plus four
  * `HubCardAction`s — and a per-hook mount effect would fire five credentialed
- * GETs per hub view. The store makes it one. It is also the idiom
- * `play/use-record-snapshot.ts` already establishes for a module-level source
- * with N consumers. A React context was rejected: the hub's client fragments
- * are separate islands inside a server component, and a provider would
- * restructure `app/page.tsx` to buy the same thing.
+ * GETs per hub view. The store makes it one.
  *
  * `useDayTruth()` TAKES NO ARGUMENT, and that is load-bearing rather than
- * terse. The moment the hook takes a `date` and filters internally, this one
- * module-level slot is serving a KEYED PROJECTION — ADR-0056's exact defect
- * one level up: N consumers with different keys evicting each other on every
- * `getSnapshot`, a fresh object per read, `Maximum update depth exceeded`
- * (measured there at 17 live consumers against a 16-entry cache, plain and
- * in StrictMode). There is exactly one "today" payload, every consumer reads
+ * terse. There is exactly one "today" payload, every consumer reads
  * the same value, so there is nothing to key and nothing to evict. The date
  * filter lives in `play/day-state.ts`, where the rendered day is already a
  * parameter. Do not add one here.
@@ -40,21 +31,13 @@ import { fetchDayTruth } from "./day-client";
  * - `visibilitychange` -> visible, `focus`, and `online` — the last being
  *   the offline -> online recovery path the client's fallback promises.
  * - A 60 s POLL, and ONLY while both of these hold: at least one listener is
- *   subscribed, and the document is visible. ADR-0060 decision 5 shipped
- *   this store with NO interval and named its cost — an already-open,
- *   already-focused tab (a second monitor sitting on the hub) never updates
- *   on its own — with a complaint as the trigger for revisiting. The
- *   complaint fired: Fernando asked, answering PR #135's veto decision 4,
- *   and #143 amended the clause (annotation (a)). The timer is torn down
+ *   subscribed, and the document is visible. The timer is torn down
  *   while hidden — `visibilitychange` -> visible already refetches on
  *   re-show, so a hidden tab owes the server nothing — and at zero
  *   listeners, where cleanup clears it; each tick goes through `refresh()`,
  *   so the in-flight guard below means a slow answer is never stacked on.
  * - A ONE-SHOT NUDGE WHEN A COMPLETION SETTLES `recorded` (#64, ADR-0070),
- *   fired by the conclusion through `refreshDayTruth()`. Honest independent
- *   of #64 — the server's day truth genuinely just changed — and it exists
- *   because the motif name is the payoff moment's whole point, and waiting
- *   up to 60 s for the poll to reveal it is not a payoff. It is EVENT-DRIVEN
+ *   fired by the conclusion through `refreshDayTruth()`. It is EVENT-DRIVEN
  *   AND ONE-SHOT, not a second interval, so the clause above stays exact.
  * - ONE POST-MINT REPAIR PER PAGE LOAD (#195, ADR-0072), when a fetch
  *   answered `undefined` while this store had never held a server truth.
@@ -142,25 +125,12 @@ function getSnapshot(): DayResponse | undefined {
 /**
  * The SSR snapshot is `undefined` — no server truth at render time — so the
  * server markup and the pre-hydration client render agree byte-for-byte and
- * NO FETCH HAPPENS AT RENDER. The hub's first-paint contract (T-WEB-S17 /
- * T-WEB-S127) is untouched.
+ * NO FETCH HAPPENS AT RENDER.
  */
 function getServerSnapshot(): DayResponse | undefined {
   return undefined;
 }
 
-/**
- * Field for field: date plus the four claims — each a status AND, since
- * #141, its optional `elapsedMs`, AND, since #142, its optional `hintsUsed`,
- * AND, since #64, the Nonogram's optional `motifName`. Comparing the status
- * alone would swallow a payload whose only change is a duration, a hint
- * count or a motif NAME, and the stale value would stand for the session.
- *
- * `motifName` is the case where that is not hypothetical: a first read that
- * raced a killed or malformed daily row answers `completed` with no name,
- * and the corrected payload one poll later differs in NOTHING ELSE. Without
- * this line the caption would never appear for that user today.
- */
 function sameGame(
   previous: DayResponse["games"]["termo"],
   next: DayResponse["games"]["termo"],
@@ -228,43 +198,6 @@ function samePayload(previous: DayResponse, next: DayResponse): boolean {
  *     `Feito`, and ordering it would charge EVERY warm load a round trip —
  *     `ensureSession()` POSTs unconditionally, with no client-side cookie
  *     check — to fix only the loads whose cookie had expired.
- *
- * SO THE STORE REPAIRS INSTEAD OF WAITING. A fetch that answers `undefined`
- * WHILE THIS STORE HAS NEVER HELD A SERVER TRUTH on this page load spends the
- * one-shot above: await the mint, then refresh once more. Five things about
- * the shape are load-bearing:
- *
- *  - THE MINT IS REACHED THROUGH `.then`, NEVER `await`ed inside the chain
- *    that holds `inFlight`. That is what keeps the guard released while the
- *    mint runs: a hanging mint parks a dangling continuation and nothing
- *    else, and every later trigger keeps working (`T-WEB-S346`(b)).
- *    `inFlight = false` is written first for readability; its position is
- *    NOT the safety, because `ensureSession().then` defers to a later
- *    microtask either way.
- *  - THE TRIGGER IS THE `next === undefined` ARM ONLY, NEVER `.catch`. The
- *    catch arm is unreachable through the shipped client, and `T-WEB-S246`
- *    stubs a rejecting client precisely to prove the guard's correctness is
- *    LOCAL; wiring the repair to it would borrow that guarantee back.
- *  - `payload === undefined` NARROWS IT FURTHER, to "no server truth at all".
- *    A transient blip mid-session does not spend the one-shot — and does not
- *    repair one either (ADR-0072 consequence (g)).
- *  - IT IS A STATE, NOT A CAUSE. `fetchDayTruth` answers `undefined` for five
- *    reasons — unset env var, ANY `!response.ok`, a 200 the schema refuses, a
- *    thrown fetch, and only within the second of those the 401 this exists
- *    for — so a 5xx degenerates the repair into a zero-delay retry-once.
- *    Accepted and bounded at one per page load; ADR-0072 consequences (j)
- *    and (k) carry the argument.
- *  - IT FIRES BLIND. `ensureSession(): Promise<void>` discards whether an
- *    identity actually landed, so a mint that resolved `false` still spends
- *    the one-shot. Reading that boolean means `remintSession()`, which is not
- *    for read paths (ADR-0072 consequence (l)).
- *  - IT JOINS A MINT, IT NEVER STARTS ONE — and that is a property of the
- *    APP, not of this module. `app/layout.tsx` is the only layout and renders
- *    `<SessionBootstrap/>` ahead of `{children}`, so `ensureSession()`'s
- *    cached promise is always already pending by the time a full `GET /day`
- *    round trip has come back. Render this store under a layout that does
- *    NOT bootstrap and a read path mints an anonymous user per load. Pinned
- *    by `T-WEB-S345`'s third case; ADR-0072 consequence (d).
  */
 function refresh(): void {
   if (inFlight) {
@@ -275,8 +208,6 @@ function refresh(): void {
   void fetchDayTruth()
     .then((next) => {
       if (next === undefined) {
-        // Only while the store has NEVER held a server truth on this page
-        // load — #195's defect shape exactly, and nothing wider.
         noTruthYet = payload === undefined;
         return;
       }
@@ -290,9 +221,8 @@ function refresh(): void {
     })
     .catch(() => {
       // Unreachable through the shipped client, and swallowed on purpose —
-      // see the header. The retained payload stands; the guard is released
-      // by the `finally` below either way. Deliberately NOT a repair
-      // trigger: `noTruthYet` is still `false` here.
+      // see the header. Deliberately NOT a repair trigger: `noTruthYet` is
+      // still `false` here.
     })
     .finally(() => {
       inFlight = false;
@@ -326,7 +256,6 @@ const POLL_INTERVAL_MS = 60_000;
 
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 
-/** Idempotent: a running timer is kept, never doubled. */
 function startPoll(): void {
   if (pollTimer !== undefined) {
     return;
@@ -347,8 +276,6 @@ function onVisibilityChange(): void {
     startPoll();
     refresh();
   } else {
-    // No timer while hidden: the visible branch above already refetches on
-    // re-show, so ticks in a hidden tab would be pure request volume.
     stopPoll();
   }
 }
@@ -387,35 +314,8 @@ export function useDayTruth(): DayResponse | undefined {
  * store notifies its subscribers if anything changed and does nothing if not.
  *
  * WHAT ITS GUARD ACTUALLY IS, stated exactly rather than assumed: `refresh()`
- * is guarded by `inFlight` and by NOTHING ELSE. The subscriber and visibility
- * conditions live on `startPoll`/`stopPoll`/`subscribe`, and
- * `window.addEventListener("focus", refresh)` calls it unconditionally too.
- * So this CAN fire a credentialed `GET /day` with no listener subscribed.
- * Accepted explicitly, and bounded: at most four completions per user per
- * day, and in the common case it is a no-op anyway, because the caller's
- * effect is declared after `useDayState`'s subscribe in the same component
- * and `inFlight` is already true.
- *
- * NO LOOP IS REACHABLE, and this is a proof rather than an assurance:
- * `refresh()` never writes a play record, so `settle` cannot be re-entered
- * from it; `settle` drops the record from the fallback queue, so the trigger
- * fires at most once per record; `inFlight` dedupes concurrent triggers; and
- * `settle(_, "recorded")` has exactly ONE call site (`acceptResponse` in
- * `play/sync.ts`, covering both the `recorded: true` and `recorded: false`
- * arms), so this is one condition and not two branches.
- *
- * THE PROOF EXTENDS RATHER THAN BREAKS UNDER #195's POST-MINT REPAIR. The new
- * edge is `refresh -> (empty, and no truth held) -> ensureSession -> refresh`,
- * and it fires AT MOST ONCE PER PAGE LOAD: `mintRepairSpent` is set before
- * the mint is awaited and is never cleared, so the chain is bounded at length
- * two and the second link cannot schedule a third. This entry point and
- * `subscribe`'s 0 -> 1 share the one flag, so that is ONE bound over both and
- * not one each (`T-WEB-S346`(c)).
- *
- * Re-exported by `play/day-state.ts` as `refreshServerDay`, which is how the
- * play layer reaches it: ADR-0060 consequence (d)'s single-importer rule says
- * `src/day/**` is imported by `src/play/day-state.ts` and nothing else
- * (`T-WEB-S244`), and #64 does not spend that rule to save one hop.
+ * is guarded by `inFlight` and by NOTHING ELSE. So this CAN fire a
+ * credentialed `GET /day` with no listener subscribed.
  */
 export function refreshDayTruth(): void {
   refresh();
