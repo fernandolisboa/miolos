@@ -21,9 +21,9 @@ const BRUSHES: readonly NonogramBrush[] = ["fill", "cross", "erase"];
  * is therefore not decoration — the brush is state a non-sighted player must
  * be able to query before every stroke.
  *
- * And there is no cycle default: `binairo/state.ts:100-104` ignores
- * `paint-over` entirely in cycle mode, so a cycle default here would ship this
- * board's primary gesture dead on first paint (N28).
+ * And there is no cycle default: `binairo/state.ts`'s `paint-over` case
+ * ignores that action entirely in cycle mode, so a cycle default here would
+ * ship this board's primary gesture dead on first paint.
  *
  * REJECTED: `role="radiogroup"` + three `role="radio"`. Semantically closer to
  * "exactly one of three", and rejected because radio semantics bring their own

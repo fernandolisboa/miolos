@@ -77,8 +77,7 @@ export type SudokuPlayAction =
   /**
    * A relative move, clamped per axis. `Home`/`End` are this action with
    * `columns: ∓8` — a full-width clamped move lands on the row's first or
-   * last column by construction, so they need no action of their own
-   * (§8.4).
+   * last column by construction, so they need no action of their own.
    */
   | {
       readonly type: "move-selection";

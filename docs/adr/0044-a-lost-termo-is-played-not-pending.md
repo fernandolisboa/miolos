@@ -300,7 +300,7 @@ done would be a lie the player can catch."*
     the schema**, and that is decision 3's requirement rather than an
     omission: *"the Termo reducer's `restore` discards a record whose
     `outcome` disagrees with `deriveBoardStatus(tiles)`"*
-    (`apps/web/src/termo/state.ts:285-288`). Putting it in the schema would
+    (`apps/web/src/termo/state.ts`'s `restore`). Putting it in the schema would
     put a `packages/games/termo` call inside `play-record.ts`, which is on
     every route's client graph — the exact import decision 3 exists to keep
     out. The two placements also fail differently, and the difference is

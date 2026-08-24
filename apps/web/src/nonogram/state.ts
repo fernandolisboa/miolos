@@ -8,8 +8,8 @@
  * Nonogram stroke carries no value of its own, so `paint-over` must be a
  * plain SET and the value it sets can only come from sticky state. There is
  * deliberately no cycle mode — `binairo/state.ts`'s `paint-over` case
- * ignores it entirely in cycle mode, and here the drag IS the primary
- * gesture.
+ * ignores that action entirely in cycle mode, and here the drag IS the
+ * primary gesture.
  */
 import type { DailyNonogramResponse, NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
@@ -358,7 +358,8 @@ function clamp(value: number, size: number): number {
  *
  * The identity guard is NEW in this game, and it is required rather than an
  * optimisation: a drag dispatches `paint-over` per `pointermove`, and the
- * caller cannot bail because it does not cheaply know the current value. Sudoku's and Binairo's `withEntry` allocate a new `entries` array
+ * caller cannot bail because it does not cheaply know the current value.
+ * Sudoku's and Binairo's `withEntry` allocate a new `entries` array
  * unconditionally — at 225 cells that is a fresh array and a persist-effect
  * run per move event. Binairo's absence of this guard is a latent
  * inefficiency filed as #62, not fixed here.
