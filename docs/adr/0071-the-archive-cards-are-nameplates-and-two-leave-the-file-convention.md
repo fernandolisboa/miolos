@@ -389,8 +389,9 @@ call under `CLAUDE.md`, decided below and recorded on the issue.
   already settled it: a non-game card takes `--accent-app`. Here the tape
   marks *a card*; the **accent** marks a game. `index-view.tsx` is not edited.
 - **(h) The archive half of the OG copy deck opens for the first time.**
-  `apps/web/src/og/copy.ts:34-36`'s *"The ARCHIVE routes add no copy at all"*
-  was true of the archive **play** routes and is amended in the same diff: the
+  `ogCopy`'s module doc block in `apps/web/src/og/copy.ts` says *"The ARCHIVE
+  routes add no copy at all"*, which was true of the archive **play** routes
+  and is amended in the same diff: the
   three shell cards add **five** strings — `archiveTagline`, the shipped
   `messages.archive.lead` sentence rather than a second spelling of it, for the
   index card, which has no date to print; `archiveDayCaption`, for the day
