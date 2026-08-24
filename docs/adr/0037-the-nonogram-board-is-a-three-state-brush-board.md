@@ -27,8 +27,8 @@ only come from state held outside the gesture. Binairo's shipped `cycle`
 default is instructive here rather than copyable: `binairo/state.ts`'s
 `paint-over` case ignores that action **entirely** in cycle mode, because
 "cycling on drag is chaos". Binairo can afford that because its drag is
-secondary. Copying
-the default here would ship this game's main input dead on first paint.
+secondary. Copying the default here would ship this game's main input dead on
+first paint.
 
 **Pointer capture leaves a door open that a composite widget has to
 close.** The shipped stroke machinery takes `setPointerCapture` on the
