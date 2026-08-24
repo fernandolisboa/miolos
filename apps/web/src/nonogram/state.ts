@@ -349,12 +349,7 @@ function clamp(value: number, size: number): number {
  * deliberately carries no `now`.
  *
  * A CLOSED BOARD TAKES NO WRITE, and that guard lives here rather than in the
- * four entry cases so a future action inherits it. The window it closes is one
- * commit wide and this board is the one that can fall into it: the freeze
- * above is an EFFECT, so between the commit that sets `status: "solved"` and
- * the flush that pauses the clock the play screen is still mounted
- * (`nonogram-screen.tsx` swaps to the conclusion only on `solved` AND
- * `runningSince === null`) and still handling `pointermove`.
+ * four entry cases so a future action inherits it.
  *
  * The identity guard is NEW in this game, and it is required rather than an
  * optimisation: a drag dispatches `paint-over` per `pointermove`, and the
