@@ -8,21 +8,23 @@ Everything else is agent-owned — plans, reviews, fixes and merges happen witho
 
 Two campaigns are open, both agent-owned, nothing blocked.
 
-**#205 — comment removal.** Tranche 6 (`apps/web/src/play`) is complete: #220 took the `.ts`/`.tsx` half (2,967 → 1,203), #221 the CSS half (824 → 187). Tranche **7a is partly done**: #223 swept `src/i18n/messages.ts` (664 → 191). Zero code changed in any of them, proved by hashing.
+**#205 — comment removal. Tranche 7a is CLOSED** (#223 `src/i18n/messages.ts`, #225 `src/day` + `src/session` + `src/og`, 1,093 → 827). Zero code changed in either, proved by hashing. Tranches 1–6 done.
 
-**7a is not closed.** Still open in it: `src/day`, `src/session`, `src/og` (~1,200 lines). Then 7b (the four game dirs' `.ts`/`.tsx`, ~2,600), 7c (the game `.module.css`, 1,097), 7d (`src/archive`, `src/free-play`, `src/components`, ~2,000), then `app/`+`scripts/`, `test/`, and `eslint.config.mjs`.
+**Next is 7b: the four game dirs' `.ts`/`.tsx`.** Then 7c (the game `.module.css`, 1,097), 7d (`src/archive`, `src/free-play`, `src/components`), then `app/`+`scripts/`, `test/`, `eslint.config.mjs`.
 
-**#221 cost seven review rounds and #223 four, and in both, most rejections were for defects introduced while fixing the previous round.** The rules are written up as two comments on #205 — read them before the next sweep. The four that generalise:
+**Read the two rule comments on #205 before sweeping anything.** #225 cost three review rounds and *every round found a defect the previous FIX left behind*. The four that generalise:
 
-- **Condensing a comment is rewriting it.** Restore verbatim or delete; never reword. And check the text a *fix* adds, not just what the sweep kept — that is where they hide.
-- **Check what cites a block before sweeping**, searching paraphrase and symbol names, not just verbatim runs — and including ADRs and READMEs. Citations can also be intra-file.
-- **`bodyOf` is first-match at every level.** One gate was bypassed eight ways across six rounds. Every descent needs a uniqueness assertion.
-- **One metric, both ends, reconciled to `git diff --numstat`.** Four counts were wrong across the two PRs.
+- **Re-derive the baseline with a PARSER.** A bare `ts.createScanner` loop needs `reScanTemplateToken` to walk template-literal spans and silently stops early without it — it under-counted 7a by 21%. Every published tranche estimate (7b's "~2,600") came from that scanner and is a **floor**. Reconciling to `numstat` does not catch this.
+- **A dangling pointer is a class.** Fix the instance a review names, then enumerate *every* outbound pointer in the tranche. #225's round-1 fix closed one and left its twin four lines away.
+- **Rule A has two halves: the quoted text AND the line anchor.** A sentence kept byte-identical still breaks `ADR-NNNN:33`-style citations when the sweep moves it. Grep for `<swept-file>:` and convert to symbol citations.
+- **Per deleted paragraph, name the gate** — and ask whether deleting the code it defends would actually red that test. Four ungated rules survived into review in files whose ADRs looked exhaustive.
 
-Also: **`npx impeccable detect` with no argument scans nothing and exits 0.** #212 and #220 both cited that vacuous green as evidence. The real UI gate is the CI `detect` check on the head commit.
+Also: **`npx impeccable detect` with no argument scans nothing and exits 0.** #212 and #220 both cited that vacuous green. The real UI gate is the CI `detect` check on the head commit.
 
 **#206 — duplication, 3 of 15 clusters done.** Next by value is cluster 14, `conclusion-view.tsx`. The issue's "1,477 lines" is stale — #220 cut it to **888**. The duplication is still real: `ConclusionView`/`RemoteConclusionView` and `ShippedStamp`/`RemoteShippedStamp`/`RemoteTermoStamp`.
 
-**#209 — the `apps/web` CI flake** is diagnosed but unfixed; it did not reproduce across any full-suite run this session. Worth fixing alongside the `apps/web/test` tranche.
+**#209 — the `apps/web` CI flake** is diagnosed but unfixed; it did not reproduce across any full-suite run in the last two sessions. Worth fixing alongside the `apps/web/test` tranche.
 
 **#219** — the read-only-but-not-writable store defect — is triaged `defect` + `ready-for-agent`.
+
+**One debt 7d must clear:** #225 left `day-client.ts` without its free-play-wall paragraph and boundary-rule comment restored *and* asserting it is a "line-by-line sibling" of `streak-client.ts`. Both went back in, so 7d has to sweep all seven clients together or the asymmetry returns.
