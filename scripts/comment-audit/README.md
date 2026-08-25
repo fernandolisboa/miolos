@@ -7,7 +7,9 @@ figures were restated three times before they reproduced, and two per-file rows
 whose errors cancelled inside a total that still reconciled.
 
 Run from the repo root. Every tool refuses an **empty file list** with exit 2,
-flags included — `--base main` alone is not a file list. A wrong glob would
+flags included — `--base main` alone is not a file list — and exits 2 rather
+than printing a summary when **every** file was skipped, because zero
+comparisons is not a green. A wrong glob would
 otherwise print the most reassuring output in the toolkit, which is #205's
 Rule I applied to this directory. `verbatim.mjs`, `excision.mjs` and
 `hash.mjs` also exit non-zero when they flag something.
@@ -76,12 +78,13 @@ ordinary prose is the dangerous direction**: it hides a real rewrite behind a
 green.
 
 It is **not anchored at the opening parenthesis** — `(ADR-0032, plan 020 §9.3)`
-is as real a citation as `(plan 020 §9.3)` — but the lead-in is **bounded**: at
-most 24 characters, no `(`, no sentence punctuation. Unbounded, it stripped the
-prose in front of a citation from both sides, and over raw text a match could
-begin at a *code* parenthesis and swallow the lines between. Which is why the
-tools scan the **comment corpus**, never the whole file. `selftest.mjs` pins
-both directions.
+is as real a citation as `(plan 020 §9.3)` — but **both sides are bounded**: at
+most 40 characters each, and neither may cross an em dash or a sentence break.
+Unbounded on either side it strips the prose *around* a citation from both
+files, so a reworded claim passes green; and over raw text a match can begin at
+a *code* parenthesis and swallow the lines between. Which is why every tool
+scans the **comment corpus**, never the whole file. `selftest.mjs` pins both
+directions and both sides.
 
 `css-count.mjs` exists for tranche 7c. It is not strictly required — `count.mjs`
 returns the identical figure on every tracked sheet today — but a `url(http://…)`

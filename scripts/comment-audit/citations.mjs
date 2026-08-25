@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
-import { commentRanges, commentRangesOf } from "./count.mjs";
+import { commentText } from "./count.mjs";
 import { recordsRe, parseArgs } from "./records.mjs";
 
 // How many records-genre citations a sweep removed: matches present on the
@@ -9,13 +8,8 @@ import { recordsRe, parseArgs } from "./records.mjs";
 // Scanned over the COMMENT CORPUS, never the whole file. A citation's lead-in
 // is unanchored, so over raw text a match can start at a code parenthesis and
 // swallow lines of declarations along with the citation inside them.
-const corpus = (file, text) =>
-  (text === undefined
-    ? commentRanges(file)
-    : commentRangesOf(file, text)
-  ).ranges
-    .map(([a, b]) => (text ?? fs.readFileSync(file, "utf8")).slice(a, b))
-    .join("\n");
+const strip = (t) => t.replace(/^\s*(\/\*+|\*+\/|\/\/|\*)\s?/gm, " ");
+const corpus = (file, raw) => strip(commentText(file, raw).text);
 
 const { base, files } = parseArgs(process.argv, "citations.mjs");
 

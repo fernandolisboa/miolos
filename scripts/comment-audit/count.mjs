@@ -36,6 +36,16 @@ export function commentRangesOf(file, text) {
   return commentRanges(path.join("/virtual", path.basename(file)), text);
 }
 
+/** The file's comment text, and its comment-only line count, in one read. */
+export function commentText(file, raw) {
+  const { text, ranges } =
+    raw === undefined ? commentRanges(file) : commentRangesOf(file, raw);
+  return {
+    text: ranges.map(([a, b]) => (raw ?? text).slice(a, b)).join("\n"),
+    commentOnly: raw === undefined ? count(file).commentOnly : undefined,
+  };
+}
+
 export function count(file) {
   const { text, ranges } = commentRanges(file);
   const lines = text.split("\n");

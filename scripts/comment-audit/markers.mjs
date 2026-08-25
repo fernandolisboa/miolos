@@ -1,5 +1,4 @@
-import fs from "node:fs";
-import { count } from "./count.mjs";
+import { commentText } from "./count.mjs";
 import { markersRe, parseArgs } from "./records.mjs";
 
 // Which files still smell of records, so the next tranche is scoped by
@@ -10,8 +9,10 @@ const { files } = parseArgs(process.argv, "markers.mjs", false);
 let skipped = 0;
 const rows = files.flatMap((f) => {
   try {
-    const n = (fs.readFileSync(f, "utf8").match(markersRe()) ?? []).length;
-    return [{ n, lines: count(f).commentOnly, f }];
+    const { text, commentOnly } = commentText(f);
+    return [
+      { n: (text.match(markersRe()) ?? []).length, lines: commentOnly, f },
+    ];
   } catch {
     skipped++;
     console.log("   -  (absent from the working tree)  " + f);

@@ -130,4 +130,4 @@ console.log(
     : `${differs} of ${compared} compared file(s) DIFFER from ${base}` +
         (fresh ? `; ${fresh} absent on ${base}` : ""),
 );
-process.exit(differs === 0 ? 0 : 1);
+process.exit(compared === 0 ? 2 : differs === 0 ? 0 : 1);

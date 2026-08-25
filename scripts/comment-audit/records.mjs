@@ -5,12 +5,20 @@
 // stripped: stripping prose hides a real rewrite behind a green. A citation
 // may sit anywhere inside its parenthesis, so `(ADR-0032, plan 020 §9.3)`
 // counts too.
+// A citation sits inside a parenthesis with a short structured lead-in and a
+// short tail — `(ADR-0032, plan 020 §9.3)`, `(#31 step-6 F15)`. BOTH sides are
+// bounded, and neither may cross an em dash or a sentence break: an unbounded
+// side excises the prose around the citation from both files, which is the
+// direction that hides a real rewrite behind a green.
+const SEG = String.raw`(?:(?!\s—\s|\.\s|"\s)[^()])`;
+const NEAR = `${SEG}{0,40}`;
+
 const INNER = [
-  String.raw`plan \d+[^)]*`,
-  String.raw`step-\d+[^)]*`,
-  String.raw`round-\d+[^)]*`,
-  String.raw`finding (?:\x60[^\x60)]+\x60|[A-Z][\w.-]*)[^)]*`,
-  String.raw`§[\d.][^)]*`,
+  String.raw`plan \d+`,
+  String.raw`step-\d+`,
+  String.raw`round-\d+`,
+  String.raw`finding (?:\x60[^\x60)]+\x60|[A-Z][\w.-]*)`,
+  String.raw`§[\d.]+`,
   String.raw`CLI-\d+`,
   // Not `[PSND]\d+` bare: that also matches the `S311` inside `T-WEB-S311`.
   String.raw`(?<![-\w])[PSND]\d+(?:\/[PSND]\d+)?(?![-\w])`,
@@ -19,13 +27,7 @@ const INNER = [
 const ANCHOR = String.raw`[\w/-]+\.(?:tsx?|mjs|css):\d[\d-]*`;
 
 export const RECORDS = [
-  // A citation may carry a short structured lead-in — `(ADR-0032, plan 020
-  // §9.3)`, `(#31 step-6 F15)` — so the prefix is not anchored at `(`. It is
-  // BOUNDED instead: at most 24 characters, no sentence punctuation, no `(`.
-  // An unbounded prefix strips the prose in front of a citation from BOTH
-  // sides, which is the direction that hides a real rewrite behind a green,
-  // and it lets a match start at a CODE parenthesis and swallow whole lines.
-  String.raw`\([^()—."]{0,24}?(?:${INNER})\)`,
+  String.raw`\(${NEAR}?(?:${INNER})${NEAR}\)`,
   "`" + ANCHOR + "`",
 ].join("|");
 
@@ -42,7 +44,7 @@ export const MARKERS = [
   // The bare decision-citation class — `(D7)`, `(S23)`, `(P11)`. It is ~12% of
   // the marker mass in the game dirs, and it is the shape `RECORDS` treats as
   // core, so a scan that scopes a tranche must see it too.
-  String.raw`\((?<![-\w])[PSND]\d+(?:\/[PSND]\d+)?\)`,
+  String.raw`\([PSND]\d+(?:\/[PSND]\d+)?\)`,
   ANCHOR,
 ].join("|");
 

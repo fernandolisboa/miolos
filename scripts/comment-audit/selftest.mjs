@@ -288,7 +288,7 @@ check(
 
 // Every file skipped is zero comparisons, and printing the toolkit's most
 // reassuring sentence after zero comparisons is Rule I's shape.
-for (const t of ["excision", "verbatim", "citations"]) {
+for (const t of ["excision", "verbatim", "citations", "hash"]) {
   check(
     `${t}.mjs exits 2 when every file is skipped`,
     run([
@@ -307,8 +307,83 @@ for (const t of ["count", "markers", "css-count"]) {
     2,
   );
   check(
-    `${t}.mjs refuses --base, which it does not honour`,
+    `${t}.mjs rejects --base rather than silently reading the working tree`,
     run([tool(`${t}.mjs`), "--base", "main", "package.json"]).code,
+    2,
+  );
+}
+
+// Round 4: only the LEAD-IN was bounded, so prose AFTER the citation token
+// inside the same parenthesis was still excised from both sides — the same
+// false green on the other side of the token.
+{
+  const re = (await import("./records.mjs")).recordsRe;
+  const after =
+    "(#103 step-6 blocker B1: every other fixture in this file is concluded, so the claim was unasserted)";
+  check(
+    "prose AFTER the citation token is not stripped",
+    (after.match(re()) ?? []).length,
+    0,
+  );
+  check(
+    "a citation with a real tail still counts",
+    [
+      "(plan 020 §9.3)",
+      "(step-6 finding K2)",
+      "(#31, ADR-0053 decision 1; plan 037 D6a)",
+    ].map((t) => (t.match(re()) ?? []).length),
+    [1, 1, 1],
+  );
+}
+
+// `markers.mjs` scanned RAW text while three artifacts claimed every tool
+// scans the comment corpus. A `data-testid` string literal is live code.
+{
+  const f = write(
+    "m.tsx",
+    'const a = <b data-testid="T-WEB-S99" />;\n// see plan 017 D3\n',
+  );
+  const out = run([tool("markers.mjs"), f]).out;
+  check(
+    "markers ignores a marker inside a string literal",
+    /^\s*1\s/m.test(out),
+    true,
+  );
+}
+
+// A path deleted from the working tree — which every `git diff --name-only`
+// list contains after a deletion — must SKIP, not crash mid-report.
+{
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-del-"));
+  temps.push(repo);
+  const git = (...a) =>
+    execFileSync("git", ["-C", repo, ...a], { stdio: "pipe" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  fs.writeFileSync(
+    path.join(repo, "f.ts"),
+    "// (plan 017 D3)\nexport const a = 1;\n",
+  );
+  fs.writeFileSync(
+    path.join(repo, "g.ts"),
+    "// (plan 018 D4)\nexport const b = 2;\n",
+  );
+  git("add", "-A");
+  git("commit", "-qm", "base");
+  git("branch", "-M", "main");
+  fs.unlinkSync(path.join(repo, "g.ts"));
+  for (const t of ["excision", "verbatim", "hash", "citations"]) {
+    const r = run([tool(`${t}.mjs`), "f.ts", "g.ts"], repo);
+    check(
+      `${t}.mjs skips a working-tree deletion instead of crashing`,
+      /ENOENT|at commentRanges/.test(r.out),
+      false,
+    );
+  }
+  check(
+    "hash.mjs exits 2 when every file is absent",
+    run([tool("hash.mjs"), "g.ts"], repo).code,
     2,
   );
 }

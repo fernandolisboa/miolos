@@ -27,14 +27,16 @@ let bad = 0;
 let skipped = 0;
 for (const f of files) {
   let baseText;
+  let text;
+  let merged;
   try {
     baseText = norm(baseCorpus(f, base));
+    ({ text, merged } = blocks(f));
   } catch {
     skipped++;
     console.log(`SKIP ${f} (absent on ${base} or from the working tree)`);
     continue;
   }
-  const { text, merged } = blocks(f);
   for (const [a, b] of merged) {
     for (const s of sentences(text.slice(a, b))) {
       if (baseText.includes(s)) continue;
