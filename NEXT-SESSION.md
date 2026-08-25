@@ -8,23 +8,23 @@ Everything else is agent-owned — plans, reviews, fixes and merges happen witho
 
 Two campaigns are open, both agent-owned, nothing blocked.
 
-**#205 — comment removal. Tranche 7a is CLOSED** (#223 `src/i18n/messages.ts`, #225 `src/day` + `src/session` + `src/og`, 1,093 → 827). Zero code changed in either, proved by hashing. Tranches 1–6 done.
+**#205 — comment removal.** Tranches 1–7a done. **7b-1 done** (#227): the four games' `state.ts` reducers, 609 → 579. Zero code changed in any tranche, proved by hashing.
 
-**Next is 7b: the four game dirs' `.ts`/`.tsx`.** Then 7c (the game `.module.css`, 1,097), 7d (`src/archive`, `src/free-play`, `src/components`), then `app/`+`scripts/`, `test/`, `eslint.config.mjs`.
+**Before sweeping anything, read the two rule comments on #205** — they now carry Rules K through Q. The four that will bite next:
 
-**Read the two rule comments on #205 before sweeping anything.** #225 cost three review rounds and *every round found a defect the previous FIX left behind*. The four that generalise:
+- **Sweep by FILE ROLE across all four games, never one game at a time** (Rule N). The games' reducers, hooks and views carry near-identical comments; one game at a time decides the same comment twice and leaves the loser asymmetric.
+- **Reconcile the count PER FILE, not only in total** (Rule O). #227 shipped two wrong rows whose errors cancelled; the total still reconciled to `numstat` and three review rounds missed it.
+- **Generate every figure in a PR body from `scripts/comment-audit/`, and publish the regex** (Rule P). #227 took **six** review rounds; rounds 4, 5 and 6 found nothing wrong with the diff — every finding was a number in the body, each in a scope the previous round had not enumerated.
+- **When a fix pulls in a file the tranche did not plan to sweep, sweep it or declare it out of scope** (Rule Q). Half a file is the defect.
 
-- **Re-derive the baseline with a PARSER.** A bare `ts.createScanner` loop needs `reScanTemplateToken` to walk template-literal spans and silently stops early without it — it under-counted 7a by 21%. Every published tranche estimate (7b's "~2,600") came from that scanner and is a **floor**. Reconciling to `numstat` does not catch this.
-- **A dangling pointer is a class.** Fix the instance a review names, then enumerate *every* outbound pointer in the tranche. #225's round-1 fix closed one and left its twin four lines away.
-- **Rule A has two halves: the quoted text AND the line anchor.** A sentence kept byte-identical still breaks `ADR-NNNN:33`-style citations when the sweep moves it. Grep for `<swept-file>:` and convert to symbol citations.
-- **Per deleted paragraph, name the gate** — and ask whether deleting the code it defends would actually red that test. Four ungated rules survived into review in files whose ADRs looked exhaustive.
+**The game dirs are NOT records-dense, and #205's ~71% does not transfer.** Measured over all 30 files: 282 markers / 3,071 comment lines, versus `src/play`'s 59% cut. The reducers came in at 5%, which is their floor. 7b is **~3,070** lines, not the issue's "~2,600".
 
-Also: **`npx impeccable detect` with no argument scans nothing and exits 0.** #212 and #220 both cited that vacuous green. The real UI gate is the CI `detect` check on the head commit.
+**Next by value:** `nonogram/board.tsx` (22 markers), then `sudoku/play-view.tsx` (19), `binairo/play-view.tsx` (17), `nonogram/play-view.tsx` (16). Also bind `binairo/controls.tsx` + `sudoku/keypad.tsx` + `termo/keyboard.tsx` into one tranche — `nonogram/controls.tsx` is already swept and `termo/keyboard.tsx` holds three live line anchors. Then 7c (the game `.module.css`, 1,097), 7d (`src/archive`, `src/free-play`, `src/components`), then `app/`+`scripts/`, `test/`, `eslint.config.mjs`.
 
-**#206 — duplication, 3 of 15 clusters done.** Next by value is cluster 14, `conclusion-view.tsx`. The issue's "1,477 lines" is stale — #220 cut it to **888**. The duplication is still real: `ConclusionView`/`RemoteConclusionView` and `ShippedStamp`/`RemoteShippedStamp`/`RemoteTermoStamp`.
+**7d owes one debt:** #225 restored `day-client.ts`'s claim to be a "line-by-line sibling" of `streak-client.ts`, so all seven authenticated-surface clients must be swept together.
 
-**#209 — the `apps/web` CI flake** is diagnosed but unfixed; it did not reproduce across any full-suite run in the last two sessions. Worth fixing alongside the `apps/web/test` tranche.
+**#206 — duplication, 3 of 15 clusters done.** Next by value is cluster 14, `conclusion-view.tsx`. The issue's "1,477 lines" is stale — #220 cut it to **888**. `ConclusionView`/`RemoteConclusionView` and `ShippedStamp`/`RemoteShippedStamp`/`RemoteTermoStamp` are still real duplication.
+
+**#209 — the `apps/web` CI flake** is diagnosed but unfixed; it has not reproduced across any full-suite run in three sessions. Worth fixing alongside the `apps/web/test` tranche.
 
 **#219** — the read-only-but-not-writable store defect — is triaged `defect` + `ready-for-agent`.
-
-**One debt 7d must clear:** #225 left `day-client.ts` without its free-play-wall paragraph and boundary-rule comment restored *and* asserting it is a "line-by-line sibling" of `streak-client.ts`. Both went back in, so 7d has to sweep all seven clients together or the asymmetry returns.
