@@ -325,6 +325,20 @@ for (const t of ["excision", "verbatim", "citations", "hash"]) {
     true,
   );
   check("shingle.mjs finds a known echo", /is echoed by:/.test(out), true);
+  // Silent truncation is the dangerous direction for a scan that authorises a
+  // deletion, and the 3-line index window means one citing file can occupy
+  // three slots — so a fourth citing file used to fall off unannounced.
+  const many = run([tool("shingle.mjs"), "apps/web/src/termo/board.tsx"]).out;
+  check(
+    "shingle.mjs says how many candidates it did not print",
+    /…and \d+ more location\(s\)/.test(many),
+    true,
+  );
+  check(
+    "shingle.mjs prints repo-relative paths",
+    /\n {4}\s*\d+x {2}[\w.-]+\//.test(many) && !/ {2}\/home\//.test(many),
+    true,
+  );
   // `git ls-files` is cwd-relative: from a game directory this indexed ONE
   // file and answered "nothing cites these comments" for the whole repo.
   const sub = run(
@@ -490,6 +504,12 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
       "// one free hint per puzzle (plan 017 D21)",
       "// two free hints per puzzle (plan 017 D21)",
     ],
+    // The real blind spot: a citation-excision sweep removes the citation as
+    // well, and then BOTH tools are silent on an inverted product claim.
+    [
+      "// one free hint per puzzle (plan 017 D21)",
+      "// two free hints per puzzle",
+    ],
   ];
   const files = rewordings.map((_, i) => `r${i}.ts`);
   const put = (which) =>
@@ -516,30 +536,54 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   // OUTSIDE the parenthetical and flag under any definition of a citation, so
   // an aggregate assertion is dominated by them and never exercises the
   // grammar — it stayed green with two earlier regex bugs reintroduced.
-  const insideTheParens = new Set([0, 2]);
   // r3 is DELIBERATELY expected not to flag: stripped of its citation the
   // sentence is 24 characters, and both tools skip sentences of 25 or fewer.
   // That blind spot is documented in the README; asserting it here keeps it
   // documented rather than discovered. The aggregate assertion this replaced
   // hid it behind the three files that do flag.
-  const tooShortToCompare = new Set([3]);
-  rewordings.forEach((_, i) => {
-    const flags = !tooShortToCompare.has(i);
+  // The two tools measure at different moments — excision after the citation
+  // is stripped, verbatim before — so the <=25-character skip does not bite
+  // them at the same time. Asserted PER TOOL and PER FILE, because an
+  // aggregate is what let the README describe this wrongly.
+  const expected = [
+    {
+      r: 0,
+      excision: 1,
+      verbatim: 1,
+      why: "a reword INSIDE the citation's parenthesis",
+    },
+    { r: 1, excision: 1, verbatim: 1, why: "a reword beside a citation" },
+    {
+      r: 2,
+      excision: 1,
+      verbatim: 1,
+      why: "a reword INSIDE the citation's parenthesis",
+    },
+    {
+      r: 3,
+      excision: 0,
+      verbatim: 1,
+      why: "a <=25-character sentence, which only excision loses",
+    },
+    {
+      r: 4,
+      excision: 0,
+      verbatim: 0,
+      why: "the citation excised too — THE documented blind spot",
+    },
+  ];
+  for (const { r, excision, verbatim, why } of expected) {
     check(
-      flags
-        ? insideTheParens.has(i)
-          ? `excision.mjs flags a reword INSIDE the citation's parenthesis (r${i})`
-          : `excision.mjs flags a reword beside a citation (r${i})`
-        : `excision.mjs does NOT see a reword in a <=25-character sentence (r${i}), as documented`,
-      run([tool("excision.mjs"), files[i]], repo).code,
-      flags ? 1 : 0,
+      `excision.mjs ${excision ? "flags" : "does NOT see"} ${why} (r${r})`,
+      run([tool("excision.mjs"), files[r]], repo).code,
+      excision,
     );
-  });
-  check(
-    "verbatim.mjs flags them too",
-    run([tool("verbatim.mjs"), ...files], repo).code,
-    1,
-  );
+    check(
+      `verbatim.mjs ${verbatim ? "flags" : "does NOT see"} ${why} (r${r})`,
+      run([tool("verbatim.mjs"), files[r]], repo).code,
+      verbatim,
+    );
+  }
 }
 
 // Every tool must refuse an empty file list rather than print its most

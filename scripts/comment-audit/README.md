@@ -130,7 +130,12 @@ flags only what changed by more than one. Declare from `excision.mjs`.
 
 Both are narrower than "nothing was reworded":
 
-- sentences of **25 characters or fewer are not compared** — `selftest.mjs` pins one real example, a reworded `one free hint per puzzle` that neither tool sees;
+- sentences of **25 characters or fewer are not compared**. The two tools
+  measure at different moments — `excision.mjs` after the citation is
+  stripped, `verbatim.mjs` before — so a reworded `one free hint per puzzle`
+  is invisible to `excision.mjs` and still flagged by `verbatim.mjs`. **Both
+  go silent when the sweep removes the citation as well**, which is the shape
+  an excision tranche actually produces; `selftest.mjs` pins all three cases;
 - the match is a substring test over the whole file's comment corpus, so a
   sentence that **moved** is not flagged;
 - they merge whitespace-adjacent comment ranges into **blocks**, while
