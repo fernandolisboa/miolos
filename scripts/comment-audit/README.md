@@ -6,9 +6,11 @@ campaign already shipped: a counter that under-counted by 21%, a PR body whose
 figures were restated three times before they reproduced, and two per-file rows
 whose errors cancelled inside a total that still reconciled.
 
-Run from the repo root. Every tool refuses an empty file list with exit 2 —
-a wrong glob would otherwise print the most reassuring output in the toolkit,
-which is #205's Rule I applied to this directory.
+Run from the repo root. Every tool refuses an **empty file list** with exit 2,
+flags included — `--base main` alone is not a file list. A wrong glob would
+otherwise print the most reassuring output in the toolkit, which is #205's
+Rule I applied to this directory. `verbatim.mjs`, `excision.mjs` and
+`hash.mjs` also exit non-zero when they flag something.
 
 | tool | answers | needs a baseline |
 |---|---|---|
@@ -22,7 +24,9 @@ which is #205's Rule I applied to this directory.
 | `selftest.mjs` | do the tools still do what this README says? | no |
 
 Baseline defaults to `main`; pass `--base <ref>` to change it. A path absent
-from the baseline is reported and skipped, never silently counted as verified.
+from the baseline — or from the working tree, which a `git diff --name-only`
+list contains after a deletion — is reported and skipped, never silently
+counted as verified.
 
 ```sh
 node scripts/comment-audit/count.mjs apps/web/src/termo/state.ts
@@ -65,12 +69,26 @@ three-line disagreement between two internally-consistent counters came from.
 `total` follows `wc -l`: a trailing newline terminates a line rather than
 starting one.
 
-`records.mjs` holds the **one** definition of a records-genre citation. It used
-to be two — `citations.mjs` counted with one regex while `excision.mjs`
-stripped with a looser one — so a sentence rewritten inside a parenthetical
-passed the excision check silently. It is deliberately narrow on both edges
-(`plan` needs a number, `finding` needs a label) because **stripping ordinary
-prose is the dangerous direction**: it hides a real rewrite behind a green.
+`records.mjs` holds the **one** definition of a records-genre citation, so the
+tool that counts and the tool that strips cannot disagree. It is narrow on both
+edges — `plan` needs a number, `finding` needs a label — because **stripping
+ordinary prose is the dangerous direction**: it hides a real rewrite behind a
+green. It is not anchored at the opening parenthesis, because `(ADR-0032, plan
+020 §9.3)` is as real a citation as `(plan 020 §9.3)`; over `apps/` and
+`packages/` it matches 461 of the 462 citation-shaped parentheticals, and the
+one it declines is prose.
+
+`css-count.mjs` exists for tranche 7c. It is not strictly required — `count.mjs`
+returns the identical figure on every tracked sheet today — but a `url(http://…)`
+would make the TypeScript parser see a `//` comment, and 7c is the tranche where
+that would matter.
+
+**Two conventions produce two right answers**, and a PR body must say which it
+used. The four game sheets are **911** lines under `css-count.mjs`. #205's
+figure of **1,097** is also correct: it counts every line from the one holding
+`/*` through the one holding `*/`, over all non-`play` CSS — which adds
+`archive/late-result`, `archive/play-note`, `components/daily-unavailable` and
+`free-play/free-play`.
 
 ## Reading `verbatim.mjs` and `excision.mjs`
 

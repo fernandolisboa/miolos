@@ -2,15 +2,14 @@ import ts from "typescript";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { requireFiles } from "./records.mjs";
+import { parseArgs } from "./records.mjs";
 
 // THE metric: comment-only lines — a source line carrying at least one
 // non-whitespace comment character and no code character.
 //
-// Comment ranges come from the PARSER, not from a raw `ts.createScanner` loop:
-// a bare scanner needs `reScanTemplateToken` to walk a template literal's
-// spans and silently stops early without it, so every file holding a `${}`
-// loses the comments after its first template.
+// Ranges come from the PARSER: a raw `ts.createScanner` loop needs
+// `reScanTemplateToken` to walk a template literal's spans and stops early
+// without it. See the README.
 export function commentRanges(file, text = fs.readFileSync(file, "utf8")) {
   const sf = ts.createSourceFile(
     file,
@@ -75,7 +74,7 @@ export function count(file) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const files = requireFiles(process.argv, "count.mjs");
+  const { files } = parseArgs(process.argv, "count.mjs");
   let tot = 0;
   let totT = 0;
   let totB = 0;

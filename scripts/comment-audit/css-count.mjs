@@ -1,14 +1,11 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
-import { requireFiles } from "./records.mjs";
+import { parseArgs } from "./records.mjs";
 
-// The same metric for CSS, because tranche 7c is `.module.css` and `count.mjs`
-// is TypeScript-only — without this, #205's Rule P cannot be satisfied for it.
-//
-// CSS has one comment form, `/* */`, and no strings that can contain it in
-// practice, so a scanner is enough here where it is not for TypeScript. A line
-// counts when it carries at least one non-whitespace comment character and no
-// declaration character — the same rule `count.mjs` applies.
+// The same metric for `.css`, for tranche 7c. CSS has one comment form and no
+// string that can hold it in this corpus, so a scanner is enough here where it
+// is not for TypeScript — `count.mjs` agrees with it on every tracked sheet
+// today, and would stop agreeing on a `url(http://…)`.
 export function countCss(file) {
   const text = fs.readFileSync(file, "utf8");
   const mask = new Uint8Array(text.length);
@@ -46,7 +43,7 @@ export function countCss(file) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const files = requireFiles(process.argv, "css-count.mjs");
+  const { files } = parseArgs(process.argv, "css-count.mjs");
   let tot = 0;
   let totT = 0;
   for (const f of files) {

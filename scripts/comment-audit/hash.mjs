@@ -2,7 +2,7 @@ import ts from "typescript";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { DIRECTIVES, requireFiles } from "./records.mjs";
+import { DIRECTIVES, parseArgs } from "./records.mjs";
 
 // Did a comment sweep change any CODE? Re-print each module from its AST with
 // `removeComments`, hash that, and walk the tree counting nodes, identifiers
@@ -10,15 +10,9 @@ import { DIRECTIVES, requireFiles } from "./records.mjs";
 // than a hash the reader has to compare by eye against a baseline produced by
 // some undocumented second step.
 //
-// WHAT THIS CANNOT SEE, and what covers it instead. The printer drops comment
-// trivia and the AST never held it, so a comment that is really a DIRECTIVE is
-// invisible to the hash: `/*#__PURE__*/`, `eslint-disable`, `@ts-expect-error`,
-// `prettier-ignore`, `@vitest-environment`, `/// <reference>`. Deleting the
-// `/*#__PURE__*/` markers in `packages/games/src/termo/word-list.ts` ships the
-// whole Termo answer pool to every client and would not move a single hash
-// here. So each directive class is COUNTED separately below, and the real
-// gates are `packages/games/test/termo/bundle-markers.test.ts`, `pnpm lint`
-// and `pnpm typecheck`.
+// A comment that is really a DIRECTIVE is invisible to the hash — the printer
+// drops it and the AST never held it — so each class is COUNTED separately
+// instead. The README names the gate that actually covers each.
 const printer = ts.createPrinter({
   removeComments: true,
   newLine: ts.NewLineKind.LineFeed,
@@ -71,18 +65,20 @@ const same = (a, b) =>
     ([n, c], i) => b.directives[i][0] === n && b.directives[i][1] === c,
   );
 
-const files = requireFiles(process.argv, "hash.mjs [--base <ref>]");
-let base = "main";
-const args = [];
-for (let i = 0; i < files.length; i++) {
-  if (files[i] === "--base") base = files[++i];
-  else args.push(files[i]);
-}
+const { base, files: args } = parseArgs(process.argv, "hash.mjs");
 
 let differs = 0;
 let fresh = 0;
+let missing = 0;
 for (const f of args) {
-  const after = fingerprint(f, fs.readFileSync(f, "utf8"));
+  let after;
+  try {
+    after = fingerprint(f, fs.readFileSync(f, "utf8"));
+  } catch {
+    missing++;
+    console.log(`GONE     (absent from the working tree)  ${f}`);
+    continue;
+  }
   let before;
   try {
     before = fingerprint(
@@ -125,11 +121,12 @@ for (const f of args) {
     });
   }
 }
-const compared = args.length - fresh;
+const compared = args.length - fresh - missing;
 console.log(
   differs === 0
     ? `${compared} of ${args.length} file(s) identical to ${base} once comments are removed` +
-        (fresh ? `; ${fresh} absent on ${base} and NOT compared` : "")
+        (fresh ? `; ${fresh} absent on ${base}` : "") +
+        (missing ? `; ${missing} absent from the working tree` : "")
     : `${differs} of ${compared} compared file(s) DIFFER from ${base}` +
         (fresh ? `; ${fresh} absent on ${base}` : ""),
 );

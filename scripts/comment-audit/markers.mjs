@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import { count } from "./count.mjs";
-import { markersRe, requireFiles } from "./records.mjs";
+import { markersRe, parseArgs } from "./records.mjs";
 
 // Which files still smell of records, so the next tranche is scoped by
 // measurement rather than by impression. Ranks ABSOLUTE marker count; the
 // per-comment-line rate is printed beside it because a long file and a dense
 // one are different problems.
-const files = requireFiles(process.argv, "markers.mjs");
+const { files } = parseArgs(process.argv, "markers.mjs");
 const rows = files.map((f) => {
   const n = (fs.readFileSync(f, "utf8").match(markersRe()) ?? []).length;
   const lines = count(f).commentOnly;

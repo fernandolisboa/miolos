@@ -139,6 +139,16 @@ check(
 );
 
 check(
+  "markers sees a .css line anchor",
+  (
+    "as `nonogram-board.module.css:398-402` shows".match(
+      (await import("./records.mjs")).markersRe(),
+    ) ?? []
+  ).length,
+  1,
+);
+
+check(
   "css counts a comment-only line",
   countCss(write("s.css", "/* hi */\n.a {\n  color: red; /* trailing */\n}\n"))
     .commentOnly,
@@ -151,9 +161,81 @@ check(
   2,
 );
 
+// BEHAVIOURAL, not a re-run of the regex table: the directive check lives in
+// `hash.mjs`'s `same()`, and a fixture that only exercises `DIRECTIVES` passes
+// with that clause deleted. Two files differing ONLY by a `/*#__PURE__*/` must
+// come back DIFFERS.
+const run = (args, cwd) => {
+  try {
+    return {
+      code: 0,
+      out: execFileSync("node", args, { encoding: "utf8", stdio: "pipe", cwd }),
+    };
+  } catch (e) {
+    return { code: e.status, out: (e.stdout ?? "") + (e.stderr ?? "") };
+  }
+};
+const tool = (n) => path.join(import.meta.dirname, n);
+
+{
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-git-"));
+  const git = (...a) =>
+    execFileSync("git", ["-C", repo, ...a], { stdio: "pipe" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  const pure = 'export const W = /*#__PURE__*/ f("a");\n';
+  fs.writeFileSync(path.join(repo, "w.ts"), pure);
+  git("add", "-A");
+  git("commit", "-qm", "base");
+  git("branch", "-M", "main");
+
+  fs.writeFileSync(path.join(repo, "w.ts"), pure.replace("/*#__PURE__*/ ", ""));
+  const gone = run([tool("hash.mjs"), "w.ts"], repo);
+  check(
+    "hash.mjs reports DIFFERS when a /*#__PURE__*/ is deleted",
+    [gone.code, /DIFFERS/.test(gone.out), /pure: 1 -> 0/.test(gone.out)],
+    [1, true, true],
+  );
+
+  fs.writeFileSync(path.join(repo, "w.ts"), pure + "// a new comment\n");
+  const same = run([tool("hash.mjs"), "w.ts"], repo);
+  check(
+    "hash.mjs reports SAME when only a comment is added",
+    [same.code, /SAME/.test(same.out)],
+    [0, true],
+  );
+
+  fs.writeFileSync(path.join(repo, "w.ts"), pure.replace('"a"', '"b"'));
+  const code = run([tool("hash.mjs"), "w.ts"], repo);
+  check(
+    "hash.mjs reports DIFFERS when a string literal changes",
+    [code.code, /DIFFERS/.test(code.out)],
+    [1, true],
+  );
+  fs.rmSync(repo, { recursive: true, force: true });
+}
+
+// `excision.mjs` imports from `verbatim.mjs`; without an entry-point guard the
+// import runs verbatim's whole CLI and prints it above excision's own output.
+{
+  const out = run([
+    tool("excision.mjs"),
+    "--base",
+    "HEAD",
+    "scripts/comment-audit/records.mjs",
+  ]).out;
+  check(
+    "excision.mjs does not print verbatim.mjs's summary",
+    /not byte-identical/.test(out),
+    false,
+  );
+}
+
 // Every tool must refuse an empty file list rather than print its most
-// reassuring output — #205's Rule I, applied to this toolkit.
-for (const tool of [
+// reassuring output — #205's Rule I, applied to this toolkit. Flags are not
+// files: `--base main` alone left the list empty and printed a green.
+for (const t of [
   "count",
   "hash",
   "citations",
@@ -162,16 +244,18 @@ for (const tool of [
   "excision",
   "css-count",
 ]) {
-  let code = 0;
-  try {
-    execFileSync("node", [path.join(import.meta.dirname, `${tool}.mjs`)], {
-      stdio: "pipe",
-    });
-  } catch (e) {
-    code = e.status;
-  }
-  check(`${tool}.mjs refuses an empty file list`, code, 2);
+  check(`${t}.mjs refuses an empty file list`, run([tool(`${t}.mjs`)]).code, 2);
+  check(
+    `${t}.mjs refuses a flag-only argument list`,
+    run([tool(`${t}.mjs`), "--base", "main"]).code,
+    2,
+  );
 }
+check(
+  "a --base with no ref exits 2",
+  run([tool("hash.mjs"), "--base"]).code,
+  2,
+);
 
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(

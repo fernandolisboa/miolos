@@ -1,15 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { commentRangesOf, commentRanges } from "./count.mjs";
-import { requireFiles } from "./records.mjs";
+import { pathToFileURL } from "node:url";
+import { parseArgs } from "./records.mjs";
 
 // Rule F, mechanically: every surviving SENTENCE must appear verbatim in the
-// same file's comment text on the base ref. Consecutive `//` lines are merged
-// into one block first, so a sentence wrapped across them is not split.
-//
-// Its green is NARROWER than "nothing was reworded": sentences of 25
-// characters or fewer are not compared, and the match is a substring test over
-// the whole file's comment corpus, so a sentence that MOVED is not flagged.
-// Pair it with `excision.mjs`, which is the one a PR body declares from.
+// same file's comment text on the base ref. Its green is NARROWER than
+// "nothing was reworded" — see the README — so declare from `excision.mjs`.
 export const norm = (s) =>
   s
     .replace(/^\s*(\/\*+|\*+\/|\/\/|\*)\s?/gm, " ")
@@ -41,32 +37,31 @@ export function baseCorpus(file, base) {
   return ranges.map(([a, b]) => before.slice(a, b)).join("\n");
 }
 
-const argv = requireFiles(process.argv, "verbatim.mjs [--base <ref>]");
-let base = "main";
-const files = [];
-for (let i = 0; i < argv.length; i++) {
-  if (argv[i] === "--base") base = argv[++i];
-  else files.push(argv[i]);
-}
-
-let bad = 0;
-for (const f of files) {
-  let baseText;
-  try {
-    baseText = norm(baseCorpus(f, base));
-  } catch {
-    console.log(`SKIP ${f} (absent on ${base})`);
-    continue;
-  }
-  const { text, merged } = blocks(f);
-  for (const [a, b] of merged) {
-    for (const s of sentences(text.slice(a, b))) {
-      if (baseText.includes(s)) continue;
-      bad++;
-      console.log(
-        `\n[${bad}] ${f}:${text.slice(0, a).split("\n").length}\n  ${s}`,
-      );
+// Behind an entry-point guard: `excision.mjs` imports `baseCorpus` and
+// `blocks` from here, and a module-level CLI would run this whole comparison
+// on that import and print it above excision's own output.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  const { base, files } = parseArgs(process.argv, "verbatim.mjs");
+  let bad = 0;
+  for (const f of files) {
+    let baseText;
+    try {
+      baseText = norm(baseCorpus(f, base));
+    } catch {
+      console.log(`SKIP ${f} (absent on ${base} or from the working tree)`);
+      continue;
+    }
+    const { text, merged } = blocks(f);
+    for (const [a, b] of merged) {
+      for (const s of sentences(text.slice(a, b))) {
+        if (baseText.includes(s)) continue;
+        bad++;
+        console.log(
+          `\n[${bad}] ${f}:${text.slice(0, a).split("\n").length}\n  ${s}`,
+        );
+      }
     }
   }
+  console.log(`\n${bad} sentence(s) not byte-identical to ${base}.`);
+  process.exit(bad === 0 ? 0 : 1);
 }
-console.log(`\n${bad} sentence(s) not byte-identical to ${base}.`);
