@@ -4,14 +4,13 @@ import type { NonogramBrush } from "./state";
 
 /**
  * The three brushes, in the order they paint. `preencher` is first and is
- * pressed at first paint (P21): it is the gesture the game is made of.
+ * pressed at first paint: it is the gesture the game is made of.
  */
 const BRUSHES: readonly NonogramBrush[] = ["fill", "cross", "erase"];
 
 /**
- * The sticky brush controls (plan 020 §11.5, ADR-0037 decision 1). Three
- * toggle buttons carrying `aria-pressed`, exactly one pressed, and NO cycle
- * mode.
+ * The sticky brush controls (ADR-0037 decision 1). Three toggle buttons
+ * carrying `aria-pressed`, exactly one pressed, and NO cycle mode.
  *
  * These are MODES, not commands, and the difference is mechanical rather than
  * stylistic. Sudoku's keypad is commands *because* Sudoku does not drag — the
@@ -21,9 +20,9 @@ const BRUSHES: readonly NonogramBrush[] = ["fill", "cross", "erase"];
  * is therefore not decoration — the brush is state a non-sighted player must
  * be able to query before every stroke.
  *
- * And there is no cycle default: `binairo/state.ts:100-104` ignores
- * `paint-over` entirely in cycle mode, so a cycle default here would ship this
- * board's primary gesture dead on first paint (N28).
+ * And there is no cycle default: `binairo/state.ts`'s `paint-over` case
+ * ignores that action entirely in cycle mode, so a cycle default here would
+ * ship this board's primary gesture dead on first paint.
  *
  * REJECTED: `role="radiogroup"` + three `role="radio"`. Semantically closer to
  * "exactly one of three", and rejected because radio semantics bring their own
@@ -64,12 +63,11 @@ export function Controls({
 }
 
 /**
- * The placeholder controls (§12.2's precedent), mirroring `KeypadSkeleton`:
- * `aria-hidden` divs rather than buttons, so nothing here is focusable or
- * announced before it works — but every box the hydrated row occupies is
- * reserved, because `.board` is a centred flex column and a missing row hands
- * its height to the board as an OFFSET (finding
- * `play-skeleton-is-not-at-final-dimensions`).
+ * The placeholder controls, mirroring `KeypadSkeleton`: `aria-hidden` divs
+ * rather than buttons, so nothing here is focusable or announced before it
+ * works — but every box the hydrated row occupies is reserved, because
+ * `.board` is a centred flex column and a missing row hands its height to the
+ * board as an OFFSET.
  *
  * Labelled, unlike the play screen's readouts: a brush label is a constant, so
  * this row owes the record nothing and can paint complete.

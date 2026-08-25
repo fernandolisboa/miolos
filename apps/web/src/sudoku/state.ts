@@ -1,11 +1,11 @@
 /**
- * The whole Sudoku gameplay state machine (plan 018 §8), as one pure
+ * The whole Sudoku gameplay state machine, as one pure
  * reducer over one immutable value: no React, no DOM, no clock. Every
  * action that needs the time carries it, so the reducer stays pure and the
- * screen stays thin (plan 017 D6) — most of the gameplay test surface is
+ * screen stays thin — most of the gameplay test surface is
  * plain unit tests.
  *
- * The input model is CELL-FIRST (S3): select a cell, then type or tap a
+ * The input model is CELL-FIRST: select a cell, then type or tap a
  * digit. Binairo's sticky paint mode does not generalize — there is no
  * plausible "paint 7s by dragging" — and cell-first gives the physical
  * keyboard's `1`–`9` and Backspace for free, which at 81 cells matters.
@@ -38,7 +38,7 @@ const SIDE = 9;
 
 /**
  * What a player may write. `null` is the client's empty cell; the engine's
- * `0` sentinel never reaches this type (S6), and the conversion happens at
+ * `0` sentinel never reaches this type, and the conversion happens at
  * exactly one boundary, `engine.ts`.
  *
  * It mirrors `@miolos/core`'s `sudokuDigitSchema` rather than being derived
@@ -61,12 +61,12 @@ export interface SudokuPlayState extends PlayCore {
   readonly givens: SudokuGrid;
   /** 81 entries; always null at a given's index. */
   readonly entries: readonly SudokuCellValue[];
-  /** The selected cell AND the roving-focus caret — one concept (S4). */
+  /** The selected cell AND the roving-focus caret — one concept. */
   readonly selected: number | null;
-  /** On the wire (S10); rendered as the `Nível` readout, never recomputed. */
+  /** On the wire; rendered as the `Nível` readout, never recomputed. */
   readonly tier: SudokuTier;
   readonly hint: HintState;
-  /** Recomputed on every entry change (S8); presentation only (ADR-0004). */
+  /** Recomputed on every entry change; presentation only (ADR-0004). */
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
 }
@@ -77,8 +77,7 @@ export type SudokuPlayAction =
   /**
    * A relative move, clamped per axis. `Home`/`End` are this action with
    * `columns: ∓8` — a full-width clamped move lands on the row's first or
-   * last column by construction, so they need no action of their own
-   * (§8.4).
+   * last column by construction, so they need no action of their own.
    */
   | {
       readonly type: "move-selection";
@@ -93,9 +92,9 @@ export type SudokuPlayAction =
 /**
  * The deterministic server snapshot: givens only, 00:00, `hydrated: false`,
  * and NO caret — it appears on first interaction, so the first paint
- * carries no state the record might contradict (plan 017 D28).
+ * carries no state the record might contradict.
  *
- * Takes `DailySudokuResponse`, never the union (S11): `daily.givens` on the
+ * Takes `DailySudokuResponse`, never the union: `daily.givens` on the
  * union is a binairo grid or a sudoku one, and neither component may
  * narrow it internally.
  */
@@ -148,7 +147,7 @@ export function sudokuPlayReducer(
         return state;
       }
       // Re-entering the same digit clears it: a one-tap undo, mirroring
-      // Binairo's "re-tapping clears" (plan 017 D8), which is what lets a
+      // Binairo's "re-tapping clears", which is what lets a
       // player back out of a mistake without reaching for `apagar`.
       return withEntry(
         state,
@@ -185,7 +184,7 @@ export function sudokuPlayReducer(
         // Nothing left to reveal: never spend the free hint on a no-op.
         return state;
       }
-      // `selected` is deliberately UNTOUCHED (§8.3): the caret is the
+      // `selected` is deliberately UNTOUCHED: the caret is the
       // player's and the highlight is the app's. Moving it would make the
       // hinted cell always also the selected cell, and the `hint-filled`
       // state — the one visual payload the free hint has — could never
@@ -202,7 +201,7 @@ export function sudokuPlayReducer(
     case "resume":
       // Both idempotence guards live in `play/timer.ts`, and it returns the
       // SAME timer object whenever the clock does not move — which is what
-      // keeps `timer` out of the persist effect's re-runs (plan 018 §5.4).
+      // keeps `timer` out of the persist effect's re-runs.
       // `now` always moves, so this is always a new state.
       return {
         ...state,
@@ -265,10 +264,10 @@ interface DerivedEntries {
 
 /**
  * Recompute everything that follows from the entries. Measured at 0.009 ms
- * for the conflicts and 0.010 ms for the verdict on a full grid (§19.6), so
+ * for the conflicts and 0.010 ms for the verdict on a full grid, so
  * this runs synchronously on every keystroke: no debounce, no worker.
  *
- * `status` is exact, not approximate (S7): `isSudokuSolved` is complete AND
+ * `status` is exact, not approximate: `isSudokuSolved` is complete AND
  * conflict-free in one call, and the daily is uniquely solvable by
  * construction (`countSudokuSolutions(givens, 2) === 1` is proved at
  * generation), so a complete conflict-free grid IS the solution. The server
@@ -289,8 +288,8 @@ function derive(
 
 /**
  * Write one cell and recompute the derived fields. Entering `solved` sets
- * `pendingSync` — the paired timer freeze is the hook's `pause` dispatch
- * (§8.3), because this reducer may never read a clock and an entry action
+ * `pendingSync` — the paired timer freeze is the hook's `pause` dispatch,
+ * because this reducer may never read a clock and an entry action
  * deliberately carries no `now`. `pause` is idempotent, so dispatching it
  * on the transition is safe whatever else fired.
  */
@@ -314,7 +313,7 @@ function withEntry(
 }
 
 /**
- * Map a persisted record onto the state (§8.3). `runningSince` stays null:
+ * Map a persisted record onto the state. `runningSince` stays null:
  * the mount effect derives the initial running state from
  * `document.visibilityState` and dispatches `resume` itself, rather than
  * resuming a tab the player cannot see.
@@ -343,8 +342,8 @@ function restore(
 
 /**
  * The record union's sudoku member, or nothing. `readPlayRecord` already
- * discards a record whose `game` disagrees with the key it was found under
- * (plan 018 S17), so this branch is unreachable in practice — it exists
+ * discards a record whose `game` disagrees with the key it was found under,
+ * so this branch is unreachable in practice — it exists
  * because the reducer takes the whole union and a 64-cell binairo `entries`
  * array must never reach an 81-cell grid.
  */

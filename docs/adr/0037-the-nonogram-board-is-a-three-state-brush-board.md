@@ -24,10 +24,11 @@ carries its own value. A Nonogram drag has to be idempotent over the cells
 it crosses — `paint-over` must be a plain SET, not a toggle, or a stroke
 that re-enters a cell undoes itself — so the value a stroke writes can
 only come from state held outside the gesture. Binairo's shipped `cycle`
-default is instructive here rather than copyable: `binairo/state.ts:100-104`
-ignores `paint-over` **entirely** in cycle mode, because "cycling on drag
-is chaos". Binairo can afford that because its drag is secondary. Copying
-the default here would ship this game's main input dead on first paint.
+default is instructive here rather than copyable: `binairo/state.ts`'s
+`paint-over` case ignores that action **entirely** in cycle mode, because
+"cycling on drag is chaos". Binairo can afford that because its drag is
+secondary. Copying the default here would ship this game's main input dead on
+first paint.
 
 **Pointer capture leaves a door open that a composite widget has to
 close.** The shipped stroke machinery takes `setPointerCapture` on the
@@ -128,8 +129,8 @@ things.
 ## Rejected
 
 - **A `cycle` brush default, copied from Binairo.** It ships the game's
-  primary gesture dead: `binairo/state.ts:100-104` ignores `paint-over`
-  entirely in cycle mode, so a drag would do nothing at all on first
+  primary gesture dead: `binairo/state.ts`'s `paint-over` case ignores that
+  action entirely in cycle mode, so a drag would do nothing at all on first
   paint. Binairo's cycle is correct *for Binairo*, whose drag is
   secondary.
 - **`role="radiogroup"` with three `role="radio"` controls.**

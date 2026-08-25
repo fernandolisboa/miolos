@@ -1,9 +1,8 @@
 /**
- * The whole Binairo gameplay state machine (plan 017 §8), as one pure
- * reducer over one immutable value: no React, no DOM, no clock. Every
- * action that needs the time carries it, so the reducer stays pure and the
- * screens stay thin (D6) — most of the gameplay test surface is plain unit
- * tests.
+ * The whole Binairo gameplay state machine, as one pure reducer over one
+ * immutable value: no React, no DOM, no clock. Every action that needs the
+ * time carries it, so the reducer stays pure and the screens stay thin —
+ * most of the gameplay test surface is plain unit tests.
  *
  * Two invariants hold everywhere below:
  * - `entries[i]` is always `null` where `givens[i]` is not: givens are
@@ -45,7 +44,7 @@ export interface PlayState extends PlayCore {
   readonly entries: readonly CellValue[];
   readonly paint: PaintMode;
   readonly hint: HintState;
-  /** Recomputed on every entry change (D11); presentation only. */
+  /** Recomputed on every entry change; presentation only. */
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
 }
@@ -60,10 +59,9 @@ export type PlayAction =
   | { readonly type: "mark-synced" };
 
 /**
- * The deterministic server snapshot: givens only, 00:00, hydrated: false
- * (D28). Takes `DailyBinairoResponse`, never the union (plan 018 S11) —
- * `daily.givens` on the union is `BinairoGrid | readonly (0..9)[]` and is
- * not a binairo grid.
+ * The deterministic server snapshot: givens only, 00:00, hydrated: false.
+ * Takes `DailyBinairoResponse`, never the union — `daily.givens` on the
+ * union is `BinairoGrid | readonly (0..9)[]` and is not a binairo grid.
  */
 export function initPlayState(daily: DailyBinairoResponse): PlayState {
   const givens: BinairoGrid = daily.givens;
@@ -100,7 +98,7 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
     case "paint-over": {
       // A drag must be idempotent over the cells it crosses, so this is a
       // plain SET, never the toggle `tap` performs. Cycling on drag is
-      // chaos, so cycle mode ignores it entirely (D8).
+      // chaos, so cycle mode ignores it entirely.
       if (state.paint.kind === "cycle") {
         return state;
       }
@@ -136,8 +134,8 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
     case "resume":
       // Both idempotence guards live in `play/timer.ts` now, and it returns
       // the SAME timer object whenever the clock does not move — which is
-      // what keeps `timer` out of the persist effect's re-runs (plan 018
-      // §5.4). `now` always moves, so this is always a new state.
+      // what keeps `timer` out of the persist effect's re-runs. `now` always
+      // moves, so this is always a new state.
       return {
         ...state,
         timer: applyTimerAction(state.timer, action),
@@ -185,7 +183,7 @@ function playableValue(state: PlayState, index: number): CellValue | undefined {
 }
 
 /**
- * Mode equality for the press-the-active-button-returns-to-cycle rule (D8).
+ * Mode equality for the press-the-active-button-returns-to-cycle rule.
  * Shared by the daily hook and the free-play screen; it lives here because
  * `state.ts` is on the wall-legal side of the free-play import wall, while
  * `use-binairo-play` is banned there by name.
@@ -199,7 +197,7 @@ export function sameMode(current: PaintMode, next: PaintMode): boolean {
     : true;
 }
 
-/** The cell cycle, per input mode (D7/D8). */
+/** The cell cycle, per input mode. */
 function tapped(mode: PaintMode, current: CellValue): CellValue {
   switch (mode.kind) {
     case "cycle":
@@ -220,9 +218,9 @@ interface DerivedEntries {
 }
 
 /**
- * Recompute everything that follows from the entries. `status` is exact,
- * not approximate (D12): the daily is uniquely solvable by construction,
- * so a complete rule-valid grid IS the solution. The server still
+ * Recompute everything that follows from the entries. `status` is exact, not
+ * approximate: the daily is uniquely solvable by construction, so a complete
+ * rule-valid grid IS the solution. The server still
  * re-judges against the stored one — this verdict only decides what the
  * UI shows (ADR-0004: local validation is never a source of truth).
  */
@@ -249,8 +247,8 @@ function derive(
 
 /**
  * Write one cell and recompute the derived fields. Entering `solved` sets
- * `pendingSync` — the paired timer freeze is the hook's `pause` dispatch
- * (§8.1/§8.3), because this reducer may never read a clock and `tap`
+ * `pendingSync` — the paired timer freeze is the hook's `pause` dispatch,
+ * because this reducer may never read a clock and `tap`
  * deliberately carries no `now`. `pause` is idempotent, so dispatching it
  * on the transition is safe whatever else fired.
  */
@@ -274,7 +272,7 @@ function withEntry(
 }
 
 /**
- * Map a persisted record onto the state (§8.3). `runningSince` stays null:
+ * Map a persisted record onto the state. `runningSince` stays null:
  * the mount effect derives the initial running state from
  * `document.visibilityState` and dispatches `resume` itself, rather than
  * resuming a tab the player cannot see.
@@ -301,8 +299,8 @@ function restore(
 
 /**
  * The record union's binairo member, or nothing. `readPlayRecord` already
- * discards a record whose `game` disagrees with the key it was found under
- * (plan 018 S17), so this branch is unreachable in practice — it exists
+ * discards a record whose `game` disagrees with the key it was found under,
+ * so this branch is unreachable in practice — it exists
  * because the reducer takes the whole union and an 81-cell sudoku `entries`
  * array must never reach `derive`.
  */

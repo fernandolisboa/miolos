@@ -1,5 +1,5 @@
 /**
- * The whole Termo gameplay state machine (#27, plan 022 §14.4), as one pure
+ * The whole Termo gameplay state machine (#27), as one pure
  * reducer over one immutable value: no React, no DOM, no clock. Every action
  * that needs the time carries it, so the reducer stays pure and the screen
  * stays thin.
@@ -119,8 +119,7 @@ export function termoPlayReducer(
       }
       // The draft moves into the pending row and the notice is CLEARED here,
       // never on `judged` and never on the next keystroke: those are the two
-      // placements that look natural and both collide with the announcer
-      // (plan 022 §13.1b).
+      // placements that look natural and both collide with the announcer.
       return {
         ...state,
         draft: "",
@@ -151,7 +150,7 @@ export function termoPlayReducer(
         return state;
       }
       // THE COPY IS PICKED FROM THE REASON, never from the branch that got
-      // here (finding B-7). "Sem conexão" is a factual claim about the
+      // here. "Sem conexão" is a factual claim about the
       // player's network, and it used to answer a 500, a 502 and a 429 as
       // well as a real network failure — false in three of the four cases,
       // and it points them at a fix that cannot help. `failed` is the shipped
@@ -179,7 +178,7 @@ export function termoPlayReducer(
       // The turn is NOT consumed — the server judged the WORD, not the board
       // — so the guess returns to the row it came from. A 422 `invalid-guess`
       // renders the same sentence a local rejection does, and the same
-      // sentence has to leave the same screen (plan 022 §11.4, §13.1b).
+      // sentence has to leave the same screen.
       return {
         ...noticed(
           state,
