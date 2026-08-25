@@ -7,9 +7,10 @@ figures were restated three times before they reproduced, and two per-file rows
 whose errors cancelled inside a total that still reconciled.
 
 Run from the repo root. Every tool refuses an **empty file list** with exit 2,
-flags included — `--base main` alone is not a file list — and exits 2 rather
-than printing a summary when **every** file was skipped, because zero
-comparisons is not a green. A wrong glob would
+flags included — `--base main` alone is not a file list. When **every** file
+was skipped they still print a summary, but they mark it (`0 of N`,
+`N of N SKIPPED`) and **exit 2**, because zero comparisons is not a green —
+and an exit code is invisible once the output is pasted into a PR body. A wrong glob would
 otherwise print the most reassuring output in the toolkit, which is #205's
 Rule I applied to this directory. `verbatim.mjs`, `excision.mjs` and
 `hash.mjs` also exit non-zero when they flag something.
@@ -77,14 +78,21 @@ edges — `plan` needs a number, `finding` needs a label — because **stripping
 ordinary prose is the dangerous direction**: it hides a real rewrite behind a
 green.
 
-It is **not anchored at the opening parenthesis** — `(ADR-0032, plan 020 §9.3)`
-is as real a citation as `(plan 020 §9.3)` — but **both sides are bounded**: at
-most 40 characters each, and neither may cross an em dash or a sentence break.
-Unbounded on either side it strips the prose *around* a citation from both
-files, so a reworded claim passes green; and over raw text a match can begin at
-a *code* parenthesis and swallow the lines between. Which is why every tool
-scans the **comment corpus**, never the whole file. `selftest.mjs` pins both
-directions and both sides.
+Both sides of the citation are matched by a **token grammar**, not by a length
+window: the lead-in and the tail may hold citation-shaped tokens and separators
+and nothing else, so a run of lowercase prose ends the match. Four attempts to
+pick a length oscillated between the two failure directions, which are **not
+symmetric** — missing a citation only makes `excision.mjs` flag an ordinary
+excision, which is noise, while stripping prose deletes a claim from both sides
+of the comparison and lets a reworded, or inverted, sentence pass green. The
+grammar is tuned to miss rather than over-match.
+
+Over raw text a match can also begin at a *code* parenthesis and swallow the
+lines between, which is why every tool scans the **comment corpus**, never the
+whole file. `markers.mjs` builds that corpus with the TypeScript parser, so its
+`.css` figures share `count.mjs`'s limitation — a `url(http://…)` would read as
+a `//` comment. No tracked sheet contains one; use `css-count.mjs` for CSS
+line counts.
 
 `css-count.mjs` exists for tranche 7c. It is not strictly required — `count.mjs`
 returns the identical figure on every tracked sheet today — but a `url(http://…)`

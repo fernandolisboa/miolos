@@ -52,7 +52,6 @@ function fingerprint(file, text) {
     ids: h(idNames.join(" ")),
     strs: h(strVals.join(" ")),
     directives,
-    parseErrors: sf.parseDiagnostics?.length ?? 0,
   };
 }
 

@@ -259,9 +259,24 @@ const tool = (n) => path.join(import.meta.dirname, n);
     ["(finding 2 of them is enough)", 0],
   ];
   check(
-    "a citation lead-in is bounded, so prose is never stripped",
+    "a lead-in of citation tokens counts; one of prose does not",
     cases.map(([t]) => (t.match(re()) ?? []).length),
     cases.map(([, w]) => w),
+  );
+  // The lead-ins the repo ACTUALLY has are 27-36 characters. The strawmen
+  // above are 55-62, so they passed every length window that was ever
+  // proposed — including the buggy ones. These are the real lines.
+  check(
+    "the repo's own prose lead-ins do not count",
+    [
+      "(no cookie rides the confirm, D3)",
+      "(a lost Termo colours no day, plan 033 D6)",
+      "(one free hint per puzzle, plan 017 D21)",
+      "(121 ms mean / 346 ms max locally, plan 018 §19.6)",
+      "(D8's never-send-in-tests requirement)",
+      "(D7: null → 0 → 1)",
+    ].map((t) => (t.match(re()) ?? []).length),
+    [0, 0, 0, 0, 0, 0],
   );
   // Over RAW text a match can begin at a code `(` and swallow the lines
   // between it and a citation, which made `citations.mjs` undercount. The fix
@@ -300,7 +315,19 @@ for (const t of ["excision", "verbatim", "citations", "hash"]) {
     2,
   );
 }
-for (const t of ["count", "markers", "css-count"]) {
+// `shingle.mjs` must find a real echo and must index something — a scan that
+// indexes zero files reports "no citations" for every comment in the repo.
+{
+  const out = run([tool("shingle.mjs"), "apps/web/src/og/copy.ts"]).out;
+  check(
+    "shingle.mjs indexes the tracked corpus",
+    /[1-9]\d{2,} tracked files indexed/.test(out),
+    true,
+  );
+  check("shingle.mjs finds a known echo", /is echoed by:/.test(out), true);
+}
+
+for (const t of ["count", "markers", "css-count", "shingle"]) {
   check(
     `${t}.mjs exits 2 when every file is absent`,
     run([tool(`${t}.mjs`), "does-not-exist.ts"]).code,
@@ -331,8 +358,19 @@ for (const t of ["count", "markers", "css-count"]) {
       "(plan 020 §9.3)",
       "(step-6 finding K2)",
       "(#31, ADR-0053 decision 1; plan 037 D6a)",
+      "(issue #20, ADR-0009/ADR-0026, plan 029 §6)",
     ].map((t) => (t.match(re()) ?? []).length),
-    [1, 1, 1],
+    [1, 1, 1, 1],
+  );
+  // A tail of prose is not a citation AT ANY LENGTH — a 22-character tail
+  // slipped through the last length window.
+  check(
+    "a short prose tail does not count either",
+    [
+      "(plan 037 D6a, which is still binding)",
+      "(plan 037 D6a, which was fully reversed)",
+    ].map((t) => (t.match(re()) ?? []).length),
+    [0, 0],
   );
 }
 
@@ -388,6 +426,69 @@ for (const t of ["count", "markers", "css-count"]) {
   );
 }
 
+// THE CENTRAL CLAIM, end to end: reword a comment beside a citation and
+// `excision.mjs` must FLAG it. Nothing tested this before — the other
+// excision fixtures cover its import guard, its skip path and its exit code.
+// Three of the four lines are real; the first inverts a security claim.
+{
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-reword-"));
+  temps.push(repo);
+  const git = (...a) =>
+    execFileSync("git", ["-C", repo, ...a], { stdio: "pipe" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  const rewordings = [
+    [
+      "// The victim's browser clicks (no cookie rides the confirm, D3).",
+      "// The victim's browser clicks (the session cookie rides the confirm, D3).",
+    ],
+    [
+      "// a lost Termo colours no day (plan 033 D6)",
+      "// a lost Termo colours the day (plan 033 D6)",
+    ],
+    [
+      "// reads it back (plan 037 D6a, which is still binding) before the flush",
+      "// reads it back (plan 037 D6a, which was fully reversed) before the flush",
+    ],
+    [
+      "// one free hint per puzzle (plan 017 D21)",
+      "// two free hints per puzzle (plan 017 D21)",
+    ],
+  ];
+  const files = rewordings.map((_, i) => `r${i}.ts`);
+  const put = (which) =>
+    rewordings.forEach((pair, i) =>
+      fs.writeFileSync(
+        path.join(repo, files[i]),
+        `${pair[which]}\nexport const a${i} = 1;\n`,
+      ),
+    );
+  put(0);
+  git("add", "-A");
+  git("commit", "-qm", "base");
+  git("branch", "-M", "main");
+
+  // Anti-vacuity first: unchanged files must be green, or the flag below
+  // would prove nothing.
+  check(
+    "excision.mjs is green when nothing was reworded",
+    run([tool("excision.mjs"), ...files], repo).code,
+    0,
+  );
+  put(1);
+  check(
+    "excision.mjs FLAGS a reworded claim beside a citation",
+    run([tool("excision.mjs"), ...files], repo).code,
+    1,
+  );
+  check(
+    "verbatim.mjs flags it too",
+    run([tool("verbatim.mjs"), ...files], repo).code,
+    1,
+  );
+}
+
 // Every tool must refuse an empty file list rather than print its most
 // reassuring output — #205's Rule I, applied to this toolkit. Flags are not
 // files: `--base main` alone left the list empty and printed a green.
@@ -399,6 +500,7 @@ for (const t of [
   "verbatim",
   "excision",
   "css-count",
+  "shingle",
 ]) {
   check(`${t}.mjs refuses an empty file list`, run([tool(`${t}.mjs`)]).code, 2);
   check(

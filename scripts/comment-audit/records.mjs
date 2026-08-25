@@ -1,17 +1,35 @@
 // The ONE definition of a records-genre citation, shared by every tool here.
 //
-// `plan` needs a number and `finding` a label, so an ordinary parenthetical
-// that happens to contain the word — "(plan for a second consumer)" — is NOT
-// stripped: stripping prose hides a real rewrite behind a green. A citation
-// may sit anywhere inside its parenthesis, so `(ADR-0032, plan 020 §9.3)`
-// counts too.
-// A citation sits inside a parenthesis with a short structured lead-in and a
-// short tail — `(ADR-0032, plan 020 §9.3)`, `(#31 step-6 F15)`. BOTH sides are
-// bounded, and neither may cross an em dash or a sentence break: an unbounded
-// side excises the prose around the citation from both files, which is the
-// direction that hides a real rewrite behind a green.
-const SEG = String.raw`(?:(?!\s—\s|\.\s|"\s)[^()])`;
-const NEAR = `${SEG}{0,40}`;
+// A citation lives inside a parenthesis and may carry structure on either side
+// — `(ADR-0032, plan 020 §9.3)`, `(#31, ADR-0053 decision 1; plan 037 D6a)`.
+// Both sides are matched by a TOKEN GRAMMAR, not by a length window: the
+// lead-in and the tail may hold citation-shaped tokens and separators and
+// nothing else, so a run of lowercase prose ends the match.
+//
+// A length window cannot tell prose from citation tokens, and four attempts to
+// pick one oscillated between the two failure directions. They are not
+// symmetric: MISSING a citation only makes `excision.mjs` flag an ordinary
+// excision, which is noise. STRIPPING prose deletes a claim from both sides of
+// the comparison, so a reworded — or inverted — sentence passes green. This
+// grammar is deliberately tuned to miss rather than to over-match; the misses
+// it accepts, like `(ADR-0031 as amended by ADR-0060, plan 018 §11.4)`, simply
+// get flagged for a human to read.
+const TOKEN = [
+  String.raw`#\d+`,
+  String.raw`ADR-\d{4}`,
+  String.raw`§[\d.]+`,
+  String.raw`plan \d+`,
+  String.raw`issue #\d+`,
+  String.raw`decision \d+[a-z]?`,
+  String.raw`step-\d+`,
+  String.raw`round-\d+`,
+  String.raw`\x60[^\x60()]*\x60`,
+  String.raw`[A-Z][\w.-]*`,
+  String.raw`\d+`,
+].join("|");
+
+// Separators only — no `.`, no `—`, no quote: those introduce prose.
+const NEAR = String.raw`(?:(?:${TOKEN})|[\s,;:/])*`;
 
 const INNER = [
   String.raw`plan \d+`,
@@ -27,7 +45,7 @@ const INNER = [
 const ANCHOR = String.raw`[\w/-]+\.(?:tsx?|mjs|css):\d[\d-]*`;
 
 export const RECORDS = [
-  String.raw`\(${NEAR}?(?:${INNER})${NEAR}\)`,
+  String.raw`\(${NEAR}(?:${INNER})${NEAR}\)`,
   "`" + ANCHOR + "`",
 ].join("|");
 
