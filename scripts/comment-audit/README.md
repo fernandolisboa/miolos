@@ -73,10 +73,15 @@ starting one.
 tool that counts and the tool that strips cannot disagree. It is narrow on both
 edges — `plan` needs a number, `finding` needs a label — because **stripping
 ordinary prose is the dangerous direction**: it hides a real rewrite behind a
-green. It is not anchored at the opening parenthesis, because `(ADR-0032, plan
-020 §9.3)` is as real a citation as `(plan 020 §9.3)`; over `apps/` and
-`packages/` it matches 461 of the 462 citation-shaped parentheticals, and the
-one it declines is prose.
+green.
+
+It is **not anchored at the opening parenthesis** — `(ADR-0032, plan 020 §9.3)`
+is as real a citation as `(plan 020 §9.3)` — but the lead-in is **bounded**: at
+most 24 characters, no `(`, no sentence punctuation. Unbounded, it stripped the
+prose in front of a citation from both sides, and over raw text a match could
+begin at a *code* parenthesis and swallow the lines between. Which is why the
+tools scan the **comment corpus**, never the whole file. `selftest.mjs` pins
+both directions.
 
 `css-count.mjs` exists for tranche 7c. It is not strictly required — `count.mjs`
 returns the identical figure on every tracked sheet today — but a `url(http://…)`

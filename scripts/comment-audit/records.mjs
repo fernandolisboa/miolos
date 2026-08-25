@@ -9,18 +9,23 @@ const INNER = [
   String.raw`plan \d+[^)]*`,
   String.raw`step-\d+[^)]*`,
   String.raw`round-\d+[^)]*`,
-  String.raw`finding (?:\x60[^\x60)]+\x60|[A-Z0-9][\w.-]*)[^)]*`,
+  String.raw`finding (?:\x60[^\x60)]+\x60|[A-Z][\w.-]*)[^)]*`,
   String.raw`§[\d.][^)]*`,
   String.raw`CLI-\d+`,
-  String.raw`[PSND]\d+(?:\/[PSND]\d+)?`,
+  // Not `[PSND]\d+` bare: that also matches the `S311` inside `T-WEB-S311`.
+  String.raw`(?<![-\w])[PSND]\d+(?:\/[PSND]\d+)?(?![-\w])`,
 ].join("|");
 
 const ANCHOR = String.raw`[\w/-]+\.(?:tsx?|mjs|css):\d[\d-]*`;
 
 export const RECORDS = [
-  // `[^)]*?` and not `[^)]*\b`: a `\b` cannot match before `§`, which
-  // silently dropped every `(ADR-0004, §9.2)`-shaped citation.
-  String.raw`\((?:[^)]*?)(?:${INNER})\)`,
+  // A citation may carry a short structured lead-in — `(ADR-0032, plan 020
+  // §9.3)`, `(#31 step-6 F15)` — so the prefix is not anchored at `(`. It is
+  // BOUNDED instead: at most 24 characters, no sentence punctuation, no `(`.
+  // An unbounded prefix strips the prose in front of a citation from BOTH
+  // sides, which is the direction that hides a real rewrite behind a green,
+  // and it lets a match start at a CODE parenthesis and swallow whole lines.
+  String.raw`\([^()—."]{0,24}?(?:${INNER})\)`,
   "`" + ANCHOR + "`",
 ].join("|");
 
@@ -34,6 +39,10 @@ export const MARKERS = [
   String.raw`\bround-\d\b`,
   String.raw`\bfinding\b`,
   String.raw`\bT-(?:WEB|LINT|API|CORE|DB)-S\d+`,
+  // The bare decision-citation class — `(D7)`, `(S23)`, `(P11)`. It is ~12% of
+  // the marker mass in the game dirs, and it is the shape `RECORDS` treats as
+  // core, so a scan that scopes a tranche must see it too.
+  String.raw`\((?<![-\w])[PSND]\d+(?:\/[PSND]\d+)?\)`,
   ANCHOR,
 ].join("|");
 
@@ -60,7 +69,7 @@ export const DIRECTIVES = [
  * empty list exits 2 rather than printing the most reassuring output in the
  * toolkit (#205 Rule I).
  */
-export function parseArgs(argv, name) {
+export function parseArgs(argv, name, takesBase = true) {
   const rest = argv.slice(2);
   let base = "main";
   const files = [];
@@ -68,6 +77,12 @@ export function parseArgs(argv, name) {
     if (rest[i] !== "--base") {
       files.push(rest[i]);
       continue;
+    }
+    if (!takesBase) {
+      console.error(
+        `${name}: reads the working tree only; --base means nothing here`,
+      );
+      process.exit(2);
     }
     base = rest[++i];
     if (base === undefined) {
@@ -77,7 +92,7 @@ export function parseArgs(argv, name) {
   }
   if (files.length === 0) {
     console.error(
-      `usage: node scripts/comment-audit/${name} [--base <ref>] <file>...\n` +
+      `usage: node scripts/comment-audit/${name}${takesBase ? " [--base <ref>]" : ""} <file>...\n` +
         "Refusing to run on an empty file list: a wrong glob would otherwise\n" +
         "print the most reassuring output in the toolkit (see #205 Rule I).",
     );

@@ -43,11 +43,19 @@ export function countCss(file) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const { files } = parseArgs(process.argv, "css-count.mjs");
+  const { files } = parseArgs(process.argv, "css-count.mjs", false);
   let tot = 0;
   let totT = 0;
+  let skipped = 0;
   for (const f of files) {
-    const r = countCss(f);
+    let r;
+    try {
+      r = countCss(f);
+    } catch {
+      skipped++;
+      console.log("   -  (absent from the working tree)  " + f);
+      continue;
+    }
     tot += r.commentOnly;
     totT += r.touched;
     console.log(
@@ -55,6 +63,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     );
   }
   console.log(
-    `${String(tot).padStart(4)} only  ${String(totT).padStart(4)} touched  TOTAL`,
+    `${String(tot).padStart(4)} only  ${String(totT).padStart(4)} touched  TOTAL` +
+      (skipped ? `; ${skipped} of ${files.length} SKIPPED` : ""),
   );
+  if (skipped === files.length) process.exit(2);
 }

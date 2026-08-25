@@ -43,11 +43,13 @@ export function baseCorpus(file, base) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const { base, files } = parseArgs(process.argv, "verbatim.mjs");
   let bad = 0;
+  let skipped = 0;
   for (const f of files) {
     let baseText;
     try {
       baseText = norm(baseCorpus(f, base));
     } catch {
+      skipped++;
       console.log(`SKIP ${f} (absent on ${base} or from the working tree)`);
       continue;
     }
@@ -62,6 +64,9 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
       }
     }
   }
-  console.log(`\n${bad} sentence(s) not byte-identical to ${base}.`);
-  process.exit(bad === 0 ? 0 : 1);
+  console.log(
+    `\n${bad} sentence(s) not byte-identical to ${base}.` +
+      (skipped ? ` ${skipped} of ${files.length} file(s) SKIPPED.` : ""),
+  );
+  process.exit(skipped === files.length ? 2 : bad === 0 ? 0 : 1);
 }

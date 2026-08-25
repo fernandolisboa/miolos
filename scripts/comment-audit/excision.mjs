@@ -24,11 +24,13 @@ const sentences = (text) =>
 const { base, files } = parseArgs(process.argv, "excision.mjs");
 
 let bad = 0;
+let skipped = 0;
 for (const f of files) {
   let baseText;
   try {
     baseText = norm(baseCorpus(f, base));
   } catch {
+    skipped++;
     console.log(`SKIP ${f} (absent on ${base} or from the working tree)`);
     continue;
   }
@@ -48,4 +50,5 @@ console.log(
     ? `\nEvery surviving sentence is verbatim from ${base} once records-genre citations are stripped from both sides.`
     : `\n${bad} sentence(s) changed by more than a citation excision.`,
 );
-process.exit(bad === 0 ? 0 : 1);
+if (skipped) console.log(`${skipped} of ${files.length} file(s) SKIPPED.`);
+process.exit(skipped === files.length ? 2 : bad === 0 ? 0 : 1);

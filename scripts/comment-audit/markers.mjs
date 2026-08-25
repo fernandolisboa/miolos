@@ -6,11 +6,17 @@ import { markersRe, parseArgs } from "./records.mjs";
 // measurement rather than by impression. Ranks ABSOLUTE marker count; the
 // per-comment-line rate is printed beside it because a long file and a dense
 // one are different problems.
-const { files } = parseArgs(process.argv, "markers.mjs");
-const rows = files.map((f) => {
-  const n = (fs.readFileSync(f, "utf8").match(markersRe()) ?? []).length;
-  const lines = count(f).commentOnly;
-  return { n, lines, f };
+const { files } = parseArgs(process.argv, "markers.mjs", false);
+let skipped = 0;
+const rows = files.flatMap((f) => {
+  try {
+    const n = (fs.readFileSync(f, "utf8").match(markersRe()) ?? []).length;
+    return [{ n, lines: count(f).commentOnly, f }];
+  } catch {
+    skipped++;
+    console.log("   -  (absent from the working tree)  " + f);
+    return [];
+  }
 });
 rows.sort((a, b) => b.n - a.n || b.lines - a.lines);
 
@@ -37,5 +43,7 @@ console.log(
     String(totalLines).padStart(5) +
     " lines  " +
     rate +
-    "  TOTAL",
+    "  TOTAL" +
+    (skipped ? `; ${skipped} of ${files.length} SKIPPED` : ""),
 );
+if (skipped === files.length) process.exit(2);

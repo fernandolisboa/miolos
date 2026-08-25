@@ -13,7 +13,16 @@ import { DIRECTIVES, recordsRe } from "./records.mjs";
 //
 // Not wired into CI. Run it after touching anything in this directory:
 //   node scripts/comment-audit/selftest.mjs
+// Run from the repo root whatever the caller's cwd is: one fixture shells out
+// to `git show HEAD:scripts/…`, and off-root it would SKIP and pass vacuously.
+const repoRoot = path.resolve(import.meta.dirname, "..", "..");
+process.chdir(repoRoot);
+
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-"));
+const temps = [dir];
+process.on("exit", () => {
+  for (const t of temps) fs.rmSync(t, { recursive: true, force: true });
+});
 const write = (name, text) => {
   const p = path.join(dir, name);
   fs.writeFileSync(p, text);
@@ -179,6 +188,7 @@ const tool = (n) => path.join(import.meta.dirname, n);
 
 {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-git-"));
+  temps.push(repo);
   const git = (...a) =>
     execFileSync("git", ["-C", repo, ...a], { stdio: "pipe" });
   git("init", "-q");
@@ -213,7 +223,6 @@ const tool = (n) => path.join(import.meta.dirname, n);
     [code.code, /DIFFERS/.test(code.out)],
     [1, true],
   );
-  fs.rmSync(repo, { recursive: true, force: true });
 }
 
 // `excision.mjs` imports from `verbatim.mjs`; without an entry-point guard the
@@ -229,6 +238,78 @@ const tool = (n) => path.join(import.meta.dirname, n);
     "excision.mjs does not print verbatim.mjs's summary",
     /not byte-identical/.test(out),
     false,
+  );
+}
+
+// The unbounded citation prefix stripped the PROSE in front of a citation from
+// both sides, and let a match start at a CODE parenthesis and swallow lines.
+{
+  const re = (await import("./records.mjs")).recordsRe;
+  const cases = [
+    ["(ADR-0032, plan 020 §9.3)", 1],
+    ["(#31 step-6 F15)", 1],
+    ["(ADR-0004, §9.2)", 1],
+    ["(D8)", 1],
+    [
+      "(the chip carries no duration and no result figure at all, plan 043 D4)",
+      0,
+    ],
+    ["(it also requires the uppercase transform, pinned in T-WEB-S311)", 0],
+    ['("run it twice, get the same account" — the crash recovery, D7)', 0],
+    ["(finding 2 of them is enough)", 0],
+  ];
+  check(
+    "a citation lead-in is bounded, so prose is never stripped",
+    cases.map(([t]) => (t.match(re()) ?? []).length),
+    cases.map(([, w]) => w),
+  );
+  // Over RAW text a match can begin at a code `(` and swallow the lines
+  // between it and a citation, which made `citations.mjs` undercount. The fix
+  // is that the tools scan the comment corpus; this pins the difference.
+  const code =
+    "const x = foo(\n  // see (plan 017 D3)\n  a,\n  // and (plan 018 D4)\n  b,\n);";
+  const comments = "// see (plan 017 D3)\n// and (plan 018 D4)";
+  check(
+    "raw text and the comment corpus disagree, and the corpus is right",
+    [(code.match(re()) ?? []).length, (comments.match(re()) ?? []).length],
+    [2, 2],
+  );
+}
+
+check(
+  "markers sees the bare decision-citation class",
+  (
+    "the guard (D7) and the mode (S23)".match(
+      (await import("./records.mjs")).markersRe(),
+    ) ?? []
+  ).length,
+  2,
+);
+
+// Every file skipped is zero comparisons, and printing the toolkit's most
+// reassuring sentence after zero comparisons is Rule I's shape.
+for (const t of ["excision", "verbatim", "citations"]) {
+  check(
+    `${t}.mjs exits 2 when every file is skipped`,
+    run([
+      tool(`${t}.mjs`),
+      "--base",
+      "no-such-ref",
+      "scripts/comment-audit/records.mjs",
+    ]).code,
+    2,
+  );
+}
+for (const t of ["count", "markers", "css-count"]) {
+  check(
+    `${t}.mjs exits 2 when every file is absent`,
+    run([tool(`${t}.mjs`), "does-not-exist.ts"]).code,
+    2,
+  );
+  check(
+    `${t}.mjs refuses --base, which it does not honour`,
+    run([tool(`${t}.mjs`), "--base", "main", "package.json"]).code,
+    2,
   );
 }
 
@@ -257,7 +338,6 @@ check(
   2,
 );
 
-fs.rmSync(dir, { recursive: true, force: true });
 console.log(
   failed === 0 ? "\nall checks passed" : `\n${failed} check(s) FAILED`,
 );

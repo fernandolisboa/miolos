@@ -1,27 +1,43 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import { commentRanges, commentRangesOf } from "./count.mjs";
 import { recordsRe, parseArgs } from "./records.mjs";
 
-// How many records-genre citations a sweep removed: matches present in the
-// file on the base ref and absent in the working tree. Published so a PR
-// body's figure is re-runnable rather than typed (#205 Rule P).
+// How many records-genre citations a sweep removed: matches present on the
+// base ref and absent in the working tree.
+//
+// Scanned over the COMMENT CORPUS, never the whole file. A citation's lead-in
+// is unanchored, so over raw text a match can start at a code parenthesis and
+// swallow lines of declarations along with the citation inside them.
+const corpus = (file, text) =>
+  (text === undefined
+    ? commentRanges(file)
+    : commentRangesOf(file, text)
+  ).ranges
+    .map(([a, b]) => (text ?? fs.readFileSync(file, "utf8")).slice(a, b))
+    .join("\n");
+
 const { base, files } = parseArgs(process.argv, "citations.mjs");
 
 let total = 0;
+let skipped = 0;
 for (const f of files) {
   let before;
   try {
-    before = execFileSync("git", ["show", `${base}:${f}`], {
-      encoding: "utf8",
-    });
+    before = corpus(
+      f,
+      execFileSync("git", ["show", `${base}:${f}`], { encoding: "utf8" }),
+    );
   } catch {
+    skipped++;
     console.log("  -  " + f + "  (absent on " + base + ")");
     continue;
   }
   let after;
   try {
-    after = fs.readFileSync(f, "utf8");
+    after = corpus(f);
   } catch {
+    skipped++;
     console.log("  -  " + f + "  (absent from the working tree)");
     continue;
   }
@@ -32,5 +48,8 @@ for (const f of files) {
   console.log(String(n).padStart(3) + "  " + f);
 }
 console.log(
-  String(total).padStart(3) + "  TOTAL records-citation matches removed",
+  String(total).padStart(3) +
+    "  TOTAL records-citation matches removed" +
+    (skipped ? `; ${skipped} of ${files.length} file(s) SKIPPED` : ""),
 );
+if (skipped === files.length) process.exit(2);

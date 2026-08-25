@@ -74,12 +74,20 @@ export function count(file) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const { files } = parseArgs(process.argv, "count.mjs");
+  const { files } = parseArgs(process.argv, "count.mjs", false);
   let tot = 0;
   let totT = 0;
   let totB = 0;
+  let skipped = 0;
   for (const f of files) {
-    const r = count(f);
+    let r;
+    try {
+      r = count(f);
+    } catch {
+      skipped++;
+      console.log("   -  (absent from the working tree)  " + f);
+      continue;
+    }
     tot += r.commentOnly;
     totT += r.touched;
     totB += r.blocks;
@@ -88,6 +96,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     );
   }
   console.log(
-    `${String(tot).padStart(4)} only  ${String(totT).padStart(4)} touched  ${String(totB).padStart(4)} ranges  TOTAL`,
+    `${String(tot).padStart(4)} only  ${String(totT).padStart(4)} touched  ${String(totB).padStart(4)} ranges  TOTAL` +
+      (skipped ? `; ${skipped} of ${files.length} SKIPPED` : ""),
   );
+  if (skipped === files.length) process.exit(2);
 }
