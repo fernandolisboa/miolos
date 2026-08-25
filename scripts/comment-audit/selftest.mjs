@@ -536,8 +536,9 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   // OUTSIDE the parenthetical and flag under any definition of a citation, so
   // an aggregate assertion is dominated by them and never exercises the
   // grammar — it stayed green with two earlier regex bugs reintroduced.
-  // r3 is DELIBERATELY expected not to flag: stripped of its citation the
-  // sentence is 24 characters, and both tools skip sentences of 25 or fewer.
+  // `excision.mjs` is deliberately expected not to flag r3: stripped of its
+  // citation the REWORDED sentence is 25 characters, and both tools skip 25
+  // or fewer. `verbatim.mjs` does flag it — it filters before the strip.
   // That blind spot is documented in the README; asserting it here keeps it
   // documented rather than discovered. The aggregate assertion this replaced
   // hid it behind the three files that do flag.
@@ -572,6 +573,20 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
       why: "the citation excised too — THE documented blind spot",
     },
   ];
+  // A parallel array to `rewordings`: a sixth pair added without a row here
+  // would be silently untested, which is how the aggregate defect started.
+  check(
+    "every rewording fixture is asserted",
+    expected.length,
+    rewordings.length,
+  );
+  // r4 is the only case asserting SILENCE, so it cannot tell "both tools are
+  // blind to this reword" from "no reword happened".
+  check(
+    "r4 really does reword something",
+    rewordings[4][0] !== rewordings[4][1],
+    true,
+  );
   for (const { r, excision, verbatim, why } of expected) {
     check(
       `excision.mjs ${excision ? "flags" : "does NOT see"} ${why} (r${r})`,
