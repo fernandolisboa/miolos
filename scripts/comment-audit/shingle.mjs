@@ -31,10 +31,31 @@ function shingles(text) {
 const { files: targets } = parseArgs(process.argv, "shingle.mjs", false);
 const skip = new Set(targets.map((f) => path.resolve(f)));
 
-const tracked = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
+// From the repo ROOT, not the cwd: `git ls-files` is cwd-relative, so running
+// this from a game directory indexed one file and answered "nothing cites
+// these comments" for the whole repo.
+const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+  encoding: "utf8",
+}).trim();
+
+const tracked = execFileSync("git", ["ls-files", "-z"], {
+  encoding: "utf8",
+  cwd: root,
+})
   .split("\0")
-  .filter((f) => /\.(ts|tsx|mjs|js|md|css|json|ya?ml)$/.test(f))
+  .filter((f) => f && !/\.(png|jpe?g|gif|svg|woff2?|ttf|ico|lock)$/.test(f))
+  .map((f) => path.join(root, f))
   .filter((f) => !skip.has(path.resolve(f)));
+
+// Zero files indexed answers "nothing cites this" for every comment in the
+// repo, which is the false green Rule A cannot afford: it authorises deleting
+// the only copy of a rule.
+if (tracked.length === 0) {
+  console.error(
+    "shingle.mjs: indexed 0 files, so every answer would be a false negative.",
+  );
+  process.exit(2);
+}
 
 const index = new Map();
 for (const f of tracked) {
@@ -72,8 +93,16 @@ for (const f of targets) {
   if (hits.size === 0) continue;
   found++;
   console.log(`\n--- ${f} is echoed by:`);
-  for (const [w, c] of [...hits].sort((a, b) => b[1] - a[1]).slice(0, 8)) {
-    console.log(`    ${String(c).padStart(3)}x  ${w}`);
+  const ranked = [...hits].sort((a, b) => b[1] - a[1]);
+  for (const [w, c] of ranked.slice(0, 12)) {
+    console.log(
+      `    ${String(c).padStart(3)}x  ${path.relative(root, w.replace(/:(\d+)$/, "")) + w.match(/:(\d+)$/)[0]}`,
+    );
+  }
+  // Hiding a candidate is the dangerous direction for a scan that authorises
+  // a deletion, so say so rather than truncating silently.
+  if (ranked.length > 12) {
+    console.log(`    …and ${ranked.length - 12} more location(s)`);
   }
 }
 console.log(

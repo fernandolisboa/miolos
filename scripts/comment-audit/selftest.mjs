@@ -325,6 +325,41 @@ for (const t of ["excision", "verbatim", "citations", "hash"]) {
     true,
   );
   check("shingle.mjs finds a known echo", /is echoed by:/.test(out), true);
+  // `git ls-files` is cwd-relative: from a game directory this indexed ONE
+  // file and answered "nothing cites these comments" for the whole repo.
+  const sub = run(
+    [tool("shingle.mjs"), "board.tsx"],
+    path.join(repoRoot, "apps/web/src/termo"),
+  ).out;
+  check(
+    "shingle.mjs indexes from the repo root whatever the cwd",
+    /[1-9]\d{2,} tracked files indexed/.test(sub),
+    true,
+  );
+}
+
+// An index of zero files answers "nothing cites this" for every comment in
+// the repo — the false green Rule A cannot afford, since it authorises
+// deleting the only copy of a rule.
+{
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-lonely-"));
+  temps.push(repo);
+  const git = (...a) =>
+    execFileSync("git", ["-C", repo, ...a], { stdio: "pipe" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  fs.writeFileSync(
+    path.join(repo, "a.ts"),
+    "// (plan 017 D3)\nexport const a = 1;\n",
+  );
+  git("add", "-A");
+  git("commit", "-qm", "base");
+  check(
+    "shingle.mjs exits 2 rather than reporting no citations from an empty index",
+    run([tool("shingle.mjs"), "a.ts"], repo).code,
+    2,
+  );
 }
 
 for (const t of ["count", "markers", "css-count", "shingle"]) {
@@ -477,13 +512,31 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
     0,
   );
   put(1);
+  // PER FILE, not one exit code over all four. Two of the four reword text
+  // OUTSIDE the parenthetical and flag under any definition of a citation, so
+  // an aggregate assertion is dominated by them and never exercises the
+  // grammar — it stayed green with two earlier regex bugs reintroduced.
+  const insideTheParens = new Set([0, 2]);
+  // r3 is DELIBERATELY expected not to flag: stripped of its citation the
+  // sentence is 24 characters, and both tools skip sentences of 25 or fewer.
+  // That blind spot is documented in the README; asserting it here keeps it
+  // documented rather than discovered. The aggregate assertion this replaced
+  // hid it behind the three files that do flag.
+  const tooShortToCompare = new Set([3]);
+  rewordings.forEach((_, i) => {
+    const flags = !tooShortToCompare.has(i);
+    check(
+      flags
+        ? insideTheParens.has(i)
+          ? `excision.mjs flags a reword INSIDE the citation's parenthesis (r${i})`
+          : `excision.mjs flags a reword beside a citation (r${i})`
+        : `excision.mjs does NOT see a reword in a <=25-character sentence (r${i}), as documented`,
+      run([tool("excision.mjs"), files[i]], repo).code,
+      flags ? 1 : 0,
+    );
+  });
   check(
-    "excision.mjs FLAGS a reworded claim beside a citation",
-    run([tool("excision.mjs"), ...files], repo).code,
-    1,
-  );
-  check(
-    "verbatim.mjs flags it too",
+    "verbatim.mjs flags them too",
     run([tool("verbatim.mjs"), ...files], repo).code,
     1,
   );

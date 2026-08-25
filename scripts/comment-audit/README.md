@@ -24,6 +24,7 @@ Rule I applied to this directory. `verbatim.mjs`, `excision.mjs` and
 | `markers.mjs` | which files are **heaviest in records markers**, and at what rate — how the next tranche is scoped | no |
 | `verbatim.mjs` | which surviving sentences are **not byte-identical** to the baseline | yes |
 | `excision.mjs` | which of those changed by **more than a citation excision** — the ones a PR body must declare | yes |
+| `shingle.mjs` | **Rule A** — what echoes a comment's prose, before you delete it | no |
 | `selftest.mjs` | do the tools still do what this README says? | no |
 
 Baseline defaults to `main`; pass `--base <ref>` to change it. A path absent
@@ -106,6 +107,20 @@ figure of **1,097** is also correct: it counts every line from the one holding
 `archive/late-result`, `archive/play-note`, `components/daily-unavailable` and
 `free-play/free-play`.
 
+## Reading `shingle.mjs`
+
+Rule A asks what cites a comment before it is deleted. `shingle.mjs` indexes
+7-word shingles over every tracked file except the ones being swept, then looks
+each target comment's prose up in it — shingles rather than `grep`, because a
+citation wraps across lines and is often a paraphrase.
+
+**A hit is a candidate, not a verdict.** The output ranks locations by how much
+prose they share and names how many it did not print; read them. It indexes
+from the repo root whatever the cwd, and **exits 2 if it indexed nothing** —
+a zero-file index would answer "nothing cites this" for every comment in the
+repo, which is the one false green Rule A cannot afford, because it authorises
+deleting the only copy of a rule.
+
 ## Reading `verbatim.mjs` and `excision.mjs`
 
 They are a pair. A citation-excision tranche makes almost every touched
@@ -115,7 +130,7 @@ flags only what changed by more than one. Declare from `excision.mjs`.
 
 Both are narrower than "nothing was reworded":
 
-- sentences of **25 characters or fewer are not compared**;
+- sentences of **25 characters or fewer are not compared** — `selftest.mjs` pins one real example, a reworded `one free hint per puzzle` that neither tool sees;
 - the match is a substring test over the whole file's comment corpus, so a
   sentence that **moved** is not flagged;
 - they merge whitespace-adjacent comment ranges into **blocks**, while
