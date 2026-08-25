@@ -8,23 +8,23 @@ Everything else is agent-owned — plans, reviews, fixes and merges happen witho
 
 Two campaigns are open, both agent-owned, nothing blocked.
 
-**#205 — comment removal. Tranche 7a is CLOSED** (#223 `src/i18n/messages.ts`, #225 `src/day` + `src/session` + `src/og`, 1,093 → 827). Zero code changed in either, proved by hashing. Tranches 1–6 done.
+**#205 — comment removal.** Tranches 1–7a done. **7b-1 done** (#227): the four games' `state.ts` reducers **plus `nonogram/controls.tsx`**, which review pulled in — 609 → 579. The four reducers alone are 566 → 538. Zero code changed in any tranche, proved by hashing.
 
-**Next is 7b: the four game dirs' `.ts`/`.tsx`.** Then 7c (the game `.module.css`, 1,097), 7d (`src/archive`, `src/free-play`, `src/components`), then `app/`+`scripts/`, `test/`, `eslint.config.mjs`.
+**Before sweeping anything, read ALL FIVE rule comments on #205**, oldest first — not just the newest. Rules A and B are unlabelled in the oldest (grep the repo for anything citing a block before deleting it; re-derive the population rather than trusting a count in a plan), and **Rule I is in the second**: `npx impeccable detect` with no argument scans nothing and exits 0, which #212 and #220 both cited as gate evidence. The real UI gate is the CI `detect` check on the head commit. The four that will bite next:
 
-**Read the two rule comments on #205 before sweeping anything.** #225 cost three review rounds and *every round found a defect the previous FIX left behind*. The four that generalise:
+- **Sweep by FILE ROLE across all four games, never one game at a time** (Rule N). The games' reducers, hooks and views carry near-identical comments; one game at a time decides the same comment twice and leaves the loser asymmetric.
+- **Reconcile the count PER FILE, not only in total** (Rule O). #227 shipped two wrong rows whose errors cancelled; the total still reconciled to `numstat` and three review rounds missed it.
+- **Generate every figure in a PR body from `scripts/comment-audit/`, and publish the regex** (Rule P). `node scripts/comment-audit/selftest.mjs` first if you touch the tools. #227 took **six** review rounds; rounds 4, 5 and 6 found nothing wrong with the diff — every finding was a number in the body, each in a scope the previous round had not enumerated.
+- **When a fix pulls in a file the tranche did not plan to sweep, sweep it or declare it out of scope** (Rule Q). Half a file is the defect.
 
-- **Re-derive the baseline with a PARSER.** A bare `ts.createScanner` loop needs `reScanTemplateToken` to walk template-literal spans and silently stops early without it — it under-counted 7a by 21%. Every published tranche estimate (7b's "~2,600") came from that scanner and is a **floor**. Reconciling to `numstat` does not catch this.
-- **A dangling pointer is a class.** Fix the instance a review names, then enumerate *every* outbound pointer in the tranche. #225's round-1 fix closed one and left its twin four lines away.
-- **Rule A has two halves: the quoted text AND the line anchor.** A sentence kept byte-identical still breaks `ADR-NNNN:33`-style citations when the sweep moves it. Grep for `<swept-file>:` and convert to symbol citations.
-- **Per deleted paragraph, name the gate** — and ask whether deleting the code it defends would actually red that test. Four ungated rules survived into review in files whose ADRs looked exhaustive.
+**The game dirs are NOT records-dense, and #205's ~71% does not transfer.** Measured over all 30 files **at HEAD** with `markers.mjs`: 248 markers / 3,041 comment lines, one per ~12 — against `src/play`'s 59% cut in tranche 6. (Before #227 merged: 330 / 3,071.) The reducers came in at 5%, which is their floor. 7b's whole scope is 3,041 lines and 579 of that is already swept, so **~2,460 remains** — close to the issue's "~2,600", but the genre is not there.
 
-Also: **`npx impeccable detect` with no argument scans nothing and exits 0.** #212 and #220 both cited that vacuous green. The real UI gate is the CI `detect` check on the head commit.
+**Next by value:** `nonogram/board.tsx` (24 markers), then `sudoku/play-view.tsx` (21), `nonogram/play-view.tsx` (18), `binairo/play-view.tsx` (17), `termo/keyboard.tsx` and `sudoku/use-sudoku-play.ts` (14 each). Re-run `markers.mjs` rather than trusting these — they move with every merge. Also bind `binairo/controls.tsx` + `sudoku/keypad.tsx` + `termo/keyboard.tsx` into one tranche — `nonogram/controls.tsx` is already swept and `termo/keyboard.tsx` holds three live line anchors. Then 7c (the four game `.module.css` — **911** by `css-count.mjs`. The issue's **1,097 does reproduce**, and encodes two differences worth keeping: a wider convention — every line from the one holding `/*` through the one holding `*/` — and a wider file set, all non-`play` CSS, which adds `archive/late-result` 63, `archive/play-note` 23, `components/daily-unavailable` 15 and `free-play/free-play` 29. **Do not let those four fall between 7c and 7d**), 7d (`src/archive`, `src/free-play`, `src/components`), then `app/`+`scripts/`, `test/`, `eslint.config.mjs`.
 
-**#206 — duplication, 3 of 15 clusters done.** Next by value is cluster 14, `conclusion-view.tsx`. The issue's "1,477 lines" is stale — #220 cut it to **888**. The duplication is still real: `ConclusionView`/`RemoteConclusionView` and `ShippedStamp`/`RemoteShippedStamp`/`RemoteTermoStamp`.
+**7d owes one debt:** #225 restored `day-client.ts`'s claim to be a "line-by-line sibling" of `streak-client.ts`, so all seven authenticated-surface clients must be swept together.
 
-**#209 — the `apps/web` CI flake** is diagnosed but unfixed; it did not reproduce across any full-suite run in the last two sessions. Worth fixing alongside the `apps/web/test` tranche.
+**#206 — duplication, 3 of 15 clusters done.** The issue says take them in table order, so cluster 4 is next; an earlier handoff said cluster 14 (`conclusion-view.tsx`) and contradicted the issue. The issue's "1,477 lines" is stale — #220 cut it to **888**. `ConclusionView`/`RemoteConclusionView` and `ShippedStamp`/`RemoteShippedStamp`/`RemoteTermoStamp` are still real duplication.
+
+**#209 — the `apps/web` CI flake** is diagnosed but unfixed; it has not reproduced across any full-suite run in three sessions. Worth fixing alongside the `apps/web/test` tranche.
 
 **#219** — the read-only-but-not-writable store defect — is triaged `defect` + `ready-for-agent`.
-
-**One debt 7d must clear:** #225 left `day-client.ts` without its free-play-wall paragraph and boundary-rule comment restored *and* asserting it is a "line-by-line sibling" of `streak-client.ts`. Both went back in, so 7d has to sweep all seven clients together or the asymmetry returns.
