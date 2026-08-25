@@ -1,16 +1,17 @@
 import ts from "typescript";
 import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { requireFiles } from "./records.mjs";
 
-// THE metric: comment-only lines — a source line whose entire content, ignoring
-// whitespace, is comment trivia. Reconciles to `git diff --numstat` when no
-// code line changes.
+// THE metric: comment-only lines — a source line carrying at least one
+// non-whitespace comment character and no code character.
 //
-// Comment ranges come from the PARSER (leading/trailing trivia at every node
-// and token), not from a raw `createScanner` loop: a bare scanner needs
-// `reScanTemplateToken` to walk a template literal's spans and silently stops
-// early without it, which under-counted every file holding a `${}`.
-export function commentRanges(file) {
-  const text = fs.readFileSync(file, "utf8");
+// Comment ranges come from the PARSER, not from a raw `ts.createScanner` loop:
+// a bare scanner needs `reScanTemplateToken` to walk a template literal's
+// spans and silently stops early without it, so every file holding a `${}`
+// loses the comments after its first template.
+export function commentRanges(file, text = fs.readFileSync(file, "utf8")) {
   const sf = ts.createSourceFile(
     file,
     text,
@@ -28,8 +29,12 @@ export function commentRanges(file) {
     node.getChildren(sf).forEach(visit);
   };
   visit(sf);
-  add(ts.getLeadingCommentRanges(text, 0));
   return { text, ranges: [...seen.values()].sort((a, b) => a[0] - b[0]) };
+}
+
+/** The same ranges, read out of a `main` blob rather than the working tree. */
+export function commentRangesOf(file, text) {
+  return commentRanges(path.join("/virtual", path.basename(file)), text);
 }
 
 export function count(file) {
@@ -52,8 +57,9 @@ export function count(file) {
     let hasComment = false;
     let hasCode = false;
     for (let j = s; j < e; j++) {
+      if (text[j].trim() === "") continue;
       if (mask[j]) hasComment = true;
-      else if (text[j].trim() !== "") hasCode = true;
+      else hasCode = true;
     }
     if (hasComment) {
       touched++;
@@ -63,20 +69,17 @@ export function count(file) {
       }
     }
   }
-  return {
-    commentOnly,
-    touched,
-    blocks: ranges.length,
-    onlyLines,
-    total: lines.length,
-  };
+  // A trailing newline is a terminator, not a line — `wc -l`'s convention.
+  const total = lines.length - (lines.at(-1) === "" ? 1 : 0);
+  return { commentOnly, touched, blocks: ranges.length, onlyLines, total };
 }
 
-if (process.argv[2]) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  const files = requireFiles(process.argv, "count.mjs");
   let tot = 0;
   let totT = 0;
   let totB = 0;
-  for (const f of process.argv.slice(2)) {
+  for (const f of files) {
     const r = count(f);
     tot += r.commentOnly;
     totT += r.touched;
