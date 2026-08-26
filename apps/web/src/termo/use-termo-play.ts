@@ -1,10 +1,9 @@
 /**
- * The React seam over the pure reducer.
- * Everything decidable without React lives in `state.ts`; everything a play
- * screen does that is not gameplay lives in `usePlayLifecycle` (ADR-0029),
- * which Termo reuses UNCHANGED — read in full it names no cell, no index and
- * no size, and its only structural constraints are `S extends PlayCore` and a
- * caller-supplied `persistDeps`.
+ * The React seam over the pure reducer. Everything decidable without React
+ * lives in `state.ts`; everything a play screen does that is not gameplay lives
+ * in `usePlayLifecycle` (ADR-0029), which Termo reuses UNCHANGED — read in full
+ * it names no cell, no index and no size, and its only structural constraints
+ * are `S extends PlayCore` and a caller-supplied `persistDeps`.
  *
  * The rule that carries over from the three shipped games unchanged: nothing
  * here runs during render. `localStorage` is read once, in the lifecycle's
@@ -55,8 +54,8 @@ export interface TermoPlay {
    * returns nothing (ADR-0028 decision 4).
    *
    * Read straight off `state.gone`: the reducer is the ONE state authority on
-   * this screen, so the three-way branch `TermoScreen` makes
-   * out of it is exercisable from `termo-state.test.ts` without React.
+   * this screen, so the three-way branch `TermoScreen` makes out of it is
+   * exercisable from `termo-state.test.ts` without React.
    */
   readonly unavailable: boolean;
   readonly type: (letter: string) => void;

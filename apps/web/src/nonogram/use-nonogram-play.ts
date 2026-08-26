@@ -1,9 +1,8 @@
 /**
- * The React seam over the pure reducer: the derived
- * readouts, the input callbacks and the game-specific half of the
- * lifecycle's contract. Everything decidable without React lives in
- * `state.ts` and `engine.ts`; everything a play screen does that is not
- * gameplay lives in `usePlayLifecycle` (ADR-0029).
+ * The React seam over the pure reducer: the derived readouts, the input
+ * callbacks and the game-specific half of the lifecycle's contract. Everything
+ * decidable without React lives in `state.ts` and `engine.ts`; everything a
+ * play screen does that is not gameplay lives in `usePlayLifecycle` (ADR-0029).
  *
  * The one rule that carries over from the two shipped games unchanged:
  * **nothing here runs during render**. `localStorage` is read

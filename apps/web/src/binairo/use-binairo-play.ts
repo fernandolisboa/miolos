@@ -1,14 +1,14 @@
 /**
- * The React seam over the pure reducer: the solution
- * memo, the input callbacks and the game-specific half of the lifecycle's
- * contract. Everything decidable without React lives in `state.ts` and the
- * shared `../play/*` modules; everything a play screen does that is not
- * gameplay lives in `usePlayLifecycle` (ADR-0029).
+ * The React seam over the pure reducer: the solution memo, the input callbacks
+ * and the game-specific half of the lifecycle's contract. Everything decidable
+ * without React lives in `state.ts` and the shared `../play/*` modules;
+ * everything a play screen does that is not gameplay lives in
+ * `usePlayLifecycle` (ADR-0029).
  *
  * The one rule that survives the extraction unchanged: **nothing here runs
- * during render**. `localStorage` is read once, in the lifecycle's
- * mount effect; `Date.now()` appears only inside effects and event
- * handlers, never in a value the first paint depends on.
+ * during render**. `localStorage` is read once, in the lifecycle's mount
+ * effect; `Date.now()` appears only inside effects and event handlers, never
+ * in a value the first paint depends on.
  */
 import type { DailyBinairoResponse } from "@miolos/core";
 import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
@@ -109,10 +109,10 @@ export function useBinairoPlay(
     dispatch,
     buildRecord,
     remotelyClaimed,
-    // `state.now` is deliberately NOT here:
-    // `tick` returns a new state object every second while these three keep
-    // their identities, so including it would write a readPlayRecord + Zod
-    // parse + JSON.stringify + setItem cycle once a second.
+    // `state.now` is deliberately NOT here: `tick` returns a new state object
+    // every second while these three keep their identities, so including it
+    // would write a readPlayRecord + Zod parse + JSON.stringify + setItem cycle
+    // once a second.
     persistDeps: [givens, entries, hintsUsed],
   });
 

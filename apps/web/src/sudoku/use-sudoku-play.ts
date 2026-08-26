@@ -1,14 +1,13 @@
 /**
- * The React seam over the pure reducer: the solution
- * memo, the input callbacks and the game-specific half of the lifecycle's
- * contract. Everything decidable without React lives in `state.ts` and
- * `engine.ts`; everything a play screen does that is not gameplay lives in
- * `usePlayLifecycle` (ADR-0029).
+ * The React seam over the pure reducer: the solution memo, the input callbacks
+ * and the game-specific half of the lifecycle's contract. Everything decidable
+ * without React lives in `state.ts` and `engine.ts`; everything a play screen
+ * does that is not gameplay lives in `usePlayLifecycle` (ADR-0029).
  *
- * The one rule that carries over from Binairo unchanged: **nothing here
- * runs during render**. `localStorage` is read once, in the
- * lifecycle's mount effect; `Date.now()` appears only inside effects and
- * event handlers, never in a value the first paint depends on.
+ * The one rule that carries over from Binairo unchanged: **nothing here runs
+ * during render**. `localStorage` is read once, in the lifecycle's mount
+ * effect; `Date.now()` appears only inside effects and event handlers, never in
+ * a value the first paint depends on.
  */
 import type { DailySudokuResponse } from "@miolos/core";
 import {
@@ -127,10 +126,10 @@ export function useSudokuPlay(
     dispatch,
     buildRecord,
     remotelyClaimed,
-    // `state.now` is deliberately NOT here:
-    // `tick` returns a new state object every second while these three keep
-    // their identities, so including it would write a readPlayRecord + Zod
-    // parse + JSON.stringify + setItem cycle once a second.
+    // `state.now` is deliberately NOT here: `tick` returns a new state object
+    // every second while these three keep their identities, so including it
+    // would write a readPlayRecord + Zod parse + JSON.stringify + setItem cycle
+    // once a second.
     persistDeps: [givens, entries, hintsUsed],
   });
 
@@ -198,14 +197,13 @@ export function useSudokuPlay(
 }
 
 /**
- * The one place a Sudoku `PlayRecord` is constructed, handed to the
- * lifecycle hook so both the in-progress write and the closing one go
- * through it. `grid` is written only for a solved board, because that is
- * the only shape the completion POST accepts and the only one the flush can
- * rebuild a body from — and `solvedDigits` is what proves it is 81 digits
- * with no empty cell left. `elapsedMs` is clamped by
- * `writePlayRecord`, never rejected — a rejecting cap would discard a
- * player's grid rather than a suspicious number.
+ * The one place a Sudoku `PlayRecord` is constructed, handed to the lifecycle
+ * hook so both the in-progress write and the closing one go through it. `grid`
+ * is written only for a solved board, because that is the only shape the
+ * completion POST accepts and the only one the flush can rebuild a body from —
+ * and `solvedDigits` is what proves it is 81 digits with no empty cell left.
+ * `elapsedMs` is clamped by `writePlayRecord`, never rejected — a rejecting cap
+ * would discard a player's grid rather than a suspicious number.
  *
  * `closed` rather than `solved`: the lifecycle's terminal predicate is "the
  * game is CLOSED" (ADR-0029 consequence (e)). For Sudoku the two coincide,

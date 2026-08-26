@@ -1,14 +1,13 @@
 "use client";
 
 /**
- * The Binairo free-play generation machine (ADR-0011, ADR-0046). One
- * job: seed → puzzle, in the browser, inside an effect — never during
- * render and never on the server (the seed is random, so SSR and hydration
- * would disagree; the same nothing-during-render discipline). The board
- * state itself lives
- * in the screen's inner board component, keyed on `{seed, level, run}` so
- * "Mais um" and level switches remount and re-init the daily reducer
- * cleanly.
+ * The Binairo free-play generation machine (ADR-0011, ADR-0046). One job:
+ * seed → puzzle, in the browser, inside an effect — never during render and
+ * never on the server (the seed is random, so SSR and hydration would
+ * disagree; the same nothing-during-render discipline). The board state
+ * itself lives in the screen's inner board component, keyed on
+ * `{seed, level, run}` so "Mais um" and level switches remount and re-init
+ * the daily reducer cleanly.
  *
  * The generator output crosses into the daily-shaped reducer layer through
  * ONE `dailyBinairoResponseSchema.parse` — the "Zod at every boundary"
@@ -93,8 +92,8 @@ export function useFreeBinairo(
       // "cascade" is one bounded re-render per generation: the skeleton
       // commits, the effect generates, the board swaps in — generation may
       // not run during render, or SSR and hydration would disagree on a
-      // random seed. Deferring it a tick would buy nothing
-      // and cost every test its synchronous session.
+      // random seed. Deferring it a tick would buy nothing and cost every
+      // test its synchronous session.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettled({
         level,
