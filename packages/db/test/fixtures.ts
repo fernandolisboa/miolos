@@ -81,8 +81,8 @@ export function nonogramContentFixture(): Record<string, unknown> {
     solution.map((row) => row[column] === true),
   );
   // `game` is the asymmetry: nonogram is the ONLY engine whose puzzle object
-  // carries one (nonogram/types.ts:33), and a fixture without it fails the
-  // strict content parse inside the wall (plan 020 N2).
+  // carries one (`NonogramPuzzle.game`), and a fixture without it fails the
+  // strict content parse inside the wall.
   return {
     game: "nonogram",
     seed: 987_654,
