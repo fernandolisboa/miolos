@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The Nonogram free-play generation machine (ADR-0011, ADR-0046).
+ * The Nonogram free-play generation machine (#28, ADR-0011, ADR-0046).
  * Same shape as `use-free-binairo`; generation is sub-millisecond after
  * the one-time pool build, so the generating state is one frame.
  *

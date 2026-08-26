@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * The Binairo free-play generation machine (ADR-0011, ADR-0046). One job:
- * seed → puzzle, in the browser, inside an effect — never during render and
- * never on the server (the seed is random, so SSR and hydration would
+ * The Binairo free-play generation machine (#28, ADR-0011, ADR-0046). One
+ * job: seed → puzzle, in the browser, inside an effect — never during render
+ * and never on the server (the seed is random, so SSR and hydration would
  * disagree; the same nothing-during-render discipline). The board state
  * itself lives in the screen's inner board component, keyed on
  * `{seed, level, run}` so "Mais um" and level switches remount and re-init
