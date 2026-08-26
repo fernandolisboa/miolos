@@ -1,10 +1,9 @@
 /**
- * The React seam over the pure reducer (#27, plan 022 §14.4/§14.5).
- * Everything decidable without React lives in `state.ts`; everything a play
- * screen does that is not gameplay lives in `usePlayLifecycle` (ADR-0029),
- * which Termo reuses UNCHANGED — read in full it names no cell, no index and
- * no size, and its only structural constraints are `S extends PlayCore` and a
- * caller-supplied `persistDeps`.
+ * The React seam over the pure reducer (#27). Everything decidable without
+ * React lives in `state.ts`; everything a play screen does that is not gameplay
+ * lives in `usePlayLifecycle` (ADR-0029), which Termo reuses UNCHANGED — read
+ * in full it names no cell, no index and no size, and its only structural
+ * constraints are `S extends PlayCore` and a caller-supplied `persistDeps`.
  *
  * The rule that carries over from the three shipped games unchanged: nothing
  * here runs during render. `localStorage` is read once, in the lifecycle's
@@ -55,8 +54,8 @@ export interface TermoPlay {
    * returns nothing (ADR-0028 decision 4).
    *
    * Read straight off `state.gone`: the reducer is the ONE state authority on
-   * this screen (finding B-12), so the three-way branch `TermoScreen` makes
-   * out of it is exercisable from `termo-state.test.ts` without React.
+   * this screen, so the three-way branch `TermoScreen` makes out of it is
+   * exercisable from `termo-state.test.ts` without React.
    */
   readonly unavailable: boolean;
   readonly type: (letter: string) => void;
@@ -236,11 +235,6 @@ export function useTermoPlay(
   );
 
   const live = state.status === "playing";
-  // Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
-  // root calls this when the server's claim wins the screen, so the 1 Hz
-  // tick stops behind the remote conclusion and the preserved in-progress
-  // record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
-  // timer is the timer reducer's no-op.
   const pause = useCallback(() => {
     dispatch({ type: "pause", now: Date.now() });
   }, []);

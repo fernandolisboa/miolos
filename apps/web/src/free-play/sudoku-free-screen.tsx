@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The /modo-livre/sudoku screen (ADR-0046) — the daily Sudoku play
+ * The /modo-livre/sudoku screen (#28, ADR-0046) — the daily Sudoku play
  * screen's sibling with the same free-play differences. See
  * `binairo-free-screen.tsx` for the pattern's full argument; this file
  * repeats it per game rather than abstracting, exactly as the daily

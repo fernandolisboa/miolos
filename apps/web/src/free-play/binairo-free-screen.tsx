@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * The /modo-livre/binairo screen (ADR-0046): the daily play screen's sibling,
- * not a new dialect — same shared grid chrome, same board card, same hint bar —
- * with the free-play differences: back targets the index, the date slot carries
- * the mode label, NO timer (ADR-0046 decision 6), a three-chip level picker
- * above the board, and an in-place swap to the solved card offering "Mais um".
+ * The /modo-livre/binairo screen (#28, ADR-0046): the daily play screen's
+ * sibling, not a new dialect — same shared grid chrome, same board card, same
+ * hint bar — with the free-play differences: back targets the index, the date
+ * slot carries the mode label, NO timer (ADR-0046 decision 6), a three-chip
+ * level picker above the board, and an in-place swap to the solved card
+ * offering "Mais um".
  *
  * Free play records NOTHING: no lifecycle hook, no sync, no play record,
  * no localStorage (ADR-0008 rule 5, ADR-0046 decision 4). The ESLint wall

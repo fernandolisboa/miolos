@@ -2,12 +2,12 @@
 
 /**
  * The Binairo free-play generation machine (#28, ADR-0011, ADR-0046). One
- * job: seed → puzzle, in the browser, inside an effect — never during
- * render and never on the server (the seed is random, so SSR and hydration
- * would disagree; plan 017 D28's discipline). The board state itself lives
- * in the screen's inner board component, keyed on `{seed, level, run}` so
- * "Mais um" and level switches remount and re-init the daily reducer
- * cleanly.
+ * job: seed → puzzle, in the browser, inside an effect — never during render
+ * and never on the server (the seed is random, so SSR and hydration would
+ * disagree; the same nothing-during-render discipline). The board state
+ * itself lives in the screen's inner board component, keyed on
+ * `{seed, level, run}` so "Mais um" and level switches remount and re-init
+ * the daily reducer cleanly.
  *
  * The generator output crosses into the daily-shaped reducer layer through
  * ONE `dailyBinairoResponseSchema.parse` — the "Zod at every boundary"
@@ -33,7 +33,7 @@ export interface FreeBinairoPuzzle {
   /** The normalized uint32 the puzzle came from — part of the board key. */
   readonly seed: number;
   readonly daily: DailyBinairoResponse;
-  /** Feeds `use-hint` directly — no solver call needed (plan 025 D7). */
+  /** Feeds `use-hint` directly — no solver call needed. */
   readonly solution: BinairoSolvedGrid;
 }
 
@@ -69,7 +69,7 @@ export function useFreeBinairo(
   const [run, setRun] = useState(0);
   // Tagged with the {level, run} it answered, so a stale result renders as
   // "generating" during the one commit between a change and its effect —
-  // the skeleton paints first, then the effect swaps the board in (D5).
+  // the skeleton paints first, then the effect swaps the board in.
   const [settled, setSettled] = useState<{
     readonly level: FreePlayLevel;
     readonly run: number;
@@ -90,10 +90,10 @@ export function useFreeBinairo(
       });
       // The synchronous setState is the effect's whole product, and the
       // "cascade" is one bounded re-render per generation: the skeleton
-      // commits, the effect generates, the board swaps in (plan 025 D5.1 —
-      // generation may not run during render, or SSR and hydration would
-      // disagree on a random seed). Deferring it a tick would buy nothing
-      // and cost every test its synchronous session.
+      // commits, the effect generates, the board swaps in — generation may
+      // not run during render, or SSR and hydration would disagree on a
+      // random seed. Deferring it a tick would buy nothing and cost every
+      // test its synchronous session.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettled({
         level,

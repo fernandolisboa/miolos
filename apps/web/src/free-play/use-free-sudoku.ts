@@ -4,7 +4,7 @@
  * The Sudoku free-play generation machine (#28, ADR-0011, ADR-0046). The
  * same shape as `use-free-binairo`, plus the one thing Sudoku owns: the
  * retry ladder. `generateDailySudoku` retries up to 1200 attempts
- * internally and an exhausted seed costs ~2s of CPU (plan 025 D5), so on
+ * internally and an exhausted seed costs ~2s of CPU, so on
  * `SudokuGenerationError` — and ONLY that error — the effect draws a fresh
  * seed, up to three, before showing the error card. This is the publishing
  * side's fresh-seed-on-exhaustion precedent moved client-side. Any other
@@ -14,7 +14,7 @@
  * Generation runs inside the effect, never during render and never on the
  * server: the generating skeleton commits and paints first, then the
  * effect blocks — honest feedback for the heavy tail, one frame for the
- * typical tens of milliseconds. No Web Worker (D5.3): it would be the
+ * typical tens of milliseconds. No Web Worker: it would be the
  * repo's first, purchased against a rare, bounded worst case.
  */
 import type { DailySudokuResponse } from "@miolos/core";
@@ -35,7 +35,7 @@ import {
   type FreePlayLevel,
 } from "./catalog";
 
-/** Fresh seeds per generation request before the error card (D5.2). */
+/** Fresh seeds per generation request before the error card. */
 export const FREE_PLAY_SUDOKU_SEED_ATTEMPTS = 3;
 
 /**
@@ -48,7 +48,7 @@ const solutionSchema = z.array(sudokuDigitSchema).length(81);
 export interface FreeSudokuPuzzle {
   readonly seed: number;
   readonly daily: DailySudokuResponse;
-  /** Narrowed to the digit union; feeds `use-hint` directly (D7). */
+  /** Narrowed to the digit union; feeds `use-hint` directly. */
   readonly solution: readonly SudokuDigit[];
 }
 
@@ -96,7 +96,7 @@ export function useFreeSudoku(
       });
       const solution = solutionSchema.parse(puzzle.solution);
       // One bounded re-render per generation, deliberately synchronous —
-      // see use-free-binairo.ts for the full argument (plan 025 D5.1).
+      // see use-free-binairo.ts for the full argument.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettled({
         level,
@@ -124,7 +124,7 @@ export function useFreeSudoku(
   return { phase, regenerate };
 }
 
-/** The ladder: only `SudokuGenerationError` buys a fresh seed (D5.2). */
+/** The ladder: only `SudokuGenerationError` buys a fresh seed. */
 function generateWithFreshSeeds(
   generate: typeof generateDailySudoku,
   draw: () => number,
