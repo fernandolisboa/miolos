@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The Sudoku free-play generation machine (#28, ADR-0011, ADR-0046). The
+ * The Sudoku free-play generation machine (ADR-0011, ADR-0046). The
  * same shape as `use-free-binairo`, plus the one thing Sudoku owns: the
  * retry ladder. `generateDailySudoku` retries up to 1200 attempts
  * internally and an exhausted seed costs ~2s of CPU, so on
