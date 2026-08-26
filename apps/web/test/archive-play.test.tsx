@@ -141,12 +141,11 @@ describe("the archive's play chrome (T-WEB-S185)", () => {
     expect(screen.queryByText(messages.archive.title)).toBeNull();
   });
 
-  // ALL FOUR GAMES, and the widening is the finding (step-6 F14). This
-  // claim — "byte-identical when the prop is absent" — is asserted as fact
-  // from NINE doc blocks (the four `play-view.tsx` pairs and
-  // `src/play/types.ts`) and from plan 037 §1 (iv), and it was proved for
-  // sudoku alone. Termo mattered most: its `PlayView` has the most complex
-  // top bar, and the `progressBar` slot's child count is what the sheet's
+  // ALL FOUR GAMES. The claim — "byte-identical when the prop is absent" —
+  // was once asserted in prose from nine doc blocks and proved for sudoku
+  // alone; ADR-0053 decision 9 and this `it.each` are what carry it now.
+  // Termo mattered most: its `PlayView` has the most complex top bar, and the
+  // `progressBar` slot's child count is what the sheet's
   // `space-between` depends on.
   it.each([
     [

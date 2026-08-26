@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * The /modo-livre/nonogram screen (#28, ADR-0046) — the daily Nonogram
- * play screen's sibling with the free-play differences of plan 025 §7.2.
- * See `binairo-free-screen.tsx` for the pattern's full argument.
+ * The /modo-livre/nonogram screen (ADR-0046) — the daily Nonogram play screen's
+ * sibling with the same free-play differences. See `binairo-free-screen.tsx`
+ * for the pattern's full argument.
  *
  * The solved card shows the PAINTED PICTURE and never `reveal.name` or
- * `reveal.motifId` (§6.4): the hook drops `reveal` at the parse, so this
+ * `reveal.motifId`: the hook drops `reveal` at the parse, so this
  * file could not render the curated name even by accident.
  */
 import type { NonogramSize } from "@miolos/core";
@@ -134,7 +134,7 @@ function NonogramFreeBoard({
   });
 
   // The shipped "no stored record" path: `{now, hydrated: true}`, nothing
-  // else. No `resume` ever — the timer stays inert (D8).
+  // else. No `resume` ever — the timer stays inert.
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
@@ -184,7 +184,7 @@ function NonogramFreeBoard({
       return;
     }
     // The state's own clue-derived solution — `reveal` never enters the
-    // hook, and the action is a bare verb (D7).
+    // hook, and the action is a bare verb.
     const hint = nextNonogramHint(current.solution, current.entries);
     if (hint === null) {
       return;
@@ -338,16 +338,9 @@ function Frame({
         )}
       </section>
 
-      {/* AFTER the board, and that is the whole of #67: `screen.page` places
-          every child by NAMED GRID AREA, so this element's position in the
-          source decides the tab order and decides nothing about the paint. It
-          used to sit above `.board` while painting below it in both bands —
-          bottom of the sidebar at >1140px, last row at <=1140px — so the
-          second tab stop on this screen was the lowest control on the page
-          (WCAG 2.4.3). Free play inherits the shared grid, so it inherited the
-          defect and inherits the fix. `grid-area: hint` is unconditional in
-          the shared sheet, so nothing about the layout moves with it.
-          T-WEB-S232. */}
+      {/* AFTER the board: `screen.page` places every child by NAMED GRID
+          AREA, so this element's position in the source decides the tab
+          order and decides nothing about the paint. T-WEB-S232. */}
       {hint === null ? (
         <div
           aria-hidden

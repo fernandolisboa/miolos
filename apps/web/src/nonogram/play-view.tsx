@@ -17,42 +17,11 @@ import type { NonogramPlay } from "./use-nonogram-play";
  * inline because `play/screen.module.css` reads both throughout. Terracotta
  * #B5563C: 4.32:1 against desk paper, which is what makes the filled cell read
  * as the picture with no rule at all — and why the caret is `--ink` rather
- * than the accent, since an accent caret on a filled cell would be 1:1 (§11.6).
+ * than the accent, since an accent caret on a filled cell would be 1:1.
  *
- * 4.32:1 IS BELOW WCAG AA FOR TEXT, and step-6 finding ISS-A2 measured it on
- * six surfaces. The pair split cleanly and both halves are now closed, neither
- * of them by moving a token value:
- *
- * - **Fixed here — desk ink ON a terracotta FILL.** `screen.hint` (14px/600)
- *   measured 4.318:1; `--ink-on-accent` resolves it to `--paper-card` at
- *   4.506:1, the identical one-token remedy `nonogram-board.module.css:461-463`
- *   already applies to `.controlActive`. Binairo and Sudoku resolve the same
- *   property to `--paper-desk` and are unchanged to the byte.
- * - **Fixed by #68, not here — terracotta TEXT on desk paper.** `.barKicker`
- *   and `.titleKicker` rendered at a computed **4.318:1** on `/nonogram` and —
- *   for `.barKicker` — on `/nonogram/concluido`, as did the conclusion's 17px
- *   `.chipDone .chipName` at **3.9717:1**. ADR-0041 closed all three without
- *   touching the palette: an accent may colour a shape, never a word, so the
- *   kickers are `--ink-2` (5.0791:1 on desk paper) and the chip name is
- *   `--ink` (13.8077:1 on the terracotta tint). The declarations live in the
- *   SHARED sheets — this module contributes only the `--accent` value they
- *   read (plan 020 landmine N14, dispositioned).
- *
- * **The rounding convention, stated once for the whole repo.** A composited
- * tint is computed at 8-bit precision and ROUNDED before its luminance is
- * taken, because that is what a browser paints: `color-mix(in srgb,
- * var(--accent) 10%, transparent)` over `--paper-card` #FBF7EF gives
- * (0.1x181 + 0.9x251, 0.1x86 + 0.9x247, 0.1x60 + 0.9x239) =
- * (244.0, 230.9, 221.1) -> **#F4E7DD**, L 0.81605382 — the same arithmetic
- * `conclusion-view.module.css`'s `.chipDone .chipName` block spells out for
- * the termo accent. This line used to quote **3.969:1**, the unrounded composite's
- * value, beside a **13.8077:1** taken from the rounded one; the rounded
- * figure is **3.9717:1** and it is what every number in this repo now uses
- * (step-7 finding A-F10). Neither value changes any conclusion — both are
- * below AA, which is why the declaration moved to `--ink`.
- *
- * `impeccable detect` in URL mode cannot see any of it, which is exactly why
- * the figures are written down.
+ * ADR-0041 measures every terracotta figure this screen depends on, and
+ * `accent-contrast.test.ts` recomputes them from `packages/ui/tokens.css` on
+ * every gate run.
  *
  * The geometry custom properties ride on `.pageNonogram` instead — a class
  * this module owns, so no cascade order is involved.
@@ -67,7 +36,7 @@ const ACCENT = accentVars("nonogram");
 const BLANK_READOUT = "\u00a0";
 
 /**
- * The /nonogram play composition (plan 020 §11, §12). The chrome is the shared
+ * The /nonogram play composition. The chrome is the shared
  * `play/screen.module.css` (ADR-0029) — one CSS grid with named areas carrying
  * both viewports out of one DOM — and only the board, the brush row and the
  * `Tamanho` readout are this game's own.
@@ -75,12 +44,6 @@ const BLANK_READOUT = "\u00a0";
  * The three card rotations are a distinct signature from Binairo's and
  * Sudoku's through `.pageNonogram`, so the three screens read as different
  * sheets from the same pad rather than as copies.
- *
- * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
- * daily route — this renders exactly what it always did, byte for byte, and
- * T-WEB-S185 pins both directions. Present, the back affordance becomes the
- * archived day's and one extra rules line states that the day does not move
- * the streak.
  */
 export function PlayView({
   play,
@@ -132,15 +95,6 @@ export function PlayView({
           </span>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
-        {/* #31 (ADR-0053 decision 9): the archive's ONE added line. It
-            carries its own class from the archive's own stylesheet — a
-            second `screen.rules` paragraph made "this does not move your
-            streak" indistinguishable from "fill the grid so each row has
-            1–9" (step-6 F10b) — and nothing under `src/play/` is edited
-            for it, because a CSS-module class name is a string the chrome
-            object hands over. It is what makes the archive's semantics
-            visible to the person they apply to, which a mode chip could
-            not have said. */}
         {archive === undefined ? null : (
           <p className={archive.note.className}>{archive.note.text}</p>
         )}
@@ -159,7 +113,7 @@ export function PlayView({
           </span>
           {/* The denominator is the PICTURE's cell count, summed from the
               clues — a `de size²` readout would stand at 21% at the moment a
-              fill-only player wins (P13). */}
+              fill-only player wins. */}
           <span className={screen.progressCard}>
             {copy.progressLong(play.filled, play.target)}
           </span>
@@ -196,17 +150,9 @@ export function PlayView({
         )}
       </section>
 
-      {/* AFTER the board, and that is the whole of #67: `screen.page` places
-          every child by NAMED GRID AREA, so this element's position in the
-          source decides the tab order and decides nothing about the paint. It
-          used to sit above `.board` while painting below it in both bands —
-          bottom of the sidebar at >1140px, last row at <=1140px — so the
-          second tab stop on every play screen was the lowest control on the
-          page (WCAG 2.4.3). Moving the node is the only fix available: focus
-          order follows the DOM, and no CSS property reorders it in the
-          browsers this app ships to. `grid-area: hint` is unconditional in the
-          shared sheet, so nothing about the layout moves with it — verified
-          per band, per screen. T-WEB-S232.
+      {/* AFTER the board: `screen.page` places every child by NAMED GRID
+          AREA, so this element's position in the source decides the tab
+          order and decides nothing about the paint. T-WEB-S232.
 
           `aria-disabled` rather than `disabled`: the exhausted button stays
           focusable and keeps announcing why it does nothing. */}
@@ -223,13 +169,11 @@ export function PlayView({
 }
 
 /**
- * The pre-hydration paint (finding
- * `binairo-reload-flashes-a-blank-board-over-a-finished-day`). Everything the
- * board, the clock, the progress readout and the hint button show is DERIVED
- * FROM THE RECORD, and the record cannot be read before the mount effect — so
- * painting them first renders a day the player already finished as an empty
- * board with a live hint button and a 00:00 clock, for as long as hydration
- * takes.
+ * The pre-hydration paint. Everything the board, the clock, the progress
+ * readout and the hint button show is DERIVED FROM THE RECORD, and the record
+ * cannot be read before the mount effect — so painting them first renders a day
+ * the player already finished as an empty board with a live hint button and a
+ * 00:00 clock, for as long as hydration takes.
  *
  * What waits is the VALUES, never the boxes: every occupant of `.page`'s grid
  * and the brush row inside `.board` is reserved here at its shipped size,
@@ -241,12 +185,6 @@ export function PlayView({
  * the clues arrive on the wire with the puzzle, so they owe the record nothing
  * — and the rails sit in `max-content` tracks, so a blank one would reserve
  * the wrong width.
- *
- * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
- * daily route — this renders exactly what it always did, byte for byte, and
- * T-WEB-S185 pins both directions. Present, the back affordance becomes the
- * archived day's and one extra rules line states that the day does not move
- * the streak.
  */
 export function PlaySkeleton({
   date,
@@ -296,15 +234,6 @@ export function PlaySkeleton({
           </span>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
-        {/* #31 (ADR-0053 decision 9): the archive's ONE added line. It
-            carries its own class from the archive's own stylesheet — a
-            second `screen.rules` paragraph made "this does not move your
-            streak" indistinguishable from "fill the grid so each row has
-            1–9" (step-6 F10b) — and nothing under `src/play/` is edited
-            for it, because a CSS-module class name is a string the chrome
-            object hands over. It is what makes the archive's semantics
-            visible to the person they apply to, which a mode chip could
-            not have said. */}
         {archive === undefined ? null : (
           <p className={archive.note.className}>{archive.note.text}</p>
         )}
@@ -360,7 +289,7 @@ export function PlaySkeleton({
  * `.pageNonogram` when the day is a 5×5, because the mobile cap is per SIZE:
  * a single 350px value would wrap a 350px card around a 288px board at 390px,
  * ~31px of dead paper each side, on the one screen whose whole argument is
- * paper that hugs its board (§12.4). Custom properties inherit, so the brush
+ * paper that hugs its board. Custom properties inherit, so the brush
  * row resolves the same cap — deliberately, and the arithmetic holds for both.
  */
 function pageClassName(size: NonogramSize): string {
