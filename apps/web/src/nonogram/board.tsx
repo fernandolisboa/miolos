@@ -55,8 +55,8 @@ const SIZE_CLASS = {
  * callbacks, so one painted cell reconciles ONE `<button>` and composes ONE
  * aria string instead of 225. `ColRail`/`RowRail` below are memoized for the
  * same reason, so the guarantee covers the whole board and not just its cells:
- * N compositions for an N-cell drag, rather than (size² + 2·size)×N, pinned
- * by `T-WEB-S66`.
+ * N compositions for an N-cell drag, rather than (size² + 2·size)×N, and
+ * `T-WEB-S66` pins it.
  *
  * The default shallow compare is exactly right here: `size` and `clues` never
  * change identity for a mounted screen (`initNonogramPlayState` takes `clues`
@@ -260,10 +260,10 @@ export const Board = memo(function Board({
 /**
  * ONE column rail, memoized — the OTHER half of the drag cost `Board`'s own
  * memo cannot reach: without it every painted cell re-ran
- * `columnCluesAria`/`rowCluesAria` 30 times. Memoizing the two rails takes
- * that to zero and the whole board to ~N compositions for an N-cell drag;
- * measured 1.33x on the commit itself, with byte-identical markup. Pinned
- * by `T-WEB-S66`.
+ * `columnCluesAria`/`rowCluesAria` 2·size times — 30 on a 15×15. Memoizing the
+ * two rails takes that to zero and the whole board to ~N compositions for an
+ * N-cell drag; measured 1.33x on the commit itself, with byte-identical
+ * markup, and pinned by `T-WEB-S66`.
  *
  * The bail-out is PERMANENT rather than probabilistic: `clues` never changes
  * identity for a mounted screen (`initNonogramPlayState` takes it from the

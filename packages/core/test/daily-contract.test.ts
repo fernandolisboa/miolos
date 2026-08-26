@@ -571,7 +571,7 @@ describe("nonogramDailyContentSchema", () => {
   });
 
   it("rejects a [0] run — an all-empty line is [], never [0]", () => {
-    // `NonogramClues.rows` and `clues.ts`'s `runLengths`: the UI renders "0"
+    // `NonogramClues.rows` and `clues.ts`'s `deriveClues`: the UI renders "0"
     // for an empty run list, so a stored [0] is drift, not data.
     const puzzle = nonogramDaily(2);
     const zeroRun = {

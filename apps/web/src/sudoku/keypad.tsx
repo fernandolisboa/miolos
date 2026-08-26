@@ -15,9 +15,9 @@ const DIGITS: readonly SudokuDigit[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 /**
  * The keypad. These are COMMANDS, not modes: Binairo's sticky paint model
  * does not generalize — there is no plausible "paint 7s by dragging" — so
- * they are plain buttons with no `aria-pressed`, and the
- * physical keyboard's `1`–`9`/`Backspace` do the same job through the board's
- * own listener (ADR-0030 decision 3).
+ * they are plain buttons with no `aria-pressed`, and the physical keyboard's
+ * `1`–`9`/`Backspace` do the same job through the board's own listener
+ * (ADR-0030 decision 3).
  *
  * Desktop: the digit row shares the board's exact track template, so digit
  * *n* sits directly under column *n* and the box rhythm is legible twice;

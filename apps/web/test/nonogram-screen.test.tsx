@@ -453,9 +453,8 @@ describe("the clue rails (T-WEB-S43)", () => {
     // The engine's own contract: an all-empty line's clue is `[]` and the UI
     // renders "0" (`NonogramClues` in `@miolos/games/nonogram`). The rail's
     // numbers and the composed label must agree, and only one fixture in the
-    // shipped library is
-    // guaranteed to have such a line — so the assertion is conditional on
-    // finding one and anti-vacuous through the label's own text.
+    // shipped library is guaranteed to have such a line — so the assertion is
+    // conditional on finding one and anti-vacuous through the label's own text.
     const { container } = render(<NonogramScreen daily={BIG} />);
     const empty = BIG.clues.rows.findIndex((runs) => runs.length === 0);
     if (empty === -1) {

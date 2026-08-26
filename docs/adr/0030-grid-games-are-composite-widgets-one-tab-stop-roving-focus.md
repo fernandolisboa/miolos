@@ -96,8 +96,8 @@ is available" buys us.
 7. **Per-cell state rides in the composed accessible name**, never in
    `aria-invalid`: ARIA does not support it on `role=button` and
    `jsx-a11y/role-supports-aria-props` reds the lint gate. This is the
-   shipped Binairo behaviour (`binairo/grid.tsx`'s `Grid`, on the playable
-   cell's `aria-label`), kept and generalized.
+   shipped Binairo behaviour (`binairo/grid.tsx`'s `Grid`), kept and
+   generalized.
 
 8. **This reverses plan 017 §8.2's deferral for grid games, from #23
    onward.** The deferral was correct for a 64-cell board with 24–48

@@ -256,10 +256,10 @@ export const Keyboard = memo(function Keyboard({
 });
 
 /**
- * The pre-hydration keyboard. Divs rather than buttons, so
- * nothing here is focusable or announced before it works — but every box the
- * hydrated keyboard occupies is reserved, all three rows and all 28 of them,
- * in the same row-major order.
+ * The pre-hydration keyboard. Divs rather than buttons, so nothing here is
+ * focusable or announced before it works — but every box the hydrated
+ * keyboard occupies is reserved, all three rows and all 28 of them, in the
+ * same row-major order.
  *
  * Labelled, unlike the play screen's readouts: a key cap is a constant, so
  * this row owes the record nothing and can paint complete

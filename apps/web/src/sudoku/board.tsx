@@ -214,9 +214,9 @@ function cellPlacement(
 
 /**
  * ONE chromatic class, optionally joined with the caret — not one class total
- * (ADR-0030 (d)). Precedence
- * `violating > hint-filled > entered > given > empty`; the caret is an
- * outline, so it composes with every one of them instead of replacing it.
+ * (ADR-0030 (d)). Precedence `violating > hint-filled > entered > given >
+ * empty`; the caret is an outline, so it composes with every one of them
+ * instead of replacing it.
  */
 function cellClassName(state: {
   readonly given: boolean;
