@@ -8,14 +8,14 @@ import type { CellValue } from "./state";
 const COLUMNS = 8;
 
 /**
- * The 8×8 board (plan 017 §12.2). Playable cells are real `<button>`s so
- * the whole grid works from the keyboard; givens are inert `<div>`s
- * carrying `aria-disabled` — they are not buttons because they can never
- * be pressed, and 32 dead tab stops would be worse than none.
+ * The 8×8 board. Playable cells are real `<button>`s so the whole grid works
+ * from the keyboard; givens are inert `<div>`s carrying `aria-disabled` —
+ * they are not buttons because they can never be pressed, and 32 dead tab
+ * stops would be worse than none.
  *
- * Arrow-key roving focus is deliberately out of this ticket (§8.2): the
- * grid ships 64 ordinary tab stops rather than a `role="grid"` that
- * promises keyboard navigation it does not implement.
+ * Arrow-key roving focus is deliberately out of this ticket: the grid ships
+ * 64 ordinary tab stops rather than a `role="grid"` that promises keyboard
+ * navigation it does not implement.
  */
 export function Grid({
   givens,
@@ -30,7 +30,7 @@ export function Grid({
   readonly entries: readonly CellValue[];
   readonly violating: ReadonlySet<number>;
   readonly hintIndex: number | null;
-  /** True in paint/erase mode; a drag in cycle mode is chaos, so it does nothing (D8). */
+  /** True in paint/erase mode; a drag in cycle mode is chaos, so it does nothing. */
   readonly painting: boolean;
   readonly onTap: (index: number) => void;
   readonly onPaintOver: (index: number) => void;
@@ -88,8 +88,7 @@ export function Grid({
               // trailing `click` on top of both, and in paint mode `tap`
               // TOGGLES, so honouring it would undo what the stroke wrote.
               // `detail` is 0 for a keyboard activation and >= 1 for a
-              // pointer one, so Enter/Space still writes while a latch is up
-              // (finding `drag-flag-kills-keyboard-cell-entry`).
+              // pointer one, so Enter/Space still writes while a latch is up.
               if (stroke.consumedClick(event)) {
                 return;
               }

@@ -451,10 +451,10 @@ describe("the clue rails (T-WEB-S43)", () => {
 
   it("renders `0` for an all-empty line, in the rail AND in its label", () => {
     // The engine's own contract: an all-empty line's clue is `[]` and the UI
-    // renders "0" (nonogram/types.ts:10). The rail's numbers and the composed
-    // label must agree, and only one fixture in the shipped library is
-    // guaranteed to have such a line — so the assertion is conditional on
-    // finding one and anti-vacuous through the label's own text.
+    // renders "0" (`NonogramClues` in `@miolos/games/nonogram`). The rail's
+    // numbers and the composed label must agree, and only one fixture in the
+    // shipped library is guaranteed to have such a line — so the assertion is
+    // conditional on finding one and anti-vacuous through the label's own text.
     const { container } = render(<NonogramScreen daily={BIG} />);
     const empty = BIG.clues.rows.findIndex((runs) => runs.length === 0);
     if (empty === -1) {
@@ -714,8 +714,10 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
     // `state.now` moves once a second for the two timer readouts, and the
     // board's props do not move with it. Without `memo` every tick rebuilds
     // 225 `<button>` elements, 30 rails and 225 composed aria strings that
-    // cannot have changed — measured at ~2.5 ms per tick on a 15×15, paid
-    // again per cell crossed during a drag.
+    // cannot have changed — measured at ~2.5 ms per tick on a 15×15. The
+    // per-cell drag cost is NOT this memo's: `paint-over` allocates a new
+    // `entries` array, so the board re-renders once per painted cell either
+    // way, and `Cell`/`ColRail`/`RowRail`'s own memos are what bound it.
     //
     // Asserted structurally because the cost is React's element allocation
     // and prop diffing, which no DOM assertion can see: the cells keep their

@@ -477,7 +477,7 @@ describe("nonogramDailyContentSchema", () => {
 
   it("rejects a content payload with the game key removed (N2 — the field that drains the buffer)", () => {
     // Nonogram is the only engine whose puzzle object carries `game`
-    // (nonogram/types.ts:33, written at generate.ts:48). Omitting it from
+    // (`NonogramPuzzle.game`, written by `generateNonogram`). Omitting it from
     // this strictObject fails every pre-insert parse, drains the buffer one
     // day per day, and fires the depth alert.
     const puzzle = nonogramDaily(4);
@@ -571,8 +571,8 @@ describe("nonogramDailyContentSchema", () => {
   });
 
   it("rejects a [0] run — an all-empty line is [], never [0]", () => {
-    // nonogram/types.ts:10 and clues.ts:22: the UI renders "0" for an empty
-    // run list, so a stored [0] is drift, not data.
+    // `NonogramClues.rows` and `clues.ts`'s `deriveClues`: the UI renders "0"
+    // for an empty run list, so a stored [0] is drift, not data.
     const puzzle = nonogramDaily(2);
     const zeroRun = {
       ...puzzle,

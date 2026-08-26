@@ -15,21 +15,13 @@ const copy = messages.games.termo.play.keyboard;
 
 /**
  * ONE table drives DOM order, reading order, tab order, the arrow model and
- * the grid placement (#27, plan 022 §12.3/§13.1a, ADR-0042 decisions 2 and 8).
+ * the grid placement (#27, ADR-0042 decisions 2 and 8).
  *
  * Rows include the COMMANDS, so the DOM is row-major and `enviar` is emitted
  * where it is drawn — first in row 3. "26 letters, then the two commands"
  * would put `enviar` visually first and second-to-last in reading and tab
  * order: a WCAG 1.3.2 / 2.4.3 mismatch, and a flat array the per-row arrow
  * table cannot be written over.
- *
- * THERE IS NO Ç KEY. `evaluate.ts` builds the guess shape as `^[a-z]{5}$` and
- * `normalizeWord` maps `ç → c` before anything is compared, so a Ç key would
- * write the SAME letter as C and `deriveKeyboardState` — which keys on the
- * normalized letter — could never colour it differently. A key that
- * duplicates another and can never carry its own state is a trap, not an
- * affordance. Removing it leaves a 9-key home row, which is also the row
- * length the 20-column grid wants.
  *
  * The second member of each pair is the grid column the key starts in. Row 1
  * is 10 keys of span 2 from column 1 — exactly 20 columns; row 2 is inset one
@@ -124,8 +116,8 @@ export interface KeyboardProps {
 }
 
 /**
- * The keyboard (plan 022 §12.3/§13.1a, ADR-0042 decisions 2, 3 and 8): a
- * composite widget, ONE tab stop, roving tabindex over 28 ids.
+ * The keyboard (ADR-0042 decisions 2, 3 and 8): a composite widget, ONE tab
+ * stop, roving tabindex over 28 ids.
  *
  * IT IS THE REPO'S FIRST ROVING TABINDEX — `sudoku/keypad.tsx` is nine plain
  * buttons and nine plain tab stops, with no `tabIndex` prop anywhere in the
@@ -142,14 +134,8 @@ export interface KeyboardProps {
  * the buttons are keyed by `KeyId` off a module-level table, so React
  * reconciles them in place and no DOM node is remounted.
  *
- * KEYS ARE COMMANDS, NOT MODES: no `aria-pressed` anywhere
- * (`sudoku/keypad.tsx:15-25`'s rule, verbatim). A key writes a letter; it has
- * no mode to be in. Its judged state is a fact about the game and rides in
- * the composed accessible name — `letra a` before judging, `letra a: fora`
- * after.
- *
- * MEMOIZED for the reason `board.tsx` spells out in full (finding B-4): the
- * 1 Hz lifecycle tick repaints a screen with no clock on it, and without this
+ * MEMOIZED for the reason `board.tsx` spells out in full: the 1 Hz
+ * lifecycle tick repaints a screen with no clock on it, and without this
  * every tick re-rendered all 28 keys — 28 `ariaFor` compositions, 28
  * `keyClassName` calls, 28 fresh `style` objects, 84 fresh inline closures
  * and 28 ref detach/reattach cycles (the inline `ref` arrow changes identity
@@ -207,11 +193,11 @@ export const Keyboard = memo(function Keyboard({
     event: ReactMouseEvent<HTMLButtonElement>,
     id: KeyId,
   ): void => {
-    // `detail !== 0` is a POINTER activation — `nonogram/board.tsx:240-241`'s
-    // shipped test. Blurring returns a mouse player to the UNFOCUSED page the
-    // window listener serves (§12.4); a keyboard activation is `detail === 0`
-    // and keeps its caret. `focused` survives either way, because only
-    // `onFocus` writes it and a blur fires no `onFocus`.
+    // `detail !== 0` is a POINTER activation — `nonogram/board.tsx`'s
+    // `onCellClick` ships the same test. Blurring returns a mouse player to
+    // the UNFOCUSED page the window listener serves; a keyboard activation
+    // is `detail === 0` and keeps its caret. `focused` survives either way,
+    // because only `onFocus` writes it and a blur fires no `onFocus`.
     if (event.detail !== 0) {
       event.currentTarget.blur();
     }
@@ -270,15 +256,15 @@ export const Keyboard = memo(function Keyboard({
 });
 
 /**
- * The pre-hydration keyboard (plan 022 §13.3). Divs rather than buttons, so
- * nothing here is focusable or announced before it works — but every box the
- * hydrated keyboard occupies is reserved, all three rows and all 28 of them,
- * in the same row-major order.
+ * The pre-hydration keyboard. Divs rather than buttons, so nothing here is
+ * focusable or announced before it works — but every box the hydrated
+ * keyboard occupies is reserved, all three rows and all 28 of them, in the
+ * same row-major order.
  *
  * Labelled, unlike the play screen's readouts: a key cap is a constant, so
  * this row owes the record nothing and can paint complete
- * (`keypad.tsx:69-71`). NO `tabIndex` and no refs — there is no roving
- * anything to seed before it works.
+ * (`sudoku/keypad.tsx`'s `KeypadSkeleton`). NO `tabIndex` and no refs —
+ * there is no roving anything to seed before it works.
  */
 export function KeyboardSkeleton() {
   return (

@@ -16,33 +16,19 @@ import { usePointerStroke } from "../play/use-pointer-stroke";
 import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
 
-/**
- * The heavy rule repeats every five cells, which also produces the TOP and
- * LEFT frame edges: `index % GROUP === 0` covers 0 (the frame) and 5/10 (the
- * groups), so a 5×5 board gets those two frame edges and no interior rule,
- * which is correct.
- *
- * The modulo cannot draw the other two on ANY legal size: no member of
- * `NonogramSize` has `size - 1` divisible by 5 (4, 7, 9, 14), the 5×5 board
- * included. The right and bottom frame edges are therefore two further
- * per-cell borders at `column === size - 1` and `row === size - 1`, drawn
- * unconditionally — see `ruleClasses` below (ADR-0035 decision 2, as
- * amended).
- */
 const GROUP = 5;
 
 /**
  * An all-empty line's clue is `[]` and the rail renders a single `0` — the
- * engine's own contract (`nonogram/types.ts:10`). This is engine data, not
- * copy: the sentence AROUND the numbers is composed in `messages.ts`, whose
- * `runsText` renders the same `0` for the same line, and T-WEB-S43 pins the
- * two together.
+ * engine's own contract (`NonogramClues` in `@miolos/games/nonogram`). This is
+ * engine data, not copy: the sentence AROUND the numbers is composed in
+ * `messages.ts`, whose `runsText` renders the same `0` for the same line, and
+ * T-WEB-S43 pins the two together.
  */
 const EMPTY_LINE: readonly number[] = [0];
 
 /**
- * The four literal templates §12.4 ships, one per weekday class. `satisfies`
- * rather than an annotation: it proves the map is exhaustive over
+ * `satisfies` rather than an annotation: it proves the map is exhaustive over
  * `NonogramSize` — a fifth size would not compile — while keeping the CSS
  * module's own `string | undefined` value type, which `noUncheckedIndexedAccess`
  * gives every class lookup in this repo.
@@ -55,25 +41,6 @@ const SIZE_CLASS = {
 } satisfies Record<NonogramSize, string | undefined>;
 
 /**
- * The variable-size board (plan 020 §11, §12). A COMPOSITE WIDGET (ADR-0030,
- * ADR-0037): a labelled `role="group"`, every cell a `<button type="button">`,
- * and exactly one carrying `tabindex="0"` — so the board is one tab stop on
- * the page rather than 225, and the caret moves with the arrow keys.
- *
- * NOT `role="grid"`, and the argument is STRONGER here than for Sudoku: a grid
- * needs `role="row"` children owning the cells, and this is one flat CSS grid
- * that also contains the clue rails. A per-row wrapper would either exclude
- * that row's rail — breaking the visual row — or include it, producing a
- * `gridcell` that is not a cell; and it would need `display: contents`, the
- * canonical removed-from-the-accessibility-tree bug. There is no arrangement
- * in which `role="grid"` is honest here (§11.1).
- *
- * There are no givens: a nonogram has no immutable cells, so ADR-0030 decision
- * 4 is vacuous — no `aria-disabled` anywhere on this board. And there is no
- * violation state, deliberately: a Nonogram has no local rule, so the only
- * cheap per-cell check is against the solution, and rendering that is a
- * per-cell oracle (§10.3).
- *
  * MEMOIZED, and at 225 cells that is not a micro-optimisation: `state.now`
  * moves once a second for the two timer readouts, and without this every tick
  * reconciles 225 `<button>`s, 30 clue rails and 225 composed aria strings that
@@ -83,38 +50,18 @@ const SIZE_CLASS = {
  * WHAT IT DOES NOT BUY ON ITS OWN: the drag. `paint-over` allocates a new
  * `entries` array, `entries` is shallow-compared, so a stroke re-enters this
  * function once per painted cell by construction — measured at 41 board
- * renders for a 40-cell drag, 0 for ten timer ticks. Saying the memo is "paid
- * again per cell crossed during a drag" had it backwards. That is what `Cell`
+ * renders for a 40-cell drag, 0 for ten timer ticks. That is what `Cell`
  * below is for: the per-cell component takes primitives and two stable
  * callbacks, so one painted cell reconciles ONE `<button>` and composes ONE
- * aria string instead of 225. Measured 2.1x on a 15×15 at 80 single-cell
- * paints, and the CELL composition count collapses from 225×N to N.
+ * aria string instead of 225. `ColRail`/`RowRail` below are memoized for the
+ * same reason, so the guarantee covers the whole board and not just its cells:
+ * N compositions for an N-cell drag, rather than (size² + 2·size)×N, and
+ * `T-WEB-S66` pins it.
  *
- * That sentence used to say "the composition count", unqualified, and it was
- * only ever true of `cellAria` (step-6 round-4 finding PERF-R4-2): the 30 clue
- * rails were still composed inline in this body, so the board's real figure
- * for an N-cell drag was 31×N — measured 43 cell labels against 1230 rail
- * labels on a 40-cell drag. `ColRail`/`RowRail` below are memoized for exactly
- * that, so the whole sentence is now true of the board and not just of its
- * cells: N compositions for an N-cell drag, rather than (size² + 2·size)×N.
- *
- * This paragraph used to say that memo "needs `consumedClick` to be
- * identity-stable — i.e. a change to the shared `usePointerStroke` that
- * Binairo also consumes". That was FALSE and it is corrected rather than
- * softened (step-6 round-3 finding PERF-R3-1): `consumedClick` closes over
- * nothing but two `useRef` objects and the event's `detail`, so an
- * effect-synced ref inside THIS file makes the click wrapper stable and exact,
- * permanently, without touching the shared hook or Binairo. `T-WEB-S66` pins
- * the result — cells AND rails, since round 4 — 31 × N aria compositions for
- * an N-cell drag became N, proved red at 1800 with the per-cell memo removed
- * and at 1230 rail labels with the rails inline — so **#66**'s Scope 1 is
- * discharged here and its `usePointerStroke` justification must not be acted
- * on: there is no reason left to change a shipped game's shared hook for it.
- *
- * The default shallow compare is exactly right here: `size` and `clues` never change
- * identity for a mounted screen (`initNonogramPlayState` takes `clues` from
- * the wire and every reducer case spreads `...state`), all six callbacks are
- * `useCallback([])` in `use-nonogram-play.ts`, and the three props that do
+ * The default shallow compare is exactly right here: `size` and `clues` never
+ * change identity for a mounted screen (`initNonogramPlayState` takes `clues`
+ * from the wire and every reducer case spreads `...state`), all six callbacks
+ * are `useCallback([])` in `use-nonogram-play.ts`, and the three props that do
  * move — `entries`, `selected`, `hintIndex` — are exactly when the board must
  * re-render. Adding a prop that is rebuilt per render silently undoes this.
  */
@@ -174,8 +121,8 @@ export const Board = memo(function Board({
 
   /**
    * This board drags, and `painting` is unconditionally true: unlike Binairo
-   * there is no cycle mode to disarm the stroke (P21/N28 — a cycle drag is a
-   * no-op, and here the drag is the primary gesture).
+   * there is no cycle mode to disarm the stroke — a cycle drag is a no-op,
+   * and here the drag is the primary gesture.
    *
    * `onStrokeEnd` is the focus door pointer capture leaves open: the browser
    * retargets the trailing `click` to the CONTAINER, so the cell's own
@@ -226,8 +173,7 @@ export const Board = memo(function Board({
     (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
       // WebKit does not focus a `<button>` on click, so on Safari
       // `document.activeElement` would stay `<body>`, the roving effect would
-      // return at its guard and no key would reach the board again (finding
-      // `pointer-selection-does-not-focus-the-board-on-webkit`). Under real
+      // return at its guard and no key would reach the board again. Under real
       // pointer capture this handler never runs for pointer input — the click
       // is retargeted to the container — so this is reached only when capture
       // FAILED; the pointer path's focus comes from `onStrokeEnd` above.
@@ -247,11 +193,6 @@ export const Board = memo(function Board({
    * One listener for every cell (ADR-0030 decision 3). Every key it handles is
    * prevented: the arrows, Home/End and PageUp/PageDown would scroll the page
    * under the caret, and Backspace is a history-back gesture in some browsers.
-   *
-   * PageUp/PageDown are this board's own addition (ADR-0037 decision 4):
-   * ADR-0030 contains no prohibition, its consequence (a) says a new game owes
-   * its own key table, and a 15-row board's vertical traversal is 14 presses
-   * against Sudoku's 8.
    */
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const move = moveFor(event.key, size);
@@ -318,15 +259,11 @@ export const Board = memo(function Board({
 
 /**
  * ONE column rail, memoized — the OTHER half of the drag cost `Board`'s own
- * memo cannot reach (step-6 round-4 finding PERF-R4-1). `Cell`'s memo fixed
- * the 225 `<button>`s and left the 30 rails inline in `Board`'s body, where
- * every painted cell re-created them, re-ran `columnCluesAria`/`rowCluesAria`
- * 30 times — each a `runs.join(", ")` plus a template string — and re-created
- * ~37 `<span>` children. Measured on a 15×15: a 40-cell drag composed 43 cell
- * labels (the memo working) against 615 + 615 rail labels. Memoizing the two
- * rails takes that to zero and the whole board to ~N compositions for an
- * N-cell drag; measured 1.33x on the commit itself, over four interleaved
- * rounds, with byte-identical markup.
+ * memo cannot reach: without it every painted cell re-ran
+ * `columnCluesAria`/`rowCluesAria` 2·size times — 30 on a 15×15. Memoizing the
+ * two rails takes that to zero and the whole board to ~N compositions for an
+ * N-cell drag; measured 1.33x on the commit itself, with byte-identical
+ * markup, and pinned by `T-WEB-S66`.
  *
  * The bail-out is PERMANENT rather than probabilistic: `clues` never changes
  * identity for a mounted screen (`initNonogramPlayState` takes it from the
@@ -345,13 +282,6 @@ const ColRail = memo(function ColRail({
   return (
     <div
       id={columnRailId(column)}
-      // `role="group"` is required, not cosmetic: `aria-label` on a
-      // role-less <div> is not reliably exposed, which is Binairo's
-      // undocumented defect (N16). `group` permits author naming, so the
-      // label is exposed both as the rail's own name and, through
-      // `aria-describedby`, as each cell's description. Subtree text would
-      // announce "22223" for runs `2 2 2 2 3`, which is why the label is
-      // composed in messages.ts (ADR-0018).
       role="group"
       aria-label={messages.games.nonogram.play.columnCluesAria(
         column + 1,
@@ -360,19 +290,6 @@ const ColRail = memo(function ColRail({
       className={styles.clueCol}
       style={{ gridColumn: column + 2, gridRow: 1 }}
     >
-      {/* NAMING THE RAIL IS NOT PRUNING ITS SUBTREE — the half the
-          comment above does not buy on its own. Each numeral would stay
-          its own `StaticText` node and its own virtual-cursor stop, so a
-          screen-reader user browsing the board linearly hears every run
-          twice: once through the composed rail label (and again through
-          every cell's `aria-describedby`), then once more as naked digits
-          with nothing saying which line they belong to — 90 extra stops
-          on a size-15 day (finding `clue-rails-announce-every-run-twice`).
-          `aria-hidden` on the numerals stops that; the rail keeps its
-          name, because an `aria-hidden` element referenced by
-          `aria-describedby` still contributes its own accessible name.
-          The skeleton's rails carry none of this: its whole subtree is
-          already inside one `aria-hidden` div. */}
       {numbersOf(runs).map((run, at) => (
         <span aria-hidden key={at} className={styles.clueNumber}>
           {run}
@@ -398,9 +315,6 @@ const RowRail = memo(function RowRail({
       className={styles.clueRow}
       style={{ gridColumn: 1, gridRow: row + 2 }}
     >
-      {/* `aria-hidden` for the reason spelled out on the column rail
-          above: the composed label is the rail's voice, and the numerals
-          under it would be read a second time as bare digits. */}
       {numbersOf(runs).map((run, at) => (
         <span aria-hidden key={at} className={styles.clueNumber}>
           {run}
@@ -415,10 +329,7 @@ const RowRail = memo(function RowRail({
  * reach (see its TSDoc). A `paint-over` allocates a new `entries` array, so
  * `Board` re-renders in full on every painted cell; with this, the cells whose
  * `value`, `hinted`, `selected` and `tabbable` did not move bail out, and one
- * painted cell composes ONE *cell* aria string instead of `size²`. On a 15×15
- * that is 225 → 1 per pointer move, measured at 2.1x on the commit itself. The
- * board's other 2·size aria strings are the clue rails, and they are
- * `ColRail`/`RowRail`'s job — this component's guarantee is about cells.
+ * painted cell composes ONE *cell* aria string instead of `size²`.
  *
  * EVERY PROP IS A PRIMITIVE OR A STABLE CALLBACK, and that is the whole
  * contract: the two handlers come from `useCallback` in `Board` over the
@@ -494,11 +405,11 @@ const Cell = memo(function Cell({
 });
 
 /**
- * The placeholder board (§12.2's precedent). It reuses `.grid`, the size
- * template, the rails and `.cell`, so its size comes from the shipped rules
- * rather than from a copied number — and `aria-hidden` divs rather than
- * buttons, because a focusable control with no handler behind it is worse than
- * none. It carries no `data-cell-index` and no ids: nothing here is a target.
+ * The placeholder board. It reuses `.grid`, the size template, the rails and
+ * `.cell`, so its size comes from the shipped rules rather than from a copied
+ * number — and `aria-hidden` divs rather than buttons, because a focusable
+ * control with no handler behind it is worse than none. It carries no
+ * `data-cell-index` and no ids: nothing here is a target.
  *
  * The rails render their real numbers because the clues arrive on the WIRE,
  * not from the record — and the gutter tracks are `max-content`, so an empty
@@ -574,7 +485,8 @@ function numbersOf(runs: readonly number[]): readonly number[] {
 /**
  * The ruled field, as classes rather than as a comment: the frame and the
  * every-five rule are per-cell borders, because a wrapper element would be
- * *card dentro de card* verbatim (ADR-0035). Pinned by assertion C1.
+ * *card dentro de card* verbatim (ADR-0035). `nonogram-screen.test.tsx`'s
+ * `C1` test pins it.
  */
 function ruleClasses(row: number, column: number, size: number): string {
   return [
@@ -619,7 +531,7 @@ function cellClassName(state: {
 }
 
 /**
- * `[rows, columns]` per navigation key (§11.3). Clamping is the reducer's.
+ * `[rows, columns]` per navigation key. Clamping is the reducer's.
  *
  * It cannot be a module constant the way Sudoku's `MOVES` is: the full-width
  * and full-height spans are `size − 1`, and this board is 5, 8, 10 or 15 a
@@ -653,7 +565,7 @@ function moveFor(key: string, size: number): readonly [number, number] | null {
  * A writing key, narrowed to a mark. The switch is the proof: an
  * `as NonogramMark` would assert exactly what this checks. `1` preenche and
  * `2` marca — `2` rather than `0` because `0` is the clear, exactly as it is
- * on the Sudoku board, and because the mark's own value is `0` (P11).
+ * on the Sudoku board, and because the mark's own value is `0`.
  */
 function asMark(key: string): NonogramMark | null {
   switch (key) {

@@ -8,33 +8,16 @@ import styles from "./sudoku-board.module.css";
 
 const SIDE = 9;
 
-/** The engine's empty-cell sentinel, as `givens` carries it (S6). */
+/** The engine's empty-cell sentinel, as `givens` carries it. */
 const EMPTY = 0;
 
 /**
  * A full-width clamped move: `Home` and `End` are `move-selection` with
  * ∓8 columns, because a clamped move that wide lands on the row's first or
- * last column by construction (§8.4) — no action of their own.
+ * last column by construction — no action of their own.
  */
 const ROW_SPAN = SIDE - 1;
 
-/**
- * The 9×9 board (plan 018 §12.3, §12.5). A COMPOSITE WIDGET (ADR-0030): a
- * labelled `role="group"`, all 81 cells are `<button type="button">`, and
- * exactly one carries `tabindex="0"` — so the board is one tab stop on the
- * page rather than 81, and the caret moves with the arrow keys.
- *
- * NOT `role="grid"`, and the reason is structural rather than stylistic: a
- * grid needs `role="row"` children owning the cells, and this is one flat
- * 81-item CSS grid with explicit gutter tracks. Row wrappers would need
- * `display: contents`, which is the canonical
- * removed-from-the-accessibility-tree bug — a silently wrong `role="grid"`
- * is worse than an honest `role="group"` (ADR-0030 rejected list).
- *
- * Givens are focusable and carry `aria-disabled="true"` rather than
- * `disabled`: a disabled button is unreachable, and a caret that skips
- * givens jumps unpredictably across a boxed grid.
- */
 export function Board({
   givens,
   entries,
@@ -121,7 +104,7 @@ export function Board({
       aria-label={messages.games.sudoku.play.boardAria}
       onKeyDown={onKeyDown}
     >
-      {/* The 3×3 structure, drawn rather than inferred from spacing (§12.3).
+      {/* The 3×3 structure, drawn rather than inferred from spacing.
           Decoration with nothing to announce: the box a cell belongs to is
           not something a screen reader can act on, and the composed cell
           name already carries the row and the column. */}
@@ -162,8 +145,7 @@ export function Board({
             // role=button and `jsx-a11y/role-supports-aria-props` reds.
             aria-label={cellAria(row + 1, column + 1, given, value, invalid)}
             // FOCUS IS THE ONLY WRITER OF THE SELECTION (ADR-0030 decision
-            // 5, finding `sudoku-tab-into-board-shows-a-caret-that-cannot-write`).
-            // A Tab into the board lands on the roving tab stop, which
+            // 5). A Tab into the board lands on the roving tab stop, which
             // before any interaction is cell 0 while `selected` is still
             // null: the accent caret is painted there by `:focus-visible`,
             // yet every writing key is swallowed by `preventDefault` and
@@ -179,8 +161,7 @@ export function Board({
             // here — but WebKit does not focus a `<button>` on click, so on
             // Safari (macOS, iOS, iPadOS) `document.activeElement` stays
             // `<body>`, the effect above returns at its guard, and the
-            // board's single keydown listener never sees a key again
-            // (finding `pointer-selection-does-not-focus-the-board-on-webkit`).
+            // board's single keydown listener never sees a key again.
             // Focusing from the click routes the pointer through the same
             // door as the keyboard: this fires `onFocus`, which selects.
             onClick={(event) => {
@@ -196,10 +177,10 @@ export function Board({
 }
 
 /**
- * The placeholder board (§12.2). It reuses `.grid`, `.cell` and the same
- * explicit placement, so its size comes from the shipped rules rather than
- * from a copied number — and `aria-hidden` divs rather than buttons, because
- * a focusable control with no handler behind it is worse than none.
+ * The placeholder board. It reuses `.grid`, `.cell` and the same explicit
+ * placement, so its size comes from the shipped rules rather than from a
+ * copied number — and `aria-hidden` divs rather than buttons, because a
+ * focusable control with no handler behind it is worse than none.
  */
 export function BoardSkeleton() {
   return (
@@ -222,7 +203,7 @@ export function BoardSkeleton() {
 /**
  * Explicit grid placement, skipping the two 2px gutter tracks. Auto-placement
  * is not an option: it would drop nine cells into the gutters, and the same
- * template serves both viewports, so this is correct at every width (§12.3).
+ * template serves both viewports, so this is correct at every width.
  */
 function cellPlacement(
   row: number,
@@ -233,9 +214,9 @@ function cellPlacement(
 
 /**
  * ONE chromatic class, optionally joined with the caret — not one class total
- * (§12.5, ADR-0030 (d)). Precedence
- * `violating > hint-filled > entered > given > empty`; the caret is an
- * outline, so it composes with every one of them instead of replacing it.
+ * (ADR-0030 (d)). Precedence `violating > hint-filled > entered > given >
+ * empty`; the caret is an outline, so it composes with every one of them
+ * instead of replacing it.
  */
 function cellClassName(state: {
   readonly given: boolean;
@@ -256,7 +237,7 @@ function cellClassName(state: {
   return `${styles.cell}${chromatic}${state.selected ? ` ${styles.cellSelected}` : ""}`;
 }
 
-/** The composed accessible name for one cell — all three cases (§13.2). */
+/** The composed accessible name for one cell — all three cases. */
 function cellAria(
   row: number,
   column: number,
@@ -274,7 +255,7 @@ function cellAria(
   return copy.cellAria(row, column, value);
 }
 
-/** `[rows, columns]` per navigation key (§8.4). Clamping is the reducer's. */
+/** `[rows, columns]` per navigation key. Clamping is the reducer's. */
 const MOVES: Readonly<Record<string, readonly [number, number]>> = {
   ArrowUp: [-1, 0],
   ArrowDown: [1, 0],

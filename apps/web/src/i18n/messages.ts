@@ -40,8 +40,8 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
   }`;
 
 // An all-empty line's clue is `[]` and the UI renders "0" — the engine's own
-// contract (nonogram/types.ts:10). The rail and its label must agree, so both
-// go through here.
+// contract (`NonogramClues` in `@miolos/games/nonogram`). The rail and its
+// label must agree, so both go through here.
 const runsText = (runs: readonly number[]) =>
   runs.length === 0 ? "0" : runs.join(", ");
 

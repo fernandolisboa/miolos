@@ -79,8 +79,8 @@ for recording its deviations with their arithmetic.
    Arrows `preventDefault`.
 
 3. **Keys are COMMANDS, not modes: no `aria-pressed`.**
-   `apps/web/src/sudoku/keypad.tsx:15-20`'s rule, verbatim. A key writes a
-   letter; it has no mode to be in. Its judged state is a fact about the
+   `apps/web/src/sudoku/keypad.tsx`'s `Keypad`'s rule, verbatim. A key writes
+   a letter; it has no mode to be in. Its judged state is a fact about the
    game and rides in the composed accessible name — ADR-0030 decision 7's
    rule — so `aria-label` is `letra A` before judging and `letra A: fora`
    after.

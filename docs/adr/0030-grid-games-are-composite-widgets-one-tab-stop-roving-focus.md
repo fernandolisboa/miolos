@@ -9,7 +9,7 @@ Issue #18 shipped the first board and deferred its keyboard model
 explicitly. Plan 017 §8.2, verbatim: *"Arrow-key roving focus is
 **not** in this ticket (64 tab stops is acceptable; a roving tabindex is
 a follow-up if review asks)."* The shipped code says the same thing in
-`apps/web/src/binairo/grid.tsx:16-18` — *"the grid ships 64 ordinary tab
+`apps/web/src/binairo/grid.tsx`'s `Grid` — *"the grid ships 64 ordinary tab
 stops rather than a `role="grid"` that promises keyboard navigation it
 does not implement"* — and softens the count by rendering givens as
 inert `<div>`s, so only the playable cells are tab stops.
@@ -95,8 +95,8 @@ is available" buys us.
 
 7. **Per-cell state rides in the composed accessible name**, never in
    `aria-invalid`: ARIA does not support it on `role=button` and
-   `jsx-a11y/role-supports-aria-props` reds the lint gate. This is the
-   shipped Binairo behaviour (`grid.tsx:204-209`), kept and generalized.
+   `jsx-a11y/role-supports-aria-props` reds the lint gate. This is the shipped
+   Binairo behaviour (`binairo/grid.tsx`'s `Grid`), kept and generalized.
 
 8. **This reverses plan 017 §8.2's deferral for grid games, from #23
    onward.** The deferral was correct for a 64-cell board with 24–48
