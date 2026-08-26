@@ -160,10 +160,9 @@ things.
 - **`role="grid"` with per-row wrappers, on this board specifically.**
   *Added at #205 tranche 7b-2, from the board comment that carried this
   argument.* ADR-0030 decision 2 already rejects that structure for every
-  grid game;
-  the rails make it unavailable a second way. A per-row wrapper would
-  either exclude that row's rail — breaking the visual row — or include
-  it, producing a `gridcell` that is not a cell.
+  grid game; the rails make it unavailable a second way. A per-row wrapper
+  would either exclude that row's rail — breaking the visual row — or
+  include it, producing a `gridcell` that is not a cell.
 - **A per-cell "this is wrong" state, in any colour.** A per-cell solution
   oracle, whatever it is called.
 
