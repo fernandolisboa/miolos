@@ -50,7 +50,7 @@ export function sudokuContentFixture(): Record<string, unknown> {
 /**
  * A 5x5 bitmap — Monday's size class. The top row is deliberately empty so
  * the fixture exercises the `[]` run list an all-empty line produces
- * (nonogram/types.ts:10: NEVER `[0]`).
+ * (`NonogramClues.rows`: NEVER `[0]`).
  */
 const NONOGRAM_PICTURE = [".....", "..#..", ".###.", "#####", ".###."];
 
