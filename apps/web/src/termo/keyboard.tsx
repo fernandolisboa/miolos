@@ -15,7 +15,7 @@ const copy = messages.games.termo.play.keyboard;
 
 /**
  * ONE table drives DOM order, reading order, tab order, the arrow model and
- * the grid placement (ADR-0042 decisions 2 and 8).
+ * the grid placement (#27, ADR-0042 decisions 2 and 8).
  *
  * Rows include the COMMANDS, so the DOM is row-major and `enviar` is emitted
  * where it is drawn — first in row 3. "26 letters, then the two commands"
