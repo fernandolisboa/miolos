@@ -1,12 +1,11 @@
 "use client";
 
 /**
- * The /modo-livre/binairo screen (ADR-0046): the daily play screen's
- * sibling, not a new dialect — same shared grid chrome, same board card,
- * same hint bar — with the free-play differences: back
- * targets the index, the date slot carries the mode label, NO timer
- * (ADR-0046 decision 6), a three-chip level picker above the board, and an
- * in-place swap to the solved card offering "Mais um".
+ * The /modo-livre/binairo screen (ADR-0046): the daily play screen's sibling,
+ * not a new dialect — same shared grid chrome, same board card, same hint bar —
+ * with the free-play differences: back targets the index, the date slot carries
+ * the mode label, NO timer (ADR-0046 decision 6), a three-chip level picker
+ * above the board, and an in-place swap to the solved card offering "Mais um".
  *
  * Free play records NOTHING: no lifecycle hook, no sync, no play record,
  * no localStorage (ADR-0008 rule 5, ADR-0046 decision 4). The ESLint wall
@@ -254,7 +253,7 @@ function Frame({
           {messages.games.binairo.kicker}
         </span>
         {/* The date slot carries the MODE, because free play has no date —
-            and no timer readout in either position (D8). */}
+            and no timer readout in either position. */}
         <span className={screen.topDate}>{messages.freePlay.modeTag}</span>
       </header>
 
@@ -290,9 +289,8 @@ function Frame({
             <span className={screen.progressCard}>{progressLong}</span>
           )}
         </div>
-        {/* The level in the timer's old slot: free play measures nothing
-            (D8), and the level is the one per-puzzle identity this mode
-            has. */}
+        {/* The level in the timer's old slot: free play measures nothing,
+            and the level is the one per-puzzle identity this mode has. */}
         <div className={screen.statRow}>
           <span className={screen.statLabel}>
             {messages.freePlay.level.label}
@@ -350,7 +348,7 @@ function GeneratingBoard() {
         </div>
       </div>
       {/* Static text, no spinner: a synchronous generation burst would
-          freeze an animation, and the system prefers stillness (D5). */}
+          freeze an animation, and the system prefers stillness. */}
       <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
   );

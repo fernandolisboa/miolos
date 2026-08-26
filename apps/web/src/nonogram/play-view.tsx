@@ -169,12 +169,11 @@ export function PlayView({
 }
 
 /**
- * The pre-hydration paint. Everything the
- * board, the clock, the progress readout and the hint button show is DERIVED
- * FROM THE RECORD, and the record cannot be read before the mount effect — so
- * painting them first renders a day the player already finished as an empty
- * board with a live hint button and a 00:00 clock, for as long as hydration
- * takes.
+ * The pre-hydration paint. Everything the board, the clock, the progress
+ * readout and the hint button show is DERIVED FROM THE RECORD, and the record
+ * cannot be read before the mount effect — so painting them first renders a day
+ * the player already finished as an empty board with a live hint button and a
+ * 00:00 clock, for as long as hydration takes.
  *
  * What waits is the VALUES, never the boxes: every occupant of `.page`'s grid
  * and the brush row inside `.board` is reserved here at its shipped size,

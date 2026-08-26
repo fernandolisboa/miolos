@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * The /modo-livre/nonogram screen (ADR-0046) — the daily Nonogram
- * play screen's sibling with the same free-play differences.
- * See `binairo-free-screen.tsx` for the pattern's full argument.
+ * The /modo-livre/nonogram screen (ADR-0046) — the daily Nonogram play screen's
+ * sibling with the same free-play differences. See `binairo-free-screen.tsx`
+ * for the pattern's full argument.
  *
  * The solved card shows the PAINTED PICTURE and never `reveal.name` or
  * `reveal.motifId`: the hook drops `reveal` at the parse, so this

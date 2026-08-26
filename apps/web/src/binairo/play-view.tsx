@@ -31,14 +31,13 @@ const TOTAL_CELLS = 64;
 const BLANK_READOUT = "\u00a0";
 
 /**
- * The /binairo play composition, recreated from
- * f3-binairo-desktop and f4-binairo-mobile. The chrome comes from the shared
- * `play/screen.module.css` (ADR-0029): one CSS grid with named areas carries
- * both viewports out of one DOM, because `display: contents` cannot move a
- * node across subtrees (`.statsCard` is a grid item, `.topBar` its sibling)
- * — so the readouts that appear in different places on the two layouts exist
- * twice and the sheet hides one of each pair. Only the board and the control
- * row are this game's own.
+ * The /binairo play composition, recreated from f3-binairo-desktop and
+ * f4-binairo-mobile. The chrome comes from the shared `play/screen.module.css`
+ * (ADR-0029): one CSS grid with named areas carries both viewports out of one
+ * DOM, because `display: contents` cannot move a node across subtrees
+ * (`.statsCard` is a grid item, `.topBar` its sibling) — so the readouts that
+ * appear in different places on the two layouts exist twice and the sheet hides
+ * one of each pair. Only the board and the control row are this game's own.
  */
 export function PlayView({
   play,
@@ -137,7 +136,7 @@ export function PlayView({
           order and decides nothing about the paint. T-WEB-S232.
 
           `aria-disabled` rather than `disabled`: the exhausted button stays
-          focusable and keeps announcing why it does nothing (§10.5). */}
+          focusable and keeps announcing why it does nothing. */}
       <button
         type="button"
         className={`${screen.hint}${play.hintReady ? "" : ` ${screen.hintUsed}`}`}
@@ -153,12 +152,11 @@ export function PlayView({
 }
 
 /**
- * The pre-hydration paint. Everything
- * the board, the clock, the progress readout and the hint button show is
- * DERIVED FROM THE RECORD, and the record cannot be read before the mount
- * effect — so painting them first renders a day the player already finished
- * as an empty board with a live hint button and a 00:00 clock, for as long
- * as hydration takes.
+ * The pre-hydration paint. Everything the board, the clock, the progress
+ * readout and the hint button show is DERIVED FROM THE RECORD, and the record
+ * cannot be read before the mount effect — so painting them first renders a day
+ * the player already finished as an empty board with a live hint button and a
+ * 00:00 clock, for as long as hydration takes.
  *
  * What waits is the VALUES, never the boxes. Every occupant of `.page`'s
  * grid — the stats card, the hint bar — and the control row inside `.board`

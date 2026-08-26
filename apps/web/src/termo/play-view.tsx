@@ -16,10 +16,10 @@ import type { TermoPlay } from "./use-termo-play";
  * inline because `play/screen.module.css` reads both throughout.
  *
  * The accent is ADR-0067's deep mustard. `--ink-on-accent` resolves to
- * `var(--paper-desk)` for termo — the same light-label
- * treatment as the other three games — which is what makes the `correct`
- * tile and the `correct` key legible, and ADR-0041 is why no word on this
- * screen wears the accent regardless.
+ * `var(--paper-desk)` for termo — the same light-label treatment as the
+ * other three games — which is what makes the `correct` tile and the
+ * `correct` key legible, and ADR-0041 is why no word on this screen wears
+ * the accent regardless.
  *
  * The four geometry custom properties ride on `.pageTermo` instead — a class
  * this module owns, so no cascade order is involved.
@@ -219,8 +219,8 @@ export function PlayView({
 
         {/* Reserved at its TALLEST state and ALWAYS rendered — a row that
             appeared would be a layout shift. The two `role="status"` regions
-            are safe because NO REDUCER TRANSITION WRITES BOTH (§13.1b), not
-            because their paths happen not to overlap. */}
+            are safe because NO REDUCER TRANSITION WRITES BOTH, not because
+            their paths happen not to overlap. */}
         <div className={styles.noticeRow}>
           <p role="status" className={styles.notice}>
             {state.notice ?? BLANK_READOUT}

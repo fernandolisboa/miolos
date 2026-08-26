@@ -34,15 +34,14 @@ const TOTAL_CELLS = 81;
 const BLANK_READOUT = "\u00a0";
 
 /**
- * The /sudoku play composition. There is no Sudoku
- * reference frame: the chrome is the shared `play/screen.module.css`
- * (ADR-0029) — one CSS grid with named areas carrying both viewports out of
- * one DOM, because `display: contents` cannot move a node across subtrees —
- * and only the board, the keypad and the `Nível` readout are this game's own.
+ * The /sudoku play composition. There is no Sudoku reference frame: the chrome
+ * is the shared `play/screen.module.css` (ADR-0029) — one CSS grid with named
+ * areas carrying both viewports out of one DOM, because `display: contents`
+ * cannot move a node across subtrees — and only the board, the keypad and the
+ * `Nível` readout are this game's own.
  *
- * The three card rotations mirror Binairo's signs through `.pageSudoku`, so
- * the two screens read as different sheets from the same pad rather than as
- * a copy.
+ * The three card rotations mirror Binairo's signs through `.pageSudoku`, so the
+ * two screens read as different sheets from the same pad rather than as a copy.
  */
 export function PlayView({
   play,
@@ -162,12 +161,11 @@ export function PlayView({
 }
 
 /**
- * The pre-hydration paint. Everything the
- * board, the clock, the progress readout and the hint button show is DERIVED
- * FROM THE RECORD, and the record cannot be read before the mount effect — so
- * painting them first renders a day the player already finished as an empty
- * board with a live hint button and a 00:00 clock, for as long as hydration
- * takes.
+ * The pre-hydration paint. Everything the board, the clock, the progress
+ * readout and the hint button show is DERIVED FROM THE RECORD, and the record
+ * cannot be read before the mount effect — so painting them first renders a day
+ * the player already finished as an empty board with a live hint button and a
+ * 00:00 clock, for as long as hydration takes.
  *
  * What waits is the VALUES, never the boxes: every occupant of `.page`'s grid
  * and the keypad inside `.board` is reserved here at its shipped size,
