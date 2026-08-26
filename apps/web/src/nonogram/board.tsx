@@ -485,7 +485,8 @@ function numbersOf(runs: readonly number[]): readonly number[] {
 /**
  * The ruled field, as classes rather than as a comment: the frame and the
  * every-five rule are per-cell borders, because a wrapper element would be
- * *card dentro de card* verbatim (ADR-0035).
+ * *card dentro de card* verbatim (ADR-0035). `nonogram-screen.test.tsx`'s
+ * `C1` test pins it.
  */
 function ruleClasses(row: number, column: number, size: number): string {
   return [

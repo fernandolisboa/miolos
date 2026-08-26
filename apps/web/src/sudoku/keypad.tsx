@@ -6,8 +6,8 @@ import styles from "./sudoku-board.module.css";
  * The nine writing keys, in the order the stylesheet places them: digit *n*
  * is the *n*th child, which is how `.keypadDigit:nth-child()` puts it under
  * board column *n* without an inline style a media query could not override.
- * Reordering this array silently moves the desktop keypad, which is
- * why the CSS carries the same note and T-WEB-S34 re-derives the columns from
+ * Reordering this array silently moves the desktop keypad, which is why the
+ * CSS carries the same note and T-WEB-S34 re-derives the columns from
  * `track()`.
  */
 const DIGITS: readonly SudokuDigit[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];

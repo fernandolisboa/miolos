@@ -714,8 +714,10 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
     // `state.now` moves once a second for the two timer readouts, and the
     // board's props do not move with it. Without `memo` every tick rebuilds
     // 225 `<button>` elements, 30 rails and 225 composed aria strings that
-    // cannot have changed — measured at ~2.5 ms per tick on a 15×15, paid
-    // again per cell crossed during a drag.
+    // cannot have changed — measured at ~2.5 ms per tick on a 15×15. The
+    // per-cell drag cost is NOT this memo's: `paint-over` allocates a new
+    // `entries` array, so the board re-renders once per painted cell either
+    // way, and `Cell`/`ColRail`/`RowRail`'s own memos are what bound it.
     //
     // Asserted structurally because the cost is React's element allocation
     // and prop diffing, which no DOM assertion can see: the cells keep their
