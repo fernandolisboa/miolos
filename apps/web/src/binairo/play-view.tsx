@@ -12,12 +12,10 @@ import type { BinairoPlay } from "./use-binairo-play";
 
 /**
  * The shared layout's per-screen accent AND the ink that sits on an accent
- * fill, set inline because `play/screen.module.css` reads both throughout
- * (plan 018 §5.2). Moss-green resolves `--ink-on-accent` to the same
- * `var(--paper-desk)` this screen has always painted — 5.307:1 on `.hint`,
- * unchanged to the byte by #25's ISS-A2 fix, which moves Nonogram only.
+ * fill, set inline because `play/screen.module.css` reads both throughout.
+ *
  * The four geometry properties ride on `.pageBinairo` instead — a class this
- * module owns, so no cascade order is involved (§12.2).
+ * module owns, so no cascade order is involved.
  */
 const ACCENT = accentVars("binairo");
 
@@ -28,13 +26,12 @@ const TOTAL_CELLS = 64;
  * and collapses to zero height, so a blank clock would make the card it sits
  * in shorter than the one hydration puts there. A no-break space is one line
  * box in the element's own font — the reserved height therefore tracks a
- * token change by construction, where a hard-coded pixel value would not
- * (finding `play-skeleton-is-not-at-final-dimensions`).
+ * token change by construction, where a hard-coded pixel value would not.
  */
 const BLANK_READOUT = "\u00a0";
 
 /**
- * The /binairo play composition (plan 017 §12.2), recreated from
+ * The /binairo play composition, recreated from
  * f3-binairo-desktop and f4-binairo-mobile. The chrome comes from the shared
  * `play/screen.module.css` (ADR-0029): one CSS grid with named areas carries
  * both viewports out of one DOM, because `display: contents` cannot move a
@@ -42,12 +39,6 @@ const BLANK_READOUT = "\u00a0";
  * — so the readouts that appear in different places on the two layouts exist
  * twice and the sheet hides one of each pair. Only the board and the control
  * row are this game's own.
- *
- * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
- * daily route — this renders exactly what it always did, byte for byte, and
- * T-WEB-S185 pins both directions. Present, the back affordance becomes the
- * archived day's and one extra rules line states that the day does not move
- * the streak.
  */
 export function PlayView({
   play,
@@ -86,8 +77,8 @@ export function PlayView({
             is a sibling of the WRAPPER, never of the heading. That is not
             styling: impeccable's hero-eyebrow-chip and kicker-above-heading
             rules both anchor on `h1.previousElementSibling` and both return
-            on their first guard when it is null (plan 017 §12.2, verified
-            against node_modules/impeccable/cli/engine/rules/checks.mjs).
+            on their first guard when it is null (verified against
+            node_modules/impeccable/cli/engine/rules/checks.mjs).
             Do not "simplify" the wrapper away. */}
         <div className={screen.titleRow}>
           <h1 className={screen.title}>{messages.games.binairo.play.title}</h1>
@@ -99,15 +90,6 @@ export function PlayView({
           </span>
         </div>
         <p className={screen.rules}>{messages.games.binairo.play.rules}</p>
-        {/* #31 (ADR-0053 decision 9): the archive's ONE added line. It
-            carries its own class from the archive's own stylesheet — a
-            second `screen.rules` paragraph made "this does not move your
-            streak" indistinguishable from "fill the grid so each row has
-            1–9" (step-6 F10b) — and nothing under `src/play/` is edited
-            for it, because a CSS-module class name is a string the chrome
-            object hands over. It is what makes the archive's semantics
-            visible to the person they apply to, which a mode chip could
-            not have said. */}
         {archive === undefined ? null : (
           <p className={archive.note.className}>{archive.note.text}</p>
         )}
@@ -150,17 +132,9 @@ export function PlayView({
         )}
       </section>
 
-      {/* AFTER the board, and that is the whole of #67: `screen.page` places
-          every child by NAMED GRID AREA, so this element's position in the
-          source decides the tab order and decides nothing about the paint. It
-          used to sit above `.board` while painting below it in both bands —
-          bottom of the sidebar at >1140px, last row at <=1140px — so the
-          second tab stop on every play screen was the lowest control on the
-          page (WCAG 2.4.3). Moving the node is the only fix available: focus
-          order follows the DOM, and no CSS property reorders it in the
-          browsers this app ships to. `grid-area: hint` is unconditional in the
-          shared sheet, so nothing about the layout moves with it — verified
-          per band, per screen. T-WEB-S232.
+      {/* AFTER the board: `screen.page` places every child by NAMED GRID
+          AREA, so this element's position in the source decides the tab
+          order and decides nothing about the paint. T-WEB-S232.
 
           `aria-disabled` rather than `disabled`: the exhausted button stays
           focusable and keeps announcing why it does nothing (§10.5). */}
@@ -179,26 +153,19 @@ export function PlayView({
 }
 
 /**
- * The pre-hydration paint (§12.2, finding
- * `binairo-reload-flashes-a-blank-board-over-a-finished-day`). Everything
+ * The pre-hydration paint. Everything
  * the board, the clock, the progress readout and the hint button show is
  * DERIVED FROM THE RECORD, and the record cannot be read before the mount
  * effect — so painting them first renders a day the player already finished
  * as an empty board with a live hint button and a 00:00 clock, for as long
- * as hydration takes. The conclusion route already made this trade (D28:
- * "a beat of nothing" beats a wrong first paint); this is the same trade on
- * the play route.
+ * as hydration takes.
  *
  * What waits is the VALUES, never the boxes. Every occupant of `.page`'s
  * grid — the stats card, the hint bar — and the control row inside `.board`
  * is reserved here at its shipped size, because `.board` is a centred flex
  * column and the mobile `hint` row is `auto`: dropping either turns the
  * freed height into an offset and the largest element on the screen jumps
- * upward the instant the mount effect runs (finding
- * `play-skeleton-is-not-at-final-dimensions`, measured at −71.7px on a
- * 390×844 phone, held for ~1.6s on a throttled connection). With them
- * reserved, `.gridCard`'s bounding-box top is identical in the JS-disabled
- * paint and in the settled page at 1440×900, 390×844 and 320×640.
+ * upward the instant the mount effect runs.
  *
  * The placeholders are `aria-hidden` divs, never buttons: a focusable
  * control with no handler behind it is worse than none, and the board's own
@@ -212,12 +179,6 @@ export function PlayView({
  * Pinning that would take a hard-coded `min-width` on the shipped rule, for
  * an 11px label; the board, the stats card, the hint bar and the control row
  * all land on the same pixel in both paints.
- *
- * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
- * daily route — this renders exactly what it always did, byte for byte, and
- * T-WEB-S185 pins both directions. Present, the back affordance becomes the
- * archived day's and one extra rules line states that the day does not move
- * the streak.
  */
 export function PlaySkeleton({
   date,
@@ -261,15 +222,6 @@ export function PlaySkeleton({
           </span>
         </div>
         <p className={screen.rules}>{messages.games.binairo.play.rules}</p>
-        {/* #31 (ADR-0053 decision 9): the archive's ONE added line. It
-            carries its own class from the archive's own stylesheet — a
-            second `screen.rules` paragraph made "this does not move your
-            streak" indistinguishable from "fill the grid so each row has
-            1–9" (step-6 F10b) — and nothing under `src/play/` is edited
-            for it, because a CSS-module class name is a string the chrome
-            object hands over. It is what makes the archive's semantics
-            visible to the person they apply to, which a mode chip could
-            not have said. */}
         {archive === undefined ? null : (
           <p className={archive.note.className}>{archive.note.text}</p>
         )}

@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * The /modo-livre/binairo screen (#28, ADR-0046): the daily play screen's
+ * The /modo-livre/binairo screen (ADR-0046): the daily play screen's
  * sibling, not a new dialect — same shared grid chrome, same board card,
- * same hint bar — with the free-play differences of plan 025 §7.2: back
+ * same hint bar — with the free-play differences: back
  * targets the index, the date slot carries the mode label, NO timer
- * (decision 6), a three-chip level picker above the board, and an in-place
- * swap to the solved card offering "Mais um".
+ * (ADR-0046 decision 6), a three-chip level picker above the board, and an
+ * in-place swap to the solved card offering "Mais um".
  *
  * Free play records NOTHING: no lifecycle hook, no sync, no play record,
  * no localStorage (ADR-0008 rule 5, ADR-0046 decision 4). The ESLint wall
@@ -100,7 +100,7 @@ export function BinairoFreeScreen({
  * React's own reset semantics instead of a hand-rolled reset action. The
  * daily reducer is reused UNMODIFIED: the timer stays `{accumulatedMs: 0,
  * runningSince: null}` forever because no `resume` is ever dispatched —
- * inert state, not removed state (plan 025 D8).
+ * inert state, not removed state.
  */
 function BinairoFreeBoard({
   level,
@@ -129,7 +129,7 @@ function BinairoFreeBoard({
 
   // The shipped path for "no stored record" (binairo/state.ts `restore`):
   // sets `{now, hydrated: true}` and nothing else. Free play has no record
-  // to look for, so this is the whole of hydration (plan 025 §6.2).
+  // to look for, so this is the whole of hydration.
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
@@ -159,7 +159,7 @@ function BinairoFreeBoard({
       return;
     }
     // The solution comes from the generator output, not a solver memo —
-    // the one line where free play diverges from `use-binairo-play` (D7).
+    // the one line where free play diverges from `use-binairo-play`.
     const hint = nextHint(puzzle.solution, current.givens, current.entries);
     if (hint === null) {
       return;
@@ -206,7 +206,7 @@ function BinairoFreeBoard({
 
 /**
  * The page chrome all three states share — the shared play grid with the
- * free-play differences (§7.2). `children` fills the board slot: the grid
+ * free-play differences. `children` fills the board slot: the grid
  * card and controls while playing, the reserved skeleton while generating,
  * the error card on failure.
  */
@@ -311,16 +311,9 @@ function Frame({
         )}
       </section>
 
-      {/* AFTER the board, and that is the whole of #67: `screen.page` places
-          every child by NAMED GRID AREA, so this element's position in the
-          source decides the tab order and decides nothing about the paint. It
-          used to sit above `.board` while painting below it in both bands —
-          bottom of the sidebar at >1140px, last row at <=1140px — so the
-          second tab stop on this screen was the lowest control on the page
-          (WCAG 2.4.3). Free play inherits the shared grid, so it inherited the
-          defect and inherits the fix. `grid-area: hint` is unconditional in
-          the shared sheet, so nothing about the layout moves with it.
-          T-WEB-S232. */}
+      {/* AFTER the board: `screen.page` places every child by NAMED GRID
+          AREA, so this element's position in the source decides the tab
+          order and decides nothing about the paint. T-WEB-S232. */}
       {hint === null ? (
         <div
           aria-hidden
@@ -342,7 +335,7 @@ function Frame({
   );
 }
 
-/** The board card at final dimensions, values blanked (D5's skeleton). */
+/** The board card at final dimensions, values blanked. */
 function GeneratingBoard() {
   return (
     <>

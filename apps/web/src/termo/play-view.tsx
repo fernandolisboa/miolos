@@ -15,15 +15,11 @@ import type { TermoPlay } from "./use-termo-play";
  * The shared layout's per-screen accent AND the ink that sits on it, set
  * inline because `play/screen.module.css` reads both throughout.
  *
- * The accent is ADR-0067's deep mustard #8D6212 (4.8433:1 on `--paper-desk`,
- * 5.0542:1 on `--paper-card`; the original #C08A1E cleared no paper at all,
- * which is what shaped this screen). `--ink-on-accent` resolves to
- * `var(--paper-desk)` for termo — 4.8433:1 ON the fill, the same light-label
+ * The accent is ADR-0067's deep mustard. `--ink-on-accent` resolves to
+ * `var(--paper-desk)` for termo — the same light-label
  * treatment as the other three games — which is what makes the `correct`
  * tile and the `correct` key legible, and ADR-0041 is why no word on this
- * screen wears the accent regardless. Every figure here is computed (§12.2),
- * because `low-contrast` is wildcard-ignored on every host CI scans and a
- * green detect run is not evidence.
+ * screen wears the accent regardless.
  *
  * The four geometry custom properties ride on `.pageTermo` instead — a class
  * this module owns, so no cascade order is involved.
@@ -41,13 +37,12 @@ const BLANK_READOUT = " ";
 
 /**
  * Zero advance, never verbalised by NVDA, JAWS or VoiceOver — and still a
- * real DOM mutation inside an aria-atomic region, which is the whole job
- * (§13.1b item 6b).
+ * real DOM mutation inside an aria-atomic region, which is the whole job.
  */
 const ZWSP = "​";
 
 /**
- * The interactive-target bail for the window keydown listener (§12.4, ADR-0042
+ * The interactive-target bail for the window keydown listener (ADR-0042
  * decision 4). The listener serves the UNFOCUSED page, so the instant
  * anything on the page holds focus that element's own semantics own the
  * keystroke.
@@ -61,11 +56,11 @@ const ZWSP = "​";
 const INTERACTIVE_TARGET =
   'button, a[href], [role="button"], [tabindex], input, textarea, select, [contenteditable]';
 
-/** One letter, after `normalizeWord`. `ç` is `c` and `á` is `a` (AC 2). */
+/** One letter, after `normalizeWord`. `ç` is `c` and `á` is `a`. */
 const SINGLE_LETTER = /^[a-z]$/;
 
 /**
- * The /termo play composition (plan 022 §12, §13.2). The chrome is the shared
+ * The /termo play composition. The chrome is the shared
  * `play/screen.module.css` (ADR-0029) — one CSS grid with named areas
  * carrying both viewports out of one DOM — and only the board, the notice
  * row and the keyboard are this game's own.
@@ -74,12 +69,6 @@ const SINGLE_LETTER = /^[a-z]$/;
  * clock runs and is recorded; it is not rendered, so `/termo` is not a fourth
  * surface for the #63 digit-swing defect, and a Termo elapsed time — which
  * includes every per-guess round trip — is never presented as a result.
- *
- * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
- * daily route — this renders exactly what it always did, byte for byte, and
- * T-WEB-S185 pins both directions. Present, the back affordance becomes the
- * archived day's and one extra rules line states that the day does not move
- * the streak.
  */
 export function PlayView({
   play,
@@ -108,15 +97,8 @@ export function PlayView({
    * focus — which is why ADR-0030 decision 3's board-container rule is scoped
    * to grid games and this is a fresh decision (ADR-0042 decision 4).
    *
-   * GUARD 3 IS BLOCKING, NOT TIDYING. Without it a focused key receiving
-   * `Enter` is handled twice — this listener submits AND the browser's
-   * synthesised click types that letter into the row the submit just consumed;
-   * `Enter` on `enviar` posts the same guess twice; `Enter` on "← Hoje"
-   * spends a turn while navigating away from the board that would have shown
-   * the verdict. And it is the NORMAL path for assistive technology: NVDA and
-   * JAWS stay in browse mode on a `<button>` and activate it with `Enter`, so
-   * without the bail a screen-reader user submits after every single letter
-   * and the game is unplayable for the exact audience §13 is written for.
+   * GUARD 3 IS BLOCKING, NOT TIDYING — ADR-0042 decision 4 spells out all
+   * four ways it fails without the bail, the screen-reader one included.
    */
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -144,7 +126,7 @@ export function PlayView({
         current.erase();
         return;
       }
-      // AC 2 applied to the KEYSTROKE, not only to the comparison: an ABNT2
+      // Applied to the KEYSTROKE, not only to the comparison: an ABNT2
       // player who types `á` or `ç` out of habit gets `a` and `c` rather than
       // a dead key, through the engine's one normalization function.
       const letter = normalizeWord(event.key);
@@ -201,15 +183,6 @@ export function PlayView({
           <h1 className={screen.title}>{copy.title}</h1>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
-        {/* #31 (ADR-0053 decision 9): the archive's ONE added line. It
-            carries its own class from the archive's own stylesheet — a
-            second `screen.rules` paragraph made "this does not move your
-            streak" indistinguishable from "fill the grid so each row has
-            1–9" (step-6 F10b) — and nothing under `src/play/` is edited
-            for it, because a CSS-module class name is a string the chrome
-            object hands over. It is what makes the archive's semantics
-            visible to the person they apply to, which a mode chip could
-            not have said. */}
         {archive === undefined ? null : (
           <p className={archive.note.className}>{archive.note.text}</p>
         )}
@@ -272,7 +245,7 @@ export function PlayView({
               className={styles.noticeRetry}
               // `detail === 0` is a KEYBOARD activation — the same test
               // `keyboard.tsx`'s own `onClick` already ships, and the reason
-              // is the mirror image of it (finding B-3). Handing the caret to
+              // is the mirror image of it. Handing the caret to
               // an on-screen key after a MOUSE click would leave that
               // `<button>` focused, and the window `keydown` listener above
               // bails on any `INTERACTIVE_TARGET` — so every physical letter
@@ -332,12 +305,6 @@ export function PlayView({
  * card, and the `.progressBar` slot in the top bar — that last one so the
  * ≤1140px bar keeps THREE children before hydration and `space-between` does
  * not throw the kicker from hard-right to centre on hydrate.
- *
- * **The archive's optional chrome** (#31, ADR-0053 decision 9): ABSENT — every
- * daily route — this renders exactly what it always did, byte for byte, and
- * T-WEB-S185 pins both directions. Present, the back affordance becomes the
- * archived day's and one extra rules line states that the day does not move
- * the streak.
  */
 export function PlaySkeleton({
   date,
@@ -377,15 +344,6 @@ export function PlaySkeleton({
           <h1 className={screen.title}>{copy.title}</h1>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
-        {/* #31 (ADR-0053 decision 9): the archive's ONE added line. It
-            carries its own class from the archive's own stylesheet — a
-            second `screen.rules` paragraph made "this does not move your
-            streak" indistinguishable from "fill the grid so each row has
-            1–9" (step-6 F10b) — and nothing under `src/play/` is edited
-            for it, because a CSS-module class name is a string the chrome
-            object hands over. It is what makes the archive's semantics
-            visible to the person they apply to, which a mode chip could
-            not have said. */}
         {archive === undefined ? null : (
           <p className={archive.note.className}>{archive.note.text}</p>
         )}
