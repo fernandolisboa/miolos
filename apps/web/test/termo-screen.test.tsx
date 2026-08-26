@@ -1008,7 +1008,7 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
     );
     expect(container.querySelectorAll(`.${styles.key ?? ""}`)).toHaveLength(28);
     // A key cap is a constant — it owes the record nothing and can paint
-    // complete (`keypad.tsx:69-71`).
+    // complete (`keypad.tsx`'s `KeypadSkeleton`).
     expect(container.textContent).toContain(copy.keyboard.enter);
     expect(container.textContent).toContain(copy.keyboard.erase);
     expect(

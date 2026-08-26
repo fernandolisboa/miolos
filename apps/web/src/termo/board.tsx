@@ -5,31 +5,8 @@ import { messages } from "../i18n";
 import styles from "./termo-board.module.css";
 import type { TermoJudgedRow } from "./types";
 
-/**
- * The tile board (#27, plan 022 §12.2/§13.2, ADR-0042 decision 1).
- *
- * READ-ONLY OUTPUT. Nothing here is focusable, nothing here takes a pointer
- * event, and there is no caret to rove: a Termo board has no selectable cell,
- * which is why ADR-0030's composite-widget model — scoped to GRID games —
- * does not reach it. The whole input surface is the keyboard beside it.
- *
- * Not `role="grid"`, and the argument is stronger here than for Sudoku: a
- * grid promises keyboard navigation over cells, and these cells are not
- * navigable at all. A labelled `role="group"` of six labelled `role="group"`
- * rows is the honest shape.
- *
- * THE ROW'S COMPOSED NAME IS THE ROW'S ONLY ACCESSIBLE CONTENT, because every
- * tile is `aria-hidden`. Unhidden tiles make a screen reader read the word
- * twice, the second time ungraded — the same defect as five one-letter spans
- * concatenating to "CAFES" with no states (ADR-0037 decision 3's "22223").
- * That makes the name load-bearing on the ACTIVE row too, not only on judged
- * ones: `rowActiveAria` carries the draft letters, and `.announcer` carries
- * every keystroke, or a screen-reader user has no signal whatsoever between
- * the first keypress and `enviar`.
- */
 const copy = messages.games.termo.play;
 
-/** Six real row boxes and five tiles each — never `display: contents`. */
 const ROW_INDEXES: readonly number[] = Array.from(
   { length: MAX_GUESSES },
   (_unused, row) => row,
@@ -48,7 +25,7 @@ const SLOT_INDEXES: readonly number[] = Array.from(
  * `satisfies … | undefined` rather than an annotation, because Next types a
  * CSS Module's default export as `{readonly [key: string]: string}` and
  * `noUncheckedIndexedAccess` therefore makes every local `string | undefined`
- * — `nonogram/board.tsx:50-55`'s shipped `SIZE_CLASS` carries the identical
+ * — `nonogram/board.tsx`'s shipped `SIZE_CLASS` carries the identical
  * shape for the identical reason.
  */
 const TILE_STATE_CLASS = {
@@ -69,9 +46,9 @@ export interface BoardProps {
 }
 
 /**
- * MEMOIZED, and it is a real defect fix rather than a precaution (finding
- * B-4, the #25 precedent at `nonogram/board.tsx:121`). `usePlayLifecycle`
- * runs `setInterval(() => dispatch({type:"tick", now: Date.now()}), 1000)`
+ * MEMOIZED, and it is a real defect fix rather than a precaution — the
+ * precedent is `nonogram/board.tsx`'s `Board`. `usePlayLifecycle` runs
+ * `setInterval(() => dispatch({type:"tick", now: Date.now()}), 1000)`
  * for the whole live game, and ADR-0045 decision 4 removed the only thing
  * that tick exists to repaint — `/termo` renders no clock at all. So a player
  * who thinks for five minutes fires 300 ticks, and without this each one
@@ -123,8 +100,6 @@ export const Board = memo(function Board({
             }
           >
             {SLOT_INDEXES.map((slot) => (
-              // aria-hidden: the row's name already carries every letter AND
-              // its verdict, so an unhidden tile is the word read twice.
               <div
                 key={slot}
                 aria-hidden
@@ -141,11 +116,11 @@ export const Board = memo(function Board({
 });
 
 /**
- * The pre-hydration board (plan 022 §13.3). Thirty tiles at final size, so the
- * card's box is the shipped one before the record has been read — `.board` is
- * a centred flex column and a missing row hands its height to the board as an
- * offset. Divs with no role and no name, on `keypad.tsx:62-71`'s rule: nothing
- * here is focusable or announced before it works.
+ * The pre-hydration board. Thirty tiles at final size, so the card's box is
+ * the shipped one before the record has been read — `.board` is a centred flex
+ * column and a missing row hands its height to the board as an offset. Divs
+ * with no role and no name, on `KeypadSkeleton`'s rule: nothing here is
+ * focusable or announced before it works.
  */
 export function BoardSkeleton() {
   return (

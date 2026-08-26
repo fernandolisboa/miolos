@@ -5,17 +5,17 @@ import styles from "./sudoku-board.module.css";
 /**
  * The nine writing keys, in the order the stylesheet places them: digit *n*
  * is the *n*th child, which is how `.keypadDigit:nth-child()` puts it under
- * board column *n* without an inline style a media query could not override
- * (§12.6). Reordering this array silently moves the desktop keypad, which is
+ * board column *n* without an inline style a media query could not override.
+ * Reordering this array silently moves the desktop keypad, which is
  * why the CSS carries the same note and T-WEB-S34 re-derives the columns from
  * `track()`.
  */
 const DIGITS: readonly SudokuDigit[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 /**
- * The keypad (plan 018 §12.6). These are COMMANDS, not modes (S3): Binairo's
- * sticky paint model does not generalize — there is no plausible "paint 7s by
- * dragging" — so they are plain buttons with no `aria-pressed`, and the
+ * The keypad. These are COMMANDS, not modes: Binairo's sticky paint model
+ * does not generalize — there is no plausible "paint 7s by dragging" — so
+ * they are plain buttons with no `aria-pressed`, and the
  * physical keyboard's `1`–`9`/`Backspace` do the same job through the board's
  * own listener (ADR-0030 decision 3).
  *
@@ -60,11 +60,11 @@ export function Keypad({
 }
 
 /**
- * The placeholder keypad (§12.2). Divs rather than buttons, so nothing here
- * is focusable or announced before it works — but every box the hydrated
- * keypad occupies is reserved, including all three mobile rows, because
+ * The placeholder keypad. Divs rather than buttons, so nothing here is
+ * focusable or announced before it works — but every box the hydrated keypad
+ * occupies is reserved, including all three mobile rows, because
  * `.board` is a centred flex column and a missing row hands its height to the
- * board as an OFFSET (finding `play-skeleton-is-not-at-final-dimensions`).
+ * board as an OFFSET.
  *
  * Labelled, unlike the play screen's readouts: a digit key's label is a
  * constant, so this row owes the record nothing and can paint complete.

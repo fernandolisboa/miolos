@@ -157,6 +157,11 @@ things.
 - **A role-less `<div>` with `aria-label` for the rails.** The cheap
   version of decision 3, and it is not reliably exposed — the defect class
   already latent in Binairo's board.
+- **`role="grid"` with per-row wrappers, on this board specifically.**
+  ADR-0030 decision 2 already rejects that structure for every grid game;
+  the rails make it unavailable a second way. A per-row wrapper would
+  either exclude that row's rail — breaking the visual row — or include
+  it, producing a `gridcell` that is not a cell.
 - **A per-cell "this is wrong" state, in any colour.** A per-cell solution
   oracle, whatever it is called.
 
