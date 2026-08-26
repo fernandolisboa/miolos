@@ -47,7 +47,7 @@ export interface BoardProps {
 
 /**
  * MEMOIZED, and it is a real defect fix rather than a precaution — the
- * precedent is `nonogram/board.tsx`'s `Board`. `usePlayLifecycle` runs
+ * precedent is `nonogram/board.tsx`'s `Board` (#25). `usePlayLifecycle` runs
  * `setInterval(() => dispatch({type:"tick", now: Date.now()}), 1000)`
  * for the whole live game, and ADR-0045 decision 4 removed the only thing
  * that tick exists to repaint — `/termo` renders no clock at all. So a player
