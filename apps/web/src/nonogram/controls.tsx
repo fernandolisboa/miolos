@@ -63,7 +63,8 @@ export function Controls({
 }
 
 /**
- * The placeholder controls, mirroring `KeypadSkeleton`: `aria-hidden` divs
+ * The placeholder controls, mirroring `sudoku/keypad.tsx`'s
+ * `KeypadSkeleton`: `aria-hidden` divs
  * rather than buttons, so nothing here is focusable or announced before it
  * works — but every box the hydrated row occupies is reserved, because
  * `.board` is a centred flex column and a missing row hands its height to the
