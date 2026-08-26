@@ -79,7 +79,7 @@ export function useFreeNonogram(
         clues: puzzle.clues,
       });
       // One bounded re-render per generation, deliberately synchronous —
-      // see use-free-binairo.ts for the full argument (plan 025 D5.1).
+      // see use-free-binairo.ts for the full argument.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettled({
         level,

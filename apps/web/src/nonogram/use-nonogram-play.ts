@@ -1,12 +1,12 @@
 /**
- * The React seam over the pure reducer (plan 020 §10.5): the derived
+ * The React seam over the pure reducer: the derived
  * readouts, the input callbacks and the game-specific half of the
  * lifecycle's contract. Everything decidable without React lives in
  * `state.ts` and `engine.ts`; everything a play screen does that is not
  * gameplay lives in `usePlayLifecycle` (ADR-0029).
  *
  * The one rule that carries over from the two shipped games unchanged:
- * **nothing here runs during render** (plan 017 D28). `localStorage` is read
+ * **nothing here runs during render**. `localStorage` is read
  * once, in the lifecycle's mount effect; `Date.now()` appears only inside
  * effects and event handlers, never in a value the first paint depends on.
  *
@@ -18,7 +18,7 @@
  * the unavailable branch cheaper: hoisting would forfeit the record restore,
  * the prune and the queue flush that the lifecycle's ungated mount effect
  * performs on that route, and would run `solutionMarks` twice per mount
- * anyway, since the reducer still needs the value in state (§10.4).
+ * anyway, since the reducer still needs the value in state.
  */
 import type { DailyNonogramResponse } from "@miolos/core";
 import {
@@ -54,7 +54,7 @@ export interface NonogramPlay {
   readonly state: NonogramPlayState;
   /** Milliseconds the readouts render; derived, never accumulated. */
   readonly elapsed: number;
-  /** Cells the player has filled — the readout's numerator (P13). */
+  /** Cells the player has filled — the readout's numerator. */
   readonly filled: number;
   /** The picture's cell count, summed from the CLUES. */
   readonly target: number;
@@ -77,7 +77,7 @@ export interface NonogramPlay {
    * fallback is live in the pure function, not dead code.
    */
   readonly hintReady: boolean;
-  /** Which case the last hint fired, for the one-line explanation (P18). */
+  /** Which case the last hint fired, for the one-line explanation. */
   readonly hintKind: NonogramHintKind | null;
   readonly selectCell: (index: number) => void;
   /**
@@ -215,11 +215,6 @@ export function useNonogramPlay(
     dispatch({ type: "use-hint" });
   }, []);
 
-  // Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
-  // root calls this when the server's claim wins the screen, so the 1 Hz
-  // tick stops behind the remote conclusion and the preserved in-progress
-  // record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
-  // timer is the timer reducer's no-op.
   const pause = useCallback(() => {
     dispatch({ type: "pause", now: Date.now() });
   }, []);
@@ -257,7 +252,7 @@ export function useNonogramPlay(
  * a rejecting cap would discard a player's board rather than a suspicious
  * number.
  *
- * `size` is written as a DATUM (P15): `sync.ts` builds the POST body from
+ * `size` is written as a DATUM: `sync.ts` builds the POST body from
  * the record alone with no board in scope, and the conclusion's picture
  * wrapper lays the bitmap out from it.
  *

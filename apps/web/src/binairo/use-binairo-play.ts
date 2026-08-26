@@ -1,12 +1,12 @@
 /**
- * The React seam over the pure reducer (plan 017 §8.3, §9): the solution
+ * The React seam over the pure reducer: the solution
  * memo, the input callbacks and the game-specific half of the lifecycle's
  * contract. Everything decidable without React lives in `state.ts` and the
  * shared `../play/*` modules; everything a play screen does that is not
- * gameplay lives in `usePlayLifecycle` (ADR-0029, plan 018 §5.4).
+ * gameplay lives in `usePlayLifecycle` (ADR-0029).
  *
  * The one rule that survives the extraction unchanged: **nothing here runs
- * during render** (D28). `localStorage` is read once, in the lifecycle's
+ * during render**. `localStorage` is read once, in the lifecycle's
  * mount effect; `Date.now()` appears only inside effects and event
  * handlers, never in a value the first paint depends on.
  */
@@ -43,17 +43,17 @@ export type BinairoHint = Hint<CellValue>;
 /** Everything the play composition needs, and nothing it does not. */
 export interface BinairoPlay {
   readonly state: PlayState;
-  /** Milliseconds the readouts render; derived, never accumulated (D10). */
+  /** Milliseconds the readouts render; derived, never accumulated. */
   readonly elapsed: number;
   /** Cells carrying a value, givens included — the frames' `{filled} de 64`. */
   readonly filled: number;
   /** False once the free hint is spent, the grid is closed, or nothing is left to reveal. */
   readonly hintReady: boolean;
-  /** Which case the last hint fired, for the one-line explanation (§10.2). */
+  /** Which case the last hint fired, for the one-line explanation. */
   readonly hintKind: BinairoHint["kind"] | null;
   readonly tapCell: (index: number) => void;
   readonly paintOver: (index: number) => void;
-  /** Pressing the active mode's button returns to cycle mode (D8). */
+  /** Pressing the active mode's button returns to cycle mode. */
   readonly toggleMode: (mode: PaintMode) => void;
   readonly revealHint: () => void;
   /**
@@ -97,7 +97,7 @@ export function useBinairoPlay(
   const elapsed = elapsedMs(timer, state.now);
   const filled = countFilled(givens, entries);
 
-  // ~0.1 ms for a published daily, memoized once per page (§10.1). `null`
+  // ~0.1 ms for a published daily, memoized once per page. `null`
   // is unreachable for a uniquely-solvable board but defined rather than
   // assumed away: it simply means no hint is available.
   const solution = useMemo(() => solveBinairo(givens), [givens]);
@@ -109,7 +109,7 @@ export function useBinairoPlay(
     dispatch,
     buildRecord,
     remotelyClaimed,
-    // `state.now` is deliberately NOT here (plan 018 §5.4, landmine 21):
+    // `state.now` is deliberately NOT here:
     // `tick` returns a new state object every second while these three keep
     // their identities, so including it would write a readPlayRecord + Zod
     // parse + JSON.stringify + setItem cycle once a second.
@@ -151,11 +151,6 @@ export function useBinairoPlay(
     dispatch({ type: "use-hint", solution });
   }, [solution]);
 
-  // Freeze the clock from OUTSIDE the lifecycle (#142 step 7): the screen
-  // root calls this when the server's claim wins the screen, so the 1 Hz
-  // tick stops behind the remote conclusion and the preserved in-progress
-  // record's `elapsedMs` stops growing. Idempotent — `pause` on a paused
-  // timer is the timer reducer's no-op.
   const pause = useCallback(() => {
     dispatch({ type: "pause", now: Date.now() });
   }, []);
@@ -176,7 +171,7 @@ export function useBinairoPlay(
 }
 
 /**
- * The one place a Binairo `PlayRecord` is constructed (§9.1), handed to the
+ * The one place a Binairo `PlayRecord` is constructed, handed to the
  * lifecycle hook so both the in-progress write and the closing one go
  * through it. `grid` is written only for a solved board, because that is the
  * only shape the completion POST accepts and the only one the flush can
