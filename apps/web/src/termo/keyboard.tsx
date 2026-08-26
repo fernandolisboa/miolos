@@ -134,9 +134,9 @@ export interface KeyboardProps {
  * the buttons are keyed by `KeyId` off a module-level table, so React
  * reconciles them in place and no DOM node is remounted.
  *
- * MEMOIZED for the reason `board.tsx` spells out in full: the 1 Hz lifecycle
- * tick repaints a screen with no clock on it, and without this every tick
- * re-rendered all 28 keys — 28 `ariaFor` compositions, 28
+ * MEMOIZED for the reason `board.tsx` spells out in full: the 1 Hz
+ * lifecycle tick repaints a screen with no clock on it, and without this
+ * every tick re-rendered all 28 keys — 28 `ariaFor` compositions, 28
  * `keyClassName` calls, 28 fresh `style` objects, 84 fresh inline closures
  * and 28 ref detach/reattach cycles (the inline `ref` arrow changes identity
  * every render, so React nulls and re-sets all 28 → 56 Map mutations), for
@@ -196,8 +196,8 @@ export const Keyboard = memo(function Keyboard({
     // `detail !== 0` is a POINTER activation — `nonogram/board.tsx`'s
     // `onCellClick` ships the same test. Blurring returns a mouse player to
     // the UNFOCUSED page the window listener serves; a keyboard activation
-    // is `detail === 0` and keeps its caret. `focused` survives either way, because only
-    // `onFocus` writes it and a blur fires no `onFocus`.
+    // is `detail === 0` and keeps its caret. `focused` survives either way,
+    // because only `onFocus` writes it and a blur fires no `onFocus`.
     if (event.detail !== 0) {
       event.currentTarget.blur();
     }
@@ -263,8 +263,8 @@ export const Keyboard = memo(function Keyboard({
  *
  * Labelled, unlike the play screen's readouts: a key cap is a constant, so
  * this row owes the record nothing and can paint complete
- * (`KeypadSkeleton`'s rule). NO `tabIndex` and no refs — there is no roving
- * anything to seed before it works.
+ * (`sudoku/keypad.tsx`'s `KeypadSkeleton`). NO `tabIndex` and no refs —
+ * there is no roving anything to seed before it works.
  */
 export function KeyboardSkeleton() {
   return (

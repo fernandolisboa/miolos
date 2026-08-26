@@ -119,8 +119,8 @@ export const Board = memo(function Board({
  * The pre-hydration board. Thirty tiles at final size, so the card's box is
  * the shipped one before the record has been read — `.board` is a centred flex
  * column and a missing row hands its height to the board as an offset. Divs
- * with no role and no name, on `KeypadSkeleton`'s rule: nothing here is
- * focusable or announced before it works.
+ * with no role and no name, on `sudoku/keypad.tsx`'s `KeypadSkeleton` rule:
+ * nothing here is focusable or announced before it works.
  */
 export function BoardSkeleton() {
   return (
