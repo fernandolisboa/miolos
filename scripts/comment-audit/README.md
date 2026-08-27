@@ -26,6 +26,7 @@ Rule I applied to this directory. `verbatim.mjs`, `excision.mjs` and
 | `excision.mjs` | which of those changed by **more than a citation excision** — the ones a PR body must declare | yes |
 | `shingle.mjs` | **Rule A** — what echoes a comment's prose, before you delete it | no |
 | `wrap.mjs` | which lines the diff left **ragged** — under-filled, or an orphan | yes |
+| `density.mjs` | is a file within the **3% comment budget**? The gate | no |
 | `selftest.mjs` | do the tools still do what this README says? | no |
 
 Baseline defaults to `main`; pass `--base <ref>` to change it. A path absent
@@ -42,8 +43,23 @@ every file.
 node scripts/comment-audit/count.mjs apps/web/src/termo/state.ts
 node scripts/comment-audit/hash.mjs $(git diff main --name-only -- '*.ts' '*.tsx')
 node scripts/comment-audit/wrap.mjs $(git diff main --name-only -- '*.ts' '*.tsx' '*.mjs' '*.css' '*.md')
+node scripts/comment-audit/density.mjs $(git ls-files '*.ts' '*.tsx')
 node scripts/comment-audit/selftest.mjs
 ```
+
+## The budget
+
+`density.mjs` is the only tool here that states a target rather than a
+measurement: no `.ts`/`.tsx` file may spend more than **3%** of its lines on
+comment-only prose. Directive lines — `eslint-disable`, `@ts-expect-error`,
+`/*#__PURE__*/`, `/// <reference`, `prettier-ignore` — are exempt, because a
+budget that counted them would push a sweep into deleting the four
+`/*#__PURE__*/` markers that keep the Termo answer pool out of the client
+bundle.
+
+It exits 1 when any file is over, so it is the campaign's finish line and,
+after that, its ratchet. Pass `--max` to measure against a different number;
+the default is the one CLAUDE.md sets.
 
 ## What `markers.mjs` cannot see
 

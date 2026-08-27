@@ -89,7 +89,9 @@ DRY has one limit: two things that merely *look* alike are not duplication. Extr
 
 ## Comments
 
-**Comments are rare.** The code says what it does; the ADR says why the decision was made. A comment only exists when the code is genuinely hard to follow, and then it says both what it does *and* why it has to be that complicated.
+**Comments are rare, and the rarity is measured.** No `.ts`/`.tsx` file spends more than **3% of its lines** on comment-only prose — `node scripts/comment-audit/density.mjs <files>` is the gate and exits 1 when a file is over. Directives (`eslint-disable`, `@ts-expect-error`, `/*#__PURE__*/`, `/// <reference`) are exempt and never counted.
+
+The code says what it does; the ADR says why the decision was made. A comment only exists when the code is genuinely hard to follow, and then it says both what it does *and* why it has to be that complicated. If a file cannot fit the budget, the first question is whether the code is too complex — not whether the budget is too small.
 
 Write a comment for: a non-obvious algorithm, an invariant no test covers, a security-critical argument, a browser or runtime workaround, or a `TODO` with an issue number.
 
@@ -98,6 +100,7 @@ Delete on sight — do not write, and remove when you touch the file:
 - Restating what the next line plainly does
 - Decision history, superseded decisions, ADR narration, "this used to be…"
 - Code-review finding IDs, plan or handoff cross-references, contrast-ratio tables
+- **Anything whose only reader is the next agent.** Review rounds, sweep tranches, rule letters, "a reviewer caught this", "#27 step-6 finding B-1", what a previous version asserted. That is a watermark, not a comment, and it is the single largest class in this repo's history.
 - Prose about alternatives not taken
 - File-header block comments explaining a module's biography
 - JSDoc on a function whose signature already says it
@@ -138,6 +141,7 @@ ADRs matter more now, not less: they are where the "why" goes when it leaves the
 - `pnpm test` — full suite
 - **Property-based tests for `packages/games`** — a generator ships with its invariants proved, not sampled. Every generated Sudoku has a unique solution; every generated puzzle is solvable; seed → puzzle is deterministic.
 - **Zod validation at every boundary** — API contracts and anything crossing the client/server line are parsed, never cast.
+- `node scripts/comment-audit/density.mjs $(git ls-files '*.ts' '*.tsx')` — the 3% comment budget. No PR raises a file above it.
 - `npx impeccable detect` — required on any change that touches UI. Visual quality is a gate, not an aspiration.
 - Pre-commit (Husky + lint-staged + typecheck + tests) must stay green. Never bypassed with `--no-verify`.
 

@@ -4,6 +4,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { count, commentRanges } from "./count.mjs";
 import { countCss } from "./css-count.mjs";
+import { density } from "./density.mjs";
 import { DIRECTIVES, recordsRe } from "./records.mjs";
 import { ragged } from "./wrap.mjs";
 import { pathToFileURL } from "node:url";
@@ -1068,6 +1069,44 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   );
 }
 
+// density.mjs — the 3% budget. A directive line looks like a comment and is
+// not: counting it would push a sweep into deleting an eslint reason or a
+// /*#__PURE__*/ that keeps the answer pool out of the bundle.
+const densityFixture = write(
+  "density-fixture.ts",
+  [
+    "// a budgeted prose line",
+    "// eslint-disable-next-line no-console -- the reason is part of the directive",
+    "/*#__PURE__*/",
+    "// @ts-expect-error deliberate",
+    "export const a = 1;",
+    "export const b = 2;",
+  ].join("\n") + "\n",
+);
+check("density counts prose only", density(densityFixture).budgeted, 1);
+check("density exempts directives", density(densityFixture).directives, 3);
+check("density total is wc -l", density(densityFixture).total, 6);
+check(
+  "density pct is prose over total",
+  Number(density(densityFixture).pct.toFixed(2)),
+  16.67,
+);
+check(
+  "a file over budget exits 1",
+  run([tool("density.mjs"), densityFixture]).code,
+  1,
+);
+check(
+  "the same file under a loose budget exits 0",
+  run([tool("density.mjs"), "--max", "50", densityFixture]).code,
+  0,
+);
+check(
+  "a non-numeric --max exits 2",
+  run([tool("density.mjs"), "--max", "lots", densityFixture]).code,
+  2,
+);
+
 // Every tool must refuse an empty file list rather than print its most
 // reassuring output — #205's Rule I, applied to this toolkit. Flags are not
 // files: `--base main` alone left the list empty and printed a green.
@@ -1081,6 +1120,7 @@ for (const t of [
   "css-count",
   "shingle",
   "wrap",
+  "density",
 ]) {
   check(`${t}.mjs refuses an empty file list`, run([tool(`${t}.mjs`)]).code, 2);
   check(
