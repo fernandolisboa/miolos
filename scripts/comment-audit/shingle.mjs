@@ -4,13 +4,8 @@ import path from "node:path";
 import { commentText } from "./count.mjs";
 import { parseArgs } from "./records.mjs";
 
-// Rule A, mechanically: what CITES a comment before you delete it. Builds an
-// index of 7-word shingles over every tracked file except the ones being
-// swept, then looks up each target comment's prose in it.
 //
-// Shingles, not `grep`, because a citation wraps across lines and is often a
-// paraphrase. It reports candidates for a human to read — a hit is not proof
-// of a citation, and the hit COUNT is the ranking, not the verdict.
+
 const N = 7;
 
 const norm = (s) =>
@@ -31,9 +26,6 @@ function shingles(text) {
 const { files: targets } = parseArgs(process.argv, "shingle.mjs", false);
 const skip = new Set(targets.map((f) => path.resolve(f)));
 
-// From the repo ROOT, not the cwd: `git ls-files` is cwd-relative, so running
-// this from a game directory indexed one file and answered "nothing cites
-// these comments" for the whole repo.
 const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).trim();
@@ -47,9 +39,6 @@ const tracked = execFileSync("git", ["ls-files", "-z"], {
   .map((f) => path.join(root, f))
   .filter((f) => !skip.has(path.resolve(f)));
 
-// Zero files indexed answers "nothing cites this" for every comment in the
-// repo, which is the false green Rule A cannot afford: it authorises deleting
-// the only copy of a rule.
 if (tracked.length === 0) {
   console.error(
     "shingle.mjs: indexed 0 files, so every answer would be a false negative.",
@@ -66,7 +55,6 @@ for (const f of tracked) {
     continue;
   }
   for (let i = 0; i < lines.length; i++) {
-    // A 3-line window, so a shingle that wraps across lines still indexes.
     const win = lines.slice(i, i + 3).join(" ");
     for (const s of shingles(win)) {
       if (!index.has(s)) index.set(s, new Set());
@@ -99,8 +87,7 @@ for (const f of targets) {
       `    ${String(c).padStart(3)}x  ${path.relative(root, w.replace(/:(\d+)$/, "")) + w.match(/:(\d+)$/)[0]}`,
     );
   }
-  // Hiding a candidate is the dangerous direction for a scan that authorises
-  // a deletion, so say so rather than truncating silently.
+
   if (ranked.length > 12) {
     console.log(`    …and ${ranked.length - 12} more location(s)`);
   }

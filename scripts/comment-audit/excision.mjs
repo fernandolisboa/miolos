@@ -1,16 +1,12 @@
 import { recordsRe, parseArgs } from "./records.mjs";
 import { baseCorpus, blocks } from "./verbatim.mjs";
 
-// The claim a PR body declares from: strip records-genre citations from BOTH
-// sides, and every surviving sentence must still be verbatim. What it flags
-// changed by more than a citation.
 const norm = (s) =>
   s
     .replace(/^\s*(\/\*+|\*+\/|\/\/|\*)\s?/gm, " ")
     .replace(recordsRe(), " ")
     .replace(/\s+/g, " ")
-    // A strip leaves a space before the punctuation that followed it, on the
-    // base side only; normalise both so the comparison is about words.
+
     .replace(/\s+([.,;:)])/g, "$1")
     .replace(/\s+/g, " ")
     .trim();

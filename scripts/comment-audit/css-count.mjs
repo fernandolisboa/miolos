@@ -2,10 +2,6 @@ import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "./records.mjs";
 
-// The same metric for `.css`, for tranche 7c. CSS has one comment form and no
-// string that can hold it in this corpus, so a scanner is enough here where it
-// is not for TypeScript — `count.mjs` agrees with it on every tracked sheet
-// today, and would stop agreeing on a `url(http://…)`.
 export function countCss(file) {
   const text = fs.readFileSync(file, "utf8");
   const mask = new Uint8Array(text.length);

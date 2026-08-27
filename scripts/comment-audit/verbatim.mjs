@@ -3,9 +3,6 @@ import { commentRangesOf, commentRanges } from "./count.mjs";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "./records.mjs";
 
-// Rule F, mechanically: every surviving SENTENCE must appear verbatim in the
-// same file's comment text on the base ref. Its green is NARROWER than
-// "nothing was reworded" — see the README — so declare from `excision.mjs`.
 export const norm = (s) =>
   s
     .replace(/^\s*(\/\*+|\*+\/|\/\/|\*)\s?/gm, " ")
@@ -37,9 +34,6 @@ export function baseCorpus(file, base) {
   return ranges.map(([a, b]) => before.slice(a, b)).join("\n");
 }
 
-// Behind an entry-point guard: `excision.mjs` imports `baseCorpus` and
-// `blocks` from here, and a module-level CLI would run this whole comparison
-// on that import and print it above excision's own output.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const { base, files } = parseArgs(process.argv, "verbatim.mjs");
   let bad = 0;

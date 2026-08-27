@@ -4,15 +4,8 @@ import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { DIRECTIVES, parseArgs } from "./records.mjs";
 
-// Did a comment sweep change any CODE? Re-print each module from its AST with
-// `removeComments`, hash that, and walk the tree counting nodes, identifiers
-// and string literals — at BOTH ends, so the answer is SAME or DIFFERS rather
-// than a hash the reader has to compare by eye against a baseline produced by
-// some undocumented second step.
 //
-// A comment that is really a DIRECTIVE is invisible to the hash — the printer
-// drops it and the AST never held it — so each class is COUNTED separately
-// instead. The README names the gate that actually covers each.
+
 const printer = ts.createPrinter({
   removeComments: true,
   newLine: ts.NewLineKind.LineFeed,

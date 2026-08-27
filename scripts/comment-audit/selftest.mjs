@@ -9,15 +9,8 @@ import { DIRECTIVES, recordsRe } from "./records.mjs";
 import { ragged } from "./wrap.mjs";
 import { pathToFileURL } from "node:url";
 
-// #205's Rule M: the counting tool is part of the gate and needs its own
-// second method. Every case here is one this campaign already got wrong or a
-// review round already caught — a fixture, and an expected number derived by
-// hand rather than by the tool under test.
 //
-// Not wired into CI. Run it after touching anything in this directory:
-//   node scripts/comment-audit/selftest.mjs
-// Run from the repo root whatever the caller's cwd is: one fixture shells out
-// to `git show HEAD:scripts/…`, and off-root it would SKIP and pass vacuously.
+
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 process.chdir(repoRoot);
 
@@ -41,8 +34,6 @@ const check = (label, actual, expected) => {
   );
 };
 
-// A bare `ts.createScanner` loop stops at the first template literal and loses
-// every comment after it. This under-counted a whole tranche by 21%.
 check(
   "template literals do not hide later comments",
   commentRanges(
@@ -54,10 +45,6 @@ check(
   3,
 );
 
-// A line counts when it has at least one non-whitespace comment character.
-// The whitespace-only line inside the block is NOT a comment line; the `*`
-// line is. The other reading of this rule is where a 3-line disagreement
-// between two correct counters came from.
 check(
   "a whitespace-only line inside a block is not a comment line",
   count(write("ws.ts", "/*\n   \n * hi\n */\nconst a = 1;\n")).commentOnly,
@@ -70,8 +57,6 @@ check(
   3,
 );
 
-// `total` follows `wc -l`: a trailing newline terminates a line, it does not
-// start one.
 check("total matches wc -l", count(write("n.ts", "const a = 1;\n")).total, 1);
 check("an empty file has no lines", count(write("e.ts", "")).total, 0);
 check(
@@ -85,9 +70,6 @@ check(
   1,
 );
 
-// JSX `{/* */}` comments are only visible when the baseline keeps its `.tsx`
-// extension — parsed as `.ts` they vanish, which silently truncated the
-// comparison corpus for every `.tsx` file.
 check(
   "a .tsx file sees its JSX comments",
   commentRanges(
@@ -99,8 +81,6 @@ check(
   1,
 );
 
-// Stripping ordinary prose is the DANGEROUS direction: it hides a real
-// rewrite behind a green.
 const stripped = (s) => (s.match(recordsRe()) ?? []).length;
 check(
   'prose that merely contains "plan" is not a citation',
@@ -134,9 +114,6 @@ check(
   1,
 );
 
-// `hash.mjs` cannot see these — the printer drops them and the AST never held
-// them — so it counts them separately. Deleting a `/*#__PURE__*/` ships the
-// Termo answer pool to every client.
 const dtext =
   'export const W = /*#__PURE__*/ f("a");\n// eslint-disable-next-line x -- why\nexport const y = 1;\n';
 check(
@@ -173,10 +150,6 @@ check(
   2,
 );
 
-// BEHAVIOURAL, not a re-run of the regex table: the directive check lives in
-// `hash.mjs`'s `same()`, and a fixture that only exercises `DIRECTIVES` passes
-// with that clause deleted. Two files differing ONLY by a `/*#__PURE__*/` must
-// come back DIFFERS.
 const run = (args, cwd) => {
   try {
     return {
@@ -228,8 +201,6 @@ const tool = (n) => path.join(import.meta.dirname, n);
   );
 }
 
-// `excision.mjs` imports from `verbatim.mjs`; without an entry-point guard the
-// import runs verbatim's whole CLI and prints it above excision's own output.
 {
   const out = run([
     tool("excision.mjs"),
@@ -244,8 +215,6 @@ const tool = (n) => path.join(import.meta.dirname, n);
   );
 }
 
-// The unbounded citation prefix stripped the PROSE in front of a citation from
-// both sides, and let a match start at a CODE parenthesis and swallow lines.
 {
   const re = (await import("./records.mjs")).recordsRe;
   const cases = [
@@ -266,9 +235,7 @@ const tool = (n) => path.join(import.meta.dirname, n);
     cases.map(([t]) => (t.match(re()) ?? []).length),
     cases.map(([, w]) => w),
   );
-  // The lead-ins the repo ACTUALLY has are 27-36 characters. The strawmen
-  // above are 55-62, so they passed every length window that was ever
-  // proposed — including the buggy ones. These are the real lines.
+
   check(
     "the repo's own prose lead-ins do not count",
     [
@@ -281,9 +248,7 @@ const tool = (n) => path.join(import.meta.dirname, n);
     ].map((t) => (t.match(re()) ?? []).length),
     [0, 0, 0, 0, 0, 0],
   );
-  // Over RAW text a match can begin at a code `(` and swallow the lines
-  // between it and a citation, which made `citations.mjs` undercount. The fix
-  // is that the tools scan the comment corpus; this pins the difference.
+
   const code =
     "const x = foo(\n  // see (plan 017 D3)\n  a,\n  // and (plan 018 D4)\n  b,\n);";
   const comments = "// see (plan 017 D3)\n// and (plan 018 D4)";
@@ -294,9 +259,6 @@ const tool = (n) => path.join(import.meta.dirname, n);
   );
 }
 
-// Rule AA: with `step-\d+` hyphen-only, the space form was invisible to BOTH
-// the citation grammar and the marker scan, so `markers.mjs 0` was reported
-// for three files that each carried one.
 {
   const re = (await import("./records.mjs")).recordsRe;
   const markers = (await import("./records.mjs")).markersRe;
@@ -311,7 +273,7 @@ const tool = (n) => path.join(import.meta.dirname, n);
       .length,
     2,
   );
-  // The widening must not reach prose: a lead-in of words still ends the match.
+
   check(
     "a prose lead-in before the space form still does not count",
     ("(work through it step 3 at a time)".match(re()) ?? []).length,
@@ -329,8 +291,6 @@ check(
   2,
 );
 
-// Every file skipped is zero comparisons, and printing the toolkit's most
-// reassuring sentence after zero comparisons is Rule I's shape.
 for (const t of ["excision", "verbatim", "citations", "hash", "wrap"]) {
   check(
     `${t}.mjs exits 2 when every file is skipped`,
@@ -343,39 +303,67 @@ for (const t of ["excision", "verbatim", "citations", "hash", "wrap"]) {
     2,
   );
 }
-// `shingle.mjs` must find a real echo and must index something — a scan that
-// indexes zero files reports "no citations" for every comment in the repo.
+
 //
-// The fixtures are files in THIS directory rather than app sources: the 3%
-// budget is taking the app's prose away, and a fixture the campaign is
-// deleting turns this check green by attrition.
+
+// The echo fixtures are a SYNTHETIC repo, not files in this one. Pointing
+// them at real prose made them erode as #205 deleted it: the app sources
+// went first, then this directory's own comments, and each time the checks
+// went green by attrition rather than by the tool working.
 {
-  const out = run([
-    tool("shingle.mjs"),
-    "scripts/comment-audit/records.mjs",
-  ]).out;
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-echo-"));
+  temps.push(repo);
+  const git = (...a) =>
+    execFileSync("git", ["-C", repo, ...a], { stdio: "pipe" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+
+  const claim =
+    "the reader's SQL wall is the only authority on which days exist";
+  fs.writeFileSync(
+    path.join(repo, "subject.ts"),
+    `// ${claim}\nexport const a = 1;\n`,
+  );
+  // More echoing locations than the 12 shingle prints, so the truncation
+  // notice has to fire. Silent truncation is the dangerous direction for a
+  // scan that authorises a deletion.
+  for (let i = 0; i < 14; i += 1) {
+    fs.mkdirSync(path.join(repo, `pkg${i}`), { recursive: true });
+    fs.writeFileSync(
+      path.join(repo, `pkg${i}`, "echo.ts"),
+      `// ${claim}\n// ${claim}\n// ${claim}\nexport const b = ${i};\n`,
+    );
+  }
+  // The index must be big enough that "N tracked files indexed" is a real
+  // three-digit count — the shape a zero-file index would fail.
+  for (let i = 0; i < 100; i += 1) {
+    fs.writeFileSync(
+      path.join(repo, `filler${i}.ts`),
+      `export const f${i} = ${i};\n`,
+    );
+  }
+  git("add", "-A");
+  git("commit", "-qm", "base");
+
+  const out = run([tool("shingle.mjs"), "subject.ts"], repo).out;
   check(
     "shingle.mjs indexes the tracked corpus",
     /[1-9]\d{2,} tracked files indexed/.test(out),
     true,
   );
   check("shingle.mjs finds a known echo", /is echoed by:/.test(out), true);
-  // Silent truncation is the dangerous direction for a scan that authorises a
-  // deletion, and the 3-line index window means one citing file can occupy
-  // three slots — so a fourth citing file used to fall off unannounced.
-  const many = run([tool("shingle.mjs"), "scripts/comment-audit/wrap.mjs"]).out;
   check(
     "shingle.mjs says how many candidates it did not print",
-    /…and \d+ more location\(s\)/.test(many),
+    /…and \d+ more location\(s\)/.test(out),
     true,
   );
   check(
     "shingle.mjs prints repo-relative paths",
-    /\n {4}\s*\d+x {2}[\w.-]+\//.test(many) && !/ {2}\/home\//.test(many),
+    /\n {4}\s*\d+x {2}[\w.-]+\//.test(out) && !/ {2}\/home\//.test(out),
     true,
   );
-  // `git ls-files` is cwd-relative: from a game directory this indexed ONE
-  // file and answered "nothing cites these comments" for the whole repo.
+
   const sub = run(
     [tool("shingle.mjs"), "board.tsx"],
     path.join(repoRoot, "apps/web/src/termo"),
@@ -387,9 +375,6 @@ for (const t of ["excision", "verbatim", "citations", "hash", "wrap"]) {
   );
 }
 
-// An index of zero files answers "nothing cites this" for every comment in
-// the repo — the false green Rule A cannot afford, since it authorises
-// deleting the only copy of a rule.
 {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-lonely-"));
   temps.push(repo);
@@ -424,9 +409,6 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   );
 }
 
-// Round 4: only the LEAD-IN was bounded, so prose AFTER the citation token
-// inside the same parenthesis was still excised from both sides — the same
-// false green on the other side of the token.
 {
   const re = (await import("./records.mjs")).recordsRe;
   const after =
@@ -446,8 +428,7 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
     ].map((t) => (t.match(re()) ?? []).length),
     [1, 1, 1, 1],
   );
-  // A tail of prose is not a citation AT ANY LENGTH — a 22-character tail
-  // slipped through the last length window.
+
   check(
     "a short prose tail does not count either",
     [
@@ -458,8 +439,6 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   );
 }
 
-// `markers.mjs` scanned RAW text while three artifacts claimed every tool
-// scans the comment corpus. A `data-testid` string literal is live code.
 {
   const f = write(
     "m.tsx",
@@ -473,8 +452,6 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   );
 }
 
-// A path deleted from the working tree — which every `git diff --name-only`
-// list contains after a deletion — must SKIP, not crash mid-report.
 {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-del-"));
   temps.push(repo);
@@ -510,10 +487,6 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   );
 }
 
-// THE CENTRAL CLAIM, end to end: reword a comment beside a citation and
-// `excision.mjs` must FLAG it. Nothing tested this before — the other
-// excision fixtures cover its import guard, its skip path and its exit code.
-// Three of the four lines are real; the first inverts a security claim.
 {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-reword-"));
   temps.push(repo);
@@ -539,8 +512,7 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
       "// one free hint per puzzle (plan 017 D21)",
       "// two free hints per puzzle (plan 017 D21)",
     ],
-    // The real blind spot: a citation-excision sweep removes the citation as
-    // well, and then BOTH tools are silent on an inverted product claim.
+
     [
       "// one free hint per puzzle (plan 017 D21)",
       "// two free hints per puzzle",
@@ -559,28 +531,13 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   git("commit", "-qm", "base");
   git("branch", "-M", "main");
 
-  // Anti-vacuity first: unchanged files must be green, or the flag below
-  // would prove nothing.
   check(
     "excision.mjs is green when nothing was reworded",
     run([tool("excision.mjs"), ...files], repo).code,
     0,
   );
   put(1);
-  // PER FILE, not one exit code over all four. Two of the four reword text
-  // OUTSIDE the parenthetical and flag under any definition of a citation, so
-  // an aggregate assertion is dominated by them and never exercises the
-  // grammar — it stayed green with two earlier regex bugs reintroduced.
-  // `excision.mjs` is deliberately expected not to flag r3: stripped of its
-  // citation the REWORDED sentence is 25 characters, and both tools skip 25
-  // or fewer. `verbatim.mjs` does flag it — it filters before the strip.
-  // That blind spot is documented in the README; asserting it here keeps it
-  // documented rather than discovered. The aggregate assertion this replaced
-  // hid it behind the three files that do flag.
-  // The two tools measure at different moments — excision after the citation
-  // is stripped, verbatim before — so the <=25-character skip does not bite
-  // them at the same time. Asserted PER TOOL and PER FILE, because an
-  // aggregate is what let the README describe this wrongly.
+
   const expected = [
     {
       r: 0,
@@ -608,15 +565,13 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
       why: "the citation excised too — THE documented blind spot",
     },
   ];
-  // A parallel array to `rewordings`: a sixth pair added without a row here
-  // would be silently untested, which is how the aggregate defect started.
+
   check(
     "every rewording fixture is asserted",
     expected.length,
     rewordings.length,
   );
-  // r4 is the only case asserting SILENCE, so it cannot tell "both tools are
-  // blind to this reword" from "no reword happened".
+
   check(
     "r4 really does reword something",
     rewordings[4][0] !== rewordings[4][1],
@@ -636,12 +591,6 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// `wrap.mjs` — the ragged-wrap check. Every fixture below was MUTATION-TESTED:
-// the guard it names was removed and this file re-run. Three earlier fixtures
-// stayed green with their guard deleted and were replaced by the ones here.
-// Widths are built from four-letter words so the arithmetic is legible:
-// `words(n)` is 5n - 1 characters, and a `// ` or `/* ` gutter adds three.
 const words = (n, seed = "a") =>
   Array.from({ length: n }, (_, i) =>
     (seed + String.fromCharCode(98 + (i % 24))).padEnd(4, "x"),
@@ -653,9 +602,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   const kinds = (name, text) =>
     ragged(write(name, text), text).map((h) => [h.kind, h.line, h.word]);
 
-  // A greedily wrapped paragraph scores zero against its OWN widest line,
-  // whatever column the author actually used. This is the property that makes
-  // the check readable; against a fixed 80 one Accepted ADR scores 464.
   check(
     "a greedily wrapped comment paragraph is clean",
     kinds(
@@ -665,8 +611,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [],
   );
 
-  // The excision shape: a sentence leaves the middle of a paragraph, the wrap
-  // does not move, and the short line could take the whole line below it.
   check(
     "an under-filled interior line is flagged",
     kinds(
@@ -676,9 +620,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["ragged", 2, "bbxx"]],
   );
 
-  // An orphan is judged against the hard 80, not the paragraph's fill: a
-  // two-line paragraph has no interior to take a column from, and that is
-  // exactly the shape an excision at the end of a block leaves behind.
   check(
     "a one-word last line that fits above is an orphan",
     kinds("w-orphan.ts", `// ${words(12)}\n// tail\nconst a = 1;\n`),
@@ -693,12 +634,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [],
   );
 
-  // Two of the four defects this tool was written for were orphans inside
-  // Accepted ADRs. A `.ts`-only line-selector cannot see them, which is why
-  // this one has a second selector. The fixture is a real orphan in a real
-  // Accepted ADR, copied verbatim from `docs/adr/0037-…` rather than built
-  // from `words(n)` — the file's own text, not one of the four by provenance:
-  // `git log -S` puts it in a `feat:` commit, not in a #205 fix.
   check(
     "markdown prose is scanned too — ADR-0037's real orphan",
     kinds(
@@ -709,11 +644,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 1, "unsolvable."]],
   );
 
-  // `line.includes("*/")` is what stops a block terminator reading as prose,
-  // and it is the guard, not the gutter regex: with the bail removed the third
-  // line joins the paragraph and the hit moves to line 2. (An earlier
-  // `\*(?!/)` lookahead in `GUTTER_RE` was kept as a second layer until a
-  // mutation showed it could not change any answer; it is gone.)
   check(
     "a closing */ is never prose",
     kinds(
@@ -723,9 +653,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 1, "short"]],
   );
 
-  // A directive is not a line a wrap may move a word onto or off. TWO adjacent
-  // ones, because `DIRECTIVES` carries the `g` flag: a shared regex would set
-  // `lastIndex` on the first and answer `false` on the second.
   check(
     "two adjacent directive lines are both skipped",
     kinds(
@@ -737,10 +664,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [],
   );
 
-  // A trailing comment beside code is not a wrappable line: a wrap that moved
-  // a word onto it would move it onto the code. Nothing in the repo indents
-  // deeply enough for the gutter widths to line up, so this fixture builds
-  // the case rather than waiting for it.
   check(
     "a trailing comment beside code is not prose",
     kinds(
@@ -766,10 +689,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [],
   );
 
-  // A list item's continuation lines are one paragraph with it, or the scan
-  // stops dead at every bullet — 694 hits across the repo. The NESTED bullet
-  // is the case that binds `MARKER_RE`: it sits at the continuation indent, so
-  // nothing but the marker test can end the run.
   check(
     "a list item's continuation lines are one paragraph",
     kinds("w-list.md", `- ${words(14)}\n  short\n  ${words(14, "b")}\n`),
@@ -781,9 +700,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 1, "short"]],
   );
 
-  // 7c is a CSS tranche, and every multi-line comment in this repo's CSS is
-  // written `globals.css`-style: an opener, then space-indented continuations
-  // with no marker at all. Requiring a marker scored the whole corpus zero.
   check(
     "a space-indented CSS continuation is prose, and joins its opener",
     kinds(
@@ -793,12 +709,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["ragged", 2, "bbxx"]],
   );
 
-  // THE BOUNDARY, both sides of it. The `+ 1` in `width + 1 + word.length` is
-  // the space the word would need, and every other fixture here clears the
-  // threshold by several columns — so dropping it left all of them green and
-  // the tracked corpus 1,840 hits heavier. These two sit ON the boundary: 66 +
-  // 1 + 6 is 73 against a column of 72 and must be clean, 65 + 1 + 6 is 72 and
-  // must be a hit.
   const boundary = (bWidth) =>
     `// ${"z".repeat(69)}\n// ${"x".repeat(bWidth - 3)}\n// ${"y".repeat(6)} tail\nconst a = 1;\n`;
   check(
@@ -812,10 +722,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["ragged", 2, "yyyyyy"]],
   );
 
-  // The `*` leg of `GUTTER_RE` carries the whole JSDoc gutter, which is the
-  // dominant multi-line style in `.ts` — 309 hits. Without it these lines fall
-  // to the whitespace fallback and `MARKER_RE` reads `* text` as a bullet, so
-  // every JSDoc paragraph collapses to one line and scores nothing.
   check(
     "a JSDoc star gutter is a gutter",
     kinds(
@@ -825,31 +731,24 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["ragged", 3, "bbxx"]],
   );
 
-  // Two comment lines at DIFFERENT left margins are two paragraphs. Without
-  // the gutter-width comparison — the headline change of this tool's fix
-  // commit — they join, and the short one reads as an orphan of the long one.
   check(
     "a different gutter width ends the paragraph",
     kinds("w-gutters.ts", `// ${words(14)}\n  // short\nconst a = 1;\n`),
     [],
   );
-  // And the body indent under the SAME gutter does the same job.
+
   check(
     "a different body indent ends the paragraph",
     kinds("w-indent.ts", `// ${words(14)}\n//   short\nconst a = 1;\n`),
     [],
   );
 
-  // A markdown hard break is the author's wrap, not a wrap to check.
   check(
     "a trailing double space ends the line on purpose",
     kinds("w-hardbreak.md", `${words(12)}  \ntail\n`),
     [],
   );
 
-  // A rule run at the START of a line is not a divider on its own: `***` and
-  // `___` are markdown emphasis, and an unanchored class dropped four real
-  // paragraphs out of `docs/adr/**` — the corpus this tool exists for.
   check(
     "an emphasis opener is prose, not a divider",
     kinds("w-emph.md", `***${words(8)}***\nshort\n`),
@@ -861,9 +760,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 2, "short"]],
   );
 
-  // Three of this repo's sheets open a section with a rule and then write
-  // prose under it; four false hits came from reading the two as one
-  // paragraph. A rule is a divider wherever it sits on the line.
   check(
     "a divider line is not prose",
     kinds(
@@ -872,8 +768,7 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     ),
     [["ragged", 3, "bbxx"]],
   );
-  // And a space-aligned table inside a comment is the thing `proseLines` says
-  // never to ask a reviewer to unwrap.
+
   check(
     "a space-aligned table row inside a comment is not prose",
     kinds(
@@ -883,8 +778,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [],
   );
 
-  // A blockquote is not prose to re-wrap. Paired with the same text without
-  // the marker, so the `[]` is not green by construction.
   check(
     "a blockquote line is not prose",
     kinds("w-quote.md", `> ${words(13)}\nshort\n`),
@@ -896,7 +789,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 1, "short"]],
   );
 
-  // `MARKER_RE`'s numbered-list leg, the same job its bullet leg does.
   check(
     "a nested numbered item at the continuation indent ends the paragraph",
     kinds(
@@ -906,8 +798,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 1, "short"]],
   );
 
-  // `BLOCKISH_RE` is tested against the body with its indent STRIPPED: a
-  // heading under a bullet is still a heading.
   check(
     "an indented heading inside a list item is not prose",
     kinds(
@@ -917,10 +807,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 1, "short"]],
   );
 
-  // `width` is the RENDERED width — gutter included. Drop the gutter and a
-  // deeply indented comment reads as 13 columns narrower than it prints. The
-  // pair is the point: at this indent the paragraph is over 80 and silent, and
-  // ten columns shallower the same text is an orphan.
   check(
     "a deep gutter counts toward the width",
     kinds(
@@ -935,9 +821,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 1, "tail"]],
   );
 
-  // When EVERY interior line is already over 80 the fill falls back to 80, and
-  // that fallback is load-bearing UPWARD: without a cap, `col` becomes the
-  // over-long width and every line in the paragraph can take the one below it.
   check(
     "a paragraph whose interior is all over 80 is silent",
     kinds(
@@ -955,9 +838,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["orphan", 2, "tail"]],
   );
 
-  // One unbreakable line must not hand the paragraph back to the fixed-80
-  // regime: without the `width <= WIDTH` filter on the fill, `col` becomes 80
-  // and the third line is flagged too.
   check(
     "a line over 80 columns does not set the paragraph's column",
     kinds(
@@ -969,9 +849,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
 }
 
 {
-  // The delta is the whole point: this repo's prose was never greedily
-  // wrapped, so an absolute count is unreadable noise. What a PR body declares
-  // is that its own diff added none.
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-wrap-"));
   temps.push(repo);
   const git = (...a) =>
@@ -1007,9 +884,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [1, true, true],
   );
 
-  // The key is the line's own text PLUS the word below it, so re-wording the
-  // line below a ragged line is a new hit even though the ragged line itself
-  // is byte-identical. Drop `word` from the key and this reads `0 new`.
   fs.writeFileSync(
     path.join(repo, "w.ts"),
     `// ${words(12)}\n// tale\nconst a = 1;\n`,
@@ -1021,9 +895,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [1, true],
   );
 
-  // And the baseline is a MULTISET: the same ragged pair twice is one hit the
-  // base ref already had and one it did not. Drop the decrement and this
-  // reads `0 new`.
   fs.writeFileSync(
     path.join(repo, "w.ts"),
     `// ${words(12)}\n// tail\nconst a = 1;\n\n// ${words(12)}\n// tail\nconst b = 2;\n`,
@@ -1035,8 +906,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [1, true],
   );
 
-  // A file the base ref does not hold has every hit read as new, and SAYS so
-  // — the suffix is what stops `N new` reading as a regression on a new file.
   fs.writeFileSync(
     path.join(repo, "fresh.ts"),
     `// ${words(12)}\n// tail\nconst a = 1;\n`,
@@ -1061,8 +930,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   );
 }
 
-// `ragged` is exported, so a module-level CLI would run the whole comparison
-// on import — the defect `verbatim.mjs` carries the same guard for.
 {
   const imported = run([
     "--input-type=module",
@@ -1076,9 +943,6 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   );
 }
 
-// density.mjs — the 3% budget. A directive line looks like a comment and is
-// not: counting it would push a sweep into deleting an eslint reason or a
-// /*#__PURE__*/ that keeps the answer pool out of the bundle.
 const densityFixture = write(
   "density-fixture.ts",
   [
@@ -1092,8 +956,7 @@ const densityFixture = write(
   ].join("\n") + "\n",
 );
 check("density counts prose only", density(densityFixture).budgeted, 1);
-// The bare `//` is a prettier layout anchor — it is what keeps a nonogram
-// bitmap one row per line rather than collapsed into an unreadable array.
+
 check("density exempts directives", density(densityFixture).directives, 4);
 check("density total is wc -l", density(densityFixture).total, 7);
 check(
@@ -1111,9 +974,7 @@ check(
   run([tool("density.mjs"), "--max", "50", densityFixture]).code,
   0,
 );
-// A generated file's header is its generator's to write. Both spellings this
-// repo actually ships: Next rewrites `next-env.d.ts`, and the termo word list
-// is rendered from `content/termo`.
+
 check(
   "a generated header is recognised (next-env.d.ts)",
   isGenerated(
@@ -1144,9 +1005,6 @@ check(
   2,
 );
 
-// Every tool must refuse an empty file list rather than print its most
-// reassuring output — #205's Rule I, applied to this toolkit. Flags are not
-// files: `--base main` alone left the list empty and printed a green.
 for (const t of [
   "count",
   "hash",

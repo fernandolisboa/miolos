@@ -43,19 +43,22 @@ every file.
 node scripts/comment-audit/count.mjs apps/web/src/termo/state.ts
 node scripts/comment-audit/hash.mjs $(git diff main --name-only -- '*.ts' '*.tsx')
 node scripts/comment-audit/wrap.mjs $(git diff main --name-only -- '*.ts' '*.tsx' '*.mjs' '*.css' '*.md')
-node scripts/comment-audit/density.mjs $(git ls-files '*.ts' '*.tsx')
+node scripts/comment-audit/density.mjs $(git ls-files '*.ts' '*.tsx' '*.mjs')
 node scripts/comment-audit/selftest.mjs
 ```
 
 ## The budget
 
 `density.mjs` is the only tool here that states a target rather than a
-measurement: no `.ts`/`.tsx` file may spend more than **3%** of its lines on
-comment-only prose. Directive lines — `eslint-disable`, `@ts-expect-error`,
-`/*#__PURE__*/`, `/// <reference`, `prettier-ignore` — are exempt, because a
-budget that counted them would push a sweep into deleting the four
-`/*#__PURE__*/` markers that keep the Termo answer pool out of the client
-bundle.
+measurement: no `.ts`, `.tsx` or `.mjs` file may spend more than **3%** of its lines on
+comment-only prose. Directive lines are exempt — `eslint-disable`,
+`@ts-expect-error`, `/*#__PURE__*/`, `/// <reference`, `prettier-ignore`,
+`impeccable-disable`, and a bare `//` — because a budget that counted them
+would push a sweep into deleting the four `/*#__PURE__*/` markers that keep
+the Termo answer pool out of the client bundle, or the 187 layout anchors
+that keep a nonogram bitmap one row per line. Generated files (`@generated`,
+`GENERATED FILE`, `should not be edited` in the first eight lines) report as
+SKIPPED: their headers belong to their generators.
 
 It exits 1 when any file is over, so it is the campaign's finish line and,
 after that, its ratchet. Pass `--max` to measure against a different number;

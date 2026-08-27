@@ -4,12 +4,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "./records.mjs";
 
-// THE metric: comment-only lines — a source line carrying at least one
-// non-whitespace comment character and no code character.
 //
-// Ranges come from the PARSER: a raw `ts.createScanner` loop needs
-// `reScanTemplateToken` to walk a template literal's spans and stops early
-// without it. See the README.
+
 export function commentRanges(file, text = fs.readFileSync(file, "utf8")) {
   const sf = ts.createSourceFile(
     file,
@@ -31,16 +27,10 @@ export function commentRanges(file, text = fs.readFileSync(file, "utf8")) {
   return { text, ranges: [...seen.values()].sort((a, b) => a[0] - b[0]) };
 }
 
-/** The same ranges, read out of a `main` blob rather than the working tree. */
 export function commentRangesOf(file, text) {
   return commentRanges(path.join("/virtual", path.basename(file)), text);
 }
 
-/**
- * The file's comment text. `commentOnly` is the line count on the working-tree
- * path and `undefined` on the baseline-blob path, where lines are meaningless
- * — read it only when you passed no `raw`.
- */
 export function commentText(file, raw) {
   if (raw !== undefined) {
     const { ranges } = commentRangesOf(file, raw);
@@ -89,7 +79,7 @@ function countLines(text, ranges) {
       }
     }
   }
-  // A trailing newline is a terminator, not a line — `wc -l`'s convention.
+
   const total = lines.length - (lines.at(-1) === "" ? 1 : 0);
   return { commentOnly, touched, blocks: ranges.length, onlyLines, total };
 }

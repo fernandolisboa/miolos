@@ -1,10 +1,6 @@
 import { commentText } from "./count.mjs";
 import { markersRe, parseArgs } from "./records.mjs";
 
-// Which files still smell of records, so the next tranche is scoped by
-// measurement rather than by impression. Ranks ABSOLUTE marker count; the
-// per-comment-line rate is printed beside it because a long file and a dense
-// one are different problems.
 const { files } = parseArgs(process.argv, "markers.mjs", false);
 let skipped = 0;
 const rows = files.flatMap((f) => {
