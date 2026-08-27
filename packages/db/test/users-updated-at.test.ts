@@ -85,8 +85,12 @@ describe("every writer of a users row sets updated_at (ADR-0050)", () => {
   it("an upsert onto users sets updatedAt in its DO UPDATE branch", async () => {
     const offenders: string[] = [];
     for (const { path, text } of await sources()) {
-      for (const match of text.matchAll(/\.insert\(users\)/g)) {
-        const chain = text.slice(match.index, match.index + 900);
+      const inserts = [...text.matchAll(/\.insert\(users\)/g)];
+      for (const [i, match] of inserts.entries()) {
+        const chain = text.slice(
+          match.index,
+          inserts[i + 1]?.index ?? text.length,
+        );
         const conflict = chain.indexOf("onConflictDoUpdate");
         if (conflict < 0) {
           continue;
@@ -104,7 +108,11 @@ describe("every writer of a users row sets updated_at (ADR-0050)", () => {
     const offenders: string[] = [];
     for (const { path, text } of await sources()) {
       for (const match of text.matchAll(/update\s+users\b/gi)) {
-        const statement = text.slice(match.index, match.index + 900);
+        const end = text.slice(match.index).search(/[;`]/);
+        const statement = text.slice(
+          match.index,
+          end < 0 ? text.length : match.index + end,
+        );
         // The assignment, not the mention — see ADR-0050.
         if (!/updated_at\s*=/.test(statement)) {
           offenders.push(`${path} @ ${String(match.index)}`);

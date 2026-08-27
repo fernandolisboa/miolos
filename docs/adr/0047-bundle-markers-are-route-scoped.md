@@ -88,3 +88,9 @@ is the defect, not an attribution nuance.
 - The library-side marker pins (`packages/games/test/*/bundle-markers.test.ts`)
   are unchanged in their assertions: markers must keep existing on both
   sides of every grep.
+- `packages/games/test/termo/bundle-markers.test.ts` reads
+  `packages/core/src/medals/definitions.ts` by relative path to pin the
+  `/*#__PURE__*/` on `MEDAL_IDS`. It lives in `packages/games` because that is
+  the only package whose test tsconfig carries Node types — `packages/core`
+  sets `types: []`. The pin belongs with the other marker pins; do not "tidy"
+  it back into `packages/core`, which cannot read a file.
