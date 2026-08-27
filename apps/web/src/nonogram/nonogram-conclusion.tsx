@@ -7,13 +7,8 @@ import type { ConclusionPicture } from "../play/types";
 import { useRecordSnapshot } from "../play/use-record-snapshot";
 
 /**
- * The Nonogram's own conclusion mount (plan 020 §13.3, ADR-0034): the shared
+ * The Nonogram's own conclusion mount (ADR-0034): the shared
  * `<ConclusionView/>` plus the one thing that is not game-blind — the picture.
- *
- * It exists rather than a `record.game === "nonogram"` branch inside
- * `conclusion-view.tsx` because ADR-0029 decision 2 puts JSX composition per
- * game and keeps the shared conclusion game-blind. Narrowing a record to one
- * game is per-game code and belongs here.
  *
  * Both mounts land on it. `/nonogram` swaps it in place with `result` and a
  * `picture` computed from the live play state; `/nonogram/concluido` renders
@@ -22,23 +17,10 @@ import { useRecordSnapshot } from "../play/use-record-snapshot";
  * server-computed picture would put a derived solution in its RSC payload
  * (ADR-0004, ADR-0033, ADR-0034 decision 3).
  *
- * THE PICTURE IS NAMED SINCE #64 (ADR-0070, superseding ADR-0033 decision
- * 1's name clause), and the name arrives over the WIRE, never from the
- * bundle: `useServerDayClaim` reads the motif name off this user's own
- * completed day claim. The motif tables stay server-side, which is why the
- * bundle grep in `scripts/route-client-js.mjs` is still armed.
- *
- * Its absence is the ordinary degraded case, not a failure — an offline
- * finish, any pre-sync paint, a deploy-skewed old payload, a killed daily
- * row. In every one of those the card renders exactly what shipped before
- * #64: the composed DESCRIPTION, and no caption. Nothing is ever fabricated.
- *
  * ALL THE NONOGRAM COPY IS COMPOSED HERE and handed down as plain strings —
- * the lead, the name and the named accessible label alike. `ConclusionView`
- * is game-blind and imports no `messages.games.nonogram.*`; Termo's `answer`
- * prop is the shipped precedent for the shape. `ConclusionPicture` is plain
- * data across the RSC boundary and a function member would be an HTTP 500
- * nothing but `route-ssr.test.tsx` can see.
+ * the lead, the name and the named accessible label alike. `ConclusionPicture`
+ * is plain data across the RSC boundary and a function member would be an HTTP
+ * 500 nothing but `route-ssr.test.tsx` can see.
  */
 export function NonogramConclusion({
   date,

@@ -149,16 +149,15 @@ the loss.
    decisions 3 and 4 make all three of the shipped stamp's slots wrong for
    this game — the clock is not rendered and "sem dicas" would present as a
    virtue something that was never possible — and hand the mechanism here.
-   The mechanism is decision 1's prop, not a second one: Termo passes
-   `{ state: "result", label: "Concluído", detail: "4/6", aria }`
-   (`apps/web/src/termo/termo-conclusion.tsx:116-128`), and the win settles
+   The mechanism is decision 1's prop, not a second one: Termo passes `{
+   state: "result", label: "Concluído", detail: "4/6", aria }` (`outcomeFor`
+   in `apps/web/src/termo/termo-conclusion.tsx`), and the win settles
    because `state` is `"result"` — the same one field the loss branches on
    (decision 1, as corrected). The `result` branch renders `label`/`detail`
-   in place of the shipped label/time/hints triple.
-   `ConclusionResult` is **still passed**,
-   because the `result` branch gates on it; it carries the real recorded
-   `elapsedMs` and `hintsUsed: 0`, and neither is rendered. Three games pass
-   nothing and are byte-identical.
+   in place of the shipped label/time/hints triple. `ConclusionResult` is
+   **still passed**, because the `result` branch gates on it; it carries the
+   real recorded `elapsedMs` and `hintsUsed: 0`, and neither is rendered.
+   Three games pass nothing and are byte-identical.
 
 6. **The canonical accented spelling renders in the conclusion, on BOTH
    outcomes**, as a second optional plain-data prop:
