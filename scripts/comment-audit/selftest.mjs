@@ -757,7 +757,7 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   );
 
   // A list item's continuation lines are one paragraph with it, or the scan
-  // stops dead at every bullet — 751 hits across the repo. The NESTED bullet
+  // stops dead at every bullet — 694 hits across the repo. The NESTED bullet
   // is the case that binds `MARKER_RE`: it sits at the continuation indent, so
   // nothing but the marker test can end the run.
   check(

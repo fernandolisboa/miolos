@@ -176,21 +176,27 @@ declares is the `N new` column. Hits are keyed by their own text plus the word
 below, so a line that merely *moved* is not new; a line that was **re-wrapped**
 is, which is the point.
 
-Every absolute figure in this section is one of these two commands, run on a
-clean checkout of the ref it names:
+The three corpus figures above — **761 files, 1,588 hits, 146 orphans** — are
+this command against `REF=49e5e7e`, the commit `main` held when they were
+taken. It reads the corpus out of the ref rather than the working tree, so it
+reproduces on any later checkout:
 
 ```sh
-node scripts/comment-audit/wrap.mjs $(git ls-files -- '*.ts' '*.tsx' '*.mjs' '*.md' '*.css') |
-  awk '$2 == "new" { t += $3 } END { print t }'
-
-node --input-type=module -e 'import fs from "node:fs";
+REF=49e5e7e node --input-type=module -e '
   import { execFileSync } from "node:child_process";
   const { ragged } = await import("./scripts/comment-audit/wrap.mjs");
-  const files = execFileSync("git", ["ls-files"], { encoding: "utf8" })
+  const ref = process.env.REF ?? "HEAD";
+  const show = (a) => execFileSync("git", a, { encoding: "utf8", maxBuffer: 1 << 28 });
+  const files = show(["ls-tree", "-r", "--name-only", ref])
     .trim().split("\n").filter((f) => /\.(ts|tsx|mjs|md|css)$/.test(f));
-  const hits = files.flatMap((f) => ragged(f, fs.readFileSync(f, "utf8")));
-  console.log(hits.length, hits.filter((h) => h.kind === "orphan").length);'
+  const hits = files.flatMap((f) => ragged(f, show(["show", `${ref}:${f}`])));
+  console.log(files.length, hits.length, hits.filter((h) => h.kind === "orphan").length);'
 ```
+
+The `apps/web/src` pair below is the same command with `.filter((f) =>
+f.startsWith("apps/web/src/"))` added, the `.css` pair with
+`.endsWith(".css")`, and ADR-0053's pair is `ragged()` against that one file,
+once as shipped and once with the interior threshold replaced by `WIDTH`.
 
 Two thresholds, because they answer different questions:
 
