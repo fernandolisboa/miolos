@@ -25,13 +25,18 @@ const DIRECTIVE_RES = DIRECTIVES.map(([, re]) => new RegExp(re.source));
 const GUTTER_RE = /^([ \t]*(?:\/\/+|\/\*+|\*)[ \t]?)/;
 
 const FENCE_RE = /^(?:```|~~~)/;
-// A run of rule characters is a DIVIDER wherever it sits on the line, not only
-// at the end of one: `/* ——— day page ——————` is a section banner in three of
-// this repo's sheets, and gluing it to the prose beneath cost four false hits.
-// `COLUMNS_RE` is the other half — three or more spaces INSIDE a line is a
-// space-aligned table, which is exactly what `proseLines` says never to ask a
-// reviewer to unwrap.
-const BLOCKISH_RE = /^(?:#{1,6}\s|\||>|<|\[[^\]]+\]:|[-—─=_*·]{3,})/;
+// A divider is a rule line OR a banner — a rule run, a title, and a rule run
+// again, which is how three of this repo's sheets open a section (`/* ——— day
+// page ——————`) and which cost four false hits when it was glued to the prose
+// beneath. A rule run at the START ALONE is not enough: `***` and `___` are
+// markdown emphasis, and an unanchored class dropped four real paragraphs in
+// `docs/adr/**` — the tool's own primary corpus — out of the prose set.
+// `COLUMNS_RE` is the other half: three or more spaces INSIDE a line is a
+// space-aligned table, which `proseLines` says never to unwrap.
+const RULE = "[-—─=·]";
+const BLOCKISH_RE = new RegExp(
+  `^(?:#{1,6}\\s|\\||>|<|\\[[^\\]]+\\]:|[-—─=·*_]{3,}\\s*$|${RULE}{3,}.*${RULE}{3,}\\s*$)`,
+);
 const COLUMNS_RE = /\S[ \t]{3,}\S/;
 const MARKER_RE = /^(?:[-*+]|\d+[.)])[ \t]+/;
 
@@ -156,7 +161,7 @@ export function ragged(file, text) {
     }
     // The paragraph's OWN fill is the column, not 80. Prose here is wrapped
     // anywhere between 68 and 80, and against a fixed 80 a correctly wrapped
-    // paragraph is flagged on nearly every line — ADR-0053 scores 463 that way
+    // paragraph is flagged on nearly every line — ADR-0053 scores 464 that way
     // against 53 here, which is how a check gets ignored. The widest line the
     // paragraph already has is a column it demonstrably reached, so a greedily
     // wrapped paragraph scores zero against it by construction, whatever the
@@ -164,10 +169,10 @@ export function ragged(file, text) {
     // one unbreakable URL would otherwise hand the whole paragraph back to the
     // fixed-80 regime this rejects.
     //
-    // `fills` is empty only when EVERY interior line is already over 80, and
-    // then every `would` is over 80 too, so no threshold can produce a hit and
-    // the fallback is unreachable by construction. It is written rather than
-    // left to `Math.max()`'s `-Infinity`.
+    // `fills` is empty when EVERY interior line is already over 80, and the
+    // fallback is what keeps that paragraph quiet: `col` must not become the
+    // width of an over-long line, or every line in the paragraph could take
+    // the one below it. It is a real branch, reached on this repo's corpus.
     const fills = lines.slice(i, end - 1).filter((l) => l.width <= WIDTH);
     const col =
       fills.length === 0 ? WIDTH : Math.max(...fills.map((l) => l.width));

@@ -170,18 +170,34 @@ it was a tool; it found four defects and **every one was introduced by a fix
 commit**, which is the class reviewers word-diff least.
 
 It is **delta-only**. Prose here was never greedily wrapped — the 761 tracked
-`.ts`/`.tsx`/`.mjs`/`.md`/`.css` files score 1,586 hits as of `main`, 146 of
+`.ts`/`.tsx`/`.mjs`/`.md`/`.css` files score 1,588 hits as of `main`, 146 of
 them orphans — so the absolute total is context, and the figure a PR body
 declares is the `N new` column. Hits are keyed by their own text plus the word
 below, so a line that merely *moved* is not new; a line that was **re-wrapped**
 is, which is the point.
+
+Every absolute figure in this section is one of these two commands, run on a
+clean checkout of the ref it names:
+
+```sh
+node scripts/comment-audit/wrap.mjs $(git ls-files -- '*.ts' '*.tsx' '*.mjs' '*.md' '*.css') |
+  awk '$2 == "new" { t += $3 } END { print t }'
+
+node --input-type=module -e 'import fs from "node:fs";
+  import { execFileSync } from "node:child_process";
+  const { ragged } = await import("./scripts/comment-audit/wrap.mjs");
+  const files = execFileSync("git", ["ls-files"], { encoding: "utf8" })
+    .trim().split("\n").filter((f) => /\.(ts|tsx|mjs|md|css)$/.test(f));
+  const hits = files.flatMap((f) => ragged(f, fs.readFileSync(f, "utf8")));
+  console.log(hits.length, hits.filter((h) => h.kind === "orphan").length);'
+```
 
 Two thresholds, because they answer different questions:
 
 - an **interior** line is judged against its own paragraph's widest line,
   ignoring any line already over 80. A greedily wrapped paragraph scores zero
   against that by construction, whatever column the author actually used —
-  ADR-0053 scores **53** here against **463** at a fixed 80, and at 463 nobody
+  ADR-0053 scores **53** here against **464** at a fixed 80, and at 464 nobody
   reads the output. Excluding the over-long lines matters: one unbreakable URL
   would otherwise hand its whole paragraph back to the fixed-80 regime;
 - an **orphan** — a last line holding one word — is judged against 80, because
@@ -211,6 +227,13 @@ to **56** across 25 sheets.
   for. `.css` is read through the same TypeScript parser as `count.mjs`; no
   tracked sheet holds one today, and on a sheet that did, the `//` the parser
   invents sits on a line that also holds code, which is not prose either way.
+- **A line whose neighbours are already over 80.** When every interior line of
+  a paragraph is wider than 80 the column falls back to 80, and nothing in that
+  paragraph can score — the alternative is a column read off an unbreakable
+  URL, which would flag every line under it.
+- **Prose that quotes spacing.** `\S[ \t]{3,}\S` reads three interior spaces as
+  a table column, which is right 43 times in the tracked corpus and wrong about
+  six, all of them sentences quoting an indent literal.
 - **Whether a re-wrap was CORRECT.** A greedily re-wrapped paragraph scores
   zero, and so does a paragraph whose sentences were reworded and then wrapped
   greedily. That is `excision.mjs`'s question, not this one.
@@ -224,6 +247,6 @@ to **56** across 25 sheets.
 Nothing here is wired into CI or pre-commit. These generate the numbers a PR
 body states, so that those numbers are re-runnable instead of typed — #205's
 Rule P. `selftest.mjs` is Rule M's second method for the counters themselves;
-run it after touching anything in this directory. It is **120 assertions**, and
+run it after touching anything in this directory. It is **131 assertions**, and
 every one is a case this campaign already got wrong or a review round already
 caught.

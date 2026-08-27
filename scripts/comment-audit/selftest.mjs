@@ -785,10 +785,10 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
 
   // THE BOUNDARY, both sides of it. The `+ 1` in `width + 1 + word.length` is
   // the space the word would need, and every other fixture here clears the
-  // threshold by several columns — so dropping it left all of them green while
-  // the corpus went 1602 -> 3454. These two sit ON the boundary: 66 + 1 + 6 is
-  // 73 against a column of 72 and must be clean, 65 + 1 + 6 is 72 and must be
-  // a hit.
+  // threshold by several columns — so dropping it left all of them green and
+  // the tracked corpus 1,840 hits heavier. These two sit ON the boundary: 66 +
+  // 1 + 6 is 73 against a column of 72 and must be clean, 65 + 1 + 6 is 72 and
+  // must be a hit.
   const boundary = (bWidth) =>
     `// ${"z".repeat(69)}\n// ${"x".repeat(bWidth - 3)}\n// ${"y".repeat(6)} tail\nconst a = 1;\n`;
   check(
@@ -803,7 +803,7 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   );
 
   // The `*` leg of `GUTTER_RE` carries the whole JSDoc gutter, which is the
-  // dominant multi-line style in `.ts` — 314 hits. Without it these lines fall
+  // dominant multi-line style in `.ts` — 309 hits. Without it these lines fall
   // to the whitespace fallback and `MARKER_RE` reads `* text` as a bullet, so
   // every JSDoc paragraph collapses to one line and scores nothing.
   check(
@@ -837,6 +837,20 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [],
   );
 
+  // A rule run at the START of a line is not a divider on its own: `***` and
+  // `___` are markdown emphasis, and an unanchored class dropped four real
+  // paragraphs out of `docs/adr/**` — the corpus this tool exists for.
+  check(
+    "an emphasis opener is prose, not a divider",
+    kinds("w-emph.md", `***${words(8)}***\nshort\n`),
+    [["orphan", 1, "short"]],
+  );
+  check(
+    "a line that is only rule characters is a divider",
+    kinds("w-rule.md", `***\n${words(12)}\nshort\n`),
+    [["orphan", 2, "short"]],
+  );
+
   // Three of this repo's sheets open a section with a rule and then write
   // prose under it; four false hits came from reading the two as one
   // paragraph. A rule is a divider wherever it sits on the line.
@@ -857,6 +871,78 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
       `/* ${words(13)}\n   row     growth   margin\n   24px    +13px    0\n   20px    +9px     -2px\n*/\n.a { color: red; }\n`,
     ),
     [],
+  );
+
+  // A blockquote is not prose to re-wrap. Paired with the same text without
+  // the marker, so the `[]` is not green by construction.
+  check(
+    "a blockquote line is not prose",
+    kinds("w-quote.md", `> ${words(13)}\nshort\n`),
+    [],
+  );
+  check(
+    "...and the same text without the marker IS",
+    kinds("w-quote-control.md", `${words(13)}\nshort\n`),
+    [["orphan", 1, "short"]],
+  );
+
+  // `MARKER_RE`'s numbered-list leg, the same job its bullet leg does.
+  check(
+    "a nested numbered item at the continuation indent ends the paragraph",
+    kinds(
+      "w-numbered.md",
+      `1. ${words(14)}\n   short\n   2. ${words(14, "b")}\n`,
+    ),
+    [["orphan", 1, "short"]],
+  );
+
+  // `BLOCKISH_RE` is tested against the body with its indent STRIPPED: a
+  // heading under a bullet is still a heading.
+  check(
+    "an indented heading inside a list item is not prose",
+    kinds(
+      "w-indented-head.md",
+      `- ${words(14)}\n  short\n  ## a heading here\n`,
+    ),
+    [["orphan", 1, "short"]],
+  );
+
+  // `width` is the RENDERED width — gutter included. Drop the gutter and a
+  // deeply indented comment reads as 13 columns narrower than it prints. The
+  // pair is the point: at this indent the paragraph is over 80 and silent, and
+  // ten columns shallower the same text is an orphan.
+  check(
+    "a deep gutter counts toward the width",
+    kinds(
+      "w-deep.ts",
+      `          // ${words(14)}\n          // tail\nconst a = 1;\n`,
+    ),
+    [],
+  );
+  check(
+    "...and the same comment shallower is an orphan",
+    kinds("w-shallow.ts", `// ${words(14)}\n// tail\nconst a = 1;\n`),
+    [["orphan", 1, "tail"]],
+  );
+
+  // When EVERY interior line is already over 80 the fill falls back to 80, and
+  // that fallback is load-bearing UPWARD: without a cap, `col` becomes the
+  // over-long width and every line in the paragraph can take the one below it.
+  check(
+    "a paragraph whose interior is all over 80 is silent",
+    kinds(
+      "w-allover.ts",
+      `// ${"z".repeat(88)}\n// ${"y".repeat(88)}\n// tail\nconst a = 1;\n`,
+    ),
+    [],
+  );
+  check(
+    "...and the same shape inside 80 is not",
+    kinds(
+      "w-allunder.ts",
+      `// ${"z".repeat(70)}\n// ${"y".repeat(70)}\n// tail\nconst a = 1;\n`,
+    ),
+    [["orphan", 2, "tail"]],
   );
 
   // One unbreakable line must not hand the paragraph back to the fixed-80
@@ -936,6 +1022,24 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   check(
     "a second copy of a ragged pair the base ref has once is new",
     [twice.code, /^\s*1 new\s+2 total/m.test(twice.out)],
+    [1, true],
+  );
+
+  // A file the base ref does not hold has every hit read as new, and SAYS so
+  // — the suffix is what stops `N new` reading as a regression on a new file.
+  fs.writeFileSync(
+    path.join(repo, "fresh.ts"),
+    `// ${words(12)}\n// tail\nconst a = 1;\n`,
+  );
+  const brandNew = run([tool("wrap.mjs"), "fresh.ts"], repo);
+  check(
+    "a file absent on the base ref says so, and every hit reads as new",
+    [
+      brandNew.code,
+      /1 new\s+1 total\s+fresh\.ts\s+\(absent on main; every hit reads as new\)/.test(
+        brandNew.out,
+      ),
+    ],
     [1, true],
   );
 
