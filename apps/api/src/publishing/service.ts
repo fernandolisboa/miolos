@@ -376,7 +376,7 @@ export async function topUpTermoBuffer(
       const { index, draw } = drawUniformIndex(pool.length);
       const answer = pool[index];
       if (answer === undefined) {
-        throw new RangeError(`answer pool index ${String(index)} is empty`);
+        throw new RangeError(`answer list index ${String(index)} is empty`);
       }
 
       const content = termoDailyContentSchema.safeParse(answer);

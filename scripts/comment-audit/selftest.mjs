@@ -9,6 +9,7 @@ import {
   density,
   DIRECTIVES as BUDGET_DIRECTIVES,
   isGenerated,
+  trackedFiles,
 } from "./density.mjs";
 import { DIRECTIVES, recordsRe } from "./records.mjs";
 import { ragged } from "./wrap.mjs";
@@ -1003,14 +1004,7 @@ check(
   // `density.mjs` exits 1 when a file is over budget, and `execFileSync`
   // turns that into a throw — which would take the whole selftest down
   // instead of failing one check. `run` reads the output either way.
-  const tracked = execFileSync(
-    "sh",
-    ["-c", "git ls-files '*.ts' '*.tsx' '*.mjs' | grep -v '^.claude/skills/'"],
-    { encoding: "utf8" },
-  )
-    .split("\n")
-    .filter(Boolean);
-  const skipped = run([tool("density.mjs"), ...tracked])
+  const skipped = run([tool("density.mjs"), ...trackedFiles()])
     .out.split("\n")
     .filter((l) => l.includes("(generated;"))
     .map((l) =>

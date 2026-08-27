@@ -285,11 +285,17 @@ closing them took the `.css` corpus to **56** across 25 sheets.
   with itself and scores zero. Only a line that is short *relative to its own
   neighbours* is a hit.
 
-## Not a gate
+## What is a gate here, and what is not
 
-Nothing here is wired into CI or pre-commit. These generate the numbers a PR
-body states, so that those numbers are re-runnable instead of typed — #205's
-Rule P. `selftest.mjs` is Rule M's second method for the counters themselves;
-run it after touching anything in this directory. It is **131 assertions**, and
+`density.mjs` IS a gate: `pnpm comments` runs `selftest.mjs` and then the
+budget, in `.husky/pre-commit` and in `.github/workflows/ci.yml`. The
+selftest is inside the gate deliberately — a budget whose own correctness
+harness runs nowhere is a budget a tool edit can silently disable, which is
+exactly what a review round caught here.
+
+The rest of this directory is NOT wired to anything. `count.mjs`,
+`citations.mjs`, `markers.mjs`, `verbatim.mjs`, `excision.mjs`,
+`shingle.mjs` and `hash.mjs` generate the numbers a PR body cites; run them
+by hand.
 every one is a case this campaign already got wrong or a review round already
 caught.
