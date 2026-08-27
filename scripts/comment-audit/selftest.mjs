@@ -113,9 +113,27 @@ check(
 );
 
 check(
-  "a trailing brace with a trailing comment stays a code line",
-  density(write("brace.ts", "const a = {\n  b: 1,\n}; // trailing\n")).budgeted,
+  "a bare `}` with a trailing comment stays a code line",
+  density(write("brace.ts", "export function f() {\n  return 1;\n} // why\n"))
+    .budgeted,
   0,
+);
+
+check(
+  "a bare `{` with a trailing comment stays a code line",
+  density(write("brace2.ts", "{ // scope\n  const a = 1;\n}\n")).budgeted,
+  0,
+);
+
+check(
+  "a JSX comment is budgeted however it is spaced inside the braces",
+  density(
+    write(
+      "jsx-spaced.tsx",
+      "export const A = () => (\n  <div>\n    { /* one */}\n    {/* two */ }\n    { /* three */ }\n  </div>\n);\n",
+    ),
+  ).budgeted,
+  3,
 );
 
 check(
@@ -228,12 +246,23 @@ check(
     ],
     [true, true, true],
   );
+  const raw = execFileSync(
+    "git",
+    ["ls-files", "-z", "*.ts", "*.tsx", "*.mts", "*.cts", "*.mjs", "*.cjs"],
+    { encoding: "utf8", cwd: repoRoot },
+  )
+    .split("\0")
+    .filter(Boolean);
+  check(
+    "the corpus is every tracked source file minus vendored skills",
+    files.length,
+    raw.filter((f) => !f.startsWith(".claude/skills/")).length,
+  );
   check(
     "vendored skills are the only exclusion",
     files.filter((f) => f.startsWith(".claude/skills/")).length,
     0,
   );
-  check("the corpus is not a rounding error", files.length > 400, true);
 }
 
 for (const [label, , example] of DIRECTIVES) {
@@ -336,7 +365,23 @@ check(
 
 for (const t of ["count", "density"]) {
   check(`${t}.mjs refuses an empty file list`, run([tool(`${t}.mjs`)]).code, 2);
+  check(
+    `${t}.mjs exits 2 when every file is absent`,
+    run([tool(`${t}.mjs`), "does-not-exist.ts"]).code,
+    2,
+  );
+  check(
+    `${t}.mjs rejects an unknown option rather than reading it as a path`,
+    run([tool(`${t}.mjs`), "--base", "main", densityFixture]).code,
+    2,
+  );
 }
+check(
+  "density.mjs exits 2 when every file is skipped as generated",
+  run([tool("density.mjs"), "apps/api/next-env.d.ts", "apps/web/next-env.d.ts"])
+    .code,
+  2,
+);
 
 console.log(
   failed === 0 ? "\nall checks passed" : `\n${failed} check(s) FAILED`,

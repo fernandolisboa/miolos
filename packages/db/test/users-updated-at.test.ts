@@ -32,6 +32,29 @@ function balanced(text: string, open: number): string {
   return text.slice(open);
 }
 
+// The chain, not a fixed window: a truncated scan reports no offender, and a
+// scan running to EOF grades the next statement's conflict clause as this one's.
+function statement(text: string, start: number): string {
+  let depth = 0;
+  let quote: string | undefined;
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote !== undefined) {
+      if (ch === "\\") i += 1;
+      else if (ch === quote) quote = undefined;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "(" || ch === "{" || ch === "[") depth += 1;
+    if (ch === ")" || ch === "}" || ch === "]") depth -= 1;
+    if (ch === ";" && depth <= 0) return text.slice(start, i);
+  }
+  return text.slice(start);
+}
+
 async function sources(): Promise<{ path: string; text: string }[]> {
   const found: { path: string; text: string }[] = [];
   const walk = async (dir: string): Promise<void> => {
@@ -85,12 +108,8 @@ describe("every writer of a users row sets updated_at (ADR-0050)", () => {
   it("an upsert onto users sets updatedAt in its DO UPDATE branch", async () => {
     const offenders: string[] = [];
     for (const { path, text } of await sources()) {
-      const inserts = [...text.matchAll(/\.insert\(users\)/g)];
-      for (const [i, match] of inserts.entries()) {
-        const chain = text.slice(
-          match.index,
-          inserts[i + 1]?.index ?? text.length,
-        );
+      for (const match of text.matchAll(/\.insert\(users\)/g)) {
+        const chain = statement(text, match.index);
         const conflict = chain.indexOf("onConflictDoUpdate");
         if (conflict < 0) {
           continue;
@@ -108,13 +127,8 @@ describe("every writer of a users row sets updated_at (ADR-0050)", () => {
     const offenders: string[] = [];
     for (const { path, text } of await sources()) {
       for (const match of text.matchAll(/update\s+users\b/gi)) {
-        const end = text.slice(match.index).search(/[;`]/);
-        const statement = text.slice(
-          match.index,
-          end < 0 ? text.length : match.index + end,
-        );
         // The assignment, not the mention — see ADR-0050.
-        if (!/updated_at\s*=/.test(statement)) {
+        if (!/updated_at\s*=/.test(statement(text, match.index))) {
           offenders.push(`${path} @ ${String(match.index)}`);
         }
       }

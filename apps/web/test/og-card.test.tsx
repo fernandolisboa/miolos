@@ -77,7 +77,7 @@ describe("the card's accent literals", () => {
 
   it("scales its lengths 3x off tokens.css, so a token edit cannot fork the card", () => {
     const css = stylesheet("../../packages/ui/tokens.css");
-    const source = cardSource;
+    const source = code(cardSource);
     const tokenPx = (name: string): number => {
       const match = new RegExp(`${name}\\s*:\\s*(\\d+)px\\s*;`).exec(css);
       expect(match, `${name} is missing from tokens.css`).not.toBeNull();

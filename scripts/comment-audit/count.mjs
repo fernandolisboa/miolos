@@ -4,6 +4,11 @@ import { pathToFileURL } from "node:url";
 
 export function parseArgs(argv, name) {
   const files = argv.slice(2).filter((a) => a !== "");
+  const flags = files.filter((a) => a.startsWith("--"));
+  if (flags.length > 0) {
+    console.error(`${name}: unknown option ${flags[0]}`);
+    process.exit(2);
+  }
   if (files.length === 0) {
     console.error(
       `usage: node scripts/comment-audit/${name} <file>...\n` +
@@ -52,13 +57,18 @@ export function maskOf(text, ranges) {
   return mask;
 }
 
-// A JSX comment line is `{/* … */}`: the braces sit OUTSIDE the comment range,
-// so counting them as code would hide every line of JSX prose from the budget.
-// A brace only passes when it abuts the comment, which keeps `} // trailing`
-// a code line — see ADR-0075.
+// A JSX comment line is `{/* … */}` and the braces sit OUTSIDE the comment
+// range, so reading them as code hides every line of JSX prose from the budget.
+// A brace passes only when a BLOCK comment opens or closes beside it, spaces
+// ignored — so `{ // scope` and `} // trailing` stay code lines. See ADR-0075.
 export function classifyLine(text, mask, s, e) {
   let hasComment = false;
   let hasCode = false;
+  const skipSpace = (j, step) => {
+    let k = j + step;
+    while (k >= s && k < e && text[k].trim() === "") k += step;
+    return k;
+  };
   for (let j = s; j < e; j++) {
     const c = text[j];
     if (c.trim() === "") continue;
@@ -66,8 +76,14 @@ export function classifyLine(text, mask, s, e) {
       hasComment = true;
       continue;
     }
-    if (c === "{" && mask[j + 1]) continue;
-    if (c === "}" && j > s && mask[j - 1]) continue;
+    if (c === "{") {
+      const k = skipSpace(j, 1);
+      if (k < e && mask[k] && text.startsWith("/*", k)) continue;
+    }
+    if (c === "}") {
+      const k = skipSpace(j, -1);
+      if (k >= s && mask[k] && text.slice(k - 1, k + 1) === "*/") continue;
+    }
     hasCode = true;
   }
   return { hasComment, hasCode };

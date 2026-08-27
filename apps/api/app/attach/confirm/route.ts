@@ -156,9 +156,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     await revokeSessionsForUser(db, resolved.winnerId);
   }
 
-  // Unreachable by construction, and kept: the concurrent-window backstop
-  // required by ADR-0050 decision 6. Deleting it as dead code leaves that
-  // window to the unique index, which answers a different conflict.
+  // Unreachable by construction, and kept: the concurrent-window backstop —
+  // see ADR-0050 decision 6. Deleting it as dead code leaves that window to
+  // the unique index, which answers `confirm-conflict`, a different error.
   const winnerAccount = await getAttachAccountState(db, resolved.winnerId);
   if (
     winnerAccount &&
