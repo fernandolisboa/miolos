@@ -1,25 +1,5 @@
 "use client";
 
-/**
- * The attach prompt card (#21, D15, ADR-0050 decision 9) — the hub's
- * fourth client fragment (of five since #35 added `hub-onboarding.tsx`),
- * beside `hub-streak.tsx` and for the same mechanical reason (CSS Modules
- * hash per file). Quiet, in-flow paper after the game cards: never a modal
- * takeover, never floating, never blocking (PRODUCT.md principle 4 —
- * this comment said "principle 3" until #35, and the citation was simply
- * wrong; "nothing nags").
- *
- * It renders `null` until the server says `eligible: true`, so the server
- * render and first paint are unchanged (T-WEB-S127's no-fetch-at-render
- * contract intact) and `impeccable detect`'s clean profile sees the hub
- * without it — the hub-streak zero-state precedent. Eligibility, the
- * threshold, the dismissal and the transport switch are all server-owned
- * (GET /attach/state): this island is a dumb renderer.
- *
- * These are the repo's first form controls, styled locally in the module
- * with tokens.css values — no promotion to packages/ui (no second
- * consumer exists; CLAUDE.md's primitive rule).
- */
 import { attachRequestSchema } from "@miolos/core";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
@@ -46,10 +26,6 @@ export function HubAttach() {
   const [reminder, setReminder] = useState(false);
   const [error, setError] = useState<AttachError | null>(null);
 
-  // Absent until the server says otherwise, and gone forever on either
-  // terminal act — the server stamps the dismissal, so no device storage
-  // is involved anywhere in the attach modules (D9; T-WEB-S136 greps
-  // these sources for the browser storage API by name).
   if (state?.eligible !== true || dismissed) {
     return null;
   }
@@ -61,9 +37,7 @@ export function HubAttach() {
 
   async function submit(event: FormEvent): Promise<void> {
     event.preventDefault();
-    // The same boundary schema the api parses: normalization (trim +
-    // lowercase) happens HERE too, so the sent-state line shows exactly
-    // the address the server saw.
+
     const parsed = attachRequestSchema.safeParse({
       email,
       recoveryConsent: recovery,
@@ -137,8 +111,6 @@ export function HubAttach() {
               <span>{messages.attach.recoveryLabel}</span>
             </label>
 
-            {/* Unchecked by DEFAULT and structurally so (AC 3): only an
-                explicit check ever sends `true`. */}
             <label className={styles.consent} htmlFor="attach-reminder">
               <input
                 id="attach-reminder"

@@ -4,7 +4,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { count, commentRanges } from "./count.mjs";
 import { countCss } from "./css-count.mjs";
-import { density } from "./density.mjs";
+import { density, isGenerated } from "./density.mjs";
 import { DIRECTIVES, recordsRe } from "./records.mjs";
 import { ragged } from "./wrap.mjs";
 import { pathToFileURL } from "node:url";
@@ -1110,6 +1110,33 @@ check(
   "the same file under a loose budget exits 0",
   run([tool("density.mjs"), "--max", "50", densityFixture]).code,
   0,
+);
+// A generated file's header is its generator's to write. Both spellings this
+// repo actually ships: Next rewrites `next-env.d.ts`, and the termo word list
+// is rendered from `content/termo`.
+check(
+  "a generated header is recognised (next-env.d.ts)",
+  isGenerated(
+    '/// <reference types="next" />\n\n// NOTE: This file should not be edited\n',
+  ),
+  true,
+);
+check(
+  "a generated header is recognised (rendered word list)",
+  isGenerated("// GENERATED FILE - do not edit.\nexport const A = 1;\n"),
+  true,
+);
+check(
+  "ordinary prose is not mistaken for a generated header",
+  isGenerated(
+    "// The worker bound lives once, at the repo root.\nexport const a = 1;\n",
+  ),
+  false,
+);
+check(
+  "a generated marker far down the file does not exempt it",
+  isGenerated("\n".repeat(12) + "// @generated\n"),
+  false,
 );
 check(
   "a non-numeric --max exits 2",
