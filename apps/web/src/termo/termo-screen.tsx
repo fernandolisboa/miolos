@@ -45,6 +45,11 @@ const TermoConclusion = resilientConclusion<
  * shipped games: the word is derivable from nothing on the client, so a
  * server-computed reveal would be the only channel and the leak would be
  * total (ADR-0004, ADR-0040).
+ *
+ * The prop is `DailyTermoResponse`, never the union: a per-game component
+ * that took `DailyPuzzleResponse` and narrowed internally would carry a
+ * branch that cannot happen, which is the branch the narrowing exists to
+ * delete.
  */
 export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
   // The server's claim about this game (#142, ADR-0065), hoisted here — the
@@ -84,6 +89,11 @@ export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
     return <DailyUnavailable copy={messages.games.termo.play.unavailable} />;
   }
 
+  // The record has not been read yet, so NOTHING derived from it may paint.
+  // Without this gate, reloading /termo on a day the player already finished
+  // renders the full play screen — their guesses wiped back to an empty
+  // board, six turns apparently unspent — until hydration swaps in the
+  // conclusion.
   if (!play.state.hydrated) {
     return <PlaySkeleton date={daily.date} />;
   }

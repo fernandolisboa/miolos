@@ -188,7 +188,8 @@ built on it.
   three existed, and nonogram takes `picture` alone (`NonogramScreen`, which
   composes it, and `NonogramConclusion`, which resolves it). No game carries
   another game's member. A second member is a claim about the *game's* shape,
-  and it has to be argued in the ADR that adds it, in those terms. "One per game" stays the number to beat.
+  and it has to be argued in the ADR that adds it, in those terms. "One per
+  game" stays the number to beat.
 - **(d) The reveal works offline, because the record is its source.** The
   client component that supplies the prop reads the local play record, so
   a player who finishes with no network still sees the picture, which is
