@@ -1,23 +1,5 @@
-/**
- * All user-facing copy lives here (ADR-0013, ADR-0018): components never
- * carry string literals. Pure values and pure value-returning functions.
- *
- * SHAPE. Shared chrome sits at the top level —
- * `brand`, `hoje`, `play`, `conclusion` — and everything a game owns sits
- * under `games.<game>.{name,kicker,description,play,conclusion}`. ADR-0018
- * makes `Messages` the migration contract, so the shape is a decision and
- * not a detail: a fourth top-level `sudoku:`/`conclusaoSudoku:` block would
- * have guaranteed four copies of the same play and conclusion chrome by #27.
- */
-
-// One product name, one source of truth. Hoje, /binairo
-// and the conclusion all render this same value; a second copy is how two
-// screens drift apart.
 const wordmark = "Miolos";
 
-// One back affordance, two shared screens, for the same reason `wordmark`
-// is hoisted. The arrow is copy, not decoration: it is what makes the label
-// read as a back affordance without an icon dependency.
 const back = "← Hoje";
 const backAria = "Voltar para Hoje";
 
@@ -39,9 +21,6 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
     value === null ? "vazia" : value === 1 ? "preenchida" : "marcada"
   }`;
 
-// An all-empty line's clue is `[]` and the UI renders "0" — the engine's own
-// contract (`NonogramClues` in `@miolos/games/nonogram`). The rail and its
-// label must agree, so both go through here.
 const runsText = (runs: readonly number[]) =>
   runs.length === 0 ? "0" : runs.join(", ");
 
@@ -51,15 +30,6 @@ const TERMO_TILE = {
   absent: "fora",
 } as const;
 
-// EVERY Termo aria string spells letters in LOWERCASE, and that is a decision
-// rather than an oversight. NVDA, JAWS and VoiceOver all announce the case of
-// a single uppercase character — "maiúsculo A", six times a row, thirty times
-// a game. The visual case is CSS's job and stays there: the tiles and the keys
-// both carry `text-transform: uppercase`, so nothing on screen changes.
-
-// The whole judged row as ONE sentence, composed here and never joined in a
-// component (ADR-0018). Five one-letter spans would otherwise concatenate to
-// "CAFES" with no states at all — ADR-0037 decision 3's "22223" defect.
 const termoRowAria = (
   row: number,
   max: number,
@@ -70,8 +40,6 @@ const termoRowAria = (
     .map((tile, index) => `${guess.charAt(index)} ${TERMO_TILE[tile]}`)
     .join(", ")}`;
 
-// The letters as separate words, so a reader SPELLS "c, a, f" rather than
-// pronouncing "caf". Used by the active and held rows.
 const termoLetters = (word: string) => word.split("").join(", ");
 
 export const messages = {
@@ -102,24 +70,7 @@ export const messages = {
       `${game} concluído em ${n} de 6 tentativas`,
     played,
     playedAria: (game: string) => `${game} jogado`,
-    /**
-     * The accessible name of a COMPLETED tile that publishes no duration —
-     * a won Termo, whose elapsed time includes every per-guess round trip
-     * and is therefore never rendered (ADR-0045 decision 4).
-     *
-     * A THIRD string rather than a reuse, and both reuses are wrong in
-     * opposite directions: `doneAria` requires an elapsed this entry does
-     * not have, and `playedAria` says *jogado* about a game the player won.
-     * ADR-0018 forbids composing the fallback in the component.
-     *
-     * IT SURVIVES #29 rather than retiring: `doneGuessesAria` above names
-     * the tile only once the server's guess count has LANDED and is about
-     * the tile's own day. While the stats fetch is unsettled, settled
-     * without a value, or answering for a different SP day (the DB clock
-     * and the web server can disagree across midnight), this string is the
-     * honest name — completed, with nothing false about a count the client
-     * does not hold.
-     */
+
     completedAria: (game: string) => `${game} concluído`,
     links: {
       archive: "Arquivo",
@@ -146,27 +97,15 @@ export const messages = {
     sync: {
       pending:
         "Resultado guardado neste aparelho — sincroniza quando a conexão voltar.",
-      // Not cosmetic: without it the "Concluído" stamp would stand while the
-      // server holds no completion, making the client's own verdict the
-      // user-visible authority (ADR-0004).
+
       rejected: "Não foi possível registrar este resultado no dia de hoje.",
     },
     dayCard: {
       title: "O dia até agora",
       missing: "falta",
-      /**
-       * A lost Termo is PLAYED, never completed (ADR-0008 decision 3,
-       * ADR-0044). Lowercase, because this is a tabular value slot beside a
-       * duration ("06:47" / "falta") and not a chip — the hub's `played`
-       * ("Jogado") is capitalised and that difference is deliberate.
-       */
+
       played: "jogado",
-      /**
-       * COMPLETED with no duration — a won Termo, whose elapsed time is
-       * meaningless for this game (ADR-0045 decision 4) and is therefore
-       * never published. Without this string the split guard in `DayChip`
-       * has nothing to print and a won Termo falls through to `falta`.
-       */
+
       done: "feito",
       games: {
         termo: "Termo",
@@ -177,7 +116,6 @@ export const messages = {
       },
     },
     streak: {
-      // CONTEXT.md's word — "sequência", never "dias seguidos".
       value: (count: number) => `${count === 1 ? "dia" : "dias"} de sequência`,
       maintained: "— mantida por hoje.",
       aria: (count: number) =>
@@ -222,12 +160,12 @@ export const messages = {
     rows: {
       best: "Seu melhor tempo",
       average: "Sua média (30 dias)",
-      solved: (name: string) => `${name}s resolvidos`, // F5:35 "Binairos resolvidos"
+      solved: (name: string) => `${name}s resolvidos`,
     },
     emptyValue: "—",
     histogram: {
-      labels: ["<4", "4–5", "5–6", "6–7", "7–9", ">9"], // minutes, F5's exact glyph set — VISUAL only
-      // Index-aligned with TIME_BUCKET_BOUNDS_MS.
+      labels: ["<4", "4–5", "5–6", "6–7", "7–9", ">9"],
+
       bucketNames: [
         "menos de 4 minutos",
         "entre 4 e 5 minutos",
@@ -247,13 +185,7 @@ export const messages = {
     },
     calendar: {
       title: "Calendário",
-      // "missed" means NO COMPLETION that day — which covers both a day never
-      // played and a day played-and-lost (a lost Termo colours no day, plan
-      // 033 D6), so the legend word must be honest for both. "perdido"
-      // (collides with the loss vocabulary — it would say "lost" over a day
-      // the player lost at Termo, meaning the opposite thing) and "não
-      // jogado" (false for a played-lost day) are both rejected. Fernando
-      // may adjust.
+
       legend: { onTime: "no dia", late: "mais tarde", missed: "sem conclusão" },
       dayAria: {
         onTime: (date: string) => `${date}: concluído no dia`,
@@ -326,10 +258,7 @@ export const messages = {
       stampLabel: "Arquivo",
       already: "Você já tinha concluído este dia — nada foi registrado agora.",
       late: "Resultado registrado — o arquivo não conta para a sua sequência.",
-      // NOT `messages.conclusion.sync.pending`: that string names
-      // connectivity, and the archive's own cause is the daily late-write
-      // ceiling answering 429 (ADR-0053 decision 13). This one is true of
-      // both, and it never claims a registration that did not happen.
+
       pending:
         "Resultado guardado neste aparelho — ainda não registrado. O envio se completa mais tarde.",
       rejected:
@@ -358,9 +287,7 @@ export const messages = {
   freePlay: {
     title: "Modo livre",
     lead: "Puzzles infinitos, gerados aqui no seu aparelho. Nada daqui conta para a sequência nem para as estatísticas.",
-    // The game screens' back affordance targets the index, not Hoje, so the
-    // shared `play.back` ("← Hoje") would lie about the destination. Same
-    // arrow-is-copy rule as the hoisted `back` above.
+
     back: "← Modo livre",
     backToIndexAria: "Voltar ao Modo livre",
     modeTag: "Modo livre",
@@ -384,18 +311,7 @@ export const messages = {
       again: "Mais um",
       backToIndex: "Voltar ao Modo livre",
       backHome: "Voltar para Hoje",
-      /**
-       * The painted picture's accessible name. NOT `games.nonogram.reveal.aria`:
-       * that string says "de hoje", which is daily language.
-       *
-       * FREE PLAY STAYS UNNAMED, PERMANENTLY, and #64 narrowed the rule
-       * rather than reversing it (ADR-0070): the DAILY conclusion now names
-       * its motif from the wire, because the server judged that one day for
-       * that one user. Free play generates infinitely, motifs recur, there
-       * is no day to judge and no server read to make — so ADR-0046
-       * consequence 1 and ADR-0047's "to generate and never to name" hold
-       * here exactly as written. The tables are still never bundled.
-       */
+
       pictureAria:
         "A figura revelada, formada pelas células preenchidas da sua grade.",
     },
@@ -471,11 +387,7 @@ export const messages = {
     failed: "Não foi possível confirmar agora. Tente de novo.",
     backHome: "Voltar para Hoje",
   },
-  /**
-   * The privacy policy (ADR-0012, ADR-0050 decision 12) — the largest
-   * single copy block in the app, and deliberately so: the page states
-   * EXACTLY what this release ships, so page and mechanism cannot drift.
-   */
+
   privacy: {
     title: "Política de Privacidade",
     intro:
@@ -486,43 +398,13 @@ export const messages = {
         "A conta anônima e o seu histórico de jogos — quais puzzles você concluiu e quando. É disso que a sequência é calculada. Puzzles antigos concluídos pelo arquivo são registrados do mesmo jeito, e ficam de fora da sequência.",
       email:
         "O seu e-mail, somente se você escolher vinculá-lo. Ninguém precisa vincular e-mail para jogar.",
-      // COMMAS, NOT EM DASHES, in the sentence below. `impeccable detect`
-      // reported `em-dash-overuse` (advisory) on this page at BOTH
-      // viewports the first time this line shipped: the block was at six
-      // and the two dashes here took the page to eight, which is the
-      // detector's saturation threshold. Em-dash saturation is a named AI
-      // cadence tell, and this is the one page whose whole value is
-      // reading as though a person wrote it. Anything added here counts
-      // against that budget.
-      //
-      // #33 (ADR-0069): the measurements are now recorded against the
-      // anonymous account and processed OUTSIDE Brazil, which is data
-      // about the user by this block's own criterion — the page states
-      // EXACTLY what this release ships, and deferring the line would be
-      // exactly that drift.
-      //
-      // THE LAST SENTENCE IS THE HONEST HALF, and it is why this line
-      // rather than the deletion section carries it: `POST /account/delete`
-      // is a `db.delete(users)` cascade over OUR tables and issues no
-      // PostHog deletion, so the immediate self-service erasure does not
-      // reach the provider's rows. Saying so here keeps the deletion
-      // section's "de uma vez" true of what it actually enumerates, and
-      // publishes the one path that does reach them. The residual and its
-      // owner are recorded in ADR-0069 decision 5 and in
-      // `docs/pending-fernando.md` (SOON), for #37's LGPD review
-      // (ADR-0012).
+
       telemetry:
         "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
-      // #30 (ADR-0052): a `medal_grants` row is operator-written data
-      // about the user, so the inventory names it the release it ships —
-      // the page states EXACTLY what this release ships (this block's own
-      // doc comment), and deferring the line would be exactly that drift.
+
       medals:
         "As medalhas: a maioria é calculada do seu histórico de jogos; algumas são concedidas manualmente pela equipe e ficam registradas na sua conta. Todas são apagadas junto com a conta.",
-      // #145 (ADR-0064): the push subscription is data about the user, so
-      // the inventory names it the release the table ships — the page
-      // states EXACTLY what this release ships (this block's own doc
-      // comment), and deferring the line would be exactly that drift.
+
       push: "O lembrete no navegador, somente se você ativar: guardamos o endereço técnico da inscrição e as chaves que o navegador gera, usados só para avisar quando a sua sequência estiver em risco. Para parar, revogue a permissão de notificações nas configurações do navegador — os avisos param na hora e a inscrição, que deixa de funcionar, é removida dos nossos registros. Excluir a conta apaga tudo.",
     },
     why: {
@@ -613,10 +495,7 @@ export const messages = {
       description: "Seis tentativas para a palavra do dia.",
       play: {
         title: "Termo",
-        // Every clause is a rule the engine actually enforces: WORD_LENGTH is
-        // 5, MAX_GUESSES is 6, `isValidGuess` runs against
-        // TERMO_VALIDATION_WORDS, and `normalizeWord` makes the input
-        // accent-free.
+
         rules:
           "Descubra a palavra de cinco letras em até seis tentativas. Digite sem acentos; cada tentativa precisa estar na lista de palavras aceitas.",
         progressLong: (used: number, max: number) =>
@@ -627,18 +506,12 @@ export const messages = {
         rowAria: termoRowAria,
         rowEmptyAria: (row: number, max: number) =>
           `tentativa ${row} de ${max}, vazia`,
-        // The ACTIVE row's name carries the DRAFT. Without the letters a
-        // screen reader gets nothing at all between the first keypress and
-        // `enviar`: the tiles are aria-hidden, and a changed `aria-label` on
-        // a non-live element is announced by no AT.
+
         rowActiveAria: (row: number, max: number, draft: string) =>
           draft === ""
             ? `tentativa ${row} de ${max}, sua vez`
             : `tentativa ${row} de ${max}, escrevendo: ${termoLetters(draft)}`,
-        // The HELD row (ADR-0039 consequence (g)). "aguardando" appears
-        // exactly once in the whole product, here — it is never a visible
-        // label, because the notice line already says the same thing in the
-        // same tick.
+
         rowHeldAria: (row: number, max: number, guess: string) =>
           `tentativa ${row} de ${max}: ${termoLetters(guess)}, aguardando resposta`,
 
@@ -647,11 +520,6 @@ export const messages = {
         letterErasedAria: (letter: string, filled: number, length: number) =>
           `${letter} apagada, ${filled} de ${length}`,
 
-        // AC 3, VERBATIM and lowercase — the issue quotes it that way inside
-        // quotes, so this one string does not take the sentence register the
-        // two below do. The same string is the local rejection's line AND the
-        // answer to a 422 `invalid-guess`: both mean the same thing to the
-        // player.
         notInList: "não está na lista",
         offline: "Sem conexão — a tentativa vai assim que a conexão voltar.",
         failed: "Não foi possível enviar a tentativa.",
@@ -663,7 +531,7 @@ export const messages = {
           erase: "apagar",
           enterAria: "enviar a tentativa",
           eraseAria: "apagar a última letra",
-          // 26 letter keys: ONE composer, never 26 literals.
+
           letterAria: (letter: string) => `letra ${letter}`,
           letterStateAria: (
             letter: string,
@@ -694,23 +562,11 @@ export const messages = {
           `Termo concluído em ${used} de ${max} tentativas.`,
         lostLabel: "Jogado",
         lostDetail: (max: number) => `X/${max}`,
-        /**
-         * ONE RULE for the whole bundle: a composer takes its numbers and
-         * renders DIGITS; it never spells one in words and never branches on a
-         * value it was handed. `max === 6 ? "seis" : String(max)` would be a
-         * runtime branch on a compile-time constant whose false arm is
-         * unreachable and untestable. Screen readers read "6" as "seis" in
-         * pt-BR, so nothing is lost, and `progressLong` sets the precedent.
-         */
+
         lostAria: (max: number) =>
           `Termo jogado: as ${max} tentativas acabaram sem acerto.`,
       },
-      /**
-       * The day's word in its canonical accented spelling (ADR-0043
-       * decision 6), rendered on BOTH outcomes. On a win it is not redundant:
-       * the player typed the word accent-free and the accents are the thing
-       * they have not seen.
-       */
+
       dayWord: {
         won: (used: number, max: number) =>
           `Você acertou em ${used} de ${max} tentativas.`,
@@ -724,8 +580,7 @@ export const messages = {
       description: "De 1 a 9, sem repetição, no clássico 9×9.",
       play: {
         title: "Sudoku",
-        // Every clause is a rule the engine actually enforces (the binairo
-        // deviation-1 precedent: never teach a rule that is not checked).
+
         rules:
           "Preencha a grade de 1 a 9. Cada linha, cada coluna e cada bloco de 3×3 tem os nove dígitos, sem repetir nenhum.",
         progressLong: (filled: number, total: number) =>
@@ -779,17 +634,10 @@ export const messages = {
       description: "Revele a figura escondida pelos números.",
       play: {
         title: "Nonogram",
-        // Every clause is a rule the engine actually enforces (the binairo
-        // deviation-1 precedent): `deriveClues` is a run-length encoding in
-        // order, with at least one empty cell between runs (clues.ts:24-36),
-        // and the completion predicate is "the picture is painted" — crossing
-        // is never required, so the blurb never asks for it.
+
         rules:
           "Os números de cada linha e de cada coluna são os blocos de células preenchidas, na ordem, com pelo menos um espaço entre eles. Preencha todos os blocos para revelar a figura.",
-        // The denominator is the PICTURE's cell count, summed from the clues
-        // — not the board's. A player finishes without crossing a single
-        // cell, so a `de size²` readout would stand at 21% at the moment
-        // they win.
+
         progressLong: (filled: number, total: number) =>
           `${filled} de ${total} preenchidas`,
         progressShort: (size: number, filled: number, total: number) =>
@@ -798,9 +646,7 @@ export const messages = {
         size: boardSize,
         boardAria: (size: number) => `grade do Nonogram, ${size} por ${size}`,
         cellAria: cellAriaNonogram,
-        // "números", never "pistas" and never "dicas" — `dica` is the reserved
-        // term for the one free hint (CONTEXT.md) and reusing it would collide
-        // with the hint button in the same screen-reader pass.
+
         rowCluesAria: (row: number, runs: readonly number[]) =>
           `números da linha ${row}: ${runsText(runs)}`,
         columnCluesAria: (column: number, runs: readonly number[]) =>
@@ -810,13 +656,7 @@ export const messages = {
           cross: "marcar",
           erase: "apagar",
           fillAria: "preencher células",
-          // NOT "células vazias": `vazia` is this bundle's word for the
-          // UNDECIDED state (`cellAriaNonogram` above, and CONTEXT.md's
-          // Undecided row), so "marcar células vazias" told a non-sighted
-          // player the brush marks the cells they have not decided. It marks
-          // the ones they have ruled OUT of the picture, whatever state those
-          // are in — which is the wording the hint copy in `hint.explain.cross`
-          // below already uses.
+
           crossAria: "marcar células fora da figura",
           eraseAria: "apagar células",
           affordance: "ou use o teclado: 1 preenche, 2 marca, 0 apaga",
@@ -827,10 +667,7 @@ export const messages = {
           explain: {
             correction: "Corrigimos uma célula que não fecha com os números.",
             fill: "Preenchemos uma célula da figura para você.",
-            // The defined-unreachable branch: the selector only falls
-            // back to a cross when no undecided picture cell is left, which is
-            // a board that is already solved. It ships rather than rendering
-            // `undefined`.
+
             cross: "Marcamos uma célula que fica fora da figura.",
           },
         },
@@ -861,9 +698,7 @@ export const messages = {
       description: "Zeros e uns, em perfeito equilíbrio.",
       play: {
         title: "Binairo",
-        // States rule 4 for rows AND columns: ADR-0020
-        // rule 4 covers both, and the reference frame's shorter wording would
-        // teach the player a rule the engine does not enforce.
+
         rules:
           "Preencha a grade com zeros e uns. Cada linha e coluna tem quatro de cada, nunca três iguais seguidos, e nenhuma linha ou coluna se repete.",
         progressLong: (filled: number, total: number) =>

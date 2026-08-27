@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * The three-chip difficulty picker (#28, ADR-0046 decision 2): Leve /
- * Médio / Difícil over the weekday ramp's endpoints and middle. A
- * radiogroup with roving tabindex — arrow keys move AND select, the
- * standard radio pattern — and the active chip is carried by geometry and
- * ink, never by accent-as-text (ADR-0041).
- *
- * Switching levels regenerates immediately: the screens key their board on
- * `{seed, level}`, so the change is React's own remount, not a reset
- * action. No level ever reaches a URL or storage (ADR-0046 decisions 2/4).
- */
 import { useRef } from "react";
 
 import { messages } from "../i18n";

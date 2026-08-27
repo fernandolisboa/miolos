@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * The /modo-livre/nonogram screen (#28, ADR-0046) — the daily Nonogram play
- * screen's sibling with the same free-play differences. See
- * `binairo-free-screen.tsx` for the pattern's full argument.
- *
- * The solved card shows the PAINTED PICTURE and never `reveal.name` or
- * `reveal.motifId`: the hook drops `reveal` at the parse, so this
- * file could not render the curated name even by accident.
- */
 import type { NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
 import {
@@ -52,16 +43,8 @@ import {
 
 const ACCENT = accentVars("nonogram");
 
-/** A readout placeholder's content — one line box, never zero height. */
 const BLANK_READOUT = "\u00a0";
 
-/**
- * The board class each level generates, mirrored from
- * `NONOGRAM_WEEKDAY_CRITERIA[LEVEL_WEEKDAYS[level]].size` — restated here
- * (typed to `NonogramSize`) because the generating skeleton needs the
- * dimensions BEFORE a puzzle exists. T-WEB-S121 pins the generated size per
- * level, so a criteria change that breaks this mirror is a red test.
- */
 const LEVEL_SIZES: Readonly<Record<FreePlayLevel, NonogramSize>> = {
   leve: 5,
   medio: 10,
@@ -71,7 +54,6 @@ const LEVEL_SIZES: Readonly<Record<FreePlayLevel, NonogramSize>> = {
 export function NonogramFreeScreen({
   deps,
 }: {
-  /** Test seam only; the page passes nothing. */
   readonly deps?: FreeNonogramDeps;
 }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
@@ -109,7 +91,6 @@ export function NonogramFreeScreen({
   );
 }
 
-/** One puzzle's board, remounted per `{seed, level, run}` by its key. */
 function NonogramFreeBoard({
   level,
   onLevelChange,
@@ -133,8 +114,6 @@ function NonogramFreeBoard({
     stateRef.current = state;
   });
 
-  // The shipped "no stored record" path: `{now, hydrated: true}`, nothing
-  // else. No `resume` ever — the timer stays inert.
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
@@ -183,8 +162,7 @@ function NonogramFreeBoard({
     ) {
       return;
     }
-    // The state's own clue-derived solution — `reveal` never enters the
-    // hook, and the action is a bare verb.
+
     const hint = nextNonogramHint(current.solution, current.entries);
     if (hint === null) {
       return;
@@ -243,7 +221,6 @@ function NonogramFreeBoard({
   );
 }
 
-/** The page chrome all three states share — see binairo-free-screen. */
 function Frame({
   playState,
   level,
@@ -338,9 +315,6 @@ function Frame({
         )}
       </section>
 
-      {/* AFTER the board: `screen.page` places every child by NAMED GRID
-          AREA, so this element's position in the source decides the tab
-          order and decides nothing about the paint. T-WEB-S232. */}
       {hint === null ? (
         <div
           aria-hidden
@@ -362,11 +336,6 @@ function Frame({
   );
 }
 
-/**
- * The board card while generating. Real dimensions need real clues, which
- * do not exist yet, so the rails carry empty lines — for the sub-ms this
- * state lasts, the reserved CELL grid is what stops the jump.
- */
 function GeneratingBoard({ size }: { readonly size: NonogramSize }) {
   const emptyClues: NonogramClues = {
     size,
@@ -396,11 +365,6 @@ function ErrorCard({ onRetry }: { readonly onRetry: () => void }) {
   );
 }
 
-/**
- * The page root's classes — the daily play-view's own rule: `.mobileCap5`
- * rides on the same element when the board is a 5×5, because the mobile
- * cap is per size.
- */
 function pageClassName(size: NonogramSize): string {
   const cap = size === 5 ? ` ${boardStyles.mobileCap5}` : "";
   return `${screen.page} ${boardStyles.pageNonogram}${cap}`;

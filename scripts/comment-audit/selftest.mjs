@@ -345,8 +345,15 @@ for (const t of ["excision", "verbatim", "citations", "hash", "wrap"]) {
 }
 // `shingle.mjs` must find a real echo and must index something — a scan that
 // indexes zero files reports "no citations" for every comment in the repo.
+//
+// The fixtures are files in THIS directory rather than app sources: the 3%
+// budget is taking the app's prose away, and a fixture the campaign is
+// deleting turns this check green by attrition.
 {
-  const out = run([tool("shingle.mjs"), "apps/web/src/og/copy.ts"]).out;
+  const out = run([
+    tool("shingle.mjs"),
+    "scripts/comment-audit/records.mjs",
+  ]).out;
   check(
     "shingle.mjs indexes the tracked corpus",
     /[1-9]\d{2,} tracked files indexed/.test(out),
@@ -356,7 +363,7 @@ for (const t of ["excision", "verbatim", "citations", "hash", "wrap"]) {
   // Silent truncation is the dangerous direction for a scan that authorises a
   // deletion, and the 3-line index window means one citing file can occupy
   // three slots — so a fourth citing file used to fall off unannounced.
-  const many = run([tool("shingle.mjs"), "apps/web/src/termo/board.tsx"]).out;
+  const many = run([tool("shingle.mjs"), "scripts/comment-audit/wrap.mjs"]).out;
   check(
     "shingle.mjs says how many candidates it did not print",
     /…and \d+ more location\(s\)/.test(many),

@@ -1,22 +1,5 @@
 "use client";
 
-/**
- * The Sudoku free-play generation machine (#28, ADR-0011, ADR-0046). The
- * same shape as `use-free-binairo`, plus the one thing Sudoku owns: the
- * retry ladder. `generateDailySudoku` retries up to 1200 attempts
- * internally and an exhausted seed costs ~2s of CPU, so on
- * `SudokuGenerationError` — and ONLY that error — the effect draws a fresh
- * seed, up to three, before showing the error card. This is the publishing
- * side's fresh-seed-on-exhaustion precedent moved client-side. Any other
- * throw (a Zod parse rejection included) is an engine-contract regression
- * and surfaces immediately.
- *
- * Generation runs inside the effect, never during render and never on the
- * server: the generating skeleton commits and paints first, then the
- * effect blocks — honest feedback for the heavy tail, one frame for the
- * typical tens of milliseconds. No Web Worker: it would be the
- * repo's first, purchased against a rare, bounded worst case.
- */
 import type { DailySudokuResponse } from "@miolos/core";
 import { dailySudokuResponseSchema, sudokuDigitSchema } from "@miolos/core";
 import {
@@ -35,20 +18,14 @@ import {
   type FreePlayLevel,
 } from "./catalog";
 
-/** Fresh seeds per generation request before the error card. */
 export const FREE_PLAY_SUDOKU_SEED_ATTEMPTS = 3;
 
-/**
- * What narrows the engine's `readonly number[]` solution to the digit
- * union the reducer's `use-hint` takes — one parse per puzzle, the
- * `play/play-record.ts` precedent for `sudokuDigitSchema`.
- */
 const solutionSchema = z.array(sudokuDigitSchema).length(81);
 
 export interface FreeSudokuPuzzle {
   readonly seed: number;
   readonly daily: DailySudokuResponse;
-  /** Narrowed to the digit union; feeds `use-hint` directly. */
+
   readonly solution: readonly SudokuDigit[];
 }
 
@@ -61,7 +38,6 @@ export type FreeSudokuPhase =
       readonly puzzle: FreeSudokuPuzzle;
     };
 
-/** Test seams only — injected values must be referentially stable. */
 export interface FreeSudokuDeps {
   readonly pickSeed?: () => number;
   readonly generate?: typeof generateDailySudoku;
@@ -95,8 +71,7 @@ export function useFreeSudoku(
         tier: puzzle.tier,
       });
       const solution = solutionSchema.parse(puzzle.solution);
-      // One bounded re-render per generation, deliberately synchronous —
-      // see use-free-binairo.ts for the full argument.
+
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettled({
         level,
@@ -124,7 +99,6 @@ export function useFreeSudoku(
   return { phase, regenerate };
 }
 
-/** The ladder: only `SudokuGenerationError` buys a fresh seed. */
 function generateWithFreshSeeds(
   generate: typeof generateDailySudoku,
   draw: () => number,

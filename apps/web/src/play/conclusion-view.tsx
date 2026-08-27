@@ -41,29 +41,14 @@ import type {
   ConclusionPicture,
 } from "./types";
 import { useRecordSnapshot } from "./use-record-snapshot";
-/**
- * The conclusion tree is lazy on the PLAY routes, so this inner boundary
- * exists for the `/<jogo>/concluido` pages, which import this file
- * STATICALLY for their server render: without it the whole push stack would
- * join their first-load sets for a card most visitors never see. The card
- * renders `null` server-side anyway, so `ssr: false` changes no paint.
- */
+
 const PushPromptCard = nextDynamic(
   () => import("./push-prompt-card").then((mod) => mod.PushPromptCard),
   { ssr: false },
 );
 
-/** The four dailies, in the order Hoje lists them. */
 const DAY_GAMES = ["termo", "sudoku", "nonogram", "binairo"] as const;
 
-/**
- * What the stamp shows when the conclusion renders in place, straight from
- * the live play state. It exists because the swap happens in the same commit
- * that closes the grid, and React runs a child's mount effect BEFORE its
- * parent's — so the record this view would otherwise read has not been
- * written yet. Passing the values down also keeps the in-place conclusion
- * working where `localStorage` throws (Safari private mode).
- */
 export interface ConclusionResult {
   readonly elapsedMs: number;
   readonly hintsUsed: number;
@@ -99,9 +84,7 @@ export function ConclusionView({
   const accent = accentVars(game);
 
   const stored = record?.concluded === true ? record : undefined;
-  // The record wins when it has one: on `recorded: false` the flush writes
-  // the server's authoritative values back into it, and the conclusion must
-  // never show a time the server does not hold.
+
   const stamp: ConclusionResult | undefined = stored ?? result;
   const syncOutcome = stored?.syncOutcome;
 
@@ -126,7 +109,6 @@ export function ConclusionView({
     );
   }
 
-  // The branch order is load-bearing — see ADR-0043.
   const lost = outcome?.state === "lost";
 
   if (!lost && stamp === undefined) {
@@ -150,8 +132,7 @@ export function ConclusionView({
         <div className={styles.emptyBody}>
           <article className={styles.emptyCard}>
             <div aria-hidden className={styles.tape} />
-            {/* h1 first element child of its wrapper — two impeccable
-                rules anchor on `h1.previousElementSibling` here. */}
+
             <div className={styles.titleRow}>
               <h1 className={styles.emptyTitle}>{copy.notYet.title}</h1>
             </div>
@@ -170,11 +151,7 @@ export function ConclusionView({
   const dayEntry = (dayGame: Game): DayEntry =>
     dayGame === game
       ? outcome === undefined
-        ? // `stamp` is defined on every path that reaches here with no
-          // `outcome` — the guard above returned otherwise — and the
-          // optional chain is TypeScript's acknowledgement of that rather
-          // than a second possibility.
-          { status: "completed", elapsedMs: stamp?.elapsedMs }
+        ? { status: "completed", elapsedMs: stamp?.elapsedMs }
         : outcome.state === "lost"
           ? { status: "played", elapsedMs: undefined }
           : { status: "completed", elapsedMs: undefined }
@@ -193,8 +170,6 @@ export function ConclusionView({
         <ConclusionCardHead copy={copy} />
         <div className={styles.stampRow}>
           {outcome === undefined ? (
-            // The `null` arm is unreachable: the guard above returns `empty`
-            // when there is no outcome and no stamp.
             stamp === undefined ? null : (
               <ShippedStamp title={copy.title} stamp={stamp} />
             )
@@ -235,9 +210,7 @@ export function ConclusionView({
             )}
           </div>
         )}
-        {/* `recorded` guarantees the just-finished game's ROW is on the
-            server; it does NOT guarantee the server still holds the
-            record's day AS today. */}
+
         {syncOutcome === "recorded" && (
           <ConclusionStats game={game} date={date} result={stamp} lost={lost} />
         )}
@@ -262,19 +235,6 @@ export function ConclusionView({
   );
 }
 
-/**
- * The cross-device completed view (ADR-0065): the day was decided on ANOTHER
- * device — `claim` is the server's own claim for this game — and this device
- * holds no record, so the play route renders the conclusion the server can
- * honestly back instead of a fresh playable board.
- *
- * THE `game === "termo"` BRANCH BELOW CROSSES ADR-0029 DECISION 2. The
- * crossing is forced, not chosen: `ConclusionCopy` is plain data across the
- * RSC boundary, so `wonDetail(guesses, max)` cannot arrive pre-composed, and
- * this stamp's detail exists only after a CLIENT fetch (`GET /stats`)
- * resolves. This is the ONLY per-game JSX branch permitted in this module;
- * a fifth game adds a claim field, never an arm.
- */
 export function RemoteConclusionView({
   game,
   date,
@@ -316,7 +276,7 @@ export function RemoteConclusionView({
             <RemoteShippedStamp title={copy.title} claim={claim} />
           )}
         </div>
-        {/* see ADR-0043 */}
+
         <p role="status" className={styles.announcer}>
           {played ? remote.playedBody : remote.completedBody}
         </p>
@@ -326,8 +286,7 @@ export function RemoteConclusionView({
         <p className={styles.remoteBody}>
           {played ? remote.playedBody : remote.completedBody}
         </p>
-        {/* `null` — the fetch settled without a value — unmounts to the
-            shipped absence, exactly like the local path. */}
+
         {stats !== null && (
           <ConclusionStatsBody
             game={game}
@@ -585,9 +544,7 @@ function ConclusionStatsBody({
   const block = loaded ? stats[game] : undefined;
   const counts = block?.histogram ?? ([0, 0, 0, 0, 0, 0] as const);
   const max = Math.max(...counts, 1);
-  // The render marks only a bucket whose own count is nonzero: the
-  // highlight claims "your solve is in this bar", and an empty bar holds
-  // nothing to claim.
+
   const todayBucket =
     elapsedMs === undefined || !dayMatches
       ? undefined
@@ -649,10 +606,7 @@ function ConclusionStatsBody({
           </div>
         ))}
       </div>
-      {/* The comparison is against the INCLUSIVE average, which is honest
-          because its direction always agrees with the exclusive one —
-          x < mean(S ∪ {x}) ⇔ x < mean(S) for nonempty S. Equal renders
-          neither line. */}
+
       {loaded &&
         dayMatches &&
         elapsedMs !== undefined &&
@@ -800,13 +754,11 @@ function ConclusionAside({
         </Link>
       )}
       {share}
-      {/* /estatisticas is a real route, so the link carries it. */}
+
       <Link className={styles.secondaryLink} href={routes.stats}>
         {messages.conclusion.stats}
       </Link>
-      {/* The prompt slot renders LAST: the push card mounts hundreds of ms
-          after paint and nothing sits below it, so the insertion shifts no
-          content and costs zero CLS. */}
+
       {prompt}
     </aside>
   );
@@ -828,9 +780,7 @@ function ConclusionTopBar({
       >
         {messages.conclusion.back}
       </Link>
-      {/* Two nodes per viewport, one hidden by a media query: F5 centres the
-          italic wordmark and puts the kicker inside the card, F6 centres the
-          kicker in the bar and its card has none. */}
+
       <span className={styles.wordmark}>{messages.brand.wordmark}</span>
       <span className={styles.barKicker}>{kicker}</span>
       <span className={styles.topDateLong}>{formatLongDate(date)}</span>
@@ -846,8 +796,6 @@ function DayChip({
   readonly game: (typeof DAY_GAMES)[number];
   readonly entry: DayEntry;
 }) {
-  // The guard is split because a WON Termo is a completed entry with no
-  // duration — see ADR-0045.
   const done = entry.status === "completed";
   const value =
     done && entry.elapsedMs !== undefined
@@ -869,7 +817,6 @@ function DayChip({
     >
       {game === "nonogram" ? (
         <>
-          {/* A distinct mobile string, never a runtime truncation. */}
           <span className={`${styles.chipName} ${styles.chipNameLong}`}>
             {messages.conclusion.dayCard.games.nonogram}
           </span>

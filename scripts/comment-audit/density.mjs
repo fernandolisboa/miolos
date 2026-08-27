@@ -8,7 +8,7 @@ const DEFAULT_MAX = 3;
 // Directives that look like comments and are not: the budget must not push a
 // sweep into deleting them. See CLAUDE.md § Comments.
 const DIRECTIVE =
-  /^(eslint-(disable|enable)|@ts-(expect-error|ignore|nocheck)|#__PURE__|\/\s*<reference|prettier-ignore|c8\s|v8\s|istanbul\s|@vitest-environment)/;
+  /^(eslint-(disable|enable)|@ts-(expect-error|ignore|nocheck)|#__PURE__|\/\s*<reference|prettier-ignore|c8\s|v8\s|istanbul\s|@vitest-environment|impeccable-(disable|ignore))/;
 
 function isDirective(line) {
   return DIRECTIVE.test(line.replace(/^\s*(\/\/+|\/\*+|\*+\/?)\s*/, ""));

@@ -1,16 +1,3 @@
-/**
- * POST a Termo guess list and return the judgement, or a typed failure
- * (#27, ADR-0038, ADR-0039).
- *
- * NOT `sync.ts` — ADR-0039 decision 4. The allowance now lives in
- * `session/bootstrap.ts` beside the promise it guards; this module keeps only
- * its own decision to ASK.
- *
- * A QUEUED GUESS WOULD BE INCOHERENT: by the time a queue drained, the board
- * may have moved on, and there is no "later" for a turn the player is
- * watching. So every failure resolves to one of four outcomes, and the screen
- * decides what the player sees.
- */
 import {
   apiErrorResponseSchema,
   termoGuessRequestSchema,
@@ -24,57 +11,25 @@ import {
   remintSession,
 } from "../session/bootstrap";
 
-/**
- * WHY THE TURN IS HELD, and it is on the type because the screen makes a
- * FACTUAL CLAIM ABOUT THE PLAYER'S NETWORK out of it.
- *
- * `offline` is claimed ONLY when the client can see it: the fetch itself
- * rejected, or `navigator.onLine` is false. Everything else is `server` —
- * ours, not theirs.
- */
 export type HeldReason = "offline" | "server";
 
 export type GuessOutcome =
-  /** The server judged the board. `answer` is present iff it closed. */
   | {
       readonly kind: "judged";
       readonly tiles: readonly TileStates[];
       readonly status: TermoBoardStatus;
       readonly answer?: string;
     }
-  /** Offline, 5xx, 429, or a 401 after the one re-mint — the turn SURVIVES. */
   | { readonly kind: "held"; readonly reason: HeldReason }
-  /**
-   * 400 / 403 / 415 / 422 — cleared, and the turn is NOT consumed. The REASON
-   * is part of the type because the screen has to tell "that word is not in
-   * the list" from "we could not process that", and the server is the last
-   * boundary that still holds the distinction (the 422 body's error code).
-   * `invalid-guess` is reachable in normal operation: apps/web and apps/api
-   * deploy independently and ADR-0015 expects the validation list to be
-   * regenerated, so a word the client's copy accepts and the server's does
-   * not is a PLAYER outcome rather than a fault.
-   */
   | { readonly kind: "rejected"; readonly reason: "not-in-list" | "refused" }
-  /** 404 — the day is unavailable. */
   | { readonly kind: "gone" };
 
-/**
- * Statuses on which the server has answered about the WORD or the request,
- * and no retry can change its mind. 404 is handled separately (it is the
- * day, not the turn) and 422 splits on its error code.
- */
 const REFUSING_STATUSES = new Set([400, 403, 415]);
 
 const HELD_OFFLINE: GuessOutcome = { kind: "held", reason: "offline" };
 const HELD_SERVER: GuessOutcome = { kind: "held", reason: "server" };
 const REFUSED: GuessOutcome = { kind: "rejected", reason: "refused" };
 
-/**
- * A hold the client can only attribute to the server UNLESS the browser is
- * telling it otherwise. `navigator.onLine === false` is trusted in exactly
- * one direction — false is reliable, true is not — which is why every other
- * hold reads as `server` rather than guessing.
- */
 function heldByStatus(): GuessOutcome {
   return typeof navigator !== "undefined" && !navigator.onLine
     ? HELD_OFFLINE
@@ -85,9 +40,6 @@ export async function postGuesses(
   date: string,
   guesses: readonly string[],
 ): Promise<GuessOutcome> {
-  // Parsed before it leaves, never trusted (CLAUDE.md's boundary rule runs in
-  // both directions). A body the contract refuses cannot be fixed by
-  // retrying, so it is `refused` rather than held — and nothing is posted.
   const request = termoGuessRequestSchema.safeParse({
     game: "termo",
     date,
@@ -100,43 +52,30 @@ export async function postGuesses(
     return REFUSED;
   }
 
-  // Loud, not silent: a relative "undefined/termo/guess" fetch would 404
-  // against the web app itself and read to the player as a dead day.
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   if (!apiUrl) {
     console.error(
       "NEXT_PUBLIC_API_URL is unset: the termo guess cannot be judged, the turn is held",
     );
-    // A misconfigured build is OURS however good the player's connection is.
+
     return HELD_SERVER;
   }
 
   const body = JSON.stringify(request.data);
 
-  // Before the FIRST post, never after: on a cold first visit a fast opening
-  // guess reliably beats the in-flight mint and would take the 401 branch.
   await ensureSession();
 
   let response = await post(apiUrl, body);
   if (response?.status === 401) {
-    // The allowance is `session/bootstrap.ts`'s, not this module's — see the
-    // header. It resolves `false` when it is spent, and nothing is re-posted.
     if (await remintSession()) {
       response = await post(apiUrl, body);
       if (response?.ok === true) {
-        // The fresh identity works, so a cookie that expires LATER in this
-        // page load can still be re-minted — without this the first spent
-        // allowance leaves the board held until a reload. `ok` and not
-        // `status !== 401`, because a 403 or a 415 is decided before
-        // `requireUserId` ever runs; see `confirmSession`.
         confirmSession();
       }
     }
   }
 
   if (response === undefined) {
-    // Network failure. The turn is the player's and it stays theirs, and this
-    // is the ONE branch that can honestly say "sem conexão".
     return HELD_OFFLINE;
   }
 
@@ -156,13 +95,9 @@ export async function postGuesses(
     return REFUSED;
   }
 
-  // 401 after the one re-mint, 429, every 5xx, and anything unforeseen.
-  // A rate limit is not a verdict, and spending one of six turns on one would
-  // be the worst possible reading of it.
   return heldByStatus();
 }
 
-/** `undefined` on a network failure — the one case that is not a status. */
 async function post(
   apiUrl: string,
   body: string,
@@ -170,11 +105,9 @@ async function post(
   try {
     return await fetch(`${apiUrl}/termo/guess`, {
       method: "POST",
-      // The cookie IS the identity.
+
       credentials: "include",
-      // Required by the route: a JSON content type forces a CORS preflight,
-      // which is what makes the WEB_ORIGIN grant load-bearing rather than the
-      // origin guard alone.
+
       headers: { "Content-Type": "application/json" },
       body,
     });
@@ -183,13 +116,6 @@ async function post(
   }
 }
 
-/**
- * A 200, parsed against the contract and never cast. A body the contract does
- * not recognise is a SERVER BUG, not a player problem, so the turn is HELD —
- * never `judged` (which would render tiles nobody computed) and never
- * `rejected` (which would blame the player for our defect). `sync.ts`'s own
- * `completionResponseSchema.parse` in a try/catch is the shipped precedent.
- */
 async function judgement(response: Response): Promise<GuessOutcome> {
   try {
     const parsed = termoGuessResponseSchema.parse(await response.json());
@@ -203,28 +129,11 @@ async function judgement(response: Response): Promise<GuessOutcome> {
     console.error(
       "a termo guess came back 200 with a body the contract does not recognize; the turn is held",
     );
-    // A body we cannot read is OUR defect, not the player's connection.
+
     return HELD_SERVER;
   }
 }
 
-/**
- * Which 422 this is, and the two codes mean OPPOSITE things to the player.
- *
- * `invalid-guess` ⟺ the NEWEST guess is not in the server's validation
- * dictionary. A legitimate player outcome — `apps/web` and `apps/api` deploy
- * independently and ADR-0015 expects the list to be regenerated — so it routes
- * to the same sentence the local `isValidGuess` rejection renders.
- *
- * `board-closed` ⟺ the posted list continues past a winning row. That is a
- * client bug or tampering and NEVER a player outcome, so it must not read as
- * "não está na lista" — a desynced board would otherwise be told a correct word
- * is not in the dictionary. It is `refused`, which renders `copy.failed`.
- *
- * Every other code — and an unreadable body — is a system outcome and reads as
- * one. The `switch` is exhaustive over what the client acts on rather than a
- * ternary, so a third code added later has one obvious place to land.
- */
 async function refusalReason(
   response: Response,
 ): Promise<"not-in-list" | "refused"> {

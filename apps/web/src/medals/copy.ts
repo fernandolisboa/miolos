@@ -1,31 +1,5 @@
 import type { MedalId } from "@miolos/core";
 
-/**
- * The 23 medal name/description records (#30, ADR-0052) — still the
- * ADR-0018 contract (typed, in-repo, composed), homed HERE rather than in
- * `src/i18n/messages.ts` by plan 035 §14 watch item 2's recorded
- * fallback, applied after measurement: as a second export of the messages
- * module, Turbopack kept the ~2 KB of prose in the shared chunk of every
- * route that imports `messages` for anything else (the unused-export
- * elimination the tree-shake argument assumed did not happen). In its own
- * module, only the medal section's graph carries it — the bundle figures
- * in the PR are the evidence. This module must import NOTHING from
- * `messages`, and the i18n barrel must never re-export it: either edge
- * would put the prose back on every route.
- *
- * The copy is VERBATIM the catalog table in `content/medals/README.md`
- * (T-WEB-S163 pins the parity both directions), authored against that
- * file's written constraints: past-tense statements of the achieved fact,
- * first word from the recorded allowlist, thresholds as digits, no
- * imperatives, no vetoed vocabulary, the stationery register where it
- * fits. `satisfies Record<MedalId, …>` makes exhaustiveness a typecheck
- * in both directions — a missing id and a stray id are both compile
- * errors.
- *
- * BEHIND THE FREE-PLAY WALL like its siblings: the whole src/medals
- * directory is banned by name from apps/web/src/free-play and
- * app/modo-livre (eslint.config.mjs, ADR-0046).
- */
 export const medalCopy = {
   "first-win": {
     name: "Primeiro carimbo",

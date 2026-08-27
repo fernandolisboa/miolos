@@ -2,6 +2,9 @@ import { render } from "@testing-library/react";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const telemetry = vi.hoisted(() => ({ markSessionReady: vi.fn() }));
+vi.mock("../src/telemetry/client", () => telemetry);
+
 // The fire-once guard is module state, so every test imports a fresh copy.
 async function freshSessionBootstrap() {
   vi.resetModules();
@@ -18,6 +21,7 @@ async function flushMicrotasks() {
 beforeEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+  telemetry.markSessionReady.mockClear();
   vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test");
 });
 
@@ -94,5 +98,24 @@ describe("SessionBootstrap", () => {
     expect(() => render(<SessionBootstrap />)).not.toThrow();
     await flushMicrotasks();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("T-WEB-S355: a FAILED mint opens the telemetry gate too, so buffered starts are never held forever", async () => {
+    for (const mint of [
+      () => Promise.reject(new TypeError("offline")),
+      () => Promise.resolve(new Response(null, { status: 500 })),
+      () => Promise.resolve(new Response("not json", { status: 200 })),
+    ]) {
+      telemetry.markSessionReady.mockClear();
+      vi.stubGlobal("fetch", vi.fn(mint));
+
+      const SessionBootstrap = await freshSessionBootstrap();
+      render(<SessionBootstrap />);
+      for (let round = 0; round < 20; round += 1) {
+        await Promise.resolve();
+      }
+
+      expect(telemetry.markSessionReady).toHaveBeenCalledTimes(1);
+    }
   });
 });

@@ -75,21 +75,25 @@ describe("the archive calendar model (T-WEB-S310)", () => {
   });
 
   it("reads no clock — 'is this day past' is never this module's question", () => {
-    // Source-level, because the property is architectural: the reader's
-    // SQL wall is the only authority on which days exist, so the module
-    // must consult no clock of any kind (plan 065 D3; the app's single
-    // sanctioned device-clock call site stays the stats neutral month).
-    const raw = readFileSync(
-      join(import.meta.dirname, "..", "src", "archive", "calendar.ts"),
-      "utf8",
+    const code = (source: string): string =>
+      source
+        .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+        .replaceAll(/^[ \t]*\/\/.*$/gm, "");
+
+    // The stripper eats prose and nothing else, so the scan below cannot go
+    // green by deleting the code it is looking for.
+    expect(code("// todaySaoPauloDate()")).not.toContain("todaySaoPauloDate");
+    expect(code("/* new Date */")).not.toContain("new Date");
+    expect(code("const d = todaySaoPauloDate();")).toContain(
+      "todaySaoPauloDate",
     );
-    const source = raw
-      .replaceAll(/\/\*[\s\S]*?\*\//g, "")
-      .replaceAll(/^[ \t]*\/\/.*$/gm, "");
-    // Non-vacuity: the module's own doc block NAMES the forbidden call —
-    // the comment stripper is what keeps this scan meaningful (the repo's
-    // `code()` rule; a raw scan would red on the prose).
-    expect(raw).toContain("todaySaoPauloDate");
+
+    const source = code(
+      readFileSync(
+        join(import.meta.dirname, "..", "src", "archive", "calendar.ts"),
+        "utf8",
+      ),
+    );
     expect(source).not.toContain("Date.now");
     expect(source).not.toContain("new Date");
     expect(source).not.toContain("todaySaoPauloDate");

@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * The /modo-livre/sudoku screen (#28, ADR-0046) — the daily Sudoku play
- * screen's sibling with the same free-play differences. See
- * `binairo-free-screen.tsx` for the pattern's full argument; this file
- * repeats it per game rather than abstracting, exactly as the daily
- * screens do (ADR-0029 rejects the shallow unification).
- *
- * The `Nível` row shows the FREE-PLAY level (Leve/Médio/Difícil), not the
- * engine tier's five-name ladder: the picker is the vocabulary this mode
- * teaches, and two difficulty vocabularies on one screen would compete.
- */
 import {
   useCallback,
   useEffect,
@@ -50,15 +39,9 @@ const ACCENT = accentVars("sudoku");
 
 const TOTAL_CELLS = 81;
 
-/** A readout placeholder's content — one line box, never zero height. */
 const BLANK_READOUT = "\u00a0";
 
-export function SudokuFreeScreen({
-  deps,
-}: {
-  /** Test seam only; the page passes nothing. */
-  readonly deps?: FreeSudokuDeps;
-}) {
+export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
   const { phase, regenerate } = useFreeSudoku(level, deps);
 
@@ -93,7 +76,6 @@ export function SudokuFreeScreen({
   );
 }
 
-/** One puzzle's board, remounted per `{seed, level, run}` by its key. */
 function SudokuFreeBoard({
   level,
   onLevelChange,
@@ -119,8 +101,6 @@ function SudokuFreeBoard({
     stateRef.current = state;
   });
 
-  // The shipped "no stored record" path: `{now, hydrated: true}`, nothing
-  // else. No `resume` ever — the timer stays inert.
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
@@ -153,8 +133,7 @@ function SudokuFreeBoard({
     ) {
       return;
     }
-    // The solution comes narrowed from the generator output (use-free-sudoku
-    // parses it once per puzzle) — no solver call needed.
+
     const hint = nextHint(
       puzzle.solution,
       playableGivens(current.givens),
@@ -206,7 +185,6 @@ function SudokuFreeBoard({
   );
 }
 
-/** The page chrome all three states share — see binairo-free-screen. */
 function Frame({
   playState,
   level,
@@ -297,9 +275,6 @@ function Frame({
         )}
       </section>
 
-      {/* AFTER the board: `screen.page` places every child by NAMED GRID
-          AREA, so this element's position in the source decides the tab
-          order and decides nothing about the paint. T-WEB-S232. */}
       {hint === null ? (
         <div
           aria-hidden
@@ -321,7 +296,6 @@ function Frame({
   );
 }
 
-/** The board card at final dimensions, values blanked. */
 function GeneratingBoard() {
   return (
     <>
