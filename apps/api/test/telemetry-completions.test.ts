@@ -233,11 +233,16 @@ describe("POST /completions — puzzle_completed (#33, ADR-0069 decision 2)", ()
     expect(capturedEvents().map((event) => event.event)).toEqual([
       "puzzle_completed",
     ]);
-    expect(
-      errorSpy.mock.calls.some((call) =>
-        String(call[0]).includes("post-response task failed"),
-      ),
-    ).toBe(true);
+    const logged = errorSpy.mock.calls.filter((call) =>
+      String(call[0]).includes("post-response task failed"),
+    );
+    expect(logged.length).toBeGreaterThan(0);
+    // The message, never the error: a drizzle/neon failure carries the failing
+    // query and its bound params (userId included) on enumerable properties.
+    for (const call of logged) {
+      expect(call.slice(1).map((arg) => typeof arg)).toEqual(["string"]);
+      expect(call[1]).toBe("derivation read boom (T-API-S164)");
+    }
   });
 });
 

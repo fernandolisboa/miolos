@@ -40,6 +40,14 @@ An **opaque random session token in a `sessions` table** — no JWT.
   writes nothing; a session is *stale* when
   `last_seen_at` is over 400 days old — a future prune cron may delete stale
   rows, not this ticket.
+- **`last_seen_at` may never become security-load-bearing as it stands.**
+  It is bumped on reads, cross-site top-level GETs included: `authenticatedRead`
+  applies no origin guard, by design, so under `SameSite=Lax` any third-party
+  page can refresh a victim's `last_seen_at` with a link. Idle expiry, re-auth
+  or any other rule that reads it as evidence of the *user's* activity is
+  therefore defeatable by a link click. Revisit CSRF on GETs first — the prune
+  cron above is safe only because deleting a row nobody touched is not a
+  security decision.
 - **Cross-site mint guard.** `POST /session` rejects with 403 — no
   `Set-Cookie`, no DB write — when the request carries *positive evidence*
   of being cross-site: `Sec-Fetch-Site: cross-site`, or an `Origin` header

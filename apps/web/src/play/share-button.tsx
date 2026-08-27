@@ -47,6 +47,7 @@ async function deliverShare(text: string): Promise<ShareStatus> {
   }
 }
 
+// TODO(#219): a read-only store leaves this control dead and silent.
 function shareSubject(
   game: Game,
   date: string,

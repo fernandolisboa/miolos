@@ -6,6 +6,7 @@ import { hashSessionToken } from "./token";
 
 const STALE_AFTER_MS = 60 * 60 * 1000;
 
+// `lastSeenAt` is bumped by unguarded GETs — see ADR-0022.
 export async function resolveSession(
   db: Db,
   tokenHash: string,

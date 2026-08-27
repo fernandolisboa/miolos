@@ -8,10 +8,9 @@
 
 ```sh
 pnpm comments                                      # the gate: selftest, then the budget
-node scripts/comment-audit/hash.mjs <targets>      # zero code changed
 ```
 
-**The budget is 3% of a file's lines or two lines, whichever is larger, and it is in CLAUDE.md and [ADR-0075](./docs/adr/0075-the-comment-budget-is-a-tool-not-a-rule.md).** `main` was 23.4%; the tracked surface is now 0.1%. Run `pnpm comments` for the number — do not trust a figure written down anywhere, including this line. Directives are exempt and the list is `DIRECTIVES` in `density.mjs`, once. A **standalone** `//` is residue and DOES count; only a trailing one (the prettier bitmap anchor) escapes, because it sits on a code line. Generated files report as SKIPPED, and the set is pinned.
+**The budget is 3% of a file's lines or two lines, whichever is larger, and it is in CLAUDE.md and [ADR-0075](./docs/adr/0075-the-comment-budget-is-a-tool-not-a-rule.md).** Run `pnpm comments` for the number — do not trust a figure written down anywhere. Directives are exempt and the list is `DIRECTIVES` in `density.mjs`, once. A **standalone** `//` is residue and DOES count; only a trailing one (the prettier bitmap anchor) escapes, because it sits on a code line. Generated files report as SKIPPED, and the set is pinned.
 
 **Do not write a comment whose only reader is the next agent.** Review rounds, tranche numbers, rule letters, "a reviewer caught this". That class was the largest in the repo's history and it is now on CLAUDE.md's delete-on-sight list.
 

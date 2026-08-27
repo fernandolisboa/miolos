@@ -74,6 +74,34 @@ describe("the card's accent literals", () => {
       expect(css).toMatch(new RegExp(`${token}\\s*:\\s*${hex}\\s*;`, "i"));
     }
   });
+
+  it("scales its lengths 3x off tokens.css, so a token edit cannot fork the card", () => {
+    const css = stylesheet("../../packages/ui/tokens.css");
+    const source = cardSource;
+    const tokenPx = (name: string): number => {
+      const match = new RegExp(`${name}\\s*:\\s*(\\d+)px\\s*;`).exec(css);
+      expect(match, `${name} is missing from tokens.css`).not.toBeNull();
+      return Number(match?.[1]);
+    };
+    const literal = (pattern: RegExp): number => {
+      const match = pattern.exec(source);
+      expect(
+        match,
+        `${String(pattern)} is missing from card.tsx`,
+      ).not.toBeNull();
+      return Number(match?.[1]);
+    };
+
+    expect(literal(/const CARD_PADDING = (\d+);/)).toBe(
+      3 * tokenPx("--space-6"),
+    );
+    expect(literal(/borderRadius: (\d+),\n\s*boxShadow:/)).toBe(
+      3 * tokenPx("--radius"),
+    );
+    expect(literal(/height: 57,\n\s*borderRadius: (\d+),/)).toBe(
+      3 * tokenPx("--radius-tape"),
+    );
+  });
 });
 
 describe("the OG card paints the accent on the tape and the shadow only (T-WEB-S200)", () => {

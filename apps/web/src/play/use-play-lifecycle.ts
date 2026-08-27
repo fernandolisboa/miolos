@@ -144,7 +144,7 @@ export function usePlayLifecycle<S extends PlayCore>({
       return;
     }
     persistUnlessConcluded(buildRef.current(state, Date.now(), false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `state` is depended on THROUGH `persistDeps`, never directly: `tick` returns a new state object every second while `timer` and the caller's slice keep their identities, so `[state]` would write a readPlayRecord + Zod parse + JSON.stringify + setItem cycle once a second, forever (plan 018 §5.4, landmine 21; T-WEB-S33). The spread is that contract, and it is the reason `persistDeps` is a named input rather than a comment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `state` is depended on THROUGH `persistDeps`, never directly: `tick` returns a new state object every second while `timer` and the caller's slice keep their identities, so `[state]` would write a readPlayRecord + Zod parse + JSON.stringify + setItem cycle once a second, forever (T-WEB-S33). The spread is that contract, and it is the reason `persistDeps` is a named input rather than a comment.
   }, [game, hydrated, status, date, timer, ...persistDeps]);
 
   useEffect(() => {

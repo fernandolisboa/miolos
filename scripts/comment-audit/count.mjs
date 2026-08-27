@@ -1,8 +1,19 @@
 import ts from "typescript";
 import fs from "node:fs";
-import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseArgs } from "./records.mjs";
+
+export function parseArgs(argv, name) {
+  const files = argv.slice(2).filter((a) => a !== "");
+  if (files.length === 0) {
+    console.error(
+      `usage: node scripts/comment-audit/${name} <file>...\n` +
+        "Refusing to run on an empty file list: a wrong glob would otherwise\n" +
+        "print the most reassuring output in the toolkit — zero comments found.",
+    );
+    process.exit(2);
+  }
+  return { files };
+}
 
 export function commentRanges(file, text = fs.readFileSync(file, "utf8")) {
   const sf = ts.createSourceFile(
@@ -25,20 +36,41 @@ export function commentRanges(file, text = fs.readFileSync(file, "utf8")) {
   return { text, ranges: [...seen.values()].sort((a, b) => a[0] - b[0]) };
 }
 
-export function commentRangesOf(file, text) {
-  return commentRanges(path.join("/virtual", path.basename(file)), text);
+export function lineStarts(text, lines) {
+  const starts = [];
+  let p = 0;
+  for (const l of lines) {
+    starts.push(p);
+    p += l.length + 1;
+  }
+  return starts;
 }
 
-export function commentText(file, raw) {
-  if (raw !== undefined) {
-    const { ranges } = commentRangesOf(file, raw);
-    return { text: ranges.map(([a, b]) => raw.slice(a, b)).join("\n") };
+export function maskOf(text, ranges) {
+  const mask = new Uint8Array(text.length);
+  for (const [a, b] of ranges) for (let i = a; i < b; i++) mask[i] = 1;
+  return mask;
+}
+
+// A JSX comment line is `{/* … */}`: the braces sit OUTSIDE the comment range,
+// so counting them as code would hide every line of JSX prose from the budget.
+// A brace only passes when it abuts the comment, which keeps `} // trailing`
+// a code line — see ADR-0075.
+export function classifyLine(text, mask, s, e) {
+  let hasComment = false;
+  let hasCode = false;
+  for (let j = s; j < e; j++) {
+    const c = text[j];
+    if (c.trim() === "") continue;
+    if (mask[j]) {
+      hasComment = true;
+      continue;
+    }
+    if (c === "{" && mask[j + 1]) continue;
+    if (c === "}" && j > s && mask[j - 1]) continue;
+    hasCode = true;
   }
-  const { text, ranges } = commentRanges(file);
-  return {
-    text: ranges.map(([a, b]) => text.slice(a, b)).join("\n"),
-    commentOnly: countLines(text, ranges).commentOnly,
-  };
+  return { hasComment, hasCode };
 }
 
 export function count(file) {
@@ -48,27 +80,19 @@ export function count(file) {
 
 function countLines(text, ranges) {
   const lines = text.split("\n");
-  const starts = [];
-  let p = 0;
-  for (const l of lines) {
-    starts.push(p);
-    p += l.length + 1;
-  }
-  const mask = new Uint8Array(text.length);
-  for (const [a, b] of ranges) for (let i = a; i < b; i++) mask[i] = 1;
+  const starts = lineStarts(text, lines);
+  const mask = maskOf(text, ranges);
   let commentOnly = 0;
   let touched = 0;
   const onlyLines = [];
   for (let i = 0; i < lines.length; i++) {
     const s = starts[i];
-    const e = s + lines[i].length;
-    let hasComment = false;
-    let hasCode = false;
-    for (let j = s; j < e; j++) {
-      if (text[j].trim() === "") continue;
-      if (mask[j]) hasComment = true;
-      else hasCode = true;
-    }
+    const { hasComment, hasCode } = classifyLine(
+      text,
+      mask,
+      s,
+      s + lines[i].length,
+    );
     if (hasComment) {
       touched++;
       if (!hasCode) {
@@ -83,7 +107,7 @@ function countLines(text, ranges) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const { files } = parseArgs(process.argv, "count.mjs", false);
+  const { files } = parseArgs(process.argv, "count.mjs");
   let tot = 0;
   let totT = 0;
   let totB = 0;

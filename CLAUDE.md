@@ -31,7 +31,7 @@ The flow scales with the work. Choose before starting and name the row in the PR
 
 | The work | Plan | Review after implementation |
 |---|---|---|
-| **Records** — a doc edit, an ADR status line, a label or workflow tweak. **Nothing under `apps/` or `packages/` changes.** | none | none — the gate is the whole defence |
+| **Records** — a doc edit, an ADR status line, a label or workflow tweak. **Nothing under `apps/` or `packages/` changes, and nothing that is a gate's own implementation or invocation** — `scripts/**`, `.husky/**`, the gate steps in `.github/workflows/**`, the `scripts` block of `package.json`. The gate that would catch a mistake there is the one being edited. | none | none — the gate is the whole defence |
 | **Quick change** — a small change with no new surface and no new decision. Includes a comment sweep and a dependency bump: both touch code files. | 3–5 lines in the PR body | **1 reviewer, correctness lens** |
 | **Defect** — a real bug | reproduce first, then a short plan in the PR body | **1 reviewer, correctness lens**; add security if it touches auth, secrets or user data |
 | **Feature** — a vertical slice, a new surface, a schema or contract change, anything needing an ADR | a real plan as an issue comment, reviewed before any code | **4 reviewers in parallel** — see below |
@@ -89,9 +89,10 @@ DRY has one limit: two things that merely *look* alike are not duplication. Extr
 
 ## Comments
 
-**Comments are rare, and the rarity is measured.** No `.ts`, `.tsx` or `.mjs` file we own spends more than **3% of its lines, or two lines, whichever is larger**, on comment-only prose. `pnpm comments` is the gate; it runs in pre-commit and in CI, and exits 1 when a file is over. The two-line floor is not slack — it is what lets a thirty-line file carry one of the comments the next paragraph *requires*, which a bare percentage forbids outright.
+**Comments are rare, and the rarity is measured.** No `.ts`, `.tsx`, `.mts`, `.cts`, `.mjs` or `.cjs` file we own spends more than **3% of its lines, or two lines, whichever is larger**, on comment-only prose. `pnpm comments` is the gate — the selftest harness, then the budget; it runs in pre-commit and in CI, and exits 1 when a file is over. The two-line floor is not slack — it is what lets a thirty-line file carry one of the comments the next paragraph *requires*, which a bare percentage forbids outright.
 
-Directives are exempt and never counted: `eslint-disable`/`-enable`, `@ts-expect-error`/`-ignore`/`-nocheck`, `/*#__PURE__*/`, `/// <reference`, `prettier-ignore`, `impeccable-disable`/`-ignore`, `@vitest-environment`, and `c8`/`v8`/`istanbul ignore`. Prose that merely *mentions* a directive is not exempt. A trailing `//` (the prettier anchor that keeps a nonogram bitmap one row per line) sits on a code line and never reaches the budget; a **standalone** `//` is residue and does count.
+Directives are exempt and never counted: `eslint-disable`, `eslint-enable`, `@ts-expect-error`, `@ts-ignore`, `@ts-nocheck`, `#__PURE__`, `/// <reference`, `prettier-ignore`, `impeccable-disable`, `impeccable-ignore`, `@vitest-environment`, `c8 ignore`, `v8 ignore`, `istanbul ignore`.
+Prose that merely *mentions* a directive is not exempt. A trailing `//` (the prettier anchor that keeps a nonogram bitmap one row per line) sits on a code line and never reaches the budget; a **standalone** `//` is residue and does count. A `{/* … */}` JSX line is prose and counts — its braces are not code.
 
 The code says what it does; the ADR says why the decision was made. A comment only exists when the code is genuinely hard to follow, and then it says both what it does *and* why it has to be that complicated. If a file cannot fit the budget, the first question is whether the code is too complex — not whether the budget is too small.
 
@@ -143,7 +144,7 @@ ADRs matter more now, not less: they are where the "why" goes when it leaves the
 - `pnpm test` — full suite
 - **Property-based tests for `packages/games`** — a generator ships with its invariants proved, not sampled. Every generated Sudoku has a unique solution; every generated puzzle is solvable; seed → puzzle is deterministic.
 - **Zod validation at every boundary** — API contracts and anything crossing the client/server line are parsed, never cast.
-- `pnpm comments` — the comment budget ([ADR-0075](./docs/adr/0075-the-comment-budget-is-a-tool-not-a-rule.md)). Generated files report as skipped; vendored skills under `.claude/skills/` are not ours.
+- `pnpm comments` — the selftest harness, then the comment budget ([ADR-0075](./docs/adr/0075-the-comment-budget-is-a-tool-not-a-rule.md)). Generated files report as skipped; vendored skills under `.claude/skills/` are not ours.
 - `npx impeccable detect` — required on any change that touches UI. Visual quality is a gate, not an aspiration.
 - Pre-commit (Husky + lint-staged + typecheck + comment budget + tests) must stay green. Never bypassed with `--no-verify`.
 

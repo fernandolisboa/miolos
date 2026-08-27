@@ -19,12 +19,12 @@ describe("the client-bundle tripwire's motif markers", () => {
     for (const marker of FORBIDDEN_MARKERS) {
       expect(
         names.has(marker),
-        `\`${marker}\` no longer names a motif: update this file AND \`FORBIDDEN\` in apps/web/scripts/route-client-js.mjs`,
+        `\`${marker}\` no longer names a motif: update this file AND the FORBIDDEN_* lists in apps/web/scripts/route-client-js.mjs`,
       ).toBe(true);
     }
     expect(
       ids.has(FORBIDDEN_ID),
-      `\`${FORBIDDEN_ID}\` no longer identifies a motif: update this file AND \`FORBIDDEN\` in apps/web/scripts/route-client-js.mjs`,
+      `\`${FORBIDDEN_ID}\` no longer identifies a motif: update this file AND the FORBIDDEN_* lists in apps/web/scripts/route-client-js.mjs`,
     ).toBe(true);
   });
 

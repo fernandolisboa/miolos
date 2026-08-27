@@ -1,13 +1,21 @@
 import fs from "node:fs";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
-import { parseArgs } from "./records.mjs";
-import { commentRanges } from "./count.mjs";
+import {
+  classifyLine,
+  commentRanges,
+  lineStarts,
+  maskOf,
+  parseArgs,
+} from "./count.mjs";
 
 const DEFAULT_MAX = 3;
 
 // A floor, not slack — see ADR-0075.
 const FLOOR_LINES = 2;
+
+export const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 
 // The one list — see ADR-0075.
 export const DIRECTIVES = [
@@ -50,12 +58,15 @@ export function isGenerated(text) {
   return GENERATED.test(text.split("\n").slice(0, 8).join("\n"));
 }
 
-// The corpus, defined once — see ADR-0075.
+// The corpus, defined once — see ADR-0075. `-z` because a newline in a
+// filename splits into two unreadable paths, and unreadable is SKIPPED.
 export function trackedFiles() {
-  return execFileSync("git", ["ls-files", "*.ts", "*.tsx", "*.mjs"], {
-    encoding: "utf8",
-  })
-    .split("\n")
+  return execFileSync(
+    "git",
+    ["ls-files", "-z", "*.ts", "*.tsx", "*.mts", "*.cts", "*.mjs", "*.cjs"],
+    { encoding: "utf8", cwd: repoRoot },
+  )
+    .split("\0")
     .filter((f) => f && !f.startsWith(".claude/skills/"));
 }
 
@@ -66,26 +77,18 @@ export function allowance(total, max = DEFAULT_MAX) {
 export function density(file, text = fs.readFileSync(file, "utf8")) {
   const { ranges } = commentRanges(file, text);
   const lines = text.split("\n");
-  const starts = [];
-  let p = 0;
-  for (const l of lines) {
-    starts.push(p);
-    p += l.length + 1;
-  }
-  const mask = new Uint8Array(text.length);
-  for (const [a, b] of ranges) for (let i = a; i < b; i++) mask[i] = 1;
+  const starts = lineStarts(text, lines);
+  const mask = maskOf(text, ranges);
   let budgeted = 0;
   let directives = 0;
   for (let i = 0; i < lines.length; i++) {
     const s = starts[i];
-    const e = s + lines[i].length;
-    let hasComment = false;
-    let hasCode = false;
-    for (let j = s; j < e; j++) {
-      if (text[j].trim() === "") continue;
-      if (mask[j]) hasComment = true;
-      else hasCode = true;
-    }
+    const { hasComment, hasCode } = classifyLine(
+      text,
+      mask,
+      s,
+      s + lines[i].length,
+    );
     if (!hasComment || hasCode) continue;
     if (isDirective(lines[i])) directives++;
     else budgeted++;
@@ -110,9 +113,13 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     console.error("density.mjs: --max needs a number");
     process.exit(2);
   }
-  const { files } = process.argv.includes("--tracked")
-    ? { files: trackedFiles() }
-    : parseArgs(argv, "density.mjs", false);
+  let files;
+  if (process.argv.includes("--tracked")) {
+    process.chdir(repoRoot);
+    files = trackedFiles();
+  } else {
+    ({ files } = parseArgs(argv, "density.mjs"));
+  }
   let overBudget = 0;
   let totB = 0;
   let totL = 0;

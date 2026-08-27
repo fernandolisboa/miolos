@@ -310,6 +310,7 @@ export async function topUpNonogramBuffer(
   }
 }
 
+// TODO(#74): a real alert for a low Termo answer pool.
 const LOW_ANSWER_POOL_WARNING = 30;
 
 const ANSWER_LIST_EXHAUSTED =
