@@ -687,8 +687,10 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
 
   // Two of the four defects this tool was written for were orphans inside
   // Accepted ADRs. A `.ts`-only line-selector cannot see them, which is why
-  // this one has a second selector — and this is one of the four, verbatim
-  // from `docs/adr/0037-…`, not a synthetic paragraph.
+  // this one has a second selector. The fixture is a real orphan in a real
+  // Accepted ADR, copied verbatim from `docs/adr/0037-…` rather than built
+  // from `words(n)` — the file's own text, not one of the four by provenance:
+  // `git log -S` puts it in a `feat:` commit, not in a #205 fix.
   check(
     "markdown prose is scanned too — ADR-0037's real orphan",
     kinds(

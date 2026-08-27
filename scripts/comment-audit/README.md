@@ -211,17 +211,19 @@ Two thresholds, because they answer different questions:
   tool knowingly over-reports: a paragraph deliberately wrapped at 72 that ends
   in a short word is flagged. Across `apps/web/src` that is 17 of 203 hits.
 
-Line selectors: comments for `.ts`/`.tsx`/`.mjs`/`.css`, and markdown prose. Two
-of the four founding defects were orphans inside Accepted ADRs, and one of
-those, ADR-0037's *"unsolvable."*, is a `selftest.mjs` fixture verbatim.
+Line selectors: comments for `.ts`/`.tsx`/`.mjs`/`.css`, and markdown prose.
+Two of the four founding defects were orphans inside Accepted ADRs, which is
+why the second selector exists; `selftest.mjs` pins the shape with a real
+orphan copied verbatim out of `docs/adr/0037-…` rather than with a synthetic
+one.
 
 Not prose, and never candidates: markdown tables, **space-aligned tables inside
 a comment**, headings, fenced blocks, sibling and nested bullets, **a section
-divider drawn in rule characters**, a trailing comment beside code, any line
-holding `*/`, a markdown hard break, and every directive class. The two in bold
-were false positives the CSS line-selector introduced — three dividers and one
-numeric table, 4 of the 60 CSS hits — and closing them took the `.css` corpus
-to **56** across 25 sheets.
+divider drawn as a rule line or as a rule–title–rule banner**, a trailing
+comment beside code, any line holding `*/`, a markdown hard break, and every
+directive class. The two in bold were false positives the CSS line-selector
+introduced — three dividers and one numeric table, 4 of the 60 CSS hits — and
+closing them took the `.css` corpus to **56** across 25 sheets.
 
 ### What `wrap.mjs` cannot see
 
@@ -229,6 +231,12 @@ to **56** across 25 sheets.
   which in CSS is usually the line carrying the paragraph's last sentence. The
   alternative — letting a comment-line regex match `*/` — is what ate a
   terminator during this campaign, so the miss is deliberate.
+- **A banner whose rule run does not close the line.** The divider rule wants
+  a rule LINE or a rule–title–rule banner, because a rule run at the start
+  alone is markdown emphasis — `***bold***` — and an unanchored class dropped
+  four real `docs/adr/**` paragraphs out of the prose set. The price is that
+  `--- Title --- (a trailing note)` reads as prose: three lines under
+  `.claude/**`, worth two hits.
 - **`url(http://…)` in a stylesheet**, the blind spot `css-count.mjs` exists
   for. `.css` is read through the same TypeScript parser as `count.mjs`; no
   tracked sheet holds one today, and on a sheet that did, the `//` the parser
