@@ -25,18 +25,37 @@ Rule I applied to this directory. `verbatim.mjs`, `excision.mjs` and
 | `verbatim.mjs` | which surviving sentences are **not byte-identical** to the baseline | yes |
 | `excision.mjs` | which of those changed by **more than a citation excision** — the ones a PR body must declare | yes |
 | `shingle.mjs` | **Rule A** — what echoes a comment's prose, before you delete it | no |
+| `wrap.mjs` | which lines the diff left **ragged** — under-filled, or an orphan | yes |
 | `selftest.mjs` | do the tools still do what this README says? | no |
 
 Baseline defaults to `main`; pass `--base <ref>` to change it. A path absent
 from the baseline — or from the working tree, which a `git diff --name-only`
 list contains after a deletion — is reported and skipped, never silently
-counted as verified.
+counted as verified. `wrap.mjs` is the one exception on the baseline side, and
+says so in its output: a file the base ref does not hold has every hit read as
+new, because a new ADR is where two of the four wrap defects were found. A base
+**ref** that does not resolve is a different condition and exits 2 — a typo
+there compared nothing, and would otherwise print that same reassuring row for
+every file.
 
 ```sh
 node scripts/comment-audit/count.mjs apps/web/src/termo/state.ts
 node scripts/comment-audit/hash.mjs $(git diff main --name-only -- '*.ts' '*.tsx')
+node scripts/comment-audit/wrap.mjs $(git diff main --name-only -- '*.ts' '*.tsx' '*.mjs' '*.css' '*.md')
 node scripts/comment-audit/selftest.mjs
 ```
+
+## What `markers.mjs` cannot see
+
+A `0` from `markers.mjs` is **not** a clean file. The scan only sees what
+`records.mjs` spells, and a genre written a hair differently is invisible:
+`step-\d+` was hyphen-only until this tool set gained `wrap.mjs`, so
+`(#142 step 7)` — live in all four daily `use-*-play.ts` hooks — counted
+nowhere, and a tranche reported `markers.mjs 0` for three files that each
+carried one (#205 Rule AA). It now matches `step[- ]\d+`.
+
+The class is not closed and cannot be: the scan is a list of spellings. Read
+the file before calling it swept.
 
 ## What `hash.mjs` cannot see
 
@@ -142,9 +161,106 @@ Both are narrower than "nothing was reworded":
   `count.mjs` reports raw `ranges`. Two numbers, two conventions — say which
   one a PR body is quoting.
 
+## Reading `wrap.mjs`
+
+An excision shortens a sentence and does not move the wrap, so what it leaves
+behind is a line that could have taken the whole line below it — or, at the end
+of a paragraph, a one-word orphan. Three PRs published this check inline before
+it was a tool; it found four defects and **every one was introduced by a fix
+commit**, which is the class reviewers word-diff least.
+
+It is **delta-only**. Prose here was never greedily wrapped — the 761 tracked
+`.ts`/`.tsx`/`.mjs`/`.md`/`.css` files score 1,588 hits as of `main`, 146 of
+them orphans — so the absolute total is context, and the figure a PR body
+declares is the `N new` column. Hits are keyed by their own text plus the word
+below, so a line that merely *moved* is not new; a line that was **re-wrapped**
+is, which is the point.
+
+The three corpus figures above — **761 files, 1,588 hits, 146 orphans** — are
+this command against `REF=49e5e7e`, the commit `main` held when they were
+taken. It reads the corpus out of the ref rather than the working tree, so it
+reproduces on any later checkout:
+
+```sh
+REF=49e5e7e node --input-type=module -e '
+  import { execFileSync } from "node:child_process";
+  const { ragged } = await import("./scripts/comment-audit/wrap.mjs");
+  const ref = process.env.REF ?? "HEAD";
+  const show = (a) => execFileSync("git", a, { encoding: "utf8", maxBuffer: 1 << 28 });
+  const files = show(["ls-tree", "-r", "--name-only", ref])
+    .trim().split("\n").filter((f) => /\.(ts|tsx|mjs|md|css)$/.test(f));
+  const hits = files.flatMap((f) => ragged(f, show(["show", `${ref}:${f}`])));
+  console.log(files.length, hits.length, hits.filter((h) => h.kind === "orphan").length);'
+```
+
+The `apps/web/src` pair below is the same command with `.filter((f) =>
+f.startsWith("apps/web/src/"))` added, the `.css` pair with
+`.endsWith(".css")`, and ADR-0053's pair is `ragged()` against that one file,
+once as shipped and once with the interior threshold replaced by `WIDTH`.
+
+Two thresholds, because they answer different questions:
+
+- an **interior** line is judged against its own paragraph's widest line,
+  ignoring any line already over 80. A greedily wrapped paragraph scores zero
+  against that by construction, whatever column the author actually used —
+  ADR-0053 scores **53** here against **464** at a fixed 80, and at 464 nobody
+  reads the output. Excluding the over-long lines matters: one unbreakable URL
+  would otherwise hand its whole paragraph back to the fixed-80 regime;
+- an **orphan** — a last line holding one word — is judged against 80, because
+  a two-line paragraph has no interior to take a column from. This is where the
+  tool knowingly over-reports: a paragraph deliberately wrapped at 72 that ends
+  in a short word is flagged. Across `apps/web/src` that is 17 of 203 hits.
+
+Line selectors: comments for `.ts`/`.tsx`/`.mjs`/`.css`, and markdown prose.
+Two of the four founding defects were orphans inside Accepted ADRs, which is
+why the second selector exists; `selftest.mjs` pins the shape with a real
+orphan copied verbatim out of `docs/adr/0037-…` rather than with a synthetic
+one.
+
+Not prose, and never candidates: markdown tables, **space-aligned tables inside
+a comment**, headings, fenced blocks, sibling and nested bullets, **a section
+divider drawn as a rule line or as a rule–title–rule banner**, a trailing
+comment beside code, any line holding `*/`, a markdown hard break, and every
+directive class. The two in bold were false positives the CSS line-selector
+introduced — three dividers and one numeric table, 4 of the 60 CSS hits — and
+closing them took the `.css` corpus to **56** across 25 sheets.
+
+### What `wrap.mjs` cannot see
+
+- **A block comment's closing line.** Any line holding `*/` is skipped whole,
+  which in CSS is usually the line carrying the paragraph's last sentence. The
+  alternative — letting a comment-line regex match `*/` — is what ate a
+  terminator during this campaign, so the miss is deliberate.
+- **A banner whose rule run does not close the line.** The divider rule wants
+  a rule LINE or a rule–title–rule banner, because a rule run at the start
+  alone is markdown emphasis — `***bold***` — and an unanchored class dropped
+  four real `docs/adr/**` paragraphs out of the prose set. The price is that
+  `--- Title --- (a trailing note)` reads as prose: three lines under
+  `.claude/**`, worth two hits.
+- **`url(http://…)` in a stylesheet**, the blind spot `css-count.mjs` exists
+  for. `.css` is read through the same TypeScript parser as `count.mjs`; no
+  tracked sheet holds one today, and on a sheet that did, the `//` the parser
+  invents sits on a line that also holds code, which is not prose either way.
+- **A line whose neighbours are already over 80.** When every interior line of
+  a paragraph is wider than 80 the column falls back to 80, and nothing in that
+  paragraph can score — the alternative is a column read off an unbreakable
+  URL, which would flag every line under it.
+- **Prose that quotes spacing.** `\S[ \t]{3,}\S` reads three interior spaces as
+  a table column, which is right 43 times in the tracked corpus and wrong about
+  six, all of them sentences quoting an indent literal.
+- **Whether a re-wrap was CORRECT.** A greedily re-wrapped paragraph scores
+  zero, and so does a paragraph whose sentences were reworded and then wrapped
+  greedily. That is `excision.mjs`'s question, not this one.
+- **A paragraph whose own fill is wrong.** The column is read off the paragraph
+  rather than imposed on it, so a block wrapped short throughout is consistent
+  with itself and scores zero. Only a line that is short *relative to its own
+  neighbours* is a hit.
+
 ## Not a gate
 
 Nothing here is wired into CI or pre-commit. These generate the numbers a PR
 body states, so that those numbers are re-runnable instead of typed — #205's
 Rule P. `selftest.mjs` is Rule M's second method for the counters themselves;
-run it after touching anything in this directory.
+run it after touching anything in this directory. It is **131 assertions**, and
+every one is a case this campaign already got wrong or a review round already
+caught.
