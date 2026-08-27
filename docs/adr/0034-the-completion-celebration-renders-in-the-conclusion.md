@@ -27,7 +27,7 @@ is a per-game divergence inside the one file that ADR-0028 exists to keep
 identical across four games.
 
 **The swap condition is an invariant, not an implementation detail.**
-`apps/web/src/sudoku/sudoku-screen.tsx:43-50` gates on **both**
+`SudokuScreen` in `apps/web/src/sudoku/sudoku-screen.tsx` gates on **both**
 `status !== "playing"` **and** `timer.runningSince === null`, and its own
 shipped comment says why: *"the clock is frozen one commit after the grid
 closes, and swapping early would stamp a time the pause is about to
@@ -47,9 +47,9 @@ built on it.
 1. **A game's completion celebration — the authoritative, scannable,
    reload-surviving payoff — renders inside `<ConclusionView/>`, never as
    an animation on the play board.** The argument that carries this needs
-   no measurement: the alternative forks the one screen shape ADR-0028:131
-   pins for every game, and fights the invariant
-   `sudoku-screen.tsx:43-50` records in its own comment.
+   no measurement: the alternative forks the one screen shape ADR-0028
+   decision 2 pins for every game, and fights the invariant `SudokuScreen`
+   records in its own comment.
 
 2. **Per-entry paint feedback on the board's cells is permitted, and it is
    explicitly not the reveal.** A cell may transition its own paint
@@ -130,14 +130,13 @@ built on it.
   | 5×5 (weekday 1) | 5 | **1** on every run | 11.7–12.1 ms, median 11.7 |
   | 15×15 (weekday 7) | 3 | **1** on every run | 11.1–11.7 ms, median 11.7 |
 
-  So a `var(--duration-slow)` (250 ms) transition started on the solved
-  board would be interrupted at ~12 ms of 250, i.e. **under 5 % of it**,
-  and the ≥200 ms threshold that would have made the in-place half live is
-  missed by more than an order of magnitude. The in-place reveal stays
-  rejected and this ADR is unamended in substance — decision 1 rests on
-  ADR-0028:131 and `sudoku-screen.tsx:43-50` and would have been unchanged
-  either way, which is exactly why it was written not to depend on this
-  measurement.
+  So a `var(--duration-slow)` (250 ms) transition started on the solved board
+  would be interrupted at ~12 ms of 250, i.e. **under 5 % of it**, and the
+  ≥200 ms threshold that would have made the in-place half live is missed by
+  more than an order of magnitude. The in-place reveal stays rejected and this
+  ADR is unamended in substance — decision 1 rests on ADR-0028 decision 2 and
+  `SudokuScreen` and would have been unchanged either way, which is exactly
+  why it was written not to depend on this measurement.
 
   **How to re-derive it**, since — unlike ADR-0032 consequence (f) and
   ADR-0033's premise, both of which are pinned by committed table-driven
@@ -186,11 +185,10 @@ built on it.
   `apps/web/src/play/conclusion-view.tsx`),
   **two games pass none, and the third passes only `picture`**: binairo and
   sudoku render byte-identically to what they rendered before any of the
-  three existed, and nonogram takes `picture` alone
-  (`nonogram-screen.tsx:96`, `nonogram-conclusion.tsx:68`). No game carries
-  another game's member. A second member is a claim about the
-  *game's* shape, and it has to be argued in the ADR that adds it, in those
-  terms. "One per game" stays the number to beat.
+  three existed, and nonogram takes `picture` alone (`NonogramScreen`, which
+  composes it, and `NonogramConclusion`, which resolves it). No game carries
+  another game's member. A second member is a claim about the *game's* shape,
+  and it has to be argued in the ADR that adds it, in those terms. "One per game" stays the number to beat.
 - **(d) The reveal works offline, because the record is its source.** The
   client component that supplies the prop reads the local play record, so
   a player who finishes with no network still sees the picture, which is

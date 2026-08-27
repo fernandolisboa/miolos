@@ -1,10 +1,10 @@
 /**
- * The ONE boundary where the engine's grid and the client's cells meet
- * (plan 018 §8.2, S6). `@miolos/games/sudoku` speaks `SudokuGrid` — 81
- * numbers with `0` for an empty cell — while the client carries `null` for
- * empty, so that the hint's "first empty", the persisted `entries` and the
- * shared `countFilled` read identically across games and no
- * `entries[i] || fallback` can ever mistake a real value for absence.
+ * The ONE boundary where the engine's grid and the client's cells meet.
+ * `@miolos/games/sudoku` speaks `SudokuGrid` — 81 numbers with `0` for an
+ * empty cell — while the client carries `null` for empty, so that the hint's
+ * "first empty", the persisted `entries` and the shared `countFilled` read
+ * identically across games and no `entries[i] || fallback` can ever mistake a
+ * real value for absence.
  *
  * Every conversion in this module is an explicit loop, never a cast: the
  * types below make claims about the values ("81 digits", "never 0") that
@@ -12,9 +12,8 @@
  *
  * It is also the guarantee that keeps the engine from throwing. Every
  * `@miolos/games/sudoku` entry point calls `assertSudokuGrid` and throws a
- * `TypeError` on anything that is not 81 integers 0–9 (landmine 8), and
- * `mergedGrid` is what makes a partial, `undefined`-bearing client array
- * impossible to hand it.
+ * `TypeError` on anything that is not 81 integers 0–9, and `mergedGrid` is what
+ * makes a partial, `undefined`-bearing client array impossible to hand it.
  */
 import { solveSudoku, type SudokuGrid } from "@miolos/games/sudoku";
 
@@ -29,12 +28,12 @@ const CELLS = 81;
 
 /**
  * 0-based row/column → 1-based CSS grid track, skipping the two gutter
- * tracks (§12.3): 0..8 → 1,2,3,5,6,7,9,10,11.
+ * tracks: 0..8 → 1,2,3,5,6,7,9,10,11.
  *
- * It lives here rather than in the board because the keypad places its
- * digit row on the SAME template, so digit *n* sits under column *n*
- * (§12.6) — two consumers, one arithmetic, one unit test (T-WEB-S8).
- * Auto-placement is not an option: it would drop cells into the gutters.
+ * It lives here rather than in the board because the keypad places its digit
+ * row on the SAME template, so digit *n* sits under column *n* — two
+ * consumers, one arithmetic, one unit test (T-WEB-S8). Auto-placement is not
+ * an option: it would drop cells into the gutters.
  */
 export const track = (index: number): number =>
   index + 1 + (index >= 3 ? 1 : 0) + (index >= 6 ? 1 : 0);
@@ -66,11 +65,10 @@ export function isPlayable(givens: SudokuGrid, index: number): boolean {
 /**
  * The engine's solution as digits, or `null` when the board is unsolvable.
  *
- * The `null` branch is DEFINED, not assumed away: for a published daily it
- * is unreachable (uniquely solvable by construction, ADR-0023), so the
- * caller renders the hint button's exhausted variant rather than treating
- * it as an error. Omitting exactly this branch was plan 017's finding
- * `issue-ac-10`.
+ * The `null` branch is DEFINED, not assumed away: for a published daily it is
+ * unreachable (uniquely solvable by construction, ADR-0023), so the caller
+ * renders the hint button's exhausted variant rather than treating it as an
+ * error.
  */
 export function solutionDigits(
   givens: SudokuGrid,
@@ -106,7 +104,7 @@ export function playableGivens(
  * `boolean`, not a type predicate — and `mergedGrid` returns
  * `readonly number[]`, which is not assignable to the `readonly
  * SudokuDigit[]` the play record's schema infers. Without it the offline
- * queue would have no body to POST at all (§8.2, review finding I3).
+ * queue would have no body to POST at all.
  */
 export function solvedDigits(
   merged: SudokuGrid,

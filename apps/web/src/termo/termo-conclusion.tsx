@@ -30,27 +30,19 @@ export interface TermoOutcomeSource {
  * plus the two things that are not game-blind — the stamp's own slots, and
  * the day's word.
  *
- * It exists rather than a `record.game === "termo"` branch inside
- * `conclusion-view.tsx` because ADR-0029 decision 2 puts JSX composition per
- * game and keeps the shared conclusion game-blind. Narrowing a record to one
- * game is per-game code and belongs here. `NonogramConclusion` is the shipped
- * precedent, and this follows it hop for hop.
- *
- * ONE EXCEPTION EXISTS, and it is bounded where it lives (#142 step 7):
- * `RemoteConclusionView`'s `game === "termo"` stamp branch, forced by the
- * RSC plain-data constraint below — its `X/6` detail exists only after a
- * client fetch, so no server page can hand it down pre-composed the way
- * this component's props are. Its header names ADR-0029 decision 2 and
- * caps the crossing at that single branch; everything local still routes
- * through here.
+ * ONE EXCEPTION EXISTS, and it is bounded where it lives (#142):
+ * `RemoteConclusionView`'s `game === "termo"` stamp branch, forced by the RSC
+ * plain-data constraint below — its `X/6` detail exists only after a client
+ * fetch, so no server page can hand it down pre-composed the way this
+ * component's props are. Its header names ADR-0029 decision 2 and caps the
+ * crossing at that single branch; everything local still routes through here.
  *
  * EVERY STRING IS COMPOSED HERE AND HANDED DOWN FINISHED. `ConclusionOutcome`
  * and `ConclusionAnswer` are plain data across the RSC boundary (ADR-0043
  * decision 8): a function member there does not fail typecheck, does not fail
  * a component test, and throws "Functions cannot be passed directly to Client
  * Components" the first time the route is server-rendered — an HTTP 500 only
- * `test/route-ssr.test.tsx` can see, and #23 shipped exactly that bug in
- * exactly this file.
+ * `test/route-ssr.test.tsx` can see.
  */
 export function TermoConclusion({
   date,
@@ -138,9 +130,9 @@ function outcomeFor(
 }
 
 /**
- * The day's word (AC 2), on BOTH outcomes. On a win it is not redundant: the
- * player typed the word accent-free, so the accents are the one thing they
- * have not seen.
+ * The day's word, on BOTH outcomes. On a win it is not redundant: the player
+ * typed the word accent-free, so the accents are the one thing they have not
+ * seen.
  */
 function answerFor(
   source: TermoOutcomeSource | undefined,

@@ -15,31 +15,7 @@ import { usePriorConclusion } from "./use-prior-conclusion";
  * The archived Nonogram at its own URL (#31, ADR-0053 decisions 1 and 9).
  *
  * It composes the shipped `useNonogramPlay` hook with the shipped
- * `PlayView`/`PlaySkeleton` and **never imports `NonogramScreen`**. That is not
- * a style preference: all four screen roots hard-render a conclusion
- * component, and `conclusion-view.tsx` calls `useDayState(date)` — so
- * composing the root would fire the streak card's `GET /streak` and chain
- * `nextPendingDaily` to TODAY's routes on an archived date. T-WEB-S183 makes
- * the exclusion a module-graph assertion rather than prose.
- *
- * THE REASON STRENGTHENED AT #83 (ADR-0060): `useDayState` now FETCHES too,
- * so composing the root would fire `GET /day` as well as `GET /streak` —
- * two user-specific reads on a public, crawler-facing route, and both about
- * TODAY on a page rendering an archived date. T-WEB-S183 widened to match.
- *
- * What it copies from the root is the GATE, not the comment:
- *
- * - the hydration gate, because everything the board, the clock and the hint
- *   button show is derived from the record and the record cannot be read
- *   before the mount effect — painting first renders a day the player
- *   already finished as an empty board with a live hint button;
- * - close detection through `isClosedAndFrozen`, the shared predicate
- *   `use-play-lifecycle.ts` exports (#31 step-6 F15). Both conjuncts are
- *   required — the clock is frozen one commit after the board closes, and
- *   swapping early would stamp a time the pause is about to correct — and
- *   `status !== "playing"` rather than `=== "solved"` is what makes a lost
- *   board close here too. It is IMPORTED rather than re-typed: nine hand
- *   copies of one predicate were the finding.
+ * `PlayView`/`PlaySkeleton` and **never imports `NonogramScreen`**.
  */
 export function ArchiveNonogramScreen({
   daily,

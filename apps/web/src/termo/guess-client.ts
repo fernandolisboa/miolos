@@ -1,37 +1,10 @@
 /**
  * POST a Termo guess list and return the judgement, or a typed failure
- * (#27, plan 022 §11.4/§14.5, ADR-0038, ADR-0039).
+ * (#27, ADR-0038, ADR-0039).
  *
- * NOT `sync.ts`, and the five reasons are grounded rather than stylistic:
- *
- * 1. That module is a COMPLETIONS queue by construction — it posts to
- *    `/completions` and its queue is `listPendingRecords()`, i.e. "a finished
- *    result the server has not acknowledged".
- * 2. Its settlement is wrong for a turn: `settle(record, "rejected")` clears
- *    `pendingSync` PERMANENTLY, and a failed guess must stay re-postable.
- * 3. Its ladder is deliberately un-urgent ([2s, 5s, 15s, 60s]) and its
- *    handler bails outright in a hidden tab. Correct for a background
- *    completion; wrong for a turn the player is staring at.
- * 4. Its module-level singletons exist to keep ONE game-blind queue coherent,
- *    so pushing a foreground turn through them would let a background flush
- *    reset a live retry, and vice versa (ADR-0039 decision 4).
- * 5. ADR-0029 decision 3 scopes `sync.ts`'s genericity to the queue machinery
- *    FOR COMPLETIONS, with `buildBody` as the one per-game dispatch. That
- *    obligation is untouched — #27 still adds `case "termo"` there.
- *
- * It shares exactly two things with `sync.ts`: `ensureSession()`, which is
- * already a module-level shared promise and safe for a second caller, and the
- * "re-mint once per page load on a 401" rule — WHICH IS NOT DUPLICATED HERE.
- * That rule used to live as a local boolean in each module, and the earlier
- * version of this paragraph cleared the duplication on the grounds that a
- * guess touches no localStorage queue. That was right about the queue and
- * silent about the thing that actually breaks: `ensureSession` holds ONE
- * module-level promise, a forced re-mint replaces it, and `POST /session`
- * mints a brand-new user for any cookieless request. Two booleans that cannot
- * see each other therefore put two cookieless mints in flight at once and let
- * a completion be written for the identity that lost the `Set-Cookie` race
- * (finding B-1). The allowance now lives in `session/bootstrap.ts` beside the
- * promise it guards; this module keeps only its own decision to ASK.
+ * NOT `sync.ts` — ADR-0039 decision 4. The allowance now lives in
+ * `session/bootstrap.ts` beside the promise it guards; this module keeps only
+ * its own decision to ASK.
  *
  * A QUEUED GUESS WOULD BE INCOHERENT: by the time a queue drained, the board
  * may have moved on, and there is no "later" for a turn the player is
@@ -53,11 +26,7 @@ import {
 
 /**
  * WHY THE TURN IS HELD, and it is on the type because the screen makes a
- * FACTUAL CLAIM ABOUT THE PLAYER'S NETWORK out of it (finding B-7). One
- * string — "Sem conexão — a tentativa vai assim que a conexão voltar." — used
- * to answer 500, 502, 429 and a 401 after the one re-mint as well as a real
- * network failure, which is false in three of those four cases and points the
- * player at a fix that cannot help.
+ * FACTUAL CLAIM ABOUT THE PLAYER'S NETWORK out of it.
  *
  * `offline` is claimed ONLY when the client can see it: the fetch itself
  * rejected, or `navigator.onLine` is false. Everything else is `server` —
@@ -157,9 +126,9 @@ export async function postGuesses(
       if (response?.ok === true) {
         // The fresh identity works, so a cookie that expires LATER in this
         // page load can still be re-minted — without this the first spent
-        // allowance leaves the board held until a reload (finding B-2). `ok`
-        // and not `status !== 401`, because a 403 or a 415 is decided before
-        // `requireUserId` ever runs (finding E-7); see `confirmSession`.
+        // allowance leaves the board held until a reload. `ok` and not
+        // `status !== 401`, because a 403 or a 415 is decided before
+        // `requireUserId` ever runs; see `confirmSession`.
         confirmSession();
       }
     }
@@ -249,10 +218,8 @@ async function judgement(response: Response): Promise<GuessOutcome> {
  *
  * `board-closed` ⟺ the posted list continues past a winning row. That is a
  * client bug or tampering and NEVER a player outcome, so it must not read as
- * "não está na lista" — a desynced board would otherwise be told a correct
- * word is not in the dictionary (findings A-3/B-8). It is `refused`, which
- * renders `copy.failed`. The route used to answer this condition with
- * `invalid-guess` too; the distinct code is the server half of the same fix.
+ * "não está na lista" — a desynced board would otherwise be told a correct word
+ * is not in the dictionary. It is `refused`, which renders `copy.failed`.
  *
  * Every other code — and an unreadable body — is a system outcome and reads as
  * one. The `switch` is exhaustive over what the client acts on rather than a

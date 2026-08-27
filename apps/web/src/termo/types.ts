@@ -1,11 +1,7 @@
 /**
- * The Termo play slice's vocabulary (#27, plan 022 §14.4). Types only — every
- * value that operates on them lives in `state.ts`, `guess-client.ts` or the
- * shared `../play/` layer.
- *
- * Termo is the first game whose `closed` and `solved` do not coincide, so it
- * is the first producer of `PlayCore.status`'s `"lost"` member — carried
- * there "from day one" by ADR-0029 decision 5 for exactly this ticket.
+ * The Termo play slice's vocabulary (#27). Types only — every value that
+ * operates on them lives in `state.ts`, `guess-client.ts` or the shared
+ * `../play/` layer.
  */
 import type { TermoBoardStatus, TileStates } from "@miolos/games/termo";
 
@@ -54,7 +50,7 @@ export interface TermoPlayState extends PlayCore {
    * Written ONLY by `submit` and `retry` (clearing) and by the failure
    * branches (setting) — never by `type`, `erase` or `judged`. That is what
    * keeps the two live regions off each other: no single transition writes
-   * both this and `announcement` (plan 022 §13.1b).
+   * both this and `announcement`.
    */
   readonly notice: string | null;
   /**
@@ -89,10 +85,10 @@ export interface TermoPlayState extends PlayCore {
   /**
    * True once the server has told us this day is gone (a 404 from the guess
    * route). It lives HERE rather than in a `useState` beside the reducer, and
-   * that is the whole point of this module's opening sentence (finding B-12):
-   * a second state authority would put a future "the day went away mid-turn"
-   * rule in two places, and would leave `TermoScreen`'s three-way branch
-   * order unexercisable through the reducer.
+   * that is the whole point of this module's opening sentence: a second state
+   * authority would put a future "the day went away mid-turn" rule in two
+   * places, and would leave `TermoScreen`'s three-way branch order
+   * unexercisable through the reducer.
    *
    * Screen-level rather than gameplay, exactly like `hydrated`, `held`,
    * `notice` and `pendingSync`, all of which the reducer already carries.
@@ -119,7 +115,7 @@ export type TermoPlayAction =
    * factual claim about the player's network out of it: `offline` only when
    * the client can actually see that (the fetch rejected, or
    * `navigator.onLine` is false), `server` for 5xx, 429 and a 401 after the
-   * one re-mint (finding B-7).
+   * one re-mint.
    */
   | { readonly type: "held"; readonly reason: HeldReason }
   /** The server answered 404: this day is gone and can never be judged. */
