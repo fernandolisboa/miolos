@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-import { maxWorkers } from "../../vitest.shared";
+import { maxWorkers } from "../../vitest.shared.ts";
 
 export default defineConfig({
   plugins: [react()],

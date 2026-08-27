@@ -189,7 +189,7 @@ describe("the worker bound, and the one package that must not carry it (T-WEB-S2
     ];
     const missing = bound.filter(
       (pkg) =>
-        !/from "\.\.\/\.\.\/vitest\.shared"/.test(
+        !/from "\.\.\/\.\.\/vitest\.shared\.ts"/.test(
           read(`${pkg}/vitest.config.ts`),
         ),
     );

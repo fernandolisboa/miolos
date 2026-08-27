@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { maxWorkers } from "../../../vitest.shared";
+import { maxWorkers } from "../../../vitest.shared.ts";
 
 describe("the shared vitest worker bound (#114, ADR-0057 decision 6)", () => {
   it("is min(4, cpus - 1), floored at 1", () => {
