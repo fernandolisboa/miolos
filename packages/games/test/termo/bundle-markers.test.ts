@@ -22,7 +22,7 @@ describe("the client-bundle tripwire's word-list markers", () => {
     for (const marker of FORBIDDEN_MARKERS) {
       expect(
         CANONICALS.has(marker),
-        `\`${marker}\` no longer spells an answer: update this file AND \`FORBIDDEN\` in apps/web/scripts/route-client-js.mjs`,
+        `\`${marker}\` no longer spells an answer: update this file AND \`FORBIDDEN_EVERYWHERE\` in apps/web/scripts/route-client-js.mjs`,
       ).toBe(true);
     }
   });
@@ -48,7 +48,7 @@ describe("the client-bundle tripwire's word-list markers", () => {
     for (const marker of EXPECTED_MARKERS) {
       expect(
         VALIDATION.has(marker),
-        `\`${marker}\` is no longer a validation word: update this file AND \`EXPECTED\` in apps/web/scripts/route-client-js.mjs`,
+        `\`${marker}\` is no longer a validation word: update this file AND \`EXPECTED_DAILY_SCOPE\`/\`FORBIDDEN_FREE_PLAY_SCOPE\` in apps/web/scripts/route-client-js.mjs`,
       ).toBe(true);
 
       expect(isValidGuess(marker)).toBe(true);

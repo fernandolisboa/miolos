@@ -126,6 +126,20 @@ function fakeSend(
   return { send, calls };
 }
 
+describe("the cron gate compares in constant time (ADR-0022, ADR-0064 §8)", () => {
+  it("hashes both sides and uses timingSafeEqual, never ===", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const source = await readFile(
+      new URL("../src/cron/auth.ts", import.meta.url),
+      "utf8",
+    );
+    expect(source).toContain("timingSafeEqual");
+    expect(source).toContain('createHash("sha256")');
+    expect(source).not.toMatch(/authorizationHeader\s*===/);
+    expect(source).not.toMatch(/===\s*`Bearer/);
+  });
+});
+
 describe("POST /cron/notify — auth (plan 014 D15, the shared extraction)", () => {
   it("T-API-S142: unset CRON_SECRET → 401 even with a bearer; a missing and a mismatched bearer → 401 — and no tick runs", async () => {
     vi.stubEnv("CRON_SECRET", undefined);

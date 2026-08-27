@@ -113,7 +113,7 @@ A comment that would be longer than the code it describes is a sign the rational
 
 **Two things that look like comments and are not.** Never strip them, and never let a sweep regex reach them:
 
-- `/*#__PURE__*/` — a bundler directive. Deleting the four in `packages/games/src/termo/word-list.ts` ships the whole answer pool to every client.
+- `/*#__PURE__*/` — a bundler directive. There are **five**: four in `packages/games/src/termo/word-list.ts`, whose deletion ships the whole answer list to every client, and one on `MEDAL_IDS` in `packages/core/src/medals/definitions.ts`. All five are pinned by `packages/games/test/termo/bundle-markers.test.ts`.
 - `// eslint-disable-…` and its trailing `-- reason`. The reason is part of the directive.
 
 **Before deleting a comment that states a rule, check whether a test covers it.** If nothing does, you are about to delete the only copy. Write the test, move the rule to an ADR or to `docs/pending-fernando.md`, or leave the comment — in that order of preference. Never just cut it.
@@ -145,7 +145,7 @@ ADRs matter more now, not less: they are where the "why" goes when it leaves the
 - **Zod validation at every boundary** — API contracts and anything crossing the client/server line are parsed, never cast.
 - `pnpm comments` — the comment budget ([ADR-0075](./docs/adr/0075-the-comment-budget-is-a-tool-not-a-rule.md)). Generated files report as skipped; vendored skills under `.claude/skills/` are not ours.
 - `npx impeccable detect` — required on any change that touches UI. Visual quality is a gate, not an aspiration.
-- Pre-commit (Husky + lint-staged + typecheck + tests) must stay green. Never bypassed with `--no-verify`.
+- Pre-commit (Husky + lint-staged + typecheck + comment budget + tests) must stay green. Never bypassed with `--no-verify`.
 
 **Adversarial review.** Reviewers default to rejecting. A finding is dismissed only with a written reason in the PR, never by silence.
 

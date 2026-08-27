@@ -55,12 +55,16 @@ of its lines, or two lines, whichever is larger**, on comment-only prose.
 `pnpm comments` is how the gate runs it, in pre-commit and in CI. See
 ADR-0075 for why the floor exists and why the tool is the gate.
 
-Exempt, and asserted one at a time in `selftest.mjs` because the list was
-once documented with only four of seven actually tested:
-`eslint-disable`/`-enable`, `@ts-expect-error`/`-ignore`/`-nocheck`,
+Exempt: `eslint-disable`/`-enable`, `@ts-expect-error`/`-ignore`/`-nocheck`,
 `/*#__PURE__*/`, `/// <reference`, `prettier-ignore`,
 `impeccable-disable`/`-ignore`, `@vitest-environment`, and
-`c8`/`v8`/`istanbul ignore`. Prose that merely *mentions* one is not exempt.
+`c8`/`v8`/`istanbul ignore`. The list lives once, as `DIRECTIVES` in
+`density.mjs`. `selftest.mjs` iterates that array for the probes **and**
+separately pins the label set by hand, because a probe list derived from the
+array cannot notice a member being deleted — which is how `/// <reference`
+and then `@vitest-environment` each shipped documented-as-exempt and
+budgeted, in consecutive review rounds. Prose that merely *mentions* a
+directive is not exempt.
 
 A **trailing** `//` — the prettier anchor that keeps a nonogram bitmap one
 row per line — sits on a code line, so it is never comment-only and never
@@ -87,7 +91,7 @@ the file before calling it swept.
 It re-prints each module from its AST with `removeComments` and hashes that, so
 **comment trivia that is really a directive is invisible to it**. A file can
 lose a `/*#__PURE__*/` and every field will match. CLAUDE.md: deleting the four
-in `packages/games/src/termo/word-list.ts` ships the whole Termo answer pool to
+in `packages/games/src/termo/word-list.ts` ships the whole Termo answer list to
 every client.
 
 So `hash.mjs` **counts** each directive class separately and prints them beside
