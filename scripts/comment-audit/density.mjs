@@ -10,8 +10,15 @@ const DEFAULT_MAX = 3;
 const DIRECTIVE =
   /^(eslint-(disable|enable)|@ts-(expect-error|ignore|nocheck)|#__PURE__|\/\s*<reference|prettier-ignore|c8\s|v8\s|istanbul\s|@vitest-environment|impeccable-(disable|ignore))/;
 
+// A bare `//` is a prettier layout anchor, not prose: it is what keeps a
+// nonogram bitmap one row per line instead of collapsed into an unreadable
+// single-line array.
 function isDirective(line) {
-  return DIRECTIVE.test(line.replace(/^\s*(\/\/+|\/\*+|\*+\/?)\s*/, ""));
+  const text = line.trim();
+  return (
+    text === "//" ||
+    DIRECTIVE.test(text.replace(/^\s*(\/\/+|\/\*+|\*+\/?)\s*/, ""))
+  );
 }
 
 export function density(file, text = fs.readFileSync(file, "utf8")) {

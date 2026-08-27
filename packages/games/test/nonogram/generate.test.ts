@@ -12,8 +12,6 @@ const weekdayArb = fc.constantFrom(...WEEKDAYS);
 
 describe("generateNonogram", () => {
   it("central property: every generated puzzle is line-solvable to its reveal solution", () => {
-    // One solver run proves solvable + unique solution + human-completable
-    // without guessing (plan §5) — the issue's first acceptance criterion.
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
         const puzzle = generateNonogram(seed, weekday);
@@ -40,7 +38,6 @@ describe("generateNonogram", () => {
   });
 
   it("carries complete picture reveal data", () => {
-    // The issue's second acceptance criterion.
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
         const puzzle = generateNonogram(seed, weekday);

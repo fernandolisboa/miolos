@@ -1,18 +1,13 @@
-// index reads use `!`: every index is produced by loops over [0, 81) / [0, 9);
-// public entry points reject grids of the wrong length (assertSudokuGrid).
 import type { SudokuGrid } from "./types";
 
-/** Row (0–8) of flat index i. */
 export function rowOf(i: number): number {
   return (i / 9) | 0;
 }
 
-/** Column (0–8) of flat index i. */
 export function colOf(i: number): number {
   return i % 9;
 }
 
-/** Box (0–8, row-major bands) of flat index i. */
 export function boxOf(i: number): number {
   return ((rowOf(i) / 3) | 0) * 3 + ((colOf(i) / 3) | 0);
 }
@@ -25,7 +20,6 @@ function buildPopcount(): readonly number[] {
   return table;
 }
 
-/** Popcount lookup for 9-bit candidate masks (bit d-1 = digit d present). */
 export const POPCOUNT: readonly number[] = buildPopcount();
 
 function buildUnits(): readonly (readonly number[])[] {
@@ -50,7 +44,6 @@ function buildUnits(): readonly (readonly number[])[] {
   return units;
 }
 
-/** The 27 units in fixed scan order: rows 0–8, columns 0–8, boxes 0–8. */
 export const UNITS: readonly (readonly number[])[] = buildUnits();
 
 function buildPeers(): readonly (readonly number[])[] {
@@ -69,16 +62,9 @@ function buildPeers(): readonly (readonly number[])[] {
   });
 }
 
-/** For each cell, the 20 cells sharing a row, column, or box with it. */
 export const PEERS: readonly (readonly number[])[] = buildPeers();
 
-/**
- * Runtime shape validation for every public entry point: array, length 81,
- * every cell an integer 0–9. Throws TypeError with the offending index.
- */
 export function assertSudokuGrid(grid: SudokuGrid): void {
-  // Guard via an `unknown` alias: Array.isArray would otherwise narrow the
-  // readonly parameter to any[], defeating type-safety below.
   const shape: unknown = grid;
   if (!Array.isArray(shape)) {
     throw new TypeError("Sudoku grid must be an array");
@@ -98,12 +84,6 @@ export function assertSudokuGrid(grid: SudokuGrid): void {
   }
 }
 
-/**
- * Indices (0–80) of every cell participating in a duplicate digit within
- * its row, column, or box, in ascending order. Empty array = grid is legal
- * so far. A responsiveness affordance for the client, never a source of
- * truth (ADR-0004).
- */
 export function getSudokuConflicts(grid: SudokuGrid): readonly number[] {
   assertSudokuGrid(grid);
   const flagged = new Array<boolean>(81).fill(false);
@@ -133,7 +113,6 @@ export function getSudokuConflicts(grid: SudokuGrid): readonly number[] {
   return Object.freeze(conflicts);
 }
 
-/** True iff the grid is complete (no zeros) and conflict-free. */
 export function isSudokuSolved(grid: SudokuGrid): boolean {
   assertSudokuGrid(grid);
   for (let i = 0; i < 81; i += 1) {

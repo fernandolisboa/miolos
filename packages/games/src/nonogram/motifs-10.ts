@@ -1,6 +1,5 @@
 import type { Motif } from "./motifs";
 
-/** 10×10 class — Thursday (easy band) and Friday (hard band). */
 export const MOTIFS_10: ReadonlyArray<Motif> = [
   {
     id: "guitar",

@@ -1083,6 +1083,7 @@ const densityFixture = write(
   "density-fixture.ts",
   [
     "// a budgeted prose line",
+    "//",
     "// eslint-disable-next-line no-console -- the reason is part of the directive",
     "/*#__PURE__*/",
     "// @ts-expect-error deliberate",
@@ -1091,12 +1092,14 @@ const densityFixture = write(
   ].join("\n") + "\n",
 );
 check("density counts prose only", density(densityFixture).budgeted, 1);
-check("density exempts directives", density(densityFixture).directives, 3);
-check("density total is wc -l", density(densityFixture).total, 6);
+// The bare `//` is a prettier layout anchor — it is what keeps a nonogram
+// bitmap one row per line rather than collapsed into an unreadable array.
+check("density exempts directives", density(densityFixture).directives, 4);
+check("density total is wc -l", density(densityFixture).total, 7);
 check(
   "density pct is prose over total",
   Number(density(densityFixture).pct.toFixed(2)),
-  16.67,
+  14.29,
 );
 check(
   "a file over budget exits 1",

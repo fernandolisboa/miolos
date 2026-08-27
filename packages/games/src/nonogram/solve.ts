@@ -6,17 +6,10 @@ import type {
 
 export interface LineSolveResult {
   readonly contradiction: boolean;
-  /** The line after forcing; same reference semantics as the input (new array). */
+
   readonly states: ReadonlyArray<NonogramCellState>;
 }
 
-/**
- * Per-line deduction: classic reachability DP over
- * (cell index, run index). Computes, across ALL placements of `runs`
- * consistent with the current `states`, which cells are forced filled,
- * forced empty, or stay unknown. Forced-cells-only — the solver never
- * guesses. O(n²·m) worst case; trivial at n <= 15.
- */
 export function solveLine(
   states: ReadonlyArray<NonogramCellState>,
   runs: ReadonlyArray<number>,
@@ -24,15 +17,12 @@ export function solveLine(
   const n = states.length;
   const m = runs.length;
 
-  // nextEmpty[i] = smallest index >= i whose state is "empty" (n if none):
-  // a run may occupy i..end-1 iff nextEmpty[i] >= end.
   const nextEmpty: number[] = new Array<number>(n + 1);
   nextEmpty[n] = n;
   for (let i = n - 1; i >= 0; i -= 1) {
     nextEmpty[i] = states[i] === "empty" ? i : (nextEmpty[i + 1] ?? n);
   }
 
-  // suffixNoFilled[i] = no cell in i..n-1 is "filled".
   const suffixNoFilled: boolean[] = new Array<boolean>(n + 1);
   suffixNoFilled[n] = true;
   for (let i = n - 1; i >= 0; i -= 1) {
@@ -40,7 +30,6 @@ export function solveLine(
       states[i] !== "filled" && (suffixNoFilled[i + 1] ?? true);
   }
 
-  // feasible[i][j] = cells i..n-1 can be completed placing runs j..m-1.
   const feasible: boolean[][] = [];
   for (let i = 0; i <= n; i += 1) {
     feasible.push(new Array<boolean>(m + 1).fill(false));
@@ -56,11 +45,11 @@ export function solveLine(
     for (let i = n - 1; i >= 0; i -= 1) {
       const end = i + runLength;
       let ok = false;
-      // Empty branch: cell i stays empty.
+
       if (states[i] !== "filled" && feasible[i + 1]?.[j] === true) {
         ok = true;
       }
-      // Run branch: run j occupies i..end-1, then a separator or line end.
+
       if (!ok && end <= n && (nextEmpty[i] ?? n) >= end) {
         if (end === n) {
           ok = j === m - 1;
@@ -79,8 +68,6 @@ export function solveLine(
     return { contradiction: true, states: [...states] };
   }
 
-  // Forward reachability from (0, 0) over feasible states, marking which
-  // cells can be empty / filled in at least one complete arrangement.
   const canBeEmpty: boolean[] = new Array<boolean>(n).fill(false);
   const canBeFilled: boolean[] = new Array<boolean>(n).fill(false);
   const visited: boolean[][] = [];
@@ -102,12 +89,12 @@ export function solveLine(
     if (i >= n) {
       continue;
     }
-    // Empty move.
+
     if (states[i] !== "filled" && feasible[i + 1]?.[j] === true) {
       canBeEmpty[i] = true;
       stack.push([i + 1, j]);
     }
-    // Run move.
+
     if (j < m) {
       const runLength = runs[j] ?? 0;
       const end = i + runLength;
@@ -142,8 +129,6 @@ export function solveLine(
     } else if (empty && !filled) {
       next[i] = "empty";
     } else if (!filled && !empty) {
-      // Unreachable when feasible[0][0] holds (every cell lies on some
-      // complete arrangement), kept as defense in depth.
       return { contradiction: true, states: [...states] };
     } else {
       next[i] = states[i] ?? "unknown";
@@ -152,20 +137,8 @@ export function solveLine(
   return { contradiction: false, states: next };
 }
 
-/**
- * Largest supported grid side. The shipped size classes are 5/8/10/15
- * (Sat/Sun cap the ramp at 15); the guard bounds solver CPU/memory against
- * untyped callers rather than encoding a gameplay rule.
- */
 const MAX_SOLVE_SIZE = 15;
 
-/**
- * Structural well-formedness of a clue set: integer size within the
- * supported bound, exactly `size` row and column clue lines, every run a
- * positive integer. Feasibility (runs fitting the line) is the solver's
- * job — an infeasible but well-formed clue set is a "contradiction", not
- * a malformed input.
- */
 export function isWellFormedClues(clues: NonogramClues): boolean {
   const n = clues.size;
   if (!Number.isInteger(n) || n < 1 || n > MAX_SOLVE_SIZE) {
@@ -179,19 +152,6 @@ export function isWellFormedClues(clues: NonogramClues): boolean {
   return clues.rows.every(wellFormedLine) && clues.cols.every(wellFormedLine);
 }
 
-/**
- * Full-grid fixpoint: rows 0..n-1 then columns 0..n-1 per sweep,
- * Gauss–Seidel style (deductions visible immediately within the sweep;
- * deterministic because the order is fixed), with dirty-line skipping. Ends
- * "solved" when no unknowns remain, "stuck" at a fixpoint with unknowns,
- * "contradiction" when some line becomes infeasible.
- *
- * Input contract: `clues` bound total CPU/memory, so the entry throws a
- * typed RangeError on structurally malformed or oversized clue sets
- * (non-integer/out-of-bound size, jagged line counts, non-positive runs).
- * Anything crossing a trust boundary must still be Zod-parsed before it
- * reaches this engine (CLAUDE.md boundary rule).
- */
 export function solveNonogram(clues: NonogramClues): NonogramSolveResult {
   if (!isWellFormedClues(clues)) {
     throw new RangeError(
@@ -305,10 +265,6 @@ export function solveNonogram(clues: NonogramClues): NonogramSolveResult {
   return finish(solved ? "solved" : "stuck");
 }
 
-/**
- * Mechanical human-effort proxy: more propagation sweeps and a
- * thinner first-pass fill both mean more work. Higher = harder.
- */
 export function effortScore(result: NonogramSolveResult): number {
   return result.passes + (1 - result.firstPassFill);
 }

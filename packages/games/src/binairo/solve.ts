@@ -10,14 +10,6 @@ import {
 import type { SolverState } from "./techniques";
 import type { BinairoGrid, BinairoSolvedGrid, BinairoTier } from "./types";
 
-/**
- * Count solutions under rules 1–4, early-exiting at `limit` (default 2 —
- * enough to decide unsolvable / unique / ambiguous). Propagate-then-branch
- * DFS; propagation runs tier 1 only (propagation strength affects speed,
- * never the count), branching is fixed row-major.
- * Grids larger than BINAIRO_SIZE per side throw a RangeError (DFS cost
- * bound); smaller even sizes are accepted for test fixtures.
- */
 export function countBinairoSolutions(givens: BinairoGrid, limit = 2): number {
   if (!Number.isInteger(limit) || limit < 1) {
     throw new RangeError(
@@ -37,8 +29,6 @@ function countFrom(state: SolverState, limit: number): number {
   }
   const index = state.cells.indexOf(-1);
   if (index === -1) {
-    // Defense in depth: re-verify the completed grid against the full
-    // ruleset with the independent checker.
     return isValidBinairoSolution(toSolvedGrid(state.cells)) ? 1 : 0;
   }
   let found = 0;
@@ -54,11 +44,6 @@ function countFrom(state: SolverState, limit: number): number {
   return found;
 }
 
-/**
- * First solution in fixed search order, or null when none exists. Same
- * size contract as countBinairoSolutions: side ≤ BINAIRO_SIZE or
- * RangeError.
- */
 export function solveBinairo(givens: BinairoGrid): BinairoSolvedGrid | null {
   const state = stateFromGrid(givens);
   if (state === null) {
@@ -91,18 +76,10 @@ function solveFrom(state: SolverState): BinairoSolvedGrid | null {
 export interface BinairoGrade {
   readonly solvable: boolean;
   readonly unique: boolean;
-  /** 3 = needs guessing; null = unsolvable. */
+
   readonly requiredTier: BinairoTier | 3 | null;
 }
 
-/**
- * Grade a puzzle with the technique-tier instrument: tier 1 if
- * the tier-1 fixpoint completes the grid, tier 2 if the tier-1+2 fixpoint
- * does, tier 3 otherwise (branching required). Soundness: every technique
- * is a forced deduction under rules 1–4, so a tier-T completion is a proof
- * of tier-T solvability. Same size contract as countBinairoSolutions:
- * side ≤ BINAIRO_SIZE or RangeError.
- */
 export function gradeBinairo(givens: BinairoGrid): BinairoGrade {
   const count = countBinairoSolutions(givens, 2);
   if (count === 0) {

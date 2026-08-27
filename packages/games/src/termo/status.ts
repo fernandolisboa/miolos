@@ -2,23 +2,12 @@ import { type TileStates } from "./evaluate";
 
 export const MAX_GUESSES = 6;
 
-/**
- * Board-level status only. Day-level semantics (won ⇒ Completed if on-time;
- * lost ⇒ Played, fail row of the distribution — ADR-0008 rules 3-4) are
- * server interpretations of won/lost. The name is TermoBoardStatus, not
- * game/day status, to keep that line sharp.
- */
 export type TermoBoardStatus = "playing" | "won" | "lost";
 
 function isWinningRow(row: TileStates): boolean {
   return row.every((tile) => tile === "correct");
 }
 
-/**
- * won: some row is all-correct. lost: MAX_GUESSES rows and none all-correct.
- * playing: otherwise. Throws RangeError if rows.length > MAX_GUESSES or if a
- * row after an all-correct row exists (guessing past a win is a caller bug).
- */
 export function deriveBoardStatus(
   rows: readonly TileStates[],
 ): TermoBoardStatus {

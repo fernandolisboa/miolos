@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * The self-service deletion island (#21, D13, ADR-0050 decision 12): a
- * quiet, ink-styled two-step confirm at the end of /privacidade — button →
- * explicit consequence copy → POST → terminal state. No modal, no accent
- * text (ADR-0041): the destructive step is carried by words and a solid
- * ink fill, never by red.
- */
 import { useState } from "react";
 
 import { deleteAccount } from "../../src/attach/attach-client";

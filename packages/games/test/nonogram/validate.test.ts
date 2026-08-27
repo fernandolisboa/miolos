@@ -28,7 +28,6 @@ function tamper(
 
 describe("validateNonogram", () => {
   it("approves every generated puzzle and enforces the weekday criteria", () => {
-    // The issue's third acceptance criterion.
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
         const puzzle = generateNonogram(seed, weekday);
@@ -80,8 +79,6 @@ describe("validateNonogram", () => {
   });
 
   it("rejects a puzzle whose effort falls outside its weekday band", () => {
-    // A valid Tuesday (easy-band 8×8) puzzle re-labeled as Wednesday
-    // (hard-band 8×8): same size, consistent clues, out-of-band effort.
     const tuesday = generateNonogram(21, 2);
     const relabeled: NonogramPuzzle = { ...tuesday, weekday: 3 };
     const verdict = validateNonogram(relabeled);
@@ -101,9 +98,7 @@ describe("validateNonogram", () => {
     const puzzle = generateNonogram(5, 3);
     const asJson = (solution: ReadonlyArray<ReadonlyArray<boolean>>): string =>
       JSON.stringify(solution);
-    // Another real motif of the same size whose bitmap (in the declared
-    // orientation) differs from the puzzle's solution: only the identity
-    // binding can catch this relabel — everything else stays consistent.
+
     const other = MOTIFS.find((motif) => {
       if (motif.size !== puzzle.size || motif.id === puzzle.reveal.motifId) {
         return false;
@@ -126,9 +121,6 @@ describe("validateNonogram", () => {
   });
 
   it("rejects a flipped mirrored flag on an asymmetric motif (identity binding)", () => {
-    // Find a generated puzzle whose motif is mirrorable: the harness proves
-    // mirrorable implies the mirrored bitmap differs, so flipping the flag
-    // must break the binding.
     let flipped: NonogramPuzzle | undefined;
     for (let seed = 0; seed < 64 && flipped === undefined; seed += 1) {
       const puzzle = generateNonogram(seed, 5);
@@ -150,8 +142,6 @@ describe("validateNonogram", () => {
   });
 
   it("exposes a typed generation error with seed, weekday and attempts", () => {
-    // Constructed directly: the generator path is unreachable with valid
-    // content (every pool entry is harness-proven).
     const error = new NonogramGenerationError(42, 5, 8);
     expect(error).toBeInstanceOf(Error);
     expect(error.name).toBe("NonogramGenerationError");

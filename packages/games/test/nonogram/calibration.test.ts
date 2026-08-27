@@ -5,15 +5,6 @@ import { MIN_POOL, T8, T10, T15, mirrorH } from "../../src/nonogram/difficulty";
 import { MOTIFS, motifBitmap } from "../../src/nonogram/motifs";
 import { effortScore, solveNonogram } from "../../src/nonogram/solve";
 
-// Executable threshold calibration (ADR-0021 §"recalibrate by the same
-// rule"): recomputes each shared size class's effort distribution from the
-// shipped library and proves the recorded threshold still sits strictly
-// inside a gap between two observed scores with >= MIN_POOL entries on each
-// side. Recalibrating after a content change is running this file and, if
-// it fails, moving the threshold into the printed gap nearest the class
-// median — no throwaway measurement code to re-derive.
-
-/** Sorted effort scores of every effective entry (motif + mirrored variants) in a size class. */
 function classScores(size: number): number[] {
   const scores: number[] = [];
   for (const motif of MOTIFS) {
@@ -51,8 +42,6 @@ describe("effort threshold calibration (shared size classes)", () => {
           `gap (${String(maxBelow)}, ${String(minAbove)}), split ${String(below.length)}/${String(above.length)}`,
       );
 
-      // Strictly inside a gap: no observed score equals the threshold, so
-      // the half-open band partition is stable under float comparison.
       expect(maxBelow, label).toBeDefined();
       expect(minAbove, label).toBeDefined();
       expect(maxBelow, label).toBeLessThan(threshold);

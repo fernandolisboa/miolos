@@ -17,10 +17,6 @@ function runLengths(line: ReadonlyArray<boolean>): number[] {
   return runs;
 }
 
-/**
- * Run-length encode the filled runs of each row (top→bottom) and column
- * (left→right). An all-empty line's clue is `[]` (the UI renders "0").
- */
 export function deriveClues(solution: NonogramSolution): NonogramClues {
   const size = solution.length;
   const rows = solution.map(runLengths);

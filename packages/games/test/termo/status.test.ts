@@ -10,9 +10,6 @@ const anyRow = fc
   .tuple(tileState, tileState, tileState, tileState, tileState)
   .map((tiles): TileStates => tiles);
 
-// Generator constrained to deriveBoardStatus's own preconditions (plan §7.4):
-// non-winning rows only, so a winning row can be appended last without
-// tripping the "row after a win" RangeError by construction.
 const nonWinningRow = anyRow.filter(
   (row) => !row.every((tile) => tile === "correct"),
 );

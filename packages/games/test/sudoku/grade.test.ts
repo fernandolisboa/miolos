@@ -1,8 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-// gradeInternal is a test-only internal (not on the public barrel): it
-// exposes the ladder's own solved grid and the set of techniques that fired.
 import { gradeInternal, type SudokuTechnique } from "../../src/sudoku/grade";
 import {
   generateDailySudoku,
@@ -14,20 +12,10 @@ import {
 } from "../../src/sudoku/index";
 import { FULL_GRID, TWO_SOLUTION_GRID } from "./fixtures";
 
-// Every fc.assert in test/sudoku/** pins { seed: FC_SEED, numRuns } so the
-// sampled puzzle-seed set is identical on every CI run.
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
 
-// Engine-generated literal puzzles, one per detection rule, produced with
-// the engine during implementation and pinned as literals.
-// No unchecked trust rides on how each was found: the test below fully
-// re-verifies every fixture (exact tier AND the named technique firing in
-// the gradeInternal trace). To regenerate after a ladder change: scan
-// generateSudoku over seeds and keep the first puzzle per rule whose
-// gradeInternal(...).techniques trace fires it at the target tier, then
-// pin the new literals here.
 const TECHNIQUE_FIXTURES: readonly {
   readonly technique: SudokuTechnique;
   readonly tier: SudokuTier;
@@ -127,7 +115,6 @@ const TECHNIQUE_FIXTURES: readonly {
 
 describe("gradeSudoku", () => {
   it("grades a naked-singles-only puzzle 1", () => {
-    // FULL_GRID minus three cells sharing no unit: each is a naked single.
     const givens = FULL_GRID.map((v, i) =>
       i === 0 || i === 13 || i === 26 ? 0 : v,
     );
@@ -159,9 +146,6 @@ describe("gradeSudoku", () => {
   });
 
   it("solves generated puzzles to the recorded solution end-to-end (redundant cross-check)", () => {
-    // Belt-and-suspenders: follows from P2 + counter correctness; kept
-    // because it exercises solveSudoku's public path and catches gross
-    // wiring mistakes cheaply.
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
         const puzzle = generateDailySudoku({ seed, weekday });
@@ -169,8 +153,6 @@ describe("gradeSudoku", () => {
       }),
       { seed: FC_SEED, numRuns: 25 },
     );
-    // Explicit timeout: Sundays cost ~140 ms mean (spike-measured); the pin
-    // lives here because ADR-0017 forbids a vitest config.
   }, 60000);
 
   it("reaches the recorded solution through the ladder itself (spike-verified invariant)", () => {

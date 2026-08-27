@@ -1,5 +1,3 @@
-// index reads use `!`: every index is produced by loops over [0, 81) / [0, 9);
-// public entry points reject grids of the wrong length (assertSudokuGrid).
 import { createSeededRandom } from "../random";
 import type { Weekday } from "../weekday";
 import { gradeInternal } from "./grade";
@@ -13,29 +11,13 @@ import type {
 import { sudokuCriteriaForWeekday } from "./criteria";
 import { validateCriteria } from "./validate";
 
-/**
- * Default attempt cap. Sized from the measured tier-5 attempt distribution:
- * p99 = 404 attempts, ~1.2% per-attempt approval, so the residual cap-hit
- * probability is (1 − 0.012)^1200 ≈ 5e-7 per seed.
- */
 export const SUDOKU_MAX_GENERATION_ATTEMPTS = 1200;
 
-/**
- * Thrown when no approved puzzle is found within the attempt cap.
- * Fully deterministic — the same (seed, criteria, maxAttempts) either always
- * returns the same puzzle or always throws with the same fields. With the
- * default cap and the shipped criteria tables this error is practically
- * unreachable (measured: residual risk ≈ 5e-7 per seed for tier 5, lower for
- * the rest); it signals a generation bug or hand-rolled impossible criteria.
- * The publishing pipeline must catch it and alert — never publish a
- * fallback puzzle silently.
- */
 export class SudokuGenerationError extends Error {
-  /** The normalized (uint32) base seed generation started from. */
   readonly seed: number;
-  /** The exact criteria object the caller passed in. */
+
   readonly criteria: SudokuApprovalCriteria;
-  /** Number of attempts consumed (=== the effective maxAttempts). */
+
   readonly attempts: number;
 
   constructor(
@@ -62,14 +44,6 @@ interface GenerationCandidate {
   readonly clueCount: number;
 }
 
-/**
- * One generation attempt: randomized full-grid fill,
- * then single-pass grade-capped clue removal over a shuffled cell order.
- * A clue is removed only if the puzzle stays unique (counter early-exits
- * at 2) and its grade stays within the target tier — uniqueness and
- * ladder-solvability hold by construction. Returns null when the attempt
- * stalls below the target tier or outside the clue band.
- */
 function tryGenerate(
   attemptSeed: number,
   criteria: SudokuApprovalCriteria,
@@ -112,20 +86,6 @@ function tryGenerate(
   };
 }
 
-/**
- * Deterministic: same (seed, criteria, maxAttempts) ⇒ deep-equal puzzle,
- * always — including across rejected attempts (each attempt draws exactly
- * one uint32 from the master stream regardless of why it failed). seed is
- * coerced uint32 like createSeededRandom (>>> 0). Throws
- * SudokuGenerationError when maxAttempts (default
- * SUDOKU_MAX_GENERATION_ATTEMPTS = 1200) attempts all fail approval.
- *
- * `maxAttempts` and the criteria bound total CPU (each attempt is a full
- * grid fill + repeated counting + grading): never derive them from
- * untrusted input — near-impossible-but-valid criteria under a huge cap is
- * an arbitrarily long synchronous loop (same duty as the Binairo grid-size
- * bound).
- */
 export function generateSudoku(options: {
   readonly seed: number;
   readonly criteria: SudokuApprovalCriteria;
@@ -142,7 +102,6 @@ export function generateSudoku(options: {
   const normalizedSeed = options.seed >>> 0;
   const master = createSeededRandom(normalizedSeed);
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    // Exact uint32 draw (splitmix32 next() * 2^32 is integral).
     const attemptSeed = master.nextInt(0x1_0000_0000);
     const candidate = tryGenerate(attemptSeed, criteria);
     if (candidate !== null) {
@@ -152,11 +111,6 @@ export function generateSudoku(options: {
   throw new SudokuGenerationError(normalizedSeed, criteria, maxAttempts);
 }
 
-/**
- * Convenience: generateSudoku with sudokuCriteriaForWeekday(weekday) —
- * the semantic twin of generateBinairo({ seed, weekday }). maxAttempts
- * threads through so the attempt cap is reachable from this API too.
- */
 export function generateDailySudoku(options: {
   readonly seed: number;
   readonly weekday: Weekday;

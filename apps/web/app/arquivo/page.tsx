@@ -9,13 +9,6 @@ import { getDb } from "../../src/db";
 import { messages, routes } from "../../src/i18n";
 import { ArchiveIndexView } from "./index-view";
 
-// No caching of any kind on this segment (ADR-0053 decision 2). The daily's
-// reason does not transfer — an archived day's CONTENT is immutable — and
-// pretending it does would be dishonest. The real reason is the kill switch:
-// `killed_at` is the operator's takedown, it is a database write with no
-// deploy and no invalidation hook, and a cached archive page outlives it for
-// the whole TTL. No `revalidate`, no `generateStaticParams` (ADR-0028
-// decision 6, obeyed), no `fetch` on this path at all.
 export const dynamic = "force-dynamic";
 
 export function generateMetadata(): Metadata {
@@ -26,19 +19,6 @@ export function generateMetadata(): Metadata {
   };
 }
 
-/**
- * The archive index (#31 AC 1, AC 5; the calendar since #163). Both reads
- * in one round-trip window: the row window the newest month's grid is cut
- * from, and the month list — whose LAST element is the archive's floor, so
- * nothing else records where the archive starts (ADR-0053 decision 3).
- * The month list feeds only the chips; the grid's month comes from the
- * row window's own newest row.
- *
- * Thin on purpose: two reader calls and a derivation, and the derivation
- * itself lives in `src/archive/calendar.ts` beside the window it depends
- * on, where `T-WEB-S312` pins it. All composition lives in the synchronous
- * view, which tests render directly.
- */
 export default async function ArchivePage() {
   const db = getDb();
   const [days, months] = await Promise.all([

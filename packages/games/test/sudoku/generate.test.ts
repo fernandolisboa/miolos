@@ -17,22 +17,10 @@ import {
 } from "../../src/sudoku/index";
 import { FULL_PROPERTIES, PR_GATE_RUNS, propertyRuns } from "../property-runs";
 
-// A green pull-request gate is a reduced sample of the ADR-0023 property
-// floor, not the full proof — see ADR-0059 and test/property-runs.ts. Every
-// fc.assert here pins { seed: FC_SEED, numRuns } so the sampled pairs are
-// identical on every run.
-//
-// Per-test timeouts follow ADR-0055 (CI-measured anchor x4, rounded up to the
-// next 5000 ms): a ceiling to diagnose against on failure, not a target to
-// raise. They measure CI CPU share, not the generator, so a fired tripwire on
-// an unchanged generator points at gate contention, not a regression here.
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
 
-// Pinned literal: guards against cross-version drift of the whole pipeline
-// that the property tests below would not catch, since they check
-// invariants rather than exact output.
 const PINNED_SEED = 123456789;
 const PINNED_WEEKDAY: Weekday = 4;
 const PINNED_GIVENS: readonly number[] = [
@@ -49,15 +37,6 @@ const PINNED_SOLUTION: readonly number[] = [
 ];
 
 describe("the reduced pull-request sample (#126, ADR-0059)", () => {
-  // asserted() records the (seed, weekday) pairs fc.assert itself draws,
-  // without generating anything, so these tests cost nothing.
-  /**
-   * The pairs `fc.assert` itself draws, not a lookalike: `fc.sample(fc.property(...))`
-   * and `fc.assert(fc.property(...))` can diverge in fast-check, while
-   * `fc.sample(fc.tuple(...))` matches today. Sizing off the lookalike would
-   * let a future draw-order change move what the properties consume while
-   * these tests stay green.
-   */
   const asserted = (numRuns: number): (readonly [number, Weekday])[] => {
     const seen: (readonly [number, Weekday])[] = [];
     fc.assert(
@@ -78,9 +57,6 @@ describe("the reduced pull-request sample (#126, ADR-0059)", () => {
   });
 
   it("draws every weekday, which is what sizes it at 25 and not less", () => {
-    // The sudoku criteria table is per-weekday, seven tiers; at FC_SEED the
-    // hardest (Sunday) first appears on run 21, so 25 is that floor plus
-    // margin. See ADR-0059.
     const weekdays = new Set(
       asserted(PR_GATE_RUNS).map(([, weekday]) => weekday),
     );
@@ -91,17 +67,12 @@ describe("the reduced pull-request sample (#126, ADR-0059)", () => {
   });
 
   it("is a strict prefix of the full sample, so the gate proves a subset", () => {
-    // Guards against a fast-check upgrade changing draw order, which would
-    // silently invalidate ADR-0059's claim that the gate proves a subset of
-    // the nightly.
     expect(asserted(100).slice(0, PR_GATE_RUNS)).toEqual(
       asserted(PR_GATE_RUNS),
     );
   });
 
   it("declares, in the run itself, which sample this run took", () => {
-    // Not a tautology: fails if propertyRuns ever stops honouring either side
-    // of the split (e.g. an env var read that silently ignores it).
     expect(propertyRuns(100)).toBe(FULL_PROPERTIES ? 100 : PR_GATE_RUNS);
     expect(propertyRuns(35)).toBe(FULL_PROPERTIES ? 35 : PR_GATE_RUNS);
     expect(propertyRuns(10)).toBe(10);
@@ -116,16 +87,9 @@ describe("generateSudoku / generateDailySudoku", () => {
         const second = generateDailySudoku({ seed, weekday });
         expect(second).toEqual(first);
       }),
-      // 100 on the nightly (the ADR-0023 floor); 25 on the pull-request gate.
+
       { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
-    // 625_000 = anchor x4, rounded up to the next 5000 (ADR-0055 decision 2).
-    // In-file rather than in a vitest config: ADR-0017 forbids one here.
-    // Anchor 155 025 ms on CI, the pooled max over seven genuine gate runs;
-    // contended local was 40 844 ms. Tripwire: over budget / 2 = 312 500 ms
-    // is a defect to diagnose and record BEFORE anything moves, while still
-    // green. What this measures on CI is CPU SHARE, not the generator — the
-    // engine is byte-identical across a 35 220 -> 155 025 ms move.
   }, 625_000);
 
   it("P1 — pinned regression: the literal expected puzzle for a fixed seed", () => {
@@ -152,17 +116,13 @@ describe("generateSudoku / generateDailySudoku", () => {
         expect(puzzle.clueCount).toBe(
           puzzle.givens.filter((v) => v !== 0).length,
         );
-        // The uniqueness proof, via the counter validated in solve.test.ts.
+
         expect(countSudokuSolutions(puzzle.givens, 2)).toBe(1);
         expect(getSudokuConflicts(puzzle.givens)).toEqual([]);
       }),
-      // 100 on the nightly (the ADR-0023 floor); 25 on the pull-request gate.
+
       { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
-    // Anchor 62 009 ms on CI (pooled max, same seven runs) = 25.8% of this
-    // ceiling, under the 40% trigger and under budget / 2 = 120 000 ms.
-    // Decision 2's arithmetic would give 250 000; the one-step disagreement
-    // is recorded and deliberately not moved, because nothing fires.
   }, 240_000);
 
   it("P3 — weekday ramp / approval on every instance", () => {
@@ -180,11 +140,9 @@ describe("generateSudoku / generateDailySudoku", () => {
           clueCount: puzzle.clueCount,
         });
       }),
-      // 35 on the nightly (a secondary approval property, outside ADR-0023's
-      // floor and left at the count it has always had); 25 on the gate.
+
       { seed: FC_SEED, numRuns: propertyRuns(35) },
     );
-    // Anchor 24 386 ms on CI; budget / 2 = 50 000 ms is the tripwire.
   }, 100_000);
 
   it("P3 — deterministic full-week coverage for fixed seeds", () => {
@@ -200,8 +158,6 @@ describe("generateSudoku / generateDailySudoku", () => {
   }, 60_000);
 
   it("throws the full failure contract when the attempt cap is hit", () => {
-    // A 17-clue tier-1 puzzle is practically impossible: deterministic cap
-    // hit, fast because maxAttempts is tiny.
     const impossible: SudokuApprovalCriteria = {
       tier: 1,
       minClues: 17,
@@ -238,8 +194,6 @@ describe("generateSudoku / generateDailySudoku", () => {
   });
 
   it("threads maxAttempts through generateDailySudoku", () => {
-    // Pinned literal seed chosen so the branch taken is fixed: seed 0's
-    // first Sunday attempt does NOT pass approval, so a cap of 1 throws.
     expect(() =>
       generateDailySudoku({ seed: 0, weekday: 7, maxAttempts: 1 }),
     ).toThrow(SudokuGenerationError);
@@ -257,7 +211,6 @@ describe("generateSudoku / generateDailySudoku", () => {
   });
 
   it("rejects invalid weekdays, criteria, and maxAttempts", () => {
-    // 0 is exactly the Date#getDay() Sunday trap the ISO encoding catches.
     expect(() =>
       generateDailySudoku({ seed: 1, weekday: 0 as Weekday }),
     ).toThrow(RangeError);
@@ -348,8 +301,7 @@ describe("validateSudoku", () => {
     if (!contradicted.approved) {
       expect(contradicted.reasons).toContain("givens-contradict-solution");
     }
-    // A malformed grid is a rejection reason; out-of-domain criteria is a
-    // caller bug and throws instead.
+
     expect(
       validateSudoku(
         { ...puzzle, givens: new Array<number>(80).fill(0) },

@@ -1,13 +1,3 @@
-// index reads use `!`: every index is produced by loops over [0, 81) / [0, 9);
-// public entry points reject grids of the wrong length (assertSudokuGrid).
-//
-// NOTE: the grade is defined RELATIVE TO THIS LADDER — our house difficulty
-// scale, not a universal one. Both ordering levels are normative spec:
-// within a tier the techniques run in the order listed
-// below and the first one that progresses wins the pass; within a technique,
-// units/cells/digits scan in fixed ascending order and the first finding is
-// applied. Any change to the ladder, the technique set, or either ordering
-// re-grades every stored/expected tier.
 import {
   PEERS,
   POPCOUNT,
@@ -19,7 +9,6 @@ import {
 } from "./board";
 import type { SudokuGrade, SudokuGrid, SudokuTier } from "./types";
 
-/** Names of the ladder's detection rules, for test fixtures only. */
 export type SudokuTechnique =
   | "nakedSingle"
   | "hiddenSingle"
@@ -34,19 +23,12 @@ export type SudokuTechnique =
 
 export interface GradeResult {
   readonly grade: SudokuGrade;
-  /** The ladder's own solved grid, or null when the grade is "beyond". */
+
   readonly solved: readonly number[] | null;
-  /** Every detection rule that made progress at least once. */
+
   readonly techniques: ReadonlySet<SudokuTechnique>;
 }
 
-/**
- * Ladder grader, internal (no shape validation). Tier techniques:
- * T1 naked single, T2 hidden single, T3 locked candidates (pointing,
- * claiming), T4 naked/hidden pair, T5 naked/hidden triple + X-wing.
- * On progress at tier k: grade = max(grade, k), restart from tier 1.
- * All five tiers stuck ⇒ "beyond".
- */
 export function gradeInternal(givens: readonly number[]): GradeResult {
   const val = [...givens];
   const rows = new Array<number>(9).fill(0);
@@ -81,12 +63,9 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
     }
   };
 
-  // T1 — naked single: first empty cell with exactly one candidate.
   const nakedSingle = (): boolean => {
     for (let i = 0; i < 81; i += 1) {
       if (val[i]! === 0 && POPCOUNT[cand[i]!]! === 1) {
-        // 32 - clz32(mask) = index of the highest set bit = the digit;
-        // valid only because popcount === 1 (that bit is the only one).
         place(i, 32 - Math.clz32(cand[i]!));
         techniques.add("nakedSingle");
         return true;
@@ -95,7 +74,6 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
     return false;
   };
 
-  // T2 — hidden single: in some unit, a digit with exactly one candidate cell.
   const hiddenSingle = (): boolean => {
     for (const unit of UNITS) {
       for (let d = 1; d <= 9; d += 1) {
@@ -118,7 +96,6 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
     return false;
   };
 
-  // T3 — locked candidates: pointing (all boxes), then claiming (rows, cols).
   const lockedCandidates = (): boolean => {
     for (let b = 0; b < 9; b += 1) {
       const box = UNITS[18 + b]!;
@@ -194,7 +171,6 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
     return false;
   };
 
-  // T4 — naked pair, then hidden pair, per unit in ascending order.
   const pairs = (): boolean => {
     for (const unit of UNITS) {
       const twos = unit.filter(
@@ -260,7 +236,6 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
     return false;
   };
 
-  // T5 — naked triple, hidden triple (per unit), then X-wing rows, X-wing cols.
   const triplesAndXWing = (): boolean => {
     for (const unit of UNITS) {
       const cells = unit.filter(
@@ -412,12 +387,6 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
   return { grade, solved: val, techniques };
 }
 
-/**
- * Highest ladder tier ever needed to solve `givens` by logic alone, or
- * "beyond" if the ladder stalls. Precondition: givens has ≥ 1 solution;
- * an unsolvable grid grades "beyond" (the ladder stalls) — documented,
- * not detected specially. Pure: no rng, no state.
- */
 export function gradeSudoku(givens: SudokuGrid): SudokuGrade {
   assertSudokuGrid(givens);
   return gradeInternal(givens).grade;

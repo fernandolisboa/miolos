@@ -11,12 +11,6 @@ import {
 import { MOTIFS, motifBitmap } from "../../src/nonogram/motifs";
 import { solveNonogram } from "../../src/nonogram/solve";
 
-// The content harness — a mechanical gate (ADR-0021, plan §4). Every motif
-// (and every mirrored variant) must pass every check here before the
-// generator may ever pick it. Growing the library is adding entries that
-// pass this file; weakening a check is never a content fix.
-
-/** Test-enforced floors per size class (plan §4). */
 const CLASS_FLOORS: ReadonlyArray<readonly [number, number]> = [
   [5, 28],
   [8, 40],
@@ -61,9 +55,6 @@ describe("motif library shape", () => {
   });
 
   it("stays roughly inside the 30–65% density guideline (ratcheted)", () => {
-    // Deliberately not a hard per-motif gate (plan §4): solvability is the
-    // gate, density is a diagnostic. Ratcheted so the outlier set can only
-    // shrink silently — growing it is a visible, consciously-bumped change.
     const DENSITY_OUTLIER_RATCHET = 34;
     const outliers: string[] = [];
     for (const motif of MOTIFS) {
@@ -129,7 +120,6 @@ describe("weekday criteria structure", () => {
       const current = NONOGRAM_WEEKDAY_CRITERIA[WEEKDAYS[index] ?? 1];
       expect(current.size).toBeGreaterThanOrEqual(previous.size);
       if (current.size === previous.size) {
-        // Same class: the later weekday is the hard band.
         expect(current.minEffort).toBeGreaterThan(previous.minEffort);
       }
     }
@@ -149,7 +139,7 @@ describe("weekday criteria structure", () => {
       expect(easy.maxEffort).toBe(hard.minEffort);
       expect(hard.maxEffort).toBe(Number.POSITIVE_INFINITY);
     }
-    // Monday covers its whole class.
+
     const monday = NONOGRAM_WEEKDAY_CRITERIA[1];
     expect(monday.size).toBe(5);
     expect(monday.minEffort).toBe(0);

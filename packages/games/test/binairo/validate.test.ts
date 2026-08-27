@@ -32,14 +32,14 @@ describe("BINAIRO_WEEKDAY_CRITERIA ramp shape", () => {
       const criteria = BINAIRO_WEEKDAY_CRITERIA[weekday];
       expect(criteria.minGivens).toBeLessThanOrEqual(criteria.maxGivens);
       expect(criteria.minTier).toBeLessThanOrEqual(criteria.maxTier);
-      // Tier 3 is never allowed — the type already bounds tiers at 2.
+
       expect(criteria.maxTier).toBeLessThanOrEqual(2);
       if (weekday > 1) {
         const previous = BINAIRO_WEEKDAY_CRITERIA[(weekday - 1) as Weekday];
-        // Bands monotonically non-increasing Monday→Sunday.
+
         expect(criteria.minGivens).toBeLessThanOrEqual(previous.minGivens);
         expect(criteria.maxGivens).toBeLessThanOrEqual(previous.maxGivens);
-        // Tiers non-decreasing.
+
         expect(criteria.maxTier).toBeGreaterThanOrEqual(previous.maxTier);
         expect(criteria.minTier).toBeGreaterThanOrEqual(previous.minTier);
       }
@@ -50,21 +50,19 @@ describe("BINAIRO_WEEKDAY_CRITERIA ramp shape", () => {
 });
 
 describe("validateBinairo", () => {
-  // Deterministic fixtures via the generator (its properties are proved
-  // in generate.test.ts).
   const monday = generateBinairo({ seed: 1, weekday: 1 });
   const sunday = generateBinairo({ seed: 1, weekday: 7 });
 
   it("rejects a Monday puzzle validated as Sunday (too easy, too many givens)", () => {
     const reasons = rejectionReasons(monday.givens, monday.solution, 7);
-    // Monday: tier 1 < Sunday's minTier 2, and 34..40 givens > Sunday's 20.
+
     expect(reasons).toContain("too-easy");
     expect(reasons).toContain("too-many-givens");
   });
 
   it("rejects a Sunday puzzle validated as Monday (too hard, too few givens)", () => {
     const reasons = rejectionReasons(sunday.givens, sunday.solution, 1);
-    // Sunday: tier 2 > Monday's maxTier 1, and 16..20 givens < Monday's 34.
+
     expect(reasons).toContain("too-hard");
     expect(reasons).toContain("too-few-givens");
   });
@@ -76,7 +74,6 @@ describe("validateBinairo", () => {
   });
 
   it("rejects a puzzle the solver proves non-unique", () => {
-    // Clear givens from a generated puzzle until uniqueness is lost.
     const givens: BinairoCell[] = [...sunday.givens];
     let ambiguous = false;
     for (let i = 0; i < givens.length && !ambiguous; i += 1) {
@@ -101,7 +98,6 @@ describe("validateBinairo", () => {
   });
 
   it("rejects a tampered solution", () => {
-    // Flipping one cell breaks line balance — the solution is invalid.
     const tampered = monday.solution.map((cell, index): 0 | 1 =>
       index === 0 ? (cell === 0 ? 1 : 0) : cell,
     );
@@ -111,8 +107,6 @@ describe("validateBinairo", () => {
   });
 
   it("rejects a valid solution the givens contradict", () => {
-    // The complement of a valid grid is valid (all four rules are
-    // symmetric under 0↔1), yet every given contradicts it.
     const complement = monday.solution.map((cell): 0 | 1 =>
       cell === 0 ? 1 : 0,
     );

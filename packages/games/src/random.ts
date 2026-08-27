@@ -1,12 +1,6 @@
-/**
- * Deterministic seeded PRNG (splitmix32) — the substrate for "seed in,
- * puzzle out" generation (ADR-0011). Pure: no Node, no DOM, no state
- * outside the returned closure.
- */
 export interface SeededRandom {
-  /** Next value in [0, 1). */
   next(): number;
-  /** Next integer in [0, maxExclusive). */
+
   nextInt(maxExclusive: number): number;
 }
 

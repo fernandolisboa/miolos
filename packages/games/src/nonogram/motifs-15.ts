@@ -1,6 +1,5 @@
 import type { Motif } from "./motifs";
 
-/** 15×15 class — Saturday (easy band) and Sunday (hard band). */
 export const MOTIFS_15: ReadonlyArray<Motif> = [
   {
     id: "sitting-cat",
@@ -302,8 +301,6 @@ export const MOTIFS_15: ReadonlyArray<Motif> = [
     ],
   },
   {
-    // Generic rounded-silhouette car; named generically ("no brands",
-    // ADR-0021 — "Fusca" was rejected as a trademarked model name).
     id: "round-car",
     name: "Carro redondinho",
     size: 15,

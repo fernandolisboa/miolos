@@ -17,8 +17,6 @@ import {
   UNSOLVABLE_LEGAL_GRID,
 } from "./fixtures";
 
-// Every fc.assert in test/sudoku/** pins { seed: FC_SEED, numRuns } so the
-// sampled puzzle-seed set is identical on every CI run (plan §5, review B2).
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 
@@ -37,15 +35,13 @@ describe("countSudokuSolutions / solveSudoku", () => {
   });
 
   it("counts exactly 2 for the unavoidable-rectangle grid (self-checking fixture)", () => {
-    // Self-check the rectangle premises: rows 0/1 share a band, columns 0/6
-    // sit in different stacks, and the corners swap two distinct digits.
     const [i1, i2, i3, i4] = RECTANGLE_INDICES;
     expect([i1, i2, i3, i4]).toEqual([0, 6, 9, 15]);
     const a = FULL_GRID[0]!;
     const b = FULL_GRID[6]!;
     expect(a).not.toBe(b);
-    expect(FULL_GRID[15]).toBe(a); // (r2,c2) === (r1,c1)
-    expect(FULL_GRID[9]).toBe(b); // (r2,c1) === (r1,c2)
+    expect(FULL_GRID[15]).toBe(a);
+    expect(FULL_GRID[9]).toBe(b);
 
     expect(countSudokuSolutions(TWO_SOLUTION_GRID, 2)).toBe(2);
     expect(countSudokuSolutions(TWO_SOLUTION_GRID, 3)).toBe(2);
@@ -58,23 +54,18 @@ describe("countSudokuSolutions / solveSudoku", () => {
   });
 
   it("counts 0 for a column duplicate (discriminates the column mask)", () => {
-    // Indices 0 and 27 share column 0 but neither row nor box.
     const grid = EMPTY_GRID.map((v, i) => (i === 0 || i === 27 ? 5 : v));
     expect(countSudokuSolutions(grid, 2)).toBe(0);
     expect(solveSudoku(grid)).toBeNull();
   });
 
   it("counts 0 for a box duplicate (discriminates the box mask)", () => {
-    // Indices 0 and 10 share box 0 but neither row nor column.
     const grid = EMPTY_GRID.map((v, i) => (i === 0 || i === 10 ? 5 : v));
     expect(countSudokuSolutions(grid, 2)).toBe(0);
     expect(solveSudoku(grid)).toBeNull();
   });
 
   it("counts 0 for a legal-so-far but unsolvable grid (search path)", () => {
-    // Premises: duplicate-free, 9 givens (digits 1-8 in row 0 plus the 9
-    // at (2,8) — the plan's construction, which it miscounted as 10), and
-    // cell (0,8) has zero candidates.
     expect(getSudokuConflicts(UNSOLVABLE_LEGAL_GRID)).toEqual([]);
     expect(UNSOLVABLE_LEGAL_GRID.filter((v) => v !== 0)).toHaveLength(9);
     expect(countSudokuSolutions(UNSOLVABLE_LEGAL_GRID, 2)).toBe(0);

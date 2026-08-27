@@ -1,9 +1,3 @@
-/**
- * Public API of @miolos/games/termo (ADR-0019 subpath). The sole ingestion
- * path for the Termo word list: the daily selection draws from
- * TERMO_ANSWERS uniformly at random over a run-scoped filtered pool, never
- * by indexing a seed into it, and never reads content/termo directly.
- */
 export { normalizeWord } from "./normalize";
 export {
   evaluateGuess,

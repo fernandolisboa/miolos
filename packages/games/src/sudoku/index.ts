@@ -1,8 +1,3 @@
-/**
- * Sudoku engine (@miolos/games/sudoku): seeded deterministic generator,
- * counting solver, validator, technique-tier grader, and the weekday
- * approval criteria table. Pure TypeScript — seed in, puzzle out.
- */
 export type { Weekday } from "../weekday";
 export {
   type SudokuApprovalCriteria,

@@ -31,8 +31,6 @@ export class BinairoGenerationError extends Error {
 function buildSolvedGrid(rng: SeededRandom): BinairoSolvedGrid {
   const state = emptyState(BINAIRO_SIZE);
   if (!fillFrom(state, 0, rng)) {
-    // Unreachable: a full 8×8 Binairo grid always exists and the search is
-    // exhaustive over candidate orders.
     throw new RangeError("unreachable: full-grid construction failed");
   }
   return toSolvedGrid(state.cells);
@@ -46,8 +44,7 @@ function fillFrom(
   if (index === state.cells.length) {
     return true;
   }
-  // Candidate order drawn at each (re)visit — determinism holds because
-  // the entire search is a pure function of the consumed stream.
+
   const first: 0 | 1 = rng.nextInt(2) === 0 ? 0 : 1;
   const second: 0 | 1 = first === 0 ? 1 : 0;
   for (const value of [first, second]) {
@@ -61,15 +58,6 @@ function fillFrom(
   return false;
 }
 
-/**
- * Generate the daily Binairo for (seed, weekday). Deterministic: the same
- * (seed >>> 0, weekday) yields a deep-equal puzzle, retries included. The
- * seed domain is uint32 — larger inputs alias via `seed >>> 0`. Uniqueness
- * is true by construction: every clue removal is re-proved by the counting
- * solver. Throws BinairoGenerationError after
- * BINAIRO_MAX_GENERATION_ATTEMPTS derived-seed attempts, and a RangeError
- * when `weekday` is outside 1..7 at runtime (untyped boundaries).
- */
 export function generateBinairo(options: {
   seed: number;
   weekday: Weekday;
