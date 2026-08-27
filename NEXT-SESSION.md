@@ -1,41 +1,33 @@
 # Do I need to do anything?
 
-**Read [`docs/pending-fernando.md`](./docs/pending-fernando.md)** — the living ledger of everything waiting on you, in blocking order. To work through it: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*. Everything else is agent-owned. **Nothing from this session needs you.**
+**Read [`docs/pending-fernando.md`](./docs/pending-fernando.md)** — the living ledger of everything waiting on you, in blocking order. To work through it: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*. **Nothing from this session needs you.**
 
 ## Start here
 
-**Read ALL rule comments on #205 before sweeping anything**, oldest first — Rules A–DD. The three newest cost ten review rounds, and nine of the ten found a wrong figure in a durable record rather than a defect in a diff:
-
-- **Rule BB.** A figure in a record is invalidated by any change to the thing it measures — **including the change that is fixing it**. After every fix re-derive *every* figure the record carries, not the ones the review named. Prefer a **delta**; anchor an unavoidable absolute to a ref and publish the command.
-- **Rule CC.** An attribution is a claim about a test. **Delete the code the comment defends and run the suite.** #235 attributed eight hydration gates to five ids and four were ungated — `T-WEB-S94` asserts *after* `act()` and never sees the first paint.
-- **Rule DD.** A restore is byte-identical or it is declared.
+**#205's deletion half is done and is now a gate, not a campaign.** The thirty rules A–DD on that issue were about *reporting* a sweep; the tool replaced them. Read `scripts/comment-audit/README.md`, not the issue.
 
 ```sh
-node scripts/comment-audit/selftest.mjs            # after touching any tool — 131 assertions
-node scripts/comment-audit/shingle.mjs <targets>   # Rule A, BEFORE sweeping
-node scripts/comment-audit/count.mjs <targets>     # the baseline
+node scripts/comment-audit/density.mjs $(git ls-files '*.ts' '*.tsx' '*.mjs' | grep -v '^.claude/skills/')
+node scripts/comment-audit/selftest.mjs            # 144 assertions, after touching any tool
 node scripts/comment-audit/hash.mjs <targets>      # zero code changed
-node scripts/comment-audit/excision.mjs <targets>  # what the PR body declares
-node scripts/comment-audit/wrap.mjs <targets>      # what an excision left ragged — pass .md too
-node scripts/comment-audit/markers.mjs <files>     # what to sweep next
 ```
 
-`README.md` names what each tool **cannot** see. `css-count.mjs` is for 7c.
+**The budget is 3% and it is in CLAUDE.md.** 24,497 comment lines became 15. Directives are exempt — including a bare `//`, which is a prettier layout anchor, and `impeccable-disable`. Generated files report as SKIPPED.
+
+**Do not write a comment whose only reader is the next agent.** Review rounds, tranche numbers, rule letters, "a reviewer caught this". That class was the largest in the repo's history and it is now on CLAUDE.md's delete-on-sight list.
 
 ## Session state
 
-**#205 — tranche 7b is CLOSED and the four game directories are fully swept, 3,071 → 2,320.** #234 committed the ragged-wrap tool and Rule AA's `step[- ]\d+`; #235 took the fourteen files 7b-1…3 left, **1,032 → 732**.
+**PR #239 is open and needs its two reviewers** — correctness and invariants. It is green on every gate, with output in the body. It was not reviewed this session because the operator asked for no subagents.
 
-**7c is next and it is a CITATION tranche, not a deletion one.** The four game `.module.css` are **911** lines by `css-count.mjs`, but `T-WEB-S102` reads `termo-board.module.css`'s header **raw** and asserts its seven numbered deviations by token — ~90 of that sheet's 367 lines cannot be cut without changing the test. The value there is **18 line anchors** (Rule L), enumerated in the #205 comment; CSS has no symbols, so the target is the selector that owns the rule.
+**Three tests were fixed for making prose load-bearing**, which is the same defect inverted: a non-vacuity check that read the doc block of the file it scanned, selftest fixtures that pointed at prose the campaign was deleting, and five bare hexes whose names lived in trailing comments. Prefer a synthetic fixture to a real file, always.
 
-**7d lost the four archive screens** (#235 swept them, by Rule N): it is `src/archive`'s remainder, `src/components`, and the six `src/free-play` files. `app/`+`scripts/`, `test/` and `eslint.config.mjs` are tranche 8.
+**CSS is the remaining 1,820 lines and is NOT a sweep.** `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header — seven numbered deviations, by token. The work is to move that table into the test as data and assert the sheet ships it. Four sheets hold 1,097 of the 1,820: termo 367, nonogram 304, arquivo 262, sudoku 164.
 
-**#236 is new and `ready-for-agent`** — four of the eight play-screen roots have an ungated hydration gate, mutation table in the issue; `T-WEB-S172` is the shape the four missing tests want.
+**`docs/agents/test-ids.md` is the same disease in a document** — single paragraphs past 2,000 words. Out of the code budget's reach.
 
-**#206 — duplication, 3 of 15 clusters done.** Cluster 4 next, in the issue's table order; its "1,477 lines" is stale, #220 cut it to **888**. **#209** (the `apps/web` CI flake) is diagnosed but unfixed and has not reproduced in five sessions. **#219** is `defect` + `ready-for-agent`.
+**#238 is new** — Vite's native `configLoader` will reject `vitest.shared.ts`'s extensionless import. **#209 reproduced locally** for the first time in six sessions, at `--concurrency=2` rather than CI's 10; output is on the issue. **#236** (four ungated hydration gates) and **#219** are still `ready-for-agent`. **#206** — duplication, 3 of 15 clusters done, cluster 4 next.
 
-## What this session cost, so the next one budgets for it
+## What this session cost
 
-Two PRs, **ten review rounds**, one of which found a defect in a diff. Budget the sweep at a fraction of the write-up. Two habits would have saved four rounds: **generate the PR body's numbers after the last commit, never before** — every fix moved them — and **run the mutation before writing the attribution**, not after a reviewer asks.
-
-One process trap: a review agent running `pnpm test` in the checkout blocks the next tranche's edits for the whole round. Prepare the next sweep in `/tmp` while a review runs, then apply it in one go. Do **not** reach for a git worktree — the napkin records what that cost.
+Six commits, one PR, no review rounds — because the numbers are generated by a tool rather than restated in prose, which is what nine of the previous ten rejections were about. The sweep itself was minutes; the diligence was hours, and all of it was mutation-testing rules to find the two that had no test.
