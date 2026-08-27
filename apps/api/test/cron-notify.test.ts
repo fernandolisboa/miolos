@@ -133,10 +133,16 @@ describe("the cron gate compares in constant time (ADR-0022, ADR-0064 §8)", () 
       new URL("../src/cron/auth.ts", import.meta.url),
       "utf8",
     );
-    expect(source).toContain("timingSafeEqual");
-    expect(source).toContain('createHash("sha256")');
-    expect(source).not.toMatch(/authorizationHeader\s*===/);
-    expect(source).not.toMatch(/===\s*`Bearer/);
+    // The RETURN, not the imports: leaving `timingSafeEqual` imported and
+    // both digests computed as dead code satisfies a `toContain`, and
+    // equality is symmetric so no behavioural test can catch the swap.
+    expect(source).toMatch(/return timingSafeEqual\(received, expected\);/);
+    expect(source).toContain(
+      'const received = createHash("sha256").update(authorizationHeader)',
+    );
+    expect(source).toContain('const expected = createHash("sha256")');
+    // 11 lines with no legitimate `===`, so banning the class is exact.
+    expect(source).not.toContain("===");
   });
 });
 

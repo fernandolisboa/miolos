@@ -48,7 +48,7 @@ describe("the client-bundle tripwire's word-list markers", () => {
     for (const marker of EXPECTED_MARKERS) {
       expect(
         VALIDATION.has(marker),
-        `\`${marker}\` is no longer a validation word: update this file AND \`EXPECTED_DAILY_SCOPE\`/\`FORBIDDEN_FREE_PLAY_SCOPE\` in apps/web/scripts/route-client-js.mjs`,
+        `\`${marker}\` is no longer a validation word: update this file, and any list in apps/web/scripts/route-client-js.mjs that names it (\`zurro\` is in EXPECTED_DAILY_SCOPE and FORBIDDEN_FREE_PLAY_SCOPE; \`abaco\` is in neither)`,
       ).toBe(true);
 
       expect(isValidGuess(marker)).toBe(true);
