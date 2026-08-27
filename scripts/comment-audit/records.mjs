@@ -21,7 +21,7 @@ const TOKEN = [
   String.raw`plan \d+`,
   String.raw`issue #\d+`,
   String.raw`decision \d+[a-z]?`,
-  String.raw`step[- ]\d+`,
+  String.raw`step-\d+`,
   String.raw`round-\d+`,
   String.raw`\x60[^\x60()]*\x60`,
   String.raw`[A-Z][\w.-]*`,

@@ -330,7 +330,7 @@ check(
 
 // Every file skipped is zero comparisons, and printing the toolkit's most
 // reassuring sentence after zero comparisons is Rule I's shape.
-for (const t of ["excision", "verbatim", "citations", "hash"]) {
+for (const t of ["excision", "verbatim", "citations", "hash", "wrap"]) {
   check(
     `${t}.mjs exits 2 when every file is skipped`,
     run([
@@ -629,10 +629,11 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
 }
 
 // ---------------------------------------------------------------------------
-// `wrap.mjs` — the ragged-wrap check. Every case below is one of the four
-// defects the inline version caught, or a line class it must never treat as
-// prose. Widths are built from four-letter words so the arithmetic is legible:
-// `words(n)` is 5n - 1 characters, and a `// ` or ` * ` gutter adds three.
+// `wrap.mjs` — the ragged-wrap check. Every fixture below was MUTATION-TESTED:
+// the guard it names was removed and this file re-run. Three earlier fixtures
+// stayed green with their guard deleted and were replaced by the ones here.
+// Widths are built from four-letter words so the arithmetic is legible:
+// `words(n)` is 5n - 1 characters, and a `// ` or `/* ` gutter adds three.
 const words = (n, seed = "a") =>
   Array.from({ length: n }, (_, i) =>
     (seed + String.fromCharCode(98 + (i % 24))).padEnd(4, "x"),
@@ -646,7 +647,7 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
 
   // A greedily wrapped paragraph scores zero against its OWN widest line,
   // whatever column the author actually used. This is the property that makes
-  // the check readable; against a fixed 80 one Accepted ADR scored 108.
+  // the check readable; against a fixed 80 one Accepted ADR scores 464.
   check(
     "a greedily wrapped comment paragraph is clean",
     kinds(
@@ -684,32 +685,59 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [],
   );
 
-  // Two of the four defects were orphans inside Accepted ADRs. A `.ts`-only
-  // line-selector cannot see them, which is why this tool has a second one.
+  // Two of the four defects this tool was written for were orphans inside
+  // Accepted ADRs. A `.ts`-only line-selector cannot see them, which is why
+  // this one has a second selector — and this is one of the four, verbatim
+  // from `docs/adr/0037-…`, not a synthetic paragraph.
   check(
-    "markdown prose is scanned too",
-    kinds("w-orphan.md", `${words(13)}\ntail\n`),
-    [["orphan", 1, "tail"]],
+    "markdown prose is scanned too — ADR-0037's real orphan",
+    kinds(
+      "w-adr.md",
+      "- **No clue association at all.** The board would be navigable and\n" +
+        "  unsolvable.\n",
+    ),
+    [["orphan", 1, "unsolvable."]],
   );
 
-  // A comment-line regex that matches `*/` reads a block terminator as prose
-  // with content `/`. An automated reflow ate one, and `pnpm typecheck` is
-  // what caught it — this makes the tool itself refuse to repeat the mistake.
+  // `line.includes("*/")` is what stops a block terminator reading as prose,
+  // and it is the guard, not the gutter regex: with the bail removed the third
+  // line joins the paragraph and the hit moves to line 2. (An earlier
+  // `\*(?!/)` lookahead in `GUTTER_RE` was kept as a second layer until a
+  // mutation showed it could not change any answer; it is gone.)
   check(
     "a closing */ is never prose",
-    kinds("w-star.ts", `/*\n * ${words(14)}\n * xx\n */\nconst a = 1;\n`),
-    [["orphan", 2, "xx"]],
+    kinds(
+      "w-star.css",
+      `/* ${words(14)}\n   short\n   ${words(14, "b")} */\n.a { color: red; }\n`,
+    ),
+    [["orphan", 1, "short"]],
   );
 
-  // The same reflow ate three `eslint-disable-next-line` directives. A
-  // directive is not a line a wrap may move a word onto or off.
+  // A directive is not a line a wrap may move a word onto or off. TWO adjacent
+  // ones, because `DIRECTIVES` carries the `g` flag: a shared regex would set
+  // `lastIndex` on the first and answer `false` on the second.
   check(
-    "a directive line is not wrappable prose",
+    "two adjacent directive lines are both skipped",
     kinds(
       "w-directive.ts",
-      "// eslint-disable-next-line react-hooks/rules-of-hooks\n// tail\nconst a = 1;\n",
+      "// eslint-disable-next-line react-hooks/rules-of-hooks\n" +
+        "// eslint-disable-next-line react-hooks/exhaustive-deps\n" +
+        "// tail\nconst a = 1;\n",
     ),
     [],
+  );
+
+  // A trailing comment beside code is not a wrappable line: a wrap that moved
+  // a word onto it would move it onto the code. Nothing in the repo indents
+  // deeply enough for the gutter widths to line up, so this fixture builds
+  // the case rather than waiting for it.
+  check(
+    "a trailing comment beside code is not prose",
+    kinds(
+      "w-trailing.ts",
+      `  // ${words(13)}\n  // short\n     x = 1; // ${words(13, "b")}\n`,
+    ),
+    [["orphan", 1, "short"]],
   );
 
   check(
@@ -729,23 +757,42 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   );
 
   // A list item's continuation lines are one paragraph with it, or the scan
-  // stops dead at every bullet — and bullets are where ADR prose lives.
+  // stops dead at every bullet — 751 hits across the repo. The NESTED bullet
+  // is the case that binds `MARKER_RE`: it sits at the continuation indent, so
+  // nothing but the marker test can end the run.
   check(
     "a list item's continuation lines are one paragraph",
     kinds("w-list.md", `- ${words(14)}\n  short\n  ${words(14, "b")}\n`),
     [["ragged", 2, "bbxx"]],
   );
   check(
-    "a sibling bullet does NOT join the paragraph above it",
-    kinds("w-bullets.md", "- short\n- tail\n"),
-    [],
+    "a nested bullet at the continuation indent ends the paragraph",
+    kinds("w-nested.md", `- ${words(14)}\n  short\n  - ${words(14, "b")}\n`),
+    [["orphan", 1, "short"]],
   );
 
-  // 7c is a CSS tranche, and CSS has its own comment form.
+  // 7c is a CSS tranche, and every multi-line comment in this repo's CSS is
+  // written `globals.css`-style: an opener, then space-indented continuations
+  // with no marker at all. Requiring a marker scored the whole corpus zero.
   check(
-    "css comments are scanned",
-    kinds("w.css", `/*\n * ${words(12)}\n * tail\n */\n.a { color: red; }\n`),
-    [["orphan", 2, "tail"]],
+    "a space-indented CSS continuation is prose, and joins its opener",
+    kinds(
+      "w.css",
+      `/* ${words(14)}\n   short\n   ${words(14, "b")}\n   more text\n */\n.a { color: red; }\n`,
+    ),
+    [["ragged", 2, "bbxx"]],
+  );
+
+  // One unbreakable line must not hand the paragraph back to the fixed-80
+  // regime: without the `width <= WIDTH` filter on the fill, `col` becomes 80
+  // and the third line is flagged too.
+  check(
+    "a line over 80 columns does not set the paragraph's column",
+    kinds(
+      "w-long.ts",
+      `// ${"z".repeat(90)}\n// short\n// ${words(14)}\n// tail end\nconst a = 1;\n`,
+    ),
+    [["ragged", 2, "abxx"]],
   );
 }
 
@@ -791,8 +838,8 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
   const gone = run([tool("wrap.mjs"), "nope.ts"], repo);
   check(
     "a file absent from the working tree leaves nothing compared",
-    gone.code,
-    2,
+    [gone.code, /No line this diff wrote/.test(gone.out)],
+    [2, false],
   );
 }
 

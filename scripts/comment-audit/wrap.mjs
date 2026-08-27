@@ -4,9 +4,7 @@ import { execFileSync } from "node:child_process";
 import { commentRanges } from "./count.mjs";
 import { DIRECTIVES, parseArgs } from "./records.mjs";
 
-// The ragged-wrap check #205 published inline in three PR bodies before it was
-// a tool. It caught four defects and every one of them was introduced by a FIX
-// commit — the class #227 rejected on twice, and the one nobody word-diffs.
+// Which lines a diff left RAGGED — under-filled, or an orphan.
 //
 // A greedily wrapped paragraph has exactly one property: no line can take the
 // first word of the line below it. An excision breaks that property in place,
@@ -14,21 +12,17 @@ import { DIRECTIVES, parseArgs } from "./records.mjs";
 // reads as an under-filled line, or as an orphan when it lands at the end of a
 // paragraph. Both are the same defect, and this reports them as one check.
 //
-// It carries a MARKDOWN line-selector as well as a comment one: two of the
-// four defects were orphans inside Accepted ADRs, invisible to a `.ts` scan.
-//
 // Baseline-relative by construction. This repo is full of prose that was never
 // greedily wrapped and never will be, so an absolute count is unreadable; what
 // a PR body declares is that its own diff added none.
 const WIDTH = 80;
 
-// `DIRECTIVES` carries the `g` flag, and `RegExp.test` with `g` is stateful —
-// alternate calls would return false on the same line. Copy the source only.
+// `RegExp.test` with the `g` flag advances `lastIndex`, and `DIRECTIVES`
+// carries it — so a shared regex would answer `false` on every other line it
+// matches. Copy the source without the flag.
 const DIRECTIVE_RES = DIRECTIVES.map(([, re]) => new RegExp(re.source));
 
-// `\*(?!/)` is not decoration: a comment-line regex that matches `*/` reads a
-// block terminator as prose with content `/`, and an earlier reflow ate one.
-const GUTTER_RE = /^(\s*(?:\/\/+|\/\*+|\*(?!\/))[ \t]?)/;
+const GUTTER_RE = /^([ \t]*(?:\/\/+|\/\*+|\*)[ \t]?)/;
 
 const FENCE_RE = /^(?:```|~~~)/;
 const BLOCKISH_RE =
@@ -36,7 +30,7 @@ const BLOCKISH_RE =
 const MARKER_RE = /^(?:[-*+]|\d+[.)])[ \t]+/;
 
 /**
- * One entry per source line: `null` where the line is not wrappable prose,
+ * One entry per source line: `null` where the line is not wrappable prose, and
  * `{ gutter, body, width }` where it is. Skipping is the safe direction — a
  * missed line costs nothing, a wrongly included one asks a reviewer to unwrap
  * a table.
@@ -63,16 +57,22 @@ function proseLines(file, text) {
         if (inComment[j]) hasComment = true;
         else hasCode = true;
       }
-      const m = GUTTER_RE.exec(line);
-      if (!hasComment || hasCode || line.includes("*/") || !m) {
+      // A line holding `*/` is never prose. Without this bail the terminator
+      // reads as a word — `/` on its own, or a trailing `*/` glued to the last
+      // real word — and a reflow that believed it deleted one.
+      if (!hasComment || hasCode || line.includes("*/")) {
         out.push(null);
         continue;
       }
-      gutter = m[1];
+      // A continuation line inside an open block comment carries no marker at
+      // all: every multi-line comment in this repo's CSS is written that way,
+      // so requiring `//`, `/*` or `*` here made the whole `.css` corpus score
+      // zero. Its indent IS its gutter.
+      gutter = (GUTTER_RE.exec(line) ?? /^[ \t]*/.exec(line))[0];
       body = line.slice(gutter.length);
     }
     // The fence toggle reads the BODY, so a fenced block written inside a
-    // comment counts — this campaign's tools are themselves documented that way.
+    // comment counts.
     if (FENCE_RE.test(body.trim())) {
       fenced = !fenced;
       out.push(null);
@@ -95,18 +95,14 @@ function proseLines(file, text) {
   return out;
 }
 
+// `.css` is read through the SAME parser, and it agrees with `css-count.mjs`
+// on every tracked sheet — including one holding `url(http://…)`, because the
+// `//` the parser sees there is on a line that also holds code, which is not
+// prose either way. A dedicated CSS scanner was written, measured against this
+// on the whole corpus, found to change nothing, and deleted. The blind spot
+// `css-count.mjs` names is stated in the README rather than defended here.
 function commentMask(file, text) {
   const mask = new Uint8Array(text.length);
-  if (file.endsWith(".css")) {
-    for (let i = 0; i < text.length; i++) {
-      if (text[i] !== "/" || text[i + 1] !== "*") continue;
-      const end = text.indexOf("*/", i + 2);
-      const stop = end === -1 ? text.length : end + 2;
-      for (let j = i; j < stop; j++) mask[j] = 1;
-      i = stop - 1;
-    }
-    return mask;
-  }
   const { ranges } = commentRanges(file, text);
   for (const [a, b] of ranges) for (let i = a; i < b; i++) mask[i] = 1;
   return mask;
@@ -130,7 +126,7 @@ export function ragged(file, text) {
     }
     // A list marker belongs to the first line only; the item's continuation
     // lines are indented past it, and that indent is what holds the paragraph
-    // together. Without this the scan stops dead at every bullet.
+    // together. Without this the scan stops dead at every bullet — 751 hits.
     const head = lines[i];
     const marker = MARKER_RE.exec(head.body.trimStart());
     const contIndent = indentOf(head.body) + (marker ? marker[0].length : 0);
@@ -138,22 +134,26 @@ export function ragged(file, text) {
     while (
       end < lines.length &&
       lines[end] &&
-      lines[end].gutter === head.gutter &&
+      // WIDTH, not text: a block comment's opener (`/* `) and its continuation
+      // indent (`   `) are the same left margin and the same paragraph.
+      lines[end].gutter.length === head.gutter.length &&
       !MARKER_RE.test(lines[end].body.trimStart()) &&
       indentOf(lines[end].body) === contIndent
     ) {
       end++;
     }
     // The paragraph's OWN fill is the column, not 80. Prose here is wrapped
-    // anywhere between 68 and 80, and a fixed 80 flags a correctly wrapped
-    // paragraph on every line — 108 hits in one Accepted ADR, which is how a
-    // check gets ignored. The widest line a paragraph already has is a column
-    // it demonstrably reached, so a greedily wrapped paragraph scores zero
-    // against it by construction, whatever the author's real margin was.
-    const col = Math.min(
-      WIDTH,
-      Math.max(...lines.slice(i, end - 1).map((l) => l.width)),
-    );
+    // anywhere between 68 and 80, and against a fixed 80 a correctly wrapped
+    // paragraph is flagged on nearly every line — ADR-0053 scores 464 that way
+    // against 53 here, which is how a check gets ignored. The widest line the
+    // paragraph already has is a column it demonstrably reached, so a greedily
+    // wrapped paragraph scores zero against it by construction, whatever the
+    // author's real margin was. Lines OVER 80 are excluded from that maximum:
+    // one unbreakable URL would otherwise hand the whole paragraph back to the
+    // fixed-80 regime this rejects.
+    const fills = lines.slice(i, end - 1).filter((l) => l.width <= WIDTH);
+    const col =
+      fills.length === 0 ? WIDTH : Math.max(...fills.map((l) => l.width));
     for (let k = i; k < end - 1; k++) {
       const next = lines[k + 1].body.trim();
       const word = next.split(/\s+/)[0];
@@ -178,30 +178,47 @@ export function ragged(file, text) {
 }
 
 // Behind an entry-point guard: `ragged` is exported, and a module-level CLI
-// would run this whole comparison on that import — the defect `verbatim.mjs`
-// carries the same guard for.
+// would run this whole comparison on that import.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const { base, files } = parseArgs(process.argv, "wrap.mjs");
+
+  // Rule T: a base ref that does not resolve compared NOTHING, and the
+  // per-file "absent on the base" path would otherwise read every hit as new
+  // and then print a green. A typo in `--base` is not a clean diff.
+  try {
+    execFileSync(
+      "git",
+      ["rev-parse", "--verify", "--quiet", `${base}^{commit}`],
+      {
+        stdio: "pipe",
+      },
+    );
+  } catch {
+    console.error(`wrap.mjs: --base ${base} does not resolve to a commit`);
+    process.exit(2);
+  }
 
   let added = 0;
   let compared = 0;
   let missing = 0;
   for (const f of files) {
-    let hits;
+    let text;
     try {
-      hits = ragged(f, fs.readFileSync(f, "utf8"));
+      text = fs.readFileSync(f, "utf8");
     } catch {
       missing++;
       console.log(`   -  (absent from the working tree)  ${f}`);
       continue;
     }
+    const hits = ragged(f, text);
     const before = new Map();
     let fresh = false;
     try {
-      const text = execFileSync("git", ["show", `${base}:${f}`], {
+      const baseText = execFileSync("git", ["show", `${base}:${f}`], {
         encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
       });
-      for (const h of ragged(f, text))
+      for (const h of ragged(f, baseText))
         before.set(h.key, (before.get(h.key) ?? 0) + 1);
     } catch {
       // Every ragged line in a file the base ref does not hold is one this
@@ -226,11 +243,13 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
       );
     }
   }
-  console.log(
-    added === 0
-      ? `\nNo line this diff wrote can take the first word below it within ${WIDTH} columns.`
-      : `\n${added} ragged line(s) this diff added.`,
-  );
+  if (compared > 0) {
+    console.log(
+      added === 0
+        ? `\nNo line this diff wrote can take the first word below it within ${WIDTH} columns.`
+        : `\n${added} ragged line(s) this diff added.`,
+    );
+  }
   if (missing) console.log(`${missing} of ${files.length} file(s) SKIPPED.`);
   process.exit(compared === 0 ? 2 : added === 0 ? 0 : 1);
 }
