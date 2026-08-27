@@ -7,16 +7,8 @@ import { describe, expect, it } from "vitest";
 
 import { nextHint } from "../src/play/grid-hint";
 
-// T-WEB-10/T-WEB-11, carried forward as T-WEB-S9/S10's binairo half
-// (plan 018 §15). `nextHint` is pure and deterministic,
-// so it is proved directly rather than through the button. Table-driven,
-// deliberately: ADR-0017 scopes fast-check to packages/games and this
-// ticket adds no test dependency.
-
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
-// Twenty pinned seeds, in-file so a failure is reproducible from the
-// source alone. Arbitrary values, never a clock or a random draw.
 const SEEDS = [
   1, 2, 3, 7, 11, 42, 101, 512, 1_009, 4_242, 20_260_101, 20_260_214,
   20_260_331, 20_260_430, 20_260_531, 20_260_630, 20_260_730, 20_260_831,
@@ -29,7 +21,6 @@ const emptyEntries: readonly BinairoCell[] = Array.from(
   () => null,
 );
 
-/** Row-major index of the first cell the player is free to fill. */
 function firstFreeIndex(givens: readonly BinairoCell[]): number {
   return givens.findIndex((cell) => cell === null);
 }
@@ -124,10 +115,6 @@ describe("nextHint", () => {
 });
 
 describe("nextHint always agrees with the solver (T-WEB-11)", () => {
-  // 7 weekdays × 20 pinned seeds. The hint is computed on the client from
-  // the published givens (ADR-0027), so the property that matters is that
-  // it never reveals anything but what `solveBinairo(givens)` already
-  // recovers — the hint can never be more informative than the board.
   it.each(WEEKDAYS)("weekday %i", (weekday) => {
     for (const seed of SEEDS) {
       const daily = generateBinairo({ seed, weekday });

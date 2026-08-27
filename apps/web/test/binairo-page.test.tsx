@@ -14,15 +14,7 @@ import { z } from "zod";
 
 import { messages } from "../src/i18n";
 
-// T-WEB-1..4b and T-WEB-23 (plan 017 §15). Both page shells are async
-// server components, which @testing-library/react cannot render — so they
-// are invoked as plain functions and asserted on the element they return,
-// plus a renderToStaticMarkup leak scan. All composition lives in the
-// synchronous components, which their own suites render directly.
 //
-// No PGlite anywhere in apps/web (D33): `vitest.config.ts` forces jsdom for
-// every file, and re-proving the wall from here would prove nothing about
-// apps/web. The wall's behaviour is pinned by packages/db's own suite.
 
 const PUZZLE = generateBinairo({ seed: 20_260_730, weekday: 3 });
 
@@ -33,11 +25,7 @@ const DAILY: DailyBinairoResponse = {
   givens: [...PUZZLE.givens],
 };
 
-// `vi.mock` factories are hoisted above every const in the file, so the
-// spies have to be hoisted with them.
 const spies = vi.hoisted(() => ({
-  // The db handle never leaves the mocked seam, so its shape is irrelevant —
-  // what matters is that `getDb` is the ONLY way a page reaches a database.
   stubDb: {},
   getDb: vi.fn(),
   getTodayDaily: vi.fn(),
@@ -49,8 +37,6 @@ const spies = vi.hoisted(() => ({
 
 vi.mock("../src/db", () => ({ getDb: spies.getDb }));
 
-// Every other export of the root entry is a spy asserted never called
-// (T-WEB-4): the wall is only a wall if it is the ONLY door apps/web uses.
 vi.mock("@miolos/db", () => ({
   getTodayDaily: spies.getTodayDaily,
   getPublishedDaily: spies.getPublishedDaily,
@@ -62,11 +48,6 @@ vi.mock("@miolos/db", () => ({
   users: {},
 }));
 
-/**
- * Reach a returned element's props without a cast: React elements are
- * plain objects, so a schema is enough and the repo's no-`as`-in-tests rule
- * is kept.
- */
 const elementSchema = z.object({
   props: z.record(z.string(), z.unknown()),
 });
@@ -119,8 +100,6 @@ describe("/binairo (T-WEB-3)", () => {
 
     const element = elementSchema.parse(await play.default());
 
-    // A strict schema: any extra key on the props object fails the parse,
-    // which is the exact-key-set assertion D4 asks for.
     expect(dailyBinairoResponseSchema.parse(element.props.daily)).toEqual(
       DAILY,
     );
@@ -132,9 +111,7 @@ describe("/binairo (T-WEB-3)", () => {
     const { play } = await loadPages();
 
     const element = await play.default();
-    // Flight serializes EVERY prop crossing into a client component,
-    // including values never rendered — so the props object is what the
-    // scan has to cover, not only the markup.
+
     const keys = collectKeys(elementSchema.parse(element).props);
     const markup = renderToStaticMarkup(element);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
@@ -163,7 +140,7 @@ describe("the db surface both pages touch (T-WEB-4)", () => {
       spies.stubDb,
       "binairo",
     );
-    // The credential is acquired through the one seam, never inline.
+
     expect(spies.getDb).toHaveBeenCalledTimes(2);
     for (const spy of [
       spies.createDb,
@@ -200,11 +177,6 @@ describe("/binairo/concluido (T-WEB-4b)", () => {
 
 describe("the server-only guard on src/db.ts (T-WEB-23)", () => {
   it('still carries `import "server-only";` as its first statement', () => {
-    // Read as TEXT, never executed: the point is that the guard cannot be
-    // deleted silently. Three ESLint bans and the narrowed root @miolos/db
-    // entry are compile-time walls, but a `"use client"` module importing
-    // `../db` would walk around all of them — `server-only` turns that into
-    // a build error (plan 017 D32).
     const source = readFileSync(
       path.join(
         path.dirname(fileURLToPath(import.meta.url)),
@@ -225,13 +197,6 @@ describe("the server-only guard on src/db.ts (T-WEB-23)", () => {
 
 describe("the least-privilege credential in src/db.ts (T-WEB-S290)", () => {
   it("reads WEB_DATABASE_URL and carries no fallback to the integration credential", () => {
-    // Read as TEXT, never executed, comments stripped first (the T-LINT-S37
-    // idiom: a doc block may legitimately name the very token the scan
-    // forbids). #59's database grant is only a second enforcement point if
-    // the app actually connects as `miolos_web`: a fallback to the
-    // integration-managed variable would silently restore the all-tables
-    // credential on any env drift, so the ABSENCE asserted below is the
-    // ticket's claim, not an accident of spelling.
     const source = readFileSync(
       path.join(
         path.dirname(fileURLToPath(import.meta.url)),

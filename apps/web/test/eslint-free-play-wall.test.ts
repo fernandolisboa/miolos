@@ -5,15 +5,6 @@ import { ESLint } from "eslint";
 import tseslint from "typescript-eslint";
 import { describe, expect, it, vi } from "vitest";
 
-/**
- * Mechanical proof that the FREE-PLAY wall (#28, ADR-0046; plan 025 §9.1)
- * actually fires — the `eslint-db-wall.test.ts` architecture applied to the
- * new directories. Every red probe sits beside a clean probe at a DAILY
- * path, proving the ban is scoped rather than accidentally global; and the
- * two replacement-regression probes (S14/S15) prove the new flat-config
- * object REPEATED the app-wide walls instead of silently replacing them
- * with less — the trap the config's own comments name.
- */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 const eslint = new ESLint({
@@ -30,34 +21,12 @@ const eslint = new ESLint({
   ],
 });
 
-// Explicit test timeout, FILE-scoped (ADR-0055 decisions 2, 3 and 4). The
-// cost this budgets is a property of the file, not of any one test: the
-// `new ESLint()` above is cheap, but the FIRST `lintText` lazily loads the
-// root flat config and everything eslint-config-next/core-web-vitals and
-// typescript-eslint pull in. Whichever `it` runs first pays it, and three
-// measurement sessions disagreed about which one that is, so pinning the
-// budget to a named test would pin a scheduling accident.
 //
-// This file's own figures: 2915 ms on CI (gate run 31888933252 — 58.3 % of
-// vitest's 5000 ms default) and 8520 ms under contended local fan-out. The
-// contended figure was measured at default fan-out; after #114 the root
-// `test` script caps turbo at 2, so reproduce it with
-// `pnpm test --force --concurrency=10` and not with a bare `pnpm test`.
+
 //
-// The three wall suites build byte-identical ESLint options over the same
-// config and differ only in when they are scheduled, so they are ONE
-// population and all three take the population maximum: eslint-og-wall's
-// 9832 ms (contended local, pooled over 11 samples). 9832 x 4 = 39 328 ->
-// 40 000 ms. That anchor is a sample maximum, not a bound — it has grown
-// twice already (4983 -> 7907 -> 9832 ms) — and the x4 with the round-up is
-// what absorbs the next surprise.
+
 //
-// A ceiling, not a target: any of these tests over budget / 2 = 20 000 ms
-// is a defect to diagnose and record, never a number to raise. The line is
-// budget / 2 and not budget / 4 because budget = anchor x 4, so budget / 4
-// IS the anchor: a tripwire there fires whenever a session sets a new
-// sample maximum, which ADR-0055 decision 2 predicts as normal. Twice the
-// anchor is drift; one times it is a draw.
+
 vi.setConfig({ testTimeout: 40_000 });
 
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
@@ -82,11 +51,10 @@ function wallHits(messages: { ruleId: string | null }[]): (string | null)[] {
   );
 }
 
-/** A probe inside the walled directory... */
 const FREE_PATH = "apps/web/src/free-play/eslint-probe.ts";
-/** ...its route-segment sibling (T-LINT-S13 pins the second glob)... */
+
 const ROUTE_PATH = "apps/web/app/modo-livre/binairo/page.tsx";
-/** ...and the scope control: the same imports are legal from a daily path. */
+
 const DAILY_PATH = "apps/web/src/binairo/eslint-probe.ts";
 
 describe("the free-play import wall (#28, ADR-0046)", () => {
@@ -108,8 +76,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifier from the daily directory
-      // reports no wall hit — the ban is the directory's, not the app's.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
@@ -149,8 +116,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(ruleIds(await lintProbe(FREE_PATH, source))).toContain(
       "no-restricted-imports",
     );
-    // The control that makes "stricter" a measured claim: the same import
-    // is the wall-safe surface everywhere else in apps/web.
+
     expect(wallHits(await lintProbe(DAILY_PATH, source))).toEqual([]);
   });
 
@@ -184,7 +150,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "no-restricted-syntax",
     );
 
-    // The control: the game engines free play exists to consume.
     const clean = [
       'import { generateBinairo } from "@miolos/games/binairo";',
       "",
@@ -195,15 +160,8 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S58: the node_modules/@miolos symlink spellings of the Termo ban AND the db ROOT ban red from free play", async () => {
-    // #106. Free play carries TWO shapes of this hole, and only one of them is
-    // the `/src` deep reach the other walls have.
     //
-    // (a) Termo, the ordinary shape. `T-LINT-S12` above bans the bare
-    // specifier and the relative path into `packages/games/src/termo`; the
-    // pnpm symlink is a third spelling of the same reach, and it matched
-    // neither the `patterns` array nor `freePlayDynamicBannedModule`'s regex.
-    // The stake is a project VETO — Termo's word list is finite curated
-    // content (ADR-0015) and free play would burn it.
+
     const termoStatic = [
       'import * as termo from "../node_modules/@miolos/games/src/termo/words";',
       "",
@@ -223,13 +181,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "no-restricted-syntax",
     );
 
-    // (b) The db ROOT entry, which is this wall's own shape and exists
-    // NOWHERE else in the config. Every other group bans `<pkg>/src`, so the
-    // symlink fix is a `/src` spelling; here free play may not name
-    // `@miolos/db` AT ALL (`T-LINT-S11`, stricter than the app-wide wall), so
-    // the bare directory needs banning too — otherwise the stricter half is
-    // reachable by a path the app-wide wall deliberately PERMITS, which is the
-    // one way a hole here differs from a hole anywhere else.
     const dbRootStatic = [
       'import { getTodayDaily } from "../node_modules/@miolos/db";',
       "",
@@ -249,15 +200,8 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "no-restricted-syntax",
     );
 
-    // `T-LINT-S11`'s control, one spelling over: "stricter than the app-wide
-    // wall" has to stay a MEASURED claim, so the db root through the symlink
-    // must still be clean from a daily path. If this arm ever goes red, #106
-    // has moved what the app-wide wall permits — which the issue says is a
-    // different ticket.
     expect(wallHits(await lintProbe(DAILY_PATH, dbRootStatic))).toEqual([]);
 
-    // And the engines free play exists to consume stay reachable through the
-    // symlink spelling too — the ban is Termo's, not `@miolos/games`'.
     const clean = [
       'import { generateBinairo } from "../node_modules/@miolos/games/src/binairo";',
       "",
@@ -280,7 +224,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "no-restricted-imports",
     );
 
-    // And the segment is not walled off from what its pages actually do.
     const clean = [
       "export default function Page() {",
       "  return <main data-play-state='generating' />;",
@@ -291,10 +234,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S14: replacement regression — the db subpath wall still fires inside free play, with the app-wide message", async () => {
-    // Flat config REPLACES a rule's configuration per file. If the
-    // free-play object had not repeated the app-wide patterns, this exact
-    // probe would lint CLEAN inside the free-play directory while redding
-    // everywhere else — the silent deletion the config comments warn about.
     const messages = await lintProbe(
       FREE_PATH,
       [
@@ -305,8 +244,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       ].join("\n"),
     );
     expect(ruleIds(messages)).toContain("no-restricted-imports");
-    // The MESSAGE is the app-wide wall's own, proving the repetition
-    // carried the original rule rather than shadowing it with a lookalike.
+
     expect(
       messages.some((message) =>
         message.message.includes("wall-safe root entry"),
@@ -334,9 +272,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       '  import("../play/play-record");',
       '  import("../binairo/use-binairo-play");',
       '  import("@miolos/db");',
-      // #145 step 7b — the dynamic arm of the T-LINT-S17 widening above:
-      // the lazy re-export module and the two per-game conclusion
-      // wrappers, each one hop from the banned conclusion graph.
+
       '  import("../play/conclusion-lazy");',
       '  import("../nonogram/nonogram-conclusion");',
       '  import("../termo/termo-conclusion");',
@@ -357,10 +293,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S17: the indirect doors — daily hooks, screen roots and conclusion-view — red from free play, clean from a daily path", async () => {
-    // `no-restricted-imports` is per-file, not transitive: a free-play file
-    // importing `use-binairo-play` would reach `use-play-lifecycle` and
-    // `sync.ts` through a door the direct bans never see, so every known
-    // indirect door is banned by name (plan 025 §9.1).
     const doors = [
       "../binairo/use-binairo-play",
       "../sudoku/use-sudoku-play",
@@ -369,12 +301,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../sudoku/sudoku-screen",
       "../nonogram/nonogram-screen",
       "../play/conclusion-view",
-      // #145 step 7b — the same claim widened, no new id (the T-DB-9a /
-      // T-LINT-S39/S40 precedent: a ban list gaining a name is the same
-      // claim about the same gate). `conclusion-lazy` RE-EXPORTS the two
-      // conclusion views, and the two per-game wrappers import
-      // `conclusion-view` statically — each a one-hop door the step-7b
-      // review measured CLEAN before these entries existed.
+
       "../play/conclusion-lazy",
       "../nonogram/nonogram-conclusion",
       "../termo/termo-conclusion",
@@ -389,9 +316,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // From a daily path the same specifiers are ordinary architecture:
-      // the sudoku directory may import its own screen root, and the
-      // conclusion is the daily's own surface.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
@@ -399,12 +324,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S21: the streak modules — client, hook, hub island and the bare barrel form — red from free play, clean from a daily path", async () => {
-    // #19's growth clause (plan 027 D9): `no-restricted-imports` bans by
-    // NAME and is non-transitive, so ADR-0046's "free play never touches
-    // the streak" stays true only because these names entered the list in
-    // the same change that created the modules. The bare `../streak` form
-    // is listed because `**/streak/**` does not match it — a future
-    // `src/streak/index.ts` barrel must not become a door.
     const doors = [
       "../streak/streak-client",
       "../streak/use-streak",
@@ -421,9 +340,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — the hub island and the conclusion card import
-      // them.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
@@ -453,11 +370,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S24: the hub page and hub-day-state — one-hop doors to day-state and the streak — red from free play, clean from a daily path", async () => {
-    // The gap the #19 step-6 live probe demonstrated: `app/page` imports
-    // `hub-day-state` and `hub-streak`, and `hub-day-state` reaches
-    // `play/day-state`, so a relative import of the hub page carried the
-    // whole daily surface with ZERO wall hits. The wall bans one hop by
-    // name, so the page and the island are both listed.
     const doors = ["../../app/page", "../../app/hub-day-state"];
     for (const door of doors) {
       const source = [
@@ -469,8 +381,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: from a daily path the hub page is ordinary
-      // architecture — the ban is the directory's, not the app's.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
@@ -498,11 +409,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S26: the attach modules — client, hook and the bare barrel form — red from free play, clean from a daily path", async () => {
-    // #21's growth clause (the napkin's one-hop rule): the attach client
-    // reaches identity and the network, so ADR-0050's flow stays out of
-    // free play only because these names entered the list in the same
-    // change that created the modules. The bare `../attach` form is listed
-    // because `**/attach/**` does not match it.
     const doors = [
       "../attach/attach-client",
       "../attach/use-attach-state",
@@ -518,8 +424,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — the hub island and /vincular import them.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
@@ -562,15 +467,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S49: the onboarding modules — client, hook, bare barrel form and the hub island — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
-    // #35's growth clause (the napkin's one-hop rule): the onboarding
-    // client reaches identity (the session mint) and the network, and the
-    // island is one hop from the walled `app/page`, so ADR-0061's surface
-    // stays out of free play only because these names entered the list in
-    // the same change that created the modules. The bare `../onboarding`
-    // form is listed because `**/onboarding/**` does not match it. One id
-    // over both arms — one claim ("free play cannot reach onboarding, by
-    // any import form"), one it — because the reservation on issue #35
-    // holds a single T-LINT id where plan 057 drafted two.
     const doors = [
       "../onboarding/onboarding-client",
       "../onboarding/use-onboarding-state",
@@ -587,14 +483,12 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — the hub island imports them.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
     }
 
-    // The dynamic-import arm: the regex closes the evasion.
     for (const door of doors) {
       const source = [
         "export const load = () =>",
@@ -614,17 +508,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S50: the push modules — client, hook, bare barrel form and the prompt card — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
-    // #145's growth clause (the napkin's one-hop rule): the push client
-    // reaches identity (the session mint) and the network, and the prompt
-    // card inside `play/` is one hop from both, so ADR-0064's surface
-    // stays out of free play only because these names entered the list in
-    // the same change that created the modules. The bare `../push` form is
-    // listed because `**/push/**` does not match it; the card is listed by
-    // its own literal name because `no-restricted-imports` is not
-    // transitive and the conclusion-view ban does not cover a direct
-    // reach. One id over both arms — the T-LINT-S49 shape: one claim
-    // ("free play cannot reach the push opt-in, by any import form"),
-    // one it.
     const doors = [
       "../push/push-client",
       "../push/use-push-state",
@@ -641,14 +524,12 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — the conclusion composition imports the card.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
     }
 
-    // The dynamic-import arm: the regex closes the evasion.
     for (const door of doors) {
       const source = [
         "export const load = () =>",
@@ -668,11 +549,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S31: the stats modules and the /estatisticas screen root — the bare barrel form included — red from free play, clean from a daily path", async () => {
-    // #29's growth clause (the napkin's one-hop rule): the stats client
-    // reaches the network and server-derived aggregates, so ADR-0051's
-    // surface stays out of free play only because these names entered the
-    // list in the same change that created the modules. The bare `../stats`
-    // form is listed because `**/stats/**` does not match it.
     const doors = [
       "../stats/stats-client",
       "../stats/use-stats",
@@ -690,8 +566,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — the hub tile and the stats screen import them.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
@@ -721,14 +596,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S33: the medals modules — client, hook and the bare barrel form — red from free play, clean from a daily path", async () => {
-    // #30's growth clause (the napkin's one-hop rule): the medals client
-    // reaches the network and the server-derived earned set, so ADR-0052's
-    // surface stays out of free play only because these names entered the
-    // list in the same change that created the modules. The bare
-    // `../medals` form is listed because `**/medals/**` does not match it —
-    // a future `src/medals/index.ts` barrel must not become a door. The
-    // section component rides `**/app/estatisticas/**`, already probed by
-    // T-LINT-S31.
     const doors = [
       "../medals/medals-client",
       "../medals/use-medals",
@@ -744,8 +611,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — the stats screen's island imports them.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
@@ -774,21 +640,13 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S35: the archive modules — the screens, the panel and the bare barrel form — red from free play, clean from a daily path", async () => {
-    // #31's growth clause (the napkin's one-hop rule): every module under
-    // `src/archive` is one hop from `sync.ts`, `play-record.ts`,
-    // `use-play-lifecycle.ts` and `use-record-snapshot.ts`, and
-    // `app/arquivo/**` is one hop from that. The bare `../archive` form is
-    // listed because `**/archive/**` does not match it — a future
-    // `src/archive/index.ts` barrel must not become a door.
     const doors = [
       "../archive/sudoku-screen",
       "../archive/late-result",
       "../archive/chrome",
       "../archive",
       "../../app/arquivo/page",
-      // Re-aimed at #163: the probe names a REAL module (`day-rows` was
-      // deleted with the calendar's landing), and the claim — any file
-      // under `app/arquivo/**` reds from free play — is unchanged.
+
       "../../app/arquivo/calendar-grid",
     ];
     for (const door of doors) {
@@ -801,8 +659,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — the archive shells import the per-game views.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
@@ -832,12 +689,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S39: play/share-text AND play/share-button are banned from free play, clean from a daily path", async () => {
-    // #34's growth clause (the napkin's one-hop rule). Free play RECORDS
-    // NOTHING (ADR-0008 rule 5, ADR-0046 `:31`), so it has no result to
-    // share, and ADR-0011's shareable-seed idea is noted rather than
-    // scheduled. The composer takes a `PlayRecord`, which free play cannot
-    // legally hold — but the wall bans by NAME and is not transitive, so
-    // the name has to enter the list in the change that creates the module.
     const source = [
       'import { buildShareText } from "../play/share-text";',
       "",
@@ -851,19 +702,9 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(ruleIds(await lintProbe(ROUTE_PATH, source))).toContain(
       "no-restricted-imports",
     );
-    // Scope control: the composer is the daily conclusion's own surface.
+
     expect(wallHits(await lintProbe(DAILY_PATH, source))).toEqual([]);
 
-    // #103 WIDENS THIS CLAIM RATHER THAN OPENING A NEW ONE — a ban list
-    // gaining a name is the same claim about the same gate (`T-DB-9a`'s
-    // 4 → 8 precedent). Until #103 the BUTTON needed no entry, and this
-    // file's own comment above said why: it lived inside
-    // `play/conclusion-view`, already banned by name. The archive's
-    // late-result panel needed the same control, the component moved to its
-    // own file, and the premise died with the move. Measured before the
-    // entry existed: a free-play probe importing `../play/share-button`
-    // linted CLEAN, so the module was an unnamed one-hop door to BOTH
-    // `play/share-text` and `play/play-record`.
     const button = [
       'import { ShareButton } from "../play/share-button";',
       "",
@@ -876,17 +717,11 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(ruleIds(await lintProbe(ROUTE_PATH, button))).toContain(
       "no-restricted-imports",
     );
-    // The same scope control: the control is the daily conclusion's own, and
-    // since #103 the archive's too — neither is behind this wall.
+
     expect(wallHits(await lintProbe(DAILY_PATH, button))).toEqual([]);
   });
 
   it("T-LINT-S40: the dynamic-import evasion of the share-text and share-button bans reds; a local dynamic import stays clean", async () => {
-    // Both halves of every ban in this wall are load-bearing, and #103's
-    // entry is no exception: the regex at `eslint.config.mjs`'s
-    // `freePlayDynamicBannedModule` is the other door, and a name added to
-    // the static group and not to the regex is a wall that reds on the easy
-    // spelling only.
     for (const specifier of ["../play/share-text", "../play/share-button"]) {
       const dynamic = [
         "export const load = () =>",
@@ -915,12 +750,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S47: the day modules — client, store and the bare barrel form — red from free play, clean from a daily path", async () => {
-    // #83's growth clause (the napkin's one-hop rule): the day client
-    // reaches the network and a server-derived, user-specific answer, so
-    // ADR-0060's surface stays out of free play only because these names
-    // entered the list in the same change that created the modules. The bare
-    // `../day` form is listed because `**/day/**` does not match it — a
-    // future `src/day/index.ts` barrel must not become a door.
     const doors = ["../day/day-client", "../day/day-truth", "../day"];
     for (const door of doors) {
       const source = [
@@ -932,17 +761,12 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — `play/day-state.ts` imports the store.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
     }
 
-    // THE GLOB CHECK, owed rather than assumed: `**/day` and `**/day/**`
-    // must not swallow the two day-SHAPED names that are banned elsewhere by
-    // their own literals. Probed from a DAILY path, where they are legal, so
-    // a hit here would mean the new group over-matched.
     for (const neighbour of ["../play/day-state", "../../app/hub-day-state"]) {
       const source = [
         `import * as ok from "${neighbour}";`,
@@ -978,17 +802,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S52: the telemetry relay client — and the bare barrel form — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
-    // #33's growth clause (the napkin's one-hop rule): the relay client
-    // reaches the network and, through the session cookie the request
-    // carries, a server-resolved identity, so ADR-0069's surface stays out
-    // of free play only because these names entered the list in the same
-    // change that created the module. Free play is ALREADY structurally
-    // silent — it never mounts `usePlayLifecycle`, the client's only caller
-    // — and that is exactly the sort of claim that survives until someone
-    // adds a second caller, which is why it is made mechanical here. The
-    // bare `../telemetry` form is listed because `**/telemetry/**` does not
-    // match it. One id over both arms — the T-LINT-S49/S50 shape: one claim
-    // ("free play cannot reach telemetry, by any import form"), one it.
     const doors = ["../telemetry/client", "../telemetry"];
     for (const door of doors) {
       const source = [
@@ -1000,19 +813,16 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // The route-segment sibling, on the second glob (the T-LINT-S13
-      // pairing): `app/modo-livre/**` is walled by the same object.
+
       expect
         .soft(ruleIds(await lintProbe(ROUTE_PATH, source)), `route ${door}`)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — the play lifecycle imports the client.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
     }
 
-    // The dynamic-import arm: the regex closes the evasion.
     for (const door of doors) {
       const source = [
         "export const load = () =>",
@@ -1024,13 +834,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
         .toContain("no-restricted-syntax");
     }
 
-    // THE ANTI-VACUITY CONTROL: a dynamic import of an unrelated local
-    // module lints clean, so the selector is banning a named module and
-    // not every `import()` in the directory. (This comment used to claim
-    // it controlled for a specifier CONTAINING the word — which
-    // `import("./catalog")` does not; the over-match claim is covered by
-    // the DAILY_PATH scope assertions above, and by `T-LINT-S53`'s own
-    // exact-name control. Step-6 correctness N9.)
     const clean = [
       "export const load = () =>",
       '  import("./catalog");',
@@ -1040,16 +843,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S61: the shared authenticated mount fetch — and the bare barrel form — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
-    // #206's growth clause (the napkin's one-hop rule): `src/api/` is the
-    // authenticated-read surface, and the streak, medals, stats, attach,
-    // onboarding and push hooks — every one of them already banned above —
-    // are now three lines each over it. `no-restricted-imports` is NOT
-    // transitive, so their entries do not cover a direct reach into the
-    // shared module, and it linted CLEAN from free play until these names
-    // entered the list (eight probes, zero wall hits). The bare `../api`
-    // form is listed because `**/api/**` does not match it. One id over
-    // both arms — the T-LINT-S49/S50 shape: one claim ("free play cannot
-    // reach the authenticated mount fetch, by any import form"), one it.
     const doors = ["../api/use-mount-fetch", "../api"];
     for (const door of doors) {
       const source = [
@@ -1061,19 +854,16 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       expect
         .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
         .toContain("no-restricted-imports");
-      // The route-segment sibling, on the second glob (the T-LINT-S13
-      // pairing): `app/modo-livre/**` is walled by the same object.
+
       expect
         .soft(ruleIds(await lintProbe(ROUTE_PATH, source)), `route ${door}`)
         .toContain("no-restricted-imports");
-      // Scope control: the identical specifiers are ordinary architecture
-      // from a daily path — every daily hook imports the module.
+
       expect
         .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
         .toEqual([]);
     }
 
-    // The dynamic-import arm: the regex closes the evasion.
     for (const door of doors) {
       const source = [
         "export const load = () =>",
@@ -1085,9 +875,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
         .toContain("no-restricted-syntax");
     }
 
-    // The anti-vacuity control (T-LINT-S52's): an unrelated local dynamic
-    // import stays clean, so the selector bans a named module rather than
-    // every `import()` in the directory.
     const clean = [
       "export const load = () =>",
       '  import("./catalog");',

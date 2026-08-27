@@ -15,9 +15,6 @@ import type { ConclusionAnswer, ConclusionOutcome } from "../src/play/types";
 import { TermoConclusion } from "../src/termo/termo-conclusion";
 import { bodyOf, decl, pixels, stylesheet } from "./css-source";
 
-// T-WEB-S96..S99 (plan 022 §19.6). The conclusion's FOURTH state, the day's
-// word, and the live region ADR-0043 decision 10 owes.
-
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
   flushPendingCompletions: vi.fn(() => Promise.resolve(undefined)),
@@ -34,7 +31,6 @@ const DATE = "2026-08-01";
 const ANSWER = "avião";
 const copy = messages.games.termo;
 
-/** A concluded Termo record, parsed rather than cast. */
 function record(
   outcome: "won" | "lost",
   rows: number,
@@ -72,28 +68,8 @@ function stateOf(container: HTMLElement): string | null | undefined {
     ?.getAttribute("data-conclusion-state");
 }
 
-/**
- * `mm:ss`, the only shape `formatElapsed` produces — and the thing ADR-0045
- * decision 4 actually withholds from a Termo conclusion.
- *
- * Matched against `innerHTML` rather than `textContent` so an accessible name
- * cannot smuggle a duration past a text-only assertion: `OutcomeStamp`'s
- * `aria-label` is an attribute, and `container.textContent` never sees it.
- */
 const DURATION = /\d{1,2}:\d{2}/;
 
-/**
- * The text of the stamp's BIG slot — where a grid game shows a duration and
- * Termo shows the guess ratio (ADR-0043 decision 5).
- *
- * Queried by `.stampGuesses` and never by `.stampTime`'s ABSENCE, which is
- * the assertion finding E-1 struck: `.stampGuesses { composes: stampTime; }`
- * makes CSS Modules put BOTH class names on the shipped element, so a
- * `.stampTime` query finds it in a browser and misses it only here, where
- * vitest stubs CSS modules and never resolves `composes`. The guard has to
- * pin the VALUE — no duration is rendered — not a class name the element now
- * legitimately carries.
- */
 function stampSlotText(container: HTMLElement): string | null | undefined {
   return container.querySelector(`.${styles.stampGuesses ?? ""}`)?.textContent;
 }
@@ -129,8 +105,6 @@ afterEach(() => {
 
 describe("the fourth branch (T-WEB-S96)", () => {
   it("renders `lost` BEFORE the stamp branch, so a concluded loss never says Concluído", () => {
-    // A lost Termo IS a locally-concluded record, so placed after the stamp
-    // check it would fall into `result` and paint an achievement over a loss.
     store(record("lost", MAX_GUESSES));
 
     const { container } = render(<TermoConclusion date={DATE} />);
@@ -154,8 +128,6 @@ describe("the fourth branch (T-WEB-S96)", () => {
   });
 
   it('gates on `outcome?.state === "lost"`, never on the prop\'s PRESENCE', () => {
-    // A won Termo passes the prop too — gating on presence would render every
-    // Termo WIN as a loss (ADR-0043 decision 1).
     const { container } = render(
       <ConclusionView
         game="termo"
@@ -188,10 +160,7 @@ describe("the fourth branch (T-WEB-S96)", () => {
     expect(container.innerHTML).not.toMatch(DURATION);
     expect(container.textContent).not.toContain(messages.conclusion.hints(0));
     expect(container.querySelector(`.${styles.stampHints ?? ""}`)).toBeNull();
-    // The positive half: the big slot exists and holds the guess ratio. A
-    // `.stampTime`-is-absent assertion would be false in a browser (see
-    // `stampSlotText`), and "no duration anywhere" is the claim decision 4
-    // makes anyway.
+
     expect(stampSlotText(container)).toBe(
       copy.outcome.wonDetail(4, MAX_GUESSES),
     );
@@ -211,13 +180,7 @@ describe("the fourth branch (T-WEB-S96)", () => {
     expect(screen.getByText(messages.conclusion.stampLabel)).toBeDefined();
     expect(screen.getAllByText("03:08").length).toBeGreaterThan(0);
     expect(screen.getByText(messages.conclusion.hints(0))).toBeDefined();
-    // No OUTCOME live region and no day-word row for a game that passes
-    // nothing. Narrowed at #34, which gave every terminal conclusion the
-    // share button's own always-rendered `aria-live` region — so
-    // `role="status"` is no longer unique on this screen and the bare
-    // `queryAllByRole("status")` stopped expressing this claim. The counted
-    // floor keeps it from loosening into nothing: exactly one status region
-    // survives, and it is the share's reserved box, which is EMPTY.
+
     expect(container.querySelector(`.${styles.announcer ?? ""}`)).toBeNull();
     expect(
       screen.queryAllByRole("status").map((node) => node.textContent?.trim()),
@@ -226,9 +189,6 @@ describe("the fourth branch (T-WEB-S96)", () => {
   });
 
   it("announces the terminal sentence VERBATIM, on both outcomes, composing nothing", () => {
-    // ADR-0043 decision 10. `conclusion-view.tsx` shipped with no live region
-    // and no focus management at all, so on the in-place swap focus fell to
-    // <body> and a blind player got nothing at the product's payoff moment.
     for (const outcome of [WON, LOST]) {
       const { container, unmount } = render(
         <ConclusionView
@@ -239,14 +199,11 @@ describe("the fourth branch (T-WEB-S96)", () => {
           outcome={outcome}
         />,
       );
-      // By CLASS since #34: the share button contributes a second
-      // `role="status"` to this screen, so `getByRole` is ambiguous here.
-      // The subject is unchanged — the outcome announcer.
+
       const region = container.querySelector(`.${styles.announcer ?? ""}`);
       expect(region, "the outcome announcer").not.toBeNull();
       expect(region?.textContent).toBe(outcome.aria);
-      // Focus still never moves programmatically — a role="status" announces
-      // without stealing the caret.
+
       expect(document.activeElement).toBe(document.body);
       unmount();
     }
@@ -257,14 +214,11 @@ describe("the loss stamp (T-WEB-S97)", () => {
   const css = stylesheet("src/play/conclusion-view.module.css");
 
   it("steps the ring down to 1.5px --ink-2 and declares NO animation of its own", () => {
-    // --ink-2 #6E6659 (L 0.13539008) on --paper-card #FBF7EF (L 0.93262753) is
-    // (0.93262753 + 0.05) / (0.13539008 + 0.05) = 5.3003:1.
     const lost = bodyOf(css, ".stampLost");
     expect(decl(lost, "border")).toBe("1.5px solid var(--ink-2)");
     expect(decl(lost, "color")).toBe("var(--ink-2)");
     expect(decl(lost, "animation")).toBeUndefined();
-    // Motion is a property of the OUTCOME's `state`, not of the loss chrome,
-    // and THIS is what actually stands the settle down.
+
     expect(decl(bodyOf(css, ".stampStill"), "animation")).toBe("none");
     expect(css.indexOf(".stampStill")).toBeGreaterThan(css.indexOf(".stamp {"));
   });
@@ -309,9 +263,7 @@ describe("the loss stamp (T-WEB-S97)", () => {
     expect(container.textContent).not.toContain("03:08");
     expect(container.innerHTML).not.toMatch(DURATION);
     expect(container.textContent).not.toContain(messages.conclusion.hints(0));
-    // Same shape as the win case: the loss's big slot is "X/6", and pinning
-    // the absence of `.stampTime` would assert something the composed class
-    // makes false in a browser (finding E-1).
+
     expect(stampSlotText(container)).toBe(copy.outcome.lostDetail(MAX_GUESSES));
     expect(
       screen.getByText(copy.outcome.lostDetail(MAX_GUESSES)),
@@ -323,9 +275,6 @@ describe("the day's word (T-WEB-S98)", () => {
   const css = stylesheet("src/play/conclusion-view.module.css");
 
   it("is not card-like, so `nested-cards` returns on its first guard", () => {
-    // `isCardLikeFromProps` (checks.mjs:227-230) returns false when an element
-    // has neither shadow nor border, and "card dentro de card" is a DESIGN.md
-    // anti-reference verbatim.
     const row = bodyOf(css, ".dayWordRow");
     for (const property of [
       "background",
@@ -338,10 +287,6 @@ describe("the day's word (T-WEB-S98)", () => {
   });
 
   it("sits below the stamp's own slot, at both viewports", () => {
-    // READ THROUGH THE COMPOSITION. `.stampGuesses` is `composes: stampTime`
-    // (finding B-10), so the element carries both class names and the sizes
-    // that govern "4/6" are `.stampTime`'s — one source of truth, and the
-    // 40/34 and 28/24 relationships this row depends on cannot drift apart.
     expect(decl(bodyOf(css, ".stampGuesses"), "composes")).toBe("stampTime");
     expect(pixels(decl(bodyOf(css, ".dayWord"), "font-size"))).toBe(34);
     expect(pixels(decl(bodyOf(css, ".stampTime"), "font-size"))).toBe(40);
@@ -402,9 +347,6 @@ describe("where the word comes from (T-WEB-S99)", () => {
   });
 
   it("takes it from live state in place, before any record has been written", () => {
-    // The in-place swap happens in the same commit that closes the board, and
-    // React runs a child's mount effect BEFORE its parent's — so the record
-    // this view would otherwise read has not been written yet.
     render(
       <TermoConclusion
         date={DATE}
@@ -428,9 +370,6 @@ describe("where the word comes from (T-WEB-S99)", () => {
   });
 
   it("renders `empty` on a device with no record — never `lost`", () => {
-    // ADR-0031's monotone rule: absence proves nothing, and `empty` is the
-    // branch it reserves for unknown. A cold profile is also what
-    // `impeccable detect` always scans.
     const { container } = render(<TermoConclusion date={DATE} />);
 
     expect(stateOf(container)).toBe("empty");

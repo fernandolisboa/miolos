@@ -7,10 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { formatLongDate, formatMonth, messages } from "../src/i18n";
 
-// One archived day (#31 AC 1, ADR-0053 decision 1). The page is an async
-// server component, invoked as a plain function; the view it returns is
-// rendered directly.
-
 const spies = vi.hoisted(() => ({
   stubDb: {},
   getDb: vi.fn(),
@@ -62,13 +58,11 @@ describe("the archive day page (T-WEB-S184)", () => {
       await ArchiveDayPage({ params: Promise.resolve({ data: "2026-08-03" }) }),
     );
 
-    // One date, asked for as an inclusive one-day range through the wall.
     expect(spies.listArchivedDays).toHaveBeenCalledWith(spies.stubDb, {
       from: "2026-08-03",
       to: "2026-08-03",
     });
-    // The archived path costs exactly ONE round trip: a row in hand is the
-    // proof that the date is past, so the classifier is never consulted.
+
     expect(spies.archiveDateClass).not.toHaveBeenCalled();
 
     expect(
@@ -89,7 +83,6 @@ describe("the archive day page (T-WEB-S184)", () => {
       ).toHaveAttribute("href", `/arquivo/2026-08-03/${game}`);
     }
 
-    // One level up, never further: the day page's back is its month page.
     expect(
       screen.getByRole("link", {
         name: messages.archive.backToMonthAria(formatMonth("2026-08-01")),
@@ -98,8 +91,6 @@ describe("the archive day page (T-WEB-S184)", () => {
   });
 
   it("a short date renders fewer cards and NO placeholder", async () => {
-    // 2026-08-01 is the archive's real floor shape: the cron gained sudoku on
-    // 01, nonogram on 02 and termo on 03, with no backfill.
     spies.listArchivedDays.mockResolvedValue([
       { date: "2026-08-01", game: "binairo" },
       { date: "2026-08-01", game: "sudoku" },
@@ -121,8 +112,6 @@ describe("the archive day page (T-WEB-S184)", () => {
       ArchiveDayPage({ params: Promise.resolve({ data: "2026-05-05" }) }),
     ).rejects.toThrow("NEXT_NOT_FOUND");
 
-    // `calendarDateString`, never a shape regex: `2026-02-30` is well-formed
-    // and is not a day, and a shape regex accepts it.
     for (const data of ["2026-02-30", "mes", "../2026-08-01", "2026-8-1"]) {
       spies.listArchivedDays.mockClear();
       await expect(
@@ -143,9 +132,6 @@ describe("the archive day page (T-WEB-S184)", () => {
 
 describe("AC 1 — a future or malformed date 404s (T-WEB-S170)", () => {
   it("a WELL-FORMED future date 404s because the READER answers undefined, on both the day page and a play page", async () => {
-    // The mechanism that matters: a well-formed future date passes
-    // validation and is refused IN SQL, inside the wall (ADR-0004). Nothing
-    // in `apps/web` compares it to a clock — the reader simply has no row.
     spies.listArchivedDays.mockResolvedValue([]);
     spies.getArchivedDaily.mockResolvedValue(undefined);
     spies.archiveDateClass.mockResolvedValue("future");
@@ -158,8 +144,6 @@ describe("AC 1 — a future or malformed date 404s (T-WEB-S170)", () => {
     ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(spies.redirect).not.toHaveBeenCalled();
 
-    // The reader really was consulted — this is not a validation 404 wearing
-    // the wall's clothes.
     expect(spies.listArchivedDays).toHaveBeenCalled();
     expect(spies.getArchivedDaily).toHaveBeenCalledWith(
       spies.stubDb,
@@ -169,9 +153,6 @@ describe("AC 1 — a future or malformed date 404s (T-WEB-S170)", () => {
   });
 
   it("a MALFORMED date 404s at calendarDateString, before any read", async () => {
-    // The second, separate mechanism. `2026-02-30` is the case a shape regex
-    // accepts and `calendarDateString` rejects, which is why the repo's one
-    // day validator is used here rather than a hand-rolled pattern.
     for (const data of ["2026-02-30", "mes", "../2026-08-01", "%2e%2e"]) {
       spies.listArchivedDays.mockClear();
       spies.getArchivedDaily.mockClear();
@@ -199,10 +180,7 @@ describe("today's URL RESOLVES (T-WEB-S171)", () => {
     await expect(
       ArchiveSudokuPage({ params: Promise.resolve({ data: "2026-08-14" }) }),
     ).rejects.toThrow("NEXT_REDIRECT:/sudoku");
-    // The redirect target is a LITERAL from `routes`, so there is no
-    // open-redirect surface, and it is TEMPORARY by `redirect()`'s own
-    // semantics — a permanent one would be cached against a URL whose truth
-    // value changes at midnight.
+
     expect(spies.notFound).not.toHaveBeenCalled();
   });
 
@@ -216,16 +194,11 @@ describe("today's URL RESOLVES (T-WEB-S171)", () => {
     await ArchiveSudokuPage({
       params: Promise.resolve({ data: "2026-08-03" }),
     });
-    // A row in hand IS the proof that the date is past, so no clock
-    // comparison can contradict it and none is made.
+
     expect(spies.archiveDateClass).not.toHaveBeenCalled();
   });
 
   it("an empty read classified `past` or `future` 404s rather than redirecting — the midnight straddle", async () => {
-    // The only reachable straddle: the date became past between the two
-    // statements. It answers 404 and a reload resolves it, and it can never
-    // hit a sitemap-advertised URL, because a URL enters the sitemap only
-    // once the row is already returnable.
     for (const dateClass of ["past", "future"]) {
       spies.getArchivedDaily.mockResolvedValue(undefined);
       spies.archiveDateClass.mockResolvedValue(dateClass);
@@ -251,21 +224,15 @@ describe("a published past day renders the archived board (T-WEB-S172)", () => {
     });
     const markup = renderToStaticMarkup(element);
 
-    // The date in the client tree is the SERVER's, never a client clock
-    // (ADR-0010 / ADR-0028 decision 4).
     expect(markup).toContain(formatLongDate("2026-08-03"));
-    // The marker the visual gate scans for is in the PRE-HYDRATION paint:
-    // the screen renders its skeleton first, because the record cannot be
-    // read before the mount effect.
+
     expect(markup).toContain('data-play-state="skeleton"');
-    // And the archive's chrome is already there — the back link is the day
-    // page's, never "Hoje".
+
     expect(markup).toContain("/arquivo/2026-08-03");
   });
 });
 
 describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
-  /** Every module reachable from `entry` by relative import. */
   function moduleGraph(entry: string): string[] {
     const seen = new Set<string>();
     const queue = [entry];
@@ -319,10 +286,7 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
     ].map((path) => join(import.meta.dirname, "..", path));
 
     const graph = entries.flatMap((entry) => moduleGraph(entry));
-    // PROSE IS NOT A GATE. `conclusion-view.tsx` calls `useDayState(date)`,
-    // whose streak card fires `GET /streak` and whose next-puzzle affordance
-    // chains to TODAY's routes — so composing a screen ROOT would falsify
-    // three of ADR-0053 decision 9's claims at once.
+
     for (const forbidden of [
       "conclusion-view",
       "termo-conclusion",
@@ -340,30 +304,16 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
       );
       expect(hits, forbidden).toEqual([]);
     }
-    // `readDayState` is reached only through `play/day-state`, which nothing
-    // in the archive imports.
+
     expect(
       graph.filter((path) => path.includes("/src/play/day-state")),
     ).toEqual([]);
     for (const path of graph) {
       expect(readFileSync(path, "utf8")).not.toContain("readDayState");
     }
-    // WIDENED AT #83, and THE DECISION THAT WARRANTS THE WIDENING IS
-    // ADR-0053 DECISION 10, not decision 9. Decision 9 is "there is no
-    // archive conclusion route" and owns the `conclusion-view` list above;
-    // the reason a user-specific READ may not appear here is decision 10's
-    // "Why no endpoint" — *"a user-specific fragment on a public page …
-    // speculative surface with one consumer and a per-request cost on a
-    // crawler-facing route"* — on the un-cached-archive trade decision 2
-    // makes. This comment said decision 9 and carried no number where it
-    // mattered, and #33 then copied the wrong number into four new records
-    // (step-6 ADR B1). The number is written here so the drift cannot
-    // recur from this pin.
+
     //
-    // `useDayState` now also FETCHES, so composing a daily screen root on an
-    // archived date would fire `GET /day` as well as `GET /streak` — exactly
-    // that user-specific read. `src/day` is reachable only through
-    // `play/day-state`, and neither may appear here.
+
     expect(graph.filter((path) => path.includes("/src/day/"))).toEqual([]);
     for (const path of graph) {
       expect(readFileSync(path, "utf8")).not.toContain("useDayTruth");
@@ -374,9 +324,7 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
     const graph = moduleGraph(
       join(import.meta.dirname, "..", "app/arquivo/[data]/sudoku/page.tsx"),
     );
-    // It crosses from `app/` into `src/archive`, then into the per-game view
-    // and the shared lifecycle — so an empty forbidden-hit list above means
-    // "not reached", not "nothing walked".
+
     expect(graph.some((path) => path.includes("/src/archive/"))).toBe(true);
     expect(
       graph.some((path) => path.endsWith("/src/sudoku/play-view.tsx")),
@@ -384,8 +332,7 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
     expect(
       graph.some((path) => path.endsWith("/src/play/use-play-lifecycle.ts")),
     ).toBe(true);
-    // And the DAILY root's graph does contain what the archive's must not,
-    // which is what makes the exclusion a real difference.
+
     const dailyGraph = moduleGraph(
       join(import.meta.dirname, "..", "app/sudoku/page.tsx"),
     );

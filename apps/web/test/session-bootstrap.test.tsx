@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const telemetry = vi.hoisted(() => ({ markSessionReady: vi.fn() }));
 vi.mock("../src/telemetry/client", () => telemetry);
 
-// The fire-once guard is module state, so every test imports a fresh copy.
 async function freshSessionBootstrap() {
   vi.resetModules();
   const { SessionBootstrap } =

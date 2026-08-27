@@ -9,12 +9,6 @@ import {
   type BinairoPlayRecord,
 } from "../src/play/play-record";
 
-/**
- * The two dead "Estatísticas" links go live (#29, plan 033 D11.5): the hub
- * nav's anchor and the conclusion's "Ver estatísticas" both carry
- * `routes.stats` — the activation half T-WEB-S55/S101 pin for the game
- * tiles, applied to the statistics route.
- */
 const DATE = "2026-07-31";
 
 const sync = vi.hoisted(() => ({
@@ -35,8 +29,7 @@ function concludedBinairo(): BinairoPlayRecord {
     elapsedMs: 407_000,
     hintsUsed: 0,
     concluded: true,
-    // "pending" keeps the streak card and the stat block unmounted, so no
-    // fetch fires — this suite is about two hrefs, nothing else.
+
     pendingSync: true,
     syncOutcome: "pending",
   };
@@ -44,9 +37,7 @@ function concludedBinairo(): BinairoPlayRecord {
 
 beforeEach(() => {
   window.localStorage.clear();
-  // The env stub and the fetch stub are a MANDATORY PAIR (plan 027 §8):
-  // the hub's streak/attach islands fetch on mount, and the anonymous 401
-  // keeps every shipped zero state.
+
   vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test");
   vi.stubGlobal(
     "fetch",
@@ -70,9 +61,7 @@ describe("the two Estatísticas links carry routes.stats (T-WEB-S159)", () => {
 
     const link = screen.getByText(messages.hoje.links.stats).closest("a");
     expect(link).toHaveAttribute("href", routes.stats);
-    // The scope control, live since #31: `arquivo` carries its own route
-    // now, and asserting the DIFFERENT href is what keeps this test from
-    // passing on a nav that gave every link the same one.
+
     expect(
       screen.getByText(messages.hoje.links.archive).closest("a"),
     ).toHaveAttribute("href", routes.archive);

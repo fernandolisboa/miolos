@@ -5,19 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePointerStroke } from "../src/play/use-pointer-stroke";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
-// T-WEB-S45g (plan 020 §5.3, commit 6). The MECHANISM half: that
-// `onStrokeEnd` hands the stroke's last cell back at `pointerup`, and that a
-// board wiring it to `focus()` plus its caret state gets both. §19.2 row 2 is
-// explicit that this is what the id proves — jsdom simulates neither pointer
-// capture nor the click retargeting that makes the seam necessary, so no test
-// here can prove it is what saves capture-retargeted input; that half was
-// reproduced in a browser.
 //
-// It lives in its own file because `nonogram-screen.test.tsx` — the file §19
-// lists T-WEB-S45 against — does not exist until build step 6 / commit 8,
-// while §5.3's sequencing table makes T-WEB-S45g commit 6's gate. The id is
-// spent HERE: the nonogram screen's stroke tests carry (a)–(f) and must not
-// re-allocate (g), which is landmine N30's mistake.
 
 installPointerStubs();
 
@@ -27,19 +15,13 @@ afterEach(() => {
 
 const CELLS = 9;
 
-/**
- * The smallest board that can show the seam working: a container carrying the
- * five handlers, nine cells resolved by `data-cell-index`, and a caret that —
- * exactly like a composite-widget board — lives in state and owns which cell
- * is the single tab stop.
- */
 function StrokeHarness({
   painting = true,
   wired = true,
   onEnd,
 }: {
   readonly painting?: boolean;
-  /** False is Binairo: a board that omits the callback entirely. */
+
   readonly wired?: boolean;
   readonly onEnd?: (index: number) => void;
 }) {
@@ -119,8 +101,7 @@ describe("usePointerStroke's onStrokeEnd (T-WEB-S45g)", () => {
 
     expect(ended.mock.calls).toStrictEqual([[2]]);
     expect(document.activeElement).toBe(cellAt(container, 2));
-    // The caret is the board's, not the DOM's: the cell the stroke ended on
-    // is the grid's single tab stop afterwards.
+
     expect(cellAt(container, 2)).toHaveAttribute("tabindex", "0");
     expect(cellAt(container, 0)).toHaveAttribute("tabindex", "-1");
   });
@@ -136,7 +117,7 @@ describe("usePointerStroke's onStrokeEnd (T-WEB-S45g)", () => {
 
     expect(ended.mock.calls).toStrictEqual([[4]]);
     expect(document.activeElement).toBe(cellAt(container, 4));
-    // The tap itself still wrote — moving focus is additive to the stroke.
+
     expect(cellAt(container, 4).textContent).toBe("1");
   });
 
@@ -171,8 +152,7 @@ describe("usePointerStroke's onStrokeEnd (T-WEB-S45g)", () => {
 
     fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
     fireEvent.pointerMove(board, { clientX: 1, clientY: 0, pointerId: 1 });
-    // A palm or the holding thumb: it never opened the stroke, so it may not
-    // end it — and it may not move the caret either.
+
     fireEvent.pointerDown(board, { clientX: 7, clientY: 0, pointerId: 2 });
     fireEvent.pointerUp(board, { clientX: 7, clientY: 0, pointerId: 2 });
 
@@ -192,8 +172,7 @@ describe("usePointerStroke's onStrokeEnd (T-WEB-S45g)", () => {
 
     fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
     fireEvent.pointerMove(board, { clientX: 1, clientY: 0, pointerId: 1 });
-    // `clientX: 99` resolves to no cell — the stub maps x straight to an
-    // index, and the harness has nine.
+
     fireEvent.pointerUp(board, { clientX: 99, clientY: 0, pointerId: 1 });
 
     expect(ended).not.toHaveBeenCalled();
@@ -217,15 +196,6 @@ describe("usePointerStroke's onStrokeEnd (T-WEB-S45g)", () => {
 });
 
 describe("a stroke that never took pointer capture (T-WEB-S59)", () => {
-  /**
-   * `onLostPointerCapture` is the container's net, and it can only fire when
-   * capture was acquired — which is exactly the branch `onPointerDown`'s
-   * `catch` exists for. Without a second net a stroke whose capture threw and
-   * whose pointer then lifted OUTSIDE the container leaves `strokePointer`
-   * set forever: every later `pointerdown` returns at the "a stroke is already
-   * open" guard and the board writes nothing for the rest of the session, with
-   * no visual signal at all.
-   */
   function throwOnCapture(): void {
     vi.spyOn(Element.prototype, "setPointerCapture").mockImplementation(() => {
       throw new Error("pens that release early throw here");
@@ -240,11 +210,9 @@ describe("a stroke that never took pointer capture (T-WEB-S59)", () => {
 
     fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 1 });
     fireEvent.pointerMove(board, { clientX: 1, clientY: 0, pointerId: 1 });
-    // The container never sees this one: with no capture the browser targets
-    // whatever is under the pointer, which is outside the board.
+
     fireEvent.pointerUp(window, { clientX: 500, clientY: 500, pointerId: 1 });
 
-    // The next stroke writes, which is the whole claim.
     fireEvent.pointerDown(board, { clientX: 5, clientY: 0, pointerId: 2 });
     fireEvent.pointerUp(board, { clientX: 5, clientY: 0, pointerId: 2 });
 
@@ -283,7 +251,6 @@ describe("a stroke that never took pointer capture (T-WEB-S59)", () => {
     fireEvent.pointerUp(board, { clientX: 0, clientY: 0, pointerId: 1 });
     expect(pointerListeners(removed)).toBe(2);
 
-    // And an unmount mid-stroke detaches them too.
     fireEvent.pointerDown(board, { clientX: 0, clientY: 0, pointerId: 3 });
     expect(pointerListeners(added)).toBe(4);
     unmount();
@@ -291,11 +258,6 @@ describe("a stroke that never took pointer capture (T-WEB-S59)", () => {
   });
 
   it("arms the same net for a board that never paints", () => {
-    // Binairo's cycle mode never requests capture at all, so it has no
-    // `lostpointercapture` to rely on either. Nothing user-visible breaks
-    // there today — the cell's own `click` still writes, because
-    // `consumedClick` stays false — so the assertion is on the net itself
-    // rather than on a symptom: `painting: false` must not opt out of it.
     const added = vi.spyOn(window, "addEventListener");
     const { container } = render(
       <StrokeHarness painting={false} wired={false} />,

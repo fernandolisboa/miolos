@@ -18,19 +18,6 @@ import {
 } from "../src/play/play-record";
 import { buildShareText } from "../src/play/share-text";
 
-/**
- * The spoiler-free share text (#34, ADR-0054 decisions 2–5). The composer is
- * PURE — a play record in, one string out — which is what lets this file
- * assert the whole contract without rendering anything.
- *
- * The interesting assertions are the ABSENCES, and each one is written with
- * the mechanism its own failure mode needs (plan 040 §9): a differential for
- * every excluded field that IS on the record, a module-graph scan for the
- * ones that are not, a key-set assertion for the one that could become one,
- * and a signature scan for the one whose realistic regression is a new
- * ARGUMENT rather than a new import.
- */
-
 const DATE = "2026-08-14";
 const SHORT_DATE = formatShortDate(DATE);
 const URL = "https://miolos.app/arquivo/2026-08-14/termo";
@@ -39,21 +26,14 @@ const ELAPSED_MS = 432_000;
 const SRC = join(import.meta.dirname, "..", "src");
 const SHARE_TEXT = join(SRC, "play", "share-text.ts");
 
-/** The composer's source, read once — the subject of four scans below. */
 const SOURCE = readFileSync(SHARE_TEXT, "utf8");
 
-/**
- * The file with its comments removed — `archive-routes.test.ts:32-41`'s own
- * helper, for its own reason: this module's doc block names the fields it may
- * not print, so a raw scan would red on prose.
- */
 function code(source: string): string {
   return source
     .replaceAll(/\/\*[\s\S]*?\*\//g, "")
     .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
-/** Everything from `buildShareText`'s declaration to the end of the file. */
 function composerBody(): string {
   const stripped = code(SOURCE);
   const start = stripped.indexOf("export function buildShareText");
@@ -63,8 +43,6 @@ function composerBody(): string {
   ).toBeGreaterThan(-1);
   return stripped.slice(start);
 }
-
-// ── fixtures ────────────────────────────────────────────────────────────
 
 function binairo(
   overrides: Partial<BinairoPlayRecord> = {},
@@ -126,7 +104,6 @@ function nonogram(
   };
 }
 
-/** One judged row, as the record stores it — a mutable 5-tuple, not an array. */
 type JudgedGuess = TermoPlayRecord["guesses"][number];
 
 const CORRECT_ROW: JudgedGuess = {
@@ -142,7 +119,6 @@ const NEAR_ROW: JudgedGuess = {
   tiles: ["absent", "absent", "correct", "present", "absent"],
 };
 
-/** Four judged rows, the last one winning — the `4/6` case of §6.2. */
 function termoWon(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
   return {
     v: 1,
@@ -160,7 +136,6 @@ function termoWon(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
   };
 }
 
-/** Six judged rows, none of them winning — the `X/6` case. */
 function termoLost(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
   return {
     v: 1,
@@ -178,13 +153,7 @@ function termoLost(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
   };
 }
 
-// ── T-WEB-S189 ──────────────────────────────────────────────────────────
-
 describe("Termo's share carries the grid and the genre's own score line (T-WEB-S189)", () => {
-  // The three squares, by codepoint rather than as literal characters, so the
-  // assertion says WHICH character it means and this file stays outside every
-  // emoji scan in the repo. U+1F7E9 large green square, U+1F7E8 large yellow
-  // square, U+2B1C white large square.
   const GREEN = "\u{1F7E9}";
   const YELLOW = "\u{1F7E8}";
   const WHITE = "\u{2B1C}";
@@ -198,7 +167,6 @@ describe("Termo's share carries the grid and the genre's own score line (T-WEB-S
 
     const lines = buildShareText(termoWon(), { url: URL }).split("\n");
 
-    // header / "4/6" / blank / four grid rows / blank / url
     expect(lines).toEqual([
       `${messages.brand.wordmark} · ${messages.games.termo.name} · ${SHORT_DATE}`,
       `4/${String(TERMO_MAX_GUESSES)}`,
@@ -219,12 +187,9 @@ describe("Termo's share carries the grid and the genre's own score line (T-WEB-S
     const grid = lines.slice(3, -2);
     expect(grid).toHaveLength(6);
     for (const row of grid) {
-      // Five squares, and nothing else on the line.
       expect([...row]).toHaveLength(5);
     }
 
-    // The count is the record's, not a constant: three judged rows print
-    // three, and the score line follows with them.
     const three = buildShareText(
       termoWon({ guesses: [MIXED_ROW, NEAR_ROW, CORRECT_ROW] }),
       { url: URL },
@@ -234,14 +199,8 @@ describe("Termo's share carries the grid and the genre's own score line (T-WEB-S
   });
 });
 
-// ── T-WEB-S190 ──────────────────────────────────────────────────────────
-
 describe("the day's answer never reaches the share (T-WEB-S190)", () => {
   it("no canonical answer appears in the composed text, over all 400 of them", () => {
-    // (c) the non-vacuity counter-assertion, as something observable: every
-    // fixture handed to the composer really carries a five-letter canonical
-    // at `record.answer` and really parses, so an empty-record regression
-    // cannot make the sweep below pass by having nothing to find.
     expect(TERMO_ANSWERS.length).toBe(400);
 
     const offenders: string[] = [];
@@ -258,16 +217,9 @@ describe("the day's answer never reaches the share (T-WEB-S190)", () => {
 
         const output = buildShareText(record, { url: URL });
         const lines = output.split("\n");
-        // The URL line is the CALLER's own input, copied verbatim — asserted
-        // here so that "the body" below really is everything the composer
-        // composed, and so an answer smuggled onto the link would red.
+
         expect(lines.at(-1)).toBe(URL);
-        // The scan runs on the body rather than the whole string for one
-        // measured reason: `termo` is itself an answer canonical
-        // (`content/termo/answers.csv:373`) and it is also the game's route
-        // slug, so the URL a Termo share carries contains it by construction.
-        // Excluding the line that is not the composer's own text is the
-        // narrow fix; weakening the scan would not be.
+
         const body = lines.slice(0, -1).join("\n");
         if (body.includes(canonical)) {
           offenders.push(canonical);
@@ -281,12 +233,6 @@ describe("the day's answer never reaches the share (T-WEB-S190)", () => {
   });
 
   it("two records differing ONLY in the answer compose byte-identical text", () => {
-    // Strictly stronger than the substring sweep: `answer` is
-    // `z.string().length(5).optional()`, constrained only by the
-    // present-iff-concluded rule (`termoPlayRecordSchema`'s `superRefine`), so both of
-    // these are valid concluded records. Byte-identity proves the field
-    // cannot influence the output AT ALL, where the sweep proves only that
-    // one spelling did not surface.
     for (const build of [termoWon, termoLost]) {
       const sonho = build({ answer: "sonho" });
       const casal = build({ answer: "casal" });
@@ -301,9 +247,6 @@ describe("the day's answer never reaches the share (T-WEB-S190)", () => {
   });
 });
 
-// ── T-WEB-S191 ──────────────────────────────────────────────────────────
-
-/** Every module reachable from `entry` by relative import. */
 function moduleGraph(entry: string): string[] {
   const seen = new Set<string>();
   const queue = [entry];
@@ -369,16 +312,12 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
       ).toEqual([]);
     }
 
-    // The non-vacuity twin, NAMED rather than counted: the same walk must
-    // reach the two modules the composer genuinely reads through, or the
-    // absences above are an empty scan rather than a real absence.
     expect(graph).toContain(join(SRC, "i18n", "messages.ts"));
     expect(graph).toContain(join(SRC, "i18n", "format.ts"));
   });
 
   it("(b) every excluded field that IS on the record is proved out by a differential", () => {
     const pairs: [string, () => [unknown, unknown]][] = [
-      // The hint count (flag F2) — all four games.
       ...(
         [
           ["binairo", binairo],
@@ -407,7 +346,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
           ],
         ],
       ]),
-      // The solved grid — the Nonogram bitmap and the two boards.
+
       ...(
         [
           ["binairo", binairo],
@@ -418,18 +357,12 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
         `${name}: solved grid present/absent`,
         () => [build({}), build({ grid: undefined })],
       ]),
-      // The Nonogram size — which necessarily moves `entries` from 25 cells
-      // to 225, so one differential covers both excluded fields.
+
       [
         "nonogram: size 5 vs 15",
         () => [nonogram({ size: 5 }), nonogram({ size: 15 })],
       ],
-      // THE PLAYER'S FILLED BOARD, on all three grid records (step-6 finding
-      // K5). `entries` was covered only incidentally, through the Nonogram
-      // size differential above, so binairo and sudoku had no arm at all —
-      // and this claim says "every excluded field that IS on the record".
-      // It is the most spoiler-bearing field of the three: a solved board is
-      // the answer.
+
       [
         "binairo: entries empty vs filled",
         () => [
@@ -451,11 +384,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
           nonogram({ entries: Array.from({ length: 100 }, () => 1 as const) }),
         ],
       ],
-      // `pendingSync`, the last member of the record with two reachable
-      // values (K5). `v` has ONE — `z.literal(1)` — so no differential over
-      // it can exist; it is covered by the key-set assertion in (c) instead,
-      // which is the mechanism the doc block assigns to a field that cannot
-      // vary.
+
       ...(
         [
           ["binairo", binairo],
@@ -472,8 +401,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
 
     for (const [name, build] of pairs) {
       const [left, right] = build();
-      // Both halves are real records, so a differential cannot pass because
-      // one of them was unparseable and never composed.
+
       for (const record of [left, right]) {
         expect(
           playRecordParses(record),
@@ -489,11 +417,6 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
   });
 
   it("(c) each record member's key set is written down, so a new field is a decision", () => {
-    // The Sudoku tier is guarded HERE and nowhere else: it is not on the
-    // record at all (`sudokuPlayRecordSchema` is a `z.strictObject` with ten
-    // members), so a fixture carrying one fails Zod and typecheck and could
-    // never go red. The day a ticket puts it — or anything else — on a
-    // record, the share's exclusion list gets a red test.
     const SHAPES: Readonly<Record<string, readonly string[]>> = {
       binairo: [
         "v",
@@ -550,8 +473,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
     const shapes: Readonly<Record<string, object>> = {
       binairo: binairoPlayRecordSchema.shape,
       sudoku: sudokuPlayRecordSchema.shape,
-      // `.shape` survives `.superRefine` on the installed zod: both checked
-      // members are still `ZodObject`s.
+
       nonogram: nonogramPlayRecordSchema.shape,
       termo: termoPlayRecordSchema.shape,
     };
@@ -565,16 +487,9 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
   });
 
   it("(d) the composer's second parameter declares exactly one member, url", () => {
-    // The streak's realistic regression is an ARGUMENT, not an import:
-    // `conclusion-view.tsx` already holds the server streak in scope at
-    // the call site, so `buildShareText(record, { url, streak })` is the edit
-    // that breaks the rule — and the module-graph scan above cannot see it.
     const body = composerBody();
     const signature = body.slice(0, body.indexOf("): string"));
 
-    // Counted floor: the slice really is the signature. The first parameter
-    // is `subject` since K3 — a `TermoPlayRecord` OR the three fields a grid
-    // game's share needs — so the floor names that instead of `record`.
     expect(signature).toContain("buildShareText");
     expect(signature).toContain("subject");
 
@@ -614,16 +529,11 @@ function playRecordParses(record: unknown): boolean {
   return false;
 }
 
-// ── T-WEB-S192 ──────────────────────────────────────────────────────────
-
 describe("the composer holds no route knowledge (T-WEB-S192)", () => {
   it("no `/arquivo` literal appears in share-text.ts", () => {
-    // Counted floor (plan 040 §9, V5): this scans a module that by
-    // construction holds no route knowledge, so an empty result proves
-    // nothing unless the file was really read.
     expect(SOURCE.length).toBeGreaterThan(0);
     expect(SOURCE).toContain("buildShareText");
-    // And the regex really matches the shape it is looking for.
+
     expect(/["'`]\/arquivo/.test('href="/arquivo/2026-08-14/termo"')).toBe(
       true,
     );
@@ -632,42 +542,22 @@ describe("the composer holds no route knowledge (T-WEB-S192)", () => {
   });
 });
 
-// ── T-WEB-S193 ──────────────────────────────────────────────────────────
-
 describe("every user-visible string comes from messages.share (T-WEB-S193)", () => {
   it("the composer's body carries no copy — only structural separators and the record's own discriminants", () => {
-    // The shipped idiom (`archive-metadata.test.ts:154`) with backticks
-    // added, because a template literal composing copy here is exactly the
-    // regression this scan exists to catch. It is scoped to the function
-    // body, so the module's own import specifiers are out of frame.
     const literals = [
       ...composerBody().matchAll(/(["'`])(?:(?!\1).){2,}\1/g),
     ].map((match) => match[0]);
 
-    // The allowlist, entry by entry. `"\n"` is the line separator the
-    // composer cannot be written without; `"termo"` and `"won"` are the
-    // record union's own DISCRIMINANTS — identifiers crossing a typed
-    // boundary, not copy, which is the ADR-0018 `:15` distinction the
-    // archive's own literal scan draws for the same token. No message-deck
-    // indirection is added for any of them: an identity function in the
-    // deck is indirection with no reader.
     const ALLOWED = new Set(['"\\n"', '"termo"', '"won"']);
 
-    // Counted floor (V5): the allowlist is the risk here — one notch too
-    // broad and the scan is permanently empty with nothing saying so — so
-    // the separator must actually be FOUND before the absence is asserted.
     expect(literals).toContain('"\\n"');
 
     expect(literals.filter((literal) => !ALLOWED.has(literal))).toEqual([]);
   });
 });
 
-// ── T-WEB-S206 ──────────────────────────────────────────────────────────
-
 describe("the share deck's audits (T-WEB-S206)", () => {
   it("no share string carries a FORBIDDEN_EVERYWHERE canonical", () => {
-    // Read from the gate itself rather than re-typed, so a fourth marker
-    // there is audited here without an edit.
     const script = readFileSync(
       join(import.meta.dirname, "..", "scripts", "route-client-js.mjs"),
       "utf8",
@@ -681,15 +571,13 @@ describe("the share deck's audits (T-WEB-S206)", () => {
     );
     expect(forbidden.length).toBeGreaterThanOrEqual(3);
 
-    // Every string the deck can produce, function members included — a
-    // `JSON.stringify` alone would silently drop the three composers.
     const rendered = [
       JSON.stringify(messages.share),
       messages.share.header(messages.games.termo.name, SHORT_DATE),
       messages.share.termoWon(4, TERMO_MAX_GUESSES),
       messages.share.termoLost(TERMO_MAX_GUESSES),
     ].join("\n");
-    // Anti-vacuity: the audited text really is the share deck.
+
     expect(rendered).toContain(messages.share.label);
     expect(rendered).toContain(messages.share.failed);
 
@@ -702,7 +590,6 @@ describe("the share deck's audits (T-WEB-S206)", () => {
     const MESSAGES = join(SRC, "i18n", "messages.ts");
     const messagesSource = readFileSync(MESSAGES, "utf8");
 
-    // Floor: both files were read and are the ones this claim is about.
     expect(SOURCE).toContain("buildShareText");
     expect(messagesSource).toContain("export const messages");
 

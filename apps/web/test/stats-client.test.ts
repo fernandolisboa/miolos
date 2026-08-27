@@ -2,12 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchStats, fetchStatsCalendar } from "../src/stats/stats-client";
 
-// The fetch-and-parse half of the two stats reads (#29, plan 033 §6.1),
-// tested without rendering — the streak-client suite's shape. This suite
-// deliberately keeps the unset-env case — the bootstrap.ts guard parity —
-// which every RENDERING suite must avoid by stubbing the pair.
-
-/** A minimal body the strict stats contract accepts. */
 function statsBody(): Record<string, unknown> {
   const timed = {
     solved: 0,
@@ -33,7 +27,6 @@ function statsBody(): Record<string, unknown> {
   };
 }
 
-/** A minimal body the strict calendar contract accepts. */
 function calendarBody(): Record<string, unknown> {
   return {
     days: [

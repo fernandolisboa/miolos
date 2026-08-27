@@ -10,24 +10,10 @@ import { z } from "zod";
 
 import { messages } from "../src/i18n";
 
-// T-WEB-S53, T-WEB-S54 (plan 020 §19). Both page shells are async server
-// components, which @testing-library/react cannot render — so they are invoked
-// as plain functions and asserted on the element they return, plus a
-// renderToStaticMarkup leak scan. All composition lives in the synchronous
-// components, which `nonogram-screen.test.tsx` renders directly.
 //
-// No PGlite anywhere in apps/web: `vitest.config.ts` forces jsdom for every
-// file, and re-proving the wall from here would prove nothing about apps/web.
-// The wall's behaviour is pinned by packages/db's own suite.
 
-/** Weekday 1 is the 5×5 class — 0.0354 ms to generate and validate. */
 const PUZZLE = generateNonogram(20_260_801, 1);
 
-/**
- * The daily the wall would project: parsed through the response schema, never
- * cast. The schema is a strict four-key object, so it is also what proves the
- * reveal is not on it (ADR-0033).
- */
 const DAILY: DailyNonogramResponse = dailyNonogramResponseSchema.parse({
   game: "nonogram",
   date: "2026-08-01",
@@ -35,11 +21,7 @@ const DAILY: DailyNonogramResponse = dailyNonogramResponseSchema.parse({
   clues: PUZZLE.clues,
 });
 
-// `vi.mock` factories are hoisted above every const in the file, so the spies
-// have to be hoisted with them.
 const spies = vi.hoisted(() => ({
-  // The db handle never leaves the mocked seam, so its shape is irrelevant —
-  // what matters is that `getDb` is the ONLY way a page reaches a database.
   stubDb: {},
   getDb: vi.fn(),
   getTodayDaily: vi.fn(),
@@ -51,8 +33,6 @@ const spies = vi.hoisted(() => ({
 
 vi.mock("../src/db", () => ({ getDb: spies.getDb }));
 
-// Every other export of the root entry is a spy asserted never called: the wall
-// is only a wall if it is the ONLY door apps/web uses.
 vi.mock("@miolos/db", () => ({
   getTodayDaily: spies.getTodayDaily,
   getPublishedDaily: spies.getPublishedDaily,
@@ -64,10 +44,6 @@ vi.mock("@miolos/db", () => ({
   users: {},
 }));
 
-/**
- * Reach a returned element's props without a cast: React elements are plain
- * objects, so a schema is enough and the repo's no-`as`-in-tests rule is kept.
- */
 const elementSchema = z.object({
   props: z.record(z.string(), z.unknown()),
 });
@@ -112,8 +88,7 @@ describe("route segment configuration (T-WEB-S53b)", () => {
     for (const markup of [playMarkup, conclusionMarkup]) {
       expect(markup).toContain(messages.games.nonogram.play.unavailable.title);
       expect(markup).toContain(messages.games.nonogram.play.unavailable.cta);
-      // The screen takes its copy as a prop, so the wrong game's block
-      // reaching it is a real failure mode.
+
       expect(markup).not.toContain(
         messages.games.sudoku.play.unavailable.title,
       );
@@ -128,14 +103,11 @@ describe("/nonogram (T-WEB-S53a)", () => {
 
     const element = elementSchema.parse(await play.default());
 
-    // A strict schema: any extra key on the daily fails the parse, which is
-    // the exact-key-set assertion ADR-0033 asks for.
     expect(dailyNonogramResponseSchema.parse(element.props.daily)).toEqual(
       DAILY,
     );
     expect(Object.keys(element.props).toSorted()).toEqual(["daily"]);
-    // Spelled out as well as parsed: the strip table's nonogram row is
-    // `game, date, size, clues` and nothing else — no `reveal`, in any form.
+
     expect(
       Object.keys(
         dailyNonogramResponseSchema.parse(element.props.daily),
@@ -149,9 +121,6 @@ describe("/nonogram (T-WEB-S53a)", () => {
 
     const element = elementSchema.parse(await play.default());
 
-    // The generic narrowing at the consumer (plan 018 S11): `getTodayDaily(db,
-    // "nonogram")` is typed to return the nonogram member, and this is the
-    // runtime half of that claim.
     expect(spies.getTodayDaily).toHaveBeenCalledWith(spies.stubDb, "nonogram");
     expect(dailyNonogramResponseSchema.parse(element.props.daily).game).toBe(
       "nonogram",
@@ -163,20 +132,12 @@ describe("/nonogram (T-WEB-S53a)", () => {
     const { play } = await loadPages();
 
     const element = await play.default();
-    // Flight serializes EVERY prop crossing into a client component, including
-    // values never rendered — so the props object is what the scan has to
-    // cover, not only the markup. `collectKeys` over an HTML STRING returns an
-    // empty set, which would make every assertion below vacuously true.
+
     const keys = collectKeys(elementSchema.parse(element).props);
     const markup = renderToStaticMarkup(element);
 
-    // Anti-vacuity: the scan is worthless if it walked nothing.
     expect(keys.has("clues")).toBe(true);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
-      // `motifId`, `name` and `mirrored` are here because ADR-0033 put them
-      // there — and `name` is simultaneously a key ban on the payload and a
-      // SUBSTRING ban on the rendered markup, which is why no element on this
-      // screen carries a `name` attribute or a lowercase `name*` class.
       expect(keys.has(forbidden)).toBe(false);
       expect(markup).not.toContain(forbidden);
     }
@@ -202,7 +163,7 @@ describe("the db surface both pages touch (T-WEB-S54)", () => {
       spies.stubDb,
       "nonogram",
     );
-    // The credential is acquired through the one seam, never inline.
+
     expect(spies.getDb).toHaveBeenCalledTimes(2);
     for (const spy of [
       spies.createDb,
@@ -223,11 +184,7 @@ describe("the db surface both pages touch (T-WEB-S54)", () => {
     const element = elementSchema.parse(await conclusion.default());
 
     expect(element.props.date).toBe("2026-07-30");
-    // `date` and NOTHING else. The game is the wrapper's own identity now
-    // (plan 020 §13.3), and the key set is the mechanical half of ADR-0034
-    // decision 3: a server-computed `picture` on this route would put a
-    // derived solution into the RSC payload of a page that also renders for
-    // players who have NOT solved.
+
     expect(Object.keys(element.props).toSorted()).toEqual(["date"]);
   });
 });

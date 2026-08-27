@@ -6,37 +6,11 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 
-/**
- * T-WEB-S74 / T-WEB-S75 (plan 022 §14.1, ADR-0044). The termo member is the
- * first play record that is not a board, and the first whose `closed` and
- * `solved` do not coincide.
- *
- * A value import of `@miolos/games/termo` is free HERE and banned in
- * `src/play/play-record.ts`: the bundle rule binds `src/`, and that module is
- * on every route's client graph, so importing the engine there would put the
- * Termo engine on `/` — and Termo's word list one lost purity annotation
- * behind it (ADR-0045 decision 5).
- *
- * WHAT THE SCHEMA DOES INSTEAD IS IMPORT, NOT RESTATE. The bounds come from
- * `@miolos/core`'s `contracts/termo-guess.ts` — `TERMO_MAX_GUESSES`,
- * `TERMO_WORD_LENGTH`, `termoTilesSchema`, `termoGuessWordSchema` — which is
- * client-safe by design and already on `/`'s graph, so the wire and the record
- * read ONE definition (finding B-6; `play-record.ts`'s own header argues it at
- * length). An earlier version of this file described a third restatement and
- * called itself the pin for it; that design is gone.
- *
- * THIS FILE IS STILL THE ANTI-DRIFT PIN, and it is the only one that can be:
- * `@miolos/core` and `@miolos/games/termo` never import each other, so nothing
- * but a test that imports BOTH can catch the day the engine's 6, 5 or tile
- * union stops agreeing with the contract's.
- */
-
 const DATE = "2026-07-30";
 
 type TermoRow = TermoPlayRecord["guesses"][number];
 type Tiles = TermoRow["tiles"];
 
-/** Five `correct` tiles — the winning row. */
 const WIN: Tiles = ["correct", "correct", "correct", "correct", "correct"];
 const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
 
@@ -45,14 +19,6 @@ const row = (guess: string, tiles: Tiles): TermoRow => ({
   tiles: [...tiles],
 });
 
-/**
- * Overrides are `Record<string, unknown>` rather than
- * `Partial<TermoPlayRecord>`, deliberately: half the cases below feed
- * ILL-TYPED payloads — a four-tile row, a seven-guess list, an accented
- * guess — because this schema's job is to parse a user-editable
- * `localStorage` entry. The compiler is not the thing under test; the
- * well-formed fixtures stay typed through `row` above.
- */
 function playing(overrides: Record<string, unknown> = {}): unknown {
   return {
     v: 1,
@@ -108,12 +74,6 @@ describe("the termo play record (T-WEB-S74)", () => {
   });
 
   it("keeps `v` at 1, so every record written before #27 still parses", () => {
-    // ADR-0029 consequence (d) / ADR-0044's rejected list: bumping `v`
-    // discards every stored record on deploy, and a discarded record carrying
-    // `pendingSync: true` is the only copy of a completion the server has not
-    // acknowledged — a lost streak day. These three payloads are the OLD
-    // SHAPE, written by hand rather than by a factory, so a widened member or
-    // a bumped literal reds here rather than in a mirror of today's code.
     const shipped: readonly unknown[] = [
       {
         v: 1,
@@ -167,19 +127,12 @@ describe("the termo play record (T-WEB-S74)", () => {
   });
 
   it("pins the restated tile union against the engine's, in both directions", () => {
-    // The schema takes its union from `@miolos/core`'s `termoTilesSchema` and
-    // the engine declares its own; neither package imports the other (see the
-    // file header), so this is the only place they can be held together. The
-    // pin is a mutual assignability check reached back out through the
-    // schema's OWN inferred type, so a member added to, removed from or
-    // renamed on EITHER side reds `pnpm typecheck` HERE rather than silently
-    // producing a record the Termo reducer cannot read.
     type RecordTile = TermoPlayRecord["guesses"][number]["tiles"][number];
     const engineToRecord: RecordTile = "present" satisfies TileState;
     const recordToEngine: TileState = "present" satisfies RecordTile;
 
     expect(engineToRecord).toBe(recordToEngine);
-    // And the runtime half: every member of the engine's union parses.
+
     for (const tile of ["correct", "present", "absent"] satisfies TileState[]) {
       expect(
         playRecordSchema.safeParse(
@@ -192,16 +145,12 @@ describe("the termo play record (T-WEB-S74)", () => {
 
 describe("the termo record's superRefine (T-WEB-S75)", () => {
   it("refuses a guess that follows a winning row", () => {
-    // `deriveBoardStatus` THROWS a RangeError on this shape
-    // (packages/games/src/termo/status.ts:31-36), so a record carrying it
-    // would crash the reducer on restore. It has to be unparseable rather
-    // than merely unexpected.
     expect(
       playRecordSchema.safeParse(
         won({ guesses: [row("praga", WIN), row("cafes", MISS)] }),
       ).success,
     ).toBe(false);
-    // Anti-vacuity: the same rows with the win LAST parse.
+
     expect(playRecordSchema.safeParse(won()).success).toBe(true);
   });
 
@@ -224,18 +173,12 @@ describe("the termo record's superRefine (T-WEB-S75)", () => {
   });
 
   it("refuses a closed board with no judged guess at all", () => {
-    // This branch is what makes `termoBody`'s `undefined` return unreachable
-    // for a legitimately closed record — and `undefined` there PERMANENTLY
-    // settles the record as rejected (`syncRecord` in sync.ts).
     expect(playRecordSchema.safeParse(won({ guesses: [] })).success).toBe(
       false,
     );
   });
 
   it("bounds the list at MAX_GUESSES and shapes each guess at WORD_LENGTH", () => {
-    // Behavioural pins on the two contract constants, driven by the ENGINE's
-    // own values value-imported here: a schema that merely DECLARED a matching
-    // type would pass a `typeof` assignment and fail these.
     const over = Array.from({ length: MAX_GUESSES + 1 }, () =>
       row("cafes", MISS),
     );
@@ -266,10 +209,6 @@ describe("the termo record's superRefine (T-WEB-S75)", () => {
   });
 
   it("refuses a NORMALIZED guess that is not five lower-case a-z letters", () => {
-    // The wire and every engine call see the normalized form, and it is the
-    // only form available: `canonical-map.csv` is harness input and does not
-    // ship, so no runtime path produces the accented spelling of an
-    // arbitrary guess (ADR-0044 decision 1).
     for (const guess of ["CAFES", "café", "caf s", "cafés"]) {
       expect(
         playRecordSchema.safeParse(playing({ guesses: [row(guess, MISS)] }))
@@ -280,8 +219,6 @@ describe("the termo record's superRefine (T-WEB-S75)", () => {
   });
 
   it("refuses a tile row that is not exactly five tiles", () => {
-    // Built inline rather than through `row`, because both shapes are
-    // deliberately outside the tuple type the well-formed helper produces.
     expect(
       playRecordSchema.safeParse(
         playing({ guesses: [{ guess: "cafes", tiles: MISS.slice(0, 4) }] }),

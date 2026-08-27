@@ -20,27 +20,15 @@ import {
   type SudokuPlayState,
 } from "../src/sudoku/state";
 
-// T-WEB-S1..S7 (plan 018 §15). The reducer is pure — no React, no DOM, no
-// clock — so the whole gameplay state machine is covered by plain unit
-// tests and the screen stays thin (plan 017 D6).
-
-// Weekday 1 is tier 1, the cheapest rung of SUDOKU_WEEKDAY_CRITERIA
-// (~0.7 ms per generation, plan 018 §19.6).
 const PUZZLE = generateDailySudoku({ seed: 20_260_801, weekday: 1 });
 
 const DATE = "2026-08-01";
 
-/** 81 empty cells — the shape the client's `entries` always has (S6). */
 const EMPTY_ENTRIES: readonly (SudokuDigit | null)[] = Array.from(
   { length: 81 },
   () => null,
 );
 
-/**
- * A daily built the way the wall builds one: parsed through the response
- * schema, never cast. `givens` on `SudokuPuzzle` is a plain
- * `readonly number[]`, and the schema is what proves it is 81 cells of 0–9.
- */
 function daily(givens: readonly number[] = PUZZLE.givens): DailySudokuResponse {
   return dailySudokuResponseSchema.parse({
     game: "sudoku",
@@ -50,7 +38,6 @@ function daily(givens: readonly number[] = PUZZLE.givens): DailySudokuResponse {
   });
 }
 
-/** A synthetic daily with nothing given, so a test can name every cell. */
 const BLANK = daily(Array.from({ length: 81 }, () => 0));
 
 function play(
@@ -63,7 +50,6 @@ function play(
   );
 }
 
-/** Select then write — the two-step model S3 fixes for Sudoku. */
 function write(
   state: SudokuPlayState,
   index: number,
@@ -72,11 +58,6 @@ function write(
   return play(state, { type: "select", index }, { type: "enter-digit", digit });
 }
 
-/**
- * The fixture's solution as digits. Narrowed by a throw rather than by a
- * cast (CLAUDE.md bans `as` in tests); a published daily is uniquely
- * solvable by construction, so the throw is unreachable.
- */
 function solutionOf(givens: readonly number[]): readonly SudokuDigit[] {
   const digits = solutionDigits(givens);
   if (digits === null) {
@@ -87,7 +68,6 @@ function solutionOf(givens: readonly number[]): readonly SudokuDigit[] {
 
 const SOLUTION = solutionOf(PUZZLE.givens);
 
-/** The solution's digit at `index`, narrowed by a throw rather than a cast. */
 function digitAt(index: number): SudokuDigit {
   const digit = SOLUTION[index];
   if (digit === undefined) {
@@ -96,18 +76,15 @@ function digitAt(index: number): SudokuDigit {
   return digit;
 }
 
-/** The last cell the player is free to write in. */
 const LAST_PLAYABLE = PUZZLE.givens.reduce(
   (last, cell, index) => (cell === 0 ? index : last),
   -1,
 );
 
-/** A state over the synthetic all-empty daily, so a test can name any cell. */
 function blankState(): SudokuPlayState {
   return initSudokuPlayState(BLANK);
 }
 
-/** Fill every playable cell from the solution, optionally skipping one. */
 function solve(state: SudokuPlayState, skip = -1): SudokuPlayState {
   let current = state;
   for (const [index, digit] of SOLUTION.entries()) {
@@ -143,8 +120,7 @@ describe("initSudokuPlayState", () => {
     expect(state.tier).toBe(PUZZLE.tier);
     expect(state.givens).toEqual([...PUZZLE.givens]);
     expect(state.entries).toEqual(EMPTY_ENTRIES);
-    // The caret appears on first interaction, so the first paint carries no
-    // state the record might contradict (plan 017 D28, §8.1).
+
     expect(state.selected).toBeNull();
     expect(state.now).toBe(0);
     expect(elapsedMs(state.timer, state.now)).toBe(0);
@@ -224,10 +200,6 @@ describe("enter-digit and clear-cell", () => {
 });
 
 describe("the merged grid the engine sees", () => {
-  // T-WEB-S3. Every `@miolos/games/sudoku` entry point calls
-  // `assertSudokuGrid` and throws a TypeError on a grid that is not 81
-  // integers 0–9 (landmine 8). A FIXED ENUMERATION of sequences, never
-  // `fc.assert` — ADR-0017 scopes fast-check to packages/games (§3).
   const initial = initSudokuPlayState(daily());
   const playable = PUZZLE.givens.findIndex((cell) => cell === 0);
   const givenIndex = PUZZLE.givens.findIndex((cell) => cell !== 0);
@@ -266,8 +238,6 @@ describe("the merged grid the engine sees", () => {
 });
 
 describe("violating", () => {
-  // Row, column and box, each isolated: 0/3 share only a row, 0/27 share
-  // only a column, 0/10 share only a box.
   const cases: readonly (readonly [string, number, number])[] = [
     ["a row", 0, 3],
     ["a column", 0, 27],
@@ -335,7 +305,7 @@ describe("status", () => {
     const synced = sudokuPlayReducer(solved, { type: "mark-synced" });
 
     expect(synced.pendingSync).toBe(false);
-    // Anything that is not a fresh transition leaves it settled.
+
     expect(
       sudokuPlayReducer(synced, { type: "select", index: 0 }).pendingSync,
     ).toBe(false);
@@ -349,10 +319,6 @@ describe("select", () => {
   it("returns the SAME state when the caret does not move", () => {
     const at = play(initial, { type: "select", index: 40 });
 
-    // Focus is what dispatches `select` (board.tsx) and the roving-focus
-    // layout effect focuses `selected` after every change, so re-selecting
-    // the cell already selected has to be a genuine no-op — otherwise the
-    // two trade a render on every arrow key.
     expect(sudokuPlayReducer(at, { type: "select", index: 40 })).toBe(at);
     expect(sudokuPlayReducer(at, { type: "select", index: 41 })).not.toBe(at);
   });
@@ -425,8 +391,7 @@ describe("move-selection", () => {
         columns: 1,
       }).selected,
     ).toBe(80);
-    // The wrap this rules out: column 9 must not become column 1 of the
-    // next row (§8.3).
+
     expect(
       sudokuPlayReducer(topRight, {
         type: "move-selection",
@@ -437,8 +402,6 @@ describe("move-selection", () => {
   });
 
   it("lands Home and End on the row's first and last column", () => {
-    // The keyboard's Home/End are exactly a full-width clamped move (§8.4),
-    // which is why they need no action of their own.
     const at = play(initial, { type: "select", index: 13 });
 
     expect(
@@ -467,9 +430,6 @@ describe("use-hint", () => {
   });
 
   it("leaves the caret exactly where the player put it", () => {
-    // §8.3: the caret is the player's, the highlight is the app's. Moving
-    // it would make `hint-filled` and `selected` the same cell forever, and
-    // the hint would have no visual payload of its own (§12.5).
     const at = play(initial, { type: "select", index: 80 });
     const hinted = sudokuPlayReducer(at, {
       type: "use-hint",
@@ -504,9 +464,6 @@ describe("use-hint", () => {
   });
 
   it("never spends the hint when there is nothing to reveal", () => {
-    // The defined `null` branch: a solution the hint cannot read (what
-    // `solutionDigits` returning null degenerates to) reveals nothing and
-    // costs nothing.
     const hinted = sudokuPlayReducer(initial, {
       type: "use-hint",
       solution: [],
@@ -563,9 +520,6 @@ describe("restore", () => {
   });
 
   it("ignores another game's record", () => {
-    // `readPlayRecord` already discards a record whose `game` disagrees with
-    // its key (S17); this is the second half — a 64-cell binairo `entries`
-    // array must never reach an 81-cell grid.
     const restored = sudokuPlayReducer(initial, {
       type: "restore",
       record: {

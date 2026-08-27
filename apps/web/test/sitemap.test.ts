@@ -2,12 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { routes } from "../src/i18n";
 
-// The sitemap and the crawl posture (#31 AC 1, ADR-0004, ADR-0053). The
-// sitemap's ADR-0004 compliance is STRUCTURAL rather than procedural: the
-// only source of a date-bearing URL is `listArchivedDays()`, which carries
-// the publication wall AND `date < the DB clock's São Paulo day` in SQL, so
-// a future-dated URL is never PRODUCED — not produced and then filtered.
-
 const spies = vi.hoisted(() => ({
   stubDb: {},
   getDb: vi.fn(),
@@ -32,7 +26,6 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-/** Every path in the sitemap, origin stripped. */
 async function paths(): Promise<string[]> {
   const entries = await sitemap();
   return entries.map((entry) => {
@@ -49,7 +42,6 @@ describe("the sitemap (T-WEB-S174)", () => {
       { date: "2026-07-31", game: "binairo" },
     ]);
 
-    // The sitemap is the ONE unbounded read: no `limit`, no range.
     expect(await paths()).toEqual([
       "/",
       "/modo-livre",
@@ -71,18 +63,11 @@ describe("the sitemap (T-WEB-S174)", () => {
   });
 
   it("nothing date-bearing enters except through the reader — the WALL excludes a future date, not a filter", async () => {
-    // The reader is mocked to do something it cannot actually do: return a
-    // future date. The sitemap emits it, and that is the POINT — it proves
-    // the sitemap adds no filter of its own, so the only thing keeping a
-    // future URL out is the reader's SQL, which is where ADR-0004 puts it.
-    // A sitemap that filtered here would be a second enforcement point,
-    // exactly what ADR-0014 :16 exists to prevent.
     spies.listArchivedDays.mockResolvedValue([
       { date: "2099-01-01", game: "termo" },
     ]);
     expect(await paths()).toContain("/arquivo/2099-01-01/termo");
 
-    // And with the reader empty, NO date-bearing URL exists at all.
     spies.listArchivedDays.mockResolvedValue([]);
     expect((await paths()).filter((path) => /\d{4}-\d{2}/.test(path))).toEqual(
       [],
@@ -130,10 +115,6 @@ describe("robots.ts (T-WEB-S175)", () => {
   });
 
   it("the daily play routes and /estatisticas are crawlable but unlisted — absence from a sitemap is NOT noindex", async () => {
-    // The assertion this test exists for: nothing in `robots.ts` marks the
-    // unlisted surfaces `noindex`. They are simply not an SEO surface worth a
-    // sitemap slot (ADR-0028 :28-30), not secrets — and if either should
-    // genuinely leave the index, the instrument is that route's own metadata.
     const disallow = robots().rules;
     expect(Array.isArray(disallow)).toBe(false);
     expect(JSON.stringify(robots())).not.toContain(routes.stats);

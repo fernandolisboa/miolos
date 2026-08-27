@@ -10,25 +10,10 @@ import { z } from "zod";
 
 import { messages } from "../src/i18n";
 
-// T-WEB-S21..S24 (plan 018 §15). Both page shells are async server
-// components, which @testing-library/react cannot render — so they are
-// invoked as plain functions and asserted on the element they return, plus a
-// renderToStaticMarkup leak scan. All composition lives in the synchronous
-// components, which `sudoku-screen.test.tsx` renders directly.
 //
-// No PGlite anywhere in apps/web (plan 017 D33): `vitest.config.ts` forces
-// jsdom for every file, and re-proving the wall from here would prove nothing
-// about apps/web. The wall's behaviour is pinned by packages/db's own suite.
 
-// Weekday 1 is tier 1, the cheapest rung of SUDOKU_WEEKDAY_CRITERIA (~0.7 ms
-// per generation, plan 018 §19.6) — and it runs once, at module scope.
 const PUZZLE = generateDailySudoku({ seed: 20_260_801, weekday: 1 });
 
-/**
- * The daily the wall would project: parsed through the response schema, never
- * cast. `givens` on `SudokuPuzzle` is a plain `readonly number[]`, and the
- * schema is what proves it is 81 cells of 0–9.
- */
 const DAILY: DailySudokuResponse = dailySudokuResponseSchema.parse({
   game: "sudoku",
   date: "2026-08-01",
@@ -36,11 +21,7 @@ const DAILY: DailySudokuResponse = dailySudokuResponseSchema.parse({
   tier: PUZZLE.tier,
 });
 
-// `vi.mock` factories are hoisted above every const in the file, so the
-// spies have to be hoisted with them.
 const spies = vi.hoisted(() => ({
-  // The db handle never leaves the mocked seam, so its shape is irrelevant —
-  // what matters is that `getDb` is the ONLY way a page reaches a database.
   stubDb: {},
   getDb: vi.fn(),
   getTodayDaily: vi.fn(),
@@ -52,8 +33,6 @@ const spies = vi.hoisted(() => ({
 
 vi.mock("../src/db", () => ({ getDb: spies.getDb }));
 
-// Every other export of the root entry is a spy asserted never called: the
-// wall is only a wall if it is the ONLY door apps/web uses.
 vi.mock("@miolos/db", () => ({
   getTodayDaily: spies.getTodayDaily,
   getPublishedDaily: spies.getPublishedDaily,
@@ -65,10 +44,6 @@ vi.mock("@miolos/db", () => ({
   users: {},
 }));
 
-/**
- * Reach a returned element's props without a cast: React elements are plain
- * objects, so a schema is enough and the repo's no-`as`-in-tests rule is kept.
- */
 const elementSchema = z.object({
   props: z.record(z.string(), z.unknown()),
 });
@@ -113,8 +88,7 @@ describe("route segment configuration (T-WEB-S21)", () => {
     for (const markup of [playMarkup, conclusionMarkup]) {
       expect(markup).toContain(messages.games.sudoku.play.unavailable.title);
       expect(markup).toContain(messages.games.sudoku.play.unavailable.cta);
-      // The screen takes its copy as a prop now (plan 018 §13.3), so the
-      // wrong game's block reaching it is a real failure mode.
+
       expect(markup).not.toContain(
         messages.games.binairo.play.unavailable.title,
       );
@@ -129,12 +103,9 @@ describe("/sudoku (T-WEB-S22, T-WEB-S24)", () => {
 
     const element = elementSchema.parse(await play.default());
 
-    // A strict schema: any extra key on the daily fails the parse, which is
-    // the exact-key-set assertion D4 asks for.
     expect(dailySudokuResponseSchema.parse(element.props.daily)).toEqual(DAILY);
     expect(Object.keys(element.props).toSorted()).toEqual(["daily"]);
-    // Spelled out as well as parsed: the strip table's sudoku row is
-    // `game, date, givens, tier` and nothing else (S10).
+
     expect(
       Object.keys(dailySudokuResponseSchema.parse(element.props.daily)),
     ).toEqual(expect.arrayContaining(["game", "date", "givens", "tier"]));
@@ -149,9 +120,6 @@ describe("/sudoku (T-WEB-S22, T-WEB-S24)", () => {
 
     const element = elementSchema.parse(await play.default());
 
-    // The generic narrowing at the consumer (S11): `getTodayDaily(db,
-    // "sudoku")` is typed to return the sudoku member, and this is the
-    // runtime half of that claim.
     expect(spies.getTodayDaily).toHaveBeenCalledWith(spies.stubDb, "sudoku");
     expect(dailySudokuResponseSchema.parse(element.props.daily).game).toBe(
       "sudoku",
@@ -163,15 +131,10 @@ describe("/sudoku (T-WEB-S22, T-WEB-S24)", () => {
     const { play } = await loadPages();
 
     const element = await play.default();
-    // Flight serializes EVERY prop crossing into a client component,
-    // including values never rendered — so the props object is what the scan
-    // has to cover, not only the markup. `collectKeys` over an HTML STRING
-    // returns an empty set, which would make every assertion below
-    // vacuously true.
+
     const keys = collectKeys(elementSchema.parse(element).props);
     const markup = renderToStaticMarkup(element);
 
-    // Anti-vacuity: the scan is worthless if it walked nothing.
     expect(keys.has("givens")).toBe(true);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
@@ -199,7 +162,7 @@ describe("the db surface both pages touch (T-WEB-S23)", () => {
       spies.stubDb,
       "sudoku",
     );
-    // The credential is acquired through the one seam, never inline.
+
     expect(spies.getDb).toHaveBeenCalledTimes(2);
     for (const spy of [
       spies.createDb,

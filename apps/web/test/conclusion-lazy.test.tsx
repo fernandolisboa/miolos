@@ -19,42 +19,6 @@ import { playRecordKey, type SudokuPlayRecord } from "../src/play/play-record";
 import { solutionDigits } from "../src/sudoku/engine";
 import type { SudokuDigit } from "../src/sudoku/state";
 
-/**
- * The lazy conclusion boundary's OWN suite (#145 step 7b): the pending
- * skeleton, the retry-once error boundary with its degraded static
- * fallback (T-WEB-S288), and the mount-time preload each screen root owes
- * (T-WEB-S289).
- *
- * The `remote-conclusion.test.tsx` register: fake `Date` pinned to the
- * fixture day (the prune reads the clock), the env stub and the fetch stub
- * as a mandatory pair, and every surface imported DYNAMICALLY after
- * `vi.resetModules()` — here that isolation is not hygiene but the SUBJECT:
- * `next/dynamic` keeps one module-level load state per registry, so only a
- * fresh registry renders the cold-chunk frame these tests pin, and only a
- * fresh registry lets the load counter below count one test's imports.
- *
- * THE COUNTING MOCK is half the apparatus: every import of
- * `conclusion-view` — direct, or transitive through a per-game wrapper —
- * bumps `chunk.loads`. Stripping a screen root's preload effect leaves
- * `chunk.loads` at zero and reds T-WEB-S289; before that test existed,
- * stripping all four left the entire gate green (#145 step-7b review,
- * major 4).
- *
- * `vi.doMock` in `beforeEach`, NEVER a top-level `vi.mock`: a `vi.mock`
- * factory's product survives `vi.resetModules()` (mocked modules are
- * exempt from the registry reset), so the factory runs once for the whole
- * file and the counter would count only the first test. Re-registering per
- * test is what makes each import re-evaluate the factory.
- *
- * THE FAILURE HALF deliberately does NOT mock the module: vitest's mocker
- * cannot model a persistently failing module (a throwing factory is
- * treated as a broken mock, and the next import — the boundary's retry —
- * quietly falls back to the real file, "healing" the failure mid-test).
- * The failure tests instead reject at `resilientConclusion`'s `load`
- * argument, which is the exact seam a failed chunk fetch rejects through
- * in the app build, composed with the SAME shipped fallback builders the
- * real exports use.
- */
 const chunk = { loads: 0 };
 
 const DATE = "2026-07-31";
@@ -92,7 +56,6 @@ const TERMO_DAILY: DailyTermoResponse = dailyTermoResponseSchema.parse({
   date: DATE,
 });
 
-/** The solution as digits, narrowed by a throw rather than by a cast. */
 function solutionOf(): readonly SudokuDigit[] {
   const digits = solutionDigits(SUDOKU_PUZZLE.givens);
   if (digits === null) {
@@ -129,8 +92,6 @@ function urlOf(input: RequestInfo | URL): string {
   return input instanceof Request ? input.url : String(input);
 }
 
-/** Everything 401s (the anonymous default every client degrades on) except
- *  an optional `/day` thunk — a FRESH Response per call (a body reads once). */
 function stubApi(day?: () => Response) {
   vi.stubGlobal(
     "fetch",
@@ -170,10 +131,6 @@ afterEach(() => {
 
 describe("the lazy conclusion's failure story — skeleton, one retry, degraded static fallback (T-WEB-S288)", () => {
   it("paints the conclusion-shaped skeleton, never a blank frame, while a COLD chunk resolves", async () => {
-    // The deterministic half of #145 step-7b major 3: a fresh registry is
-    // the only place the pre-flush frame is guaranteed cold (the screen
-    // suites' own restore tests run after tests that already flushed the
-    // chunk, so there the frame is legitimately the conclusion itself).
     window.localStorage.setItem(
       playRecordKey("sudoku", DATE),
       JSON.stringify(concludedSudoku()),
@@ -187,13 +144,10 @@ describe("the lazy conclusion's failure story — skeleton, one retry, degraded 
       '[data-conclusion-state="skeleton"]',
     );
     expect(pending).not.toBeNull();
-    // Non-empty — an empty container was exactly what the pre-fix
-    // assertion could not tell from a skeleton.
+
     expect(pending?.childElementCount).toBeGreaterThan(0);
     expect(container.querySelector("[data-cell-index]")).toBeNull();
 
-    // Flushing the same import the lazy component awaits lands the real
-    // conclusion — the skeleton is a frame, not a destination.
     await act(async () => {
       await import("../src/play/conclusion-view");
     });
@@ -235,7 +189,6 @@ describe("the lazy conclusion's failure story — skeleton, one retry, degraded 
 
     const { container } = render(
       <ConclusionChunkBoundary
-        // Never settles: the frame under test is the retry window itself.
         retry={() => new Promise(() => undefined)}
         recovered={() => <p>recovered</p>}
         fallback={<p>fallback</p>}
@@ -271,8 +224,7 @@ describe("the lazy conclusion's failure story — skeleton, one retry, degraded 
     );
 
     expect(await screen.findByText("fallback")).toBeInTheDocument();
-    // Once, not per re-render and not per failure: the boundary spends its
-    // single retry and settles.
+
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
@@ -298,22 +250,8 @@ describe("the lazy conclusion's failure story — skeleton, one retry, degraded 
   });
 
   it("renders the LOCAL win's degraded fallback — stamp word and frozen time from memory — when the chunk never loads", async () => {
-    // The blocker-2 scenario end to end through the SHIPPED helper: a
-    // loader that genuinely rejects, twice — the first rejection surfaces
-    // through the lazy element, the boundary's one retry runs the SAME
-    // loader and rejects again — composed with the SAME fallback builder
-    // the shipped `ConclusionView` export hands to `resilientConclusion`
-    // (`localConclusionFallback`, by name, one reference in the source).
-    // The player's win must land on the static fallback — the stamp word
-    // and the recorded time, from props already in memory — never on a
-    // blank page and never on Next's generic client-exception screen.
     //
-    // The loader is a REAL rejection rather than a vi.mock of the module:
-    // vitest's mocker cannot model a persistently failing module (a
-    // throwing factory is treated as a broken mock and the next import
-    // falls back to the real file), and this seam — `resilientConclusion`'s
-    // `load` argument — is the exact seam a failed chunk fetch rejects
-    // through in the app build.
+
     const lazy = await loadLazyModule();
     const loads: number[] = [];
     const Broken = lazy.resilientConclusion(() => {
@@ -345,22 +283,16 @@ describe("the lazy conclusion's failure story — skeleton, one retry, degraded 
     expect(
       screen.getByText(messages.games.sudoku.conclusion.title),
     ).toBeInTheDocument();
-    // The way home survives the degradation.
+
     expect(screen.getByText(messages.conclusion.back)).toBeInTheDocument();
     const frame = container.querySelector("[data-conclusion-state]");
     expect(frame).toHaveAttribute("data-conclusion-state", "degraded");
     expect(container.querySelector("[data-cell-index]")).toBeNull();
-    // The loader ran for the lazy mount and ONCE more for the boundary's
-    // retry — the "retries the import once" claim, counted at the seam.
+
     expect(loads.length).toBe(2);
   });
 
   it("never puts the stamp word on a claim that is not a completed one — the REMOTE fallback understates", async () => {
-    // The remote arm of the same failure, on the shipped builders: a Termo
-    // `played` claim (a lost board) degrades to the titled card ALONE —
-    // `Concluído` on a loss would be the lie ADR-0043's loss discipline
-    // exists to forbid — and a deploy-skew claim carrying a bare time
-    // composes no stamp either, rather than fabricating a hint count.
     const { remoteFallbackStamp, remoteConclusionFallback } =
       await loadLazyModule();
 
@@ -393,13 +325,6 @@ describe("the lazy conclusion's failure story — skeleton, one retry, degraded 
 });
 
 describe("every screen root warms the conclusion chunk on mount (T-WEB-S289)", () => {
-  // One parameterised arm over the four roots (a cross-file spread of one
-  // claim is what the sibling-letter rule exists to prevent). Each case
-  // renders a fresh PLAYABLE board — no record, no claim — where NOTHING
-  // else in the graph imports `conclusion-view`: the lazy component never
-  // renders, so the counter can only move if the mount-time preload fires.
-  // Stripping a screen root's preload effect leaves `chunk.loads` at 0 and
-  // this arm red (#145 step-7b review, major 4).
   it.each([
     {
       game: "sudoku",
@@ -434,14 +359,11 @@ describe("every screen root warms the conclusion chunk on mount (T-WEB-S289)", (
     "$game preloads the conclusion while the board is still open",
     async ({ mount }) => {
       stubApi();
-      // The anti-vacuity control: nothing this test imported has loaded the
-      // conclusion graph yet — the counter can only be moved by the mount.
+
       expect(chunk.loads).toBe(0);
 
       await mount();
 
-      // The preload is a background import; waitFor rides real timers (only
-      // `Date` is faked above).
       await waitFor(() => {
         expect(chunk.loads).toBeGreaterThan(0);
       });

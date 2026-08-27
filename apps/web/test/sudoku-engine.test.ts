@@ -16,13 +16,6 @@ import {
 } from "../src/sudoku/engine";
 import type { SudokuCellValue, SudokuDigit } from "../src/sudoku/state";
 
-// T-WEB-S8 (plan 018 §15). `engine.ts` is the ONE boundary where the
-// engine's `0`-is-empty grid and the client's `null`-is-empty cells meet
-// (S6), plus the board's gutter-track placement (§12.3). Everything here is
-// pure — no React, no DOM, no clock.
-
-// Weekday 1 is tier 1, the cheapest rung of SUDOKU_WEEKDAY_CRITERIA
-// (~0.7 ms per generation, plan 018 §19.6): a fixture, not a benchmark.
 const PUZZLE = generateDailySudoku({ seed: 20_260_801, weekday: 1 });
 
 const EMPTY_ENTRIES: readonly SudokuCellValue[] = Array.from(
@@ -30,16 +23,10 @@ const EMPTY_ENTRIES: readonly SudokuCellValue[] = Array.from(
   () => null,
 );
 
-/** The first index the player is free to write in. */
 function firstPlayable(): number {
   return PUZZLE.givens.findIndex((cell) => cell === 0);
 }
 
-/**
- * The fixture's solution as digits. Narrowed by a throw rather than by a
- * cast — CLAUDE.md bans `as` in tests, and a tier-1 daily is solvable by
- * construction, so the throw is unreachable and says so.
- */
 function solutionOf(): readonly SudokuDigit[] {
   const digits = solutionDigits(PUZZLE.givens);
   if (digits === null) {
@@ -48,7 +35,6 @@ function solutionOf(): readonly SudokuDigit[] {
   return digits;
 }
 
-/** entries with `digit` written at `index`, everything else empty. */
 function entriesWith(
   index: number,
   digit: SudokuCellValue,
@@ -58,9 +44,6 @@ function entriesWith(
 
 describe("track", () => {
   it("maps the nine board columns onto eleven grid tracks, skipping the gutters", () => {
-    // §12.3: the board is one flat CSS grid with two explicit 2px gutter
-    // tracks, so placement is explicit — auto-placement would drop cells
-    // into the gutters.
     expect(Array.from({ length: 9 }, (_unused, index) => track(index))).toEqual(
       [1, 2, 3, 5, 6, 7, 9, 10, 11],
     );
@@ -108,9 +91,6 @@ describe("mergedGrid", () => {
   });
 
   it("always satisfies the engine's guard, so no entry point can throw", () => {
-    // Every `@miolos/games/sudoku` entry point calls `assertSudokuGrid` and
-    // throws a TypeError on anything that is not 81 integers 0–9 (landmine
-    // 8). This function is that guarantee.
     const merged = mergedGrid(PUZZLE.givens, entriesWith(firstPlayable(), 9));
 
     expect(merged).toHaveLength(81);
@@ -143,9 +123,6 @@ describe("solutionDigits", () => {
   });
 
   it("returns null for an unsolvable grid, which is the hint's defined fallback", () => {
-    // Two 1s in the first row: the solver's mask build rejects it outright.
-    // The branch is unreachable for a published daily and defined anyway —
-    // omitting exactly this branch was plan 017's finding `issue-ac-10`.
     const contradictory = EMPTY_ENTRIES.map((_cell, index) =>
       index === 0 || index === 1 ? 1 : 0,
     );
@@ -170,7 +147,6 @@ describe("solvedDigits", () => {
   });
 
   it("returns null when any cell is still 0 — the guard buildRecord writes `grid` behind", () => {
-    // Without this the offline queue would have no body to POST (§8.2).
     expect(solvedDigits(mergedGrid(PUZZLE.givens, EMPTY_ENTRIES))).toBeNull();
     expect(
       solvedDigits(mergedGrid(PUZZLE.givens, entriesWith(0, 5))),

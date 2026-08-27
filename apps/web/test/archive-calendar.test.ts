@@ -5,12 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import { archiveCalendarMonth } from "../src/archive/calendar";
 
-// The archive calendar's cell decision (#163, plan 065 D4): linked iff the
-// date is in the reader's answer. Today, future days, killed days and the
-// ragged floor are all the same absence — the model has ONE branch, which
-// is the property that keeps the kill switch honest with no code of its
-// own (ADR-0053 decision 3).
-
 describe("the archive calendar model (T-WEB-S310)", () => {
   it("marks exactly the published dates linked, every other in-month day inert", () => {
     const { month, cells } = archiveCalendarMonth(
@@ -21,7 +15,7 @@ describe("the archive calendar model (T-WEB-S310)", () => {
     expect(month).toBe("2026-08-01");
     const days = cells.filter((cell) => cell !== null);
     expect(days).toHaveLength(31);
-    // Every in-month day is a cell with its own date, in order.
+
     expect(days.map((cell) => cell.date)).toEqual(
       Array.from(
         { length: 31 },
@@ -38,8 +32,7 @@ describe("the archive calendar model (T-WEB-S310)", () => {
       "2026-08",
       new Set(["2026-08-01", "2026-08-02"]),
     );
-    // The kill switch's whole shape: the date leaves the reader's answer,
-    // and nothing else changes.
+
     const after = archiveCalendarMonth("2026-08", new Set(["2026-08-01"]));
 
     const cellFor = (
@@ -54,7 +47,7 @@ describe("the archive calendar model (T-WEB-S310)", () => {
     };
     expect(cellFor(before.cells, "2026-08-02").linked).toBe(true);
     expect(cellFor(after.cells, "2026-08-02").linked).toBe(false);
-    // Same geometry, same neighbours: only the one flag moved.
+
     expect(before.cells.length).toBe(after.cells.length);
     expect(cellFor(after.cells, "2026-08-01").linked).toBe(true);
   });
@@ -66,8 +59,7 @@ describe("the archive calendar model (T-WEB-S310)", () => {
 
     const leap = archiveCalendarMonth("2028-02", new Set());
     expect(leap.cells.some((cell) => cell?.date === "2028-02-29")).toBe(true);
-    // A published set can only ever LIGHT cells the month already has:
-    // an out-of-month date in the set changes nothing.
+
     const poisoned = archiveCalendarMonth("2026-02", new Set(["2026-03-01"]));
     expect(poisoned.cells.every((cell) => cell === null || !cell.linked)).toBe(
       true,
@@ -80,8 +72,6 @@ describe("the archive calendar model (T-WEB-S310)", () => {
         .replaceAll(/\/\*[\s\S]*?\*\//g, "")
         .replaceAll(/^[ \t]*\/\/.*$/gm, "");
 
-    // The stripper eats prose and nothing else, so the scan below cannot go
-    // green by deleting the code it is looking for.
     expect(code("// todaySaoPauloDate()")).not.toContain("todaySaoPauloDate");
     expect(code("/* new Date */")).not.toContain("new Date");
     expect(code("const d = todaySaoPauloDate();")).toContain(

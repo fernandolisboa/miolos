@@ -11,16 +11,8 @@ import {
 import { TermoConclusion } from "../src/termo/termo-conclusion";
 import { messages } from "../src/i18n";
 
-/**
- * The conclusion's stat block (#29, plan 033 §6.4/D13): mounted by the
- * caller only under `syncOutcome === "recorded"` — the StreakCard's own
- * gate — with today's bucket from the LOCAL duration, the closing line
- * gated on the average's own sample population, and Termo's distribution
- * highlighting today's row on a win (via the server value) and the fail
- * row on a loss (via the local outcome).
- */
 const DATE = "2026-07-30";
-const ELAPSED_MS = 407_000; // bucket index 3 (360_000 <= x < 420_000)
+const ELAPSED_MS = 407_000;
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -34,8 +26,6 @@ const clients = vi.hoisted(() => ({
 }));
 vi.mock("../src/stats/stats-client", () => clients);
 
-// The streak card mounts under the same gate; keep its read settled-null
-// so this suite's subject is the stat block alone.
 const streak = vi.hoisted(() => ({
   fetchStreak: vi.fn(() => Promise.resolve(undefined)),
 }));
@@ -100,7 +90,6 @@ const lostTermo = () =>
     outcome: "lost",
   });
 
-/** A summary whose binairo block carries `averageMs` and `sampleCount`. */
 function statsWith(
   averageMs: number | null,
   averageSampleCount: number,
@@ -142,8 +131,7 @@ function renderBinairoConclusion() {
 
 beforeEach(() => {
   window.localStorage.clear();
-  // Hoisted module mocks survive `restoreAllMocks`; reset them so no call
-  // count or resolved value leaks between cases.
+
   clients.fetchStats.mockReset();
   clients.fetchStatsCalendar.mockReset();
 });
@@ -191,7 +179,6 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
       screen.getByText(messages.stats.rows.solved(messages.games.binairo.name)),
     ).toBeInTheDocument();
 
-    // 407_000 ms → bucket 3, from the local record, never the server.
     const today = container.querySelector("[data-today]");
     expect(today).not.toBeNull();
     expect(today).toHaveAttribute(
@@ -202,7 +189,6 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
       ),
     );
 
-    // local 407_000 < average 430_000 → the faster line, F5's own words.
     expect(
       screen.getByText(messages.conclusion.closingFaster),
     ).toBeInTheDocument();
@@ -231,9 +217,6 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
   });
 
   it("holds the closing line back until the average rests on at least two samples", async () => {
-    // averageSampleCount 1 is today alone (the recorded gate puts today's
-    // row in the sample by construction): a comparison against a mean of
-    // itself would always flatter, so the line stays out.
     clients.fetchStats.mockResolvedValue(statsWith(407_000, 1));
     writePlayRecord(concludedBinairo());
 
@@ -262,7 +245,7 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
       "aria-label",
       messages.stats.termo.rowAria(4, 2),
     );
-    // No time row and no closing line exist for this game (ADR-0045).
+
     expect(
       screen.queryByText(messages.stats.rows.best),
     ).not.toBeInTheDocument();
@@ -288,10 +271,6 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
   });
 
   it("T-WEB-S157a: drops the today-decorations when the server's day is not the record's — no bucket highlight, no closing line, aggregates intact", async () => {
-    // The step-6 F4 case: a retry landing after the SP midnight. The day
-    // IS recorded (the gate opened) but as a LATE win — `stats.date` has
-    // moved on and the aggregates exclude the solve. The block still
-    // renders the server's numbers; only the today-claims go.
     clients.fetchStats.mockResolvedValue({
       ...statsWith(430_000, 3),
       date: "2026-07-31",
@@ -309,8 +288,6 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
     ).not.toBeInTheDocument();
     binairo.unmount();
 
-    // And the Termo win highlight follows the same rule: another day's
-    // `todayTermoGuesses` describes `stats.date`, never this screen.
     window.localStorage.clear();
     clients.fetchStats.mockReset();
     clients.fetchStats.mockResolvedValue({

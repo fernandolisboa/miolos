@@ -7,14 +7,6 @@ import { describe, expect, it } from "vitest";
 
 import { medalCopy } from "../src/medals/copy";
 
-// The medal content harness (#30, ADR-0052; the ADR-0015 method's
-// mechanical-validation half over the pt-BR copy) — the word-list.test.ts
-// file-reading precedent. Homed HERE rather than packages/core because the
-// copy lives web-side (ADR-0018) and `packages/core` deliberately has no
-// `@types/node`. The rules enforced below are `content/medals/README.md`'s
-// own "Naming & tone rules" — prose there may be tightened, rules may not
-// be weakened, and this file is what makes that sentence mechanical.
-
 const testDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(testDir, "..", "..", "..");
 const readme = readFileSync(
@@ -29,16 +21,13 @@ interface CatalogRow {
   readonly rule: string;
 }
 
-/** The README's catalog table rows: `| <n> | \`id\` | name | description |
- *  rule | rationale |`. Only the catalog table numbers its first column,
- *  so the digit test selects exactly its body rows. */
 function readCatalogRows(): CatalogRow[] {
   return readme
     .split("\n")
     .filter((line) => /^\|\s*\d+\s*\|/.test(line))
     .map((line) => {
       const cells = line.split("|").map((cell) => cell.trim());
-      // cells[0] is the empty string before the leading pipe.
+
       return {
         id: (cells[2] ?? "").replaceAll("`", ""),
         name: cells[3] ?? "",
@@ -48,9 +37,6 @@ function readCatalogRows(): CatalogRow[] {
     });
 }
 
-/** The Rule column's canonical rendering, derived from each definition's
- *  own rule params — one spelling, computed, never hand-kept, so the
- *  column cannot drift from the code (T-WEB-S163a). */
 function canonicalRule(
   rule: (typeof MEDAL_DEFINITIONS)[number]["rule"],
 ): string {
@@ -72,18 +58,12 @@ function canonicalRule(
   }
 }
 
-/** The rejected-candidates section's bullet rows (`- *Candidate* → reason`). */
 function rejectedCandidates(): string[] {
   const section = readme.split("## Rejected candidates")[1]?.split("\n## ")[0];
   expect(section).toBeDefined();
   return (section ?? "").split("\n").filter((line) => line.startsWith("- *"));
 }
 
-// The README's forbidden-vocabulary list, verbatim: the vetoed concepts
-// (CONTEXT.md, ADR-0006) plus the scoreboard words, the recorded copy
-// rejections ("dias seguidos"; the Terms-to-avoid; dica/pista), and the
-// three bundle canaries. Word-bounded via Unicode lookarounds — `\b` is
-// ASCII-only and misfires beside accented letters.
 const FORBIDDEN_VOCABULARY = [
   "xp",
   "níveis",
@@ -116,8 +96,6 @@ const forbiddenRegex = new RegExp(
   "iu",
 );
 
-// The recorded past-tense first-word allowlist — extending it is a
-// deliberate README + harness edit (the README's own mood rule).
 const PAST_TENSE_FIRST_WORDS = new Set([
   "Acertou",
   "Chegou",
@@ -130,9 +108,6 @@ const EMOJI = /\p{Extended_Pictographic}/u;
 
 describe("the medal content harness (T-WEB-S163)", () => {
   it("the README catalog table and MEDAL_IDS agree — same ids, same order, both directions", () => {
-    // Catalog order IS display order, and the README's table is the
-    // constraints file's own record of it: array equality pins membership
-    // AND order in one assertion.
     expect(readCatalogRows().map((row) => row.id)).toEqual([...MEDAL_IDS]);
   });
 
@@ -144,9 +119,6 @@ describe("the medal content harness (T-WEB-S163)", () => {
       expect(medalCopy[id].name, id).toBe(row?.name);
       expect(medalCopy[id].description, id).toBe(row?.description);
     }
-    // The reverse direction — a table row with no medalCopy record — is
-    // the id-parity assertion above plus the `satisfies` exhaustiveness
-    // typecheck (a missing or stray medalCopy key is a compile error).
   });
 
   it("T-WEB-S163a: the README table's Rule column equals the canonical rendering of each definition's rule params — the column cannot drift", () => {
@@ -159,9 +131,6 @@ describe("the medal content harness (T-WEB-S163)", () => {
   });
 
   it("T-WEB-S163b: the README text carries every forbidden-vocabulary entry and every allowlist word — weakening the README fails the suite", () => {
-    // The README→harness direction: the other tests enforce the README's
-    // rules on the copy; this one keeps the README itself from being
-    // quietly weakened while the harness still passes.
     const lower = readme.toLowerCase();
     for (const entry of FORBIDDEN_VOCABULARY) {
       expect.soft(lower.includes(entry.toLowerCase()), entry).toBe(true);
@@ -182,8 +151,7 @@ describe("the medal content harness (T-WEB-S163)", () => {
       expect.soft(name.length, id).toBeLessThanOrEqual(28);
       expect.soft(name, id).not.toMatch(/[!?]/);
       expect.soft(name, id).not.toMatch(EMOJI);
-      // The README's "no digits-as-rank" and "no diminutives (-inho/-inha)"
-      // tone rules, made mechanical (step-6 F17).
+
       expect.soft(name, id).not.toMatch(/[0-9]/);
       expect.soft(name, id).not.toMatch(/inh[oa]\b/i);
       expect.soft(forbiddenRegex.test(name), `${id}: ${name}`).toBe(false);
@@ -222,8 +190,7 @@ describe("the medal content harness (T-WEB-S163)", () => {
         continue;
       }
       const { description } = medalCopy[definition.id];
-      // The threshold as a standalone number — "30" must not be satisfied
-      // by "300".
+
       const digits = new RegExp(`(?<!\\d)${String(threshold)}(?!\\d)`);
       expect
         .soft(description, `${definition.id}: threshold ${String(threshold)}`)

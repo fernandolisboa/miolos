@@ -4,9 +4,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it, vi } from "vitest";
 
-// The layout calls the Next font loaders at module scope, which only the
-// Next compiler can execute; the mock returns the one field the layout
-// reads. Nothing here asserts on fonts.
 vi.mock("next/font/google", () => ({
   Fraunces: () => ({ variable: "--font-fraunces" }),
   Instrument_Sans: () => ({ variable: "--font-instrument-sans" }),
@@ -16,22 +13,15 @@ import manifest from "../app/manifest";
 import { metadata, viewport } from "../app/layout";
 import { locale, messages } from "../src/i18n";
 
-// The PWA surface (#19, plan 027 §10): the manifest is a typed metadata
-// route, so it is unit-tested by importing the default export — no HTTP
-// needed — and the icons are committed binaries whose dimensions are read
-// straight from the PNG bytes, so no image dependency enters the tests.
-
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const tokensCss = readFileSync(
   join(webRoot, "../../packages/ui/tokens.css"),
   "utf8",
 );
 
-/** Width and height from the IHDR chunk — bytes 16–23 of any valid PNG. */
 function pngDimensions(path: string): { width: number; height: number } {
   const bytes = readFileSync(path);
-  // The 8-byte signature, then IHDR's length+type (8 bytes), then width
-  // and height as big-endian u32s.
+
   expect(bytes.subarray(12, 16).toString("latin1")).toBe("IHDR");
   return {
     width: bytes.readUInt32BE(16),
@@ -54,10 +44,6 @@ describe("the web app manifest (T-WEB-S130)", () => {
   });
 
   it("ties both color literals back to the tokens file", () => {
-    // A webmanifest cannot read a CSS custom property, so the hex is
-    // duplicated by necessity — and this is the mechanism that stops the
-    // duplicate from drifting: a token change that forgets the manifest is
-    // a red test here, not a silently stale install surface.
     expect(built.background_color).toBeDefined();
     expect(built.theme_color).toBeDefined();
     for (const literal of [built.background_color, built.theme_color]) {
@@ -78,23 +64,19 @@ describe("the web app manifest (T-WEB-S130)", () => {
       expect(sizeMatch, icon.src).not.toBeNull();
       const declared = Number(sizeMatch?.[1]);
       expect(sizeMatch?.[2]).toBe(sizeMatch?.[1]);
-      // `src` is rooted at public/ — the file must exist AND be the size
-      // the manifest claims, or installability fails at runtime only.
+
       const onDisk = pngDimensions(
         join(webRoot, "public", ...(icon.src ?? "").split("/")),
       );
       expect(onDisk, icon.src).toEqual({ width: declared, height: declared });
     }
-    // Exactly one maskable, inset to the safe zone by the render script.
+
     expect(
       icons.filter((icon) => icon.purpose === "maskable").map((i) => i.src),
     ).toEqual(["/icons/icon-maskable-512.png"]);
   });
 
   it("ships the two file-convention icons beside the manifest set", () => {
-    // app/icon.svg (favicon) and app/apple-icon.png are auto-linked by
-    // Next's file convention — no `icons` metadata config, so their
-    // presence on disk IS the wiring.
     expect(readFileSync(join(webRoot, "app", "icon.svg"), "utf8")).toContain(
       "<svg",
     );
@@ -107,8 +89,6 @@ describe("the web app manifest (T-WEB-S130)", () => {
 
 describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)", () => {
   it("exports the themeColor viewport, tied to the tokens file", () => {
-    // Narrowed through the value, not cast: Next's type admits descriptor
-    // arrays, and the layout ships the plain-string form.
     const themeColor = viewport.themeColor;
     expect(typeof themeColor).toBe("string");
     if (typeof themeColor === "string") {
@@ -125,19 +105,6 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
   });
 
   it("registers a service worker in exactly ONE place — the push card's accept gesture — and never at layout or mount level (the D13 tripwire, re-aimed at #145)", () => {
-    // #19 shipped installability WITHOUT a worker (Chromium dropped the SW
-    // install requirement; iOS never had it) and this tripwire pinned the
-    // absence, naming "the streak-at-risk push ticket" as the moment the
-    // worker earns its complexity. #145 IS that ticket, so the claim is
-    // RE-AIMED in place (the T-WEB-S96/T-WEB-S204 precedent — a landed
-    // assertion whose recorded premise the work retires): the worker now
-    // exists (apps/web/public/sw.js, caching-free, pinned by T-WEB-S261),
-    // and what this id guards from here on is that registration stays
-    // INSIDE the accept gesture — plan 061 §2's "no layout-level
-    // registration": the worker has no job until a subscription exists,
-    // registration persists browser-side once made, and no other route may
-    // gain a byte of client JS for it. Any second file naming the API is a
-    // regression this list makes loud.
     const sources: { path: string; text: string }[] = [];
     for (const dir of ["app", "src"]) {
       for (const entry of readdirSync(join(webRoot, dir), {
@@ -151,9 +118,7 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
         sources.push({ path, text: readFileSync(path, "utf8") });
       }
     }
-    // Anti-vacuity (the #28 convention): before asserting an absence, prove
-    // the walk actually read the files it claims to scan — layout.tsx is in
-    // scope and carries a known-present string.
+
     expect(
       sources.some(
         (source) =>
@@ -167,11 +132,5 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     expect(offenders).toEqual([
       join(webRoot, "src", "play", "push-prompt-card.tsx"),
     ]);
-    // The layout arm that used to follow was DELETED at step 7 (#145
-    // step-6 quality m4): the exact-offender-list equality above already
-    // entails that layout.tsx names no serviceWorker, so a second
-    // assertion could never fail while the first held — it read as a
-    // second claim and was not one. The layout's own presence in the walk
-    // is what the anti-vacuity arm above proves.
   });
 });

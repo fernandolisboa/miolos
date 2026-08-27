@@ -1,9 +1,3 @@
-/**
- * The free-play catalog (#28, ADR-0046): the game set, the level→weekday
- * mapping and the seed source. The set-equality assertion is the T-LINT-S7
- * pattern — derived from `@miolos/core`'s own `GAMES`, so a fifth game
- * arriving forces a conscious decision here rather than a silent gap.
- */
 import { GAMES } from "@miolos/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -21,8 +15,6 @@ afterEach(() => {
 
 describe("the free-play game set and level mapping (T-WEB-S109)", () => {
   it("FREE_PLAY_GAMES set-equals GAMES minus termo", () => {
-    // Control first: the derivation below would pass vacuously against an
-    // empty GAMES, so pin the universe it derives from.
     expect(GAMES).toHaveLength(4);
     expect(GAMES).toContain("termo");
 
@@ -61,7 +53,7 @@ describe("pickSeed (T-WEB-S110)", () => {
       expect(Number.isInteger(seed)).toBe(true);
       expect(seed).toBeGreaterThanOrEqual(0);
       expect(seed).toBeLessThanOrEqual(0xffff_ffff);
-      // The generators alias via `seed >>> 0`; a uint32 is its own alias.
+
       expect(seed >>> 0).toBe(seed);
     }
   });

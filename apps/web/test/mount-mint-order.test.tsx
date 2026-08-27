@@ -16,20 +16,9 @@ import { useStats } from "../src/stats/use-stats";
 import { useStatsCalendar } from "../src/stats/use-stats-calendar";
 import { useStreak } from "../src/streak/use-streak";
 
-// #149: the four remaining mount-fetch hooks await the mint before they read.
 //
-// The defect these suites close is NOT the cold first visit — it is the
-// RE-MINT LOAD. A returning player whose cookie expired gets a fresh
-// `POST /session` from the layout on that page load (`SessionBootstrap` →
-// `ensureSession()`), and a bare mount fetch races it into the 401 branch:
-// the eligible player sees no attach prompt, the stamp shows 0, the medals
-// and stats sections stay empty, for that whole load. `useOnboardingState`
-// (#35) was fixed first and its `T-WEB-S250` is the shape these follow.
+
 //
-// The claim is about the HOOK, so each suite drives the hook itself rather
-// than one of its consumers: three of the four have more than one consumer,
-// and a per-surface placement would pin a hook-level claim to whichever
-// surface happened to be picked.
 
 const ATTACH: AttachStateResponse = { eligible: true };
 const STREAK: StreakResponse = {
@@ -38,8 +27,7 @@ const STREAK: StreakResponse = {
   todayCounts: true,
 };
 const MEDALS: MedalsResponse = { medals: ["founder"] };
-// Parsed rather than cast, the `stats-page.test.tsx` idiom: the fixture is
-// checked against the shipped contract instead of merely satisfying the type.
+
 const STATS: StatsResponse = statsResponseSchema.parse({
   date: "2026-08-22",
   binairo: {
@@ -92,9 +80,6 @@ vi.mock("../src/stats/stats-client", () => ({
   fetchStatsCalendar: clients.fetchStatsCalendar,
 }));
 
-// `ensureSession` is stubbed by SPREADING the real module (the
-// `hub-onboarding.test.tsx` discipline): everything else bootstrap exports
-// stays real, and only the mint is driven as a deferred promise.
 const bootstrapMock = vi.hoisted(() => ({
   ensureSession: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 }));
@@ -119,13 +104,6 @@ beforeEach(() => {
   clients.fetchStatsCalendar.mockResolvedValue(CALENDAR);
 });
 
-/**
- * Drive one hook against a DEFERRED mint. Two halves, and the second is what
- * keeps the first from being satisfiable by a hook that simply never reads:
- * while `ensureSession()` is in flight nothing is issued and the hook still
- * reports `undefined`, and once it resolves the read fires exactly once and
- * the server's answer lands.
- */
 async function assertAwaitsTheMint<T>(
   useHook: () => T | null | undefined,
   read: Mock,
@@ -142,7 +120,7 @@ async function assertAwaitsTheMint<T>(
   await waitFor(() => {
     expect(bootstrapMock.ensureSession).toHaveBeenCalled();
   });
-  // The mint is still in flight: the read has NOT been issued.
+
   expect(read).not.toHaveBeenCalled();
   expect(result.current).toBeUndefined();
 
