@@ -25,18 +25,34 @@ Rule I applied to this directory. `verbatim.mjs`, `excision.mjs` and
 | `verbatim.mjs` | which surviving sentences are **not byte-identical** to the baseline | yes |
 | `excision.mjs` | which of those changed by **more than a citation excision** — the ones a PR body must declare | yes |
 | `shingle.mjs` | **Rule A** — what echoes a comment's prose, before you delete it | no |
+| `wrap.mjs` | which lines the diff left **ragged** — under-filled, or an orphan | yes |
 | `selftest.mjs` | do the tools still do what this README says? | no |
 
 Baseline defaults to `main`; pass `--base <ref>` to change it. A path absent
 from the baseline — or from the working tree, which a `git diff --name-only`
 list contains after a deletion — is reported and skipped, never silently
-counted as verified.
+counted as verified. `wrap.mjs` is the one exception on the baseline side, and
+says so in its output: a file the base ref does not hold has every hit read as
+new, because a new ADR is where two of the four wrap defects were found.
 
 ```sh
 node scripts/comment-audit/count.mjs apps/web/src/termo/state.ts
 node scripts/comment-audit/hash.mjs $(git diff main --name-only -- '*.ts' '*.tsx')
+node scripts/comment-audit/wrap.mjs $(git diff main --name-only)
 node scripts/comment-audit/selftest.mjs
 ```
+
+## What `markers.mjs` cannot see
+
+A `0` from `markers.mjs` is **not** a clean file. The scan only sees what
+`records.mjs` spells, and a genre written a hair differently is invisible:
+`step-\d+` was hyphen-only until this tool set gained `wrap.mjs`, so
+`(#142 step 7)` — live in all four daily `use-*-play.ts` hooks — counted
+nowhere, and a tranche reported `markers.mjs 0` for three files that each
+carried one (#205 Rule AA). It now matches `step[- ]\d+`.
+
+The class is not closed and cannot be: the scan is a list of spellings. Read
+the file before calling it swept.
 
 ## What `hash.mjs` cannot see
 
@@ -142,9 +158,43 @@ Both are narrower than "nothing was reworded":
   `count.mjs` reports raw `ranges`. Two numbers, two conventions — say which
   one a PR body is quoting.
 
+## Reading `wrap.mjs`
+
+An excision shortens a sentence and does not move the wrap, so what it leaves
+behind is a line that could have taken the whole line below it — or, at the end
+of a paragraph, a one-word orphan. Three PRs published this check inline before
+it was a tool; it found four defects and **every one was introduced by a fix
+commit**, which is the class reviewers word-diff least.
+
+It is **delta-only**. Prose here was never greedily wrapped — one Accepted ADR
+scores 142 hits on `main` — so the absolute total is context, and the figure a
+PR body declares is the `N new` column. Hits are keyed by their own text plus
+the word below, so a line that merely *moved* is not new; a line that was
+**re-wrapped** is, which is the point.
+
+Two thresholds, because they answer different questions:
+
+- an **interior** line is judged against its own paragraph's widest line. A
+  greedily wrapped paragraph scores zero against that by construction, whatever
+  column the author actually used — against a fixed 80 the same ADR scores 108;
+- an **orphan** — a last line holding one word — is judged against 80, because
+  a two-line paragraph has no interior to take a column from. This is the one
+  place the tool over-reports: a paragraph deliberately wrapped at 72 that ends
+  in a short word is flagged. Across `apps/web/src` that is 17 lines.
+
+It carries a **markdown** line-selector as well as a comment one, and a CSS
+comment scanner: two of the four defects were orphans inside Accepted ADRs, and
+tranche 7c is a `.css` tranche. Tables, headings, fenced blocks, list markers,
+`*/` and every directive class are not prose and are never candidates —
+`\*(?!/)` is load-bearing there, because a reflow that read `*/` as prose with
+content `/` ate one, and another ate three `eslint-disable-next-line`
+directives.
+
 ## Not a gate
 
 Nothing here is wired into CI or pre-commit. These generate the numbers a PR
 body states, so that those numbers are re-runnable instead of typed — #205's
 Rule P. `selftest.mjs` is Rule M's second method for the counters themselves;
-run it after touching anything in this directory.
+run it after touching anything in this directory. It is **107 assertions**, and
+every one is a case this campaign already got wrong or a review round already
+caught.

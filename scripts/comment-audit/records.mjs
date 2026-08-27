@@ -21,7 +21,7 @@ const TOKEN = [
   String.raw`plan \d+`,
   String.raw`issue #\d+`,
   String.raw`decision \d+[a-z]?`,
-  String.raw`step-\d+`,
+  String.raw`step[- ]\d+`,
   String.raw`round-\d+`,
   String.raw`\x60[^\x60()]*\x60`,
   String.raw`[A-Z][\w.-]*`,
@@ -31,9 +31,13 @@ const TOKEN = [
 // Separators only — no `.`, no `—`, no quote: those introduce prose.
 const NEAR = String.raw`(?:(?:${TOKEN})|[\s,;:/])*`;
 
+// `step[- ]\d+` takes the SPACE form as well as the hyphen. With the hyphen
+// only, `(#142 step 7)` — live in all four daily `use-*-play.ts` hooks — was
+// invisible to both `citations.mjs` and `markers.mjs`, so a tranche could
+// report `markers.mjs 0` for three files that each carried one (#205 Rule AA).
 const INNER = [
   String.raw`plan \d+`,
-  String.raw`step-\d+`,
+  String.raw`step[- ]\d+`,
   String.raw`round-\d+`,
   String.raw`finding (?:\x60[^\x60)]+\x60|[A-Z][\w.-]*)`,
   String.raw`§[\d.]+`,
@@ -55,7 +59,7 @@ export const recordsRe = (flags = "g") => new RegExp(RECORDS, flags);
 export const MARKERS = [
   String.raw`\bplan \d+\b`,
   String.raw`§\d`,
-  String.raw`\bstep-\d\b`,
+  String.raw`\bstep[- ]\d\b`,
   String.raw`\bround-\d\b`,
   String.raw`\bfinding\b`,
   String.raw`\bT-(?:WEB|LINT|API|CORE|DB)-S\d+`,

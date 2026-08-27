@@ -5,6 +5,8 @@ import { execFileSync } from "node:child_process";
 import { count, commentRanges } from "./count.mjs";
 import { countCss } from "./css-count.mjs";
 import { DIRECTIVES, recordsRe } from "./records.mjs";
+import { ragged } from "./wrap.mjs";
+import { pathToFileURL } from "node:url";
 
 // #205's Rule M: the counting tool is part of the gate and needs its own
 // second method. Every case here is one this campaign already got wrong or a
@@ -288,6 +290,31 @@ const tool = (n) => path.join(import.meta.dirname, n);
     "raw text and the comment corpus disagree, and the corpus is right",
     [(code.match(re()) ?? []).length, (comments.match(re()) ?? []).length],
     [2, 2],
+  );
+}
+
+// Rule AA: with `step-\d+` hyphen-only, the space form was invisible to BOTH
+// the citation grammar and the marker scan, so `markers.mjs 0` was reported
+// for three files that each carried one.
+{
+  const re = (await import("./records.mjs")).recordsRe;
+  const markers = (await import("./records.mjs")).markersRe;
+  check(
+    "the space form of `step N` is a citation, like the hyphen form",
+    ["(#142 step 7)", "(#142 step-7)"].map((t) => (t.match(re()) ?? []).length),
+    [1, 1],
+  );
+  check(
+    "markers.mjs sees the space form too",
+    ("a rule (#142 step 7) and another (#31 step-6 F15)".match(markers()) ?? [])
+      .length,
+    2,
+  );
+  // The widening must not reach prose: a lead-in of words still ends the match.
+  check(
+    "a prose lead-in before the space form still does not count",
+    ("(work through it step 3 at a time)".match(re()) ?? []).length,
+    0,
   );
 }
 
@@ -601,6 +628,189 @@ for (const t of ["count", "markers", "css-count", "shingle"]) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// `wrap.mjs` — the ragged-wrap check. Every case below is one of the four
+// defects the inline version caught, or a line class it must never treat as
+// prose. Widths are built from four-letter words so the arithmetic is legible:
+// `words(n)` is 5n - 1 characters, and a `// ` or ` * ` gutter adds three.
+const words = (n, seed = "a") =>
+  Array.from({ length: n }, (_, i) =>
+    (seed + String.fromCharCode(98 + (i % 24))).padEnd(4, "x"),
+  ).join(" ");
+
+check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
+
+{
+  const kinds = (name, text) =>
+    ragged(write(name, text), text).map((h) => [h.kind, h.line, h.word]);
+
+  // A greedily wrapped paragraph scores zero against its OWN widest line,
+  // whatever column the author actually used. This is the property that makes
+  // the check readable; against a fixed 80 one Accepted ADR scored 108.
+  check(
+    "a greedily wrapped comment paragraph is clean",
+    kinds(
+      "w-greedy.ts",
+      `// ${words(14)}\n// ${words(14, "b")}\n// tail end\nconst a = 1;\n`,
+    ),
+    [],
+  );
+
+  // The excision shape: a sentence leaves the middle of a paragraph, the wrap
+  // does not move, and the short line could take the whole line below it.
+  check(
+    "an under-filled interior line is flagged",
+    kinds(
+      "w-short.ts",
+      `// ${words(14)}\n// short\n// ${words(14, "b")}\nconst a = 1;\n`,
+    ),
+    [["ragged", 2, "bbxx"]],
+  );
+
+  // An orphan is judged against the hard 80, not the paragraph's fill: a
+  // two-line paragraph has no interior to take a column from, and that is
+  // exactly the shape an excision at the end of a block leaves behind.
+  check(
+    "a one-word last line that fits above is an orphan",
+    kinds("w-orphan.ts", `// ${words(12)}\n// tail\nconst a = 1;\n`),
+    [["orphan", 1, "tail"]],
+  );
+  check(
+    "a one-word last line that does NOT fit above is left alone",
+    kinds(
+      "w-legit.ts",
+      `// ${words(15)}\n// supercalifragilisticexpialidocious\nconst a = 1;\n`,
+    ),
+    [],
+  );
+
+  // Two of the four defects were orphans inside Accepted ADRs. A `.ts`-only
+  // line-selector cannot see them, which is why this tool has a second one.
+  check(
+    "markdown prose is scanned too",
+    kinds("w-orphan.md", `${words(13)}\ntail\n`),
+    [["orphan", 1, "tail"]],
+  );
+
+  // A comment-line regex that matches `*/` reads a block terminator as prose
+  // with content `/`. An automated reflow ate one, and `pnpm typecheck` is
+  // what caught it — this makes the tool itself refuse to repeat the mistake.
+  check(
+    "a closing */ is never prose",
+    kinds("w-star.ts", `/*\n * ${words(14)}\n * xx\n */\nconst a = 1;\n`),
+    [["orphan", 2, "xx"]],
+  );
+
+  // The same reflow ate three `eslint-disable-next-line` directives. A
+  // directive is not a line a wrap may move a word onto or off.
+  check(
+    "a directive line is not wrappable prose",
+    kinds(
+      "w-directive.ts",
+      "// eslint-disable-next-line react-hooks/rules-of-hooks\n// tail\nconst a = 1;\n",
+    ),
+    [],
+  );
+
+  check(
+    "a markdown table is not prose",
+    kinds("w-table.md", `| ${words(13)} |\n| --- |\nc\n`),
+    [],
+  );
+  check(
+    "a fenced block is not prose",
+    kinds("w-fence.md", "```\n" + words(13) + "\nx\n```\ntail\n"),
+    [],
+  );
+  check(
+    "a heading is not prose",
+    kinds("w-head.md", `## ${words(12)}\ntail\n`),
+    [],
+  );
+
+  // A list item's continuation lines are one paragraph with it, or the scan
+  // stops dead at every bullet — and bullets are where ADR prose lives.
+  check(
+    "a list item's continuation lines are one paragraph",
+    kinds("w-list.md", `- ${words(14)}\n  short\n  ${words(14, "b")}\n`),
+    [["ragged", 2, "bbxx"]],
+  );
+  check(
+    "a sibling bullet does NOT join the paragraph above it",
+    kinds("w-bullets.md", "- short\n- tail\n"),
+    [],
+  );
+
+  // 7c is a CSS tranche, and CSS has its own comment form.
+  check(
+    "css comments are scanned",
+    kinds("w.css", `/*\n * ${words(12)}\n * tail\n */\n.a { color: red; }\n`),
+    [["orphan", 2, "tail"]],
+  );
+}
+
+{
+  // The delta is the whole point: this repo's prose was never greedily
+  // wrapped, so an absolute count is unreadable noise. What a PR body declares
+  // is that its own diff added none.
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "comment-audit-wrap-"));
+  temps.push(repo);
+  const git = (...a) =>
+    execFileSync("git", ["-C", repo, ...a], { stdio: "pipe" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  const base = `// ${words(12)}\n// tail\nconst a = 1;\n`;
+  fs.writeFileSync(path.join(repo, "w.ts"), base);
+  git("add", "-A");
+  git("commit", "-qm", "base");
+  git("branch", "-M", "main");
+
+  const clean = run([tool("wrap.mjs"), "w.ts"], repo);
+  check(
+    "a ragged line already on the base ref is not reported",
+    [clean.code, /^\s*0 new\s+1 total/m.test(clean.out)],
+    [0, true],
+  );
+
+  fs.writeFileSync(
+    path.join(repo, "w.ts"),
+    base.replace("const a", `\n// ${words(13, "b")}\n// x2\nconst a`),
+  );
+  const dirty = run([tool("wrap.mjs"), "w.ts"], repo);
+  check(
+    "a ragged line the diff adds IS reported, and exits 1",
+    [
+      dirty.code,
+      /orphan/.test(dirty.out),
+      /1 ragged line\(s\)/.test(dirty.out),
+    ],
+    [1, true, true],
+  );
+
+  const gone = run([tool("wrap.mjs"), "nope.ts"], repo);
+  check(
+    "a file absent from the working tree leaves nothing compared",
+    gone.code,
+    2,
+  );
+}
+
+// `ragged` is exported, so a module-level CLI would run the whole comparison
+// on import — the defect `verbatim.mjs` carries the same guard for.
+{
+  const imported = run([
+    "--input-type=module",
+    "-e",
+    `await import(${JSON.stringify(pathToFileURL(tool("wrap.mjs")).href)});`,
+  ]);
+  check(
+    "importing wrap.mjs runs no CLI",
+    [imported.code, imported.out.trim()],
+    [0, ""],
+  );
+}
+
 // Every tool must refuse an empty file list rather than print its most
 // reassuring output — #205's Rule I, applied to this toolkit. Flags are not
 // files: `--base main` alone left the list empty and printed a green.
@@ -613,6 +823,7 @@ for (const t of [
   "excision",
   "css-count",
   "shingle",
+  "wrap",
 ]) {
   check(`${t}.mjs refuses an empty file list`, run([tool(`${t}.mjs`)]).code, 2);
   check(
