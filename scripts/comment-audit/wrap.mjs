@@ -25,8 +25,14 @@ const DIRECTIVE_RES = DIRECTIVES.map(([, re]) => new RegExp(re.source));
 const GUTTER_RE = /^([ \t]*(?:\/\/+|\/\*+|\*)[ \t]?)/;
 
 const FENCE_RE = /^(?:```|~~~)/;
-const BLOCKISH_RE =
-  /^(?:#{1,6}\s|\||>|<|\[[^\]]+\]:|(?:-{3,}|\*{3,}|_{3,})\s*$)/;
+// A run of rule characters is a DIVIDER wherever it sits on the line, not only
+// at the end of one: `/* ——— day page ——————` is a section banner in three of
+// this repo's sheets, and gluing it to the prose beneath cost four false hits.
+// `COLUMNS_RE` is the other half — three or more spaces INSIDE a line is a
+// space-aligned table, which is exactly what `proseLines` says never to ask a
+// reviewer to unwrap.
+const BLOCKISH_RE = /^(?:#{1,6}\s|\||>|<|\[[^\]]+\]:|[-—─=_*·]{3,})/;
+const COLUMNS_RE = /\S[ \t]{3,}\S/;
 const MARKER_RE = /^(?:[-*+]|\d+[.)])[ \t]+/;
 
 /**
@@ -60,6 +66,11 @@ function proseLines(file, text) {
       // A line holding `*/` is never prose. Without this bail the terminator
       // reads as a word — `/` on its own, or a trailing `*/` glued to the last
       // real word — and a reflow that believed it deleted one.
+      //
+      // `!hasComment` cannot be bound by a fixture and is kept for the
+      // definition rather than the behaviour: a line with no comment character
+      // and no code character holds no non-whitespace character at all, so the
+      // blank-body check below already returns `null` for it.
       if (!hasComment || hasCode || line.includes("*/")) {
         out.push(null);
         continue;
@@ -83,6 +94,7 @@ function proseLines(file, text) {
       fenced ||
       trimmed.trim() === "" ||
       BLOCKISH_RE.test(trimmed.trimStart()) ||
+      COLUMNS_RE.test(trimmed) ||
       DIRECTIVE_RES.some((re) => re.test(line)) ||
       // A trailing double space is a markdown hard break: that wrap is a decision.
       (md && /[ \t]{2}$/.test(body))
@@ -126,7 +138,7 @@ export function ragged(file, text) {
     }
     // A list marker belongs to the first line only; the item's continuation
     // lines are indented past it, and that indent is what holds the paragraph
-    // together. Without this the scan stops dead at every bullet — 751 hits.
+    // together. Without this the scan stops dead at every bullet — 694 hits.
     const head = lines[i];
     const marker = MARKER_RE.exec(head.body.trimStart());
     const contIndent = indentOf(head.body) + (marker ? marker[0].length : 0);
@@ -144,13 +156,18 @@ export function ragged(file, text) {
     }
     // The paragraph's OWN fill is the column, not 80. Prose here is wrapped
     // anywhere between 68 and 80, and against a fixed 80 a correctly wrapped
-    // paragraph is flagged on nearly every line — ADR-0053 scores 464 that way
+    // paragraph is flagged on nearly every line — ADR-0053 scores 463 that way
     // against 53 here, which is how a check gets ignored. The widest line the
     // paragraph already has is a column it demonstrably reached, so a greedily
     // wrapped paragraph scores zero against it by construction, whatever the
     // author's real margin was. Lines OVER 80 are excluded from that maximum:
     // one unbreakable URL would otherwise hand the whole paragraph back to the
     // fixed-80 regime this rejects.
+    //
+    // `fills` is empty only when EVERY interior line is already over 80, and
+    // then every `would` is over 80 too, so no threshold can produce a hit and
+    // the fallback is unreachable by construction. It is written rather than
+    // left to `Math.max()`'s `-Infinity`.
     const fills = lines.slice(i, end - 1).filter((l) => l.width <= WIDTH);
     const col =
       fills.length === 0 ? WIDTH : Math.max(...fills.map((l) => l.width));
@@ -172,7 +189,7 @@ export function ragged(file, text) {
         key: `${lines[k].body.trim()} ${word}`,
       });
     }
-    i = Math.max(end, i + 1);
+    i = end;
   }
   return hits;
 }
@@ -202,6 +219,10 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   let compared = 0;
   let missing = 0;
   for (const f of files) {
+    // The `try` covers the READ and nothing else, so "absent from the working
+    // tree" can only ever be said about a file that is. No fixture binds the
+    // narrowing: `ragged` is total over any string the read returns, so a
+    // wider `try` is observationally identical here and wrong only later.
     let text;
     try {
       text = fs.readFileSync(f, "utf8");

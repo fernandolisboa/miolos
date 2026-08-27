@@ -41,7 +41,7 @@ every file.
 ```sh
 node scripts/comment-audit/count.mjs apps/web/src/termo/state.ts
 node scripts/comment-audit/hash.mjs $(git diff main --name-only -- '*.ts' '*.tsx')
-node scripts/comment-audit/wrap.mjs $(git diff main --name-only -- '*.ts' '*.tsx' '*.css' '*.md')
+node scripts/comment-audit/wrap.mjs $(git diff main --name-only -- '*.ts' '*.tsx' '*.mjs' '*.css' '*.md')
 node scripts/comment-audit/selftest.mjs
 ```
 
@@ -169,31 +169,37 @@ of a paragraph, a one-word orphan. Three PRs published this check inline before
 it was a tool; it found four defects and **every one was introduced by a fix
 commit**, which is the class reviewers word-diff least.
 
-It is **delta-only**. Prose here was never greedily wrapped — the whole tracked
-corpus scores 1,603 hits on `main`, 146 of them orphans — so the absolute total
-is context, and the figure a PR body declares is the `N new` column. Hits are
-keyed by their own text plus the word below, so a line that merely *moved* is
-not new; a line that was **re-wrapped** is, which is the point.
+It is **delta-only**. Prose here was never greedily wrapped — the 761 tracked
+`.ts`/`.tsx`/`.mjs`/`.md`/`.css` files score 1,586 hits as of `main`, 146 of
+them orphans — so the absolute total is context, and the figure a PR body
+declares is the `N new` column. Hits are keyed by their own text plus the word
+below, so a line that merely *moved* is not new; a line that was **re-wrapped**
+is, which is the point.
 
 Two thresholds, because they answer different questions:
 
 - an **interior** line is judged against its own paragraph's widest line,
   ignoring any line already over 80. A greedily wrapped paragraph scores zero
   against that by construction, whatever column the author actually used —
-  ADR-0053 scores **53** here against **464** at a fixed 80, and at 464 nobody
+  ADR-0053 scores **53** here against **463** at a fixed 80, and at 463 nobody
   reads the output. Excluding the over-long lines matters: one unbreakable URL
   would otherwise hand its whole paragraph back to the fixed-80 regime;
 - an **orphan** — a last line holding one word — is judged against 80, because
-  a two-line paragraph has no interior to take a column from. This is the one
-  place the tool over-reports: a paragraph deliberately wrapped at 72 that ends
-  in a short word is flagged. Across `apps/web/src` that is 17 lines of 160.
+  a two-line paragraph has no interior to take a column from. This is where the
+  tool knowingly over-reports: a paragraph deliberately wrapped at 72 that ends
+  in a short word is flagged. Across `apps/web/src` that is 17 of 203 hits.
 
 Line selectors: comments for `.ts`/`.tsx`/`.mjs`/`.css`, and markdown prose. Two
 of the four founding defects were orphans inside Accepted ADRs, and one of
-those, ADR-0037's *"unsolvable."*, is a `selftest.mjs` fixture verbatim. Tables,
-headings, fenced blocks, sibling and nested bullets, a trailing comment beside
-code, any line holding `*/`, and every directive class are not prose and never
-candidates.
+those, ADR-0037's *"unsolvable."*, is a `selftest.mjs` fixture verbatim.
+
+Not prose, and never candidates: markdown tables, **space-aligned tables inside
+a comment**, headings, fenced blocks, sibling and nested bullets, **a section
+divider drawn in rule characters**, a trailing comment beside code, any line
+holding `*/`, a markdown hard break, and every directive class. The two in bold
+were false positives the CSS line-selector introduced — three dividers and one
+numeric table, 4 of the 60 CSS hits — and closing them took the `.css` corpus
+to **56** across 25 sheets.
 
 ### What `wrap.mjs` cannot see
 
@@ -208,12 +214,16 @@ candidates.
 - **Whether a re-wrap was CORRECT.** A greedily re-wrapped paragraph scores
   zero, and so does a paragraph whose sentences were reworded and then wrapped
   greedily. That is `excision.mjs`'s question, not this one.
+- **A paragraph whose own fill is wrong.** The column is read off the paragraph
+  rather than imposed on it, so a block wrapped short throughout is consistent
+  with itself and scores zero. Only a line that is short *relative to its own
+  neighbours* is a hit.
 
 ## Not a gate
 
 Nothing here is wired into CI or pre-commit. These generate the numbers a PR
 body states, so that those numbers are re-runnable instead of typed — #205's
 Rule P. `selftest.mjs` is Rule M's second method for the counters themselves;
-run it after touching anything in this directory. It is **110 assertions**, and
+run it after touching anything in this directory. It is **120 assertions**, and
 every one is a case this campaign already got wrong or a review round already
 caught.

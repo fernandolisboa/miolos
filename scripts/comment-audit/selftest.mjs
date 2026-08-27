@@ -783,6 +783,82 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
     [["ragged", 2, "bbxx"]],
   );
 
+  // THE BOUNDARY, both sides of it. The `+ 1` in `width + 1 + word.length` is
+  // the space the word would need, and every other fixture here clears the
+  // threshold by several columns — so dropping it left all of them green while
+  // the corpus went 1602 -> 3454. These two sit ON the boundary: 66 + 1 + 6 is
+  // 73 against a column of 72 and must be clean, 65 + 1 + 6 is 72 and must be
+  // a hit.
+  const boundary = (bWidth) =>
+    `// ${"z".repeat(69)}\n// ${"x".repeat(bWidth - 3)}\n// ${"y".repeat(6)} tail\nconst a = 1;\n`;
+  check(
+    "a word that needs one column more than the fill does not fit",
+    kinds("w-edge-clean.ts", boundary(66)),
+    [],
+  );
+  check(
+    "a word that exactly reaches the fill does fit",
+    kinds("w-edge-hit.ts", boundary(65)),
+    [["ragged", 2, "yyyyyy"]],
+  );
+
+  // The `*` leg of `GUTTER_RE` carries the whole JSDoc gutter, which is the
+  // dominant multi-line style in `.ts` — 314 hits. Without it these lines fall
+  // to the whitespace fallback and `MARKER_RE` reads `* text` as a bullet, so
+  // every JSDoc paragraph collapses to one line and scores nothing.
+  check(
+    "a JSDoc star gutter is a gutter",
+    kinds(
+      "w-jsdoc.ts",
+      `/**\n * ${words(14)}\n * short\n * ${words(14, "b")}\n */\nconst a = 1;\n`,
+    ),
+    [["ragged", 3, "bbxx"]],
+  );
+
+  // Two comment lines at DIFFERENT left margins are two paragraphs. Without
+  // the gutter-width comparison — the headline change of this tool's fix
+  // commit — they join, and the short one reads as an orphan of the long one.
+  check(
+    "a different gutter width ends the paragraph",
+    kinds("w-gutters.ts", `// ${words(14)}\n  // short\nconst a = 1;\n`),
+    [],
+  );
+  // And the body indent under the SAME gutter does the same job.
+  check(
+    "a different body indent ends the paragraph",
+    kinds("w-indent.ts", `// ${words(14)}\n//   short\nconst a = 1;\n`),
+    [],
+  );
+
+  // A markdown hard break is the author's wrap, not a wrap to check.
+  check(
+    "a trailing double space ends the line on purpose",
+    kinds("w-hardbreak.md", `${words(12)}  \ntail\n`),
+    [],
+  );
+
+  // Three of this repo's sheets open a section with a rule and then write
+  // prose under it; four false hits came from reading the two as one
+  // paragraph. A rule is a divider wherever it sits on the line.
+  check(
+    "a divider line is not prose",
+    kinds(
+      "w-divider.css",
+      `/* ——— a section title ——————————————\n   ${words(13)}\n   short\n   ${words(13, "b")}\n*/\n.a { color: red; }\n`,
+    ),
+    [["ragged", 3, "bbxx"]],
+  );
+  // And a space-aligned table inside a comment is the thing `proseLines` says
+  // never to ask a reviewer to unwrap.
+  check(
+    "a space-aligned table row inside a comment is not prose",
+    kinds(
+      "w-cols.css",
+      `/* ${words(13)}\n   row     growth   margin\n   24px    +13px    0\n   20px    +9px     -2px\n*/\n.a { color: red; }\n`,
+    ),
+    [],
+  );
+
   // One unbreakable line must not hand the paragraph back to the fixed-80
   // regime: without the `width <= WIDTH` filter on the fill, `col` becomes 80
   // and the third line is flagged too.
@@ -833,6 +909,34 @@ check("words(14) plus a gutter is 72 columns", ("// " + words(14)).length, 72);
       /1 ragged line\(s\)/.test(dirty.out),
     ],
     [1, true, true],
+  );
+
+  // The key is the line's own text PLUS the word below it, so re-wording the
+  // line below a ragged line is a new hit even though the ragged line itself
+  // is byte-identical. Drop `word` from the key and this reads `0 new`.
+  fs.writeFileSync(
+    path.join(repo, "w.ts"),
+    `// ${words(12)}\n// tale\nconst a = 1;\n`,
+  );
+  const reworded = run([tool("wrap.mjs"), "w.ts"], repo);
+  check(
+    "re-wording the word below a ragged line makes it new",
+    [reworded.code, /^\s*1 new\s+1 total/m.test(reworded.out)],
+    [1, true],
+  );
+
+  // And the baseline is a MULTISET: the same ragged pair twice is one hit the
+  // base ref already had and one it did not. Drop the decrement and this
+  // reads `0 new`.
+  fs.writeFileSync(
+    path.join(repo, "w.ts"),
+    `// ${words(12)}\n// tail\nconst a = 1;\n\n// ${words(12)}\n// tail\nconst b = 2;\n`,
+  );
+  const twice = run([tool("wrap.mjs"), "w.ts"], repo);
+  check(
+    "a second copy of a ragged pair the base ref has once is new",
+    [twice.code, /^\s*1 new\s+2 total/m.test(twice.out)],
+    [1, true],
   );
 
   const gone = run([tool("wrap.mjs"), "nope.ts"], repo);
