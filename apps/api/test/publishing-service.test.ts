@@ -440,8 +440,6 @@ describe("topUpTermoBuffer", () => {
   });
 
   it("T-API-S32: exhaustion FAILS CLOSED — uncovered dates carry the exhaustion reason", async () => {
-    //
-
     const spent = TERMO_ANSWERS.slice(0, 395);
     await ctx.db.insert(dailyPuzzles).values(
       spent.map((answer, index) => ({
@@ -484,8 +482,6 @@ describe("topUpTermoBuffer", () => {
   });
 
   it("T-API-S44: the low-pool warning fires AT 30 remaining, and is silent at 31", async () => {
-    //
-
     const spendAnswers = async (count: number): Promise<void> => {
       await ctx.db.insert(dailyPuzzles).values(
         TERMO_ANSWERS.slice(0, count).map((answer, index) => ({

@@ -105,8 +105,6 @@ async function rowsFor(game: string): Promise<DailyPuzzleRow[]> {
   return rows.filter((row) => row.game === game);
 }
 
-//
-
 beforeAll(async () => {
   ctx = await createTestDb();
   vi.spyOn(console, "log").mockImplementation((...data: unknown[]) => {
@@ -507,8 +505,6 @@ describe("GET /cron/publish top-up", () => {
   }, 30_000);
 
   it("T-API-S41: runTopUp never leaks a bound parameter into the response body", async () => {
-    //
-
     insertBadDate.add("termo");
     insertBadDate.add("binairo");
 

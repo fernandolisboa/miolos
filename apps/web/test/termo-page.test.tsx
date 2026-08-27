@@ -9,8 +9,6 @@ import { z } from "zod";
 
 import { messages } from "../src/i18n";
 
-//
-
 const DAILY: DailyTermoResponse = dailyTermoResponseSchema.parse({
   game: "termo",
   date: "2026-08-01",

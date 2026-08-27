@@ -42,8 +42,6 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
   });
 
   it("reads the label colour through the property, with the site's own safe fallback", () => {
-    //
-
     const sites = [
       ["src/play/screen.module.css", ".hint", "var(--paper-desk)"],
       ["src/play/conclusion-view.module.css", ".ctaNext", "var(--paper-desk)"],
@@ -130,8 +128,6 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
   ]);
 
   it("declares no accent-coloured text in the shared sheets, beyond the two allowed", () => {
-    //
-
     const offenders: string[] = [];
     for (const sheet of SHARED) {
       const css = stylesheet(sheet);
@@ -292,10 +288,6 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
   });
 
   it("paints the shared layer's one focus ring in ink, never the accent", () => {
-    //
-
-    //
-
     const body = bodyOf(
       stylesheet("src/play/screen.module.css"),
       ".hint:focus-visible",
@@ -323,8 +315,6 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
   });
 
   it("gives the secondary link's hover a real geometry delta", () => {
-    //
-
     const css = stylesheet("src/play/conclusion-view.module.css");
     const rest = bodyOf(css, ".secondaryLink");
 

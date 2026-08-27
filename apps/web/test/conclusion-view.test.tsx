@@ -23,8 +23,6 @@ const sync = vi.hoisted(() => ({
 }));
 vi.mock("../src/play/sync", () => sync);
 
-//
-
 const bootstrapMock = vi.hoisted(() => ({
   ensureSession: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 }));
@@ -326,8 +324,6 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
   });
 
   it("takes the DESTINATION game's accent, not the celebrated game's", () => {
-    //
-
     writePlayRecord(concluded());
     writePlayRecord(wonTermo());
 
@@ -348,8 +344,6 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
   });
 
   it("never chains back to the game whose stamp is on screen", () => {
-    //
-
     writePlayRecord(concludedSudoku({ concluded: false, grid: undefined }));
     writePlayRecord(wonTermo());
 
@@ -932,8 +926,6 @@ describe("the conclusion's layout (tripwires)", () => {
 
     expect(decl(bodyOf(reduced, ".picture"), "opacity")).toBe("1");
 
-    //
-
     const preludes = [...reduced.matchAll(/(?:^|\})\s*([^{}]+?)\s*\{/g)].map(
       (match) => (match[1] ?? "").replaceAll(/\s+/g, " ").trim(),
     );
@@ -977,8 +969,6 @@ describe("the conclusion's layout (tripwires)", () => {
   });
 
   it("keeps every solid CTA's label off its own background on hover", () => {
-    //
-
     const HOVER: Readonly<Record<string, string>> = {
       cta: "var(--paper-desk)",
       emptyCta: "var(--ink-on-accent, var(--paper-desk))",
@@ -1004,8 +994,6 @@ describe("the conclusion's layout (tripwires)", () => {
   });
 
   it("insets the day-card chips on BOTH axes, at both bands (T-WEB-S65b)", () => {
-    //
-
     for (const [scope, body] of [
       ["top level", bodyOf(CSS, ".chip")],
       [
@@ -1136,10 +1124,6 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
   });
 
   it("still never chains the CTA back into the game just spent", () => {
-    //
-
-    //
-
     render(
       <ConclusionView
         game="termo"
@@ -1254,8 +1238,6 @@ describe("the streak card's state machine (T-WEB-S128)", () => {
         copy={messages.games.binairo.conclusion}
       />,
     );
-
-    //
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(

@@ -52,8 +52,6 @@ async function mintedBody(response: Response) {
   return sessionResponseSchema.parse(await response.json());
 }
 
-//
-
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);

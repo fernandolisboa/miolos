@@ -504,8 +504,6 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     join(appDir, "arquivo", "[data]", game, "opengraph-image.tsx");
 
   it("the ROOT site card reaches no database, transitively", () => {
-    //
-
     const graph = moduleGraph(cardSource);
     for (const path of graph) {
       const source = code(readFileSync(path, "utf8"));
@@ -720,8 +718,6 @@ describe("the two archive shell cards are existence proofs (T-WEB-S334)", () => 
   });
 
   it("(5) a malformed day segment 404s with the reader NEVER called", async () => {
-    //
-
     for (const segment of [
       "mes",
       "lixo",
@@ -770,8 +766,6 @@ describe("the two archive shell cards are existence proofs (T-WEB-S334)", () => 
   });
 
   it("(8) a throwing READER propagates — these handlers have NO catch, on purpose", async () => {
-    //
-
     for (const error of [
       named("ZodError"),
       named("DailyProjectionUnsupportedError"),
@@ -788,8 +782,6 @@ describe("the two archive shell cards are existence proofs (T-WEB-S334)", () => 
   });
 
   it("(9) a throwing CARD BUILDER propagates too, and is not converted into a 404", async () => {
-    //
-
     spies.listArchivedDays.mockResolvedValue([pair(DAY, "binairo")]);
     spies.archiveCard.mockImplementation(() => {
       throw new Error("synthetic satori failure");

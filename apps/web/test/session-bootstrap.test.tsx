@@ -99,22 +99,53 @@ describe("SessionBootstrap", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("T-WEB-S355: a FAILED mint opens the telemetry gate too, so buffered starts are never held forever", async () => {
-    for (const mint of [
-      () => Promise.reject(new TypeError("offline")),
-      () => Promise.resolve(new Response(null, { status: 500 })),
-      () => Promise.resolve(new Response("not json", { status: 200 })),
-    ]) {
+  it("T-WEB-S355: the telemetry gate opens once the mint SETTLES, however it settles, so buffered starts are never held forever", async () => {
+    const settlings = [
+      ["a rejecting fetch", () => Promise.reject(new TypeError("offline"))],
+      ["a 500", () => Promise.resolve(new Response(null, { status: 500 }))],
+      [
+        "a 200 whose body the contract refuses",
+        () => Promise.resolve(new Response("not json", { status: 200 })),
+      ],
+      [
+        "a 200 the contract accepts",
+        () =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({ userId: crypto.randomUUID(), created: true }),
+            ),
+          ),
+      ],
+    ] as const;
+
+    for (const [label, mint] of settlings) {
       telemetry.markSessionReady.mockClear();
       vi.stubGlobal("fetch", vi.fn(mint));
 
       const SessionBootstrap = await freshSessionBootstrap();
       render(<SessionBootstrap />);
-      for (let round = 0; round < 20; round += 1) {
-        await Promise.resolve();
-      }
+      // Awaiting the module's own promise rather than counting microtasks:
+      // the effect has already called it, so this is a barrier, not a hope.
+      const { ensureSession } = await import("../src/session/bootstrap");
+      await ensureSession();
 
-      expect(telemetry.markSessionReady).toHaveBeenCalledTimes(1);
+      expect(telemetry.markSessionReady, label).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it("opens the gate with no API url too — nothing is minted, and nothing may buffer forever", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const SessionBootstrap = await freshSessionBootstrap();
+    render(<SessionBootstrap />);
+    const { ensureSession } = await import("../src/session/bootstrap");
+    await ensureSession();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(telemetry.markSessionReady).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
   });
 });

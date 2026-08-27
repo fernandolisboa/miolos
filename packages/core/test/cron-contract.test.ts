@@ -10,10 +10,6 @@ import {
   type CronPublishResponse,
 } from "../src/index";
 
-//
-
-//
-
 const healthy: CronPublishGameResult = {
   generated: 3,
   depth: 7,

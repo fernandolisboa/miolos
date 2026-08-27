@@ -7,8 +7,6 @@ import type { PlayRecord } from "../src/play/play-record";
 import { usePlayLifecycle } from "../src/play/use-play-lifecycle";
 import type { LifecycleAction, PlayCore } from "../src/play/types";
 
-//
-
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
   flushPendingCompletions: vi.fn(() => Promise.resolve()),

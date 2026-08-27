@@ -11,6 +11,7 @@
     "dev": "turbo run dev",
     "typecheck": "turbo run typecheck",
     "lint": "eslint --max-warnings 0 .",
+    "comments": "node scripts/comment-audit/density.mjs $(git ls-files '*.ts' '*.tsx' '*.mjs' | grep -v '^.claude/skills/')",
     "test": "TURBO_CONCURRENCY=2 turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

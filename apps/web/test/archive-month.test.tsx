@@ -129,8 +129,6 @@ describe("the archive month page (T-WEB-S169)", () => {
     ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(spies.notFound).toHaveBeenCalled();
 
-    //
-
     for (const mes of [
       "2026-13",
       "2026-8",

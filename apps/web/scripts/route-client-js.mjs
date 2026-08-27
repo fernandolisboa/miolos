@@ -30,12 +30,6 @@ const BUDGETED = [
 
   "/estatisticas",
 
-  //
-
-  //
-
-  //
-
   "/arquivo",
   "/arquivo/mes/[mes]",
   "/arquivo/[data]",
@@ -43,8 +37,6 @@ const BUDGETED = [
   "/arquivo/[data]/nonogram",
   "/arquivo/[data]/sudoku",
   "/arquivo/[data]/termo",
-
-  //
 
   "/binairo/concluido",
   "/nonogram/concluido",

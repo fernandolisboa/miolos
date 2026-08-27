@@ -587,17 +587,11 @@ describe("the stroke (T-WEB-S45)", () => {
 
 describe("the board's re-render budget (T-WEB-S57)", () => {
   it("is memoized, so an unrelated tick cannot reconcile 225 cells", () => {
-    //
-
     expect(Board).toHaveProperty("$$typeof", Symbol.for("react.memo"));
     expect(Board).toHaveProperty("type", expect.any(Function));
   });
 
   it("composes ONE label per painted cell during a drag — cells AND rails, not size² + 2·size (T-WEB-S66)", () => {
-    //
-
-    //
-
     const { container } = render(<NonogramScreen daily={BIG} />);
     stubElementFromPoint(container);
     const board = boardOf(BIG);
@@ -938,8 +932,6 @@ describe("the picture reveal (T-WEB-S51)", () => {
   });
 
   it("stamps a concluded record that carries no grid, and reveals nothing", () => {
-    //
-
     const day = "2026-07-31";
     window.localStorage.setItem(
       playRecordKey("nonogram", day),

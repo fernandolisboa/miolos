@@ -217,8 +217,6 @@ describe("the unnamed reveal is the honest degraded case (T-WEB-S324)", () => {
 
 describe("a name that lands AFTER mount (T-WEB-S325)", () => {
   it("re-labels the already-mounted figure — the named accessible-name residual", async () => {
-    //
-
     let motifName: string | undefined = undefined;
     stubApi(() => jsonResponse(200, dayBody(completedClaim(motifName))));
     window.localStorage.setItem(
@@ -257,8 +255,6 @@ describe("a name that lands AFTER mount (T-WEB-S325)", () => {
 
 describe("the name is composed once, in the wrapper (T-WEB-S326)", () => {
   it("composes AFTER the `fromRecord ?? picture` precedence, and the play screen composes none", async () => {
-    //
-
     stubApi(() => jsonResponse(200, dayBody(completedClaim(MOTIF))));
     const NonogramConclusion = await loadConclusion();
 
@@ -349,10 +345,6 @@ describe("the payoff-moment refresh (T-WEB-S329)", () => {
   }
 
   it("a completion that settles `recorded` AFTER mount asks the store for today's truth", async () => {
-    //
-
-    //
-
     const fetchMock = stubApi(() =>
       jsonResponse(200, dayBody(completedClaim(MOTIF))),
     );
@@ -418,10 +410,6 @@ describe("the payoff-moment refresh (T-WEB-S329)", () => {
 
 describe("the caption's impeccable worst case (T-WEB-S330)", () => {
   it("no curated motif name can trip `all-caps-body` — measured over the whole shipped library, not over today's motif", () => {
-    //
-
-    //
-
     const sheet = stylesheet("src/play/conclusion-view.module.css");
     const uppercase = (selector: string) =>
       decl(bodyOf(sheet, selector), "text-transform") === "uppercase";

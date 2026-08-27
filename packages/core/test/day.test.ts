@@ -131,18 +131,12 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       [...GAMES].sort(),
     );
 
-    //
-
-    //
-
     for (const game of GAMES) {
       expect(
         Object.keys(dayResponseSchema.shape.games.shape[game].shape).sort(),
         game,
       ).toEqual(["elapsedMs", "hintsUsed", "motifName", "status"]);
     }
-
-    //
 
     const keys = collectKeys(dayResponseSchema.parse(valid));
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
@@ -516,8 +510,6 @@ describe("the merge invariant (ADR-0060 decision 3)", () => {
       }),
       { numRuns: 100 },
     );
-
-    //
 
     fc.assert(
       fc.property(statusArb, statusArb, statusArb, (localA, localB, server) => {

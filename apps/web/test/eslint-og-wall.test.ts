@@ -21,12 +21,6 @@ const eslint = new ESLint({
   ],
 });
 
-//
-
-//
-
-//
-
 vi.setConfig({ testTimeout: 40_000 });
 
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
@@ -134,8 +128,6 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
   });
 
   it("T-LINT-S57: the node_modules/@miolos symlink spelling of the games ban reds too, static and dynamic", async () => {
-    //
-
     const staticDoors = [
       "../../../node_modules/@miolos/games/src/nonogram",
       "../node_modules/@miolos/games/src",
@@ -367,8 +359,6 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
   });
 
   it("T-LINT-S46: the OG wall does not DELETE the free-play wall where the two globs intersect", async () => {
-    //
-
     const probes: [string, string][] = [
       [
         "play/sync",

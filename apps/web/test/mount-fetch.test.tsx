@@ -113,8 +113,6 @@ describe("one mount, one read — and no call site can make it refetch (T-WEB-S3
   });
 
   it("every call site passes bare identifiers, so `[fetcher, enabled]` is stable by construction", () => {
-    //
-
     const call = /useMountFetch\s*(?:<[^>]*>)?\s*\(([^)]*)\)/g;
     const sites = sources()
       .filter((sourcePath) => sourcePath !== DECLARING_MODULE)

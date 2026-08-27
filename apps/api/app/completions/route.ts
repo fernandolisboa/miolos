@@ -155,8 +155,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     return completionResponse(existing, false);
   }
 
-  //
-
   const today = await todaySaoPaulo(db);
   if (!isWritableDate(body.date, today)) {
     return errorResponse(404, "no-puzzle");

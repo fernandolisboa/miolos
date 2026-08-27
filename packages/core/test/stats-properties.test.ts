@@ -172,8 +172,6 @@ describe("stats derivations — properties (ADR-0023)", () => {
   });
 
   it("T-CORE-S84: however far back the rows reach, every emitted date lies in [since − rolloverSlackDays, today] — the fabricated-`missed` bound, sampled", () => {
-    //
-
     const archiveRowArb = (todayDay: number): fc.Arbitrary<StatsRow> =>
       fc.record({
         game: fc.constantFrom(...GAMES),

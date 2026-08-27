@@ -35,8 +35,6 @@ export function HubCardAction({
   const entry = useDayState(date)[game];
   const route = playRoutes[game];
 
-  //
-
   const elapsedMs = entry.status === "completed" ? entry.elapsedMs : undefined;
 
   if (entry.status === "pending") {

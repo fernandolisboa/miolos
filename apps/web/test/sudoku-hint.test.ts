@@ -10,8 +10,6 @@ import { nextHint } from "../src/play/grid-hint";
 import { playableGivens, solutionDigits } from "../src/sudoku/engine";
 import type { SudokuDigit } from "../src/sudoku/state";
 
-//
-
 const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 7];
 
 const SEEDS: Readonly<Record<Weekday, readonly number[]>> = {

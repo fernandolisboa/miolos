@@ -38,8 +38,9 @@ async function runTopUp(
 
     const aborted = thrown instanceof TopUpAbortedError ? thrown : undefined;
 
-    //
-
+    // Only the MESSAGE is sanitised below. `query`, `params` and `cause`
+    // stay enumerable on the error, so logging the whole object re-opens the
+    // answer leak this split closes (ADR-0004).
     const cause = aborted ? aborted.cause : thrown;
     const error =
       cause instanceof Error

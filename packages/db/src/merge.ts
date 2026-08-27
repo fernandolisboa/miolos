@@ -111,8 +111,6 @@ export async function mergeAccounts(
         and l.completed_at < w.completed_at
   `);
 
-  //
-
   await db.execute(sql`
     insert into completions
       (user_id, game, date, completed_at, outcome, elapsed_ms, hints_used, guesses, on_time)

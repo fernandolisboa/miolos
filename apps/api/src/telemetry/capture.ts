@@ -45,6 +45,7 @@ export async function captureEvent<E extends TelemetryEvent>(input: {
       signal: AbortSignal.timeout(CAPTURE_TIMEOUT_MS),
     });
 
+    // Undici holds the socket until the body is read or cancelled.
     void response.body?.cancel().catch(() => {});
   } catch {
     // A lost telemetry event, never a route error.

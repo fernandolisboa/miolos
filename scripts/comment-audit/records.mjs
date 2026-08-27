@@ -1,7 +1,3 @@
-//
-
-//
-
 const TOKEN = [
   String.raw`#\d+`,
   String.raw`ADR-\d{4}`,

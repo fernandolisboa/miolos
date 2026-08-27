@@ -4,12 +4,10 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { count, commentRanges } from "./count.mjs";
 import { countCss } from "./css-count.mjs";
-import { density, isGenerated } from "./density.mjs";
+import { allowance, density, isGenerated } from "./density.mjs";
 import { DIRECTIVES, recordsRe } from "./records.mjs";
 import { ragged } from "./wrap.mjs";
 import { pathToFileURL } from "node:url";
-
-//
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 process.chdir(repoRoot);
@@ -303,8 +301,6 @@ for (const t of ["excision", "verbatim", "citations", "hash", "wrap"]) {
     2,
   );
 }
-
-//
 
 // The echo fixtures are a SYNTHETIC repo, not files in this one. Pointing
 // them at real prose made them erode as #205 deleted it: the app sources
@@ -947,7 +943,8 @@ const densityFixture = write(
   "density-fixture.ts",
   [
     "// a budgeted prose line",
-    "//",
+    "// a second budgeted prose line",
+    "// a third, which puts the fixture past the 2-line floor",
     "// eslint-disable-next-line no-console -- the reason is part of the directive",
     "/*#__PURE__*/",
     "// @ts-expect-error deliberate",
@@ -955,14 +952,14 @@ const densityFixture = write(
     "export const b = 2;",
   ].join("\n") + "\n",
 );
-check("density counts prose only", density(densityFixture).budgeted, 1);
+check("density counts prose only", density(densityFixture).budgeted, 3);
 
-check("density exempts directives", density(densityFixture).directives, 4);
-check("density total is wc -l", density(densityFixture).total, 7);
+check("density exempts directives", density(densityFixture).directives, 3);
+check("density total is wc -l", density(densityFixture).total, 8);
 check(
   "density pct is prose over total",
   Number(density(densityFixture).pct.toFixed(2)),
-  14.29,
+  37.5,
 );
 check(
   "a file over budget exits 1",
@@ -999,6 +996,71 @@ check(
   isGenerated("\n".repeat(12) + "// @generated\n"),
   false,
 );
+// EVERY exemption CLAUDE.md and the README name, asserted one at a time.
+// The list was documented and only four of seven were tested, which is how
+// `/// <reference` shipped documented-as-exempt and budgeted.
+for (const [label, line] of [
+  ["eslint-disable", "// eslint-disable-next-line no-console -- reason"],
+  ["eslint-enable", "/* eslint-enable no-console */"],
+  ["@ts-expect-error", "// @ts-expect-error deliberate"],
+  ["#__PURE__", "/*#__PURE__*/"],
+  ["/// <reference", '/// <reference types="next" />'],
+  ["prettier-ignore", "// prettier-ignore"],
+  ["impeccable-disable", "// impeccable-disable-next-line side-tab"],
+]) {
+  const probe = write(
+    `exempt-${label.replaceAll(/\W/g, "")}.ts`,
+    `${line}\nexport const a = 1;\n`,
+  );
+  check(`density exempts ${label}`, density(probe).budgeted, 0);
+}
+// A standalone `//` is RESIDUE, not an anchor. The prettier anchor that
+// keeps a nonogram bitmap one row per line is TRAILING (`".#.#.", //`), so it
+// sits on a code line and was never comment-only to begin with.
+check(
+  "a standalone // is residue, not exempt",
+  density(write("orphan.ts", "//\nexport const a = 1;\n")).budgeted,
+  1,
+);
+check(
+  "a trailing // never reaches the budget at all — it is on a code line",
+  density(
+    write("anchor.ts", 'export const rows = [\n  ".#.", //\n  "###",\n];\n'),
+  ).budgeted,
+  0,
+);
+check(
+  "prose that merely mentions a directive is NOT exempt",
+  density(
+    write(
+      "mentions.ts",
+      "// see the /*#__PURE__*/ above\nexport const a = 1;\n",
+    ),
+  ).budgeted,
+  1,
+);
+
+// A percentage alone forbids CLAUDE.md's sanctioned comments in a small file:
+// 3% of 30 lines is zero, so one `TODO(#238)` would red the gate.
+check("a small file gets a floor of 2 lines", allowance(4), 2);
+check("the floor does not apply once 3% exceeds it", allowance(1000), 30);
+check(
+  "one sanctioned TODO in a 4-line file is within budget",
+  run([
+    tool("density.mjs"),
+    write("todo.ts", "// TODO(#238): see the issue\nexport const a = 1;\n"),
+  ]).code,
+  0,
+);
+check(
+  "three prose lines in a 4-line file are not",
+  run([
+    tool("density.mjs"),
+    write("prose.ts", "// one\n// two\n// three\nexport const a = 1;\n"),
+  ]).code,
+  1,
+);
+
 check(
   "a non-numeric --max exits 2",
   run([tool("density.mjs"), "--max", "lots", densityFixture]).code,

@@ -1026,8 +1026,6 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       await getPublishedNonogramMotifName(ctx.db, "2026-06-15"),
     ).toBeUndefined();
 
-    //
-
     await ctx.db.insert(dailyPuzzles).values({
       game: "binairo",
       date: "2026-06-20",

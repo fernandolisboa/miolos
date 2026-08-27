@@ -16,10 +16,6 @@ import { useStats } from "../src/stats/use-stats";
 import { useStatsCalendar } from "../src/stats/use-stats-calendar";
 import { useStreak } from "../src/streak/use-streak";
 
-//
-
-//
-
 const ATTACH: AttachStateResponse = { eligible: true };
 const STREAK: StreakResponse = {
   date: "2026-08-22",

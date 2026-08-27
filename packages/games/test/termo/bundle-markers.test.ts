@@ -58,8 +58,8 @@ describe("the client-bundle tripwire's word-list markers", () => {
   });
 });
 
-describe("the answer pool's tree-shaking annotations", () => {
-  it("survive: four /*#__PURE__*/ markers, one per top-level initialiser", () => {
+describe("the tree-shaking annotations that keep bundles honest", () => {
+  it("survive in word-list.ts: four /*#__PURE__*/, one per top-level initialiser", () => {
     const source = readFileSync(
       join(import.meta.dirname, "..", "..", "src", "termo", "word-list.ts"),
       "utf8",
@@ -73,5 +73,28 @@ describe("the answer pool's tree-shaking annotations", () => {
     ]) {
       expect(source).toContain(`/*#__PURE__*/ ${initialiser}`);
     }
+  });
+
+  it("survive in @miolos/core's MEDAL_IDS, which has no test of its own", () => {
+    // A module-level call is otherwise a side effect that can pin the module
+    // into a chunk that only wanted a type. Scanned from here because
+    // `packages/core` carries no Node types.
+    const source = readFileSync(
+      join(
+        import.meta.dirname,
+        "..",
+        "..",
+        "..",
+        "core",
+        "src",
+        "medals",
+        "definitions.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain(
+      "/*#__PURE__*/ MEDAL_DEFINITIONS.map((d) => d.id)",
+    );
+    expect(source.match(/\/\*#__PURE__\*\//g)).toHaveLength(1);
   });
 });

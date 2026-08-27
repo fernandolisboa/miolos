@@ -222,8 +222,6 @@ describe("the archive SHELL routes' openGraph (T-WEB-S335)", () => {
   });
 
   it("a HOSTILE shell segment carries no openGraph and no alternates", async () => {
-    //
-
     for (const raw of [
       "//evil.example.com",
       "https://evil.example.com",

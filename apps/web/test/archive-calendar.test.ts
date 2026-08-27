@@ -84,6 +84,9 @@ describe("the archive calendar model (T-WEB-S310)", () => {
         "utf8",
       ),
     );
+    // An emptied module would satisfy every `not.toContain` below.
+    expect(source).toContain("export function archiveCalendarMonth");
+    expect(source.length).toBeGreaterThan(200);
     expect(source).not.toContain("Date.now");
     expect(source).not.toContain("new Date");
     expect(source).not.toContain("todaySaoPauloDate");

@@ -15,8 +15,6 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 
-//
-
 const DATE = "2026-07-30";
 const OTHER_DATE = "2026-07-29";
 const BINAIRO_MS = 407_000;

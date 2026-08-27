@@ -420,8 +420,6 @@ describe("the archive card is a dated nameplate (T-WEB-S333)", () => {
     const displays = Object.values(cards).map((args) => args.display);
     expect(new Set(displays).size).toBe(3);
 
-    //
-
     expect(cards.day.display).not.toBe(messages.archive.title);
     expect(cards.month.display).not.toBe(messages.archive.title);
 
@@ -433,8 +431,6 @@ describe("the archive card is a dated nameplate (T-WEB-S333)", () => {
   });
 
   it("the day card takes RUNG 2: the year is on the caption, not the display line", () => {
-    //
-
     expect(cards.day.display).not.toMatch(/\d{4}/);
     expect(cards.day.caption).toContain("2026");
     expect(cards.day.caption).toContain(messages.archive.title);

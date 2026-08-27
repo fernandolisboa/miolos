@@ -176,8 +176,6 @@ describe("turbo.json carries no global concurrency key (T-WEB-S227)", () => {
 });
 
 describe("the worker bound, and the one package that must not carry it (T-WEB-S229)", () => {
-  //
-
   const repoRoot = join(import.meta.dirname, "..", "..", "..");
   const read = (p: string) => readFileSync(join(repoRoot, p), "utf8");
 

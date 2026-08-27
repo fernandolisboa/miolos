@@ -6,8 +6,6 @@ import { ESLint } from "eslint";
 import tseslint from "typescript-eslint";
 import { describe, expect, it, vi } from "vitest";
 
-//
-
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 const eslint = new ESLint({
@@ -23,12 +21,6 @@ const eslint = new ESLint({
     },
   ],
 });
-
-//
-
-//
-
-//
 
 vi.setConfig({ testTimeout: 40_000 });
 
@@ -128,10 +120,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S4: packages/core's client contracts never import the server-only ones", () => {
-    //
-
-    //
-
     const read = (relative: string) =>
       readFileSync(join(repoRoot, relative), "utf8")
         .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -216,8 +204,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S7: the banned name list IS the server-only module's value exports, derived not copied", () => {
-    //
-
     const content = readFileSync(
       join(repoRoot, "packages/core/src/contracts/daily-content.ts"),
       "utf8",
@@ -312,8 +298,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S8a: the wall fires from apps/web/src/og/**, and a clean OG file reports nothing", async () => {
-    //
-
     const OG_PATH = "apps/web/src/og/eslint-probe.ts";
 
     const bare = await lintProbe(
@@ -396,8 +380,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S56: the node_modules/@miolos SYMLINK spelling of that same reach is restricted too, static and dynamic", async () => {
-    //
-
     const db = await lintProbe(
       SOURCE_PATH,
       [
@@ -690,8 +672,6 @@ describe("apps/web db wall — not a blanket ban", () => {
   });
 
   it("T-LINT-S59: the symlink bans are PACKAGE-SCOPED — @miolos/ui through node_modules stays legal", async () => {
-    //
-
     const ui = await lintProbe(
       SOURCE_PATH,
       [
@@ -752,8 +732,6 @@ describe("apps/web db wall — not a blanket ban", () => {
 
 describe("the no-session-replay wall (#33, ADR-0069 decision 1)", () => {
   it("T-LINT-S53: a replay-capable client is an import error in every tree, and the ban is not a substring heuristic", async () => {
-    //
-
     const bannedAt = [
       ["apps/web/src/eslint-probe.ts", 'import "posthog-js";'],
       ["apps/web/src/free-play/eslint-probe.ts", 'import "posthog-js-lite";'],

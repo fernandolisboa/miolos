@@ -89,7 +89,9 @@ DRY has one limit: two things that merely *look* alike are not duplication. Extr
 
 ## Comments
 
-**Comments are rare, and the rarity is measured.** No `.ts`, `.tsx` or `.mjs` file we own spends more than **3% of its lines** on comment-only prose — `node scripts/comment-audit/density.mjs <files>` is the gate and exits 1 when a file is over. Directives are exempt and never counted: `eslint-disable`, `@ts-expect-error`, `/*#__PURE__*/`, `/// <reference`, `prettier-ignore`, `impeccable-disable`, and a bare `//` — which is a prettier layout anchor, not prose.
+**Comments are rare, and the rarity is measured.** No `.ts`, `.tsx` or `.mjs` file we own spends more than **3% of its lines, or two lines, whichever is larger**, on comment-only prose. `pnpm comments` is the gate; it runs in pre-commit and in CI, and exits 1 when a file is over. The two-line floor is not slack — it is what lets a thirty-line file carry one of the comments the next paragraph *requires*, which a bare percentage forbids outright.
+
+Directives are exempt and never counted: `eslint-disable`/`-enable`, `@ts-expect-error`/`-ignore`/`-nocheck`, `/*#__PURE__*/`, `/// <reference`, `prettier-ignore`, `impeccable-disable`/`-ignore`, `@vitest-environment`, and `c8`/`v8`/`istanbul ignore`. Prose that merely *mentions* a directive is not exempt. A trailing `//` (the prettier anchor that keeps a nonogram bitmap one row per line) sits on a code line and never reaches the budget; a **standalone** `//` is residue and does count.
 
 The code says what it does; the ADR says why the decision was made. A comment only exists when the code is genuinely hard to follow, and then it says both what it does *and* why it has to be that complicated. If a file cannot fit the budget, the first question is whether the code is too complex — not whether the budget is too small.
 
@@ -141,7 +143,7 @@ ADRs matter more now, not less: they are where the "why" goes when it leaves the
 - `pnpm test` — full suite
 - **Property-based tests for `packages/games`** — a generator ships with its invariants proved, not sampled. Every generated Sudoku has a unique solution; every generated puzzle is solvable; seed → puzzle is deterministic.
 - **Zod validation at every boundary** — API contracts and anything crossing the client/server line are parsed, never cast.
-- `node scripts/comment-audit/density.mjs $(git ls-files '*.ts' '*.tsx' '*.mjs' | grep -v '^.claude/skills/')` — the 3% comment budget. No PR raises a file above it. Generated files report as skipped; vendored skills are not ours.
+- `pnpm comments` — the comment budget ([ADR-0075](./docs/adr/0075-the-comment-budget-is-a-tool-not-a-rule.md)). Generated files report as skipped; vendored skills under `.claude/skills/` are not ours.
 - `npx impeccable detect` — required on any change that touches UI. Visual quality is a gate, not an aspiration.
 - Pre-commit (Husky + lint-staged + typecheck + tests) must stay green. Never bypassed with `--no-verify`.
 

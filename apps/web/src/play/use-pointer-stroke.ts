@@ -77,7 +77,8 @@ export function usePointerStroke(input: {
         event.currentTarget.setPointerCapture(event.pointerId);
         captured = true;
       } catch {
-        // Safari throws when the pointer is already captured elsewhere.
+        // jsdom does not implement pointer capture, and a pen can release
+        // before it is taken; capture is only an optimisation here.
       }
     }
     if (!captured) {

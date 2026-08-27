@@ -10,8 +10,6 @@ import { z } from "zod";
 
 import { messages } from "../src/i18n";
 
-//
-
 const PUZZLE = generateDailySudoku({ seed: 20_260_801, weekday: 1 });
 
 const DAILY: DailySudokuResponse = dailySudokuResponseSchema.parse({

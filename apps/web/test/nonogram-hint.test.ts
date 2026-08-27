@@ -23,8 +23,6 @@ import {
   type NonogramPlayState,
 } from "../src/nonogram/state";
 
-//
-
 const DATE = "2026-08-01";
 
 const SEEDS: readonly number[] = Array.from(

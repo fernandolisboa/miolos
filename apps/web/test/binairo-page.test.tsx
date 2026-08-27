@@ -14,8 +14,6 @@ import { z } from "zod";
 
 import { messages } from "../src/i18n";
 
-//
-
 const PUZZLE = generateBinairo({ seed: 20_260_730, weekday: 3 });
 
 const DAILY: DailyBinairoResponse = {

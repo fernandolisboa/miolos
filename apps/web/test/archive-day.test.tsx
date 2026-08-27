@@ -312,8 +312,6 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
       expect(readFileSync(path, "utf8")).not.toContain("readDayState");
     }
 
-    //
-
     expect(graph.filter((path) => path.includes("/src/day/"))).toEqual([]);
     for (const path of graph) {
       expect(readFileSync(path, "utf8")).not.toContain("useDayTruth");

@@ -10,8 +10,6 @@ import { z } from "zod";
 
 import { messages } from "../src/i18n";
 
-//
-
 const PUZZLE = generateNonogram(20_260_801, 1);
 
 const DAILY: DailyNonogramResponse = dailyNonogramResponseSchema.parse({

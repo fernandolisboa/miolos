@@ -638,8 +638,6 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
 
 describe("mergeAccounts — the repoint column-list tripwire (ADR-0049, step-6 finding)", () => {
   it("T-DB-S24: the completions column set derived from the live schema deep-equals the names the repoint statement carries", () => {
-    //
-
     const liveColumns = Object.values(getTableColumns(completions))
       .map((column) => column.name)
       .sort();

@@ -5,8 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePointerStroke } from "../src/play/use-pointer-stroke";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
-//
-
 installPointerStubs();
 
 afterEach(() => {

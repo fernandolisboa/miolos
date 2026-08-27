@@ -348,8 +348,6 @@ describe("status and pendingSync", () => {
   });
 
   it("stays playing while a cell outside the picture is painted", () => {
-    //
-
     const solution = solutionOf(MONDAY_STATE);
     const emptyCell = solution.indexOf(0);
     const overpainted = fillOnly(
@@ -389,8 +387,6 @@ describe("status and pendingSync", () => {
   });
 
   it("takes NO entry once the picture closes, so a closed board cannot reopen (T-WEB-S69)", () => {
-    //
-
     const solved = fillOnly(MONDAY_STATE);
     const outside = solutionOf(MONDAY_STATE).indexOf(0);
     expect(solved.status).toBe("solved");

@@ -218,8 +218,6 @@ describe("the share button renders in both terminal states and nowhere else (T-W
 
 describe("the button is disabled until the concluded record hydrates (T-WEB-S195)", () => {
   it("TERMO renders its box either way, and is disabled while `stored` is undefined", () => {
-    //
-
     const { unmount } = render(
       view("termo", { result: { elapsedMs: 407_000, hintsUsed: 0 } }),
     );

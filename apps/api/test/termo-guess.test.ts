@@ -474,8 +474,6 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
   });
 
   it("T-API-S42: an EARLIER non-word is judged normally — the gate is the newest guess only", async () => {
-    //
-
     const today = await todaySaoPaulo(ctx.db);
     await seedTermo(today);
     const { token } = await createSession();
@@ -497,8 +495,6 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
   });
 
   it("T-API-S38: a row FOLLOWING a winning row ⇒ 422 `board-closed`, and never the 500 `deriveBoardStatus` would throw", async () => {
-    //
-
     const today = await todaySaoPaulo(ctx.db);
     await seedTermo(today);
     const { token } = await createSession();

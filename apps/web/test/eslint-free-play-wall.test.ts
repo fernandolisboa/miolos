@@ -21,12 +21,6 @@ const eslint = new ESLint({
   ],
 });
 
-//
-
-//
-
-//
-
 vi.setConfig({ testTimeout: 40_000 });
 
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
@@ -160,8 +154,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 
   it("T-LINT-S58: the node_modules/@miolos symlink spellings of the Termo ban AND the db ROOT ban red from free play", async () => {
-    //
-
     const termoStatic = [
       'import * as termo from "../node_modules/@miolos/games/src/termo/words";',
       "",

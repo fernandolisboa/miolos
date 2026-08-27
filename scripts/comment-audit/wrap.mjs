@@ -4,10 +4,6 @@ import { execFileSync } from "node:child_process";
 import { commentRanges } from "./count.mjs";
 import { DIRECTIVES, parseArgs } from "./records.mjs";
 
-//
-
-//
-
 const WIDTH = 80;
 
 const DIRECTIVE_RES = DIRECTIVES.map(([, re]) => new RegExp(re.source));
@@ -43,8 +39,6 @@ function proseLines(file, text) {
         if (inComment[j]) hasComment = true;
         else hasCode = true;
       }
-
-      //
 
       if (!hasComment || hasCode || line.includes("*/")) {
         out.push(null);
@@ -109,8 +103,6 @@ export function ragged(file, text) {
     ) {
       end++;
     }
-
-    //
 
     const fills = lines.slice(i, end - 1).filter((l) => l.width <= WIDTH);
     const col =

@@ -400,10 +400,6 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
   }
 
   it("T-DB-S56: the ceiling counts LATE rows by the WRITE instant's São Paulo day, and 49/50/51 is where it bites", async () => {
-    //
-
-    //
-
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-08-10T12:00:00Z"));
 
@@ -506,8 +502,6 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
   }, 30_000);
 
   it("T-DB-S58: the guarded INSERT renders byte-identically through the neon-http and PGlite dialects, as ONE statement", async () => {
-    //
-
     const logged: Record<Dialect, string[]> = { neonHttp: [], pglite: [] };
     const loggerFor = (dialect: Dialect) => ({
       logQuery: (query: string) => {

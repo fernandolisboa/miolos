@@ -10,22 +10,6 @@ const appGlobs = ["apps/web/**/*.{ts,tsx}", "apps/api/**/*.{ts,tsx}"];
 
 const webWallExtensions = "{ts,tsx,mts,cts,js,jsx,mjs,cjs}";
 
-//
-
-//
-
-//
-
-//
-
-//
-
-//
-
-//
-
-//
-
 const symlinkSpelling = (pkg) => [
   `**/node_modules/@miolos/${pkg}/src`,
   `**/node_modules/@miolos/${pkg}/src/*`,
@@ -38,8 +22,6 @@ const webDynamicDbImport = {
   message:
     "apps/web is client-serving: dynamic import of the server-internal @miolos/db subpaths is banned (ADR-0024, ADR-0026).",
 };
-
-//
 
 const webDynamicPackageSource = {
   selector:
@@ -60,10 +42,6 @@ const webRequireCall = {
     "apps/web is client-serving ESM: require() is banned — it evades the @miolos/db import restrictions (ADR-0024, ADR-0026).",
 };
 
-//
-
-//
-
 const replayCapableClientGroups = [
   {
     group: [
@@ -80,8 +58,6 @@ const replayCapableClientGroups = [
       "no session replay, and no client PostHog SDK: telemetry is five server-anchored events over a hand-rolled capture in apps/api, so the ceiling and the published no-replay promise hold by construction (CLAUDE.md invariants, ADR-0069 decision 1, /privacidade's own copy).",
   },
 ];
-
-//
 
 const webWallImportPatterns = [
   {
@@ -130,8 +106,6 @@ const webWallImportPaths = [
   },
   {
     name: "@miolos/core",
-
-    //
 
     importNames: [
       "binairoDailyContentSchema",
@@ -193,12 +167,6 @@ const freePlayBannedModuleGroups = [
       "free play records nothing and fetches nothing: the sync/record/lifecycle/session modules — and the daily hooks, screen roots, hub page and hub islands that reach them one hop in — are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0008 rule 5, ADR-0046).",
   },
   {
-    //
-
-    //
-
-    //
-
     group: [
       "@miolos/db",
       "@miolos/db/*",
@@ -256,22 +224,16 @@ const freePlayBannedModuleGroups = [
       "free play never touches identity or the push opt-in: the push client, hook and prompt card are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0064).",
   },
   {
-    //
-
     group: ["**/day", "**/day/**"],
     message:
       "free play never touches the day: the day client and the day-truth store are banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0060).",
   },
   {
-    //
-
     group: ["**/telemetry", "**/telemetry/**"],
     message:
       "free play fires no telemetry: the puzzle_started relay client is banned from apps/web/src/free-play and app/modo-livre (ADR-0008 rule 5, ADR-0046, ADR-0069).",
   },
   {
-    //
-
     group: ["**/api", "**/api/**"],
     message:
       "free play fetches nothing and mints no session: the shared authenticated mount fetch is banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0048).",
@@ -381,8 +343,6 @@ export default tseslint.config(
     },
   },
   {
-    //
-
     files: [
       "apps/api/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
       "packages/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
@@ -493,10 +453,6 @@ export default tseslint.config(
     },
   },
   {
-    //
-
-    //
-
     files: [
       `apps/web/src/og/**/*.${webWallExtensions}`,
 
@@ -527,10 +483,6 @@ export default tseslint.config(
     },
   },
   {
-    //
-
-    //
-
     files: [
       `apps/web/app/modo-livre/**/opengraph-image.${webWallExtensions}`,
       `apps/web/app/modo-livre/**/twitter-image.${webWallExtensions}`,

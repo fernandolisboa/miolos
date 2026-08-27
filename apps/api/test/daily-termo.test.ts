@@ -23,10 +23,6 @@ import {
 import { GET } from "../app/daily/termo/route";
 import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 
-//
-
-//
-
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({

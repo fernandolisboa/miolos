@@ -15,8 +15,6 @@ import { solutionDigits } from "../src/sudoku/engine";
 import type { SudokuDigit } from "../src/sudoku/state";
 import { useSudokuPlay } from "../src/sudoku/use-sudoku-play";
 
-//
-
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
   flushPendingCompletions: vi.fn(() => Promise.resolve()),

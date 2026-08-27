@@ -965,8 +965,6 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
   });
 
   it("names every off-4pt length the STYLESHEET actually ships, not only the two the prose used to", () => {
-    //
-
     const sheet = stylesheet("src/termo/termo-board.module.css");
     const declarations =
       /(?:^|[\s;{])(?:gap|row-gap|column-gap|margin(?:-[a-z]+)?|padding(?:-[a-z-]+)?|text-underline-offset)\s*:\s*([^;{}]+)/g;
@@ -1069,8 +1067,6 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
 });
 
 describe("the 1 Hz tick paints nothing, because there is no clock (T-WEB-S104)", () => {
-  //
-
   beforeEach(() => {
     vi.useFakeTimers();
   });

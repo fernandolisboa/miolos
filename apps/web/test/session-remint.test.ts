@@ -109,8 +109,6 @@ describe("one page load mints one identity, however many callers ask (T-WEB-S105
 
 describe("a re-mint the server refused spends nothing (T-WEB-S108)", () => {
   it("re-arms the allowance after a failed mint, and burns it on a successful one", async () => {
-    //
-
     const sessionCalls: number[] = [];
 
     const script = [200, 500, 200];

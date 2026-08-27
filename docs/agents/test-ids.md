@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S355` | `S354` | `T-WEB-23` |
+| `T-WEB` | `S356` | `S355` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
 
 #205's `apps/web/src/play` tranche spent **`T-WEB-S354`** in the new

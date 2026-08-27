@@ -4,8 +4,6 @@ import path from "node:path";
 import { commentText } from "./count.mjs";
 import { parseArgs } from "./records.mjs";
 
-//
-
 const N = 7;
 
 const norm = (s) =>

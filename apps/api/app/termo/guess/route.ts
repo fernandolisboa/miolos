@@ -72,8 +72,6 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   const body = parsed.data;
 
-  //
-
   if (!isWritableDate(body.date, await todaySaoPaulo(db))) {
     return errorResponse(404, "no-puzzle");
   }
@@ -84,10 +82,6 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const content = termoDailyContentSchema.parse(row.content);
-
-  //
-
-  //
 
   const newest = body.guesses[body.guesses.length - 1];
   if (newest !== undefined && !isValidGuess(newest)) {

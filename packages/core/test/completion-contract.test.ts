@@ -457,8 +457,6 @@ describe("sudokuCompletionRequestSchema", () => {
 });
 
 describe("calendarDateString", () => {
-  //
-
   it.each([
     "2026-02-30",
     "2026-13-01",

@@ -558,8 +558,6 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     },
   );
 
-  //
-
   it("posts today's daily BEFORE a late record that will take the 429", async () => {
     const LATE = "2026-07-01";
     const TODAY = "2026-08-14";

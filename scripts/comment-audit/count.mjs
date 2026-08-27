@@ -4,8 +4,6 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "./records.mjs";
 
-//
-
 export function commentRanges(file, text = fs.readFileSync(file, "utf8")) {
   const sf = ts.createSourceFile(
     file,

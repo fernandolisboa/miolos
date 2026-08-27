@@ -214,8 +214,6 @@ describe("what a LATE share may honestly say (T-WEB-S231)", () => {
   });
 
   it("a locally judged outcome gets the SAME result line as a server-recorded one — there is no other kind", async () => {
-    //
-
     window.localStorage.clear();
     const won = termo();
     writePlayRecord(won);
@@ -244,8 +242,6 @@ describe("what a LATE share may honestly say (T-WEB-S231)", () => {
   });
 
   it("an UNCONCLUDED record for the same key shares nothing — the gate that stops a won Termo shipping `X/6`", () => {
-    //
-
     window.localStorage.clear();
     const won = termo();
     const inProgress: TermoPlayRecord = {

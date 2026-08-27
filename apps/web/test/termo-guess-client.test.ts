@@ -144,8 +144,6 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   });
 
   it.each([500, 502, 503, 429])("HOLDS the turn on %i", async (status) => {
-    //
-
     stubFetch(() => jsonResponse(status, { error: "nope" }));
     const { postGuesses } = await freshClient();
 

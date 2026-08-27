@@ -1387,8 +1387,6 @@ describe("POST /completions — termo (#27, ADR-0038)", () => {
   });
 
   it("T-API-S43: a WIN whose earlier rows contain a non-word is RECORDED, not 422'd", async () => {
-    //
-
     const today = await todaySaoPaulo(ctx.db);
     await seedTermo(today);
     const { token } = await createSession();
@@ -1896,8 +1894,6 @@ describe("POST /completions — the archive write window (#31, ADR-0053)", () =>
   }, 30_000);
 
   it("T-API-S107: the 50th late write of a São Paulo day lands and the 51st is 429 archive-cap; a today-dated write is neither counted nor capped; the cap lifts when the clock crosses SP midnight", async () => {
-    //
-
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-08-11T02:59:59Z"));
 
@@ -1982,10 +1978,6 @@ describe("POST /completions — the archive write window (#31, ADR-0053)", () =>
   }, 40_000);
 
   it("T-API-S107a: 429 is NOT terminal in the web client's sync ladder — a capped archive completion survives to flush later", async () => {
-    //
-
-    //
-
     const sync = await readFile(
       new URL("../../web/src/play/sync.ts", import.meta.url),
       "utf8",

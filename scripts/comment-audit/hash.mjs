@@ -4,8 +4,6 @@ import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { DIRECTIVES, parseArgs } from "./records.mjs";
 
-//
-
 const printer = ts.createPrinter({
   removeComments: true,
   newLine: ts.NewLineKind.LineFeed,

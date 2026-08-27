@@ -2,8 +2,6 @@ import { execFileSync } from "node:child_process";
 import { commentText } from "./count.mjs";
 import { recordsRe, parseArgs } from "./records.mjs";
 
-//
-
 const strip = (t) => t.replace(/^\s*(\/\*+|\*+\/|\/\/|\*)\s?/gm, " ");
 const corpus = (file, raw) => strip(commentText(file, raw).text);
 

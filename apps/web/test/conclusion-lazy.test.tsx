@@ -250,8 +250,6 @@ describe("the lazy conclusion's failure story — skeleton, one retry, degraded 
   });
 
   it("renders the LOCAL win's degraded fallback — stamp word and frozen time from memory — when the chunk never loads", async () => {
-    //
-
     const lazy = await loadLazyModule();
     const loads: number[] = [];
     const Broken = lazy.resilientConclusion(() => {

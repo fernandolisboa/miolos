@@ -9,8 +9,6 @@ import {
 import { notificationSends, pushSubscriptions, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
 
-//
-
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeAll(async () => {

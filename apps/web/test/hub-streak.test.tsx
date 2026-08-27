@@ -4,8 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HubStreak } from "../app/hub-streak";
 import { messages } from "../src/i18n";
 
-//
-
 const bootstrapMock = vi.hoisted(() => ({
   ensureSession: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 }));

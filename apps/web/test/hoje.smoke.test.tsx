@@ -231,8 +231,6 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
   });
 
   it("keeps a PLAYED game out of the meta line's count (T-WEB-S80)", () => {
-    //
-
     writePlayRecord(concludedSudoku());
     writePlayRecord(lostTermo());
 
