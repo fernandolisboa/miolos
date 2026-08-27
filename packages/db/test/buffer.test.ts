@@ -13,11 +13,6 @@ import { binairoContentFixture } from "./fixtures";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -30,9 +25,7 @@ afterAll(async () => {
   await ctx.close();
 });
 
-/** Pure date math for seeding relative to SP-today (test-local; the api app has its own). */
 function addDaysLocal(date: string, days: number): string {
-  // Runtime-guarded parse (apps/api partsOf pattern) — no bare tuple cast.
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) {
     throw new RangeError(`expected 'YYYY-MM-DD', got ${JSON.stringify(date)}`);
@@ -69,8 +62,6 @@ describe("insertDailyPuzzle", () => {
   });
 
   it("derives published_at for 2026-08-01 as exactly 2026-08-01T03:00:00Z (AT TIME ZONE pin)", async () => {
-    // Pins the DB-side derivation against tzdata (SP = UTC-3 year-round
-    // since 2019) — asserted via tzdata, never via offset arithmetic in code.
     await insertDailyPuzzle(ctx.db, {
       game: "binairo",
       date: "2026-08-01",
@@ -101,14 +92,12 @@ describe("bufferDepth", () => {
         content: binairoContentFixture(),
       });
     }
-    // Kill tomorrow's row — the one sanctioned mutation.
+
     await ctx.db
       .update(dailyPuzzles)
       .set({ killedAt: sql`now()` })
       .where(eq(dailyPuzzles.date, addDaysLocal(today, 1)));
 
-    // Past row excluded by date, killed row excluded by killed_at:
-    // today and today+2 remain.
     expect(await bufferDepth(ctx.db, "binairo")).toBe(2);
     expect(await bufferDepth(ctx.db, "sudoku")).toBe(0);
   });
@@ -138,8 +127,6 @@ describe("listBufferedDates", () => {
 
 describe("the migration's CHECK constraint", () => {
   it("rejects an unknown game value on a raw insert", async () => {
-    // Drizzle wraps the driver error ("Failed query: …"); the constraint
-    // name lives down the cause chain.
     const messages = (error: unknown): string => {
       let out = "";
       let current: unknown = error;

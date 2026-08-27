@@ -16,19 +16,12 @@ import {
 } from "../../../src/session/origin-guard";
 import { requireUserId } from "../../../src/session/service";
 
-// Never statically cached: every request stamps against the users table.
 export const dynamic = "force-dynamic";
 
 export function OPTIONS(): Response {
   return preflightResponse();
 }
 
-/**
- * "Agora não" — a permanent decline, stamped server-side so it survives
- * cleared site data (see ADR-0050 decision 9). The body must be a literal
- * `{}`; any key is a 400. Idempotent: the UPDATE is guarded on
- * `attach_prompt_dismissed_at IS NULL`, so a re-post touches zero rows.
- */
 export async function POST(request: NextRequest): Promise<Response> {
   warnIfGuardDegraded();
 

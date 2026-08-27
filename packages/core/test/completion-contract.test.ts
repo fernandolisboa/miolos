@@ -17,7 +17,6 @@ import {
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
 
-/** A rule-irrelevant but well-typed 64-cell grid — the schema checks shape, never binairo rules. */
 const grid: BinairoCompletionRequest["grid"] = Array.from(
   { length: 64 },
   (_unused, index): 0 | 1 => (index % 2 === 0 ? 0 : 1),
@@ -33,7 +32,6 @@ const valid: BinairoCompletionRequest = {
 
 const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
-/** Rule-irrelevant but well-typed 81 digits — the schema checks shape, never sudoku rules. */
 const sudokuGrid: SudokuCompletionRequest["grid"] = Array.from(
   { length: 81 },
   (_unused, index) => DIGITS[index % 9] ?? 1,
@@ -47,18 +45,8 @@ const validSudoku: SudokuCompletionRequest = {
   hintsUsed: 1,
 };
 
-/**
- * The four legal board areas. A nonogram is the first game whose board size
- * changes daily, so unlike binairo's 64 and sudoku's 81 there is no single
- * legal length — the SET is the contract (plan 020 P4).
- */
 const NONOGRAM_SIZES = [5, 8, 10, 15] as const;
 
-/**
- * A rule-irrelevant but well-typed picture bitmap — the schema checks shape,
- * never nonogram rules. `1` = filled, `0` = crossed or untouched
- * indistinguishably (ADR-0032).
- */
 function nonogramGrid(size: number): NonogramCompletionRequest["grid"] {
   return Array.from({ length: size * size }, (_unused, index): 0 | 1 =>
     index % 3 === 0 ? 1 : 0,
@@ -73,12 +61,6 @@ const validNonogram: NonogramCompletionRequest = {
   hintsUsed: 1,
 };
 
-/**
- * The fourth member, and the first with no grid at all: the guess LIST is the
- * only EVIDENCE of the outcome that exists, so it is what the wire carries
- * (ADR-0038 decision 3). Normalized on the wire, so two honest players who
- * typed "AÇÃO" and "acao" post byte-identical bodies.
- */
 const validTermo: TermoCompletionRequest = {
   game: "termo",
   date: "2026-08-01",
@@ -105,28 +87,16 @@ describe("binairoCompletionRequestSchema", () => {
   });
 
   it("drops a JSON `__proto__` key instead of rejecting it, and carries none of it through (T-CORE-S16)", () => {
-    // The one exception to the strictness the schema's TSDoc claims, pinned
-    // rather than argued (step-6 round-4 finding
-    // `strictobject-silently-drops-a-json-proto-key`). `JSON.parse` makes
-    // `__proto__` an OWN enumerable property, but Zod's unrecognized-key
-    // check asks `"__proto__" in shape`, which is true for every object
-    // literal — so this body PARSES.
-    // Built as a STRING and parsed, because an object literal's `__proto__`
-    // sets the prototype instead of adding a key — the hazard only exists on
-    // the wire.
     const body: unknown = JSON.parse(
       `{"__proto__":{"polluted":true},${JSON.stringify(valid).slice(1)}`,
     );
-    // Anti-vacuity: the key really did survive JSON.parse as an own key, or
-    // this test proves nothing about Zod.
+
     expect(Object.prototype.hasOwnProperty.call(body, "__proto__")).toBe(true);
 
     const parsed = binairoCompletionRequestSchema.safeParse(body);
 
     expect(parsed.success).toBe(true);
-    // What makes it harmless: the output is a fresh object with only the
-    // five declared keys, so no client value survives the parse — the
-    // no-timestamp guarantee holds by construction rather than by strictness.
+
     expect(Object.keys(parsed.success ? parsed.data : {}).sort()).toEqual([
       "date",
       "elapsedMs",
@@ -136,8 +106,6 @@ describe("binairoCompletionRequestSchema", () => {
     ]);
     expect("polluted" in Object.prototype).toBe(false);
 
-    // And every OTHER smuggled key is still rejected, `constructor` included
-    // — the sentence in the TSDoc is narrowed by exactly one name.
     expect(
       binairoCompletionRequestSchema.safeParse({
         ...valid,
@@ -198,14 +166,6 @@ describe("binairoCompletionRequestSchema", () => {
     ).toBe(true);
   });
 
-  // Retargeted THREE times, each time at the game the union genuinely does
-  // not carry: `sudoku` at #18, `nonogram` at #23, `termo` at #25 — and at
-  // #27 there is no fifth game to retarget it to, so it inverts into a
-  // POSITIVE assertion (plan 022 §11.2). The retarget was never tidying: with
-  // nonogram in the union the old form was ACTIVELY FALSE against it, because
-  // a 64-cell 0/1 body IS a legal 8x8 nonogram submission (plan 020 N31).
-  // A binairo body relabelled `termo` still fails, and now for the RIGHT
-  // reason — the termo member carries `guesses`, not `grid`.
   it("T-CORE-S23: the union now carries termo, and a relabelled binairo body still fails", () => {
     expect(completionRequestSchema.safeParse(validTermo).success).toBe(true);
     expect(
@@ -219,7 +179,6 @@ describe("binairoCompletionRequestSchema", () => {
 });
 
 describe("termoCompletionRequestSchema", () => {
-  // T-CORE-S22 (plan 022 §19.3).
   it("T-CORE-S22: parses and round-trips a six-guess submission, through the union too", () => {
     expect(termoCompletionRequestSchema.parse(validTermo)).toEqual(validTermo);
     const six = {
@@ -263,10 +222,6 @@ describe("termoCompletionRequestSchema", () => {
   });
 
   it("T-CORE-S22: carries NO tiles, NO outcome, NO answer and no other smuggled key", () => {
-    // Each of the three is the obvious thing to add and each would be a
-    // second place to lie about a fact the stored row owns (ADR-0038
-    // decision 3) — `outcome` in particular is the same class of
-    // client-asserted input as the completion instant ADR-0026 rejects.
     for (const extra of [
       { tiles: [["correct", "correct", "correct", "correct", "correct"]] },
       { outcome: "won" },
@@ -280,9 +235,6 @@ describe("termoCompletionRequestSchema", () => {
   });
 
   it("T-CORE-S22: `elapsedMs`/`hintsUsed` carry binairo's bounds UNCHANGED", () => {
-    // The bound is a PRODUCT rule, not a per-game one: narrowing `hintsUsed`
-    // to `z.literal(0)` because Termo ships no hint (ADR-0045) would make a
-    // later Termo hint a contract change.
     expect(
       termoCompletionRequestSchema.safeParse({
         ...validTermo,
@@ -315,7 +267,6 @@ describe("termoCompletionRequestSchema", () => {
 });
 
 describe("nonogramCompletionRequestSchema", () => {
-  // T-CORE-S13 (plan 020 §19).
   it.each(NONOGRAM_SIZES)(
     "parses and round-trips a %i-class submission",
     (size) => {
@@ -337,8 +288,6 @@ describe("nonogramCompletionRequestSchema", () => {
   });
 
   it("rejects a `size` key — there is no size on the wire (P4)", () => {
-    // A `size` field would be a second place for the client to lie and would
-    // still not be authoritative: the STORED row's solution decides the size.
     const withSize = { ...validNonogram, size: 5 };
     expect(nonogramCompletionRequestSchema.safeParse(withSize).success).toBe(
       false,
@@ -353,8 +302,6 @@ describe("nonogramCompletionRequestSchema", () => {
   });
 
   it("rejects an 81-length grid — sudoku's area is not a nonogram's", () => {
-    // The sharpest case: 81 is a perfect square and a legal length for the
-    // OTHER square-boarded game, so a length-free array would accept it.
     const sudokuShaped = {
       ...validNonogram,
       grid: Array.from({ length: 81 }, (_unused, index): 0 | 1 =>
@@ -367,8 +314,6 @@ describe("nonogramCompletionRequestSchema", () => {
   });
 
   it("rejects a null cell (a submission is a COMPLETE picture, never a partial one)", () => {
-    // `null` is the client's "undecided"; it never crosses the wire, because
-    // a finished picture has no undecided cell left in it (ADR-0032).
     const withHole = {
       ...validNonogram,
       grid: [null, ...validNonogram.grid.slice(1)],
@@ -435,7 +380,6 @@ describe("nonogramCompletionRequestSchema", () => {
 });
 
 describe("sudokuCompletionRequestSchema", () => {
-  // T-CORE-S5 (plan 018 §15).
   it("parses and round-trips a valid submission", () => {
     expect(sudokuCompletionRequestSchema.parse(validSudoku)).toEqual(
       validSudoku,
@@ -460,8 +404,6 @@ describe("sudokuCompletionRequestSchema", () => {
   });
 
   it("rejects a 0 cell (a submission is a COMPLETE grid, never a partial one)", () => {
-    // 0 is `SudokuGrid`'s empty sentinel, so it is excluded here for exactly
-    // the reason `null` is excluded from binairo's.
     const withHole = { ...validSudoku, grid: [0, ...sudokuGrid.slice(1)] };
     expect(sudokuCompletionRequestSchema.safeParse(withHole).success).toBe(
       false,
@@ -515,17 +457,8 @@ describe("sudokuCompletionRequestSchema", () => {
 });
 
 describe("calendarDateString", () => {
-  // The shape regex alone passes every one of these straight into an
-  // `eq(dailyPuzzles.date, date)` against a Postgres `date` column, where
-  // they raise 22008 — a 500 from a two-character body edit.
   //
-  // `0000-01-01` and `0000-12-31` are step-6 round-4's addition (finding
-  // `calendar-date-year-zero-500s-the-completions-route`): JS has a year 0
-  // and the proleptic Gregorian calendar Postgres implements does not, so
-  // they survive the UTC round trip verbatim while real Postgres rejects
-  // them. They sit next to `0000-00-00`, which was already refused but only
-  // because it is an Invalid Date — the month, not the year — which is
-  // exactly the near-miss that made the live gap invisible. (T-CORE-S15)
+
   it.each([
     "2026-02-30",
     "2026-13-01",
@@ -537,10 +470,6 @@ describe("calendarDateString", () => {
     expect(calendarDateString.safeParse(impossible).success).toBe(false);
   });
 
-  // `0001-01-01` is the boundary: Postgres's first AD day, and the first
-  // value the year floor lets through. `9999-12-31` is the other end — the
-  // four-digit regex caps it there and Postgres accepts it, which is why the
-  // floor needs no companion ceiling.
   it.each([
     "0001-01-01",
     "2026-02-28",
@@ -603,13 +532,6 @@ describe("completionResponseSchema", () => {
 });
 
 describe("the completion request carries no instant (plan 017 D19)", () => {
-  /**
-   * `date` is exempt by EXACT match: it is the puzzle's America/Sao_Paulo
-   * calendar day, chosen by the server's clock and echoed back — not a
-   * moment in time. Everything else that could carry a client-asserted
-   * instant is banned, because `completed_at` is the DB clock at insert and
-   * the client clock never enters streak arithmetic (CLAUDE.md invariant).
-   */
   const INSTANT_SHAPED = /at$|time|clock|instant|epoch|now|date/i;
 
   it("binairo's key set is exactly the five audited fields", () => {

@@ -10,24 +10,9 @@ import {
   type CronPublishResponse,
 } from "../src/index";
 
-// T-CORE-S7 (plan 018 §15), extended to three games at #25 (T-CORE-S14, plan
-// 020 §19) and to all four at #27 (T-CORE-S24, plan 022 §19.3). Both bodies
-// were reshaped keyed BY GAME at #23 (S15) and both stayed `z.strictObject`
-// on BOTH levels — the property this file exists to pin is that a game still
-// has to widen the schema in the same PR that wires its top-up. A
-// `z.array(...)` or a `gameSchema`-keyed record would parse a new game
-// silently and lose exactly that.
 //
-// #27 RETARGETS the two negative cases for the second time. They rejected a
-// third game key, then a fourth aimed at `termo`; `termo` is now wired, and
-// `GAMES` is fully covered, so there is no fifth game to aim at. They aim at
-// `crossword` — a real product word (the founding handoff's post-M2 game)
-// that is deliberately NOT in `Game`. They must be retargeted again rather
-// than deleted if a crossword ticket ever lands.
+
 //
-// The key ORDER below is the cron's, and it is COST-ASCENDING rather than
-// alphabetical: termo first (a curated-word-list pick, 0.019 ms per cold
-// week) before binairo (~7 ms), nonogram and sudoku.
 
 const healthy: CronPublishGameResult = {
   generated: 3,
@@ -60,8 +45,6 @@ describe("cronPublishResponseSchema", () => {
   });
 
   it("rejects a body missing a wired game", () => {
-    // One case per wired game: dropping any single key must fail, so a
-    // future reshape cannot make one of the four optional by accident.
     for (const missing of ["termo", "binairo", "nonogram", "sudoku"] as const) {
       const games = { ...body.games };
       delete games[missing];
@@ -87,8 +70,7 @@ describe("cronPublishResponseSchema", () => {
           failures: [
             {
               date: "2026-08-10",
-              // Termo's own drain mode, and the one that is a CONTENT fact
-              // rather than an infrastructure one (ADR-0040 consequence (f)).
+
               reason:
                 "answer list exhausted: every curated Termo answer is already used",
             },
@@ -119,8 +101,6 @@ describe("cronPublishResponseSchema", () => {
   });
 
   it("keeps failures[].date an isoDateString, so an aborted run cannot report through it", () => {
-    // The reason `error` exists at all (§7.2/C2): a run-level message has
-    // nowhere else to go that still strict-parses.
     expect(
       cronPublishGameResultSchema.safeParse({
         ...healthy,
@@ -183,7 +163,6 @@ describe("bufferDepthResponseSchema", () => {
   });
 
   it("carries the S16 failure mode for the key #25 just added: nonogram drained alone", () => {
-    // The key that was just added is the one whose alerting has never run.
     const drained: BufferDepthResponse = {
       depths: { termo: 7, binairo: 7, nonogram: 0, sudoku: 7 },
       threshold: 4,
@@ -193,9 +172,6 @@ describe("bufferDepthResponseSchema", () => {
   });
 
   it("carries the S16 failure mode for the key #27 just added: termo drained alone", () => {
-    // Termo's drain is the one that can be a CONTENT fact — the word list
-    // running out — rather than an infrastructure one, and the alert issue
-    // it opens will read like a cron failure (ADR-0040 consequence (f)).
     const drained: BufferDepthResponse = {
       depths: { termo: 0, binairo: 7, nonogram: 7, sudoku: 7 },
       threshold: 4,
@@ -233,7 +209,7 @@ describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4)", () => {
       failed: 0,
     };
     expect(cronNotifyResponseSchema.parse(tick)).toEqual(tick);
-    // Zero across the board is the expected first-tick reality, and legal.
+
     expect(
       cronNotifyResponseSchema.parse({
         candidates: 0,
@@ -243,11 +219,11 @@ describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4)", () => {
         failed: 0,
       }).sent,
     ).toBe(0);
-    // Strict: an appended key fails every deployed reader's parse.
+
     expect(
       cronNotifyResponseSchema.safeParse({ ...tick, skipped: 1 }).success,
     ).toBe(false);
-    // A missing counter fails — the route can never under-report a field.
+
     expect(
       cronNotifyResponseSchema.safeParse({
         candidates: 3,
@@ -256,7 +232,7 @@ describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4)", () => {
         pruned: 1,
       }).success,
     ).toBe(false);
-    // Counts are non-negative integers.
+
     expect(
       cronNotifyResponseSchema.safeParse({ ...tick, sent: -1 }).success,
     ).toBe(false);

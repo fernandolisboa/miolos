@@ -95,10 +95,7 @@ export {
   type NonogramSize,
   type ProjectedGame,
 } from "./contracts/daily";
-// Server-only, and re-exported here rather than behind a subpath: the
-// module is dropped from the client bundle by `"sideEffects": false` the
-// moment nothing in a browser chunk names one of these. Do not import any
-// of them from a client component.
+
 export {
   binairoDailyContentSchema,
   DailyProjectionUnsupportedError,

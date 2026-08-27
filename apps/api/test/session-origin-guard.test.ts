@@ -4,9 +4,6 @@ import { isCrossSiteWrite } from "../src/session/origin-guard";
 
 const WEB = "https://miolos.app";
 
-// Full matrix per plan 009 D13: deny on positive evidence of a cross-site
-// request, never require proof — absent headers (curl, seam-4 tests, old
-// clients) must always be allowed.
 describe("isCrossSiteWrite", () => {
   it.each(["same-origin", "same-site", "none"])(
     "allows Sec-Fetch-Site: %s",
@@ -58,9 +55,6 @@ describe("isCrossSiteWrite", () => {
   });
 });
 
-// T-API-16. The once-per-instance flag is module state, so each case takes
-// a FRESH module instance — asserting "does not log" against an already
-// tripped flag would pass for the wrong reason.
 async function freshGuardModule() {
   vi.resetModules();
   return import("../src/session/origin-guard");

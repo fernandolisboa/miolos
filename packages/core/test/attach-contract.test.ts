@@ -15,11 +15,6 @@ import {
   remoteConfigSchema,
 } from "../src/index";
 
-// The attach and account contracts (#21, ADR-0050; plan 031 §6). Strict on
-// both ends throughout — the streak.ts register: every route parses before
-// Response.json and every client parses on arrival, so payload growth is a
-// NEW endpoint and contract, never an appended field.
-
 describe("attachEmailSchema (D6 layer 1 — normalization IS the boundary)", () => {
   it("T-CORE-S49: trims and lowercases before validating, and rejects non-emails, overlong input and empties", () => {
     expect(attachEmailSchema.parse("  Jogadora@Example.COM ")).toBe(
@@ -36,14 +31,14 @@ describe("attachEmailSchema (D6 layer 1 — normalization IS the boundary)", () 
       "sem-arroba.example.com",
       "a@",
       "@example.com",
-      `${"a".repeat(250)}@example.com`, // over the 254 cap
+      `${"a".repeat(250)}@example.com`,
     ]) {
       expect(
         attachEmailSchema.safeParse(bad).success,
         JSON.stringify(bad),
       ).toBe(false);
     }
-    // Non-strings never coerce.
+
     expect(attachEmailSchema.safeParse(42).success).toBe(false);
     expect(attachEmailSchema.safeParse(null).success).toBe(false);
   });
@@ -65,8 +60,6 @@ describe("attachRequestSchema (D7 — the two consents)", () => {
       reminderConsent: false,
     });
 
-    // Attaching IS the recovery consent (ADR-0012): a form without it is a
-    // 400, never a default.
     for (const recoveryConsent of [false, undefined, "true", 1]) {
       expect(
         attachRequestSchema.safeParse({
@@ -78,9 +71,6 @@ describe("attachRequestSchema (D7 — the two consents)", () => {
       ).toBe(false);
     }
 
-    // The reminder choice is stated EXPLICITLY by the client — absent is a
-    // parse failure, not a default-off. (Default-off lives in the UI
-    // checkbox and in the NULL column, T-WEB-S137 / T-API-S63.)
     expect(
       attachRequestSchema.safeParse({ ...base, recoveryConsent: true }).success,
     ).toBe(false);
@@ -105,8 +95,8 @@ describe("attachConfirmSchema (D2 — the token shape)", () => {
     for (const bad of [
       "A".repeat(42),
       "A".repeat(44),
-      `${"A".repeat(42)}=`, // padding is stripped at generation, never legal
-      `${"A".repeat(42)}+`, // base64, not base64url
+      `${"A".repeat(42)}=`,
+      `${"A".repeat(42)}+`,
       `${"A".repeat(42)}/`,
       "",
     ]) {
@@ -136,13 +126,9 @@ describe("the response schemas are strict on both ends (ADR-0048's rule)", () =>
       ).toBe(false);
     }
 
-    // The dismiss REQUEST is the strict empty object: the client posts a
-    // literal {} and any key is a 400 (plan 031 §6 — nothing smuggled).
     expect(attachDismissSchema.parse({})).toEqual({});
     expect(attachDismissSchema.safeParse({ anything: 1 }).success).toBe(false);
 
-    // The delete request takes only the literal confirm (D13's deliberate
-    // second factor against drive-by fetches).
     expect(accountDeleteSchema.parse({ confirm: true })).toEqual({
       confirm: true,
     });
@@ -154,10 +140,6 @@ describe("the response schemas are strict on both ends (ADR-0048's rule)", () =>
 });
 
 describe("remoteConfigSchema.attachStreakThreshold (D10, ADR-0003/ADR-0025)", () => {
-  // Widened in place at #145 (the T-DB-9a precedent — an exact-object pin
-  // gaining the config's new key is the same claim about the same gate):
-  // `pushOptInStreakThreshold` (default 3, ADR-0064) joins the pinned
-  // default object; its own clamp claim lives in T-CORE-S101.
   it("T-CORE-S54: defaults to 5, clamps 1..365 integers, and defaultRemoteConfig carries every key", () => {
     expect(remoteConfigSchema.parse({})).toEqual({
       bufferDepth: 7,
@@ -176,9 +158,6 @@ describe("remoteConfigSchema.attachStreakThreshold (D10, ADR-0003/ADR-0025)", ()
       pushOptInStreakThreshold: 3,
     });
 
-    // Out-of-clamp / non-integer values fail the whole-config parse — the
-    // accessor then falls back to defaults entirely (the existing
-    // getRemoteConfig semantics, unchanged by this key).
     for (const bad of [0, 366, 2.5, "5", null]) {
       expect(
         remoteConfigSchema.safeParse({ attachStreakThreshold: bad }).success,

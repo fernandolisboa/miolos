@@ -15,21 +15,12 @@ import { DELETE, POST } from "../app/push/subscriptions/route";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { jsonHeaders, subscriptionsRequest } from "./push-helpers";
 
-// Seam 4 for POST + DELETE /push/subscriptions (#145, ADR-0064; plan 061
-// §3): the real handlers over PGlite — the onboarding-seen suite's write
-// conventions (origin guard, 415, strict body, 401), plus the upsert and
-// own-rows-only semantics the endpoint PK carries.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -80,8 +71,6 @@ describe("POST /push/subscriptions — the Zod boundary and the write (#145, ADR
       );
     };
 
-    // The happy path FIRST (the non-vacuity control): the row lands, owned
-    // by the session's user, created_at from the DB clock.
     const posted = await POST(
       subscriptionsRequest("POST", {
         headers: jsonHeaders(token),
@@ -99,8 +88,6 @@ describe("POST /push/subscriptions — the Zod boundary and the write (#145, ADR
     expect(rows[0]?.auth).toBe("a1");
     expect(rows[0]?.createdAt).toBeInstanceOf(Date);
 
-    // Zod boundary: an unknown key (the browser's toJSON grows one) and a
-    // non-URL endpoint are both 400s — parsed, never cast.
     const smuggled = await POST(
       subscriptionsRequest("POST", {
         headers: jsonHeaders(token),
@@ -123,8 +110,6 @@ describe("POST /push/subscriptions — the Zod boundary and the write (#145, ADR
     expect(badEndpoint.status).toBe(400);
     expectGrant(badEndpoint);
 
-    // 415: the JSON content type is what forces the CORS preflight, so a
-    // missing one is refused before the body is read.
     const textHeaders = new Headers({ "content-type": "text/plain" });
     textHeaders.set("cookie", jsonHeaders(token).get("cookie") ?? "");
     const wrongType = await POST(
@@ -136,7 +121,6 @@ describe("POST /push/subscriptions — the Zod boundary and the write (#145, ADR
     expect(wrongType.status).toBe(415);
     expectGrant(wrongType);
 
-    // 403 cross-site: the origin guard precedes everything else.
     const crossHeaders = jsonHeaders(token);
     crossHeaders.set("sec-fetch-site", "cross-site");
     const crossSite = await POST(
@@ -148,7 +132,6 @@ describe("POST /push/subscriptions — the Zod boundary and the write (#145, ADR
     expect(crossSite.status).toBe(403);
     expectGrant(crossSite);
 
-    // 401 without a session — and no row was written by any refusal.
     const noSession = await POST(
       subscriptionsRequest("POST", {
         headers: jsonHeaders(),
@@ -159,8 +142,6 @@ describe("POST /push/subscriptions — the Zod boundary and the write (#145, ADR
     expectGrant(noSession);
     expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(1);
 
-    // The file exports exactly the write template's surface: both verbs,
-    // the preflight, and force-dynamic.
     const routeModule = await import("../app/push/subscriptions/route");
     expect(Object.keys(routeModule).sort()).toEqual([
       "DELETE",
@@ -179,7 +160,6 @@ describe("POST /push/subscriptions — the Zod boundary and the write (#145, ADR
       }),
     );
 
-    // Key rotation: same endpoint, new keys — one row, updated in place.
     await POST(
       subscriptionsRequest("POST", {
         headers: jsonHeaders(first.token),
@@ -192,9 +172,6 @@ describe("POST /push/subscriptions — the Zod boundary and the write (#145, ADR
     expect(rows[0]?.auth).toBe("a-new");
     expect(rows[0]?.userId).toBe(first.userId);
 
-    // The endpoint follows whoever the cookie now says (the browser
-    // install is the authority for its own capability URL): a second
-    // account re-subscribing the SAME endpoint repoints the one row.
     const second = await createSession();
     const reposted = await POST(
       subscriptionsRequest("POST", {
@@ -220,8 +197,6 @@ describe("DELETE /push/subscriptions — own rows only (#145, ADR-0064)", () => 
       }),
     );
 
-    // The stranger knows the capability URL — the delete removes NOTHING
-    // and still answers the idempotent shape (no row-count oracle).
     const foreign = await DELETE(
       subscriptionsRequest("DELETE", {
         headers: jsonHeaders(stranger.token),
@@ -232,7 +207,6 @@ describe("DELETE /push/subscriptions — own rows only (#145, ADR-0064)", () => 
     expect(await foreign.json()).toEqual({ removed: true });
     expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(1);
 
-    // The owner's delete removes the row.
     const own = await DELETE(
       subscriptionsRequest("DELETE", {
         headers: jsonHeaders(owner.token),
@@ -243,7 +217,6 @@ describe("DELETE /push/subscriptions — own rows only (#145, ADR-0064)", () => 
     expect(await own.json()).toEqual({ removed: true });
     expect(await ctx.db.select().from(pushSubscriptions)).toEqual([]);
 
-    // Idempotent: the re-delete answers the same shape over zero rows.
     const again = await DELETE(
       subscriptionsRequest("DELETE", {
         headers: jsonHeaders(owner.token),
@@ -253,7 +226,6 @@ describe("DELETE /push/subscriptions — own rows only (#145, ADR-0064)", () => 
     expect(again.status).toBe(200);
     expect(await again.json()).toEqual({ removed: true });
 
-    // The Zod boundary holds on this verb too: an extra key is a 400.
     const smuggled = await DELETE(
       subscriptionsRequest("DELETE", {
         headers: jsonHeaders(owner.token),
@@ -268,8 +240,6 @@ describe("the subscribe boundary refuses what the dispatcher must never receive 
   it("T-API-S131: non-https schemes (metadata, loopback, file, javascript, data) and oversized endpoint/keys are 400s — never 500s, never rows: these rows are #146's SSRF target list", async () => {
     const { token } = await createSession();
 
-    // Positive control first (the T-API-S125 convention): a real push
-    // endpoint passes, so every refusal below is non-vacuous.
     const legal = await POST(
       subscriptionsRequest("POST", {
         headers: jsonHeaders(token),
@@ -279,10 +249,6 @@ describe("the subscribe boundary refuses what the dispatcher must never receive 
     expect(legal.status).toBe(200);
     await ctx.db.execute(sql`truncate table push_subscriptions`);
 
-    // The scheme floor: a browser push service is always https, and every
-    // one of these is a destination #146's server-side send pass must never
-    // be handed — the boundary is the only place that can refuse them
-    // before they become stored rows.
     const hostile = [
       "http://169.254.169.254/latest/meta-data/",
       "http://localhost:5432/x",
@@ -302,10 +268,6 @@ describe("the subscribe boundary refuses what the dispatcher must never receive 
       expect(await refused.json()).toEqual({ error: "invalid-body" });
     }
 
-    // The length caps — and the status fix that rides them: an over-long
-    // endpoint used to raise inside the insert (the btree PK's ~2704-byte
-    // tuple limit), surfacing as a caller-reachable 500 for what is
-    // malformed input. The .max(2048) makes it the 400 it always was.
     const oversizedEndpoint = `https://push.example.org/${"a".repeat(2100)}`;
     const tooLong = await POST(
       subscriptionsRequest("POST", {
@@ -329,8 +291,6 @@ describe("the subscribe boundary refuses what the dispatcher must never receive 
     );
     expect(giantAuth.status).toBe(400);
 
-    // Nothing was stored by any refusal, and the DELETE contract mirrors
-    // the scheme floor for symmetry.
     expect(await ctx.db.select().from(pushSubscriptions)).toEqual([]);
     const deleteRefused = await DELETE(
       subscriptionsRequest("DELETE", {
@@ -351,8 +311,7 @@ describe("created_at is the consent evidence and attests to the CURRENT owner (#
         body: subscribeBody(ENDPOINT, "p-old", "a-old"),
       }),
     );
-    // Age the stamp deterministically, so "preserved" and "refreshed" are
-    // a day apart rather than a race on the DB clock's millisecond.
+
     await ctx.db.execute(
       sql`update push_subscriptions set created_at = now() - interval '1 day'`,
     );
@@ -360,8 +319,6 @@ describe("created_at is the consent evidence and attests to the CURRENT owner (#
     const aged = agedRows[0]?.createdAt;
     expect(aged).toBeInstanceOf(Date);
 
-    // Same user, rotated keys: the consent act is unchanged — the stamp
-    // must not move (ADR-0064 decision 2's idiom).
     await POST(
       subscriptionsRequest("POST", {
         headers: jsonHeaders(first.token),
@@ -372,9 +329,6 @@ describe("created_at is the consent evidence and attests to the CURRENT owner (#
     expect(rows).toHaveLength(1);
     expect(rows[0]?.createdAt?.getTime()).toBe(aged?.getTime());
 
-    // A different account repoints the row: the single record ADR-0064
-    // nominates as the proof of consent must now attest to the NEW owner's
-    // consent moment, not carry the old owner's.
     const second = await createSession();
     await POST(
       subscriptionsRequest("POST", {
@@ -403,14 +357,11 @@ describe("the per-user subscription ceiling (#146, ADR-0068 decision 1 — the #
         }),
       );
 
-    // Endpoints 1..9, then the 10th — all land.
     for (let n = 1; n <= 9; n += 1) {
       expect((await post(subscribeBody(endpoint(n)))).status).toBe(200);
     }
     expect((await post(subscribeBody(endpoint(10)))).status).toBe(200);
 
-    // The 11th DISTINCT endpoint: 429, nothing stored — the guard's
-    // count disjunct refused the row.
     const eleventh = await post(subscribeBody(endpoint(11)));
     expect(eleventh.status).toBe(429);
     const stored = await ctx.db
@@ -419,10 +370,6 @@ describe("the per-user subscription ceiling (#146, ADR-0068 decision 1 — the #
     expect(stored).toHaveLength(10);
     expect(stored.map((row) => row.endpoint)).not.toContain(endpoint(11));
 
-    // A same-user re-subscribe of an existing endpoint AT the cap: 200,
-    // keys updated, created_at preserved (T-API-S132's claim untouched by
-    // the ceiling — the `exists` disjunct scoped to (endpoint, user_id) is
-    // what proposes the row).
     const beforeRotation = await ctx.db
       .select()
       .from(pushSubscriptions)
@@ -441,11 +388,6 @@ describe("the per-user subscription ceiling (#146, ADR-0068 decision 1 — the #
     );
     expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(10);
 
-    // A cross-user repoint AT the cap: another user's endpoint posted by
-    // the full account is a 429 and ownership does not move — the repoint
-    // would raise the posting user's fan-out past the ceiling. The honest
-    // residual (ADR-0068 decision 1): a full account cannot take over an
-    // endpoint another user holds until it frees a slot.
     const other = await createSession();
     const otherEndpoint = "https://push.example.org/send/other-device";
     expect((await post(subscribeBody(otherEndpoint), other.token)).status).toBe(
@@ -459,9 +401,6 @@ describe("the per-user subscription ceiling (#146, ADR-0068 decision 1 — the #
       .where(sql`${pushSubscriptions.endpoint} = ${otherEndpoint}`);
     expect(contested[0]?.userId).toBe(other.userId);
 
-    // And an under-cap user repointing is unaffected: the OTHER user (one
-    // row) can still take over one of the full user's endpoints — the cap
-    // binds the POSTING user's fan-out, nothing else.
     const repoint = await post(subscribeBody(endpoint(10)), other.token);
     expect(repoint.status).toBe(200);
     const repointed = await ctx.db
@@ -469,7 +408,7 @@ describe("the per-user subscription ceiling (#146, ADR-0068 decision 1 — the #
       .from(pushSubscriptions)
       .where(sql`${pushSubscriptions.endpoint} = ${endpoint(10)}`);
     expect(repointed[0]?.userId).toBe(other.userId);
-    // The full user is now at 9 and can subscribe a fresh endpoint again.
+
     expect((await post(subscribeBody(endpoint(12)))).status).toBe(200);
   });
 });

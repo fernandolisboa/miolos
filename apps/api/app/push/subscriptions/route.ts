@@ -26,40 +26,12 @@ import {
 import { requireUserId } from "../../../src/session/service";
 import { captureEvent, runAfterResponse } from "../../../src/telemetry/capture";
 
-// Never statically cached: every request writes the caller's rows.
 export const dynamic = "force-dynamic";
 
-/**
- * POST + DELETE /push/subscriptions; see ADR-0064. Both verbs 503 via
- * `isPushConfigured()` BEFORE any side effect — fail-closed dormancy: an
- * unconfigured environment must not collect subscriptions the dispatcher
- * can never serve, and must not pretend to delete what it never stores.
- * Zod-parsed bodies, never cast.
- *
- * - POST upserts on the endpoint PK: the browser install is the authority
- *   for its own capability URL — key rotation and a cookie's endpoint
- *   changing both land as an update, one row.
- * - DELETE removes the caller's OWN row only (endpoint AND user id):
- *   knowing another account's capability URL deletes nothing. Idempotent
- *   `{removed: true}` — the caller reconciles browser-side state, not a
- *   row count.
- *
- * The whole body of each verb is caught: a transient DB throw would
- * otherwise be the one branch without the CORS grant.
- */
-
 export function OPTIONS(): Response {
-  // DELETE joins the grant: the JSON content type forces a preflight on
-  // both verbs.
   return preflightResponse("POST, DELETE, OPTIONS");
 }
 
-/**
- * The shared write preamble: origin guard, dormancy 503, content type,
- * auth, JSON body — in that order, so the cheap refusals cost nothing and
- * the 503 precedes every side effect. Returns either the failure Response
- * or the authenticated context.
- */
 async function writePreamble(request: NextRequest): Promise<
   | { failure: Response }
   | {
@@ -106,9 +78,7 @@ async function writePreamble(request: NextRequest): Promise<
   } catch {
     return { failure: errorResponse(400, "invalid-body") };
   }
-  // The db handle rides the context: `getDb()` has no module-level cache,
-  // so returning it here saves each verb constructing a second client for
-  // the same request.
+
   return { db, userId, raw };
 }
 
@@ -131,18 +101,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       auth: parsed.data.keys.auth,
     });
     if (!stored) {
-      // The ceiling refused the row. 429 rather than 200-with-stored-false
-      // because the client keys off `response.ok` and must unwind (ADR-0068
-      // decision 1).
       return errorResponse(429, "too-many-requests");
     }
 
-    // Telemetry (see ADR-0069): a GENUINE first insert only — `inserted`,
-    // not `stored`, because the DO UPDATE arm also answers `stored: true`
-    // (key rotation, identical re-subscribe, cross-user repoint) and each
-    // would re-count an opt-in that already happened. Payload empty by
-    // decision: never the endpoint or the keys. Post-response and
-    // throw-proof via `runAfterResponse`.
     if (inserted) {
       const userId = context.userId;
       runAfterResponse(() =>

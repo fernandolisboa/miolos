@@ -5,20 +5,8 @@ import { listMedalGrants } from "../src/medals";
 import { medalGrants, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
 
-// The #30 medal-grants suite (ADR-0052). What is pinned here and nowhere
-// else: the one reader's projection (`granted_at` never selected), the
-// migration-0005 constraints reaching the database, and AC 3's mechanical
-// teeth — the table-set pin, the grants column pin and the
-// forbidden-vocabulary column scan. Rows are inserted DIRECTLY (the
-// manufactured-rows precedent): no code writer exists in v1 — the grant
-// mechanism is the documented operator ritual (ADR-0052).
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -31,7 +19,6 @@ afterAll(async () => {
   await ctx.close();
 });
 
-/** A fresh anonymous identity — the FK parent every grant below needs. */
 async function createUser(): Promise<string> {
   const inserted = await ctx.db.insert(users).values({}).returning();
   const user = inserted[0];
@@ -41,12 +28,10 @@ async function createUser(): Promise<string> {
   return user.id;
 }
 
-/** The operator ritual's own statement shape (ADR-0052): a direct insert. */
 async function insertGrant(userId: string, medalId: string): Promise<void> {
   await ctx.db.insert(medalGrants).values({ userId, medalId });
 }
 
-/** Drizzle wraps the driver error; the constraint name lives down the cause chain. */
 function messages(error: unknown): string {
   let out = "";
   let current: unknown = error;
@@ -57,7 +42,6 @@ function messages(error: unknown): string {
   return out;
 }
 
-/** Runs `statement` and returns whatever it threw (undefined when it did not). */
 async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
   try {
     await statement;
@@ -71,31 +55,22 @@ describe("listMedalGrants (ADR-0052)", () => {
   it("T-DB-S37: the caller's grant ids in deterministic order, granted_at never selected, other users' rows absent", async () => {
     const userId = await createUser();
     const otherUserId = await createUser();
-    // Inserted out of order on purpose: the reader's order is its own.
+
     await insertGrant(userId, "founder");
     await insertGrant(userId, "bug-reporter");
     await insertGrant(otherUserId, "founder");
 
     const grants = await listMedalGrants(ctx.db, userId);
-    // medal_id ascending — deterministic, and exactly the id strings: the
-    // projection carries NO granted_at (no date crosses the wire,
-    // ADR-0052/D6 — its readers are the merge's least() and the
-    // operator's audit queries).
+
     expect(grants).toEqual(["bug-reporter", "founder"]);
     expect(await listMedalGrants(ctx.db, otherUserId)).toEqual(["founder"]);
 
-    // A user with no grants reads the honest empty list.
     expect(await listMedalGrants(ctx.db, await createUser())).toEqual([]);
   });
 });
 
 describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
   it("T-DB-S38: medal_grants' column set is exactly the grant-event shape", async () => {
-    // A future `points`, `tier`, `progress` or `revoked_at` column is the
-    // accumulable/rank state ADR-0006 forbids (revocation, if ever
-    // needed, is a DELETE — grants are append-only events like hint
-    // grants); this tripwire makes adding one fail the suite rather than
-    // pass review.
     const result = await ctx.db.execute(
       sql`select column_name from information_schema.columns
            where table_schema = 'public' and table_name = 'medal_grants'
@@ -109,13 +84,6 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
   });
 
   it("T-DB-S39: the public base-table set deep-equals the audited set — no wallet, ledger, XP or ranking table exists anywhere in the schema", async () => {
-    // AC 3's teeth (ADR-0052): any future wallet/ledger/XP/ranking TABLE
-    // fails the suite rather than passing review. Drizzle's own
-    // bookkeeping lives in the `drizzle` schema, so the public deep-equal
-    // is sound. The RECORDED RESIDUAL, named rather than pretended away:
-    // a wallet-as-VIEW, or accumulable state hidden inside jsonb
-    // (`users.entitlements`, `remote_config.value`), passes this pin —
-    // the AC's own words cover tables; T-DB-S43 narrows the column half.
     const result = await ctx.db.execute(
       sql`select table_name from information_schema.tables
            where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -127,23 +95,13 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
       "daily_puzzles",
       "hint_grants",
       "medal_grants",
-      // #146 (ADR-0064 d7, ADR-0068): the notification-send claim ledger —
-      // one row per (user, SP day, channel), append-only, claim-first. A
-      // "ledger" in the send-once sense, NOT the accumulable sense this
-      // tripwire exists to forbid: no quantity column exists to accumulate
-      // (T-DB-S77 pins the column set exactly). Widened in place, the
-      // T-DB-9a precedent.
+
       "notification_sends",
-      // #145 (ADR-0064): per-browser-install Web Push subscriptions —
-      // endpoint PK, keys, created_at-as-consent. Not a wallet, ledger or
-      // ranking: no quantity column exists to accumulate (T-DB-S66 pins
-      // the column set exactly). Widened in place, the T-DB-9a precedent.
+
       "push_subscriptions",
       "remote_config",
       "sessions",
-      // #58 (ADR-0066): one row per (user, SP day) the server saw the user
-      // online — two columns, no quantity, nothing accumulable. Widened in
-      // place, the T-DB-9a precedent.
+
       "user_seen_days",
       "users",
     ]);
@@ -152,9 +110,6 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
   it("T-DB-S40: the CHECK and PK reached the database — bad ids fail by name, duplicates fail, on conflict do nothing inserts zero", async () => {
     const userId = await createUser();
 
-    // The shape CHECK (never a membership CHECK — catalog/DB drift must
-    // be a read-time no-op, not an insert-time failure): uppercase and
-    // overlong ids fail naming the constraint.
     const uppercase = await thrownBy(
       ctx.db.execute(
         sql`insert into medal_grants (user_id, medal_id)
@@ -171,8 +126,6 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
     );
     expect(messages(overlong)).toContain("medal_grants_medal_id_check");
 
-    // The composite PK: a duplicate (user_id, medal_id) plain insert
-    // fails; the operator ritual's ON CONFLICT DO NOTHING inserts zero.
     await insertGrant(userId, "founder");
     const duplicate = await thrownBy(
       ctx.db.execute(
@@ -191,19 +144,6 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
   });
 
   it("T-DB-S43: the forbidden-vocabulary column scan returns zero rows across all public tables", async () => {
-    // AC 3's third tooth (ADR-0052): the table-set pin alone would miss a
-    // `balance` column added to `users`, and only hint_grants and
-    // medal_grants carry column pins — so every public column name is
-    // scanned for the vetoed-concepts vocabulary (ADR-0006). The known
-    // cost — a future legitimate column matching the pattern must edit
-    // this test — is the point: that edit is the review moment AC 3
-    // wants. The jsonb/view residual stays named in T-DB-S39's comment.
-    // ONE exact allow-listed pair (#145): `push_subscriptions.endpoint` is
-    // the Push API's own term for the capability URL (RFC 8030) and
-    // contains "point" only as a substring. Excluded by the exact
-    // (table, column) pair — never by loosening the regex, whose substring
-    // reach is the scan's value — and this edit IS the review moment the
-    // comment above promises a matching legitimate column must pay.
     const result = await ctx.db.execute(
       sql`select table_name, column_name from information_schema.columns
            where table_schema = 'public'

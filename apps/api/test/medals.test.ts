@@ -20,36 +20,19 @@ import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
-// Seam 4: the real GET /medals handler over PGlite (the streak.test.ts
-// architecture). src/db is the only behavioural mock. History rows are
-// manufactured by direct `db.insert(completions)` with an explicit
-// `completedAt`, and grant rows by direct `db.insert(medalGrants)` — the
-// manufactured-rows precedent: no code writer exists for grants in v1
-// (the operator ritual, ADR-0052), exactly as #29 manufactured late rows
-// before any late writer existed.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-/** When set, the route sees this in place of the real db — T-API-S94's
- *  two probes ride it: a counting proxy over the real db (the 401 path's
- *  zero-queries-beyond-auth claim, asserted rather than titled) and a
- *  client whose every access throws (the 500 branch). */
 let dbOverride: Awaited<ReturnType<typeof createTestDb>>["db"] | undefined;
 
 vi.mock("../src/db", () => ({
   getDb: () => dbOverride ?? ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
 
 beforeEach(async () => {
-  // `cascade` from users reaches sessions, completions and medal_grants.
   await ctx.db.execute(sql`truncate table users cascade`);
 });
 
@@ -64,7 +47,6 @@ afterAll(async () => {
 
 const WEB = "https://miolos.app";
 
-/** A fresh identity with a live session cookie — the route never mints. */
 async function createSession(): Promise<{ token: string; userId: string }> {
   const inserted = await ctx.db.insert(users).values({}).returning();
   const user = inserted[0];
@@ -89,13 +71,6 @@ function medalsRequest(token?: string): NextRequest {
   });
 }
 
-/**
- * A LATE win dated `date`, completed at noon-SP TODAY: on_time derives
- * false, so the row moves the volume totals (late wins count — ADR-0008
- * rule 2 names distributions, not totals) while touching no streak, no
- * perfect day and no guess medal — the seeded set stays computable by
- * hand.
- */
 async function insertLateWin(init: {
   userId: string;
   game: "binairo" | "sudoku" | "nonogram" | "termo";
@@ -111,13 +86,11 @@ async function insertLateWin(init: {
     elapsedMs: 61_000,
     hintsUsed: 0,
     guesses: init.game === "termo" ? 3 : undefined,
-    // #58 (ADR-0066): stored at write; the old derivation's verdict for
-    // these instants, i.e. migration 0008's backfill semantics.
+
     onTime: init.today === init.date,
   });
 }
 
-/** The operator ritual's shape (ADR-0052): a direct grant insert. */
 async function insertGrant(userId: string, medalId: string): Promise<void> {
   await ctx.db.insert(medalGrants).values({ userId, medalId });
 }
@@ -133,12 +106,8 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
     const today = await todaySaoPaulo(ctx.db);
     const { token, userId } = await createSession();
 
-    // Zero history: the honest empty set parses.
     expect(await readMedals(token)).toEqual({ medals: [] });
 
-    // Nine late binairo wins on nine distinct past dates: first-win is
-    // earned from the first (a late solve is honestly a solve), wins-10
-    // is one row short.
     for (let i = 1; i <= 9; i += 1) {
       await insertLateWin({
         userId,
@@ -149,8 +118,6 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
     }
     expect(await readMedals(token)).toEqual({ medals: ["first-win"] });
 
-    // The tenth row earns it — the threshold visible at the seam, in
-    // catalog order.
     await insertLateWin({
       userId,
       game: "binairo",
@@ -165,15 +132,10 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
   it("T-API-S93: a directly-inserted curated grant surfaces its id; a rule-derived-id grant row is ignored — never surfaced, never an error", async () => {
     const { token, userId } = await createSession();
 
-    // The curated grant (the operator ritual's own row shape).
     await insertGrant(userId, "founder");
-    // A grant row bearing a RULE-DERIVED id: ignored at read time —
-    // storing one could fake an uncomputed feat or desync from a
-    // recompute (ADR-0052). The caller has zero completions, so
-    // surfacing it would be exactly that fake.
+
     await insertGrant(userId, "first-win");
-    // A shape-valid id unknown to the bundled catalog: the read-time
-    // no-op the shape CHECK (never a membership CHECK) was chosen for.
+
     await insertGrant(userId, "ghost-medal");
 
     expect(await readMedals(token)).toEqual({ medals: ["founder"] });
@@ -182,12 +144,6 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
   it("T-API-S94: cookieless is 401 with zero queries beyond auth, a thrown db is 500 internal, and no-store plus the CORS grant ride every branch", async () => {
     vi.stubEnv("WEB_ORIGIN", WEB);
 
-    // The 401 path runs over a COUNTING proxy: every query-verb access on
-    // the db is recorded and forwarded to the real client, so "zero
-    // queries beyond auth" is an asserted access list, not a title. Only
-    // the verbs are counted — every drizzle query STARTS with one, while
-    // execution also reads internal plumbing (`session`, `dialect`) off
-    // the instance, which is not a query of its own.
     const QUERY_VERBS = new Set([
       "select",
       "insert",
@@ -202,13 +158,11 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
         if (typeof property === "string" && QUERY_VERBS.has(property)) {
           accessed.push(property);
         }
-        // `as unknown` only widens Reflect.get's `any` for no-unsafe-return.
+
         return Reflect.get(target, property, receiver) as unknown;
       },
     });
 
-    // No cookie: 401 no-session before the db is touched AT ALL — zero
-    // accesses, auth included (`requireUserId` short-circuits tokenless).
     const noCookie = await GET(medalsRequest());
     expect(noCookie.status).toBe(401);
     expect(await noCookie.json()).toEqual({ error: "no-session" });
@@ -216,15 +170,12 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
     expect(noCookie.headers.get("access-control-allow-origin")).toBe(WEB);
     expect(accessed).toEqual([]);
 
-    // An unknown cookie: exactly the one auth lookup (`select`), and none
-    // of the three post-auth reads — a 401 costs zero queries beyond auth.
     const unknownCookie = await GET(medalsRequest(generateSessionToken()));
     expect(unknownCookie.status).toBe(401);
     expect(accessed).toEqual(["select"]);
     dbOverride = undefined;
     expect(await ctx.db.select().from(users)).toHaveLength(0);
 
-    // The 200 branch carries the same discipline.
     const { token } = await createSession();
     const ok = await GET(medalsRequest(token));
     expect(ok.status).toBe(200);
@@ -232,8 +183,6 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
     expect(ok.headers.get("access-control-allow-origin")).toBe(WEB);
     expect(ok.headers.get("access-control-allow-credentials")).toBe("true");
 
-    // A db whose every access throws (the T-API-S53 pattern): the catch
-    // must produce the same header discipline as every intentional branch.
     dbOverride = new Proxy({} as NonNullable<typeof dbOverride>, {
       get() {
         throw new Error("connection lost");

@@ -17,10 +17,8 @@ import {
 import { requireUserId } from "../../src/session/service";
 import { captureEvent, runAfterResponse } from "../../src/telemetry/capture";
 
-// Never statically cached: every request resolves the caller's session.
 export const dynamic = "force-dynamic";
 
-/** The success shape either way: nothing to say, only the CORS grant. */
 function dropResponse(): Response {
   return new Response(null, {
     status: 204,
@@ -29,8 +27,6 @@ function dropResponse(): Response {
 }
 
 export function OPTIONS(): Response {
-  // The relay body carries a JSON content type, so every cross-origin call
-  // preflights (unlike the body-less session POST).
   return preflightResponse();
 }
 
@@ -59,8 +55,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     request.cookies.get(SESSION_COOKIE_NAME)?.value,
   );
   if (!userId) {
-    // No session is a 204 drop, not a 401 — no error surface to probe.
-    // ADR-0069 D2; T-API-S158.
     return dropResponse();
   }
 

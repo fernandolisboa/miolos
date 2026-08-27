@@ -4,36 +4,15 @@ import { getTodayDaily } from "@miolos/db";
 import { corsHeaders } from "../../../src/cors";
 import { getDb } from "../../../src/db";
 
-// Never statically cached — same reason as daily/binairo/route.ts.
 export const dynamic = "force-dynamic";
 
-/**
- * GET /daily/nonogram — today's daily through the wall. The THIRD literal
- * route, for the same reason as `daily/sudoku/route.ts`: a `[game]`
- * dynamic segment would put an untrusted `params.game` in front of the
- * wall.
- *
- * Nothing in `apps/web` consumes this path — the web app fetches
- * `/session`, `/completions` and `POST /termo/guess`, a user-specific
- * READ that ADR-0014 routes here the same way — and it ships anyway,
- * because it is the operator's machine-readable check that a `killed_at`
- * took effect. Without it two games can be verified with a `curl` and the
- * third only by scraping the web app, and a `limit(1)` indexed read of
- * already-public content is identical in cost and exposure to its two
- * shipped siblings.
- *
- * The daily is public content (ADR-0005): no auth, no cookies, no
- * credentialed CORS. Miss → 404 with an empty body: no on-demand
- * generation fallback, ever.
- */
 export async function GET(): Promise<Response> {
   const db = getDb();
   const daily = await getTodayDaily(db, "nonogram");
   if (!daily) {
     return Response.json({}, { status: 404, headers: corsHeaders() });
   }
-  // Parsed against the NONOGRAM member, never the union — a union parse
-  // would accept a mismatched row on this path.
+
   return Response.json(dailyNonogramResponseSchema.parse(daily), {
     headers: corsHeaders(),
   });

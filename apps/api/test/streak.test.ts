@@ -22,34 +22,19 @@ import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
-// Seam 4: the real GET /streak handler over PGlite (the completions.test.ts
-// architecture). src/db is the only behavioural mock. History rows are
-// manufactured by direct `db.insert(completions)` with an explicit
-// `completedAt` — `recordCompletion` rightly accepts no timestamp, and
-// T15:00:00Z is 12:00 in São Paulo, so a row stamped that way sits inside
-// its own SP day (on time) and one stamped on the NEXT date is late.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-/** When set, the route sees this in place of the real db — the T-API-S53
- *  500-branch probe swaps in a client whose every access throws. */
 let dbOverride: Awaited<ReturnType<typeof createTestDb>>["db"] | undefined;
 
 vi.mock("../src/db", () => ({
   getDb: () => dbOverride ?? ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
 
 beforeEach(async () => {
-  // `cascade` from users reaches sessions and completions; daily_puzzles
-  // is seeded by the T-API-S48 real-route half.
   await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
 });
 
@@ -64,7 +49,6 @@ afterAll(async () => {
 
 const WEB = "https://miolos.app";
 
-/** A fresh identity with a live session cookie — the route never mints. */
 async function createSession(): Promise<{ token: string; userId: string }> {
   const inserted = await ctx.db.insert(users).values({}).returning();
   const user = inserted[0];
@@ -89,11 +73,6 @@ function streakRequest(token?: string): NextRequest {
   });
 }
 
-/**
- * A history row with a chosen completion instant. `completedAtDate` is the
- * SP day the completion HAPPENED on; the noon-SP stamp keeps it inside that
- * day unambiguously, so `on_time` derives to `completedAtDate === date`.
- */
 async function insertHistoryRow(init: {
   userId: string;
   game: "binairo" | "sudoku" | "nonogram" | "termo";
@@ -111,9 +90,7 @@ async function insertHistoryRow(init: {
     elapsedMs: 61_000,
     hintsUsed: 0,
     guesses: init.guesses,
-    // #58 (ADR-0066): on_time is stored at write. The helper stores the
-    // same verdict the pre-#58 derivation gave these instants — which is
-    // exactly what migration 0008's backfill guarantees for old rows.
+
     onTime: init.completedAtDate === init.date,
   });
 }
@@ -126,7 +103,6 @@ async function readStreak(
   return streakResponseSchema.parse(await response.json());
 }
 
-/** The losing Termo board for the real-route half of T-API-S48. */
 const TERMO_ANSWER = TERMO_ANSWERS[0];
 if (TERMO_ANSWER === undefined) {
   throw new Error("unreachable: TERMO_ANSWERS is empty");
@@ -148,8 +124,6 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
     expect(unknownCookie.status).toBe(401);
     expect(await unknownCookie.json()).toEqual({ error: "no-session" });
 
-    // The never-mints property at the read: `requireUserId` looked up and
-    // refused; nothing was inserted on either path.
     expect(await ctx.db.select().from(users)).toHaveLength(0);
   });
 
@@ -159,7 +133,7 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
 
     const response = await GET(streakRequest(token));
     expect(response.status).toBe(200);
-    // Strict parse: an extra field or a missing one throws here.
+
     const body = streakResponseSchema.parse(await response.json());
     expect(body).toEqual({
       date: await todaySaoPaulo(ctx.db),
@@ -174,10 +148,6 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
   });
 
   it("T-API-S48: the #27-transferred obligation (issue #19 comment 5159949996) — a lost Termo neither extends nor maintains a streak", async () => {
-    // (a) DOES NOT EXTEND / DAY NOT COUNTED. A won on-time row yesterday,
-    // then today's Termo LOST through the REAL completions route (the
-    // T-API-S39 six-guess shape): the streak stays 1 and today does not
-    // count — the anchor skipped the lost day, not the whole history.
     const today = await todaySaoPaulo(ctx.db);
     const yesterday = addDays(today, -1);
     const { token, userId } = await createSession();
@@ -229,8 +199,6 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
       todayCounts: false,
     });
 
-    // (b) DOES NOT MAINTAIN. won D−2, on-time lost D−1, nothing on D: the
-    // run dies at the rollover only a lost row spans — 0, not 2.
     const other = await createSession();
     const twoDaysAgo = addDays(today, -2);
     await insertHistoryRow({
@@ -291,8 +259,6 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
     const today = await todaySaoPaulo(ctx.db);
     const yesterday = addDays(today, -1);
 
-    // A win FOR yesterday synced today (ADR-0026 decision 7's window):
-    // on_time derives false and the day stays uncounted end to end.
     const late = await createSession();
     await insertHistoryRow({
       userId: late.userId,
@@ -307,8 +273,6 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
       todayCounts: false,
     });
 
-    // The yesterday-alive case: an on-time run through D−2 and D−1 with
-    // nothing on D reads intact until the rollover (ADR-0048 decision 2).
     const alive = await createSession();
     const twoDaysAgo = addDays(today, -2);
     await insertHistoryRow({
@@ -334,9 +298,7 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
 
   it("T-API-S53: a thrown db is a 500 `internal` that still carries no-store and the credentialed CORS grant", async () => {
     vi.stubEnv("WEB_ORIGIN", WEB);
-    // A db whose every access throws, standing in for a lost connection:
-    // the catch must produce the same header discipline as every
-    // intentional branch — a bare framework 500 carries neither.
+
     dbOverride = new Proxy({} as NonNullable<typeof dbOverride>, {
       get() {
         throw new Error("connection lost");
@@ -354,9 +316,6 @@ describe("GET /streak — the first authenticated read (ADR-0048, plan 027 §7)"
   });
 
   it("T-API-S51: the route module exports GET (and the dynamic marker) and nothing else — D6's no-OPTIONS pinned as export-absence", async () => {
-    // Handlers are imported directly at this seam, so Next's own 405
-    // wiring never runs; the assertion the seam CAN make is that no POST
-    // and no OPTIONS export exists to be wired.
     const routeModule = await import("../app/streak/route");
     expect(Object.keys(routeModule).sort()).toEqual(["GET", "dynamic"]);
   });

@@ -20,33 +20,19 @@ import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
-// Seam 4: the real GET /stats handler over PGlite (the streak.test.ts
-// architecture). src/db is the only behavioural mock. History rows are
-// manufactured by direct `db.insert(completions)` with an explicit
-// `completedAt` — T15:00:00Z is 12:00 in São Paulo, so a row stamped that
-// way sits inside its own SP day (on time) and one stamped on the NEXT
-// date is late.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-/** When set, the route sees this in place of the real db — the 500-branch
- *  probe swaps in a client whose every access throws (T-API-S53 pattern). */
 let dbOverride: Awaited<ReturnType<typeof createTestDb>>["db"] | undefined;
 
 vi.mock("../src/db", () => ({
   getDb: () => dbOverride ?? ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
 
 beforeEach(async () => {
-  // `cascade` from users reaches sessions and completions.
   await ctx.db.execute(sql`truncate table users cascade`);
 });
 
@@ -61,7 +47,6 @@ afterAll(async () => {
 
 const WEB = "https://miolos.app";
 
-/** A fresh identity with a live session cookie — the route never mints. */
 async function createSession(): Promise<{ token: string; userId: string }> {
   const inserted = await ctx.db.insert(users).values({}).returning();
   const user = inserted[0];
@@ -86,11 +71,6 @@ function statsRequest(token?: string): NextRequest {
   });
 }
 
-/**
- * A history row with a chosen completion instant. `completedAtDate` is the
- * SP day the completion HAPPENED on; the noon-SP stamp keeps it inside that
- * day unambiguously, so `on_time` derives to `completedAtDate === date`.
- */
 async function insertHistoryRow(init: {
   userId: string;
   game: "binairo" | "sudoku" | "nonogram" | "termo";
@@ -109,8 +89,7 @@ async function insertHistoryRow(init: {
     elapsedMs: init.elapsedMs ?? 61_000,
     hintsUsed: 0,
     guesses: init.guesses,
-    // #58 (ADR-0066): stored at write; the old derivation's verdict for
-    // these instants, i.e. migration 0008's backfill semantics.
+
     onTime: init.completedAtDate === init.date,
   });
 }
@@ -121,8 +100,6 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
     const yesterday = addDays(today, -1);
     const { token, userId } = await createSession();
 
-    // An on-time Binairo win, a LATE Sudoku win (dated yesterday, synced
-    // today), and a lost Termo — one row per exclusion rule.
     await insertHistoryRow({
       userId,
       game: "binairo",
@@ -150,10 +127,10 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
 
     const response = await GET(statsRequest(token));
     expect(response.status).toBe(200);
-    // Strict parse: an extra field or a missing one throws here.
+
     const body = statsResponseSchema.parse(await response.json());
     expect(body.date).toBe(today);
-    // The on-time win feeds everything (272 s sits in the 4–5 min bucket).
+
     expect(body.binairo).toEqual({
       solved: 1,
       bestMs: 272_000,
@@ -161,8 +138,7 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
       averageSampleCount: 1,
       histogram: [0, 1, 0, 0, 0, 0],
     });
-    // The LATE win moves `solved` only — best/average/histogram stay
-    // empty (ADR-0008 rule 2 at the seam).
+
     expect(body.sudoku).toEqual({
       solved: 1,
       bestMs: null,
@@ -170,7 +146,7 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
       averageSampleCount: 0,
       histogram: [0, 0, 0, 0, 0, 0],
     });
-    // The lost Termo lands in the fail row and NOTHING else (rule 3).
+
     expect(body.termo).toEqual({
       solved: 0,
       distribution: [0, 0, 0, 0, 0, 0, 1],
@@ -190,12 +166,9 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
     expect(noCookie.headers.get("access-control-allow-credentials")).toBe(
       "true",
     );
-    // The never-mints property at the read: nothing was inserted.
+
     expect(await ctx.db.select().from(users)).toHaveLength(0);
 
-    // A db whose every access throws, standing in for a lost connection:
-    // the catch must produce the same header discipline as every
-    // intentional branch (the T-API-S53 pattern).
     dbOverride = new Proxy({} as NonNullable<typeof dbOverride>, {
       get() {
         throw new Error("connection lost");
@@ -209,7 +182,6 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
     expect(thrown.headers.get("access-control-allow-credentials")).toBe("true");
     dbOverride = undefined;
 
-    // The 200 branch carries the same discipline.
     const { token } = await createSession();
     const ok = await GET(statsRequest(token));
     expect(ok.status).toBe(200);
@@ -236,8 +208,6 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
     expect(winnerBody.todayTermoGuesses).toBe(4);
     expect(winnerBody.termo.distribution).toEqual([0, 0, 0, 1, 0, 0, 0]);
 
-    // A loser's fail-row day reads null — the conclusion highlights the
-    // fail row from the LOCAL outcome, never from this field.
     const loser = await createSession();
     await insertHistoryRow({
       userId: loser.userId,
@@ -253,7 +223,6 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
       ).todayTermoGuesses,
     ).toBeNull();
 
-    // A cold user sees nothing of either history.
     const cold = await createSession();
     const coldBody = statsResponseSchema.parse(
       await (await GET(statsRequest(cold.token))).json(),

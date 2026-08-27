@@ -18,9 +18,6 @@ import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { createSessionForUser } from "../src/session/service";
 import { hashSessionToken } from "../src/session/token";
 
-// Seam 4: route handlers invoked as functions, responses parsed with the
-// shared Zod contract, and the ONLY mock is src/db — everything below getDb
-// runs for real on in-memory PGlite executing the committed migrations.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
@@ -44,8 +41,6 @@ function cookieTokenOf(response: Response): string {
     new RegExp(`^${SESSION_COOKIE_NAME}=([^;]+);`),
   );
   if (!match?.[1]) {
-    // Redact the cookie value: even throwaway PGlite tokens never reach a
-    // log — "no raw token in any log" holds to the letter.
     const redacted = String(setCookie).replace(/=[^;]+/, "=<redacted>");
     throw new Error(`no session token in: ${redacted}`);
   }
@@ -57,17 +52,8 @@ async function mintedBody(response: Response) {
   return sessionResponseSchema.parse(await response.json());
 }
 
-// One PGlite boot per FILE, not per test: per-test isolation comes from
-// truncating both tables instead — sessions follows users via the FK cascade.
-// Cuts the suite from ~12s to roughly the cost of one boot. What that boot
-// actually costs, and what it is spent on, is measured beside `createTestDb`
-// rather than guessed at here.
 //
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
+
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -117,14 +103,13 @@ describe("POST /session", () => {
     expect(withDomain).toContain("Secure");
 
     vi.stubEnv("COOKIE_DOMAIN", undefined);
-    vi.stubEnv("NODE_ENV", "test"); // explicit: the no-Secure branch needs non-production
+    vi.stubEnv("NODE_ENV", "test");
     const local = (await POST(postRequest())).headers.get("set-cookie");
     expect(local).not.toContain("Domain=");
     expect(local).not.toContain("Secure");
 
     vi.stubEnv("NODE_ENV", "production");
-    // Keep the guard-degradation warning out of test output: production
-    // with WEB_ORIGIN set is the configured shape.
+
     vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
     const preview = (await POST(postRequest())).headers.get("set-cookie");
     expect(preview).toContain("Secure");
@@ -168,7 +153,6 @@ describe("POST /session", () => {
       .where(eq(sessions.tokenHash, tokenHash));
     expect(afterFreshResolve[0]?.lastSeenAt).toEqual(mintSeenAt);
 
-    // Backdate directly in the test db (harness code, not identity path).
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
     await ctx.db
       .update(sessions)
@@ -246,8 +230,6 @@ describe("POST /session", () => {
     expect(forgedBody.created).toBe(true);
     expect(forgedBody.userId).not.toBe(baseline.userId);
 
-    // Timestamps are DB-generated: created_at = last_seen_at on mint, and
-    // untouched by anything the request carried.
     const rows = await ctx.db
       .select()
       .from(sessions)
@@ -260,9 +242,6 @@ describe("POST /session", () => {
     expect(row!.createdAt.getFullYear()).toBeGreaterThan(2020);
   });
 
-  // Named for what it proves: timestamps are DB-populated Dates that never
-  // decrease. Strict monotonicity is unprovable on PGlite, whose now()
-  // follows the host JS clock (see the PR's AC-5 honesty note).
   it("stores DB-populated, non-decreasing created_at across sequential mints (AC 5)", async () => {
     const first = await mintedBody(await POST(postRequest()));
     const second = await mintedBody(await POST(postRequest()));
@@ -334,7 +313,6 @@ describe("POST /session", () => {
 });
 
 describe("seen days at the session seam (#58, ADR-0066)", () => {
-  /** The whole table, ordered — small by construction in these fixtures. */
   async function seenRows(): Promise<unknown[]> {
     const result = await ctx.db.execute(
       sql`select user_id, date::text as date from user_seen_days
@@ -350,14 +328,10 @@ describe("seen days at the session seam (#58, ADR-0066)", () => {
     const today = todayResult.rows[0]?.["today"];
     expect(typeof today).toBe("string");
 
-    // Write point 2: the mint (the first visit) records exactly one row.
     const minted = await POST(postRequest());
     const { userId } = await mintedBody(minted);
     expect(await seenRows()).toEqual([{ user_id: userId, date: today }]);
 
-    // Write point 1: a resolve of the same cookie on the same SP day adds
-    // NONE — the PK conflicts away (recordSeenDay's idempotence), so an
-    // active user costs one dead insert per request, never a second row.
     const token = cookieTokenOf(minted);
     const resolved = await POST(
       postRequest({
@@ -367,9 +341,6 @@ describe("seen days at the session seam (#58, ADR-0066)", () => {
     expect((await mintedBody(resolved)).created).toBe(false);
     expect(await seenRows()).toEqual([{ user_id: userId, date: today }]);
 
-    // Write point 3: attach-confirm mints the clicking browser's session
-    // DIRECTLY (createSessionForUser), bypassing the two hooks above — the
-    // click proves presence, so it records too.
     const inserted = await ctx.db.insert(users).values({}).returning();
     const attachUser = inserted[0];
     if (!attachUser) {
@@ -380,8 +351,7 @@ describe("seen days at the session seam (#58, ADR-0066)", () => {
       await hashSessionToken("attach-confirm-token"),
       attachUser.id,
     );
-    // Compared as SETS (JS-sorted on both sides): Postgres orders uuids by
-    // bytes, which need not match a JS string sort.
+
     const byUser = (a: unknown, b: unknown) =>
       JSON.stringify(a).localeCompare(JSON.stringify(b));
     expect([...(await seenRows())].sort(byUser)).toEqual(

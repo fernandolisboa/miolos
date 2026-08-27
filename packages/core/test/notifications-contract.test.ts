@@ -12,16 +12,10 @@ import {
   remoteConfigSchema,
 } from "../src/index";
 
-// The notification contracts (#145, ADR-0064; plan 061 §3). Strict on both
-// ends throughout — the onboarding.ts register: every route parses before
-// Response.json and the web client parses on arrival, so payload growth is
-// a NEW endpoint and contract, never an appended field.
-
 const ENDPOINT = "https://push.example.org/send/abc123";
 
 describe("the notification schemas are strict on both ends (ADR-0048 decision 3)", () => {
   it("T-CORE-S100: unknown keys are rejected on all four schemas, vapidPublicKey is nullable, the subscribe keys are non-empty and capped, and the endpoint must be an https URL of bounded length", () => {
-    // GET /notifications/state — eligible + the nullable public key.
     expect(
       notificationsStateResponseSchema.parse({
         eligible: true,
@@ -38,14 +32,13 @@ describe("the notification schemas are strict on both ends (ADR-0048 decision 3)
       notificationsStateResponseSchema.safeParse({
         eligible: true,
         vapidPublicKey: null,
-        threshold: 3, // the threshold never ships (ADR-0048's rule)
+        threshold: 3,
       }).success,
     ).toBe(false);
     expect(
       notificationsStateResponseSchema.safeParse({ eligible: true }).success,
     ).toBe(false);
 
-    // POST /push/subscriptions — endpoint URL + the two non-empty keys.
     expect(
       pushSubscribeSchema.parse({
         endpoint: ENDPOINT,
@@ -70,11 +63,7 @@ describe("the notification schemas are strict on both ends (ADR-0048 decision 3)
         keys: { p256dh: "k1", auth: "" },
       }).success,
     ).toBe(false);
-    // The scheme floor and the caps (#145 step-6 security 1/2, widened in
-    // place): a browser push service is always https, and every stored row
-    // is a URL #146's dispatcher will make a server-side request to — so
-    // non-https schemes (metadata, loopback, file, javascript, data) and
-    // over-long values are refused AT THE CONTRACT, on both verbs.
+
     for (const endpoint of [
       "http://169.254.169.254/latest/meta-data/",
       "http://localhost:5432/x",
@@ -110,8 +99,7 @@ describe("the notification schemas are strict on both ends (ADR-0048 decision 3)
         keys: { p256dh: "k1", auth: "k".repeat(129) },
       }).success,
     ).toBe(false);
-    // Real values fit with room: a p256dh is ~88 base64url chars, an auth
-    // ~22 — the positive control that the caps refuse only the absurd.
+
     expect(
       pushSubscribeSchema.safeParse({
         endpoint: ENDPOINT,
@@ -119,8 +107,6 @@ describe("the notification schemas are strict on both ends (ADR-0048 decision 3)
       }).success,
     ).toBe(true);
 
-    // Strict at BOTH levels: an unknown key inside `keys` (the browser's
-    // own toJSON may grow one) and one beside it both fail.
     expect(
       pushSubscribeSchema.safeParse({
         endpoint: ENDPOINT,
@@ -141,7 +127,6 @@ describe("the notification schemas are strict on both ends (ADR-0048 decision 3)
       pushSubscribeResponseSchema.safeParse({ subscribed: false }).success,
     ).toBe(false);
 
-    // DELETE /push/subscriptions — the endpoint alone.
     expect(pushUnsubscribeSchema.parse({ endpoint: ENDPOINT })).toEqual({
       endpoint: ENDPOINT,
     });
@@ -156,7 +141,6 @@ describe("the notification schemas are strict on both ends (ADR-0048 decision 3)
       removed: true,
     });
 
-    // POST /notifications/dismiss — the strict EMPTY object.
     expect(notificationsDismissSchema.parse({})).toEqual({});
     expect(notificationsDismissSchema.safeParse({ anything: 1 }).success).toBe(
       false,
@@ -176,8 +160,6 @@ describe("remoteConfigSchema.pushOptInStreakThreshold (#145, ADR-0064/ADR-0025)"
   it("T-CORE-S101: defaults to 3, clamps 1..365 integers, and parses from a rows override", () => {
     expect(remoteConfigSchema.parse({}).pushOptInStreakThreshold).toBe(3);
 
-    // A rows override parses (the getRemoteConfig merge shape: rows become
-    // one object before this schema sees them).
     expect(
       remoteConfigSchema.parse({ pushOptInStreakThreshold: 7 })
         .pushOptInStreakThreshold,
@@ -191,9 +173,6 @@ describe("remoteConfigSchema.pushOptInStreakThreshold (#145, ADR-0064/ADR-0025)"
         .pushOptInStreakThreshold,
     ).toBe(365);
 
-    // Out-of-clamp / non-integer values fail the whole-config parse — the
-    // accessor then falls back to defaults entirely (the existing
-    // getRemoteConfig semantics, unchanged by this key).
     for (const bad of [0, 366, 2.5, "3", null]) {
       expect(
         remoteConfigSchema.safeParse({ pushOptInStreakThreshold: bad }).success,
@@ -210,12 +189,11 @@ describe("pushNudgePayloadSchema (#146, ADR-0064 decision 6)", () => {
       body: "Sua sequência de 3 dias termina à meia-noite, no horário de Brasília. Jogue hoje para mantê-la.",
     };
     expect(pushNudgePayloadSchema.parse(payload)).toEqual(payload);
-    // Strict: sw.js reads exactly these two keys — a third never ships.
+
     expect(
       pushNudgePayloadSchema.safeParse({ ...payload, url: "/binairo" }).success,
     ).toBe(false);
-    // Non-empty on both: a blank notification is a composition bug, caught
-    // BEFORE the send, not a fallback case for the worker.
+
     expect(
       pushNudgePayloadSchema.safeParse({ ...payload, title: "" }).success,
     ).toBe(false);

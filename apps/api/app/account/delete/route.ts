@@ -19,24 +19,12 @@ import {
 } from "../../../src/session/origin-guard";
 import { requireUserId } from "../../../src/session/service";
 
-// Never statically cached: every request deletes against the users table.
 export const dynamic = "force-dynamic";
 
 export function OPTIONS(): Response {
   return preflightResponse();
 }
 
-/**
- * Real, immediate, self-service deletion — see ADR-0050 decision 12. One
- * cascade DELETE removes every row the users table owns; the cookie is
- * cleared and the next visit mints a fresh, empty identity.
- *
- * A merge tombstone owns no session, so `requireUserId` can never resolve
- * a cookie to one — this route can never reach a tombstone, so deletion
- * never conflicts with ADR-0049's "retained forever". The literal
- * `confirm: true` is a second factor against drive-by fetches; the UI's
- * two-step confirm supplies it.
- */
 export async function POST(request: NextRequest): Promise<Response> {
   warnIfGuardDegraded();
 

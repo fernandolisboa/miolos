@@ -20,27 +20,12 @@ import {
   telemetrySettled,
 } from "../src/telemetry/capture";
 
-/**
- * The login_linked seam (#33, ADR-0069 decision 2): POST /attach/confirm
- * fires on success with `{merged}` from the resolver, keyed by
- * `resolved.winnerId` — this route deliberately requires NO session (the
- * recovery browser may have none), so the winner id is the only honest
- * distinct_id in scope. The token rows are seeded directly (the claim is
- * about the confirm seam, not the transport); the capture is observed at
- * the stubbed global fetch like the sibling telemetry suites, with
- * `telemetrySettled()` awaited after each confirm.
- */
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -96,7 +81,6 @@ async function createUser(init?: {
   return user.id;
 }
 
-/** Seed a live attach token for `userId` and return the RAW value. */
 async function seedToken(userId: string, email = EMAIL): Promise<string> {
   const raw = generateSessionToken();
   await ctx.db.insert(attachTokens).values({
@@ -109,7 +93,6 @@ async function seedToken(userId: string, email = EMAIL): Promise<string> {
 }
 
 async function postConfirm(rawToken: string): Promise<Response> {
-  // No session cookie, deliberately: the route requires none (ADR-0050 D3).
   return confirmPost(
     new NextRequest("http://localhost:3001/attach/confirm", {
       method: "POST",
@@ -142,7 +125,7 @@ describe("POST /attach/confirm — login_linked (#33, ADR-0069)", () => {
     expect(JSON.parse(bodies[0] ?? "")).toEqual({
       api_key: "phc_test_key",
       event: "login_linked",
-      // No collision: the requester IS the winner.
+
       distinct_id: requesterId,
       properties: {
         merged: false,
@@ -153,8 +136,6 @@ describe("POST /attach/confirm — login_linked (#33, ADR-0069)", () => {
   });
 
   it("T-API-S174: a recovery merge fires login_linked {merged: true} keyed by the WINNER — and the posted body carries no email", async () => {
-    // A verified holder of the email already exists: confirm resolves a
-    // cross-account merge (ADR-0049/0050) and the winner absorbs both.
     const holderId = await createUser({
       email: EMAIL,
       verified: true,
@@ -168,8 +149,6 @@ describe("POST /attach/confirm — login_linked (#33, ADR-0069)", () => {
     expect(await response.json()).toEqual({ merged: true });
     await telemetrySettled();
 
-    // The winner is whoever holds the verified email after the merge —
-    // read from the table, never assumed from the fixture's ordering.
     const winnerRows = await ctx.db
       .select({ id: users.id })
       .from(users)
@@ -190,8 +169,7 @@ describe("POST /attach/confirm — login_linked (#33, ADR-0069)", () => {
         $geoip_disable: true,
       },
     });
-    // The PII pin: the wire body never carries the address — not as a
-    // property, not as the distinct_id, not anywhere.
+
     expect(bodies[0]).not.toContain(EMAIL);
     expect(bodies[0]).not.toContain("example.org");
   });

@@ -19,20 +19,12 @@ import {
 } from "../../../src/session/origin-guard";
 import { requireUserId } from "../../../src/session/service";
 
-// Never statically cached: every request stamps against the users table.
 export const dynamic = "force-dynamic";
 
 export function OPTIONS(): Response {
   return preflightResponse();
 }
 
-/**
- * "Entendi" — stamped server-side so the introduction's one lifecycle per
- * account survives cleared site data and account merge (see ADR-0061;
- * the attach-dismiss route's template). The body must be a literal `{}`;
- * any key is a 400. Idempotent: the UPDATE is guarded on
- * `onboarding_seen_at IS NULL`, so a re-post touches zero rows.
- */
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     warnIfGuardDegraded();

@@ -22,19 +22,12 @@ import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { jsonHeaders, seenRequest } from "./onboarding-helpers";
 
-// Seam 4 for GET /onboarding/state (#35, ADR-0061, plan 057 D5): the real
-// handler over PGlite. The attach-state suite's conventions throughout.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -90,14 +83,8 @@ describe("GET /onboarding/state — server-owned once-only (#35, ADR-0061)", () 
     expect(await response.json()).toEqual({ error: "no-session" });
     expect(response.headers.get("cache-control")).toBe("no-store");
 
-    // The route never mints (requireUserId's contract): a first visit's
-    // identity comes from the layout's own POST /session, which the web
-    // hook awaits BEFORE calling here (plan 057 D10).
     expect(await ctx.db.select({ id: users.id }).from(users)).toEqual([]);
 
-    // No OPTIONS export: the authenticated-READ template (the attach-state
-    // route's own pin) — a credentialed GET with no custom header never
-    // preflights.
     const routeModule = await import("../app/onboarding/state/route");
     expect(Object.keys(routeModule).sort()).toEqual(["GET", "dynamic"]);
   });
@@ -114,15 +101,8 @@ describe("GET /onboarding/state — server-owned once-only (#35, ADR-0061)", () 
   });
 
   it("T-API-S119: an unknown user id resolves show false at the service seam, and a deleted account's request fails closed as a 401 — never a 500", async () => {
-    // The service seam: an id with no row resolves undefined, and the
-    // route's derivation (`account !== undefined && … === null`) turns
-    // that into show:false — an identity we cannot read is never nagged.
     expect(await getOnboardingState(ctx.db, randomUUID())).toBeUndefined();
 
-    // Through the route, "deleted user" is unreachable as a 200: the
-    // sessions FK cascades, so deleting the account retires the cookie and
-    // requireUserId answers 401. Asserted so the fail-closed path is a
-    // pinned status, not a guessed one — and never a 500.
     const { token, userId } = await createSession();
     await ctx.db.delete(users).where(eq(users.id, userId));
     const response = await GET(stateRequest(token));
@@ -139,7 +119,6 @@ describe("GET /onboarding/state — server-owned once-only (#35, ADR-0061)", () 
       );
     };
 
-    // GET: the 200 and the 401.
     const { token, userId } = await createSession();
     const ok = await GET(stateRequest(token));
     expect(ok.status).toBe(200);
@@ -150,10 +129,6 @@ describe("GET /onboarding/state — server-owned once-only (#35, ADR-0061)", () 
     expect(unauthenticated.headers.get("cache-control")).toBe("no-store");
     expectGrant(unauthenticated);
 
-    // POST: 200, 401, 403, 415 and 400 — every branch grants, so a browser
-    // can always READ the status instead of reporting an opaque CORS error.
-    // The request builders are shared with onboarding-seen.test.ts
-    // (./onboarding-helpers.ts — step-6 quality finding).
     const post = (init: { headers: Headers; body: string }) =>
       seenPost(seenRequest(init));
 
@@ -184,8 +159,6 @@ describe("GET /onboarding/state — server-owned once-only (#35, ADR-0061)", () 
     expect(smuggled.status).toBe(400);
     expectGrant(smuggled);
 
-    // The stamped user still answers the GET with the grant (the show:false
-    // branch — the last branch the sweep has not crossed).
     const stamped = await ctx.db
       .select({ onboardingSeenAt: users.onboardingSeenAt })
       .from(users)

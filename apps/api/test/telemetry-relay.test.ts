@@ -22,25 +22,12 @@ import {
   telemetrySettled,
 } from "../src/telemetry/capture";
 
-/**
- * POST /telemetry — the first-party relay (#33, ADR-0069 decision 2): the
- * one client-originated event, `puzzle_started`, Zod-parsed against the
- * closed relay contract, keyed by the session's userId, with `archive`
- * derived server-side against the DB clock's SP today. Seam 4 over PGlite;
- * captures observed at the stubbed global fetch; `telemetrySettled()`
- * awaited (direct handler calls take `runAfterResponse`'s fallback arm).
- */
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -168,24 +155,20 @@ describe("POST /telemetry — the first-party relay (#33, ADR-0069)", () => {
 
     const rejected: readonly string[] = [
       "not json",
-      // A server-seam event through the relay is refused, not relayed.
+
       JSON.stringify({
         event: "puzzle_completed",
         properties: { game: "binairo", date: today },
       }),
-      // The client may not assert `archive`.
+
       JSON.stringify({
         event: "puzzle_started",
         properties: { game: "binairo", date: today, archive: true },
       }),
-      // Not a calendar date; not a game.
+
       startedBody("binairo", "2026-02-30"),
       startedBody("chess", today),
-      // THE HIGHEST-VALUE FORGERY, given its own line rather than left to
-      // the top-level `strictObject` (step-6 security N2): a body that
-      // asserts someone else's `distinct_id`. It is refused at the
-      // contract, and the route would ignore it anyway — `distinct_id`
-      // comes from `requireUserId`, never from the body.
+
       JSON.stringify({
         event: "puzzle_started",
         distinct_id: "some-other-user",
@@ -247,8 +230,6 @@ describe("POST /telemetry — the first-party relay (#33, ADR-0069)", () => {
       },
     });
 
-    // The relay POST carries a JSON content type, so cross-origin calls
-    // always preflight — OPTIONS must grant it.
     const preflight = OPTIONS();
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-methods")).toContain(

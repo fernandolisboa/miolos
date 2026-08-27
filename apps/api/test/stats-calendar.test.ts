@@ -16,39 +16,20 @@ import {
 } from "vitest";
 
 import { GET } from "../app/stats/calendar/route";
-// #31 (ADR-0053 decision 7): T-API-S103 asserts that the aggregates carry
-// what the calendar does not paint, which needs the other route.
-// Statically imported, the `completions.test.ts` register — `vi.mock` is
-// hoisted above every import, so a route module needs no `await
-// import(...)` to see the mocked `../src/db`, and one idiom for one need
-// beats two.
+
 import { GET as statsGet } from "../app/stats/route";
 import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
-// Seam 4: the real GET /stats/calendar handler over PGlite (the
-// streak.test.ts architecture). src/db is the only behavioural mock.
-// The range anchor is `users.created_at`'s SP day, so tests move the
-// anchor by UPDATING created_at with a DB-side interval — never a JS
-// clock. History rows carry an explicit `completedAt`: T15:00:00Z is
-// 12:00 in São Paulo (inside its own day = on time); stamped on a LATER
-// date the row derives late.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-/** When set, the route sees this in place of the real db — the 500-branch
- *  probe swaps in a client whose every access throws (T-API-S53 pattern). */
 let dbOverride: Awaited<ReturnType<typeof createTestDb>>["db"] | undefined;
 
 vi.mock("../src/db", () => ({
   getDb: () => dbOverride ?? ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -68,7 +49,6 @@ afterAll(async () => {
 
 const WEB = "https://miolos.app";
 
-/** A fresh identity with a live session cookie — the route never mints. */
 async function createSession(): Promise<{ token: string; userId: string }> {
   const inserted = await ctx.db.insert(users).values({}).returning();
   const user = inserted[0];
@@ -82,7 +62,6 @@ async function createSession(): Promise<{ token: string; userId: string }> {
   return { token, userId: user.id };
 }
 
-/** Move the account's birth back `days` days — DB-side arithmetic only. */
 async function ageAccount(userId: string, days: number): Promise<void> {
   await ctx.db
     .update(users)
@@ -120,8 +99,7 @@ async function insertHistoryRow(init: {
     elapsedMs: 61_000,
     hintsUsed: 0,
     guesses: init.guesses,
-    // #58 (ADR-0066): stored at write; the old derivation's verdict for
-    // these instants, i.e. migration 0008's backfill semantics.
+
     onTime: init.completedAtDate === init.date,
   });
 }
@@ -132,11 +110,6 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     const { token, userId } = await createSession();
     await ageAccount(userId, 3);
 
-    // today: all four games won on time — an "onTime" day AND a Dia
-    // Perfeito. today−1: a lost Termo ONLY — lost rows never colour a
-    // day, so it renders "missed" (and the day is structurally not
-    // perfect). today−2: a win dated there but synced today — "late".
-    // today−3 (the birth day): no rows — "missed".
     for (const game of ["binairo", "sudoku", "nonogram"] as const) {
       await insertHistoryRow({
         userId,
@@ -173,7 +146,7 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     const response = await GET(calendarRequest(token));
     expect(response.status).toBe(200);
     const raw: unknown = await response.json();
-    // The payload carries `days` and nothing else — no envelope fields.
+
     expect(Object.keys(raw as Record<string, unknown>)).toEqual(["days"]);
     const body = statsCalendarResponseSchema.parse(raw);
     expect(body.days).toEqual([
@@ -210,8 +183,6 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     expect(thrown.headers.get("access-control-allow-credentials")).toBe("true");
     dbOverride = undefined;
 
-    // The 200 branch (a cold account: one honest "missed" day) carries
-    // the same discipline.
     const { token } = await createSession();
     const ok = await GET(calendarRequest(token));
     expect(ok.status).toBe(200);
@@ -229,11 +200,6 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     const yesterday = addDays(today, -1);
     const { token, userId } = await createSession();
 
-    // The ROLLOVER SLACK's birth-midnight case: an account minted just
-    // after the SP rollover completing YESTERDAY's puzzle — the row is
-    // dated one day before created_at's SP day and must appear. The slack
-    // is one day and stays one day; #31 widened the WRITE window, which is
-    // a different constant with a different owner (ADR-0053 decision 6).
     await insertHistoryRow({
       userId,
       game: "binairo",
@@ -249,10 +215,6 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
       { date: today, state: "missed", perfect: false },
     ]);
 
-    // A manufactured row a week before birth (no writer can produce one
-    // today) does NOT drag the range further back: it emits no day entry
-    // and contributes nothing to the clamp — the start stays where the
-    // yesterday won row put it (the won-only rule, ADR-0051 decision 2).
     await insertHistoryRow({
       userId,
       game: "sudoku",
@@ -271,13 +233,6 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     const yesterday = addDays(today, -1);
     const { token, userId } = await createSession();
 
-    // The reachable case the won-only clamp exists for: a 00:20 account
-    // LOSES yesterday's Termo (the write window admits it, and the rollover
-    // slack is what would let it extend the range). A
-    // lost row colours no day, so an extension it earned could only paint
-    // "missed" on a day the account did not exist for — the range must
-    // start at birth, and the loss still lands in the fail row (visible
-    // on GET /stats, not here).
     await insertHistoryRow({
       userId,
       game: "termo",
@@ -299,10 +254,6 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     const winner = await createSession();
     const other = await createSession();
 
-    // User A holds a full Dia Perfeito today; user B holds nothing. B's
-    // enumeration must show no non-missed day and no perfect marker —
-    // the reader is scoped by the SESSION's userId, and this pins it at
-    // the route seam (the streak suite's isolation posture).
     for (const game of ["binairo", "sudoku", "nonogram"] as const) {
       await insertHistoryRow({
         userId: winner.userId,
@@ -327,8 +278,6 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
     expect(body.days.every((day) => day.state === "missed")).toBe(true);
     expect(body.days.every((day) => !day.perfect)).toBe(true);
 
-    // And the winner still sees their own day — the isolation cuts one
-    // way, not both.
     const winnerBody = statsCalendarResponseSchema.parse(
       await (await GET(calendarRequest(winner.token))).json(),
     );
@@ -342,18 +291,12 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
 
 describe("GET /stats/calendar — the archive widening (#31, ADR-0053)", () => {
   it("T-API-S103: a late row 400 days before the account's birth paints no calendar day, does not move the range start, and still counts in GET /stats' `solved`", async () => {
-    // D9 at the seam, over two real routes and one PGlite database. The
-    // class is the one #31 creates and nothing else could: before #31 a
-    // won row could be at most one day before `since`, always inside the
-    // rollover slack. Off-calendar with the aggregates carrying it is
-    // ADR-0051 decision 2's SECOND sanctioned exit, taken verbatim.
     const today = await todaySaoPaulo(ctx.db);
     const { token, userId } = await createSession();
     await ageAccount(userId, 3);
     const birthDay = addDays(today, -3);
     const prebirth = addDays(today, -400);
 
-    // An on-time win today, so the calendar is not trivially all-missed.
     await insertHistoryRow({
       userId,
       game: "binairo",
@@ -361,8 +304,7 @@ describe("GET /stats/calendar — the archive widening (#31, ADR-0053)", () => {
       outcome: "won",
       completedAtDate: today,
     });
-    // The pre-birth archive row: dated 400 days back, WRITTEN today, so
-    // `on_time` derives false exactly as an archive completion does.
+
     await insertHistoryRow({
       userId,
       game: "sudoku",
@@ -375,14 +317,10 @@ describe("GET /stats/calendar — the archive widening (#31, ADR-0053)", () => {
     expect(response.status).toBe(200);
     const body = statsCalendarResponseSchema.parse(await response.json());
 
-    // No entry for the pre-birth date, and the range still starts at birth:
-    // not one fabricated "missed" day between the two.
     expect(body.days.some((day) => day.date === prebirth)).toBe(false);
     expect(body.days[0]?.date).toBe(birthDay);
     expect(body.days).toHaveLength(4);
 
-    // And GET /stats counts it — the aggregates carry what the calendar
-    // does not paint (ADR-0051 decision 6).
     const stats = await statsGet(
       new NextRequest("http://localhost:3001/stats", {
         method: "GET",
@@ -392,7 +330,7 @@ describe("GET /stats/calendar — the archive widening (#31, ADR-0053)", () => {
     expect(stats.status).toBe(200);
     const statsBody = statsResponseSchema.parse(await stats.json());
     expect(statsBody.sudoku.solved).toBe(1);
-    // …and nothing time-shaped: a late row reaches no time statistic.
+
     expect(statsBody.sudoku.bestMs).toBeNull();
     expect(statsBody.sudoku.averageMs).toBeNull();
   });

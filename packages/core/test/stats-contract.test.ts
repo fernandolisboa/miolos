@@ -7,14 +7,6 @@ import {
   type StatsResponse,
 } from "../src/index";
 
-/**
- * The two #29 wire contracts (plan 033 §3.3, ADR-0048 decision 3): strict
- * on both ends, closed to growth the moment they ship. These fixtures pin
- * the closures — an unknown key, a wrong tuple length, an out-of-range
- * value or an envelope field must FAIL the parse, because a parse failure
- * at the route is the catch-all 500, never a silent lie on the wire.
- */
-
 const timedZero: StatsResponse["binairo"] = {
   solved: 0,
   bestMs: null,
@@ -48,14 +40,11 @@ const validCalendar: StatsCalendarResponse = {
 
 describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", () => {
   it("T-CORE-S69: both schemas are strict, tuple lengths 6/7 exact, enums closed, ranges enforced, the calendar envelope-free and never empty", () => {
-    // Round trips.
     expect(statsResponseSchema.parse(validStats)).toEqual(validStats);
     expect(statsCalendarResponseSchema.parse(validCalendar)).toEqual(
       validCalendar,
     );
 
-    // Strict at every level: an unknown key is a parse failure — growth is
-    // a NEW endpoint (#30's medals never land here).
     expect(
       statsResponseSchema.safeParse({ ...validStats, medals: [] }).success,
     ).toBe(false);
@@ -72,7 +61,6 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
       }).success,
     ).toBe(false);
 
-    // Tuple lengths are exact: 6 histogram buckets, 7 distribution rows.
     for (const histogram of [
       [0, 0, 0, 0, 0],
       [0, 0, 0, 0, 0, 0, 0],
@@ -96,8 +84,6 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
       ).toBe(false);
     }
 
-    // `averageSampleCount` is load-bearing (the closing line's gate): a
-    // payload without it fails.
     const withoutSampleCount = {
       solved: timedZero.solved,
       bestMs: timedZero.bestMs,
@@ -111,7 +97,6 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
       }).success,
     ).toBe(false);
 
-    // todayTermoGuesses is 1..6 or null — never 0, never 7.
     expect(
       statsResponseSchema.safeParse({ ...validStats, todayTermoGuesses: null })
         .success,
@@ -125,16 +110,12 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
       ).toBe(false);
     }
 
-    // The day-state enum is closed.
     expect(
       statsCalendarResponseSchema.safeParse({
         days: [{ date: "2026-08-13", state: "pending", perfect: false }],
       }).success,
     ).toBe(false);
 
-    // NO envelope fields: the range start IS days[0].date and the range
-    // end IS days.at(-1).date — a `date`/`since` key is the speculative
-    // surface this repo treats as a finding, and it never parses.
     expect(
       statsCalendarResponseSchema.safeParse({
         ...validCalendar,
@@ -148,19 +129,12 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
       }).success,
     ).toBe(false);
 
-    // min(1): `since <= today` holds by construction (both come off the
-    // same DB clock), so an empty enumeration is impossible — the schema
-    // makes it a parse failure, i.e. a 500, not a silent lie.
     expect(statsCalendarResponseSchema.safeParse({ days: [] }).success).toBe(
       false,
     );
   });
 
   it("T-CORE-S69a: a calendar day must be a real day — a shape-valid non-day fails the parse instead of reaching a throwing parser", () => {
-    // `days[].date` goes into throwing parsers on the client (`epochDay`,
-    // the `Intl` formatters), so `calendarDateString` makes a malformed
-    // 200 a `safeParse` failure — the honest settled-null zero — never a
-    // `RangeError` mid-render.
     for (const date of ["0000-00-00", "0000-01-01", "2026-02-30"]) {
       expect(
         statsCalendarResponseSchema.safeParse({
@@ -168,10 +142,7 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
         }).success,
       ).toBe(false);
     }
-    // The asymmetry is deliberate: `statsResponseSchema.date` stays
-    // shape-only (`isoDateString`) because it feeds string EQUALITY checks
-    // only, never a parser — the repo convention for server-derived
-    // comparands.
+
     expect(
       statsResponseSchema.safeParse({ ...validStats, date: "0000-00-00" })
         .success,
