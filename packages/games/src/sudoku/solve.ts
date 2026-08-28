@@ -1,5 +1,3 @@
-// index reads use `!`: every index is produced by loops over [0, 81) / [0, 9);
-// public entry points reject grids of the wrong length (assertSudokuGrid).
 import type { SeededRandom } from "../random";
 import { POPCOUNT, assertSudokuGrid, boxOf, colOf, rowOf } from "./board";
 import type { SudokuGrid } from "./types";
@@ -10,7 +8,6 @@ interface Masks {
   readonly boxes: number[];
 }
 
-/** Build used-digit bitmasks from a grid, or null if a duplicate exists. */
 function buildMasks(grid: readonly number[]): Masks | null {
   const rows = new Array<number>(9).fill(0);
   const cols = new Array<number>(9).fill(0);
@@ -38,13 +35,6 @@ function buildMasks(grid: readonly number[]): Masks | null {
   return { rows, cols, boxes };
 }
 
-/**
- * Bitmask + MRV backtracking search. Counts solutions up to `limit`
- * (early-exiting the whole recursion at the limit); when `record` is
- * given, the first completed grid is copied into it. Deterministic: the
- * MRV pick uses a first-lowest-index tiebreak and digits are tried in
- * ascending order.
- */
 function search(
   grid: number[],
   limit: number,
@@ -72,7 +62,7 @@ function search(
         ~(rows[rowOf(i)]! | cols[colOf(i)]! | boxes[boxOf(i)]!) & 0x1ff;
       const candidates = POPCOUNT[mask]!;
       if (candidates === 0) {
-        return; // dead end: an empty cell with no legal digit
+        return;
       }
       if (candidates < bestCount) {
         bestCount = candidates;
@@ -119,7 +109,6 @@ function search(
   return count;
 }
 
-/** Internal counterpart of countSudokuSolutions, no shape validation. */
 export function countSolutionsInternal(
   grid: readonly number[],
   limit: number,
@@ -127,17 +116,6 @@ export function countSolutionsInternal(
   return search([...grid], limit, null);
 }
 
-/**
- * Number of solutions, counting stops early at `limit` (default 2, must be
- * a positive integer). countSudokuSolutions(g, 2) === 1 is the uniqueness
- * predicate used by the property tests and the generator.
- *
- * `limit` bounds total work: a sparse grid has astronomically many
- * completions (the empty grid ~6.7e21), so a large limit is effectively
- * unbounded synchronous search. Never derive `limit` from untrusted input
- * (same duty as the Binairo grid-size bound) — no legitimate uniqueness
- * check needs more than a small constant.
- */
 export function countSudokuSolutions(givens: SudokuGrid, limit = 2): number {
   assertSudokuGrid(givens);
   if (!Number.isInteger(limit) || limit < 1) {
@@ -148,10 +126,6 @@ export function countSudokuSolutions(givens: SudokuGrid, limit = 2): number {
   return countSolutionsInternal(givens, limit);
 }
 
-/**
- * First solution found by the backtracking solver in deterministic (fixed,
- * unseeded) order, or null if unsolvable. Validates the grid shape.
- */
 export function solveSudoku(givens: SudokuGrid): SudokuGrid | null {
   assertSudokuGrid(givens);
   const record = new Array<number>(81).fill(0);
@@ -159,7 +133,6 @@ export function solveSudoku(givens: SudokuGrid): SudokuGrid | null {
   return found === 0 ? null : Object.freeze(record);
 }
 
-/** Fisher–Yates shuffle in place, all randomness from the given rng. */
 export function shuffleInPlace(values: number[], rng: SeededRandom): void {
   for (let k = values.length - 1; k > 0; k -= 1) {
     const j = rng.nextInt(k + 1);
@@ -169,11 +142,6 @@ export function shuffleInPlace(values: number[], rng: SeededRandom): void {
   }
 }
 
-/**
- * Full-grid fill by randomized backtracking: cells in fixed ascending order,
- * candidate digits Fisher–Yates-shuffled with the attempt rng. Always
- * succeeds; deterministic per rng state.
- */
 export function fillGrid(rng: SeededRandom): number[] {
   const grid = new Array<number>(81).fill(0);
   const rows = new Array<number>(9).fill(0);

@@ -1,11 +1,7 @@
-/**
- * User-scoped exports only, reachable through `@miolos/db/user` and never
- * the root entry — apps/web cannot import this module.
- */
 export {
   getCompletion,
-  grantedHintsToday, // dormant, no v1 writer (ADR-0027)
-  grantHints, // dormant, no v1 writer (ADR-0027)
+  grantedHintsToday,
+  grantHints,
   hasCreditedPastDateToday,
   listCompletionsForDay,
   listCompletionsForStreak,

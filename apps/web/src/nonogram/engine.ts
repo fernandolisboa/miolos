@@ -1,45 +1,9 @@
-/**
- * The ONE boundary where the engine's values and the client's cells meet,
- * on the charter `sudoku/engine.ts` set. `@miolos/games/nonogram` speaks
- * `NonogramCellState[][]` and `boolean[][]`; the client carries a FLAT
- * `(0 | 1 | null)[]` in row-major order, where `1` = preenchida, `0` =
- * marcada and `null` = vazia.
- *
- * Every conversion in this module is an explicit loop, never a cast: the
- * types below make claims about the values ("size² marks", "never unknown")
- * that only the loop actually proves (CLAUDE.md "parsed, never cast").
- *
- * THE PROHIBITION THIS MODULE CARRIES: the client takes `size` from THE
- * WIRE — `daily.size` — and never from `NONOGRAM_WEEKDAY_CRITERIA`. That
- * constant is on the barrel but lives in `difficulty.ts`, which imports
- * `MOTIFS, motifBitmap` at module scope, so a single client-side import of
- * it retains all 59 233 bytes of motif tables in the browser bundle. It is
- * a tempting line, because `NonogramPuzzle` carries no difficulty field and
- * a size label has to come from somewhere. It comes from `daily.size`.
- */
 import { solveNonogram, type NonogramClues } from "@miolos/games/nonogram";
 
 import { nextHint, type Hint } from "../play/grid-hint";
-// Type-only, so this is erased at build time and the `state.ts` ↔
-// `engine.ts` pair carries no runtime cycle (`verbatimModuleSyntax`).
+
 import type { NonogramCellValue, NonogramMark } from "./state";
 
-/**
- * The picture recovered from the PUBLISHED clues, flattened row-major, or
- * `null` when the clues did not solve to an exact bitmap.
- *
- * It NEVER throws. `solveNonogram` raises a typed `RangeError` on structurally
- * malformed clues, and every other failure mode — `status !== "solved"`, a row
- * of the wrong length, a residual `"unknown"`, a flattened length that is not
- * `size²` — is a `null` return.
- *
- * The `null` branch is DEFINED, not assumed away: ADR-0021 decision 3 makes
- * line-solvability to the exact bitmap a binary mechanical gate over all 265
- * motif variants, re-proved 280/280 against the wire projection alone, so it
- * is unreachable for a published daily — exactly the status
- * `solutionDigits`'s null branch has. The screen renders the unavailable card
- * on it rather than crashing.
- */
 export function solutionMarks(
   clues: NonogramClues,
 ): readonly NonogramMark[] | null {
@@ -59,8 +23,6 @@ export function solutionMarks(
       return null;
     }
     for (const cell of row) {
-      // `unknown` is never guessed at: a solved board has none, and a board
-      // that has one is not a board this client may play.
       if (cell === "unknown") {
         return null;
       }
@@ -70,16 +32,6 @@ export function solutionMarks(
   return marks.length === size ** 2 ? marks : null;
 }
 
-/**
- * The readout's denominator: the number of cells the finished picture holds,
- * summed from the CLUES.
- *
- * From the clues and never from the solution — public, solve-free, O(runs),
- * and verified equal to the picture's filled count on 280/280 real boards.
- * It also disposes of the worry that the denominator leaks the total filled
- * count: it does not, it is a number the player can add up themselves off
- * the rails in front of them.
- */
 export function filledTarget(clues: NonogramClues): number {
   let target = 0;
   for (const line of clues.rows) {
@@ -90,15 +42,6 @@ export function filledTarget(clues: NonogramClues): number {
   return target;
 }
 
-/**
- * Cells the player has PAINTED — the readout's numerator.
- *
- * The shared `progress.ts` `countFilled` is deliberately not reused: it tests
- * `(given ?? entries[index] ?? null) !== null`, and a cross is `0`, which is
- * not nullish — so it would count crosses too and compute a different readout
- * entirely. Counting only the cells that are painted AND correct is forbidden
- * under any framing that arrives at it — see ADR-0032 decision 5.
- */
 export function countFilledCells(
   entries: readonly NonogramCellValue[],
 ): number {
@@ -111,24 +54,6 @@ export function countFilledCells(
   return filled;
 }
 
-/**
- * True when the PICTURE is painted — the completion predicate (ADR-0032).
- *
- * Iterates the SOLUTION, which decides how a MISMATCHED `entries` array
- * reads. Too LONG: the surplus tail is never looked at, so an over-long array
- * whose first size² cells paint the picture reads as COMPLETE. Too SHORT:
- * every index past the end is `undefined`, so the predicate reduces to
- * `mark === 0` there — which is a FALSE WIN in exactly the same way. Neither
- * direction is a guard: the structural one is `restore`'s size/length check
- * (`state.ts`, `restore`), and it must stay.
- *
- * Crosses and undecided cells are both "not painted", so a player who crosses
- * every empty cell, one who crosses none, and every mixture in between all
- * finish identically.
- *
- * Local only. The server re-judges against the stored row (ADR-0004): this
- * verdict decides what the UI shows and nothing else.
- */
 export function isPictureComplete(
   solution: readonly NonogramMark[],
   entries: readonly NonogramCellValue[],
@@ -138,17 +63,6 @@ export function isPictureComplete(
   );
 }
 
-/**
- * The completion body's grid, or `null` unless the board is exactly `cells`
- * long.
- *
- * `1` where the player painted, `0` for a cross AND for an undecided cell —
- * the three finishes produce byte-identical bodies, and a cross never
- * crosses the wire (ADR-0032). Mirrors `solvedDigits`/`allDigits` including
- * the length proof, which is the only thing that can prove the array before
- * the record is built: a nonogram grid is one of four legal lengths, so
- * nothing downstream carries a fixed `.length()` that would catch it.
- */
 export function submittedCells(
   entries: readonly NonogramCellValue[],
   cells: number,
@@ -159,26 +73,8 @@ export function submittedCells(
   return entries.map((entry) => (entry === 1 ? 1 : 0));
 }
 
-/**
- * Which of the three explanations the day's hint earns. Selected by the hint's
- * `kind` AND its `value`, because a `fill` of `0` is a cross and reads nothing
- * like a fill to the player.
- */
 export type NonogramHintKind = "correction" | "fill" | "cross";
 
-/**
- * The one free hint: `nextHint` composed TWICE, so its fill branch always
- * lands on a picture cell — ADR-0032 decision 6.
- *
- * `grid-hint.ts` is NOT modified. Its `T` is unconstrained precisely so a
- * synthetic `givens` array works here — a nonogram has no givens.
- *
- * The `?? first` fallback is DEFINED, not assumed away: it fires only when no
- * undecided picture cell is left, which — with no contradiction present — is a
- * board that is already painted, where `use-hint` has already refused.
- * Verified unreachable on 280/280 boards; kept because "unreachable" is an
- * argument, not a type.
- */
 export function nextNonogramHint(
   solution: readonly NonogramMark[],
   entries: readonly NonogramCellValue[],
@@ -192,10 +88,6 @@ export function nextNonogramHint(
   return nextHint<NonogramMark>(solution, pictureOnly, entries) ?? first;
 }
 
-/**
- * Pure, so the hook and the reducer agree on which explanation fired without
- * sharing a closure — and so it is unit-testable without React.
- */
 export function hintKindOf(hint: Hint<NonogramMark>): NonogramHintKind {
   if (hint.kind === "correction") {
     return "correction";

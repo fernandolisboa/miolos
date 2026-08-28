@@ -2,16 +2,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { formatElapsed, formatLongDate, formatShortDate } from "../src/i18n";
 
-// T-WEB-22 (plan 017 §15). The formatters render the PUZZLE's calendar day,
-// which is a server-derived string, never `new Date()` — so the host clock's
-// timezone may not shift the rendered day by one. The offsets below bracket
-// the real world: Kiritimati is UTC+14 (the day is already over there when
-// São Paulo starts it) and Baker Island is UTC-12.
 const originalTz = process.env.TZ;
 
 function withTimeZone(timeZone: string | undefined, run: () => void) {
-  // Node re-reads process.env.TZ on the next Date/Intl construction, so the
-  // assignment is enough — no module reload needed.
   process.env.TZ = timeZone;
   try {
     run();

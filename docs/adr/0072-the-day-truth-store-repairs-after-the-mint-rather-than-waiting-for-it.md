@@ -224,3 +224,12 @@ which nothing here has measured (consequence (i)).
   cross-module reach and ADR-0069 should be findable from here. **No ADR-0069
   annotation is owed**: its rule is *when* the gate opens (the mint settles),
   not *who* triggers the mint, and that is unchanged.
+- **(n)** Residual **R3**: **the store has no notion of an identity swap.**
+  `POST /attach/confirm` replaces this device's session, but the store's
+  retained payload survives it, so `getSnapshot` answers the pre-swap truth on
+  the first paint after linking. Safe today because the winner's day payload
+  is the same public daily and the 60 s poll converges it — and because ADR-0009
+  recomputes streaks from the union, so nothing the store holds is authoritative
+  about the merged account. Recorded as a named residual rather than fixed with
+  a `resetDayTruth()` export, which no caller would have until attach grows a
+  client-side completion view.

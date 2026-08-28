@@ -19,17 +19,11 @@ import {
   type NonogramPlayState,
 } from "../src/nonogram/state";
 
-// T-WEB-S36 / T-WEB-S37 (plan 020 §19). The reducer is pure — no React, no
-// DOM, no clock — so the whole gameplay state machine is covered by plain
-// unit tests and the screen stays thin.
-
 const DATE = "2026-08-01";
 
-/** Weekday 1 is the 5×5 class; weekday 7 the 15×15 one, for the edge cases. */
 const MONDAY = generateNonogram(20_260_801, 1);
 const SUNDAY = generateNonogram(20_260_801, 7);
 
-/** The wire projection, parsed the way the wall builds one — never cast. */
 function daily(puzzle: NonogramPuzzle): DailyNonogramResponse {
   return dailyNonogramResponseSchema.parse({
     game: "nonogram",
@@ -49,10 +43,6 @@ function play(
   );
 }
 
-/**
- * The recovered picture, narrowed by a throw rather than by a cast: a
- * published daily is line-solvable to the exact bitmap by construction.
- */
 function solutionOf(state: NonogramPlayState): readonly NonogramMark[] {
   if (state.solution === null) {
     throw new Error(
@@ -62,7 +52,6 @@ function solutionOf(state: NonogramPlayState): readonly NonogramMark[] {
   return state.solution;
 }
 
-/** The first index the finished picture paints. */
 function firstPictureCell(state: NonogramPlayState): number {
   const index = solutionOf(state).indexOf(1);
   if (index < 0) {
@@ -71,7 +60,6 @@ function firstPictureCell(state: NonogramPlayState): number {
   return index;
 }
 
-/** Paint every picture cell with the fill brush, crossing nothing. */
 function fillOnly(state: NonogramPlayState): NonogramPlayState {
   return solutionOf(state).reduce(
     (current, mark, index) =>
@@ -91,8 +79,7 @@ describe("initNonogramPlayState", () => {
     expect(MONDAY_STATE.entries).toHaveLength(25);
     expect(MONDAY_STATE.entries.every((cell) => cell === null)).toBe(true);
     expect(MONDAY_STATE.selected).toBeNull();
-    // `preencher` first (P21): the drag is the primary gesture, so the board
-    // may never boot into a mode where a drag does nothing.
+
     expect(MONDAY_STATE.brush).toBe("fill");
     expect(MONDAY_STATE.timer).toEqual({
       accumulatedMs: 0,
@@ -127,7 +114,6 @@ describe("mark-cell", () => {
     );
     expect(crossed.entries[7]).toBe(0);
 
-    // One tap of the erase brush clears a filled cell.
     const erased = play(
       play(MONDAY_STATE, { type: "mark-cell", index: 7 }),
       { type: "set-brush", brush: "erase" },
@@ -179,8 +165,6 @@ describe("clear-cell", () => {
   it("returns the SAME state on an already-empty cell", () => {
     const selected = play(MONDAY_STATE, { type: "select", index: 2 });
 
-    // A new object would re-render the board and fire the persist effect for
-    // a write that changed nothing.
     expect(play(selected, { type: "clear-cell" })).toBe(selected);
   });
 
@@ -202,9 +186,7 @@ describe("paint-over", () => {
 
     expect(once.entries[9]).toBe(1);
     expect(twice.entries[9]).toBe(1);
-    // The identity guard (§10.3 divergence 4): a drag dispatches one
-    // `paint-over` per `pointermove`, so a re-paint must not allocate a new
-    // `entries` array and must not fire the persist effect.
+
     expect(twice).toBe(once);
   });
 
@@ -233,8 +215,6 @@ describe("paint-over", () => {
 
 describe("set-brush", () => {
   it("returns the SAME object when the active brush is pressed again", () => {
-    // There is no cycle to fall back to (P21), so pressing `preencher` while
-    // it is pressed must do nothing at all.
     expect(play(MONDAY_STATE, { type: "set-brush", brush: "fill" })).toBe(
       MONDAY_STATE,
     );
@@ -250,9 +230,6 @@ describe("set-brush", () => {
 
 describe("select", () => {
   it("returns the SAME object when the caret does not move", () => {
-    // Load-bearing rather than a saving: `onFocus` dispatches `select` while
-    // the roving-focus layout effect focuses `selected`, so without the
-    // bail-out the two trade a render on every arrow key.
     const selected = play(MONDAY_STATE, { type: "select", index: 6 });
 
     expect(play(selected, { type: "select", index: 6 })).toBe(selected);
@@ -260,13 +237,6 @@ describe("select", () => {
   });
 
   it("refuses an OFF-BOARD index, so the roving tab stop always matches a cell (T-WEB-S71)", () => {
-    // Step-6 round-4 finding NONO-C4-5, found by a 224 000-step randomized
-    // reducer fuzz: `select` was the ONE case that stored `action.index`
-    // unconditionally, so `selected` was the only field that could hold a
-    // value outside `0..size²-1`. The consequence is not graceful — `board.tsx`
-    // computes `tabbable = selected ?? 0`, so an off-board caret matches no
-    // cell and ADR-0030's "exactly one cell is ever tabbable" becomes ZERO:
-    // the composite widget drops off the tab order entirely.
     const selected = play(MONDAY_STATE, { type: "select", index: 6 });
     const cells = MONDAY_STATE.size ** 2;
 
@@ -276,8 +246,7 @@ describe("select", () => {
         `select(${index}) escaped the board`,
       ).toBe(selected);
     }
-    // Both ends of the legal range still land, so the guard is a bound and
-    // not a blanket bail-out.
+
     expect(play(selected, { type: "select", index: 0 }).selected).toBe(0);
     expect(play(selected, { type: "select", index: cells - 1 }).selected).toBe(
       cells - 1,
@@ -301,7 +270,6 @@ describe("move-selection", () => {
       index: size * size - 1,
     });
 
-    // Off the top and off the left: clamped per axis, never rolled over.
     expect(
       play(topLeft, { type: "move-selection", rows: -1, columns: 0 }).selected,
     ).toBe(0);
@@ -317,8 +285,6 @@ describe("move-selection", () => {
         .selected,
     ).toBe(size * size - 1);
 
-    // The wrap that clamping forbids: from the last column of row 0, one step
-    // right stays on row 0 rather than landing on row 1 column 0.
     const rowEnd = play(SUNDAY_STATE, { type: "select", index: size - 1 });
     expect(
       play(rowEnd, { type: "move-selection", rows: 0, columns: 1 }).selected,
@@ -334,19 +300,13 @@ describe("move-selection", () => {
     expect(
       play(rowEnd, { type: "move-selection", rows: 4, columns: 0 }).selected,
     ).toBe(24);
-    // `Home` and `End` are a full-width clamped move.
+
     expect(
       play(rowEnd, { type: "move-selection", rows: 0, columns: -4 }).selected,
     ).toBe(0);
   });
 
   it("returns the SAME object when the clamp leaves the caret where it was (T-WEB-S67)", () => {
-    // The `select` and `set-brush` guards, for the input that actually
-    // produces this one: an arrow key HELD against an edge. A 15-row board
-    // makes vertical traversal 14 presses — which is why PageUp/PageDown
-    // exist — so running into a wall is ordinary, not exotic, and every
-    // repeat used to allocate a state and re-render the screen for a caret
-    // that could not move.
     const topLeft = play(SUNDAY_STATE, { type: "select", index: 0 });
 
     expect(
@@ -355,8 +315,7 @@ describe("move-selection", () => {
     expect(
       play(topLeft, { type: "move-selection", rows: 0, columns: -14 }),
     ).toBe(topLeft);
-    // Still a new state when the caret DOES move — the guard must not be a
-    // blanket bail-out.
+
     expect(
       play(topLeft, { type: "move-selection", rows: 1, columns: 0 }),
     ).not.toBe(topLeft);
@@ -389,17 +348,6 @@ describe("status and pendingSync", () => {
   });
 
   it("stays playing while a cell outside the picture is painted", () => {
-    // The over-painted board NEVER closes: `isPictureComplete` is an exact
-    // match, so one extra filled cell keeps `status` at `playing` however
-    // complete the rest is.
-    //
-    // Painted BEFORE the picture is finished, deliberately. This used to
-    // start from a solved board and assert that over-painting it came back to
-    // `playing` — which is precisely the reopening the `withEntry` guard now
-    // forbids (step-6 round-4 finding NONO-C4-1), and asserting it here made
-    // the defect look like a shipped contract. The property the test is
-    // actually about is unchanged and is now measured from a board that never
-    // closed.
     const solution = solutionOf(MONDAY_STATE);
     const emptyCell = solution.indexOf(0);
     const overpainted = fillOnly(
@@ -411,8 +359,7 @@ describe("status and pendingSync", () => {
 
     expect(emptyCell).toBeGreaterThanOrEqual(0);
     expect(overpainted.status).toBe("playing");
-    // Anti-vacuity: the picture really is otherwise finished, so `playing` is
-    // the over-paint's doing and not an unpainted board's.
+
     expect(
       solution.every(
         (mark, index) => mark === 0 || overpainted.entries[index] === 1,
@@ -435,26 +382,11 @@ describe("status and pendingSync", () => {
       MONDAY_STATE,
     );
 
-    // ADR-0032: a cross is the player's notation. Three finishes, one
-    // completion predicate.
     expect(fillOnly(MONDAY_STATE).status).toBe("solved");
     expect(crossedThrough.status).toBe("solved");
   });
 
   it("takes NO entry once the picture closes, so a closed board cannot reopen (T-WEB-S69)", () => {
-    // Step-6 round-4 finding NONO-C4-1. The freeze is an EFFECT, so between
-    // the commit that sets `solved` and the flush that pauses the clock the
-    // play screen is still mounted and still handling `pointermove` — and
-    // this board's primary gesture is a drag (ADR-0037), where overshooting a
-    // run by one cell past the finishing cell is how a player un-paints a
-    // just-completed picture. `derive` recomputes `status` from scratch, so
-    // that used to hand back `status: "playing"` with `runningSince` already
-    // null: a permanently frozen clock, and an `elapsedMs` written to the
-    // write-once completion row that under-reports every second after it.
-    //
-    // The assertion is IDENTITY, not just `status`: a new object would still
-    // re-render the board and fire the persist effect for a write that must
-    // not happen at all.
     const solved = fillOnly(MONDAY_STATE);
     const outside = solutionOf(MONDAY_STATE).indexOf(0);
     expect(solved.status).toBe("solved");
@@ -478,23 +410,14 @@ describe("status and pendingSync", () => {
       ).toBe("solved");
     }
 
-    // The identity form on the gesture that actually produces the window.
     expect(
       nonogramPlayReducer(solved, { type: "paint-over", index: outside }),
     ).toBe(solved);
-    // And the day stays queued — `pendingSync` never depended on this guard
-    // (`derive` latches it), but the pairing is what the completion needs.
+
     expect(solved.pendingSync).toBe(true);
   });
 
   it("keeps the clock frozen once the board closes, whatever lands after (T-WEB-S70)", () => {
-    // The end-to-end shape of NONO-C4-1, at the state level: the entry action
-    // enqueued first, the freeze effect's `pause` flushed second — the order
-    // React produces when `flushPassiveEffects()` runs at the start of the
-    // render the second pointer move schedules. `use-play-lifecycle.ts`
-    // computes `closedAndFrozen = status !== "playing" && runningSince ===
-    // null`, so a board that came back `playing` disarmed the completion
-    // effect AND never re-armed the tick.
     const running = play(fillOnly(MONDAY_STATE), { type: "resume", now: 0 });
     const outside = solutionOf(MONDAY_STATE).indexOf(0);
     const after = play(
@@ -506,7 +429,7 @@ describe("status and pendingSync", () => {
     expect(after.status).toBe("solved");
     expect(after.timer.runningSince).toBeNull();
     expect(after.timer.accumulatedMs).toBe(10_000);
-    // The predicate the lifecycle actually reads.
+
     expect(
       after.status !== "playing" && after.timer.runningSince === null,
     ).toBe(true);
@@ -556,12 +479,6 @@ describe("restore (T-WEB-S37)", () => {
   });
 
   it("discards a record whose size disagrees with today's board", () => {
-    // The HARMLESS direction, asserted anyway because the guard covers both:
-    // a 25-cell array reaching `derive` on a 225-cell board fails closed on
-    // its own — `isPictureComplete` iterates the solution, so every index past
-    // the array's end reads `undefined` against a still-filled cell. The
-    // dangerous direction is the next test's (P16/N11). A discarded record is
-    // discarded, NEVER migrated.
     const restored = play(SUNDAY_STATE, {
       type: "restore",
       record: nonogramRecord(),
@@ -577,11 +494,6 @@ describe("restore (T-WEB-S37)", () => {
   });
 
   it("discards a LONGER record that would otherwise read as a false win", () => {
-    // The direction that can actually latch `solved`, and the reason the size
-    // check is load-bearing rather than cosmetic. Yesterday was a 15×15 and
-    // today is a 5×5; the surplus tail is never looked at, so an array whose
-    // first 25 cells paint TODAY's picture reads as COMPLETE. The first
-    // assertion proves the hazard is real, the rest prove the guard closes it.
     const monday = solutionOf(MONDAY_STATE);
     const entries: NonogramCellValue[] = Array.from(
       { length: 225 },
@@ -603,8 +515,6 @@ describe("restore (T-WEB-S37)", () => {
   });
 
   it("discards a record whose entries length disagrees with today's board", () => {
-    // The schema proves `entries.length === size²` for the record's OWN size;
-    // only the reducer compares it against today's. Two walls, both cheap.
     const restored = play(MONDAY_STATE, {
       type: "restore",
       record: nonogramRecord({
@@ -664,7 +574,7 @@ describe("restore (T-WEB-S37)", () => {
     });
 
     expect(restored.status).toBe("solved");
-    // Already acknowledged by the server: restoring must not re-queue it.
+
     expect(restored.pendingSync).toBe(false);
   });
 });

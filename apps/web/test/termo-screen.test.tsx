@@ -37,29 +37,15 @@ import type { TermoPlayAction, TermoPlayState } from "../src/termo/types";
 import type { TermoPlay } from "../src/termo/use-termo-play";
 import { bodyOf, decl, pixels, stylesheet } from "./css-source";
 
-// T-WEB-S86..S94, S102, S103 (plan 022 §19.6). UI composition is not
-// TDD-shaped, so the rendering tests are smoke tests written against the
-// screen; every assertion goes through `messages.*` or the stylesheet's own
-// text rather than a literal. The four assertions that ARE behavioural — the
-// window listener's guards, the announcer's draft, the reducer's live-region
-// invariant and the roving caret — are driven at the seam, not through the
-// happy path.
-
-// The queue is proved by play-sync.test.ts with no screen mounted; here it is
-// stubbed so the composition tests never touch the network.
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
   flushPendingCompletions: vi.fn(() => Promise.resolve(undefined)),
 }));
 vi.mock("../src/play/sync", () => sync);
 
-// Every guess the integration tests make resolves here, so a verdict is a
-// value this file writes rather than a network round trip.
 const guessClient = vi.hoisted(() => ({ postGuesses: vi.fn() }));
 vi.mock("../src/termo/guess-client", () => guessClient);
 
-// The screen needs NO navigation — so the router is mocked purely to prove it
-// is never asked to do anything.
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
@@ -75,11 +61,9 @@ const DAILY: DailyTermoResponse = dailyTermoResponseSchema.parse({
 
 const copy = messages.games.termo.play;
 
-/** Two real accepted guesses, taken from the engine's own validation list. */
 const VALID = validationWord(0);
 const SECOND = validationWord(1);
 
-/** Five letters the list does not contain — the local "não está na lista". */
 const INVALID = "zzzzz";
 
 const TILES: TileStates = ["correct", "present", "absent", "absent", "absent"];
@@ -94,12 +78,6 @@ function validationWord(index: number): string {
   return word;
 }
 
-/**
- * A `TermoPlay` whose handlers are spies, so "the window listener submitted
- * exactly once" is a call count rather than an inference from a POST. The
- * derived members are computed the way `useTermoPlay` computes them, so a
- * fixture cannot describe a state the hook could not produce.
- */
 interface PlayFixture {
   readonly play: TermoPlay;
   readonly type: ReturnType<typeof vi.fn>;
@@ -162,7 +140,6 @@ function typeOnBody(word: string): void {
   }
 }
 
-/** A judged verdict for a board that has already spent `spent` rows. */
 function judged(
   spent: number,
   last: TileStates,
@@ -213,17 +190,13 @@ describe("the board is read-only output (T-WEB-S86)", () => {
     const board = boardOf();
     expect(within(board).queryAllByRole("button")).toEqual([]);
     expect(board.querySelectorAll("[tabindex]")).toHaveLength(0);
-    // Anti-vacuity: the keyboard beside it IS focusable, so an empty board is
-    // a fact about the board rather than about the query.
+
     expect(within(keyboardOf()).getAllByRole("button").length).toBeGreaterThan(
       0,
     );
   });
 
   it("uses real row boxes, never `display: contents`", () => {
-    // A role-bearing element with `display: contents` has a long, documented
-    // history of being dropped from the accessibility tree (ADR-0030's
-    // Rejected list), and every row here carries `role="group"`.
     expect(stylesheet("src/termo/termo-board.module.css")).not.toContain(
       "display: contents",
     );
@@ -238,8 +211,7 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
     typeOnBody(VALID);
     await act(() => {
       fireEvent.keyDown(document.body, { key: "Enter" });
-      // The guess client's promise settles in a microtask, so the verdict has
-      // to be flushed inside the same `act` as the keystroke that armed it.
+
       return Promise.resolve();
     });
 
@@ -252,10 +224,6 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
   });
 
   it("carries the DRAFT in the active row's name and in the announcer", () => {
-    // The tiles are aria-hidden and a changed `aria-label` on a non-live
-    // element is announced by no AT, so without BOTH of these a
-    // screen-reader user gets nothing at all between the first keypress and
-    // `enviar`.
     render(<TermoScreen daily={DAILY} />);
 
     typeOnBody("ca");
@@ -275,16 +243,6 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
   });
 
   it("never lets one transition write BOTH live regions — walked over every action", () => {
-    // A REDUCER PROPERTY, not a render-time one, and a happy-path test proves
-    // nothing here: the only transition where the natural placement collides
-    // is a held turn that succeeds on RETRY, which writes the row sentence
-    // into the announcer while clearing the connection line out of the
-    // notice. Two polite regions mutating in one commit is exactly the race
-    // two regions are supposed to avoid.
-    // Every member of the action union appears, and the sequence REPLAYS
-    // rather than resets, so `submit` arms from a full draft, `retry` finds a
-    // held turn and `rejected` finds a pending one — the states those actions
-    // no-op outside of.
     const letters = (word: string): readonly TermoPlayAction[] =>
       [...word].map((letter) => ({ type: "type", letter }));
     const actions: readonly TermoPlayAction[] = [
@@ -297,10 +255,7 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
       { type: "resume", now: 4 },
       { type: "submit" },
       { type: "held", reason: "offline" },
-      // THE COLLIDING PAIR: a held turn cleared by `retry`, then the verdict
-      // that follows it. Under the placement that "reads natural" — clearing
-      // the notice on `judged` — this last step writes the row sentence into
-      // the announcer AND blanks the connection line in the same commit.
+
       { type: "retry" },
       {
         type: "judged",
@@ -338,14 +293,6 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
       }
     }
 
-    // The invariant is DISJOINT WRITERS, so the sets are asserted as well as
-    // the per-transition count: a placement that merely happens not to
-    // collide on this walk is one refactor away from doing so, and the
-    // withdrawn design — clearing on `judged` instead of on `submit`/`retry`
-    // — is exactly that shape.
-    // `submit` and `retry` CLEAR it; `held` and `rejected` set it. `judged`
-    // appearing in this set is the withdrawn design, and `type`/`erase`
-    // appearing in it is the other one.
     expect([...noticeWriters].toSorted()).toEqual([
       "held",
       "rejected",
@@ -357,7 +304,7 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
       "judged",
       "type",
     ]);
-    // Anti-vacuity: a walk that skipped an action would pass silently.
+
     expect([...seen].toSorted()).toEqual([
       "erase",
       "held",
@@ -374,10 +321,6 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
   });
 
   it("re-announces an identical rejection through the nonce, without touching the notice's own text", () => {
-    // `role="status"` is implicitly aria-atomic and React leaves a text node
-    // it rewrites identically alone, so the second identical rejection would
-    // be silent on the one channel telling the player why the board is not
-    // moving.
     expect(isValidGuess(INVALID)).toBe(false);
     const { container } = render(<TermoScreen daily={DAILY} />);
 
@@ -386,13 +329,10 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
     const first = nonceText(container);
     expect(screen.getByText(copy.notInList)).toBeDefined();
 
-    // The draft is untouched by a local rejection, so re-submitting the same
-    // word is one keypress.
     fireEvent.keyDown(document.body, { key: "Enter" });
 
     expect(nonceText(container)).not.toBe(first);
-    // The marker is a SIBLING span, never appended to the notice's own text
-    // node, so an exact-text query still matches.
+
     expect(screen.getByText(copy.notInList)).toBeDefined();
   });
 });
@@ -406,12 +346,9 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     const keys = within(keyboardOf()).getAllByRole("button");
     expect(keys).toHaveLength(28);
     for (const key of keys) {
-      // Keys are COMMANDS, not modes: a Termo key writes a letter and has no
-      // mode to be in (ADR-0042 decision 3).
       expect(key.getAttribute("aria-pressed")).toBeNull();
     }
-    // A Ç key would write the SAME letter as C — `normalizeWord` maps ç → c —
-    // and could never carry its own state.
+
     expect(
       keys.map((key) => key.textContent).filter((label) => label === "ç"),
     ).toEqual([]);
@@ -428,9 +365,6 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
   });
 
   it("emits the keys row-major WITH the commands, so reading order matches the drawing", () => {
-    // "26 letters, then the two commands" would put `enviar` visually first
-    // and second-to-last in reading and tab order — a WCAG 1.3.2 / 2.4.3
-    // mismatch.
     const { play } = playFixture();
 
     render(<PlayView play={play} />);
@@ -452,18 +386,13 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     const keys = within(keyboardOf()).getAllByRole("button");
     expect(keys[0]?.style.gridColumn).toBe("1 / span 2");
     expect(keys[9]?.style.gridColumn).toBe("19 / span 2");
-    // Row 2 is inset one column each side — the QWERTY half-key stagger,
-    // drawn by tracks rather than by spacers.
+
     expect(keys[10]?.style.gridColumn).toBe("2 / span 2");
     expect(keys[19]?.style.gridColumn).toBe("1 / span 3");
     expect(keys[27]?.style.gridColumn).toBe("18 / span 3");
   });
 
   it("moves the CARET with the arrows, clamping at every edge", () => {
-    // Every assertion is pinned on `document.activeElement`, never on the
-    // `tabIndex` attribute: an attribute-only assertion passes on an
-    // implementation that moves `tabindex` and leaves the caret where it was,
-    // which is the exact defect a roving tabindex exists to avoid.
     const { play } = playFixture();
 
     render(<PlayView play={play} />);
@@ -494,13 +423,10 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
 
     render(<PlayView play={play} />);
 
-    // Row 1's `p` sits at column index 9; row 2 has nine keys, so
-    // `min(9, 8)` lands on `l`.
     focusKey(letterKey("p"));
     press("ArrowDown");
     expect(document.activeElement).toBe(letterKey("l"));
-    // Row 2's `l` sits at index 8; row 3 has nine members and index 8 is
-    // `apagar`.
+
     press("ArrowDown");
     expect(document.activeElement).toBe(commandKey("erase"));
     press("Home");
@@ -522,10 +448,6 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
       />,
     );
 
-    // 28 keys re-render with new classes and new accessible names; `focused`
-    // is the keyboard's OWN state and is not derived from the play state, and
-    // the buttons are keyed off a module-level table, so React reconciles
-    // them in place and no DOM node is remounted.
     expect(document.activeElement).toBe(focused);
     expect(tabbableKeys()).toHaveLength(1);
   });
@@ -562,11 +484,6 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
 });
 
 describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", () => {
-  // jsdom does not synthesise the activation `click` a browser produces from
-  // `Enter` on a focused control, so each case below fires BOTH events
-  // exactly as a browser would and asserts the TOTAL. Without guard 3 the
-  // window listener adds a second handler for one keypress.
-
   it("does not submit when Enter lands on `enviar` — the button's own click is the one submit", () => {
     const fixture = playFixture({ draft: VALID });
 
@@ -579,23 +496,19 @@ describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", ()
   });
 
   it("does not submit when Enter lands on a LETTER key", () => {
-    // Otherwise the listener submits the draft AND the synthesised click
-    // types that letter into the row the submit just consumed.
     const fixture = playFixture({ draft: VALID });
 
     render(<PlayView play={fixture.play} />);
     fireEvent.keyDown(letterKey("a"), { key: "Enter" });
 
     expect(fixture.submit).toHaveBeenCalledTimes(0);
-    // And the key's own activation still writes its letter.
+
     fireEvent.click(letterKey("a"), { detail: 0 });
     expect(fixture.type).toHaveBeenCalledTimes(1);
     expect(fixture.type).toHaveBeenCalledWith("a");
   });
 
   it("does not submit when Enter lands on the back link", () => {
-    // A guess spent while the page navigates away from the board that would
-    // have shown the verdict.
     const fixture = playFixture({ draft: VALID });
 
     render(<PlayView play={fixture.play} />);
@@ -675,8 +588,7 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
     expect(decl(bodyOf(css, ".tileTyped"), "border-color")).toBe(
       "var(--ink-2)",
     );
-    // The SIXTH state (ADR-0039 consequence (g)), and the one a "five states"
-    // reading drops. Its carrier is a SHAPE difference from `typed`.
+
     expect(decl(bodyOf(css, ".tileHeld"), "border-color")).toBe("var(--ink-2)");
     expect(decl(bodyOf(css, ".tileHeld"), "border-style")).toBe("dashed");
     expect(decl(bodyOf(css, ".tileCaret"), "outline")).toBe(
@@ -698,9 +610,6 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
   });
 
   it("draws both strikes in --ink, never in the glyph's own --ink-2", () => {
-    // Same-colour mark and glyph is 1.0000:1 — on every letterform with a
-    // horizontal midstroke the strike merges into the letter and `A` reads as
-    // `Ⱥ`. --ink is 13.9929:1 against the tint it is drawn on.
     for (const selector of [".tileAbsent", ".keyAbsent"]) {
       expect(decl(bodyOf(css, selector), "color")).toBe("var(--ink-2)");
       expect(decl(bodyOf(css, selector), "text-decoration-color")).toBe(
@@ -710,9 +619,6 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
   });
 
   it("steps the absent KEY's border to --ink-2, its only 3:1 carrier besides the strike", () => {
-    // untouched --line (L 0.63605722) against absent --ink-2 (L 0.13539008) is
-    // (0.63605722 + 0.05) / (0.13539008 + 0.05) = 3.7006:1. The fill
-    // (1.1196:1), the glyph (2.9557:1) and the shadow all miss 1.4.11's floor.
     expect(decl(bodyOf(css, ".key"), "border-color")).toBeUndefined();
     expect(decl(bodyOf(css, ".key"), "border")).toBe("1.5px solid var(--line)");
     expect(decl(bodyOf(css, ".keyAbsent"), "border-color")).toBe(
@@ -722,12 +628,6 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
   });
 
   it("reads the accent's ink through --ink-on-accent with desk paper as the fallback", () => {
-    // Since #161 (ADR-0067) the accent is the deep #8D6212 and desk paper ON
-    // it is 4.8433:1, so this surface carries the same light-label treatment
-    // as the other three games and the fallback matches the resolved value.
-    // The old `var(--ink)` fallback was for the old light mustard, on which
-    // desk was 2.7311:1; --ink on the DEEP value is 3.0996:1 and illegal
-    // (ADR-0041 consequence (c) as amended by ADR-0067).
     for (const selector of [".tileCorrect", ".keyCorrect"]) {
       expect(decl(bodyOf(css, selector), "color")).toBe(
         "var(--ink-on-accent, var(--paper-desk))",
@@ -736,12 +636,6 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
   });
 
   it("carries `:not(.keyAbsent)` on EVERY shadow rule, at both viewports", () => {
-    // The cascade defect jsdom cannot compute. `.key:active` is (0,2,0) and
-    // `.keyAbsent` is (0,1,0), so a bare `.key:active { box-shadow }`
-    // outranks `.keyAbsent { box-shadow: none }`; and a bare
-    // `.key { box-shadow }` inside the mobile block is (0,1,0) and sits LATER
-    // in the file, so it wins at equal specificity and silently restores the
-    // shadow on every spent key at the PRIMARY viewport.
     expect(decl(bodyOf(css, ".key:active"), "box-shadow")).toBeUndefined();
     expect(decl(bodyOf(css, ".key:active"), "transform")).toBe(
       "translate(1px, 1px)",
@@ -761,9 +655,6 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
   });
 
   it("keeps the underline off the border at both viewports", () => {
-    // At offset 6 / thickness 3 the mark landed 3.1px above a 1.5px ink
-    // border of the SAME colour at ≤768px and the pair read as one doubled
-    // edge. The THICKNESS steps with the glyph; the OFFSET does not.
     expect(decl(bodyOf(css, ".tilePresent"), "text-underline-offset")).toBe(
       "4px",
     );
@@ -786,8 +677,6 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
   });
 
   it("puts `touch-action` on the KEYBOARD and nowhere near the read-only board", () => {
-    // `manipulation` costs double-tap-to-zoom, and the board is the one
-    // element of this screen a low-vision player wants to enlarge.
     expect(decl(bodyOf(css, ".keyboard"), "touch-action")).toBe("manipulation");
     expect(decl(bodyOf(css, ".grid"), "touch-action")).toBeUndefined();
     expect(decl(bodyOf(css, ".tile"), "touch-action")).toBeUndefined();
@@ -798,9 +687,6 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
   const css = stylesheet("src/termo/termo-board.module.css");
 
   it("declares --board-mobile-max UNCONDITIONALLY, or the ≤768px cap dies in silence", () => {
-    // `screen.module.css`'s `.gridCard` reads it with NO fallback, so omitting
-    // it makes `max-width` invalid at computed-value time and it falls back to
-    // `none`.
     const root = bodyOf(css, ".pageTermo");
     expect(pixels(decl(root, "--board-mobile-max"))).toBe(254);
     expect(
@@ -870,10 +756,7 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     );
     expect(decl(keyboard, "grid-template-rows")).toBe("repeat(3, 52px)");
     expect(pixels(decl(keyboard, "width"))).toBe(552);
-    // THE TOKEN, not the 8px literal it resolves to (finding B-13): the
-    // mobile `.keyboard` below already reaches for `var(--space-1)`, and two
-    // idioms for one kind of length in one sheet is how a token stops being
-    // the source of truth.
+
     expect(decl(keyboard, "gap")).toBe("var(--space-2)");
     expect(pixels(decl(keyboard, "margin-top"))).toBe(30);
 
@@ -886,10 +769,6 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
   });
 
   it("holds the command label at `undersized-ui-text`'s 11px floor exactly", () => {
-    // 11px is the floor and cannot go lower — `checks.mjs:3439` needs
-    // `fontSize < 11 && dtLen >= 2`, and `enviar`/`apagar` are six characters
-    // inside a <button>. So the 320px fit is bought with PADDING instead:
-    // 38.6 − 4 − 3 = 31.6px of content box against 38.6 − 16 − 3 = 19.6px.
     expect(decl(bodyOf(css, ".keyCommand"), "font")).toBe("var(--text-button)");
     const command = bodyOf(mobileChrome(css), ".keyCommand");
     expect(pixels(decl(command, "font-size"))).toBe(11);
@@ -897,8 +776,6 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
   });
 
   it("keeps the notice row reserved at its tallest state, so the retry button is a paint", () => {
-    // 14px × 1.5 line-height = 21px + 2 × 4px padding = 29px, cleared with
-    // 7px to spare; the 13px notice line is 19.5px.
     expect(pixels(decl(bodyOf(css, ".noticeRow"), "min-height"))).toBe(36);
     expect(decl(bodyOf(css, ".notice"), "padding")).toBe(
       "var(--space-1) var(--space-2)",
@@ -915,7 +792,6 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
   });
 
   it("declares this module's own `.placeholder`, AFTER `.key` and `.tile`", () => {
-    // A class hashed in `screen.module.css` cannot reach one hashed here.
     expect(decl(bodyOf(css, ".placeholder"), "pointer-events")).toBe("none");
     expect(css.indexOf(".placeholder")).toBeGreaterThan(css.indexOf(".key {"));
     expect(css.indexOf(".placeholder")).toBeGreaterThan(css.indexOf(".tile {"));
@@ -940,8 +816,6 @@ describe("motion (T-WEB-S92)", () => {
   });
 
   it("stands down the STAGGER as well as the transition, in this module", () => {
-    // A delay on a paint that no longer animates is 390ms of a
-    // reduced-motion user staring at a stale row.
     const reduced = bodyOf(css, "@media (prefers-reduced-motion: reduce)");
     expect(decl(bodyOf(reduced, ".tile,\n  .key"), "transition")).toBe("none");
     for (let column = 1; column <= WORD_LENGTH; column += 1) {
@@ -963,12 +837,6 @@ describe("motion (T-WEB-S92)", () => {
 });
 
 describe("the <h1> guard, which is TWO mechanisms and not one (T-WEB-S93)", () => {
-  // impeccable's `hero-eyebrow-chip` (checks.mjs:423) and
-  // `kicker-above-heading` (:2500) both anchor on `h1.previousElementSibling`.
-  // Three of the four views make it null; `DailyUnavailable` does NOT, and it
-  // passes one guard later, on the sibling's TEXT. A single uniform assertion
-  // across all four would red a shipped component that is green in the real
-  // scan.
   it("makes the <h1> the FIRST element child of its wrapper in the play, skeleton and conclusion views", () => {
     for (const view of [
       <PlayView key="play" play={playFixture().play} />,
@@ -1007,8 +875,7 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
       MAX_GUESSES * WORD_LENGTH,
     );
     expect(container.querySelectorAll(`.${styles.key ?? ""}`)).toHaveLength(28);
-    // A key cap is a constant — it owes the record nothing and can paint
-    // complete (`sudoku/keypad.tsx`'s `KeypadSkeleton`).
+
     expect(container.textContent).toContain(copy.keyboard.enter);
     expect(container.textContent).toContain(copy.keyboard.erase);
     expect(
@@ -1017,10 +884,6 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
   });
 
   it("reserves the notice row at its FULL height and the affordance line beside the keyboard", () => {
-    // The row is 36px in every play state INCLUDING the held one, so the
-    // retry button appearing is a paint and never a reflow; and `.affordance`
-    // is a sibling, so an auto-placed span never lands in an implicit fourth
-    // grid row.
     const { container } = render(<PlaySkeleton date={DATE} />);
 
     const row = container.querySelector(`.${styles.noticeRow ?? ""}`);
@@ -1032,9 +895,6 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
   });
 
   it("keeps the top bar at THREE children below 1140px, with a blank progress slot", () => {
-    // `justify-content: space-between` with two items throws PALAVRAS hard
-    // right, where three shipped screens centre it — so the slot has to exist
-    // before hydration too.
     const { container } = render(<PlaySkeleton date={DATE} />);
 
     const slot = container.querySelector(`.${sharedStyles.progressBar ?? ""}`);
@@ -1056,9 +916,6 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
   it("is what /termo paints before the record is read", async () => {
     render(<TermoScreen daily={DAILY} />);
 
-    // The hydrated screen replaces it in the same act(), so the assertion is
-    // that the play view — not a conclusion and not an unavailable screen —
-    // is what the record produced.
     await act(() => Promise.resolve());
     expect(
       document
@@ -1069,10 +926,6 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
 });
 
 describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
-  // §12.1 requires all seven to be written into the file's own header,
-  // numbered, the way `nonogram-board.module.css:1-60` writes its six. A
-  // later contributor deleting one for tidiness reds this rather than passing
-  // quietly. Read RAW, because `stylesheet()` strips comments.
   const header = readFileSync(
     path.join(here, "..", "src/termo/termo-board.module.css"),
     "utf8",
@@ -1112,18 +965,6 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
   });
 
   it("names every off-4pt length the STYLESHEET actually ships, not only the two the prose used to", () => {
-    // Finding B-13, and it is the half this describe structurally could not
-    // reach: everything above regexes the header comment, so the assertion was
-    // about the PROSE and never about the declarations. Deviation 7 said "two
-    // off-4pt lengths" while `.grid` and `.row` shipped `gap: 3px` at ≤768px —
-    // a third, and unlike a decoration offset it is literally spacing between
-    // boxes, the case the deviation governs.
-    //
-    // The property list is spacing plus `text-underline-offset`, which is a
-    // DISTANCE; `text-decoration-thickness` is deliberately out, because a
-    // stroke weight is not spacing on any scale. Negative lengths are out too:
-    // the only one is `.announcer`'s `margin: -1px`, the visually-hidden clip
-    // idiom, which is not a gap between anything.
     const sheet = stylesheet("src/termo/termo-board.module.css");
     const declarations =
       /(?:^|[\s;{])(?:gap|row-gap|column-gap|margin(?:-[a-z]+)?|padding(?:-[a-z-]+)?|text-underline-offset)\s*:\s*([^;{}]+)/g;
@@ -1138,7 +979,6 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
       }
     }
 
-    // Anti-vacuity: the scan found declarations at all.
     expect(offScale.size).toBeGreaterThan(0);
     expect([...offScale].sort()).toEqual(["2px", "30px", "3px"]);
 
@@ -1167,8 +1007,7 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
     const retry = screen.getByRole("button", { name: copy.retry });
     const region = screen.getByText(copy.offline);
     expect(region.getAttribute("role")).toBe("status");
-    // A focusable element inside a mutating live region would be re-read on
-    // every write; the region's atomic re-read has to be the sentence alone.
+
     expect(region.contains(retry)).toBe(false);
     expect(retry.parentElement).toBe(region.parentElement);
   });
@@ -1182,24 +1021,15 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
 
     render(<PlayView play={held.play} />);
     const retry = screen.getByRole("button", { name: copy.retry });
-    // `detail: 0` is Enter/Space on the button — the same test `keyboard.tsx`
-    // uses one component over.
+
     fireEvent.click(retry, { detail: 0 });
 
     expect(held.retry).toHaveBeenCalledTimes(1);
-    // A focused element that unmounts drops the caret to <body> mid-game —
-    // a 2.4.3 failure.
+
     expect(document.activeElement).toBe(letterKey("q"));
   });
 
   it("leaves the page UNFOCUSED on a mouse click, or the physical keyboard dies", () => {
-    // Finding B-3, and it is the mirror image of the rule above. The window
-    // `keydown` listener serves the UNFOCUSED page and bails on any
-    // `INTERACTIVE_TARGET` — which every one of the 28 keys is — and the
-    // keyboard's own `onKeyDown` handles arrows and Home/End only. So focusing
-    // a key after a MOUSE click means every physical letter keypress lands on
-    // that <button> and types nothing, until the player clicks the page
-    // background with no indication why.
     const held = playFixture({
       pending: VALID,
       held: true,
@@ -1237,18 +1067,6 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
 });
 
 describe("the 1 Hz tick paints nothing, because there is no clock (T-WEB-S104)", () => {
-  // Finding B-4, and the #25 precedent is `nonogram/board.tsx`'s own memo
-  // (findings PERF-R4-1/R4-2). `usePlayLifecycle` runs
-  // `setInterval(() => dispatch({type:"tick", now: Date.now()}), 1000)` for
-  // the whole live game, and ADR-0045 decision 4 removed the only thing that
-  // tick exists to repaint — `/termo` renders no timer at all. Without `memo`
-  // on `Board` and `Keyboard` every tick re-rendered all 58 elements for ZERO
-  // DOM writes: a player who thinks for five minutes burns 300 ticks,
-  // ~10 200 aria compositions and ~17 400 reconciliations.
-  //
-  // The composers are the honest probe, exactly as they are for Nonogram: a
-  // DOM assertion cannot see this, because React writes no attribute when the
-  // value is unchanged and the markup is identical either way.
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -1258,30 +1076,15 @@ describe("the 1 Hz tick paints nothing, because there is no clock (T-WEB-S104)",
   });
 
   it("composes ZERO row and key labels across ten timer ticks", () => {
-    // Anti-vacuity, half ZERO — the nonogram precedent's structural pin
-    // (`nonogram-screen.test.tsx`, "is memoized, so an unrelated tick cannot
-    // reconcile 225 cells"), and the two lines that close the gaps the other
-    // two halves leave (finding E-8). `vi.getTimerCount() > 0` below cannot
-    // tell the lifecycle's 1 Hz tick from `subscribeToPlayRecords`'s 1 Hz poll
-    // (`use-record-snapshot.ts`), which also runs on this screen and produces
-    // zero re-renders — so without this the test would stay green while
-    // measuring nothing if `usePlayLifecycle` ever stopped arming here. And
-    // half two below drives only the BOARD spy: a keystroke does not re-render
-    // `Keyboard` (its `state` is `useMemo([state.guesses])`), so `letterAria`
-    // is never shown to be reachable. If either of these reds because the
-    // component was unwrapped, the fix is to re-wrap it, not to delete the
-    // assertion.
     expect(Board).toHaveProperty("$$typeof", Symbol.for("react.memo"));
     expect(Keyboard).toHaveProperty("$$typeof", Symbol.for("react.memo"));
 
     render(<TermoScreen daily={DAILY} />);
-    // Let the mount effect's restore, the derived resume and their persists
-    // settle, so what the spies see afterwards is only what the ticks cause.
+
     act(() => {
       vi.advanceTimersByTime(0);
     });
 
-    // Anti-vacuity, half one: the interval really is armed.
     expect(vi.getTimerCount()).toBeGreaterThan(0);
 
     const rowEmptyAria = vi.spyOn(copy, "rowEmptyAria");
@@ -1292,13 +1095,10 @@ describe("the 1 Hz tick paints nothing, because there is no clock (T-WEB-S104)",
       vi.advanceTimersByTime(10_000);
     });
 
-    // The numbers that must never come back are 5 × 10, 1 × 10 and 26 × 10.
     expect(rowEmptyAria).not.toHaveBeenCalled();
     expect(rowActiveAria).not.toHaveBeenCalled();
     expect(letterAria).not.toHaveBeenCalled();
 
-    // Anti-vacuity, half two: the spies ARE wired, and a keystroke — which
-    // moves `draft` and therefore the active row — still repaints the board.
     act(() => {
       fireEvent.keyDown(window, { key: "a" });
     });
@@ -1310,7 +1110,6 @@ describe("the 1 Hz tick paints nothing, because there is no clock (T-WEB-S104)",
   });
 });
 
-/** The one key carrying the roving `tabindex="0"`. */
 function tabbableKeys(): readonly HTMLElement[] {
   return [
     ...keyboardOf().querySelectorAll<HTMLElement>('button[tabindex="0"]'),
@@ -1323,18 +1122,12 @@ function commandKey(id: "enter" | "erase"): HTMLElement {
   });
 }
 
-/**
- * Move the caret the way a browser does, inside `act` so the `onFocus` that
- * records it is committed before the next event — otherwise the assertions
- * below would race React rather than the implementation.
- */
 function focusKey(element: HTMLElement): void {
   act(() => {
     element.focus();
   });
 }
 
-/** A key press on whatever currently holds the caret. */
 function press(key: string): void {
   const active = document.activeElement;
   if (active === null) {
@@ -1343,7 +1136,6 @@ function press(key: string): void {
   fireEvent.keyDown(active, { key });
 }
 
-/** The visually-hidden announcer — the LAST `role="status"` on the screen. */
 function announcerText(): string {
   const regions = screen.getAllByRole("status");
   return regions.at(-1)?.textContent ?? "";
@@ -1353,7 +1145,6 @@ function nonceText(container: HTMLElement): string {
   return container.querySelector(`.${styles.nonce ?? ""}`)?.textContent ?? "";
 }
 
-/** The SECOND `@media (max-width: 768px)` block — `bodyOf` is first-match. */
 function mobileChrome(css: string): string {
   const geometry = bodyOf(css, "@media (max-width: 768px)");
   const rest = css.slice(css.indexOf(geometry) + geometry.length);

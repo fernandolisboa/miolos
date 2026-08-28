@@ -7,13 +7,6 @@ import type { PlayRecord, TermoPlayRecord } from "../src/play/play-record";
 import { initTermoPlayState, termoPlayReducer } from "../src/termo/state";
 import type { TermoPlayAction, TermoPlayState } from "../src/termo/types";
 
-/**
- * T-WEB-S81 / T-WEB-S82 (plan 022 §14.4, ADR-0044 decision 3, ADR-0029
- * consequence (e)). The Termo reducer is the one place the engine's
- * `TermoBoardStatus` meets `PlayCore.status`, and the one place the record's
- * stored `outcome` is checked against the tiles.
- */
-
 const copy = messages.games.termo.play;
 
 const DATE = "2026-07-30";
@@ -25,12 +18,6 @@ const WIN: Tiles = ["correct", "correct", "correct", "correct", "correct"];
 
 const ANSWER = "praga";
 
-/**
- * Six words the LOCAL list really carries, because `submit` runs
- * `isValidGuess` before anything reaches the pending row — a fixture of
- * `"aaaaa"` would be rejected locally and the six-guess loss below would
- * never be built at all. Their membership is asserted, not assumed.
- */
 const SIX_REAL_GUESSES = [
   "abaco",
   "banho",
@@ -79,9 +66,6 @@ function record(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
 
 describe("the fixtures the reducer actually accepts", () => {
   it("uses six guesses the local word list really carries", () => {
-    // Anti-vacuity for `closedStates()`: `submit` rejects a word the list
-    // does not carry, so an invented fixture would never reach a pending row
-    // and the six-guess loss would silently be a still-playing board.
     expect(new Set(SIX_REAL_GUESSES).size).toBe(MAX_GUESSES);
     for (const guess of [...SIX_REAL_GUESSES, ANSWER]) {
       expect(isValidGuess(guess), guess).toBe(true);
@@ -106,12 +90,6 @@ describe("restore (T-WEB-S81)", () => {
   });
 
   it("DISCARDS a record whose stored outcome disagrees with the tiles", () => {
-    // The single definition of the derivation lives here, in the one module
-    // allowed to import the engine (ADR-0044 decision 3): `day-state.ts`
-    // reads the field without consulting `deriveBoardStatus`, so if the two
-    // ever disagree this is the reader that has to notice. Six losing rows
-    // stamped `outcome: "won"` is the hand-edited store that would otherwise
-    // restore a solved board over a lost one.
     const forged = record({
       guesses: "abcdef".split("").map((letter) => ({
         guess: letter.repeat(WORD_LENGTH),
@@ -157,9 +135,6 @@ describe("restore (T-WEB-S81)", () => {
   });
 
   it("DISCARDS another game's record and hydrates on nothing at all", () => {
-    // `readPlayRecord` already refuses a record that does not address its own
-    // key, so this is unreachable in practice — it exists because the reducer
-    // takes the whole union.
     const foreign: PlayRecord = {
       v: 1,
       game: "binairo",
@@ -187,11 +162,6 @@ describe("restore (T-WEB-S81)", () => {
 
 describe("the ordering contract (T-WEB-S82)", () => {
   it("writes guesses, answer and status in ONE transition", () => {
-    // `use-play-lifecycle.ts` fires the completion effect on `closedAndFrozen`
-    // and calls `buildRecord(state, Date.now(), true)` SYNCHRONOUSLY. If
-    // `status` left "playing" before the answer landed, `buildRecord` would
-    // write a record with no `answer`, the record's `superRefine` would refuse
-    // it, `writePlayRecord` would drop it — and the completion would be LOST.
     const before = typed(ANSWER);
     const submitted = termoPlayReducer(before, { type: "submit" });
     const after = termoPlayReducer(submitted, {
@@ -206,15 +176,12 @@ describe("the ordering contract (T-WEB-S82)", () => {
     expect(after.answer).toBe(ANSWER);
     expect(after.guesses).toEqual([{ guess: ANSWER, tiles: [...WIN] }]);
     expect(after.pending).toBeNull();
-    // The state BETWEEN the two is still playing — there is no third state.
+
     expect(submitted.status).toBe("playing");
     expect(submitted.answer).toBeUndefined();
   });
 
   it("leaves no reachable state with a terminal status and no answer", () => {
-    // Driven over every action the reducer takes, from every representative
-    // state, rather than over the happy path: the property is what the
-    // lifecycle depends on, and one unguarded transition breaks it.
     const closed = closedStates();
     const seeds: readonly TermoPlayState[] = [
       hydrated(),
@@ -228,7 +195,6 @@ describe("the ordering contract (T-WEB-S82)", () => {
       ...closed,
     ];
 
-    // Anti-vacuity: the walk really visits terminal states.
     expect(closed).toHaveLength(2);
 
     for (const seed of seeds) {
@@ -243,9 +209,6 @@ describe("the ordering contract (T-WEB-S82)", () => {
   });
 
   it("maps the engine's `won` to PlayCore's `solved`, and passes `lost` through", () => {
-    // The ONE place the mapping is written. The engine and the wire speak
-    // "playing" | "won" | "lost"; `PlayCore.status` is
-    // "playing" | "solved" | "lost" and has no "won" member at all.
     const won = termoPlayReducer(
       termoPlayReducer(typed(ANSWER), { type: "submit" }),
       {
@@ -263,10 +226,6 @@ describe("the ordering contract (T-WEB-S82)", () => {
   });
 
   it("carries NO `outcome` field, so there is one terminal predicate", () => {
-    // ADR-0029 consequence (e) forbids a second terminal predicate by name:
-    // `outcome !== undefined` would be exactly `status !== "playing"`. The
-    // RECORD's `outcome` is a field, and `buildRecord` derives it from
-    // `state.status` — the same one-way mapping read backwards.
     for (const state of [hydrated(), ...closedStates()]) {
       expect(Object.keys(state)).not.toContain("outcome");
     }
@@ -280,7 +239,6 @@ describe("the ordering contract (T-WEB-S82)", () => {
   });
 });
 
-/** A won board and a lost one, both reached through real transitions. */
 function closedStates(): readonly TermoPlayState[] {
   const won = termoPlayReducer(
     termoPlayReducer(typed(ANSWER), { type: "submit" }),
@@ -309,7 +267,6 @@ function closedStates(): readonly TermoPlayState[] {
   return [won, lost];
 }
 
-/** One of every action the reducer accepts, including the lifecycle's four. */
 const EVERY_ACTION: readonly TermoPlayAction[] = [
   { type: "restore", record: undefined, now: 9_000 },
   { type: "tick", now: 9_000 },
@@ -342,8 +299,6 @@ const EVERY_ACTION: readonly TermoPlayAction[] = [
 
 describe("typing, erasing and submitting", () => {
   it("accepts five letters and no more, accent-insensitively", () => {
-    // AC 2 applied to the KEYSTROKE: an ABNT2 player who types `á` out of
-    // habit gets `a`, through the engine's one normalization function.
     const state = typed("caf");
     expect(state.draft).toBe("caf");
     expect(termoPlayReducer(state, { type: "type", letter: "É" }).draft).toBe(
@@ -352,7 +307,7 @@ describe("typing, erasing and submitting", () => {
     expect(termoPlayReducer(state, { type: "type", letter: "Ç" }).draft).toBe(
       "cafc",
     );
-    // Not a letter at all: refused, and the state object is not even replaced.
+
     expect(termoPlayReducer(state, { type: "type", letter: "1" })).toBe(state);
     expect(termoPlayReducer(state, { type: "type", letter: "Enter" })).toBe(
       state,
@@ -381,10 +336,6 @@ describe("typing, erasing and submitting", () => {
   });
 
   it("bumps the nonce on a SECOND identical rejection", () => {
-    // `role="status"` is aria-atomic and React does not touch a text node it
-    // rewrites identically, so without the counter a repeated rejection is
-    // silent on the one channel telling the player why the board is not
-    // moving (plan 022 §13.1b item 6b).
     const first = termoPlayReducer(typed("zzzzz"), { type: "submit" });
     const second = termoPlayReducer(first, { type: "submit" });
 
@@ -411,11 +362,6 @@ describe("typing, erasing and submitting", () => {
   });
 
   it("picks the held line from the REASON, never one string for all four causes (T-WEB-S106)", () => {
-    // Finding B-7. "Sem conexão — a tentativa vai assim que a conexão voltar."
-    // is a factual claim about the player's NETWORK, and it used to answer a
-    // 500, a 502, a 429 and a 401-after-the-re-mint as well as a real network
-    // failure — false in three of the four, and it points them at a fix that
-    // cannot help.
     const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
 
     const offline = termoPlayReducer(submitted, {
@@ -429,43 +375,30 @@ describe("typing, erasing and submitting", () => {
 
     expect(offline.notice).toBe(copy.offline);
     expect(server.notice).toBe(copy.failed);
-    // Both are HELD: the turn survives either way and the retry is offered.
+
     expect(offline.held).toBe(true);
     expect(server.held).toBe(true);
     expect(server.pending).toBe(ANSWER);
-    // And the two lines really are different strings, or the split buys
-    // nothing.
+
     expect(copy.offline).not.toBe(copy.failed);
   });
 
   it("carries `gone` in the REDUCER, not in a second state authority beside it (T-WEB-S107)", () => {
-    // Finding B-12: `unavailable` lived in a `useState` in the hook, so this
-    // module's opening sentence — "the whole Termo gameplay state machine …
-    // as one pure reducer over one immutable value" — was not true, and
-    // `TermoScreen`'s three-way branch order could not be exercised without
-    // React.
     const playing = hydrated();
     expect(playing.gone).toBe(false);
 
-    // No `pending` guard: a 404 is about the DAY, not the turn, so it lands
-    // on an idle board as well as on one mid-guess.
     expect(termoPlayReducer(playing, { type: "gone" }).gone).toBe(true);
 
     const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
     const gone = termoPlayReducer(submitted, { type: "gone" });
     expect(gone.gone).toBe(true);
-    // It changes nothing else: the screen swaps wholesale, so there is no
-    // board state to unwind.
+
     expect(gone.pending).toBe(ANSWER);
     expect(gone.notice).toBe(submitted.notice);
     expect(gone.announcement).toBe(submitted.announcement);
   });
 
   it("returns a server-rejected guess to the row it came from", () => {
-    // The turn is NOT consumed — the server judged the WORD, not the board —
-    // and the 422 `invalid-guess` path renders the same sentence the local
-    // rejection does, so it must leave the same screen: the word in the
-    // active row, the line under the board (plan 022 §11.4, §13.1b).
     const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
     const rejected = termoPlayReducer(submitted, {
       type: "rejected",
@@ -480,9 +413,6 @@ describe("typing, erasing and submitting", () => {
   });
 
   it("never writes the notice and the announcer in the same transition", () => {
-    // The live-region invariant, stated as a property of the reducer (plan
-    // 022 §13.1b) and walked rather than sampled: the collision is on the
-    // retry path, which a happy-path test never reaches.
     const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
     const seeds: readonly TermoPlayState[] = [
       hydrated(),

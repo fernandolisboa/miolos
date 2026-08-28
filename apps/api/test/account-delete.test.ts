@@ -25,20 +25,12 @@ import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { requireUserId } from "../src/session/service";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
-// Seam 4 for POST /account/delete (D13, ADR-0050 decision 12): real,
-// immediate, self-service deletion by cascade — and its structural
-// distinction from tombstones, pinned end to end through the real routes.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -106,7 +98,6 @@ async function mintViaSessionRoute(cookieToken?: string): Promise<string> {
 }
 
 describe("POST /account/delete — real self-service deletion (D13)", () => {
-  /** `user_seen_days` is on no package entry's export surface, so read it raw. */
   const seenDayCount = async (): Promise<number> => {
     type CountRow = { readonly n: number };
     const result = (await ctx.db.execute(
@@ -128,7 +119,7 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
       completedAt: new Date("2026-08-01T15:00:00Z"),
       elapsedMs: 61_000,
       hintsUsed: 0,
-      onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
+      onTime: true,
     });
     await ctx.db
       .insert(hintGrants)
@@ -138,8 +129,7 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
       userId,
       email: "jogadora@example.com",
     });
-    // Seeded so the two assertions below are not vacuous: this helper builds
-    // its user and session directly, so neither table gets a row otherwise.
+
     await ctx.db.insert(pushSubscriptions).values({
       endpoint: "https://push.example.test/endpoint-1",
       userId,
@@ -149,15 +139,10 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
     await ctx.db.execute(
       sql`insert into user_seen_days (user_id, date) values (${userId}, '2026-08-01')`,
     );
-    // Non-vacuity, asserted rather than assumed: a `toHaveLength(0)` after the
-    // delete proves nothing unless the row was there first, and mutating
-    // `schema.ts` cannot demonstrate it — PGlite runs the committed
-    // migrations, so the cascade lives in SQL, not in drizzle's model of it.
+
     expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(1);
     expect(await seenDayCount()).toBe(1);
 
-    // The literal-true second factor: anything else is a 400 and deletes
-    // nothing.
     for (const body of [{ confirm: false }, {}, { confirm: true, extra: 1 }]) {
       const refused = await deletePost(deleteRequest(token, body));
       expect(refused.status, JSON.stringify(body)).toBe(400);
@@ -173,29 +158,21 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ deleted: true });
 
-    // One statement, whole footprint: users, sessions, completions,
-    // hint_grants, medal_grants, attach_tokens.
     expect(await ctx.db.select().from(users)).toHaveLength(0);
     expect(await ctx.db.select().from(sessions)).toHaveLength(0);
     expect(await ctx.db.select().from(completions)).toHaveLength(0);
     expect(await ctx.db.select().from(hintGrants)).toHaveLength(0);
     expect(await ctx.db.select().from(attachTokens)).toHaveLength(0);
-    // push_subscriptions and user_seen_days are on the same LGPD cascade and
-    // were asserted by nothing until #205 — the comment enumerating the
-    // footprint was the only record that they are in it.
+
     expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(0);
     expect(await seenDayCount()).toBe(0);
 
-    // The clearing Set-Cookie: same name, Max-Age=0 — the browser evicts.
     const setCookie = response.headers.get("set-cookie") ?? "";
     expect(setCookie).toContain(`${SESSION_COOKIE_NAME}=;`);
     expect(setCookie).toContain("Max-Age=0");
   });
 
   it("T-API-S77a: a seeded medal_grants row is gone after the cascade delete — #30's table joins S77's footprint claim", async () => {
-    // The sibling inside S77's landed claim: an operator-recorded curated
-    // grant (no code writer exists in v1 — the direct insert IS the
-    // ritual's shape, ADR-0052) is user data and dies with the account.
     const { token, userId } = await createSession(OLDER);
     await ctx.db.insert(medalGrants).values({ userId, medalId: "founder" });
     expect(await ctx.db.select().from(medalGrants)).toHaveLength(1);
@@ -207,20 +184,12 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
   });
 
   it("T-API-S78: after deletion the bootstrap mints a FRESH identity, and a merge tombstone is structurally unreachable by this route", async () => {
-    // Deletion then re-visit: POST /session with the dead cookie mints a
-    // brand-new, empty identity — no resurrection, no merge (the correct
-    // post-deletion semantics, distinct from the tombstone's remap).
     const a = await createSession(OLDER);
     await deletePost(deleteRequest(a.token, { confirm: true }));
     const freshId = await mintViaSessionRoute(a.token);
     expect(freshId).not.toBe(a.userId);
     expect(await ctx.db.select().from(users)).toHaveLength(1);
 
-    // The tombstone half: after a merge, the loser's old cookie resolves
-    // to the WINNER, so aiming this route through it deletes the winner —
-    // the account the cookie actually names — while the tombstone row
-    // (session-less by construction) survives, exactly as ADR-0049's
-    // "retained forever" requires.
     await ctx.db.execute(sql`truncate table users cascade`);
     const winner = await createSession(OLDER);
     const loser = await createSession(NEWER);
@@ -233,7 +202,7 @@ describe("POST /account/delete — real self-service deletion (D13)", () => {
     expect(viaLoserCookie.status).toBe(200);
     const remaining = await ctx.db.select().from(users);
     expect(remaining).toHaveLength(1);
-    expect(remaining[0]?.id).toBe(loser.userId); // the tombstone, retained
+    expect(remaining[0]?.id).toBe(loser.userId);
     expect(await ctx.db.select().from(sessions)).toHaveLength(0);
   });
 });

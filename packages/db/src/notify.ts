@@ -4,15 +4,8 @@ import type { Db } from "./client";
 import { SAO_PAULO_TIME_ZONE } from "./published";
 import { notificationSends } from "./schema";
 
-/**
- * No JS `Date` appears in any statement in this file: `today` and `hour`
- * come from one Postgres read (`readTickInstant` below), and every
- * comparison runs in SQL.
- */
-
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** The SP calendar day and hour, read in one statement so the pair can never straddle midnight against each other. */
 export async function readTickInstant(
   db: Db,
 ): Promise<{ today: string; hour: number }> {
@@ -40,24 +33,6 @@ export async function readTickInstant(
   return { today, hour };
 }
 
-/**
- * Every subscribed user whose streak is at risk today, whose habitual hour
- * is `hour`, and whose push nudge for `today` isn't already claimed.
- *
- * The habitual hour is `percentile_disc(0.5)` over each counted day's
- * earliest on-time completion, floored to the hour rather than
- * round-half-up: half-up would round a 23:40 habit to hour 0 and fire the
- * nudge at the 00:xx tick of the at-risk day itself — minutes after the
- * user finished playing and ~24h before the deadline. Floor lands it at
- * 23:xx instead, just before the habitual minute.
- *
- * A credited (synced-late) row's `completed_at` is the sync instant, not
- * the play instant, and still feeds the median as a sample — an accepted
- * imperfection.
- *
- * The ledger's `not exists` is a prefilter only; `claimNudgeSend` below is
- * the actual race authority.
- */
 export async function listPushNudgeCandidates(
   db: Db,
   args: { today: string; hour: number },
@@ -104,14 +79,6 @@ export async function listPushNudgeCandidates(
   });
 }
 
-/**
- * `INSERT … ON CONFLICT DO NOTHING RETURNING` — race-safe without a
- * transaction, since neon-http supports only single-statement queries.
- * `true` means this call owns the send.
- *
- * Runs BEFORE any send (claim-first): a crash between claim and send
- * drops that user's nudge for the day, chosen over risking a double send.
- */
 export async function claimNudgeSend(
   db: Db,
   args: { userId: string; date: string; channel: "push" | "email" },

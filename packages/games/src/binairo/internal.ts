@@ -2,16 +2,8 @@ import type { SeededRandom } from "../random";
 import { BINAIRO_SIZE } from "./types";
 import type { BinairoGrid, BinairoSolvedGrid } from "./types";
 
-/**
- * Internal mutable cell state: -1 = empty. Never exported from the public
- * barrel; the public boundary uses `BinairoCell` (null = empty).
- */
 export type CellState = -1 | 0 | 1;
 
-/**
- * Total indexed read — satisfies `noUncheckedIndexedAccess` without
- * sprinkled narrowing or `!` assertions.
- */
 export function cellAt(cells: readonly CellState[], index: number): CellState {
   const value = cells[index];
   if (value === undefined) {
@@ -31,7 +23,6 @@ export function setCellAt(
   cells[index] = value;
 }
 
-/** Total indexed read for plain number arrays (count tallies, orderings). */
 export function intAt(values: readonly number[], index: number): number {
   const value = values[index];
   if (value === undefined) {
@@ -40,14 +31,6 @@ export function intAt(values: readonly number[], index: number): number {
   return value;
 }
 
-/**
- * Side length of a row-major square grid; rejects non-square or odd sides
- * (Binairo balance needs an even side) and sides above BINAIRO_SIZE. The
- * cap bounds the exponential DFS and its recursion depth: without it a
- * huge attacker-supplied grid reaching a solver entry point is CPU/stack
- * exhaustion instead of a typed error. Sub-daily sizes (4×4, 6×6) stay
- * accepted for hand-enumerable test fixtures.
- */
 export function sideLength(cellCount: number): number {
   const n = Math.sqrt(cellCount);
   if (!Number.isInteger(n) || n === 0 || n % 2 !== 0) {
@@ -74,11 +57,6 @@ export function toSolvedGrid(cells: readonly CellState[]): BinairoSolvedGrid {
   });
 }
 
-/**
- * Seeded Fisher–Yates permutation of [0..length-1]. Never
- * `Array.prototype.sort` — its tie-breaking is implementation-defined and
- * would silently break determinism.
- */
 export function seededPermutation(length: number, rng: SeededRandom): number[] {
   const values = Array.from({ length }, (_, i) => i);
   for (let i = length - 1; i > 0; i -= 1) {

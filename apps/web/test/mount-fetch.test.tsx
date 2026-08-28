@@ -7,14 +7,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMountFetch } from "../src/api/use-mount-fetch";
 import { withoutComments } from "./ts-source";
 
-/**
- * The shared mount-fetch hook (#206 cluster 3): seven hooks used to carry
- * the same 28-line body — mint first, tri-state, cancel flag — and now
- * delegate to one owner. The behaviour proof stays where it was
- * (`mount-mint-order.test.tsx`, the push, attach, onboarding, medals and
- * stats suites); this file gates the three things extraction put at risk.
- */
-
 const VALUE = { settled: true };
 
 const bootstrapMock = vi.hoisted(() => ({
@@ -35,7 +27,6 @@ const webRoot = join(import.meta.dirname, "..");
 
 const DECLARING_MODULE = "src/api/use-mount-fetch.ts";
 
-/** Every TypeScript source the app ships, repo-relative to `apps/web/`. */
 function sources(): readonly string[] {
   const found: string[] = [];
   for (const root of ["src", "app"]) {
@@ -58,11 +49,6 @@ function codeOf(sourcePath: string): string {
 
 describe("no caller can make useMountFetch refetch (T-WEB-S353)", () => {
   it("freezes both arguments at mount — inline arrows, an aliased import, and a changing prop all buy exactly one read", async () => {
-    // The wall is STRUCTURAL, not a spelling rule. A source scan for bare
-    // identifiers was the first attempt and a reviewer broke it twice: a
-    // per-render closure bound to a `const` passes such a scan and produced
-    // ~17k requests in 300ms, and an aliased import evades it outright.
-    // Freezing at mount is what makes every one of those harmless.
     let reads = 0;
     const { useMountFetch: useRead } =
       await import("../src/api/use-mount-fetch");
@@ -93,10 +79,6 @@ describe("the mint-first mount fetch has ONE owner (T-WEB-S351)", () => {
       codeOf(sourcePath).includes("ensureSession"),
     );
 
-    // `day/day-truth.ts` is on this list deliberately and is NOT a candidate
-    // for the hook: it is a `useSyncExternalStore` module store whose own
-    // in-flight guard and post-mint repair are ADR-0072's decision. An
-    // eighth hand-rolled mount fetch, by contrast, reds this line.
     expect([...naming].sort()).toEqual([
       "src/api/use-mount-fetch.ts",
       "src/components/session-bootstrap.tsx",
@@ -122,10 +104,7 @@ describe("one mount, one read — and no call site can make it refetch (T-WEB-S3
 
     rerender();
     rerender();
-    // The settle point, named rather than assumed (#209): a re-run effect
-    // calls `ensureSession` synchronously inside `rerender`'s act, and its
-    // `fetcher` one microtask later, so the counters are read only after a
-    // waitFor has given that tail room to land.
+
     await waitFor(() => {
       expect(result.current).toEqual(VALUE);
     });
@@ -134,18 +113,6 @@ describe("one mount, one read — and no call site can make it refetch (T-WEB-S3
   });
 
   it("every call site passes bare identifiers, so `[fetcher, enabled]` is stable by construction", () => {
-    // THE WALL IS HERE AND NOT IN THE DEPS ARRAY. An inline arrow for
-    // either argument is a fresh value per render, so the effect re-runs,
-    // `setValue` re-renders, and the credentialed GET loops without bound.
-    // `react-hooks/exhaustive-deps` fires inside the hook, where the deps
-    // are correct, and never at the call site.
-    //
-    // `[^)]*` cannot see a balanced argument list, and does not need to:
-    // every shape this bans — arrow, function expression, call — contains a
-    // parenthesis, so an imprecise match errs red, which is the safe way.
-    // The optional `<…>` is not decoration: an explicit type argument would
-    // otherwise hide a whole call site from this scan, and the path set
-    // below is what makes an eighth one red.
     const call = /useMountFetch\s*(?:<[^>]*>)?\s*\(([^)]*)\)/g;
     const sites = sources()
       .filter((sourcePath) => sourcePath !== DECLARING_MODULE)

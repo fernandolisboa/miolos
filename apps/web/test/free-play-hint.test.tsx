@@ -1,9 +1,3 @@
-/**
- * Hint parity across the three free-play screens (#28, plan 025 D7): the
- * one free hint fires — against the generator's own solution for Binairo
- * and Sudoku, through the bare `use-hint` verb for Nonogram — the second
- * press is inert, and `aria-disabled` says so.
- */
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku } from "@miolos/games/sudoku";
@@ -18,7 +12,7 @@ import { messages } from "../src/i18n";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
 
 const SEED = 20_260_812;
-const WEEKDAY = LEVEL_WEEKDAYS.medio; // every screen mounts on the default
+const WEEKDAY = LEVEL_WEEKDAYS.medio;
 
 function stableDeps(seed: number) {
   return { pickSeed: () => seed };
@@ -46,15 +40,12 @@ describe("one free hint per free-play puzzle, second press inert (T-WEB-S122)", 
     expect(button).toHaveAttribute("aria-disabled", "false");
     fireEvent.click(screen.getByText(copy.available));
 
-    // An untouched board's first hint is the row-major first empty cell,
-    // revealed at its solution value (grid-hint.ts).
     expect(cellText(container, firstEmpty)).toBe(
       String(puzzle.solution[firstEmpty]),
     );
     const used = screen.getByText(copy.used).closest("button");
     expect(used).toHaveAttribute("aria-disabled", "true");
 
-    // Second press: inert — the cell keeps its value, the label stays.
     fireEvent.click(screen.getByText(copy.used));
     expect(cellText(container, firstEmpty)).toBe(
       String(puzzle.solution[firstEmpty]),
@@ -95,13 +86,11 @@ describe("one free hint per free-play puzzle, second press inert (T-WEB-S122)", 
       container.querySelectorAll(
         `.${boardStyles.cellFilled}, .${boardStyles.cellCrossed}`,
       ).length;
-    expect(puzzle.size).toBe(10); // the médio class — the fixture is live
+    expect(puzzle.size).toBe(10);
     expect(marked()).toBe(0);
 
     fireEvent.click(screen.getByText(copy.available));
 
-    // One cell decided by the hint (an empty board's first hint fills a
-    // picture cell), and the button is spent.
     expect(marked()).toBe(1);
     const used = screen.getByText(copy.used).closest("button");
     expect(used).toHaveAttribute("aria-disabled", "true");

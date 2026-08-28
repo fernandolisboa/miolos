@@ -6,25 +6,23 @@ import { BINAIRO_SIZE } from "./types";
 import type { BinairoGrid, BinairoSolvedGrid, BinairoTier } from "./types";
 
 export interface BinairoApprovalCriteria {
-  /** Ceiling: completable with techniques ≤ maxTier (no guessing, ever). */
   readonly maxTier: BinairoTier;
-  /** Floor: must REQUIRE at least one deduction of tier ≥ minTier. */
+
   readonly minTier: BinairoTier;
   readonly minGivens: number;
   readonly maxGivens: number;
 }
 
-/** Weekday → approval criteria, ISO 8601 numbering (Monday = 1 … Sunday = 7). */
 export const BINAIRO_WEEKDAY_CRITERIA: Readonly<
   Record<Weekday, BinairoApprovalCriteria>
 > = {
-  1: { maxTier: 1, minTier: 1, minGivens: 34, maxGivens: 40 }, // Monday    — tier-1 only, generous givens
-  2: { maxTier: 1, minTier: 1, minGivens: 30, maxGivens: 34 }, // Tuesday
-  3: { maxTier: 2, minTier: 1, minGivens: 26, maxGivens: 30 }, // Wednesday — tier 2 allowed, not required
-  4: { maxTier: 2, minTier: 2, minGivens: 24, maxGivens: 28 }, // Thursday  — tier 2 required from here on
-  5: { maxTier: 2, minTier: 2, minGivens: 20, maxGivens: 24 }, // Friday
-  6: { maxTier: 2, minTier: 2, minGivens: 18, maxGivens: 22 }, // Saturday
-  7: { maxTier: 2, minTier: 2, minGivens: 16, maxGivens: 20 }, // Sunday    — hardest: tier 2 + fewest givens
+  1: { maxTier: 1, minTier: 1, minGivens: 34, maxGivens: 40 },
+  2: { maxTier: 1, minTier: 1, minGivens: 30, maxGivens: 34 },
+  3: { maxTier: 2, minTier: 1, minGivens: 26, maxGivens: 30 },
+  4: { maxTier: 2, minTier: 2, minGivens: 24, maxGivens: 28 },
+  5: { maxTier: 2, minTier: 2, minGivens: 20, maxGivens: 24 },
+  6: { maxTier: 2, minTier: 2, minGivens: 18, maxGivens: 22 },
+  7: { maxTier: 2, minTier: 2, minGivens: 16, maxGivens: 20 },
 };
 
 export type BinairoRejectionReason =
@@ -49,13 +47,6 @@ export type BinairoValidationResult =
       readonly reasons: readonly BinairoRejectionReason[];
     };
 
-/**
- * Fixed to the daily 8×8. Collects every applicable rejection reason;
- * approves only a uniquely solvable puzzle inside the weekday's tier and
- * givens bands. Tier 3 (guessing) always rejects as too-hard. Throws a
- * RangeError when `weekday` is outside 1..7 at runtime (untyped
- * boundaries) — Zod parsing at the boundary remains the caller's duty.
- */
 export function validateBinairo(
   candidate: {
     readonly givens: BinairoGrid;
@@ -123,7 +114,6 @@ export function validateBinairo(
     return { approved: false, reasons };
   }
   if (tier !== 1 && tier !== 2) {
-    // Unreachable: tier 3 pushed too-hard, null pushed unsolvable.
     throw new RangeError(`unreachable: approved with tier ${String(tier)}`);
   }
   return { approved: true, requiredTier: tier, givensCount };

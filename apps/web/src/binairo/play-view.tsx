@@ -10,35 +10,12 @@ import { Controls } from "./controls";
 import { Grid } from "./grid";
 import type { BinairoPlay } from "./use-binairo-play";
 
-/**
- * The shared layout's per-screen accent AND the ink that sits on an accent
- * fill, set inline because `play/screen.module.css` reads both throughout.
- *
- * The four geometry properties ride on `.pageBinairo` instead — a class this
- * module owns, so no cascade order is involved.
- */
 const ACCENT = accentVars("binairo");
 
 const TOTAL_CELLS = 64;
 
-/**
- * A readout placeholder's content. An EMPTY element has no line box at all
- * and collapses to zero height, so a blank clock would make the card it sits
- * in shorter than the one hydration puts there. A no-break space is one line
- * box in the element's own font — the reserved height therefore tracks a
- * token change by construction, where a hard-coded pixel value would not.
- */
 const BLANK_READOUT = "\u00a0";
 
-/**
- * The /binairo play composition, recreated from f3-binairo-desktop and
- * f4-binairo-mobile. The chrome comes from the shared `play/screen.module.css`
- * (ADR-0029): one CSS grid with named areas carries both viewports out of one
- * DOM, because `display: contents` cannot move a node across subtrees
- * (`.statsCard` is a grid item, `.topBar` its sibling) — so the readouts that
- * appear in different places on the two layouts exist twice and the sheet hides
- * one of each pair. Only the board and the control row are this game's own.
- */
 export function PlayView({
   play,
   archive,
@@ -72,13 +49,7 @@ export function PlayView({
 
       <div className={screen.titleBlock}>
         <p className={screen.titleKicker}>{messages.games.binairo.kicker}</p>
-        {/* The <h1> is the FIRST element child of .titleRow, and the kicker
-            is a sibling of the WRAPPER, never of the heading. That is not
-            styling: impeccable's hero-eyebrow-chip and kicker-above-heading
-            rules both anchor on `h1.previousElementSibling` and both return
-            on their first guard when it is null (verified against
-            node_modules/impeccable/cli/engine/rules/checks.mjs).
-            Do not "simplify" the wrapper away. */}
+
         <div className={screen.titleRow}>
           <h1 className={screen.title}>{messages.games.binairo.play.title}</h1>
           <span className={screen.progressBar}>
@@ -95,7 +66,6 @@ export function PlayView({
       </div>
 
       <div className={screen.statsCard}>
-        {/* Decoration with nothing to announce. */}
         <div aria-hidden className={screen.tape} />
         <div className={screen.statRow}>
           <span className={screen.statLabel}>{messages.play.timerLabel}</span>
@@ -131,12 +101,6 @@ export function PlayView({
         )}
       </section>
 
-      {/* AFTER the board: `screen.page` places every child by NAMED GRID
-          AREA, so this element's position in the source decides the tab
-          order and decides nothing about the paint. T-WEB-S232.
-
-          `aria-disabled` rather than `disabled`: the exhausted button stays
-          focusable and keeps announcing why it does nothing. */}
       <button
         type="button"
         className={`${screen.hint}${play.hintReady ? "" : ` ${screen.hintUsed}`}`}
@@ -151,33 +115,6 @@ export function PlayView({
   );
 }
 
-/**
- * The pre-hydration paint. Everything the board, the clock, the progress
- * readout and the hint button show is DERIVED FROM THE RECORD, and the record
- * cannot be read before the mount effect — so painting them first renders a day
- * the player already finished as an empty board with a live hint button and a
- * 00:00 clock, for as long as hydration takes.
- *
- * What waits is the VALUES, never the boxes. Every occupant of `.page`'s
- * grid — the stats card, the hint bar — and the control row inside `.board`
- * is reserved here at its shipped size, because `.board` is a centred flex
- * column and the mobile `hint` row is `auto`: dropping either turns the
- * freed height into an offset and the largest element on the screen jumps
- * upward the instant the mount effect runs.
- *
- * The placeholders are `aria-hidden` divs, never buttons: a focusable
- * control with no handler behind it is worse than none, and the board's own
- * placeholder reuses `.gridCard`, `.grid` and `.cell` so its size comes from
- * the shipped rules by construction rather than from a copied number.
- *
- * One thing does still move, and it is named here rather than glossed: on
- * mobile `.topBar` is `justify-content: space-between`, the clock's box is
- * blank because its VALUE is the record's, and a blank box is 4.4px wide
- * against `00:00`'s 56.9px — so `.barKicker` beside it settles ~25px left.
- * Pinning that would take a hard-coded `min-width` on the shipped rule, for
- * an 11px label; the board, the stats card, the hint bar and the control row
- * all land on the same pixel in both paints.
- */
 export function PlaySkeleton({
   date,
   archive,
@@ -211,8 +148,7 @@ export function PlaySkeleton({
 
       <div className={screen.titleBlock}>
         <p className={screen.titleKicker}>{messages.games.binairo.kicker}</p>
-        {/* The same structural wrapper as in PlayView — see the note there:
-            impeccable's two rules anchor on `h1.previousElementSibling`. */}
+
         <div className={screen.titleRow}>
           <h1 className={screen.title}>{messages.games.binairo.play.title}</h1>
           <span aria-hidden className={screen.progressBar}>
@@ -225,9 +161,6 @@ export function PlaySkeleton({
         )}
       </div>
 
-      {/* The desktop sidebar card. Its two rows are what give it its height,
-          so they are here in full — with the STATIC labels, which say what
-          the card is, and blank readouts where the record's numbers go. */}
       <div aria-hidden className={screen.statsCard}>
         <div className={screen.tape} />
         <div className={screen.statRow}>
@@ -253,11 +186,7 @@ export function PlaySkeleton({
             ))}
           </div>
         </div>
-        {/* Labelled, unlike the readouts above: the control row shows the
-            mode, `PaintMode` is never persisted, and `initPlayState` always
-            starts in cycle — so this row is the ONE piece of play chrome
-            that owes the record nothing and can paint complete. Divs, so
-            nothing here is focusable or announced before it works. */}
+
         <div aria-hidden className={styles.controls}>
           <div
             className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
@@ -280,13 +209,6 @@ export function PlaySkeleton({
         </div>
       </section>
 
-      {/* Last in the source, exactly as in `PlayView` above: the skeleton's
-          placeholder is `aria-hidden` and unfocusable, so it owes nothing to
-          the tab order itself — but the two branches occupy the same grid
-          areas in the same source order, which is what the skeleton/live
-          parity assertions read. Blank rather than labelled: which of the two
-          hint labels applies is read off the record, and the bar is the same
-          44px/50px either way. */}
       <div
         aria-hidden
         className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}

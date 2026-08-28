@@ -2,14 +2,6 @@ import { messages } from "../i18n";
 import styles from "./binairo-screen.module.css";
 import type { PaintMode } from "./state";
 
-/**
- * The sticky-mode controls. `0`, `1` and `apagar` set a paint mode; pressing
- * the active one returns to cycle mode, which is why they are toggle buttons
- * carrying `aria-pressed` rather than commands.
- *
- * The affordance line is desktop-only — F4 draws no such line, and at 390px
- * the three 60px buttons already fill the row.
- */
 export function Controls({
   paint,
   onToggleMode,

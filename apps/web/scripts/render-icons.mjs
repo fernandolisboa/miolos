@@ -1,15 +1,3 @@
-// Renders the PWA icon set from the committed SVG master (#19, plan 027
-// D12). Hand-run, outputs committed — the binaries in the repo have a
-// reproducible provenance and a Nano Banana swap is: replace app/icon.svg,
-// re-run this, commit.
-//
-//   cd apps/web && node scripts/render-icons.mjs
-//
-// The maskable variant insets the artwork to the ~80% safe zone on the
-// desk-paper ground, so a platform mask (circle, squircle) never clips the
-// card. 192 + 512 are Chromium's installability floor; PNG rather than SVG
-// because SVG manifest-icon support is Chromium-only. apple-icon.png is
-// 180×180 full-bleed — iOS applies its own corner mask.
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,7 +8,6 @@ const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const master = join(webRoot, "app", "icon.svg");
 const iconsDir = join(webRoot, "public", "icons");
 
-/** --paper-desk (packages/ui/tokens.css) — the maskable ground. */
 const PAPER_DESK = "#F7F2E9";
 
 await mkdir(iconsDir, { recursive: true });
@@ -34,8 +21,6 @@ async function renderPlain(size, outPath) {
 }
 
 async function renderMaskable(size, outPath) {
-  // The safe zone is a centred circle of 40% radius (80% diameter): render
-  // the artwork at 80% and centre it on the desk-paper ground.
   const inner = Math.round(size * 0.8);
   const artwork = await sharp(master, { density: (72 * inner) / 512 })
     .resize(inner, inner)

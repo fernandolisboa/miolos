@@ -88,6 +88,7 @@ jobs:
             turbo-${{ runner.os }}-
       - run: pnpm typecheck
       - run: pnpm lint
+      - run: pnpm comments
       # The root `test` script caps turbo at 2 (ADR-0057). That cap is a fix for
       # a 15.5 GB / 8-core developer box, where vitest spawns `cpus-1` workers
       # per package and six packages at once demand ~19 GB — measured peak RSS

@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 
 const APP = new URL("../app/", import.meta.url);
 
-/** The known eight: both the expected scan result and the loader for it. */
 const AUTHENTICATED_GETS: Record<string, () => Promise<object>> = {
   "attach/state/route.ts": () => import("../app/attach/state/route"),
   "day/route.ts": () => import("../app/day/route"),
@@ -17,8 +16,6 @@ const AUTHENTICATED_GETS: Record<string, () => Promise<object>> = {
   "streak/route.ts": () => import("../app/streak/route"),
 };
 
-// Both spellings of the auth marker: the scan has to name the same eight
-// routes before and after the envelope moves into the helper it gates.
 const AUTH_MARKERS = ["requireUserId", "authenticatedRead"];
 
 async function scanAuthenticatedGets(): Promise<Map<string, string>> {
@@ -52,11 +49,6 @@ describe("every authenticated GET goes through one envelope (T-API-S183)", () =>
   it.each([...authenticatedGets])(
     "%s reads nothing off the request — the no-parameter wall, by gate not by prose",
     (_name, source) => {
-      // ADR-0004's wall is that an authenticated read takes no parameter. The
-      // helper's signature does NOT enforce it: every callback is an arrow
-      // function written inside `GET(request)`, so `request` stays in the
-      // closure and a route can still reach `searchParams`. This is the
-      // tripwire the per-route prose used to be.
       expect(
         [
           "nextUrl",

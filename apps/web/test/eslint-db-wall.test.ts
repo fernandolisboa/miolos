@@ -6,20 +6,6 @@ import { ESLint } from "eslint";
 import tseslint from "typescript-eslint";
 import { describe, expect, it, vi } from "vitest";
 
-// Mechanical proof that the ADR-0024 §5 wall (and its 2026-07-31 amendment,
-// a named #18 duty) actually fires. The rules live in the ROOT
-// eslint.config.mjs and are exercised here through ESLint's Node API against
-// the real config file — asserting on the config object's shape would prove
-// nothing about what `pnpm lint` does.
-//
-// TRAP, verified: `projectService: false` alone does NOT lint. The root config
-// enables tseslint.configs.recommendedTypeChecked, and the first type-aware
-// rule aborts the whole lintText call with
-//   Error while loading rule '@typescript-eslint/await-thenable':
-//   You have used a rule which requires type information…
-// Spreading `disableTypeChecked` into the SAME override object is what makes
-// the harness work. Both rules under test are purely syntactic, so nothing
-// under test is weakened by it (plan 017 §14, disposition adr-2/testability-2).
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 const eslint = new ESLint({
@@ -36,50 +22,10 @@ const eslint = new ESLint({
   ],
 });
 
-// Explicit test timeout, FILE-scoped (ADR-0055 decisions 2, 3 and 4). The
-// cost this budgets is a property of the file, not of any one test: the
-// `new ESLint()` above is cheap, but the FIRST `lintText` lazily loads the
-// root flat config and everything eslint-config-next/core-web-vitals and
-// typescript-eslint pull in. Whichever `it` runs first pays it, and three
-// measurement sessions disagreed about which one that is — so pinning the
-// budget to a named test would pin a scheduling accident, and a `describe`
-// option would need one edit per top-level describe (five in this file)
-// with a silent hole for the sixth.
-//
-// This file's own figures: 4186 ms on CI (gate run 31888933252 — 83.7 % of
-// vitest's 5000 ms default, 814 ms of margin, the thinnest budget in the
-// suite), 3537 ms under contended local fan-out, and a 4983 ms sample from
-// an earlier session that is right-censored at the 5000 ms wall. The
-// contended figure was measured at default fan-out; after #114 the root
-// `test` script caps turbo at 2, so reproduce it with
-// `pnpm test --force --concurrency=10` and not with a bare `pnpm test`.
-//
-// The three wall suites build byte-identical ESLint options over the same
-// config and differ only in when they are scheduled, so they are ONE
-// population and all three take the population maximum: eslint-og-wall's
-// 9832 ms (contended local, pooled over 11 samples). 9832 x 4 = 39 328 ->
-// 40 000 ms. That anchor is a sample maximum, not a bound — it has grown
-// twice already (4983 -> 7907 -> 9832 ms) — and the x4 with the round-up is
-// what absorbs the next surprise.
-//
-// A ceiling, not a target: any of these tests over budget / 2 = 20 000 ms
-// is a defect to diagnose and record, never a number to raise. The line is
-// budget / 2 and not budget / 4 because budget = anchor x 4, so budget / 4
-// IS the anchor: a tripwire there fires whenever a session sets a new
-// sample maximum, which ADR-0055 decision 2 predicts as normal. Twice the
-// anchor is drift; one times it is a draw.
 vi.setConfig({ testTimeout: 40_000 });
 
-/** The two rule ids that carry the wall. Everything else is noise here. */
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
-/**
- * Lint a probe as if it lived at `relativePath`. Nothing is written to disk:
- * `pnpm lint` must never see a deliberately-broken FILE, and the probe strings
- * below (which contain the banned table names on purpose) only ever exist
- * inside this test source — which the table-literal glob deliberately excludes
- * (plan 017 §14, T-LINT-7).
- */
 async function lintProbe(relativePath: string, source: string) {
   const [result] = await eslint.lintText(source, {
     filePath: join(repoRoot, relativePath),
@@ -104,12 +50,6 @@ const SOURCE_PATH = "apps/web/src/eslint-probe.ts";
 const APP_PATH = "apps/web/app/eslint-probe.ts";
 const TEST_PATH = "apps/web/test/eslint-probe.test.ts";
 
-// The plain-JS extensions. apps/web/tsconfig.json sets `allowJs` with `checkJs`
-// off and next.config.ts overrides no `pageExtensions`, so a `.jsx` under app/
-// is a real, typechecking route — and before the step 6 finding
-// web-db-wall-glob-misses-js-jsx-mjs the wall's `{ts,tsx,mts,cts}` globs saw
-// none of these. T-LINT-9/T-LINT-10 keep the extension list from being
-// narrowed back silently, the way T-LINT-7/T-LINT-8 pin the source/test split.
 const SOURCE_JS_PATH = "apps/web/src/eslint-probe.js";
 const APP_JSX_PATH = "apps/web/app/eslint-probe.jsx";
 const SOURCE_MJS_PATH = "apps/web/src/eslint-probe.mjs";
@@ -154,8 +94,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(value)).toContain("no-restricted-imports");
 
-    // `import type` is still an ImportDeclaration: a type-only door into the
-    // server-internal surface would let apps/web NAME the banned tables.
     const typeOnly = await lintProbe(
       SOURCE_PATH,
       [
@@ -169,9 +107,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-3b: `sql` and `eq` are banned by name off the root entry", async () => {
-    // The `paths` half of rule (1): the root entry is wall-safe as a whole,
-    // but its raw-SQL re-exports are the residual the ADR-0024 amendment
-    // names. Without a red proof this half of the rule is not a gate.
     const messages = await lintProbe(
       SOURCE_PATH,
       [
@@ -185,27 +120,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S4: packages/core's client contracts never import the server-only ones", () => {
-    // The OTHER half of the same wall, and it belongs beside the lint probe
-    // rather than in `packages/core/test/`: that package compiles with
-    // `"types": []` and `lib: ES2023`, so it cannot name `node:fs` at all.
-    //
-    // Commit d5bb543 split the content schemas out of `contracts/daily.ts`
-    // because a module-scope `z.strictObject(...)` is a call the bundler
-    // cannot prove pure — so while they sat in that file every one of them,
-    // `nonogramRevealSchema`'s `motifId` / `name` / `mirrored` / `solution`
-    // key strings included, was retained in the browser chunk of all eight
-    // routes. `daily.ts`'s header states the rule as an absolute
-    // ("nothing in this file may import from ./daily-content.ts") and nothing
-    // checked it: one re-added import reinstates the regression with
-    // typecheck, lint and the whole suite green (step-6 round-3 finding
-    // `core-client-server-split-is-prose-only`).
-    //
-    // A SOURCE read, not a module-graph walk: what the bundler retains is the
-    // import, and this must keep failing for a type-only import promoted to a
-    // value one.
-    // Comments are stripped first, because BOTH file headers discuss the rule
-    // in prose and quote the very specifier they forbid — a raw match reds on
-    // the documentation instead of on an import.
     const read = (relative: string) =>
       readFileSync(join(repoRoot, relative), "utf8")
         .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -214,8 +128,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
 
     expect(client).not.toMatch(/from\s+["']\.\/daily-content/);
 
-    // Anti-vacuity: the stripper left the code, the file is the one meant, and
-    // the dependency really does run the other way.
     expect(client).toMatch(/export const nonogramSizeSchema/);
     expect(read("packages/core/src/contracts/daily-content.ts")).toMatch(
       /from\s+["']\.\/daily["']/,
@@ -223,12 +135,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S5: the server-only daily-content schemas are banned by name off @miolos/core", async () => {
-    // The client/server split commit d5bb543 landed was enforced by a comment
-    // in two file headers and a hand-run bundle grep — a single
-    // `import { stripDailyContent } from "@miolos/core"` in a `"use client"`
-    // module reinstated the regression with every gate green (step-6 round-3
-    // finding `core-client-server-split-is-prose-only`). That the name list is
-    // COMPLETE is `T-LINT-S7` below; this is the red proof that it fires.
     const messages = await lintProbe(
       SOURCE_PATH,
       [
@@ -240,8 +146,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(messages)).toContain("no-restricted-imports");
 
-    // The rest of the entry is wall-safe: the CLIENT-facing half must keep
-    // importing cleanly, or this ban would be a wall against the app itself.
     const allowed = await lintProbe(
       SOURCE_PATH,
       [
@@ -255,14 +159,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S6: a relative path or dynamic import into packages/core/src is restricted too", async () => {
-    // The ban above is BARE-SPECIFIER-ONLY, which is the identical hole
-    // `T-LINT-3c` closed for `@miolos/db` one ticket earlier: a relative path
-    // into the package source linted, typechecked and tested clean while
-    // re-shipping `nonogramRevealSchema`'s `motifId` / `name` / `mirrored` /
-    // `solution` key strings into every route's browser chunk (step-6 round-4
-    // finding `core-server-only-ban-is-bare-specifier-only`). The hand-run
-    // bundle tripwire WOULD have caught it, and its own header says nothing in
-    // CI invokes it — so a green suite was not evidence.
     const deep = await lintProbe(
       SOURCE_PATH,
       [
@@ -274,7 +170,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(deep)).toContain("no-restricted-imports");
 
-    // The directory itself resolves to its index too.
     const index = await lintProbe(
       SOURCE_PATH,
       [
@@ -286,7 +181,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(index)).toContain("no-restricted-imports");
 
-    // And the dynamic form, which `no-restricted-imports` cannot see at all.
     const dynamic = await lintProbe(
       SOURCE_PATH,
       [
@@ -297,8 +191,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(dynamic)).toContain("no-restricted-syntax");
 
-    // The package ENTRY is still importable for its client half — this is a
-    // path ban, not a ban on @miolos/core.
     const allowed = await lintProbe(
       SOURCE_PATH,
       [
@@ -312,18 +204,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S7: the banned name list IS the server-only module's value exports, derived not copied", () => {
-    // `T-LINT-S5`'s config comment asserts "the names are the five values
-    // `packages/core/src/index.ts` re-exports from `contracts/daily-content.ts`"
-    // — a guarantee nothing checked. #27 adds `termoDailyContentSchema` to that
-    // module and re-exports it; forgetting the one config line would leave it
-    // importable from a `"use client"` module with typecheck, lint and the
-    // whole suite green, reinstating exactly the bundle regression commit
-    // d5bb543 exists to prevent (step-6 round-4 finding ISS-R4-4). #25 blocks
-    // #27, so this is the next ticket in the chain.
-    //
-    // Derived from the SOURCE on both sides rather than from a second hand
-    // copy: the module's own `export const|class|function` identifiers, and
-    // the `importNames` array read out of the config file.
     const content = readFileSync(
       join(repoRoot, "packages/core/src/contracts/daily-content.ts"),
       "utf8",
@@ -334,7 +214,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
       ),
     ].map(([, name]) => name);
 
-    // Anti-vacuity: the regex really did find the module's exports.
     expect(exported).toContain("stripDailyContent");
     expect(exported.length).toBeGreaterThanOrEqual(5);
 
@@ -350,13 +229,8 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
       ([, name]) => name,
     );
 
-    // Every value the server-only module exports, and nothing else — a name
-    // in the ban that the module no longer exports is just as much a defect,
-    // because it reads as coverage that is not there.
     expect([...bannedNames].sort()).toEqual([...exported].sort());
 
-    // The list is only load-bearing if `index.ts` actually re-exports it, so
-    // that the bare specifier can reach the names at all.
     const barrel = readFileSync(
       join(repoRoot, "packages/core/src/index.ts"),
       "utf8",
@@ -365,13 +239,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S8: the wall fires from apps/web/src/termo/**, and a clean Termo file reports nothing", async () => {
-    // #27 adds a whole new source directory to `apps/web/src`, and every glob
-    // in the wall is written against `apps/web/src/**` rather than against an
-    // enumerated list of game directories. That is a claim about the globs,
-    // not about the files, so it is asserted from the new directory itself:
-    // a `src/termo` file that reached `@miolos/db/publishing` or named a
-    // server-only content schema would ship the credential or the answer
-    // shape into the browser chunk of `/termo` (ADR-0024, ADR-0040).
     const TERMO_PATH = "apps/web/src/termo/eslint-probe.ts";
 
     const bare = await lintProbe(
@@ -417,9 +284,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(dynamic)).toContain("no-restricted-syntax");
 
-    // Anti-vacuity, and the half that keeps the wall from being a wall
-    // against the game itself: the client-safe surface a Termo screen
-    // actually imports reports ZERO wall hits.
     const clean = await lintProbe(
       TERMO_PATH,
       [
@@ -434,18 +298,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S8a: the wall fires from apps/web/src/og/**, and a clean OG file reports nothing", async () => {
-    // The T-LINT-S8 claim above, on the source directory #34 adds. It is the
-    // same claim — "every glob in the wall is written against
-    // `apps/web/src/**` rather than against an enumerated list of
-    // directories" — so it takes the sibling letter rather than a fresh id.
-    //
-    // It matters more here than it did for `src/termo`: `src/og` is the
-    // directory whose modules DO read the database, on an unauthenticated
-    // crawler-facing path, and #34 adds a fourth flat-config wall object
-    // whose globs cover it. Flat config replaces rather than merges, so this
-    // is the assertion that the app-wide wall survived that addition from
-    // inside the new directory itself (T-LINT-S43 asserts the same thing from
-    // the route side).
     const OG_PATH = "apps/web/src/og/eslint-probe.ts";
 
     const bare = await lintProbe(
@@ -491,9 +343,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(dynamic)).toContain("no-restricted-syntax");
 
-    // Anti-vacuity: what the shipped handlers actually import reports ZERO
-    // wall hits. `getPublishedDaily` and `getTodayDaily` are on the root
-    // entry and on `WALL_SURFACE`, so `T-LINT-S37` needs no new name either.
     const clean = await lintProbe(
       OG_PATH,
       [
@@ -507,9 +356,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-3c: a relative path into packages/db/src is restricted", async () => {
-    // Step 6 finding web-db-wall-has-no-relative-path-ban: the bare-specifier
-    // groups match none of this, so `completions` and `hint_grants` were one
-    // `../` away from apps/web — falsifying plan 017 D17.
     const deep = await lintProbe(
       SOURCE_PATH,
       [
@@ -521,7 +367,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(deep)).toContain("no-restricted-imports");
 
-    // The directory itself resolves to its index too.
     const index = await lintProbe(
       SOURCE_PATH,
       [
@@ -535,19 +380,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-S56: the node_modules/@miolos SYMLINK spelling of that same reach is restricted too, static and dynamic", async () => {
-    // #106, found at #34 step 6 as finding P1 and filed rather than fixed there
-    // because the hole is pre-existing on `main`. `T-LINT-3c` above and
-    // `T-LINT-S6` cover two spellings of the deep reach — the bare subpath and
-    // the relative path into `packages/<pkg>/src`. In a pnpm workspace there is
-    // a THIRD: `apps/web/node_modules/@miolos/db` is a symlink to
-    // `packages/db`, so the specifier below resolves to the same file,
-    // typechecks and bundles identically, and matched neither glob.
-    //
-    // Not theoretical, and not reasoned — MEASURED on the shipped config before
-    // the fix: this exact probe and six siblings linted CLEAN with every
-    // bare/relative control BLOCKED. The symlink is real
-    // (`db -> ../../../../packages/db`) and
-    // `apps/web/node_modules/@miolos/db/src/publishing.ts` is a real file.
     const db = await lintProbe(
       SOURCE_PATH,
       [
@@ -559,12 +391,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(db)).toContain("no-restricted-imports");
 
-    // The BARE `/src` arm, which is the one that binds — measured, and the
-    // opposite of how the triple reads. `no-restricted-imports` matches with
-    // gitignore DIRECTORY semantics, so `**/node_modules/@miolos/db/src` alone
-    // covers `…/src` AND every descendant, while a `/src/**`-only ban misses
-    // the bare directory. Deleting the two starred arms leaves this file green;
-    // deleting this one does not. The config comment carries the measurement.
     const dbIndex = await lintProbe(
       SOURCE_PATH,
       [
@@ -576,9 +402,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(dbIndex)).toContain("no-restricted-imports");
 
-    // packages/core has the identical hole and the identical stake — the
-    // server-only daily-content schemas, whose module is retained in every
-    // route's browser chunk the moment anything names it (commit d5bb543).
     const core = await lintProbe(
       SOURCE_PATH,
       [
@@ -590,10 +413,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(core)).toContain("no-restricted-imports");
 
-    // And the dynamic halves, which `no-restricted-imports` cannot see at all.
-    // `webDynamicPackageSource`'s regex had the same hole: it matched
-    // `packages/(db|core)/src` only, and the node_modules path spells the
-    // package `@miolos/db`, not `db`.
     const dynamic = await lintProbe(
       SOURCE_PATH,
       [
@@ -604,9 +423,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
     );
     expect(ruleIds(dynamic)).toContain("no-restricted-syntax");
 
-    // The depth of the `../` prefix is not what makes this fire — checked
-    // rather than assumed, because `**` and a leading `..` segment is exactly
-    // the kind of minimatch question that reads as obvious and is not.
     for (const prefix of ["./", "../", "../../", "../../../"]) {
       const atDepth = await lintProbe(
         SOURCE_PATH,
@@ -622,10 +438,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-3d: `users` and `sessions` are banned by name off the root entry", async () => {
-    // Step 6 finding root-entry-users-and-sessions-are-importable-from-apps-web:
-    // `db.select().from(users)` needs neither `sql` nor `eq`, so restricting
-    // only those two left every user row — and every session token hash — one
-    // import away from an RSC payload.
     const messages = await lintProbe(
       SOURCE_PATH,
       [
@@ -646,11 +458,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
       "",
     ].join("\n");
 
-    // Both paths on purpose. `apps/web/src/**` matches BOTH wall config
-    // objects, and flat config REPLACES a rule's whole configuration rather
-    // than merging it — so the source-only object must carry this selector
-    // too or the dynamic-import door reopens exactly where src/db.ts lives.
-    // Departure from plan 017 §14, proven red before it was fixed.
     expect(ruleIds(await lintProbe(SOURCE_PATH, banned))).toContain(
       "no-restricted-syntax",
     );
@@ -671,10 +478,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-4b: a COMPUTED dynamic import specifier is restricted at every apps/web path", async () => {
-    // Step 6 finding dynamic-import-selector-misses-computed-specifiers: the
-    // literal selector of T-LINT-4 sees only a plain string, so both of these
-    // linted clean while resolving at runtime to the very module the wall
-    // exists to keep out.
     const templateLiteral = [
       "export async function load() {",
       "  return await import(`@miolos/db/publishing`);",
@@ -689,9 +492,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
       "",
     ].join("\n");
 
-    // All three paths, for the same flat-config reason as T-LINT-4: the
-    // source-only object REPLACES the rule's configuration rather than merging
-    // it, so the selector has to be listed in both arrays.
     for (const path of [SOURCE_PATH, APP_PATH, TEST_PATH]) {
       expect(ruleIds(await lintProbe(path, templateLiteral))).toContain(
         "no-restricted-syntax",
@@ -701,9 +501,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
       );
     }
 
-    // Matching on `source` rather than on "any non-Literal child" is what makes
-    // this safe: ImportExpression also carries the options argument, and an
-    // import attribute must not be mistaken for a computed specifier.
     const withAttributes = [
       "export async function load() {",
       '  return await import("./data.json", { with: { type: "json" } });',
@@ -714,10 +511,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-4c: require() is banned at every apps/web path", async () => {
-    // no-restricted-imports never sees require(), so covering `.cjs` in the
-    // wall globs would leave CommonJS as an open door (step 6 finding
-    // web-db-wall-glob-misses-js-jsx-mjs). apps/web is `"type": "module"` and
-    // calls require() nowhere, so the whole call is banned.
     const source = [
       'const publishing = require("@miolos/db/publishing");',
       "",
@@ -733,8 +526,6 @@ describe("apps/web db wall — import bans (ADR-0024 §5)", () => {
   });
 
   it("T-LINT-8: the import bans still fire under apps/web/test/**", async () => {
-    // The source/test split narrows only the table-literal selectors. If a
-    // future edit widens the exemption to the import bans, this goes red.
     const messages = await lintProbe(
       TEST_PATH,
       [
@@ -756,8 +547,6 @@ describe("apps/web db wall — table-name literals (ADR-0024 amendment)", () => 
     );
     expect(ruleIds(stringLiteral)).toContain("no-restricted-syntax");
 
-    // The TemplateElement companion is not optional: a tagged `sql` template
-    // slips straight through a Literal-only selector.
     const template = await lintProbe(
       SOURCE_PATH,
       ["export const query = `select * from remote_config`;", ""].join("\n"),
@@ -775,7 +564,6 @@ describe("apps/web db wall — table-name literals (ADR-0024 amendment)", () => 
     );
     expect(ruleIds(interpolated)).toContain("no-restricted-syntax");
 
-    // `\b` spares a longer word that merely starts with a banned name.
     const nearMiss = await lintProbe(
       SOURCE_PATH,
       ['export const setting = "remote_configuration";', ""].join("\n"),
@@ -792,10 +580,6 @@ describe("apps/web db wall — table-name literals (ADR-0024 amendment)", () => 
   });
 
   it("T-LINT-7: the same probe reports nothing under apps/web/test/**", async () => {
-    // Pins the source/test split itself. `pnpm lint` lints apps/web/test, and
-    // THIS file must contain the banned strings to prove the rules fire — so
-    // narrowing the literal selectors to source is what keeps the lint gate
-    // green. Nobody "simplifies" the glob back without going red here.
     const stringLiteral = await lintProbe(
       TEST_PATH,
       ['export const table = "daily_puzzles";', ""].join("\n"),
@@ -825,7 +609,6 @@ describe("apps/web db wall — extension coverage (step 6: js/jsx/mjs/cjs)", () 
       );
     }
 
-    // `.cjs` is parsed as CommonJS, so its door is require(), not import.
     const commonJs = [
       'const publishing = require("@miolos/db/publishing");',
       "",
@@ -838,11 +621,6 @@ describe("apps/web db wall — extension coverage (step 6: js/jsx/mjs/cjs)", () 
   });
 
   it("T-LINT-9b: a .jsx file is linted at all, JSX syntax included", async () => {
-    // The hole under T-LINT-9 was worse than a silent wall: eslint-config-next's
-    // repo-wide globs are force-scoped to `{ts,tsx}`, so nothing in the repo
-    // named `.jsx` and ESLint skipped the file with "File ignored because no
-    // matching configuration was supplied" — a green lint on an unlinted route.
-    // A rule from js.configs.recommended firing is the proof the file is reached.
     const redeclared = [
       "var a = 1;",
       "var a = 2;",
@@ -853,8 +631,6 @@ describe("apps/web db wall — extension coverage (step 6: js/jsx/mjs/cjs)", () 
       "no-redeclare",
     );
 
-    // And JSX itself must parse: without ecmaFeatures.jsx the file dies at the
-    // first `<`, which would report the wall as silent for the wrong reason.
     const jsx = [
       "export default function Probe() {",
       '  return <div className="probe">ok</div>;',
@@ -896,17 +672,6 @@ describe("apps/web db wall — not a blanket ban", () => {
   });
 
   it("T-LINT-S59: the symlink bans are PACKAGE-SCOPED — @miolos/ui through node_modules stays legal", async () => {
-    // The non-vacuity control for `T-LINT-S56`, `T-LINT-S57` and `T-LINT-S58`
-    // (#106), and the reason it earns an id of its own: `T-LINT-S18` and
-    // `T-LINT-S45` are the precedent — a wall that reds on everything proves
-    // nothing about what it bans, so a batch of four new BAN probes needs a
-    // legal-surface probe beside it or the cheapest wrong fix (a blanket
-    // `**/node_modules/@miolos/**`) passes every one of them.
-    //
-    // `@miolos/ui` is the right subject: it holds tokens and primitives
-    // (ADR-0002) and is deliberately NOT walled, so its symlink spelling must
-    // stay clean. `packages/games` is the other unwalled-app-wide one, but it
-    // is banned on the OG surface, which would make it a confusing control.
     const ui = await lintProbe(
       SOURCE_PATH,
       [
@@ -918,10 +683,6 @@ describe("apps/web db wall — not a blanket ban", () => {
     );
     expect(wallHits(ui)).toEqual([]);
 
-    // And the app-wide wall still PERMITS the wall-safe root entries it always
-    // permitted. #106 only ever adds bans; if this ticket had moved what a wall
-    // permits rather than only what it bans, that is a different ticket and the
-    // issue says so out loud.
     const rootEntry = await lintProbe(
       SOURCE_PATH,
       [
@@ -936,12 +697,6 @@ describe("apps/web db wall — not a blanket ban", () => {
   });
 
   it("T-LINT-S3: the wall fires from apps/web/src/nonogram/**, and a clean nonogram file reports zero", async () => {
-    // #25's standing duty (ADR-0024 §5, plan 020 §18): the ticket adds a whole
-    // new directory under `apps/web/src/`, and the wall's globs are
-    // `apps/web/**` / `apps/web/src/**` — so it covers the new path BY
-    // CONSTRUCTION rather than by anyone remembering to widen a list. That is
-    // exactly the kind of claim worth a red proof: a future narrowing of the
-    // glob to a per-feature list would pass every other test in this file.
     const nonogramPath = "apps/web/src/nonogram/eslint-probe.ts";
 
     const bannedImport = await lintProbe(
@@ -961,8 +716,6 @@ describe("apps/web db wall — not a blanket ban", () => {
     );
     expect(ruleIds(tableLiteral)).toContain("no-restricted-syntax");
 
-    // And the other half: the wall is not a blanket ban on the directory. The
-    // two imports every real nonogram module makes report nothing.
     const clean = await lintProbe(
       nonogramPath,
       [
@@ -979,18 +732,6 @@ describe("apps/web db wall — not a blanket ban", () => {
 
 describe("the no-session-replay wall (#33, ADR-0069 decision 1)", () => {
   it("T-LINT-S53: a replay-capable client is an import error in every tree, and the ban is not a substring heuristic", async () => {
-    // Issue #33's AC 2 is "session replay is disabled AND STAYS DISABLED",
-    // and CLAUDE.md lists no-session-replay as a veto. Before this group the
-    // "stays" half was a convention plus a copy assertion — nothing in the
-    // tree went red if a later PR added `posthog-js`. THIS IS THE SOURCE
-    // HALF; the install half (which is what closes dynamic import and
-    // require, neither of which `no-restricted-imports` can see) is
-    // `no-session-replay.test.ts`, T-WEB-S322.
-    //
-    // The four apps/web paths are the four REPEATERS of
-    // `webWallImportPatterns`: drop the spread from any one of them — the
-    // failure mode the whole file exists for — and exactly one of these
-    // reds. `apps/api` and `packages/**` are the separate object (0).
     const bannedAt = [
       ["apps/web/src/eslint-probe.ts", 'import "posthog-js";'],
       ["apps/web/src/free-play/eslint-probe.ts", 'import "posthog-js-lite";'],
@@ -1011,11 +752,6 @@ describe("the no-session-replay wall (#33, ADR-0069 decision 1)", () => {
       ).toContain("no-restricted-imports");
     }
 
-    // ANTI-VACUITY. The list is exact names plus their subpaths, never a
-    // `posthog*` substring match, so a local module or an unrelated package
-    // whose name merely CONTAINS one of them stays clean. Without this
-    // control a future "simplification" to `["*posthog*"]` would pass every
-    // assertion above while banning files that have nothing to do with it.
     for (const clean of [
       'import "./posthog-js-notes";',
       'import "../telemetry/client";',
@@ -1029,37 +765,7 @@ describe("the no-session-replay wall (#33, ADR-0069 decision 1)", () => {
   });
 });
 
-/**
- * AC 2 as a TEST rather than a hand-run grep (#31, ADR-0014 :16 / ADR-0053
- * decision 4). The issue's second acceptance criterion is that `apps/web`'s
- * direct database reads go only through the published-predicate helper, with
- * no parallel query path — and until #31 that was a sentence in a PR body.
- *
- * A source scan in `T-WEB-S166`'s register: it enumerates every `@miolos/db`
- * import in `apps/web` and asserts the imported NAMES are wall readers.
- * ESLint already bans the dangerous subpaths and the four bypass names off
- * the root entry; what it cannot express is "and nothing NEW on the root
- * entry either", which is the thing an archive PR is most likely to get
- * wrong.
- */
-// The ids in this file live on `it(...)`, never on the `describe` — every
-// other block here does it that way, and `docs/agents/test-ids.md` records
-// `eslint-*-wall.test.ts` as keeping its own convention. This block landed
-// carrying the id on the `describe` AND on both of its `it`s, which is a
-// same-file duplicate whichever convention you read it under (step-7
-// verification round, plan 037 §14 I65). `T-LINT-S37` stays on the assertion §13's AC 2 cites; the
-// counter-assertion added at step 7 takes the sibling letter.
 describe("no parallel query path in apps/web", () => {
-  /**
-   * The wall readers `apps/web` may name, plus the one type the archive's
-   * grouping helper takes. Every one of them carries `published_at <= now()`
-   * and `killed_at IS NULL` in SQL — `archiveDateClass` is the single
-   * exception and it reads no table at all, so there is nothing for a wall
-   * to guard (ADR-0053 decision 4).
-   *
-   * Adding a name here without adding its wall tests in `packages/db` is the
-   * move this list exists to make visible.
-   */
   const WALL_SURFACE = new Set([
     "ArchivedDay",
     "archiveDateClass",
@@ -1092,19 +798,12 @@ describe("no parallel query path in apps/web", () => {
     return found;
   }
 
-  /**
-   * The file with its comments removed, so the counter-assertion below
-   * counts CODE references to `@miolos/db` and not the doc blocks that
-   * discuss the wall at length. The same stripper `archive-routes.test.ts`
-   * uses, and it deliberately does not eat the `//` of a URL scheme.
-   */
   function code(source: string): string {
     return source
       .replaceAll(/\/\*[\s\S]*?\*\//g, "")
       .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
   }
 
-  /** Every `@miolos/db*` import in the file, as `{ from, names }`. */
   function dbImports(
     source: string,
   ): { readonly from: string; readonly names: string[] }[] {
@@ -1138,15 +837,7 @@ describe("no parallel query path in apps/web", () => {
           }
         }
       }
-      // THE COUNTER-ASSERTION, and it is what makes this suite AC 2's proof
-      // rather than a scan of one import shape (step-6 F19). The parser above
-      // only sees BRACED named imports, so `import * as db from "@miolos/db"`,
-      // a default import and `await import("@miolos/db")` all pass it by
-      // yielding no matches at all — and the root entry is deliberately NOT
-      // ESLint-banned, which is this suite's whole premise, so the one hole
-      // sits in the one place the test claims to cover. A file that mentions
-      // the package in code and yields no parsed import is now an offender:
-      // an unparsed import shape reds instead of passing.
+
       if (code(source).includes('"@miolos/db') && found.length === 0) {
         offenders.push(
           `${path}: an @miolos/db reference this scan cannot parse`,
@@ -1165,14 +856,13 @@ describe("no parallel query path in apps/web", () => {
         }
       }
     }
-    // The archive's four readers really are found by the parser above, so an
-    // empty offender list means "all clean", not "nothing scanned".
+
     expect(seen.has("getArchivedDaily")).toBe(true);
     expect(seen.has("listArchivedDays")).toBe(true);
     expect(seen.has("listArchivedMonths")).toBe(true);
     expect(seen.has("archiveDateClass")).toBe(true);
     expect(seen.has("getTodayDaily")).toBe(true);
-    // And a planted parallel path is seen for what it is.
+
     expect(
       dbImports('import { sql, users } from "@miolos/db";')[0]?.names,
     ).toEqual(["sql", "users"]);
@@ -1182,9 +872,6 @@ describe("no parallel query path in apps/web", () => {
       )[0]?.from,
     ).toBe("@miolos/db/publishing");
 
-    // The three shapes the parser CANNOT read, pinned as unreadable so the
-    // counter-assertion above is the thing catching them and nobody later
-    // mistakes the parser for exhaustive (step-6 F19).
     for (const unparsed of [
       'import * as db from "@miolos/db";',
       'import db from "@miolos/db";',

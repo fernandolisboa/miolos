@@ -1,8 +1,3 @@
-/**
- * The free-play Sudoku screen (#28): the generating state, the fresh-seed
- * retry ladder (plan 025 D5.2 — only `SudokuGenerationError` buys a seed),
- * and the zero-fetch solve with no timer anywhere (D8).
- */
 import {
   generateDailySudoku,
   sudokuCriteriaForWeekday,
@@ -17,8 +12,7 @@ import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
 
 const SEED = 20_260_812;
-// The solve runs on Leve (weekday 1, tier 1) — the cheapest rung, the
-// route the daily fixtures use too (route-ssr.test.tsx's own note).
+
 const LEVE_PUZZLE = generateDailySudoku({
   seed: SEED,
   weekday: LEVEL_WEEKDAYS.leve,
@@ -53,14 +47,11 @@ afterEach(() => {
 
 describe("free-play Sudoku generation states (T-WEB-S118)", () => {
   it("server-renders the generating skeleton with its marker — the static shell", () => {
-    // No effect runs on the server: the pre-hydration HTML is the
-    // generating state at final dimensions, which is what satisfies the
-    // impeccable preflight's grep on a static page (plan 025 D1).
     const markup = renderToStaticMarkup(<SudokuFreeScreen />);
 
     expect(markup).toContain('data-play-state="generating"');
     expect(markup).toContain(messages.freePlay.generating);
-    // The board card and keypad boxes are reserved, values blanked.
+
     expect(markup).toContain(messages.games.sudoku.play.keypad.erase);
   });
 
@@ -86,7 +77,6 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
 
     const { container } = render(<SudokuFreeScreen deps={deps} />);
 
-    // Third seed succeeded: the board is up, three seeds were drawn.
     expect(
       container.querySelector("main")?.getAttribute("data-play-state"),
     ).toBe("playing");
@@ -115,7 +105,6 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
 
     const { container } = render(<SudokuFreeScreen deps={deps} />);
 
-    // The ladder exhausted: never an empty screen (plan 025 §7.4).
     expect(
       container.querySelector("main")?.getAttribute("data-play-state"),
     ).toBe("error");
@@ -132,35 +121,28 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
 });
 
 describe("free-play Sudoku zero-fetch solve, no timer (T-WEB-S119)", () => {
-  // Full simulated-keystroke solve: ~1.5s of test time locally, observed at
-  // 6-7s on starved CI runners (3-4x slowdown, napkin/handoff 024) — over
-  // vitest's 5s default. Local x4 plus margin over the observed CI worst case.
   it(
     "solves a pinned Leve puzzle into the solved card with zero fetch calls",
     { timeout: 20_000 },
     () => {
       const fetchMock = vi.fn();
       vi.stubGlobal("fetch", fetchMock);
-      // Two draws: the default Médio mount, then the switch to Leve.
+
       const { deps } = stableDeps({ seeds: [SEED, SEED] });
 
       const { container } = render(<SudokuFreeScreen deps={deps} />);
 
-      // No timer rendered ANYWHERE on the free screen (D8) — neither label
-      // nor a 00:00 readout.
       expect(
         screen.queryByText(messages.play.timerLabel),
       ).not.toBeInTheDocument();
       expect(container.textContent).not.toContain("00:00");
 
-      // Switch to Leve — the picker regenerates immediately (remount by key).
       fireEvent.click(
         screen.getByRole("radio", {
           name: messages.freePlay.level.aria("Leve"),
         }),
       );
 
-      // Key the solution in: select each empty cell, press its digit.
       for (const [index, given] of LEVE_PUZZLE.givens.entries()) {
         if (given !== 0) {
           continue;
@@ -170,7 +152,7 @@ describe("free-play Sudoku zero-fetch solve, no timer (T-WEB-S119)", () => {
           `[data-cell-index="${index}"]`,
         );
         if (cell === null) {
-          break; // solved — the in-place swap took the board with it
+          break;
         }
         fireEvent.click(cell);
         fireEvent.click(

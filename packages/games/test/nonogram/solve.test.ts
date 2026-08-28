@@ -40,8 +40,6 @@ describe("solveLine", () => {
   });
 
   it("completes a line from partial knowledge", () => {
-    // Clue [3] on a 5-line with the middle cell known filled and cell 0
-    // known empty: run must sit within 1..4 and cover cell 2.
     const states: NonogramCellState[] = [
       "empty",
       "unknown",
@@ -51,7 +49,7 @@ describe("solveLine", () => {
     ];
     const result = solveLine(states, [3]);
     expect(result.contradiction).toBe(false);
-    // Placements: 1-3 or 2-4; cells 2 and 3 are in both.
+
     expect(result.states[2]).toBe("filled");
     expect(result.states[3]).toBe("filled");
     expect(result.states[0]).toBe("empty");

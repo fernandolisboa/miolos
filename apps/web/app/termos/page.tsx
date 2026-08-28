@@ -3,15 +3,6 @@ import Link from "next/link";
 import { messages, routes } from "../../src/i18n";
 import styles from "./page.module.css";
 
-/**
- * The terms of use (#158) — /privacidade's register, mirrored exactly:
- * STATIC on purpose, no `dynamic` export, no db import, no fetch in the
- * server component, every string from `messages.terms.*`, and no metadata
- * export (the root layout's title stands, as it does for the policy). The
- * copy states exactly what this release ships — free content (ADR-0005),
- * the no-signup account (ADR-0003, ADR-0050) — and the one internal link
- * points at the policy, which keeps the data story in its single home.
- */
 export default function TermsPage() {
   return (
     <main className={styles.page} data-page="termos">

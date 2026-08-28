@@ -1,18 +1,5 @@
 "use client";
 
-/**
- * The /modo-livre/binairo screen (#28, ADR-0046): the daily play screen's
- * sibling, not a new dialect — same shared grid chrome, same board card, same
- * hint bar — with the free-play differences: back targets the index, the date
- * slot carries the mode label, NO timer (ADR-0046 decision 6), a three-chip
- * level picker above the board, and an in-place swap to the solved card
- * offering "Mais um".
- *
- * Free play records NOTHING: no lifecycle hook, no sync, no play record,
- * no localStorage (ADR-0008 rule 5, ADR-0046 decision 4). The ESLint wall
- * around this directory makes those imports a lint error, and the
- * zero-fetch suites prove the absence at runtime.
- */
 import {
   useCallback,
   useEffect,
@@ -52,13 +39,11 @@ const ACCENT = accentVars("binairo");
 
 const TOTAL_CELLS = 64;
 
-/** A readout placeholder's content — one line box, never zero height. */
 const BLANK_READOUT = "\u00a0";
 
 export function BinairoFreeScreen({
   deps,
 }: {
-  /** Test seam only; the page passes nothing. */
   readonly deps?: FreeBinairoDeps;
 }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
@@ -95,13 +80,6 @@ export function BinairoFreeScreen({
   );
 }
 
-/**
- * One puzzle's board, remounted per `{seed, level, run}` by its key —
- * React's own reset semantics instead of a hand-rolled reset action. The
- * daily reducer is reused UNMODIFIED: the timer stays `{accumulatedMs: 0,
- * runningSince: null}` forever because no `resume` is ever dispatched —
- * inert state, not removed state.
- */
 function BinairoFreeBoard({
   level,
   onLevelChange,
@@ -127,9 +105,6 @@ function BinairoFreeBoard({
     stateRef.current = state;
   });
 
-  // The shipped path for "no stored record" (binairo/state.ts `restore`):
-  // sets `{now, hydrated: true}` and nothing else. Free play has no record
-  // to look for, so this is the whole of hydration.
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
@@ -158,8 +133,7 @@ function BinairoFreeBoard({
     if (current.hint.used >= current.hint.free || current.status === "solved") {
       return;
     }
-    // The solution comes from the generator output, not a solver memo —
-    // the one line where free play diverges from `use-binairo-play`.
+
     const hint = nextHint(puzzle.solution, current.givens, current.entries);
     if (hint === null) {
       return;
@@ -204,12 +178,6 @@ function BinairoFreeBoard({
   );
 }
 
-/**
- * The page chrome all three states share — the shared play grid with the
- * free-play differences. `children` fills the board slot: the grid
- * card and controls while playing, the reserved skeleton while generating,
- * the error card on failure.
- */
 function Frame({
   playState,
   level,
@@ -225,7 +193,7 @@ function Frame({
   readonly onLevelChange: (level: FreePlayLevel) => void;
   readonly progressLong: string | null;
   readonly progressShort: string | null;
-  /** `null` renders the reserved placeholder bar (the skeleton discipline). */
+
   readonly hint: {
     readonly ready: boolean;
     readonly onReveal: () => void;
@@ -253,16 +221,13 @@ function Frame({
         <span className={screen.barKicker}>
           {messages.games.binairo.kicker}
         </span>
-        {/* The date slot carries the MODE, because free play has no date —
-            and no timer readout in either position. */}
+
         <span className={screen.topDate}>{messages.freePlay.modeTag}</span>
       </header>
 
       <div className={screen.titleBlock}>
         <p className={screen.titleKicker}>{messages.games.binairo.kicker}</p>
-        {/* The <h1> stays the FIRST element child of .titleRow — see the
-            daily play-view: impeccable's hero-eyebrow-chip and
-            kicker-above-heading rules anchor on `h1.previousElementSibling`. */}
+
         <div className={screen.titleRow}>
           <h1 className={screen.title}>{copy.title}</h1>
           {progressShort === null ? (
@@ -290,8 +255,7 @@ function Frame({
             <span className={screen.progressCard}>{progressLong}</span>
           )}
         </div>
-        {/* The level in the timer's old slot: free play measures nothing,
-            and the level is the one per-puzzle identity this mode has. */}
+
         <div className={screen.statRow}>
           <span className={screen.statLabel}>
             {messages.freePlay.level.label}
@@ -310,9 +274,6 @@ function Frame({
         )}
       </section>
 
-      {/* AFTER the board: `screen.page` places every child by NAMED GRID
-          AREA, so this element's position in the source decides the tab
-          order and decides nothing about the paint. T-WEB-S232. */}
       {hint === null ? (
         <div
           aria-hidden
@@ -334,7 +295,6 @@ function Frame({
   );
 }
 
-/** The board card at final dimensions, values blanked. */
 function GeneratingBoard() {
   return (
     <>
@@ -348,8 +308,7 @@ function GeneratingBoard() {
           ))}
         </div>
       </div>
-      {/* Static text, no spinner: a synchronous generation burst would
-          freeze an animation, and the system prefers stillness. */}
+
       <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
   );

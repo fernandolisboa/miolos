@@ -5,18 +5,6 @@ import { freePlayRoutes, messages, routes } from "../../src/i18n";
 import { accentVars } from "../../src/play/accent";
 import styles from "./page.module.css";
 
-/**
- * The Modo livre index (#28, ADR-0046): three cards, one per grid game,
- * each a real link into its free-play screen. STATIC on purpose — no
- * `dynamic` export, no db import, no fetch, because there is nothing to
- * fetch: free play is generated in the browser (ADR-0011) and this page
- * reads no date. A static page is itself a small structural proof of
- * AC 1 — it has no server data dependency to leak.
- *
- * Termo has no card here and no route under /modo-livre at all: its word
- * list is finite curated content (ADR-0005/ADR-0015) and the exclusion is
- * carried by `FREE_PLAY_GAMES`'s type, not by this file's restraint.
- */
 export default function FreePlayIndexPage() {
   return (
     <main className={styles.page} data-free-play="index">

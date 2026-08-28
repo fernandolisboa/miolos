@@ -10,10 +10,6 @@ import { HubAttach } from "../app/hub-attach";
 import HojePage from "../app/page";
 import { messages, routes } from "../src/i18n";
 
-// The attach prompt card (#21, D15, ADR-0050 decision 9): server-owned
-// eligibility, one lifecycle per account, the repo's first form controls.
-// Every assertion goes through the messages module — never string literals.
-
 const clientMock = vi.hoisted(() => ({
   fetchAttachState: vi.fn<() => Promise<{ eligible: boolean } | undefined>>(),
   requestAttachLink: vi.fn(),
@@ -29,7 +25,6 @@ beforeEach(() => {
   clientMock.requestAttachLink.mockResolvedValue("sent");
 });
 
-/** Render the card and wait for the eligibility fetch to land it. */
 async function renderEligibleCard() {
   render(<HubAttach />);
   return await screen.findByText(messages.attach.invitation);
@@ -37,17 +32,13 @@ async function renderEligibleCard() {
 
 describe("HubAttach eligibility gating (T-WEB-S135)", () => {
   it("is absent on the server render and while the state is unresolved, and renders from messages once eligible resolves true", async () => {
-    // The server render: no fetch fires, nothing paints — the hub's
-    // first-paint contract (T-WEB-S127) is untouched by this island.
     expect(renderToStaticMarkup(<HubAttach />)).toBe("");
 
-    // Unresolved: a promise that never settles inside this test.
     clientMock.fetchAttachState.mockReturnValue(new Promise(() => undefined));
     const { container, unmount } = render(<HubAttach />);
     expect(container.innerHTML).toBe("");
     unmount();
 
-    // Ineligible: the server said no — nothing renders, ever.
     clientMock.fetchAttachState.mockResolvedValue({ eligible: false });
     const ineligible = render(<HubAttach />);
     await waitFor(() => {
@@ -56,7 +47,6 @@ describe("HubAttach eligibility gating (T-WEB-S135)", () => {
     expect(ineligible.container.innerHTML).toBe("");
     ineligible.unmount();
 
-    // Eligible: the card appears, all copy from the messages module.
     clientMock.fetchAttachState.mockResolvedValue({ eligible: true });
     await renderEligibleCard();
     expect(screen.getByText(messages.attach.lead)).toBeInTheDocument();
@@ -76,12 +66,6 @@ describe("HubAttach dismissal (T-WEB-S136)", () => {
     expect(clientMock.dismissAttachPrompt).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(messages.attach.invitation)).toBeNull();
 
-    // The mechanical half of D9's "server-owned, never localStorage": the
-    // attach modules' own sources carry no storage reference at all. #35's
-    // onboarding modules join the list (the same D9, plan 057: "per
-    // identity, surviving attach/merge" is a thing localStorage cannot do)
-    // — a widened claim about the same gate, no new id (the T-WEB-S100
-    // burn precedent).
     const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
     for (const sourcePath of [
       "src/attach/attach-client.ts",
@@ -91,17 +75,11 @@ describe("HubAttach dismissal (T-WEB-S136)", () => {
       "src/onboarding/onboarding-client.ts",
       "src/onboarding/use-onboarding-state.ts",
       "app/hub-onboarding.tsx",
-      // #145's push modules join (ADR-0064: the dismissal is the
-      // attach-prompt lifecycle — device storage re-prompts exactly the
-      // cleared-data user) — the same widened claim, no new id.
+
       "src/push/push-client.ts",
       "src/push/use-push-state.ts",
       "src/play/push-prompt-card.tsx",
-      // #206 cluster 3: the three hooks above are now three lines each over
-      // one shared mount fetch, and that module is where a cache would go
-      // — for these three and for the streak, medals and stats reads whose
-      // own doc blocks carried ADR-0048 decision 4's "no localStorage" and
-      // are now delegations. Same widened claim, no new id.
+
       "src/api/use-mount-fetch.ts",
       "src/streak/use-streak.ts",
       "src/medals/use-medals.ts",
@@ -129,7 +107,7 @@ describe("HubAttach form semantics (T-WEB-S137)", () => {
     fireEvent.change(screen.getByLabelText(messages.attach.emailLabel), {
       target: { value: "  Jogadora@Example.COM " },
     });
-    expect(submit).toBeDisabled(); // still: recovery is the gate
+    expect(submit).toBeDisabled();
 
     fireEvent.click(screen.getByLabelText(messages.attach.recoveryLabel));
     expect(submit).toBeEnabled();
@@ -138,7 +116,7 @@ describe("HubAttach form semantics (T-WEB-S137)", () => {
     await waitFor(() => {
       expect(clientMock.requestAttachLink).toHaveBeenCalledTimes(1);
     });
-    // Normalized BEFORE the wire: the same boundary schema the api parses.
+
     expect(clientMock.requestAttachLink).toHaveBeenCalledWith({
       email: "jogadora@example.com",
       recoveryConsent: true,
@@ -185,7 +163,7 @@ describe("HubAttach sent and error states (T-WEB-S138)", () => {
         screen.getByRole("button", { name: messages.attach.submit }),
       );
       expect(await screen.findByText(copy)).toBeInTheDocument();
-      // The form survives an error — the player fixes and retries.
+
       expect(
         screen.getByLabelText(messages.attach.emailLabel),
       ).toBeInTheDocument();
@@ -196,12 +174,10 @@ describe("HubAttach sent and error states (T-WEB-S138)", () => {
 
 describe("the privacy links ride `routes`, never literals (T-WEB-S143)", () => {
   it("the hub nav carries the real /privacidade link and the card's consent copy links it too", async () => {
-    // The server page: the secondary nav's new href is the routes value.
     const hub = renderToStaticMarkup(<HojePage />);
     expect(hub).toContain(`href="${routes.privacy}"`);
     expect(hub).toContain(messages.hoje.links.privacy);
 
-    // The card: the consent copy's link into the policy.
     await renderEligibleCard();
     const link = screen.getByRole("link", {
       name: messages.attach.privacyLinkLabel,
@@ -212,13 +188,10 @@ describe("the privacy links ride `routes`, never literals (T-WEB-S143)", () => {
 
 describe("the terms link rides beside the policy at both legal link sites (T-WEB-S294)", () => {
   it("the hub nav carries the real /termos link and the card's legal-links line links it too", async () => {
-    // The server page: the fifth secondary-nav href is the routes value —
-    // T-WEB-S143's shape, applied to #158's link.
     const hub = renderToStaticMarkup(<HojePage />);
     expect(hub).toContain(`href="${routes.terms}"`);
     expect(hub).toContain(messages.hoje.links.terms);
 
-    // The card: the terms sit on the same quiet line as the policy link.
     await renderEligibleCard();
     const link = screen.getByRole("link", {
       name: messages.attach.termsLinkLabel,

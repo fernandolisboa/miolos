@@ -7,22 +7,12 @@ import { getAttachAccountState } from "../../../src/attach/service";
 import { isAttachConfigured } from "../../../src/email/transport";
 import { authenticatedRead } from "../../../src/http/authenticated-read";
 
-// Never statically cached: every request reads the caller's rows.
 export const dynamic = "force-dynamic";
 
 function statePayload(eligible: boolean) {
   return attachStateResponseSchema.parse({ eligible });
 }
 
-/**
- * GET /attach/state — ADR-0050 decision 9. Serves one derived boolean; the
- * threshold itself never ships to the client, so eligibility got a NEW
- * endpoint rather than a field appended to /streak.
- *
- * `isAttachConfigured` is the SAME full switch (RESEND_API_KEY and
- * WEB_ORIGIN) the request route 503s under, so a half-configured
- * environment never renders a form whose submit would fail.
- */
 export function GET(request: NextRequest): Promise<Response> {
   return authenticatedRead(request, async (db, userId) => {
     if (!isAttachConfigured()) {

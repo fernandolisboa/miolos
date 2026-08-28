@@ -12,20 +12,11 @@ import {
   type PlayState,
 } from "../src/binairo/state";
 
-// T-WEB-12/12b/13/14/14b (plan 017 §15). The reducer is pure — no React,
-// no DOM, no clock — so the whole gameplay state machine is covered by
-// plain unit tests and the screens stay thin (D6).
-
 const EMPTY_GIVENS: DailyBinairoResponse["givens"] = Array.from(
   { length: 64 },
   () => null,
 );
 
-/**
- * A synthetic daily whose givens are all empty, so a violation test can
- * name the exact cells it fills. A real generated puzzle is used where the
- * assertion needs a real solution instead.
- */
 function daily(
   givens: DailyBinairoResponse["givens"] = EMPTY_GIVENS,
   date = "2026-07-30",
@@ -176,12 +167,10 @@ describe("set-mode", () => {
 
 describe("local validation (D11, T-WEB-12)", () => {
   it("flags a third identical digit the moment it lands and clears it on removal", () => {
-    // Row 0, cells 0..2 — three zeros in a row breaks rule 2.
     let state = tap(initPlayState(daily()), 0, 1, 2);
 
     expect([...state.violating].toSorted()).toEqual([0, 1, 2]);
 
-    // Cycling cell 2 on to 1 removes the run.
     state = tap(state, 2);
     expect(state.violating.size).toBe(0);
   });
@@ -204,7 +193,7 @@ describe("completion detection (D12, T-WEB-13)", () => {
       if (REAL_PUZZLE.givens[index] !== null || target === undefined) {
         continue;
       }
-      // Cycle to the wanted value: one tap reaches 0, two reach 1.
+
       state = tap(state, index);
       if (target === 1) {
         state = tap(state, index);
@@ -225,9 +214,7 @@ describe("completion detection (D12, T-WEB-13)", () => {
 
   it("stays playing on a full but wrong grid", () => {
     const solved = fillFromSolution(allIndices);
-    // A cell the solution fills with 0: one tap cycles it to 1, so the grid
-    // stays COMPLETE while breaking a rule — the case a
-    // "every cell filled" check would wrongly call solved.
+
     const flipped = allIndices.find(
       (index) =>
         REAL_PUZZLE.givens[index] === null && REAL_PUZZLE.solution[index] === 0,

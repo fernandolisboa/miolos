@@ -24,26 +24,14 @@ import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { requireUserId } from "../src/session/service";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
-// Seam 4 for #21 (plan 031 §10): the real attach request/confirm/dismiss
-// handlers over PGlite, with src/db and the EMAIL TRANSPORT as the only
-// behavioural mocks. The raw magic-link token is HARVESTED from the mocked
-// transport's URL argument — the same string a human would click is what
-// drives every confirm below, which is what makes "transport faked" an
-// end-to-end claim rather than a unit one.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-/** When set, the routes see this instead of the real db — the no-DB-touch
- *  probes swap in a client whose every access throws. */
 let dbOverride: Awaited<ReturnType<typeof createTestDb>>["db"] | undefined;
 
 vi.mock("../src/db", () => ({
   getDb: () => dbOverride ?? ctx.db,
 }));
 
-// The transport fake (D11): importOriginal is spread so the REAL
-// `isAttachConfigured` (env-derived at call time — vi.stubEnv drives the
-// dormancy switch) survives, and only the send is overridden with a spy
-// recording {to, url} (step-7 finding F: no re-declared module surface).
 const sendSpy = vi.hoisted(() =>
   vi.fn<(init: { to: string; url: string }) => Promise<void>>(() =>
     Promise.resolve(),
@@ -55,11 +43,6 @@ vi.mock("../src/email/transport", async (importOriginal) => {
   return { ...actual, sendMagicLinkEmail: sendSpy };
 });
 
-// T-API-S73's lever: a pass-through mergeAccounts that can be told to
-// throw the winner-liveness guard's error N times before delegating — the
-// only way to schedule the concurrent-merge shape deterministically.
-// `failWith` (T-API-S83) swaps the thrown error for a NON-guard one, so
-// the route's catch taxonomy is pinned: only the guard error is retryable.
 const mergeControl = vi.hoisted(() => ({
   failuresRemaining: 0,
   calls: 0,
@@ -81,9 +64,6 @@ vi.mock("@miolos/db/user", async (importOriginal) => {
   return { ...actual, mergeAccounts };
 });
 
-// T-API-S80's lever: attachEmailToUser made to throw the partial-index
-// violation exactly once — the concurrent-confirm window where the holder
-// lookup returned null cannot be reached by sequential statements.
 const attachControl = vi.hoisted(() => ({ failUniqueOnce: false }));
 vi.mock("../src/attach/service", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/attach/service")>();
@@ -102,17 +82,11 @@ vi.mock("../src/attach/service", async (importOriginal) => {
   return { ...actual, attachEmailToUser };
 });
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
 
 beforeEach(async () => {
-  // `cascade` from users reaches sessions, completions and attach_tokens.
   await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
   vi.stubEnv("WEB_ORIGIN", WEB);
   vi.stubEnv("RESEND_API_KEY", "re_test_key");
@@ -141,11 +115,9 @@ const VALID_BODY = {
   reminderConsent: false,
 } as const;
 
-// Pinned birthdays: the winner rule (older created_at) applied by hand.
 const OLDER = new Date("2026-01-01T12:00:00.000Z");
 const NEWER = new Date("2026-06-01T12:00:00.000Z");
 
-/** A fresh identity with a live session cookie — the routes never mint. */
 async function createSession(
   createdAt?: Date,
 ): Promise<{ token: string; userId: string }> {
@@ -186,7 +158,6 @@ async function postRequest(
   );
 }
 
-/** Run the real request route and harvest the raw token from the link. */
 async function requestMagicLink(
   sessionToken: string,
   body: typeof VALID_BODY | { [key: string]: unknown } = VALID_BODY,
@@ -205,8 +176,6 @@ async function requestMagicLink(
 }
 
 async function postConfirm(rawToken: string): Promise<Response> {
-  // No session cookie, deliberately: the recovery browser may have none
-  // (D3), and D4 is the authorization.
   return confirmPost(
     new NextRequest("http://localhost:3001/attach/confirm", {
       method: "POST",
@@ -238,7 +207,6 @@ async function userRow(userId: string) {
   return row;
 }
 
-/** An on-time win for `date` (the merge-resolution.test.ts fixture idiom). */
 async function insertOnTimeWin(init: {
   userId: string;
   date: string;
@@ -251,7 +219,7 @@ async function insertOnTimeWin(init: {
     completedAt: new Date(`${init.date}T15:00:00Z`),
     elapsedMs: 61_000,
     hintsUsed: 0,
-    onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
+    onTime: true,
   });
 }
 
@@ -361,12 +329,10 @@ describe("POST /attach/request — gates and fail-closed (plan 031 §7)", () => 
 
     expect(sendSpy).toHaveBeenCalledTimes(1);
     const call = sendSpy.mock.calls[0]?.[0];
-    expect(call?.to).toBe(EMAIL); // trimmed + lowercased at the boundary
+    expect(call?.to).toBe(EMAIL);
     expect(call?.url).toBe(`${WEB}/vincular?token=${raw}`);
     expect(raw).toMatch(/^[A-Za-z0-9_-]{43}$/);
 
-    // Hash-only storage: the raw token appears nowhere in the DB; its
-    // SHA-256 hex does.
     const rows = await ctx.db.select().from(attachTokens);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.tokenHash).toBe(await hashSessionToken(raw));
@@ -383,8 +349,6 @@ describe("POST /attach/request — gates and fail-closed (plan 031 §7)", () => 
       reminderConsent: true,
     });
 
-    // AC 3's first half: saving the streak never signs the player up for
-    // mail — no consent, no email, no bump lands on users at request time.
     const row = await userRow(userId);
     expect(row.email).toBeNull();
     expect(row.emailVerifiedAt).toBeNull();
@@ -402,10 +366,7 @@ describe("POST /attach/request — gates and fail-closed (plan 031 §7)", () => 
     for (let i = 0; i < 3; i += 1) {
       await requestMagicLink(token);
     }
-    // 31 minutes old: EXPIRED for the claim, INSIDE the 1-hour rate
-    // window. Cleanup at the 30-minute expiry would delete these and make
-    // the real cap 6/hour — this fixture is what catches that loosening
-    // (four quick requests cannot).
+
     await ctx.db.execute(
       sql`update attach_tokens set created_at = now() - interval '31 minutes' where user_id = ${userId}`,
     );
@@ -415,7 +376,6 @@ describe("POST /attach/request — gates and fail-closed (plan 031 §7)", () => 
     expect(await fourth.json()).toEqual({ error: "too-many-requests" });
     expect(sendSpy).toHaveBeenCalledTimes(3);
 
-    // Past the rate window the rows are the cleanup's business (D12).
     await ctx.db.execute(
       sql`update attach_tokens set created_at = now() - interval '2 hours' where user_id = ${userId}`,
     );
@@ -445,9 +405,6 @@ describe("POST /attach/request — gates and fail-closed (plan 031 §7)", () => 
   });
 
   it("T-API-S81: the per-email cap closes the mint-fresh-users mail-bombing shape for one inbox (D12)", async () => {
-    // Three DISTINCT fresh users each request the same normalized email —
-    // the per-user count is 1 for each, so only the per-email count can
-    // stop the fourth.
     for (let i = 0; i < 3; i += 1) {
       const { token } = await createSession();
       await requestMagicLink(token);
@@ -471,8 +428,6 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ merged: false });
 
-    // Token consumed; email + verified + recovery stamped in one UPDATE
-    // with explicit updated_at; reminder stays NULL when unchecked.
     expect(await ctx.db.select().from(attachTokens)).toHaveLength(0);
     const row = await userRow(userId);
     expect(row.email).toBe(EMAIL);
@@ -481,11 +436,8 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     expect(row.reminderConsentAt).toBeNull();
     expect(row.updatedAt.getTime()).toBeGreaterThan(OLDER.getTime());
 
-    // AC 5: the attach-without-collision path never touches completions.
     expect(await ctx.db.select().from(completions)).toHaveLength(1);
 
-    // The clicking browser is authenticated AS the winner through the only
-    // cookie→identity mechanism that exists.
     const cookieToken = cookieTokenOf(response);
     expect(await requireUserId(ctx.db, cookieToken)).toBe(userId);
   });
@@ -502,8 +454,6 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
       Date,
     );
 
-    // A different account with an existing stamp, re-attaching with the
-    // box unchecked: absence of NEW consent, never a withdrawal (D7).
     const stamped = await createSession();
     const priorStamp = new Date("2026-07-01T12:00:00.000Z");
     await ctx.db
@@ -552,8 +502,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
 
   it("T-API-S70: merge-on-collision — winner per created_at, loser tombstoned, the email on the winner, and the new cookie's GET /streak serves the MERGED streak", async () => {
     const today = await todaySaoPaulo(ctx.db);
-    // Holder X: OLDER (the deterministic winner), verified E, two on-time
-    // days. Requester B: NEWER, two interleaved days — the union reads 4.
+
     const x = await createSession(OLDER);
     await ctx.db
       .update(users)
@@ -570,7 +519,6 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ merged: true });
 
-    // Loser tombstoned: zero sessions, zero completions, no handles.
     const loser = await userRow(b.userId);
     expect(loser.email).toBeNull();
     expect(loser.emailVerifiedAt).toBeNull();
@@ -587,19 +535,14 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
         .where(sql`user_id = ${b.userId}`),
     ).toHaveLength(0);
 
-    // The email lands on the WINNER (X), re-stamped by the confirm UPDATE.
     const winner = await userRow(x.userId);
     expect(winner.email).toBe(EMAIL);
     expect(winner.recoveryConsentAt).toBeInstanceOf(Date);
 
-    // The clicking browser resolves to the winner, and the real deployed
-    // read path serves the union's streak (AC 2 + AC 5 in one).
     const cookieToken = cookieTokenOf(response);
     expect(await requireUserId(ctx.db, cookieToken)).toBe(x.userId);
     expect(await readStreak(cookieToken)).toBe(4);
-    // Post-merge revocation (step-7 finding A, ADR-0050 decision 13):
-    // NEITHER pre-existing cookie survives a cross-account merge — the
-    // clicking browser's fresh session is the only live one.
+
     expect(await requireUserId(ctx.db, b.token)).toBeUndefined();
     expect(await requireUserId(ctx.db, x.token)).toBeUndefined();
     expect(await ctx.db.select().from(sessions)).toHaveLength(1);
@@ -607,7 +550,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
 
   it("T-API-S71: recovery and device move, by name — a fresh empty account requesting the attached email resolves the clicking browser to the old history", async () => {
     const today = await todaySaoPaulo(ctx.db);
-    // The old account: verified E, a 2-day streak.
+
     const old = await createSession(OLDER);
     await ctx.db
       .update(users)
@@ -616,8 +559,6 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     await insertOnTimeWin({ userId: old.userId, date: today });
     await insertOnTimeWin({ userId: old.userId, date: addDays(today, -1) });
 
-    // The cleared-site-data user AND the second device are this same
-    // fixture: a fresh, empty account requests with the old email.
     const fresh = await createSession(NEWER);
     const raw = await requestMagicLink(fresh.token);
     const response = await postConfirm(raw);
@@ -627,9 +568,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     const cookieToken = cookieTokenOf(response);
     expect(await requireUserId(ctx.db, cookieToken)).toBe(old.userId);
     expect(await readStreak(cookieToken)).toBe(2);
-    // Recovery and device move end with EXACTLY one live session — the
-    // clicking browser's (step-7 finding A): the old device's and the
-    // fresh account's pre-existing cookies are revoked with the merge.
+
     expect(await ctx.db.select().from(sessions)).toHaveLength(1);
     expect(await requireUserId(ctx.db, old.token)).toBeUndefined();
     expect(await requireUserId(ctx.db, fresh.token)).toBeUndefined();
@@ -638,8 +577,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
   it("T-API-S72: a requester tombstoned between request and confirm gets 410 and no write anywhere", async () => {
     const { token, userId } = await createSession(OLDER);
     const raw = await requestMagicLink(token);
-    // The concurrent-merge shape, manufactured: the requester's sessions
-    // are gone (remapped away) by confirm time.
+
     await ctx.db.delete(sessions).where(sql`user_id = ${userId}`);
 
     const response = await postConfirm(raw);
@@ -662,7 +600,6 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     await insertOnTimeWin({ userId: x.userId, date: today });
     const b = await createSession(NEWER);
 
-    // One guard throw: the route re-derives and the retry succeeds.
     mergeControl.failuresRemaining = 1;
     const raw = await requestMagicLink(b.token);
     const retried = await postConfirm(raw);
@@ -670,8 +607,6 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     expect(await retried.json()).toEqual({ merged: true });
     expect(mergeControl.calls).toBe(2);
 
-    // A persistent failure (astronomically rare): 409, and the atomically
-    // claimed token is spent — the user requests a new link.
     await ctx.db.execute(sql`truncate table users cascade`);
     const x2 = await createSession(OLDER);
     await ctx.db
@@ -690,33 +625,26 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
 
   it("T-API-S82: an attacker-requested token confirmed by the victim leaves the attacker's original cookie resolving to NOTHING — no pre-existing session survives a cross-account merge", async () => {
     const today = await todaySaoPaulo(ctx.db);
-    // The victim: verified E, real history.
+
     const victim = await createSession(OLDER);
     await ctx.db
       .update(users)
       .set({ email: EMAIL, emailVerifiedAt: sql`now()` })
       .where(sql`id = ${victim.userId}`);
     await insertOnTimeWin({ userId: victim.userId, date: today });
-    // The attacker: a fresh account requesting a token for the VICTIM's
-    // verified email (the request route cannot know the address is not
-    // theirs), then waiting for the victim to click the mail.
+
     const attacker = await createSession(NEWER);
     const raw = await requestMagicLink(attacker.token);
 
-    // The victim's browser clicks (no cookie rides the confirm, D3).
     const response = await postConfirm(raw);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ merged: true });
 
-    // The takeover this pins shut (step-7 finding A): the merge's session
-    // remap had just handed the attacker's cookie the victim's account —
-    // the post-merge revocation retires it before any fresh session is
-    // minted. The attacker's original cookie resolves to nothing…
     expect(await requireUserId(ctx.db, attacker.token)).toBeUndefined();
-    // …the clicking browser's fresh cookie resolves to the winner…
+
     const cookieToken = cookieTokenOf(response);
     expect(await requireUserId(ctx.db, cookieToken)).toBe(victim.userId);
-    // …that fresh session is the ONLY live one, and history is intact.
+
     expect(await ctx.db.select().from(sessions)).toHaveLength(1);
     expect(await readStreak(cookieToken)).toBe(1);
     expect(await ctx.db.select().from(completions)).toHaveLength(1);
@@ -725,8 +653,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
   it("T-API-S79a: the stale-intent guard runs BEFORE any merge — a live E2 token whose email has a verified holder is 409 with ZERO merge, holder untouched, no tombstone", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const E2 = "segunda@example.com";
-    // The would-be victim: E2's verified holder, with history and a live
-    // session of its own.
+
     const holder = await createSession(OLDER);
     await ctx.db
       .update(users)
@@ -734,10 +661,6 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
       .where(sql`id = ${holder.userId}`);
     await insertOnTimeWin({ userId: holder.userId, date: today });
 
-    // The requester mints a token for E2 while unattached, then attaches
-    // E1 — the E2 token now records a DEAD intent (T-API-S79's shape, the
-    // verified-holder variant: without the pre-merge guard, confirm would
-    // destructively merge the requester with E2's holder before 409ing).
     const requester = await createSession(NEWER);
     const rawE2 = await requestMagicLink(requester.token, {
       email: E2,
@@ -752,11 +675,9 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     const response = await postConfirm(rawE2);
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({ error: "email-already-attached" });
-    // ZERO merge: the guard sits before resolveWinner ever runs.
+
     expect(mergeControl.calls).toBe(0);
 
-    // The holder is untouched — no tombstone, handles, session and
-    // history all intact.
     const holderRow = await userRow(holder.userId);
     expect(holderRow.email).toBe(E2);
     expect(holderRow.emailVerifiedAt).toBeInstanceOf(Date);
@@ -767,7 +688,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
         .from(completions)
         .where(sql`user_id = ${holder.userId}`),
     ).toHaveLength(1);
-    // The requester keeps E1, and the stale token is spent.
+
     expect((await userRow(requester.userId)).email).toBe(EMAIL);
     expect((await postConfirm(rawE2)).status).toBe(410);
   });
@@ -787,14 +708,11 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     try {
       mergeControl.failuresRemaining = 1;
       mergeControl.failWith = "connection reset mid-merge";
-      // The route rethrows: at this seam the rejection IS the framework
-      // 500 on the deployed route, and it proves no catch flattened a
-      // mid-merge failure into the spent-token answers.
+
       await expect(postConfirm(raw)).rejects.toThrow(
         "connection reset mid-merge",
       );
-      // Not swallowed, and not retried either — the retry is reserved for
-      // the guard's pre-destructive throw alone.
+
       expect(mergeControl.calls).toBe(1);
       expect(errorSpy).toHaveBeenCalledWith(
         "attach confirm: mergeAccounts failed mid-operation",
@@ -803,14 +721,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     } finally {
       errorSpy.mockRestore();
     }
-    // Scope of this assertion, honestly: the lever throws BEFORE
-    // delegating, so NO merge statement ran — this proves a
-    // pre-operation failure leaves the holder untouched (email intact,
-    // nothing tombstoned), and that the route swallowed none of it. It
-    // proves NOTHING about half-run state: a real failure landing inside
-    // statements 2–4 heals by re-run only in the requester-is-winner arm;
-    // the holder-wins arm's stranding residual is recorded in ADR-0050
-    // decision 5, with the nightly-check/support seam as the repair path.
+
     expect((await userRow(x.userId)).email).toBe(EMAIL);
   });
 
@@ -821,7 +732,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
       recoveryConsent: true,
       reminderConsent: false,
     });
-    // E1 becomes the verified email while the E2 token is still live.
+
     await ctx.db
       .update(users)
       .set({ email: EMAIL, emailVerifiedAt: sql`now()` })
@@ -832,7 +743,7 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     expect(await response.json()).toEqual({ error: "email-already-attached" });
 
     expect((await userRow(userId)).email).toBe(EMAIL);
-    // Spent by the atomic claim — a stale intent is not resurrected.
+
     const replay = await postConfirm(rawE2);
     expect(replay.status).toBe(410);
   });
@@ -867,13 +778,11 @@ describe("POST /attach/dismiss — the permanent, idempotent decline (D9)", () =
 
     const stamped = await userRow(userId);
     expect(stamped.attachPromptDismissedAt).toBeInstanceOf(Date);
-    // Explicit updated_at, same statement, same DB now().
+
     expect(stamped.updatedAt.toISOString()).toBe(
       stamped.attachPromptDismissedAt?.toISOString(),
     );
 
-    // Idempotent: the IS NULL guard makes the re-post a zero-row UPDATE —
-    // neither stamp moves.
     const replay = await dismissPost(
       new NextRequest("http://localhost:3001/attach/dismiss", {
         method: "POST",
@@ -884,7 +793,6 @@ describe("POST /attach/dismiss — the permanent, idempotent decline (D9)", () =
     expect(replay.status).toBe(200);
     expect(await userRow(userId)).toEqual(stamped);
 
-    // The write-route guards.
     const noSession = await dismissPost(
       new NextRequest("http://localhost:3001/attach/dismiss", {
         method: "POST",
@@ -905,7 +813,6 @@ describe("POST /attach/dismiss — the permanent, idempotent decline (D9)", () =
     );
     expect(crossSite.status).toBe(403);
 
-    // z.strictObject({}): any key at all is a 400.
     const smuggled = await dismissPost(
       new NextRequest("http://localhost:3001/attach/dismiss", {
         method: "POST",

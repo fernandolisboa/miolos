@@ -18,43 +18,17 @@ import {
   type TermoTiles,
 } from "../src/index";
 
-/**
- * The Termo guess wire (ADR-0038, plan 022 §11.1). `@miolos/games` is a DEV
- * dependency of this package and stays one — `packages/core/src` may not
- * import it at all — so this file is the door where the restated bounds meet
- * the engine's own, exactly as `daily-contract.test.ts` does for the stored
- * content.
- */
-
-/**
- * MUTABLE, not `as const`: `z.tuple` infers a mutable 5-tuple, so a `readonly`
- * literal is `TS4104` against it. The direction that matters holds — the
- * inferred tuple IS assignable to the engine's `readonly TileStates`, which is
- * what lets a parsed response feed `deriveKeyboardState` with no `as`
- * (plan 022 §26 probe P-a).
- */
 const TILES: TermoTiles = ["correct", "present", "absent", "absent", "absent"];
 
-/** A five-letter normalized word; the schema checks shape, never the dictionary. */
 const WORD = "praga";
 
 describe("termoTilesSchema", () => {
-  // T-CORE-S18b (plan 022 §19.3) — the WIRE half; `daily-contract.test.ts`
-  // holds the stored-content half as `T-CORE-S18a`. The two shipped under one
-  // id spanning two files, each citing the other as precedent; the sibling
-  // letters are `docs/agents/test-ids.md`'s rule for a new duplicate, and `b`
-  // is this file, which owns these symbols.
   it("T-CORE-S18b: the restated bounds ARE the engine's WORD_LENGTH and MAX_GUESSES", () => {
     expect(TERMO_WORD_LENGTH).toBe(WORD_LENGTH);
     expect(TERMO_MAX_GUESSES).toBe(MAX_GUESSES);
   });
 
   it("T-CORE-S18b: the tuple's arity is the engine's WORD_LENGTH, by shape AND by behaviour", () => {
-    // `.def.items`, never `.items`: verified against the installed zod 4.4.3
-    // that a tuple exposes `type`/`items`/`rest` on `.def` and NOTHING at
-    // `.items`, so `.items.length` would read `undefined.length` and throw a
-    // TypeError — a red test for the wrong reason. The behavioural half below
-    // is what survives a zod internal rename.
     expect(termoTilesSchema.def.items).toHaveLength(WORD_LENGTH);
     for (const length of [WORD_LENGTH - 1, WORD_LENGTH + 1]) {
       expect(
@@ -68,9 +42,6 @@ describe("termoTilesSchema", () => {
   });
 
   it("T-CORE-S18b: a parsed row IS the engine's `TileStates`, with no `as`", () => {
-    // The assignment is the assertion (it is a `pnpm typecheck` failure if it
-    // ever stops holding), and the `expect` is what keeps the binding USED so
-    // `@typescript-eslint/no-unused-vars` cannot fire on it.
     const forEngine: TileStates = termoTilesSchema.parse(TILES);
     expect(deriveKeyboardState([{ guess: WORD, tiles: forEngine }])).toEqual(
       expect.any(Object),
@@ -90,8 +61,7 @@ describe("termoTilesSchema", () => {
 describe("termoGuessWordSchema", () => {
   it("T-CORE-S21: accepts a NORMALIZED five-letter word and rejects everything else", () => {
     expect(termoGuessWordSchema.parse(WORD)).toBe(WORD);
-    // The client normalizes before posting (ADR-0032's canonical wire), so an
-    // accented or upper-case body is a client bug, not a lenient case.
+
     for (const rejected of [
       "CAFÉ",
       "cafe",
@@ -137,8 +107,6 @@ describe("termoGuessRequestSchema", () => {
   });
 
   it("T-CORE-S21: `date` is calendarDateString — an impossible day and year 0 both fail", () => {
-    // Client-supplied, so the shape check is not enough: "2026-02-30" reaches
-    // a Postgres `date` column and raises 22008 (contracts/daily.ts).
     for (const date of ["2026-02-30", "0000-01-01", "2026-8-02", "nope"]) {
       expect(
         termoGuessRequestSchema.safeParse({ ...valid, date }).success,
@@ -193,9 +161,6 @@ describe("termoGuessResponseSchema", () => {
   });
 
   it("T-CORE-S21: the answer is the CANONICAL accented spelling, not a normalized one", () => {
-    // `z.string()`, deliberately unshaped beyond that: the reveal is
-    // `content.canonical` (ADR-0015), which carries `ã`, `ç`, `é`, `ó` today
-    // and may carry more after a regeneration.
     const accented = { ...playing, status: "won" as const, answer: "então" };
     expect(termoGuessResponseSchema.parse(accented).answer).toBe("então");
   });

@@ -1,23 +1,6 @@
 import type { TelemetryEventProperties } from "@miolos/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-/**
- * The hand-rolled capture helper (#33, ADR-0069 decision 1): a plain fetch
- * to PostHog's US ingestion endpoint, no SDK, no client identity, never a
- * throw into a route. Loaded per test via `vi.resetModules()` + dynamic
- * import because two pieces of module state are under test: the once-only
- * missing-key `console.error` guard (the D8 pin) and the fallback
- * `telemetrySettled()` chain.
- *
- * No `POSTHOG_KEY` rides any test environment — the no-key arm below is
- * also where a test run's silence is CHECKED (D8's never-send-in-tests
- * requirement); the send-path tests stub the key AND the global fetch, so
- * nothing ever leaves the process either way. It is one arm of one test,
- * not a construction-backed invariant (ADR-0023's reserved vocabulary):
- * nothing structural stops a future test from stubbing a key and
- * forgetting the fetch.
- */
-
 async function loadCapture() {
   vi.resetModules();
   return import("../src/telemetry/capture");
@@ -49,8 +32,7 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    // Once, not per call: the repo's loud-degrade idiom (streak-client.ts,
-    // origin-guard.ts) without turning the platform log into a firehose.
+
     expect(errorSpy).toHaveBeenCalledTimes(1);
     expect(errorSpy.mock.calls[0]?.[0]).toContain("POSTHOG_KEY");
   });
@@ -71,11 +53,6 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
       }),
     ).resolves.toBeUndefined();
 
-    // The abort path. WHAT THIS PINS, precisely (step-6 quality NB-5): a
-    // fetch that never resolves on its own and later rejects leaves
-    // `captureEvent` resolved and silent. The abort is fired BY HAND below
-    // rather than waiting 3 s of wall clock, so `AbortSignal.timeout` is
-    // not itself exercised — only the rejection shape it produces.
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -84,7 +61,6 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
             init?.signal?.addEventListener("abort", () =>
               reject(new DOMException("aborted", "AbortError")),
             );
-            // Never resolves on its own — only the signal ends it.
           }),
       ),
     );
@@ -94,7 +70,7 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
       event: "notification_opt_in",
       properties: {},
     });
-    // Fire the abort by hand rather than waiting 3 s of wall clock.
+
     const init = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0]?.[1] as RequestInit | undefined;
     (init?.signal as AbortSignal | undefined)?.dispatchEvent(
@@ -143,11 +119,9 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
         elapsed_ms: 61_000,
         outcome: "lost",
         on_time: true,
-        // Anonymous-class events (ADR-0069 decision 5): no person profiles
-        // are built, so PostHog stores event rows and nothing person-shaped.
+
         $process_person_profile: false,
-        // And no geo tag: the capture is server->server, so the only IP
-        // PostHog could see is a datacentre's (step-6 security N4).
+
         $geoip_disable: true,
       },
     });
@@ -159,10 +133,6 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     vi.stubGlobal("fetch", fetchMock);
     const { captureEvent } = await loadCapture();
 
-    // The call site a future regression looks like: properties built from a
-    // wider source. The cast is what makes the hostile shape reachable —
-    // the compile-time half of the ceiling already rejects it, and this
-    // test exists for the half the types cannot see.
     await captureEvent({
       distinctId: "user-7",
       event: "login_linked",
@@ -174,8 +144,6 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
 
     expect(fetchMock).not.toHaveBeenCalled();
 
-    // The control: the same event WITHOUT the smuggled key still sends, so
-    // the assertion above is the strict parse firing and not a broken stub.
     await captureEvent({
       distinctId: "user-7",
       event: "login_linked",

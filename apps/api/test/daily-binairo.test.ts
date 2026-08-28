@@ -22,20 +22,12 @@ import {
 import { GET } from "../app/daily/binairo/route";
 import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 
-// Seam 4: the real route over PGlite; the ONLY mock is src/db. Seeding
-// goes through insertDailyPuzzle — the same write the cron uses, so
-// published_at derivation is the production one.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -67,9 +59,7 @@ describe("GET /daily/binairo", () => {
     await seedDate(today);
     const response = await GET();
     expect(response.status).toBe(200);
-    // Narrowed from the union deliberately: with `sudoku` in
-    // `dailyPuzzleResponseSchema` a union parse would ACCEPT a mismatched row
-    // on this path and lose a defence-in-depth assertion (plan 018 §7.4).
+
     const body = dailyBinairoResponseSchema.parse(await response.json());
     expect(body.game).toBe("binairo");
     expect(body.date).toBe(today);
@@ -82,9 +72,7 @@ describe("GET /daily/binairo", () => {
     const response = await GET();
     const raw: unknown = await response.json();
     const keys = collectKeys(raw);
-    // Anti-vacuity: `collectKeys` returns an empty set for any non-object
-    // input, so without this the forbidden loop passes trivially on an HTML
-    // error page (finding `api-leak-scans-have-no-anti-vacuity-assertion`).
+
     expect(keys.has("givens")).toBe(true);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
@@ -126,12 +114,6 @@ describe("GET /daily/binairo", () => {
     expect(route.dynamic).toBe("force-dynamic");
   });
   it("T-API-S27a: is PUBLIC CORS — an origin echo, never credentials", async () => {
-    // The sibling of `daily-nonogram.test.ts`'s T-API-S27, landed with it:
-    // all three public daily routes carried the TSDoc claim "no auth, no
-    // cookies, no credentialed CORS" (ADR-0005) with nothing holding it,
-    // while the two credentialed routes asserted theirs. A one-character
-    // edit — `corsHeaders({ credentials: true })` — would grant a
-    // credentialed cross-origin read with every suite green.
     vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
     await seedDate(await todaySaoPaulo(ctx.db));
 
@@ -140,8 +122,7 @@ describe("GET /daily/binairo", () => {
       "https://miolos.app",
     );
     expect(found.headers.has("access-control-allow-credentials")).toBe(false);
-    // `Vary: Origin` is the credentialed branch's tell — a public response is
-    // identical for every origin and must stay cacheable as one.
+
     expect(found.headers.has("vary")).toBe(false);
 
     await ctx.db.execute(sql`truncate table daily_puzzles`);

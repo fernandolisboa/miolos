@@ -1,9 +1,3 @@
-/**
- * Codegen runner: reads content/termo/{answers.csv,validation.txt} and
- * writes src/termo/words.generated.ts via the pure renderer. Run with
- * Node >= 24 (native type stripping):
- *   pnpm --filter @miolos/games generate:termo
- */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

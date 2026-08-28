@@ -19,12 +19,6 @@ import {
   type SudokuPlayRecord,
 } from "../src/play/play-record";
 
-// T-WEB-16 / T-WEB-16b (plan 017 §15). The flush is proved with NO play
-// screen mounted: the record IS the queue (D18), so seeding localStorage
-// and importing the module is the whole fixture. That is exactly the
-// situation AC 3 cares about — a completion that syncs from a cold mount,
-// an `online` event or a retry, long after the grid left the screen.
-
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
 
@@ -33,24 +27,12 @@ const SOLVED_GRID: NonNullable<BinairoPlayRecord["grid"]> = Array.from(
   (_unused, index) => (index % 2 === 0 ? 0 : 1),
 );
 
-/**
- * The sudoku queue item: 81 digits and no zero, because `0` means EMPTY in
- * the engine grid and a submission is a COMPLETE board. Built by repeating
- * the digit row rather than by asserting a type — the repo bans `as` in
- * tests, and this shape is the schema's own.
- */
 const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 const SOLVED_DIGITS: NonNullable<SudokuPlayRecord["grid"]> = Array.from(
   { length: 9 },
   () => DIGITS,
 ).flat();
 
-/**
- * The nonogram queue item: a 5×5 board's SUBMITTED bitmap, 25 cells of 0/1.
- * Crossed and undecided cells are both `0` here, because the completion
- * predicate is "the picture is painted" (ADR-0032) — so on a closed board
- * this array IS the solution, and a cross never crosses the wire.
- */
 const SUBMITTED_PICTURE: NonNullable<NonogramPlayRecord["grid"]> = Array.from(
   { length: 25 },
   (_unused, index) => (index % 6 === 0 ? 1 : 0),
@@ -107,7 +89,6 @@ function pendingRecord(
   };
 }
 
-/** The exact `fetch` init the flush is expected to build. */
 const requestInitSchema = z.strictObject({
   method: z.string(),
   credentials: z.string(),
@@ -135,11 +116,6 @@ function okBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/**
- * Fetch double that answers `/session` unconditionally and delegates every
- * `/completions` call to `respond`, which receives the 1-based attempt
- * number so a test can change its mind between retries.
- */
 function stubFetch(respond: (attempt: number) => Response | Promise<Response>) {
   let attempt = 0;
   const fetchMock = vi.fn((...args: unknown[]) => {
@@ -167,7 +143,6 @@ function sessionCalls(fetchMock: ReturnType<typeof stubFetch>) {
   );
 }
 
-/** Module state (the in-flight guard, the re-mint latch) is per-import. */
 async function freshSync() {
   vi.resetModules();
   return await import("../src/play/sync");
@@ -202,8 +177,6 @@ describe("flushPendingCompletions", () => {
     expect(call).toBeDefined();
     expect(String(call?.[0])).toBe(`${API_URL}/completions`);
 
-    // Parsed rather than cast: the repo bans `as` in tests, and a schema
-    // says exactly which request shape is being pinned.
     const init = requestInitSchema.parse(call?.[1]);
     expect(init).toEqual({
       method: "POST",
@@ -300,14 +273,6 @@ describe("flushPendingCompletions", () => {
   });
 
   it("posts a completion handed to a flush that was already running (T-WEB-S61)", async () => {
-    // The interleaving AC 3 loses to: a fast finish on a slow network, or a
-    // restored near-complete board, closes while a mount flush is still
-    // awaiting its own fetch. The in-flight flush built `pending` before this
-    // record existed, so it never posts it — and if its own records all
-    // settle it used to call `cancelRetries()`, clearing the ladder and
-    // stranding the just-finished puzzle until a new mount, an `online` or a
-    // `visibilitychange`. The player is ONLINE and the conclusion says
-    // "pendente" (finding `handed-completion-dropped-by-a-concurrent-flush`).
     vi.useFakeTimers();
     writePlayRecord(pendingRecord());
 
@@ -326,8 +291,7 @@ describe("flushPendingCompletions", () => {
         });
       }
       call += 1;
-      // Only the FIRST POST hangs: it is the flush that must not swallow the
-      // record handed to it while it was in the air.
+
       if (call === 1) {
         await held;
         return jsonResponse(200, okBody());
@@ -341,8 +305,6 @@ describe("flushPendingCompletions", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(completionCalls(fetchMock)).toHaveLength(1);
 
-    // The board closes mid-flight. `writePlayRecord` is what the real caller
-    // does first, so the record is in the store AND handed over.
     const nonogram = pendingNonogramRecord();
     writePlayRecord(nonogram);
     await flushPendingCompletions(nonogram);
@@ -353,8 +315,6 @@ describe("flushPendingCompletions", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(false);
 
-    // No new mount, no `online`, no `visibilitychange` — only the ladder the
-    // handed record armed. It must fire, and it must carry the nonogram.
     await vi.advanceTimersByTimeAsync(2_000);
     const posted = completionCalls(fetchMock).map((entry) => {
       const init = requestInitSchema.parse(entry[1]);
@@ -368,13 +328,6 @@ describe("flushPendingCompletions", () => {
   });
 
   it("posts the completion it was handed even with no usable localStorage", async () => {
-    // An Android WebView with DOM storage off (the default) throws on the
-    // property itself, so `writePlayRecord` is a silent no-op and the queue
-    // reads back EMPTY: without the in-memory fallback the flush returns
-    // before it ever reaches `ensureSession`, no POST is ever issued on any
-    // trigger, and the day is lost for the streak while the conclusion
-    // claims the result is safe on the device (finding
-    // `completion-lost-when-localstorage-is-unavailable`).
     const original = Object.getOwnPropertyDescriptor(window, "localStorage");
     Object.defineProperty(window, "localStorage", {
       configurable: true,
@@ -401,8 +354,6 @@ describe("flushPendingCompletions", () => {
         hintsUsed: 1,
       });
 
-      // And settled, so no later trigger re-posts a completion the server
-      // has already answered (D15).
       await flushPendingCompletions();
       expect(completionCalls(fetchMock)).toHaveLength(1);
     } finally {
@@ -413,14 +364,6 @@ describe("flushPendingCompletions", () => {
   });
 
   it("clamps a backwards clock step on the memory-queue path too", async () => {
-    // The store's own clamp is two-sided, but a handed record never reaches
-    // it when `localStorage` throws: `memoryQueue` keeps the object verbatim
-    // and `buildBody` is the FIRST bound the number meets. Clamped on one
-    // side only, `elapsedMs: z.number().int().min(0)` failed the request
-    // parse, `buildBody` returned `undefined`, and the flush dropped an
-    // intact completion with "has no solved grid to post" — permanently, on
-    // exactly the devices the fallback exists for (finding
-    // `memory-queue-record-bypasses-the-two-sided-clamp`).
     const original = Object.getOwnPropertyDescriptor(window, "localStorage");
     Object.defineProperty(window, "localStorage", {
       configurable: true,
@@ -432,7 +375,7 @@ describe("flushPendingCompletions", () => {
 
     try {
       const { flushPendingCompletions } = await freshSync();
-      // An NTP correction mid-session: `now - runningSince` goes negative.
+
       await flushPendingCompletions(pendingRecord({ elapsedMs: -3_600_000 }));
 
       const [call] = completionCalls(fetchMock);
@@ -473,8 +416,6 @@ describe("flushPendingCompletions", () => {
       const { flushPendingCompletions } = await freshSync();
       await flushPendingCompletions(pendingRecord());
 
-      // The reconnect is the whole point of AC 3: the record is the only
-      // copy, and here the store is not holding it.
       online = true;
       await flushPendingCompletions();
 
@@ -487,10 +428,6 @@ describe("flushPendingCompletions", () => {
   });
 
   it("posts one record of EACH game, once each — the one-module property (T-WEB-S12)", async () => {
-    // `listPendingRecords()` is game-blind by design, and this module's
-    // guards are module-level: if the extraction had left a second copy of
-    // sync.ts behind, each copy would post BOTH records and settle the
-    // other's (ADR-0029, plan 018 S1). One module, two records, two POSTs.
     writePlayRecord(pendingRecord());
     writePlayRecord(pendingSudokuRecord());
     writePlayRecord(pendingNonogramRecord());
@@ -499,9 +436,6 @@ describe("flushPendingCompletions", () => {
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    // Parsed against the request union, never cast — `JSON.parse` hands back
-    // `any`, and a body that reached the wrong branch of `buildBody` fails
-    // right here.
     const bodies = completionCalls(fetchMock).map((call) => {
       const raw: unknown = JSON.parse(requestInitSchema.parse(call[1]).body);
       return completionRequestSchema.parse(raw);
@@ -529,9 +463,7 @@ describe("flushPendingCompletions", () => {
       elapsedMs: 411_000,
       hintsUsed: 0,
     });
-    // The nonogram body carries NO `size` (P4): a `size` key would be a
-    // second place for the client to lie, and the stored row's solution is
-    // what decides the size anyway. `gridBody` builds all three.
+
     expect(
       nonogramCompletionRequestSchema.parse(
         bodies.find((body) => body.game === "nonogram"),
@@ -610,12 +542,6 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     },
   );
 
-  // 429 joined this list at #31 (ADR-0053 decision 13): the completion
-  // route's late-write ceiling is the first 429 this repo emits, and it is
-  // a RATE refusal — the record is real and must survive to flush after
-  // the next São Paulo rollover, which is exactly why it is not terminal.
-  // The behavioural assertion lives here rather than in the source scan
-  // `apps/api` carries (step-6 finding F13).
   it.each([429, 500, 502, 503])(
     "keeps the record pending on %i",
     async (status) => {
@@ -632,33 +558,13 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     },
   );
 
-  // THE MIXED-DATE QUEUE, which is the case the `break` is actually about
-  // and the one nothing exercised (#31 step-6 finding F1). Every 429
-  // assertion above and below runs a SINGLE-record queue, where head-of-line
-  // blocking is unobservable by construction.
-  //
-  // The reproduction: two pending records, an archive date and today's, with
-  // the server capping only the late one — which is exactly what the route
-  // does, because its ceiling branch is `isLateDate(body.date, today)` and a
-  // today-dated write is never capped. `listPendingRecords()` walks
-  // `localStorage` key order, which is neither date order nor insertion
-  // order, so before the fix the archive record could be posted first, take
-  // the 429, and `break` before today's daily was ever sent. Every later
-  // trigger — mount, `online`, `visibilitychange`, all four retry rungs —
-  // hit the same record first and broke again, deterministically, until the
-  // São Paulo rollover; the deferred write then landed with `completed_at =
-  // now()`, so `on_time` was false and the streak day was gone.
   it("posts today's daily BEFORE a late record that will take the 429", async () => {
     const LATE = "2026-07-01";
     const TODAY = "2026-08-14";
-    // Written late-first, so key order alone would post the capped record
-    // first: the queue's own ordering is what has to fix it.
+
     writePlayRecord(pendingRecord({ date: LATE }));
     writePlayRecord(pendingRecord({ date: TODAY }));
 
-    // The stub answers on the BODY'S DATE, exactly as the route's ceiling
-    // branch does — `stubFetch` hands over the attempt number, not the
-    // request, so this one is built inline.
     const fetchMock = vi.fn((...args: unknown[]) => {
       if (String(args[0]).endsWith("/session")) {
         return Promise.resolve(
@@ -687,15 +593,12 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
       return (parsed as { date: string }).date;
     });
 
-    // Today's daily is FIRST and it is posted. The late record follows, takes
-    // its 429 and stops the loop — which is now sound, because everything
-    // after it in a date-descending queue is older still.
     expect(posted).toEqual([TODAY, LATE]);
     expect(readPlayRecord("binairo", TODAY)).toMatchObject({
       pendingSync: false,
       syncOutcome: "recorded",
     });
-    // And the capped one is kept, non-terminally, for the next rollover.
+
     expect(readPlayRecord("binairo", LATE)).toMatchObject({
       pendingSync: true,
       syncOutcome: "pending",
@@ -711,7 +614,6 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    // One POST, not three: the `break` is the whole point of the ordering.
     const bodies = completionCalls(fetchMock).map((call) => {
       const parsed: unknown = JSON.parse(
         String((call[1] as { body?: unknown }).body),
@@ -735,7 +637,6 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    // One mint before the first POST, one re-mint after the 401.
     expect(sessionCalls(fetchMock)).toHaveLength(2);
     expect(completionCalls(fetchMock)).toHaveLength(2);
     expect(readPlayRecord("binairo", DATE)).toMatchObject({
@@ -745,7 +646,6 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
 
     await flushPendingCompletions();
 
-    // The latch holds: a second flush posts once more and never re-mints.
     expect(sessionCalls(fetchMock)).toHaveLength(2);
     expect(completionCalls(fetchMock)).toHaveLength(3);
   });
@@ -840,29 +740,14 @@ describe("startCompletionSync", () => {
     expect(completionCalls(fetchMock)).toHaveLength(3);
     expect(readPlayRecord("binairo", DATE)?.syncOutcome).toBe("recorded");
 
-    // Terminal: the ladder is cancelled, not merely exhausted.
     await vi.advanceTimersByTimeAsync(120_000);
     expect(completionCalls(fetchMock)).toHaveLength(3);
     stop();
   });
 });
 
-/**
- * The one per-game branch in the module, and the one place a new game can
- * fail OPEN (finding `buildbody-switch-fails-open-for-a-new-game`).
- *
- * The guarantee is a COMPILE-TIME one and `pnpm typecheck` is what enforces
- * it: `PlayRecord` has exactly three members today, both handled, so no runtime
- * input can reach the default — a test that manufactured one would have to
- * cast, which is precisely the lie the guard exists to prevent. What this
- * reads instead is the source, the way `./css-source.ts` reads a stylesheet:
- * the tripwire cannot be deleted silently, and the note travels with it.
- */
 describe("the extension point #27 widens", () => {
   it("makes an unhandled game a compile error, not a dropped completion", () => {
-    // `path` rather than `new URL(..., import.meta.url)`: the jsdom
-    // environment's own `URL` resolves the relative specifier against the
-    // document's http base, not against the module.
     const source = readFileSync(
       path.join(
         path.dirname(fileURLToPath(import.meta.url)),
@@ -881,12 +766,6 @@ describe("the extension point #27 widens", () => {
 });
 
 describe("the late-sync credit needs NO client change (#58, ADR-0066) (T-WEB-S283)", () => {
-  // The server-side rule (a seen day credits a 1-day-late sync) is decided
-  // and stored entirely at the write; the decision's "schema/route/client
-  // identical" claim is pinned here from the client's side: a queued
-  // yesterday record posts the SAME five-key body every record always
-  // posted — no date assertion, no attestation, no new field — and the 200
-  // it settles on already carries `onTime` in the shipped response schema.
   it("posts a queued yesterday record byte-unchanged in shape and settles recorded on the credited 200", async () => {
     const YESTERDAY = "2026-08-13";
     writePlayRecord(pendingRecord({ date: YESTERDAY }));
@@ -897,9 +776,6 @@ describe("the late-sync credit needs NO client change (#58, ADR-0066) (T-WEB-S28
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
 
-    // The body is the ordinary completion request — parsed by the shipped
-    // contract, exactly the keys every completion posts, nothing about the
-    // credit rides the wire.
     const calls = completionCalls(fetchMock);
     expect(calls).toHaveLength(1);
     const init = requestInitSchema.parse(calls[0]?.[1]);
@@ -914,8 +790,6 @@ describe("the late-sync credit needs NO client change (#58, ADR-0066) (T-WEB-S28
       "hintsUsed",
     ]);
 
-    // The credited 200 settles the record — the response schema carried
-    // `onTime` since #18, so a `true` on a yesterday date is just a value.
     expect(readPlayRecord("binairo", YESTERDAY)).toMatchObject({
       pendingSync: false,
       syncOutcome: "recorded",
@@ -924,10 +798,6 @@ describe("the late-sync credit needs NO client change (#58, ADR-0066) (T-WEB-S28
 });
 
 describe("422 multi-date-sync settles the record with no retry (#58, ADR-0066) (T-WEB-S284)", () => {
-  // The guard's refusal is a 422, which has been terminal in
-  // `TERMINAL_STATUSES` since #18 — that pre-existing fact is exactly why
-  // the guard costs no client change. This pins it for the guard's own
-  // error token: the record settles `rejected`, and no retry rung fires.
   it("marks the record rejected and never re-posts it", async () => {
     vi.useFakeTimers();
     writePlayRecord(pendingRecord());
@@ -947,8 +817,6 @@ describe("422 multi-date-sync settles the record with no retry (#58, ADR-0066) (
     });
     expect(completionCalls(fetchMock)).toHaveLength(1);
 
-    // The whole retry ladder elapses and nothing re-posts: a settled
-    // record is out of the queue, not merely deprioritised.
     await vi.runAllTimersAsync();
     expect(completionCalls(fetchMock)).toHaveLength(1);
     errorSpy.mockRestore();

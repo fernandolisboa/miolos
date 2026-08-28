@@ -19,26 +19,12 @@ import {
 } from "../../../src/session/origin-guard";
 import { requireUserId } from "../../../src/session/service";
 
-// Never statically cached: every request stamps against the users table.
 export const dynamic = "force-dynamic";
 
 export function OPTIONS(): Response {
   return preflightResponse();
 }
 
-/**
- * "Agora não" — or a browser denial — stamped server-side so the push
- * pre-prompt's one lifecycle per account survives cleared site data and
- * account merge (see ADR-0064). The body must be a literal `{}`; any key
- * is a 400. Idempotent: the UPDATE is guarded on
- * `push_prompt_dismissed_at IS NULL`, so a re-post touches zero rows.
- *
- * Deliberately NOT gated on `isPushConfigured()`: a dismissal is the
- * player declining a prompt this environment rendered — refusing to
- * record it because an env var vanished between render and click would
- * re-prompt them forever. The dismissal has no push side effect to fail
- * closed over.
- */
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     warnIfGuardDegraded();

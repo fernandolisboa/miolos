@@ -2,10 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildSessionCookie, SESSION_COOKIE_NAME } from "../src/session/cookie";
 
-// Serialization matrix per plan 009 D10: Domain comes from COOKIE_DOMAIN
-// alone; Secure comes from COOKIE_DOMAIN being set OR NODE_ENV=production
-// (so https *.vercel.app previews get a Secure cookie, local http dev does
-// not).
 describe("buildSessionCookie", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -13,7 +9,7 @@ describe("buildSessionCookie", () => {
 
   it("serializes the local-dev shape: no Domain, no Secure", () => {
     vi.stubEnv("COOKIE_DOMAIN", undefined);
-    vi.stubEnv("NODE_ENV", "test"); // explicit: the no-Secure branch needs non-production
+    vi.stubEnv("NODE_ENV", "test");
     expect(buildSessionCookie("tok")).toBe(
       `${SESSION_COOKIE_NAME}=tok; Path=/; Max-Age=34560000; HttpOnly; SameSite=Lax`,
     );

@@ -4,41 +4,14 @@ import { MOTIFS_10 } from "./motifs-10";
 import { MOTIFS_15 } from "./motifs-15";
 import type { NonogramSolution } from "./types";
 
-/**
- * The curated Nonogram picture library (ADR-0021).
- *
- * Every entry is AI-authored pixel art under these curation constraints:
- *
- * Judged (recorded in ADR-0021):
- * - The subject is a concrete, everyday object/animal/plant/food/tool/
- *   nature/Brazilian-iconography item nameable by a common pt-BR noun.
- * - No letters/digits/text, no brands, no people/faces of real persons,
- *   no offensive, violent, religious or political shapes.
- * - `mirrorable` only when the horizontally mirrored form is still
- *   recognizable as the same subject.
- *
- * Mechanical (enforced by test/nonogram/motifs.test.ts, the content harness):
- * - Exact size×size shape over the alphabet {#, .}; unique ids; non-empty
- *   pt-BR names; `mirrorable` implies the mirrored bitmap differs.
- * - Line-solvable: solveNonogram(deriveClues(bitmap)) is "solved" and
- *   reproduces the bitmap exactly — for the motif AND its mirrored variant.
- * - Class floors and per-weekday pool minimums.
- * - Density guideline 30–65% is a warning-level diagnostic, not a gate.
- */
 export interface Motif {
-  /**
-   * Unique kebab-case English id (e.g. "anchor"), globally unique across
-   * size classes: a subject recurring in a larger class takes a `-big`
-   * suffix ("owl" 8×8 vs "owl-big" 15×15), never a numeric suffix or
-   * reordered words.
-   */
   readonly id: string;
-  /** pt-BR display name: "Âncora". */
+
   readonly name: string;
   readonly size: 5 | 8 | 10 | 15;
-  /** Asymmetric AND recognizable when horizontally mirrored. */
+
   readonly mirrorable: boolean;
-  /** "#" = filled, "." = empty; rows.length === size === each row's length. */
+
   readonly rows: ReadonlyArray<string>;
 }
 

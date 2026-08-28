@@ -25,17 +25,8 @@ import {
   termoContentFixture,
 } from "./fixtures";
 
-// THE AC-1 WALL SUITE (issue #17, seam 3, ADR-0004/0010/0024). Future
-// rows invisible through every reader, kill switch respected, boundary
-// instants exact, and the package surface pinned by tripwires. No later
-// PR may weaken this suite.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -48,7 +39,6 @@ afterAll(async () => {
   await ctx.close();
 });
 
-/** The projected games, each with the content fixture the wall parses. */
 const CONTENT_FIXTURES: Readonly<
   Record<
     "binairo" | "nonogram" | "sudoku" | "termo",
@@ -61,14 +51,6 @@ const CONTENT_FIXTURES: Readonly<
   termo: termoContentFixture,
 };
 
-/**
- * Raw seeding writes on purpose: the wall under test must not seed itself.
- * `game` defaults to binairo so every #17 test above reads unchanged; #23
- * passes "sudoku" and #25 "nonogram", each getting the matching content
- * fixture (plan 018 §15, plan 020 §8). The two-game ternary became a
- * lookup at #25 — a third arm would have been the point where the ternary
- * stopped being readable.
- */
 async function insertRow(options: {
   date: string;
   publishedAt: ReturnType<typeof sql>;
@@ -87,11 +69,6 @@ async function insertRow(options: {
   });
 }
 
-/**
- * The DB clock's America/Sao_Paulo calendar day — the same expression
- * `wallPredicate` uses when `date` is omitted, so a `getTodayDaily` test
- * can name the date it seeded without consulting the JS clock (ADR-0010).
- */
 async function saoPauloToday(): Promise<string> {
   const rows = await ctx.db.execute(
     sql`select ((now() at time zone 'America/Sao_Paulo')::date)::text as today`,
@@ -111,8 +88,6 @@ describe("the published-predicate wall", () => {
   });
 
   it("T-DB-2: getTodayDaily returns undefined when only future rows exist", async () => {
-    // Today's SP date with a future publication instant, plus genuinely
-    // future dates — nothing satisfies the wall.
     const todayRows = await ctx.db.execute(
       sql`select ((now() at time zone 'America/Sao_Paulo')::date)::text as today`,
     );
@@ -193,8 +168,7 @@ describe("the published-predicate wall", () => {
       "2026-07-31",
     );
     expect(row).toBeDefined();
-    // The named-for-danger accessor DOES carry the solution — that is its
-    // one job, behind the same wall.
+
     expect(collectKeys(row?.content).has("solution")).toBe(true);
   });
 
@@ -224,8 +198,7 @@ describe("the published-predicate wall", () => {
           const visible =
             (await getPublishedDaily(ctx.db, "binairo", "2026-08-01")) !==
             undefined;
-          // Named intermediate: Prettier strips the clarifying parens from
-          // `visible === (offsetSeconds <= 0)`, so spell the biconditional out.
+
           const shouldBeVisible = offsetSeconds <= 0;
           return visible === shouldBeVisible;
         },
@@ -255,7 +228,7 @@ describe("the wall holds for the second game (#23, plan 018 §6.5)", () => {
     expect(
       await getPublishedDaily(ctx.db, "sudoku", "2026-07-31"),
     ).toBeUndefined();
-    // Same predicate, same answer for the solution-bearing reader.
+
     expect(
       await getPublishedDailyWithSolution(ctx.db, "sudoku", today),
     ).toBeUndefined();
@@ -276,9 +249,7 @@ describe("the wall holds for the second game (#23, plan 018 §6.5)", () => {
       "tier",
     ]);
     expect(daily?.date).toBe("2026-08-01");
-    // `tier` only type-checks because the reader is narrowed to the game it
-    // was asked for — on the un-narrowed union this line is a compile error,
-    // which is what made this test red before src/published.ts changed.
+
     expect(daily?.tier).toBe(3);
     expect(daily?.givens).toHaveLength(81);
     const keys = collectKeys(daily);
@@ -314,9 +285,7 @@ describe("the wall holds for the second game (#23, plan 018 §6.5)", () => {
 
   it("T-DB-S4: the narrowing is machine-checked — every seeded shape returns sudoku at runtime", async () => {
     const today = await saoPauloToday();
-    // The enumerated row shapes a sudoku read can meet. The src narrowing
-    // is an `as` restating what stripDailyContent already proved; this loop
-    // is the proof, taken on the real value rather than on the type.
+
     const companions: readonly (readonly [string, () => Promise<void>])[] = [
       ["no companion row", () => Promise.resolve()],
       [
@@ -351,11 +320,7 @@ describe("the wall holds for the second game (#23, plan 018 §6.5)", () => {
 
     for (const [shape, seedCompanion] of companions) {
       await ctx.db.execute(sql`truncate table daily_puzzles`);
-      // The companion goes in FIRST, deliberately: the readers take
-      // `limit(1)` with no ORDER BY, so a game-blind predicate would hand
-      // back the binairo row by insertion order and the assertions below
-      // would go red. Seeding sudoku first made this test pass under a
-      // mutation that deleted `eq(dailyPuzzles.game, game)`.
+
       await seedCompanion();
       await insertRow({
         game: "sudoku",
@@ -392,7 +357,7 @@ describe("the wall holds for the third game (#25, plan 020 §8)", () => {
     expect(
       await getPublishedDaily(ctx.db, "nonogram", "2026-07-31"),
     ).toBeUndefined();
-    // Same predicate, same answer for the solution-bearing reader.
+
     expect(
       await getPublishedDailyWithSolution(ctx.db, "nonogram", today),
     ).toBeUndefined();
@@ -413,13 +378,11 @@ describe("the wall holds for the third game (#25, plan 020 §8)", () => {
       "size",
     ]);
     expect(daily?.date).toBe("2026-08-01");
-    // `clues` only type-checks because the reader is narrowed to the game it
-    // was asked for — on the un-narrowed union this line is a compile error.
+
     expect(daily?.size).toBe(5);
     expect(daily?.clues.rows).toHaveLength(5);
     expect(daily?.clues.cols).toHaveLength(5);
-    // ADR-0033: the whole reveal is withheld, so the identity keys the strip
-    // drops are the ones FORBIDDEN_DAILY_KEYS now names.
+
     const keys = collectKeys(daily);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
@@ -447,7 +410,7 @@ describe("the wall holds for the third game (#25, plan 020 §8)", () => {
       publishedAt: sql`now() - interval '1 hour'`,
       seed: 3,
     });
-    // All three games live on the same date: each read answers with its own.
+
     expect((await getTodayDaily(ctx.db, "nonogram"))?.game).toBe("nonogram");
     expect((await getTodayDaily(ctx.db, "binairo"))?.game).toBe("binairo");
     expect((await getTodayDaily(ctx.db, "sudoku"))?.game).toBe("sudoku");
@@ -498,9 +461,7 @@ describe("the wall holds for the third game (#25, plan 020 §8)", () => {
 
     for (const [shape, seedCompanion] of companions) {
       await ctx.db.execute(sql`truncate table daily_puzzles`);
-      // The companion goes in FIRST, deliberately — same reason as T-DB-S4:
-      // the readers take `limit(1)` with no ORDER BY, so a game-blind
-      // predicate would hand back the binairo row by insertion order.
+
       await seedCompanion();
       await insertRow({
         game: "nonogram",
@@ -518,11 +479,6 @@ describe("the wall holds for the third game (#25, plan 020 §8)", () => {
 });
 
 describe("the wall holds for the fourth game (#27, plan 022 §9)", () => {
-  // T-DB-S12. Termo's projection is EMPTY — `{game, date}` and nothing else
-  // — so the wall's job here is entirely about which rows are visible. That
-  // makes this the sharpest of the four wall suites, not the slackest: with
-  // no payload to inspect, "the row is invisible" is the only property left,
-  // and a leaked FUTURE date is the whole of ADR-0004 for this game.
   it("T-DB-S12: a published termo row projects to exactly {game,date}", async () => {
     await insertRow({
       game: "termo",
@@ -534,7 +490,7 @@ describe("the wall holds for the fourth game (#27, plan 022 §9)", () => {
     expect(Object.keys(daily ?? {}).sort()).toEqual(["date", "game"]);
     expect(daily?.date).toBe("2026-08-01");
     expect(daily?.game).toBe("termo");
-    // The answer word is in the ROW and must be in nothing the wall returns.
+
     const keys = collectKeys(daily);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
@@ -586,7 +542,7 @@ describe("the wall holds for the fourth game (#27, plan 022 §9)", () => {
       publishedAt: sql`now() - interval '1 hour'`,
       seed: 4,
     });
-    // All four games live on the same date: each read answers with its own.
+
     expect((await getTodayDaily(ctx.db, "termo"))?.game).toBe("termo");
     expect((await getTodayDaily(ctx.db, "binairo"))?.game).toBe("binairo");
     expect((await getTodayDaily(ctx.db, "nonogram"))?.game).toBe("nonogram");
@@ -594,9 +550,6 @@ describe("the wall holds for the fourth game (#27, plan 022 §9)", () => {
   });
 
   it("T-DB-S12: a drifted termo row THROWS rather than serving an unplayable date", async () => {
-    // The empty projection means a 200 carries no evidence of anything, so
-    // the strict content parse inside the wall is what makes it mean
-    // "playable" (plan 022 §8.3). `getTodayDaily` does not catch.
     await ctx.db.insert(dailyPuzzles).values({
       game: "termo",
       date: "2026-08-01",
@@ -611,11 +564,6 @@ describe("the wall holds for the fourth game (#27, plan 022 §9)", () => {
 });
 
 describe("listUsedTermoAnswers (#27, ADR-0040's no-repeat rule)", () => {
-  /**
-   * Raw seeding with a CHOSEN answer — `insertRow` above always writes the
-   * one fixture word, and this suite is entirely about telling several
-   * answers apart.
-   */
   async function insertTermoRow(options: {
     date: string;
     normalized: string;
@@ -636,11 +584,6 @@ describe("listUsedTermoAnswers (#27, ADR-0040's no-repeat rule)", () => {
   }
 
   it("T-DB-S10: returns killed AND unpublished AND past answers — an answer is spent forever", async () => {
-    // The three row states a date filter or a `killed_at` filter would drop,
-    // and each one has already reached a player or may yet: a killed date's
-    // answer may have been served before the kill, and a past date's
-    // certainly was. This is a STRONGER rule than `listBufferedDates`'
-    // (ADR-0024 D14) — that one is about coverage, this one about spend.
     await insertTermoRow({
       date: "2026-07-01",
       normalized: "passe",
@@ -663,10 +606,6 @@ describe("listUsedTermoAnswers (#27, ADR-0040's no-repeat rule)", () => {
   });
 
   it("T-DB-S10: a binairo row is NOT returned (the anti-vacuity half)", async () => {
-    // Without this the query could be reading every row in the table and the
-    // assertion above would still pass. The other three games' content has no
-    // `normalized` key at all, so a game-blind read would return nulls rather
-    // than words — and dropping nulls silently would look identical.
     await insertRow({
       game: "binairo",
       date: "2026-08-01",
@@ -691,11 +630,6 @@ describe("listUsedTermoAnswers (#27, ADR-0040's no-repeat rule)", () => {
   });
 
   it("T-DB-S10: reads `normalized` and not `canonical` — the ASCII form is the key", async () => {
-    // `normalized` is `^[a-z]{5}$` by the word-list harness, so the
-    // comparison cannot be defeated by a jsonb round-trip that composes a
-    // diacritic differently. A read of `canonical` would hand the top-up an
-    // accented string to compare against `TermoAnswer.normalized`, and every
-    // accented answer would then be eligible twice.
     await ctx.db.insert(dailyPuzzles).values({
       game: "termo",
       date: "2026-08-01",
@@ -708,13 +642,6 @@ describe("listUsedTermoAnswers (#27, ADR-0040's no-repeat rule)", () => {
 });
 
 describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
-  /**
-   * Every date this suite uses is derived from the DATABASE's São Paulo day,
-   * never from a JS clock and never hardcoded: `archivedWallPredicate`'s
-   * bound is `date < (the DB clock's SP day)`, so a literal date would pin
-   * "past" to whenever the file was written. `offsetDays` is negative for
-   * the past and positive for the future.
-   */
   async function spDate(offsetDays: number): Promise<string> {
     const rows = await ctx.db.execute(
       sql`select (((now() at time zone 'America/Sao_Paulo')::date) + ${offsetDays}::int)::text as d`,
@@ -729,8 +656,7 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
     expect(archived).toBeDefined();
     expect(archived?.game).toBe("binairo");
     expect(archived?.date).toBe(date);
-    // The same row shape `getPublishedDaily` would answer with: one wall,
-    // one projection, one extra conjunct.
+
     expect(archived).toEqual(await getPublishedDaily(ctx.db, "binairo", date));
   });
 
@@ -740,9 +666,9 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
       date: today,
       publishedAt: sql`now() - interval '1 hour'`,
     });
-    // The row is genuinely readable through the shipped wall...
+
     expect(await getPublishedDaily(ctx.db, "binairo", today)).toBeDefined();
-    // ...and invisible to the archive, which is the whole difference.
+
     expect(await getArchivedDaily(ctx.db, "binairo", today)).toBeUndefined();
   });
 
@@ -812,8 +738,7 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
       { date: newer, game: "sudoku" },
       { date: older, game: "termo" },
     ]);
-    // Deterministic across repeated calls: the order is the reader's, not
-    // the planner's.
+
     expect(await listArchivedDays(ctx.db)).toEqual(days);
   });
 
@@ -864,20 +789,18 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
         seed: index + 1,
       });
     }
-    // Inclusive at BOTH edges.
+
     const ranged = await listArchivedDays(ctx.db, {
       from: dates[1],
       to: dates[2],
     });
     expect(ranged.map((row) => row.date)).toEqual([dates[2], dates[1]]);
-    // `limit` truncates the same descending order rather than reordering it.
+
     const limited = await listArchivedDays(ctx.db, { limit: 2 });
     expect(limited.map((row) => row.date)).toEqual([dates[3], dates[2]]);
   });
 
   it("T-DB-S51: listArchivedMonths returns YYYY-MM newest-first, one entry per month, and its last element is min(date)'s month — the archive's floor", async () => {
-    // Three dates spanning at least two calendar months, derived from the DB
-    // clock so the assertion never depends on when the suite runs.
     const oldest = await spDate(-70);
     const middle = await spDate(-35);
     const newest = await spDate(-1);
@@ -887,7 +810,7 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
         publishedAt: sql`now() - interval '100 days'`,
         seed: index + 1,
       });
-      // A second game on the same date must NOT produce a second month entry.
+
       await insertRow({
         date,
         game: "sudoku",
@@ -946,13 +869,12 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
       publishedAt: sql`now() + interval '1 hour'`,
       seed: 4,
     });
-    // Today's row, through the today reader and the dated one.
+
     expect((await getTodayDaily(ctx.db, "binairo"))?.date).toBe(today);
     expect((await getPublishedDaily(ctx.db, "binairo", today))?.date).toBe(
       today,
     );
-    // A dated past row, and a FUTURE-dated row that is published: the shipped
-    // wall carries no date bound at all, and #31 did not give it one.
+
     expect((await getPublishedDaily(ctx.db, "binairo", past))?.date).toBe(past);
     expect((await getPublishedDaily(ctx.db, "binairo", future))?.date).toBe(
       future,
@@ -960,7 +882,7 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
     expect(
       (await getPublishedDailyWithSolution(ctx.db, "binairo", future))?.date,
     ).toBe(future);
-    // An unpublished row stays invisible through both.
+
     expect(
       await getPublishedDaily(ctx.db, "binairo", await spDate(-2)),
     ).toBeUndefined();
@@ -971,18 +893,13 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
       new URL("../src/published.ts", import.meta.url),
       "utf8",
     );
-    // Comment-stripping is LOAD-BEARING, not hygiene: this module's doc
-    // blocks discuss the very expressions counted below, so a scan over the
-    // raw file would count its own prose and red on a correct module.
+
     const code = source
       .replaceAll(/\/\*[\s\S]*?\*\//g, "")
       .replaceAll(/^[ \t]*\/\/.*$/gm, "");
     const occurrences = (needle: RegExp): number =>
       [...code.matchAll(needle)].length;
-    // ADR-0004's guarantee has ONE enforcement point (ADR-0010 :20,
-    // ADR-0014 :16). A second copy of any of the three reds here even when
-    // it behaves identically — which behaviour tests cannot catch, and which
-    // no test can reach through an export, because the helpers are private.
+
     expect(occurrences(/dailyPuzzles\.publishedAt/g)).toBe(1);
     expect(occurrences(/isNull\(dailyPuzzles\.killedAt\)/g)).toBe(1);
     expect(occurrences(/killedAt/g)).toBe(1);
@@ -1020,11 +937,11 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
     } finally {
       console.error = original;
     }
-    // The log line IS the alarm (ADR-0053 decision 4), so it names the row.
+
     expect(logged).toHaveLength(1);
     expect(String(logged[0]?.[0])).toContain("binairo");
     expect(String(logged[0]?.[0])).toContain(date);
-    // A bad row on the LIVE readers is an incident, not a 404.
+
     await expect(getPublishedDaily(ctx.db, "binairo", date)).rejects.toThrow();
   });
 
@@ -1032,14 +949,11 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
     const past = await spDate(-1);
     const today = await spDate(0);
     const future = await spDate(1);
-    // It reads no table: the three dates below have no daily_puzzles row at
-    // all, and it still answers.
+
     expect(await archiveDateClass(ctx.db, past)).toBe("past");
     expect(await archiveDateClass(ctx.db, today)).toBe("today");
     expect(await archiveDateClass(ctx.db, future)).toBe("future");
-    // And it agrees with the wall: a date the archive readers return is
-    // never classified anything but "past" (ADR-0053 decision 1's ordering
-    // rests on exactly this).
+
     await insertRow({ date: past, publishedAt: sql`now() - interval '1 day'` });
     await insertRow({
       date: today,
@@ -1053,13 +967,6 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
 });
 
 describe("the motif-name read (#64, ADR-0070)", () => {
-  /**
-   * Seeds a nonogram row whose `reveal.name` is whatever the caller says,
-   * fixture-derived in every other respect. The fixtures module cannot do
-   * this — its whole point is a VALID content object — and the empty-name
-   * case below is precisely a row the generator would have refused to write
-   * and the read path must survive anyway.
-   */
   async function insertNamed(options: {
     date: string;
     name: string;
@@ -1088,11 +995,6 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       "Âncora",
     );
 
-    // A STRING, not a row and not a projection — so there is nothing here a
-    // caller could over-serialize. The parse happens inside the wall
-    // (ADR-0024) and `motifId`, `mirrored` and `reveal.solution` never leave
-    // this function, which is ADR-0033 decision 1 still holding for
-    // everything but the name.
     const value = await getPublishedNonogramMotifName(ctx.db, "2026-08-01");
     expect(typeof value).toBe("string");
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
@@ -1102,10 +1004,7 @@ describe("the motif-name read (#64, ADR-0070)", () => {
 
   it("T-DB-S86: the wall holds — a future-dated row, a killed row and a missing date all yield `undefined`", async () => {
     const today = await saoPauloToday();
-    // Published in the FUTURE: the row exists, the wall hides it. This is
-    // the ADR-0004 guarantee for the name specifically — a completed claim
-    // is the only thing that can carry it, and an unpublished day can never
-    // produce one.
+
     await insertNamed({
       date: today,
       name: "Amanhã",
@@ -1113,7 +1012,6 @@ describe("the motif-name read (#64, ADR-0070)", () => {
     });
     expect(await getPublishedNonogramMotifName(ctx.db, today)).toBeUndefined();
 
-    // KILLED: published once, withdrawn since (ADR-0004's kill switch).
     await insertNamed({
       date: "2026-07-31",
       name: "Morto",
@@ -1124,23 +1022,10 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       await getPublishedNonogramMotifName(ctx.db, "2026-07-31"),
     ).toBeUndefined();
 
-    // No row at all — the ordinary degraded case, and no throw.
     expect(
       await getPublishedNonogramMotifName(ctx.db, "2026-06-15"),
     ).toBeUndefined();
 
-    // A row for ANOTHER game on a date that has one: the predicate is
-    // game-scoped, so a published binairo never answers for the nonogram.
-    //
-    // THE CONTENT IS NONOGRAM CONTENT FILED UNDER `game: "binairo"`, which
-    // looks perverse and is the only shape that proves anything. With a real
-    // binairo row this assertion is VACUOUS — a step-6 reviewer removed
-    // `eq(dailyPuzzles.game, game)` from the reader's predicate and all 46
-    // tests here still passed, because binairo content fails
-    // `nonogramDailyContentSchema.parse` inside the `try` and the `catch`
-    // swallows it. The parse was doing the scoping, not the wall. With
-    // parseable content under the wrong game, only the predicate can answer
-    // `undefined`.
     await ctx.db.insert(dailyPuzzles).values({
       game: "binairo",
       date: "2026-06-20",
@@ -1154,20 +1039,11 @@ describe("the motif-name read (#64, ADR-0070)", () => {
   });
 
   it("T-DB-S87: an EMPTY or whitespace-only stored name normalises to `undefined` — the read that would otherwise 500 the whole day payload", async () => {
-    // `nonogramRevealSchema` has no `.min(1)`: the `reveal-name-empty`
-    // rejection lives in `packages/games` at GENERATION time, so a stored
-    // `name: ""` parses fine on this read path. Returned as-is it would
-    // reach `dayGameStateSchema`'s `.min(1)` inside the route's own
-    // `dayResponseSchema.parse` and take down the hub, the four tiles and
-    // every completed view for a user who merely finished the Nonogram.
-    // This is the normalisation that makes the wire's `.min(1)` safe.
     const cases: readonly [string, string][] = [
       ["2026-08-02", ""],
       ["2026-08-03", "   "],
       ["2026-08-04", "\t\n "],
-      // The two `trim()` does NOT strip, and the reason the guard is a
-      // `\p{Cf}` regex rather than a trim: a zero-width space and a BOM both
-      // render an invisible name under a visible lead.
+
       ["2026-08-06", "​"],
       ["2026-08-07", "﻿​ "],
     ];
@@ -1183,8 +1059,6 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       ).toBeUndefined();
     }
 
-    // A name with surrounding whitespace is NOT blank and is returned
-    // UNCHANGED — the trim decides emptiness, it does not edit content.
     await insertNamed({
       date: "2026-08-05",
       name: " Âncora ",
@@ -1199,13 +1073,7 @@ describe("the motif-name read (#64, ADR-0070)", () => {
 describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", () => {
   it("T-DB-9a: the wall module exports exactly the audited set", async () => {
     const published = await import("../src/published");
-    // #31 added exactly four (ADR-0053 decision 4): three archive readers,
-    // all wall-carrying, plus `archiveDateClass`, which carries no wall
-    // because it reads no table — it answers a question about the clock,
-    // and every caller has already been through the wall. 4 names became 8.
-    // #64 (ADR-0070) adds exactly one — `getPublishedNonogramMotifName`,
-    // wall-carrying like the rest, returning one curated string rather than
-    // a row. 8 became 9, widened in place in the same commit as the export.
+
     expect(Object.keys(published).sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
       "archiveDateClass",
@@ -1221,12 +1089,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
 
   it("T-DB-9b: the root barrel exports exactly the wall-only set", async () => {
     const root = await import("../src/index");
-    // #31: the three archive readers and the date classifier join the root
-    // entry — `apps/web` is their only consumer and may hold nothing else.
-    // The publishing and user entries are untouched by this row. 8 → 12.
-    // #145 (ADR-0064): `pushSubscriptions` joins — no puzzle content, and
-    // its statements live api-side beside the onboarding precedent. 12 → 13,
-    // widened in place (the T-DB-9a precedent).
+
     expect(Object.keys(root).sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
       "archiveDateClass",
@@ -1251,20 +1114,12 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "createPublishingDb",
       "dailyPuzzles",
       "getPublishedDailyWithSolution",
-      // #64 (ADR-0070): today's motif NAME, read back out of stored
-      // `content` behind the wall. It belongs on THIS entry and not the
-      // root's — the root entry is `apps/web`'s, and a root export would
-      // hand an RSC segment a one-line channel to today's name (ADR-0024).
-      // 10 names became 11. T-DB-9b and T-DB-9d come out byte-identical,
-      // and that is the proof the export went to the right surface.
+
       "getPublishedNonogramMotifName",
       "getRemoteConfig",
       "insertDailyPuzzle",
       "listBufferedDates",
-      // #27's ONE addition to this entry: `listUsedTermoAnswers`, the first
-      // top-up read-back of stored `content` in the package (plan 022 §9.2).
-      // 9 names became 10; if any other line in this block needed editing,
-      // something was added to the wrong surface (landmine L5).
+
       "listUsedTermoAnswers",
       "remoteConfig",
       "todaySaoPaulo",
@@ -1272,23 +1127,12 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
   });
 
   it("T-DB-9d: the root client's relational-query surface is the wall-safe subset", async () => {
-    // The wall must hold for QUERY CAPABILITY, not just named exports:
-    // `db.query.dailyPuzzles.findMany()` on a root-entry client would read
-    // solution-bearing unpublished rows without any /publishing import.
-    // neon() performs no I/O at construction — the URL is a dummy.
     const { createDb } = await import("../src/client");
     const db = createDb("postgresql://tripwire:tripwire@localhost:5432/x");
     expect(Object.keys(db.query).sort()).toEqual(["sessions", "users"]);
   });
 
   it("T-DB-S5: #23 added no runtime export to any package entry", async () => {
-    // The generic wall (plan 018 S11) is a SIGNATURE change: two readers
-    // become generic in `game` and nothing is added to the surface. T-DB-9a
-    // through T-DB-9e compare Object.keys() per module and are blind to a
-    // signature, which is the point — they come out of this ticket
-    // byte-identical (plan 018 §19.5). This asserts the same property once
-    // across every package.json subpath, so a sudoku-specific helper added
-    // to ANY entry fails here even if someone "fixed" a per-module list.
     const entries = await Promise.all([
       import("../src/index"),
       import("../src/publishing"),
@@ -1298,102 +1142,60 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     const surface = entries.flatMap((entry) => Object.keys(entry));
     expect([...new Set(surface)].sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
-      "archiveDateClass", // #31 (ADR-0053): the four archive names, root entry
-      "attachTokens", // #21 (ADR-0050): widened in the same commit as the export
+      "archiveDateClass",
+      "attachTokens",
       "bufferDepth",
-      "claimNudgeSend", // #146 (ADR-0064 d7, ADR-0068): user entry only
+      "claimNudgeSend",
       "completions",
       "createDb",
       "createPublishingDb",
       "createTestDb",
       "dailyPuzzles",
       "eq",
-      "getArchivedDaily", // #31 (ADR-0053 decision 4)
+      "getArchivedDaily",
       "getCompletion",
       "getPublishedDaily",
       "getPublishedDailyWithSolution",
-      // #64 (ADR-0070): the motif-name read, PUBLISHING entry only.
+
       "getPublishedNonogramMotifName",
       "getRemoteConfig",
       "getTodayDaily",
-      "getUserSince", // #29 (plan 033): widened in the same commit as the export
+      "getUserSince",
       "grantHints",
       "grantedHintsToday",
-      "hasCreditedPastDateToday", // #58 (ADR-0066): user entry only
+      "hasCreditedPastDateToday",
       "hintGrants",
       "insertDailyPuzzle",
-      "isWinnerLivenessError", // #21 step 7 finding C: the guard's discriminant
-      "listArchivedDays", // #31 (ADR-0053 decision 4)
-      "listArchivedMonths", // #31 (ADR-0053 decision 4)
+      "isWinnerLivenessError",
+      "listArchivedDays",
+      "listArchivedMonths",
       "listBufferedDates",
-      // #83 (ADR-0060): the day-truth reader, user entry only. Widened in
-      // place beside `T-DB-9e`, in the same commit as the export.
+
       "listCompletionsForDay",
       "listCompletionsForMerge",
-      "listCompletionsForStats", // #29 (plan 033): the unfiltered stats projection
+      "listCompletionsForStats",
       "listCompletionsForStreak",
-      "listMedalGrants", // #30 (ADR-0052): widened in the same commit as the export
-      "listPushNudgeCandidates", // #146 (ADR-0064, ADR-0068): user entry only
+      "listMedalGrants",
+      "listPushNudgeCandidates",
       "listUsedTermoAnswers",
-      "medalGrants", // #30 (ADR-0052): the curated-grant table, user entry only
+      "medalGrants",
       "mergeAccounts",
-      // #146: the notification-send ledger table, USER entry only — unlike
-      // `user_seen_days` (no entry), because the schema-pin and merge tests
-      // are named readers of the table object.
+
       "notificationSends",
-      "pruneSeenDays", // #58 (ADR-0066): user entry only
-      // #145 (ADR-0064): the push-subscriptions table, root entry only —
-      // widened in place beside T-DB-9b, in the same commit as the export.
+      "pruneSeenDays",
+
       "pushSubscriptions",
-      "readTickInstant", // #146 (ADR-0068 d3): user entry only
+      "readTickInstant",
       "recordCompletion",
-      "recordSeenDay", // #58 (ADR-0066): user entry only
+      "recordSeenDay",
       "remoteConfig",
       "sessions",
       "sql",
       "todaySaoPaulo",
       "users",
-      "wasSeenOn", // #58 (ADR-0066): user entry only
+      "wasSeenOn",
     ]);
-    // A duplicate across two entries would be hidden by the Set above, so
-    // pin the count too — one name per export, the list above and the
-    // length below agreeing. (The prose here read "44 distinct names, 44
-    // exports" while the assertion said 48; the two drifted apart as the
-    // history below grew, and a count is now stated once, at the assertion,
-    // where it cannot go stale silently.) #27 moved it by
-    // exactly one — `listUsedTermoAnswers` on the publishing entry — #19 by
-    // one more: `listCompletionsForStreak` on the user entry (plan 027 §6),
-    // #20 by two: `listCompletionsForMerge` and `mergeAccounts` on the
-    // user entry (plan 029 §6), #21 by one: `attachTokens` on the user
-    // entry (ADR-0050, ADR-0026 decision 5), never the root, #21's
-    // step 7 by one more: `isWinnerLivenessError` on the user entry
-    // (finding C — the confirm route's retry discriminant), #29 by
-    // exactly two: `listCompletionsForStats` and `getUserSince` on the
-    // user entry (plan 033 §3.1), never the root, and #30 by exactly
-    // two: `listMedalGrants` and `medalGrants` on the user entry
-    // (ADR-0052), never the root. #31's write-window PR moved it by
-    // ZERO — the late-write ceiling is a guard inside
-    // `recordCompletion`'s own INSERT, not a new export (step-6 finding
-    // F1) — and its archive PR moves it by exactly four: the three
-    // archive readers and the date classifier, on the root entry. #83 moves
-    // it by exactly one: `listCompletionsForDay` on the USER entry
-    // (ADR-0060 decision 1), never the root — apps/web must stay unable to
-    // name it. #145 moves it by exactly one: `pushSubscriptions` on the
-    // ROOT entry (ADR-0064 — the entry `users` rides; the statements over
-    // it live api-side, apps/api/src/push/service.ts). #58 moves it by
-    // exactly four, all on the USER entry (ADR-0066): the three seen-days
-    // statements plus the multi-past-date guard's read; the
-    // `user_seen_days` TABLE itself is on no entry at all — only
-    // seen-days.ts and mergeAccounts name it. #146 moves it by exactly
-    // four, all on the USER entry (ADR-0064, ADR-0068): the dispatcher's
-    // candidate read, the claim, the one-snapshot tick instant, and the
-    // `notification_sends` TABLE — the table on the user entry (unlike
-    // user_seen_days) because the schema-pin and merge suites are named
-    // readers of the table object; never the root, so apps/web cannot name
-    // the ledger. #64 moves it by exactly ONE:
-    // `getPublishedNonogramMotifName` on the PUBLISHING entry (ADR-0070),
-    // never the root — the same shape `listUsedTermoAnswers` took, and for
-    // the same reason. 48 → 49.
+
     expect(surface).toHaveLength(49);
   });
 });

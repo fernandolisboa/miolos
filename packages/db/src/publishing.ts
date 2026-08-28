@@ -1,10 +1,3 @@
-/**
- * The dangerous side of the wall: raw table objects, the buffer
- * writers/readers, remote config, the solution-bearing reader, and the
- * curated Nonogram motif name — every read whose result apps/web must
- * never be able to name (ADR-0024). apps/web must NEVER import
- * `@miolos/db/publishing`; apps/api (cron) and tests only.
- */
 export {
   bufferDepth,
   insertDailyPuzzle,

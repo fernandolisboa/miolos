@@ -2,13 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchMedals } from "../src/medals/medals-client";
 
-// The fetch-and-parse half of the medals read (#30, ADR-0052), tested
-// without rendering — the streak-client suite's shape. This suite
-// deliberately keeps the unset-env case — the bootstrap.ts guard parity —
-// which every RENDERING suite must avoid by mocking the client module.
-// Every stubbed fetch hands out a FRESH Response per call (the shared-
-// Response poisoning trap: a Response body reads once).
-
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
 }
@@ -37,9 +30,6 @@ describe("fetchMedals (T-WEB-S160)", () => {
   });
 
   it("parses a valid body against the strict contract — a shape-valid UNKNOWN id included, which PASSES (the skew posture)", async () => {
-    // "some-future-medal" is not in the bundled catalog: ids are validated
-    // by SHAPE, never enum (ADR-0052), so catalog growth is additive and
-    // the drop happens at render, not here.
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>

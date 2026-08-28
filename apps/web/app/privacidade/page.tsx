@@ -4,15 +4,6 @@ import { messages, routes } from "../../src/i18n";
 import { DeleteAccount } from "./delete-account";
 import styles from "./page.module.css";
 
-/**
- * The privacy policy (#21, ADR-0012, ADR-0050 decision 12) — the
- * modo-livre static register: STATIC on purpose, no `dynamic` export, no
- * db import, no fetch in the server component, every string from
- * `messages.privacy.*`. The copy states exactly what this release ships —
- * page and mechanism land in the same PR, so they cannot drift — and the
- * one client component is the self-service deletion island at the end
- * (D13's quiet, ink-styled section).
- */
 export default function PrivacyPage() {
   return (
     <main className={styles.page} data-page="privacidade">

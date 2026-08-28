@@ -1,11 +1,3 @@
-/**
- * The module is named `grid-hint`, not `hint`, because that argument is
- * scoped to games whose solution is recoverable from the published givens.
- * Termo's answer is never on the wire (`packages/core`'s strip table gives
- * its public projection as `game, date` only) and its guesses are judged
- * server-side, so #27 inherited neither this module nor ADR-0027's reasoning.
- */
-
 export interface Hint<T> {
   readonly index: number;
   readonly value: T;

@@ -9,16 +9,6 @@ import { validateNonogram } from "./validate";
 
 export const NONOGRAM_MAX_GENERATION_ATTEMPTS = 8;
 
-/**
- * Generate the Nonogram for (seed, weekday). Deterministic: the same pair
- * always yields the same puzzle. All randomness flows through one seeded
- * PRNG per attempt; attempt seeds derive from the base seed. Every pool
- * entry is harness-proven valid for its weekday, so attempt 0 succeeds in
- * practice — the retry loop and typed error are a cross-engine convention
- * and a tripwire against content/threshold drift. Throws a RangeError when
- * `weekday` is outside 1..7 at runtime (untyped boundaries) — Zod parsing
- * at the API boundary remains the caller's duty.
- */
 export function generateNonogram(
   seed: number,
   weekday: Weekday,
@@ -56,7 +46,7 @@ export function generateNonogram(
         solution,
       },
     };
-    // Defense in depth: the harness already proves every pool entry valid.
+
     if (validateNonogram(puzzle).ok) {
       return puzzle;
     }

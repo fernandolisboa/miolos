@@ -1,6 +1,5 @@
 import type { Motif } from "./motifs";
 
-/** 5×5 class — Monday (whole class). See motifs.ts for the curation rules. */
 export const MOTIFS_5: ReadonlyArray<Motif> = [
   {
     id: "heart",

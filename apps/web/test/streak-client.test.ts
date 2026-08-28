@@ -2,11 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchStreak } from "../src/streak/streak-client";
 
-// The fetch-and-parse half of the streak read (#19, plan 027 §8), tested
-// without rendering. This suite deliberately keeps the unset-env case — the
-// bootstrap.ts guard parity — which every RENDERING suite must avoid by
-// stubbing the pair.
-
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
 }

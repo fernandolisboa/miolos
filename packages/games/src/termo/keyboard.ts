@@ -6,7 +6,6 @@ export interface EvaluatedGuess {
   readonly tiles: TileStates;
 }
 
-/** Partial map over the 26 keys a-z (guesses are normalized before keying). */
 export type KeyboardState = Readonly<Partial<Record<string, TileState>>>;
 
 const PRECEDENCE: Record<TileState, number> = {
@@ -15,11 +14,6 @@ const PRECEDENCE: Record<TileState, number> = {
   absent: 0,
 };
 
-/**
- * Best-of per letter with precedence correct > present > absent; monotonic —
- * a later guess never downgrades a key. Pure and recomputed from the full
- * history: no incremental state to corrupt.
- */
 export function deriveKeyboardState(
   guesses: readonly EvaluatedGuess[],
 ): KeyboardState {

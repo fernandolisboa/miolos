@@ -1,7 +1,3 @@
-// Private solving machinery: mutable solver state, incremental placement
-// legality, and the tiered technique fixpoint that doubles as the
-// difficulty instrument. Nothing here is exported from the public barrel.
-
 import { cellAt, intAt, setCellAt, sideLength, toCellStates } from "./internal";
 import type { CellState } from "./internal";
 import type { BinairoGrid } from "./types";
@@ -40,11 +36,6 @@ export function cloneState(state: SolverState): SolverState {
   };
 }
 
-/**
- * Build a state from public givens, placing each given through the
- * incremental legality checks. Returns null when the givens already
- * contradict rules 2–4. Throws RangeError on a malformed size.
- */
 export function stateFromGrid(grid: BinairoGrid): SolverState | null {
   const n = sideLength(grid.length);
   const state = emptyState(n);
@@ -65,7 +56,6 @@ export function isComplete(state: SolverState): boolean {
   return !state.cells.includes(-1);
 }
 
-/** True when the placement completes a run of three `value` cells. */
 function createsRun(
   state: SolverState,
   row: number,
@@ -110,7 +100,6 @@ function colIsComplete(state: SolverState, col: number): boolean {
   return intAt(state.colZeros, col) + intAt(state.colOnes, col) === state.n;
 }
 
-/** True when a just-completed line duplicates another complete parallel line (rule 4). */
 function completesDuplicateLine(
   state: SolverState,
   row: number,
@@ -154,14 +143,6 @@ function completesDuplicateLine(
   return false;
 }
 
-/**
- * Place `value` at `index` with incremental legality (rules 2–4 as far as
- * they are decidable at placement time). Self-reverting: on an illegal
- * placement the state is left untouched and false is returned. Placing a
- * value already present is a no-op returning true; placing over the
- * opposite value returns false (the "rule would place both values"
- * contradiction).
- */
 export function place(
   state: SolverState,
   index: number,
@@ -196,7 +177,6 @@ export function place(
   return true;
 }
 
-/** Undo a placement (full-grid backtracking construction only). */
 export function unplace(state: SolverState, index: number): void {
   const value = cellAt(state.cells, index);
   if (value === -1) {
@@ -218,13 +198,6 @@ function flip(value: 0 | 1): 0 | 1 {
   return value === 0 ? 1 : 0;
 }
 
-/**
- * Tier 1, one full scan in fixed order: windows (T1a surround
- * pair, T1b split pair) over rows then columns in index order, cells
- * left-to-right/top-to-bottom, then T1c count saturation over rows then
- * columns. Deductions are monotone, so the fixpoint is order-independent;
- * the fixed order makes traces reproducible.
- */
 function applyTier1(state: SolverState): RuleOutcome {
   const { n, half, cells } = state;
   let progress = false;
@@ -238,7 +211,7 @@ function applyTier1(state: SolverState): RuleOutcome {
         const a = cellAt(cells, i0);
         const b = cellAt(cells, i1);
         const c = cellAt(cells, i2);
-        // T1a — surround pair: [v, v, .] and [., v, v].
+
         if (a !== -1 && a === b && c === -1) {
           if (!place(state, i2, flip(a))) {
             return "contradiction";
@@ -250,7 +223,6 @@ function applyTier1(state: SolverState): RuleOutcome {
           }
           progress = true;
         } else if (a !== -1 && a === c && b === -1) {
-          // T1b — split pair: [v, ., v].
           if (!place(state, i1, flip(a))) {
             return "contradiction";
           }
@@ -260,7 +232,6 @@ function applyTier1(state: SolverState): RuleOutcome {
     }
   }
 
-  // T1c — count saturation.
   for (const isRow of [true, false]) {
     const zeroCounts = isRow ? state.rowZeros : state.colZeros;
     const oneCounts = isRow ? state.rowOnes : state.colOnes;
@@ -287,17 +258,9 @@ function applyTier1(state: SolverState): RuleOutcome {
   return progress ? "progress" : "none";
 }
 
-/**
- * Tier 2, first applicable deduction in fixed order: T2a line lookahead
- * (balance forcing), then T2b duplicate-line avoidance. Returns after one
- * deduction so the cheaper tier-1 rules re-run first.
- */
 function applyTier2(state: SolverState): RuleOutcome {
   const { n, cells } = state;
 
-  // T2a — for each empty cell and value, simulate the placement plus a
-  // tier-1-only fixpoint (never nested); a contradiction forces the
-  // opposite value.
   for (let index = 0; index < cells.length; index += 1) {
     if (cellAt(cells, index) !== -1) {
       continue;
@@ -313,12 +276,6 @@ function applyTier2(state: SolverState): RuleOutcome {
     }
   }
 
-  // T2b — duplicate-line avoidance: a complete line A and a parallel line
-  // B with exactly two empties that agrees with A on every filled cell.
-  // When A's values at B's two empty positions differ, counts force B's
-  // empties to hold one 0 and one 1, and rule 4 bars matching A — so B
-  // takes the swapped arrangement. When they are equal, do nothing:
-  // T1c/contradiction detection owns that case.
   for (const isRow of [true, false]) {
     for (let a = 0; a < n; a += 1) {
       const aComplete = isRow
@@ -369,10 +326,6 @@ function applyTier2(state: SolverState): RuleOutcome {
   return "none";
 }
 
-/**
- * Propagate technique deductions to fixpoint, tiers 1..maxTier, in fixed
- * order. Returns false on contradiction.
- */
 export function propagate(state: SolverState, maxTier: 1 | 2): boolean {
   for (;;) {
     const tier1 = applyTier1(state);

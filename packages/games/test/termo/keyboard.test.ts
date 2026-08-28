@@ -68,16 +68,13 @@ describe("deriveKeyboardState", () => {
   });
 
   it("keeps correct over a later present, and present over a later absent", () => {
-    // answer "cacau": guess "casal" puts c correct at 0; guess "banco" has
-    // c only as present (position 3) — the key must stay correct.
     const answer = "cacau";
     const state = deriveKeyboardState([
       toEvaluated("casal", answer),
       toEvaluated("banco", answer),
     ]);
     expect(state["c"]).toBe("correct");
-    // "u" present in "usual" (position 0, answer has u at 4), then a guess
-    // without u leaves it present; "l" was absent in "casal" and stays absent.
+
     expect(state["u"]).toBeUndefined();
     const withU = deriveKeyboardState([
       toEvaluated("usual", answer),

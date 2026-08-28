@@ -22,19 +22,12 @@ import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { dismissRequest, jsonHeaders } from "./push-helpers";
 
-// Seam 4 for POST /notifications/dismiss (#145, ADR-0064; plan 061 §3):
-// the real handler over PGlite — the onboarding-seen suite's conventions.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -81,8 +74,6 @@ function stateRequest(token: string): NextRequest {
 
 describe("POST /notifications/dismiss — one permanent stamp (#145, ADR-0064)", () => {
   it("T-API-S130: stamps once with explicit updated_at; a re-post touches zero rows and never re-bumps; the state flips ineligible; 400/401/403/415 hold; and the stamp is NOT gated on the VAPID triple", async () => {
-    // An eligible player (streak 3 on the compiled default), so the flip
-    // below is the dismissal and nothing else.
     const { token, userId } = await createSession();
     const today = await todaySaoPaulo(ctx.db);
     for (const offset of [0, -1, -2]) {
@@ -94,7 +85,7 @@ describe("POST /notifications/dismiss — one permanent stamp (#145, ADR-0064)",
         completedAt: new Date(`${addDays(today, offset)}T15:00:00Z`),
         elapsedMs: 61_000,
         hintsUsed: 0,
-        onTime: true, // #58 (ADR-0066): stored at write; instant inside its own day
+        onTime: true,
       });
     }
     const before = await stateGet(stateRequest(token));
@@ -102,7 +93,6 @@ describe("POST /notifications/dismiss — one permanent stamp (#145, ADR-0064)",
       notificationsStateResponseSchema.parse(await before.json()).eligible,
     ).toBe(true);
 
-    // The stamp — with explicit updated_at (schema.ts's writer list).
     const posted = await POST(
       dismissRequest({ headers: jsonHeaders(token), body: "{}" }),
     );
@@ -120,14 +110,11 @@ describe("POST /notifications/dismiss — one permanent stamp (#145, ADR-0064)",
     expect(row?.pushPromptDismissedAt).toBeInstanceOf(Date);
     expect(row?.updatedAt.getTime()).not.toBe(row?.createdAt.getTime());
 
-    // The state flips ineligible, permanently — the attach-prompt
-    // lifecycle, server-owned so it survives cleared site data and merge.
     const after = await stateGet(stateRequest(token));
     expect(
       notificationsStateResponseSchema.parse(await after.json()).eligible,
     ).toBe(false);
 
-    // Idempotent: the re-post touches zero rows — neither stamp moves.
     const reposted = await POST(
       dismissRequest({ headers: jsonHeaders(token), body: "{}" }),
     );
@@ -146,7 +133,6 @@ describe("POST /notifications/dismiss — one permanent stamp (#145, ADR-0064)",
       row?.updatedAt.toISOString(),
     );
 
-    // The write-template refusals (the onboarding-seen shape).
     const smuggled = await POST(
       dismissRequest({
         headers: jsonHeaders(token),
@@ -171,11 +157,6 @@ describe("POST /notifications/dismiss — one permanent stamp (#145, ADR-0064)",
     );
     expect(wrongType.status).toBe(415);
 
-    // Deliberately NOT gated on isPushConfigured(): a player declining a
-    // prompt this environment rendered must be recorded even if a VAPID
-    // var vanished between render and click — refusing would re-prompt
-    // them forever, and the dismissal has no push side effect to fail
-    // closed over (the route's own doc block).
     const fresh = await createSession();
     vi.stubEnv("VAPID_PUBLIC_KEY", undefined);
     const unconfigured = await POST(

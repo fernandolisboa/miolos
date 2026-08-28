@@ -88,17 +88,11 @@ describe("evaluateGuess", () => {
     );
   });
 
-  // Hand-verified double-letter fixtures (plan §7.2): each tuple was worked
-  // through the two-pass algorithm by hand before becoming an expectation.
   it.each([
-    // Surplus doubles vs fewer in answer: pass 1 consumes positions 1 and 3,
-    // the 'a' count is exhausted for positions 0, 2, 4.
     ["aaaaa", "cacau", ["absent", "correct", "absent", "correct", "absent"]],
-    // Accent-insensitive with letter-count exhaustion: caçar → cacar, only
-    // one 'r' remains after pass 1 consumes nothing for 'r'.
+
     ["carro", "caçar", ["correct", "correct", "present", "absent", "absent"]],
-    // Exact beats earlier present: pass-1 consumption at positions 0 and 3
-    // happens before pass 2 walks left-to-right.
+
     ["aarrr", "arara", ["correct", "present", "present", "correct", "absent"]],
     ["arara", "arara", ["correct", "correct", "correct", "correct", "correct"]],
   ])("evaluates guess %j against answer %j", (guess, answer, expected) => {

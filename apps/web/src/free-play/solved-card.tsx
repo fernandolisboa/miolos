@@ -1,19 +1,5 @@
 "use client";
 
-/**
- * The free-play solved card (#28, plan 025 §7.3): an in-place swap when the
- * board closes — no navigation, so finishing offline works, exactly the
- * daily's trick. A paper card in the game's accent: the "Resolvido!" stamp,
- * the Nonogram's painted picture where applicable (its curated name is
- * withheld on this card and on every free-play surface — ADR-0033 as amended
- * by ADR-0047 and narrowed by ADR-0070, which names the DAILY reveal only),
- * then "Mais um",
- * back to the index, and a quiet link to Hoje.
- *
- * No elapsed time (ADR-0046 decision 6: free play has no timer) and no
- * completion language: **Conclusão** is a daily verb (CONTEXT.md) and
- * nothing here was recorded anywhere (ADR-0008 rule 5).
- */
 import Link from "next/link";
 
 import { messages, routes } from "../i18n";
@@ -31,7 +17,7 @@ export function FreePlaySolvedCard({
 }: {
   readonly game: FreePlayGame;
   readonly level: FreePlayLevel;
-  /** The painted payoff — Nonogram only; never a motif name or id. */
+
   readonly picture?: ConclusionPicture;
   readonly onAgain: () => void;
 }) {
@@ -52,10 +38,6 @@ export function FreePlaySolvedCard({
           )}
         </p>
         {picture !== undefined && (
-          // One <svg>, one <path> — the conclusion's own pattern (SVG, Skia
-          // or code inside the app; CLAUDE.md). The path builder is the
-          // shared `play/picture-path`, which sits on the wall-legal side
-          // of the free-play import wall (plan 025 §6.5).
           <div className={styles.pictureRow}>
             <svg
               className={styles.picture}

@@ -2,11 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchDayTruth } from "../src/day/day-client";
 
-// The fetch-and-parse half of the day-truth read (#83, ADR-0060), tested
-// without rendering — `streak-client.test.ts`'s register. This suite
-// deliberately keeps the unset-env case (the bootstrap.ts guard parity),
-// which every RENDERING suite must avoid by stubbing the env/fetch pair.
-
 const API_URL = "https://api.example.test";
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -19,7 +14,7 @@ const validBody = {
     termo: { status: "completed" },
     sudoku: { status: "pending" },
     nonogram: { status: "played" },
-    // A completed grid claim carries the stored duration (#141).
+
     binairo: { status: "completed", elapsedMs: 407_000 },
   },
 };
@@ -42,8 +37,7 @@ describe("fetchDayTruth (T-WEB-S234)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     expect(await fetchDayTruth()).toEqual(validBody);
-    // A credentialed GET with no custom headers stays a CORS simple
-    // request, so the read never preflights. No parameters either.
+
     expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/day`, {
       credentials: "include",
     });
@@ -98,9 +92,9 @@ describe("fetchDayTruth (T-WEB-S234)", () => {
         ...validBody,
         games: { ...validBody.games, sudoku: { status: "late" } },
       },
-      // The pre-#141 wire spelling: a bare status string is not a claim.
+
       { ...validBody, games: { ...validBody.games, sudoku: "pending" } },
-      // A duration on a game nobody completed fails the claim's refinement.
+
       {
         ...validBody,
         games: {
@@ -108,8 +102,7 @@ describe("fetchDayTruth (T-WEB-S234)", () => {
           sudoku: { status: "played", elapsedMs: 1 },
         },
       },
-      // So does a hint count (#142) — and an over-cap one on a completed
-      // game: the read side never accepts what the write side refused.
+
       {
         ...validBody,
         games: {
@@ -134,8 +127,7 @@ describe("fetchDayTruth (T-WEB-S234)", () => {
       );
       expect(await fetchDayTruth(), JSON.stringify(body)).toBeUndefined();
     }
-    // The parse failure is silent by choice, matching `streak-client.ts` and
-    // `stats-client.ts`; only the env guard is loud, and it did not fire.
+
     expect(errorSpy).not.toHaveBeenCalled();
   });
 });

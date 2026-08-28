@@ -11,22 +11,11 @@ import {
   type StatsRow,
 } from "../src/index";
 
-/**
- * Property tests for the #30 medal derivation (ADR-0023: main properties
- * run at ≥ 100; these run at exactly 100, pinned seed — sampled evidence,
- * never proof). The domain is the stats-properties register: epoch days in
- * a window around a generated `today`, rows quantified over the FULL type
- * (lost rows, late rows, null-guess termo rows, future-dated rows
- * included) — the function is total, and the properties must hold anyway.
- */
-
-// A comfortable modern window: 2020-01-01 (18262) .. 2030-12-31 (22279).
 const DAY_MIN = 18_262;
 const DAY_MAX = 22_279;
 
 const todayDayArb = fc.integer({ min: DAY_MIN + 50, max: DAY_MAX });
 
-/** Rows clustered near `today` so runs and same-date structure arise. */
 function rowArb(todayDay: number): fc.Arbitrary<StatsRow> {
   return fc.record({
     game: fc.constantFrom(...GAMES),
@@ -41,8 +30,6 @@ function rowArb(todayDay: number): fc.Arbitrary<StatsRow> {
   });
 }
 
-/** Grant ids: catalog ids (curated and rule-derived alike — the derivation
- *  must ignore the latter) plus unknown-but-shape-valid strays. */
 const grantArb = fc.oneof(
   fc.constantFrom(...MEDAL_DEFINITIONS.map((d) => d.id)),
   fc.constantFrom("ghost-medal", "future-medal", "abc-123"),
@@ -70,19 +57,13 @@ describe("earnedMedals — properties (ADR-0023, sampled evidence)", () => {
         ({ today, rows, grants }, extra, indices) => {
           const reference = earnedMedals(rows, grants, today);
 
-          // Determinism: no clock, no randomness — repeated calls agree.
           expect(earnedMedals(rows, grants, today)).toEqual(reference);
 
-          // Monotonicity (the recompute-honesty property, ADR-0052): a
-          // future late row (#31) may newly earn a medal — history can
-          // grow backward — but nothing is ever un-earned by adding rows.
           const widened = earnedMedals([...rows, ...extra], grants, today);
           for (const id of reference) {
             expect(widened).toContain(id);
           }
 
-          // Permutation invariance of rows AND grants (the T-CORE-S62
-          // shuffle): order is never load-bearing.
           const shuffled = [...rows];
           for (let i = shuffled.length - 1; i > 0; i -= 1) {
             const next = indices.next();
@@ -109,10 +90,6 @@ describe("earnedMedals — properties (ADR-0023, sampled evidence)", () => {
       fc.property(inputArb, ({ todayDay, today, rows, grants }) => {
         const earned = new Set(earnedMedals(rows, grants, today));
 
-        // The oracle, spelled independently of computeStreak: counted days
-        // are the distinct epoch days ≤ today holding a won on-time row;
-        // the maximum reached streak is the longest run of consecutive
-        // counted days.
         const countedDays = [
           ...new Set(
             rows

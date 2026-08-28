@@ -23,27 +23,12 @@ import {
 import { GET } from "../app/daily/nonogram/route";
 import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 
-// Seam 4: the real route over PGlite; the ONLY mock is src/db. Seeding goes
-// through insertDailyPuzzle — the same write the cron uses, so published_at
-// derivation is the production one.
-//
-// No per-`it` timeout anywhere below (landmine 25): nonogram generation
-// measures 0.0354 ms (Mon 5x5) to 0.1902 ms (Sun 15x15), three orders of
-// magnitude under the sudoku boards that made daily-sudoku.test.ts carry
-// 30_000, so copying that constant here would be a number with no reason to
-// exist. The PGlite boot hook keeps its own, which is what it is for — on
-// evidence the comment beside `beforeAll` points at.
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
 vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
-// Hook budget 30_000 ms, over vitest's bare 10_000 ms hook default. The
-// measured figures behind it — isolated, capped, uncapped and CI — why it is
-// not re-derived, and the re-derivation tripwire live once, beside
-// `createTestDb` in `@miolos/db/testing` (ADR-0055 decision 1 as amended by
-// #114; ADR-0057). Do not restate them here — 26 copies rot 26 ways.
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -75,15 +60,12 @@ describe("GET /daily/nonogram", () => {
     await seedDate(today);
     const response = await GET();
     expect(response.status).toBe(200);
-    // The member, never the union: a union parse would accept a mismatched
-    // row on this path and lose the assertion (plan 018 §7.4, plan 020 §9.4).
+
     const body = dailyNonogramResponseSchema.parse(await response.json());
     expect(body.game).toBe("nonogram");
     expect(body.date).toBe(today);
     expect(Object.keys(body).sort()).toEqual(["clues", "date", "game", "size"]);
-    // The clue rails are the whole playable projection: one line list per row
-    // and per column, and `size` agreeing with the nested `clues.size` is
-    // what the response schema's refine exists to hold.
+
     expect(body.clues.size).toBe(body.size);
     expect(body.clues.rows).toHaveLength(body.size);
     expect(body.clues.cols).toHaveLength(body.size);
@@ -95,14 +77,7 @@ describe("GET /daily/nonogram", () => {
     const response = await GET();
     const raw: unknown = await response.json();
     const keys = collectKeys(raw);
-    // Anti-vacuity: the scan is worthless if it walked nothing.
-    // `collectKeys` returns an EMPTY set for any non-object input — an HTML
-    // error page, `undefined`, a number — so without a positive assertion
-    // every `has(forbidden)` below passes trivially. The web page suites have
-    // carried this line since #23; the four apps/api scans did not, and this
-    // is the only machine check that the wall's nonogram projection is
-    // reveal-free on the wire (step-6 round-4 finding
-    // `api-leak-scans-have-no-anti-vacuity-assertion`).
+
     expect(keys.has("clues")).toBe(true);
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden)).toBe(false);
@@ -140,9 +115,6 @@ describe("GET /daily/nonogram", () => {
   });
 
   it("a BINAIRO row published for today never answers this path", async () => {
-    // The wall read is game-scoped and the HTTP boundary parses against
-    // dailyNonogramResponseSchema rather than the union, so a mismatched row
-    // can neither be found nor be serialized — two independent gates.
     const today = await todaySaoPaulo(ctx.db);
     const weekday = isoWeekdayOf(today);
     if (!isWeekday(weekday)) {
@@ -165,13 +137,6 @@ describe("GET /daily/nonogram", () => {
   });
 
   it("T-API-S27: is PUBLIC CORS — an origin echo, never credentials", async () => {
-    // The route's own TSDoc asserts "no auth, no cookies, no credentialed
-    // CORS" (ADR-0005), and until this test nothing held it: the two
-    // credentialed routes assert their headers, all three public daily routes
-    // asserted none of theirs. A one-character edit —
-    // `corsHeaders({ credentials: true })`, plausibly pasted from
-    // /completions when a fourth game's route is written — would grant a
-    // credentialed cross-origin read of the daily with every suite green.
     vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
     await seedDate(await todaySaoPaulo(ctx.db));
 
@@ -182,13 +147,10 @@ describe("GET /daily/nonogram", () => {
       expect(response.headers.has("access-control-allow-credentials")).toBe(
         false,
       );
-      // `Vary: Origin` is the credentialed branch's tell — a public response
-      // is identical for every origin and must stay cacheable as one.
+
       expect(response.headers.has("vary")).toBe(false);
     }
 
-    // And the 404 branch takes the same headers, so a miss cannot be the way
-    // in.
     await ctx.db.execute(sql`truncate table daily_puzzles`);
     const missing = await GET();
     expect(missing.status).toBe(404);

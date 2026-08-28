@@ -6,17 +6,8 @@ import { validateNonogram } from "../../src/nonogram/validate";
 import type { NonogramClues } from "../../src/nonogram/types";
 import type { Weekday } from "../../src/weekday";
 
-// Typed rejections at the engine's public edge (step-6 review findings,
-// mirroring test/binairo/guards.test.ts): an out-of-range weekday or a
-// structurally malformed/oversized clue set must fail with a typed
-// RangeError (or a reason code from the validator) up front — not an
-// incidental TypeError deep in a criteria lookup, and not a CPU/memory
-// exhausting solve on an attacker-sized grid.
-
 describe("weekday runtime guard", () => {
   it("generateNonogram throws RangeError on an out-of-range weekday", () => {
-    // Simulates an untyped boundary (plain-JS caller, JSON config); the
-    // cast is the point of the test.
     for (const bad of [0, 8, 2.5, Number.NaN] as Weekday[]) {
       expect(() => generateNonogram(1, bad)).toThrow(RangeError);
     }

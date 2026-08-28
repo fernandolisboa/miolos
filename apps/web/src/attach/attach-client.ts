@@ -8,30 +8,7 @@ import {
   type AttachStateResponse,
 } from "@miolos/core";
 
-/**
- * The client half of the attach endpoints (#21, ADR-0050; plan 031 D15) —
- * fetch and parse only, no React, so it is testable without rendering.
- * The completions-client posture throughout: `NEXT_PUBLIC_API_URL`,
- * `credentials: "include"`, an explicit JSON content type on every write
- * (deliberately triggering the CORS preflight, so the WEB_ORIGIN grant is
- * load-bearing), and STRICT parsing of every response body.
- *
- * Failures resolve to `undefined` (the streak-client rule) — except where
- * a specific STATUS is a UI state the plan names: the confirm page renders
- * a different explainer for a dead link (410) than for a conflict (409),
- * and the card words a rate-limit differently from a generic failure, so
- * those statuses come back as string variants rather than being flattened
- * into the same `undefined`.
- *
- * BEHIND THE FREE-PLAY WALL: this module and its siblings are banned from
- * apps/web/src/free-play and app/modo-livre by name (eslint.config.mjs) —
- * free play never touches identity or the streak.
- */
-
 function apiUrl(): string | undefined {
-  // Loud, not silent (the session/bootstrap.ts guard): without the var the
-  // fetch would hit "undefined/…" and the catch would swallow the
-  // misconfiguration forever.
   const url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
     console.error(
@@ -42,7 +19,6 @@ function apiUrl(): string | undefined {
   return url;
 }
 
-/** GET /attach/state — a CORS simple request, never preflighted. */
 export async function fetchAttachState(): Promise<
   AttachStateResponse | undefined
 > {
@@ -67,7 +43,6 @@ export async function fetchAttachState(): Promise<
 export type AttachRequestResult =
   "sent" | "rate-limited" | "already-attached" | undefined;
 
-/** POST /attach/request. The body is the already-validated form value. */
 export async function requestAttachLink(
   body: AttachRequest,
 ): Promise<AttachRequestResult> {
@@ -102,7 +77,6 @@ export async function requestAttachLink(
 export type AttachConfirmResult =
   AttachConfirmResponse | "invalid-or-expired" | "conflict" | undefined;
 
-/** POST /attach/confirm — driven by the /vincular page's explicit click. */
 export async function confirmAttach(
   token: string,
 ): Promise<AttachConfirmResult> {
@@ -133,7 +107,6 @@ export async function confirmAttach(
   }
 }
 
-/** POST /attach/dismiss — the strict empty body; `true` when stamped. */
 export async function dismissAttachPrompt(): Promise<boolean> {
   const base = apiUrl();
   if (!base) {
@@ -152,7 +125,6 @@ export async function dismissAttachPrompt(): Promise<boolean> {
   }
 }
 
-/** POST /account/delete — the literal confirm; `true` when deleted. */
 export async function deleteAccount(): Promise<boolean> {
   const base = apiUrl();
   if (!base) {

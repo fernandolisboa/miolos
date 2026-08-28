@@ -18,17 +18,6 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 
-/**
- * T-WEB-S76 (plan 022 §14.2, ADR-0044 decisions 7-9). Termo's completion body
- * carries the guess WORDS, oldest first, and no verdict: the server re-judges
- * them against its stored answer and decides won or lost itself, which keeps
- * `outcome` off the one surface ADR-0026's rejected list calls forgeable.
- *
- * The TILES stay on the device — they are the client's rendering state, and
- * posting them would be a second place to lie about a fact the stored row
- * owns (ADR-0032 decision 4's argument for keeping `size` off the wire).
- */
-
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
 
@@ -39,12 +28,7 @@ const WIN: Tiles = ["correct", "correct", "correct", "correct", "correct"];
 const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 const GUESSES = ["cafes", "acoes"] as const;
-/**
- * The canonical ACCENTED answer (ADR-0015). Deliberately the accented
- * spelling of the winning guess: it is five codepoints, it is what the
- * record stores, and it is a string no honest body may ever contain — the
- * wire is normalized, and the answer is not on the wire at all.
- */
+
 const ANSWER = "ações";
 
 function pendingTermoRecord(
@@ -101,7 +85,6 @@ function pendingSudokuRecord(): SudokuPlayRecord {
   };
 }
 
-/** The exact `fetch` init the flush is expected to build. */
 const requestInitSchema = z.strictObject({
   method: z.string(),
   credentials: z.string(),
@@ -147,15 +130,11 @@ function completionBodies(fetchMock: ReturnType<typeof stubFetch>) {
   return fetchMock.mock.calls
     .filter((call) => String(call[0]).endsWith("/completions"))
     .map((call) => {
-      // Parsed against the request union, never cast: `JSON.parse` hands back
-      // `any`, and a body that reached the wrong branch of `buildBody` fails
-      // right here.
       const raw: unknown = JSON.parse(requestInitSchema.parse(call[1]).body);
       return completionRequestSchema.parse(raw);
     });
 }
 
-/** Module state (the in-flight guard, the re-mint latch) is per-import. */
 async function freshSync() {
   vi.resetModules();
   return await import("../src/play/sync");
@@ -189,10 +168,7 @@ describe("the termo completion body (T-WEB-S76)", () => {
       elapsedMs: 188_000,
       hintsUsed: 0,
     });
-    // Neither the tiles nor the outcome cross the wire — the server
-    // re-judges from the guess list and the stored answer (ADR-0044
-    // decision 7). `strictObject` would have rejected either, but the
-    // assertion is written out so a widened contract cannot pass silently.
+
     const raw = JSON.stringify(bodies[0]);
     expect(raw).not.toContain("tiles");
     expect(raw).not.toContain("outcome");
@@ -202,13 +178,6 @@ describe("the termo completion body (T-WEB-S76)", () => {
   });
 
   it("clamps `elapsedMs` at BOTH ends, on the memory-queue path too", async () => {
-    // The two-sided clamp is not a restatement of the schema: `memoryQueue`
-    // holds a record that never reached the store, so on the devices the
-    // fallback exists for (DOM storage off) `buildBody` is the FIRST bound
-    // this number meets. A backwards wall-clock step makes it negative and
-    // the request contract's `min(0)` would then fail the parse, dropping an
-    // intact completion (finding
-    // `memory-queue-record-bypasses-the-two-sided-clamp`).
     const original = Object.getOwnPropertyDescriptor(window, "localStorage");
     Object.defineProperty(window, "localStorage", {
       configurable: true,
@@ -240,9 +209,6 @@ describe("the termo completion body (T-WEB-S76)", () => {
   });
 
   it("posts one record of EACH game, once each — termo beside the grids", async () => {
-    // The queue is game-blind and this module is exactly one module
-    // (ADR-0029): three records, three POSTs, each through its own branch of
-    // `buildBody`.
     writePlayRecord(pendingBinairoRecord());
     writePlayRecord(pendingSudokuRecord());
     writePlayRecord(pendingTermoRecord());
@@ -264,11 +230,6 @@ describe("the termo completion body (T-WEB-S76)", () => {
   });
 
   it("keeps a six-guess LOSS a 200, never a rejected settle", async () => {
-    // ADR-0044 decision 8 / the inversion §14.2 states in both halves: a loss
-    // is a legitimately played Termo, so `TERMINAL_STATUSES.has(422)` must
-    // never see it. A 422 here would render `conclusion.sync.rejected` on a
-    // game the player really played, and #29's distribution would never get
-    // its fail row.
     const guesses: TermoPlayRecord["guesses"] = "abcdef"
       .split("")
       .map((letter) => ({ guess: letter.repeat(5), tiles: [...MISS] }));
@@ -284,9 +245,7 @@ describe("the termo completion body (T-WEB-S76)", () => {
       termoCompletionRequestSchema.parse(body),
     );
     expect(bodies[0]?.guesses).toEqual(guesses.map((row) => row.guess));
-    // `concluded: true` survives any sync outcome — for a grid game a
-    // rejected completion leaves a solvable board, but for Termo it leaves a
-    // SPENT one and there is no honest way to re-offer six guesses.
+
     expect(readPlayRecord("termo", DATE)).toMatchObject({
       concluded: true,
       pendingSync: false,
@@ -295,12 +254,6 @@ describe("the termo completion body (T-WEB-S76)", () => {
   });
 });
 
-/**
- * The source tripwire, re-asserted here rather than trusted: `buildBody`'s
- * `default` branch is what makes a fifth game a RED TYPECHECK instead of a
- * silently dropped completion. #27 is the ticket that fired it, so the
- * assertion has to survive the ticket that satisfied it.
- */
 describe("the `never` tripwire survives the termo case", () => {
   it("still makes an unhandled game a compile error", () => {
     const source = readFileSync(

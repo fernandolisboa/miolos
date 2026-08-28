@@ -48,14 +48,6 @@ function sameBitmap(a: NonogramSolution, b: NonogramSolution): boolean {
   );
 }
 
-/**
- * The validator whose approval criteria enforce the weekday ramp (spec:
- * "rampa … via critério de aprovação do validador"). All failures are
- * collected as machine-greppable reason codes, never short-circuited.
- * Structurally hostile inputs (out-of-range weekday, malformed clue sets)
- * are rejected with reason codes instead of throwing — the validator is a
- * verdict function, not an assertion.
- */
 export function validateNonogram(
   puzzle: NonogramPuzzle,
 ): NonogramValidationResult {
@@ -86,13 +78,8 @@ export function validateNonogram(
   }
 
   if (!isWellFormedClues(clues)) {
-    // Also bounds the solver work below: solveNonogram only ever runs on
-    // structurally well-formed clue sets here (defense in depth for untyped
-    // callers — the generator can never produce this state).
     failures.push("clues-malformed");
   } else {
-    // Line-solvability = solvable + unique + human-completable in one run
-    // (the central property).
     const solveResult = solveNonogram(clues);
     if (solveResult.status !== "solved") {
       failures.push("not-line-solvable");
@@ -124,10 +111,6 @@ export function validateNonogram(
   if (motif === undefined) {
     failures.push("reveal-motif-unknown");
   } else if (squareGrid) {
-    // Bind the reveal to the named motif: the solution must be exactly the
-    // motif's bitmap under the declared `mirrored` flag, so a reveal cannot
-    // name a different-but-existing motif or carry a flipped flag (defense
-    // in depth — the generator derives all three from one pool entry).
     const base = motifBitmap(motif);
     const expected = reveal.mirrored ? mirrorH(base) : base;
     if (!sameBitmap(reveal.solution, expected)) {

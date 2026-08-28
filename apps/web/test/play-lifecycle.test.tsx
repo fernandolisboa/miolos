@@ -7,18 +7,6 @@ import type { PlayRecord } from "../src/play/play-record";
 import { usePlayLifecycle } from "../src/play/use-play-lifecycle";
 import type { LifecycleAction, PlayCore } from "../src/play/types";
 
-// T-WEB-S33 (plan 018 §15). The single most regressible property of the
-// `src/play/` extraction, pinned on the shared hook itself rather than
-// through either game's screen: `state.now` must NEVER enter `persistDeps`.
-//
-// Including it writes a readPlayRecord + Zod parse + JSON.stringify +
-// setItem cycle EVERY SECOND, for every game, forever; omitting
-// `persistDeps` altogether means an in-progress board is persisted only on
-// pause/resume, so a tab crash loses it. Both failures are invisible in
-// every other test in this suite (plan 018 §5.4, landmine 21).
-
-// The queue is stubbed: this file is about the persist effect's dependency
-// array, and a real flush would reach `fetch`.
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
   flushPendingCompletions: vi.fn(() => Promise.resolve()),
@@ -27,7 +15,6 @@ vi.mock("../src/play/sync", () => sync);
 
 const DATE = "2026-07-30";
 
-/** The smallest state that satisfies `PlayCore` plus something to persist. */
 interface ProbeState extends PlayCore {
   readonly entries: readonly (0 | 1 | null)[];
   readonly status: "playing" | "solved";
@@ -52,8 +39,6 @@ function probeReducer(state: ProbeState, action: ProbeAction): ProbeState {
     case "tick":
     case "pause":
     case "resume":
-      // Exactly what both real reducers do: a NEW state object every time,
-      // with `timer` keeping its identity whenever the clock does not move.
       return {
         ...state,
         timer: applyTimerAction(state.timer, action),
@@ -85,12 +70,6 @@ function buildRecord(
   };
 }
 
-/**
- * The probe's dispatch, published to the test from an EFFECT rather than
- * during render — reassigning a module variable in a render body is the
- * impurity `react-hooks/globals` refuses, and the point of this file is the
- * hook's behaviour, not a shortcut around the rules it is written under.
- */
 const dispatchProbe: { current: (action: ProbeAction) => void } = {
   current: () => undefined,
 };
@@ -126,8 +105,7 @@ afterEach(() => {
 describe("usePlayLifecycle's persist effect (T-WEB-S33)", () => {
   it("writes nothing on a tick, and exactly once on an entry change", () => {
     render(<Probe />);
-    // Let the mount effect's restore, the derived resume and their persists
-    // settle, so what the spy sees afterwards is only what the ticks cause.
+
     act(() => {
       vi.advanceTimersByTime(0);
     });
@@ -139,8 +117,6 @@ describe("usePlayLifecycle's persist effect (T-WEB-S33)", () => {
       }
     });
 
-    // Ten new state objects, ten new `now` values, ZERO writes: `timer` kept
-    // its identity and `state.now` is not a dependency.
     expect(setItem).not.toHaveBeenCalled();
 
     act(() => {

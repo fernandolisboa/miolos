@@ -10,14 +10,6 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 
-/**
- * The hub Termo tile's `em 4/6` (#29, plan 033 D5): `TermoDoneLink` owns
- * the whole done anchor for a COMPLETED Termo and captions it with the
- * SERVER's guess count from GET /stats — never a duration, never a local
- * derivation (ADR-0031: device state decides the shape, the server value
- * only captions it). The hoje.smoke register: fake Date, records under the
- * hub's own SP day, env + fetch stubs as a mandatory pair.
- */
 const DATE = "2026-07-31";
 const OTHER_DATE = "2026-07-30";
 const API_URL = "https://api.example.test";
@@ -79,7 +71,6 @@ const lostTermo = () =>
     outcome: "lost",
   });
 
-/** A /stats body whose Termo half says: won today, in `guesses` tries. */
 function statsBody(date: string, guesses: number | null): unknown {
   const timed = {
     solved: 0,
@@ -111,13 +102,10 @@ function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
-/** The requested URL as a string — every client in this app passes one. */
 function urlOf(input: RequestInfo | URL): string {
   return input instanceof Request ? input.url : String(input);
 }
 
-/** Answers /stats with `stats`; every other read (streak, attach) gets the
- *  anonymous 401, so the rest of the hub keeps its shipped zero state. */
 function stubFetchByUrl(stats: () => Response | Promise<Response>) {
   const fetchMock = vi.fn((input: RequestInfo | URL) =>
     Promise.resolve(
@@ -175,8 +163,7 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
 
   it("keeps the shipped name and holds the result line box open while unsettled", () => {
     writePlayRecord(wonTermo());
-    // A promise that never settles inside this test: the pre-resolution
-    // paint is the unsettled state.
+
     stubFetchByUrl(() => new Promise<Response>(() => undefined));
 
     render(<HojePage />);
@@ -185,8 +172,7 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
       messages.hoje.completedAria(messages.games.termo.name),
     );
     expect(link).toHaveAttribute("href", routes.termo);
-    // The blank-values idiom: a U+00A0 holds the line box open so the value
-    // landing shifts nothing (#37's CLS≈0).
+
     expect(link.textContent).toContain(" ");
   });
 
@@ -206,15 +192,13 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
     const link = within(cardFor("termo")).getByLabelText(
       messages.hoje.completedAria(messages.games.termo.name),
     );
-    // Chip only: no result span, no held-open blank box.
+
     await waitFor(() => {
       expect(link.textContent).toBe(messages.hoje.done);
     });
   });
 
   it("collapses to the chip-only form when the server answers for a different SP day", async () => {
-    // The DB clock and the web server's SP day can disagree across
-    // midnight — a value about yesterday must not caption today's tile.
     writePlayRecord(wonTermo());
     const fetchMock = stubFetchByUrl(() =>
       jsonResponse(200, statsBody(OTHER_DATE, 4)),
@@ -245,8 +229,7 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
     );
 
     render(<HojePage />);
-    // Let the mount effects that DO fire (streak, attach) settle first, so
-    // the absence below is a settled absence rather than a race.
+
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled();
     });

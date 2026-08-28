@@ -5,16 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-// Mechanical enforcement of the project's architectural invariant:
-// `packages/games` takes zero runtime dependencies and its source imports
-// nothing but itself. See CLAUDE.md ("Project invariants").
-
 const packageDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = join(packageDir, "src");
 
 function listSourceFiles(): string[] {
-  // Every TS flavor tsc can compile: a `.mts`/`.cts` file slipping the
-  // filter is a proven evasion vector.
   return readdirSync(srcDir, { withFileTypes: true, recursive: true })
     .filter((entry) => entry.isFile() && /\.(ts|tsx|mts|cts)$/.test(entry.name))
     .map((entry) => join(entry.parentPath, entry.name));
@@ -22,14 +16,12 @@ function listSourceFiles(): string[] {
 
 function importSpecifiers(source: string): string[] {
   const patterns = [
-    // import ... from "x"; export ... from "x". `\b` (not `\s`) after the
-    // keyword: `import{x}from"y"` is valid TS and must not slip through.
     /(?:^|[^\w$])(?:import|export)\b[^"'`]*?from\s*["']([^"']+)["']/g,
-    // side-effect import "x";
+
     /(?:^|[^\w$])import\s*["']([^"']+)["']/g,
-    // dynamic import("x")
+
     /(?:^|[^\w$])import\s*\(\s*["']([^"']+)["']\s*\)/g,
-    // require("x")
+
     /(?:^|[^\w$])require\s*\(\s*["']([^"']+)["']\s*\)/g,
   ];
   const specifiers: string[] = [];
@@ -66,9 +58,6 @@ describe("packages/games purity", () => {
   });
 
   it("never uses dynamic import() or require() in src/**, in any form", () => {
-    // Computed specifiers — import("node" + ":fs") — defeat any regex that
-    // expects a quoted literal, a proven evasion. Games has no legitimate
-    // dynamic imports at all, so ban the tokens outright.
     const offenders: string[] = [];
     const dynamicTokens = /(?:^|[^\w$.])(?:import|require)\s*\(/g;
     for (const file of listSourceFiles()) {

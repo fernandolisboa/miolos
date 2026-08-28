@@ -1,13 +1,3 @@
-/**
- * Pure renderer for src/termo/words.generated.ts. Shared by the codegen
- * runner (generate-termo-words.ts) and the word-list harness's staleness
- * test, so there is exactly one rendering implementation — the test
- * byte-compares this function's output against the committed file.
- *
- * Deterministic: LF newlines, no timestamps, input order preserved.
- * Throws on malformed input (wrong header, non-2-column row, CRLF).
- */
-
 const ANSWERS_HEADER = "canonical,normalized";
 
 function splitLines(name: string, raw: string): string[] {
@@ -63,8 +53,7 @@ export function renderTermoWordsModule(
     "// The test/termo/word-list.test.ts staleness test fails CI if this file and",
     "// the CSVs disagree in either direction.",
     "",
-    // Prettier-stable shape: the long literal breaks onto its own line with
-    // a two-space indent (verified with `prettier --check` during review).
+
     `/** ${String(answers.length)} canonical answer spellings, answers.csv row order, "\\n"-joined. */`,
     "export const ANSWER_CANONICALS: string =",
     `  ${answersLiteral};`,
