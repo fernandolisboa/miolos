@@ -3,7 +3,15 @@ import { dirname, join } from "node:path";
 
 import { render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
@@ -324,9 +332,12 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
     },
   ] as const;
 
+  let readStorage: MockInstance | undefined;
+
   afterEach(() => {
     window.localStorage.clear();
-    vi.restoreAllMocks();
+    readStorage?.mockRestore();
+    readStorage = undefined;
   });
 
   it.each(cases)(
@@ -342,12 +353,11 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
       const element = await page({
         params: Promise.resolve({ data: ARCHIVED }),
       });
-      const readStorage = vi.spyOn(Storage.prototype, "getItem");
+      readStorage = vi.spyOn(Storage.prototype, "getItem");
       const markup = renderToStaticMarkup(element);
 
       expect(readStorage).not.toHaveBeenCalled();
       expect(markup).toContain('data-play-state="skeleton"');
-      expect(markup).not.toContain('data-play-state="concluded"');
 
       for (const marker of live) {
         expect(markup).not.toContain(marker);

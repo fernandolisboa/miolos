@@ -60,11 +60,16 @@ agreed with this table in both columns (next free `S356`, highest in use
 - **`T-WEB-S357`** — `apps/web/test/archive-day.test.tsx`, one `describe` over
   the three remaining archive roots, in `T-WEB-S172`'s shape: server-render the
   route's page component and assert the same three, plus that the live play
-  surface is absent — `data-cell-index` for the grid games, `<button` for termo
-  — and that `data-play-state="concluded"` is not painted, which pins the
-  module-level `priorCache` in `use-prior-conclusion.ts` that the `getItem` spy
-  cannot see. `T-WEB-S172` already covers the fourth,
+  surface is absent — `data-cell-index` for the grid games, `<button` for
+  termo. `T-WEB-S172` already covers the fourth,
   `src/archive/sudoku-screen.tsx`.
+
+  **The `getItem` spy is what carries "no record-derived value reaches the
+  markup".** A value cannot derive from a record that was never read, and a
+  lazy `useState`/`useReducer` initializer reading during render reds the spy.
+  Asserting the absence of a rendered record value instead does nothing: a
+  static render takes `useSyncExternalStore`'s `getServerSnapshot`, so no
+  module-level cache is reachable either.
 
   All four are mutation-proven over the full `apps/web` suite: deleting one
   gate reds exactly its own case, and each live-surface marker was verified to

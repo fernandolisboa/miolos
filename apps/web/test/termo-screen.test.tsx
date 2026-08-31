@@ -22,7 +22,15 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 
 import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { messages } from "../src/i18n";
@@ -953,15 +961,18 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
 });
 
 describe("the first paint of /termo (T-WEB-S356)", () => {
+  let readStorage: MockInstance | undefined;
+
   afterEach(() => {
-    vi.restoreAllMocks();
+    readStorage?.mockRestore();
+    readStorage = undefined;
   });
 
   it("is the skeleton: nothing is read from the play-record store, and no live control paints", () => {
     const record = concludedRecord();
     writePlayRecord(record);
     expect(readPlayRecord("termo", DATE)).toEqual(record);
-    const readStorage = vi.spyOn(Storage.prototype, "getItem");
+    readStorage = vi.spyOn(Storage.prototype, "getItem");
 
     const markup = renderToStaticMarkup(<TermoScreen daily={DAILY} />);
 
