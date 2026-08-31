@@ -19,3 +19,5 @@ The four principles, in this order when they conflict:
 Each finding: the file and symbol, which principle, and the concrete change. Rate `blocking` or `note`. End with `VERDICT: approve` or `VERDICT: reject`.
 
 Do not report naming preferences, formatting, or anything lint already enforces.
+
+**Never run `git checkout`, and never switch branches.** Read the branch you were given with `git diff main...<branch>` and `git show <ref>:<path>`. Other agents are working in the same tree and moving `HEAD` breaks them.
