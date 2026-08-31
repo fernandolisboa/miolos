@@ -40,8 +40,40 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S356` | `S355` | `T-WEB-23` |
+| `T-WEB` | `S358` | `S357` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#236 spent **`T-WEB-S356`** and **`T-WEB-S357`** on the four play-screen roots
+whose hydration gate no test held. Re-derived by grep before allocating, which
+agreed with this table in both columns (next free `S356`, highest in use
+`S355`).
+
+- **`T-WEB-S356`** — `apps/web/test/termo-screen.test.tsx`. `/termo`'s first
+  paint is `PlaySkeleton`: `data-play-state="skeleton"`, no `<button`, and
+  `getItem` never called during `renderToStaticMarkup`. A concluded play record
+  sits in the play-record store and is read back before the render, so a
+  fixture the schema rejects cannot make the claim vacuous. `T-WEB-S94` looked
+  like this record and is not — its only `TermoScreen` arm asserts
+  `data-play-state="playing"` **after** `act()`, so it never sees the first
+  paint.
+
+- **`T-WEB-S357`** — `apps/web/test/archive-day.test.tsx`, one `describe` over
+  the three remaining archive roots, in `T-WEB-S172`'s shape: server-render the
+  route's page component and assert the same three, plus that the live play
+  surface is absent — `data-cell-index` for the grid games, `<button` for
+  termo. `T-WEB-S172` already covers the fourth,
+  `src/archive/sudoku-screen.tsx`.
+
+  **The `getItem` spy is what carries "no record-derived value reaches the
+  markup".** A value cannot derive from a record that was never read, and a
+  lazy `useState`/`useReducer` initializer reading during render reds the spy.
+  Asserting the absence of a rendered record value instead does nothing: a
+  static render takes `useSyncExternalStore`'s `getServerSnapshot`, so no
+  module-level cache is reachable either.
+
+  All four are mutation-proven over the full `apps/web` suite: deleting one
+  gate reds exactly its own case, and each live-surface marker was verified to
+  red on its own with the `data-play-state` assertion removed.
 
 #205's `apps/web/src/play` tranche spent **`T-WEB-S354`** in the new
 `apps/web/test/client-graph-engine-free.test.ts`. Re-derived by grep before

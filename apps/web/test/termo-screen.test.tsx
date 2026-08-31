@@ -21,11 +21,25 @@ import {
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 
 import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { messages } from "../src/i18n";
 import { ConclusionView } from "../src/play/conclusion-view";
+import {
+  readPlayRecord,
+  writePlayRecord,
+  type TermoPlayRecord,
+} from "../src/play/play-record";
 import sharedStyles from "../src/play/screen.module.css";
 import { Board } from "../src/termo/board";
 import { Keyboard } from "../src/termo/keyboard";
@@ -69,6 +83,27 @@ const INVALID = "zzzzz";
 const TILES: TileStates = ["correct", "present", "absent", "absent", "absent"];
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+function concludedRecord(): TermoPlayRecord {
+  return {
+    v: 1,
+    game: "termo",
+    date: DATE,
+    guesses: [
+      {
+        guess: VALID,
+        tiles: ["correct", "correct", "correct", "correct", "correct"],
+      },
+    ],
+    answer: VALID,
+    outcome: "won",
+    elapsedMs: 272_000,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+  };
+}
 
 function validationWord(index: number): string {
   const word = TERMO_VALIDATION_WORDS[index];
@@ -922,6 +957,28 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
         .querySelector("[data-play-state]")
         ?.getAttribute("data-play-state"),
     ).toBe("playing");
+  });
+});
+
+describe("the first paint of /termo (T-WEB-S356)", () => {
+  let readStorage: MockInstance | undefined;
+
+  afterEach(() => {
+    readStorage?.mockRestore();
+    readStorage = undefined;
+  });
+
+  it("is the skeleton: nothing is read from the play-record store, and no live control paints", () => {
+    const record = concludedRecord();
+    writePlayRecord(record);
+    expect(readPlayRecord("termo", DATE)).toEqual(record);
+    readStorage = vi.spyOn(Storage.prototype, "getItem");
+
+    const markup = renderToStaticMarkup(<TermoScreen daily={DAILY} />);
+
+    expect(readStorage).not.toHaveBeenCalled();
+    expect(markup).toContain('data-play-state="skeleton"');
+    expect(markup).not.toContain("<button");
   });
 });
 

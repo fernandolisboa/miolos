@@ -3,9 +3,22 @@ import { dirname, join } from "node:path";
 
 import { render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
+
+import { generateBinairo } from "@miolos/games/binairo";
+import { generateNonogram } from "@miolos/games/nonogram";
 
 import { formatLongDate, formatMonth, messages } from "../src/i18n";
+import { solutionMarks } from "../src/nonogram/engine";
+import { playRecordKey, readPlayRecord } from "../src/play/play-record";
 
 const spies = vi.hoisted(() => ({
   stubDb: {},
@@ -36,6 +49,12 @@ const { default: ArchiveDayPage, generateMetadata } =
   await import("../app/arquivo/[data]/page");
 const { default: ArchiveSudokuPage } =
   await import("../app/arquivo/[data]/sudoku/page");
+const { default: ArchiveBinairoPage } =
+  await import("../app/arquivo/[data]/binairo/page");
+const { default: ArchiveNonogramPage } =
+  await import("../app/arquivo/[data]/nonogram/page");
+const { default: ArchiveTermoPage } =
+  await import("../app/arquivo/[data]/termo/page");
 
 beforeEach(() => {
   spies.getDb.mockReturnValue(spies.stubDb);
@@ -230,6 +249,121 @@ describe("a published past day renders the archived board (T-WEB-S172)", () => {
 
     expect(markup).toContain("/arquivo/2026-08-03");
   });
+});
+
+describe("the three remaining archive roots gate the first paint too (T-WEB-S357)", () => {
+  const ARCHIVED = "2026-08-03";
+  const BINAIRO = generateBinairo({ seed: 20_260_803, weekday: 1 });
+  const NONOGRAM = generateNonogram(20_260_803, 1);
+  const NONOGRAM_SOLVED = solutionMarks(NONOGRAM.clues);
+  if (NONOGRAM_SOLVED === null) {
+    throw new Error("the nonogram fixture's clues do not solve");
+  }
+
+  const cases = [
+    {
+      game: "binairo",
+      page: ArchiveBinairoPage,
+      live: ["data-cell-index", "<button"],
+      archived: {
+        game: "binairo",
+        date: ARCHIVED,
+        size: 8,
+        givens: [...BINAIRO.givens],
+      },
+      record: {
+        v: 1,
+        game: "binairo",
+        date: ARCHIVED,
+        entries: [...BINAIRO.solution],
+        elapsedMs: 272_000,
+        hintsUsed: 0,
+        concluded: true,
+        pendingSync: false,
+        syncOutcome: "recorded",
+      },
+    },
+    {
+      game: "nonogram",
+      page: ArchiveNonogramPage,
+      live: ["data-cell-index", "<button"],
+      archived: {
+        game: "nonogram",
+        date: ARCHIVED,
+        size: NONOGRAM.size,
+        clues: NONOGRAM.clues,
+      },
+      record: {
+        v: 1,
+        game: "nonogram",
+        date: ARCHIVED,
+        size: NONOGRAM.size,
+        entries: [...NONOGRAM_SOLVED],
+        elapsedMs: 272_000,
+        hintsUsed: 0,
+        concluded: true,
+        pendingSync: false,
+        syncOutcome: "recorded",
+      },
+    },
+    {
+      game: "termo",
+      page: ArchiveTermoPage,
+      live: ["<button"],
+      archived: { game: "termo", date: ARCHIVED },
+      record: {
+        v: 1,
+        game: "termo",
+        date: ARCHIVED,
+        guesses: [
+          {
+            guess: "termo",
+            tiles: ["correct", "correct", "correct", "correct", "correct"],
+          },
+        ],
+        answer: "termo",
+        outcome: "won",
+        elapsedMs: 272_000,
+        hintsUsed: 0,
+        concluded: true,
+        pendingSync: false,
+        syncOutcome: "recorded",
+      },
+    },
+  ] as const;
+
+  let readStorage: MockInstance | undefined;
+
+  afterEach(() => {
+    window.localStorage.clear();
+    readStorage?.mockRestore();
+    readStorage = undefined;
+  });
+
+  it.each(cases)(
+    "$game: a concluded play record is in the store, and the pre-hydration paint is still the skeleton",
+    async ({ game, page, live, archived, record }) => {
+      window.localStorage.setItem(
+        playRecordKey(game, ARCHIVED),
+        JSON.stringify(record),
+      );
+      expect(readPlayRecord(game, ARCHIVED)?.concluded).toBe(true);
+      spies.getArchivedDaily.mockResolvedValue(archived);
+
+      const element = await page({
+        params: Promise.resolve({ data: ARCHIVED }),
+      });
+      readStorage = vi.spyOn(Storage.prototype, "getItem");
+      const markup = renderToStaticMarkup(element);
+
+      expect(readStorage).not.toHaveBeenCalled();
+      expect(markup).toContain('data-play-state="skeleton"');
+
+      for (const marker of live) {
+        expect(markup).not.toContain(marker);
+      }
+    },
+  );
 });
 
 describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
