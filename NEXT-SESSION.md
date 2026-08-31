@@ -1,32 +1,27 @@
 # Do I need to do anything?
 
-**Read [`docs/pending-fernando.md`](./docs/pending-fernando.md)** — the living ledger of everything waiting on you, in blocking order. To work through it: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*. **Nothing from this session needs you.**
+**Yes — one 5-minute setup step.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) NOW §2: a SessionStart hook that carries your standing request into every session. An agent cannot install it — the auto-mode classifier blocks writing to `~/.claude/hooks/`, correctly. To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
-**#205's deletion half is merged (#239) and is a gate, not a campaign.** The thirty rules A–DD on that issue were about *reporting* a sweep; the tool replaced them. Read `scripts/comment-audit/README.md`, not the issue.
+**Claude Code injects an instruction that overrides `CLAUDE.md`.** A system-prompt section named `heron_brook` says *"Do not call the AgentTool unless the user requested it"*. It is gated on the Opus 5 capability `opus_5_prompt_bundle`, lives in no config file, and `/config` cannot reach it. Upstream: [#80988](https://github.com/anthropics/claude-code/issues/80988), [#82371](https://github.com/anthropics/claude-code/issues/82371), both open.
 
-```sh
-pnpm comments                                      # the gate: selftest, then the budget
-```
-
-**The budget is 3% of a file's lines or two lines, whichever is larger** — CLAUDE.md and [ADR-0075](./docs/adr/0075-the-comment-budget-is-a-tool-not-a-rule.md). Run `pnpm comments` for the number; do not trust a figure written down anywhere. Directives are exempt, listed in `DIRECTIVES` in `density.mjs`, and the harness reads CLAUDE.md and the README back so the three cannot drift. A **standalone** `//` counts; a trailing one does not. `{/* … */}` counts, spaces inside the braces or not. Generated files are SKIPPED and the set is pinned.
-
-**Fernando's standing rule, 2026-08-27: a comment that explains genuinely complex code stays.** The budget is not a reason to delete one. If a file cannot fit and the comment is load-bearing, raise `FLOOR_LINES` or tighten the prose — never cut the argument. He does not want to discuss comments again.
+It cost a full session's flow before anyone noticed. `CLAUDE.md` § *Verification gates* now carries **"The agent runs the whole loop unattended"** — spawn the reviewers, commit, push, open the PR, merge when green, never ask. **That paragraph alone does not win**; #82371 is the report that it loses. The hook in NOW §2 is what actually clears the line, because the injected text's own escape is *"unless the user requested it"*.
 
 ## Session state
 
-**#239 merged with four lenses plus a re-review round.** All four rejected the first pass (nine blockers), correctness rejected the fixes too. What that round found is worth carrying:
+**#236 merged (#241): the four ungated hydration gates now have `T-WEB-S356` and `T-WEB-S357`.** Four review rounds on a test-only PR. The three lessons are worth more than the diff:
 
-- **A pin that only fires on a big enough change is not a pin.** The corpus check passed because a narrowing left the file count above a magic `> 400`. Dropping all 108 files under `apps/web/src` was invisible. Compare against a freshly computed list, never a threshold.
-- **Check what the fixture actually exercises.** The brace rule's fixture was `}; // trailing` — the semicolon set `hasCode`, so the rule under test never ran. Both brace clauses could be deleted with the harness green.
-- **A check can pass for the wrong reason.** `--base main` exited 2 through the all-skipped path, not the flag guard. Mutate the rule, not the output.
-- Two security rules had lost their only copy: `last_seen_at` must not become security-load-bearing without revisiting CSRF on GETs (now ADR-0022), and "log the message, never the error object" (now T-API-S164). **No mutation of current code reds a constraint on future code** — that class needs the ADR.
+- **A static server render never reads the play-record store.** So no deletion of a hydration gate can make a record-derived value appear, and every `not.toContain(<a record value>)` written to prove otherwise was structurally incapable of failing. What carries the claim is `expect(getItem).not.toHaveBeenCalled()` — falsifiable, proven by injecting a render-time `readPlayRecord`.
+- **A justification for keeping an assertion is itself reviewable.** Round 3 kept `data-play-state="concluded"` on a `priorCache` argument and wrote it into `docs/agents/test-ids.md`. Round 4 disproved it in five minutes — made `priorSnapshot` throw, all three cases still passed — because `renderToStaticMarkup` takes `useSyncExternalStore`'s `getServerSnapshot`. A convention file recording a false mechanism is worse than a dead test line.
+- **`git checkout` in a reviewer breaks everyone beside it.** One left the tree on `main` mid-session. All four `.claude/agents/reviewer-*.md` now forbid it; so does `CLAUDE.md`.
 
-**#238 fixed and closed.** `allowImportingTsExtensions` plus the `.ts` specifier in all five vitest configs. T-WEB-S229 became the guard rather than a new test.
+**Before adding a `not.toContain`, render the thing it guards against and confirm the string really appears.** `reviewer-correctness` now treats an assertion that cannot fail as blocking.
 
-**CSS is the remaining ~1,820 lines and is NOT a sweep.** `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header — seven numbered deviations, by token. The work is to move that table into the test as data. Four sheets hold 1,097: termo 367, nonogram 304, arquivo 262, sudoku 164.
+**CSS is still the remaining ~1,820 lines of #205 and is NOT a sweep.** `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header — seven numbered deviations, by token. The work is to move that table into the test as data. Four sheets hold 1,097: termo 367, nonogram 304, arquivo 262, sudoku 164.
 
 ## Next
 
-**#236** (four ungated hydration gates) and **#219** are `ready-for-agent`. **#209** reproduced locally at `--concurrency=2` rather than CI's 10; output is on the issue. **#206** — duplication, 3 of 15 clusters done, cluster 4 next. **#205** stays open for the CSS half.
+**#219** (read-only-but-not-writable store leaves the share button dead) is `ready-for-agent` and was the next one queued. **#209** reproduced locally at `--concurrency=2` rather than CI's 10; output is on the issue. **#206** — duplication, 3 of 15 clusters done, cluster 4 next. **#205** stays open for the CSS half.
+
+**One ticket worth filing:** the play-record fixture shape is duplicated across ~22 `apps/web/test` files with no shared builder. The design lens flagged it as real duplication but out of scope for a Quick change.
