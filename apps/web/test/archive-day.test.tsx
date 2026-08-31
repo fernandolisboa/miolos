@@ -8,12 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 
-import {
-  formatElapsed,
-  formatLongDate,
-  formatMonth,
-  messages,
-} from "../src/i18n";
+import { formatLongDate, formatMonth, messages } from "../src/i18n";
+import { solutionMarks } from "../src/nonogram/engine";
 import { playRecordKey, readPlayRecord } from "../src/play/play-record";
 
 const spies = vi.hoisted(() => ({
@@ -251,12 +247,16 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
   const ARCHIVED = "2026-08-03";
   const BINAIRO = generateBinairo({ seed: 20_260_803, weekday: 1 });
   const NONOGRAM = generateNonogram(20_260_803, 1);
-  const CELLS = NONOGRAM.size ** 2;
+  const NONOGRAM_SOLVED = solutionMarks(NONOGRAM.clues);
+  if (NONOGRAM_SOLVED === null) {
+    throw new Error("the nonogram fixture's clues do not solve");
+  }
 
   const cases = [
     [
       "binairo",
       ArchiveBinairoPage,
+      ["data-cell-index", "<button"],
       { game: "binairo", date: ARCHIVED, size: 8, givens: [...BINAIRO.givens] },
       {
         v: 1,
@@ -273,6 +273,7 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
     [
       "nonogram",
       ArchiveNonogramPage,
+      ["data-cell-index", "<button"],
       {
         game: "nonogram",
         date: ARCHIVED,
@@ -284,7 +285,7 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
         game: "nonogram",
         date: ARCHIVED,
         size: NONOGRAM.size,
-        entries: Array.from({ length: CELLS }, () => 0),
+        entries: [...NONOGRAM_SOLVED],
         elapsedMs: 272_000,
         hintsUsed: 0,
         concluded: true,
@@ -295,6 +296,7 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
     [
       "termo",
       ArchiveTermoPage,
+      ["<button"],
       { game: "termo", date: ARCHIVED },
       {
         v: 1,
@@ -319,11 +321,12 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
 
   afterEach(() => {
     window.localStorage.clear();
+    vi.restoreAllMocks();
   });
 
   it.each(cases)(
     "%s: a concluded record is in the store, and the pre-hydration paint is still the skeleton",
-    async (game, page, archived, record) => {
+    async (game, page, live, archived, record) => {
       window.localStorage.setItem(
         playRecordKey(game, ARCHIVED),
         JSON.stringify(record),
@@ -334,12 +337,17 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
       const element = await page({
         params: Promise.resolve({ data: ARCHIVED }),
       });
+      const readStorage = vi.spyOn(Storage.prototype, "getItem");
       const markup = renderToStaticMarkup(element);
 
+      expect(readStorage).not.toHaveBeenCalled();
       expect(markup).toContain('data-play-state="skeleton"');
       expect(markup).not.toContain('data-play-state="concluded"');
       expect(markup).not.toContain(messages.archive.result.stampLabel);
-      expect(markup).not.toContain(formatElapsed(record.elapsedMs));
+
+      for (const marker of live) {
+        expect(markup).not.toContain(marker);
+      }
     },
   );
 });

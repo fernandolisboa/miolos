@@ -68,6 +68,20 @@ agreed with this table in both columns (next free `S356`, highest in use
   The record written per case is read back before the render, so a fixture the
   schema rejects cannot make the claim vacuous.
 
+  **Correctness review killed three assertions for being unfalsifiable, and the
+  lesson generalises past this ticket.** A static server render never reads the
+  store, so *no* deletion of a hydration gate can make a record-derived value
+  appear — asserting the record's elapsed time is absent passes on every build
+  and proves nothing. What separates the two paints is the live play surface,
+  so `T-WEB-S357` asserts `data-cell-index` (binairo, nonogram) and `<button`
+  (termo) instead, each verified to red **on its own** with the
+  `data-play-state` assertion removed. `T-WEB-S356` lost `VALID.toUpperCase()`
+  — `letterAt` emits one lowercase letter per `div` and the stylesheet does the
+  uppercasing, so the word is never a contiguous substring at all — and lost an
+  elapsed-time assertion to `T-WEB-S104`'s standing fact that Termo has no
+  clock. **Before adding a `not.toContain`, render the thing it guards against
+  and confirm the string really appears.**
+
 #205's `apps/web/src/play` tranche spent **`T-WEB-S354`** in the new
 `apps/web/test/client-graph-engine-free.test.ts`. Re-derived by grep before
 allocating, which agreed with this table in both columns (next free `S354`,

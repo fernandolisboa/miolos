@@ -25,7 +25,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DailyUnavailable } from "../src/components/daily-unavailable";
-import { formatElapsed, messages } from "../src/i18n";
+import { messages } from "../src/i18n";
 import { ConclusionView } from "../src/play/conclusion-view";
 import {
   readPlayRecord,
@@ -973,8 +973,8 @@ describe("the first paint of /termo (T-WEB-S356)", () => {
     expect(markup).not.toContain(
       copy.rowAria(1, MAX_GUESSES, row?.guess ?? "", row?.tiles ?? []),
     );
-    expect(markup).not.toContain(VALID.toUpperCase());
-    expect(markup).not.toContain(formatElapsed(record.elapsedMs));
+    expect(styles.tileJudged).toBeDefined();
+    expect(markup).not.toContain(styles.tileJudged ?? "");
 
     expect(markup).not.toContain(messages.conclusion.stampLabel);
     expect(markup).not.toContain("<button");
