@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { archiveGameRoute, messages } from "../i18n";
 import { absoluteUrl } from "../site-origin";
-import { playRecordsAvailable, type PlayRecord } from "./play-record";
+import { playRecordsWritable, type PlayRecord } from "./play-record";
 import styles from "./share-button.module.css";
 import { buildShareText, type ShareSubject } from "./share-text";
 
@@ -47,7 +47,6 @@ async function deliverShare(text: string): Promise<ShareStatus> {
   }
 }
 
-// TODO(#219): a read-only store leaves this control dead and silent.
 function shareSubject(
   game: Game,
   date: string,
@@ -89,7 +88,7 @@ export function ShareButton({
   }, [status]);
 
   const subject = shareSubject(game, date, stored, stamp);
-  if (subject === undefined && !playRecordsAvailable()) {
+  if (subject === undefined && !playRecordsWritable()) {
     return null;
   }
 

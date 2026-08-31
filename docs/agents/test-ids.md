@@ -40,8 +40,23 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S358` | `S357` | `T-WEB-23` |
+| `T-WEB` | `S359` | `S358` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#219 spent **`T-WEB-S358`** in the new
+`apps/web/test/share-write-blocked.test.tsx`: a store that reads but cannot
+hold a record renders no share control at all, on Termo's daily conclusion and
+on the archive late-result panel for all four games. Re-derived by grep before
+allocating, which agreed with this table in both columns (next free `S358`,
+highest in use `S357`). One id over eight cases, the `T-LINT-S49` shape.
+
+Every `toBeNull` in it is falsifiable, and each was redded by a named mutation
+rather than argued: the read probe restored reds cases 1 and 2, a token probe
+value reds case 3, and case 4 — the same store given room for a record —
+proves all five surfaces bring the button back. The sizing case binds
+`WRITE_PROBE_BYTES` on both sides against the largest record the four schemas
+admit, so a probe too small to stand for a record and one so large it hides a
+control that would have worked both fail.
 
 #236 spent **`T-WEB-S356`** and **`T-WEB-S357`** on the four play-screen roots
 whose hydration gate no test held. Re-derived by grep before allocating, which

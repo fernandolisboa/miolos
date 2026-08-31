@@ -179,8 +179,28 @@ function storage(): Storage | undefined {
   }
 }
 
-export function playRecordsAvailable(): boolean {
-  return storage() !== undefined;
+export const WRITE_PROBE_KEY = "miolos:write-probe";
+
+// The probe stands for a whole record: a store with room for a bare key but
+// not for one of these passes a token write and still loses the real one.
+export const WRITE_PROBE_BYTES = 2048;
+
+const WRITE_PROBE_VALUE = "x".repeat(WRITE_PROBE_BYTES);
+
+export function playRecordsWritable(): boolean {
+  const store = storage();
+  if (store === undefined) {
+    return false;
+  }
+  let writable = false;
+  try {
+    store.setItem(WRITE_PROBE_KEY, WRITE_PROBE_VALUE);
+    writable = true;
+    store.removeItem(WRITE_PROBE_KEY);
+  } catch {
+    return writable;
+  }
+  return true;
 }
 
 function playRecordKeys(store: Storage): string[] {
@@ -268,6 +288,9 @@ export function prunePlayRecords(keepDate: string): void {
   const store = storage();
   if (store === undefined) {
     return;
+  }
+  if (store.getItem(WRITE_PROBE_KEY) !== null) {
+    store.removeItem(WRITE_PROBE_KEY);
   }
   const candidates: { key: string; date: string }[] = [];
   for (const key of playRecordKeys(store)) {
