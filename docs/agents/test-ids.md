@@ -40,8 +40,33 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S356` | `S355` | `T-WEB-23` |
+| `T-WEB` | `S358` | `S357` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#236 spent **`T-WEB-S356`** and **`T-WEB-S357`** on the four play-screen roots
+whose hydration gate no test held. Re-derived by grep before allocating, which
+agreed with this table in both columns (next free `S356`, highest in use
+`S355`).
+
+- **`T-WEB-S356`** — `apps/web/test/termo-screen.test.tsx`, one assertion.
+  `/termo`'s first paint is `PlaySkeleton` with a concluded record sitting in
+  the store: `getItem` is never called during `renderToStaticMarkup`, and
+  neither the judged row's aria label, the guessed word, the elapsed time nor
+  the conclusion stamp reaches the markup. `T-WEB-S94` looked like this record
+  and is not — its only `TermoScreen` arm asserts `data-play-state="playing"`
+  **after** `act()`, so it never sees the first paint.
+
+- **`T-WEB-S357`** — `apps/web/test/archive-day.test.tsx`, one `describe` over
+  the three remaining archive roots (`binairo`, `nonogram`, `termo`), in
+  `T-WEB-S172`'s shape: server-render the route's page component, assert
+  `data-play-state="skeleton"` and that `LateResult`'s marker, its stamp and
+  the record's elapsed time are absent. `T-WEB-S172` already covers the fourth,
+  `src/archive/sudoku-screen.tsx`.
+
+  Each of the four is mutation-proven over the full `apps/web` suite: deleting
+  one gate reds exactly its own case, `1 failed | 1437 passed`, four times.
+  The record written per case is read back before the render, so a fixture the
+  schema rejects cannot make the claim vacuous.
 
 #205's `apps/web/src/play` tranche spent **`T-WEB-S354`** in the new
 `apps/web/test/client-graph-engine-free.test.ts`. Re-derived by grep before

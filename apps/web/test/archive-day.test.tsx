@@ -5,7 +5,16 @@ import { render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatLongDate, formatMonth, messages } from "../src/i18n";
+import { generateBinairo } from "@miolos/games/binairo";
+import { generateNonogram } from "@miolos/games/nonogram";
+
+import {
+  formatElapsed,
+  formatLongDate,
+  formatMonth,
+  messages,
+} from "../src/i18n";
+import { playRecordKey, readPlayRecord } from "../src/play/play-record";
 
 const spies = vi.hoisted(() => ({
   stubDb: {},
@@ -36,6 +45,12 @@ const { default: ArchiveDayPage, generateMetadata } =
   await import("../app/arquivo/[data]/page");
 const { default: ArchiveSudokuPage } =
   await import("../app/arquivo/[data]/sudoku/page");
+const { default: ArchiveBinairoPage } =
+  await import("../app/arquivo/[data]/binairo/page");
+const { default: ArchiveNonogramPage } =
+  await import("../app/arquivo/[data]/nonogram/page");
+const { default: ArchiveTermoPage } =
+  await import("../app/arquivo/[data]/termo/page");
 
 beforeEach(() => {
   spies.getDb.mockReturnValue(spies.stubDb);
@@ -230,6 +245,103 @@ describe("a published past day renders the archived board (T-WEB-S172)", () => {
 
     expect(markup).toContain("/arquivo/2026-08-03");
   });
+});
+
+describe("the three remaining archive roots gate the first paint too (T-WEB-S357)", () => {
+  const ARCHIVED = "2026-08-03";
+  const BINAIRO = generateBinairo({ seed: 20_260_803, weekday: 1 });
+  const NONOGRAM = generateNonogram(20_260_803, 1);
+  const CELLS = NONOGRAM.size ** 2;
+
+  const cases = [
+    [
+      "binairo",
+      ArchiveBinairoPage,
+      { game: "binairo", date: ARCHIVED, size: 8, givens: [...BINAIRO.givens] },
+      {
+        v: 1,
+        game: "binairo",
+        date: ARCHIVED,
+        entries: [...BINAIRO.solution],
+        elapsedMs: 272_000,
+        hintsUsed: 0,
+        concluded: true,
+        pendingSync: false,
+        syncOutcome: "recorded",
+      },
+    ],
+    [
+      "nonogram",
+      ArchiveNonogramPage,
+      {
+        game: "nonogram",
+        date: ARCHIVED,
+        size: NONOGRAM.size,
+        clues: NONOGRAM.clues,
+      },
+      {
+        v: 1,
+        game: "nonogram",
+        date: ARCHIVED,
+        size: NONOGRAM.size,
+        entries: Array.from({ length: CELLS }, () => 0),
+        elapsedMs: 272_000,
+        hintsUsed: 0,
+        concluded: true,
+        pendingSync: false,
+        syncOutcome: "recorded",
+      },
+    ],
+    [
+      "termo",
+      ArchiveTermoPage,
+      { game: "termo", date: ARCHIVED },
+      {
+        v: 1,
+        game: "termo",
+        date: ARCHIVED,
+        guesses: [
+          {
+            guess: "termo",
+            tiles: ["correct", "correct", "correct", "correct", "correct"],
+          },
+        ],
+        answer: "termo",
+        outcome: "won",
+        elapsedMs: 272_000,
+        hintsUsed: 0,
+        concluded: true,
+        pendingSync: false,
+        syncOutcome: "recorded",
+      },
+    ],
+  ] as const;
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it.each(cases)(
+    "%s: a concluded record is in the store, and the pre-hydration paint is still the skeleton",
+    async (game, page, archived, record) => {
+      window.localStorage.setItem(
+        playRecordKey(game, ARCHIVED),
+        JSON.stringify(record),
+      );
+      expect(readPlayRecord(game, ARCHIVED)?.concluded).toBe(true);
+      spies.getArchivedDaily.mockResolvedValue(archived);
+
+      const element = await page({
+        params: Promise.resolve({ data: ARCHIVED }),
+      });
+      const markup = renderToStaticMarkup(element);
+
+      expect(markup).toContain('data-play-state="skeleton"');
+      expect(markup).not.toContain('data-play-state="concluded"');
+      expect(markup).not.toContain(messages.archive.result.stampLabel);
+      expect(markup).not.toContain(formatElapsed(record.elapsedMs));
+    },
+  );
 });
 
 describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
