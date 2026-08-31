@@ -179,7 +179,7 @@ function storage(): Storage | undefined {
   }
 }
 
-const WRITE_PROBE_KEY = "miolos:write-probe";
+export const WRITE_PROBE_KEY = "miolos:write-probe";
 
 // The probe stands for a whole record: a store with room for a bare key but
 // not for one of these passes a token write and still loses the real one.
@@ -288,6 +288,9 @@ export function prunePlayRecords(keepDate: string): void {
   const store = storage();
   if (store === undefined) {
     return;
+  }
+  if (store.getItem(WRITE_PROBE_KEY) !== null) {
+    store.removeItem(WRITE_PROBE_KEY);
   }
   const candidates: { key: string; date: string }[] = [];
   for (const key of playRecordKeys(store)) {

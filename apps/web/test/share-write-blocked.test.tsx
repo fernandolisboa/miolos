@@ -1,4 +1,9 @@
-import { nonogramSizeSchema, type Game } from "@miolos/core";
+import {
+  nonogramSizeSchema,
+  TERMO_MAX_GUESSES,
+  TERMO_WORD_LENGTH,
+  type Game,
+} from "@miolos/core";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,8 +14,10 @@ import {
   ELAPSED_CAP_MS,
   playRecordKey,
   playRecordSchema,
+  prunePlayRecords,
   readPlayRecord,
   WRITE_PROBE_BYTES,
+  WRITE_PROBE_KEY,
 } from "../src/play/play-record";
 
 vi.mock("../src/play/sync", () => ({
@@ -27,23 +34,56 @@ const LARGEST_SIZE = nonogramSizeSchema.options
   .map((option) => option.value)
   .reduce((widest, size) => (size > widest ? size : widest));
 
-const LARGEST_RECORD = playRecordSchema.parse({
-  v: 1,
-  game: "nonogram",
-  date: DATE,
-  size: LARGEST_SIZE,
-  entries: Array.from({ length: LARGEST_SIZE ** 2 }, () => null),
-  grid: Array.from({ length: LARGEST_SIZE ** 2 }, (_unused, cell) => cell % 2),
+const HEAVIEST = {
   elapsedMs: ELAPSED_CAP_MS,
   hintsUsed: 1,
   concluded: true,
   pendingSync: true,
   syncOutcome: "rejected",
+} as const;
+
+const cells = (count: number) => ({
+  entries: Array.from({ length: count }, () => null),
+  grid: Array.from({ length: count }, (_unused, cell) => cell % 2),
 });
 
-const LARGEST_RECORD_BYTES =
-  playRecordKey("nonogram", DATE).length +
-  JSON.stringify(LARGEST_RECORD).length;
+const MAXIMAL_RECORDS = [
+  { v: 1, game: "binairo", date: DATE, ...cells(64), ...HEAVIEST },
+  {
+    v: 1,
+    game: "sudoku",
+    date: DATE,
+    entries: Array.from({ length: 81 }, () => null),
+    grid: Array.from({ length: 81 }, () => 9),
+    ...HEAVIEST,
+  },
+  {
+    v: 1,
+    game: "nonogram",
+    date: DATE,
+    size: LARGEST_SIZE,
+    ...cells(LARGEST_SIZE ** 2),
+    ...HEAVIEST,
+  },
+  {
+    v: 1,
+    game: "termo",
+    date: DATE,
+    guesses: Array.from({ length: TERMO_MAX_GUESSES }, () => ({
+      guess: "sonho",
+      tiles: Array.from({ length: TERMO_WORD_LENGTH }, () => "present"),
+    })),
+    answer: "carta",
+    outcome: "lost",
+    ...HEAVIEST,
+  },
+].map((shape) => playRecordSchema.parse(shape));
+
+const LARGEST_RECORD_BYTES = MAXIMAL_RECORDS.map(
+  (record) =>
+    playRecordKey(record.game, record.date).length +
+    JSON.stringify(record).length,
+).reduce((widest, bytes) => (bytes > widest ? bytes : widest));
 
 const BINAIRO_RECORD = playRecordSchema.parse({
   v: 1,
@@ -230,11 +270,35 @@ describe("a store that reads but cannot hold a record renders no share control (
       }) as Storage,
     );
 
-    render(conclusion("termo"));
+    const { unmount } = render(conclusion("termo"));
     expect(shareButton()).not.toBeNull();
+    unmount();
+
+    render(conclusion("termo"));
+    expect(sticky.keys(), "one orphan, and it never multiplies").toEqual([
+      WRITE_PROBE_KEY,
+    ]);
   });
 
-  it("the probe is sized to the largest record the schemas admit, and no larger than twice it", () => {
+  it("the next play mount reclaims an orphaned probe key, and leaves every other key alone", () => {
+    const stray = "unrelated-key";
+    const kept = playRecordKey("binairo", DATE);
+    const orphaned = store({
+      headroom: Number.MAX_SAFE_INTEGER,
+      seed: {
+        [WRITE_PROBE_KEY]: "x",
+        [kept]: JSON.stringify(BINAIRO_RECORD),
+        [stray]: "left alone",
+      },
+    });
+    installStore(orphaned);
+
+    prunePlayRecords(DATE);
+
+    expect(orphaned.keys()).toEqual([kept, stray]);
+  });
+
+  it("the probe is sized to the largest record any of the four schemas admits, and no larger than twice it", () => {
     expect(WRITE_PROBE_BYTES).toBeGreaterThanOrEqual(LARGEST_RECORD_BYTES);
     expect(WRITE_PROBE_BYTES).toBeLessThan(LARGEST_RECORD_BYTES * 2);
   });
