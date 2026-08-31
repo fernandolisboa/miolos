@@ -253,12 +253,17 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
   }
 
   const cases = [
-    [
-      "binairo",
-      ArchiveBinairoPage,
-      ["data-cell-index", "<button"],
-      { game: "binairo", date: ARCHIVED, size: 8, givens: [...BINAIRO.givens] },
-      {
+    {
+      game: "binairo",
+      page: ArchiveBinairoPage,
+      live: ["data-cell-index", "<button"],
+      archived: {
+        game: "binairo",
+        date: ARCHIVED,
+        size: 8,
+        givens: [...BINAIRO.givens],
+      },
+      record: {
         v: 1,
         game: "binairo",
         date: ARCHIVED,
@@ -269,18 +274,18 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
         pendingSync: false,
         syncOutcome: "recorded",
       },
-    ],
-    [
-      "nonogram",
-      ArchiveNonogramPage,
-      ["data-cell-index", "<button"],
-      {
+    },
+    {
+      game: "nonogram",
+      page: ArchiveNonogramPage,
+      live: ["data-cell-index", "<button"],
+      archived: {
         game: "nonogram",
         date: ARCHIVED,
         size: NONOGRAM.size,
         clues: NONOGRAM.clues,
       },
-      {
+      record: {
         v: 1,
         game: "nonogram",
         date: ARCHIVED,
@@ -292,13 +297,13 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
         pendingSync: false,
         syncOutcome: "recorded",
       },
-    ],
-    [
-      "termo",
-      ArchiveTermoPage,
-      ["<button"],
-      { game: "termo", date: ARCHIVED },
-      {
+    },
+    {
+      game: "termo",
+      page: ArchiveTermoPage,
+      live: ["<button"],
+      archived: { game: "termo", date: ARCHIVED },
+      record: {
         v: 1,
         game: "termo",
         date: ARCHIVED,
@@ -316,7 +321,7 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
         pendingSync: false,
         syncOutcome: "recorded",
       },
-    ],
+    },
   ] as const;
 
   afterEach(() => {
@@ -325,8 +330,8 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
   });
 
   it.each(cases)(
-    "%s: a concluded record is in the store, and the pre-hydration paint is still the skeleton",
-    async (game, page, live, archived, record) => {
+    "$game: a concluded play record is in the store, and the pre-hydration paint is still the skeleton",
+    async ({ game, page, live, archived, record }) => {
       window.localStorage.setItem(
         playRecordKey(game, ARCHIVED),
         JSON.stringify(record),
@@ -343,7 +348,6 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
       expect(readStorage).not.toHaveBeenCalled();
       expect(markup).toContain('data-play-state="skeleton"');
       expect(markup).not.toContain('data-play-state="concluded"');
-      expect(markup).not.toContain(messages.archive.result.stampLabel);
 
       for (const marker of live) {
         expect(markup).not.toContain(marker);

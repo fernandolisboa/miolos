@@ -48,39 +48,27 @@ whose hydration gate no test held. Re-derived by grep before allocating, which
 agreed with this table in both columns (next free `S356`, highest in use
 `S355`).
 
-- **`T-WEB-S356`** — `apps/web/test/termo-screen.test.tsx`, one assertion.
-  `/termo`'s first paint is `PlaySkeleton` with a concluded record sitting in
-  the store: `getItem` is never called during `renderToStaticMarkup`, and
-  neither the judged row's aria label, the guessed word, the elapsed time nor
-  the conclusion stamp reaches the markup. `T-WEB-S94` looked like this record
-  and is not — its only `TermoScreen` arm asserts `data-play-state="playing"`
-  **after** `act()`, so it never sees the first paint.
+- **`T-WEB-S356`** — `apps/web/test/termo-screen.test.tsx`. `/termo`'s first
+  paint is `PlaySkeleton`: `data-play-state="skeleton"`, no `<button`, and
+  `getItem` never called during `renderToStaticMarkup`. A concluded play record
+  sits in the play-record store and is read back before the render, so a
+  fixture the schema rejects cannot make the claim vacuous. `T-WEB-S94` looked
+  like this record and is not — its only `TermoScreen` arm asserts
+  `data-play-state="playing"` **after** `act()`, so it never sees the first
+  paint.
 
 - **`T-WEB-S357`** — `apps/web/test/archive-day.test.tsx`, one `describe` over
-  the three remaining archive roots (`binairo`, `nonogram`, `termo`), in
-  `T-WEB-S172`'s shape: server-render the route's page component, assert
-  `data-play-state="skeleton"` and that `LateResult`'s marker, its stamp and
-  the record's elapsed time are absent. `T-WEB-S172` already covers the fourth,
+  the three remaining archive roots, in `T-WEB-S172`'s shape: server-render the
+  route's page component and assert the same three, plus that the live play
+  surface is absent — `data-cell-index` for the grid games, `<button` for termo
+  — and that `data-play-state="concluded"` is not painted, which pins the
+  module-level `priorCache` in `use-prior-conclusion.ts` that the `getItem` spy
+  cannot see. `T-WEB-S172` already covers the fourth,
   `src/archive/sudoku-screen.tsx`.
 
-  Each of the four is mutation-proven over the full `apps/web` suite: deleting
-  one gate reds exactly its own case, `1 failed | 1437 passed`, four times.
-  The record written per case is read back before the render, so a fixture the
-  schema rejects cannot make the claim vacuous.
-
-  **Correctness review killed three assertions for being unfalsifiable, and the
-  lesson generalises past this ticket.** A static server render never reads the
-  store, so *no* deletion of a hydration gate can make a record-derived value
-  appear — asserting the record's elapsed time is absent passes on every build
-  and proves nothing. What separates the two paints is the live play surface,
-  so `T-WEB-S357` asserts `data-cell-index` (binairo, nonogram) and `<button`
-  (termo) instead, each verified to red **on its own** with the
-  `data-play-state` assertion removed. `T-WEB-S356` lost `VALID.toUpperCase()`
-  — `letterAt` emits one lowercase letter per `div` and the stylesheet does the
-  uppercasing, so the word is never a contiguous substring at all — and lost an
-  elapsed-time assertion to `T-WEB-S104`'s standing fact that Termo has no
-  clock. **Before adding a `not.toContain`, render the thing it guards against
-  and confirm the string really appears.**
+  All four are mutation-proven over the full `apps/web` suite: deleting one
+  gate reds exactly its own case, and each live-surface marker was verified to
+  red on its own with the `data-play-state` assertion removed.
 
 #205's `apps/web/src/play` tranche spent **`T-WEB-S354`** in the new
 `apps/web/test/client-graph-engine-free.test.ts`. Re-derived by grep before

@@ -957,7 +957,7 @@ describe("the first paint of /termo (T-WEB-S356)", () => {
     vi.restoreAllMocks();
   });
 
-  it("is the skeleton: a concluded record in the store reaches no byte of it", () => {
+  it("is the skeleton: nothing is read from the play-record store, and no live control paints", () => {
     const record = concludedRecord();
     writePlayRecord(record);
     expect(readPlayRecord("termo", DATE)).toEqual(record);
@@ -967,16 +967,6 @@ describe("the first paint of /termo (T-WEB-S356)", () => {
 
     expect(readStorage).not.toHaveBeenCalled();
     expect(markup).toContain('data-play-state="skeleton"');
-
-    const row = record.guesses[0];
-    expect(row).toBeDefined();
-    expect(markup).not.toContain(
-      copy.rowAria(1, MAX_GUESSES, row?.guess ?? "", row?.tiles ?? []),
-    );
-    expect(styles.tileJudged).toBeDefined();
-    expect(markup).not.toContain(styles.tileJudged ?? "");
-
-    expect(markup).not.toContain(messages.conclusion.stampLabel);
     expect(markup).not.toContain("<button");
   });
 });
