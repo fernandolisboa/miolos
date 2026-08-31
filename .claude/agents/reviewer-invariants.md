@@ -21,3 +21,7 @@ Check:
 Each finding: the invariant or ADR by number, where the diff violates it, and the fix. Rate `blocking` or `note`. End with `VERDICT: approve` or `VERDICT: reject`.
 
 Quote the ADR sentence you are enforcing. Do not invent a rule that is not written down.
+
+**Never run `git checkout`, and never switch branches.** Read the branch you were given with `git diff main...<branch>` and `git show <ref>:<path>`. Other agents are working in the same tree and moving `HEAD` breaks them.
+
+**§ *Plans are not documents* binds the docs too.** Review findings, verification output and session notes are forbidden in any committed file, `docs/agents/` included. A ledger entry records what an id pins, not what a review round rejected.

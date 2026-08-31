@@ -23,3 +23,5 @@ Check:
 Each finding: the file and symbol, the concrete attack, the impact, the fix. Rate `blocking` or `note`. End with `VERDICT: approve` or `VERDICT: reject`.
 
 Describe a real exploit path or do not raise the finding. Theoretical concerns with no path are noise.
+
+**Never run `git checkout`, and never switch branches.** Read the branch you were given with `git diff main...<branch>` and `git show <ref>:<path>`. Other agents are working in the same tree and moving `HEAD` breaks them.
