@@ -1,12 +1,12 @@
 # Do I need to do anything?
 
-**Yes — one 5-minute setup step.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) NOW §2: a SessionStart hook that carries your standing request into every session. An agent cannot install it — the auto-mode classifier blocks writing to `~/.claude/hooks/`, correctly. To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**No.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) NOW holds one ⚡ decision, low urgency by ~13 months. To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
-**Claude Code injects an instruction that overrides `CLAUDE.md`.** A system-prompt section named `heron_brook` says *"Do not call the AgentTool unless the user requested it"*. It is gated on the Opus 5 capability `opus_5_prompt_bundle`, lives in no config file, and `/config` cannot reach it. Upstream: [#80988](https://github.com/anthropics/claude-code/issues/80988), [#82371](https://github.com/anthropics/claude-code/issues/82371), both open.
+**Verify the standing-authorization hook fired.** Fernando installed `~/.claude/hooks/miolos-standing-authorization.sh` on 2026-08-31. Asked *"what standing instructions do you have?"*, this session should recite four points unprompted: use subagents; run commit→push→PR→merge unattended; bring him only the two things in § *Writing for Fernando*; reviewers never `git checkout`. **If it cannot, say so plainly and stop** — the automation is not live, and open `/hooks` once to force a config reload.
 
-It cost a full session's flow before anyone noticed. `CLAUDE.md` § *Verification gates* now carries **"The agent runs the whole loop unattended"** — spawn the reviewers, commit, push, open the PR, merge when green, never ask. **That paragraph alone does not win**; #82371 is the report that it loses. The hook in NOW §2 is what actually clears the line, because the injected text's own escape is *"unless the user requested it"*.
+**Why the hook exists.** Claude Code injects a system-prompt section (`heron_brook`) reading *"Do not call the AgentTool unless the user requested it"*, gated on the Opus 5 capability `opus_5_prompt_bundle`. It is in no config file, `/config` cannot reach it, and **it overrides `CLAUDE.md`** — upstream [#80988](https://github.com/anthropics/claude-code/issues/80988) and [#82371](https://github.com/anthropics/claude-code/issues/82371), both open. It cost a full session's flow before anyone noticed. `CLAUDE.md` § *Verification gates* now carries **"The agent runs the whole loop unattended"**, but that paragraph alone is what #82371 reports losing. The hook wins because the injected text's own escape clause is *"unless the user requested it"*, and the hook is Fernando requesting it.
 
 ## Session state
 
@@ -22,6 +22,6 @@ It cost a full session's flow before anyone noticed. `CLAUDE.md` § *Verificatio
 
 ## Next
 
-**#219** (read-only-but-not-writable store leaves the share button dead) is `ready-for-agent` and was the next one queued. **#209** reproduced locally at `--concurrency=2` rather than CI's 10; output is on the issue. **#206** — duplication, 3 of 15 clusters done, cluster 4 next. **#205** stays open for the CSS half.
+**#219** (read-only-but-not-writable store leaves the share button dead) is `ready-for-agent` and is the next one queued — Defect row, reproduction shape on the issue. **#209** reproduced locally at `--concurrency=2` rather than CI's 10; output is on the issue. **#206** — duplication, 3 of 15 clusters done, cluster 4 next. **#205** stays open for the CSS half.
 
 **One ticket worth filing:** the play-record fixture shape is duplicated across ~22 `apps/web/test` files with no shared builder. The design lens flagged it as real duplication but out of scope for a Quick change.
