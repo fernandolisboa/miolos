@@ -181,18 +181,26 @@ function storage(): Storage | undefined {
 
 const WRITE_PROBE_KEY = "miolos:write-probe";
 
+// The probe stands for a whole record: a store with room for a bare key but
+// not for one of these passes a token write and still loses the real one.
+export const WRITE_PROBE_BYTES = 2048;
+
+const WRITE_PROBE_VALUE = "x".repeat(WRITE_PROBE_BYTES);
+
 export function playRecordsWritable(): boolean {
   const store = storage();
   if (store === undefined) {
     return false;
   }
+  let writable = false;
   try {
-    store.setItem(WRITE_PROBE_KEY, "");
+    store.setItem(WRITE_PROBE_KEY, WRITE_PROBE_VALUE);
+    writable = true;
     store.removeItem(WRITE_PROBE_KEY);
-    return true;
   } catch {
-    return false;
+    return writable;
   }
+  return true;
 }
 
 function playRecordKeys(store: Storage): string[] {

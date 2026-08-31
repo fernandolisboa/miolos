@@ -1,11 +1,17 @@
-import type { Game } from "@miolos/core";
+import { nonogramSizeSchema, type Game } from "@miolos/core";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LateResult } from "../src/archive/late-result";
 import { messages } from "../src/i18n";
 import { ConclusionView } from "../src/play/conclusion-view";
-import { playRecordKey, readPlayRecord } from "../src/play/play-record";
+import {
+  ELAPSED_CAP_MS,
+  playRecordKey,
+  playRecordSchema,
+  readPlayRecord,
+  WRITE_PROBE_BYTES,
+} from "../src/play/play-record";
 
 vi.mock("../src/play/sync", () => ({
   startCompletionSync: () => () => undefined,
@@ -17,9 +23,29 @@ vi.mock("../src/stats/use-stats", () => ({ useStats: () => null }));
 const DATE = "2026-08-14";
 const GAMES: readonly Game[] = ["binairo", "sudoku", "nonogram", "termo"];
 
-const setItem = vi.fn<(key: string, value: string) => void>();
+const LARGEST_SIZE = nonogramSizeSchema.options
+  .map((option) => option.value)
+  .reduce((widest, size) => (size > widest ? size : widest));
 
-const BINAIRO_RECORD = {
+const LARGEST_RECORD = playRecordSchema.parse({
+  v: 1,
+  game: "nonogram",
+  date: DATE,
+  size: LARGEST_SIZE,
+  entries: Array.from({ length: LARGEST_SIZE ** 2 }, () => null),
+  grid: Array.from({ length: LARGEST_SIZE ** 2 }, (_unused, cell) => cell % 2),
+  elapsedMs: ELAPSED_CAP_MS,
+  hintsUsed: 1,
+  concluded: true,
+  pendingSync: true,
+  syncOutcome: "rejected",
+});
+
+const LARGEST_RECORD_BYTES =
+  playRecordKey("nonogram", DATE).length +
+  JSON.stringify(LARGEST_RECORD).length;
+
+const BINAIRO_RECORD = playRecordSchema.parse({
   v: 1,
   game: "binairo",
   date: DATE,
@@ -29,14 +55,25 @@ const BINAIRO_RECORD = {
   concluded: true,
   pendingSync: false,
   syncOutcome: "recorded",
-} as const;
+});
 
-function readOnlyStore(seed: Record<string, string> = {}): Storage {
+interface FakeStore extends Storage {
+  readonly keys: () => string[];
+}
+
+function store({
+  seed = {},
+  headroom = 0,
+}: {
+  readonly seed?: Record<string, string>;
+  readonly headroom?: number;
+} = {}): FakeStore {
   const cells = new Map<string, string>(Object.entries(seed));
   return {
     get length() {
       return cells.size;
     },
+    keys: () => [...cells.keys()],
     key: (index: number) => [...cells.keys()][index] ?? null,
     getItem: (key: string) => cells.get(key) ?? null,
     removeItem: (key: string) => {
@@ -45,25 +82,27 @@ function readOnlyStore(seed: Record<string, string> = {}): Storage {
     clear: () => {
       cells.clear();
     },
-    setItem,
+    setItem: (key: string, value: string) => {
+      if (key.length + value.length > headroom) {
+        throw new DOMException("quota", "QuotaExceededError");
+      }
+      cells.set(key, value);
+    },
   };
 }
 
 let realStore: PropertyDescriptor | undefined;
 
-function installStore(store: Storage): void {
-  realStore = Object.getOwnPropertyDescriptor(window, "localStorage");
+function installStore(fake: Storage): void {
+  realStore ??= Object.getOwnPropertyDescriptor(window, "localStorage");
   Object.defineProperty(window, "localStorage", {
     configurable: true,
-    get: () => store,
+    get: () => fake,
   });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  setItem.mockImplementation(() => {
-    throw new DOMException("quota", "QuotaExceededError");
-  });
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText: vi.fn(() => Promise.resolve()) },
     configurable: true,
@@ -83,13 +122,23 @@ function shareButton(): HTMLButtonElement | null {
   return screen.queryByRole("button", { name: messages.share.label });
 }
 
-function conclusion(game: Game) {
+function conclusion(game: Game, lost = false) {
   return (
     <ConclusionView
       game={game}
       date={DATE}
       copy={messages.games[game].conclusion}
       result={{ elapsedMs: 407_000, hintsUsed: 0 }}
+      {...(lost
+        ? {
+            outcome: {
+              state: "lost" as const,
+              label: "Jogado",
+              detail: "X/6",
+              aria: "Termo jogado, as 6 tentativas acabaram.",
+            },
+          }
+        : {})}
     />
   );
 }
@@ -105,11 +154,13 @@ function late(game: Game) {
   );
 }
 
-describe("a store that reads but cannot write renders no share control (T-WEB-S358)", () => {
-  it("TERMO's daily conclusion withholds the button rather than disabling it forever", () => {
+describe("a store that reads but cannot hold a record renders no share control (T-WEB-S358)", () => {
+  it("TERMO's daily conclusion withholds the button rather than disabling it forever, won and lost alike", () => {
     installStore(
-      readOnlyStore({
-        [playRecordKey("binairo", DATE)]: JSON.stringify(BINAIRO_RECORD),
+      store({
+        seed: {
+          [playRecordKey("binairo", DATE)]: JSON.stringify(BINAIRO_RECORD),
+        },
       }),
     );
 
@@ -118,13 +169,15 @@ describe("a store that reads but cannot write renders no share control (T-WEB-S3
     );
     expect(readPlayRecord("termo", DATE)).toBeUndefined();
 
-    render(conclusion("termo"));
-
-    expect(shareButton()).toBeNull();
+    for (const lost of [false, true]) {
+      const { unmount } = render(conclusion("termo", lost));
+      expect(shareButton(), lost ? "lost" : "won").toBeNull();
+      unmount();
+    }
   });
 
   it("the ARCHIVE late-result panel withholds it on all four games", () => {
-    installStore(readOnlyStore());
+    installStore(store());
 
     for (const game of GAMES) {
       const { unmount } = render(late(game));
@@ -133,9 +186,24 @@ describe("a store that reads but cannot write renders no share control (T-WEB-S3
     }
   });
 
-  it("the same store, made writable, renders the button on every one of those five surfaces", () => {
-    setItem.mockImplementation(() => undefined);
-    installStore(readOnlyStore());
+  it("a store with room for a bare key but not for a record is still no store at all", () => {
+    const narrow = store({ headroom: LARGEST_RECORD_BYTES - 1 });
+    installStore(narrow);
+
+    const { unmount } = render(conclusion("termo"));
+    expect(shareButton(), "termo conclusion").toBeNull();
+    unmount();
+
+    const panel = render(late("nonogram"));
+    expect(shareButton(), "late-result").toBeNull();
+    panel.unmount();
+
+    expect(narrow.keys(), "the failed probe leaves nothing behind").toEqual([]);
+  });
+
+  it("the same store, given room for a record, renders the button on every one of those five surfaces and leaves no probe behind", () => {
+    const roomy = store({ headroom: Number.MAX_SAFE_INTEGER });
+    installStore(roomy);
 
     const { unmount } = render(conclusion("termo"));
     expect(shareButton(), "termo conclusion").not.toBeNull();
@@ -146,10 +214,33 @@ describe("a store that reads but cannot write renders no share control (T-WEB-S3
       expect(shareButton(), game).not.toBeNull();
       panel.unmount();
     }
+
+    expect(roomy.keys(), "the probe cleans up after itself").toEqual([]);
   });
 
-  it("the three GRID games still share their stamp on a write-blocked store", () => {
-    installStore(readOnlyStore());
+  it("a store that accepts the write but refuses the cleanup is writable, orphan and all", () => {
+    const sticky = store({ headroom: Number.MAX_SAFE_INTEGER });
+    installStore(
+      Object.create(sticky, {
+        removeItem: {
+          value: () => {
+            throw new DOMException("blocked", "SecurityError");
+          },
+        },
+      }) as Storage,
+    );
+
+    render(conclusion("termo"));
+    expect(shareButton()).not.toBeNull();
+  });
+
+  it("the probe is sized to the largest record the schemas admit, and no larger than twice it", () => {
+    expect(WRITE_PROBE_BYTES).toBeGreaterThanOrEqual(LARGEST_RECORD_BYTES);
+    expect(WRITE_PROBE_BYTES).toBeLessThan(LARGEST_RECORD_BYTES * 2);
+  });
+
+  it("the three GRID games never reach the gate — their stamp shares with no record at all", () => {
+    installStore(store());
 
     for (const game of ["binairo", "sudoku", "nonogram"] as const) {
       const { unmount } = render(conclusion(game));

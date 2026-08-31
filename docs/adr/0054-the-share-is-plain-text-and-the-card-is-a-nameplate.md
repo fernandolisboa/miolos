@@ -194,10 +194,22 @@ verdicts, so this record is readable without it:
    `ConclusionResult` already carries. Termo genuinely cannot be composed that
    way — its grid is `guesses[].tiles`, which exists nowhere but the record —
    so it keeps the gate, and where no store exists to lift it,
-   `playRecordsAvailable()` omits the control instead of showing one that can
+   `playRecordsWritable()` omits the control instead of showing one that can
    never work. Three states, all three written into the component's doc block:
    subject → enabled; no subject but a store → disabled for one commit; no
    subject and no store → nothing rendered.
+   *(**Amended at #219** — the third state's TRIGGER, and the symbol above,
+   which was `playRecordsAvailable()` until this ticket. That was a *read*
+   probe, so a store that reads fine but cannot hold a record — a full quota, a
+   write-blocked or partitioned profile — passed it, and the control sat
+   disabled forever: state 2's *"for one commit"* became *"for good"*, which is
+   ADR-0045's dead share button reached from a third side. The probe now writes
+   and removes a record-sized value, so state 3 reads *no subject and no
+   **writable** store* and state 2 narrows to a store that will actually hold
+   the record it is waiting for. The three states themselves are unchanged, and
+   the choice to withhold the control rather than explain the failure is the
+   one the rule above already makes: a control must not promise what the
+   product cannot deliver. `T-WEB-S358` asserts it, quota band included.)*
    *(**Amended at #103** — the three states are unchanged; what changes is
    how far the third one REACHES. On the archive's late-result panel all four
    games can reach it, not Termo alone, because that panel passes no `stamp`:
