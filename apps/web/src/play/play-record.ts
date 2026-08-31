@@ -179,8 +179,20 @@ function storage(): Storage | undefined {
   }
 }
 
-export function playRecordsAvailable(): boolean {
-  return storage() !== undefined;
+const WRITE_PROBE_KEY = "miolos:write-probe";
+
+export function playRecordsWritable(): boolean {
+  const store = storage();
+  if (store === undefined) {
+    return false;
+  }
+  try {
+    store.setItem(WRITE_PROBE_KEY, "");
+    store.removeItem(WRITE_PROBE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function playRecordKeys(store: Storage): string[] {
