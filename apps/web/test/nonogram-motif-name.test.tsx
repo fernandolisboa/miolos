@@ -366,10 +366,12 @@ describe("the payoff-moment refresh (T-WEB-S329)", () => {
     expect(afterMount).toBeGreaterThanOrEqual(1);
 
     writePlayRecord(concludedRecord({ syncOutcome: "recorded" }));
-    await waitOutRecordPoll();
-    await flush();
-
-    expect(dayCalls()).toBeGreaterThan(afterMount);
+    await waitFor(
+      () => {
+        expect(dayCalls()).toBeGreaterThan(afterMount);
+      },
+      { timeout: 3_000 },
+    );
 
     const afterNudge = dayCalls();
     view.rerender(<NonogramConclusion date={DATE} />);

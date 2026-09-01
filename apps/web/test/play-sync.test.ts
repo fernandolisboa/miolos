@@ -150,11 +150,12 @@ async function freshSync() {
 
 async function settle() {
   for (let turn = 0; turn < 6; turn += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setImmediate(resolve));
   }
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   window.localStorage.clear();
@@ -715,6 +716,24 @@ describe("startCompletionSync", () => {
     await settle();
 
     expect(completionCalls(fetchMock)).toHaveLength(before);
+  });
+
+  it("a retry armed by a flush lives on this file's virtual clock, so it cannot outlive the test (T-WEB-S359)", async () => {
+    writePlayRecord(pendingRecord());
+    const fetchMock = stubFetch(() => jsonResponse(503, { error: "boom" }));
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+    await settle();
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    expect(
+      vi.getTimerCount(),
+      "a real retry timer would survive vi.resetModules() and post into the NEXT test's fetch stub",
+    ).toBeGreaterThan(0);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(completionCalls(fetchMock)).toHaveLength(2);
   });
 
   it("retries on a bounded backoff after a 5xx and stops once recorded", async () => {

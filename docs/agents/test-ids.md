@@ -40,8 +40,15 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S359` | `S358` | `T-WEB-23` |
+| `T-WEB` | `S360` | `S359` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#209 spent **`T-WEB-S359`** in `apps/web/test/play-sync.test.ts`: a retry armed
+by a flush lives on that file's virtual clock, so `vi.resetModules()` cannot
+orphan a live `setTimeout` that later posts a phantom `/completions` into the
+next test's fetch stub. Re-derived by grep before allocating (next free `S359`,
+highest in use `S358`). It reds by deleting the one `vi.useFakeTimers` line the
+file's `beforeEach` gained — verified, not argued.
 
 #219 spent **`T-WEB-S358`** in the new
 `apps/web/test/share-write-blocked.test.tsx`: a store that reads but cannot
