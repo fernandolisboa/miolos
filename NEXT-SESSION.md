@@ -1,29 +1,29 @@
 # Do I need to do anything?
 
-**No.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) NOW holds one ⚡ decision, low urgency by ~13 months. To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**No.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) still holds one ⚡ decision, low urgency by ~13 months. To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
-Nothing to verify. The standing-authorization hook works — this session recited the four points unprompted and ran plan → review → implement → review → merge unattended across three tickets.
+Nothing to verify. #206 cluster 5 merged as #250; plan → plan review → re-plan → implement → 4 lenses → fix → merge ran unattended.
 
-## Session state — #219, #209 and #206 cluster 4 all merged
+## Session state — #206 cluster 5 merged (#250)
 
-**#219 (#245).** A store that reads but cannot *hold a record* renders no share control. Two correctness rounds.
+Twelve per-game route files stopped carrying their own copy of the publication wall read. **436 lines → 184**, two shared modules at 98, envelope copies 12 → 2. New **ADR-0076**: the shared envelope takes a `render` callback, never a screen registry — a registry would pull four screens (and the Termo dictionary) onto every consumer's graph and *nothing in the gate would fail*. `T-WEB-S364` is that ADR's only enforcement.
 
-**#209 (#247).** Opened as a test-isolation fix; four review rounds found **four production defects** in `sync.ts`'s retry ownership, all on the completion post the streak depends on. `sync.ts` now carries one invariant — *a retry is armed iff some live owner still wants one* — with a test per guard. **#209 stays open** on two residuals: the `day-truth` fixed-tick population, and the starvation axis (`T-WEB-S203`/`T-WEB-S289`), which is ADR-0057's and cannot be closed from `apps/web`.
+**Left alone on purpose:** the 8 `opengraph-image.tsx` files (already on the `og/handlers.ts` seam; `T-WEB-S204` pins them) and the 3 free-play pages (5 lines, no wall read).
 
-**#206 cluster 4 (#248).** One API client behind the twelve credentialed call sites, 633 lines to 233. Plan rejected once, then all four lenses rejected in turn.
+## The two lessons this ticket cost
 
-## The lesson this session actually earned
+**1. A source read is not an experiment.** The first plan claimed a re-exported `export const dynamic` is *silently* dropped and would serve a stale puzzle. The plan review read Next's source and said it only *warns*. Running the build showed **both wrong** — this repo builds with Turbopack, which hard-fails all three shapes by file and line. A test was one review round from shipping to guard a failure that cannot happen. **When a claim is about what a tool does, run the tool.**
 
-**Three separate dead assertions shipped past me, in three different tickets, and every one was caught by mutation rather than by reading.** A `not.toContain` that could not fail (#236, last session), a negative claim after a fixed sleep that passed with a 10 ms wait (#209), and a uniqueness check comparing a `const` array against itself (#206). Fixing that last one exposed a *fourth*: a non-ok fixture whose body the schema rejected, so deleting the branch it guarded left it green.
+**2. The dead assertion appeared again — inside the test written to stop dead assertions.** `route-envelopes.test.ts` asserted three arms in sequence; the archive-screen arm could never red, because every archive screen imports `../<game>/play-view` and trips the first filter, which throws first. Fourth session running, still only caught by mutation. The fix is one object assertion instead of three sequential ones. **Sequential `expect`s in one test hide every arm after the first.**
 
-**So: before an assertion counts as coverage, name the production change that reds it and run that change.** Not "verified" — the red output, pasted. That is now the bar the reviewers hold, and it is worth more than any of the three diffs.
-
-Second: **a claim carried from an audit or a plan is not evidence.** Cluster 4's audit said six copies of the guard (twelve), five uniform POSTs (four), and one wall entry owed (none). Clusters 1 and 3 hit the same thing. Re-derive.
+Also: two review lenses independently rejected on the **id frontier** — `T-WEB-S364` spent without `docs/agents/test-ids.md` moving. Same failure that opened the `S` series. And ADR-0076 shipped an `Amends:` line plus an in-place annotation on ADR-0029, both retired by `docs/agents/domain.md`.
 
 ## Next
 
-**#206 cluster 5** — 16 per-game Next route files, ~930 lines; `diff` of the sudoku and nonogram archive pages changes five tokens across 91 lines. Follow `og/handlers.ts`. Note the issue's ordering: **14 unblocks 6**, so 5 → 14 → 6 is the cheaper path than table order.
+**#206 cluster 14** — `conclusion-view.tsx`, 1,477 lines, 19 top-level components, two full screens. The issue notes **14 unblocks 6**, so 14 → 6 is the order.
 
-**Also queued:** #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, and it is NOT a sweep — `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header). And a Quick change filed on #206 this session: `jsonResponse`/`stubFetch` are hand-copied across ~19 `apps/web/test` files; `test/ts-source.ts` is now the precedent for where a shared test helper lives.
+**Also queued:** #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, NOT a sweep — `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header), #155 (`bundle-check` into CI — ADR-0076 names it as the gap that makes `T-WEB-S364` necessary), and the Quick change filed on #206: `jsonResponse`/`stubFetch` hand-copied across ~19 `apps/web/test` files.
+
+**One process note:** four review lenses running the suite concurrently on one box produced transient cross-module failures in files the diff never touched. Serial re-runs were green every time. Don't trust a single red from a parallel review round — re-run it alone first.
