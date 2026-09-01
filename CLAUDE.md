@@ -25,7 +25,9 @@ Plus four small convention files under [`docs/agents/`](./docs/agents/) (issue t
 
 **It is updated in the same PR as the work it describes** — never as a PR of its own. A handoff-only commit is process noise; if the work was worth a PR, the handoff belongs in it.
 
-**Write only what the next session needs.** Two things are always kept true, because a stale pointer sends the next session at already-merged work: whether Fernando needs to do anything, and what to pick up next. Everything else — what a ticket taught, a lesson worth repeating, an unexpected outcome, a trap the gate did not catch — is written **only when it happened**. A clean ticket that taught nothing earns a two-line edit, not a session diary. Nobody reads a narrative of work that went as planned.
+**Write it as though the PR has already merged.** It ships inside that PR, so it is written in the past tense about work that is landing, and its **Next** names what comes *after* this ticket — never this ticket. If the merge then goes sideways, edit it again; that is the cheap case, and it is the only thing an unexpected outcome is for.
+
+**Write only what the next session needs.** Two things are always kept true: whether Fernando needs to do anything, and what to pick up next. Everything else — what a ticket taught, a lesson worth repeating, an unexpected outcome, a trap the gate did not catch — is written **only when it happened**. A clean ticket that taught nothing earns a two-line edit, not a session diary. Nobody reads a narrative of work that went as planned.
 
 **The ledger.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) is the living list of actions and decisions only Fernando can take — credentials, production actions, money, legal, product scope. Any session that surfaces one **adds it there in the same change**; a discharged item moves to its Done table with date and evidence, and is never re-asked. Fernando works through it with `/wizard`. An item that lives only in a PR body is a bug in the process.
 
