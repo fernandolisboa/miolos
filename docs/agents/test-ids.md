@@ -40,8 +40,22 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S361` | `S360` | `T-WEB-23` |
+| `T-WEB` | `S363` | `S362` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#206 cluster 4 spent **`T-WEB-S361`** and **`T-WEB-S362`** on the two API-client
+modules that had no direct test at all — `attach-client.ts` and
+`onboarding-client.ts` were reached only through `vi.mock` in their consumers'
+suites, so their real guard, fetch and parse code was executed by nothing. That
+is 2 of the 8 credentialed GETs and 2 of the 5 boolean POSTs with no net, and
+the net had to exist before the extraction, not after it.
+
+Both are characterization suites, and both were proved to be a net rather than
+an encoding of today's behaviour: dropping `credentials` from
+`fetchAttachState`, moving `requestAttachLink`'s 429 to 428, making
+`deleteAccount` return `response.ok` instead of parsing its body, and drifting
+one word of the onboarding log text each red a different one of the eleven
+cases, with no overlap.
 
 #209 spent **`T-WEB-S359`** and **`T-WEB-S360`**, both in
 `apps/web/test/play-sync.test.ts`. Re-derived by grep before allocating (next
