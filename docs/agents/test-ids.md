@@ -54,11 +54,21 @@ claim — advance the clock, count the POSTs.
   phantom `/completions` into the next test's fetch stub. Reds by deleting the
   one `vi.useFakeTimers` line the file's `beforeEach` gained.
 
-- **`T-WEB-S360`** — a flush still in flight when `stop()` runs cannot arm a
-  retry nobody owns. This one holds the `/completions` response across the
-  teardown, which `"stops flushing once it has been torn down"` never did: that
-  test settles the flush first, so the in-flight case was uncovered. Reds by
-  deleting the `era` check in `flushPendingCompletions`.
+- **`T-WEB-S360`**, with siblings **`S360a`** and **`S360b`**, over the one claim
+  `sync.ts` now makes: *a retry is armed iff some live owner still wants one*.
+  `"stops flushing once it has been torn down"` never reached it — that test
+  settles the flush before tearing down, so the in-flight case was uncovered.
+  Each sibling reds on its own mutation, one per `scheduleRetry` call site plus
+  the ownership term:
+
+  - `S360` holds the `/completions` response across `stop()`; reds without the
+    `retryIsOwned` check after the flush.
+  - `S360a` hands a record in through the `flushing` early return while that
+    torn-down flush is still running; reds without the guard on that branch.
+  - `S360b` mounts a second consumer before the first's flush resolves; reds
+    without the `consumers > 0` term, which is the regression the first draft of
+    this fix shipped — an era check alone drops the retry a still-mounted
+    screen is waiting on.
 
 #219 spent **`T-WEB-S358`** in the new
 `apps/web/test/share-write-blocked.test.tsx`: a store that reads but cannot

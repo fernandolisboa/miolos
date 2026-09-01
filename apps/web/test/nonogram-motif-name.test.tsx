@@ -398,27 +398,21 @@ describe("the payoff-moment refresh (T-WEB-S329)", () => {
     const afterMount = dayCalls();
     expect(afterMount).toBeGreaterThanOrEqual(1);
 
-    const key = playRecordKey("nonogram", DATE);
-    const reads = vi.spyOn(Storage.prototype, "getItem");
-    const pollsSeen = () =>
-      reads.mock.calls.filter((call) => call[0] === key).length;
-    const beforeSettle = pollsSeen();
+    expect(screen.queryByText(messages.conclusion.sync.rejected)).toBeNull();
 
     writePlayRecord(concludedRecord({ syncOutcome: "rejected" }));
 
-    await waitFor(
-      () => {
-        expect(
-          pollsSeen(),
-          "the record poll must actually tick",
-        ).toBeGreaterThan(beforeSettle);
-      },
-      { timeout: POLL_WAIT_MS },
-    );
+    expect(
+      await screen.findByText(
+        messages.conclusion.sync.rejected,
+        {},
+        { timeout: POLL_WAIT_MS },
+      ),
+      "the screen must have SEEN the rejected settle before this asserts on it",
+    ).toBeInTheDocument();
     await flush();
 
     expect(dayCalls()).toBe(afterMount);
-    reads.mockRestore();
     view.unmount();
   });
 });

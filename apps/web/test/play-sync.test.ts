@@ -758,6 +758,57 @@ describe("startCompletionSync", () => {
     expect(completionCalls(fetchMock)).toHaveLength(1);
   });
 
+  it("a record handed in while a torn-down flush is still running arms nothing either (T-WEB-S360a)", async () => {
+    writePlayRecord(pendingRecord());
+    let release = (): void => undefined;
+    const held = new Promise<Response>((resolve) => {
+      release = () => {
+        resolve(jsonResponse(503, { error: "boom" }));
+      };
+    });
+    const fetchMock = stubFetch(() => held);
+
+    const { startCompletionSync, flushPendingCompletions } = await freshSync();
+    const stop = startCompletionSync();
+    await settle();
+
+    stop();
+    void flushPendingCompletions(pendingRecord({ date: "2026-07-29" }));
+    release();
+    await settle();
+
+    await vi.advanceTimersByTimeAsync(RETRY_SPAN_MS);
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it("a SECOND consumer still mounted keeps the retry the first one's teardown would have dropped (T-WEB-S360b)", async () => {
+    writePlayRecord(pendingRecord());
+    let release = (): void => undefined;
+    const held = new Promise<Response>((resolve) => {
+      release = () => {
+        resolve(jsonResponse(503, { error: "boom" }));
+      };
+    });
+    const fetchMock = stubFetch(() => held);
+
+    const { startCompletionSync } = await freshSync();
+    const first = startCompletionSync();
+    await settle();
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    first();
+    const second = startCompletionSync();
+    release();
+    await settle();
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(
+      completionCalls(fetchMock).length,
+      "a mounted consumer with a pending record must still be retried",
+    ).toBeGreaterThan(1);
+    second();
+  });
+
   it("retries on a bounded backoff after a 5xx and stops once recorded", async () => {
     vi.useFakeTimers();
     writePlayRecord(pendingRecord());
