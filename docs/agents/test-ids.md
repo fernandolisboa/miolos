@@ -40,15 +40,25 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S360` | `S359` | `T-WEB-23` |
+| `T-WEB` | `S361` | `S360` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
 
-#209 spent **`T-WEB-S359`** in `apps/web/test/play-sync.test.ts`: a retry armed
-by a flush lives on that file's virtual clock, so `vi.resetModules()` cannot
-orphan a live `setTimeout` that later posts a phantom `/completions` into the
-next test's fetch stub. Re-derived by grep before allocating (next free `S359`,
-highest in use `S358`). It reds by deleting the one `vi.useFakeTimers` line the
-file's `beforeEach` gained — verified, not argued.
+#209 spent **`T-WEB-S359`** and **`T-WEB-S360`**, both in
+`apps/web/test/play-sync.test.ts`. Re-derived by grep before allocating (next
+free `S359`, highest in use `S358`). Neither asserts on `vi.getTimerCount()`:
+that count picks up timers this file does not own, so both make the behavioural
+claim — advance the clock, count the POSTs.
+
+- **`T-WEB-S359`** — a retry armed by a flush lives on the file's virtual clock,
+  so `vi.resetModules()` cannot orphan a live `setTimeout` that later posts a
+  phantom `/completions` into the next test's fetch stub. Reds by deleting the
+  one `vi.useFakeTimers` line the file's `beforeEach` gained.
+
+- **`T-WEB-S360`** — a flush still in flight when `stop()` runs cannot arm a
+  retry nobody owns. This one holds the `/completions` response across the
+  teardown, which `"stops flushing once it has been torn down"` never did: that
+  test settles the flush first, so the in-flight case was uncovered. Reds by
+  deleting the `era` check in `flushPendingCompletions`.
 
 #219 spent **`T-WEB-S358`** in the new
 `apps/web/test/share-write-blocked.test.tsx`: a store that reads but cannot

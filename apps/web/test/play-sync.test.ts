@@ -148,9 +148,13 @@ async function freshSync() {
   return await import("../src/play/sync");
 }
 
+const RETRY_SPAN_MS = 120_000;
+
+const realSetImmediate = setImmediate;
+
 async function settle() {
   for (let turn = 0; turn < 6; turn += 1) {
-    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => realSetImmediate(resolve));
   }
 }
 
@@ -727,13 +731,31 @@ describe("startCompletionSync", () => {
     await settle();
     expect(completionCalls(fetchMock)).toHaveLength(1);
 
-    expect(
-      vi.getTimerCount(),
-      "a real retry timer would survive vi.resetModules() and post into the NEXT test's fetch stub",
-    ).toBeGreaterThan(0);
-
     await vi.advanceTimersByTimeAsync(2_000);
     expect(completionCalls(fetchMock)).toHaveLength(2);
+  });
+
+  it("a flush still in flight when stop() runs cannot arm a retry nobody owns (T-WEB-S360)", async () => {
+    writePlayRecord(pendingRecord());
+    let release = (): void => undefined;
+    const held = new Promise<Response>((resolve) => {
+      release = () => {
+        resolve(jsonResponse(503, { error: "boom" }));
+      };
+    });
+    const fetchMock = stubFetch(() => held);
+
+    const { startCompletionSync } = await freshSync();
+    const stop = startCompletionSync();
+    await settle();
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    stop();
+    release();
+    await settle();
+
+    await vi.advanceTimersByTimeAsync(RETRY_SPAN_MS);
+    expect(completionCalls(fetchMock)).toHaveLength(1);
   });
 
   it("retries on a bounded backoff after a 5xx and stops once recorded", async () => {

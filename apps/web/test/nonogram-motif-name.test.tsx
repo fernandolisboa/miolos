@@ -337,13 +337,10 @@ describe("no motif name reaches server markup (T-WEB-S327)", () => {
   });
 });
 
-describe("the payoff-moment refresh (T-WEB-S329)", () => {
-  async function waitOutRecordPoll(): Promise<void> {
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1300));
-    });
-  }
+// 3x the 1s interval in subscribeToPlayRecords, which is what these two wait on.
+const POLL_WAIT_MS = 3_000;
 
+describe("the payoff-moment refresh (T-WEB-S329)", () => {
   it("a completion that settles `recorded` AFTER mount asks the store for today's truth", async () => {
     const fetchMock = stubApi(() =>
       jsonResponse(200, dayBody(completedClaim(MOTIF))),
@@ -370,7 +367,7 @@ describe("the payoff-moment refresh (T-WEB-S329)", () => {
       () => {
         expect(dayCalls()).toBeGreaterThan(afterMount);
       },
-      { timeout: 3_000 },
+      { timeout: POLL_WAIT_MS },
     );
 
     const afterNudge = dayCalls();
@@ -401,11 +398,27 @@ describe("the payoff-moment refresh (T-WEB-S329)", () => {
     const afterMount = dayCalls();
     expect(afterMount).toBeGreaterThanOrEqual(1);
 
+    const key = playRecordKey("nonogram", DATE);
+    const reads = vi.spyOn(Storage.prototype, "getItem");
+    const pollsSeen = () =>
+      reads.mock.calls.filter((call) => call[0] === key).length;
+    const beforeSettle = pollsSeen();
+
     writePlayRecord(concludedRecord({ syncOutcome: "rejected" }));
-    await waitOutRecordPoll();
+
+    await waitFor(
+      () => {
+        expect(
+          pollsSeen(),
+          "the record poll must actually tick",
+        ).toBeGreaterThan(beforeSettle);
+      },
+      { timeout: POLL_WAIT_MS },
+    );
     await flush();
 
     expect(dayCalls()).toBe(afterMount);
+    reads.mockRestore();
     view.unmount();
   });
 });

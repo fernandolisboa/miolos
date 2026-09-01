@@ -27,6 +27,10 @@ const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 60_000] as const;
 
 let flushing = false;
 let retryStep = 0;
+
+// A flush that was already in flight when a teardown ran must not arm a retry
+// nobody is left to cancel: the teardown bumps the era, and the flush checks it.
+let era = 0;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
 const memoryQueue = new Map<string, PlayRecord>();
@@ -61,6 +65,7 @@ export async function flushPendingCompletions(
     return;
   }
   flushing = true;
+  const startedIn = era;
   try {
     const pending = pendingQueue();
     if (pending.length === 0) {
@@ -89,6 +94,9 @@ export async function flushPendingCompletions(
       }
     }
 
+    if (era !== startedIn) {
+      return;
+    }
     if (stillPending || pendingQueue().length > 0) {
       scheduleRetry();
     } else {
@@ -116,6 +124,7 @@ export function startCompletionSync(): () => void {
   return () => {
     window.removeEventListener("online", onOnline);
     document.removeEventListener("visibilitychange", onVisibility);
+    era += 1;
     cancelRetries();
   };
 }
