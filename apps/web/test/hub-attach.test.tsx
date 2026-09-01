@@ -80,6 +80,7 @@ describe("HubAttach dismissal (T-WEB-S136)", () => {
       "src/push/use-push-state.ts",
       "src/play/push-prompt-card.tsx",
 
+      "src/api/client.ts",
       "src/api/use-mount-fetch.ts",
       "src/streak/use-streak.ts",
       "src/medals/use-medals.ts",

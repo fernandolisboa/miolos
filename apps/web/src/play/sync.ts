@@ -19,6 +19,8 @@ import {
   type TermoPlayRecord,
 } from "./play-record";
 
+import { apiBaseUrl } from "../api/client";
+
 const TERMINAL_STATUSES = new Set([400, 403, 404, 415, 422]);
 
 const CAPPED_STATUS = 429;
@@ -81,11 +83,10 @@ export async function flushPendingCompletions(
       return;
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = apiBaseUrl(
+      "the completion sync cannot run, results stay queued on this device",
+    );
     if (!apiUrl) {
-      console.error(
-        "NEXT_PUBLIC_API_URL is unset: the completion sync cannot run, results stay queued on this device",
-      );
       return;
     }
 

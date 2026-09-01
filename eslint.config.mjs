@@ -236,7 +236,7 @@ const freePlayBannedModuleGroups = [
   {
     group: ["**/api", "**/api/**"],
     message:
-      "free play fetches nothing and mints no session: the shared authenticated mount fetch is banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0048).",
+      "free play fetches nothing and mints no session: the shared authenticated mount fetch and the shared API client are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0046, ADR-0048).",
   },
 ];
 

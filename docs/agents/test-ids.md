@@ -40,8 +40,26 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S363` | `S362` | `T-WEB-23` |
+| `T-WEB` | `S364` | `S363` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#206 cluster 4 reserved **`T-WEB-S361…S363`**, contiguous, and spent all three.
+Re-derived by grep at the plan and again at the end (next free `S361`, highest
+in use `S360`). **No `T-LINT` id was spent**: `T-LINT-S61` already loops over a
+`doors` array, so the new `../api/client` door is a third element of an existing
+assertion, not a new claim — a fresh id there would have been process artifact
+outweighing its diff.
+
+**`T-WEB-S363`** is the wall over the extraction. Three set-equalities re-derived
+from a walk of `apps/web/src` rather than from a hand-list: the modules reading
+`process.env.NEXT_PUBLIC_API_URL` are exactly `api/client.ts` and
+`telemetry/client.ts`; the modules building a `credentials: "include"` request
+are exactly those two plus `session/bootstrap.ts`, `play/sync.ts` and
+`termo/guess-client.ts`; and all twelve absence clauses still sit in the module
+that names their consequence. That last one exists because the plan review found
+the tails unpinned at 8 of the 12 sites — copying `fetchStats`'s clause onto
+`fetchStatsCalendar` four lines below it would have been invisible. It reds on
+exactly that mutation.
 
 #206 cluster 4 spent **`T-WEB-S361`** and **`T-WEB-S362`** on the two API-client
 modules that had no direct test at all — `attach-client.ts` and

@@ -834,8 +834,8 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
-  it("T-LINT-S61: the shared authenticated mount fetch — and the bare barrel form — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
-    const doors = ["../api/use-mount-fetch", "../api"];
+  it("T-LINT-S61: the shared authenticated mount fetch and API client — and the bare barrel form — red from free play through BOTH arms, static and dynamic; clean from a daily path", async () => {
+    const doors = ["../api/use-mount-fetch", "../api/client", "../api"];
     for (const door of doors) {
       const source = [
         `import * as banned from "${door}";`,

@@ -5,6 +5,7 @@ import {
 } from "@miolos/core";
 import type { TermoBoardStatus, TileStates } from "@miolos/games/termo";
 
+import { apiBaseUrl } from "../api/client";
 import {
   confirmSession,
   ensureSession,
@@ -52,12 +53,10 @@ export async function postGuesses(
     return REFUSED;
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = apiBaseUrl(
+    "the termo guess cannot be judged, the turn is held",
+  );
   if (!apiUrl) {
-    console.error(
-      "NEXT_PUBLIC_API_URL is unset: the termo guess cannot be judged, the turn is held",
-    );
-
     return HELD_SERVER;
   }
 

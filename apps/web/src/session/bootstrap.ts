@@ -2,6 +2,8 @@ import { sessionResponseSchema } from "@miolos/core";
 
 import { markSessionReady } from "../telemetry/client";
 
+import { apiBaseUrl } from "../api/client";
+
 let pending: Promise<void> | undefined;
 
 let reminting: Promise<boolean> | undefined;
@@ -48,11 +50,10 @@ export function confirmSession(): void {
 }
 
 async function mintSession(): Promise<boolean> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = apiBaseUrl(
+    "session bootstrap skipped, no identity will be minted",
+  );
   if (!apiUrl) {
-    console.error(
-      "NEXT_PUBLIC_API_URL is unset: session bootstrap skipped, no identity will be minted",
-    );
     return false;
   }
   try {
