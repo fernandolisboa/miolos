@@ -21,7 +21,11 @@ Plus four small convention files under [`docs/agents/`](./docs/agents/) (issue t
 
 **Plans are not documents.** A plan lives as a comment on its GitHub issue, or in the PR body. It is never a file, never numbered, never committed. Same for review findings, verification output and session notes.
 
-**Handoffs are one file.** `NEXT-SESSION.md` at the root, overwritten each time, at most ~40 lines. There is no `docs/handoffs/` for new work.
+**Handoffs are one file, and they ride along.** `NEXT-SESSION.md` at the root, overwritten each time, at most ~40 lines. There is no `docs/handoffs/` for new work.
+
+**It is updated in the same PR as the work it describes** — never as a PR of its own. A handoff-only commit is process noise; if the work was worth a PR, the handoff belongs in it.
+
+**Write only what the next session needs.** Two things are always kept true, because a stale pointer sends the next session at already-merged work: whether Fernando needs to do anything, and what to pick up next. Everything else — what a ticket taught, a lesson worth repeating, an unexpected outcome, a trap the gate did not catch — is written **only when it happened**. A clean ticket that taught nothing earns a two-line edit, not a session diary. Nobody reads a narrative of work that went as planned.
 
 **The ledger.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) is the living list of actions and decisions only Fernando can take — credentials, production actions, money, legal, product scope. Any session that surfaces one **adds it there in the same change**; a discharged item moves to its Done table with date and evidence, and is never re-asked. Fernando works through it with `/wizard`. An item that lives only in a PR body is a bug in the process.
 
