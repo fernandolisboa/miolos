@@ -133,6 +133,12 @@ describe("attach-client (T-WEB-S361)", () => {
 
     stubFetch(() => jsonResponse(200, { sent: true }));
     expect(await requestAttachLink(REQUEST)).toBe("sent");
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("offline"))),
+    );
+    expect(await requestAttachLink(REQUEST)).toBeUndefined();
   });
 
   it("confirmAttach reads 410 and 409 as their own answers, and returns the parsed body on 200", async () => {
@@ -150,6 +156,12 @@ describe("attach-client (T-WEB-S361)", () => {
 
     stubFetch(() => jsonResponse(200, { merged: true }));
     expect(await confirmAttach(TOKEN)).toEqual({ merged: true });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("offline"))),
+    );
+    expect(await confirmAttach(TOKEN)).toBeUndefined();
   });
 
   it("deleteAccount is the one write that reads its body back — an unparseable 200 is not a deletion", async () => {

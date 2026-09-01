@@ -64,8 +64,12 @@ no assertion was added at all, let alone a new claim.
   `telemetry/client.ts`; the modules building a `credentials: "include"`
   request are those two plus `session/bootstrap.ts`, whose mint posts no JSON
   body and so cannot take `postJson`; and all twelve absence clauses sit in the
-  module that names their consequence. The last of the three reds when one
-  clause is copied from a sibling four lines away.
+  module that names their consequence — and in that module **alone**, re-derived
+  by walking every source file for each clause rather than by trusting the
+  test's own list, which is a comparison that cannot fail. The suite also owns
+  the four answers `client.ts` is now the only producer of: a non-ok status
+  whose body would have parsed, a body the schema refuses, a rejecting fetch,
+  and a body `JSON.stringify` refuses.
 
 #209 spent **`T-WEB-S359`** and **`T-WEB-S360`**, both in
 `apps/web/test/play-sync.test.ts`. Re-derived by grep before allocating (next

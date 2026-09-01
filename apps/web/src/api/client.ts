@@ -58,7 +58,13 @@ export async function apiPostRaw(
   if (!base) {
     return undefined;
   }
-  return await postJson(`${base}${path}`, JSON.stringify(body));
+  let payload: string;
+  try {
+    payload = JSON.stringify(body);
+  } catch {
+    return undefined;
+  }
+  return await postJson(`${base}${path}`, payload);
 }
 
 export async function apiPost(

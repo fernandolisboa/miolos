@@ -193,8 +193,8 @@ which nothing here has measured (consequence (i)).
   (e-narrow), rejected above — but it is stated rather than left to be
   discovered, because "repairs after the mint" is not what the mechanism does
   on four of the five paths.
-  *(**Annotated at #206** — the CITATION moved, the contract did not. All four
-  of the non-401 causes are now produced by `apiGet` in
+  *(**Annotated at #206** — the CITATION moved, the contract did not. All five
+  causes, the 401 included, are now produced by `apiGet` in
   `apps/web/src/api/client.ts`, and `day-client.ts` is a delegation to it, so a
   reader who follows this bullet to that file no longer finds them. Whoever
   gives `apiGet` a throw or a sentinel instead of `undefined` breaks this

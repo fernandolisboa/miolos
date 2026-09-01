@@ -6,6 +6,8 @@ import { webCodeOf, webSources } from "./ts-source";
 
 const API_URL = "https://api.example.test";
 
+const VALID_STREAK = { date: "2026-08-14", streak: 3, todayCounts: true };
+
 function modulesContaining(needle: string): string[] {
   return webSources()
     .filter((module) => webCodeOf(module).includes(needle))
@@ -77,15 +79,12 @@ describe("the one API client every credentialed request goes through (T-WEB-S363
       );
     }
 
-    expect(
-      new Set(ABSENCE_SITES.map(([, absence]) => absence)).size,
-      "no two screens claim the same consequence",
-    ).toBe(ABSENCE_SITES.length);
-
-    expect(
-      webCodeOf("src/api/client.ts"),
-      "the prefix is single-sourced and the tails are not",
-    ).toContain("`NEXT_PUBLIC_API_URL is unset: ${absence}`");
+    for (const [module, absence] of ABSENCE_SITES) {
+      expect(
+        webSources().filter((file) => webCodeOf(file).includes(absence)),
+        `${absence} belongs to ${module} alone`,
+      ).toEqual([`src/${module}`]);
+    }
   });
 
   it("only the client and the telemetry relay still read the environment variable", () => {
@@ -105,7 +104,7 @@ describe("the one API client every credentialed request goes through (T-WEB-S363
 
   it("apiGet sends a bare credentialed GET and nothing else", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(jsonResponse(200, { current: 3, best: 5 })),
+      Promise.resolve(jsonResponse(200, VALID_STREAK)),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -148,6 +147,43 @@ describe("the one API client every credentialed request goes through (T-WEB-S363
       vi.fn(() => Promise.resolve(jsonResponse(500, {}))),
     );
     expect(await apiPost("/attach/dismiss", {}, "unused")).toBe(false);
+  });
+
+  it("a non-ok status, an unparseable body, a rejecting fetch and an unserialisable body are all the same answer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(500, VALID_STREAK))),
+    );
+    expect(
+      await apiGet("/streak", streakResponseSchema, "x"),
+      "a 500 whose body would have parsed is still no answer",
+    ).toBeUndefined();
+    expect(await apiPost("/x", {}, "x")).toBe(false);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(200, { streak: "three" }))),
+    );
+    expect(await apiGet("/streak", streakResponseSchema, "x")).toBeUndefined();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("offline"))),
+    );
+    expect(await apiGet("/streak", streakResponseSchema, "x")).toBeUndefined();
+    expect(await apiPostRaw("/x", {}, "x")).toBeUndefined();
+    expect(await apiPost("/x", {}, "x")).toBe(false);
+
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(200, {}))),
+    );
+    expect(
+      await apiPostRaw("/x", circular, "x"),
+      "a body JSON refuses answers, it does not throw",
+    ).toBeUndefined();
   });
 
   it("a missing URL logs the caller's own clause and reaches the network on no path", async () => {
