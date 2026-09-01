@@ -19,7 +19,7 @@ import {
   type TermoPlayRecord,
 } from "./play-record";
 
-import { apiBaseUrl } from "../api/client";
+import { apiBaseUrl, postJson } from "../api/client";
 
 const TERMINAL_STATUSES = new Set([400, 403, 404, 415, 422]);
 
@@ -161,10 +161,10 @@ async function syncRecord(
     return { stillPending: false, capped: false };
   }
 
-  let response = await post(apiUrl, body);
+  let response = await postJson(`${apiUrl}/completions`, body);
   if (response?.status === 401) {
     if (await remintSession()) {
-      response = await post(apiUrl, body);
+      response = await postJson(`${apiUrl}/completions`, body);
       if (response?.ok === true) {
         confirmSession();
       }
@@ -237,23 +237,6 @@ function termoBody(record: TermoPlayRecord): string | undefined {
     hintsUsed: record.hintsUsed,
   });
   return parsed.success ? JSON.stringify(parsed.data) : undefined;
-}
-
-async function post(
-  apiUrl: string,
-  body: string,
-): Promise<Response | undefined> {
-  try {
-    return await fetch(`${apiUrl}/completions`, {
-      method: "POST",
-      credentials: "include",
-
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-  } catch {
-    return undefined;
-  }
 }
 
 async function acceptResponse(

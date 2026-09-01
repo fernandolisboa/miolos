@@ -51,12 +51,14 @@ assertion, not a new claim — a fresh id there would have been process artifact
 outweighing its diff.
 
 **`T-WEB-S363`** is the wall over the extraction. Three set-equalities re-derived
-from a walk of `apps/web/src` rather than from a hand-list: the modules reading
+from a walk of `apps/web/src` and `app/` rather than from a hand-list, through
+the same comment-stripped `webCodeOf` cluster 3's `T-WEB-S351` uses — a raw-text
+scan would read a comment as code. The modules reading
 `process.env.NEXT_PUBLIC_API_URL` are exactly `api/client.ts` and
 `telemetry/client.ts`; the modules building a `credentials: "include"` request
-are exactly those two plus `session/bootstrap.ts`, `play/sync.ts` and
-`termo/guess-client.ts`; and all twelve absence clauses still sit in the module
-that names their consequence. That last one exists because the plan review found
+are exactly those two plus `session/bootstrap.ts`, whose mint posts no JSON body
+and so cannot take `postJson`; and all twelve absence clauses still sit in the
+module that names their consequence. That last one exists because the plan review found
 the tails unpinned at 8 of the 12 sites — copying `fetchStats`'s clause onto
 `fetchStatsCalendar` four lines below it would have been invisible. It reds on
 exactly that mutation.

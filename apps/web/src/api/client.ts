@@ -32,6 +32,22 @@ export async function apiGet<T>(
   }
 }
 
+export async function postJson(
+  url: string,
+  body: string,
+): Promise<Response | undefined> {
+  try {
+    return await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 export async function apiPostRaw(
   path: string,
   body: unknown,
@@ -41,16 +57,7 @@ export async function apiPostRaw(
   if (!base) {
     return undefined;
   }
-  try {
-    return await fetch(`${base}${path}`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    return undefined;
-  }
+  return await postJson(`${base}${path}`, JSON.stringify(body));
 }
 
 export async function apiPost(

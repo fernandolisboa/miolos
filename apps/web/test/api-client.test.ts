@@ -1,37 +1,15 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
-
 import { streakResponseSchema } from "@miolos/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiGet, apiPost, apiPostRaw } from "../src/api/client";
+import { webCodeOf, webSources } from "./ts-source";
 
 const API_URL = "https://api.example.test";
-const SRC = join(import.meta.dirname, "..", "src");
-
-function source(relative: string): string {
-  return readFileSync(join(SRC, relative), "utf8");
-}
-
-function modulesUnderSrc(): string[] {
-  const found: string[] = [];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(full);
-      } else if (/\.tsx?$/.test(entry.name)) {
-        found.push(relative(SRC, full).replaceAll("\\", "/"));
-      }
-    }
-  };
-  walk(SRC);
-  return found;
-}
 
 function modulesContaining(needle: string): string[] {
-  return modulesUnderSrc()
-    .filter((module) => source(module).includes(needle))
+  return webSources()
+    .filter((module) => webCodeOf(module).includes(needle))
+    .map((module) => module.replace(/^src\//, ""))
     .sort();
 }
 
@@ -94,7 +72,9 @@ const ABSENCE_SITES: readonly (readonly [string, string])[] = [
 describe("the one API client every credentialed request goes through (T-WEB-S363)", () => {
   it("all twelve absence clauses survive the move, each still in the module it describes", () => {
     for (const [module, absence] of ABSENCE_SITES) {
-      expect(source(module), `${module} — ${absence}`).toContain(absence);
+      expect(webCodeOf(`src/${module}`), `${module} — ${absence}`).toContain(
+        absence,
+      );
     }
 
     expect(
@@ -103,7 +83,7 @@ describe("the one API client every credentialed request goes through (T-WEB-S363
     ).toBe(ABSENCE_SITES.length);
 
     expect(
-      source("api/client.ts"),
+      webCodeOf("src/api/client.ts"),
       "the prefix is single-sourced and the tails are not",
     ).toContain("`NEXT_PUBLIC_API_URL is unset: ${absence}`");
   });
@@ -115,13 +95,11 @@ describe("the one API client every credentialed request goes through (T-WEB-S363
     ]);
   });
 
-  it("only five modules build a credentialed request at all", () => {
+  it("three modules build a credentialed request: the client, the mint and the telemetry relay", () => {
     expect(modulesContaining('credentials: "include"')).toEqual([
       "api/client.ts",
-      "play/sync.ts",
       "session/bootstrap.ts",
       "telemetry/client.ts",
-      "termo/guess-client.ts",
     ]);
   });
 
@@ -193,7 +171,7 @@ describe("the one API client every credentialed request goes through (T-WEB-S363
   });
 
   it("the client reaches no session module — the mint ordering stays where ADR-0072 put it", () => {
-    const client = source("api/client.ts");
+    const client = webCodeOf("src/api/client.ts");
     expect(client).not.toContain("session/bootstrap");
     expect(client).not.toContain("ensureSession");
     expect(
