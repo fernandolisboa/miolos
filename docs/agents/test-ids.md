@@ -43,6 +43,11 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-WEB` | `S366` | `S364` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
 
+#206 cluster 14 **spent and burned nothing** — the table above is unchanged.
+`../play/conclusion-stats` is one more element of `T-LINT-S16`'s and
+`T-LINT-S17`'s existing `doors` arrays, on the same sibling rule clusters 4
+and 5 used; S17's title widened in place to name the conclusion modules.
+
 #206 cluster 4 reserved **`T-WEB-S361…S363`**, contiguous, and spent all three.
 Re-derived by grep at the plan and again at the end (next free `S361`, highest
 in use `S360`). **No `T-LINT` id was spent**, on this file's own sibling rule —

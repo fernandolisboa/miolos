@@ -4,30 +4,24 @@
 
 ## Start here
 
-Nothing to verify. #206 cluster 5 merged as #250; plan → plan review → re-plan → implement → 4 lenses → fix → merge ran unattended.
+Nothing to verify. #206 clusters 5 and 14 merged; the handoff now ships inside the PR that does the work (#252, #253).
 
-## Session state — #206 cluster 5 merged (#250)
+## Session state
 
-Twelve per-game route files stopped carrying their own copy of the publication wall read. **436 lines → 184**, two shared modules at 98, envelope copies 12 → 2. New **ADR-0076**: the shared envelope takes a `render` callback, never a screen registry — a registry would pull four screens (and the Termo dictionary) onto every consumer's graph and *nothing in the gate would fail*. `T-WEB-S364` is that ADR's only enforcement.
+**Cluster 5 (#250).** Twelve per-game route files stopped carrying their own copy of the publication wall read: 436 → 184 lines, envelope copies 12 → 2. New **ADR-0076** — the shared envelope takes a `render` callback, never a screen registry.
 
-**Left alone on purpose:** the 8 `opengraph-image.tsx` files (already on the `og/handlers.ts` seam; `T-WEB-S204` pins them) and the 3 free-play pages (5 lines, no wall read).
+**Cluster 14.** The audit said 1,477 lines and "two full screens, split into five files". Re-derived: **835 lines**, and the two screens are not independent — `ConclusionView` renders `RemoteConclusionView` as its own branch. The 642 missing lines were **comments** (#205/#239 already removed them): both revisions reprinted with comments stripped are 483 → 481 lines, token streams byte-identical. What shipped is the one extraction the evidence supports — the 194-line statistics sub-tree into `src/play/conclusion-stats.tsx`, retiring one of the file's **six** change reasons. The remote-root extraction is declined and priced: it moves the lazy boundary.
 
-## The two lessons this ticket cost
+**Retracted on the record: "14 unblocks 6" is false.** No `play-view.tsx` imports any conclusion module. Cluster 6 is unblocked today. Its "~1,460 lines" is really 890; cluster 7's "640" is really 321.
 
-**1. A source read is not an experiment.** The first plan claimed a re-exported `export const dynamic` is *silently* dropped and would serve a stale puzzle. The plan review read Next's source and said it only *warns*. Running the build showed **both wrong** — this repo builds with Turbopack, which hard-fails all three shapes by file and line. A test was one review round from shipping to guard a failure that cannot happen. **When a claim is about what a tool does, run the tool.**
+## The lesson, again — fifth instance
 
-**2. The dead assertion appeared again — inside the test written to stop dead assertions.** `route-envelopes.test.ts` asserted three arms in sequence; the archive-screen arm could never red, because every archive screen imports `../<game>/play-view` and trips the first filter, which throws first. Fourth session running, still only caught by mutation. The fix is one object assertion instead of three sequential ones. **Sequential `expect`s in one test hide every arm after the first.**
+**A dead assertion shipped past four reviewers into the very ticket after the one that documented the pattern.** The new `"conclusion-stats"` entry in `archive-day.test.tsx`'s forbidden array could not fail: `conclusion-stats.tsx` imports `conclusion-view.module.css`, so any graph reaching it also matches index 0, and a plain `expect` in a loop throws before index 1 is read. #250 had already written down the fix — *collect every arm and assert once* — and it was not applied. The loop now does.
 
-Also: two review lenses independently rejected on the **id frontier** — `T-WEB-S364` spent without `docs/agents/test-ids.md` moving. Same failure that opened the `S` series. And ADR-0076 shipped an `Amends:` line plus an in-place annotation on ADR-0029, both retired by `docs/agents/domain.md`.
+**Also: two reviewers disagreed and one was wrong.** Invariants called the same entry live coverage; correctness proved it dead by mutation, both directions. **The lens with pasted red output wins over the lens with an argument.**
 
 ## Next
 
-**#206 cluster 14** — `conclusion-view.tsx`, 1,477 lines, 19 top-level components, two full screens. The issue notes **14 unblocks 6**, so 14 → 6 is the order.
+**#206 cluster 6** — `play-view.tsx` screen chrome, 4 files, 890 lines (not 1,460). Unblocked now.
 
-**Also queued:** #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, NOT a sweep — `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header), #155 (`bundle-check` into CI — ADR-0076 names it as the gap that makes `T-WEB-S364` necessary), and the Quick change filed on #206: `jsonResponse`/`stubFetch` hand-copied across ~19 `apps/web/test` files.
-
-## Two process changes, both Fernando's call
-
-**This file now ships inside the PR that does the work**, never as its own PR (#252, #253) — three of the six commits before it were handoff-only, which was habit, not rule. Write it in the past tense as though the PR has merged, point **Next** at what comes *after* the ticket, and edit again only if the merge goes sideways. Say only what is new: a clean ticket earns a two-line pointer edit, not a session diary.
-
-**Don't trust a single red from a parallel review round.** Four review lenses running the suite concurrently on one box produced transient cross-module failures in files the diff never touched. Serial re-runs were green every time — re-run alone before believing it.
+**Also queued:** #254 (the remote conclusion announces its body sentence twice — `.announcer` is `clip-path`-hidden, so a screen reader gets it on mount and again in browse mode), #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, NOT a sweep), #155 (`bundle-check` into CI), the `jsonResponse`/`stubFetch` Quick change, and the free-play wall's missing `**/termo/termo-screen` — the other three screen roots are walled and Termo's is not.

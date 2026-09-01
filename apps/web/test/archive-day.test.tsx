@@ -443,23 +443,30 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
 
     const graph = entries.flatMap((entry) => moduleGraph(entry));
 
-    for (const forbidden of [
+    const forbidden = [
       "conclusion-view",
+      "conclusion-stats",
       "termo-conclusion",
       "nonogram-conclusion",
       "binairo-screen",
       "sudoku-screen",
       "nonogram-screen",
       "termo-screen",
-    ]) {
-      const hits = graph.filter(
-        (path) =>
-          path.includes(`/src/play/${forbidden}`) ||
-          (/\/src\/(?:binairo|sudoku|nonogram|termo)\//.test(path) &&
-            path.endsWith(`${forbidden}.tsx`)),
-      );
-      expect(hits, forbidden).toEqual([]);
-    }
+    ];
+    const leaks = Object.fromEntries(
+      forbidden.map((name) => [
+        name,
+        graph.filter(
+          (path) =>
+            path.includes(`/src/play/${name}`) ||
+            (/\/src\/(?:binairo|sudoku|nonogram|termo)\//.test(path) &&
+              path.endsWith(`${name}.tsx`)),
+        ),
+      ]),
+    );
+    expect(leaks).toEqual(
+      Object.fromEntries(forbidden.map((name) => [name, []])),
+    );
 
     expect(
       graph.filter((path) => path.includes("/src/play/day-state")),
