@@ -26,4 +26,8 @@ Also: two review lenses independently rejected on the **id frontier** — `T-WEB
 
 **Also queued:** #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, NOT a sweep — `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header), #155 (`bundle-check` into CI — ADR-0076 names it as the gap that makes `T-WEB-S364` necessary), and the Quick change filed on #206: `jsonResponse`/`stubFetch` hand-copied across ~19 `apps/web/test` files.
 
-**One process note:** four review lenses running the suite concurrently on one box produced transient cross-module failures in files the diff never touched. Serial re-runs were green every time. Don't trust a single red from a parallel review round — re-run it alone first.
+## Two process changes, both Fernando's call
+
+**This file now ships inside the PR that does the work**, never as its own PR (#252, #253) — three of the six commits before it were handoff-only, which was habit, not rule. Write it in the past tense as though the PR has merged, point **Next** at what comes *after* the ticket, and edit again only if the merge goes sideways. Say only what is new: a clean ticket earns a two-line pointer edit, not a session diary.
+
+**Don't trust a single red from a parallel review round.** Four review lenses running the suite concurrently on one box produced transient cross-module failures in files the diff never touched. Serial re-runs were green every time — re-run alone before believing it.
