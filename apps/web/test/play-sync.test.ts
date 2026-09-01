@@ -148,13 +148,18 @@ async function freshSync() {
   return await import("../src/play/sync");
 }
 
+const RETRY_SPAN_MS = 120_000;
+
+const realSetImmediate = setImmediate;
+
 async function settle() {
   for (let turn = 0; turn < 6; turn += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => realSetImmediate(resolve));
   }
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   window.localStorage.clear();
@@ -715,6 +720,114 @@ describe("startCompletionSync", () => {
     await settle();
 
     expect(completionCalls(fetchMock)).toHaveLength(before);
+  });
+
+  it("a retry armed by a flush lives on this file's virtual clock, so it cannot outlive the test (T-WEB-S359)", async () => {
+    writePlayRecord(pendingRecord());
+    const fetchMock = stubFetch(() => jsonResponse(503, { error: "boom" }));
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+    await settle();
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(completionCalls(fetchMock)).toHaveLength(2);
+  });
+
+  it("a flush still in flight when stop() runs cannot arm a retry nobody owns (T-WEB-S360)", async () => {
+    writePlayRecord(pendingRecord());
+    let release = (): void => undefined;
+    const held = new Promise<Response>((resolve) => {
+      release = () => {
+        resolve(jsonResponse(503, { error: "boom" }));
+      };
+    });
+    const fetchMock = stubFetch(() => held);
+
+    const { startCompletionSync } = await freshSync();
+    const stop = startCompletionSync();
+    await settle();
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    stop();
+    release();
+    await settle();
+
+    await vi.advanceTimersByTimeAsync(RETRY_SPAN_MS);
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it("a record handed in while a torn-down flush is still running arms nothing either (T-WEB-S360a)", async () => {
+    writePlayRecord(pendingRecord());
+    let release = (): void => undefined;
+    const held = new Promise<Response>((resolve) => {
+      release = () => {
+        resolve(jsonResponse(503, { error: "boom" }));
+      };
+    });
+    const fetchMock = stubFetch(() => held);
+
+    const { startCompletionSync, flushPendingCompletions } = await freshSync();
+    const stop = startCompletionSync();
+    await settle();
+
+    stop();
+    void flushPendingCompletions(pendingRecord({ date: "2026-07-29" }));
+    release();
+    await settle();
+
+    await vi.advanceTimersByTimeAsync(RETRY_SPAN_MS);
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it("a SECOND consumer still mounted keeps the retry the first one's teardown would have dropped (T-WEB-S360b)", async () => {
+    writePlayRecord(pendingRecord());
+    let release = (): void => undefined;
+    const held = new Promise<Response>((resolve) => {
+      release = () => {
+        resolve(jsonResponse(503, { error: "boom" }));
+      };
+    });
+    const fetchMock = stubFetch(() => held);
+
+    const { startCompletionSync } = await freshSync();
+    const first = startCompletionSync();
+    await settle();
+    expect(completionCalls(fetchMock)).toHaveLength(1);
+
+    first();
+    const second = startCompletionSync();
+    release();
+    await settle();
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(
+      completionCalls(fetchMock).length,
+      "a mounted consumer with a pending record must still be retried",
+    ).toBeGreaterThan(1);
+    second();
+  });
+
+  it("one consumer's teardown does not cancel the retry another is still waiting on (T-WEB-S360d)", async () => {
+    writePlayRecord(pendingRecord());
+    const fetchMock = stubFetch(() => jsonResponse(503, { error: "boom" }));
+
+    const { startCompletionSync } = await freshSync();
+    const first = startCompletionSync();
+    await settle();
+    const second = startCompletionSync();
+    await settle();
+    const before = completionCalls(fetchMock).length;
+
+    first();
+
+    await vi.advanceTimersByTimeAsync(RETRY_SPAN_MS);
+    expect(
+      completionCalls(fetchMock).length,
+      "the surviving consumer is still waiting on that chain",
+    ).toBeGreaterThan(before);
+    second();
   });
 
   it("retries on a bounded backoff after a 5xx and stops once recorded", async () => {

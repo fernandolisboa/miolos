@@ -27,6 +27,17 @@ const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 60_000] as const;
 
 let flushing = false;
 let retryStep = 0;
+
+// A retry is armed only while some live owner still wants one. A teardown bumps
+// the era, so a flush that began before it is stale; a direct
+// flushPendingCompletions caller has no owner but its own era, which never moves.
+let era = 0;
+let flushEra = 0;
+let consumers = 0;
+
+function retryIsOwned(startedIn: number): boolean {
+  return era === startedIn || consumers > 0;
+}
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
 const memoryQueue = new Map<string, PlayRecord>();
@@ -55,12 +66,14 @@ export async function flushPendingCompletions(
     memoryQueue.set(queueKey(record), record);
   }
   if (flushing) {
-    if (record?.pendingSync === true) {
+    if (record?.pendingSync === true && retryIsOwned(flushEra)) {
       scheduleRetry();
     }
     return;
   }
   flushing = true;
+  const startedIn = era;
+  flushEra = era;
   try {
     const pending = pendingQueue();
     if (pending.length === 0) {
@@ -89,6 +102,9 @@ export async function flushPendingCompletions(
       }
     }
 
+    if (!retryIsOwned(startedIn)) {
+      return;
+    }
     if (stillPending || pendingQueue().length > 0) {
       scheduleRetry();
     } else {
@@ -111,12 +127,17 @@ export function startCompletionSync(): () => void {
 
   window.addEventListener("online", onOnline);
   document.addEventListener("visibilitychange", onVisibility);
+  consumers += 1;
   void flushPendingCompletions();
 
   return () => {
     window.removeEventListener("online", onOnline);
     document.removeEventListener("visibilitychange", onVisibility);
-    cancelRetries();
+    consumers -= 1;
+    era += 1;
+    if (consumers === 0) {
+      cancelRetries();
+    }
   };
 }
 

@@ -40,8 +40,43 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S359` | `S358` | `T-WEB-23` |
+| `T-WEB` | `S361` | `S360` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#209 spent **`T-WEB-S359`** and **`T-WEB-S360`**, both in
+`apps/web/test/play-sync.test.ts`. Re-derived by grep before allocating (next
+free `S359`, highest in use `S358`). Neither asserts on `vi.getTimerCount()`:
+that count picks up timers this file does not own, so both make the behavioural
+claim — advance the clock, count the POSTs.
+
+- **`T-WEB-S359`** — a retry armed by a flush lives on the file's virtual clock,
+  so `vi.resetModules()` cannot orphan a live `setTimeout` that later posts a
+  phantom `/completions` into the next test's fetch stub. Reds by deleting the
+  one `vi.useFakeTimers` line the file's `beforeEach` gained.
+
+- **`T-WEB-S360`**, with siblings **`S360a`**, **`S360b`** and **`S360d`**, over
+  the one claim `sync.ts` now makes: *a retry is armed iff some live owner still
+  wants one*. `"stops flushing once it has been torn down"` never reached it —
+  that test settles the flush before tearing down, so the in-flight case was
+  uncovered. Each sibling reds on its own mutation, one per statement that arms
+  or cancels a retry, plus the ownership term. **There is no `S360c`**: it was
+  drafted for a double-teardown guard and removed with it, because the mutation
+  showed the assertion could not red. Nothing is allocated to it and nothing is
+  lost.
+
+  - `S360` holds the `/completions` response across `stop()`; reds without the
+    `retryIsOwned` check after the flush.
+  - `S360a` hands a record in through the `flushing` early return while that
+    torn-down flush is still running; reds without the guard on that branch.
+  - `S360b` mounts a second consumer before the first's flush resolves; reds
+    without the `consumers > 0` term, which is the regression the first draft of
+    this fix shipped — an era check alone drops the retry a still-mounted
+    screen is waiting on.
+  - `S360d` is the same claim through `cancelRetries`, the one statement the
+    first draft left ungated: with two consumers mounted, the first teardown
+    cancelled the chain the second was waiting on. Reds when the teardown's
+    `consumers === 0` condition goes. It is the only one of the four that ever
+    has two consumers live at once.
 
 #219 spent **`T-WEB-S358`** in the new
 `apps/web/test/share-write-blocked.test.tsx`: a store that reads but cannot

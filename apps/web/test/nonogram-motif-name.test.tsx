@@ -337,13 +337,10 @@ describe("no motif name reaches server markup (T-WEB-S327)", () => {
   });
 });
 
-describe("the payoff-moment refresh (T-WEB-S329)", () => {
-  async function waitOutRecordPoll(): Promise<void> {
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1300));
-    });
-  }
+// 3x the 1s interval in subscribeToPlayRecords, which is what these two wait on.
+const POLL_WAIT_MS = 3_000;
 
+describe("the payoff-moment refresh (T-WEB-S329)", () => {
   it("a completion that settles `recorded` AFTER mount asks the store for today's truth", async () => {
     const fetchMock = stubApi(() =>
       jsonResponse(200, dayBody(completedClaim(MOTIF))),
@@ -366,10 +363,12 @@ describe("the payoff-moment refresh (T-WEB-S329)", () => {
     expect(afterMount).toBeGreaterThanOrEqual(1);
 
     writePlayRecord(concludedRecord({ syncOutcome: "recorded" }));
-    await waitOutRecordPoll();
-    await flush();
-
-    expect(dayCalls()).toBeGreaterThan(afterMount);
+    await waitFor(
+      () => {
+        expect(dayCalls()).toBeGreaterThan(afterMount);
+      },
+      { timeout: POLL_WAIT_MS },
+    );
 
     const afterNudge = dayCalls();
     view.rerender(<NonogramConclusion date={DATE} />);
@@ -399,8 +398,18 @@ describe("the payoff-moment refresh (T-WEB-S329)", () => {
     const afterMount = dayCalls();
     expect(afterMount).toBeGreaterThanOrEqual(1);
 
+    expect(screen.queryByText(messages.conclusion.sync.rejected)).toBeNull();
+
     writePlayRecord(concludedRecord({ syncOutcome: "rejected" }));
-    await waitOutRecordPoll();
+
+    expect(
+      await screen.findByText(
+        messages.conclusion.sync.rejected,
+        {},
+        { timeout: POLL_WAIT_MS },
+      ),
+      "the screen must have SEEN the rejected settle before this asserts on it",
+    ).toBeInTheDocument();
     await flush();
 
     expect(dayCalls()).toBe(afterMount);
