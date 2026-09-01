@@ -268,6 +268,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       '  import("../play/conclusion-lazy");',
       '  import("../nonogram/nonogram-conclusion");',
       '  import("../termo/termo-conclusion");',
+      '  import("../play/daily-route");',
     ];
     for (const door of doors) {
       const source = ["export const load = () =>", door, ""].join("\n");
@@ -284,7 +285,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
-  it("T-LINT-S17: the indirect doors — daily hooks, screen roots and conclusion-view — red from free play, clean from a daily path", async () => {
+  it("T-LINT-S17: the indirect doors — daily hooks, screen roots, conclusion-view and the daily route envelope — red from free play, clean from a daily path", async () => {
     const doors = [
       "../binairo/use-binairo-play",
       "../sudoku/use-sudoku-play",
@@ -297,6 +298,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../play/conclusion-lazy",
       "../nonogram/nonogram-conclusion",
       "../termo/termo-conclusion",
+      "../play/daily-route",
     ];
     for (const door of doors) {
       const source = [

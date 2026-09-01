@@ -147,6 +147,7 @@ const freePlayBannedModuleGroups = [
       "**/play/share-text",
 
       "**/play/share-button",
+      "**/play/daily-route",
       "**/termo/guess-client",
       "**/session/bootstrap",
       "**/components/session-bootstrap",
@@ -164,7 +165,7 @@ const freePlayBannedModuleGroups = [
       "**/app/hub-day-state",
     ],
     message:
-      "free play records nothing and fetches nothing: the sync/record/lifecycle/session modules — and the daily hooks, screen roots, hub page and hub islands that reach them one hop in — are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0008 rule 5, ADR-0046).",
+      "free play records nothing and fetches nothing: the sync/record/lifecycle/session modules — and the daily hooks, screen roots, the daily route envelope, hub page and hub islands that reach them one hop in — are banned from apps/web/src/free-play and app/modo-livre (ADR-0011, ADR-0008 rule 5, ADR-0046).",
   },
   {
     group: [
@@ -242,7 +243,7 @@ const freePlayBannedModuleGroups = [
 
 const freePlayDynamicBannedModule = {
   selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|(packages|@miolos)\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|share-text|share-button|push-prompt-card|daily-route)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|(packages|@miolos)\\/games\\/src\\/termo)/]",
   message:
     "free play records nothing, fetches nothing, fires no telemetry, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };
