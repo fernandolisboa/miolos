@@ -4,20 +4,26 @@
 
 ## Start here
 
-The standing-authorization hook works. This session recited the four points unprompted, spawned reviewers, and ran commit→push→PR→merge without stopping. Nothing to verify — just work.
+Nothing to verify. The standing-authorization hook works — this session recited the four points unprompted and ran plan → review → implement → review → merge unattended across three tickets.
 
-## Session state
+## Session state — #219, #209 and #206 cluster 4 all merged
 
-**#219 merged (#245): a store that reads but cannot hold a record renders no share control.** Three commits, two correctness rounds. The lessons:
+**#219 (#245).** A store that reads but cannot *hold a record* renders no share control. Two correctness rounds.
 
-- **A probe must be the size of the thing it predicts.** The first commit's probe wrote an *empty* value, so a store with room for a bare key but not for a ~1.8 KB record — a full quota, the first cause #219 named — passed it and still lost the write. `WRITE_PROBE_BYTES` is now bound on **both** sides by `T-WEB-S358`: at least the largest record the four schemas admit, under twice it. A one-sided bound would have let the probe grow until it hid controls that worked.
-- **Deviating from a ticket's suggested shape is fine; leaving the reason in the PR body is not.** #219 asked the button to *say* which failure it hit; this withholds it instead, per ADR-0045's rule. That call now lives in **ADR-0054 decision 1**. Two ADRs also named the renamed symbol and a trigger the change falsified — a reviewer found them, not a grep in the plan.
-- **A test caught a regression inside a review fix.** Reclaiming the orphaned probe key in `prunePlayRecords` added an unguarded `removeItem` at its entry; the suite's hostile-store case redded it immediately. It is now guarded by a read.
+**#209 (#247).** Opened as a test-isolation fix; four review rounds found **four production defects** in `sync.ts`'s retry ownership, all on the completion post the streak depends on. `sync.ts` now carries one invariant — *a retry is armed iff some live owner still wants one* — with a test per guard. **#209 stays open** on two residuals: the `day-truth` fixed-tick population, and the starvation axis (`T-WEB-S203`/`T-WEB-S289`), which is ADR-0057's and cannot be closed from `apps/web`.
 
-**Every new assertion was redded by a named production mutation** — eight of them, listed in the PR. That is now the expected standard, not a flourish.
+**#206 cluster 4 (#248).** One API client behind the twelve credentialed call sites, 633 lines to 233. Plan rejected once, then all four lenses rejected in turn.
+
+## The lesson this session actually earned
+
+**Three separate dead assertions shipped past me, in three different tickets, and every one was caught by mutation rather than by reading.** A `not.toContain` that could not fail (#236, last session), a negative claim after a fixed sleep that passed with a 10 ms wait (#209), and a uniqueness check comparing a `const` array against itself (#206). Fixing that last one exposed a *fourth*: a non-ok fixture whose body the schema rejected, so deleting the branch it guarded left it green.
+
+**So: before an assertion counts as coverage, name the production change that reds it and run that change.** Not "verified" — the red output, pasted. That is now the bar the reviewers hold, and it is worth more than any of the three diffs.
+
+Second: **a claim carried from an audit or a plan is not evidence.** Cluster 4's audit said six copies of the guard (twelve), five uniform POSTs (four), and one wall entry owed (none). Clusters 1 and 3 hit the same thing. Re-derive.
 
 ## Next
 
-**#209** (apps/web flakes on CI at `--concurrency=10`) is the next queued defect — reproduced locally at `--concurrency=2`, output on the issue. **#206** — duplication, 3 of 15 clusters done, cluster 4 next. **#205** stays open for the CSS half: ~1,820 lines, and it is NOT a sweep — `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header, seven numbered deviations by token, and the work is to move that table into the test as data. Four sheets hold 1,097: termo 367, nonogram 304, arquivo 262, sudoku 164.
+**#206 cluster 5** — 16 per-game Next route files, ~930 lines; `diff` of the sudoku and nonogram archive pages changes five tokens across 91 lines. Follow `og/handlers.ts`. Note the issue's ordering: **14 unblocks 6**, so 5 → 14 → 6 is the cheaper path than table order.
 
-**One ticket still worth filing:** the play-record fixture shape is duplicated across ~22 `apps/web/test` files with no shared builder — this PR's new suite makes it ~23. Flagged by the design lens at #236 as real duplication, out of scope for a Quick change.
+**Also queued:** #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, and it is NOT a sweep — `T-WEB-S102` asserts the *contents* of `termo-board.module.css`'s header). And a Quick change filed on #206 this session: `jsonResponse`/`stubFetch` are hand-copied across ~19 `apps/web/test` files; `test/ts-source.ts` is now the precedent for where a shared test helper lives.
