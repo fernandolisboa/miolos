@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S364` | `S363` | `T-WEB-23` |
+| `T-WEB` | `S366` | `S364` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
 
 #206 cluster 4 reserved **`T-WEB-S361…S363`**, contiguous, and spent all three.
@@ -48,6 +48,16 @@ Re-derived by grep at the plan and again at the end (next free `S361`, highest
 in use `S360`). **No `T-LINT` id was spent**, on this file's own sibling rule —
 `../api/client` is a third element of `T-LINT-S61`'s existing `doors` array, so
 no assertion was added at all, let alone a new claim.
+
+#206 cluster 5 reserved **`T-WEB-S364…S365`** and spent only `S364`
+(`apps/web/test/route-envelopes.test.ts` — the two shared route envelopes carry
+no per-game module, and each is reached by exactly its own routes).
+**`T-WEB-S365` was the declared review-round headroom, went unspent, and is
+burned** — it is never reused, which is why next free is `S366` and not `S365`.
+Re-derived by the two-stage grep at the plan and again here.
+**No `T-LINT` id was spent**, on the same sibling rule cluster 4 used:
+`**/play/daily-route` is a third element of `T-LINT-S16`'s and `T-LINT-S17`'s
+existing `doors` arrays, so no new claim was made.
 
 - **`T-WEB-S361`** (`attach-client`) and **`T-WEB-S362`** (`onboarding-client`)
   cover two modules that were reached only through `vi.mock` in their consumers'

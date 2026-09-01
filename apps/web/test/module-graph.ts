@@ -8,7 +8,7 @@ import { withoutComments } from "./ts-source";
 const WEB_ROOT = join(import.meta.dirname, "..");
 const REPO_ROOT = join(WEB_ROOT, "..", "..");
 
-export function workspaceBase(specifier: string): string | null {
+function workspaceBase(specifier: string): string | null {
   if (!specifier.startsWith("@miolos/")) {
     return null;
   }
@@ -19,10 +19,7 @@ export function workspaceBase(specifier: string): string | null {
   return join(REPO_ROOT, "packages", match[1], "src", match[2] ?? "");
 }
 
-export function resolveSpecifier(
-  fromFile: string,
-  specifier: string,
-): string | null {
+function resolveSpecifier(fromFile: string, specifier: string): string | null {
   const base = specifier.startsWith(".")
     ? resolve(dirname(join(REPO_ROOT, fromFile)), specifier)
     : workspaceBase(specifier);
@@ -71,7 +68,7 @@ export function closureOf(entry: string): ReadonlySet<string> {
   return seen;
 }
 
-export function routeEntries(): readonly string[] {
+function routeEntries(): readonly string[] {
   const found: string[] = [];
   for (const entry of readdirSync(join(WEB_ROOT, "app"), {
     recursive: true,

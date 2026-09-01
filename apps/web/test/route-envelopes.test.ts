@@ -6,6 +6,7 @@ const DAILY_ROUTE = "apps/web/src/play/daily-route.tsx";
 const GAME_ROUTE = "apps/web/src/archive/game-route.tsx";
 const SCREEN_MODULE = /\/src\/(binairo|sudoku|nonogram|termo)\//;
 const ARCHIVE_SCREEN = /\/src\/archive\/.*-screen/;
+const CONCLUSION = /\/src\/play\/conclusion-view\.tsx$/;
 
 describe("the shared route envelopes are game-blind (T-WEB-S364)", () => {
   it.each([DAILY_ROUTE, GAME_ROUTE])(
@@ -13,9 +14,11 @@ describe("the shared route envelopes are game-blind (T-WEB-S364)", () => {
     (envelope) => {
       const closure = [...closureOf(envelope)];
 
-      expect(closure.filter((path) => SCREEN_MODULE.test(path))).toEqual([]);
-      expect(closure.filter((path) => ARCHIVE_SCREEN.test(path))).toEqual([]);
-      expect(closure).not.toContain("apps/web/src/play/conclusion-view.tsx");
+      expect({
+        screens: closure.filter((path) => SCREEN_MODULE.test(path)),
+        archiveScreens: closure.filter((path) => ARCHIVE_SCREEN.test(path)),
+        conclusions: closure.filter((path) => CONCLUSION.test(path)),
+      }).toEqual({ screens: [], archiveScreens: [], conclusions: [] });
     },
   );
 
