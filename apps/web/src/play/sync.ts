@@ -135,7 +135,9 @@ export function startCompletionSync(): () => void {
     document.removeEventListener("visibilitychange", onVisibility);
     consumers -= 1;
     era += 1;
-    cancelRetries();
+    if (consumers === 0) {
+      cancelRetries();
+    }
   };
 }
 

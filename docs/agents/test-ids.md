@@ -69,6 +69,11 @@ claim — advance the clock, count the POSTs.
     without the `consumers > 0` term, which is the regression the first draft of
     this fix shipped — an era check alone drops the retry a still-mounted
     screen is waiting on.
+  - `S360d` is the same claim through `cancelRetries`, the one statement the
+    first draft left ungated: with two consumers mounted, the first teardown
+    cancelled the chain the second was waiting on. Reds when the teardown's
+    `consumers === 0` condition goes. It is the only one of the four that ever
+    has two consumers live at once.
 
 #219 spent **`T-WEB-S358`** in the new
 `apps/web/test/share-write-blocked.test.tsx`: a store that reads but cannot

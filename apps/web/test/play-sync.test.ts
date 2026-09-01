@@ -809,6 +809,27 @@ describe("startCompletionSync", () => {
     second();
   });
 
+  it("one consumer's teardown does not cancel the retry another is still waiting on (T-WEB-S360d)", async () => {
+    writePlayRecord(pendingRecord());
+    const fetchMock = stubFetch(() => jsonResponse(503, { error: "boom" }));
+
+    const { startCompletionSync } = await freshSync();
+    const first = startCompletionSync();
+    await settle();
+    const second = startCompletionSync();
+    await settle();
+    const before = completionCalls(fetchMock).length;
+
+    first();
+
+    await vi.advanceTimersByTimeAsync(RETRY_SPAN_MS);
+    expect(
+      completionCalls(fetchMock).length,
+      "the surviving consumer is still waiting on that chain",
+    ).toBeGreaterThan(before);
+    second();
+  });
+
   it("retries on a bounded backoff after a 5xx and stops once recorded", async () => {
     vi.useFakeTimers();
     writePlayRecord(pendingRecord());
