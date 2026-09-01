@@ -40,8 +40,36 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S361` | `S360` | `T-WEB-23` |
+| `T-WEB` | `S364` | `S363` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#206 cluster 4 reserved **`T-WEB-S361…S363`**, contiguous, and spent all three.
+Re-derived by grep at the plan and again at the end (next free `S361`, highest
+in use `S360`). **No `T-LINT` id was spent**, on this file's own sibling rule —
+`../api/client` is a third element of `T-LINT-S61`'s existing `doors` array, so
+no assertion was added at all, let alone a new claim.
+
+- **`T-WEB-S361`** (`attach-client`) and **`T-WEB-S362`** (`onboarding-client`)
+  cover two modules that were reached only through `vi.mock` in their consumers'
+  suites, so their real guard, fetch and parse code was executed by nothing —
+  3 of the 5 boolean POSTs and 2 of the 8 credentialed GETs. Both are
+  characterization suites, and both landed before the extraction they exist to
+  catch.
+
+- **`T-WEB-S363`** is the wall over the extraction. Three set-equalities
+  re-derived from a walk of `apps/web/src` and `app/` rather than from a
+  hand-list, through the same comment-stripped `webCodeOf` that `T-WEB-S351`
+  uses — a raw-text scan reads a commented-out line as code. The modules
+  reading `process.env.NEXT_PUBLIC_API_URL` are exactly `api/client.ts` and
+  `telemetry/client.ts`; the modules building a `credentials: "include"`
+  request are those two plus `session/bootstrap.ts`, whose mint posts no JSON
+  body and so cannot take `postJson`; and all twelve absence clauses sit in the
+  module that names their consequence — and in that module **alone**, re-derived
+  by walking every source file for each clause rather than by trusting the
+  test's own list, which is a comparison that cannot fail. The suite also owns
+  the four answers `client.ts` is now the only producer of: a non-ok status
+  whose body would have parsed, a body the schema refuses, a rejecting fetch,
+  and a body `JSON.stringify` refuses.
 
 #209 spent **`T-WEB-S359`** and **`T-WEB-S360`**, both in
 `apps/web/test/play-sync.test.ts`. Re-derived by grep before allocating (next

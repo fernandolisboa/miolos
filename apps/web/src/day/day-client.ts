@@ -1,24 +1,11 @@
 import { dayResponseSchema, type DayResponse } from "@miolos/core";
 
-export async function fetchDayTruth(): Promise<DayResponse | undefined> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) {
-    console.error(
-      "NEXT_PUBLIC_API_URL is unset: day fetch skipped, the hub keeps this device's own day state",
-    );
-    return undefined;
-  }
-  try {
-    const response = await fetch(`${apiUrl}/day`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      return undefined;
-    }
+import { apiGet } from "../api/client";
 
-    const parsed = dayResponseSchema.safeParse(await response.json());
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return undefined;
-  }
+export async function fetchDayTruth(): Promise<DayResponse | undefined> {
+  return await apiGet(
+    "/day",
+    dayResponseSchema,
+    "day fetch skipped, the hub keeps this device's own day state",
+  );
 }

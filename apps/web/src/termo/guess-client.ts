@@ -5,6 +5,7 @@ import {
 } from "@miolos/core";
 import type { TermoBoardStatus, TileStates } from "@miolos/games/termo";
 
+import { apiBaseUrl, postJson } from "../api/client";
 import {
   confirmSession,
   ensureSession,
@@ -52,12 +53,10 @@ export async function postGuesses(
     return REFUSED;
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = apiBaseUrl(
+    "the termo guess cannot be judged, the turn is held",
+  );
   if (!apiUrl) {
-    console.error(
-      "NEXT_PUBLIC_API_URL is unset: the termo guess cannot be judged, the turn is held",
-    );
-
     return HELD_SERVER;
   }
 
@@ -65,10 +64,10 @@ export async function postGuesses(
 
   await ensureSession();
 
-  let response = await post(apiUrl, body);
+  let response = await postJson(`${apiUrl}/termo/guess`, body);
   if (response?.status === 401) {
     if (await remintSession()) {
-      response = await post(apiUrl, body);
+      response = await postJson(`${apiUrl}/termo/guess`, body);
       if (response?.ok === true) {
         confirmSession();
       }
@@ -96,24 +95,6 @@ export async function postGuesses(
   }
 
   return heldByStatus();
-}
-
-async function post(
-  apiUrl: string,
-  body: string,
-): Promise<Response | undefined> {
-  try {
-    return await fetch(`${apiUrl}/termo/guess`, {
-      method: "POST",
-
-      credentials: "include",
-
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-  } catch {
-    return undefined;
-  }
 }
 
 async function judgement(response: Response): Promise<GuessOutcome> {

@@ -1,11 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
-
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useMountFetch } from "../src/api/use-mount-fetch";
-import { withoutComments } from "./ts-source";
+import { webCodeOf, webSources } from "./ts-source";
 
 const VALUE = { settled: true };
 
@@ -23,29 +20,7 @@ beforeEach(() => {
   bootstrapMock.ensureSession.mockImplementation(() => Promise.resolve());
 });
 
-const webRoot = join(import.meta.dirname, "..");
-
 const DECLARING_MODULE = "src/api/use-mount-fetch.ts";
-
-function sources(): readonly string[] {
-  const found: string[] = [];
-  for (const root of ["src", "app"]) {
-    for (const entry of readdirSync(join(webRoot, root), {
-      recursive: true,
-      withFileTypes: true,
-    })) {
-      if (entry.isFile() && /\.[cm]?[jt]sx?$/.test(entry.name)) {
-        found.push(relative(webRoot, join(entry.parentPath, entry.name)));
-      }
-    }
-  }
-  expect(found.length).toBeGreaterThan(50);
-  return found;
-}
-
-function codeOf(sourcePath: string): string {
-  return withoutComments(readFileSync(join(webRoot, sourcePath), "utf8"));
-}
 
 describe("no caller can make useMountFetch refetch (T-WEB-S353)", () => {
   it("freezes both arguments at mount — inline arrows, an aliased import, and a changing prop all buy exactly one read", async () => {
@@ -75,8 +50,8 @@ describe("no caller can make useMountFetch refetch (T-WEB-S353)", () => {
 
 describe("the mint-first mount fetch has ONE owner (T-WEB-S351)", () => {
   it("`ensureSession` is named in code by exactly six modules — the declarer, the bootstrap island, the two write paths, the day-truth store and this hook", () => {
-    const naming = sources().filter((sourcePath) =>
-      codeOf(sourcePath).includes("ensureSession"),
+    const naming = webSources().filter((sourcePath) =>
+      webCodeOf(sourcePath).includes("ensureSession"),
     );
 
     expect([...naming].sort()).toEqual([
@@ -114,10 +89,10 @@ describe("one mount, one read — and no call site can make it refetch (T-WEB-S3
 
   it("every call site passes bare identifiers, so `[fetcher, enabled]` is stable by construction", () => {
     const call = /useMountFetch\s*(?:<[^>]*>)?\s*\(([^)]*)\)/g;
-    const sites = sources()
+    const sites = webSources()
       .filter((sourcePath) => sourcePath !== DECLARING_MODULE)
       .flatMap((sourcePath) =>
-        [...codeOf(sourcePath).matchAll(call)].map((match) => ({
+        [...webCodeOf(sourcePath).matchAll(call)].map((match) => ({
           sourcePath,
           args: (match[1] ?? "")
             .split(",")

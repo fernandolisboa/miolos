@@ -3,77 +3,29 @@ import {
   type NotificationsStateResponse,
 } from "@miolos/core";
 
-function apiUrl(): string | undefined {
-  const url = process.env.NEXT_PUBLIC_API_URL;
-  if (!url) {
-    console.error(
-      "NEXT_PUBLIC_API_URL is unset: notification calls skipped, the card stays absent",
-    );
-    return undefined;
-  }
-  return url;
-}
+import { apiGet, apiPost } from "../api/client";
+
+const ABSENCE = "notification calls skipped, the card stays absent";
 
 export async function fetchNotificationsState(): Promise<
   NotificationsStateResponse | undefined
 > {
-  const base = apiUrl();
-  if (!base) {
-    return undefined;
-  }
-  try {
-    const response = await fetch(`${base}/notifications/state`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      return undefined;
-    }
-    const parsed = notificationsStateResponseSchema.safeParse(
-      await response.json(),
-    );
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return undefined;
-  }
+  return await apiGet(
+    "/notifications/state",
+    notificationsStateResponseSchema,
+    ABSENCE,
+  );
 }
 
 export async function postPushSubscription(body: {
   endpoint: string;
   keys: { p256dh: string; auth: string };
 }): Promise<boolean> {
-  const base = apiUrl();
-  if (!base) {
-    return false;
-  }
-  try {
-    const response = await fetch(`${base}/push/subscriptions`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
+  return await apiPost("/push/subscriptions", body, ABSENCE);
 }
 
 export async function dismissPushPrompt(): Promise<boolean> {
-  const base = apiUrl();
-  if (!base) {
-    return false;
-  }
-  try {
-    const response = await fetch(`${base}/notifications/dismiss`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
+  return await apiPost("/notifications/dismiss", {}, ABSENCE);
 }
 
 export function applicationServerKeyBytes(

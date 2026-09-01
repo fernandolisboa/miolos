@@ -130,8 +130,12 @@ describe("the puzzle_started relay client", () => {
     const cold = await loadClient();
     cold.markSessionReady();
     cold.postPuzzleStarted("termo", DATE);
+    cold.postPuzzleStarted("sudoku", DATE);
     await settle();
     expect(silent).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(
+      errorSpy,
+      "the relay warns once per page life, not once per send",
+    ).toHaveBeenCalledTimes(1);
   });
 });
