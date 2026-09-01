@@ -54,12 +54,15 @@ claim — advance the clock, count the POSTs.
   phantom `/completions` into the next test's fetch stub. Reds by deleting the
   one `vi.useFakeTimers` line the file's `beforeEach` gained.
 
-- **`T-WEB-S360`**, with siblings **`S360a`** and **`S360b`**, over the one claim
-  `sync.ts` now makes: *a retry is armed iff some live owner still wants one*.
-  `"stops flushing once it has been torn down"` never reached it — that test
-  settles the flush before tearing down, so the in-flight case was uncovered.
-  Each sibling reds on its own mutation, one per `scheduleRetry` call site plus
-  the ownership term:
+- **`T-WEB-S360`**, with siblings **`S360a`**, **`S360b`** and **`S360d`**, over
+  the one claim `sync.ts` now makes: *a retry is armed iff some live owner still
+  wants one*. `"stops flushing once it has been torn down"` never reached it —
+  that test settles the flush before tearing down, so the in-flight case was
+  uncovered. Each sibling reds on its own mutation, one per statement that arms
+  or cancels a retry, plus the ownership term. **There is no `S360c`**: it was
+  drafted for a double-teardown guard and removed with it, because the mutation
+  showed the assertion could not red. Nothing is allocated to it and nothing is
+  lost.
 
   - `S360` holds the `/completions` response across `stop()`; reds without the
     `retryIsOwned` check after the flush.
