@@ -9,6 +9,7 @@ export function apiBaseUrl(absence: string): string | undefined {
   return url;
 }
 
+// Every failure path answers undefined: see ADR-0072 consequence (j).
 export async function apiGet<T>(
   path: string,
   schema: ZodType<T>,

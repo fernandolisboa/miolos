@@ -45,37 +45,27 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 #206 cluster 4 reserved **`T-WEB-S361…S363`**, contiguous, and spent all three.
 Re-derived by grep at the plan and again at the end (next free `S361`, highest
-in use `S360`). **No `T-LINT` id was spent**: `T-LINT-S61` already loops over a
-`doors` array, so the new `../api/client` door is a third element of an existing
-assertion, not a new claim — a fresh id there would have been process artifact
-outweighing its diff.
+in use `S360`). **No `T-LINT` id was spent**, on this file's own sibling rule —
+`../api/client` is a third element of `T-LINT-S61`'s existing `doors` array, so
+no assertion was added at all, let alone a new claim.
 
-**`T-WEB-S363`** is the wall over the extraction. Three set-equalities re-derived
-from a walk of `apps/web/src` and `app/` rather than from a hand-list, through
-the same comment-stripped `webCodeOf` cluster 3's `T-WEB-S351` uses — a raw-text
-scan would read a comment as code. The modules reading
-`process.env.NEXT_PUBLIC_API_URL` are exactly `api/client.ts` and
-`telemetry/client.ts`; the modules building a `credentials: "include"` request
-are exactly those two plus `session/bootstrap.ts`, whose mint posts no JSON body
-and so cannot take `postJson`; and all twelve absence clauses still sit in the
-module that names their consequence. That last one exists because the plan review found
-the tails unpinned at 8 of the 12 sites — copying `fetchStats`'s clause onto
-`fetchStatsCalendar` four lines below it would have been invisible. It reds on
-exactly that mutation.
+- **`T-WEB-S361`** (`attach-client`) and **`T-WEB-S362`** (`onboarding-client`)
+  cover two modules that were reached only through `vi.mock` in their consumers'
+  suites, so their real guard, fetch and parse code was executed by nothing —
+  3 of the 5 boolean POSTs and 2 of the 8 credentialed GETs. Both are
+  characterization suites, and both landed before the extraction they exist to
+  catch.
 
-#206 cluster 4 spent **`T-WEB-S361`** and **`T-WEB-S362`** on the two API-client
-modules that had no direct test at all — `attach-client.ts` and
-`onboarding-client.ts` were reached only through `vi.mock` in their consumers'
-suites, so their real guard, fetch and parse code was executed by nothing. That
-is 2 of the 8 credentialed GETs and 2 of the 5 boolean POSTs with no net, and
-the net had to exist before the extraction, not after it.
-
-Both are characterization suites, and both were proved to be a net rather than
-an encoding of today's behaviour: dropping `credentials` from
-`fetchAttachState`, moving `requestAttachLink`'s 429 to 428, making
-`deleteAccount` return `response.ok` instead of parsing its body, and drifting
-one word of the onboarding log text each red a different one of the eleven
-cases, with no overlap.
+- **`T-WEB-S363`** is the wall over the extraction. Three set-equalities
+  re-derived from a walk of `apps/web/src` and `app/` rather than from a
+  hand-list, through the same comment-stripped `webCodeOf` that `T-WEB-S351`
+  uses — a raw-text scan reads a commented-out line as code. The modules
+  reading `process.env.NEXT_PUBLIC_API_URL` are exactly `api/client.ts` and
+  `telemetry/client.ts`; the modules building a `credentials: "include"`
+  request are those two plus `session/bootstrap.ts`, whose mint posts no JSON
+  body and so cannot take `postJson`; and all twelve absence clauses sit in the
+  module that names their consequence. The last of the three reds when one
+  clause is copied from a sibling four lines away.
 
 #209 spent **`T-WEB-S359`** and **`T-WEB-S360`**, both in
 `apps/web/test/play-sync.test.ts`. Re-derived by grep before allocating (next

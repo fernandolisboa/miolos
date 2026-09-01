@@ -193,6 +193,13 @@ which nothing here has measured (consequence (i)).
   (e-narrow), rejected above — but it is stated rather than left to be
   discovered, because "repairs after the mint" is not what the mechanism does
   on four of the five paths.
+  *(**Annotated at #206** — the CITATION moved, the contract did not. All four
+  of the non-401 causes are now produced by `apiGet` in
+  `apps/web/src/api/client.ts`, and `day-client.ts` is a delegation to it, so a
+  reader who follows this bullet to that file no longer finds them. Whoever
+  gives `apiGet` a throw or a sentinel instead of `undefined` breaks this
+  repair for eight readers at once. `T-WEB-S234` still covers all four causes
+  through `fetchDayTruth`.)*
 - **(k)** **Two costs follow from (j), and both are accepted with their
   names.** First, **a 5xx or 429 on `/day` degenerates the repair into a
   zero-delay retry-once against an already-failing API** — the mint is settled

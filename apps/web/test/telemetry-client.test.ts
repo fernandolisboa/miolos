@@ -135,7 +135,7 @@ describe("the puzzle_started relay client", () => {
     expect(silent).not.toHaveBeenCalled();
     expect(
       errorSpy,
-      "the relay warns once per page life, not once per buffered event",
+      "the relay warns once per page life, not once per send",
     ).toHaveBeenCalledTimes(1);
   });
 });
