@@ -239,7 +239,7 @@ describe("the four per-game archive routes' own metadata (T-WEB-S209)", () => {
         join("app", "arquivo", "[data]", game, "page.tsx"),
       );
 
-      expect(metadataBlock, game).toContain("canonical");
+      expect(metadataBlock, game).toContain("archiveGameMetadata");
       const literals = [
         ...metadataBlock.matchAll(/(["'])(?:(?!\1).){2,}\1/g),
       ].map((match) => match[0]);

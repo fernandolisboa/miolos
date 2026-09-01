@@ -87,6 +87,13 @@ it as a timing rule and was wrong.
    read misses this class; this is that class, found the same way at #103's
    step-6 adherence review.)*
 
+   *(**Amended at #206 cluster 5** — the enumeration gains `daily-route.tsx`,
+   the wall-read envelope extracted out of the eight daily and conclusion
+   route files. [ADR-0076](./0076-the-shared-route-envelope-takes-a-render-callback-not-a-screen-registry.md)
+   governs what it may import: never a per-game screen or conclusion, only
+   a `render` callback supplied by the route file. Decision 2's substance
+   is unchanged.)*
+
 3. **`sync.ts` is exactly one module, permanently.** Its genericity is
    scoped to the **queue, retry ladder and settle machinery**;
    `buildBody` is the one per-game dispatch **inside** it. Termo's
