@@ -16,7 +16,7 @@ import {
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 
-import { formatLongDate, formatMonth, messages } from "../src/i18n";
+import { formatLongDate, formatMonth, messages, playRoutes } from "../src/i18n";
 import { solutionMarks } from "../src/nonogram/engine";
 import { playRecordKey, readPlayRecord } from "../src/play/play-record";
 
@@ -55,6 +55,13 @@ const { default: ArchiveNonogramPage } =
   await import("../app/arquivo/[data]/nonogram/page");
 const { default: ArchiveTermoPage } =
   await import("../app/arquivo/[data]/termo/page");
+
+const ARCHIVE_GAME_PAGES = [
+  { game: "binairo", page: ArchiveBinairoPage },
+  { game: "sudoku", page: ArchiveSudokuPage },
+  { game: "nonogram", page: ArchiveNonogramPage },
+  { game: "termo", page: ArchiveTermoPage },
+] as const;
 
 beforeEach(() => {
   spies.getDb.mockReturnValue(spies.stubDb);
@@ -150,83 +157,98 @@ describe("the archive day page (T-WEB-S184)", () => {
 });
 
 describe("AC 1 — a future or malformed date 404s (T-WEB-S170)", () => {
-  it("a WELL-FORMED future date 404s because the READER answers undefined, on both the day page and a play page", async () => {
-    spies.listArchivedDays.mockResolvedValue([]);
-    spies.getArchivedDaily.mockResolvedValue(undefined);
-    spies.archiveDateClass.mockResolvedValue("future");
+  it.each(ARCHIVE_GAME_PAGES)(
+    "$game: a WELL-FORMED future date 404s because the READER answers undefined, on both the day page and a play page",
+    async ({ game, page }) => {
+      spies.listArchivedDays.mockResolvedValue([]);
+      spies.getArchivedDaily.mockResolvedValue(undefined);
+      spies.archiveDateClass.mockResolvedValue("future");
 
-    await expect(
-      ArchiveDayPage({ params: Promise.resolve({ data: "2099-01-01" }) }),
-    ).rejects.toThrow("NEXT_NOT_FOUND");
-    await expect(
-      ArchiveSudokuPage({ params: Promise.resolve({ data: "2099-01-01" }) }),
-    ).rejects.toThrow("NEXT_NOT_FOUND");
-    expect(spies.redirect).not.toHaveBeenCalled();
-
-    expect(spies.listArchivedDays).toHaveBeenCalled();
-    expect(spies.getArchivedDaily).toHaveBeenCalledWith(
-      spies.stubDb,
-      "sudoku",
-      "2099-01-01",
-    );
-  });
-
-  it("a MALFORMED date 404s at calendarDateString, before any read", async () => {
-    for (const data of ["2026-02-30", "mes", "../2026-08-01", "%2e%2e"]) {
-      spies.listArchivedDays.mockClear();
-      spies.getArchivedDaily.mockClear();
       await expect(
-        ArchiveDayPage({ params: Promise.resolve({ data }) }),
+        ArchiveDayPage({ params: Promise.resolve({ data: "2099-01-01" }) }),
       ).rejects.toThrow("NEXT_NOT_FOUND");
       await expect(
-        ArchiveSudokuPage({ params: Promise.resolve({ data }) }),
+        page({ params: Promise.resolve({ data: "2099-01-01" }) }),
       ).rejects.toThrow("NEXT_NOT_FOUND");
-      expect(spies.listArchivedDays).not.toHaveBeenCalled();
-      expect(spies.getArchivedDaily).not.toHaveBeenCalled();
-    }
-  });
+      expect(spies.redirect).not.toHaveBeenCalled();
+
+      expect(spies.listArchivedDays).toHaveBeenCalled();
+      expect(spies.getArchivedDaily).toHaveBeenCalledWith(
+        spies.stubDb,
+        game,
+        "2099-01-01",
+      );
+    },
+  );
+
+  it.each(ARCHIVE_GAME_PAGES)(
+    "$game: a MALFORMED date 404s at calendarDateString, before any read",
+    async ({ page }) => {
+      for (const data of ["2026-02-30", "mes", "../2026-08-01", "%2e%2e"]) {
+        spies.listArchivedDays.mockClear();
+        spies.getArchivedDaily.mockClear();
+        await expect(
+          ArchiveDayPage({ params: Promise.resolve({ data }) }),
+        ).rejects.toThrow("NEXT_NOT_FOUND");
+        await expect(
+          page({ params: Promise.resolve({ data }) }),
+        ).rejects.toThrow("NEXT_NOT_FOUND");
+        expect(spies.listArchivedDays).not.toHaveBeenCalled();
+        expect(spies.getArchivedDaily).not.toHaveBeenCalled();
+      }
+    },
+  );
 });
 
 describe("today's URL RESOLVES (T-WEB-S171)", () => {
-  it("today's date redirects — the day page to the hub, a play page to that game's daily route", async () => {
-    spies.listArchivedDays.mockResolvedValue([]);
-    spies.getArchivedDaily.mockResolvedValue(undefined);
-    spies.archiveDateClass.mockResolvedValue("today");
-
-    await expect(
-      ArchiveDayPage({ params: Promise.resolve({ data: "2026-08-14" }) }),
-    ).rejects.toThrow("NEXT_REDIRECT:/");
-    await expect(
-      ArchiveSudokuPage({ params: Promise.resolve({ data: "2026-08-14" }) }),
-    ).rejects.toThrow("NEXT_REDIRECT:/sudoku");
-
-    expect(spies.notFound).not.toHaveBeenCalled();
-  });
-
-  it("the ORDER is asserted, not only the outcome — a rendering path never calls the classifier", async () => {
-    spies.getArchivedDaily.mockResolvedValue({
-      game: "sudoku",
-      date: "2026-08-03",
-      givens: Array.from({ length: 81 }, () => 0),
-      tier: 1,
-    });
-    await ArchiveSudokuPage({
-      params: Promise.resolve({ data: "2026-08-03" }),
-    });
-
-    expect(spies.archiveDateClass).not.toHaveBeenCalled();
-  });
-
-  it("an empty read classified `past` or `future` 404s rather than redirecting — the midnight straddle", async () => {
-    for (const dateClass of ["past", "future"]) {
+  it.each(ARCHIVE_GAME_PAGES)(
+    "$game: today's date redirects — the day page to the hub, a play page to that game's daily route",
+    async ({ game, page }) => {
+      spies.listArchivedDays.mockResolvedValue([]);
       spies.getArchivedDaily.mockResolvedValue(undefined);
-      spies.archiveDateClass.mockResolvedValue(dateClass);
+      spies.archiveDateClass.mockResolvedValue("today");
+
       await expect(
-        ArchiveSudokuPage({ params: Promise.resolve({ data: "2026-08-03" }) }),
-      ).rejects.toThrow("NEXT_NOT_FOUND");
-    }
-    expect(spies.redirect).not.toHaveBeenCalled();
-  });
+        ArchiveDayPage({ params: Promise.resolve({ data: "2026-08-14" }) }),
+      ).rejects.toThrow("NEXT_REDIRECT:/");
+      await expect(
+        page({ params: Promise.resolve({ data: "2026-08-14" }) }),
+      ).rejects.toThrow(`NEXT_REDIRECT:${playRoutes[game]}`);
+
+      expect(spies.notFound).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(ARCHIVE_GAME_PAGES)(
+    "$game: the ORDER is asserted, not only the outcome — a rendering path never calls the classifier",
+    async ({ game, page }) => {
+      spies.getArchivedDaily.mockResolvedValue({
+        game,
+        date: "2026-08-03",
+        givens: Array.from({ length: 81 }, () => 0),
+        tier: 1,
+      });
+      await page({
+        params: Promise.resolve({ data: "2026-08-03" }),
+      });
+
+      expect(spies.archiveDateClass).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(ARCHIVE_GAME_PAGES)(
+    "$game: an empty read classified `past` or `future` 404s rather than redirecting — the midnight straddle",
+    async ({ page }) => {
+      for (const dateClass of ["past", "future"]) {
+        spies.getArchivedDaily.mockResolvedValue(undefined);
+        spies.archiveDateClass.mockResolvedValue(dateClass);
+        await expect(
+          page({ params: Promise.resolve({ data: "2026-08-03" }) }),
+        ).rejects.toThrow("NEXT_NOT_FOUND");
+      }
+      expect(spies.redirect).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("a published past day renders the archived board (T-WEB-S172)", () => {
