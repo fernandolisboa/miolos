@@ -266,6 +266,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       '  import("@miolos/db");',
 
       '  import("../play/conclusion-lazy");',
+      '  import("../play/conclusion-stats");',
       '  import("../nonogram/nonogram-conclusion");',
       '  import("../termo/termo-conclusion");',
       '  import("../play/daily-route");',
@@ -285,7 +286,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
-  it("T-LINT-S17: the indirect doors — daily hooks, screen roots, conclusion-view and the daily route envelope — red from free play, clean from a daily path", async () => {
+  it("T-LINT-S17: the indirect doors — daily hooks, screen roots, the conclusion modules and the daily route envelope — red from free play, clean from a daily path", async () => {
     const doors = [
       "../binairo/use-binairo-play",
       "../sudoku/use-sudoku-play",
@@ -294,6 +295,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../sudoku/sudoku-screen",
       "../nonogram/nonogram-screen",
       "../play/conclusion-view",
+      "../play/conclusion-stats",
 
       "../play/conclusion-lazy",
       "../nonogram/nonogram-conclusion",
