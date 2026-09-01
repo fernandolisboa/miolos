@@ -56,8 +56,9 @@ no per-game module, and each is reached by exactly its own routes).
 burned** — it is never reused, which is why next free is `S366` and not `S365`.
 Re-derived by the two-stage grep at the plan and again here.
 **No `T-LINT` id was spent**, on the same sibling rule cluster 4 used:
-`**/play/daily-route` is a third element of `T-LINT-S16`'s and `T-LINT-S17`'s
-existing `doors` arrays, so no new claim was made.
+`../play/daily-route` is one more element of `T-LINT-S16`'s and `T-LINT-S17`'s
+existing `doors` arrays, so no new claim was made. S17's title widened in
+place to name the route envelope, since the old one stopped being true.
 
 - **`T-WEB-S361`** (`attach-client`) and **`T-WEB-S362`** (`onboarding-client`)
   cover two modules that were reached only through `vi.mock` in their consumers'
