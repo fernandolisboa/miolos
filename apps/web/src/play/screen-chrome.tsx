@@ -8,8 +8,9 @@ import { accentVars } from "./accent";
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
 
-const ACCENTS: Readonly<Record<Game, CSSProperties>> = {
-  termo: accentVars("termo"),
+export type ChromeGame = Exclude<Game, "termo">;
+
+const ACCENTS: Readonly<Record<ChromeGame, CSSProperties>> = {
   sudoku: accentVars("sudoku"),
   nonogram: accentVars("nonogram"),
   binairo: accentVars("binairo"),
@@ -34,20 +35,22 @@ export interface PlayChromeStat {
   readonly className: string;
 }
 
-export interface PlayChromeHint {
-  readonly ready: boolean;
-  readonly label: string;
-  readonly explain: string | null;
-  readonly onReveal: () => void;
-}
-
-export type PlayChromeClock = "none" | "blank" | { readonly elapsedMs: number };
-
-export interface PlayChromeLive {
+export interface PlayChromeReadouts {
   readonly progressShort: string;
   readonly progressLong: string;
-  readonly hint: PlayChromeHint;
+  readonly hint: {
+    readonly ready: boolean;
+    readonly label: string;
+    readonly explain: string | null;
+    readonly onReveal: () => void;
+  };
 }
+
+export type PlayChromeState =
+  | { readonly kind: "playing"; readonly readouts: PlayChromeReadouts }
+  | { readonly kind: "skeleton" | "generating" | "error" };
+
+export type PlayChromeClock = "none" | "blank" | { readonly elapsedMs: number };
 
 export const DAILY_PLAY_BACK: PlayChromeBack = {
   href: routes.home,
@@ -92,8 +95,8 @@ function clockRow(clock: PlayChromeClock): ReactNode {
 
 export function PlayScreenChrome({
   game,
-  pageClassName,
-  playState,
+  pageModifier,
+  state,
   back,
   topDate,
   kicker,
@@ -102,12 +105,11 @@ export function PlayScreenChrome({
   note,
   clock,
   extraStat,
-  live,
   children,
 }: {
-  readonly game: Game;
-  readonly pageClassName: string;
-  readonly playState: "playing" | "skeleton" | "generating" | "error";
+  readonly game: ChromeGame;
+  readonly pageModifier: string;
+  readonly state: PlayChromeState;
   readonly back: PlayChromeBack;
   readonly topDate: string;
   readonly kicker: string;
@@ -116,16 +118,16 @@ export function PlayScreenChrome({
   readonly note: PlayChromeNote | null;
   readonly clock: PlayChromeClock;
   readonly extraStat: PlayChromeStat | null;
-  readonly live: PlayChromeLive | null;
   readonly children: ReactNode;
 }): ReactElement {
-  const skeleton = playState === "skeleton";
+  const skeleton = state.kind === "skeleton";
+  const readouts = state.kind === "playing" ? state.readouts : null;
 
   return (
     <main
-      className={`${screen.page} ${pageClassName}`}
+      className={`${screen.page} ${pageModifier}`}
       style={ACCENTS[game]}
-      data-play-state={playState}
+      data-play-state={state.kind}
     >
       <header className={screen.topBar}>
         <Link
@@ -147,10 +149,10 @@ export function PlayScreenChrome({
         <div className={screen.titleRow}>
           <h1 className={screen.title}>{title}</h1>
           <span
-            aria-hidden={live === null ? true : undefined}
+            aria-hidden={readouts === null ? true : undefined}
             className={screen.progressBar}
           >
-            {live === null ? BLANK_READOUT : live.progressShort}
+            {readouts === null ? BLANK_READOUT : readouts.progressShort}
           </span>
         </div>
         <p className={screen.rules}>{rules}</p>
@@ -173,10 +175,10 @@ export function PlayScreenChrome({
             {messages.play.progressLabel}
           </span>
           <span
-            aria-hidden={live === null && !skeleton ? true : undefined}
+            aria-hidden={readouts === null && !skeleton ? true : undefined}
             className={screen.progressCard}
           >
-            {live === null ? BLANK_READOUT : live.progressLong}
+            {readouts === null ? BLANK_READOUT : readouts.progressLong}
           </span>
         </div>
         {extraStat === null ? null : (
@@ -189,12 +191,12 @@ export function PlayScreenChrome({
 
       <section className={screen.board}>
         {children}
-        {live === null || live.hint.explain === null ? null : (
-          <p className={screen.hintExplain}>{live.hint.explain}</p>
+        {readouts === null || readouts.hint.explain === null ? null : (
+          <p className={screen.hintExplain}>{readouts.hint.explain}</p>
         )}
       </section>
 
-      {live === null ? (
+      {readouts === null ? (
         <div
           aria-hidden
           className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}
@@ -204,11 +206,11 @@ export function PlayScreenChrome({
       ) : (
         <button
           type="button"
-          className={`${screen.hint}${live.hint.ready ? "" : ` ${screen.hintUsed}`}`}
-          aria-disabled={!live.hint.ready}
-          onClick={live.hint.onReveal}
+          className={`${screen.hint}${readouts.hint.ready ? "" : ` ${screen.hintUsed}`}`}
+          aria-disabled={!readouts.hint.ready}
+          onClick={readouts.hint.onReveal}
         >
-          {live.hint.label}
+          {readouts.hint.label}
         </button>
       )}
     </main>

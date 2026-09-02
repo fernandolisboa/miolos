@@ -57,19 +57,25 @@ would not fire on a free-play screen importing the chrome.
   the hint node are swapped in the chrome.
 
 - **`T-WEB-S367`** — the four variants of the chrome, each read into one
-  descriptor and asserted together: the three clock states, `live` null versus
-  present, `extraStat`, the note, the hint control's tag and `aria-disabled`,
-  the explain paragraph, `onReveal` firing, and the five-row `aria-hidden`
-  inventory **asserted as attribute-absent, never `"false"`**. Five separate
-  mutations red it. The extra-stat arm was dead on the first draft — dropping
-  `className={extraStat.className}` passed, because the reader only took
-  `textContent` — and the descriptor gained a marker-class lookup so it reds.
+  descriptor and asserted together: the page's own classes, the accent style,
+  the three clock states, the readouts present versus absent, `extraStat`, the
+  note, the hint control's tag, its three class combinations and its
+  `aria-disabled`, the explain paragraph, `onReveal` firing, and the five-row
+  `aria-hidden` inventory **asserted as attribute-absent, never `"false"`**.
+  Every value is read by the class that carries it — the extra stat and the
+  note by their marker class, not by `textContent`, which cannot tell a
+  `className` that was dropped from one that was applied.
 
-- **`T-WEB-S368`** — `closureOf("apps/web/src/play/screen-chrome.tsx")` reaches
-  none of the eighteen modules the free-play wall bans, every one of those
-  eighteen paths exists on disk, and the closure does reach
-  `play/timer-readout.tsx`. Reds through `play/types` → `play/play-record` on
-  the import the module is forbidden.
+- **`T-WEB-S368`** — every import specifier in
+  `closureOf("apps/web/src/play/screen-chrome.tsx")`, rewritten as a free-play
+  file would spell it, is put through **the real `eslint.config.mjs`** at
+  `apps/web/src/free-play/`. Nothing is hand-copied, so the assertion tracks
+  all thirteen `freePlayBannedModuleGroups` and every group added later. Reds
+  on `import { fetchStreak } from "../streak/streak-client"` in the chrome —
+  which `pnpm lint` cannot see, because `no-restricted-imports` is per-file and
+  the chrome is not under `free-play/**`. Non-vacuity has three legs: the
+  closure reaches `../play/timer-readout` and `@miolos/core`, and the same
+  probe plus `../streak/streak-client` is reported.
 
 #206 cluster 14 **spent and burned nothing** — the table above is unchanged.
 `../play/conclusion-stats` is one more element of `T-LINT-S16`'s and

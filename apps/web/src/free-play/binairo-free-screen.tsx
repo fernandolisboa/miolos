@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
 import { Controls } from "../binairo/controls";
@@ -23,11 +16,9 @@ import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
 import screen from "../play/screen.module.css";
-import { PlayScreenChrome, type PlayChromeLive } from "../play/screen-chrome";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
-import { FREE_PLAY_BACK, levelStat } from "./chrome";
+import { FreePlayChrome } from "./chrome";
 import styles from "./free-play.module.css";
-import { LevelPicker } from "./level-picker";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeBinairo,
@@ -60,18 +51,22 @@ export function BinairoFreeScreen({
   }
 
   return (
-    <Chrome
-      playState={phase.kind === "failed" ? "error" : "generating"}
+    <FreePlayChrome
+      game="binairo"
+      pageModifier={boardStyles.pageBinairo ?? ""}
+      kicker={messages.games.binairo.kicker}
+      title={copy.title}
+      rules={copy.rules}
       level={level}
       onLevelChange={setLevel}
-      live={null}
+      state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
         <ErrorCard onRetry={regenerate} />
       ) : (
         <GeneratingBoard />
       )}
-    </Chrome>
+    </FreePlayChrome>
   );
 }
 
@@ -142,18 +137,25 @@ function BinairoFreeBoard({
   }
 
   return (
-    <Chrome
-      playState="playing"
+    <FreePlayChrome
+      game="binairo"
+      pageModifier={boardStyles.pageBinairo ?? ""}
+      kicker={messages.games.binairo.kicker}
+      title={copy.title}
+      rules={copy.rules}
       level={level}
       onLevelChange={onLevelChange}
-      live={{
-        progressShort: copy.progressShort(filled, TOTAL_CELLS),
-        progressLong: copy.progressLong(filled, TOTAL_CELLS),
-        hint: {
-          ready: hintReady,
-          label: hintReady ? copy.hint.available : copy.hint.used,
-          explain: hintKind === null ? null : copy.hint.explain[hintKind],
-          onReveal: revealHint,
+      state={{
+        kind: "playing",
+        readouts: {
+          progressShort: copy.progressShort(filled, TOTAL_CELLS),
+          progressLong: copy.progressLong(filled, TOTAL_CELLS),
+          hint: {
+            ready: hintReady,
+            label: hintReady ? copy.hint.available : copy.hint.used,
+            explain: hintKind === null ? null : copy.hint.explain[hintKind],
+            onReveal: revealHint,
+          },
         },
       }}
     >
@@ -169,41 +171,7 @@ function BinairoFreeBoard({
         />
       </div>
       <Controls paint={state.paint} onToggleMode={toggleMode} />
-    </Chrome>
-  );
-}
-
-function Chrome({
-  playState,
-  level,
-  onLevelChange,
-  live,
-  children,
-}: {
-  readonly playState: "generating" | "error" | "playing";
-  readonly level: FreePlayLevel;
-  readonly onLevelChange: (level: FreePlayLevel) => void;
-  readonly live: PlayChromeLive | null;
-  readonly children: ReactNode;
-}) {
-  return (
-    <PlayScreenChrome
-      game="binairo"
-      pageClassName={boardStyles.pageBinairo ?? ""}
-      playState={playState}
-      back={FREE_PLAY_BACK}
-      topDate={messages.freePlay.modeTag}
-      kicker={messages.games.binairo.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={null}
-      clock="none"
-      extraStat={levelStat(level)}
-      live={live}
-    >
-      <LevelPicker level={level} onChange={onLevelChange} />
-      {children}
-    </PlayScreenChrome>
+    </FreePlayChrome>
   );
 }
 

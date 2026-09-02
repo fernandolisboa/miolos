@@ -1,20 +1,12 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { messages } from "../i18n";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
 import screen from "../play/screen.module.css";
-import { PlayScreenChrome, type PlayChromeLive } from "../play/screen-chrome";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { playableGivens } from "../sudoku/engine";
 import { Keypad, KeypadSkeleton } from "../sudoku/keypad";
@@ -25,9 +17,8 @@ import {
 } from "../sudoku/state";
 import boardStyles from "../sudoku/sudoku-board.module.css";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
-import { FREE_PLAY_BACK, levelStat } from "./chrome";
+import { FreePlayChrome } from "./chrome";
 import styles from "./free-play.module.css";
-import { LevelPicker } from "./level-picker";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeSudoku,
@@ -56,18 +47,22 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
   }
 
   return (
-    <Chrome
-      playState={phase.kind === "failed" ? "error" : "generating"}
+    <FreePlayChrome
+      game="sudoku"
+      pageModifier={boardStyles.pageSudoku ?? ""}
+      kicker={messages.games.sudoku.kicker}
+      title={copy.title}
+      rules={copy.rules}
       level={level}
       onLevelChange={setLevel}
-      live={null}
+      state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
         <ErrorCard onRetry={regenerate} />
       ) : (
         <GeneratingBoard />
       )}
-    </Chrome>
+    </FreePlayChrome>
   );
 }
 
@@ -146,22 +141,29 @@ function SudokuFreeBoard({
   }
 
   return (
-    <Chrome
-      playState="playing"
+    <FreePlayChrome
+      game="sudoku"
+      pageModifier={boardStyles.pageSudoku ?? ""}
+      kicker={messages.games.sudoku.kicker}
+      title={copy.title}
+      rules={copy.rules}
       level={level}
       onLevelChange={onLevelChange}
-      live={{
-        progressShort: copy.progressShort(
-          messages.freePlay.level[level],
-          filled,
-          TOTAL_CELLS,
-        ),
-        progressLong: copy.progressLong(filled, TOTAL_CELLS),
-        hint: {
-          ready: hintReady,
-          label: hintReady ? copy.hint.available : copy.hint.used,
-          explain: hintKind === null ? null : copy.hint.explain[hintKind],
-          onReveal: revealHint,
+      state={{
+        kind: "playing",
+        readouts: {
+          progressShort: copy.progressShort(
+            messages.freePlay.level[level],
+            filled,
+            TOTAL_CELLS,
+          ),
+          progressLong: copy.progressLong(filled, TOTAL_CELLS),
+          hint: {
+            ready: hintReady,
+            label: hintReady ? copy.hint.available : copy.hint.used,
+            explain: hintKind === null ? null : copy.hint.explain[hintKind],
+            onReveal: revealHint,
+          },
         },
       }}
     >
@@ -179,41 +181,7 @@ function SudokuFreeBoard({
         />
       </div>
       <Keypad onDigit={enterDigit} onClear={clearCell} />
-    </Chrome>
-  );
-}
-
-function Chrome({
-  playState,
-  level,
-  onLevelChange,
-  live,
-  children,
-}: {
-  readonly playState: "generating" | "error" | "playing";
-  readonly level: FreePlayLevel;
-  readonly onLevelChange: (level: FreePlayLevel) => void;
-  readonly live: PlayChromeLive | null;
-  readonly children: ReactNode;
-}) {
-  return (
-    <PlayScreenChrome
-      game="sudoku"
-      pageClassName={boardStyles.pageSudoku ?? ""}
-      playState={playState}
-      back={FREE_PLAY_BACK}
-      topDate={messages.freePlay.modeTag}
-      kicker={messages.games.sudoku.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={null}
-      clock="none"
-      extraStat={levelStat(level)}
-      live={live}
-    >
-      <LevelPicker level={level} onChange={onLevelChange} />
-      {children}
-    </PlayScreenChrome>
+    </FreePlayChrome>
   );
 }
 

@@ -76,7 +76,7 @@ it as a timing rule and was wrong.
    `screen.module.css` are now one shared `play/screen-chrome.tsx`, serving the
    three daily grid views, their skeletons and free play's three screens; the
    board, its input model, the geometry stylesheet and all copy stay per game,
-   and Termo keeps its own composition. See
+   and Termo is excluded by the component's own type. See
    [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md).)*
 
    *(**Amended at #103** — the "Shared" enumeration is **three items short**

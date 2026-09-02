@@ -23,8 +23,7 @@ export function PlayView({
   return (
     <PlayScreenChrome
       game="binairo"
-      pageClassName={styles.pageBinairo ?? ""}
-      playState="playing"
+      pageModifier={styles.pageBinairo ?? ""}
       back={archive?.back ?? DAILY_PLAY_BACK}
       topDate={formatLongDate(state.date)}
       kicker={messages.games.binairo.kicker}
@@ -33,15 +32,18 @@ export function PlayView({
       note={archive?.note ?? null}
       clock={{ elapsedMs: play.elapsed }}
       extraStat={null}
-      live={{
-        progressShort: copy.progressShort(play.filled, TOTAL_CELLS),
-        progressLong: copy.progressLong(play.filled, TOTAL_CELLS),
-        hint: {
-          ready: play.hintReady,
-          label: play.hintReady ? copy.hint.available : copy.hint.used,
-          explain:
-            play.hintKind === null ? null : copy.hint.explain[play.hintKind],
-          onReveal: play.revealHint,
+      state={{
+        kind: "playing",
+        readouts: {
+          progressShort: copy.progressShort(play.filled, TOTAL_CELLS),
+          progressLong: copy.progressLong(play.filled, TOTAL_CELLS),
+          hint: {
+            ready: play.hintReady,
+            label: play.hintReady ? copy.hint.available : copy.hint.used,
+            explain:
+              play.hintKind === null ? null : copy.hint.explain[play.hintKind],
+            onReveal: play.revealHint,
+          },
         },
       }}
     >
@@ -71,8 +73,7 @@ export function PlaySkeleton({
   return (
     <PlayScreenChrome
       game="binairo"
-      pageClassName={styles.pageBinairo ?? ""}
-      playState="skeleton"
+      pageModifier={styles.pageBinairo ?? ""}
       back={archive?.back ?? DAILY_PLAY_BACK}
       topDate={formatLongDate(date)}
       kicker={messages.games.binairo.kicker}
@@ -81,7 +82,7 @@ export function PlaySkeleton({
       note={archive?.note ?? null}
       clock="blank"
       extraStat={null}
-      live={null}
+      state={{ kind: "skeleton" }}
     >
       <div aria-hidden className={screen.gridCard}>
         <div className={styles.grid}>

@@ -29,8 +29,7 @@ export function PlayView({
   return (
     <PlayScreenChrome
       game="sudoku"
-      pageClassName={styles.pageSudoku ?? ""}
-      playState="playing"
+      pageModifier={styles.pageSudoku ?? ""}
       back={archive?.back ?? DAILY_PLAY_BACK}
       topDate={formatLongDate(state.date)}
       kicker={messages.games.sudoku.kicker}
@@ -39,19 +38,22 @@ export function PlayView({
       note={archive?.note ?? null}
       clock={{ elapsedMs: play.elapsed }}
       extraStat={levelStat(state.tier)}
-      live={{
-        progressShort: copy.progressShort(
-          copy.level(state.tier),
-          play.filled,
-          TOTAL_CELLS,
-        ),
-        progressLong: copy.progressLong(play.filled, TOTAL_CELLS),
-        hint: {
-          ready: play.hintReady,
-          label: play.hintReady ? copy.hint.available : copy.hint.used,
-          explain:
-            play.hintKind === null ? null : copy.hint.explain[play.hintKind],
-          onReveal: play.revealHint,
+      state={{
+        kind: "playing",
+        readouts: {
+          progressShort: copy.progressShort(
+            copy.level(state.tier),
+            play.filled,
+            TOTAL_CELLS,
+          ),
+          progressLong: copy.progressLong(play.filled, TOTAL_CELLS),
+          hint: {
+            ready: play.hintReady,
+            label: play.hintReady ? copy.hint.available : copy.hint.used,
+            explain:
+              play.hintKind === null ? null : copy.hint.explain[play.hintKind],
+            onReveal: play.revealHint,
+          },
         },
       }}
     >
@@ -85,8 +87,7 @@ export function PlaySkeleton({
   return (
     <PlayScreenChrome
       game="sudoku"
-      pageClassName={styles.pageSudoku ?? ""}
-      playState="skeleton"
+      pageModifier={styles.pageSudoku ?? ""}
       back={archive?.back ?? DAILY_PLAY_BACK}
       topDate={formatLongDate(date)}
       kicker={messages.games.sudoku.kicker}
@@ -95,7 +96,7 @@ export function PlaySkeleton({
       note={archive?.note ?? null}
       clock="blank"
       extraStat={levelStat(tier)}
-      live={null}
+      state={{ kind: "skeleton" }}
     >
       <div aria-hidden className={screen.gridCard}>
         <BoardSkeleton />

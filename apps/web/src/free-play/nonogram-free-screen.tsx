@@ -2,18 +2,10 @@
 
 import type { NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
-import {
-  useCallback,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { messages } from "../i18n";
 import screen from "../play/screen.module.css";
-import { PlayScreenChrome, type PlayChromeLive } from "../play/screen-chrome";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
 import {
@@ -23,7 +15,7 @@ import {
   nextNonogramHint,
   type NonogramHintKind,
 } from "../nonogram/engine";
-import boardStyles from "../nonogram/nonogram-board.module.css";
+import { nonogramPageModifier } from "../nonogram/page-class";
 import {
   initNonogramPlayState,
   nonogramPlayReducer,
@@ -31,9 +23,8 @@ import {
   type NonogramMark,
 } from "../nonogram/state";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
-import { FREE_PLAY_BACK, levelStat } from "./chrome";
+import { FreePlayChrome } from "./chrome";
 import styles from "./free-play.module.css";
-import { LevelPicker } from "./level-picker";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeNonogram,
@@ -70,19 +61,22 @@ export function NonogramFreeScreen({
   }
 
   return (
-    <Chrome
-      playState={phase.kind === "failed" ? "error" : "generating"}
+    <FreePlayChrome
+      game="nonogram"
+      kicker={messages.games.nonogram.kicker}
+      title={copy.title}
+      rules={copy.rules}
       level={level}
       onLevelChange={setLevel}
-      size={LEVEL_SIZES[level]}
-      live={null}
+      state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
+      pageModifier={nonogramPageModifier(LEVEL_SIZES[level])}
     >
       {phase.kind === "failed" ? (
         <ErrorCard onRetry={regenerate} />
       ) : (
         <GeneratingBoard size={LEVEL_SIZES[level]} />
       )}
-    </Chrome>
+    </FreePlayChrome>
   );
 }
 
@@ -182,19 +176,25 @@ function NonogramFreeBoard({
   }
 
   return (
-    <Chrome
-      playState="playing"
+    <FreePlayChrome
+      game="nonogram"
+      kicker={messages.games.nonogram.kicker}
+      title={copy.title}
+      rules={copy.rules}
       level={level}
       onLevelChange={onLevelChange}
-      size={state.size}
-      live={{
-        progressShort: copy.progressShort(state.size, filled, target),
-        progressLong: copy.progressLong(filled, target),
-        hint: {
-          ready: hintReady,
-          label: hintReady ? copy.hint.available : copy.hint.used,
-          explain: hintKind === null ? null : copy.hint.explain[hintKind],
-          onReveal: revealHint,
+      pageModifier={nonogramPageModifier(state.size)}
+      state={{
+        kind: "playing",
+        readouts: {
+          progressShort: copy.progressShort(state.size, filled, target),
+          progressLong: copy.progressLong(filled, target),
+          hint: {
+            ready: hintReady,
+            label: hintReady ? copy.hint.available : copy.hint.used,
+            explain: hintKind === null ? null : copy.hint.explain[hintKind],
+            onReveal: revealHint,
+          },
         },
       }}
     >
@@ -214,43 +214,7 @@ function NonogramFreeBoard({
         />
       </div>
       <Controls brush={state.brush} onSetBrush={setBrush} />
-    </Chrome>
-  );
-}
-
-function Chrome({
-  playState,
-  level,
-  onLevelChange,
-  size,
-  live,
-  children,
-}: {
-  readonly playState: "generating" | "error" | "playing";
-  readonly level: FreePlayLevel;
-  readonly onLevelChange: (level: FreePlayLevel) => void;
-  readonly size: NonogramSize;
-  readonly live: PlayChromeLive | null;
-  readonly children: ReactNode;
-}) {
-  return (
-    <PlayScreenChrome
-      game="nonogram"
-      pageClassName={pageClassName(size)}
-      playState={playState}
-      back={FREE_PLAY_BACK}
-      topDate={messages.freePlay.modeTag}
-      kicker={messages.games.nonogram.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={null}
-      clock="none"
-      extraStat={levelStat(level)}
-      live={live}
-    >
-      <LevelPicker level={level} onChange={onLevelChange} />
-      {children}
-    </PlayScreenChrome>
+    </FreePlayChrome>
   );
 }
 
@@ -281,9 +245,4 @@ function ErrorCard({ onRetry }: { readonly onRetry: () => void }) {
       </button>
     </div>
   );
-}
-
-function pageClassName(size: NonogramSize): string {
-  const cap = size === 5 ? ` ${boardStyles.mobileCap5}` : "";
-  return `${boardStyles.pageNonogram}${cap}`;
 }

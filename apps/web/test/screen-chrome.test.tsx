@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 
 import {
   dailyNonogramResponseSchema,
@@ -12,9 +12,11 @@ import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku } from "@miolos/games/sudoku";
 import { fireEvent, render } from "@testing-library/react";
+import { ESLint } from "eslint";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import tseslint from "typescript-eslint";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   PlaySkeleton as BinairoSkeleton,
@@ -30,13 +32,15 @@ import {
   PlayView as NonogramView,
 } from "../src/nonogram/play-view";
 import { initNonogramPlayState } from "../src/nonogram/state";
+import { accentVars } from "../src/play/accent";
 import {
   DAILY_PLAY_BACK,
   PlayScreenChrome,
   type PlayChromeClock,
-  type PlayChromeLive,
   type PlayChromeNote,
+  type PlayChromeReadouts,
   type PlayChromeStat,
+  type PlayChromeState,
 } from "../src/play/screen-chrome";
 import screen from "../src/play/screen.module.css";
 import {
@@ -44,9 +48,12 @@ import {
   PlayView as SudokuView,
 } from "../src/sudoku/play-view";
 import { initSudokuPlayState } from "../src/sudoku/state";
+import { stylesheet } from "./css-source";
 import { closureOf } from "./module-graph";
+import { withoutComments } from "./ts-source";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
+const SHARED_CSS = stylesheet("src/play/screen.module.css");
 
 const DATE = "2026-08-18";
 const SEED = 20_260_818;
@@ -55,9 +62,12 @@ const BLANK = "\u00a0";
 const ELAPSED = 65_000;
 
 function cls(local: string): string {
+  if (!new RegExp(`(?:^|[\\s,])\\.${local}(?![\\w-])`, "m").test(SHARED_CSS)) {
+    throw new Error(`play/screen.module.css declares no .${local}`);
+  }
   const generated = screen[local];
   if (generated === undefined) {
-    throw new Error(`play/screen.module.css declares no .${local}`);
+    throw new Error(`the CSS module exposes no key for .${local}`);
   }
   return generated;
 }
@@ -150,27 +160,40 @@ function mountedPage(element: ReactElement): Element {
 
 const GRID_AREAS = ["topBar", "titleBlock", "statsCard", "board", "hint"];
 
-function areasOf(page: Element): readonly string[] {
-  return [...page.children].map(
-    (child) =>
-      GRID_AREAS.find((area) => child.classList.contains(cls(area))) ??
-      `unplaced:${child.className}`,
-  );
+function placementOf(page: Element): Record<string, unknown> {
+  return {
+    areas: [...page.children].map(
+      (child) =>
+        GRID_AREAS.find((area) => child.classList.contains(cls(area))) ??
+        `unplaced:${child.className}`,
+    ),
+    state: page.getAttribute("data-play-state"),
+  };
+}
+
+function placed(state: string): Record<string, unknown> {
+  return { areas: GRID_AREAS, state };
 }
 
 describe("`.page` places the same five children, in DOM order, everywhere (T-WEB-S366)", () => {
   it("holds for the nine shipped composition shapes", () => {
-    const observed = {
-      "binairo daily": areasOf(staticPage(<BinairoView play={BINAIRO_PLAY} />)),
-      "sudoku daily": areasOf(staticPage(<SudokuView play={SUDOKU_PLAY} />)),
-      "nonogram daily": areasOf(
+    expect({
+      "binairo daily": placementOf(
+        staticPage(<BinairoView play={BINAIRO_PLAY} />),
+      ),
+      "sudoku daily": placementOf(
+        staticPage(<SudokuView play={SUDOKU_PLAY} />),
+      ),
+      "nonogram daily": placementOf(
         staticPage(<NonogramView play={NONOGRAM_PLAY} />),
       ),
-      "binairo skeleton": areasOf(staticPage(<BinairoSkeleton date={DATE} />)),
-      "sudoku skeleton": areasOf(
+      "binairo skeleton": placementOf(
+        staticPage(<BinairoSkeleton date={DATE} />),
+      ),
+      "sudoku skeleton": placementOf(
         staticPage(<SudokuSkeleton date={DATE} tier={SUDOKU.tier} />),
       ),
-      "nonogram skeleton": areasOf(
+      "nonogram skeleton": placementOf(
         staticPage(
           <NonogramSkeleton
             date={DATE}
@@ -179,13 +202,13 @@ describe("`.page` places the same five children, in DOM order, everywhere (T-WEB
           />,
         ),
       ),
-      "free play playing": areasOf(
+      "free play playing": placementOf(
         mountedPage(<BinairoFreeScreen deps={{ pickSeed: () => SEED }} />),
       ),
-      "free play generating": areasOf(
+      "free play generating": placementOf(
         staticPage(<SudokuFreeScreen deps={{ pickSeed: () => SEED }} />),
       ),
-      "free play error": areasOf(
+      "free play error": placementOf(
         mountedPage(
           <NonogramFreeScreen
             deps={{
@@ -196,13 +219,17 @@ describe("`.page` places the same five children, in DOM order, everywhere (T-WEB
           />,
         ),
       ),
-    };
-
-    expect(observed).toEqual(
-      Object.fromEntries(
-        Object.keys(observed).map((shape) => [shape, GRID_AREAS]),
-      ),
-    );
+    }).toEqual({
+      "binairo daily": placed("playing"),
+      "sudoku daily": placed("playing"),
+      "nonogram daily": placed("playing"),
+      "binairo skeleton": placed("skeleton"),
+      "sudoku skeleton": placed("skeleton"),
+      "nonogram skeleton": placed("skeleton"),
+      "free play playing": placed("playing"),
+      "free play generating": placed("generating"),
+      "free play error": placed("error"),
+    });
   });
 });
 
@@ -217,12 +244,13 @@ const EXTRA: PlayChromeStat = {
 };
 const PROGRESS_SHORT = "12/64";
 const PROGRESS_LONG = "12 de 64 células";
+const PAGE_MODIFIER = "page-binairo";
 
-function live(
+function readouts(
   ready: boolean,
   explain: string | null,
   onReveal: () => void = noop,
-): PlayChromeLive {
+): PlayChromeReadouts {
   return {
     progressShort: PROGRESS_SHORT,
     progressLong: PROGRESS_LONG,
@@ -231,17 +259,16 @@ function live(
 }
 
 function chrome(variant: {
-  readonly playState: "playing" | "skeleton" | "generating" | "error";
+  readonly state: PlayChromeState;
   readonly clock: PlayChromeClock;
   readonly extraStat: PlayChromeStat | null;
   readonly note: PlayChromeNote | null;
-  readonly live: PlayChromeLive | null;
 }): ReactElement {
   return (
     <PlayScreenChrome
       game="binairo"
-      pageClassName="page-binairo"
-      playState={variant.playState}
+      pageModifier={PAGE_MODIFIER}
+      state={variant.state}
       back={DAILY_PLAY_BACK}
       topDate="18 de agosto"
       kicker="binário"
@@ -250,7 +277,6 @@ function chrome(variant: {
       note={variant.note}
       clock={variant.clock}
       extraStat={variant.extraStat}
-      live={variant.live}
     >
       <div className={screen.gridCard} />
     </PlayScreenChrome>
@@ -258,35 +284,31 @@ function chrome(variant: {
 }
 
 const DAILY_LIVE = {
-  playState: "playing",
+  state: { kind: "playing", readouts: readouts(true, null) },
   clock: { elapsedMs: ELAPSED },
   extraStat: EXTRA,
   note: NOTE,
-  live: live(true, null),
 } as const;
 
 const DAILY_SKELETON = {
-  playState: "skeleton",
+  state: { kind: "skeleton" },
   clock: "blank",
   extraStat: null,
   note: null,
-  live: null,
 } as const;
 
 const FREE_PLAYING = {
-  playState: "playing",
+  state: { kind: "playing", readouts: readouts(false, "porque sim") },
   clock: "none",
   extraStat: EXTRA,
   note: null,
-  live: live(false, "porque sim"),
 } as const;
 
 const FREE_GENERATING = {
-  playState: "generating",
+  state: { kind: "generating" },
   clock: "none",
   extraStat: EXTRA,
   note: null,
-  live: null,
 } as const;
 
 function textOf(page: Element, local: string): string {
@@ -298,9 +320,47 @@ function hiddenOn(page: Element, local: string): string | null {
   return node === null ? "absent" : node.getAttribute("aria-hidden");
 }
 
+const CHROME_CLASSES = [
+  "page",
+  "topBar",
+  "back",
+  "wordmark",
+  "barKicker",
+  "topDate",
+  "timerBar",
+  "titleBlock",
+  "titleKicker",
+  "titleRow",
+  "title",
+  "progressBar",
+  "rules",
+  "statsCard",
+  "tape",
+  "statRow",
+  "statLabel",
+  "timerCard",
+  "progressCard",
+  "board",
+  "gridCard",
+  "hintExplain",
+  "hint",
+  "hintUsed",
+  "placeholder",
+];
+
+const LOCAL_NAME_OF = new Map(
+  CHROME_CLASSES.map((local) => [cls(local), local]),
+);
+
+function localNamesOf(node: Element): readonly string[] {
+  return [...node.classList].map((name) => LOCAL_NAME_OF.get(name) ?? name);
+}
+
 function shapeOf(page: Element): Record<string, unknown> {
   const hint = page.querySelector(`.${cls("hint")}`);
   return {
+    pageClasses: localNamesOf(page),
+    accent: page.getAttribute("style"),
     timerBar: textOf(page, "timerBar"),
     timerCard: textOf(page, "timerCard"),
     timers: page.querySelectorAll("[role='timer']").length,
@@ -310,6 +370,7 @@ function shapeOf(page: Element): Record<string, unknown> {
       [...row.children].map((cell) => cell.textContent ?? ""),
     ),
     hint: hint === null ? "absent" : hint.tagName,
+    hintClasses: hint === null ? "absent" : localNamesOf(hint),
     hintDisabled: hint?.getAttribute("aria-disabled") ?? null,
     hintExplain: textOf(page, "hintExplain"),
     note: page.querySelector(".note-mark")?.textContent ?? "absent",
@@ -324,15 +385,24 @@ function shapeOf(page: Element): Record<string, unknown> {
   };
 }
 
+const ACCENT_STYLE = Object.entries(accentVars("binairo"))
+  .map(([name, value]) => `${name}:${String(value)}`)
+  .join(";");
+
+const PAGE_CLASSES = ["page", PAGE_MODIFIER];
+
 describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)", () => {
-  it("renders the clock, the readouts, the extra stat, the note and the hint", () => {
+  it("renders the page classes, accent, clock, readouts, stats, note and hint", () => {
     let revealed = 0;
     const clickable = mountedPage(
       chrome({
         ...FREE_PLAYING,
-        live: live(true, null, () => {
-          revealed += 1;
-        }),
+        state: {
+          kind: "playing",
+          readouts: readouts(true, null, () => {
+            revealed += 1;
+          }),
+        },
       }),
     );
     const button = clickable.querySelector(`.${cls("hint")}`);
@@ -350,6 +420,8 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
       revealed,
     }).toEqual({
       dailyLive: {
+        pageClasses: PAGE_CLASSES,
+        accent: ACCENT_STYLE,
         timerBar: elapsed,
         timerCard: elapsed,
         timers: 2,
@@ -361,6 +433,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
           [EXTRA.label, EXTRA.value],
         ],
         hint: "BUTTON",
+        hintClasses: ["hint"],
         hintDisabled: "false",
         hintExplain: "absent",
         note: NOTE.text,
@@ -374,6 +447,8 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         },
       },
       dailySkeleton: {
+        pageClasses: PAGE_CLASSES,
+        accent: ACCENT_STYLE,
         timerBar: BLANK,
         timerCard: BLANK,
         timers: 0,
@@ -384,6 +459,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
           [messages.play.progressLabel, BLANK],
         ],
         hint: "DIV",
+        hintClasses: ["hint", "hintUsed", "placeholder"],
         hintDisabled: null,
         hintExplain: "absent",
         note: "absent",
@@ -397,6 +473,8 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         },
       },
       freePlaying: {
+        pageClasses: PAGE_CLASSES,
+        accent: ACCENT_STYLE,
         timerBar: "absent",
         timerCard: "absent",
         timers: 0,
@@ -407,6 +485,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
           [EXTRA.label, EXTRA.value],
         ],
         hint: "BUTTON",
+        hintClasses: ["hint", "hintUsed"],
         hintDisabled: "true",
         hintExplain: "porque sim",
         note: "absent",
@@ -420,6 +499,8 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         },
       },
       freeGenerating: {
+        pageClasses: PAGE_CLASSES,
+        accent: ACCENT_STYLE,
         timerBar: "absent",
         timerCard: "absent",
         timers: 0,
@@ -430,6 +511,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
           [EXTRA.label, EXTRA.value],
         ],
         hint: "DIV",
+        hintClasses: ["hint", "hintUsed", "placeholder"],
         hintDisabled: null,
         hintExplain: "absent",
         note: "absent",
@@ -448,36 +530,84 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
 });
 
 const CHROME = "apps/web/src/play/screen-chrome.tsx";
+const FREE_PLAY_PROBE = "apps/web/src/free-play/eslint-probe.ts";
 
-const WALLED = [
-  "apps/web/src/play/sync.ts",
-  "apps/web/src/play/play-record.ts",
-  "apps/web/src/play/use-play-lifecycle.ts",
-  "apps/web/src/play/day-state.ts",
-  "apps/web/src/play/use-record-snapshot.ts",
-  "apps/web/src/play/conclusion-view.tsx",
-  "apps/web/src/play/conclusion-lazy.tsx",
-  "apps/web/src/play/share-text.ts",
-  "apps/web/src/play/share-button.tsx",
-  "apps/web/src/play/daily-route.tsx",
-  "apps/web/src/termo/guess-client.ts",
-  "apps/web/src/session/bootstrap.ts",
-  "apps/web/src/binairo/use-binairo-play.ts",
-  "apps/web/src/sudoku/use-sudoku-play.ts",
-  "apps/web/src/nonogram/use-nonogram-play.ts",
-  "apps/web/src/binairo/binairo-screen.tsx",
-  "apps/web/src/sudoku/sudoku-screen.tsx",
-  "apps/web/src/nonogram/nonogram-screen.tsx",
-];
+function withoutExtension(module: string): string {
+  return module.replace(/\.tsx?$/, "");
+}
+
+function bareImportsOf(module: string): readonly string[] {
+  const code = withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
+  return [...code.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)]
+    .map((match) => match[1] ?? "")
+    .filter((specifier) => specifier !== "" && !specifier.startsWith("."));
+}
+
+function chromeSpecifiers(): readonly string[] {
+  const closure = [...closureOf(CHROME)];
+  const local = closure
+    .filter((module) => module.startsWith("apps/web/"))
+    .map((module) =>
+      relative(dirname(FREE_PLAY_PROBE), withoutExtension(module)).replaceAll(
+        "\\",
+        "/",
+      ),
+    )
+    .map((path) => (path.startsWith(".") ? path : `./${path}`));
+  const bare = closure.flatMap(bareImportsOf);
+  return [...new Set([...local, ...bare])].sort();
+}
+
+const eslint = new ESLint({
+  cwd: REPO_ROOT,
+  overrideConfigFile: join(REPO_ROOT, "eslint.config.mjs"),
+  overrideConfig: [
+    {
+      files: ["**/*.{ts,tsx}"],
+      ...tseslint.configs.disableTypeChecked,
+      languageOptions: {
+        parserOptions: { projectService: false, project: false },
+      },
+    },
+  ],
+});
+
+async function wallVerdictOn(
+  specifiers: readonly string[],
+): Promise<readonly string[]> {
+  const source = specifiers.map((s) => `import "${s}";`).join("\n") + "\n";
+  const [result] = await eslint.lintText(source, {
+    filePath: join(REPO_ROOT, FREE_PLAY_PROBE),
+  });
+  if (result === undefined) {
+    throw new Error("ESLint returned no result for the free-play probe");
+  }
+  return result.messages
+    .filter((message) => message.ruleId === "no-restricted-imports")
+    .map(
+      (message) => /^'([^']+)'/.exec(message.message)?.[1] ?? message.message,
+    );
+}
+
+vi.setConfig({ testTimeout: 40_000 });
 
 describe("the chrome reaches nothing free play is walled from (T-WEB-S368)", () => {
-  it("carries no banned module, and does carry the timer readout", () => {
-    const closure = closureOf(CHROME);
+  it("every specifier in its closure passes the real wall, run from a free-play path", async () => {
+    const specifiers = chromeSpecifiers();
 
     expect({
-      reached: WALLED.filter((module) => closure.has(module)),
-      misnamed: WALLED.filter((module) => !existsSync(join(REPO_ROOT, module))),
-      timerReadout: closure.has("apps/web/src/play/timer-readout.tsx"),
-    }).toEqual({ reached: [], misnamed: [], timerReadout: true });
+      banned: await wallVerdictOn(specifiers),
+      reachesTimerReadout: specifiers.includes("../play/timer-readout"),
+      reachesCore: specifiers.includes("@miolos/core"),
+      streakIsCaught: await wallVerdictOn([
+        ...specifiers,
+        "../streak/streak-client",
+      ]),
+    }).toEqual({
+      banned: [],
+      reachesTimerReadout: true,
+      reachesCore: true,
+      streakIsCaught: ["../streak/streak-client"],
+    });
   });
 });
