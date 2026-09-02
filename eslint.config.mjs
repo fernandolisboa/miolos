@@ -92,6 +92,16 @@ const webWallImportPatterns = [
     message:
       "apps/web is client-serving: reach the contracts through the `@miolos/core` package entry, never by relative path into packages/core/src — the deep path reaches the SERVER-ONLY daily-content schemas, whose module is retained in the browser chunk of every route the moment anything names it (commit d5bb543, ADR-0024/ADR-0033).",
   },
+  {
+    group: [
+      "**/packages/games/src/termo",
+      "**/packages/games/src/termo/**",
+      "**/node_modules/@miolos/games/src/termo",
+      "**/node_modules/@miolos/games/src/termo/**",
+    ],
+    message:
+      "apps/web reaches the Termo engine through `@miolos/games/termo`, never by relative path into packages/games/src/termo — every ban on the word list is written against the package specifier, and the deep path walks past all of them and ships the whole answer list (ADR-0005, ADR-0015, ADR-0047).",
+  },
 
   ...replayCapableClientGroups,
 ];

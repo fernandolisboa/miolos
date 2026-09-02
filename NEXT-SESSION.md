@@ -4,24 +4,26 @@
 
 ## Start here
 
-Nothing to verify. #206 clusters 5 and 14 merged; the handoff now ships inside the PR that does the work (#252, #253).
+Nothing to verify. #206 clusters 5, 6 and 14 merged.
 
 ## Session state
 
-**Cluster 5 (#250).** Twelve per-game route files stopped carrying their own copy of the publication wall read: 436 → 184 lines, envelope copies 12 → 2. New **ADR-0076** — the shared envelope takes a `render` callback, never a screen registry.
+**Cluster 6.** One `src/play/screen-chrome.tsx` now owns the five named grid areas of `play/screen.module.css` for nine composition shapes — the three daily grid play views, their skeletons, and free play's three screens, which share one `free-play/chrome.tsx` over it. Six source files went 1,660 → 1,017 lines; net production **−349**. Termo is excluded by the compiler (`game: Exclude<Game, "termo">`), not by prose, and priced in **ADR-0077**, which amends ADR-0029 decision 2 and consequence (b).
 
-**Cluster 14.** The audit said 1,477 lines and "two full screens, split into five files". Re-derived: **835 lines**, and the two screens are not independent — `ConclusionView` renders `RemoteConclusionView` as its own branch. The 642 missing lines were **comments** (#205/#239 already removed them): both revisions reprinted with comments stripped are 483 → 481 lines, token streams byte-identical. What shipped is the one extraction the evidence supports — the 194-line statistics sub-tree into `src/play/conclusion-stats.tsx`, retiring one of the file's **six** change reasons. The remote-root extraction is declined and priced: it moves the lazy boundary.
+**Zero rendered delta, proved not argued.** `renderToStaticMarkup` over 31 shapes — every archive-note, nonogram-size-5, hint and free-play-phase variant — is byte-identical against `main`, md5 `11224528d82bf228f9a62fb1361a417d` both sides, with zero `aria-hidden="false"` and zero `undefined`. The `aria-hidden` asymmetry between the daily skeleton and free play was **preserved**, not tidied: the skeleton hides the whole `.statsCard`, free play hides each blank readout. Both are correct; unifying them is a behaviour change and a different ticket.
 
-**Retracted on the record: "14 unblocks 6" is false.** No `play-view.tsx` imports any conclusion module. Cluster 6 is unblocked today. Its "~1,460 lines" is really 890; cluster 7's "640" is really 321.
+**`bundle-check` is the only gate that measures this**, and it is not in CI (#155). Chunk attribution is unchanged at 32 daily / 3 free-only / 6 unattributed, every ADR-0033/ADR-0047 marker `ok`. Free-play routes grew ~1.5 KB raw, daily routes shrank ~0.6 KB; every budget green.
 
-## The lesson, again — fifth instance
+## The lesson — a test that restates a wall is a wall with a hole in it
 
-**A dead assertion shipped past four reviewers into the very ticket after the one that documented the pattern.** The new `"conclusion-stats"` entry in `archive-day.test.tsx`'s forbidden array could not fail: `conclusion-stats.tsx` imports `conclusion-view.module.css`, so any graph reaching it also matches index 0, and a plain `expect` in a loop throws before index 1 is read. #250 had already written down the fix — *collect every arm and assert once* — and it was not applied. The loop now does.
+**A test derived from a wall must take every specifier its subject's closure *writes*** — not a hand-copied list of modules, and not only the specifiers that stay inside `apps/web/`. `T-WEB-S368` lints the chrome's closure through the real `eslint.config.mjs` at a free-play file path, so the whole config applies. Two specifier shapes are the ones a narrower rule never produces and both are load bearing: the deep relative path `../../../../packages/games/src/termo/word-list`, which walks past every ban written against `@miolos/games/termo` and would ship the answer list on `/modo-livre/*`, and any `.module.css`, which `closureOf` does not follow but the wall still matches by string. The deep Termo path is now also banned across `apps/web` in `webWallImportPatterns`, beside `packages/db/src` and `packages/core/src`: detecting a hole in one test is weaker than closing it everywhere.
 
-**Also: two reviewers disagreed and one was wrong.** Invariants called the same entry live coverage; correctness proved it dead by mutation, both directions. **The lens with pasted red output wins over the lens with an argument.**
+**The open half, on the record:** the chrome is not special. Intersecting the three daily play routes' closures with the three free-play ones gives **29** `apps/web/src` modules, 26 of them before this ticket. The wall applies to exactly one — `free-play/catalog.ts`, which lives under `free-play/` — and to none of the other 28, so each of those is a one-hop route into free play that `pnpm lint` cannot see. Only the chrome has a test. Extending that guard to the other 27 is unclaimed work.
+
+**An assertion that reads `textContent` or a tag name cannot see an attribute**, and a component's identity mostly lives in attributes: `pageModifier`, the hint's `className`, `style={ACCENTS[game]}` and the extra stat's `className` were each deletable from the chrome with the full suite green until the reader was changed to look at the attribute that carries them.
 
 ## Next
 
-**#206 cluster 6** — `play-view.tsx` screen chrome, 4 files, 890 lines (not 1,460). Unblocked now.
+**#206 cluster 7** — 321 lines (not 640).
 
 **Also queued:** #254 (the remote conclusion announces its body sentence twice — `.announcer` is `clip-path`-hidden, so a screen reader gets it on mount and again in browse mode), #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, NOT a sweep), #155 (`bundle-check` into CI), the `jsonResponse`/`stubFetch` Quick change, and the free-play wall's missing `**/termo/termo-screen` — the other three screen roots are walled and Termo's is not.

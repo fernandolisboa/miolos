@@ -40,8 +40,74 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S366` | `S364` | `T-WEB-23` |
+| `T-WEB` | `S369` | `S368` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#206 cluster 6 reserved **`T-WEB-S366…S368`**, contiguous, and spent all three
+in the new `apps/web/test/screen-chrome.test.tsx`. Nothing was reserved as
+headroom, so nothing is burned: next free is `S369`. Re-derived by the
+two-stage grep at the plan and again here. **No `T-LINT` id was spent** — no
+wall rule changed; `play/types` is kept out of the chrome by `T-WEB-S368`
+rather than by a lint rule, because `no-restricted-imports` is per-file and
+would not fire on a free-play screen importing the chrome.
+
+- **`T-WEB-S366`** — `.page`'s direct children are `bar, title, stats, board,
+  hint` in that DOM order, over a named list of the nine real shipped shapes,
+  collected into one object and asserted once. Reds when the `<section>` and
+  the hint node are swapped in the chrome.
+
+- **`T-WEB-S367`** — the four variants of the chrome, each read into one
+  descriptor and asserted together: the page's own classes, the accent style,
+  the three clock states, the readouts present versus absent, `extraStat`, the
+  note, the hint control's tag, its three class combinations and its
+  `aria-disabled`, the explain paragraph, `onReveal` firing, and the five-row
+  `aria-hidden` inventory **asserted as attribute-absent, never `"false"`**.
+  Every value is read by the class that carries it — the extra stat and the
+  note by their marker class, not by `textContent`, which cannot tell a
+  `className` that was dropped from one that was applied. The local names it
+  reports come from a list **derived from the chrome's own source**, and the
+  list itself — not its length — is the asserted value. A hand-written list
+  drifts from the source silently: an entry lost is that class's coverage lost,
+  and an entry no longer written is coverage that was never there. Pinning the
+  size alone catches neither, because any 24 declared names keep `cls()` quiet.
+
+- **`T-WEB-S368`** — the specifiers **written by** the modules in
+  `closureOf("apps/web/src/play/screen-chrome.tsx")` are put through **the real
+  `eslint.config.mjs`**, at the virtual file path
+  `apps/web/src/free-play/eslint-probe.ts` (a `lintText` argument, not a file
+  on disk). The whole config applies — `webWallImportPatterns`,
+  `webWallImportPaths` and `freePlayBannedModuleGroups` alike — and the
+  assertion reads both `no-restricted-imports` and `no-restricted-syntax`, so
+  no rule is dropped by the reader. What the probe can *trip* is still bounded
+  by its own source shape — it emits static `import "…";` lines and nothing
+  else — so a rule keyed to a dynamic import or a call expression stays out of
+  reach of this probe even though the reader would report it. The
+  `no-restricted-syntax` half has a positive control: a `daily_puzzles`
+  specifier is a bare `Literal`, which `webTableNameLiteral` selects, and
+  restoring the old `no-restricted-imports`-only filter reds it.
+
+  **What "every specifier" means, exactly:** a non-relative specifier goes
+  through verbatim; a relative one written by an `apps/web/**` module is
+  resolved and re-based onto the probe's directory, **whatever it resolves
+  to**. Both halves are load bearing. Relative-and-escaping is the deep path
+  `../../../../packages/games/src/termo/word-list`, which walks past every ban
+  written against `@miolos/games/termo`; resolving-to-nothing-walked is any
+  `.module.css`, which `closureOf` does not follow but the wall still matches
+  by string. Deriving from closure *members* instead reaches neither — see
+  ADR-0077's Rejected for why the wider alternative is worse.
+
+  Three mutations red it: `import { fetchStreak } from
+  "../streak/streak-client"`, the deep-relative Termo path above, and `import
+  "../archive/play-note.module.css"`. `pnpm lint` reports only the second, and
+  only since the deep Termo path joined `webWallImportPatterns`; the other two
+  are the test's alone. Non-vacuity has three legs — the specifier set contains
+  `../play/timer-readout`, `@miolos/core` and `../play/screen.module.css`.
+
+  The same set carries one assertion that is not about the wall: the chrome
+  imports **`next/link`**. Nothing else can bind it — `next/link` and a plain
+  `<a>` render the same `<a class href aria-label>`, so swapping them keeps
+  eslint at 0 and the suite green while nine screens lose client-side
+  navigation on the back link.
 
 #206 cluster 14 **spent and burned nothing** — the table above is unchanged.
 `../play/conclusion-stats` is one more element of `T-LINT-S16`'s and

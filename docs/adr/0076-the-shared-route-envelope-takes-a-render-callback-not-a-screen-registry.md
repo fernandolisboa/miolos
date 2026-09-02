@@ -19,6 +19,8 @@ The `render` callback. **Neither shared envelope imports a per-game screen or co
 - Cost: one `render` argument per route file, and the game token appears twice per file — once in the envelope call, once in the screen import. That is the price of keeping four screens off eight graphs.
 - This is ADR-0029 decision 2 applied, not undone: *"the non-visual layer is shared, JSX composition is per game."* Only the wall read and its failure branches move.
 
+  **Annotated at #206 cluster 6** — [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) amends that clause: the shared layer now also holds the game-agnostic page frame `play/screen.module.css`'s grid areas define. This decision is unaffected. `PlayScreenChrome` obeys the same rule the `render` callback does — it imports no per-game module, and the game is a literal argument.
+
 ## Rejected
 
 - **A `Record<ProjectedGame, ComponentType>` registry in the shared module.** Reads better and matches `og/handlers.ts` more literally, but couples every consumer to every game, with no gate that fails when it happens.
