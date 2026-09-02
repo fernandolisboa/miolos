@@ -64,18 +64,46 @@ would not fire on a free-play screen importing the chrome.
   `aria-hidden` inventory **asserted as attribute-absent, never `"false"`**.
   Every value is read by the class that carries it — the extra stat and the
   note by their marker class, not by `textContent`, which cannot tell a
-  `className` that was dropped from one that was applied.
+  `className` that was dropped from one that was applied. The local names it
+  reports come from a list **derived from the chrome's own source**, and its
+  size is pinned: a hand-written list can lose an entry and take that class's
+  coverage with it, and the one that shipped first also named a `gridCard` the
+  chrome never writes.
 
-- **`T-WEB-S368`** — every import specifier in
-  `closureOf("apps/web/src/play/screen-chrome.tsx")`, rewritten as a free-play
-  file would spell it, is put through **the real `eslint.config.mjs`** at
-  `apps/web/src/free-play/`. Nothing is hand-copied, so the assertion tracks
-  all thirteen `freePlayBannedModuleGroups` and every group added later. Reds
-  on `import { fetchStreak } from "../streak/streak-client"` in the chrome —
-  which `pnpm lint` cannot see, because `no-restricted-imports` is per-file and
-  the chrome is not under `free-play/**`. Non-vacuity has three legs: the
-  closure reaches `../play/timer-readout` and `@miolos/core`, and the same
-  probe plus `../streak/streak-client` is reported.
+- **`T-WEB-S368`** — the specifiers **written by** the modules in
+  `closureOf("apps/web/src/play/screen-chrome.tsx")` are put through **the real
+  `eslint.config.mjs`**, at the virtual file path
+  `apps/web/src/free-play/eslint-probe.ts` (a `lintText` argument, not a file
+  on disk). The whole config applies — `webWallImportPatterns`,
+  `webWallImportPaths` and `freePlayBannedModuleGroups` alike — and the
+  assertion reads both `no-restricted-imports` and `no-restricted-syntax`, so
+  no rule of the wall is structurally out of reach.
+
+  **What "every specifier" means, exactly**, because a narrower rule shipped
+  first and had a hole in it: a non-relative specifier goes through verbatim; a
+  relative one written by an `apps/web/**` module is resolved and re-based onto
+  the probe's directory, **whatever it resolves to**. Both halves are load
+  bearing. Relative-and-escaping is the deep path
+  `../../../../packages/games/src/termo/word-list`, which walks past every ban
+  written against `@miolos/games/termo`; resolving-to-nothing-walked is any
+  `.module.css`, which `closureOf` does not follow but the wall still matches
+  by string. Restricting the rewrite to closure *members* misses the first;
+  widening it to *all* closure members instead re-spells the legitimate
+  `@miolos/core` graph as `../../../../packages/core/src/*` and fires 46 false
+  positives on a clean tree.
+
+  Three mutations red it: `import { fetchStreak } from
+  "../streak/streak-client"`, the deep-relative Termo path above, and `import
+  "../archive/play-note.module.css"`. `pnpm lint` reports only the second, and
+  only since the deep Termo path joined `webWallImportPatterns`; the other two
+  are the test's alone. Non-vacuity has three legs — the specifier set contains
+  `../play/timer-readout`, `@miolos/core` and `../play/screen.module.css`.
+
+  The same set carries one assertion that is not about the wall: the chrome
+  imports **`next/link`**. Nothing else can bind it — `next/link` and a plain
+  `<a>` render the same `<a class href aria-label>`, so swapping them keeps
+  eslint at 0 and the suite green while nine screens lose client-side
+  navigation on the back link.
 
 #206 cluster 14 **spent and burned nothing** — the table above is unchanged.
 `../play/conclusion-stats` is one more element of `T-LINT-S16`'s and

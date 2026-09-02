@@ -53,6 +53,7 @@ import { closureOf } from "./module-graph";
 import { withoutComments } from "./ts-source";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
+const CHROME = "apps/web/src/play/screen-chrome.tsx";
 const SHARED_CSS = stylesheet("src/play/screen.module.css");
 
 const DATE = "2026-08-18";
@@ -321,32 +322,14 @@ function hiddenOn(page: Element, local: string): string | null {
 }
 
 const CHROME_CLASSES = [
-  "page",
-  "topBar",
-  "back",
-  "wordmark",
-  "barKicker",
-  "topDate",
-  "timerBar",
-  "titleBlock",
-  "titleKicker",
-  "titleRow",
-  "title",
-  "progressBar",
-  "rules",
-  "statsCard",
-  "tape",
-  "statRow",
-  "statLabel",
-  "timerCard",
-  "progressCard",
-  "board",
-  "gridCard",
-  "hintExplain",
-  "hint",
-  "hintUsed",
-  "placeholder",
-];
+  ...new Set(
+    [
+      ...withoutComments(readFileSync(join(REPO_ROOT, CHROME), "utf8"))
+        .replace(/^import .*$/gm, "")
+        .matchAll(/\bscreen\.([A-Za-z0-9_]+)/g),
+    ].map((match) => match[1] ?? ""),
+  ),
+].sort();
 
 const LOCAL_NAME_OF = new Map(
   CHROME_CLASSES.map((local) => [cls(local), local]),
@@ -418,6 +401,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
       freePlaying: shapeOf(staticPage(chrome(FREE_PLAYING))),
       freeGenerating: shapeOf(staticPage(chrome(FREE_GENERATING))),
       revealed,
+      chromeClassCount: CHROME_CLASSES.length,
     }).toEqual({
       dailyLive: {
         pageClasses: PAGE_CLASSES,
@@ -525,37 +509,44 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         },
       },
       revealed: 1,
+      chromeClassCount: 24,
     });
   });
 });
 
-const CHROME = "apps/web/src/play/screen-chrome.tsx";
 const FREE_PLAY_PROBE = "apps/web/src/free-play/eslint-probe.ts";
+const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
-function withoutExtension(module: string): string {
-  return module.replace(/\.tsx?$/, "");
+const SPECIFIER = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
+
+function specifiersWrittenIn(module: string): readonly string[] {
+  const code = withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
+  return [...code.matchAll(SPECIFIER)]
+    .map((match) => match[1] ?? "")
+    .filter((specifier) => specifier !== "");
 }
 
-function bareImportsOf(module: string): readonly string[] {
-  const code = withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
-  return [...code.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)]
-    .map((match) => match[1] ?? "")
-    .filter((specifier) => specifier !== "" && !specifier.startsWith("."));
+function asProbeWouldSpellIt(repoRelative: string): string {
+  const path = relative(dirname(FREE_PLAY_PROBE), repoRelative).replaceAll(
+    "\\",
+    "/",
+  );
+  return path.startsWith(".") ? path : `./${path}`;
 }
 
 function chromeSpecifiers(): readonly string[] {
   const closure = [...closureOf(CHROME)];
-  const local = closure
-    .filter((module) => module.startsWith("apps/web/"))
-    .map((module) =>
-      relative(dirname(FREE_PLAY_PROBE), withoutExtension(module)).replaceAll(
-        "\\",
-        "/",
-      ),
-    )
-    .map((path) => (path.startsWith(".") ? path : `./${path}`));
-  const bare = closure.flatMap(bareImportsOf);
-  return [...new Set([...local, ...bare])].sort();
+  const collected: string[] = [];
+  for (const source of closure) {
+    for (const specifier of specifiersWrittenIn(source)) {
+      if (!specifier.startsWith(".")) {
+        collected.push(specifier);
+      } else if (source.startsWith("apps/web/")) {
+        collected.push(asProbeWouldSpellIt(join(dirname(source), specifier)));
+      }
+    }
+  }
+  return [...new Set(collected)].sort();
 }
 
 const eslint = new ESLint({
@@ -583,22 +574,29 @@ async function wallVerdictOn(
     throw new Error("ESLint returned no result for the free-play probe");
   }
   return result.messages
-    .filter((message) => message.ruleId === "no-restricted-imports")
+    .filter(
+      (message) =>
+        message.ruleId !== null && WALL_RULES.includes(message.ruleId),
+    )
     .map(
-      (message) => /^'([^']+)'/.exec(message.message)?.[1] ?? message.message,
+      (message) =>
+        /^'([^']+)'/.exec(message.message)?.[1] ??
+        `${message.ruleId ?? "?"}: ${message.message}`,
     );
 }
 
 vi.setConfig({ testTimeout: 40_000 });
 
 describe("the chrome reaches nothing free play is walled from (T-WEB-S368)", () => {
-  it("every specifier in its closure passes the real wall, run from a free-play path", async () => {
+  it("every specifier its closure writes passes the real wall, at a free-play path", async () => {
     const specifiers = chromeSpecifiers();
 
     expect({
       banned: await wallVerdictOn(specifiers),
       reachesTimerReadout: specifiers.includes("../play/timer-readout"),
       reachesCore: specifiers.includes("@miolos/core"),
+      reachesStylesheet: specifiers.includes("../play/screen.module.css"),
+      backLinkIsRouted: specifiersWrittenIn(CHROME).includes("next/link"),
       streakIsCaught: await wallVerdictOn([
         ...specifiers,
         "../streak/streak-client",
@@ -607,6 +605,8 @@ describe("the chrome reaches nothing free play is walled from (T-WEB-S368)", () 
       banned: [],
       reachesTimerReadout: true,
       reachesCore: true,
+      reachesStylesheet: true,
+      backLinkIsRouted: true,
       streakIsCaught: ["../streak/streak-client"],
     });
   });

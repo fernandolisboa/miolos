@@ -14,11 +14,13 @@ Nothing to verify. #206 clusters 5, 6 and 14 merged.
 
 **`bundle-check` is the only gate that measures this**, and it is not in CI (#155). Chunk attribution is unchanged at 32 daily / 3 free-only / 6 unattributed, every ADR-0033/ADR-0047 marker `ok`. Free-play routes grew ~1.5 KB raw, daily routes shrank ~0.6 KB; every budget green.
 
-## The lesson — a hand-copied list is a wall with a hole in it
+## The lesson — a test that restates a wall is a wall with a hole in it
 
-**`T-WEB-S368` first hand-copied 18 module paths out of `eslint.config.mjs`'s 13 ban groups.** The security lens added `import { fetchStreak } from "../streak/streak-client"` to the chrome and **nothing** reported it — not eslint, because `no-restricted-imports` is attached to `free-play/**` and the chrome is not there; not the suite, because `**/streak/**` was one of the twelve groups the copy omitted. The test now feeds every specifier in the chrome's closure through **the real config** at a free-play path, so a group added later is covered without touching the test. The general form: *when a test restates a config, it dates from the moment it is written.*
+**`T-WEB-S368` took three rounds to become true, and each round's prose claimed more than the test delivered.** It first hand-copied 18 module paths out of `eslint.config.mjs`'s 13 ban groups, so `../streak/streak-client` in the chrome was silent everywhere. Rewritten to lint the closure through the real config, it then missed two *specifier shapes* it never produced: the deep-relative `../../../../packages/games/src/termo/word-list` — which walks past every ban written against `@miolos/games/termo` and would ship the answer list on `/modo-livre/*` — and any `.module.css`, which `closureOf` does not follow. Both are closed, and the deep-relative Termo path is now banned app-wide in `webWallImportPatterns` beside the existing `packages/db/src` and `packages/core/src` groups, because detecting a hole in one test is weaker than closing it everywhere. **Games-wide would have been the tidier rule and is deliberately not what shipped**: it reds `T-LINT-S58`'s control, the probe that proves the Termo ban is Termo-specific rather than a blanket games ban, and re-founding three other tickets' wall assertions does not belong in this one.
 
-Four more assertions were written and found dead by mutation before merge — `pageModifier`, the hint's `className`, the accent `style`, and the extra stat's `className`, each of which could be deleted from the chrome with the full suite green. All four read `textContent` or a tag name where the thing that mattered was an attribute.
+**The open half, on the record:** the chrome is not special. Twenty-one `apps/web` modules sit on both the daily and the free-play route graphs — `nonogram/state.ts`, `play/grid-hint.ts`, `nonogram/board.tsx` among them — every one of them is the same one-hop bypass, and only the chrome has a test. Extending that guard is unclaimed work.
+
+Four assertions in the same file were written and found dead by mutation before merge — `pageModifier`, the hint's `className`, the accent `style`, and the extra stat's `className`, each deletable from the chrome with the full suite green. All four read `textContent` or a tag name where the thing that mattered was an attribute.
 
 ## Next
 
