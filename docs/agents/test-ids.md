@@ -65,10 +65,11 @@ would not fire on a free-play screen importing the chrome.
   Every value is read by the class that carries it — the extra stat and the
   note by their marker class, not by `textContent`, which cannot tell a
   `className` that was dropped from one that was applied. The local names it
-  reports come from a list **derived from the chrome's own source**, and its
-  size is pinned: a hand-written list can lose an entry and take that class's
-  coverage with it, and the one that shipped first also named a `gridCard` the
-  chrome never writes.
+  reports come from a list **derived from the chrome's own source**, and the
+  list itself — not its length — is the asserted value. A hand-written list
+  drifts from the source silently: an entry lost is that class's coverage lost,
+  and an entry no longer written is coverage that was never there. Pinning the
+  size alone catches neither, because any 24 declared names keep `cls()` quiet.
 
 - **`T-WEB-S368`** — the specifiers **written by** the modules in
   `closureOf("apps/web/src/play/screen-chrome.tsx")` are put through **the real
@@ -77,20 +78,23 @@ would not fire on a free-play screen importing the chrome.
   on disk). The whole config applies — `webWallImportPatterns`,
   `webWallImportPaths` and `freePlayBannedModuleGroups` alike — and the
   assertion reads both `no-restricted-imports` and `no-restricted-syntax`, so
-  no rule of the wall is structurally out of reach.
+  no rule is dropped by the reader. What the probe can *trip* is still bounded
+  by its own source shape — it emits static `import "…";` lines and nothing
+  else — so a rule keyed to a dynamic import or a call expression stays out of
+  reach of this probe even though the reader would report it. The
+  `no-restricted-syntax` half has a positive control: a `daily_puzzles`
+  specifier is a bare `Literal`, which `webTableNameLiteral` selects, and
+  restoring the old `no-restricted-imports`-only filter reds it.
 
-  **What "every specifier" means, exactly**, because a narrower rule shipped
-  first and had a hole in it: a non-relative specifier goes through verbatim; a
-  relative one written by an `apps/web/**` module is resolved and re-based onto
-  the probe's directory, **whatever it resolves to**. Both halves are load
-  bearing. Relative-and-escaping is the deep path
+  **What "every specifier" means, exactly:** a non-relative specifier goes
+  through verbatim; a relative one written by an `apps/web/**` module is
+  resolved and re-based onto the probe's directory, **whatever it resolves
+  to**. Both halves are load bearing. Relative-and-escaping is the deep path
   `../../../../packages/games/src/termo/word-list`, which walks past every ban
   written against `@miolos/games/termo`; resolving-to-nothing-walked is any
   `.module.css`, which `closureOf` does not follow but the wall still matches
-  by string. Restricting the rewrite to closure *members* misses the first;
-  widening it to *all* closure members instead re-spells the legitimate
-  `@miolos/core` graph as `../../../../packages/core/src/*` and fires 46 false
-  positives on a clean tree.
+  by string. Deriving from closure *members* instead reaches neither — see
+  ADR-0077's Rejected for why the wider alternative is worse.
 
   Three mutations red it: `import { fetchStreak } from
   "../streak/streak-client"`, the deep-relative Termo path above, and `import

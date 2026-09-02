@@ -54,6 +54,10 @@ import { withoutComments } from "./ts-source";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
 const CHROME = "apps/web/src/play/screen-chrome.tsx";
+
+function sourceOf(module: string): string {
+  return withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
+}
 const SHARED_CSS = stylesheet("src/play/screen.module.css");
 
 const DATE = "2026-08-18";
@@ -324,7 +328,7 @@ function hiddenOn(page: Element, local: string): string | null {
 const CHROME_CLASSES = [
   ...new Set(
     [
-      ...withoutComments(readFileSync(join(REPO_ROOT, CHROME), "utf8"))
+      ...sourceOf(CHROME)
         .replace(/^import .*$/gm, "")
         .matchAll(/\bscreen\.([A-Za-z0-9_]+)/g),
     ].map((match) => match[1] ?? ""),
@@ -401,7 +405,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
       freePlaying: shapeOf(staticPage(chrome(FREE_PLAYING))),
       freeGenerating: shapeOf(staticPage(chrome(FREE_GENERATING))),
       revealed,
-      chromeClassCount: CHROME_CLASSES.length,
+      chromeClasses: CHROME_CLASSES,
     }).toEqual({
       dailyLive: {
         pageClasses: PAGE_CLASSES,
@@ -509,7 +513,32 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         },
       },
       revealed: 1,
-      chromeClassCount: 24,
+      chromeClasses: [
+        "back",
+        "barKicker",
+        "board",
+        "hint",
+        "hintExplain",
+        "hintUsed",
+        "page",
+        "placeholder",
+        "progressBar",
+        "progressCard",
+        "rules",
+        "statLabel",
+        "statRow",
+        "statsCard",
+        "tape",
+        "timerBar",
+        "timerCard",
+        "title",
+        "titleBlock",
+        "titleKicker",
+        "titleRow",
+        "topBar",
+        "topDate",
+        "wordmark",
+      ],
     });
   });
 });
@@ -520,8 +549,7 @@ const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 const SPECIFIER = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
 
 function specifiersWrittenIn(module: string): readonly string[] {
-  const code = withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
-  return [...code.matchAll(SPECIFIER)]
+  return [...sourceOf(module).matchAll(SPECIFIER)]
     .map((match) => match[1] ?? "")
     .filter((specifier) => specifier !== "");
 }
@@ -601,6 +629,9 @@ describe("the chrome reaches nothing free play is walled from (T-WEB-S368)", () 
         ...specifiers,
         "../streak/streak-client",
       ]),
+      tableNameIsCaught: (
+        await wallVerdictOn([...specifiers, "daily_puzzles"])
+      ).map((entry) => entry.split(":")[0] ?? entry),
     }).toEqual({
       banned: [],
       reachesTimerReadout: true,
@@ -608,6 +639,7 @@ describe("the chrome reaches nothing free play is walled from (T-WEB-S368)", () 
       reachesStylesheet: true,
       backLinkIsRouted: true,
       streakIsCaught: ["../streak/streak-client"],
+      tableNameIsCaught: ["no-restricted-syntax"],
     });
   });
 });
