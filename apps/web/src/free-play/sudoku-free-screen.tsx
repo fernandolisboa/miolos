@@ -8,14 +8,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import Link from "next/link";
 
-import { messages, routes } from "../i18n";
-import { accentVars } from "../play/accent";
+import { messages } from "../i18n";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
 import screen from "../play/screen.module.css";
+import { PlayScreenChrome, type PlayChromeLive } from "../play/screen-chrome";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { playableGivens } from "../sudoku/engine";
 import { Keypad, KeypadSkeleton } from "../sudoku/keypad";
@@ -26,6 +25,7 @@ import {
 } from "../sudoku/state";
 import boardStyles from "../sudoku/sudoku-board.module.css";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
+import { FREE_PLAY_BACK, levelStat } from "./chrome";
 import styles from "./free-play.module.css";
 import { LevelPicker } from "./level-picker";
 import { FreePlaySolvedCard } from "./solved-card";
@@ -35,11 +35,9 @@ import {
   type FreeSudokuPuzzle,
 } from "./use-free-sudoku";
 
-const ACCENT = accentVars("sudoku");
-
 const TOTAL_CELLS = 81;
 
-const BLANK_READOUT = "\u00a0";
+const copy = messages.games.sudoku.play;
 
 export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
@@ -58,21 +56,18 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
   }
 
   return (
-    <Frame
+    <Chrome
       playState={phase.kind === "failed" ? "error" : "generating"}
       level={level}
       onLevelChange={setLevel}
-      progressLong={null}
-      progressShort={null}
-      hint={null}
-      hintKind={null}
+      live={null}
     >
       {phase.kind === "failed" ? (
         <ErrorCard onRetry={regenerate} />
       ) : (
         <GeneratingBoard />
       )}
-    </Frame>
+    </Chrome>
   );
 }
 
@@ -151,21 +146,24 @@ function SudokuFreeBoard({
   }
 
   return (
-    <Frame
+    <Chrome
       playState="playing"
       level={level}
       onLevelChange={onLevelChange}
-      progressLong={messages.games.sudoku.play.progressLong(
-        filled,
-        TOTAL_CELLS,
-      )}
-      progressShort={messages.games.sudoku.play.progressShort(
-        messages.freePlay.level[level],
-        filled,
-        TOTAL_CELLS,
-      )}
-      hint={{ ready: hintReady, onReveal: revealHint }}
-      hintKind={hintKind}
+      live={{
+        progressShort: copy.progressShort(
+          messages.freePlay.level[level],
+          filled,
+          TOTAL_CELLS,
+        ),
+        progressLong: copy.progressLong(filled, TOTAL_CELLS),
+        hint: {
+          ready: hintReady,
+          label: hintReady ? copy.hint.available : copy.hint.used,
+          explain: hintKind === null ? null : copy.hint.explain[hintKind],
+          onReveal: revealHint,
+        },
+      }}
     >
       <div className={screen.gridCard}>
         <Board
@@ -181,118 +179,41 @@ function SudokuFreeBoard({
         />
       </div>
       <Keypad onDigit={enterDigit} onClear={clearCell} />
-    </Frame>
+    </Chrome>
   );
 }
 
-function Frame({
+function Chrome({
   playState,
   level,
   onLevelChange,
-  progressLong,
-  progressShort,
-  hint,
-  hintKind,
+  live,
   children,
 }: {
   readonly playState: "generating" | "error" | "playing";
   readonly level: FreePlayLevel;
   readonly onLevelChange: (level: FreePlayLevel) => void;
-  readonly progressLong: string | null;
-  readonly progressShort: string | null;
-  readonly hint: {
-    readonly ready: boolean;
-    readonly onReveal: () => void;
-  } | null;
-  readonly hintKind: "correction" | "fill" | null;
+  readonly live: PlayChromeLive | null;
   readonly children: ReactNode;
 }) {
-  const copy = messages.games.sudoku.play;
-
   return (
-    <main
-      className={`${screen.page} ${boardStyles.pageSudoku}`}
-      style={ACCENT}
-      data-play-state={playState}
+    <PlayScreenChrome
+      game="sudoku"
+      pageClassName={boardStyles.pageSudoku ?? ""}
+      playState={playState}
+      back={FREE_PLAY_BACK}
+      topDate={messages.freePlay.modeTag}
+      kicker={messages.games.sudoku.kicker}
+      title={copy.title}
+      rules={copy.rules}
+      note={null}
+      clock="none"
+      extraStat={levelStat(level)}
+      live={live}
     >
-      <header className={screen.topBar}>
-        <Link
-          className={screen.back}
-          href={routes.freePlay}
-          aria-label={messages.freePlay.backToIndexAria}
-        >
-          {messages.freePlay.back}
-        </Link>
-        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
-        <span className={screen.barKicker}>{messages.games.sudoku.kicker}</span>
-        <span className={screen.topDate}>{messages.freePlay.modeTag}</span>
-      </header>
-
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{messages.games.sudoku.kicker}</p>
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{copy.title}</h1>
-          {progressShort === null ? (
-            <span aria-hidden className={screen.progressBar}>
-              {BLANK_READOUT}
-            </span>
-          ) : (
-            <span className={screen.progressBar}>{progressShort}</span>
-          )}
-        </div>
-        <p className={screen.rules}>{copy.rules}</p>
-      </div>
-
-      <div className={screen.statsCard}>
-        <div aria-hidden className={screen.tape} />
-        <div className={screen.statRow}>
-          <span className={screen.statLabel}>
-            {messages.play.progressLabel}
-          </span>
-          {progressLong === null ? (
-            <span aria-hidden className={screen.progressCard}>
-              {BLANK_READOUT}
-            </span>
-          ) : (
-            <span className={screen.progressCard}>{progressLong}</span>
-          )}
-        </div>
-        <div className={screen.statRow}>
-          <span className={screen.statLabel}>
-            {messages.freePlay.level.label}
-          </span>
-          <span className={screen.progressCard}>
-            {messages.freePlay.level[level]}
-          </span>
-        </div>
-      </div>
-
-      <section className={screen.board}>
-        <LevelPicker level={level} onChange={onLevelChange} />
-        {children}
-        {hintKind !== null && (
-          <p className={screen.hintExplain}>{copy.hint.explain[hintKind]}</p>
-        )}
-      </section>
-
-      {hint === null ? (
-        <div
-          aria-hidden
-          className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}
-        >
-          {BLANK_READOUT}
-        </div>
-      ) : (
-        <button
-          type="button"
-          className={`${screen.hint}${hint.ready ? "" : ` ${screen.hintUsed}`}`}
-          aria-disabled={!hint.ready}
-          onClick={hint.onReveal}
-        >
-          {hint.ready ? copy.hint.available : copy.hint.used}
-        </button>
-      )}
-    </main>
+      <LevelPicker level={level} onChange={onLevelChange} />
+      {children}
+    </PlayScreenChrome>
   );
 }
 

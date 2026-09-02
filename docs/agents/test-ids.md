@@ -40,8 +40,36 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S366` | `S364` | `T-WEB-23` |
+| `T-WEB` | `S369` | `S368` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#206 cluster 6 reserved **`T-WEB-S366…S368`**, contiguous, and spent all three
+in the new `apps/web/test/screen-chrome.test.tsx`. Nothing was reserved as
+headroom, so nothing is burned: next free is `S369`. Re-derived by the
+two-stage grep at the plan and again here. **No `T-LINT` id was spent** — no
+wall rule changed; `play/types` is kept out of the chrome by `T-WEB-S368`
+rather than by a lint rule, because `no-restricted-imports` is per-file and
+would not fire on a free-play screen importing the chrome.
+
+- **`T-WEB-S366`** — `.page`'s direct children are `bar, title, stats, board,
+  hint` in that DOM order, over a named list of the nine real shipped shapes,
+  collected into one object and asserted once. Reds when the `<section>` and
+  the hint node are swapped in the chrome.
+
+- **`T-WEB-S367`** — the four variants of the chrome, each read into one
+  descriptor and asserted together: the three clock states, `live` null versus
+  present, `extraStat`, the note, the hint control's tag and `aria-disabled`,
+  the explain paragraph, `onReveal` firing, and the five-row `aria-hidden`
+  inventory **asserted as attribute-absent, never `"false"`**. Five separate
+  mutations red it. The extra-stat arm was dead on the first draft — dropping
+  `className={extraStat.className}` passed, because the reader only took
+  `textContent` — and the descriptor gained a marker-class lookup so it reds.
+
+- **`T-WEB-S368`** — `closureOf("apps/web/src/play/screen-chrome.tsx")` reaches
+  none of the eighteen modules the free-play wall bans, every one of those
+  eighteen paths exists on disk, and the closure does reach
+  `play/timer-readout.tsx`. Reds through `play/types` → `play/play-record` on
+  the import the module is forbidden.
 
 #206 cluster 14 **spent and burned nothing** — the table above is unchanged.
 `../play/conclusion-stats` is one more element of `T-LINT-S16`'s and

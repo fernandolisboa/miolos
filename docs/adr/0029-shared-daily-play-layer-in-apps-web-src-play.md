@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md)
+**Amended by:** [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) — decision 2 and consequence (b)
 
 ## Context
 
@@ -69,6 +70,14 @@ it as a timing rule and was wrong.
    adapter, the board, the controls or keypad, the board-geometry
    stylesheet, the play composition and its skeleton, the screen root,
    and all copy.
+
+   *(**Amended at #206 cluster 6** — "the play composition and its skeleton"
+   is no longer wholly per game. The five named grid areas of
+   `screen.module.css` are now one shared `play/screen-chrome.tsx`, serving the
+   three daily grid views, their skeletons and free play's three screens; the
+   board, its input model, the geometry stylesheet and all copy stay per game,
+   and Termo keeps its own composition. See
+   [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md).)*
 
    *(**Amended at #103** — the "Shared" enumeration is **three items short**
    and is completed here rather than left to drift. #34 added
@@ -173,6 +182,13 @@ it as a timing rule and was wrong.
   and the non-visual layer are shared, JSX composition is per game. A
   later contributor who wants to "finish the job" by hoisting the board
   into `play/` is undoing decision 2, not completing it.
+
+  **Amended at #206 cluster 6** — the first sentence now reads: CSS, the
+  non-visual layer **and the game-agnostic page frame those stylesheets' grid
+  areas define** are shared; the board, its input model, the per-game geometry
+  stylesheet and all per-game copy are per game. The second sentence stands
+  unchanged — hoisting the board is still undoing this decision. See
+  [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md).
 - **(c) The pointer-stroke machinery stays in `binairo/grid.tsx` until
   #25 gives it a second consumer.** Sudoku does not drag, so extracting
   it now would create a shared module with exactly one consumer. That is

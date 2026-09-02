@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import Link from "next/link";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
 import { Controls } from "../binairo/controls";
@@ -19,13 +18,14 @@ import {
   sameMode,
   type PaintMode,
 } from "../binairo/state";
-import { messages, routes } from "../i18n";
-import { accentVars } from "../play/accent";
+import { messages } from "../i18n";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
 import screen from "../play/screen.module.css";
+import { PlayScreenChrome, type PlayChromeLive } from "../play/screen-chrome";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
+import { FREE_PLAY_BACK, levelStat } from "./chrome";
 import styles from "./free-play.module.css";
 import { LevelPicker } from "./level-picker";
 import { FreePlaySolvedCard } from "./solved-card";
@@ -35,11 +35,9 @@ import {
   type FreeBinairoPuzzle,
 } from "./use-free-binairo";
 
-const ACCENT = accentVars("binairo");
-
 const TOTAL_CELLS = 64;
 
-const BLANK_READOUT = "\u00a0";
+const copy = messages.games.binairo.play;
 
 export function BinairoFreeScreen({
   deps,
@@ -62,21 +60,18 @@ export function BinairoFreeScreen({
   }
 
   return (
-    <Frame
+    <Chrome
       playState={phase.kind === "failed" ? "error" : "generating"}
       level={level}
       onLevelChange={setLevel}
-      progressLong={null}
-      progressShort={null}
-      hint={null}
-      hintKind={null}
+      live={null}
     >
       {phase.kind === "failed" ? (
         <ErrorCard onRetry={regenerate} />
       ) : (
         <GeneratingBoard />
       )}
-    </Frame>
+    </Chrome>
   );
 }
 
@@ -147,20 +142,20 @@ function BinairoFreeBoard({
   }
 
   return (
-    <Frame
+    <Chrome
       playState="playing"
       level={level}
       onLevelChange={onLevelChange}
-      progressLong={messages.games.binairo.play.progressLong(
-        filled,
-        TOTAL_CELLS,
-      )}
-      progressShort={messages.games.binairo.play.progressShort(
-        filled,
-        TOTAL_CELLS,
-      )}
-      hint={{ ready: hintReady, onReveal: revealHint }}
-      hintKind={hintKind}
+      live={{
+        progressShort: copy.progressShort(filled, TOTAL_CELLS),
+        progressLong: copy.progressLong(filled, TOTAL_CELLS),
+        hint: {
+          ready: hintReady,
+          label: hintReady ? copy.hint.available : copy.hint.used,
+          explain: hintKind === null ? null : copy.hint.explain[hintKind],
+          onReveal: revealHint,
+        },
+      }}
     >
       <div className={screen.gridCard}>
         <Grid
@@ -174,124 +169,41 @@ function BinairoFreeBoard({
         />
       </div>
       <Controls paint={state.paint} onToggleMode={toggleMode} />
-    </Frame>
+    </Chrome>
   );
 }
 
-function Frame({
+function Chrome({
   playState,
   level,
   onLevelChange,
-  progressLong,
-  progressShort,
-  hint,
-  hintKind,
+  live,
   children,
 }: {
   readonly playState: "generating" | "error" | "playing";
   readonly level: FreePlayLevel;
   readonly onLevelChange: (level: FreePlayLevel) => void;
-  readonly progressLong: string | null;
-  readonly progressShort: string | null;
-
-  readonly hint: {
-    readonly ready: boolean;
-    readonly onReveal: () => void;
-  } | null;
-  readonly hintKind: "correction" | "fill" | null;
+  readonly live: PlayChromeLive | null;
   readonly children: ReactNode;
 }) {
-  const copy = messages.games.binairo.play;
-
   return (
-    <main
-      className={`${screen.page} ${boardStyles.pageBinairo}`}
-      style={ACCENT}
-      data-play-state={playState}
+    <PlayScreenChrome
+      game="binairo"
+      pageClassName={boardStyles.pageBinairo ?? ""}
+      playState={playState}
+      back={FREE_PLAY_BACK}
+      topDate={messages.freePlay.modeTag}
+      kicker={messages.games.binairo.kicker}
+      title={copy.title}
+      rules={copy.rules}
+      note={null}
+      clock="none"
+      extraStat={levelStat(level)}
+      live={live}
     >
-      <header className={screen.topBar}>
-        <Link
-          className={screen.back}
-          href={routes.freePlay}
-          aria-label={messages.freePlay.backToIndexAria}
-        >
-          {messages.freePlay.back}
-        </Link>
-        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
-        <span className={screen.barKicker}>
-          {messages.games.binairo.kicker}
-        </span>
-
-        <span className={screen.topDate}>{messages.freePlay.modeTag}</span>
-      </header>
-
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{messages.games.binairo.kicker}</p>
-
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{copy.title}</h1>
-          {progressShort === null ? (
-            <span aria-hidden className={screen.progressBar}>
-              {BLANK_READOUT}
-            </span>
-          ) : (
-            <span className={screen.progressBar}>{progressShort}</span>
-          )}
-        </div>
-        <p className={screen.rules}>{copy.rules}</p>
-      </div>
-
-      <div className={screen.statsCard}>
-        <div aria-hidden className={screen.tape} />
-        <div className={screen.statRow}>
-          <span className={screen.statLabel}>
-            {messages.play.progressLabel}
-          </span>
-          {progressLong === null ? (
-            <span aria-hidden className={screen.progressCard}>
-              {BLANK_READOUT}
-            </span>
-          ) : (
-            <span className={screen.progressCard}>{progressLong}</span>
-          )}
-        </div>
-
-        <div className={screen.statRow}>
-          <span className={screen.statLabel}>
-            {messages.freePlay.level.label}
-          </span>
-          <span className={screen.progressCard}>
-            {messages.freePlay.level[level]}
-          </span>
-        </div>
-      </div>
-
-      <section className={screen.board}>
-        <LevelPicker level={level} onChange={onLevelChange} />
-        {children}
-        {hintKind !== null && (
-          <p className={screen.hintExplain}>{copy.hint.explain[hintKind]}</p>
-        )}
-      </section>
-
-      {hint === null ? (
-        <div
-          aria-hidden
-          className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}
-        >
-          {BLANK_READOUT}
-        </div>
-      ) : (
-        <button
-          type="button"
-          className={`${screen.hint}${hint.ready ? "" : ` ${screen.hintUsed}`}`}
-          aria-disabled={!hint.ready}
-          onClick={hint.onReveal}
-        >
-          {hint.ready ? copy.hint.available : copy.hint.used}
-        </button>
-      )}
-    </main>
+      <LevelPicker level={level} onChange={onLevelChange} />
+      {children}
+    </PlayScreenChrome>
   );
 }
 
