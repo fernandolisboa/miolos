@@ -58,8 +58,8 @@ the free-play Termo group alone.
   free-play file reaches no I/O module and nothing in `packages/db/src` or
   `packages/games/src/termo`; `termo-screen`'s graph lists exactly the five I/O
   modules, which pins the token list to the tree.
-- **`T-WEB-S370`** — every specifier that graph's `apps/web` modules write
-  passes the real config at a free-play path, both wall rules read.
+- **`T-WEB-S370`** — every bare specifier any graph member writes, and the
+  relative specifiers of its `apps/web` members, pass the real config at a free-play path, both wall rules read.
 - **`T-WEB-S371`** (`screen-chrome.test.tsx`) — the chrome imports `next/link`.
 - **`T-WEB-S372`** — `resolveSpecifier` follows the `node_modules` symlink,
   throws on a code extension, returns null for CSS.
