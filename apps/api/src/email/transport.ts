@@ -15,16 +15,20 @@ const REMINDER_UNSUBSCRIBE = "<mailto:privacidade@miolos.app>";
 
 const SEND_TIMEOUT_MS = 10_000;
 
+const RATE_LIMIT_WAIT_MS = 1_000;
+
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY) && Boolean(process.env.WEB_ORIGIN);
 }
 
-async function postToResend(message: {
+type ResendMessage = {
   to: string;
   subject: string;
   text: string;
   headers?: Record<string, string>;
-}): Promise<void> {
+};
+
+async function requestResend(message: ResendMessage): Promise<number> {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     throw new Error("email transport: RESEND_API_KEY is unset");
@@ -45,20 +49,21 @@ async function postToResend(message: {
 
     signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
-  if (!response.ok) {
-    throw new Error(`email transport: Resend answered ${response.status}`);
-  }
+  return response.status;
 }
 
 export async function sendMagicLinkEmail(init: {
   to: string;
   url: string;
 }): Promise<void> {
-  await postToResend({
+  const status = await requestResend({
     to: init.to,
     subject: magicLinkSubject,
     text: magicLinkBody(init.url),
   });
+  if (status < 200 || status > 299) {
+    throw new Error(`email transport: Resend answered ${status}`);
+  }
 }
 
 export type ReminderSend = (reminder: StreakReminder) => Promise<boolean>;
@@ -69,16 +74,26 @@ export const sendReminderEmail: ReminderSend = async (reminder) => {
     console.error("email transport: WEB_ORIGIN is unset");
     return false;
   }
+  const message = {
+    to: reminder.to,
+    subject: streakReminderSubject,
+    text: streakReminderBody(reminder.streak, webOrigin),
+    headers: { "List-Unsubscribe": REMINDER_UNSUBSCRIBE },
+  };
   try {
-    await postToResend({
-      to: reminder.to,
-      subject: streakReminderSubject,
-      text: streakReminderBody(reminder.streak, webOrigin),
-      headers: { "List-Unsubscribe": REMINDER_UNSUBSCRIBE },
-    });
-    return true;
+    let status = await requestResend(message);
+    if (status === 429) {
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_WAIT_MS));
+      status = await requestResend(message);
+    }
+    if (status >= 200 && status <= 299) {
+      return true;
+    }
+    console.error(
+      `email transport: reminder not sent, Resend answered ${status}`,
+    );
   } catch (thrown) {
     console.error("email transport: reminder not sent", thrown);
-    return false;
   }
+  return false;
 };

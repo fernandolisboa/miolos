@@ -200,6 +200,46 @@ describe("POST /cron/notify — the email arm is required too (#199, ADR-0079)",
   });
 });
 
+describe("POST /cron/notify — the route wires the real Resend transport (#199)", () => {
+  it("T-API-S195: an email candidate at the DB clock's hour gets one POST to Resend, and the body counts it", async () => {
+    const inserted = await ctx.db
+      .insert(users)
+      .values({
+        email: "ana@example.org",
+        emailVerifiedAt: new Date(0),
+        reminderConsentAt: new Date(0),
+      })
+      .returning();
+    const userId = inserted[0]?.id ?? "";
+    await ctx.db.execute(sql`
+      insert into completions
+        (user_id, game, date, completed_at, outcome, elapsed_ms, hints_used, guesses, on_time)
+      select ${userId}::uuid, 'binairo',
+             ((now() - interval '1 day') at time zone 'America/Sao_Paulo')::date,
+             now() - interval '1 day', 'won', 1000, 0, null, true
+    `);
+
+    const posted: string[] = [];
+    vi.stubGlobal("fetch", (url: string) => {
+      posted.push(url);
+      return Promise.resolve(new Response(null, { status: 200 }));
+    });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const response = await POST(notifyRequest(`Bearer ${SECRET}`));
+    const body = cronNotifyResponseSchema.parse(await response.json());
+    vi.unstubAllGlobals();
+
+    expect(body.email).toEqual({
+      candidates: 1,
+      claimed: 1,
+      sent: 1,
+      failed: 0,
+    });
+    expect(posted).toEqual(["https://api.resend.com/emails"]);
+  });
+});
+
 describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", () => {
   it("T-API-S144: the claim lands BEFORE the transport is invoked, and the payload carries computeStreak's exact number in the §4.8 pt-BR copy — n≥2 and n=1 both", async () => {
     const userId = await createUser();

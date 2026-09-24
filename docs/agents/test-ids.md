@@ -39,11 +39,11 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S118` | `S117` | never used |
 | `T-DB` | `S94` | `S93` | `T-DB-21` |
-| `T-API` | `S195` | `S194` | `T-API-16` |
+| `T-API` | `S196` | `S195` | `T-API-16` |
 | `T-WEB` | `S379` | `S378` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
 
-#199 (the email hedge, ADR-0079) spent **`T-CORE-S116`/`S117`**, **`T-DB-S90…S93`** and **`T-API-S189…S194`**. Its API ids were planned as `S185…S190` and moved at the merge that brought #206 cluster 8, which had spent `S185…S188` in parallel.
+#199 (the email hedge, ADR-0079) spent `T-CORE-S116` (per-channel notify response) and `S117` (`streakReminderSchema`); `T-DB-S90` (email candidate), `S91` (the hedge: a subscription excludes), `S92` (no consent, unverified, tombstone) and `S93` (per-channel ledger); `T-API-S189` (claim before send, `computeStreak`'s number), `S190` (dual consent gets push only), `S191` (all subscriptions pruned, then emailed), `S192` (once per day, a failure is not retried), `S193` (copy and transport), `S193a` (one retry after a 429), `S194` (503 without Resend) and `S195` (the route wires the real transport).
 
 #206 cluster 8 spent **`T-API-S185…S188`**, contiguous, all in
 `apps/api/test/publishing-service.test.ts`. `S185` is binairo's

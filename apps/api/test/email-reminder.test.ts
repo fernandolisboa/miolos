@@ -5,10 +5,11 @@ import { sendReminderEmail } from "../src/email/transport";
 
 type Sent = { url: string; body: string };
 
-function stubResend(status: number): Sent[] {
+function stubResend(...statuses: number[]): Sent[] {
   const sent: Sent[] = [];
   vi.stubGlobal("fetch", (url: string, init: { body: string }) => {
     sent.push({ url, body: init.body });
+    const status = statuses[sent.length - 1] ?? statuses.at(-1) ?? 200;
     return Promise.resolve(new Response(null, { status }));
   });
   return sent;
@@ -64,7 +65,7 @@ describe("the streak reminder email (#199, ADR-0079)", () => {
     expect(await sendReminderEmail({ to: "ana@example.org", streak: 3 })).toBe(
       false,
     );
-    expect(String(errorSpy.mock.calls[0]?.[1])).toContain(
+    expect(String(errorSpy.mock.calls[0]?.[0])).toContain(
       "Resend answered 422",
     );
 
@@ -75,4 +76,19 @@ describe("the streak reminder email (#199, ADR-0079)", () => {
     );
     expect(unkeyed).toHaveLength(0);
   });
+
+  it("T-API-S193a: a 429 waits and retries once — a second 429 counts as not sent", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const retried = stubResend(429, 200);
+    expect(await sendReminderEmail({ to: "ana@example.org", streak: 2 })).toBe(
+      true,
+    );
+    expect(retried).toHaveLength(2);
+
+    const limited = stubResend(429, 429);
+    expect(await sendReminderEmail({ to: "ana@example.org", streak: 2 })).toBe(
+      false,
+    );
+    expect(limited).toHaveLength(2);
+  }, 10_000);
 });

@@ -1,6 +1,7 @@
 # ADR-0012 — Minimal LGPD ships with email attach; recovery and reminder consent are separate
 
 **Status:** Accepted — 2026-07-30
+**Amended by:** [ADR-0079](./0079-the-email-hedge-is-a-second-arm-of-the-one-tick.md) decision 6 — an interim mail withdrawal of the email reminder nulls its timestamp, so neither the given nor the withdrawn time survives it
 **Depends on:** [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md)
 **Amends:** the milestone placement of LGPD work in [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md) (all of it in the launch milestone).
 
