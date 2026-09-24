@@ -1,5 +1,7 @@
 /* light theme */
 :root {
+  color-scheme: light;
+
   --paper-desk: #F7F2E9;
   --paper-card: #FBF7EF;
   --paper-tint: #F1EADD;
@@ -13,6 +15,9 @@
   --accent-sudoku: #2E4E7E;
   --accent-nonogram: #B5563C;
   --accent-binairo: #4E6B52;
+
+  --accent-sudoku-text: var(--accent-sudoku);
+  --accent-binairo-text: var(--accent-binairo);
 
   --font-display: 'Fraunces', serif;
   --font-ui: 'Instrument Sans', sans-serif;
@@ -47,6 +52,56 @@
   --touch-target-min: 44px;
   --rotate-card-max: 2.4deg;
 }
+
+/* dark theme — see ADR-0079, ADR-0080 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --paper-desk: #16130F;
+    --paper-card: #1D1914;
+    --paper-tint: #231F19;
+    --ink: #EAE3D5;
+    --ink-2: #A29A8A;
+    --line: #3A352E;
+    --line-soft: #2C2822;
+
+    --accent-app: #CC6255;
+    --accent-termo: #AC7816;
+    --accent-sudoku: #5883C2;
+    --accent-nonogram: #C4684E;
+    --accent-binairo: #658B6A;
+
+    --accent-sudoku-text: #5E87C4;
+    --accent-binairo-text: #68906E;
+
+    --texture-dots: radial-gradient(rgba(234,227,213,0.06) 1px, transparent 1px);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper-desk: #16130F;
+  --paper-card: #1D1914;
+  --paper-tint: #231F19;
+  --ink: #EAE3D5;
+  --ink-2: #A29A8A;
+  --line: #3A352E;
+  --line-soft: #2C2822;
+
+  --accent-app: #CC6255;
+  --accent-termo: #AC7816;
+  --accent-sudoku: #5883C2;
+  --accent-nonogram: #C4684E;
+  --accent-binairo: #658B6A;
+
+  --accent-sudoku-text: #5E87C4;
+  --accent-binairo-text: #68906E;
+
+  --texture-dots: radial-gradient(rgba(234,227,213,0.06) 1px, transparent 1px);
+}
+
 /* Numerals that must align in a column (grids, timers, statistics, histograms):
    var(--font-ui) + font-variant-numeric: tabular-nums. Fraunces has NO tabular
    figures — no OpenType feature tag responds on it — so tabular-nums on

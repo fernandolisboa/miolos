@@ -68,6 +68,12 @@ From the brief, section 5, verbatim:
 
 > Gradiente roxo/azul; glassmorphism; card dentro de card; texto cinza sobre fundo colorido; tile arredondado com ícone acima de todo heading; dark mode preto-puro com neon; mascote; emoji decorativo; sombra difusa em tudo; Inter.
 
-## Dark mode (pending)
+## Dark mode
 
-A launch requirement, not yet designed. Starting point from the brief: background `#1B1814`, ink `#E9E2D4`, secondary `#9C9485`, lines `#3A352E`; accents to be revalidated for contrast on dark paper.
+Ships as a device preference (`prefers-color-scheme`, overridable per-device, [ADR-0079](./docs/adr/0079-the-theme-is-a-device-preference-applied-before-paint.md)). Palette in `packages/ui/tokens.css`'s `:root[data-theme="dark"]` block:
+
+- Paper: `--paper-desk` `#16130F`, `--paper-card` `#1D1914`, `--paper-tint` `#231F19` — darker than the brief's `#1B1814` starting point, the room the accents needed to lighten without breaking the label floor.
+- Ink: `--ink` `#EAE3D5`, `--ink-2` `#A29A8A`; lines `--line` `#3A352E`, `--line-soft` `#2C2822`.
+- Accents, lightened from their light values: `--accent-app` `#CC6255`, `--accent-termo` `#AC7816`, `--accent-sudoku` `#5883C2`, `--accent-nonogram` `#C4684E`, `--accent-binairo` `#658B6A`. Two small-text sites (Sudoku's and Binairo's `.cellHinted`) need a further-lifted `--accent-sudoku-text` / `--accent-binairo-text`.
+
+The paper-label family (ADR-0067) inverts in dark: the label is the dark ink, the fill is the lighter accent. Tuning and the rejected candidates are in [ADR-0080](./docs/adr/0080-paper-dark-accents-lighten-under-a-paper-label.md).
