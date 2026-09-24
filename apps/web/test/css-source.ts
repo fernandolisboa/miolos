@@ -57,6 +57,30 @@ export function token(name: string): number {
   return pixels(match?.[1]);
 }
 
+export function colorTokens(
+  theme: "light" | "dark",
+): ReadonlyMap<string, string> {
+  const css = stylesheet("../../packages/ui/tokens.css");
+  const body =
+    theme === "light"
+      ? bodyOf(css, ":root")
+      : bodyOf(css, ':root[data-theme="dark"]');
+  const map = new Map<string, string>();
+  for (const match of body.matchAll(
+    /(--[\w-]+)\s*:\s*(#[0-9A-Fa-f]{6})\s*;/g,
+  )) {
+    const name = match[1];
+    const hex = match[2];
+    if (name !== undefined && hex !== undefined) {
+      map.set(name, hex.toUpperCase());
+    }
+  }
+  if (map.size === 0) {
+    throw new Error(`no colour tokens resolved for the ${theme} block`);
+  }
+  return map;
+}
+
 function stripComments(css: string): string {
   return css.replace(/\/\*[\s\S]*?\*\//g, "");
 }
