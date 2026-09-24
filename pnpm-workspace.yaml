@@ -78,7 +78,7 @@ trustPolicy: no-downgrade
 #   eslint-plugin-import and eslint-plugin-react — dev tooling only.
 # - eslint-import-resolver-typescript@3.10.1, published 2025-04-21 with no
 #   attestation, while the 4.x line has carried one since 4.2.6 (2025-03-28).
-#   Pinned to 3.x by eslint-config-next@16.2.12; not ours to bump.
+#   Pinned to 3.x by eslint-config-next@16.3.5; not ours to bump.
 # Exact `name@version`, so both bypasses expire the moment either version
 # moves. Recheck at the next eslint-config-next major: if it has moved to
 # eslint-import-resolver-typescript 4.x, delete that entry rather than

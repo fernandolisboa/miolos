@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     "@miolos/games",
   ],
   poweredByHeader: false,
+  agentRules: false,
   headers: () =>
     Promise.resolve([
       {
