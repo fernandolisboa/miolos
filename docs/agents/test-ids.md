@@ -45,32 +45,20 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 #206 cluster 7 reserved **`T-WEB-S369…S370`**, contiguous, and spent both:
 `S369` in `apps/web/test/play-lifecycle.test.tsx` and `S370` in the new
-`apps/web/test/claim-pause.test.tsx`. Nothing was reserved as headroom, so
-nothing is burned: next free is `S371`. Re-derived by the two-stage grep at
-the plan and again here. **No `T-LINT` id was spent.** `T-WEB-S321a` also
-landed in this cluster, in the existing `telemetry-lifecycle.test.tsx` —
-it is a sibling of the already-landed `T-WEB-S321`, not a fresh
-reservation, because a claim arriving after mount not re-running the mount
-effect is the same "not a start" claim `S321` already makes, restated over
-a rerender instead of a fresh mount.
+`apps/web/test/claim-pause.test.tsx`. Nothing is burned: next free is `S371`.
+**No `T-LINT` id was spent.** `T-WEB-S321a` is a sibling of `T-WEB-S321`, not
+a reservation: a claim arriving after mount starts nothing, restated over a
+rerender instead of a fresh mount.
 
-- **`T-WEB-S369`** — `usePlayLifecycle`'s pause effect
-  (`apps/web/src/play/use-play-lifecycle.ts`) now reads the live
-  `remotelyClaimed` prop instead of ignoring it once mounted. Three arms
-  over one `Probe`: (a) mounted unclaimed and hydrated with a running
-  clock, a rerender that turns the claim on pauses it; (b) while claimed, a
-  hidden-to-visible resume is paused right back on the next render rather
-  than left running; (c) the flag omitted — the archive shape — leaves the
-  clock running, so the widened condition cannot regress a caller that
-  never passes it.
-
-- **`T-WEB-S370`** — the same claim proved over the four daily play hooks
-  themselves rather than the shared probe: one `it.each` over
-  `useBinairoPlay`, `useSudokuPlay`, `useNonogramPlay` and `useTermoPlay`,
-  each against its own real daily fixture. Each hydrates with a running
-  clock unclaimed, then a rerender with `claimed: true` pauses it — the
-  seam the four screens' own `claimOwnsScreen` effect used to cover before
-  it moved into the hook.
+- **`T-WEB-S369`** — `usePlayLifecycle`'s pause effect reads the live
+  `remotelyClaimed`. Three arms over one `Probe`: (a) a claim that arrives
+  after an unclaimed mount pauses the running clock; (b) a hidden-to-visible
+  return while claimed leaves the clock paused; (c) the flag omitted, the
+  archive shape, leaves the clock running.
+- **`T-WEB-S370`** — the same claim over the four daily play hooks: one
+  `it.each` over `useBinairoPlay`, `useSudokuPlay`, `useNonogramPlay` and
+  `useTermoPlay`, each on its own daily fixture, hydrating with a running
+  clock and pausing when rerendered with `claimed: true`.
 
 #206 cluster 6 reserved **`T-WEB-S366…S368`**, contiguous, and spent all three
 in the new `apps/web/test/screen-chrome.test.tsx`. Nothing was reserved as

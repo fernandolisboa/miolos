@@ -349,7 +349,7 @@ made that test red; the wall was right.
 the first render and never updated for the `puzzle_started` snapshot or the
 mount effect — putting the live value in the mount effect's dependency array
 would re-run the restore, the prune and the sync registration whenever a
-`GET /day` lands. The pause effect is the one exception (#206 cluster 7): it
+`GET /day` lands. The pause effect is the one exception: it
 reads the live `remotelyClaimed`, not the mount snapshot, so a claim that
 lands after mount still pauses a clock already running. On a **cold direct
 load** the payload has not arrived at first render, so a day finished on

@@ -140,6 +140,7 @@ describe("usePlayLifecycle's puzzle_started seam", () => {
     expect(startCompletionSync).toHaveBeenCalledTimes(1);
     expect(telemetry.postPuzzleStarted).toHaveBeenCalledTimes(1);
 
+    window.localStorage.clear();
     rerender(<Probe remotelyClaimed />);
 
     expect(startCompletionSync).toHaveBeenCalledTimes(1);

@@ -175,7 +175,7 @@ describe("usePlayLifecycle's pause effect reads a live claim (T-WEB-S369)", () =
     expect(runningSince(container)).toBe("null");
   });
 
-  it("(b) a hidden-to-visible resume while claimed is paused right back", () => {
+  it("(b) a hidden-to-visible return while claimed leaves the clock paused", () => {
     const { container } = render(<Probe remotelyClaimed />);
     act(() => {
       vi.advanceTimersByTime(0);
