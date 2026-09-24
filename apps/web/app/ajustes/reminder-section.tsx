@@ -13,6 +13,7 @@ import { usePushState } from "../../src/push/use-push-state";
 import styles from "./page.module.css";
 
 type BrowserPush = "loading" | "unsupported" | "blocked" | "off" | "on";
+type View = BrowserPush | "error";
 
 async function readBrowserPush(): Promise<BrowserPush> {
   if (!browserSupportsPush()) {
@@ -26,16 +27,21 @@ async function readBrowserPush(): Promise<BrowserPush> {
 
 function viewOf(
   browser: BrowserPush,
-  serverPending: boolean,
-  vapidPublicKey: string | null,
-): BrowserPush {
-  if (browser !== "off" || vapidPublicKey !== null) {
+  server: { vapidPublicKey: string | null } | null | undefined,
+): View {
+  if (browser !== "off") {
     return browser;
   }
-  return serverPending ? "loading" : "unsupported";
+  if (server === undefined) {
+    return "loading";
+  }
+  if (server === null) {
+    return "error";
+  }
+  return server.vapidPublicKey === null ? "unsupported" : "off";
 }
 
-export function PushSection() {
+export function ReminderSection() {
   const copy = messages.settings.push;
   const server = usePushState(browserSupportsPush);
   const [browser, setBrowser] = useState<BrowserPush>("loading");
@@ -57,7 +63,7 @@ export function PushSection() {
   }, []);
 
   const vapidPublicKey = server?.vapidPublicKey ?? null;
-  const view = viewOf(browser, server === undefined, vapidPublicKey);
+  const view = viewOf(browser, server);
 
   async function turnOn(key: string): Promise<void> {
     const outcome = await subscribeAndStore(key);
@@ -109,10 +115,14 @@ export function PushSection() {
       {view === "unsupported" ? (
         <>
           <p className={styles.note}>{copy.unsupported}</p>
-          <p className={styles.note}>{copy.installHint}</p>
+          {browser === "unsupported" ? (
+            <p className={styles.note}>{copy.installHint}</p>
+          ) : null}
         </>
       ) : view === "blocked" ? (
         <p className={styles.note}>{copy.blocked}</p>
+      ) : view === "error" ? (
+        <p className={styles.note}>{copy.error}</p>
       ) : (
         <div className={styles.switchRow}>
           <span id="settings-push-toggle">{copy.toggle}</span>

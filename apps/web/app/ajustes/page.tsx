@@ -5,7 +5,7 @@ import { PageTopBar } from "../../src/components/page-top-bar";
 import { deleteAccountAnchor, messages, routes } from "../../src/i18n";
 import { AccountSection } from "./account-section";
 import styles from "./page.module.css";
-import { PushSection } from "./push-section";
+import { ReminderSection } from "./reminder-section";
 import { ThemeSection } from "./theme-section";
 
 export const metadata: Metadata = {
@@ -25,7 +25,7 @@ export default function SettingsPage() {
       </div>
 
       <ThemeSection />
-      <PushSection />
+      <ReminderSection />
       <AccountSection />
 
       <section

@@ -22,6 +22,7 @@ const NAME_KEYS = [
   "animation",
   "animation-name",
 ] as const;
+const SCROLL_KEY = "scroll-behavior";
 
 export function cssFiles(): readonly { path: string; absolute: string }[] {
   const found: { path: string; absolute: string }[] = [];
@@ -99,25 +100,37 @@ function parseDecls(body: string): Record<string, string> {
   return decls;
 }
 
+function stripImportant(value: string): string {
+  return value.replace(/!\s*important\s*$/i, "").trim();
+}
+
 function isZero(value: string): boolean {
-  return value
+  return stripImportant(value)
     .split(",")
     .every(
       (token) => Number(/^(-?[\d.]+)(m?s)?$/.exec(token.trim())?.[1]) === 0,
     );
 }
 
-function familyOf(key: string): "transition" | "animation" {
+type Family = "transition" | "animation" | "scroll";
+
+function familyOf(key: string): Family {
+  if (key === SCROLL_KEY) return "scroll";
   return key.startsWith("animation") ? "animation" : "transition";
 }
 
 /**
  * A key "runs" when its value is neither `none` (the name-family
- * shorthand/longhand) nor an all-zero duration/delay.
+ * shorthand/longhand), `auto` (scroll-behavior's standing-down value) nor
+ * an all-zero duration/delay.
  */
 function runs(key: string, value: string): boolean {
+  const bare = stripImportant(value);
   if ((NAME_KEYS as readonly string[]).includes(key)) {
-    return value.trim() !== "none";
+    return bare !== "none";
+  }
+  if (key === SCROLL_KEY) {
+    return bare !== "auto";
   }
   if ((DURATION_KEYS as readonly string[]).includes(key)) {
     return !isZero(value);
@@ -125,14 +138,13 @@ function runs(key: string, value: string): boolean {
   return false;
 }
 
-export function hotFamilies(
-  decls: Rule["decls"],
-): Set<"transition" | "animation"> {
-  const families = new Set<"transition" | "animation">();
+export function hotFamilies(decls: Rule["decls"]): Set<Family> {
+  const families = new Set<Family>();
   for (const [key, value] of Object.entries(decls)) {
     if (
       ((NAME_KEYS as readonly string[]).includes(key) ||
-        (DURATION_KEYS as readonly string[]).includes(key)) &&
+        (DURATION_KEYS as readonly string[]).includes(key) ||
+        key === SCROLL_KEY) &&
       runs(key, value)
     ) {
       families.add(familyOf(key));
@@ -143,10 +155,12 @@ export function hotFamilies(
 
 function familyStoodDown(
   decls: Rule["decls"],
-  family: "transition" | "animation",
+  family: Family,
   hotKeys: readonly string[],
 ): boolean {
-  if (decls[family]?.trim() === "none") return true;
+  if (family !== "scroll" && stripImportant(decls[family] ?? "") === "none") {
+    return true;
+  }
   return hotKeys
     .filter((key) => familyOf(key) === family)
     .every((key) => {

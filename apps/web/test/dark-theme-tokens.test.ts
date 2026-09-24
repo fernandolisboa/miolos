@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { bodyOf, colorTokens, stylesheet } from "./css-source";
+import { contrast } from "./contrast";
 
 function normalize(body: string): string {
   return body
@@ -8,22 +9,6 @@ function normalize(body: string): string {
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .join("\n");
-}
-
-function luminance(hex: string): number {
-  const channel = (index: number): number => {
-    const srgb = parseInt(hex.slice(index, index + 2), 16) / 255;
-    return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
-}
-
-function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [
-    number,
-    number,
-  ];
-  return (hi + 0.05) / (lo + 0.05);
 }
 
 describe("the two dark blocks stay byte-identical and every light colour token has a dark twin (T-WEB-S390)", () => {

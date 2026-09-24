@@ -1,10 +1,17 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { renderToStaticMarkup } from "react-dom/server";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AccountSection } from "../app/ajustes/account-section";
 import SettingsPage, { metadata } from "../app/ajustes/page";
-import { PushSection } from "../app/ajustes/push-section";
+import { ReminderSection } from "../app/ajustes/reminder-section";
 import { ThemeSection } from "../app/ajustes/theme-section";
 import HojePage from "../app/page";
 import PrivacyPage from "../app/privacidade/page";
@@ -170,6 +177,33 @@ describe("/ajustes is a static shell that renders with the API and the database 
 });
 
 describe("the theme radios read the stored choice and apply a new one (T-WEB-S401)", () => {
+  it("renders the server snapshot on the server, then hydrates to the stored choice", () => {
+    theme.readThemeChoice.mockReturnValue("dark");
+    const html = renderToString(<ThemeSection />);
+
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.append(container);
+
+    expect(
+      container.querySelector<HTMLInputElement>('input[value="system"]')
+        ?.checked,
+    ).toBe(true);
+    expect(
+      container.querySelector<HTMLInputElement>('input[value="dark"]')?.checked,
+    ).toBe(false);
+
+    act(() => {
+      hydrateRoot(container, <ThemeSection />);
+    });
+
+    expect(
+      container.querySelector<HTMLInputElement>('input[value="dark"]')?.checked,
+    ).toBe(true);
+
+    container.remove();
+  });
+
   it("checks the stored choice after mount and calls applyThemeChoice on change", () => {
     theme.readThemeChoice.mockReturnValue("dark");
     render(<ThemeSection />);
@@ -197,10 +231,10 @@ describe("the theme radios read the stored choice and apply a new one (T-WEB-S40
   });
 });
 
-describe("the push toggle reads the browser and works from day one (T-WEB-S402)", () => {
+describe("the reminder switch reads the browser and works from day one (T-WEB-S402)", () => {
   it("an unsupported browser shows the install hint and fires no fetch", async () => {
     removePushBrowser();
-    render(<PushSection />);
+    render(<ReminderSection />);
     await settledPushState("unsupported");
     expect(
       screen.getByText(messages.settings.push.installHint),
@@ -208,28 +242,43 @@ describe("the push toggle reads the browser and works from day one (T-WEB-S402)"
     expect(pushClient.fetchNotificationsState).not.toHaveBeenCalled();
   });
 
-  it("a server with no VAPID key is unsupported too, and ineligible is not a reason to hide the toggle", async () => {
+  it("a server with no VAPID key is unsupported too, with no install hint, and ineligible is not a reason to hide the toggle", async () => {
     installPushBrowser({ permission: "default", subscribed: false });
     pushClient.fetchNotificationsState.mockResolvedValue({
       eligible: false,
       vapidPublicKey: null,
     });
-    const view = render(<PushSection />);
+    const view = render(<ReminderSection />);
     await settledPushState("unsupported");
+    expect(
+      screen.queryByText(messages.settings.push.installHint),
+    ).not.toBeInTheDocument();
     view.unmount();
 
     pushClient.fetchNotificationsState.mockResolvedValue({
       eligible: false,
       vapidPublicKey: "BKey",
     });
-    render(<PushSection />);
+    render(<ReminderSection />);
     await settledPushState("off");
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
   });
 
+  it("a failed fetch of /notifications/state gets its own error state, with no install hint", async () => {
+    installPushBrowser({ permission: "default", subscribed: false });
+    pushClient.fetchNotificationsState.mockResolvedValue(undefined);
+    render(<ReminderSection />);
+    await settledPushState("error");
+    expect(screen.getByText(messages.settings.push.error)).toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.settings.push.installHint),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
   it("a denied permission is blocked, with the way to unblock it", async () => {
     installPushBrowser({ permission: "denied", subscribed: false });
-    render(<PushSection />);
+    render(<ReminderSection />);
     await settledPushState("blocked");
     expect(
       screen.getByText(messages.settings.push.blocked),
@@ -239,7 +288,7 @@ describe("the push toggle reads the browser and works from day one (T-WEB-S402)"
 
   it("turning on stores the subscription and reads on; a denial on the ask goes blocked without dismissing the card", async () => {
     installPushBrowser({ permission: "default", subscribed: false });
-    const view = render(<PushSection />);
+    const view = render(<ReminderSection />);
     await settledPushState("off");
     fireEvent.click(screen.getByRole("switch"));
     await settledPushState("on");
@@ -252,7 +301,7 @@ describe("the push toggle reads the browser and works from day one (T-WEB-S402)"
       subscribed: false,
       deniesOnSubscribe: true,
     });
-    render(<PushSection />);
+    render(<ReminderSection />);
     await settledPushState("off");
     fireEvent.click(screen.getByRole("switch"));
     await settledPushState("blocked");
@@ -273,7 +322,7 @@ describe("the push toggle reads the browser and works from day one (T-WEB-S402)"
       order.push("delete");
       return Promise.resolve(true);
     });
-    const view = render(<PushSection />);
+    const view = render(<ReminderSection />);
     await settledPushState("on");
     fireEvent.click(screen.getByRole("switch"));
     await settledPushState("off");
@@ -285,7 +334,7 @@ describe("the push toggle reads the browser and works from day one (T-WEB-S402)"
       subscribed: true,
     });
     pushClient.deletePushSubscription.mockResolvedValue(false);
-    render(<PushSection />);
+    render(<ReminderSection />);
     await settledPushState("on");
     fireEvent.click(screen.getByRole("switch"));
     expect(

@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-09-24
 **Depends on:** [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0067](./0067-termo-accent-deepens-to-carry-a-light-label.md)
+**Amends:** [ADR-0041](./0041-accents-colour-shapes-never-words.md) — decision 1's accent-as-text allowance and consequence (h)'s site figures are now measured in both themes, not light alone; decision 6 (`--accent-termo`, as already carried by ADR-0067) gains its dark twin here too. The dark figures are pinned by `T-WEB-S299a`, `T-WEB-S300a` and `T-WEB-S395`.
 
 ## Context
 
@@ -24,3 +25,4 @@ Every game accent carries a paper label (`--paper-desk` or `--paper-card`, via `
 
 - Dark accents read visibly lighter and slightly more saturated than their light twins, by construction — this is the trade the window forces, not a stylistic choice.
 - `--accent-sudoku-text` / `--accent-binairo-text` are the only accent-as-text lift so far; a future accent-as-text site failing 4.5:1 in dark gets the same treatment, not a palette-wide relift.
+- Accent-coloured text (ADR-0041 decision 1's exception) is never placed on `--paper-tint` — every dark accent clears only 4.24–4.26:1 against it, below AA. The two shipped sites (`.streakNumeral`/`.streakLabel` on `--paper-desk`, `.streakCardNumeral`/`.streakCardLabel` on `--paper-card`) already avoid it; a future accent-as-text site on `--paper-tint` needs its own lifted token, the same way `--accent-sudoku-text` did.

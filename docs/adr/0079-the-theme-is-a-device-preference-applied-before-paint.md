@@ -4,7 +4,7 @@
 
 ## Context
 
-Dark mode is a launch requirement (DESIGN.md, "Dark mode (pending)"). Miolos has no server-rendered per-user state today — every page is static or driven by client-side session data — and the theme choice (system / light / dark) has to reach the very first paint, or the page flashes the wrong palette before JavaScript runs.
+Dark mode is a launch requirement — the founding handoff names it directly: *"dark mode 'papel escuro' desde o dia 1"* (`docs/handoffs/001-handoff-project-foundation.md`). Miolos has no server-rendered per-user state today — every page is static or driven by client-side session data — and the theme choice (system / light / dark) has to reach the very first paint, or the page flashes the wrong palette before JavaScript runs.
 
 ## Decision
 

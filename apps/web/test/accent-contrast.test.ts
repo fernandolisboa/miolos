@@ -4,6 +4,7 @@ import type { Game } from "@miolos/core";
 
 import { accentVars } from "../src/play/accent";
 import { colorTokens } from "./css-source";
+import { contrast, luminance } from "./contrast";
 
 const GAMES: readonly Game[] = ["termo", "sudoku", "nonogram", "binairo"];
 
@@ -35,22 +36,6 @@ function contrastTools(theme: "light" | "dark") {
   }
 
   return { hexOf, resolveVar, pair };
-}
-
-function luminance(hex: string): number {
-  const channel = (index: number): number => {
-    const srgb = parseInt(hex.slice(index, index + 2), 16) / 255;
-    return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
-}
-
-function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [
-    number,
-    number,
-  ];
-  return (hi + 0.05) / (lo + 0.05);
 }
 
 const LIGHT = contrastTools("light");

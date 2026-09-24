@@ -22,7 +22,7 @@ next 16.3.5, sharp 0.35.4 and vitest 4.1.11 landed in one PR that superseded Dep
 
 ## Next
 
-**#36 PR B** — withdrawing the email-reminder consent and removing the email from `/ajustes` (plan on #36, ADR-0082 still to write). Push it only after ledger §2 is in Done. PR A shipped the theme (ADR-0079, ADR-0080), the settings screen with the push switch (ADR-0081), `GET /account/state`, one shared top bar, and the reduced-motion guard.
+**#36 PR B** — withdrawing the email-reminder consent and removing the email from `/ajustes` (plan on #36, ADR-0082 Proposed). Push it only after ledger §2 is in Done. PR A shipped the theme (ADR-0079, ADR-0080), the settings screen with the reminder switch (ADR-0081), `GET /account/state`, one shared top bar, and the reduced-motion guard.
 
 **Then #206 cluster 9** — re-derive the audit's numbers first, as clusters 1, 4, 7 and 8 had to.
 

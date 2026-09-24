@@ -57,7 +57,7 @@ describe("one subscribe path for the card and the settings toggle, and only the 
       .filter((file) => webCodeOf(file).includes("subscribeAndStore("))
       .sort();
     expect(callers).toEqual([
-      "app/ajustes/push-section.tsx",
+      "app/ajustes/reminder-section.tsx",
       "src/play/push-prompt-card.tsx",
       "src/push/subscribe.ts",
     ]);
@@ -69,7 +69,7 @@ describe("one subscribe path for the card and the settings toggle, and only the 
     expect(webCodeOf("src/push/subscribe.ts")).not.toContain(
       "dismissPushPrompt",
     );
-    expect(webCodeOf("app/ajustes/push-section.tsx")).not.toContain(
+    expect(webCodeOf("app/ajustes/reminder-section.tsx")).not.toContain(
       "dismissPushPrompt",
     );
   });

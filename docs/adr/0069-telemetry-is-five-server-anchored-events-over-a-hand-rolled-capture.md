@@ -256,6 +256,9 @@ construction instead.
    re-subscribe, a cross-user repoint, and #36's future settings toggle.
    Firing on it would re-count an opt-in that already happened.
    `upsertSubscription` therefore answers `{stored, inserted}`.
+   *Annotation (#36, 2026-09-24): the settings reminder switch (ADR-0081)
+   turns off by deleting the row, so turning it back on is a genuine
+   insert every time — this fires correctly with no change here.*
 
    The mechanism is the **plan's named fallback, not its first choice**:
    `(xmax = 0)` in the RETURNING list does not type on a clean tree, because
