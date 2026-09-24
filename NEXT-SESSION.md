@@ -22,6 +22,10 @@ Nothing to verify. #206 clusters 5, 6 and 14 merged.
 
 **An assertion that reads `textContent` or a tag name cannot see an attribute**, and a component's identity mostly lives in attributes: `pageModifier`, the hint's `className`, `style={ACCENTS[game]}` and the extra stat's `className` were each deletable from the chrome with the full suite green until the reader was changed to look at the attribute that carries them.
 
+## Dependabot npm PRs cannot be merged as opened
+
+next 16.3.5, sharp 0.35.4 and vitest 4.1.11 landed in one PR that superseded Dependabot #259–#262. Dependabot's npm PRs here change one `package.json` and never `pnpm-lock.yaml`, so `--frozen-lockfile` fails, and they bump a package in only one of the workspaces that pin it. Land them as one hand-made bump across every pin, and stay outside `minimumReleaseAge` (7 days): `pnpm install` refuses anything newer.
+
 ## Next
 
 **#206 cluster 7** — 321 lines (not 640).
