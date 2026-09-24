@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S116` | `S114` | never used |
-| `T-DB` | `S90` | `S89` | `T-DB-21` |
-| `T-API` | `S189` | `S188` | `T-API-16` |
+| `T-CORE` | `S118` | `S117` | never used |
+| `T-DB` | `S94` | `S93` | `T-DB-21` |
+| `T-API` | `S195` | `S194` | `T-API-16` |
 | `T-WEB` | `S379` | `S378` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
+
+#199 (the email hedge, ADR-0079) spent **`T-CORE-S116`/`S117`**, **`T-DB-S90…S93`** and **`T-API-S189…S194`**. Its API ids were planned as `S185…S190` and moved at the merge that brought #206 cluster 8, which had spent `S185…S188` in parallel.
 
 #206 cluster 8 spent **`T-API-S185…S188`**, contiguous, all in
 `apps/api/test/publishing-service.test.ts`. `S185` is binairo's

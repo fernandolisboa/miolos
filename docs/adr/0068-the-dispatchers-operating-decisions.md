@@ -1,6 +1,7 @@
 # ADR-0068 — The dispatcher's operating decisions: write-side subscription ceiling, ledger merge duty, one-snapshot tick instant
 
 **Status:** Accepted — 2026-08-20 (issue #146, shipped in #171)
+**Amended by:** [ADR-0079](./0079-the-email-hedge-is-a-second-arm-of-the-one-tick.md) — decisions 4 and 5 (per-channel response, 503 on either transport, the concurrency trigger summed over both arms) and the consequence that the push reader stays untouched
 **Depends on:** [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0049](./0049-account-merge-one-pure-function-one-idempotent-operation.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0064](./0064-streak-at-risk-is-a-derived-decision.md), [ADR-0066](./0066-a-late-sync-is-credited-from-a-server-seen-day.md)
 
 ## Context

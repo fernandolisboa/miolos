@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 
 import type { Db } from "./client";
 import { SAO_PAULO_TIME_ZONE } from "./published";
@@ -33,12 +33,10 @@ export async function readTickInstant(
   return { today, hour };
 }
 
-export async function listPushNudgeCandidates(
-  db: Db,
-  args: { today: string; hour: number },
-): Promise<string[]> {
-  const { today, hour } = args;
-  const result = await db.execute(sql`
+type TickArgs = { today: string; hour: number };
+
+function habitualHours(today: string): SQL {
+  return sql`
     with counted_day_starts as (
       select c.user_id, c.date, min(c.completed_at) as first_on_time
       from completions c
@@ -53,20 +51,37 @@ export async function listPushNudgeCandidates(
               ))::int as habitual_hour
       from counted_day_starts
       group by user_id
-    )
+    )`;
+}
+
+function atRiskNow(
+  args: TickArgs,
+  userId: SQL,
+  channel: "push" | "email",
+): SQL {
+  const { today, hour } = args;
+  return sql`h.habitual_hour = ${hour}::int
+      and exists (select 1 from completions y
+                  where y.user_id = ${userId} and y.date = ${today}::date - 1
+                    and y.outcome = 'won' and y.on_time)
+      and not exists (select 1 from completions t
+                  where t.user_id = ${userId} and t.date = ${today}::date
+                    and t.outcome = 'won' and t.on_time)
+      and not exists (select 1 from notification_sends n
+                  where n.user_id = ${userId} and n.date = ${today}::date
+                    and n.channel = ${channel})`;
+}
+
+export async function listPushNudgeCandidates(
+  db: Db,
+  args: TickArgs,
+): Promise<string[]> {
+  const result = await db.execute(sql`
+    ${habitualHours(args.today)}
     select distinct p.user_id
     from push_subscriptions p
     join habitual h on h.user_id = p.user_id
-    where h.habitual_hour = ${hour}::int
-      and exists (select 1 from completions y
-                  where y.user_id = p.user_id and y.date = ${today}::date - 1
-                    and y.outcome = 'won' and y.on_time)
-      and not exists (select 1 from completions t
-                  where t.user_id = p.user_id and t.date = ${today}::date
-                    and t.outcome = 'won' and t.on_time)
-      and not exists (select 1 from notification_sends n
-                  where n.user_id = p.user_id and n.date = ${today}::date
-                    and n.channel = 'push')
+    where ${atRiskNow(args, sql`p.user_id`, "push")}
   `);
   return result.rows.map((row) => {
     const userId: unknown = row["user_id"];
@@ -76,6 +91,32 @@ export async function listPushNudgeCandidates(
       );
     }
     return userId;
+  });
+}
+
+export async function listEmailNudgeCandidates(
+  db: Db,
+  args: TickArgs,
+): Promise<{ userId: string; email: string }[]> {
+  const result = await db.execute(sql`
+    ${habitualHours(args.today)}
+    select u.id as user_id, u.email
+    from users u
+    join habitual h on h.user_id = u.id
+    where u.reminder_consent_at is not null
+      and u.email is not null and u.email_verified_at is not null
+      and not exists (select 1 from push_subscriptions p where p.user_id = u.id)
+      and ${atRiskNow(args, sql`u.id`, "email")}
+  `);
+  return result.rows.map((row) => {
+    const userId: unknown = row["user_id"];
+    const email: unknown = row["email"];
+    if (typeof userId !== "string" || typeof email !== "string") {
+      throw new Error(
+        "listEmailNudgeCandidates: unexpected row shape from the database",
+      );
+    }
+    return { userId, email };
   });
 }
 

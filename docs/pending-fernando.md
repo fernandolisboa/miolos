@@ -13,7 +13,7 @@
 
 ---
 
-## NOW — one ⚡ decision, and it is not urgent
+## NOW — two ⚡ decisions, neither urgent
 
 *(Section numbers were positional and moved three times before the section emptied on 2026-08-21. Several Done rows carry that old numbering in their "Was pending in" column; each row is about its own subject, not about whatever held that number. **Cite Done rows by subject, never by section number.** As promised there, the next item filed starts at §1 again — this is it.)*
 
@@ -29,9 +29,20 @@
 
 ---
 
+### §2 ⚡ How people stop the email reminder — issue #199
+
+- **Do:** answer on #199 with one letter. **(a)** keep it: the email says "write to privacidade@miolos.app to stop", and you run one SQL line when someone writes. **(b)** before launch, add a one-click stop link in the email (#267; an agent builds it, and it likely needs one new secret from you).
+- **Under (a), each time a stop request arrives:** run via the operator ritual (napkin § Shell 2): `update users set reminder_consent_at = null where email = lower(trim('<address>')) and email_verified_at is not null;` — expect `UPDATE 1`. The next hourly tick no longer picks that account.
+- **Verify:** the letter is on #199. Under (a), `select count(*) from users where email = '<address>' and reminder_consent_at is not null` returns 0 after each request.
+- **Blocks:** nothing ships blocked. Reminders go only to people who ticked the box, at most one per day.
+- **Why it is yours:** reading that mailbox is a production action, and whether a mail request is an easy enough way to withdraw consent (LGPD art. 8 §5) is a legal call.
+- **Source:** #199, ADR-0079 decision 6.
+
+---
+
 ## SOON — decided or queued, agent-driven, nothing for you unless asked
 
-- **#146** streak-at-risk dispatcher — SHIPPED (plan 063, ADR-0068) **and green as of 2026-08-21**: the hourly tick reaches the API and returns a real body (run 32477211453, the first `success` the workflow has ever had) after the CRON_SECRET rotation in the Done table. The phone ritual in ANY TIME is now the only thing between this and a real nudge. Email-hedge slice (slice C) is **filed as #199** as of 2026-08-22 — it had been unblocked and *unfiled* for two days, which is the same rot this section's #64 row below is about. Resend went live 2026-08-21 (Done table) and Fernando's Q1/Q2 were answered 2026-08-20, so nothing had blocked it since; the filing step simply never happened, and the row said *"it remains ordinary agent work on #146"* while no ticket existed. Ordinary agent work on **#199**, nothing for Fernando.
+- **#146** streak-at-risk dispatcher — SHIPPED (plan 063, ADR-0068) **and green as of 2026-08-21**: the hourly tick reaches the API and returns a real body (run 32477211453, the first `success` the workflow has ever had) after the CRON_SECRET rotation in the Done table. The phone ritual in ANY TIME is now the only thing between this and a real nudge. Email-hedge slice (slice C) is **filed as #199** as of 2026-08-22 — it had been unblocked and *unfiled* for two days, which is the same rot this section's #64 row below is about. Resend went live 2026-08-21 (Done table) and Fernando's Q1/Q2 were answered 2026-08-20, so nothing had blocked it since; the filing step simply never happened, and the row said *"it remains ordinary agent work on #146"* while no ticket existed. Ordinary agent work on **#199**, nothing for Fernando. **#199 shipped 2026-09-24** (ADR-0079); its one question for you is NOW §2.
 - **#64** Nonogram picture name — **SHIPPED** (PR #188, `69e4d35`, ADR-0070). *This row read `ready-for-agent` for a full day after the work merged; corrected 2026-08-22 at #104. It is live proof that the ledger rots when a shipping PR does not close its own SOON row, which is why #104's row below was scheduled inside its own plan rather than left to be noticed.* The two deliberate departures from Fernando's instructions are in STANDING and stay there until he says otherwise.
 - **#104** archive OG cards — **SHIPPED** (PR #190, ADR-0071): all three archive shells have cards, `/arquivo` as a committed asset and the month and day pages pointing at `/cartao/mes/<YYYY-MM>` and `/cartao/<YYYY-MM-DD>`. The design call his comment delegated — whether the day card names the four games — was decided in-plan (it does not) and recorded on the issue. **Nothing in it needs Fernando.**
 - **#158** terms-of-use page `/termos` — approved and filed, `ready-for-agent`.

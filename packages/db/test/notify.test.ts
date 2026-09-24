@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   claimNudgeSend,
+  listEmailNudgeCandidates,
   listPushNudgeCandidates,
   readTickInstant,
 } from "../src/notify";
@@ -287,6 +288,95 @@ describe("listPushNudgeCandidates — the habitual hour (#146, ADR-0064 d1)", ()
     expect(
       await listPushNudgeCandidates(ctx.db, { today: TODAY, hour: 3 }),
     ).toEqual([]);
+  });
+});
+
+async function createReminderUser(
+  email: string,
+  overrides: { consent?: boolean; verified?: boolean } = {},
+): Promise<string> {
+  const inserted = await ctx.db
+    .insert(users)
+    .values({
+      email,
+      emailVerifiedAt: overrides.verified === false ? null : new Date(0),
+      reminderConsentAt: overrides.consent === false ? null : new Date(0),
+    })
+    .returning();
+  const user = inserted[0];
+  if (!user) {
+    throw new Error("users insert returned no row");
+  }
+  return user.id;
+}
+
+describe("listEmailNudgeCandidates — the email hedge (#199, ADR-0079)", () => {
+  it("T-DB-S90: reminder consent + verified email + no subscription + at risk at the habitual hour ⇒ one {userId, email}; the wrong hour or a counted today excludes", async () => {
+    const userId = await createReminderUser("ana@example.org");
+    await insertCompletion({ userId, date: YESTERDAY, hour: 20 });
+
+    const doneToday = await createReminderUser("bia@example.org");
+    await insertCompletion({ userId: doneToday, date: YESTERDAY, hour: 20 });
+    await insertCompletion({ userId: doneToday, date: TODAY, hour: 9 });
+
+    expect(
+      await listEmailNudgeCandidates(ctx.db, { today: TODAY, hour: 20 }),
+    ).toEqual([{ userId, email: "ana@example.org" }]);
+    expect(
+      await listEmailNudgeCandidates(ctx.db, { today: TODAY, hour: 21 }),
+    ).toEqual([]);
+  });
+
+  it("T-DB-S91: the hedge (Q1 = 1a) — a consent holder with a push subscription is a push candidate and never an email candidate", async () => {
+    const userId = await createReminderUser("ana@example.org");
+    await subscribe(userId);
+    await insertCompletion({ userId, date: YESTERDAY, hour: 20 });
+
+    const args = { today: TODAY, hour: 20 };
+    expect(await listEmailNudgeCandidates(ctx.db, args)).toEqual([]);
+    expect(await listPushNudgeCandidates(ctx.db, args)).toEqual([userId]);
+  });
+
+  it("T-DB-S92: no consent, an unverified email, and a merge tombstone (consent kept, email nulled) are never candidates", async () => {
+    const noConsent = await createReminderUser("a@example.org", {
+      consent: false,
+    });
+    const unverified = await createReminderUser("b@example.org", {
+      verified: false,
+    });
+    const tombstone = await createReminderUser("c@example.org");
+    await ctx.db.execute(
+      sql`update users set email = null, email_verified_at = null where id = ${tombstone}::uuid`,
+    );
+    for (const userId of [noConsent, unverified, tombstone]) {
+      await insertCompletion({ userId, date: YESTERDAY, hour: 20 });
+    }
+
+    expect(
+      await listEmailNudgeCandidates(ctx.db, { today: TODAY, hour: 20 }),
+    ).toEqual([]);
+  });
+
+  it("T-DB-S93: an email ledger row blocks the email arm; a push ledger row does not", async () => {
+    const emailed = await createReminderUser("a@example.org");
+    const pushed = await createReminderUser("b@example.org");
+    for (const userId of [emailed, pushed]) {
+      await insertCompletion({ userId, date: YESTERDAY, hour: 20 });
+    }
+    await claimNudgeSend(ctx.db, {
+      userId: emailed,
+      date: TODAY,
+      channel: "email",
+    });
+    await claimNudgeSend(ctx.db, {
+      userId: pushed,
+      date: TODAY,
+      channel: "push",
+    });
+
+    expect(
+      await listEmailNudgeCandidates(ctx.db, { today: TODAY, hour: 20 }),
+    ).toEqual([{ userId: pushed, email: "b@example.org" }]);
   });
 });
 
