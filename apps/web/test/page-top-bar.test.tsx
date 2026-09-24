@@ -11,6 +11,7 @@ import { messages, routes } from "../src/i18n";
 const WEB = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const TOP_BAR_PAGES = [
+  "app/ajustes/page.tsx",
   "app/arquivo/day-view.tsx",
   "app/arquivo/index-view.tsx",
   "app/arquivo/month-view.tsx",

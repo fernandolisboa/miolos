@@ -11,6 +11,7 @@ export const routeSlugs = {
   attach: "vincular",
   privacy: "privacidade",
   terms: "termos",
+  settings: "ajustes",
   binairo: "binairo",
   sudoku: "sudoku",
   nonogram: "nonogram",
@@ -38,10 +39,13 @@ export const routes = {
   attach: `/${routeSlugs.attach}`,
   privacy: `/${routeSlugs.privacy}`,
   terms: `/${routeSlugs.terms}`,
+  settings: `/${routeSlugs.settings}`,
   archive: `/${routeSlugs.archive}`,
 } as const;
 
 export type Route = (typeof routes)[keyof typeof routes];
+
+export const deleteAccountAnchor = "excluir-conta";
 
 export function archiveMonthRoute(month: string): string {
   return `${routes.archive}/${routeSlugs.month}/${month}`;

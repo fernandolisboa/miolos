@@ -33,13 +33,16 @@ export async function apiGet<T>(
   }
 }
 
-export async function postJson(
+type JsonMethod = "POST" | "DELETE";
+
+async function sendJson(
+  method: JsonMethod,
   url: string,
   body: string,
 ): Promise<Response | undefined> {
   try {
     return await fetch(url, {
-      method: "POST",
+      method,
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body,
@@ -49,7 +52,15 @@ export async function postJson(
   }
 }
 
-export async function apiPostRaw(
+export async function postJson(
+  url: string,
+  body: string,
+): Promise<Response | undefined> {
+  return await sendJson("POST", url, body);
+}
+
+async function apiSend(
+  method: JsonMethod,
   path: string,
   body: unknown,
   absence: string,
@@ -64,7 +75,15 @@ export async function apiPostRaw(
   } catch {
     return undefined;
   }
-  return await postJson(`${base}${path}`, payload);
+  return await sendJson(method, `${base}${path}`, payload);
+}
+
+export async function apiPostRaw(
+  path: string,
+  body: unknown,
+  absence: string,
+): Promise<Response | undefined> {
+  return await apiSend("POST", path, body, absence);
 }
 
 export async function apiPost(
@@ -73,4 +92,12 @@ export async function apiPost(
   absence: string,
 ): Promise<boolean> {
   return (await apiPostRaw(path, body, absence))?.ok === true;
+}
+
+export async function apiDelete(
+  path: string,
+  body: unknown,
+  absence: string,
+): Promise<boolean> {
+  return (await apiSend("DELETE", path, body, absence))?.ok === true;
 }

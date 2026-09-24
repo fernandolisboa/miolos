@@ -104,7 +104,7 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     });
   });
 
-  it("registers a service worker in exactly ONE place — the push card's accept gesture — and never at layout or mount level (the D13 tripwire, re-aimed at #145)", () => {
+  it("registers a service worker in exactly ONE place — the push subscribe module, called from the card's accept and the settings toggle — and never at layout or mount level (the D13 tripwire, re-aimed at #145)", () => {
     const sources: { path: string; text: string }[] = [];
     for (const dir of ["app", "src"]) {
       for (const entry of readdirSync(join(webRoot, dir), {
@@ -129,8 +129,6 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     const offenders = sources
       .filter((source) => source.text.includes("serviceWorker"))
       .map((source) => source.path);
-    expect(offenders).toEqual([
-      join(webRoot, "src", "play", "push-prompt-card.tsx"),
-    ]);
+    expect(offenders).toEqual([join(webRoot, "src", "push", "subscribe.ts")]);
   });
 });

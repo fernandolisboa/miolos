@@ -76,6 +76,7 @@ export const messages = {
       archive: "Arquivo",
       freePlay: "Modo livre",
       stats: "Estatísticas",
+      settings: "Ajustes",
       privacy: "Política de Privacidade",
       terms: "Termos de Uso",
     },
@@ -405,7 +406,7 @@ export const messages = {
       medals:
         "As medalhas: a maioria é calculada do seu histórico de jogos; algumas são concedidas manualmente pela equipe e ficam registradas na sua conta. Todas são apagadas junto com a conta.",
 
-      push: "O lembrete no navegador, somente se você ativar: guardamos o endereço técnico da inscrição e as chaves que o navegador gera, usados só para avisar quando a sua sequência estiver em risco. Para parar, revogue a permissão de notificações nas configurações do navegador — os avisos param na hora e a inscrição, que deixa de funcionar, é removida dos nossos registros. Excluir a conta apaga tudo.",
+      push: "O lembrete no navegador, somente se você ativar: guardamos o endereço técnico da inscrição e as chaves que o navegador gera, usados só para avisar quando a sua sequência estiver em risco. Para parar, desligue o lembrete em Ajustes — a inscrição sai dos nossos registros na hora. Revogar a permissão de notificações no navegador também para os avisos, e a inscrição, que deixa de funcionar, é removida. Excluir a conta apaga tudo.",
     },
     why: {
       heading: "Para que usamos",
@@ -487,6 +488,42 @@ export const messages = {
     done: "Conta excluída.",
     doneNote: "Se voltar a jogar, você começa do zero — como no primeiro dia.",
     error: "Não foi possível excluir agora. Tente de novo.",
+  },
+  settings: {
+    title: "Ajustes",
+    lead: "Como o Miolos aparece e avisa você neste aparelho, e o que a sua conta guarda.",
+    theme: {
+      heading: "Aparência",
+      legend: "Tema das cores neste aparelho",
+      system: "Sistema",
+      light: "Claro",
+      dark: "Escuro",
+    },
+    push: {
+      heading: "Lembretes neste aparelho",
+      lead: "Um aviso antes da virada quando a sua sequência estiver em risco. No máximo um por dia, e nunca propaganda.",
+      toggle: "Lembrete de sequência em risco",
+      on: "Ligado",
+      off: "Desligado",
+      busy: "Um instante…",
+      unsupported: "Este navegador não recebe lembretes do Miolos agora.",
+      installHint:
+        "No iPhone ou no iPad, adicione o Miolos à Tela de Início pelo botão Compartilhar e abra por lá para ligar os lembretes.",
+      blocked:
+        "As notificações do Miolos estão bloqueadas neste navegador. Para liberar, abra as configurações do site no navegador e permita as notificações.",
+      error: "Não deu certo agora. Tente de novo em instantes.",
+    },
+    account: {
+      heading: "Seu e-mail",
+      attached: "E-mail vinculado a esta conta:",
+      none: "Sua conta não tem e-mail. Sem ele, não dá para recuperar a sua sequência em outro aparelho.",
+      unavailable: "Não conseguimos carregar os dados da conta agora.",
+    },
+    deletion: {
+      heading: "Excluir conta",
+      lead: "Apaga a sua conta, a sequência e todo o histórico, de uma vez.",
+      link: "Ir para a exclusão da conta",
+    },
   },
   games: {
     termo: {

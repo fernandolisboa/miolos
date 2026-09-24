@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   applicationServerKeyBytes,
+  deletePushSubscription,
   dismissPushPrompt,
   fetchNotificationsState,
   postPushSubscription,
 } from "../src/push/push-client";
+import { webCodeOf } from "./ts-source";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
@@ -149,5 +151,49 @@ describe("push-client (T-WEB-S263)", () => {
   it("applicationServerKeyBytes decodes base64url, unpadded included, to the exact bytes", () => {
     expect([...applicationServerKeyBytes("AQID")]).toEqual([1, 2, 3]);
     expect([...applicationServerKeyBytes("_-8")]).toEqual([255, 239]);
+  });
+});
+
+describe("turning push off asks the server to forget this endpoint (T-WEB-S401)", () => {
+  it("deletePushSubscription sends the credentialed JSON DELETE the route parses, through the one request path", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(jsonResponse(200, { removed: true })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await deletePushSubscription(ENDPOINT)).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("https://api.example.test/push/subscriptions");
+    expect(init).toEqual({
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: ENDPOINT }),
+    });
+    expect(webCodeOf("src/api/client.ts").match(/fetch\(/g)).toHaveLength(2);
+  });
+
+  it("a non-ok status, a network failure and a missing URL all answer false", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(500, { error: "internal" }))),
+    );
+    expect(await deletePushSubscription(ENDPOINT)).toBe(false);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("offline"))),
+    );
+    expect(await deletePushSubscription(ENDPOINT)).toBe(false);
+
+    vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await deletePushSubscription(ENDPOINT)).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,7 @@ export {
   archiveGameRoute,
   archiveMonthCardRoute,
   archiveMonthRoute,
+  deleteAccountAnchor,
   freePlayRoutes,
   playRoutes,
   routes,

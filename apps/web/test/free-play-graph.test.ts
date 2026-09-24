@@ -143,7 +143,7 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
       termoScreenIo: [
         "apps/web/src/api/client.ts",
         "apps/web/src/play/play-record.ts",
-        "apps/web/src/play/push-prompt-card.tsx",
+        "apps/web/src/push/subscribe.ts",
         "apps/web/src/session/bootstrap.ts",
         "apps/web/src/telemetry/client.ts",
       ],

@@ -3,21 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 
 import { messages } from "../i18n";
+import { dismissPushPrompt } from "../push/push-client";
 import {
-  applicationServerKeyBytes,
-  dismissPushPrompt,
-  postPushSubscription,
-} from "../push/push-client";
+  browserSupportsPush,
+  currentPushSubscription,
+  subscribeAndStore,
+} from "../push/subscribe";
 import { usePushState } from "../push/use-push-state";
 import styles from "./push-prompt-card.module.css";
-
-function browserSupportsPush(): boolean {
-  return (
-    "Notification" in window &&
-    "serviceWorker" in navigator &&
-    "PushManager" in window
-  );
-}
 
 function askableHere(): boolean {
   return browserSupportsPush() && Notification.permission === "default";
@@ -41,48 +34,6 @@ function moveFocusPastCard(card: HTMLElement | null): void {
   (following ?? controls.at(-1))?.focus();
 }
 
-type SubscribeOutcome = "stored" | "denied" | "retriable";
-
-async function subscribeAndStore(
-  vapidPublicKey: string,
-): Promise<SubscribeOutcome> {
-  let subscription: PushSubscription;
-  try {
-    await navigator.serviceWorker.register("/sw.js");
-    const registration = await navigator.serviceWorker.ready;
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: applicationServerKeyBytes(vapidPublicKey),
-    });
-  } catch {
-    if (Notification.permission === "denied") {
-      void dismissPushPrompt();
-      return "denied";
-    }
-    return "retriable";
-  }
-  const json = subscription.toJSON();
-  const p256dh = json.keys?.["p256dh"];
-  const auth = json.keys?.["auth"];
-
-  const stored =
-    p256dh !== undefined && auth !== undefined && p256dh !== "" && auth !== ""
-      ? await postPushSubscription({
-          endpoint: subscription.endpoint,
-          keys: { p256dh, auth },
-        })
-      : false;
-  if (!stored) {
-    try {
-      await subscription.unsubscribe();
-    } catch {
-      // The server has no record of it either way.
-    }
-    return "retriable";
-  }
-  return "stored";
-}
-
 export function PushPromptCard() {
   const state = usePushState(askableHere);
   const [browserGate, setBrowserGate] = useState(false);
@@ -99,17 +50,12 @@ export function PushPromptCard() {
     if (Notification.permission !== "default") {
       return;
     }
-    navigator.serviceWorker
-      .getRegistration()
-      .then(
-        (registration) => registration?.pushManager.getSubscription() ?? null,
-      )
+    currentPushSubscription()
       .then((subscription) => {
         if (!cancelled && subscription === null) {
           setBrowserGate(true);
         }
       })
-
       .catch(() => undefined);
     return () => {
       cancelled = true;
@@ -132,6 +78,9 @@ export function PushPromptCard() {
       if (outcome === "retriable") {
         setInFlight(false);
         return;
+      }
+      if (outcome === "denied") {
+        void dismissPushPrompt();
       }
       moveFocusPastCard(cardRef.current);
       setGone(true);

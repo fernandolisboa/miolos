@@ -96,6 +96,9 @@ export default function HojePage() {
         <Link className={styles.secondaryLink} href={routes.stats}>
           {messages.hoje.links.stats}
         </Link>
+        <Link className={styles.secondaryLink} href={routes.settings}>
+          {messages.hoje.links.settings}
+        </Link>
         <Link className={styles.secondaryLink} href={routes.privacy}>
           {messages.hoje.links.privacy}
         </Link>
