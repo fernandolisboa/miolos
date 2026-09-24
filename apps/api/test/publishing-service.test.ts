@@ -28,9 +28,12 @@ import {
 import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 import {
   drawUniformIndex,
+  MAX_BINAIRO_SEED_RETRIES_PER_DATE,
   MAX_NONOGRAM_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_RUN,
+  TopUpAbortedError,
+  topUpBinairoBuffer,
   topUpNonogramBuffer,
   topUpSudokuBuffer,
   topUpTermoBuffer,
@@ -39,8 +42,33 @@ import {
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
+const { insertControl } = vi.hoisted(() => ({
+  insertControl: { throwOnCall: 0, calls: 0 },
+}));
+
+vi.mock("@miolos/db/publishing", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@miolos/db/publishing")>();
+  return {
+    ...actual,
+    insertDailyPuzzle: async (
+      ...args: Parameters<typeof actual.insertDailyPuzzle>
+    ) => {
+      insertControl.calls += 1;
+      if (insertControl.calls === insertControl.throwOnCall) {
+        throw new Error("simulated insert failure");
+      }
+      return actual.insertDailyPuzzle(...args);
+    },
+  };
+});
+
 const { generation } = vi.hoisted(() => ({
-  generation: { failWeekdays: new Set<number>(), calls: 0 },
+  generation: {
+    failWeekdays: new Set<number>(),
+    calls: 0,
+    rejectValidator: false,
+    injectStrayKey: false,
+  },
 }));
 
 const { nonogram } = vi.hoisted(() => {
@@ -51,14 +79,27 @@ const { nonogram } = vi.hoisted(() => {
     forceWeekday: Weekday | undefined;
 
     lastPuzzle: NonogramPuzzle | undefined;
+    rejectValidator: boolean;
+    injectStrayKey: boolean;
   } = {
     failWeekdays: new Set(),
     calls: 0,
     forceWeekday: undefined,
     lastPuzzle: undefined,
+    rejectValidator: false,
+    injectStrayKey: false,
   };
   return { nonogram: state };
 });
+
+const { binairo } = vi.hoisted(() => ({
+  binairo: {
+    failWeekdays: new Set<number>(),
+    calls: 0,
+    rejectValidator: false,
+    injectStrayKey: false,
+  },
+}));
 
 vi.mock("@miolos/games/nonogram", async (importOriginal) => {
   const actual =
@@ -82,7 +123,15 @@ vi.mock("@miolos/games/nonogram", async (importOriginal) => {
         nonogram.forceWeekday ?? weekday,
       );
       nonogram.lastPuzzle = puzzle;
-      return puzzle;
+      return nonogram.injectStrayKey ? { ...puzzle, stray: 1 } : puzzle;
+    },
+    validateNonogram: (
+      puzzle: Parameters<typeof actual.validateNonogram>[0],
+    ) => {
+      if (nonogram.rejectValidator) {
+        return { ok: false, failures: ["clues-solution-mismatch"] };
+      }
+      return actual.validateNonogram(puzzle);
     },
   };
 });
@@ -102,7 +151,47 @@ vi.mock("@miolos/games/sudoku", async (importOriginal) => {
           actual.SUDOKU_MAX_GENERATION_ATTEMPTS,
         );
       }
-      return actual.generateDailySudoku(options);
+      const puzzle = actual.generateDailySudoku(options);
+      return generation.injectStrayKey ? { ...puzzle, stray: 1 } : puzzle;
+    },
+    validateSudoku: (
+      puzzle: Parameters<typeof actual.validateSudoku>[0],
+      criteria: Parameters<typeof actual.validateSudoku>[1],
+    ) => {
+      if (generation.rejectValidator) {
+        return { approved: false, reasons: ["too-hard"] };
+      }
+      return actual.validateSudoku(puzzle, criteria);
+    },
+  };
+});
+
+vi.mock("@miolos/games/binairo", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@miolos/games/binairo")>();
+  return {
+    ...actual,
+    generateBinairo: (
+      options: Parameters<typeof actual.generateBinairo>[0],
+    ) => {
+      binairo.calls += 1;
+      if (binairo.failWeekdays.has(options.weekday)) {
+        throw new actual.BinairoGenerationError(
+          options.seed,
+          options.weekday,
+          actual.BINAIRO_MAX_GENERATION_ATTEMPTS,
+        );
+      }
+      const puzzle = actual.generateBinairo(options);
+      return binairo.injectStrayKey ? { ...puzzle, stray: 1 } : puzzle;
+    },
+    validateBinairo: (
+      puzzle: Parameters<typeof actual.validateBinairo>[0],
+      weekday: Parameters<typeof actual.validateBinairo>[1],
+    ) => {
+      if (binairo.rejectValidator) {
+        return { approved: false, reasons: ["too-hard"] };
+      }
+      return actual.validateBinairo(puzzle, weekday);
     },
   };
 });
@@ -113,12 +202,22 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await ctx.db.execute(sql`truncate table daily_puzzles`);
+  insertControl.throwOnCall = 0;
+  insertControl.calls = 0;
   generation.failWeekdays.clear();
   generation.calls = 0;
+  generation.rejectValidator = false;
+  generation.injectStrayKey = false;
   nonogram.failWeekdays.clear();
   nonogram.calls = 0;
   nonogram.forceWeekday = undefined;
   nonogram.lastPuzzle = undefined;
+  nonogram.rejectValidator = false;
+  nonogram.injectStrayKey = false;
+  binairo.failWeekdays.clear();
+  binairo.calls = 0;
+  binairo.rejectValidator = false;
+  binairo.injectStrayKey = false;
 });
 
 afterAll(async () => {
@@ -141,6 +240,13 @@ async function nonogramRows(): Promise<
     .map((row) => ({ date: row.date, seed: row.seed, content: row.content }));
 }
 
+async function binairoRows(): Promise<{ date: string; content: unknown }[]> {
+  const rows = await ctx.db.select().from(dailyPuzzles);
+  return rows
+    .filter((row) => row.game === "binairo")
+    .map((row) => ({ date: row.date, content: row.content }));
+}
+
 function weekdayOf(date: string): Weekday {
   const weekday = isoWeekdayOf(date);
   if (!isWeekday(weekday)) {
@@ -148,6 +254,78 @@ function weekdayOf(date: string): Weekday {
   }
   return weekday;
 }
+
+describe("topUpBinairoBuffer", () => {
+  it("T-API-S185: a date whose generation always fails lands in failures and the run continues", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const doomedDate = addDays(today, 3);
+
+    binairo.failWeekdays.add(weekdayOf(doomedDate));
+
+    const result = await topUpBinairoBuffer(ctx.db, 7);
+
+    expect(result.generated).toBe(6);
+    expect(result.depth).toBe(6);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(doomedDate);
+    expect(result.failures[0]?.reason).toContain(
+      "Binairo generation exhausted",
+    );
+    const dates = (await binairoRows()).map((row) => row.date).sort();
+    expect(dates).not.toContain(doomedDate);
+    expect(dates).toHaveLength(6);
+
+    expect(binairo.calls).toBe(6 + MAX_BINAIRO_SEED_RETRIES_PER_DATE);
+  }, 30_000);
+
+  it("T-API-S186: a validator that always rejects retries the full per-date budget", async () => {
+    binairo.rejectValidator = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpBinairoBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toMatch(/^validator rejected:/);
+    expect(binairo.calls).toBe(MAX_BINAIRO_SEED_RETRIES_PER_DATE);
+  });
+
+  it("T-API-S187: a schema rejection stops the date after one attempt", async () => {
+    binairo.injectStrayKey = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpBinairoBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toMatch(/^content schema rejected:/);
+    expect(binairo.calls).toBe(1);
+  });
+
+  it("T-API-S188: a throw mid-run aborts with the partial count and failures gathered so far", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    binairo.failWeekdays.add(weekdayOf(today));
+    insertControl.throwOnCall = 3;
+
+    let caught: unknown;
+    try {
+      await topUpBinairoBuffer(ctx.db, 7);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(TopUpAbortedError);
+    const aborted = caught as TopUpAbortedError;
+    expect(aborted.partial.generated).toBe(2);
+    expect(aborted.partial.failures).toHaveLength(1);
+    expect(aborted.partial.failures[0]?.date).toBe(today);
+    expect(aborted.partial.failures[0]?.reason).toContain(
+      "Binairo generation exhausted",
+    );
+  }, 30_000);
+});
 
 describe("topUpSudokuBuffer", () => {
   it("covers a full week with content the strict contract and the weekday criteria both accept", async () => {
@@ -229,6 +407,50 @@ describe("topUpSudokuBuffer", () => {
 
     expect(result).toEqual({ generated: 1, depth: 7, failures: [] });
     expect(generation.calls).toBe(1);
+  }, 30_000);
+
+  it("T-API-S186: a validator that always rejects retries the full per-date budget", async () => {
+    generation.rejectValidator = true;
+
+    const result = await topUpSudokuBuffer(ctx.db, 7);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(7);
+    const datesThatReallyTried =
+      MAX_SUDOKU_SEED_RETRIES_PER_RUN / MAX_SUDOKU_SEED_RETRIES_PER_DATE;
+    for (const failure of result.failures.slice(0, datesThatReallyTried)) {
+      expect(failure.reason).toMatch(/^validator rejected:/);
+    }
+    for (const failure of result.failures.slice(datesThatReallyTried)) {
+      expect(failure.reason).toBe("run seed-retry budget exhausted");
+    }
+    expect(generation.calls).toBe(MAX_SUDOKU_SEED_RETRIES_PER_RUN);
+  }, 30_000);
+
+  it("T-API-S187: a schema rejection burns the run budget, one attempt per date", async () => {
+    generation.injectStrayKey = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpSudokuBuffer(ctx.db, 7);
+
+    expect(generation.calls).toBe(MAX_SUDOKU_SEED_RETRIES_PER_RUN);
+    expect(result.failures).toHaveLength(7);
+    const schemaRejected = result.failures.slice(
+      0,
+      MAX_SUDOKU_SEED_RETRIES_PER_RUN,
+    );
+    const budgetExhausted = result.failures.slice(
+      MAX_SUDOKU_SEED_RETRIES_PER_RUN,
+    );
+    for (const failure of schemaRejected) {
+      expect(failure.reason).toMatch(/^content schema rejected:/);
+    }
+    for (const failure of budgetExhausted) {
+      expect(failure.reason).toBe("run seed-retry budget exhausted");
+    }
+    expect(result.failures.map((failure) => failure.date)).toEqual(
+      Array.from({ length: 7 }, (_, offset) => addDays(today, offset)),
+    );
   }, 30_000);
 });
 
@@ -319,6 +541,50 @@ describe("topUpNonogramBuffer", () => {
         before.get(row.date),
       );
     }
+  });
+
+  it("T-API-S186: a validator that always rejects retries the full per-date budget", async () => {
+    nonogram.rejectValidator = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpNonogramBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toMatch(/^validator rejected:/);
+    expect(nonogram.calls).toBe(MAX_NONOGRAM_SEED_RETRIES_PER_DATE);
+  });
+
+  it("T-API-S186: the weekday/size cross-check runs before the validator", async () => {
+    nonogram.forceWeekday = 1;
+    nonogram.rejectValidator = true;
+    const today = await todaySaoPaulo(ctx.db);
+    const notMonday = [0, 1]
+      .map((offset) => addDays(today, offset))
+      .find((date) => isoWeekdayOf(date) !== 1);
+    if (notMonday === undefined) {
+      throw new Error("unreachable: two consecutive days include a non-Monday");
+    }
+    const depth = notMonday === today ? 1 : 2;
+
+    const result = await topUpNonogramBuffer(ctx.db, depth);
+
+    const failure = result.failures.find((entry) => entry.date === notMonday);
+    expect(failure?.reason).toContain("weekday/size cross-check failed");
+  });
+
+  it("T-API-S187: a schema rejection stops the date after one attempt", async () => {
+    nonogram.injectStrayKey = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpNonogramBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toMatch(/^content schema rejected:/);
+    expect(nonogram.calls).toBe(1);
   });
 });
 
@@ -524,6 +790,22 @@ describe("topUpTermoBuffer", () => {
     const all = answersOf(await termoRows());
     expect(new Set(all).size).toBe(7);
   });
+
+  it("T-API-S188: a throw mid-run aborts with the partial count gathered so far", async () => {
+    insertControl.throwOnCall = 4;
+
+    let caught: unknown;
+    try {
+      await topUpTermoBuffer(ctx.db, 7);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(TopUpAbortedError);
+    const aborted = caught as TopUpAbortedError;
+    expect(aborted.partial.generated).toBe(3);
+    expect(aborted.partial.failures).toEqual([]);
+  }, 30_000);
 });
 
 describe("drawUniformIndex", () => {

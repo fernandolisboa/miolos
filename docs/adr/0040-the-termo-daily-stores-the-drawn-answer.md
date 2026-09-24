@@ -124,10 +124,13 @@ is *"tightening a constraint and regenerating"*.
    (module-private and unprefixed, in `apps/api/src/publishing/service.ts`),
    `MAX_SUDOKU_SEED_RETRIES_PER_DATE` and
    `MAX_NONOGRAM_SEED_RETRIES_PER_DATE` — get no termo analogue, and one
-   added later "for symmetry" would guard nothing. `failures[].reason` for
-   termo has exactly two values: the exhaustion string and `content schema
-   rejected: …`. `drawUniformIndex`'s 64-attempt cap is a draw-termination
-   bound, not a retry budget.
+   added later "for symmetry" would guard nothing. *(**Amended at #206
+   cluster 8** — `MAX_SEED_RETRIES_PER_DATE` is exported as
+   `MAX_BINAIRO_SEED_RETRIES_PER_DATE`, matching its two siblings' naming;
+   the value and the absence of a termo analogue are unchanged.)*
+   `failures[].reason` for termo has exactly two values: the exhaustion
+   string and `content schema rejected: …`. `drawUniformIndex`'s 64-attempt
+   cap is a draw-termination bound, not a retry budget.
 
 ## Rejected
 

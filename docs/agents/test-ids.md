@@ -39,9 +39,20 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
-| `T-API` | `S185` | `S184` | `T-API-16` |
+| `T-API` | `S189` | `S188` | `T-API-16` |
 | `T-WEB` | `S379` | `S378` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
+
+#206 cluster 8 spent **`T-API-S185…S188`**, contiguous, all in
+`apps/api/test/publishing-service.test.ts`. `S185` is binairo's
+doomed-generation characterisation, the one its siblings already had. `S186`
+pins that a validator rejection retries in all three grid games (sudoku's leg
+also proves it is charged to the run budget) and that nonogram's weekday/size
+cross-check runs before the validator. `S187` pins that a schema rejection
+stops the date, and sudoku's leg that it is charged to the run budget. `S188`
+pins `TopUpAbortedError`'s partial count on a mid-run throw for binairo and
+termo, and binairo's leg the failures gathered before it. Next free is
+`S189`.
 
 #255 (with #201 and #257, ADR-0078) reserved **`T-WEB-S374…S377`** and
 **`T-LINT-S62…S65`**, contiguous, and spent all eight; its review round added

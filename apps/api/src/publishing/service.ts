@@ -5,6 +5,7 @@ import {
   termoDailyContentSchema,
 } from "@miolos/core";
 import type { Db } from "@miolos/db";
+import type { Game } from "@miolos/core";
 import {
   bufferDepth,
   insertDailyPuzzle,
@@ -13,6 +14,7 @@ import {
   todaySaoPaulo,
 } from "@miolos/db/publishing";
 import { isWeekday } from "@miolos/games";
+import type { Weekday } from "@miolos/games";
 import {
   BinairoGenerationError,
   generateBinairo,
@@ -58,8 +60,6 @@ export function effectiveThreshold(configuredDepth: number): number {
   return Math.min(BUFFER_ALERT_THRESHOLD, configuredDepth);
 }
 
-const MAX_SEED_RETRIES_PER_DATE = 8;
-
 function randomUint32(): number {
   const box = new Uint32Array(1);
   crypto.getRandomValues(box);
@@ -70,72 +70,132 @@ function randomUint32(): number {
   return value;
 }
 
-export async function topUpBinairoBuffer(
+type Insert = (seed: number, content: unknown) => Promise<boolean>;
+
+type CoverDate = (
+  target: string,
+  insert: Insert,
+) => Promise<string | undefined>;
+
+async function topUpBuffer(
   db: Db,
+  game: Game,
   depth: number,
+  startRun: () => CoverDate | Promise<CoverDate>,
 ): Promise<TopUpResult> {
   let generated = 0;
   const failures: { date: string; reason: string }[] = [];
   try {
     const today = await todaySaoPaulo(db);
-    const existing = new Set(await listBufferedDates(db, "binairo", today));
+    const existing = new Set(await listBufferedDates(db, game, today));
+    const coverDate = await startRun();
 
     for (let offset = 0; offset < depth; offset += 1) {
       const target = addDays(today, offset);
       if (existing.has(target)) {
         continue;
       }
-      const weekday = isoWeekdayOf(target);
-      if (!isWeekday(weekday)) {
-        throw new RangeError(`derived weekday out of range for ${target}`);
-      }
-
-      let covered = false;
-      let lastReason = "no attempt made";
-      for (let attempt = 0; attempt < MAX_SEED_RETRIES_PER_DATE; attempt += 1) {
-        const seed = randomUint32();
-        let puzzle;
-        try {
-          puzzle = generateBinairo({ seed, weekday });
-        } catch (error) {
-          if (error instanceof BinairoGenerationError) {
-            lastReason = error.message;
-            continue;
-          }
-          throw error;
-        }
-        const verdict = validateBinairo(puzzle, weekday);
-        if (!verdict.approved) {
-          lastReason = `validator rejected: ${verdict.reasons.join(", ")}`;
-          continue;
-        }
-        const content = binairoDailyContentSchema.safeParse(puzzle);
-        if (!content.success) {
-          lastReason = `content schema rejected: ${content.error.message}`;
-          break;
-        }
+      const insert: Insert = async (seed, content) => {
         const inserted = await insertDailyPuzzle(db, {
-          game: "binairo",
+          game,
           date: target,
           seed,
-          content: content.data,
+          content,
         });
         if (inserted) {
           generated += 1;
         }
-
-        covered = true;
-        break;
-      }
-      if (!covered) {
-        failures.push({ date: target, reason: lastReason });
+        return inserted;
+      };
+      const reason = await coverDate(target, insert);
+      if (reason !== undefined) {
+        failures.push({ date: target, reason });
       }
     }
 
-    return { generated, depth: await bufferDepth(db, "binairo"), failures };
+    return { generated, depth: await bufferDepth(db, game), failures };
   } catch (thrown) {
     throw new TopUpAbortedError({ generated, failures }, thrown);
   }
+}
+
+type Attempt =
+  | { kind: "content"; content: unknown }
+  | { kind: "retry"; reason: string }
+  | { kind: "stop"; reason: string };
+
+async function withSeedRetries(
+  target: string,
+  maxAttempts: number,
+  attempt: (seed: number, weekday: Weekday) => Attempt,
+  insert: Insert,
+): Promise<string | undefined> {
+  const weekday = isoWeekdayOf(target);
+  if (!isWeekday(weekday)) {
+    throw new RangeError(`derived weekday out of range for ${target}`);
+  }
+
+  let lastReason = "no attempt made";
+  for (let count = 0; count < maxAttempts; count += 1) {
+    const seed = randomUint32();
+    const outcome = attempt(seed, weekday);
+    if (outcome.kind === "content") {
+      await insert(seed, outcome.content);
+      return undefined;
+    }
+    lastReason = outcome.reason;
+    if (outcome.kind === "stop") {
+      break;
+    }
+  }
+  return lastReason;
+}
+
+export const MAX_BINAIRO_SEED_RETRIES_PER_DATE = 8;
+
+function attemptBinairo(seed: number, weekday: Weekday): Attempt {
+  let puzzle;
+  try {
+    puzzle = generateBinairo({ seed, weekday });
+  } catch (error) {
+    if (error instanceof BinairoGenerationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+  const verdict = validateBinairo(puzzle, weekday);
+  if (!verdict.approved) {
+    return {
+      kind: "retry",
+      reason: `validator rejected: ${verdict.reasons.join(", ")}`,
+    };
+  }
+  const content = binairoDailyContentSchema.safeParse(puzzle);
+  if (!content.success) {
+    return {
+      kind: "stop",
+      reason: `content schema rejected: ${content.error.message}`,
+    };
+  }
+  return { kind: "content", content: content.data };
+}
+
+export async function topUpBinairoBuffer(
+  db: Db,
+  depth: number,
+): Promise<TopUpResult> {
+  return topUpBuffer(
+    db,
+    "binairo",
+    depth,
+    () => (target, insert) =>
+      withSeedRetries(
+        target,
+        MAX_BINAIRO_SEED_RETRIES_PER_DATE,
+        attemptBinairo,
+        insert,
+      ),
+  );
 }
 
 export const MAX_SUDOKU_SEED_RETRIES_PER_DATE = 2;
@@ -144,170 +204,114 @@ export const MAX_SUDOKU_SEED_RETRIES_PER_RUN = 4;
 
 const RUN_BUDGET_EXHAUSTED = "run seed-retry budget exhausted";
 
+function attemptSudoku(seed: number, weekday: Weekday): Attempt {
+  let puzzle;
+  try {
+    puzzle = generateDailySudoku({ seed, weekday });
+  } catch (error) {
+    if (error instanceof SudokuGenerationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+  const verdict = validateSudoku(puzzle, sudokuCriteriaForWeekday(weekday));
+  if (!verdict.approved) {
+    return {
+      kind: "retry",
+      reason: `validator rejected: ${verdict.reasons.join(", ")}`,
+    };
+  }
+  const content = sudokuDailyContentSchema.safeParse(puzzle);
+  if (!content.success) {
+    return {
+      kind: "stop",
+      reason: `content schema rejected: ${content.error.message}`,
+    };
+  }
+  return { kind: "content", content: content.data };
+}
+
 export async function topUpSudokuBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  let generated = 0;
-  const failures: { date: string; reason: string }[] = [];
-  try {
-    const today = await todaySaoPaulo(db);
-    const existing = new Set(await listBufferedDates(db, "sudoku", today));
+  return topUpBuffer(db, "sudoku", depth, () => {
     let runBudget = MAX_SUDOKU_SEED_RETRIES_PER_RUN;
-
-    for (let offset = 0; offset < depth; offset += 1) {
-      const target = addDays(today, offset);
-
-      if (existing.has(target)) {
-        continue;
+    const chargedAttempt = (seed: number, weekday: Weekday): Attempt => {
+      const outcome = attemptSudoku(seed, weekday);
+      if (outcome.kind !== "content") {
+        runBudget -= 1;
       }
-      if (runBudget <= 0) {
-        failures.push({ date: target, reason: RUN_BUDGET_EXHAUSTED });
-        continue;
-      }
-      const weekday = isoWeekdayOf(target);
-      if (!isWeekday(weekday)) {
-        throw new RangeError(`derived weekday out of range for ${target}`);
-      }
-
-      const criteria = sudokuCriteriaForWeekday(weekday);
-
-      let covered = false;
-      let lastReason = "no attempt made";
-      for (
-        let attempt = 0;
-        attempt < MAX_SUDOKU_SEED_RETRIES_PER_DATE && runBudget > 0;
-        attempt += 1
-      ) {
-        const seed = randomUint32();
-        let puzzle;
-        try {
-          puzzle = generateDailySudoku({ seed, weekday });
-        } catch (error) {
-          if (error instanceof SudokuGenerationError) {
-            lastReason = error.message;
-            runBudget -= 1;
-            continue;
-          }
-          throw error;
-        }
-        const verdict = validateSudoku(puzzle, criteria);
-        if (!verdict.approved) {
-          lastReason = `validator rejected: ${verdict.reasons.join(", ")}`;
-          runBudget -= 1;
-          continue;
-        }
-        const content = sudokuDailyContentSchema.safeParse(puzzle);
-        if (!content.success) {
-          lastReason = `content schema rejected: ${content.error.message}`;
-          runBudget -= 1;
-          break;
-        }
-        const inserted = await insertDailyPuzzle(db, {
-          game: "sudoku",
-          date: target,
-          seed,
-          content: content.data,
-        });
-        if (inserted) {
-          generated += 1;
-        }
-
-        covered = true;
-        break;
-      }
-      if (!covered) {
-        failures.push({ date: target, reason: lastReason });
-      }
-    }
-
-    return { generated, depth: await bufferDepth(db, "sudoku"), failures };
-  } catch (thrown) {
-    throw new TopUpAbortedError({ generated, failures }, thrown);
-  }
+      return outcome;
+    };
+    return (target, insert) =>
+      runBudget <= 0
+        ? Promise.resolve(RUN_BUDGET_EXHAUSTED)
+        : withSeedRetries(
+            target,
+            Math.min(MAX_SUDOKU_SEED_RETRIES_PER_DATE, runBudget),
+            chargedAttempt,
+            insert,
+          );
+  });
 }
 
 export const MAX_NONOGRAM_SEED_RETRIES_PER_DATE = 8;
+
+function attemptNonogram(seed: number, weekday: Weekday): Attempt {
+  let puzzle;
+  try {
+    puzzle = generateNonogram(seed, weekday);
+  } catch (error) {
+    if (error instanceof NonogramGenerationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+
+  const expected = NONOGRAM_WEEKDAY_CRITERIA[weekday];
+  if (puzzle.weekday !== weekday || puzzle.size !== expected.size) {
+    return {
+      kind: "stop",
+      reason:
+        `weekday/size cross-check failed: expected weekday ${String(weekday)} ` +
+        `size ${String(expected.size)}, got weekday ${String(puzzle.weekday)} ` +
+        `size ${String(puzzle.size)}`,
+    };
+  }
+  const verdict = validateNonogram(puzzle);
+  if (!verdict.ok) {
+    return {
+      kind: "retry",
+      reason: `validator rejected: ${verdict.failures.join(", ")}`,
+    };
+  }
+  const content = nonogramDailyContentSchema.safeParse(puzzle);
+  if (!content.success) {
+    return {
+      kind: "stop",
+      reason: `content schema rejected: ${content.error.message}`,
+    };
+  }
+  return { kind: "content", content: content.data };
+}
 
 export async function topUpNonogramBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  let generated = 0;
-  const failures: { date: string; reason: string }[] = [];
-  try {
-    const today = await todaySaoPaulo(db);
-    const existing = new Set(await listBufferedDates(db, "nonogram", today));
-
-    for (let offset = 0; offset < depth; offset += 1) {
-      const target = addDays(today, offset);
-      if (existing.has(target)) {
-        continue;
-      }
-      const weekday = isoWeekdayOf(target);
-      if (!isWeekday(weekday)) {
-        throw new RangeError(`derived weekday out of range for ${target}`);
-      }
-      const expected = NONOGRAM_WEEKDAY_CRITERIA[weekday];
-
-      let covered = false;
-      let lastReason = "no attempt made";
-      for (
-        let attempt = 0;
-        attempt < MAX_NONOGRAM_SEED_RETRIES_PER_DATE;
-        attempt += 1
-      ) {
-        const seed = randomUint32();
-        let puzzle;
-        try {
-          puzzle = generateNonogram(seed, weekday);
-        } catch (error) {
-          if (error instanceof NonogramGenerationError) {
-            lastReason = error.message;
-            continue;
-          }
-          throw error;
-        }
-
-        if (puzzle.weekday !== weekday || puzzle.size !== expected.size) {
-          lastReason =
-            `weekday/size cross-check failed: expected weekday ${String(weekday)} ` +
-            `size ${String(expected.size)}, got weekday ${String(puzzle.weekday)} ` +
-            `size ${String(puzzle.size)}`;
-          break;
-        }
-        const verdict = validateNonogram(puzzle);
-        if (!verdict.ok) {
-          lastReason = `validator rejected: ${verdict.failures.join(", ")}`;
-          continue;
-        }
-        const content = nonogramDailyContentSchema.safeParse(puzzle);
-        if (!content.success) {
-          lastReason = `content schema rejected: ${content.error.message}`;
-          break;
-        }
-        const inserted = await insertDailyPuzzle(db, {
-          game: "nonogram",
-          date: target,
-          seed,
-          content: content.data,
-        });
-        if (inserted) {
-          generated += 1;
-        }
-
-        covered = true;
-        break;
-      }
-      if (!covered) {
-        failures.push({ date: target, reason: lastReason });
-      }
-    }
-
-    return { generated, depth: await bufferDepth(db, "nonogram"), failures };
-  } catch (thrown) {
-    throw new TopUpAbortedError({ generated, failures }, thrown);
-  }
+  return topUpBuffer(
+    db,
+    "nonogram",
+    depth,
+    () => (target, insert) =>
+      withSeedRetries(
+        target,
+        MAX_NONOGRAM_SEED_RETRIES_PER_DATE,
+        attemptNonogram,
+        insert,
+      ),
+  );
 }
 
 // TODO(#74): a real alert for a low Termo answer pool.
@@ -347,11 +351,7 @@ export async function topUpTermoBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  let generated = 0;
-  const failures: { date: string; reason: string }[] = [];
-  try {
-    const today = await todaySaoPaulo(db);
-    const existing = new Set(await listBufferedDates(db, "termo", today));
+  return topUpBuffer(db, "termo", depth, async () => {
     const used = new Set(await listUsedTermoAnswers(db));
     const pool = TERMO_ANSWERS.filter((answer) => !used.has(answer.normalized));
 
@@ -365,14 +365,9 @@ export async function topUpTermoBuffer(
       );
     }
 
-    for (let offset = 0; offset < depth; offset += 1) {
-      const target = addDays(today, offset);
-      if (existing.has(target)) {
-        continue;
-      }
+    return async (target, insert) => {
       if (pool.length === 0) {
-        failures.push({ date: target, reason: ANSWER_LIST_EXHAUSTED });
-        continue;
+        return ANSWER_LIST_EXHAUSTED;
       }
       const { index, draw } = drawUniformIndex(pool.length);
       const answer = pool[index];
@@ -382,28 +377,12 @@ export async function topUpTermoBuffer(
 
       const content = termoDailyContentSchema.safeParse(answer);
       if (!content.success) {
-        failures.push({
-          date: target,
-          reason: `content schema rejected: ${content.error.message}`,
-        });
-        continue;
+        return `content schema rejected: ${content.error.message}`;
       }
-      const inserted = await insertDailyPuzzle(db, {
-        game: "termo",
-        date: target,
-
-        seed: draw,
-        content: content.data,
-      });
-      if (inserted) {
-        generated += 1;
-
+      if (await insert(draw, content.data)) {
         pool.splice(index, 1);
       }
-    }
-
-    return { generated, depth: await bufferDepth(db, "termo"), failures };
-  } catch (thrown) {
-    throw new TopUpAbortedError({ generated, failures }, thrown);
-  }
+      return undefined;
+    };
+  });
 }
