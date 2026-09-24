@@ -13,7 +13,7 @@ import { webCodeOf, webSources } from "./ts-source";
 const JS_MOTION =
   /requestAnimationFrame|\.animate\(|behavior:\s*["']smooth["']|scrollIntoView|framer-motion|from\s+["']motion["']/;
 
-describe("every CSS animation has a reduced-motion stand-down (T-WEB-S410)", () => {
+describe("every CSS animation has a reduced-motion stand-down (T-WEB-S405)", () => {
   const sheets = cssFiles();
 
   it("finds every stylesheet under apps/web and packages/ui", () => {

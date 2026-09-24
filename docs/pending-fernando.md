@@ -13,7 +13,7 @@
 
 ---
 
-## NOW — one ⚡ decision, and it is not urgent
+## NOW — one database step, and one ⚡ decision that is not urgent
 
 *(Section numbers were positional and moved three times before the section emptied on 2026-08-21. Several Done rows carry that old numbering in their "Was pending in" column; each row is about its own subject, not about whatever held that number. **Cite Done rows by subject, never by section number.** As promised there, the next item filed starts at §1 again — this is it.)*
 
@@ -26,6 +26,18 @@
 - **Why it is yours and not an agent's:** the four options are different promises to the player, and (c) changes a shipped medal's meaning. The pt-BR wording, the tile's visual treatment and the ordering are **not** yours and will not be asked — CLAUDE.md, *"Do not bring him UI/UX choices."*
 - **Do NOT be re-asked the answer-pool direction.** You settled that on 2026-08-20 (bulk-extension accepted, live generation preferred long-term) and it is in the Done table as *"#74 answer-pool direction"*. That is about **refilling** the pool; #200 is about **running out**. Two questions, and #74's body ran them together, which is why #200 was split out.
 - **Source:** #74's exploration, 2026-08-22 (this session). The consequence that made it worth filing rather than leaving in the ticket: with no Termo daily, **Dia Perfeito is unreachable for every user indefinitely** — an achievement class silently freezes. The streak survives (ADR-0008 rule 3, *"the streak stays reachable through the three grid games"*), so the core mechanic does not break.
+
+### §2 Apply migration 0012 to Neon — issue #36, before its second PR
+
+- **Do:** run these two statements against production with `DATABASE_URL_UNPOOLED` (the operator ritual, napkin § Shell 2):
+  ```sql
+  ALTER TABLE "users" ADD COLUMN "recovery_consent_withdrawn_at" timestamp with time zone;
+  ALTER TABLE "users" ADD COLUMN "reminder_consent_withdrawn_at" timestamp with time zone;
+  ```
+- **Verify:** `SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name LIKE '%withdrawn_at';` returns both names. Paste it on #36.
+- **Blocks:** #36's second PR (withdrawing email-reminder consent and removing the email from `/ajustes`). It is not pushed until this row is in Done: previews share the production database, and a new `users` column changes the insert every new session runs (ADR-0038 (h)).
+- **Safe to do early:** both columns are new and nullable, and nothing reads them until that PR ships. Applying today changes nothing for players.
+- **Source:** #36 plan, 2026-09-24. If #199 lands a migration first, the file number moves; the two statements do not.
 
 ---
 

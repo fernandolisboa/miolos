@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-**No.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) still holds one ⚡ decision, low urgency by ~13 months. To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**Yes, one database step.** [`docs/pending-fernando.md`](./docs/pending-fernando.md) §2: two `ALTER TABLE` lines for #36's second PR. The ⚡ decision on #200 is still low urgency. To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -22,6 +22,8 @@ next 16.3.5, sharp 0.35.4 and vitest 4.1.11 landed in one PR that superseded Dep
 
 ## Next
 
-**#206 cluster 9** — re-derive the audit's numbers first, as clusters 1, 4, 7 and 8 had to.
+**#36 PR B** — withdrawing the email-reminder consent and removing the email from `/ajustes` (plan on #36, ADR-0082 still to write). Push it only after ledger §2 is in Done. PR A shipped the theme (ADR-0079, ADR-0080), the settings screen with the push switch (ADR-0081), `GET /account/state`, one shared top bar, and the reduced-motion guard.
+
+**Then #206 cluster 9** — re-derive the audit's numbers first, as clusters 1, 4, 7 and 8 had to.
 
 **Also queued:** the Binairo `validate.test.ts` uniqueness property has no explicit timeout, and it hit the 5 s default under CI load on #264 (about 530 ms locally; the sibling property tests in `binairo/generate.test.ts` carry `25_000`), #254 (the remote conclusion announces its body sentence twice — `.announcer` is `clip-path`-hidden, so a screen reader gets it on mount and again in browse mode), #205's CSS half (~1,820 lines, NOT a sweep), #155 (`bundle-check` into CI), the `jsonResponse`/`stubFetch` Quick change, and folding `T-WEB-S183`'s duplicate module walker in `archive-day.test.tsx` onto `module-graph.ts`.

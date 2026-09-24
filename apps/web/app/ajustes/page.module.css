@@ -1,0 +1,229 @@
+.page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-11) 80px var(--space-12);
+  max-width: 860px;
+  margin-inline: auto;
+}
+
+.page a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-app);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.titleBlock {
+  margin-top: 44px;
+}
+
+.title {
+  margin: 0;
+  font: var(--text-screen-title);
+}
+
+.lead {
+  margin: var(--space-4) 0 0;
+  max-width: 52ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.card {
+  box-sizing: border-box;
+  margin-top: var(--space-8);
+  max-width: 60ch;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.body {
+  margin: var(--space-3) 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.note {
+  margin: var(--space-3) 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.email {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.fieldset {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  padding: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-4) 0 var(--space-3);
+  background: var(--paper-desk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: var(--text-button);
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--ink);
+  box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.choice input {
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.switch {
+  flex-shrink: 0;
+  min-width: 112px;
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-5);
+  background: var(--paper-card);
+  color: var(--ink);
+  font: var(--text-button);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-settle),
+    color var(--duration-fast) var(--ease-settle);
+}
+
+.switch[aria-checked="true"] {
+  background: var(--ink);
+  color: var(--paper-card);
+}
+
+.switch:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.deletion {
+  margin-top: var(--space-12);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--line);
+  max-width: 60ch;
+}
+
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  margin-top: var(--space-2);
+  font: var(--text-button);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-5) var(--space-5) var(--space-6);
+  }
+
+  .titleBlock {
+    margin-top: var(--space-5);
+  }
+
+  .title {
+    font-size: 34px;
+  }
+
+  .lead {
+    margin-top: var(--space-3);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .card {
+    margin-top: var(--space-6);
+    padding: var(--space-4) var(--space-4) var(--space-5);
+  }
+
+  .heading {
+    font-size: 20px;
+  }
+
+  .body {
+    font-size: 14px;
+  }
+
+  .switchRow {
+    flex-wrap: wrap;
+  }
+
+  .deletion {
+    margin-top: var(--space-8);
+  }
+}

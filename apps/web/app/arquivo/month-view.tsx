@@ -6,6 +6,7 @@ import {
   messages,
   routes,
 } from "../../src/i18n";
+import { PageTopBar } from "../../src/components/page-top-bar";
 import styles from "./arquivo.module.css";
 import { ArchiveCalendar } from "./calendar-grid";
 
@@ -24,17 +25,14 @@ export function ArchiveMonthView({
 
   return (
     <main className={styles.page} data-page="arquivo-mes">
-      <header className={styles.topBar}>
-        <Link
-          className={styles.back}
-          href={routes.archive}
-          aria-label={copy.backToIndexAria}
-        >
-          {copy.backToIndex}
-        </Link>
-        <span className={styles.wordmark}>{messages.brand.wordmark}</span>
-        <span className={styles.barKicker}>{copy.title}</span>
-      </header>
+      <PageTopBar
+        back={{
+          href: routes.archive,
+          label: copy.backToIndex,
+          ariaLabel: copy.backToIndexAria,
+        }}
+        kicker={copy.title}
+      />
 
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>{formatMonth(`${month}-01`)}</h1>

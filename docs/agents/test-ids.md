@@ -37,10 +37,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S116` | `S114` | never used |
+| `T-CORE` | `S117` | `S116` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
-| `T-API` | `S189` | `S188` | `T-API-16` |
-| `T-WEB` | `S379` | `S378` | `T-WEB-23` |
+| `T-API` | `S203` | `S202` | `T-API-16` |
+| `T-WEB` | `S406` | `S405` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
 
 #206 cluster 8 spent **`T-API-S185…S188`**, contiguous, all in
@@ -53,6 +53,13 @@ stops the date, and sudoku's leg that it is charged to the run budget. `S188`
 pins `TopUpAbortedError`'s partial count on a mid-run throw for binairo and
 termo, and binairo's leg the failures gathered before it. Next free is
 `S189`.
+
+#36 PR A (settings and paper-dark) spent **`T-CORE-S116`**, **`T-API-S200…S202`**
+and **`T-WEB-S390…S405`**, plus dark siblings `T-WEB-S72a`, `S73a`, `S299a`,
+`S300a`, `S301a`; `T-WEB-S131` was re-founded in place (the viewport
+`themeColor` is now a light/dark pair). `T-API-S189…S199` and
+`T-WEB-S379…S389` were left free for #199, running in parallel: whichever
+lands second re-derives the frontier after merging `main`.
 
 #255 (with #201 and #257, ADR-0078) reserved **`T-WEB-S374…S377`** and
 **`T-LINT-S62…S65`**, contiguous, and spent all eight; its review round added
