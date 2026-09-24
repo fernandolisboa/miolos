@@ -110,7 +110,6 @@ const BINAIRO_PLAY = {
   paintOver: noop,
   toggleMode: noop,
   revealHint: noop,
-  pause: noop,
 };
 
 const SUDOKU_PLAY = {
@@ -124,7 +123,6 @@ const SUDOKU_PLAY = {
   enterDigit: noop,
   clearCell: noop,
   revealHint: noop,
-  pause: noop,
 };
 
 const NONOGRAM_PLAY = {
@@ -142,7 +140,6 @@ const NONOGRAM_PLAY = {
   clearCell: noop,
   paintOver: noop,
   revealHint: noop,
-  pause: noop,
 };
 
 function pageIn(root: ParentNode): Element {

@@ -40,8 +40,25 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S369` | `S368` | `T-WEB-23` |
+| `T-WEB` | `S371` | `S370` | `T-WEB-23` |
 | `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+
+#206 cluster 7 reserved **`T-WEB-S369…S370`**, contiguous, and spent both:
+`S369` in `apps/web/test/play-lifecycle.test.tsx` and `S370` in the new
+`apps/web/test/claim-pause.test.tsx`. Nothing is burned: next free is `S371`.
+**No `T-LINT` id was spent.** `T-WEB-S321a` is a sibling of `T-WEB-S321`, not
+a reservation: a claim arriving after mount starts nothing, restated over a
+rerender instead of a fresh mount.
+
+- **`T-WEB-S369`** — `usePlayLifecycle`'s pause effect reads the live
+  `remotelyClaimed`. Three arms over one `Probe`: (a) a claim that arrives
+  after an unclaimed mount pauses the running clock; (b) a hidden-to-visible
+  return while claimed leaves the clock paused; (c) the flag omitted, the
+  archive shape, leaves the clock running.
+- **`T-WEB-S370`** — the same claim over the four daily play hooks: one
+  `it.each` over `useBinairoPlay`, `useSudokuPlay`, `useNonogramPlay` and
+  `useTermoPlay`, each on its own daily fixture, hydrating with a running
+  clock and pausing when rerendered with `claimed: true`.
 
 #206 cluster 6 reserved **`T-WEB-S366…S368`**, contiguous, and spent all three
 in the new `apps/web/test/screen-chrome.test.tsx`. Nothing was reserved as

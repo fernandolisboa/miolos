@@ -4,7 +4,7 @@
 
 ## Start here
 
-Nothing to verify. #206 clusters 5, 6 and 14 merged.
+Nothing to verify. #206 clusters 5, 6, 7 and 14 merged. Cluster 7 moved the four roots' claim-pause effect into `usePlayLifecycle` and did **not** build the issue's `useDailyScreenState` phase union: the ladders differ per game, so it would have saved nothing.
 
 ## Session state
 
@@ -28,6 +28,6 @@ next 16.3.5, sharp 0.35.4 and vitest 4.1.11 landed in one PR that superseded Dep
 
 ## Next
 
-**#206 cluster 7** — 321 lines (not 640).
+**#206 cluster 8** — the four `topUp*Buffer`s in `apps/api`. Re-derive the audit's numbers first, as clusters 1, 4 and 7 had to.
 
-**Also queued:** #254 (the remote conclusion announces its body sentence twice — `.announcer` is `clip-path`-hidden, so a screen reader gets it on mount and again in browse mode), #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, NOT a sweep), #155 (`bundle-check` into CI), the `jsonResponse`/`stubFetch` Quick change, and the free-play wall's missing `**/termo/termo-screen` — the other three screen roots are walled and Termo's is not.
+**Also queued:** the Binairo `validate.test.ts` uniqueness property has no explicit timeout, and it hit the 5 s default under CI load on #264 (about 530 ms locally; the sibling property tests in `binairo/generate.test.ts` carry `25_000`), #254 (the remote conclusion announces its body sentence twice — `.announcer` is `clip-path`-hidden, so a screen reader gets it on mount and again in browse mode), #201 (import walls walked by a mid-path `..`), #205's CSS half (~1,820 lines, NOT a sweep), #155 (`bundle-check` into CI), the `jsonResponse`/`stubFetch` Quick change, and the free-play wall's missing `**/termo/termo-screen` — the other three screen roots are walled and Termo's is not.
