@@ -882,3 +882,102 @@ describe("no parallel query path in apps/web", () => {
     }
   });
 });
+
+const WALL_BLOCK_PATHS = [
+  TEST_PATH,
+  SOURCE_PATH,
+  "apps/web/src/free-play/eslint-probe.ts",
+  "apps/web/src/og/eslint-probe.ts",
+  "apps/web/app/modo-livre/opengraph-image.tsx",
+];
+
+function asEveryForm(specifier: string): readonly string[] {
+  return [
+    `import "${specifier}";\n`,
+    `export * from "${specifier}";\n`,
+    `export const load = () => import("${specifier}");\n`,
+  ];
+}
+
+async function hitsCiting(
+  path: string,
+  source: string,
+  rule: string,
+): Promise<number> {
+  return (await lintProbe(path, source)).filter(
+    (message) =>
+      message.ruleId === "no-restricted-syntax" &&
+      message.message.includes(rule),
+  ).length;
+}
+
+describe("apps/web relative specifiers are in normal form (#201, ADR-0078)", () => {
+  it("T-LINT-S62: a `.`, empty or mid-path `..` segment, or a `?`/`#` suffix, reds in every wall block, static, re-exported and dynamic", async () => {
+    const banned = [
+      "../x/../play/sync",
+      "../play/./sync",
+      "./../play/sync",
+      "../play//sync",
+      "../play/sync/.",
+      "../../../packages/games/src/x/../termo/word-list",
+      "../../../packages/games//src/termo",
+      "../../packages/db/../core/src/contracts/daily-content",
+      "../node_modules/@miolos/games/../games/src/nonogram",
+      "@miolos/games/termo#x",
+      "@miolos/db?x",
+      "@miolos/db/publishing#x",
+      "../play/sync?x",
+    ];
+    for (const path of WALL_BLOCK_PATHS) {
+      for (const specifier of banned) {
+        for (const source of asEveryForm(specifier)) {
+          expect
+            .soft(
+              await hitsCiting(path, source, "normal form"),
+              `${source} @ ${path}`,
+            )
+            .toBe(1);
+        }
+      }
+      for (const specifier of ["../../x", "./x", "react"]) {
+        for (const source of asEveryForm(specifier)) {
+          expect
+            .soft(
+              wallHits(await lintProbe(path, source)),
+              `${source} @ ${path}`,
+            )
+            .toEqual([]);
+        }
+      }
+    }
+  });
+
+  it("T-LINT-S63: a relative specifier with a code extension reds in app/ and src/, never in tests", async () => {
+    const sources = [
+      'import "../play/sync.ts";\n',
+      'import "../play/sync.js";\n',
+      'export const load = () => import("../termo/termo-screen.tsx");\n',
+    ];
+    for (const path of WALL_BLOCK_PATHS.slice(1)) {
+      for (const source of sources) {
+        expect
+          .soft(
+            await hitsCiting(path, source, "code extension"),
+            `${source} @ ${path}`,
+          )
+          .toBe(1);
+      }
+      expect
+        .soft(
+          wallHits(await lintProbe(path, 'import "./x.module.css";\n')),
+          path,
+        )
+        .toEqual([]);
+    }
+    expect(
+      wallHits(
+        await lintProbe(TEST_PATH, 'import "../../vitest.shared.ts";\n'),
+      ),
+    ).toEqual([]);
+  });
+});
