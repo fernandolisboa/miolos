@@ -305,7 +305,9 @@ describe("topUpBinairoBuffer", () => {
   });
 
   it("T-API-S188: a throw mid-run aborts with the partial count and failures gathered so far", async () => {
-    insertControl.throwOnCall = 4;
+    const today = await todaySaoPaulo(ctx.db);
+    binairo.failWeekdays.add(weekdayOf(today));
+    insertControl.throwOnCall = 3;
 
     let caught: unknown;
     try {
@@ -316,8 +318,12 @@ describe("topUpBinairoBuffer", () => {
 
     expect(caught).toBeInstanceOf(TopUpAbortedError);
     const aborted = caught as TopUpAbortedError;
-    expect(aborted.partial.generated).toBe(3);
-    expect(aborted.partial.failures).toEqual([]);
+    expect(aborted.partial.generated).toBe(2);
+    expect(aborted.partial.failures).toHaveLength(1);
+    expect(aborted.partial.failures[0]?.date).toBe(today);
+    expect(aborted.partial.failures[0]?.reason).toContain(
+      "Binairo generation exhausted",
+    );
   }, 30_000);
 });
 
@@ -405,16 +411,21 @@ describe("topUpSudokuBuffer", () => {
 
   it("T-API-S186: a validator that always rejects retries the full per-date budget", async () => {
     generation.rejectValidator = true;
-    const today = await todaySaoPaulo(ctx.db);
 
-    const result = await topUpSudokuBuffer(ctx.db, 1);
+    const result = await topUpSudokuBuffer(ctx.db, 7);
 
     expect(result.generated).toBe(0);
-    expect(result.failures).toHaveLength(1);
-    expect(result.failures[0]?.date).toBe(today);
-    expect(result.failures[0]?.reason).toMatch(/^validator rejected:/);
-    expect(generation.calls).toBe(MAX_SUDOKU_SEED_RETRIES_PER_DATE);
-  });
+    expect(result.failures).toHaveLength(7);
+    const datesThatReallyTried =
+      MAX_SUDOKU_SEED_RETRIES_PER_RUN / MAX_SUDOKU_SEED_RETRIES_PER_DATE;
+    for (const failure of result.failures.slice(0, datesThatReallyTried)) {
+      expect(failure.reason).toMatch(/^validator rejected:/);
+    }
+    for (const failure of result.failures.slice(datesThatReallyTried)) {
+      expect(failure.reason).toBe("run seed-retry budget exhausted");
+    }
+    expect(generation.calls).toBe(MAX_SUDOKU_SEED_RETRIES_PER_RUN);
+  }, 30_000);
 
   it("T-API-S187: a schema rejection burns the run budget, one attempt per date", async () => {
     generation.injectStrayKey = true;
@@ -543,6 +554,24 @@ describe("topUpNonogramBuffer", () => {
     expect(result.failures[0]?.date).toBe(today);
     expect(result.failures[0]?.reason).toMatch(/^validator rejected:/);
     expect(nonogram.calls).toBe(MAX_NONOGRAM_SEED_RETRIES_PER_DATE);
+  });
+
+  it("T-API-S186: the weekday/size cross-check runs before the validator", async () => {
+    nonogram.forceWeekday = 1;
+    nonogram.rejectValidator = true;
+    const today = await todaySaoPaulo(ctx.db);
+    const notMonday = [0, 1]
+      .map((offset) => addDays(today, offset))
+      .find((date) => isoWeekdayOf(date) !== 1);
+    if (notMonday === undefined) {
+      throw new Error("unreachable: two consecutive days include a non-Monday");
+    }
+    const depth = notMonday === today ? 1 : 2;
+
+    const result = await topUpNonogramBuffer(ctx.db, depth);
+
+    const failure = result.failures.find((entry) => entry.date === notMonday);
+    expect(failure?.reason).toContain("weekday/size cross-check failed");
   });
 
   it("T-API-S187: a schema rejection stops the date after one attempt", async () => {
@@ -762,7 +791,7 @@ describe("topUpTermoBuffer", () => {
     expect(new Set(all).size).toBe(7);
   });
 
-  it("T-API-S188: a throw mid-run aborts with the partial count and failures gathered so far", async () => {
+  it("T-API-S188: a throw mid-run aborts with the partial count gathered so far", async () => {
     insertControl.throwOnCall = 4;
 
     let caught: unknown;

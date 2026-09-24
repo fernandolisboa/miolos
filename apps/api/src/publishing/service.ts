@@ -81,7 +81,7 @@ async function topUpBuffer(
   db: Db,
   game: Game,
   depth: number,
-  startRun: () => Promise<CoverDate>,
+  startRun: () => CoverDate | Promise<CoverDate>,
 ): Promise<TopUpResult> {
   let generated = 0;
   const failures: { date: string; reason: string }[] = [];
@@ -153,44 +153,48 @@ async function withSeedRetries(
 
 export const MAX_BINAIRO_SEED_RETRIES_PER_DATE = 8;
 
+function attemptBinairo(seed: number, weekday: Weekday): Attempt {
+  let puzzle;
+  try {
+    puzzle = generateBinairo({ seed, weekday });
+  } catch (error) {
+    if (error instanceof BinairoGenerationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+  const verdict = validateBinairo(puzzle, weekday);
+  if (!verdict.approved) {
+    return {
+      kind: "retry",
+      reason: `validator rejected: ${verdict.reasons.join(", ")}`,
+    };
+  }
+  const content = binairoDailyContentSchema.safeParse(puzzle);
+  if (!content.success) {
+    return {
+      kind: "stop",
+      reason: `content schema rejected: ${content.error.message}`,
+    };
+  }
+  return { kind: "content", content: content.data };
+}
+
 export async function topUpBinairoBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  return topUpBuffer(db, "binairo", depth, () =>
-    Promise.resolve((target, insert) =>
+  return topUpBuffer(
+    db,
+    "binairo",
+    depth,
+    () => (target, insert) =>
       withSeedRetries(
         target,
         MAX_BINAIRO_SEED_RETRIES_PER_DATE,
-        (seed, weekday) => {
-          let puzzle;
-          try {
-            puzzle = generateBinairo({ seed, weekday });
-          } catch (error) {
-            if (error instanceof BinairoGenerationError) {
-              return { kind: "retry", reason: error.message };
-            }
-            throw error;
-          }
-          const verdict = validateBinairo(puzzle, weekday);
-          if (!verdict.approved) {
-            return {
-              kind: "retry",
-              reason: `validator rejected: ${verdict.reasons.join(", ")}`,
-            };
-          }
-          const content = binairoDailyContentSchema.safeParse(puzzle);
-          if (!content.success) {
-            return {
-              kind: "stop",
-              reason: `content schema rejected: ${content.error.message}`,
-            };
-          }
-          return { kind: "content", content: content.data };
-        },
+        attemptBinairo,
         insert,
       ),
-    ),
   );
 }
 
@@ -200,107 +204,113 @@ export const MAX_SUDOKU_SEED_RETRIES_PER_RUN = 4;
 
 const RUN_BUDGET_EXHAUSTED = "run seed-retry budget exhausted";
 
+function attemptSudoku(seed: number, weekday: Weekday): Attempt {
+  let puzzle;
+  try {
+    puzzle = generateDailySudoku({ seed, weekday });
+  } catch (error) {
+    if (error instanceof SudokuGenerationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+  const verdict = validateSudoku(puzzle, sudokuCriteriaForWeekday(weekday));
+  if (!verdict.approved) {
+    return {
+      kind: "retry",
+      reason: `validator rejected: ${verdict.reasons.join(", ")}`,
+    };
+  }
+  const content = sudokuDailyContentSchema.safeParse(puzzle);
+  if (!content.success) {
+    return {
+      kind: "stop",
+      reason: `content schema rejected: ${content.error.message}`,
+    };
+  }
+  return { kind: "content", content: content.data };
+}
+
 export async function topUpSudokuBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
   return topUpBuffer(db, "sudoku", depth, () => {
     let runBudget = MAX_SUDOKU_SEED_RETRIES_PER_RUN;
-    return Promise.resolve((target, insert) => {
-      if (runBudget <= 0) {
-        return Promise.resolve(RUN_BUDGET_EXHAUSTED);
+    const chargedAttempt = (seed: number, weekday: Weekday): Attempt => {
+      const outcome = attemptSudoku(seed, weekday);
+      if (outcome.kind !== "content") {
+        runBudget -= 1;
       }
-      const maxAttempts = Math.min(MAX_SUDOKU_SEED_RETRIES_PER_DATE, runBudget);
-      return withSeedRetries(
-        target,
-        maxAttempts,
-        (seed, weekday) => {
-          const criteria = sudokuCriteriaForWeekday(weekday);
-          let puzzle;
-          try {
-            puzzle = generateDailySudoku({ seed, weekday });
-          } catch (error) {
-            if (error instanceof SudokuGenerationError) {
-              runBudget -= 1;
-              return { kind: "retry", reason: error.message };
-            }
-            throw error;
-          }
-          const verdict = validateSudoku(puzzle, criteria);
-          if (!verdict.approved) {
-            runBudget -= 1;
-            return {
-              kind: "retry",
-              reason: `validator rejected: ${verdict.reasons.join(", ")}`,
-            };
-          }
-          const content = sudokuDailyContentSchema.safeParse(puzzle);
-          if (!content.success) {
-            runBudget -= 1;
-            return {
-              kind: "stop",
-              reason: `content schema rejected: ${content.error.message}`,
-            };
-          }
-          return { kind: "content", content: content.data };
-        },
-        insert,
-      );
-    });
+      return outcome;
+    };
+    return (target, insert) =>
+      runBudget <= 0
+        ? Promise.resolve(RUN_BUDGET_EXHAUSTED)
+        : withSeedRetries(
+            target,
+            Math.min(MAX_SUDOKU_SEED_RETRIES_PER_DATE, runBudget),
+            chargedAttempt,
+            insert,
+          );
   });
 }
 
 export const MAX_NONOGRAM_SEED_RETRIES_PER_DATE = 8;
 
+function attemptNonogram(seed: number, weekday: Weekday): Attempt {
+  let puzzle;
+  try {
+    puzzle = generateNonogram(seed, weekday);
+  } catch (error) {
+    if (error instanceof NonogramGenerationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+
+  const expected = NONOGRAM_WEEKDAY_CRITERIA[weekday];
+  if (puzzle.weekday !== weekday || puzzle.size !== expected.size) {
+    return {
+      kind: "stop",
+      reason:
+        `weekday/size cross-check failed: expected weekday ${String(weekday)} ` +
+        `size ${String(expected.size)}, got weekday ${String(puzzle.weekday)} ` +
+        `size ${String(puzzle.size)}`,
+    };
+  }
+  const verdict = validateNonogram(puzzle);
+  if (!verdict.ok) {
+    return {
+      kind: "retry",
+      reason: `validator rejected: ${verdict.failures.join(", ")}`,
+    };
+  }
+  const content = nonogramDailyContentSchema.safeParse(puzzle);
+  if (!content.success) {
+    return {
+      kind: "stop",
+      reason: `content schema rejected: ${content.error.message}`,
+    };
+  }
+  return { kind: "content", content: content.data };
+}
+
 export async function topUpNonogramBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  return topUpBuffer(db, "nonogram", depth, () =>
-    Promise.resolve((target, insert) =>
+  return topUpBuffer(
+    db,
+    "nonogram",
+    depth,
+    () => (target, insert) =>
       withSeedRetries(
         target,
         MAX_NONOGRAM_SEED_RETRIES_PER_DATE,
-        (seed, weekday) => {
-          let puzzle;
-          try {
-            puzzle = generateNonogram(seed, weekday);
-          } catch (error) {
-            if (error instanceof NonogramGenerationError) {
-              return { kind: "retry", reason: error.message };
-            }
-            throw error;
-          }
-
-          const expected = NONOGRAM_WEEKDAY_CRITERIA[weekday];
-          if (puzzle.weekday !== weekday || puzzle.size !== expected.size) {
-            return {
-              kind: "stop",
-              reason:
-                `weekday/size cross-check failed: expected weekday ${String(weekday)} ` +
-                `size ${String(expected.size)}, got weekday ${String(puzzle.weekday)} ` +
-                `size ${String(puzzle.size)}`,
-            };
-          }
-          const verdict = validateNonogram(puzzle);
-          if (!verdict.ok) {
-            return {
-              kind: "retry",
-              reason: `validator rejected: ${verdict.failures.join(", ")}`,
-            };
-          }
-          const content = nonogramDailyContentSchema.safeParse(puzzle);
-          if (!content.success) {
-            return {
-              kind: "stop",
-              reason: `content schema rejected: ${content.error.message}`,
-            };
-          }
-          return { kind: "content", content: content.data };
-        },
+        attemptNonogram,
         insert,
       ),
-    ),
   );
 }
 

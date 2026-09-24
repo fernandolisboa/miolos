@@ -4,7 +4,7 @@
 
 ## Start here
 
-Nothing to verify. #255, #201 and #257 merged together, and #206 clusters 5, 6, 7, 8 and 14. Cluster 7 moved the four roots' claim-pause effect into `usePlayLifecycle` and did **not** build the issue's `useDailyScreenState` phase union: the ladders differ per game, so it would have saved nothing. Cluster 8 gave the four `apps/api/src/publishing/service.ts` top-ups one shared `topUpBuffer` envelope and one shared `withSeedRetries` loop; the audit's ~420 lines were really 293 across the four, and the file is 378 lines now (was 413).
+Nothing to verify. #255, #201 and #257 merged together, and #206 clusters 5, 6, 7, 8 and 14. Cluster 7 moved the four roots' claim-pause effect into `usePlayLifecycle` and did **not** build the issue's `useDailyScreenState` phase union: the ladders differ per game, so it would have saved nothing. Cluster 8 gave the four `apps/api/src/publishing/service.ts` top-ups one shared `topUpBuffer` envelope and one shared `withSeedRetries` loop. The audit's ~420 lines were really 293 across the four: re-derive its numbers before sizing a cluster.
 
 ## Session state
 

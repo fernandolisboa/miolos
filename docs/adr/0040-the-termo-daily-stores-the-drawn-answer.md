@@ -128,10 +128,9 @@ is *"tightening a constraint and regenerating"*.
    cluster 8** — `MAX_SEED_RETRIES_PER_DATE` is exported as
    `MAX_BINAIRO_SEED_RETRIES_PER_DATE`, matching its two siblings' naming;
    the value and the absence of a termo analogue are unchanged.)*
-   `failures[].reason` for
-   termo has exactly two values: the exhaustion string and `content schema
-   rejected: …`. `drawUniformIndex`'s 64-attempt cap is a draw-termination
-   bound, not a retry budget.
+   `failures[].reason` for termo has exactly two values: the exhaustion
+   string and `content schema rejected: …`. `drawUniformIndex`'s 64-attempt
+   cap is a draw-termination bound, not a retry budget.
 
 ## Rejected
 
