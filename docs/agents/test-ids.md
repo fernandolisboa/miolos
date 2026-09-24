@@ -39,9 +39,20 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
-| `T-API` | `S185` | `S184` | `T-API-16` |
+| `T-API` | `S189` | `S188` | `T-API-16` |
 | `T-WEB` | `S379` | `S378` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
+
+#206 cluster 8 spent **`T-API-S185…S188`**, contiguous, all in
+`apps/api/test/publishing-service.test.ts`. Re-derived by grep before
+allocating, which agreed with this table in both columns (next free `S185`,
+highest in use `S184`). `S185` is binairo's doomed-generation
+characterisation, the sibling `topUpSudokuBuffer`/`topUpNonogramBuffer`
+already had; `S186` and `S187` pin validator-rejection retries and
+schema-rejection stops across all three grid games, one `it` per game under
+the shared id; `S188` pins `TopUpAbortedError`'s partial count on a mid-run
+throw, for binairo and termo. Nothing was reserved as headroom, so nothing
+is burned: next free is `S189`.
 
 #255 (with #201 and #257, ADR-0078) reserved **`T-WEB-S374…S377`** and
 **`T-LINT-S62…S65`**, contiguous, and spent all eight; its review round added
