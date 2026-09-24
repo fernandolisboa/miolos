@@ -16,6 +16,10 @@ Relative specifiers must now be in normal form (no `.`, empty or mid-path `..` s
 
 `closureOf` follows `import type`, so on it free play already "reaches" `play/play-record` — a module no browser ever loads for free play, because the import is erased. A runtime claim needs the runtime graph: `valueClosureOf` drops `import type`, `export type` and `typeof import(…)`, and keeps `import { type X }`, which is a value edge under `verbatimModuleSyntax`. The regex agrees with the TypeScript AST on all 254 source files. The resolver now throws on an unresolved relative or `@miolos/*` specifier, so a walk can no longer lose an edge in silence.
 
+## Dependabot npm PRs cannot be merged as opened
+
+next 16.3.5, sharp 0.35.4 and vitest 4.1.11 landed in one PR that superseded Dependabot #259–#262. Dependabot's npm PRs here change one `package.json` and never `pnpm-lock.yaml`, so `--frozen-lockfile` fails, and they bump a package in only one of the workspaces that pin it. Land them as one hand-made bump across every pin, and stay outside `minimumReleaseAge` (7 days): `pnpm install` refuses anything newer.
+
 ## Next
 
 **#206 cluster 7** — 321 lines (not 640).
