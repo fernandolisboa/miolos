@@ -94,13 +94,14 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
           .soft(ruleIds(await lintProbe(path, source)), `${door} @ ${path}`)
           .toContain("no-restricted-imports");
       }
-
-      expect
-        .soft(wallHits(await lintProbe(SHARE_TEXT_PATH, source)), door)
-        .toEqual([]);
-      expect
-        .soft(wallHits(await lintProbe(PAGE_PATH, source)), door)
-        .toEqual([]);
+      if (door.startsWith("@miolos/")) {
+        expect
+          .soft(wallHits(await lintProbe(SHARE_TEXT_PATH, source)), door)
+          .toEqual([]);
+        expect
+          .soft(wallHits(await lintProbe(PAGE_PATH, source)), door)
+          .toEqual([]);
+      }
     }
   });
 
@@ -116,11 +117,16 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
           .soft(ruleIds(await lintProbe(path, source)), `${door} @ ${path}`)
           .toContain("no-restricted-syntax");
       }
-      expect
-        .soft(wallHits(await lintProbe(SHARE_TEXT_PATH, source)), door)
-        .toEqual([]);
     }
 
+    expect(
+      wallHits(
+        await lintProbe(
+          SHARE_TEXT_PATH,
+          'export const load = () => import("@miolos/games/nonogram");\n',
+        ),
+      ),
+    ).toEqual([]);
     const clean = ["export const load = () =>", '  import("./card");', ""].join(
       "\n",
     );
@@ -144,13 +150,6 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
           .soft(ruleIds(await lintProbe(path, source)), `${door} @ ${path}`)
           .toContain("no-restricted-imports");
       }
-
-      expect
-        .soft(wallHits(await lintProbe(SHARE_TEXT_PATH, source)), door)
-        .toEqual([]);
-      expect
-        .soft(wallHits(await lintProbe(PAGE_PATH, source)), door)
-        .toEqual([]);
     }
 
     for (const door of staticDoors) {
@@ -164,10 +163,20 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
           .soft(ruleIds(await lintProbe(path, source)), `dyn ${door} @ ${path}`)
           .toContain("no-restricted-syntax");
       }
-      expect
-        .soft(wallHits(await lintProbe(SHARE_TEXT_PATH, source)), `dyn ${door}`)
-        .toEqual([]);
     }
+
+    const packageSpelling = [
+      'import { solveNonogram } from "@miolos/games/nonogram";',
+      'export const load = () => import("@miolos/games/nonogram");',
+      "export const probe = solveNonogram;",
+      "",
+    ].join("\n");
+    expect
+      .soft(wallHits(await lintProbe(SHARE_TEXT_PATH, packageSpelling)))
+      .toEqual([]);
+    expect
+      .soft(wallHits(await lintProbe(PAGE_PATH, packageSpelling)))
+      .toEqual([]);
   });
 
   it("T-LINT-S43: replacement regression — the app-wide db wall still fires inside the OG surface", async () => {
@@ -411,5 +420,45 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
     ).toContain("no-restricted-syntax");
 
     expect(wallHits(await lintProbe(FREE_PLAY_PAGE_PATH, games))).toEqual([]);
+  });
+
+  it("T-LINT-S65: a relative path into packages/games/src reds everywhere in apps/web, static and dynamic; the package specifier stays clean off the OG surface", async () => {
+    const paths = [SHARE_TEXT_PATH, PAGE_PATH, FREE_PLAY_PAGE_PATH];
+    const doors = [
+      "../../../packages/games/src/nonogram",
+      "../../node_modules/@miolos/games/src/nonogram",
+    ];
+    for (const path of paths) {
+      for (const door of doors) {
+        expect
+          .soft(
+            ruleIds(await lintProbe(path, `import "${door}";\n`)),
+            `${door} @ ${path}`,
+          )
+          .toContain("no-restricted-imports");
+        expect
+          .soft(
+            ruleIds(
+              await lintProbe(
+                path,
+                `export const load = () => import("${door}");\n`,
+              ),
+            ),
+            `dyn ${door} @ ${path}`,
+          )
+          .toContain("no-restricted-syntax");
+      }
+      expect
+        .soft(
+          wallHits(
+            await lintProbe(
+              path,
+              'import "@miolos/games/nonogram";\nexport const load = () => import("@miolos/games/nonogram");\n',
+            ),
+          ),
+          path,
+        )
+        .toEqual([]);
+    }
   });
 });

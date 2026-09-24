@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 
 import { expect } from "vitest";
@@ -19,11 +19,18 @@ function workspaceBase(specifier: string): string | null {
   return join(REPO_ROOT, "packages", match[1], "src", match[2] ?? "");
 }
 
-function resolveSpecifier(fromFile: string, specifier: string): string | null {
+const SPECIFIER = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
+const TYPE_ONLY_EDGE =
+  /(?:import|export)\s+type\s+(?!from\b)[^;]*?\bfrom\s*["'][^"']+["']|typeof\s+import\s*\(\s*["'][^"']+["']\s*\)/g;
+
+export function resolveSpecifier(
+  fromFile: string,
+  specifier: string,
+): string | null {
   const base = specifier.startsWith(".")
     ? resolve(dirname(join(REPO_ROOT, fromFile)), specifier)
     : workspaceBase(specifier);
-  if (base === null) {
+  if (base === null || specifier.endsWith(".css")) {
     return null;
   }
   for (const candidate of [
@@ -34,13 +41,36 @@ function resolveSpecifier(fromFile: string, specifier: string): string | null {
     join(base, "index.tsx"),
   ]) {
     if (existsSync(candidate) && /\.tsx?$/.test(candidate)) {
-      return relative(REPO_ROOT, candidate).replaceAll("\\", "/");
+      return relative(REPO_ROOT, realpathSync(candidate)).replaceAll("\\", "/");
     }
   }
-  return null;
+  throw new Error(
+    `${fromFile} imports ${specifier}, which resolves to nothing`,
+  );
 }
 
-export function closureOf(entry: string): ReadonlySet<string> {
+function specifiersIn(code: string): readonly string[] {
+  return [...code.matchAll(SPECIFIER)]
+    .map((match) => match[1] ?? "")
+    .filter((specifier) => specifier !== "");
+}
+
+function codeOf(module: string): string {
+  return withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
+}
+
+function specifiersOf(module: string): readonly string[] {
+  return specifiersIn(codeOf(module));
+}
+
+export function valueSpecifiersOf(module: string): readonly string[] {
+  return specifiersIn(codeOf(module).replace(TYPE_ONLY_EDGE, ""));
+}
+
+function walk(
+  entry: string,
+  edgesOf: (module: string) => readonly string[],
+): ReadonlySet<string> {
   const seen = new Set<string>();
   const queue = [entry];
   while (queue.length > 0) {
@@ -49,16 +79,7 @@ export function closureOf(entry: string): ReadonlySet<string> {
       continue;
     }
     seen.add(current);
-    const code = withoutComments(
-      readFileSync(join(REPO_ROOT, current), "utf8"),
-    );
-    for (const match of code.matchAll(
-      /(?:from|import)\s*\(?\s*["']([^"']+)["']/g,
-    )) {
-      const specifier = match[1];
-      if (specifier === undefined) {
-        continue;
-      }
+    for (const specifier of edgesOf(current)) {
       const resolved = resolveSpecifier(current, specifier);
       if (resolved !== null) {
         queue.push(resolved);
@@ -66,6 +87,14 @@ export function closureOf(entry: string): ReadonlySet<string> {
     }
   }
   return seen;
+}
+
+export function closureOf(entry: string): ReadonlySet<string> {
+  return walk(entry, specifiersOf);
+}
+
+export function valueClosureOf(entry: string): ReadonlySet<string> {
+  return walk(entry, valueSpecifiersOf);
 }
 
 function routeEntries(): readonly string[] {

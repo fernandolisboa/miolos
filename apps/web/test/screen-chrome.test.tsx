@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { join } from "node:path";
 
 import {
   dailyNonogramResponseSchema,
@@ -12,11 +12,9 @@ import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku } from "@miolos/games/sudoku";
 import { fireEvent, render } from "@testing-library/react";
-import { ESLint } from "eslint";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import tseslint from "typescript-eslint";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   PlaySkeleton as BinairoSkeleton,
@@ -49,7 +47,7 @@ import {
 } from "../src/sudoku/play-view";
 import { initSudokuPlayState } from "../src/sudoku/state";
 import { stylesheet } from "./css-source";
-import { closureOf } from "./module-graph";
+import { valueSpecifiersOf } from "./module-graph";
 import { withoutComments } from "./ts-source";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
@@ -543,103 +541,8 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
   });
 });
 
-const FREE_PLAY_PROBE = "apps/web/src/free-play/eslint-probe.ts";
-const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
-
-const SPECIFIER = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
-
-function specifiersWrittenIn(module: string): readonly string[] {
-  return [...sourceOf(module).matchAll(SPECIFIER)]
-    .map((match) => match[1] ?? "")
-    .filter((specifier) => specifier !== "");
-}
-
-function asProbeWouldSpellIt(repoRelative: string): string {
-  const path = relative(dirname(FREE_PLAY_PROBE), repoRelative).replaceAll(
-    "\\",
-    "/",
-  );
-  return path.startsWith(".") ? path : `./${path}`;
-}
-
-function chromeSpecifiers(): readonly string[] {
-  const closure = [...closureOf(CHROME)];
-  const collected: string[] = [];
-  for (const source of closure) {
-    for (const specifier of specifiersWrittenIn(source)) {
-      if (!specifier.startsWith(".")) {
-        collected.push(specifier);
-      } else if (source.startsWith("apps/web/")) {
-        collected.push(asProbeWouldSpellIt(join(dirname(source), specifier)));
-      }
-    }
-  }
-  return [...new Set(collected)].sort();
-}
-
-const eslint = new ESLint({
-  cwd: REPO_ROOT,
-  overrideConfigFile: join(REPO_ROOT, "eslint.config.mjs"),
-  overrideConfig: [
-    {
-      files: ["**/*.{ts,tsx}"],
-      ...tseslint.configs.disableTypeChecked,
-      languageOptions: {
-        parserOptions: { projectService: false, project: false },
-      },
-    },
-  ],
-});
-
-async function wallVerdictOn(
-  specifiers: readonly string[],
-): Promise<readonly string[]> {
-  const source = specifiers.map((s) => `import "${s}";`).join("\n") + "\n";
-  const [result] = await eslint.lintText(source, {
-    filePath: join(REPO_ROOT, FREE_PLAY_PROBE),
-  });
-  if (result === undefined) {
-    throw new Error("ESLint returned no result for the free-play probe");
-  }
-  return result.messages
-    .filter(
-      (message) =>
-        message.ruleId !== null && WALL_RULES.includes(message.ruleId),
-    )
-    .map(
-      (message) =>
-        /^'([^']+)'/.exec(message.message)?.[1] ??
-        `${message.ruleId ?? "?"}: ${message.message}`,
-    );
-}
-
-vi.setConfig({ testTimeout: 40_000 });
-
-describe("the chrome reaches nothing free play is walled from (T-WEB-S368)", () => {
-  it("every specifier its closure writes passes the real wall, at a free-play path", async () => {
-    const specifiers = chromeSpecifiers();
-
-    expect({
-      banned: await wallVerdictOn(specifiers),
-      reachesTimerReadout: specifiers.includes("../play/timer-readout"),
-      reachesCore: specifiers.includes("@miolos/core"),
-      reachesStylesheet: specifiers.includes("../play/screen.module.css"),
-      backLinkIsRouted: specifiersWrittenIn(CHROME).includes("next/link"),
-      streakIsCaught: await wallVerdictOn([
-        ...specifiers,
-        "../streak/streak-client",
-      ]),
-      tableNameIsCaught: (
-        await wallVerdictOn([...specifiers, "daily_puzzles"])
-      ).map((entry) => entry.split(":")[0] ?? entry),
-    }).toEqual({
-      banned: [],
-      reachesTimerReadout: true,
-      reachesCore: true,
-      reachesStylesheet: true,
-      backLinkIsRouted: true,
-      streakIsCaught: ["../streak/streak-client"],
-      tableNameIsCaught: ["no-restricted-syntax"],
-    });
+describe("the chrome's back link is routed (T-WEB-S371)", () => {
+  it("imports next/link", () => {
+    expect(valueSpecifiersOf(CHROME)).toContain("next/link");
   });
 });

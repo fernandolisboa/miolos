@@ -40,8 +40,29 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S369` | `S368` | `T-WEB-23` |
-| `T-LINT` | `S62` | `S61` | `T-LINT-10` |
+| `T-WEB` | `S373` | `S372` | `T-WEB-23` |
+| `T-LINT` | `S66` | `S65` | `T-LINT-10` |
+
+#255 (with #201 and #257, ADR-0078) reserved **`T-WEB-S369…S372`** and
+**`T-LINT-S62…S65`**, contiguous, and spent all eight: next free is `T-WEB-S373`
+and `T-LINT-S66`. Re-derived by the two-stage grep. **`T-WEB-S368` is retired
+and never reused** — its wall half became `T-WEB-S370`, its `next/link` half
+`T-WEB-S371`. `T-LINT-S41`, `S42`, `S57` and `S58` were **re-founded in place**:
+same claim, only the clean control moved to package specifiers, because a
+relative path into `packages/games/src` is now banned across `apps/web`.
+
+- **`T-WEB-S369`** (`free-play-graph.test.ts`) — the value graph of every
+  free-play file reaches no I/O module and nothing in `packages/db/src` or
+  `packages/games/src/termo`; `termo-screen`'s graph lists exactly the five I/O
+  modules, which pins the token list to the tree.
+- **`T-WEB-S370`** — every specifier that graph's `apps/web` modules write
+  passes the real config at a free-play path, both wall rules read.
+- **`T-WEB-S371`** (`screen-chrome.test.tsx`) — the chrome imports `next/link`.
+- **`T-WEB-S372`** — `resolveSpecifier` follows the `node_modules` symlink,
+  throws on a code extension, returns null for CSS.
+- **`T-LINT-S62`, `S63`** (`eslint-db-wall`) — normal-form and code-extension
+  bans; **`S64`** (`eslint-free-play-wall`) — `termo/` banned by directory;
+  **`S65`** (`eslint-og-wall`) — `packages/games/src` banned by relative path.
 
 #206 cluster 6 reserved **`T-WEB-S366…S368`**, contiguous, and spent all three
 in the new `apps/web/test/screen-chrome.test.tsx`. Nothing was reserved as
@@ -71,7 +92,7 @@ would not fire on a free-play screen importing the chrome.
   and an entry no longer written is coverage that was never there. Pinning the
   size alone catches neither, because any 24 declared names keep `cls()` quiet.
 
-- **`T-WEB-S368`** — the specifiers **written by** the modules in
+- **`T-WEB-S368`** *(retired at #255 — see above)* — the specifiers **written by** the modules in
   `closureOf("apps/web/src/play/screen-chrome.tsx")` are put through **the real
   `eslint.config.mjs`**, at the virtual file path
   `apps/web/src/free-play/eslint-probe.ts` (a `lintText` argument, not a file

@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-12 (issue #28, shipped in #81)
 **Depends on:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0005](./0005-all-content-is-free.md), [ADR-0013](./0013-canonical-domain-and-pt-br-routes.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md)
 **Amended by:** [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) (#64) — consequence 1's *"non-user-facing **everywhere**"* narrows to FREE PLAY, which stays unnamed permanently. A narrowing, not a reversal.
+**Amended by:** [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) (#255) — consequence 2's ESLint wall is no longer the enforcement on its own: the proof is the free-play runtime module graph (`T-WEB-S369`, `T-WEB-S370`); the name list stays as editor feedback.
 
 ## Context
 

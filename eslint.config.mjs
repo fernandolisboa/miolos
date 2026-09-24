@@ -16,6 +16,21 @@ const symlinkSpelling = (pkg) => [
   `**/node_modules/@miolos/${pkg}/src/**`,
 ];
 
+const importSource =
+  ":matches(ImportDeclaration, ExportAllDeclaration, ExportNamedDeclaration, ImportExpression) > Literal.source";
+
+const webDotSegment = {
+  selector: `${importSource}[value=/(^|\\/)(?!\\.\\.\\/)[^\\/]+\\/\\.\\.?(\\/|$)|\\/\\.(\\/|$)|\\/\\//]`,
+  message:
+    "apps/web writes a relative specifier in normal form: no `.` or empty segment, and `..` only as a leading run. Every wall ban matches the specifier string, and `../x/../play/sync` or `../play//sync` walks past a ban written against `**/play/sync` (ADR-0078).",
+};
+
+const webCodeExtension = {
+  selector: `${importSource}[value=/^\\.\\.?\\/.*\\.[cm]?[jt]sx?$/]`,
+  message:
+    "apps/web writes a relative source specifier without its code extension: `../play/sync.ts` walks past a ban written against `**/play/sync` (ADR-0078).",
+};
+
 const webDynamicDbImport = {
   selector:
     "ImportExpression > Literal[value=/^@miolos\\/db\\/(publishing|user|testing)(\\/|$)/]",
@@ -25,9 +40,9 @@ const webDynamicDbImport = {
 
 const webDynamicPackageSource = {
   selector:
-    "ImportExpression > Literal[value=/(packages|@miolos)\\/(db|core)\\/src(\\/|$)/]",
+    "ImportExpression > Literal[value=/(packages|@miolos)\\/(db|core|games)\\/src(\\/|$)/]",
   message:
-    "apps/web is client-serving: dynamic import of a relative path into packages/db/src or packages/core/src is banned — it evades the deep-path import restrictions (ADR-0024, ADR-0026, ADR-0033).",
+    "apps/web is client-serving: dynamic import of a relative path into packages/db/src, packages/core/src or packages/games/src is banned — it evades the deep-path import restrictions (ADR-0024, ADR-0026, ADR-0033).",
 };
 
 const webComputedDynamicImport = {
@@ -94,13 +109,13 @@ const webWallImportPatterns = [
   },
   {
     group: [
-      "**/packages/games/src/termo",
-      "**/packages/games/src/termo/**",
-      "**/node_modules/@miolos/games/src/termo",
-      "**/node_modules/@miolos/games/src/termo/**",
+      "**/packages/games/src",
+      "**/packages/games/src/*",
+      "**/packages/games/src/**",
+      ...symlinkSpelling("games"),
     ],
     message:
-      "apps/web reaches the Termo engine through `@miolos/games/termo`, never by relative path into packages/games/src/termo — every ban on the word list is written against the package specifier, and the deep path walks past all of them and ships the whole answer list (ADR-0005, ADR-0015, ADR-0047).",
+      "apps/web reaches the engines through `@miolos/games` or `@miolos/games/<game>`, never by relative path into packages/games/src — every ban on a game is written against the package specifier, and for Termo the deep path walks past all of them and ships the whole answer list (ADR-0005, ADR-0015, ADR-0047, ADR-0078).",
   },
 
   ...replayCapableClientGroups,
@@ -158,7 +173,6 @@ const freePlayBannedModuleGroups = [
 
       "**/play/share-button",
       "**/play/daily-route",
-      "**/termo/guess-client",
       "**/session/bootstrap",
       "**/components/session-bootstrap",
       "**/binairo/use-binairo-play",
@@ -169,7 +183,6 @@ const freePlayBannedModuleGroups = [
       "**/nonogram/nonogram-screen",
 
       "**/nonogram/nonogram-conclusion",
-      "**/termo/termo-conclusion",
 
       "**/app/page",
       "**/app/hub-day-state",
@@ -188,14 +201,7 @@ const freePlayBannedModuleGroups = [
       "free play is generated on the client and reads no database at all — not even the wall-safe root entry (ADR-0011, ADR-0046).",
   },
   {
-    group: [
-      "@miolos/games/termo",
-      "@miolos/games/termo/*",
-      "**/packages/games/src/termo",
-      "**/packages/games/src/termo/**",
-      "**/node_modules/@miolos/games/src/termo",
-      "**/node_modules/@miolos/games/src/termo/**",
-    ],
+    group: ["**/termo", "**/termo/**"],
     message:
       "Termo is excluded from free play by project invariant: its word list is finite curated content and free play would burn it (ADR-0005, ADR-0015, ADR-0046).",
   },
@@ -258,29 +264,21 @@ const freePlayBannedModuleGroups = [
 
 const freePlayDynamicBannedModule = {
   selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route)|termo\\/(guess-client|termo-conclusion)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$)|^@miolos\\/games\\/termo(\\/|$)|(packages|@miolos)\\/games\\/src\\/termo)/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route)|(^|\\/)termo(\\/|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/]",
   message:
     "free play records nothing, fetches nothing, fires no telemetry, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };
 
 const ogBannedGameGroups = [
   {
-    group: [
-      "@miolos/games",
-      "@miolos/games/*",
-      "**/packages/games/src",
-      "**/packages/games/src/*",
-      "**/packages/games/src/**",
-      ...symlinkSpelling("games"),
-    ],
+    group: ["@miolos/games", "@miolos/games/*"],
     message:
       "an OG card draws no puzzle content: @miolos/games is banned from the card and the image routes — `solveNonogram(clues)` recovers the Nonogram picture from the published clues, and refusing to draw it is the product decision ADR-0033 decision 2 records (ADR-0054 decision 8).",
   },
 ];
 
 const ogDynamicGamesImport = {
-  selector:
-    "ImportExpression > Literal[value=/(^@miolos\\/games(\\/|$)|(packages|@miolos)\\/games\\/src)/]",
+  selector: "ImportExpression > Literal[value=/^@miolos\\/games(\\/|$)/]",
   message:
     'an OG card draws no puzzle content, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/nonogram")`, and one dynamic import is all `solveNonogram` needs (ADR-0033 decision 2, ADR-0054 decision 8).',
 };
@@ -422,6 +420,7 @@ export default tseslint.config(
         webDynamicPackageSource,
         webComputedDynamicImport,
         webRequireCall,
+        webDotSegment,
       ],
     },
   },
@@ -440,6 +439,8 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
+        webDotSegment,
+        webCodeExtension,
       ],
     },
   },
@@ -464,6 +465,8 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
+        webDotSegment,
+        webCodeExtension,
         freePlayDynamicBannedModule,
       ],
     },
@@ -494,6 +497,8 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
+        webDotSegment,
+        webCodeExtension,
         ogDynamicGamesImport,
       ],
     },
@@ -523,6 +528,8 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
+        webDotSegment,
+        webCodeExtension,
         freePlayDynamicBannedModule,
         ogDynamicGamesImport,
       ],

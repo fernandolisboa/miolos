@@ -195,7 +195,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(DAILY_PATH, dbRootStatic))).toEqual([]);
 
     const clean = [
-      'import { generateBinairo } from "../node_modules/@miolos/games/src/binairo";',
+      'import { generateBinairo } from "@miolos/games/binairo";',
       "",
       "export const generate = generateBinairo;",
       "",
@@ -901,5 +901,33 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     ].join("\n");
 
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
+  });
+
+  it("T-LINT-S64: every module under termo/ is banned from free play by directory, not by name", async () => {
+    const doors: [string, string][] = [
+      [FREE_PATH, 'import "../termo/termo-screen";\n'],
+      [FREE_PATH, 'import "../termo/use-termo-play";\n'],
+      [FREE_PATH, 'export const load = () => import("../termo/play-view");\n'],
+      [ROUTE_PATH, 'import "../../../src/termo/termo-screen";\n'],
+      [ROUTE_PATH, 'import "../../../src/termo/use-termo-play";\n'],
+      [
+        ROUTE_PATH,
+        'export const load = () => import("../../../src/termo/play-view");\n',
+      ],
+    ];
+    for (const [path, source] of doors) {
+      expect
+        .soft(wallHits(await lintProbe(path, source)), `${source} @ ${path}`)
+        .toHaveLength(1);
+    }
+
+    expect(
+      wallHits(
+        await lintProbe(
+          "apps/web/app/termo/page.tsx",
+          'import "../../src/termo/termo-screen";\n',
+        ),
+      ),
+    ).toEqual([]);
   });
 });
