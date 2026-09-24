@@ -22,26 +22,6 @@
   text-underline-offset: 4px;
 }
 
-.topBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.back {
-  font: var(--text-button);
-  text-decoration: none;
-}
-
-.wordmark {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 24px;
-  font-weight: 600;
-  transform: rotate(-1deg);
-}
-
 .titleBlock {
   margin-top: 44px;
 }
@@ -161,14 +141,6 @@
 @media (max-width: 768px) {
   .page {
     padding: var(--space-5) var(--space-5) var(--space-6);
-  }
-
-  .topBar {
-    min-height: var(--touch-target-min);
-  }
-
-  .back {
-    padding: 10px 10px 10px 0;
   }
 
   .titleBlock {
