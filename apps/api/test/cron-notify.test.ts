@@ -186,7 +186,7 @@ describe("POST /cron/notify — dormancy (the isPushConfigured triple)", () => {
   });
 });
 
-describe("POST /cron/notify — the email arm is required too (#199, ADR-0079)", () => {
+describe("POST /cron/notify — the email arm is required too (#199, ADR-0083)", () => {
   it("T-API-S194: RESEND_API_KEY or WEB_ORIGIN unset → 503 BEFORE any DB statement, even with VAPID configured", async () => {
     for (const missing of ["RESEND_API_KEY", "WEB_ORIGIN"]) {
       vi.stubEnv(missing, undefined);

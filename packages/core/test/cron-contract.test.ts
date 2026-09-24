@@ -196,7 +196,7 @@ describe("bufferDepthResponseSchema", () => {
   });
 });
 
-describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4; per channel at #199, ADR-0079)", () => {
+describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4; per channel at #199, ADR-0083)", () => {
   const tick = {
     push: { candidates: 3, claimed: 2, sent: 2, pruned: 1, failed: 0 },
     email: { candidates: 1, claimed: 1, sent: 1, failed: 0 },
@@ -233,7 +233,7 @@ describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4; per channel at #1
     ).toBe(false);
   });
 
-  it("T-CORE-S116: both channels are required, email has no pruned counter, and the pre-#199 flat body no longer parses", () => {
+  it("T-CORE-S119: both channels are required, email has no pruned counter, and the pre-#199 flat body no longer parses", () => {
     expect(
       cronNotifyResponseSchema.safeParse({ push: tick.push }).success,
     ).toBe(false);
@@ -247,8 +247,8 @@ describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4; per channel at #1
   });
 });
 
-describe("streakReminderSchema (#199, ADR-0079)", () => {
-  it("T-CORE-S117: an address and a streak of at least one day, nothing else", () => {
+describe("streakReminderSchema (#199, ADR-0083)", () => {
+  it("T-CORE-S120: an address and a streak of at least one day, nothing else", () => {
     const reminder = { to: "ana@example.org", streak: 3 };
     expect(streakReminderSchema.parse(reminder)).toEqual(reminder);
     expect(

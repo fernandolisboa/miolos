@@ -26,8 +26,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("the streak reminder email (#199, ADR-0079)", () => {
-  it("T-API-S193: the copy is pinned in both number forms, links to WEB_ORIGIN and says how to stop; the send is text-only with List-Unsubscribe; a refusal is logged and returns false; no key sends nothing", async () => {
+describe("the streak reminder email (#199, ADR-0083)", () => {
+  it("T-API-S193: the copy is pinned in both number forms, links to WEB_ORIGIN and points to the Ajustes checkbox; the send is text-only with List-Unsubscribe; a refusal is logged and returns false; no key sends nothing", async () => {
     expect(streakReminderSubject).toBe("Sua sequência no Miolos está em risco");
     expect(streakReminderBody(3, "https://miolos.app")).toBe(
       [
@@ -38,7 +38,7 @@ describe("the streak reminder email (#199, ADR-0079)", () => {
         "",
         "Você recebe este lembrete porque pediu lembretes por e-mail no Miolos.",
         "No máximo um por dia, e nunca propaganda.",
-        "Para não receber mais, escreva para privacidade@miolos.app.",
+        "Para não receber mais, desmarque o lembrete por e-mail em Ajustes: https://miolos.app/ajustes",
       ].join("\n"),
     );
     expect(streakReminderBody(1, "https://miolos.app")).toContain(
@@ -57,7 +57,7 @@ describe("the streak reminder email (#199, ADR-0079)", () => {
       to: ["ana@example.org"],
       subject: streakReminderSubject,
       text: streakReminderBody(3, "https://miolos.app"),
-      headers: { "List-Unsubscribe": "<mailto:privacidade@miolos.app>" },
+      headers: { "List-Unsubscribe": "<https://miolos.app/ajustes>" },
     });
 
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});

@@ -111,7 +111,7 @@ function tick(
   });
 }
 
-describe("runNotifyTick — the email arm (#199, ADR-0079)", () => {
+describe("runNotifyTick — the email arm (#199, ADR-0083)", () => {
   it("T-API-S189: the email claim lands BEFORE the transport is invoked, and the transport gets the account's address and computeStreak's number", async () => {
     const userId = await createReminderUser("ana@example.org");
     await insertCompletion(userId, daysBack(2));

@@ -27,6 +27,6 @@ export function streakReminderBody(streak: number, webOrigin: string): string {
     "",
     "Você recebe este lembrete porque pediu lembretes por e-mail no Miolos.",
     "No máximo um por dia, e nunca propaganda.",
-    "Para não receber mais, escreva para privacidade@miolos.app.",
+    `Para não receber mais, desmarque o lembrete por e-mail em Ajustes: ${webOrigin}/ajustes`,
   ].join("\n");
 }

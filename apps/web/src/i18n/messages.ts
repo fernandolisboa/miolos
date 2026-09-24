@@ -412,7 +412,7 @@ export const messages = {
       recovery:
         "O e-mail existe para recuperar e mover a sua sequência — se você limpar o navegador ou trocar de aparelho, ele é o caminho de volta.",
       reminder:
-        "Lembretes de sequência em risco só chegam por e-mail se você marcar o consentimento próprio para isso — e ele vem desmarcado. Se algum aparelho da sua conta recebe o lembrete no navegador, o e-mail não é enviado. Para parar os lembretes por e-mail, escreva para privacidade@miolos.app.",
+        "Lembretes de sequência em risco só chegam por e-mail se você marcar o consentimento próprio para isso — e ele vem desmarcado. Se algum aparelho da sua conta recebe o lembrete no navegador, o e-mail não é enviado.",
     },
     consents: {
       heading: "Os dois consentimentos",

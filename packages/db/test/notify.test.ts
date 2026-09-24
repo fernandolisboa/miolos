@@ -310,8 +310,8 @@ async function createReminderUser(
   return user.id;
 }
 
-describe("listEmailNudgeCandidates — the email hedge (#199, ADR-0079)", () => {
-  it("T-DB-S90: reminder consent + verified email + no subscription + at risk at the habitual hour ⇒ one {userId, email}; the wrong hour or a counted today excludes", async () => {
+describe("listEmailNudgeCandidates — the email hedge (#199, ADR-0083)", () => {
+  it("T-DB-S92: reminder consent + verified email + no subscription + at risk at the habitual hour ⇒ one {userId, email}; the wrong hour or a counted today excludes", async () => {
     const userId = await createReminderUser("ana@example.org");
     await insertCompletion({ userId, date: YESTERDAY, hour: 20 });
 
@@ -327,7 +327,7 @@ describe("listEmailNudgeCandidates — the email hedge (#199, ADR-0079)", () => 
     ).toEqual([]);
   });
 
-  it("T-DB-S91: the hedge (Q1 = 1a) — a consent holder with a push subscription is a push candidate and never an email candidate", async () => {
+  it("T-DB-S93: the hedge (Q1 = 1a) — a consent holder with a push subscription is a push candidate and never an email candidate", async () => {
     const userId = await createReminderUser("ana@example.org");
     await subscribe(userId);
     await insertCompletion({ userId, date: YESTERDAY, hour: 20 });
@@ -337,7 +337,7 @@ describe("listEmailNudgeCandidates — the email hedge (#199, ADR-0079)", () => 
     expect(await listPushNudgeCandidates(ctx.db, args)).toEqual([userId]);
   });
 
-  it("T-DB-S92: no consent, an unverified email, and a merge tombstone (consent kept, email nulled) are never candidates", async () => {
+  it("T-DB-S94: no consent, an unverified email, and a merge tombstone (consent kept, email nulled) are never candidates", async () => {
     const noConsent = await createReminderUser("a@example.org", {
       consent: false,
     });
@@ -357,7 +357,7 @@ describe("listEmailNudgeCandidates — the email hedge (#199, ADR-0079)", () => 
     ).toEqual([]);
   });
 
-  it("T-DB-S93: an email ledger row blocks the email arm; a push ledger row does not", async () => {
+  it("T-DB-S95: an email ledger row blocks the email arm; a push ledger row does not", async () => {
     const emailed = await createReminderUser("a@example.org");
     const pushed = await createReminderUser("b@example.org");
     for (const userId of [emailed, pushed]) {

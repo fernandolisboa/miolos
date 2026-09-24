@@ -11,8 +11,6 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 const SENDER = "Miolos <conta@miolos.app>";
 
-const REMINDER_UNSUBSCRIBE = "<mailto:privacidade@miolos.app>";
-
 const SEND_TIMEOUT_MS = 10_000;
 
 const RATE_LIMIT_WAIT_MS = 1_000;
@@ -78,7 +76,7 @@ export const sendReminderEmail: ReminderSend = async (reminder) => {
     to: reminder.to,
     subject: streakReminderSubject,
     text: streakReminderBody(reminder.streak, webOrigin),
-    headers: { "List-Unsubscribe": REMINDER_UNSUBSCRIBE },
+    headers: { "List-Unsubscribe": `<${webOrigin}/ajustes>` },
   };
   try {
     let status = await requestResend(message);
