@@ -106,7 +106,11 @@ describe("the OG import wall (#34, ADR-0054 decision 8)", () => {
   });
 
   it("T-LINT-S42: the dynamic-import evasion of the games ban reds; a local dynamic import stays clean", async () => {
-    for (const door of ["@miolos/games/nonogram", "../../packages/games/src"]) {
+    for (const door of [
+      "@miolos/games/nonogram",
+      "@miolos/GAMES/nonogram",
+      "../../packages/games/src",
+    ]) {
       const source = [
         "export const load = () =>",
         `  import("${door}");`,

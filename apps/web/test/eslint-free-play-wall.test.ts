@@ -908,6 +908,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       [FREE_PATH, 'import "../termo/termo-screen";\n'],
       [FREE_PATH, 'import "../termo/use-termo-play";\n'],
       [FREE_PATH, 'export const load = () => import("../termo/play-view");\n'],
+      [FREE_PATH, 'export const load = () => import("../Termo/play-view");\n'],
       [ROUTE_PATH, 'import "../../../src/termo/termo-screen";\n'],
       [ROUTE_PATH, 'import "../../../src/termo/use-termo-play";\n'],
       [

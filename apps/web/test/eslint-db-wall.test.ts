@@ -912,7 +912,7 @@ async function hitsCiting(
 }
 
 describe("apps/web relative specifiers are in normal form (#201, ADR-0078)", () => {
-  it("T-LINT-S62: a `.`, empty or mid-path `..` segment reds in every wall block, static, re-exported and dynamic", async () => {
+  it("T-LINT-S62: a `.`, empty or mid-path `..` segment, or a `?`/`#` suffix, reds in every wall block, static, re-exported and dynamic", async () => {
     const banned = [
       "../x/../play/sync",
       "../play/./sync",
@@ -921,6 +921,12 @@ describe("apps/web relative specifiers are in normal form (#201, ADR-0078)", () 
       "../play/sync/.",
       "../../../packages/games/src/x/../termo/word-list",
       "../../../packages/games//src/termo",
+      "../../packages/db/../core/src/contracts/daily-content",
+      "../node_modules/@miolos/games/../games/src/nonogram",
+      "@miolos/games/termo#x",
+      "@miolos/db?x",
+      "@miolos/db/publishing#x",
+      "../play/sync?x",
     ];
     for (const path of WALL_BLOCK_PATHS) {
       for (const specifier of banned) {

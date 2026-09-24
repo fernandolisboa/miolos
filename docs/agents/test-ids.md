@@ -40,16 +40,19 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S373` | `S372` | `T-WEB-23` |
+| `T-WEB` | `S374` | `S373` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
 
 #255 (with #201 and #257, ADR-0078) reserved **`T-WEB-S369…S372`** and
-**`T-LINT-S62…S65`**, contiguous, and spent all eight: next free is `T-WEB-S373`
-and `T-LINT-S66`. Re-derived by the two-stage grep. **`T-WEB-S368` is retired
+**`T-LINT-S62…S65`**, contiguous, and spent all eight; its review round added
+`T-WEB-S373`. Next free is `T-WEB-S374` and `T-LINT-S66`. Re-derived by the two-stage grep. **`T-WEB-S368` is retired
 and never reused** — its wall half became `T-WEB-S370`, its `next/link` half
 `T-WEB-S371`. `T-LINT-S41`, `S42`, `S57` and `S58` were **re-founded in place**:
 same claim, only the clean control moved to package specifiers, because a
 relative path into `packages/games/src` is now banned across `apps/web`.
+`S58`'s Termo leg is now covered twice — by the games-wide deep-path ban and by
+`**/termo/**` — so it reds only when both go; `T-LINT-S12` and `S64` still pin
+the free-play Termo group alone.
 
 - **`T-WEB-S369`** (`free-play-graph.test.ts`) — the value graph of every
   free-play file reaches no I/O module and nothing in `packages/db/src` or
@@ -60,8 +63,10 @@ relative path into `packages/games/src` is now banned across `apps/web`.
 - **`T-WEB-S371`** (`screen-chrome.test.tsx`) — the chrome imports `next/link`.
 - **`T-WEB-S372`** — `resolveSpecifier` follows the `node_modules` symlink,
   throws on a code extension, returns null for CSS.
-- **`T-LINT-S62`, `S63`** (`eslint-db-wall`) — normal-form and code-extension
-  bans; **`S64`** (`eslint-free-play-wall`) — `termo/` banned by directory;
+- **`T-WEB-S373`** — no `.js`, `.jsx`, `.mjs` or `.cjs` file under `app/` or
+  `src/`: one would escape `tsc` and the graph proof's entries.
+- **`T-LINT-S62`, `S63`** (`eslint-db-wall`) — normal-form (segments and
+  `?`/`#` suffixes) and code-extension bans; **`S64`** (`eslint-free-play-wall`) — `termo/` banned by directory;
   **`S65`** (`eslint-og-wall`) — `packages/games/src` banned by relative path.
 
 #206 cluster 6 reserved **`T-WEB-S366…S368`**, contiguous, and spent all three

@@ -11,7 +11,7 @@ import {
   valueClosureOf,
   valueSpecifiersOf,
 } from "./module-graph";
-import { withoutComments } from "./ts-source";
+import { webSources, withoutComments } from "./ts-source";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
 const FREE_PLAY_PROBE = "apps/web/src/free-play/eslint-probe.ts";
@@ -64,13 +64,13 @@ function asProbeWouldSpellIt(repoRelative: string): string {
 
 function specifiersWrittenBy(modules: readonly string[]): readonly string[] {
   const collected: string[] = [];
-  for (const source of modules.filter((m) => m.startsWith("apps/web/"))) {
+  for (const source of modules) {
     for (const specifier of valueSpecifiersOf(source)) {
-      collected.push(
-        specifier.startsWith(".")
-          ? asProbeWouldSpellIt(join(dirname(source), specifier))
-          : specifier,
-      );
+      if (!specifier.startsWith(".")) {
+        collected.push(specifier);
+      } else if (source.startsWith("apps/web/")) {
+        collected.push(asProbeWouldSpellIt(join(dirname(source), specifier)));
+      }
     }
   }
   return [...new Set(collected)].sort();
@@ -189,5 +189,13 @@ describe("resolveSpecifier lands on source or refuses (T-WEB-S372)", () => {
       "../play/sync.js",
     );
     expect(resolveSpecifier(from, "./x.module.css")).toBeNull();
+  });
+});
+
+describe("apps/web source is TypeScript (T-WEB-S373)", () => {
+  it("no JavaScript file under app/ or src/ escapes the typechecker and the graph proof", () => {
+    expect(webSources().filter((path) => /\.[cm]?jsx?$/.test(path))).toEqual(
+      [],
+    );
   });
 });

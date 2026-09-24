@@ -19,10 +19,10 @@ const symlinkSpelling = (pkg) => [
 const importSource =
   ":matches(ImportDeclaration, ExportAllDeclaration, ExportNamedDeclaration, ImportExpression) > Literal.source";
 
-const webDotSegment = {
-  selector: `${importSource}[value=/(^|\\/)(?!\\.\\.\\/)[^\\/]+\\/\\.\\.?(\\/|$)|\\/\\.(\\/|$)|\\/\\//]`,
+const webNormalForm = {
+  selector: `${importSource}[value=/(^|\\/)(?!\\.\\.\\/)[^\\/]+\\/\\.\\.?(\\/|$)|\\/\\.(\\/|$)|\\/\\/|[?#]/]`,
   message:
-    "apps/web writes a relative specifier in normal form: no `.` or empty segment, and `..` only as a leading run. Every wall ban matches the specifier string, and `../x/../play/sync` or `../play//sync` walks past a ban written against `**/play/sync` (ADR-0078).",
+    "apps/web writes an import specifier in normal form: no `.` or empty segment, `..` only as a leading run, and no `?query` or `#fragment`. Every wall ban matches the specifier string, and `../x/../play/sync`, `../play//sync` or `../play/sync?x` walks past a ban written against `**/play/sync` (ADR-0078).",
 };
 
 const webCodeExtension = {
@@ -264,7 +264,7 @@ const freePlayBannedModuleGroups = [
 
 const freePlayDynamicBannedModule = {
   selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route)|(^|\\/)termo(\\/|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route)|(^|\\/)termo(\\/|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/i]",
   message:
     "free play records nothing, fetches nothing, fires no telemetry, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };
@@ -278,7 +278,7 @@ const ogBannedGameGroups = [
 ];
 
 const ogDynamicGamesImport = {
-  selector: "ImportExpression > Literal[value=/^@miolos\\/games(\\/|$)/]",
+  selector: "ImportExpression > Literal[value=/^@miolos\\/games(\\/|$)/i]",
   message:
     'an OG card draws no puzzle content, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/nonogram")`, and one dynamic import is all `solveNonogram` needs (ADR-0033 decision 2, ADR-0054 decision 8).',
 };
@@ -420,7 +420,7 @@ export default tseslint.config(
         webDynamicPackageSource,
         webComputedDynamicImport,
         webRequireCall,
-        webDotSegment,
+        webNormalForm,
       ],
     },
   },
@@ -439,7 +439,7 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
-        webDotSegment,
+        webNormalForm,
         webCodeExtension,
       ],
     },
@@ -465,7 +465,7 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
-        webDotSegment,
+        webNormalForm,
         webCodeExtension,
         freePlayDynamicBannedModule,
       ],
@@ -497,7 +497,7 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
-        webDotSegment,
+        webNormalForm,
         webCodeExtension,
         ogDynamicGamesImport,
       ],
@@ -528,7 +528,7 @@ export default tseslint.config(
         webRequireCall,
         webTableNameLiteral,
         webTableNameTemplate,
-        webDotSegment,
+        webNormalForm,
         webCodeExtension,
         freePlayDynamicBannedModule,
         ogDynamicGamesImport,
