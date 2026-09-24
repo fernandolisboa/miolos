@@ -22,15 +22,6 @@ export function BinairoScreen({
   const claim = useServerDayClaim(daily.date, "binairo");
   const play = useBinairoPlay(daily, claim !== undefined);
 
-  const claimOwnsScreen =
-    claim !== undefined && play.state.timer.runningSince !== null;
-  const pause = play.pause;
-  useEffect(() => {
-    if (claimOwnsScreen) {
-      pause();
-    }
-  }, [claimOwnsScreen, pause]);
-
   useEffect(() => {
     preloadConclusionView();
   }, []);

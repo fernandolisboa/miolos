@@ -134,10 +134,13 @@ export function usePlayLifecycle<S extends PlayCore>({
   }, [hydrated, status, dispatch]);
 
   useEffect(() => {
-    if (status !== "playing" && timer.runningSince !== null) {
+    if (
+      (status !== "playing" || remotelyClaimed) &&
+      timer.runningSince !== null
+    ) {
       dispatch({ type: "pause", now: Date.now() });
     }
-  }, [status, timer, dispatch]);
+  }, [status, timer, remotelyClaimed, dispatch]);
 
   useEffect(() => {
     if (!hydrated || status !== "playing") {

@@ -46,8 +46,6 @@ export interface SudokuPlay {
   readonly enterDigit: (digit: SudokuDigit) => void;
   readonly clearCell: () => void;
   readonly revealHint: () => void;
-
-  readonly pause: () => void;
 }
 
 export function useSudokuPlay(
@@ -126,10 +124,6 @@ export function useSudokuPlay(
     dispatch({ type: "use-hint", solution });
   }, [solution]);
 
-  const pause = useCallback(() => {
-    dispatch({ type: "pause", now: Date.now() });
-  }, []);
-
   return {
     state,
     elapsed,
@@ -142,7 +136,6 @@ export function useSudokuPlay(
     enterDigit,
     clearCell,
     revealHint,
-    pause,
   };
 }
 

@@ -42,8 +42,6 @@ export interface BinairoPlay {
 
   readonly toggleMode: (mode: PaintMode) => void;
   readonly revealHint: () => void;
-
-  readonly pause: () => void;
 }
 
 export function useBinairoPlay(
@@ -108,10 +106,6 @@ export function useBinairoPlay(
     dispatch({ type: "use-hint", solution });
   }, [solution]);
 
-  const pause = useCallback(() => {
-    dispatch({ type: "pause", now: Date.now() });
-  }, []);
-
   return {
     state,
     elapsed,
@@ -123,7 +117,6 @@ export function useBinairoPlay(
     paintOver,
     toggleMode,
     revealHint,
-    pause,
   };
 }
 

@@ -28,15 +28,6 @@ export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
   const claim = useServerDayClaim(daily.date, "termo");
   const play = useTermoPlay(daily, claim !== undefined);
 
-  const claimOwnsScreen =
-    claim !== undefined && play.state.timer.runningSince !== null;
-  const pause = play.pause;
-  useEffect(() => {
-    if (claimOwnsScreen) {
-      pause();
-    }
-  }, [claimOwnsScreen, pause]);
-
   useEffect(() => {
     preloadTermoConclusion();
   }, []);
