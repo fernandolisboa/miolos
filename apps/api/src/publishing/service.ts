@@ -58,7 +58,7 @@ export function effectiveThreshold(configuredDepth: number): number {
   return Math.min(BUFFER_ALERT_THRESHOLD, configuredDepth);
 }
 
-const MAX_SEED_RETRIES_PER_DATE = 8;
+export const MAX_BINAIRO_SEED_RETRIES_PER_DATE = 8;
 
 function randomUint32(): number {
   const box = new Uint32Array(1);
@@ -92,7 +92,11 @@ export async function topUpBinairoBuffer(
 
       let covered = false;
       let lastReason = "no attempt made";
-      for (let attempt = 0; attempt < MAX_SEED_RETRIES_PER_DATE; attempt += 1) {
+      for (
+        let attempt = 0;
+        attempt < MAX_BINAIRO_SEED_RETRIES_PER_DATE;
+        attempt += 1
+      ) {
         const seed = randomUint32();
         let puzzle;
         try {
