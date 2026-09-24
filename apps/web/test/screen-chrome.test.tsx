@@ -108,7 +108,6 @@ const BINAIRO_PLAY = {
   paintOver: noop,
   toggleMode: noop,
   revealHint: noop,
-  pause: noop,
 };
 
 const SUDOKU_PLAY = {
@@ -122,7 +121,6 @@ const SUDOKU_PLAY = {
   enterDigit: noop,
   clearCell: noop,
   revealHint: noop,
-  pause: noop,
 };
 
 const NONOGRAM_PLAY = {
@@ -140,7 +138,6 @@ const NONOGRAM_PLAY = {
   clearCell: noop,
   paintOver: noop,
   revealHint: noop,
-  pause: noop,
 };
 
 function pageIn(root: ParentNode): Element {
@@ -541,7 +538,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
   });
 });
 
-describe("the chrome's back link is routed (T-WEB-S371)", () => {
+describe("the chrome's back link is routed (T-WEB-S376)", () => {
   it("imports next/link", () => {
     expect(valueSpecifiersOf(CHROME)).toContain("next/link");
   });

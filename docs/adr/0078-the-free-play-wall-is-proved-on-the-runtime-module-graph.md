@@ -10,9 +10,9 @@ The free-play wall was a list of module names under `no-restricted-imports`, att
 
 ## Decision
 
-1. **The proof is the runtime graph.** `T-WEB-S369` walks the value edges of every free-play file (`valueClosureOf` in `apps/web/test/module-graph.ts`) and asserts no module on it does network or storage I/O, and none lives in `packages/db/src` or `packages/games/src/termo`. `T-WEB-S370` puts every bare specifier any graph member writes, and the relative specifiers of its `apps/web` members, through the real `eslint.config.mjs` at a free-play path. T-WEB-S368 is retired; S370 covers it on runtime edges and deliberately no longer checks the chrome's type-only edges.
+1. **The proof is the runtime graph.** `T-WEB-S374` walks the value edges of every free-play file (`valueClosureOf` in `apps/web/test/module-graph.ts`) and asserts no module on it does network or storage I/O, and none lives in `packages/db/src` or `packages/games/src/termo`. `T-WEB-S375` puts every bare specifier any graph member writes, and the relative specifiers of its `apps/web` members, through the real `eslint.config.mjs` at a free-play path. T-WEB-S368 is retired; S375 covers it on runtime edges and deliberately no longer checks the chrome's type-only edges.
 2. **The name list stays, as editor feedback.** Termo is banned from free play as a directory (`**/termo`, `**/termo/**`), not by name.
-3. **Import specifiers are in normal form.** Two structural selectors: `webNormalForm` (no `.` or empty segment, `..` only as a leading run, no `?query` or `#fragment` — a suffix the bundler strips but every ban reads) in every `apps/web` block, and `webCodeExtension` in `app/` and `src/`. Source under `app/` and `src/` is TypeScript only (`T-WEB-S373`): a JS file escapes `tsc` and the graph proof's entries.
+3. **Import specifiers are in normal form.** Two structural selectors: `webNormalForm` (no `.` or empty segment, `..` only as a leading run, no `?query` or `#fragment` — a suffix the bundler strips but every ban reads) in every `apps/web` block, and `webCodeExtension` in `app/` and `src/`. Source under `app/` and `src/` is TypeScript only (`T-WEB-S378`): a JS file escapes `tsc` and the graph proof's entries.
 4. **`packages/games/src` is unreachable by relative path from all of `apps/web`**, static and dynamic. Games are reached through `@miolos/games[/<game>]`.
 5. The module resolver throws on a relative or `@miolos/*` specifier that resolves to nothing, CSS aside, so the graph cannot silently lose an edge.
 
@@ -26,7 +26,7 @@ The free-play wall was a list of module names under `no-restricted-imports`, att
 
 - ADR-0077 deferred the games-wide ban as out of scope; this ADR does it, and re-founds `T-LINT-S41`, `S42`, `S57` and `S58` in place — their clean controls move to package specifiers.
 - ADR-0077's consequence that S368 "measures the specifiers, not the erasure" is amended: the check now measures runtime edges.
-- The type-edge regex must keep `import { type X }` as a value edge — it is one under `verbatimModuleSyntax`. `T-WEB-S369` reds if it drops a real value edge.
+- The type-edge regex must keep `import { type X }` as a value edge — it is one under `verbatimModuleSyntax`. `T-WEB-S374` reds if it drops a real value edge.
 - The walker cannot see `new Worker(new URL(…))` edges. None exist in `apps/web` today.
 - The I/O scan does not see Next.js navigation requests (`<Link>` prefetch, `router.prefetch`); like the root layout's `POST /session` in ADR-0046 decision 8, they are framework traffic, outside what the scan measures.
 - The OG block's games ban names only the package specifiers; the deep spellings live in the shared arrays, so a hit reports once.

@@ -74,7 +74,7 @@ const dispatchProbe: { current: (action: ProbeAction) => void } = {
   current: () => undefined,
 };
 
-function Probe() {
+function Probe({ remotelyClaimed }: { readonly remotelyClaimed?: boolean }) {
   const [state, dispatch] = useReducer(probeReducer, INITIAL);
   useEffect(() => {
     dispatchProbe.current = dispatch;
@@ -87,9 +87,21 @@ function Probe() {
     dispatch,
     buildRecord,
     persistDeps: [state.entries],
+    remotelyClaimed,
   });
 
-  return <output>{state.now}</output>;
+  return (
+    <output data-running-since={String(state.timer.runningSince)}>
+      {state.now}
+    </output>
+  );
+}
+
+function runningSince(container: HTMLElement): string | null {
+  return (
+    container.querySelector("output")?.getAttribute("data-running-since") ??
+    null
+  );
 }
 
 beforeEach(() => {
@@ -100,6 +112,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("usePlayLifecycle's persist effect (T-WEB-S33)", () => {
@@ -144,5 +157,49 @@ describe("usePlayLifecycle's persist effect (T-WEB-S33)", () => {
     });
     expect(setItem).toHaveBeenCalledTimes(2);
     setItem.mockRestore();
+  });
+});
+
+describe("usePlayLifecycle's pause effect reads a live claim (T-WEB-S369)", () => {
+  it("(a) an unclaimed mount hydrates with a running clock, and a remote claim pauses it", () => {
+    const { container, rerender } = render(<Probe remotelyClaimed={false} />);
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    expect(runningSince(container)).not.toBe("null");
+
+    rerender(<Probe remotelyClaimed />);
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    expect(runningSince(container)).toBe("null");
+  });
+
+  it("(b) a hidden-to-visible return while claimed leaves the clock paused", () => {
+    const { container } = render(<Probe remotelyClaimed />);
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(runningSince(container)).toBe("null");
+  });
+
+  it("(c) an omitted flag, the archive shape, leaves the clock running", () => {
+    const { container } = render(<Probe />);
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+
+    expect(runningSince(container)).not.toBe("null");
   });
 });

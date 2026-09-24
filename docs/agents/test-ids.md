@@ -40,34 +40,51 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S116` | `S114` | never used |
 | `T-DB` | `S90` | `S89` | `T-DB-21` |
 | `T-API` | `S185` | `S184` | `T-API-16` |
-| `T-WEB` | `S374` | `S373` | `T-WEB-23` |
+| `T-WEB` | `S379` | `S378` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
 
-#255 (with #201 and #257, ADR-0078) reserved **`T-WEB-S369…S372`** and
+#255 (with #201 and #257, ADR-0078) reserved **`T-WEB-S374…S377`** and
 **`T-LINT-S62…S65`**, contiguous, and spent all eight; its review round added
-`T-WEB-S373`. Next free is `T-WEB-S374` and `T-LINT-S66`. Re-derived by the two-stage grep. **`T-WEB-S368` is retired
-and never reused** — its wall half became `T-WEB-S370`, its `next/link` half
-`T-WEB-S371`. `T-LINT-S41`, `S42`, `S57` and `S58` were **re-founded in place**:
+`T-WEB-S378`. Next free is `T-WEB-S379` and `T-LINT-S66`. Re-derived by the two-stage grep. **`T-WEB-S368` is retired
+and never reused** — its wall half became `T-WEB-S375`, its `next/link` half
+`T-WEB-S376`. `T-LINT-S41`, `S42`, `S57` and `S58` were **re-founded in place**:
 same claim, only the clean control moved to package specifiers, because a
 relative path into `packages/games/src` is now banned across `apps/web`.
 `S58`'s Termo leg is now covered twice — by the games-wide deep-path ban and by
 `**/termo/**` — so it reds only when both go; `T-LINT-S12` and `S64` still pin
 the free-play Termo group alone.
 
-- **`T-WEB-S369`** (`free-play-graph.test.ts`) — the value graph of every
+- **`T-WEB-S374`** (`free-play-graph.test.ts`) — the value graph of every
   free-play file reaches no I/O module and nothing in `packages/db/src` or
   `packages/games/src/termo`; `termo-screen`'s graph lists exactly the five I/O
   modules, which pins the token list to the tree.
-- **`T-WEB-S370`** — every bare specifier any graph member writes, and the
+- **`T-WEB-S375`** — every bare specifier any graph member writes, and the
   relative specifiers of its `apps/web` members, pass the real config at a free-play path, both wall rules read.
-- **`T-WEB-S371`** (`screen-chrome.test.tsx`) — the chrome imports `next/link`.
-- **`T-WEB-S372`** — `resolveSpecifier` follows the `node_modules` symlink,
+- **`T-WEB-S376`** (`screen-chrome.test.tsx`) — the chrome imports `next/link`.
+- **`T-WEB-S377`** — `resolveSpecifier` follows the `node_modules` symlink,
   throws on a code extension, returns null for CSS.
-- **`T-WEB-S373`** — no `.js`, `.jsx`, `.mjs` or `.cjs` file under `app/` or
+- **`T-WEB-S378`** — no `.js`, `.jsx`, `.mjs` or `.cjs` file under `app/` or
   `src/`: one would escape `tsc` and the graph proof's entries.
 - **`T-LINT-S62`, `S63`** (`eslint-db-wall`) — normal-form (segments and
   `?`/`#` suffixes) and code-extension bans; **`S64`** (`eslint-free-play-wall`) — `termo/` banned by directory;
   **`S65`** (`eslint-og-wall`) — `packages/games/src` banned by relative path.
+
+#206 cluster 7 reserved **`T-WEB-S369…S370`**, contiguous, and spent both:
+`S369` in `apps/web/test/play-lifecycle.test.tsx` and `S370` in the new
+`apps/web/test/claim-pause.test.tsx`. Nothing is burned: next free is `S371`.
+**No `T-LINT` id was spent.** `T-WEB-S321a` is a sibling of `T-WEB-S321`, not
+a reservation: a claim arriving after mount starts nothing, restated over a
+rerender instead of a fresh mount.
+
+- **`T-WEB-S369`** — `usePlayLifecycle`'s pause effect reads the live
+  `remotelyClaimed`. Three arms over one `Probe`: (a) a claim that arrives
+  after an unclaimed mount pauses the running clock; (b) a hidden-to-visible
+  return while claimed leaves the clock paused; (c) the flag omitted, the
+  archive shape, leaves the clock running.
+- **`T-WEB-S370`** — the same claim over the four daily play hooks: one
+  `it.each` over `useBinairoPlay`, `useSudokuPlay`, `useNonogramPlay` and
+  `useTermoPlay`, each on its own daily fixture, hydrating with a running
+  clock and pausing when rerendered with `claimed: true`.
 
 #206 cluster 6 reserved **`T-WEB-S366…S368`**, contiguous, and spent all three
 in the new `apps/web/test/screen-chrome.test.tsx`. Nothing was reserved as

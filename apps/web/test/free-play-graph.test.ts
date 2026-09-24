@@ -116,7 +116,7 @@ vi.setConfig({ testTimeout: 40_000 });
 const entries = freePlayEntries();
 const valueGraph = union(entries.map(valueClosureOf));
 
-describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S369)", () => {
+describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S374)", () => {
   it("no module on it does network or storage I/O, or lives in packages/db/src or packages/games/src/termo", () => {
     expect({
       io: valueGraph.filter(doesIo),
@@ -151,7 +151,7 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
   });
 });
 
-describe("every specifier free play's runtime graph writes passes the real wall (T-WEB-S370)", () => {
+describe("every specifier free play's runtime graph writes passes the real wall (T-WEB-S375)", () => {
   it("at a free-play path, through both wall rules", async () => {
     const specifiers = specifiersWrittenBy(valueGraph);
 
@@ -178,7 +178,7 @@ describe("every specifier free play's runtime graph writes passes the real wall 
   });
 });
 
-describe("resolveSpecifier lands on source or refuses (T-WEB-S372)", () => {
+describe("resolveSpecifier lands on source or refuses (T-WEB-S377)", () => {
   it("follows the node_modules symlink, throws on a code extension, skips CSS", () => {
     const from = "apps/web/src/free-play/catalog.ts";
 
@@ -192,7 +192,7 @@ describe("resolveSpecifier lands on source or refuses (T-WEB-S372)", () => {
   });
 });
 
-describe("apps/web source is TypeScript (T-WEB-S373)", () => {
+describe("apps/web source is TypeScript (T-WEB-S378)", () => {
   it("no JavaScript file under app/ or src/ escapes the typechecker and the graph proof", () => {
     expect(webSources().filter((path) => /\.[cm]?jsx?$/.test(path))).toEqual(
       [],

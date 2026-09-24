@@ -26,8 +26,6 @@ export interface TermoPlay {
   readonly submit: () => void;
 
   readonly retry: () => void;
-
-  readonly pause: () => void;
 }
 
 export function useTermoPlay(
@@ -146,9 +144,6 @@ export function useTermoPlay(
   );
 
   const live = state.status === "playing";
-  const pause = useCallback(() => {
-    dispatch({ type: "pause", now: Date.now() });
-  }, []);
 
   return {
     state,
@@ -161,7 +156,6 @@ export function useTermoPlay(
     erase,
     submit,
     retry,
-    pause,
   };
 }
 

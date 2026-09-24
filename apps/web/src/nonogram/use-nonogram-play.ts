@@ -51,8 +51,6 @@ export interface NonogramPlay {
 
   readonly paintOver: (index: number) => void;
   readonly revealHint: () => void;
-
-  readonly pause: () => void;
 }
 
 export function useNonogramPlay(
@@ -135,10 +133,6 @@ export function useNonogramPlay(
     dispatch({ type: "use-hint" });
   }, []);
 
-  const pause = useCallback(() => {
-    dispatch({ type: "pause", now: Date.now() });
-  }, []);
-
   return {
     state,
     elapsed,
@@ -155,7 +149,6 @@ export function useNonogramPlay(
     clearCell,
     paintOver,
     revealHint,
-    pause,
   };
 }
 

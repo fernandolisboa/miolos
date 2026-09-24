@@ -22,15 +22,6 @@ export function SudokuScreen({
   const claim = useServerDayClaim(daily.date, "sudoku");
   const play = useSudokuPlay(daily, claim !== undefined);
 
-  const claimOwnsScreen =
-    claim !== undefined && play.state.timer.runningSince !== null;
-  const pause = play.pause;
-  useEffect(() => {
-    if (claimOwnsScreen) {
-      pause();
-    }
-  }, [claimOwnsScreen, pause]);
-
   useEffect(() => {
     preloadConclusionView();
   }, []);

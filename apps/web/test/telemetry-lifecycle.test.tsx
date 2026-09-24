@@ -3,6 +3,7 @@ import { useReducer } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { writePlayRecord, type PlayRecord } from "../src/play/play-record";
+import { startCompletionSync } from "../src/play/sync";
 import { applyTimerAction } from "../src/play/timer";
 import type { LifecycleAction, PlayCore } from "../src/play/types";
 import { usePlayLifecycle } from "../src/play/use-play-lifecycle";
@@ -132,5 +133,17 @@ describe("usePlayLifecycle's puzzle_started seam", () => {
       "binairo",
       "2026-07-01",
     );
+  });
+
+  it("T-WEB-S321a: a claim arriving after mount does not re-run the mount effect", () => {
+    const { rerender } = render(<Probe remotelyClaimed={false} />);
+    expect(startCompletionSync).toHaveBeenCalledTimes(1);
+    expect(telemetry.postPuzzleStarted).toHaveBeenCalledTimes(1);
+
+    window.localStorage.clear();
+    rerender(<Probe remotelyClaimed />);
+
+    expect(startCompletionSync).toHaveBeenCalledTimes(1);
+    expect(telemetry.postPuzzleStarted).toHaveBeenCalledTimes(1);
   });
 });

@@ -346,12 +346,15 @@ passes nothing. A first implementation that read the claim inside the hook
 made that test red; the wall was right.
 
 (d) **The cold-load residual of that gate.** `remotelyClaimed` is captured at
-the first render and never updated — putting the live value in the mount
-effect's dependency array would re-run the restore, the prune and the sync
-registration whenever a `GET /day` lands. On a **cold direct load** the
-payload has not arrived at first render, so a day finished on another device
-reports one `puzzle_started` before the remote view swaps in. The case the
-gate actually covers is the **warm** one — a client-side navigation from the
+the first render and never updated for the `puzzle_started` snapshot or the
+mount effect — putting the live value in the mount effect's dependency array
+would re-run the restore, the prune and the sync registration whenever a
+`GET /day` lands. The pause effect is the one exception: it
+reads the live `remotelyClaimed`, not the mount snapshot, so a claim that
+lands after mount still pauses a clock already running. On a **cold direct
+load** the payload has not arrived at first render, so a day finished on
+another device reports one `puzzle_started` before the remote view swaps in.
+The case the gate actually covers is the **warm** one — a client-side navigation from the
 hub, whose done tile links to the board route — which is the common path.
 
 **The ARCHIVE's version of this is structural, not a timing window**

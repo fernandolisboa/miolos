@@ -4,13 +4,13 @@
 
 ## Start here
 
-Nothing to verify. #255, #201 and #257 merged together.
+Nothing to verify. #255, #201 and #257 merged together, and #206 clusters 5, 6, 7 and 14. Cluster 7 moved the four roots' claim-pause effect into `usePlayLifecycle` and did **not** build the issue's `useDailyScreenState` phase union: the ladders differ per game, so it would have saved nothing.
 
 ## Session state
 
-**The free-play wall is proved on the runtime module graph** (**ADR-0078**, amends ADR-0046 and ADR-0077). `T-WEB-S369` walks the value edges of every free-play file and finds no I/O module, no `packages/db/src`, no Termo source; `T-WEB-S370` lints every specifier that graph writes through the real config. A one-hop door — `termo-screen`, a daily route page — no longer needs its name on a list to be caught. The 27 shared modules ADR-0077 left unguarded are covered.
+**The free-play wall is proved on the runtime module graph** (**ADR-0078**, amends ADR-0046 and ADR-0077). `T-WEB-S374` walks the value edges of every free-play file and finds no I/O module, no `packages/db/src`, no Termo source; `T-WEB-S375` lints every specifier that graph writes through the real config. A one-hop door — `termo-screen`, a daily route page — no longer needs its name on a list to be caught. The 27 shared modules ADR-0077 left unguarded are covered.
 
-Relative specifiers must now be in normal form (no `.`, empty or mid-path `..` segment, no code extension in `app/` or `src/`), and a relative path into any of `packages/games/src` is banned across `apps/web`. `T-LINT-S41`, `S42`, `S57`, `S58` were re-founded in place; `T-WEB-S368` is retired.
+Relative specifiers must now be in normal form (no `.`, empty or mid-path `..` segment, no code extension in `app/` or `src/`), and a relative path into any of `packages/games/src` is banned across `apps/web`. `T-LINT-S41`, `S42`, `S57`, `S58` were re-founded in place; `T-WEB-S368` is retired. Its ids were first reserved as `S369…S373` and renumbered to `S374…S378` at merge, because #206 cluster 7 landed `S369`/`S370` in parallel: two threads cutting ids off one frontier collide, so re-derive it after merging `main`.
 
 ## The lesson — a graph that follows type edges proves the wrong thing
 
@@ -22,6 +22,6 @@ next 16.3.5, sharp 0.35.4 and vitest 4.1.11 landed in one PR that superseded Dep
 
 ## Next
 
-**#206 cluster 7** — 321 lines (not 640).
+**#206 cluster 8** — the four `topUp*Buffer`s in `apps/api`. Re-derive the audit's numbers first, as clusters 1, 4 and 7 had to.
 
-**Also queued:** #254 (the remote conclusion announces its body sentence twice — `.announcer` is `clip-path`-hidden, so a screen reader gets it on mount and again in browse mode), #205's CSS half (~1,820 lines, NOT a sweep), #155 (`bundle-check` into CI), the `jsonResponse`/`stubFetch` Quick change, and folding `T-WEB-S183`'s duplicate module walker in `archive-day.test.tsx` onto `module-graph.ts`.
+**Also queued:** the Binairo `validate.test.ts` uniqueness property has no explicit timeout, and it hit the 5 s default under CI load on #264 (about 530 ms locally; the sibling property tests in `binairo/generate.test.ts` carry `25_000`), #254 (the remote conclusion announces its body sentence twice — `.announcer` is `clip-path`-hidden, so a screen reader gets it on mount and again in browse mode), #205's CSS half (~1,820 lines, NOT a sweep), #155 (`bundle-check` into CI), the `jsonResponse`/`stubFetch` Quick change, and folding `T-WEB-S183`'s duplicate module walker in `archive-day.test.tsx` onto `module-graph.ts`.
