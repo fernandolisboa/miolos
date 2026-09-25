@@ -161,7 +161,7 @@ describe("the two consent routes share the write preamble (#36, ADR-0082)", () =
   });
 });
 
-describe("POST /account/reminder-consent (#36, ADR-0082 decision 2)", () => {
+describe("POST /account/reminder-consent (#36, ADR-0082 decision 3)", () => {
   it("T-API-S205: withdrawing nulls the consent and stamps the withdrawal once — a repeat keeps the first instant", async () => {
     const { token, userId } = await createSession({
       email: "ana@example.org",
@@ -192,7 +192,7 @@ describe("POST /account/reminder-consent (#36, ADR-0082 decision 2)", () => {
     ).toBeNull();
   });
 
-  it("T-API-S206: re-granting stamps a fresh consent and clears the withdrawal, a repeat keeps the grant instant, and with no email it is a 409 that writes nothing", async () => {
+  it("T-API-S206: re-granting stamps a fresh consent and keeps the withdrawal mark, a repeat keeps the grant instant, and with no email it is a 409 that writes nothing", async () => {
     const { token, userId } = await createSession({
       email: "ana@example.org",
       reminder: true,
@@ -207,7 +207,7 @@ describe("POST /account/reminder-consent (#36, ADR-0082 decision 2)", () => {
     expect(first.reminderConsentAt?.getTime()).toBeGreaterThan(
       GRANTED_AT.getTime(),
     );
-    expect(first.reminderConsentWithdrawnAt).toBeNull();
+    expect(first.reminderConsentWithdrawnAt).toBeInstanceOf(Date);
 
     const again = await setReminder(token, true);
     expect(await again.json()).toEqual({ reminderConsent: true });
@@ -225,7 +225,7 @@ describe("POST /account/reminder-consent (#36, ADR-0082 decision 2)", () => {
   });
 });
 
-describe("POST /account/detach-email (#36, ADR-0082 decision 3)", () => {
+describe("POST /account/detach-email (#36, ADR-0082 decision 4)", () => {
   it("T-API-S207: nulls the email and both consents, stamps a withdrawal only where a consent was set, stamps the attach dismissal and keeps the session; a second detach is a 409", async () => {
     const both = await createSession({
       email: "ana@example.org",
@@ -334,9 +334,10 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
     ).toEqual(dismissedAt);
   });
 
-  it("T-API-S211: attaching logs a recovery grant, plus a reminder grant when ticked, and a re-attach after detach clears the withdrawal columns it re-grants", async () => {
+  it("T-API-S211: attaching logs a recovery grant, plus a reminder grant when ticked, and a re-attach after detach keeps the withdrawal marks", async () => {
     const ticked = await createSession();
     await attachEmailToUser(ctx.db, {
+      tokenCreatedAt: new Date(),
       userId: ticked.userId,
       email: "ana@example.org",
       reminderConsent: true,
@@ -348,15 +349,16 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
 
     await detach(ticked.token);
     await attachEmailToUser(ctx.db, {
+      tokenCreatedAt: new Date(),
       userId: ticked.userId,
       email: "ana@example.org",
       reminderConsent: true,
     });
     const reattached = await readUser(ticked.userId);
     expect(reattached.recoveryConsentAt).toBeInstanceOf(Date);
-    expect(reattached.recoveryConsentWithdrawnAt).toBeNull();
+    expect(reattached.recoveryConsentWithdrawnAt).toBeInstanceOf(Date);
     expect(reattached.reminderConsentAt).toBeInstanceOf(Date);
-    expect(reattached.reminderConsentWithdrawnAt).toBeNull();
+    expect(reattached.reminderConsentWithdrawnAt).toBeInstanceOf(Date);
     expect(await events(ticked.userId)).toEqual([
       "recovery:granted",
       "reminder:granted",
@@ -372,12 +374,13 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
     });
     await detach(unticked.token);
     await attachEmailToUser(ctx.db, {
+      tokenCreatedAt: new Date(),
       userId: unticked.userId,
       email: "bia@example.org",
       reminderConsent: false,
     });
     const partial = await readUser(unticked.userId);
-    expect(partial.recoveryConsentWithdrawnAt).toBeNull();
+    expect(partial.recoveryConsentWithdrawnAt).toBeInstanceOf(Date);
     expect(partial.reminderConsentAt).toBeNull();
     expect(partial.reminderConsentWithdrawnAt).toBeInstanceOf(Date);
     expect(await events(unticked.userId)).toEqual([
@@ -388,6 +391,7 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
 
     const firstGrant = (await readUser(ticked.userId)).recoveryConsentAt;
     await attachEmailToUser(ctx.db, {
+      tokenCreatedAt: new Date(),
       userId: ticked.userId,
       email: "ana@example.org",
       reminderConsent: true,
@@ -405,6 +409,7 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
     );
     expect(winnerId).toBe(ticked.userId);
     await attachEmailToUser(ctx.db, {
+      tokenCreatedAt: new Date(),
       userId: winnerId,
       email: "ana@example.org",
       reminderConsent: true,

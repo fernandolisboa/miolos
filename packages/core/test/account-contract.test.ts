@@ -39,7 +39,7 @@ describe("accountStateResponseSchema", () => {
   });
 });
 
-describe("the reminder-consent contract (ADR-0082 decision 2)", () => {
+describe("the reminder-consent contract (ADR-0082 decision 3)", () => {
   it("T-CORE-S117: the request is a strict {granted: boolean}, the response a strict {reminderConsent: boolean}", () => {
     expect(reminderConsentSchema.parse({ granted: true })).toEqual({
       granted: true,
@@ -65,7 +65,7 @@ describe("the reminder-consent contract (ADR-0082 decision 2)", () => {
   });
 });
 
-describe("the detach-email contract (ADR-0082 decision 3)", () => {
+describe("the detach-email contract (ADR-0082 decision 4)", () => {
   it("T-CORE-S118: only the literal {confirm: true} passes, and the response is the literal {detached: true}", () => {
     expect(accountDetachEmailSchema.parse({ confirm: true })).toEqual({
       confirm: true,

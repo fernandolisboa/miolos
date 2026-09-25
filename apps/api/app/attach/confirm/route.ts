@@ -173,6 +173,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       userId: resolved.winnerId,
       email: claimed.email,
       reminderConsent: claimed.reminderConsent,
+      tokenCreatedAt: claimed.createdAt,
     });
   } catch (error) {
     if (isVerifiedEmailUniqueViolation(error)) {

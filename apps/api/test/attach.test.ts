@@ -16,6 +16,7 @@ import {
 } from "vitest";
 
 import { POST as detachPost } from "../app/account/detach-email/route";
+import { POST as reminderPost } from "../app/account/reminder-consent/route";
 import { POST as confirmPost } from "../app/attach/confirm/route";
 import { POST as dismissPost } from "../app/attach/dismiss/route";
 import { POST as requestPost } from "../app/attach/request/route";
@@ -874,5 +875,48 @@ describe("removing the email resets no attach limit and revives no link (#36, AD
     expect(late.status).toBe(410);
     expect(await late.json()).toEqual({ error: "invalid-or-expired" });
     expect((await userRow(userId)).email).toBeNull();
+  });
+});
+
+describe("withdrawal marks outlive a re-attach (#36, ADR-0082)", () => {
+  it("T-API-S215: a link minted before a detach stays refused after the player attaches again", async () => {
+    const { token } = await createSession();
+    const session = cookieTokenOf(
+      await postConfirm(await requestMagicLink(token)),
+    );
+    const stale = await requestMagicLink(session);
+    expect((await postDetach(session)).status).toBe(200);
+    const reattached = await postConfirm(await requestMagicLink(session));
+    expect(reattached.status).toBe(200);
+
+    const late = await postConfirm(stale);
+    expect(late.status).toBe(410);
+    expect(await late.json()).toEqual({ error: "invalid-or-expired" });
+  });
+
+  it("T-API-S216: a ticked link minted before the reminder was unticked in Ajustes grants no reminder when confirmed later", async () => {
+    const { token, userId } = await createSession();
+    const ticked = { ...VALID_BODY, reminderConsent: true };
+    const first = await requestMagicLink(token, ticked);
+    const second = await requestMagicLink(token, ticked);
+    const session = cookieTokenOf(await postConfirm(first));
+    expect((await userRow(userId)).reminderConsentAt).toBeInstanceOf(Date);
+
+    const untick = await reminderPost(
+      new NextRequest("http://localhost:3001/account/reminder-consent", {
+        method: "POST",
+        headers: jsonHeaders(session),
+        body: JSON.stringify({ granted: false }),
+      }),
+    );
+    expect(untick.status).toBe(200);
+
+    expect((await postConfirm(second)).status).toBe(200);
+    expect((await userRow(userId)).reminderConsentAt).toBeNull();
+    const grants = await ctx.db.execute(
+      sql`select count(*)::int as n from consent_events
+           where user_id = ${userId} and consent = 'reminder' and action = 'granted'`,
+    );
+    expect(grants.rows[0]?.["n"]).toBe(1);
   });
 });

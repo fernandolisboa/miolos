@@ -49,7 +49,6 @@ export async function grantReminderConsent(
     ), changed as (
       update users u
          set reminder_consent_at = now(),
-             reminder_consent_withdrawn_at = null,
              updated_at = now()
         from target t
        where u.id = t.id and t.reminder_consent_at is null
