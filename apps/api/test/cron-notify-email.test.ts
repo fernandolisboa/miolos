@@ -4,6 +4,7 @@ import { notificationSends } from "@miolos/db/user";
 import { createTestDb } from "@miolos/db/testing";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { detachEmail, withdrawReminderConsent } from "../src/account/service";
 import type { ReminderSend } from "../src/email/transport";
 import { runNotifyTick } from "../src/notify/dispatcher";
 import type { NudgeSend, SendResult } from "../src/notify/transport";
@@ -209,5 +210,23 @@ describe("runNotifyTick — the email arm (#199, ADR-0083)", () => {
     });
     expect(calls.sort()).toEqual(["ana@example.org", "bia@example.org"]);
     expect(await ledger()).toHaveLength(2);
+  });
+});
+
+describe("the email arm after a withdrawal in Ajustes (#36, ADR-0082)", () => {
+  it("T-API-S208: a withdrawn reminder consent and a detached email are skipped; a consent holder beside them is emailed", async () => {
+    const kept = await createReminderUser("ana@example.org");
+    const withdrawn = await createReminderUser("bia@example.org");
+    const detached = await createReminderUser("cris@example.org");
+    for (const userId of [kept, withdrawn, detached]) {
+      await insertCompletion(userId, daysBack(1));
+    }
+    await withdrawReminderConsent(ctx.db, withdrawn);
+    expect(await detachEmail(ctx.db, detached)).toBe(true);
+
+    const email = fakeEmail();
+    const result = await tick(fakePush().send, email.send);
+    expect(result.email.candidates).toBe(1);
+    expect(email.calls).toEqual([{ to: "ana@example.org", streak: 1 }]);
   });
 });
