@@ -21,6 +21,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -77,18 +78,22 @@ describe("the streak reminder email (#199, ADR-0083)", () => {
     expect(unkeyed).toHaveLength(0);
   });
 
-  it("T-API-S193a: a 429 waits and retries once — a second 429 counts as not sent", async () => {
+  it("T-API-S193a: a 429 waits a second and retries once; a second 429 counts as not sent", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.useFakeTimers();
+
     const retried = stubResend(429, 200);
-    expect(await sendReminderEmail({ to: "ana@example.org", streak: 2 })).toBe(
-      true,
-    );
+    const delivered = sendReminderEmail({ to: "ana@example.org", streak: 2 });
+    await vi.advanceTimersByTimeAsync(999);
+    expect(retried).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await delivered).toBe(true);
     expect(retried).toHaveLength(2);
 
     const limited = stubResend(429, 429);
-    expect(await sendReminderEmail({ to: "ana@example.org", streak: 2 })).toBe(
-      false,
-    );
+    const refused = sendReminderEmail({ to: "ana@example.org", streak: 2 });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await refused).toBe(false);
     expect(limited).toHaveLength(2);
-  }, 10_000);
+  });
 });

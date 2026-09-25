@@ -48,6 +48,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -228,7 +229,6 @@ describe("POST /cron/notify — the route wires the real Resend transport (#199)
 
     const response = await POST(notifyRequest(`Bearer ${SECRET}`));
     const body = cronNotifyResponseSchema.parse(await response.json());
-    vi.unstubAllGlobals();
 
     expect(body.email).toEqual({
       candidates: 1,
