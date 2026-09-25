@@ -1,6 +1,6 @@
 # ADR-0082 — Settings withdraws consent with timestamps; removing the email is the recovery withdrawal
 
-**Status:** Proposed — 2026-09-24 (issue #36, second PR)
+**Status:** Accepted — 2026-09-25 (issue #36, second PR)
 **Depends on:** [ADR-0012](./0012-minimal-lgpd-ships-with-email-attach.md), [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md), [ADR-0081](./0081-the-reminder-switch-is-player-started-not-an-ask.md)
 **Amends:** [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md) decision 7 — *"no explicit flag columns in v1, because no withdrawal surface exists in v1"* and *"reminderConsent … stamped on the winner at confirm only when true"*. `/ajustes` is that withdrawal surface; the *_consent_at columns keep their meaning (NULL = no consent) unchanged, but consent can now also end after having been given, which needs its own timestamp.
 

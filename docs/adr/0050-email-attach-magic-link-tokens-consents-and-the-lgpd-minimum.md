@@ -1,7 +1,7 @@
 # ADR-0050 — Email attach: magic-link tokens, verified-email uniqueness, consents, and the LGPD minimum
 
 **Status:** Accepted — 2026-08-13 (issue #21, shipped in #88)
-**Amended by:** [ADR-0083](./0083-the-email-hedge-is-a-second-arm-of-the-one-tick.md) — discharges decision 11's revisit trigger (#32's send infrastructure)
+**Amended by:** [ADR-0083](./0083-the-email-hedge-is-a-second-arm-of-the-one-tick.md) — discharges decision 11's revisit trigger (#32's send infrastructure); [ADR-0082](./0082-settings-withdraws-consent-with-timestamps-removing-the-email-is-the-recovery-withdrawal.md) — decision 7: consent can now be withdrawn in Ajustes, with a timestamp per consent
 **Depends on:** ADR-0003, ADR-0009, ADR-0012, ADR-0013, ADR-0022, ADR-0025, ADR-0026, ADR-0048, ADR-0049
 **Amends:** the tombstoning consequence of
 [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md)

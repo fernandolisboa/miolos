@@ -39,9 +39,11 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S121` | `S120` | never used |
 | `T-DB` | `S96` | `S95` | `T-DB-21` |
-| `T-API` | `S203` | `S202` | `T-API-16` |
-| `T-WEB` | `S406` | `S405` | `T-WEB-23` |
+| `T-API` | `S209` | `S208` | `T-API-16` |
+| `T-WEB` | `S410` | `S409` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
+
+#36 PR B (consent withdrawal, ADR-0082) spent its reservation `T-CORE-S117` (reminder-consent contract) and `S118` (detach contract), and `T-DB-S90` (the two withdrawal columns); `T-DB-S91` is **burned**, unspent. It spent `T-API-S203` (the promoted preamble keeps the push route's 403-before-503), `S204` (the preamble's rejections on both new routes), `S205` (withdraw), `S206` (re-grant and the 409), `S207` (detach) and `S208` (#199's email arm skips both), and `T-WEB-S406` (the account write clients), `S407` (the checkbox), `S408` (the detach confirm) and `S409` (the policy names Ajustes). Re-derived by the two-stage grep.
 
 #199 (the email hedge, ADR-0083) spent `T-CORE-S119` (per-channel notify response) and `S120` (`streakReminderSchema`); `T-DB-S92` (email candidate), `S93` (the hedge: a subscription excludes), `S94` (no consent, unverified, tombstone) and `S95` (per-channel ledger), leaving `T-CORE-S116…S118` and `T-DB-S90`/`S91` to #36's reservation; `T-API-S189` (claim before send, `computeStreak`'s number), `S190` (dual consent gets push only), `S191` (all subscriptions pruned, then emailed), `S192` (once per day, a failure is not retried), `S193` (copy and transport), `S193a` (one retry after a 429), `S194` (503 without Resend) and `S195` (the route wires the real transport).
 
