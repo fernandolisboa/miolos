@@ -86,6 +86,24 @@ export async function apiPostRaw(
   return await apiSend("POST", path, body, absence);
 }
 
+export async function apiPostParsed<T>(
+  path: string,
+  body: unknown,
+  schema: ZodType<T>,
+  absence: string,
+): Promise<T | undefined> {
+  const response = await apiPostRaw(path, body, absence);
+  if (!response?.ok) {
+    return undefined;
+  }
+  try {
+    const parsed = schema.safeParse(await response.json());
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function apiPost(
   path: string,
   body: unknown,

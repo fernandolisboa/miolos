@@ -39,6 +39,9 @@ const accountClient = vi.hoisted(() => ({
         { email: string | null; reminderConsent: boolean } | undefined
       >
     >(),
+  setReminderConsent:
+    vi.fn<(granted: boolean) => Promise<boolean | undefined>>(),
+  detachAccountEmail: vi.fn<() => Promise<boolean>>(),
 }));
 vi.mock("../src/account/account-client", () => accountClient);
 
@@ -402,5 +405,113 @@ describe("the hub and the policy point at Ajustes (T-WEB-S404)", () => {
     expect(hub).toContain(`href="${routes.settings}"`);
     expect(hub).toContain(messages.hoje.links.settings);
     expect(messages.privacy.collected.push).toContain(messages.settings.title);
+  });
+});
+
+function attachedAccount(reminderConsent: boolean): void {
+  accountClient.fetchAccountState.mockResolvedValue({
+    email: "jogadora@example.com",
+    reminderConsent,
+  });
+}
+
+async function reminderCheckbox(): Promise<HTMLElement> {
+  return await screen.findByRole("checkbox", {
+    name: messages.attach.reminderLabel,
+  });
+}
+
+describe("the email-reminder checkbox (T-WEB-S407)", () => {
+  it("shows only with an email attached, reuses the attach form's consent label, and is checked from reminderConsent", async () => {
+    accountClient.fetchAccountState.mockResolvedValue({
+      email: null,
+      reminderConsent: false,
+    });
+    const none = render(<AccountSection />);
+    await screen.findByText(messages.settings.account.none);
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    none.unmount();
+
+    attachedAccount(true);
+    const on = render(<AccountSection />);
+    expect(await reminderCheckbox()).toBeChecked();
+    on.unmount();
+
+    attachedAccount(false);
+    render(<AccountSection />);
+    expect(await reminderCheckbox()).not.toBeChecked();
+  });
+
+  it("a change calls the endpoint and takes the server's answer; a failure keeps the old state and shows the error", async () => {
+    attachedAccount(true);
+    accountClient.setReminderConsent.mockResolvedValue(false);
+    render(<AccountSection />);
+    fireEvent.click(await reminderCheckbox());
+    await waitFor(async () => {
+      expect(await reminderCheckbox()).not.toBeChecked();
+    });
+    expect(accountClient.setReminderConsent).toHaveBeenCalledWith(false);
+    expect(
+      screen.queryByText(messages.settings.account.reminderError),
+    ).toBeNull();
+
+    accountClient.setReminderConsent.mockResolvedValue(undefined);
+    fireEvent.click(await reminderCheckbox());
+    expect(
+      await screen.findByText(messages.settings.account.reminderError),
+    ).toBeInTheDocument();
+    expect(accountClient.setReminderConsent).toHaveBeenLastCalledWith(true);
+    expect(await reminderCheckbox()).not.toBeChecked();
+    expect(await reminderCheckbox()).toBeEnabled();
+  });
+});
+
+describe("removing the email takes an explicit confirm (T-WEB-S408)", () => {
+  const detach = messages.settings.account.detach;
+
+  it("nothing is sent before the confirm, cancel goes back, and a confirmed detach shows the no-email state", async () => {
+    attachedAccount(true);
+    accountClient.detachAccountEmail.mockResolvedValue(true);
+    render(<AccountSection />);
+
+    fireEvent.click(await screen.findByRole("button", { name: detach.start }));
+    expect(screen.getByText(detach.confirmTitle)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: detach.cancel }));
+    expect(screen.queryByText(detach.confirmTitle)).toBeNull();
+    expect(accountClient.detachAccountEmail).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: detach.start }));
+    fireEvent.click(screen.getByRole("button", { name: detach.confirm }));
+    expect(
+      await screen.findByText(messages.settings.account.none),
+    ).toBeInTheDocument();
+    expect(screen.getByText(detach.done)).toBeInTheDocument();
+    expect(accountClient.detachAccountEmail).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("jogadora@example.com")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("a failed detach keeps the email and shows the error with a retry", async () => {
+    attachedAccount(false);
+    accountClient.detachAccountEmail.mockResolvedValue(false);
+    render(<AccountSection />);
+
+    fireEvent.click(await screen.findByRole("button", { name: detach.start }));
+    fireEvent.click(screen.getByRole("button", { name: detach.confirm }));
+    expect(await screen.findByText(detach.error)).toBeInTheDocument();
+    expect(screen.getByText("jogadora@example.com")).toBeInTheDocument();
+
+    accountClient.detachAccountEmail.mockResolvedValue(true);
+    fireEvent.click(screen.getByRole("button", { name: detach.confirm }));
+    expect(
+      await screen.findByText(messages.settings.account.none),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the policy names Ajustes as where the email is removed (T-WEB-S409)", () => {
+  it("the recovery line points at Ajustes, and the reminder line at its checkbox", () => {
+    expect(messages.privacy.why.recovery).toContain(messages.settings.title);
+    expect(messages.privacy.why.reminder).toContain(messages.settings.title);
   });
 });

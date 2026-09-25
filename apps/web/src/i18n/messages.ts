@@ -411,7 +411,7 @@ export const messages = {
     why: {
       heading: "Para que usamos",
       recovery:
-        "O e-mail existe para recuperar e mover a sua sequência — se você limpar o navegador ou trocar de aparelho, ele é o caminho de volta.",
+        "O e-mail existe para recuperar e mover a sua sequência — se você limpar o navegador ou trocar de aparelho, ele é o caminho de volta. Para desvincular, remova o e-mail em Ajustes: sem ele, os lembretes por e-mail também param.",
       reminder:
         "Lembretes de sequência em risco só chegam por e-mail se você marcar o consentimento próprio para isso — e ele vem desmarcado. Se algum aparelho da sua conta recebe o lembrete no navegador, o e-mail não é enviado. Para parar, desmarque o lembrete por e-mail em Ajustes.",
     },
@@ -518,6 +518,18 @@ export const messages = {
       attached: "E-mail vinculado a esta conta:",
       none: "Sua conta não tem e-mail. Sem ele, não dá para recuperar a sua sequência em outro aparelho.",
       unavailable: "Não conseguimos carregar os dados da conta agora.",
+      reminderError: "Não deu certo agora. Tente de novo em instantes.",
+      detach: {
+        start: "Remover e-mail",
+        confirmTitle: "Remover o e-mail desta conta?",
+        confirmBody:
+          "Sem ele, não dá para recuperar a sua sequência em outro aparelho, e os lembretes por e-mail param. A conta, a sequência e o histórico continuam aqui.",
+        confirm: "Sim, remover",
+        cancel: "Cancelar",
+        removing: "Removendo…",
+        done: "E-mail removido.",
+        error: "Não foi possível remover agora. Tente de novo.",
+      },
     },
     deletion: {
       heading: "Excluir conta",
