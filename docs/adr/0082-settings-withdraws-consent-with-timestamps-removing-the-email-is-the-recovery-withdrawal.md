@@ -10,13 +10,13 @@ ADR-0050 decision 7 left `recoveryConsentAt` / `reminderConsentAt` as timestamp-
 
 ## Decision
 
-1. **Live state stays on `users`.** `*_consent_at` (NULL = no consent) and two new nullable columns, `recovery_consent_withdrawn_at` and `reminder_consent_withdrawn_at`. The dispatcher and #199's email arm read `reminder_consent_at` and `email` unchanged.
+1. **Live state stays on `users`.** A consent is active when `*_consent_at` is not NULL. Two new nullable columns, `recovery_consent_withdrawn_at` and `reminder_consent_withdrawn_at`, are high-water marks: stamped at each withdrawal, never cleared. The dispatcher and #199's email arm read `reminder_consent_at` and `email` unchanged.
 2. **History is an append-only table, `consent_events`** (`user_id` FK cascade, `consent` in `recovery | reminder`, `action` in `granted | withdrawn`, DB-side `at`). Every real transition writes one row in the same statement as the state change; an idempotent repeat writes none. Writers: `attachEmailToUser`, `grantReminderConsent`, `withdrawReminderConsent`, `detachEmail`. Migration 0013 backfills one `granted` event per consent held before the log existed.
-3. **`POST /account/reminder-consent { granted }`** sets the email-reminder consent. It is not the per-device reminder switch (ADR-0081). A withdrawal nulls `reminder_consent_at` and stamps the withdrawn column. A grant stamps `reminder_consent_at` and clears the withdrawn column, only when an email is attached; otherwise `409 no-email`.
+3. **`POST /account/reminder-consent { granted }`** sets the email-reminder consent. It is not the per-device reminder switch (ADR-0081). A withdrawal nulls `reminder_consent_at` and stamps the withdrawn column. A grant stamps `reminder_consent_at`, only when an email is attached; otherwise `409 no-email`.
 4. **`POST /account/detach-email { confirm: true }`** nulls `email`, `email_verified_at` and both consents; stamps the withdrawn column and writes a `withdrawn` event only for a consent that was set; stamps `attach_prompt_dismissed_at` if it was not already set. It keeps `attach_tokens`, which are the ledger of the two hourly attach caps; `claimAttachToken` refuses a token minted at or before `recovery_consent_withdrawn_at`. Sessions are kept: detaching is a consent withdrawal, not an account deletion.
-5. **Attach grants only what is not held.** `attachEmailToUser` keeps an existing consent instant (`coalesce`) and logs a grant only for a consent that was NULL, so a repeat confirm or a holder-wins merge adds nothing. It clears `recovery_consent_withdrawn_at`, and `reminder_consent_withdrawn_at` when the reminder is ticked.
+5. **Attach grants only what is not held.** `attachEmailToUser` keeps an existing consent instant (`coalesce`) and logs a grant only for a consent that was NULL, so a repeat confirm or a holder-wins merge adds nothing. A token's reminder consent applies only when the token is newer than `reminder_consent_withdrawn_at`, so a link ticked before an untick in Ajustes grants nothing.
 6. **A merge moves no events.** ADR-0050 decision 8 keeps the loser's consent timestamps on the tombstone as evidence, never copied; its `consent_events` rows stay beside them.
-7. **No telemetry.** ADR-0069 decision 6 keeps `notification_opt_in` for browser push only.
+7. **No telemetry.** ADR-0069 decision 4 keeps `notification_opt_in` for browser push only.
 
 ## Rejected
 
