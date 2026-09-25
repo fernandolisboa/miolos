@@ -2,26 +2,29 @@
 
 **Status:** Accepted — 2026-09-25 (issue #36, second PR)
 **Depends on:** [ADR-0012](./0012-minimal-lgpd-ships-with-email-attach.md), [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md), [ADR-0081](./0081-the-reminder-switch-is-player-started-not-an-ask.md)
-**Amends:** [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md) decision 7 — *"no explicit flag columns in v1, because no withdrawal surface exists in v1"* and *"reminderConsent … stamped on the winner at confirm only when true"*. `/ajustes` is that withdrawal surface; the *_consent_at columns keep their meaning (NULL = no consent) unchanged, but consent can now also end after having been given, which needs its own timestamp.
+**Amends:** [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md) decision 7 — *"no explicit flag columns in v1, because no withdrawal surface exists in v1"* and *"reminderConsent … stamped on the winner at confirm only when true"*. `/ajustes` is that withdrawal surface. The `*_consent_at` columns keep their meaning (NULL = no consent), but consent can now end after it was given, and be given again.
 
 ## Context
 
-ADR-0050 decision 7 left `recoveryConsentAt` / `reminderConsentAt` as timestamp-only flags because nothing could withdraw them. Issue #36's second PR adds that surface: turning the email reminder off in `/ajustes`, and removing the attached email. Both need a "when withdrawn" fact the dispatcher and #199's email hedge do not currently have any column for, and neither may lose the original consent instant — it stays evidence of what was granted and when.
+ADR-0050 decision 7 left `recoveryConsentAt` / `reminderConsentAt` as timestamp-only flags because nothing could withdraw them. Issue #36's second PR adds that surface: turning the email reminder off in `/ajustes`, and removing the attached email. Once consent can be withdrawn and re-granted, a single column per consent is overwritten on every change, so a past grant could no longer be proven. It must stay evidence of what was granted and when.
 
 ## Decision
 
-1. **Two nullable columns on `users`:** `recovery_consent_withdrawn_at`, `reminder_consent_withdrawn_at`. `*_consent_at` keeps meaning NULL = no consent; the dispatcher and #199 read it unchanged.
-2. **`POST /account/reminder-consent { granted: boolean }`** sets the email-reminder consent. It is not the per-device reminder switch (ADR-0081), which is browser push. `granted: false` nulls `reminder_consent_at` and stamps `reminder_consent_withdrawn_at`. `granted: true` re-grants — stamps `reminder_consent_at`, clears the withdrawn column — only when an email is attached; with no attached email it answers `409`, since a reminder consent needs an address to send to.
-3. **`POST /account/detach-email`** nulls `email`, `email_verified_at`, `recovery_consent_at` and `reminder_consent_at`; stamps `recovery_consent_withdrawn_at` and `reminder_consent_withdrawn_at`, but only the columns whose consent was actually set — detaching an email that never carried a reminder consent does not fabricate a withdrawal instant for one. It also stamps `attach_prompt_dismissed_at`, so the attach prompt does not return for a player who just removed the email on purpose. Sessions are kept: detaching is a consent withdrawal, not an account deletion.
-4. **Re-granting is a new grant.** It stamps a fresh `reminder_consent_at`. It fires no telemetry: ADR-0069 decision 4 keeps `notification_opt_in` for browser push only.
+1. **Live state stays on `users`.** `*_consent_at` (NULL = no consent) and two new nullable columns, `recovery_consent_withdrawn_at` and `reminder_consent_withdrawn_at`. The dispatcher and #199's email arm read `reminder_consent_at` and `email` unchanged.
+2. **History is an append-only table, `consent_events`** (`user_id` FK cascade, `consent` in `recovery | reminder`, `action` in `granted | withdrawn`, DB-side `at`). Every real transition writes one row in the same statement as the state change; an idempotent repeat writes none. Writers: `attachEmailToUser` (a recovery grant, plus a reminder grant when ticked), `grantReminderConsent`, `withdrawReminderConsent`, `detachEmail`.
+3. **`POST /account/reminder-consent { granted }`** sets the email-reminder consent. It is not the per-device reminder switch (ADR-0081). A withdrawal nulls `reminder_consent_at` and stamps the withdrawn column. A grant stamps `reminder_consent_at` and clears the withdrawn column, only when an email is attached; otherwise `409 no-email`.
+4. **`POST /account/detach-email { confirm: true }`** nulls `email`, `email_verified_at` and both consents; stamps the withdrawn column and writes a `withdrawn` event only for a consent that was set; deletes the user's unspent attach tokens; stamps `attach_prompt_dismissed_at` if it was not already set. Sessions are kept: detaching is a consent withdrawal, not an account deletion.
+5. **Attaching again is a new grant.** `attachEmailToUser` clears `recovery_consent_withdrawn_at`, and clears `reminder_consent_withdrawn_at` when the reminder is ticked.
+6. **A merge moves no events.** ADR-0050 decision 8 keeps the loser's consent timestamps on the tombstone as evidence, never copied; its `consent_events` rows stay beside them.
+7. **No telemetry.** ADR-0069 decision 6 keeps `notification_opt_in` for browser push only.
 
 ## Rejected
 
-- **Boolean flag columns (`recoveryConsentWithdrawn: boolean`).** Loses *when* — the dispatcher and any future audit need the instant, not just the fact, and a boolean throws away exactly the information a timestamp column costs nothing extra to keep.
-- **Deleting the consent history on withdrawal.** Overwriting `*_consent_at` to NULL without a withdrawn timestamp would make a past grant unprovable later, which is worse for an LGPD-facing record than keeping both.
+- **Last state only** (the `*_consent_at` and `*_withdrawn_at` columns alone). Each re-grant or withdrawal overwrites the one before it, so a grant followed by a withdrawal and a re-grant leaves no proof of the first grant.
+- **Boolean flag columns.** They lose *when*, which the timestamp columns keep at no extra cost.
 
 ## Consequences
 
-- The migration adds two nullable columns; nothing reads them until this PR ships, so it is safe to apply ahead of the PR (`docs/pending-fernando.md` §2).
-- `POST /account/detach-email` is the recovery-consent withdrawal path in full: no separate "remove just the reminder" and "remove just the email" split — the email is the recovery consent's substance (ADR-0012), so removing it withdraws both consents it carries.
-- A player who re-attaches an email after detaching starts a clean consent cycle: new `recovery_consent_at`, and the email-reminder consent reads off until the player turns it on again.
+- Two migrations: 0012 (the withdrawn columns) and 0013 (`consent_events`). Both are additive. Both must reach production before this PR is pushed; see the ledger's Done rows for migrations 0012 and 0013.
+- Removing the email withdraws both consents it carries. The email is the recovery consent's substance (ADR-0012), and the reminder has no address left.
+- A player who removed the email can attach one again from the Ajustes no-email state, which renders the attach form with no eligibility read. The hub card stays dismissed. Re-attaching starts a new cycle: a fresh recovery grant, and the email reminder only if ticked.

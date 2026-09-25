@@ -38,12 +38,12 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
 | `T-CORE` | `S121` | `S120` | never used |
-| `T-DB` | `S96` | `S95` | `T-DB-21` |
-| `T-API` | `S209` | `S208` | `T-API-16` |
-| `T-WEB` | `S410` | `S409` | `T-WEB-23` |
+| `T-DB` | `S98` | `S97` | `T-DB-21` |
+| `T-API` | `S212` | `S211` | `T-API-16` |
+| `T-WEB` | `S414` | `S413` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
 
-#36 PR B (consent withdrawal, ADR-0082) spent its reservation `T-CORE-S117` (reminder-consent contract) and `S118` (detach contract), and `T-DB-S90` (the two withdrawal columns); `T-DB-S91` is **burned**, unspent. It spent `T-API-S203` (the promoted preamble keeps the push route's 403-before-503), `S204` (the preamble's rejections on both new routes), `S205` (withdraw), `S206` (re-grant and the 409), `S207` (detach) and `S208` (#199's email arm skips both), and `T-WEB-S406` (the account write clients), `S407` (the checkbox), `S408` (the detach confirm) and `S409` (the policy names Ajustes). Re-derived by the two-stage grep.
+#36 PR B (consent withdrawal, ADR-0082) spent its reservation `T-CORE-S117` (reminder-consent contract) and `S118` (detach contract), and `T-DB-S90` (the two withdrawal columns); `T-DB-S91` is **burned**, unspent. It spent `T-API-S203` (the promoted preamble keeps the push route's 403-before-503), `S204` (the preamble's rejections on both new routes), `S205` (withdraw), `S206` (re-grant and the 409), `S207` (detach) and `S208` (#199's email arm skips both), and `T-WEB-S406` (the account write clients), `S407` (the checkbox), `S408` (the detach confirm) and `S409` (the policy names Ajustes). Its review round added `T-DB-S96` (`consent_events`) and `S97` (a merge moves no events), `T-API-S209` (grant, withdraw, grant logs three events), `S210` (detach logs only set consents, drops attach tokens) and `S211` (attach logs grants, clears withdrawals), and `T-WEB-S410` (a 409 no-email is a finished detach), `S411` (disabled while pending), `S412` (a failure re-reads the account) and `S413` (attach again from Ajustes).
 
 #199 (the email hedge, ADR-0083) spent `T-CORE-S119` (per-channel notify response) and `S120` (`streakReminderSchema`); `T-DB-S92` (email candidate), `S93` (the hedge: a subscription excludes), `S94` (no consent, unverified, tombstone) and `S95` (per-channel ledger), leaving `T-CORE-S116…S118` and `T-DB-S90`/`S91` to #36's reservation; `T-API-S189` (claim before send, `computeStreak`'s number), `S190` (dual consent gets push only), `S191` (all subscriptions pruned, then emailed), `S192` (once per day, a failure is not retried), `S193` (copy and transport), `S193a` (one retry after a 429), `S194` (503 without Resend) and `S195` (the route wires the real transport).
 
@@ -63,8 +63,8 @@ and **`T-WEB-S390…S405`**, plus dark siblings `T-WEB-S72a`, `S73a`, `S299a`,
 `S300a`, `S301a`; `T-WEB-S131` was re-founded in place (the viewport
 `themeColor` is now a light/dark pair). It left `T-API-S189…S199` and
 `T-WEB-S379…S389` to #199, which spent `T-API-S189…S195`; `T-API-S196…S199`
-and `T-WEB-S379…S389` are **burned**, never reused. `T-CORE-S117`/`S118` and
-`T-DB-S90`/`S91` stay reserved for #36's second PR.
+and `T-WEB-S379…S389` are **burned**, never reused. #36's second PR spent
+`T-CORE-S117`/`S118` and `T-DB-S90`, and burned `T-DB-S91` (paragraph above).
 
 #255 (with #201 and #257, ADR-0078) reserved **`T-WEB-S374…S377`** and
 **`T-LINT-S62…S65`**, contiguous, and spent all eight; its review round added
