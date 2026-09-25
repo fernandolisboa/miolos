@@ -9,4 +9,12 @@ CREATE TABLE "consent_events" (
 );
 --> statement-breakpoint
 ALTER TABLE "consent_events" ADD CONSTRAINT "consent_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "consent_events_user_id_idx" ON "consent_events" USING btree ("user_id");
+CREATE INDEX "consent_events_user_id_idx" ON "consent_events" USING btree ("user_id");--> statement-breakpoint
+INSERT INTO "consent_events" ("user_id", "consent", "action", "at")
+SELECT "id", 'recovery', 'granted', "recovery_consent_at" FROM "users" u
+WHERE "recovery_consent_at" IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM "consent_events" e WHERE e."user_id" = u."id" AND e."consent" = 'recovery')
+UNION ALL
+SELECT "id", 'reminder', 'granted', "reminder_consent_at" FROM "users" u
+WHERE "reminder_consent_at" IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM "consent_events" e WHERE e."user_id" = u."id" AND e."consent" = 'reminder');

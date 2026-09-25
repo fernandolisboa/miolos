@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -175,5 +177,54 @@ describe("consent_events (migration 0013, ADR-0082)", () => {
 
     await ctx.db.delete(users).where(eq(users.id, userId));
     expect(await ctx.db.select().from(consentEvents)).toEqual([]);
+  });
+});
+
+async function backfill(): Promise<void> {
+  const migration = await readFile(
+    new URL("../migrations/0013_last_mercury.sql", import.meta.url),
+    "utf8",
+  );
+  const statement = migration.split("--> statement-breakpoint").at(-1) ?? "";
+  expect(statement).toContain('INSERT INTO "consent_events"');
+  await ctx.db.execute(sql.raw(statement));
+}
+
+describe("migration 0013 backfills the consents that predate the log (ADR-0082)", () => {
+  it("T-DB-S98: one granted event per held consent, at its consent instant; a consent already logged, or none held, gets nothing; a re-run adds nothing", async () => {
+    const recoveryAt = new Date("2026-08-01T12:00:00.000Z");
+    const reminderAt = new Date("2026-08-02T12:00:00.000Z");
+    const both = await createUser();
+    await ctx.db
+      .update(users)
+      .set({ recoveryConsentAt: recoveryAt, reminderConsentAt: reminderAt })
+      .where(eq(users.id, both));
+    const logged = await createUser();
+    await ctx.db
+      .update(users)
+      .set({ recoveryConsentAt: recoveryAt })
+      .where(eq(users.id, logged));
+    await ctx.db
+      .insert(consentEvents)
+      .values({ userId: logged, consent: "recovery", action: "granted" });
+    const none = await createUser();
+
+    await backfill();
+    await backfill();
+
+    const rows = await ctx.db
+      .select()
+      .from(consentEvents)
+      .orderBy(consentEvents.consent);
+    const of = (userId: string) =>
+      rows
+        .filter((row) => row.userId === userId)
+        .map((row) => [row.consent, row.action, row.at.toISOString()]);
+    expect(of(both)).toEqual([
+      ["recovery", "granted", recoveryAt.toISOString()],
+      ["reminder", "granted", reminderAt.toISOString()],
+    ]);
+    expect(of(logged)).toHaveLength(1);
+    expect(of(none)).toEqual([]);
   });
 });
