@@ -5,19 +5,19 @@
 
 ## Context
 
-Issue #36 adds `/ajustes`, with a per-device push switch and the account's attached email. The invariant says the reminder opt-in is *requested* after a 3-day streak; ADR-0064 decision 3 makes that threshold gate the ask (the conclusion card), never a send. ADR-0064 decision 10 annotation (b) and ADR-0068 decision 6 deferred the `pushsubscriptionchange` handler to this ticket and named the toggle the re-ask surface. Four calls were open: whether the toggle waits for the threshold, how "off" orders its two writes, whether the worker gains the handler, and whether the email is masked.
+Issue #36 adds `/ajustes`, with a per-device reminder switch (browser push) and the account's attached email. The invariant says the reminder opt-in is *requested* after a 3-day streak; ADR-0064 decision 3 makes that threshold gate the ask (the conclusion card), never a send. ADR-0064 decision 10 annotation (b) and ADR-0068 decision 6 deferred the `pushsubscriptionchange` handler to this ticket, as the way back for an install that lost its subscription. Four calls were open: whether the switch waits for the threshold, how "off" orders its two writes, whether the worker gains the handler, and whether the email is masked.
 
 ## Decision
 
 1. **The switch is not an ask, so it works from day one.** The player starts it; nothing prompts them. `ReminderSection` (`apps/web/app/ajustes/reminder-section.tsx`) reads `vapidPublicKey` from `GET /notifications/state` and ignores `eligible`. A null key means unsupported, as for the card.
 2. **Its state is the browser's.** Feature support, `Notification.permission` and `pushManager.getSubscription()` decide unsupported, blocked, off or on. Turning on calls the same `subscribeAndStore` as the card (`apps/web/src/push/subscribe.ts`); only the card stamps `dismissPushPrompt` on a denial, because the switch is not the prompt's lifecycle.
 3. **Off is `DELETE /push/subscriptions` first, then `unsubscribe()`** (`unsubscribeAndForget`). If the DELETE fails the switch stays on with an error: the browser keeps a subscription the server still holds, which is honest. If `unsubscribe()` fails after the DELETE it is retried once, then the switch reads off with an error: the server no longer sends, which is what the player asked for.
-4. **No `pushsubscriptionchange` handler.** This confirms ADR-0064 decision 10 annotation (b) and ADR-0068 decision 6: T-WEB-S261's listener set stays; a granted install that lost its subscription reads off here and is re-asked by the toggle; 404/410 pruning keeps the table honest.
+4. **No `pushsubscriptionchange` handler.** This confirms ADR-0064 decision 10 annotation (b) and ADR-0068 decision 6: T-WEB-S261's listener set stays; a granted install that lost its subscription reads off here and the player turns it on again; 404/410 pruning keeps the table honest.
 5. **The attached email is shown in full** (`GET /account/state`). The session cookie already is the account and can delete it, so masking protects nothing from whoever holds the device.
 
 ## Rejected
 
-- **Gating the toggle on `eligible`.** It would hide the off switch from a subscribed player whose streak fell, and re-ask nobody.
+- **Gating the switch on `eligible`.** It would hide the off switch from a subscribed player whose streak fell, and protect nobody.
 - **Unsubscribe first, then DELETE.** A failed DELETE would leave a server row the dispatcher keeps sending to, with no browser left to receive or remove it until pruning.
 - **A worker re-POST on `pushsubscriptionchange`.** A new credentialed network surface in a worker whose ADR-0004 argument is that it has none.
 

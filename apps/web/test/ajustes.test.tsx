@@ -204,7 +204,7 @@ describe("the theme radios read the stored choice and apply a new one (T-WEB-S40
     container.remove();
   });
 
-  it("checks the stored choice after mount and calls applyThemeChoice on change", () => {
+  it("checks the stored choice and calls applyThemeChoice on change", () => {
     theme.readThemeChoice.mockReturnValue("dark");
     render(<ThemeSection />);
 
@@ -274,6 +274,18 @@ describe("the reminder switch reads the browser and works from day one (T-WEB-S4
       screen.queryByText(messages.settings.push.installHint),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  it("a throwing getSubscription on a push-capable browser is an error, never the install hint", async () => {
+    installPushBrowser({ permission: "default", subscribed: false });
+    vi.mocked(navigator.serviceWorker.getRegistration).mockRejectedValue(
+      new Error("InvalidStateError"),
+    );
+    render(<ReminderSection />);
+    await settledPushState("error");
+    expect(
+      screen.queryByText(messages.settings.push.installHint),
+    ).not.toBeInTheDocument();
   });
 
   it("a denied permission is blocked, with the way to unblock it", async () => {

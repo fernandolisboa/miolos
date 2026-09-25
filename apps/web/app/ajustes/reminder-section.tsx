@@ -12,8 +12,9 @@ import {
 import { usePushState } from "../../src/push/use-push-state";
 import styles from "./page.module.css";
 
-type BrowserPush = "loading" | "unsupported" | "blocked" | "off" | "on";
-type View = BrowserPush | "error";
+type BrowserPush =
+  "loading" | "unsupported" | "blocked" | "off" | "on" | "error";
+type View = BrowserPush;
 
 async function readBrowserPush(): Promise<BrowserPush> {
   if (!browserSupportsPush()) {
@@ -51,7 +52,7 @@ export function ReminderSection() {
   useEffect(() => {
     let cancelled = false;
     void readBrowserPush()
-      .catch((): BrowserPush => "unsupported")
+      .catch((): BrowserPush => "error")
       .then((read) => {
         if (!cancelled) {
           setBrowser(read);
