@@ -4,7 +4,7 @@ import { listCompletionsForStreak } from "@miolos/db/user";
 import type { NextRequest } from "next/server";
 
 import { getAttachAccountState } from "../../../src/attach/service";
-import { isAttachConfigured } from "../../../src/email/transport";
+import { isEmailConfigured } from "../../../src/email/transport";
 import { authenticatedRead } from "../../../src/http/authenticated-read";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ function statePayload(eligible: boolean) {
 
 export function GET(request: NextRequest): Promise<Response> {
   return authenticatedRead(request, async (db, userId) => {
-    if (!isAttachConfigured()) {
+    if (!isEmailConfigured()) {
       return statePayload(false);
     }
     const account = await getAttachAccountState(db, userId);

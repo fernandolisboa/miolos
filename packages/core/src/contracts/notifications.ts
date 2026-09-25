@@ -40,6 +40,12 @@ export const pushNudgePayloadSchema = z.strictObject({
 });
 export type PushNudgePayload = z.infer<typeof pushNudgePayloadSchema>;
 
+export const streakReminderSchema = z.strictObject({
+  to: z.email(),
+  streak: z.number().int().min(1),
+});
+export type StreakReminder = z.infer<typeof streakReminderSchema>;
+
 export const notificationsDismissSchema = z.strictObject({});
 export type NotificationsDismissRequest = z.infer<
   typeof notificationsDismissSchema

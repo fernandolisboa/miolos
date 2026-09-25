@@ -204,6 +204,7 @@ export {
   pushSubscribeSchema,
   pushUnsubscribeResponseSchema,
   pushUnsubscribeSchema,
+  streakReminderSchema,
   type NotificationsDismissRequest,
   type NotificationsDismissResponse,
   type NotificationsStateResponse,
@@ -212,6 +213,7 @@ export {
   type PushSubscribeResponse,
   type PushUnsubscribeRequest,
   type PushUnsubscribeResponse,
+  type StreakReminder,
 } from "./contracts/notifications";
 export {
   TELEMETRY_EVENTS,

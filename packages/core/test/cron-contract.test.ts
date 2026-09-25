@@ -5,6 +5,7 @@ import {
   cronNotifyResponseSchema,
   cronPublishGameResultSchema,
   cronPublishResponseSchema,
+  streakReminderSchema,
   type BufferDepthResponse,
   type CronPublishGameResult,
   type CronPublishResponse,
@@ -195,45 +196,70 @@ describe("bufferDepthResponseSchema", () => {
   });
 });
 
-describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4)", () => {
+describe("cronNotifyResponseSchema (#146, ADR-0068 decision 4; per channel at #199, ADR-0083)", () => {
+  const tick = {
+    push: { candidates: 3, claimed: 2, sent: 2, pruned: 1, failed: 0 },
+    email: { candidates: 1, claimed: 1, sent: 1, failed: 0 },
+  };
+
   it("T-CORE-S107: strict — an unknown key, a missing counter, a negative and a fractional count are all rejected; a legal tick body round-trips", () => {
-    const tick = {
-      candidates: 3,
-      claimed: 2,
-      sent: 2,
-      pruned: 1,
-      failed: 0,
-    };
     expect(cronNotifyResponseSchema.parse(tick)).toEqual(tick);
 
     expect(
-      cronNotifyResponseSchema.parse({
-        candidates: 0,
-        claimed: 0,
-        sent: 0,
-        pruned: 0,
-        failed: 0,
-      }).sent,
-    ).toBe(0);
-
-    expect(
-      cronNotifyResponseSchema.safeParse({ ...tick, skipped: 1 }).success,
-    ).toBe(false);
-
-    expect(
       cronNotifyResponseSchema.safeParse({
-        candidates: 3,
-        claimed: 2,
-        sent: 2,
-        pruned: 1,
+        ...tick,
+        push: { ...tick.push, skipped: 1 },
       }).success,
     ).toBe(false);
 
     expect(
-      cronNotifyResponseSchema.safeParse({ ...tick, sent: -1 }).success,
+      cronNotifyResponseSchema.safeParse({
+        ...tick,
+        push: { candidates: 3, claimed: 2, sent: 2, pruned: 1 },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      cronNotifyResponseSchema.safeParse({
+        ...tick,
+        push: { ...tick.push, sent: -1 },
+      }).success,
     ).toBe(false);
     expect(
-      cronNotifyResponseSchema.safeParse({ ...tick, pruned: 1.5 }).success,
+      cronNotifyResponseSchema.safeParse({
+        ...tick,
+        push: { ...tick.push, pruned: 1.5 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("T-CORE-S119: both channels are required, email has no pruned counter, and the pre-#199 flat body no longer parses", () => {
+    expect(
+      cronNotifyResponseSchema.safeParse({ push: tick.push }).success,
+    ).toBe(false);
+    expect(
+      cronNotifyResponseSchema.safeParse({
+        ...tick,
+        email: { ...tick.email, pruned: 0 },
+      }).success,
+    ).toBe(false);
+    expect(cronNotifyResponseSchema.safeParse(tick.push).success).toBe(false);
+  });
+});
+
+describe("streakReminderSchema (#199, ADR-0083)", () => {
+  it("T-CORE-S120: an address and a streak of at least one day, nothing else", () => {
+    const reminder = { to: "ana@example.org", streak: 3 };
+    expect(streakReminderSchema.parse(reminder)).toEqual(reminder);
+    expect(
+      streakReminderSchema.safeParse({ ...reminder, streak: 0 }).success,
+    ).toBe(false);
+    expect(
+      streakReminderSchema.safeParse({ ...reminder, to: "not-an-address" })
+        .success,
+    ).toBe(false);
+    expect(
+      streakReminderSchema.safeParse({ ...reminder, body: "promo" }).success,
     ).toBe(false);
   });
 });

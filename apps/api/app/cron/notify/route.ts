@@ -4,6 +4,10 @@ import type { NextRequest } from "next/server";
 
 import { isAuthorized } from "../../../src/cron/auth";
 import { getDb } from "../../../src/db";
+import {
+  isEmailConfigured,
+  sendReminderEmail,
+} from "../../../src/email/transport";
 import { runNotifyTick } from "../../../src/notify/dispatcher";
 import { sendWebPush } from "../../../src/notify/transport";
 import { isPushConfigured } from "../../../src/push/config";
@@ -12,12 +16,17 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (!isAuthorized(request.headers.get("authorization"))) {
     return new Response(null, { status: 401 });
   }
-  if (!isPushConfigured()) {
+  if (!isPushConfigured() || !isEmailConfigured()) {
     return new Response(null, { status: 503 });
   }
   const db = getDb();
   const { today, hour } = await readTickInstant(db);
-  const result = await runNotifyTick(db, { today, hour, send: sendWebPush });
+  const result = await runNotifyTick(db, {
+    today,
+    hour,
+    sendPush: sendWebPush,
+    sendEmail: sendReminderEmail,
+  });
   console.log(JSON.stringify({ event: "cron-notify", today, hour, ...result }));
   return Response.json(cronNotifyResponseSchema.parse(result), {
     status: 200,

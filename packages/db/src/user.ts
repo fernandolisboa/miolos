@@ -18,6 +18,7 @@ export { getUserSince, listCompletionsForStats } from "./stats";
 export { listMedalGrants } from "./medals";
 export {
   claimNudgeSend,
+  listEmailNudgeCandidates,
   listPushNudgeCandidates,
   readTickInstant,
 } from "./notify";
