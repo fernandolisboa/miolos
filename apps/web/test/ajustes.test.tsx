@@ -278,7 +278,7 @@ describe("the reminder switch reads the browser and works from day one (T-WEB-S4
 
   it("a throwing getSubscription on a push-capable browser is an error, never the install hint", async () => {
     installPushBrowser({ permission: "default", subscribed: false });
-    vi.mocked(navigator.serviceWorker.getRegistration).mockRejectedValue(
+    vi.spyOn(navigator.serviceWorker, "getRegistration").mockRejectedValue(
       new Error("InvalidStateError"),
     );
     render(<ReminderSection />);
