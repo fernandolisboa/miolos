@@ -1,5 +1,4 @@
-/* Accent colours SHAPES only (ADR-0041): labels are --ink, the submit label
-   is --paper-card on --accent-app (6.2980:1, ADR-0041 decision 1's pair). */
+/* Accent colours shapes only — see ADR-0041. */
 
 .lead {
   margin: var(--space-2) 0 0;

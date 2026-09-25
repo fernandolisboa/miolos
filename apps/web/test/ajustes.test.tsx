@@ -472,6 +472,7 @@ describe("the email-reminder checkbox (T-WEB-S407)", () => {
       await screen.findByText(messages.settings.account.reminderError),
     ).toBeInTheDocument();
     expect(accountClient.setReminderConsent).toHaveBeenLastCalledWith(true);
+    expect(accountClient.fetchAccountState).toHaveBeenCalledTimes(2);
     expect(await reminderCheckbox()).not.toBeChecked();
     expect(await reminderCheckbox()).toBeEnabled();
   });

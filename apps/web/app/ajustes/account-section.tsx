@@ -101,7 +101,10 @@ function AccountBody() {
       <ReminderConsent
         checked={account.reminderConsent}
         onAnswer={(reminderConsent) => {
-          setCurrent({ ...account, reminderConsent });
+          setCurrent((prev) => {
+            const base = prev ?? account;
+            return base.email === null ? base : { ...base, reminderConsent };
+          });
         }}
         onFailure={refresh}
       />
