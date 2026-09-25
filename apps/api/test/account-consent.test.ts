@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
+
 import { eq, sessions, sql, users } from "@miolos/db";
-import { attachTokens } from "@miolos/db/user";
+import { attachTokens, mergeAccounts } from "@miolos/db/user";
 import { createTestDb } from "@miolos/db/testing";
 import { NextRequest } from "next/server";
 import {
@@ -294,7 +296,7 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
     ]);
   });
 
-  it("T-API-S210: detach logs a withdrawal only for the consents that were set, deletes the user's unspent attach tokens, and keeps an earlier attach dismissal", async () => {
+  it("T-API-S210: detach logs a withdrawal only for the consents that were set, keeps the attach tokens that the rate limits count, and keeps an earlier attach dismissal", async () => {
     const both = await createSession({
       email: "ana@example.org",
       reminder: true,
@@ -323,8 +325,10 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
     ]);
     expect(await events(recoveryOnly.userId)).toEqual(["recovery:withdrawn"]);
     expect(
-      (await ctx.db.select().from(attachTokens)).map((row) => row.userId),
-    ).toEqual([bystander.userId]);
+      (await ctx.db.select().from(attachTokens))
+        .map((row) => row.userId)
+        .sort(),
+    ).toEqual([both.userId, bystander.userId].sort());
     expect(
       (await readUser(recoveryOnly.userId)).attachPromptDismissedAt,
     ).toEqual(dismissedAt);
@@ -380,6 +384,67 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
       "recovery:withdrawn",
       "reminder:withdrawn",
       "recovery:granted",
+    ]);
+
+    const firstGrant = (await readUser(ticked.userId)).recoveryConsentAt;
+    await attachEmailToUser(ctx.db, {
+      userId: ticked.userId,
+      email: "ana@example.org",
+      reminderConsent: true,
+    });
+    expect(await events(ticked.userId)).toHaveLength(6);
+    expect((await readUser(ticked.userId)).recoveryConsentAt).toEqual(
+      firstGrant,
+    );
+
+    const newcomer = await createSession();
+    const { winnerId } = await mergeAccounts(
+      ctx.db,
+      newcomer.userId,
+      ticked.userId,
+    );
+    expect(winnerId).toBe(ticked.userId);
+    await attachEmailToUser(ctx.db, {
+      userId: winnerId,
+      email: "ana@example.org",
+      reminderConsent: true,
+    });
+    expect(await events(ticked.userId)).toHaveLength(6);
+    expect(await events(newcomer.userId)).toEqual([]);
+  });
+});
+
+describe("a consent granted before the log keeps its grant through a withdrawal (#36, migration 0013)", () => {
+  it("T-API-S214: after the 0013 backfill, withdrawing adds a withdrawn event beside the backfilled grant at the original instant", async () => {
+    const { token, userId } = await createSession({
+      email: "ana@example.org",
+      reminder: true,
+    });
+    const migration = await readFile(
+      new URL(
+        "../../../packages/db/migrations/0013_last_mercury.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    await ctx.db.execute(
+      sql.raw(migration.split("--> statement-breakpoint").at(-1) ?? ""),
+    );
+
+    await setReminder(token, false);
+
+    const result = await ctx.db.execute(
+      sql`select consent, action, at from consent_events
+           where user_id = ${userId} and consent = 'reminder' order by at`,
+    );
+    expect(
+      result.rows.map((row) => [
+        row["action"],
+        new Date(String(row["at"])).toISOString(),
+      ]),
+    ).toEqual([
+      ["granted", GRANTED_AT.toISOString()],
+      ["withdrawn", expect.any(String)],
     ]);
   });
 });

@@ -41,23 +41,26 @@ export async function grantReminderConsent(
   userId: string,
 ): Promise<boolean> {
   const result = await db.execute(sql`
-    with changed as (
-      update users
+    with target as (
+      select id, reminder_consent_at
+        from users
+       where id = ${userId} and email is not null
+         for update
+    ), changed as (
+      update users u
          set reminder_consent_at = now(),
              reminder_consent_withdrawn_at = null,
              updated_at = now()
-       where id = ${userId} and email is not null
-         and reminder_consent_at is null
-      returning id
+        from target t
+       where u.id = t.id and t.reminder_consent_at is null
+      returning u.id
     ), logged as (
       insert into consent_events (user_id, consent, action)
       select id, 'reminder', 'granted' from changed
     )
-    select exists (
-      select 1 from users where id = ${userId} and email is not null
-    ) as attached
+    select count(*)::int as attached from target
   `);
-  return result.rows[0]?.["attached"] === true;
+  return result.rows[0]?.["attached"] === 1;
 }
 
 export async function detachEmail(db: Db, userId: string): Promise<boolean> {
@@ -92,8 +95,6 @@ export async function detachEmail(db: Db, userId: string): Promise<boolean> {
       select id, 'recovery', 'withdrawn' from changed where had_recovery
       union all
       select id, 'reminder', 'withdrawn' from changed where had_reminder
-    ), tokens as (
-      delete from attach_tokens where user_id in (select id from changed)
     )
     select count(*)::int as detached from changed
   `);

@@ -59,7 +59,12 @@ export async function claimAttachToken(
   const rows = await db
     .delete(attachTokens)
     .where(
-      sql`${attachTokens.tokenHash} = ${tokenHash} and ${attachTokens.createdAt} > now() - interval '30 minutes'`,
+      sql`${attachTokens.tokenHash} = ${tokenHash} and ${attachTokens.createdAt} > now() - interval '30 minutes'
+        and not exists (
+          select 1 from users w
+           where w.id = ${attachTokens.userId}
+             and ${attachTokens.createdAt} <= w.recovery_consent_withdrawn_at
+        )`,
     )
     .returning();
   const row = rows[0];
@@ -111,24 +116,34 @@ export async function attachEmailToUser(
 ): Promise<void> {
   const reminder = sql`${init.reminderConsent}::boolean`;
   await db.execute(sql`
-    with changed as (
-      update users
+    with target as (
+      select id, recovery_consent_at, reminder_consent_at
+        from users
+       where id = ${init.userId}
+         for update
+    ), changed as (
+      update users u
          set email = ${init.email},
              email_verified_at = now(),
-             recovery_consent_at = now(),
+             recovery_consent_at = coalesce(t.recovery_consent_at, now()),
              recovery_consent_withdrawn_at = null,
              reminder_consent_at = case
-               when ${reminder} then now() else reminder_consent_at end,
+               when ${reminder} then coalesce(t.reminder_consent_at, now())
+               else u.reminder_consent_at end,
              reminder_consent_withdrawn_at = case
-               when ${reminder} then null else reminder_consent_withdrawn_at end,
+               when ${reminder} then null
+               else u.reminder_consent_withdrawn_at end,
              updated_at = now()
-       where id = ${init.userId}
-      returning id
+        from target t
+       where u.id = t.id
+      returning u.id,
+                t.recovery_consent_at is null as new_recovery,
+                ${reminder} and t.reminder_consent_at is null as new_reminder
     )
     insert into consent_events (user_id, consent, action)
-    select id, 'recovery', 'granted' from changed
+    select id, 'recovery', 'granted' from changed where new_recovery
     union all
-    select id, 'reminder', 'granted' from changed where ${reminder}
+    select id, 'reminder', 'granted' from changed where new_reminder
   `);
 }
 

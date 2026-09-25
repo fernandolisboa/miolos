@@ -15,6 +15,7 @@ import {
   vi,
 } from "vitest";
 
+import { POST as detachPost } from "../app/account/detach-email/route";
 import { POST as confirmPost } from "../app/attach/confirm/route";
 import { POST as dismissPost } from "../app/attach/dismiss/route";
 import { POST as requestPost } from "../app/attach/request/route";
@@ -822,5 +823,56 @@ describe("POST /attach/dismiss — the permanent, idempotent decline (D9)", () =
     );
     expect(smuggled.status).toBe(400);
     expect(await smuggled.json()).toEqual({ error: "invalid-body" });
+  });
+});
+
+async function postDetach(sessionToken: string): Promise<Response> {
+  return detachPost(
+    new NextRequest("http://localhost:3001/account/detach-email", {
+      method: "POST",
+      headers: jsonHeaders(sessionToken),
+      body: JSON.stringify({ confirm: true }),
+    }),
+  );
+}
+
+describe("removing the email resets no attach limit and revives no link (#36, ADR-0082)", () => {
+  it("T-API-S212: two links to a victim, attach and detach your own address, and the victim's hourly cap still stands", async () => {
+    const attacker = await createSession();
+    const victim = { ...VALID_BODY, email: "victim@example.com" };
+    for (let i = 0; i < 2; i += 1) {
+      expect((await postRequest(attacker.token, victim)).status).toBe(200);
+    }
+    const own = await requestMagicLink(attacker.token, {
+      ...VALID_BODY,
+      email: "own@example.com",
+    });
+    const confirmed = await postConfirm(own);
+    expect(confirmed.status).toBe(200);
+    const session = cookieTokenOf(confirmed);
+    expect((await postDetach(session)).status).toBe(200);
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      statuses.push((await postRequest(session, victim)).status);
+    }
+    expect(statuses[2]).toBe(429);
+    expect(
+      sendSpy.mock.calls.filter(([call]) => call.to === "victim@example.com"),
+    ).toHaveLength(3);
+  });
+
+  it("T-API-S213: a link minted before a detach is refused after it, with the one generic 410", async () => {
+    const { token, userId } = await createSession();
+    const first = await requestMagicLink(token);
+    const confirmed = await postConfirm(first);
+    const session = cookieTokenOf(confirmed);
+    const minted = await requestMagicLink(session);
+    expect((await postDetach(session)).status).toBe(200);
+
+    const late = await postConfirm(minted);
+    expect(late.status).toBe(410);
+    expect(await late.json()).toEqual({ error: "invalid-or-expired" });
+    expect((await userRow(userId)).email).toBeNull();
   });
 });
