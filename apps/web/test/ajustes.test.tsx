@@ -637,7 +637,7 @@ describe("a player with no email can attach one from Ajustes (T-WEB-S413)", () =
 describe("the policy says the consent record exists and dies with the account (T-WEB-S409a)", () => {
   it("the consents paragraph names the grant-and-withdrawal record and its erasure", () => {
     expect(messages.privacy.consents.body).toContain(
-      "Guardamos quando cada consentimento foi dado e retirado; esse registro é apagado junto com a conta.",
+      "Guardamos quando cada consentimento foi dado e retirado, como registro do que você autorizou.",
     );
   });
 });

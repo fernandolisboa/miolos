@@ -334,10 +334,12 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
     ).toEqual(dismissedAt);
   });
 
+  const mintedAfterEveryStamp = () => new Date(Date.now() + 60_000);
+
   it("T-API-S211: attaching logs a recovery grant, plus a reminder grant when ticked, and a re-attach after detach keeps the withdrawal marks", async () => {
     const ticked = await createSession();
     await attachEmailToUser(ctx.db, {
-      tokenCreatedAt: new Date(),
+      tokenCreatedAt: mintedAfterEveryStamp(),
       userId: ticked.userId,
       email: "ana@example.org",
       reminderConsent: true,
@@ -349,7 +351,7 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
 
     await detach(ticked.token);
     await attachEmailToUser(ctx.db, {
-      tokenCreatedAt: new Date(),
+      tokenCreatedAt: mintedAfterEveryStamp(),
       userId: ticked.userId,
       email: "ana@example.org",
       reminderConsent: true,
@@ -374,7 +376,7 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
     });
     await detach(unticked.token);
     await attachEmailToUser(ctx.db, {
-      tokenCreatedAt: new Date(),
+      tokenCreatedAt: mintedAfterEveryStamp(),
       userId: unticked.userId,
       email: "bia@example.org",
       reminderConsent: false,
@@ -391,7 +393,7 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
 
     const firstGrant = (await readUser(ticked.userId)).recoveryConsentAt;
     await attachEmailToUser(ctx.db, {
-      tokenCreatedAt: new Date(),
+      tokenCreatedAt: mintedAfterEveryStamp(),
       userId: ticked.userId,
       email: "ana@example.org",
       reminderConsent: true,
@@ -409,7 +411,7 @@ describe("consent_events records every real transition, and no repeat (#36, ADR-
     );
     expect(winnerId).toBe(ticked.userId);
     await attachEmailToUser(ctx.db, {
-      tokenCreatedAt: new Date(),
+      tokenCreatedAt: mintedAfterEveryStamp(),
       userId: winnerId,
       email: "ana@example.org",
       reminderConsent: true,
