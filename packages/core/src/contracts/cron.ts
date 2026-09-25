@@ -25,12 +25,22 @@ export const cronPublishResponseSchema = z.strictObject({
 
 export type CronPublishResponse = z.infer<typeof cronPublishResponseSchema>;
 
+const notifyCount = z.number().int().min(0);
+
 export const cronNotifyResponseSchema = z.strictObject({
-  candidates: z.number().int().min(0),
-  claimed: z.number().int().min(0),
-  sent: z.number().int().min(0),
-  pruned: z.number().int().min(0),
-  failed: z.number().int().min(0),
+  push: z.strictObject({
+    candidates: notifyCount,
+    claimed: notifyCount,
+    sent: notifyCount,
+    pruned: notifyCount,
+    failed: notifyCount,
+  }),
+  email: z.strictObject({
+    candidates: notifyCount,
+    claimed: notifyCount,
+    sent: notifyCount,
+    failed: notifyCount,
+  }),
 });
 
 export type CronNotifyResponse = z.infer<typeof cronNotifyResponseSchema>;

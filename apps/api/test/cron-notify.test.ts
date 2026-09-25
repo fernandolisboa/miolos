@@ -15,6 +15,7 @@ import {
 } from "vitest";
 
 import { POST } from "../app/cron/notify/route";
+import type { ReminderSend } from "../src/email/transport";
 import { runNotifyTick } from "../src/notify/dispatcher";
 import type { NudgeSend, SendResult } from "../src/notify/transport";
 
@@ -41,10 +42,13 @@ beforeEach(async () => {
   vi.stubEnv("VAPID_PUBLIC_KEY", "BTestPublicKey");
   vi.stubEnv("VAPID_PRIVATE_KEY", "test-private-key");
   vi.stubEnv("VAPID_SUBJECT", "mailto:privacidade@miolos.app");
+  vi.stubEnv("RESEND_API_KEY", "re_test_key");
+  vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
 });
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -102,6 +106,12 @@ async function insertCompletion(init: {
 async function ledgerRows(): Promise<unknown[]> {
   return ctx.db.select().from(notificationSends);
 }
+
+const NO_EMAIL = { candidates: 0, claimed: 0, sent: 0, failed: 0 };
+
+const noEmail: ReminderSend = () => {
+  throw new Error("no email candidate is seeded in this suite");
+};
 
 const TODAY = "2026-08-20";
 const HOUR = 20;
@@ -177,6 +187,59 @@ describe("POST /cron/notify — dormancy (the isPushConfigured triple)", () => {
   });
 });
 
+describe("POST /cron/notify — the email arm is required too (#199, ADR-0083)", () => {
+  it("T-API-S194: RESEND_API_KEY or WEB_ORIGIN unset → 503 BEFORE any DB statement, even with VAPID configured", async () => {
+    for (const missing of ["RESEND_API_KEY", "WEB_ORIGIN"]) {
+      vi.stubEnv(missing, undefined);
+      const response = await POST(notifyRequest(`Bearer ${SECRET}`));
+      expect(response.status, missing).toBe(503);
+      vi.stubEnv(missing, "restored");
+    }
+
+    expect(getDbCalls.count).toBe(0);
+    expect(await ledgerRows()).toHaveLength(0);
+  });
+});
+
+describe("POST /cron/notify — the route wires the real Resend transport (#199)", () => {
+  it("T-API-S195: an email candidate at the DB clock's hour gets one POST to Resend, and the body counts it", async () => {
+    const inserted = await ctx.db
+      .insert(users)
+      .values({
+        email: "ana@example.org",
+        emailVerifiedAt: new Date(0),
+        reminderConsentAt: new Date(0),
+      })
+      .returning();
+    const userId = inserted[0]?.id ?? "";
+    await ctx.db.execute(sql`
+      insert into completions
+        (user_id, game, date, completed_at, outcome, elapsed_ms, hints_used, guesses, on_time)
+      select ${userId}::uuid, 'binairo',
+             ((now() - interval '1 day') at time zone 'America/Sao_Paulo')::date,
+             now() - interval '1 day', 'won', 1000, 0, null, true
+    `);
+
+    const posted: string[] = [];
+    vi.stubGlobal("fetch", (url: string) => {
+      posted.push(url);
+      return Promise.resolve(new Response(null, { status: 200 }));
+    });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const response = await POST(notifyRequest(`Bearer ${SECRET}`));
+    const body = cronNotifyResponseSchema.parse(await response.json());
+
+    expect(body.email).toEqual({
+      candidates: 1,
+      claimed: 1,
+      sent: 1,
+      failed: 0,
+    });
+    expect(posted).toEqual(["https://api.resend.com/emails"]);
+  });
+});
+
 describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", () => {
   it("T-API-S144: the claim lands BEFORE the transport is invoked, and the payload carries computeStreak's exact number in the §4.8 pt-BR copy — n≥2 and n=1 both", async () => {
     const userId = await createUser();
@@ -196,14 +259,12 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", (
     const result = await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send,
+      sendPush: send,
+      sendEmail: noEmail,
     });
     expect(result).toEqual({
-      candidates: 1,
-      claimed: 1,
-      sent: 1,
-      pruned: 0,
-      failed: 0,
+      push: { candidates: 1, claimed: 1, sent: 1, pruned: 0, failed: 0 },
+      email: NO_EMAIL,
     });
     expect(claimedAtSendTime).toEqual([true]);
     expect(calls).toEqual([
@@ -221,7 +282,8 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", (
     await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send: singular.send,
+      sendPush: singular.send,
+      sendEmail: noEmail,
     });
     expect(singular.calls.map((call) => call.payload.body)).toEqual([
       "Sua sequência de 1 dia termina à meia-noite, no horário de Brasília. Jogue hoje para mantê-la.",
@@ -237,22 +299,21 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", (
     const first = await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send,
+      sendPush: send,
+      sendEmail: noEmail,
     });
     const second = await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send,
+      sendPush: send,
+      sendEmail: noEmail,
     });
 
-    expect(first.sent).toBe(1);
+    expect(first.push.sent).toBe(1);
 
     expect(second).toEqual({
-      candidates: 0,
-      claimed: 0,
-      sent: 0,
-      pruned: 0,
-      failed: 0,
+      push: { candidates: 0, claimed: 0, sent: 0, pruned: 0, failed: 0 },
+      email: NO_EMAIL,
     });
     expect(calls).toHaveLength(1);
     expect(await ledgerRows()).toHaveLength(1);
@@ -268,14 +329,12 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", (
     const result = await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send,
+      sendPush: send,
+      sendEmail: noEmail,
     });
     expect(result).toEqual({
-      candidates: 0,
-      claimed: 0,
-      sent: 0,
-      pruned: 0,
-      failed: 0,
+      push: { candidates: 0, claimed: 0, sent: 0, pruned: 0, failed: 0 },
+      email: NO_EMAIL,
     });
     expect(calls).toHaveLength(0);
     expect(await ledgerRows()).toHaveLength(0);
@@ -300,14 +359,12 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", (
     const result = await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send,
+      sendPush: send,
+      sendEmail: noEmail,
     });
     expect(result).toEqual({
-      candidates: 1,
-      claimed: 1,
-      sent: 1,
-      pruned: 2,
-      failed: 0,
+      push: { candidates: 1, claimed: 1, sent: 1, pruned: 2, failed: 0 },
+      email: NO_EMAIL,
     });
 
     expect(calls.map((call) => call.endpoint).sort()).toEqual(
@@ -329,14 +386,12 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", (
     const result = await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send,
+      sendPush: send,
+      sendEmail: noEmail,
     });
     expect(result).toEqual({
-      candidates: 1,
-      claimed: 1,
-      sent: 0,
-      pruned: 0,
-      failed: 1,
+      push: { candidates: 1, claimed: 1, sent: 0, pruned: 0, failed: 1 },
+      email: NO_EMAIL,
     });
 
     expect(await ctx.db.select().from(pushSubscriptions)).toHaveLength(1);
@@ -345,14 +400,12 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", (
     const retry = await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send,
+      sendPush: send,
+      sendEmail: noEmail,
     });
     expect(retry).toEqual({
-      candidates: 0,
-      claimed: 0,
-      sent: 0,
-      pruned: 0,
-      failed: 0,
+      push: { candidates: 0, claimed: 0, sent: 0, pruned: 0, failed: 0 },
+      email: NO_EMAIL,
     });
     expect(calls).toHaveLength(1);
   });
@@ -380,14 +433,12 @@ describe("runNotifyTick — the tick seam (ADR-0064 decisions 6/7, ADR-0068)", (
     const result = await runNotifyTick(ctx.db, {
       today: TODAY,
       hour: HOUR,
-      send,
+      sendPush: send,
+      sendEmail: noEmail,
     });
     expect(result).toEqual({
-      candidates: 1,
-      claimed: 1,
-      sent: 2,
-      pruned: 0,
-      failed: 0,
+      push: { candidates: 1, claimed: 1, sent: 2, pruned: 0, failed: 0 },
+      email: NO_EMAIL,
     });
     expect(overlapped).toBe(false);
     expect(calls.sort()).toEqual([first, second].sort());
@@ -402,11 +453,8 @@ describe("POST /cron/notify — the response contract (ADR-0068 decision 4)", ()
     expect(response.status).toBe(200);
     const body: unknown = await response.json();
     expect(cronNotifyResponseSchema.parse(body)).toEqual({
-      candidates: 0,
-      claimed: 0,
-      sent: 0,
-      pruned: 0,
-      failed: 0,
+      push: { candidates: 0, claimed: 0, sent: 0, pruned: 0, failed: 0 },
+      email: NO_EMAIL,
     });
 
     const lines = logSpy.mock.calls
@@ -416,8 +464,8 @@ describe("POST /cron/notify — the response contract (ADR-0068 decision 4)", ()
     const parsed: unknown = JSON.parse(lines[0] ?? "{}");
     expect(parsed).toMatchObject({
       event: "cron-notify",
-      candidates: 0,
-      sent: 0,
+      push: { candidates: 0, sent: 0 },
+      email: { candidates: 0, sent: 0 },
     });
   });
 });

@@ -16,7 +16,7 @@ import {
 import { errorResponse } from "../../../src/http/responses";
 import { getDb } from "../../../src/db";
 import {
-  isAttachConfigured,
+  isEmailConfigured,
   sendMagicLinkEmail,
 } from "../../../src/email/transport";
 import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const body = parsed.data;
 
   const webOrigin = process.env.WEB_ORIGIN;
-  if (!isAttachConfigured() || !webOrigin) {
+  if (!isEmailConfigured() || !webOrigin) {
     return errorResponse(503, "email-unconfigured");
   }
 

@@ -108,6 +108,7 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
       "listCompletionsForMerge",
       "listCompletionsForStats",
       "listCompletionsForStreak",
+      "listEmailNudgeCandidates",
       "listMedalGrants",
 
       "listPushNudgeCandidates",

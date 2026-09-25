@@ -14,3 +14,19 @@ export function magicLinkBody(url: string): string {
     "Se você não pediu, ignore este e-mail — nada acontece sem o clique.",
   ].join("\n");
 }
+
+export const streakReminderSubject = "Sua sequência no Miolos está em risco";
+
+export function streakReminderBody(streak: number, webOrigin: string): string {
+  const dias = streak === 1 ? "1 dia" : `${streak} dias`;
+  return [
+    `Sua sequência de ${dias} termina à meia-noite, no horário de Brasília.`,
+    "Jogue hoje para mantê-la:",
+    "",
+    webOrigin,
+    "",
+    "Você recebe este lembrete porque pediu lembretes por e-mail no Miolos.",
+    "No máximo um por dia, e nunca propaganda.",
+    `Para não receber mais, desmarque o lembrete por e-mail em Ajustes: ${webOrigin}/ajustes`,
+  ].join("\n");
+}
