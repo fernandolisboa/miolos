@@ -8,7 +8,7 @@ Nothing to verify. #255, #201 and #257 merged together, and #206 clusters 5, 6, 
 
 ## Session state
 
-**The email hedge shipped** (#199, **ADR-0083**). The hourly tick has a second arm: reminder-consent holders with a verified email and no push subscription get one pt-BR text email at their habitual hour. `CronNotifyResponse` is now per channel, and the route answers 503 if Resend is unconfigured as well as VAPID. The email is stopped only by the Ajustes checkbox from #36's second PR, which had to merge first.
+**The email hedge shipped** (#199, **ADR-0083**). The hourly tick has a second arm: reminder-consent holders with a verified email and no push subscription get one pt-BR text email at their habitual hour. `CronNotifyResponse` is now per channel, and the route answers 503 if Resend is unconfigured as well as VAPID. The email is stopped only by the Ajustes checkbox from #36's second PR. By Fernando's call on 2026-09-25 the email shipped first, while he is its only recipient; until that PR lands, the email's `/ajustes` link has no checkbox to untick.
 
 **The free-play wall is proved on the runtime module graph** (**ADR-0078**, amends ADR-0046 and ADR-0077). `T-WEB-S374` walks the value edges of every free-play file and finds no I/O module, no `packages/db/src`, no Termo source; `T-WEB-S375` lints every specifier that graph writes through the real config. A one-hop door — `termo-screen`, a daily route page — no longer needs its name on a list to be caught. The 27 shared modules ADR-0077 left unguarded are covered.
 

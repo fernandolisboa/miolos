@@ -23,6 +23,7 @@ Issue #36 adds `/ajustes`, with a per-device reminder switch (browser push) and 
 
 ## Consequences
 
+- Turning the switch off on every device leaves an email-reminder consent holder with no push subscription, so the email arm starts reaching them (ADR-0083 decision 3).
 - The ask and the switch are separate surfaces: the card still waits for the threshold and still stamps a denial; the switch never stamps.
 - A reload after a stranded unsubscribe (decision 3) can read "on" again while the server holds no row. Switching off again repairs it; the DELETE is idempotent.
 - `GET /account/state` returns `{ email, reminderConsent }`; it is an authenticated read like the other state routes (`authenticatedRead`, `T-API-S183`).

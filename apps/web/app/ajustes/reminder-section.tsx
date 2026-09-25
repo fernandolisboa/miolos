@@ -14,7 +14,6 @@ import styles from "./page.module.css";
 
 type BrowserPush =
   "loading" | "unsupported" | "blocked" | "off" | "on" | "error";
-type View = BrowserPush;
 
 async function readBrowserPush(): Promise<BrowserPush> {
   if (!browserSupportsPush()) {
@@ -29,7 +28,7 @@ async function readBrowserPush(): Promise<BrowserPush> {
 function viewOf(
   browser: BrowserPush,
   server: { vapidPublicKey: string | null } | null | undefined,
-): View {
+): BrowserPush {
   if (browser !== "off") {
     return browser;
   }

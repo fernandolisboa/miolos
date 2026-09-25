@@ -406,7 +406,7 @@ export const messages = {
       medals:
         "As medalhas: a maioria é calculada do seu histórico de jogos; algumas são concedidas manualmente pela equipe e ficam registradas na sua conta. Todas são apagadas junto com a conta.",
 
-      push: "O lembrete no navegador, somente se você ativar: guardamos o endereço técnico da inscrição e as chaves que o navegador gera, usados só para avisar quando a sua sequência estiver em risco. Para parar, desligue o lembrete em Ajustes — a inscrição sai dos nossos registros na hora. Revogar a permissão de notificações no navegador também para os avisos, e a inscrição, que deixa de funcionar, é removida. Excluir a conta apaga tudo.",
+      push: "O lembrete no navegador, somente se você ativar: guardamos o endereço técnico da inscrição e as chaves que o navegador gera, usados só para avisar quando a sua sequência estiver em risco. Para parar, desligue o lembrete em Ajustes, em cada aparelho — a inscrição sai dos nossos registros na hora. Revogar a permissão de notificações no navegador também para os avisos, e a inscrição, que deixa de funcionar, é removida. Excluir a conta apaga tudo.",
     },
     why: {
       heading: "Para que usamos",
