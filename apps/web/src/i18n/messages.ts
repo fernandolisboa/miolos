@@ -417,7 +417,7 @@ export const messages = {
     },
     consents: {
       heading: "Os dois consentimentos",
-      body: "Vincular o e-mail (recuperação) e receber lembretes são consentimentos separados e independentes: um nunca implica o outro, e o lembrete vem sempre desmarcado.",
+      body: "Vincular o e-mail (recuperação) e receber lembretes são consentimentos separados e independentes: um nunca implica o outro, e o lembrete vem sempre desmarcado. Guardamos quando cada consentimento foi dado e retirado; esse registro é apagado junto com a conta.",
     },
     deletion: {
       heading: "Excluir seus dados",
