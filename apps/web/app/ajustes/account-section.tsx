@@ -1,5 +1,6 @@
 "use client";
 
+import type { AccountStateResponse } from "@miolos/core";
 import { useState } from "react";
 
 import {
@@ -8,41 +9,48 @@ import {
   setReminderConsent,
 } from "../../src/account/account-client";
 import { useMountFetch } from "../../src/api/use-mount-fetch";
+import { AttachForm, ConsentCheckbox } from "../../src/attach/attach-form";
+import { ConfirmAction } from "../../src/components/confirm-action";
 import { messages } from "../../src/i18n";
 import styles from "./page.module.css";
 
 const copy = messages.settings.account;
 
-function ReminderConsent({ initial }: { initial: boolean }) {
-  const [checked, setChecked] = useState(initial);
+function ReminderConsent({
+  checked,
+  onAnswer,
+  onFailure,
+}: {
+  checked: boolean;
+  onAnswer: (granted: boolean) => void;
+  onFailure: () => Promise<void>;
+}) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
   async function change(granted: boolean): Promise<void> {
     setBusy(true);
     const answer = await setReminderConsent(granted);
-    setBusy(false);
     setFailed(answer === undefined);
-    if (answer !== undefined) {
-      setChecked(answer);
+    if (answer === undefined) {
+      await onFailure();
+    } else {
+      onAnswer(answer);
     }
+    setBusy(false);
   }
 
   return (
     <>
-      <label className={styles.consent} htmlFor="settings-email-reminder">
-        <input
-          id="settings-email-reminder"
-          className={styles.checkbox}
-          type="checkbox"
-          checked={checked}
-          disabled={busy}
-          onChange={(event) => {
-            void change(event.target.checked);
-          }}
-        />
-        <span>{messages.attach.reminderLabel}</span>
-      </label>
+      <ConsentCheckbox
+        id="settings-email-reminder"
+        label={messages.attach.reminderLabel}
+        checked={checked}
+        disabled={busy}
+        onChange={(granted) => {
+          void change(granted);
+        }}
+      />
       {failed && (
         <p className={styles.note} role="status">
           {copy.reminderError}
@@ -52,72 +60,18 @@ function ReminderConsent({ initial }: { initial: boolean }) {
   );
 }
 
-type DetachState = "idle" | "confirming" | "removing" | "error";
+function AccountBody() {
+  const fetched = useMountFetch(fetchAccountState);
+  const [current, setCurrent] = useState<AccountStateResponse>();
+  const [detached, setDetached] = useState(false);
+  const account = current ?? fetched;
 
-function DetachEmail({ onDetached }: { onDetached: () => void }) {
-  const [state, setState] = useState<DetachState>("idle");
-
-  async function runDetach(): Promise<void> {
-    setState("removing");
-    if (await detachAccountEmail()) {
-      onDetached();
-    } else {
-      setState("error");
+  async function refresh(): Promise<void> {
+    const fresh = await fetchAccountState();
+    if (fresh) {
+      setCurrent(fresh);
     }
   }
-
-  if (state === "idle") {
-    return (
-      <button
-        type="button"
-        className={styles.action}
-        onClick={() => {
-          setState("confirming");
-        }}
-      >
-        {copy.detach.start}
-      </button>
-    );
-  }
-
-  return (
-    <div className={styles.confirm} data-detach-state={state}>
-      <p className={styles.confirmTitle}>{copy.detach.confirmTitle}</p>
-      <p className={styles.body}>{copy.detach.confirmBody}</p>
-      {state === "error" && (
-        <p className={styles.body} role="status">
-          {copy.detach.error}
-        </p>
-      )}
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.confirmButton}
-          disabled={state === "removing"}
-          onClick={() => {
-            void runDetach();
-          }}
-        >
-          {state === "removing" ? copy.detach.removing : copy.detach.confirm}
-        </button>
-        <button
-          type="button"
-          className={styles.cancel}
-          disabled={state === "removing"}
-          onClick={() => {
-            setState("idle");
-          }}
-        >
-          {copy.detach.cancel}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function AccountBody() {
-  const account = useMountFetch(fetchAccountState);
-  const [detached, setDetached] = useState(false);
 
   if (account === undefined) {
     return null;
@@ -125,18 +79,18 @@ function AccountBody() {
   if (account === null) {
     return <p className={styles.body}>{copy.unavailable}</p>;
   }
-  if (detached) {
+  if (account.email === null) {
     return (
       <>
-        <p className={styles.body} role="status">
-          {copy.detach.done}
-        </p>
+        {detached && (
+          <p className={styles.body} role="status">
+            {copy.detach.done}
+          </p>
+        )}
         <p className={styles.body}>{copy.none}</p>
+        <AttachForm />
       </>
     );
-  }
-  if (account.email === null) {
-    return <p className={styles.body}>{copy.none}</p>;
   }
   return (
     <>
@@ -144,10 +98,25 @@ function AccountBody() {
         {copy.attached}{" "}
         <strong className={styles.email}>{account.email}</strong>
       </p>
-      <ReminderConsent initial={account.reminderConsent} />
-      <DetachEmail
-        onDetached={() => {
+      <ReminderConsent
+        checked={account.reminderConsent}
+        onAnswer={(reminderConsent) => {
+          setCurrent({ ...account, reminderConsent });
+        }}
+        onFailure={refresh}
+      />
+      <ConfirmAction
+        labels={copy.detach}
+        run={async () => {
+          const done = await detachAccountEmail();
+          if (!done) {
+            await refresh();
+          }
+          return done;
+        }}
+        onDone={() => {
           setDetached(true);
+          setCurrent({ email: null, reminderConsent: false });
         }}
       />
     </>

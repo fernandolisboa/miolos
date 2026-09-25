@@ -71,6 +71,7 @@ describe("HubAttach dismissal (T-WEB-S136)", () => {
       "src/attach/attach-client.ts",
       "src/attach/use-attach-state.ts",
       "app/hub-attach.tsx",
+      "src/attach/attach-form.tsx",
       "app/vincular/attach-confirm.tsx",
       "src/onboarding/onboarding-client.ts",
       "src/onboarding/use-onboarding-state.ts",

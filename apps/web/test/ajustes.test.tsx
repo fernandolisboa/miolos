@@ -32,6 +32,16 @@ const pushClient = vi.hoisted(() => ({
 }));
 vi.mock("../src/push/push-client", () => pushClient);
 
+const attachClient = vi.hoisted(() => ({
+  requestAttachLink: vi.fn(() => Promise.resolve("sent" as const)),
+  fetchAttachState: vi.fn(),
+}));
+vi.mock("../src/attach/attach-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/attach/attach-client")>()),
+  requestAttachLink: attachClient.requestAttachLink,
+  fetchAttachState: attachClient.fetchAttachState,
+}));
+
 const accountClient = vi.hoisted(() => ({
   fetchAccountState:
     vi.fn<
@@ -429,7 +439,7 @@ describe("the email-reminder checkbox (T-WEB-S407)", () => {
     });
     const none = render(<AccountSection />);
     await screen.findByText(messages.settings.account.none);
-    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(document.getElementById("settings-email-reminder")).toBeNull();
     none.unmount();
 
     attachedAccount(true);
@@ -442,7 +452,7 @@ describe("the email-reminder checkbox (T-WEB-S407)", () => {
     expect(await reminderCheckbox()).not.toBeChecked();
   });
 
-  it("a change calls the endpoint and takes the server's answer; a failure keeps the old state and shows the error", async () => {
+  it("a change calls the endpoint and takes the server's answer; a failure shows the error and re-reads the account", async () => {
     attachedAccount(true);
     accountClient.setReminderConsent.mockResolvedValue(false);
     render(<AccountSection />);
@@ -455,6 +465,7 @@ describe("the email-reminder checkbox (T-WEB-S407)", () => {
       screen.queryByText(messages.settings.account.reminderError),
     ).toBeNull();
 
+    attachedAccount(false);
     accountClient.setReminderConsent.mockResolvedValue(undefined);
     fireEvent.click(await reminderCheckbox());
     expect(
@@ -488,7 +499,7 @@ describe("removing the email takes an explicit confirm (T-WEB-S408)", () => {
     expect(screen.getByText(detach.done)).toBeInTheDocument();
     expect(accountClient.detachAccountEmail).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("jogadora@example.com")).toBeNull();
-    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(document.getElementById("settings-email-reminder")).toBeNull();
   });
 
   it("a failed detach keeps the email and shows the error with a retry", async () => {
@@ -513,5 +524,111 @@ describe("the policy names Ajustes as where the email is removed (T-WEB-S409)", 
   it("the recovery line points at Ajustes, and the reminder line at its checkbox", () => {
     expect(messages.privacy.why.recovery).toContain(messages.settings.title);
     expect(messages.privacy.why.reminder).toContain(messages.settings.title);
+  });
+});
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve: (value: T) => void = () => {};
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
+describe("the account controls hold still while a call is in flight (T-WEB-S411)", () => {
+  it("the checkbox and the confirm button are disabled until their promise settles", async () => {
+    attachedAccount(false);
+    const consent = deferred<boolean | undefined>();
+    accountClient.setReminderConsent.mockReturnValue(consent.promise);
+    const detached = deferred<boolean>();
+    accountClient.detachAccountEmail.mockReturnValue(detached.promise);
+    render(<AccountSection />);
+
+    fireEvent.click(await reminderCheckbox());
+    expect(await reminderCheckbox()).toBeDisabled();
+    await act(async () => {
+      consent.resolve(true);
+      await consent.promise;
+    });
+    expect(await reminderCheckbox()).toBeEnabled();
+    expect(await reminderCheckbox()).toBeChecked();
+
+    const detach = messages.settings.account.detach;
+    fireEvent.click(screen.getByRole("button", { name: detach.start }));
+    fireEvent.click(screen.getByRole("button", { name: detach.confirm }));
+    expect(screen.getByRole("button", { name: detach.busy })).toBeDisabled();
+    expect(screen.getByRole("button", { name: detach.cancel })).toBeDisabled();
+    await act(async () => {
+      detached.resolve(true);
+      await detached.promise;
+    });
+    expect(
+      await screen.findByText(messages.settings.account.none),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("a failed write re-reads the account and trusts what it finds (T-WEB-S412)", () => {
+  it("a reminder failure or a detach failure whose re-read finds no email shows the no-email state", async () => {
+    attachedAccount(true);
+    accountClient.setReminderConsent.mockResolvedValue(undefined);
+    const first = render(<AccountSection />);
+    const checkbox = await reminderCheckbox();
+    accountClient.fetchAccountState.mockResolvedValue({
+      email: null,
+      reminderConsent: false,
+    });
+    fireEvent.click(checkbox);
+    expect(
+      await screen.findByText(messages.settings.account.none),
+    ).toBeInTheDocument();
+    first.unmount();
+
+    attachedAccount(true);
+    accountClient.detachAccountEmail.mockResolvedValue(false);
+    render(<AccountSection />);
+    const detach = messages.settings.account.detach;
+    fireEvent.click(await screen.findByRole("button", { name: detach.start }));
+    accountClient.fetchAccountState.mockResolvedValue({
+      email: null,
+      reminderConsent: false,
+    });
+    fireEvent.click(screen.getByRole("button", { name: detach.confirm }));
+    expect(
+      await screen.findByText(messages.settings.account.none),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("jogadora@example.com")).toBeNull();
+  });
+});
+
+describe("a player with no email can attach one from Ajustes (T-WEB-S413)", () => {
+  it("the no-email state offers the attach form, with no eligibility read, and sends the request", async () => {
+    accountClient.fetchAccountState.mockResolvedValue({
+      email: null,
+      reminderConsent: false,
+    });
+    render(<AccountSection />);
+    fireEvent.change(
+      await screen.findByRole("textbox", { name: messages.attach.emailLabel }),
+      {
+        target: { value: "jogadora@example.com" },
+      },
+    );
+    fireEvent.click(screen.getByLabelText(messages.attach.recoveryLabel));
+    fireEvent.click(
+      screen.getByRole("button", { name: messages.attach.submit }),
+    );
+    expect(
+      await screen.findByText(messages.attach.sent("jogadora@example.com")),
+    ).toBeInTheDocument();
+    expect(attachClient.requestAttachLink).toHaveBeenCalledWith({
+      email: "jogadora@example.com",
+      recoveryConsent: true,
+      reminderConsent: false,
+    });
+    expect(attachClient.fetchAttachState).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: messages.attach.dismiss }),
+    ).toBeNull();
   });
 });

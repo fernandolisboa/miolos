@@ -23,9 +23,17 @@ export async function apiGet<T>(
     const response = await fetch(`${base}${path}`, {
       credentials: "include",
     });
-    if (!response.ok) {
-      return undefined;
-    }
+    return response.ok ? await parseJsonResponse(response, schema) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function parseJsonResponse<T>(
+  response: Response,
+  schema: ZodType<T>,
+): Promise<T | undefined> {
+  try {
     const parsed = schema.safeParse(await response.json());
     return parsed.success ? parsed.data : undefined;
   } catch {
@@ -93,15 +101,7 @@ export async function apiPostParsed<T>(
   absence: string,
 ): Promise<T | undefined> {
   const response = await apiPostRaw(path, body, absence);
-  if (!response?.ok) {
-    return undefined;
-  }
-  try {
-    const parsed = schema.safeParse(await response.json());
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return undefined;
-  }
+  return response?.ok ? await parseJsonResponse(response, schema) : undefined;
 }
 
 export async function apiPost(

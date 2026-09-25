@@ -54,7 +54,7 @@ describe("the account write calls parse their answers (T-WEB-S406)", () => {
     }
   });
 
-  it("detachAccountEmail posts {confirm: true} and is true only on the literal {detached: true}", async () => {
+  it("detachAccountEmail posts {confirm: true} and is true on the literal {detached: true}", async () => {
     const fetchMock = stubFetch(() =>
       Promise.resolve(jsonResponse(200, { detached: true })),
     );
@@ -68,7 +68,8 @@ describe("the account write calls parse their answers (T-WEB-S406)", () => {
     );
 
     for (const respond of [
-      () => Promise.resolve(jsonResponse(409, { error: "no-email" })),
+      () => Promise.resolve(jsonResponse(409, { error: "cross-site" })),
+      () => Promise.resolve(new Response("{", { status: 409 })),
       () => Promise.resolve(jsonResponse(200, { detached: false })),
       () => Promise.resolve(new Response("not json", { status: 200 })),
       () => Promise.reject(new TypeError("offline")),
@@ -76,5 +77,15 @@ describe("the account write calls parse their answers (T-WEB-S406)", () => {
       stubFetch(respond);
       expect(await detachAccountEmail()).toBe(false);
     }
+  });
+});
+
+describe("a detach that finds no email is done, not failed (T-WEB-S410)", () => {
+  it("a 409 no-email answers true; any other 409 answers false", async () => {
+    stubFetch(() => Promise.resolve(jsonResponse(409, { error: "no-email" })));
+    expect(await detachAccountEmail()).toBe(true);
+
+    stubFetch(() => Promise.resolve(jsonResponse(409, { error: "other" })));
+    expect(await detachAccountEmail()).toBe(false);
   });
 });
