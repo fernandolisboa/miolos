@@ -29,6 +29,8 @@ export const users = pgTable(
     googleId: text("google_id").unique(),
     recoveryConsentAt: timestamptz("recovery_consent_at"),
     reminderConsentAt: timestamptz("reminder_consent_at"),
+    recoveryConsentWithdrawnAt: timestamptz("recovery_consent_withdrawn_at"),
+    reminderConsentWithdrawnAt: timestamptz("reminder_consent_withdrawn_at"),
 
     attachPromptDismissedAt: timestamptz("attach_prompt_dismissed_at"),
 

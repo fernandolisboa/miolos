@@ -118,3 +118,34 @@ describe("users_verified_email_uq (migration 0004, ADR-0050 decision 6)", () => 
     expect(await ctx.db.select().from(users)).toHaveLength(4);
   });
 });
+
+describe("consent withdrawal columns (migration 0012, ADR-0082 decision 1)", () => {
+  it("T-DB-S90: users carries two nullable timestamptz withdrawal columns with no default, so a fresh row reads never-withdrawn", async () => {
+    const columns = await ctx.db.execute(
+      sql`select column_name, data_type, is_nullable, column_default
+           from information_schema.columns
+           where table_schema = 'public' and table_name = 'users'
+             and column_name like '%_consent_withdrawn_at'
+           order by column_name`,
+    );
+    expect(columns.rows).toEqual([
+      {
+        column_name: "recovery_consent_withdrawn_at",
+        data_type: "timestamp with time zone",
+        is_nullable: "YES",
+        column_default: null,
+      },
+      {
+        column_name: "reminder_consent_withdrawn_at",
+        data_type: "timestamp with time zone",
+        is_nullable: "YES",
+        column_default: null,
+      },
+    ]);
+
+    const userId = await createUser();
+    const rows = await ctx.db.select().from(users).where(eq(users.id, userId));
+    expect(rows[0]?.recoveryConsentWithdrawnAt).toBeNull();
+    expect(rows[0]?.reminderConsentWithdrawnAt).toBeNull();
+  });
+});

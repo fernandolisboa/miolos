@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "recovery_consent_withdrawn_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "reminder_consent_withdrawn_at" timestamp with time zone;
