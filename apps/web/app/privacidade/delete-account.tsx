@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { deleteAccount } from "../../src/attach/attach-client";
-import { messages } from "../../src/i18n";
+import { deleteAccountAnchor, messages } from "../../src/i18n";
 import styles from "./page.module.css";
 
 type DeleteState = "idle" | "confirming" | "deleting" | "done" | "error";
@@ -18,7 +18,11 @@ export function DeleteAccount() {
   }
 
   return (
-    <section className={styles.deleteSection} data-delete-state={state}>
+    <section
+      id={deleteAccountAnchor}
+      className={styles.deleteSection}
+      data-delete-state={state}
+    >
       <h2 className={styles.heading}>{messages.deleteAccount.heading}</h2>
       <p className={styles.body}>{messages.deleteAccount.explain}</p>
 

@@ -3,7 +3,7 @@ import {
   type NotificationsStateResponse,
 } from "@miolos/core";
 
-import { apiGet, apiPost } from "../api/client";
+import { apiDelete, apiGet, apiPost } from "../api/client";
 
 const ABSENCE = "notification calls skipped, the card stays absent";
 
@@ -22,6 +22,12 @@ export async function postPushSubscription(body: {
   keys: { p256dh: string; auth: string };
 }): Promise<boolean> {
   return await apiPost("/push/subscriptions", body, ABSENCE);
+}
+
+export async function deletePushSubscription(
+  endpoint: string,
+): Promise<boolean> {
+  return await apiDelete("/push/subscriptions", { endpoint }, ABSENCE);
 }
 
 export async function dismissPushPrompt(): Promise<boolean> {

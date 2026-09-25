@@ -146,6 +146,7 @@ that only they exercise is recorded now so they attach rather than re-decide.
     listener set); the event is rare and browser-initiated; the
     granted-but-unsubscribed install is already re-askable at #36's toggle;
     and the 404/410 pruning #146 ships keeps the table honest meanwhile.*
+    *Annotation (e) (#36, 2026-09-24): confirmed — no handler; a lost subscription is turned back on with the reminder switch in Ajustes ([ADR-0081](./0081-the-reminder-switch-is-player-started-not-an-ask.md)).*
 
 ## Rejected
 

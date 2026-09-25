@@ -111,7 +111,7 @@
 .cellHinted {
   background: color-mix(in srgb, var(--accent-binairo) 10%, var(--paper-desk));
   border-color: var(--accent-binairo);
-  color: var(--accent-binairo);
+  color: var(--accent-binairo-text);
   font-weight: 600;
 }
 

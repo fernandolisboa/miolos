@@ -88,11 +88,16 @@ describe("the web app manifest (T-WEB-S130)", () => {
 });
 
 describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)", () => {
-  it("exports the themeColor viewport, tied to the tokens file", () => {
+  it("exports the themeColor viewport as a light/dark pair, both tied to --paper-desk — the manifest's static theme_color stays light-only, but the viewport now follows the system", () => {
     const themeColor = viewport.themeColor;
-    expect(typeof themeColor).toBe("string");
-    if (typeof themeColor === "string") {
-      expect(tokensCss).toContain(themeColor);
+    expect(Array.isArray(themeColor)).toBe(true);
+    const pair = themeColor as { media: string; color: string }[];
+    expect(pair).toEqual([
+      { media: "(prefers-color-scheme: light)", color: "#F7F2E9" },
+      { media: "(prefers-color-scheme: dark)", color: "#16130F" },
+    ]);
+    for (const { color } of pair) {
+      expect(tokensCss).toContain(color);
     }
   });
 
@@ -104,7 +109,7 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     });
   });
 
-  it("registers a service worker in exactly ONE place — the push card's accept gesture — and never at layout or mount level (the D13 tripwire, re-aimed at #145)", () => {
+  it("registers a service worker in exactly ONE place — the push subscribe module, called from the card's accept and the settings toggle — and never at layout or mount level (the D13 tripwire, re-aimed at #145)", () => {
     const sources: { path: string; text: string }[] = [];
     for (const dir of ["app", "src"]) {
       for (const entry of readdirSync(join(webRoot, dir), {
@@ -129,8 +134,6 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     const offenders = sources
       .filter((source) => source.text.includes("serviceWorker"))
       .map((source) => source.path);
-    expect(offenders).toEqual([
-      join(webRoot, "src", "play", "push-prompt-card.tsx"),
-    ]);
+    expect(offenders).toEqual([join(webRoot, "src", "push", "subscribe.ts")]);
   });
 });

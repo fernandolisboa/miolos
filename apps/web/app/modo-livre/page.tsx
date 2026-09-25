@@ -1,23 +1,15 @@
 import Link from "next/link";
 
 import { FREE_PLAY_GAMES } from "../../src/free-play/catalog";
-import { freePlayRoutes, messages, routes } from "../../src/i18n";
+import { freePlayRoutes, messages } from "../../src/i18n";
 import { accentVars } from "../../src/play/accent";
+import { PageTopBar } from "../../src/components/page-top-bar";
 import styles from "./page.module.css";
 
 export default function FreePlayIndexPage() {
   return (
     <main className={styles.page} data-free-play="index">
-      <header className={styles.topBar}>
-        <Link
-          className={styles.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
-        >
-          {messages.play.back}
-        </Link>
-        <span className={styles.wordmark}>{messages.brand.wordmark}</span>
-      </header>
+      <PageTopBar />
 
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>{messages.freePlay.title}</h1>

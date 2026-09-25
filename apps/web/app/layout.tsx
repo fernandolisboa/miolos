@@ -9,6 +9,7 @@ import { SessionBootstrap } from "../src/components/session-bootstrap";
 import { locale, messages } from "../src/i18n";
 import { OG_DEFAULTS } from "../src/og/defaults";
 import { siteOrigin } from "../src/site-origin";
+import { themeScript } from "../src/theme/theme";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -26,7 +27,10 @@ const instrumentSans = Instrument_Sans({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#F7F2E9",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F7F2E9" },
+    { media: "(prefers-color-scheme: dark)", color: "#16130F" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -54,7 +58,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html
       lang={locale}
       className={`${fraunces.variable} ${instrumentSans.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
         <SessionBootstrap />
         {children}

@@ -55,6 +55,12 @@
   text-wrap: pretty;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .share {
+    transition: none;
+  }
+}
+
 @media (max-width: 768px) {
   .share {
     min-height: 52px;

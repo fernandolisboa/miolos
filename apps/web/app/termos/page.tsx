@@ -1,21 +1,13 @@
 import Link from "next/link";
 
 import { messages, routes } from "../../src/i18n";
+import { PageTopBar } from "../../src/components/page-top-bar";
 import styles from "./page.module.css";
 
 export default function TermsPage() {
   return (
     <main className={styles.page} data-page="termos">
-      <header className={styles.topBar}>
-        <Link
-          className={styles.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
-        >
-          {messages.play.back}
-        </Link>
-        <span className={styles.wordmark}>{messages.brand.wordmark}</span>
-      </header>
+      <PageTopBar />
 
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>{messages.terms.title}</h1>

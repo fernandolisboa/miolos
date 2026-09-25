@@ -1,5 +1,4 @@
 import type { Game } from "@miolos/core";
-import Link from "next/link";
 
 import { monthOf } from "../../src/archive/parse-params";
 import {
@@ -9,6 +8,7 @@ import {
   formatMonth,
   messages,
 } from "../../src/i18n";
+import { PageTopBar } from "../../src/components/page-top-bar";
 import { ArchiveDayCard } from "./day-card";
 import styles from "./arquivo.module.css";
 
@@ -25,17 +25,14 @@ export function ArchiveDayView({
 
   return (
     <main className={styles.page} data-page="arquivo-dia">
-      <header className={styles.topBar}>
-        <Link
-          className={styles.back}
-          href={archiveMonthRoute(month)}
-          aria-label={copy.backToMonthAria(formatMonth(`${month}-01`))}
-        >
-          {copy.backToMonth(formatMonth(`${month}-01`))}
-        </Link>
-        <span className={styles.wordmark}>{messages.brand.wordmark}</span>
-        <span className={styles.barKicker}>{copy.title}</span>
-      </header>
+      <PageTopBar
+        back={{
+          href: archiveMonthRoute(month),
+          label: copy.backToMonth(formatMonth(`${month}-01`)),
+          ariaLabel: copy.backToMonthAria(formatMonth(`${month}-01`)),
+        }}
+        kicker={copy.title}
+      />
 
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>{longDate}</h1>

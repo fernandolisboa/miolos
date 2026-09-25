@@ -1,12 +1,8 @@
 import Link from "next/link";
 
 import type { ArchiveIndexCalendar } from "../../src/archive/calendar";
-import {
-  archiveMonthRoute,
-  formatMonth,
-  messages,
-  routes,
-} from "../../src/i18n";
+import { archiveMonthRoute, formatMonth, messages } from "../../src/i18n";
+import { PageTopBar } from "../../src/components/page-top-bar";
 import styles from "./arquivo.module.css";
 import { ArchiveCalendar } from "./calendar-grid";
 
@@ -22,17 +18,7 @@ export function ArchiveIndexView({
 
   return (
     <main className={styles.page} data-page="arquivo">
-      <header className={styles.topBar}>
-        <Link
-          className={styles.back}
-          href={routes.home}
-          aria-label={messages.play.backAria}
-        >
-          {messages.play.back}
-        </Link>
-        <span className={styles.wordmark}>{messages.brand.wordmark}</span>
-        <span className={styles.barKicker}>{copy.title}</span>
-      </header>
+      <PageTopBar kicker={copy.title} />
 
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>{copy.title}</h1>
