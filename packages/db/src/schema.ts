@@ -94,6 +94,30 @@ export const notificationSends = pgTable(
   ],
 );
 
+export const consentEvents = pgTable(
+  "consent_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    consent: text("consent", { enum: ["recovery", "reminder"] }).notNull(),
+    action: text("action", { enum: ["granted", "withdrawn"] }).notNull(),
+    at: timestamptz("at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("consent_events_user_id_idx").on(t.userId),
+    check(
+      "consent_events_consent_check",
+      sql`${t.consent} in ('recovery', 'reminder')`,
+    ),
+    check(
+      "consent_events_action_check",
+      sql`${t.action} in ('granted', 'withdrawn')`,
+    ),
+  ],
+);
+
 export const attachTokens = pgTable(
   "attach_tokens",
   {

@@ -94,6 +94,7 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
 
       "claimNudgeSend",
       "completions",
+      "consentEvents",
 
       "getCompletion",
       "getUserSince",

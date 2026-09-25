@@ -25,6 +25,7 @@ export {
 export {
   attachTokens,
   completions,
+  consentEvents,
   hintGrants,
   medalGrants,
   notificationSends,

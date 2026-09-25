@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { attachTokens, users } from "../src/schema";
+import { attachTokens, consentEvents, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
@@ -147,5 +147,33 @@ describe("consent withdrawal columns (migration 0012, ADR-0082 decision 1)", () 
     const rows = await ctx.db.select().from(users).where(eq(users.id, userId));
     expect(rows[0]?.recoveryConsentWithdrawnAt).toBeNull();
     expect(rows[0]?.reminderConsentWithdrawnAt).toBeNull();
+  });
+});
+
+describe("consent_events (migration 0013, ADR-0082)", () => {
+  it("T-DB-S96: an append-only log with a uuid id, a DB-side instant, CHECKs on consent and action, and a user cascade", async () => {
+    const userId = await createUser();
+    await ctx.db
+      .insert(consentEvents)
+      .values({ userId, consent: "reminder", action: "granted" });
+    const rows = await ctx.db.select().from(consentEvents);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(rows[0]?.at).toBeInstanceOf(Date);
+
+    for (const [consent, action] of [
+      ["marketing", "granted"],
+      ["reminder", "revoked"],
+    ]) {
+      const refused = await thrownBy(
+        ctx.db.execute(
+          sql`insert into consent_events (user_id, consent, action) values (${userId}, ${consent}, ${action})`,
+        ),
+      );
+      expect(messages(refused)).toContain("consent_events_");
+    }
+
+    await ctx.db.delete(users).where(eq(users.id, userId));
+    expect(await ctx.db.select().from(consentEvents)).toEqual([]);
   });
 });
