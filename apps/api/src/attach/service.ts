@@ -109,16 +109,27 @@ export async function attachEmailToUser(
   db: Db,
   init: { userId: string; email: string; reminderConsent: boolean },
 ): Promise<void> {
-  await db
-    .update(users)
-    .set({
-      email: init.email,
-      emailVerifiedAt: sql`now()`,
-      recoveryConsentAt: sql`now()`,
-      ...(init.reminderConsent ? { reminderConsentAt: sql`now()` } : {}),
-      updatedAt: sql`now()`,
-    })
-    .where(eq(users.id, init.userId));
+  const reminder = sql`${init.reminderConsent}::boolean`;
+  await db.execute(sql`
+    with changed as (
+      update users
+         set email = ${init.email},
+             email_verified_at = now(),
+             recovery_consent_at = now(),
+             recovery_consent_withdrawn_at = null,
+             reminder_consent_at = case
+               when ${reminder} then now() else reminder_consent_at end,
+             reminder_consent_withdrawn_at = case
+               when ${reminder} then null else reminder_consent_withdrawn_at end,
+             updated_at = now()
+       where id = ${init.userId}
+      returning id
+    )
+    insert into consent_events (user_id, consent, action)
+    select id, 'recovery', 'granted' from changed
+    union all
+    select id, 'reminder', 'granted' from changed where ${reminder}
+  `);
 }
 
 export async function dismissAttachPrompt(

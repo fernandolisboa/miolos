@@ -22,46 +22,80 @@ export async function withdrawReminderConsent(
   db: Db,
   userId: string,
 ): Promise<void> {
-  await db
-    .update(users)
-    .set({
-      reminderConsentAt: null,
-      reminderConsentWithdrawnAt: sql`case when ${users.reminderConsentAt} is null then ${users.reminderConsentWithdrawnAt} else now() end`,
-      updatedAt: sql`now()`,
-    })
-    .where(eq(users.id, userId));
+  await db.execute(sql`
+    with changed as (
+      update users
+         set reminder_consent_at = null,
+             reminder_consent_withdrawn_at = now(),
+             updated_at = now()
+       where id = ${userId} and reminder_consent_at is not null
+      returning id
+    )
+    insert into consent_events (user_id, consent, action)
+    select id, 'reminder', 'withdrawn' from changed
+  `);
 }
 
 export async function grantReminderConsent(
   db: Db,
   userId: string,
 ): Promise<boolean> {
-  const rows = await db
-    .update(users)
-    .set({
-      reminderConsentAt: sql`coalesce(${users.reminderConsentAt}, now())`,
-      reminderConsentWithdrawnAt: null,
-      updatedAt: sql`now()`,
-    })
-    .where(sql`${users.id} = ${userId} and ${users.email} is not null`)
-    .returning();
-  return rows.length > 0;
+  const result = await db.execute(sql`
+    with changed as (
+      update users
+         set reminder_consent_at = now(),
+             reminder_consent_withdrawn_at = null,
+             updated_at = now()
+       where id = ${userId} and email is not null
+         and reminder_consent_at is null
+      returning id
+    ), logged as (
+      insert into consent_events (user_id, consent, action)
+      select id, 'reminder', 'granted' from changed
+    )
+    select exists (
+      select 1 from users where id = ${userId} and email is not null
+    ) as attached
+  `);
+  return result.rows[0]?.["attached"] === true;
 }
 
 export async function detachEmail(db: Db, userId: string): Promise<boolean> {
-  const rows = await db
-    .update(users)
-    .set({
-      email: null,
-      emailVerifiedAt: null,
-      recoveryConsentAt: null,
-      reminderConsentAt: null,
-      recoveryConsentWithdrawnAt: sql`case when ${users.recoveryConsentAt} is null then ${users.recoveryConsentWithdrawnAt} else now() end`,
-      reminderConsentWithdrawnAt: sql`case when ${users.reminderConsentAt} is null then ${users.reminderConsentWithdrawnAt} else now() end`,
-      attachPromptDismissedAt: sql`now()`,
-      updatedAt: sql`now()`,
-    })
-    .where(sql`${users.id} = ${userId} and ${users.email} is not null`)
-    .returning();
-  return rows.length > 0;
+  const result = await db.execute(sql`
+    with target as (
+      select id, recovery_consent_at, reminder_consent_at
+        from users
+       where id = ${userId} and email is not null
+         for update
+    ), changed as (
+      update users u
+         set email = null,
+             email_verified_at = null,
+             recovery_consent_at = null,
+             reminder_consent_at = null,
+             recovery_consent_withdrawn_at = case
+               when t.recovery_consent_at is null
+               then u.recovery_consent_withdrawn_at else now() end,
+             reminder_consent_withdrawn_at = case
+               when t.reminder_consent_at is null
+               then u.reminder_consent_withdrawn_at else now() end,
+             attach_prompt_dismissed_at =
+               coalesce(u.attach_prompt_dismissed_at, now()),
+             updated_at = now()
+        from target t
+       where u.id = t.id
+      returning u.id,
+                t.recovery_consent_at is not null as had_recovery,
+                t.reminder_consent_at is not null as had_reminder
+    ), logged as (
+      insert into consent_events (user_id, consent, action)
+      select id, 'recovery', 'withdrawn' from changed where had_recovery
+      union all
+      select id, 'reminder', 'withdrawn' from changed where had_reminder
+    ), tokens as (
+      delete from attach_tokens where user_id in (select id from changed)
+    )
+    select count(*)::int as detached from changed
+  `);
+  return result.rows[0]?.["detached"] === 1;
 }

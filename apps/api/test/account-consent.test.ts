@@ -1,4 +1,5 @@
 import { eq, sessions, sql, users } from "@miolos/db";
+import { attachTokens } from "@miolos/db/user";
 import { createTestDb } from "@miolos/db/testing";
 import { NextRequest } from "next/server";
 import {
@@ -14,6 +15,7 @@ import {
 
 import * as detachRoute from "../app/account/detach-email/route";
 import * as reminderRoute from "../app/account/reminder-consent/route";
+import { attachEmailToUser } from "../src/attach/service";
 import { requireUserId } from "../src/session/service";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { jsonHeaders } from "./push-helpers";
@@ -262,5 +264,122 @@ describe("POST /account/detach-email (#36, ADR-0082 decision 3)", () => {
 
     const regrant = await setReminder(both.token, true);
     expect(regrant.status).toBe(409);
+  });
+});
+
+async function events(userId: string): Promise<string[]> {
+  const result = await ctx.db.execute(
+    sql`select consent, action from consent_events
+         where user_id = ${userId} order by at, consent`,
+  );
+  return result.rows.map(
+    (row) => `${String(row["consent"])}:${String(row["action"])}`,
+  );
+}
+
+describe("consent_events records every real transition, and no repeat (#36, ADR-0082)", () => {
+  it("T-API-S209: grant, withdraw, grant leaves three reminder events; a repeated grant or withdrawal adds none", async () => {
+    const { token, userId } = await createSession({ email: "ana@example.org" });
+
+    await setReminder(token, true);
+    await setReminder(token, true);
+    await setReminder(token, false);
+    await setReminder(token, false);
+    await setReminder(token, true);
+
+    expect(await events(userId)).toEqual([
+      "reminder:granted",
+      "reminder:withdrawn",
+      "reminder:granted",
+    ]);
+  });
+
+  it("T-API-S210: detach logs a withdrawal only for the consents that were set, deletes the user's unspent attach tokens, and keeps an earlier attach dismissal", async () => {
+    const both = await createSession({
+      email: "ana@example.org",
+      reminder: true,
+    });
+    const recoveryOnly = await createSession({ email: "bia@example.org" });
+    const bystander = await createSession();
+    const dismissedAt = new Date("2026-08-02T12:00:00.000Z");
+    await ctx.db
+      .update(users)
+      .set({ attachPromptDismissedAt: dismissedAt })
+      .where(eq(users.id, recoveryOnly.userId));
+    for (const [n, userId] of [both.userId, bystander.userId].entries()) {
+      await ctx.db.insert(attachTokens).values({
+        tokenHash: `hash-${String(n)}`,
+        userId,
+        email: "x@example.org",
+      });
+    }
+
+    await detach(both.token);
+    await detach(recoveryOnly.token);
+
+    expect(await events(both.userId)).toEqual([
+      "recovery:withdrawn",
+      "reminder:withdrawn",
+    ]);
+    expect(await events(recoveryOnly.userId)).toEqual(["recovery:withdrawn"]);
+    expect(
+      (await ctx.db.select().from(attachTokens)).map((row) => row.userId),
+    ).toEqual([bystander.userId]);
+    expect(
+      (await readUser(recoveryOnly.userId)).attachPromptDismissedAt,
+    ).toEqual(dismissedAt);
+  });
+
+  it("T-API-S211: attaching logs a recovery grant, plus a reminder grant when ticked, and a re-attach after detach clears the withdrawal columns it re-grants", async () => {
+    const ticked = await createSession();
+    await attachEmailToUser(ctx.db, {
+      userId: ticked.userId,
+      email: "ana@example.org",
+      reminderConsent: true,
+    });
+    expect(await events(ticked.userId)).toEqual([
+      "recovery:granted",
+      "reminder:granted",
+    ]);
+
+    await detach(ticked.token);
+    await attachEmailToUser(ctx.db, {
+      userId: ticked.userId,
+      email: "ana@example.org",
+      reminderConsent: true,
+    });
+    const reattached = await readUser(ticked.userId);
+    expect(reattached.recoveryConsentAt).toBeInstanceOf(Date);
+    expect(reattached.recoveryConsentWithdrawnAt).toBeNull();
+    expect(reattached.reminderConsentAt).toBeInstanceOf(Date);
+    expect(reattached.reminderConsentWithdrawnAt).toBeNull();
+    expect(await events(ticked.userId)).toEqual([
+      "recovery:granted",
+      "reminder:granted",
+      "recovery:withdrawn",
+      "reminder:withdrawn",
+      "recovery:granted",
+      "reminder:granted",
+    ]);
+
+    const unticked = await createSession({
+      email: "bia@example.org",
+      reminder: true,
+    });
+    await detach(unticked.token);
+    await attachEmailToUser(ctx.db, {
+      userId: unticked.userId,
+      email: "bia@example.org",
+      reminderConsent: false,
+    });
+    const partial = await readUser(unticked.userId);
+    expect(partial.recoveryConsentWithdrawnAt).toBeNull();
+    expect(partial.reminderConsentAt).toBeNull();
+    expect(partial.reminderConsentWithdrawnAt).toBeInstanceOf(Date);
+    expect(await events(unticked.userId)).toEqual([
+      "recovery:withdrawn",
+      "reminder:withdrawn",
+      "recovery:granted",
+    ]);
   });
 });
