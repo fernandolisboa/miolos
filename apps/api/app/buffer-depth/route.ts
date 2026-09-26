@@ -3,7 +3,11 @@ import { bufferDepth, getRemoteConfig } from "@miolos/db/publishing";
 
 import { corsHeaders } from "../../src/cors";
 import { getDb } from "../../src/db";
-import { effectiveThreshold } from "../../src/publishing/service";
+import {
+  effectiveThreshold,
+  isTermoAnswerListLow,
+  unusedTermoAnswers,
+} from "../../src/publishing/service";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +22,13 @@ export async function GET(): Promise<Response> {
     sudoku: await bufferDepth(db, "sudoku"),
   };
   const threshold = effectiveThreshold(config.bufferDepth);
+  const termoAnswersRemaining = (await unusedTermoAnswers(db)).length;
   const body = bufferDepthResponseSchema.parse({
     depths,
     threshold,
     shallow: Object.values(depths).some((depth) => depth < threshold),
+    termoAnswersRemaining,
+    termoAnswersLow: isTermoAnswerListLow(termoAnswersRemaining),
   });
   return Response.json(body, { headers: corsHeaders() });
 }

@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S121` | `S120` | never used |
+| `T-CORE` | `S122` | `S121` | never used |
 | `T-DB` | `S99` | `S98` | `T-DB-21` |
-| `T-API` | `S217` | `S216` | `T-API-16` |
-| `T-WEB` | `S414` | `S413` | `T-WEB-23` |
+| `T-API` | `S220` | `S219` | `T-API-16` |
+| `T-WEB` | `S415` | `S414` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
+
+#74 (the answer-list alert, ADR-0084) spent `T-CORE-S121` (both answer-list keys required on `bufferDepthResponseSchema`), `T-API-S217` (the unused count, low at 30 and not at 31), `S218` (a killed row stays spent) and `S219` (a shallow buffer and a low list are independent), and `T-WEB-S414` (the `buffer-alert.yml` scan). It reserved nothing beyond these, so nothing is burned.
 
 #36 PR B (consent withdrawal, ADR-0082) spent its reservation `T-CORE-S117` (reminder-consent contract) and `S118` (detach contract), and `T-DB-S90` (the two withdrawal columns); `T-DB-S91` is **burned**, unspent. It spent `T-API-S203` (the promoted preamble keeps the push route's 403-before-503), `S204` (the preamble's rejections on both new routes), `S205` (withdraw), `S206` (re-grant and the 409), `S207` (detach) and `S208` (#199's email arm skips both), and `T-WEB-S406` (the account write clients), `S407` (the checkbox), `S408` (the detach confirm) and `S409` (the policy names Ajustes). It also spent `T-DB-S96` (`consent_events` shape), `S97` (a merge moves no events) and `S98` (the 0013 backfill); `T-API-S209` (grant, withdraw, grant logs three events), `S210` (detach logs only set consents and keeps the attach tokens), `S211` (attach logs only real grants), `S212` (detach resets no attach cap), `S213` (a pre-detach link is refused), `S214` (a backfilled grant survives a withdrawal), `S215` (a pre-detach link stays refused after a re-attach) and `S216` (a link ticked before an untick grants no reminder); and `T-WEB-S409a` (the policy names the consent record), `S410` (a 409 no-email is a finished detach), `S411` (disabled while pending), `S412` (a failure re-reads the account) and `S413` (attach again from Ajustes).
 
@@ -512,7 +514,8 @@ is a `T-WEB`-only change whose ids sit on the behaviour under test, and **#74
 moves to `S351+`** because its three web ids are for a workflow source-scan
 and are the cheaper ones to shift. Nothing is burned by the collision — each
 number keeps exactly one meaning — and both allocation paragraphs stay, in
-their plans and here.
+their plans and here. *(Closed at #74's landing: #206 cluster 3 spent `S351…S353`
+first, and #74 took `T-WEB-S414` from the live frontier instead.)*
 
 #106 (Tier 1, no plan) reserved **`T-LINT-S56…S60`** — four planned plus one
 tail of review-round headroom, no `T-CORE`, `T-DB`, `T-API` or `T-WEB` id

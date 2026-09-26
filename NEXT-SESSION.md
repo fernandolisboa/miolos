@@ -4,7 +4,7 @@
 
 ## Start here
 
-Nothing to verify. #36 is closed; consent withdrawal is ADR-0082.
+**Drill #74's answer-list alert** (ADR-0084). An agent can do all three: `curl -fsS https://api.miolos.app/buffer-depth` shows `termoAnswersRemaining` and `termoAnswersLow` (paste the count on #74, it is the first real reading); dispatch the "Buffer alert" workflow with `force_answer_list_low` ticked, check an `answer-list-alert` issue appears, and close it as a drill; one run with no inputs is green. Until that drill, the self-creating label has never run in production.
 
 ## Traps
 

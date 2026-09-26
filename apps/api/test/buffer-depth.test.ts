@@ -1,10 +1,12 @@
 import {
+  type BufferDepthResponse,
   bufferDepthResponseSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
 } from "@miolos/core";
 import { sql } from "@miolos/db";
 import {
+  dailyPuzzles,
   insertDailyPuzzle,
   remoteConfig,
   todaySaoPaulo,
@@ -81,6 +83,24 @@ async function seedDays(
   }
 }
 
+async function spendPastAnswers(from: number, count: number): Promise<void> {
+  await ctx.db.insert(dailyPuzzles).values(
+    TERMO_ANSWERS.slice(from, from + count).map((answer, index) => ({
+      game: "termo" as const,
+      date: addDays("2020-01-01", index),
+      seed: index,
+      content: termoDailyContentSchema.parse(answer),
+      publishedAt: sql`now() - interval '1 year'`,
+    })),
+  );
+}
+
+async function readBody(): Promise<BufferDepthResponse> {
+  const response = await GET();
+  expect(response.status).toBe(200);
+  return bufferDepthResponseSchema.parse(await response.json());
+}
+
 describe("GET /buffer-depth", () => {
   it("T-API-S5: reports per-game depth, the effective threshold and shallow=false at 7", async () => {
     await seedDays("termo", 7);
@@ -94,6 +114,8 @@ describe("GET /buffer-depth", () => {
       depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 7 },
       threshold: 4,
       shallow: false,
+      termoAnswersRemaining: 393,
+      termoAnswersLow: false,
     });
   });
 
@@ -108,6 +130,8 @@ describe("GET /buffer-depth", () => {
       depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 0 },
       threshold: 4,
       shallow: true,
+      termoAnswersRemaining: 393,
+      termoAnswersLow: false,
     });
   });
 
@@ -122,6 +146,8 @@ describe("GET /buffer-depth", () => {
       depths: { termo: 7, binairo: 7, nonogram: 0, sudoku: 7 },
       threshold: 4,
       shallow: true,
+      termoAnswersRemaining: 393,
+      termoAnswersLow: false,
     });
   });
 
@@ -136,6 +162,8 @@ describe("GET /buffer-depth", () => {
       depths: { termo: 0, binairo: 7, nonogram: 7, sudoku: 7 },
       threshold: 4,
       shallow: true,
+      termoAnswersRemaining: 400,
+      termoAnswersLow: false,
     });
   });
 
@@ -151,6 +179,8 @@ describe("GET /buffer-depth", () => {
       depths: { termo: 3, binairo: 3, nonogram: 3, sudoku: 3 },
       threshold: 4,
       shallow: true,
+      termoAnswersRemaining: 397,
+      termoAnswersLow: false,
     });
   });
 
@@ -166,6 +196,8 @@ describe("GET /buffer-depth", () => {
       depths: { termo: 2, binairo: 2, nonogram: 2, sudoku: 2 },
       threshold: 2,
       shallow: false,
+      termoAnswersRemaining: 398,
+      termoAnswersLow: false,
     });
   });
 
@@ -176,6 +208,53 @@ describe("GET /buffer-depth", () => {
       depths: { termo: 0, binairo: 0, nonogram: 0, sudoku: 0 },
       threshold: 4,
       shallow: true,
+      termoAnswersRemaining: 400,
+      termoAnswersLow: false,
+    });
+  });
+
+  it("T-API-S217: reports the unused answer count, and flags it low AT 30 and not at 31", async () => {
+    await spendPastAnswers(7, 369);
+    expect(await readBody()).toMatchObject({
+      termoAnswersRemaining: 31,
+      termoAnswersLow: false,
+    });
+
+    await ctx.db.execute(sql`truncate table daily_puzzles`);
+    await spendPastAnswers(7, 370);
+    expect(await readBody()).toMatchObject({
+      termoAnswersRemaining: 30,
+      termoAnswersLow: true,
+    });
+  });
+
+  it("T-API-S218: a killed buffered termo row leaves the buffer but its answer stays spent", async () => {
+    await seedDays("termo", 7);
+    const today = await todaySaoPaulo(ctx.db);
+    await ctx.db.execute(
+      sql`update daily_puzzles set killed_at = now() where game = 'termo' and date = ${addDays(today, 3)}`,
+    );
+    expect(await readBody()).toMatchObject({
+      depths: { termo: 6 },
+      termoAnswersRemaining: 393,
+    });
+  });
+
+  it("T-API-S219: a shallow buffer and a low answer list are reported independently", async () => {
+    await seedDays("binairo", 7);
+    await seedDays("nonogram", 7);
+    await seedDays("sudoku", 7);
+    expect(await readBody()).toMatchObject({
+      shallow: true,
+      termoAnswersLow: false,
+    });
+
+    await seedDays("termo", 7);
+    await spendPastAnswers(7, 370);
+    expect(await readBody()).toMatchObject({
+      shallow: false,
+      termoAnswersRemaining: 23,
+      termoAnswersLow: true,
     });
   });
 });

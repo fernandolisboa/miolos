@@ -33,6 +33,7 @@ import {
   validateSudoku,
 } from "@miolos/games/sudoku";
 import { TERMO_ANSWERS } from "@miolos/games/termo";
+import type { TermoAnswer } from "@miolos/games/termo";
 
 import { addDays, isoWeekdayOf } from "./dates";
 
@@ -314,8 +315,16 @@ export async function topUpNonogramBuffer(
   );
 }
 
-// TODO(#74): a real alert for a low Termo answer pool.
-const LOW_ANSWER_POOL_WARNING = 30;
+const LOW_ANSWER_LIST_WARNING = 30;
+
+export async function unusedTermoAnswers(db: Db): Promise<TermoAnswer[]> {
+  const used = new Set(await listUsedTermoAnswers(db));
+  return TERMO_ANSWERS.filter((answer) => !used.has(answer.normalized));
+}
+
+export function isTermoAnswerListLow(remaining: number): boolean {
+  return remaining <= LOW_ANSWER_LIST_WARNING;
+}
 
 const ANSWER_LIST_EXHAUSTED =
   "answer list exhausted: every curated Termo answer is already used";
@@ -352,10 +361,9 @@ export async function topUpTermoBuffer(
   depth: number,
 ): Promise<TopUpResult> {
   return topUpBuffer(db, "termo", depth, async () => {
-    const used = new Set(await listUsedTermoAnswers(db));
-    const pool = TERMO_ANSWERS.filter((answer) => !used.has(answer.normalized));
+    const pool = await unusedTermoAnswers(db);
 
-    if (pool.length <= LOW_ANSWER_POOL_WARNING) {
+    if (isTermoAnswerListLow(pool.length)) {
       console.error(
         JSON.stringify({
           event: "termo-answer-pool-low",

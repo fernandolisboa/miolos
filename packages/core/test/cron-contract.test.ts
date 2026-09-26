@@ -122,6 +122,8 @@ describe("bufferDepthResponseSchema", () => {
     depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 7 },
     threshold: 4,
     shallow: false,
+    termoAnswersRemaining: 120,
+    termoAnswersLow: false,
   };
 
   it("parses and round-trips a four-game body", () => {
@@ -155,6 +157,8 @@ describe("bufferDepthResponseSchema", () => {
       depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 0 },
       threshold: 4,
       shallow: true,
+      termoAnswersRemaining: 120,
+      termoAnswersLow: false,
     };
     expect(bufferDepthResponseSchema.parse(drained)).toEqual(drained);
   });
@@ -164,6 +168,8 @@ describe("bufferDepthResponseSchema", () => {
       depths: { termo: 7, binairo: 7, nonogram: 0, sudoku: 7 },
       threshold: 4,
       shallow: true,
+      termoAnswersRemaining: 120,
+      termoAnswersLow: false,
     };
     expect(bufferDepthResponseSchema.parse(drained)).toEqual(drained);
   });
@@ -173,6 +179,8 @@ describe("bufferDepthResponseSchema", () => {
       depths: { termo: 0, binairo: 7, nonogram: 7, sudoku: 7 },
       threshold: 4,
       shallow: true,
+      termoAnswersRemaining: 120,
+      termoAnswersLow: false,
     };
     expect(bufferDepthResponseSchema.parse(drained)).toEqual(drained);
   });
@@ -193,6 +201,27 @@ describe("bufferDepthResponseSchema", () => {
         depths: { termo: -1, binairo: 7, nonogram: 7, sudoku: 7 },
       }).success,
     ).toBe(false);
+  });
+
+  it("T-CORE-S121: both answer-list keys are required, the count is a non-negative integer, and no unknown top-level key parses", () => {
+    const without = (
+      key: keyof BufferDepthResponse,
+    ): Partial<BufferDepthResponse> => {
+      const body: Partial<BufferDepthResponse> = { ...depths };
+      delete body[key];
+      return body;
+    };
+    for (const body of [
+      without("termoAnswersRemaining"),
+      without("termoAnswersLow"),
+      { ...depths, termoAnswersRemaining: -1 },
+      { ...depths, termoAnswersRemaining: 30.5 },
+      { ...depths, termoAnswersTotal: 400 },
+    ]) {
+      expect(bufferDepthResponseSchema.safeParse(body).success).toBe(false);
+    }
+    const low = { ...depths, termoAnswersRemaining: 0, termoAnswersLow: true };
+    expect(bufferDepthResponseSchema.parse(low)).toEqual(low);
   });
 });
 
