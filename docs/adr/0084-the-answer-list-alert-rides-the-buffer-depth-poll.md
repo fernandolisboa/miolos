@@ -20,5 +20,5 @@ The Termo answer list is finite and spends one answer a day. Until now the only 
 
 - The clocks, counted from the first poll that reads `termoAnswersLow` (bufferDepth 7, effective threshold 4): the list empties on day 30, `shallow` first shows on day 34, and day 37 is the first dark day. ADR-0040's "~30 days' notice" stands. Its "~3 days" holds for any bufferDepth of 4 or more.
 - Once it fires, the issue is bumped every day until a content PR extends the list. That is intended.
-- The workflow now needs the API to carry both keys. Between merge and the API deploy, a scheduled run goes red once.
+- The workflow now needs the API to carry both keys. A scheduled run between merge and the API deploy goes red and files no `buffer-alert` issue that day; so does any later run whose body lacks them.
 - The route makes one more database trip, which reads one short string per Termo row ever written. Its cost under load is unmeasured, and `apps/api` has no rate limit.

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -312,13 +312,15 @@ describe("the buffer alert keeps its two independent issue streams (T-WEB-S414)"
     const start = lines.findIndex((line) =>
       line.includes("name: Open or bump the alert issues"),
     );
+    if (start < 0) throw new Error("the issue step is missing");
     const run = lines.findIndex(
       (line, index) => index > start && /^\s*run: \|$/.test(line),
     );
+    const indent = indentOf(lines[run + 1] ?? "");
     const body: string[] = [];
     for (const line of lines.slice(run + 1)) {
-      if (line.trim() !== "" && !line.startsWith("          ")) break;
-      body.push(line.slice(10));
+      if (line.trim() !== "" && indentOf(line) < indent) break;
+      body.push(line.slice(indent));
     }
     return body.join("\n");
   })();
@@ -345,7 +347,9 @@ describe("the buffer alert keeps its two independent issue streams (T-WEB-S414)"
         ...env,
       },
     });
-    return { status: result.status, calls: readFileSync(log, "utf8") };
+    const calls = readFileSync(log, "utf8");
+    rmSync(dir, { recursive: true, force: true });
+    return { status: result.status, calls };
   };
 
   const unconstrainedEnvWrites = (text: string): string[] =>
@@ -381,6 +385,12 @@ describe("the buffer alert keeps its two independent issue streams (T-WEB-S414)"
     expect(live).toMatch(/^\s*-\s*cron:\s*["']30 7 \* \* \*["']\s*$/m);
     expect(live).toMatch(/^\s*force_shallow:\s*$/m);
     expect(live).toMatch(/^\s*force_answer_list_low:\s*$/m);
+    expect(live).toMatch(
+      /^\s*FORCE_SHALLOW: \$\{\{ inputs\.force_shallow == true \}\}\s*$/m,
+    );
+    expect(live).toMatch(
+      /^\s*FORCE_ANSWER_LIST_LOW: \$\{\{ inputs\.force_answer_list_low == true \}\}\s*$/m,
+    );
     expect(live).toMatch(/curl -fsS "\$API_ORIGIN\/buffer-depth"/);
   });
 
