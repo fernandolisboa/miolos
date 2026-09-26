@@ -55,6 +55,8 @@ export const bufferDepthResponseSchema = z.strictObject({
   threshold: z.number().int().positive(),
 
   shallow: z.boolean(),
+  termoAnswersRemaining: z.number().int().min(0),
+  termoAnswersLow: z.boolean(),
 });
 
 export type BufferDepthResponse = z.infer<typeof bufferDepthResponseSchema>;
