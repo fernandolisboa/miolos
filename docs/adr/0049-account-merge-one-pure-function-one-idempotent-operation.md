@@ -1,6 +1,7 @@
 # ADR-0049 — Account merge: one pure function, one idempotent operation, tombstone by remap
 
 **Status:** Accepted — 2026-08-13
+**Amended by:** [ADR-0082](./0082-settings-withdraws-consent-with-timestamps-removing-the-email-is-the-recovery-withdrawal.md) — decision 6: `consent_events` rows stay on the tombstone as evidence
 **Depends on:** [ADR-0003](./0003-anonymous-first-identity-with-email-recovery.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md)
 **Amends:** the merge-repoint consequence of
 [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md) —

@@ -15,3 +15,29 @@ export const accountStateResponseSchema = z.strictObject({
   reminderConsent: z.boolean(),
 });
 export type AccountStateResponse = z.infer<typeof accountStateResponseSchema>;
+
+export const reminderConsentSchema = z.strictObject({
+  granted: z.boolean(),
+});
+export type ReminderConsentRequest = z.infer<typeof reminderConsentSchema>;
+
+export const reminderConsentResponseSchema = z.strictObject({
+  reminderConsent: z.boolean(),
+});
+export type ReminderConsentResponse = z.infer<
+  typeof reminderConsentResponseSchema
+>;
+
+export const accountDetachEmailSchema = z.strictObject({
+  confirm: z.literal(true),
+});
+export type AccountDetachEmailRequest = z.infer<
+  typeof accountDetachEmailSchema
+>;
+
+export const accountDetachEmailResponseSchema = z.strictObject({
+  detached: z.literal(true),
+});
+export type AccountDetachEmailResponse = z.infer<
+  typeof accountDetachEmailResponseSchema
+>;

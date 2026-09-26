@@ -85,6 +85,20 @@
       "when": 1787273619657,
       "tag": "0011_fair_vin_gonzales",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790354796294,
+      "tag": "0012_colossal_iceman",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790356600101,
+      "tag": "0013_last_mercury",
+      "breakpoints": true
     }
   ]
 }

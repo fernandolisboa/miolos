@@ -83,8 +83,8 @@ describe("every writer of a users row sets updated_at (ADR-0050)", () => {
     const raw = files.flatMap(({ text }) => [
       ...text.matchAll(/update\s+users\b/gi),
     ]);
-    expect(builders.length).toBeGreaterThanOrEqual(5);
-    expect(raw.length).toBeGreaterThanOrEqual(1);
+    expect(builders.length).toBeGreaterThanOrEqual(4);
+    expect(raw.length).toBeGreaterThanOrEqual(5);
 
     const setSites = files.flatMap(({ text }) => [
       ...text.matchAll(/\.update\(users\)\s*\.set\(/g),

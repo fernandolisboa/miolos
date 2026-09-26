@@ -6,24 +6,14 @@ import {
 } from "@miolos/core";
 import type { NextRequest } from "next/server";
 
-import {
-  corsHeaders,
-  isJsonContentType,
-  preflightResponse,
-} from "../../../src/cors";
+import { corsHeaders, preflightResponse } from "../../../src/cors";
 import { errorResponse } from "../../../src/http/responses";
-import { getDb } from "../../../src/db";
+import { writePreamble } from "../../../src/http/write-preamble";
 import { isPushConfigured } from "../../../src/push/config";
 import {
   deleteSubscription,
   upsertSubscription,
 } from "../../../src/push/service";
-import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
-import {
-  isCrossSiteWrite,
-  warnIfGuardDegraded,
-} from "../../../src/session/origin-guard";
-import { requireUserId } from "../../../src/session/service";
 import { captureEvent, runAfterResponse } from "../../../src/telemetry/capture";
 
 export const dynamic = "force-dynamic";
@@ -32,73 +22,28 @@ export function OPTIONS(): Response {
   return preflightResponse("POST, DELETE, OPTIONS");
 }
 
-async function writePreamble(request: NextRequest): Promise<
-  | { failure: Response }
-  | {
-      failure?: undefined;
-      db: ReturnType<typeof getDb>;
-      userId: string;
-      raw: unknown;
-    }
-> {
-  warnIfGuardDegraded();
-
-  if (
-    isCrossSiteWrite(
-      {
-        secFetchSite: request.headers.get("sec-fetch-site"),
-        origin: request.headers.get("origin"),
-      },
-      process.env.WEB_ORIGIN,
-    )
-  ) {
-    return { failure: errorResponse(403, "cross-site") };
-  }
-
-  if (!isPushConfigured()) {
-    return { failure: errorResponse(503, "push-not-configured") };
-  }
-
-  if (!isJsonContentType(request.headers.get("content-type"))) {
-    return { failure: errorResponse(415, "unsupported-media-type") };
-  }
-
-  const db = getDb();
-  const userId = await requireUserId(
-    db,
-    request.cookies.get(SESSION_COOKIE_NAME)?.value,
-  );
-  if (!userId) {
-    return { failure: errorResponse(401, "no-session") };
-  }
-
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return { failure: errorResponse(400, "invalid-body") };
-  }
-
-  return { db, userId, raw };
+function pushUnavailable(): Response | undefined {
+  return isPushConfigured()
+    ? undefined
+    : errorResponse(503, "push-not-configured");
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const context = await writePreamble(request);
+    const context = await writePreamble(
+      request,
+      pushSubscribeSchema,
+      pushUnavailable,
+    );
     if (context.failure) {
       return context.failure;
     }
 
-    const parsed = pushSubscribeSchema.safeParse(context.raw);
-    if (!parsed.success) {
-      return errorResponse(400, "invalid-body");
-    }
-
     const { stored, inserted } = await upsertSubscription(context.db, {
       userId: context.userId,
-      endpoint: parsed.data.endpoint,
-      p256dh: parsed.data.keys.p256dh,
-      auth: parsed.data.keys.auth,
+      endpoint: context.body.endpoint,
+      p256dh: context.body.keys.p256dh,
+      auth: context.body.keys.auth,
     });
     if (!stored) {
       return errorResponse(429, "too-many-requests");
@@ -126,17 +71,16 @@ export async function POST(request: NextRequest): Promise<Response> {
 
 export async function DELETE(request: NextRequest): Promise<Response> {
   try {
-    const context = await writePreamble(request);
+    const context = await writePreamble(
+      request,
+      pushUnsubscribeSchema,
+      pushUnavailable,
+    );
     if (context.failure) {
       return context.failure;
     }
 
-    const parsed = pushUnsubscribeSchema.safeParse(context.raw);
-    if (!parsed.success) {
-      return errorResponse(400, "invalid-body");
-    }
-
-    await deleteSubscription(context.db, context.userId, parsed.data.endpoint);
+    await deleteSubscription(context.db, context.userId, context.body.endpoint);
 
     return Response.json(
       pushUnsubscribeResponseSchema.parse({ removed: true }),

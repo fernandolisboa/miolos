@@ -177,10 +177,18 @@ export {
 export {
   accountDeleteResponseSchema,
   accountDeleteSchema,
+  accountDetachEmailResponseSchema,
+  accountDetachEmailSchema,
   accountStateResponseSchema,
+  reminderConsentResponseSchema,
+  reminderConsentSchema,
   type AccountDeleteRequest,
   type AccountDeleteResponse,
+  type AccountDetachEmailRequest,
+  type AccountDetachEmailResponse,
   type AccountStateResponse,
+  type ReminderConsentRequest,
+  type ReminderConsentResponse,
 } from "./contracts/account";
 export {
   medalIdSchema,

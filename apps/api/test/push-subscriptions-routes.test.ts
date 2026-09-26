@@ -412,3 +412,26 @@ describe("the per-user subscription ceiling (#146, ADR-0068 decision 1 — the #
     expect((await post(subscribeBody(endpoint(12)))).status).toBe(200);
   });
 });
+
+describe("the promoted write preamble keeps the push route's order (#36)", () => {
+  it("T-API-S203: a cross-site write is a 403 even with push unconfigured, and the 503 still comes before the JSON gate, the session and the body", async () => {
+    vi.stubEnv("VAPID_PRIVATE_KEY", undefined);
+    const crossHeaders = jsonHeaders();
+    crossHeaders.set("sec-fetch-site", "cross-site");
+    const crossSite = await POST(
+      subscriptionsRequest("POST", { headers: crossHeaders, body: "{" }),
+    );
+    expect(crossSite.status).toBe(403);
+
+    const unconfigured = await DELETE(
+      subscriptionsRequest("DELETE", {
+        headers: new Headers({ "content-type": "text/plain" }),
+        body: "{",
+      }),
+    );
+    expect(unconfigured.status).toBe(503);
+    expect(await unconfigured.json()).toEqual({
+      error: "push-not-configured",
+    });
+  });
+});

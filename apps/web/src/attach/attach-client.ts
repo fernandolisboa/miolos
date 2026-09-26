@@ -8,7 +8,7 @@ import {
   type AttachStateResponse,
 } from "@miolos/core";
 
-import { apiGet, apiPost, apiPostRaw } from "../api/client";
+import { apiGet, apiPost, apiPostParsed, apiPostRaw } from "../api/client";
 
 const ABSENCE = "attach calls skipped, the prompt stays absent";
 
@@ -78,20 +78,11 @@ export async function dismissAttachPrompt(): Promise<boolean> {
 }
 
 export async function deleteAccount(): Promise<boolean> {
-  const response = await apiPostRaw(
+  const response = await apiPostParsed(
     "/account/delete",
     { confirm: true },
+    accountDeleteResponseSchema,
     ABSENCE,
   );
-  if (response === undefined) {
-    return false;
-  }
-  try {
-    if (!response.ok) {
-      return false;
-    }
-    return accountDeleteResponseSchema.safeParse(await response.json()).success;
-  } catch {
-    return false;
-  }
+  return response !== undefined;
 }

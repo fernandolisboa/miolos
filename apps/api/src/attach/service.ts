@@ -54,12 +54,18 @@ export async function claimAttachToken(
   db: Db,
   tokenHash: string,
 ): Promise<
-  { userId: string; email: string; reminderConsent: boolean } | undefined
+  | { userId: string; email: string; reminderConsent: boolean; createdAt: Date }
+  | undefined
 > {
   const rows = await db
     .delete(attachTokens)
     .where(
-      sql`${attachTokens.tokenHash} = ${tokenHash} and ${attachTokens.createdAt} > now() - interval '30 minutes'`,
+      sql`${attachTokens.tokenHash} = ${tokenHash} and ${attachTokens.createdAt} > now() - interval '30 minutes'
+        and not exists (
+          select 1 from users w
+           where w.id = ${attachTokens.userId}
+             and ${attachTokens.createdAt} <= w.recovery_consent_withdrawn_at
+        )`,
     )
     .returning();
   const row = rows[0];
@@ -70,6 +76,7 @@ export async function claimAttachToken(
     userId: row.userId,
     email: row.email,
     reminderConsent: row.reminderConsent,
+    createdAt: row.createdAt,
   };
 }
 
@@ -107,18 +114,43 @@ export async function revokeSessionsForUser(
 
 export async function attachEmailToUser(
   db: Db,
-  init: { userId: string; email: string; reminderConsent: boolean },
+  init: {
+    userId: string;
+    email: string;
+    reminderConsent: boolean;
+    tokenCreatedAt: Date;
+  },
 ): Promise<void> {
-  await db
-    .update(users)
-    .set({
-      email: init.email,
-      emailVerifiedAt: sql`now()`,
-      recoveryConsentAt: sql`now()`,
-      ...(init.reminderConsent ? { reminderConsentAt: sql`now()` } : {}),
-      updatedAt: sql`now()`,
-    })
-    .where(eq(users.id, init.userId));
+  await db.execute(sql`
+    with target as (
+      select id, recovery_consent_at, reminder_consent_at,
+             ${init.reminderConsent}::boolean and (
+               reminder_consent_withdrawn_at is null
+               or ${init.tokenCreatedAt}::timestamptz > reminder_consent_withdrawn_at
+             ) as reminder
+        from users
+       where id = ${init.userId}
+         for update
+    ), changed as (
+      update users u
+         set email = ${init.email},
+             email_verified_at = now(),
+             recovery_consent_at = coalesce(t.recovery_consent_at, now()),
+             reminder_consent_at = case
+               when t.reminder then coalesce(t.reminder_consent_at, now())
+               else u.reminder_consent_at end,
+             updated_at = now()
+        from target t
+       where u.id = t.id
+      returning u.id,
+                t.recovery_consent_at is null as new_recovery,
+                t.reminder and t.reminder_consent_at is null as new_reminder
+    )
+    insert into consent_events (user_id, consent, action)
+    select id, 'recovery', 'granted' from changed where new_recovery
+    union all
+    select id, 'reminder', 'granted' from changed where new_reminder
+  `);
 }
 
 export async function dismissAttachPrompt(

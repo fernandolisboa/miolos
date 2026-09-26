@@ -9,6 +9,7 @@ import {
 } from "../src/merge";
 import {
   completions,
+  consentEvents,
   hintGrants,
   medalGrants,
   notificationSends,
@@ -1153,5 +1154,38 @@ describe("mergeAccounts — push subscriptions and the push prompt (#145, ADR-00
       await mergeAccounts(ctx.db, winner, loser);
       expect(await pushDismissedOf(winner)).toBeNull();
     }
+  });
+});
+
+describe("consent_events across a merge (ADR-0050 decision 8, ADR-0082)", () => {
+  it("T-DB-S97: both accounts' events survive — the winner's stay on the winner, the loser's stay on the tombstone beside its consent timestamps, and a re-run changes nothing", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await ctx.db.insert(consentEvents).values([
+      { userId: winner, consent: "recovery", action: "granted" },
+      { userId: loser, consent: "recovery", action: "granted" },
+      { userId: loser, consent: "reminder", action: "granted" },
+    ]);
+    const owners = async () =>
+      (
+        await ctx.db
+          .select({
+            userId: consentEvents.userId,
+            consent: consentEvents.consent,
+          })
+          .from(consentEvents)
+          .orderBy(asc(consentEvents.userId), asc(consentEvents.consent))
+      )
+        .map(
+          (row) =>
+            `${row.userId === winner ? "winner" : "loser"}:${row.consent}`,
+        )
+        .sort();
+
+    await mergeAccounts(ctx.db, winner, loser);
+    const expected = ["loser:recovery", "loser:reminder", "winner:recovery"];
+    expect(await owners()).toEqual(expected);
+    await mergeAccounts(ctx.db, winner, loser);
+    expect(await owners()).toEqual(expected);
   });
 });

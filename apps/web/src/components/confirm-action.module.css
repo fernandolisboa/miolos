@@ -1,0 +1,111 @@
+/* Understated on purpose: a destructive step in ink and words, never a red
+   alarm (ADR-0041: accents colour shapes, and no accent belongs here). */
+
+.start {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-4);
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-5);
+  background: var(--paper-card);
+  color: var(--ink);
+  font: var(--text-button);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-settle);
+}
+
+.confirm {
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 19px;
+}
+
+.body {
+  margin: var(--space-3) 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.confirmButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-5);
+  background: var(--ink);
+  color: var(--paper-card);
+  font: var(--text-button);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.cancel {
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-2);
+  background: none;
+  border: none;
+  font: var(--text-button);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.confirmButton:disabled,
+.cancel:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.start:focus-visible,
+.confirmButton:focus-visible,
+.cancel:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.error {
+  margin: var(--space-4) 0 0;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .body {
+    font-size: 14px;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
+}

@@ -29,6 +29,8 @@ export const users = pgTable(
     googleId: text("google_id").unique(),
     recoveryConsentAt: timestamptz("recovery_consent_at"),
     reminderConsentAt: timestamptz("reminder_consent_at"),
+    recoveryConsentWithdrawnAt: timestamptz("recovery_consent_withdrawn_at"),
+    reminderConsentWithdrawnAt: timestamptz("reminder_consent_withdrawn_at"),
 
     attachPromptDismissedAt: timestamptz("attach_prompt_dismissed_at"),
 
@@ -88,6 +90,30 @@ export const notificationSends = pgTable(
     check(
       "notification_sends_channel_check",
       sql`${t.channel} in ('push', 'email')`,
+    ),
+  ],
+);
+
+export const consentEvents = pgTable(
+  "consent_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    consent: text("consent", { enum: ["recovery", "reminder"] }).notNull(),
+    action: text("action", { enum: ["granted", "withdrawn"] }).notNull(),
+    at: timestamptz("at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("consent_events_user_id_idx").on(t.userId),
+    check(
+      "consent_events_consent_check",
+      sql`${t.consent} in ('recovery', 'reminder')`,
+    ),
+    check(
+      "consent_events_action_check",
+      sql`${t.action} in ('granted', 'withdrawn')`,
     ),
   ],
 );
