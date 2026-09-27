@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S122` | `S121` | never used |
 | `T-DB` | `S99` | `S98` | `T-DB-21` |
 | `T-API` | `S220` | `S219` | `T-API-16` |
-| `T-WEB` | `S415` | `S414` | `T-WEB-23` |
+| `T-WEB` | `S417` | `S416` | `T-WEB-23` |
 | `T-LINT` | `S66` | `S65` | `T-LINT-10` |
+
+#206 cluster 9 (the free-play generation hooks) reserved **`T-WEB-S415…S416`** and spent both, in `apps/web/test/free-play-generation.test.tsx`: `S415` (one build per `{level, run}`, the stale-result mask, `regenerate`'s identity) and `S416` (an inline game descriptor cannot loop the build).
 
 #74 (the answer-list alert, ADR-0084) spent `T-CORE-S121` (both answer-list keys required on `bufferDepthResponseSchema`), `T-API-S217` (the unused count, low at 30 and not at 31), `S218` (a killed row stays spent) and `S219` (a shallow buffer and a low list are independent), and `T-WEB-S414` (the `buffer-alert.yml` scan). It reserved nothing beyond these, so nothing is burned.
 

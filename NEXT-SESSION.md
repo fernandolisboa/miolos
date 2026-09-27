@@ -4,7 +4,7 @@
 
 ## Start here
 
-**Drill #74's answer-list alert** (ADR-0084). An agent can do all three: `curl -fsS https://api.miolos.app/buffer-depth` shows `termoAnswersRemaining` and `termoAnswersLow` (paste the count on #74, it is the first real reading); dispatch the "Buffer alert" workflow with `force_answer_list_low` ticked, check an `answer-list-alert` issue appears, and close it as a drill; one run with no inputs is green. Until that drill, the self-creating label has never run in production.
+**#206 cluster 10** — the free-play `Frame` / `ErrorCard` in `apps/web/src/free-play/*-free-screen.tsx`. Re-derive the audit's numbers first; cluster 9's "~375 lines" was 297.
 
 ## Traps
 
@@ -14,6 +14,4 @@
 
 ## Next
 
-**#206 cluster 9** — re-derive the audit's numbers first, as clusters 1, 4, 7 and 8 had to.
-
-**Also queued:** the telemetry opt-out UI (ADR-0069 decision 5) did not ship in #36 and belongs to #37; moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route and the two account routes); the Binairo `validate.test.ts` uniqueness property has no explicit timeout and hit the 5 s default under CI load on #264; #254 (the remote conclusion announces its body sentence twice); #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s duplicate module walker in `archive-day.test.tsx` onto `module-graph.ts`.
+**Queued:** the telemetry opt-out UI (ADR-0069 decision 5) did not ship in #36 and belongs to #37; moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route and the two account routes); the Binairo `validate.test.ts` uniqueness property has no explicit timeout and hit the 5 s default under CI load on #264; #254 (the remote conclusion announces its body sentence twice); #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s duplicate module walker in `archive-day.test.tsx` onto `module-graph.ts`.

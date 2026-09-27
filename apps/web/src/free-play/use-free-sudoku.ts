@@ -7,16 +7,16 @@ import {
   SudokuGenerationError,
   type SudokuPuzzle,
 } from "@miolos/games/sudoku";
-import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 
 import type { SudokuDigit } from "../sudoku/state";
+import { FREE_PLAY_DATE, LEVEL_WEEKDAYS, type FreePlayLevel } from "./catalog";
 import {
-  FREE_PLAY_DATE,
-  LEVEL_WEEKDAYS,
-  pickSeed,
-  type FreePlayLevel,
-} from "./catalog";
+  useFreeGeneration,
+  type FreeGame,
+  type FreeGeneration,
+  type FreeGenerationDeps,
+} from "./use-free-generation";
 
 export const FREE_PLAY_SUDOKU_SEED_ATTEMPTS = 3;
 
@@ -29,74 +29,29 @@ export interface FreeSudokuPuzzle {
   readonly solution: readonly SudokuDigit[];
 }
 
-export type FreeSudokuPhase =
-  | { readonly kind: "generating" }
-  | { readonly kind: "failed" }
-  | {
-      readonly kind: "ready";
-      readonly run: number;
-      readonly puzzle: FreeSudokuPuzzle;
-    };
+export type FreeSudokuDeps = FreeGenerationDeps<typeof generateDailySudoku>;
 
-export interface FreeSudokuDeps {
-  readonly pickSeed?: () => number;
-  readonly generate?: typeof generateDailySudoku;
-}
+const FREE_SUDOKU: FreeGame<typeof generateDailySudoku, FreeSudokuPuzzle> = {
+  generate: generateDailySudoku,
+  build: (generate, draw, level) => {
+    const puzzle = generateWithFreshSeeds(generate, draw, level);
+    const daily = dailySudokuResponseSchema.parse({
+      game: "sudoku",
+      date: FREE_PLAY_DATE,
+      givens: puzzle.givens,
+      tier: puzzle.tier,
+    });
+    const solution = solutionSchema.parse(puzzle.solution);
 
-export interface FreeSudoku {
-  readonly phase: FreeSudokuPhase;
-  readonly regenerate: () => void;
-}
+    return { seed: puzzle.seed, daily, solution };
+  },
+};
 
 export function useFreeSudoku(
   level: FreePlayLevel,
   deps?: FreeSudokuDeps,
-): FreeSudoku {
-  const [run, setRun] = useState(0);
-  const [settled, setSettled] = useState<{
-    readonly level: FreePlayLevel;
-    readonly run: number;
-    readonly phase: FreeSudokuPhase;
-  } | null>(null);
-  const draw = deps?.pickSeed ?? pickSeed;
-  const generate = deps?.generate ?? generateDailySudoku;
-
-  useEffect(() => {
-    try {
-      const puzzle = generateWithFreshSeeds(generate, draw, level);
-      const daily = dailySudokuResponseSchema.parse({
-        game: "sudoku",
-        date: FREE_PLAY_DATE,
-        givens: puzzle.givens,
-        tier: puzzle.tier,
-      });
-      const solution = solutionSchema.parse(puzzle.solution);
-
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSettled({
-        level,
-        run,
-        phase: {
-          kind: "ready",
-          run,
-          puzzle: { seed: puzzle.seed, daily, solution },
-        },
-      });
-    } catch {
-      setSettled({ level, run, phase: { kind: "failed" } });
-    }
-  }, [level, run, draw, generate]);
-
-  const regenerate = useCallback(() => {
-    setRun((current) => current + 1);
-  }, []);
-
-  const phase: FreeSudokuPhase =
-    settled !== null && settled.level === level && settled.run === run
-      ? settled.phase
-      : { kind: "generating" };
-
-  return { phase, regenerate };
+): FreeGeneration<FreeSudokuPuzzle> {
+  return useFreeGeneration(level, FREE_SUDOKU, deps);
 }
 
 function generateWithFreshSeeds(
