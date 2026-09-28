@@ -181,6 +181,12 @@
 .gameCard:nth-child(4) {
   transform: rotate(-0.3deg);
 }
+/* The fifth card is Binairo, alone in its row — spans both columns rather
+   than sitting half-width beside an empty cell. */
+.gameCard:nth-child(5) {
+  grid-column: 1 / -1;
+  transform: rotate(-0.4deg);
+}
 
 .tape {
   position: absolute;
@@ -203,6 +209,9 @@
 }
 .gameCard:nth-child(4) .tape {
   transform: translateX(-50%) rotate(4deg);
+}
+.gameCard:nth-child(5) .tape {
+  transform: translateX(-50%) rotate(-4deg);
 }
 
 /* The hub kicker's post-ADR-0041 form: --ink-2 (5.3003:1 on card paper),

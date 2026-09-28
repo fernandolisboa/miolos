@@ -45,6 +45,13 @@ const webDynamicPackageSource = {
     "apps/web is client-serving: dynamic import of a relative path into packages/db/src, packages/core/src or packages/games/src is banned — it evades the deep-path import restrictions (ADR-0024, ADR-0026, ADR-0033).",
 };
 
+const webDynamicCrosswordImport = {
+  selector:
+    "ImportExpression > Literal[value=/^@miolos\\/games\\/crossword(\\/|$)/i]",
+  message:
+    'apps/web never imports @miolos/games/crossword, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/crossword")` (ADR-0086 decision 9).',
+};
+
 const webComputedDynamicImport = {
   selector: 'ImportExpression[source.type!="Literal"]',
   message:
@@ -117,6 +124,11 @@ const webWallImportPatterns = [
     message:
       "apps/web reaches the engines through `@miolos/games` or `@miolos/games/<game>`, never by relative path into packages/games/src — every ban on a game is written against the package specifier, and for Termo the deep path walks past all of them and ships the whole answer list (ADR-0005, ADR-0015, ADR-0047, ADR-0078).",
   },
+  {
+    group: ["@miolos/games/crossword", "@miolos/games/crossword/*"],
+    message:
+      "apps/web never imports @miolos/games/crossword: unlike the other engines, its module carries the whole lexicon, and the client judges nothing — the server ships the day's grid and judges the completion again (ADR-0086 decision 9).",
+  },
 
   ...replayCapableClientGroups,
 ];
@@ -134,6 +146,7 @@ const webWallImportPaths = [
 
     importNames: [
       "binairoDailyContentSchema",
+      "crosswordDailyContentSchema",
       "DailyProjectionUnsupportedError",
       "nonogramDailyContentSchema",
       "stripDailyContent",
@@ -418,6 +431,7 @@ export default tseslint.config(
         "error",
         webDynamicDbImport,
         webDynamicPackageSource,
+        webDynamicCrosswordImport,
         webComputedDynamicImport,
         webRequireCall,
         webNormalForm,
@@ -435,6 +449,7 @@ export default tseslint.config(
 
         webDynamicDbImport,
         webDynamicPackageSource,
+        webDynamicCrosswordImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -461,6 +476,7 @@ export default tseslint.config(
         "error",
         webDynamicDbImport,
         webDynamicPackageSource,
+        webDynamicCrosswordImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -493,6 +509,7 @@ export default tseslint.config(
         "error",
         webDynamicDbImport,
         webDynamicPackageSource,
+        webDynamicCrosswordImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -524,6 +541,7 @@ export default tseslint.config(
         "error",
         webDynamicDbImport,
         webDynamicPackageSource,
+        webDynamicCrosswordImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,

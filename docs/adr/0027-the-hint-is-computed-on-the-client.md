@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0005](./0005-all-content-is-free.md), [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md), [ADR-0020](./0020-binairo-ruleset.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md)
 **Amends:** the medal line of [ADR-0006](./0006-monetization-convenience-not-access.md) — *"Server-side matters if any curated medal ever depends on 'solved without hints'."* — by narrowing what `hints_used` is allowed to back; see Consequences.
+**Amended by:** [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md) — the rejected bullet *"Shipping `solution` in the daily payload"* is overturned for the Cruzadinha only: no program solves a 5×5 grid from its shape and clues, so shipping the letters weakens no other board's projection. The grid games keep the rejection as written.
 
 ## Context
 

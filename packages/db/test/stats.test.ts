@@ -1,10 +1,11 @@
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { todaySaoPaulo } from "../src/buffer";
 import { recordCompletion } from "../src/completions";
+import { listPublishedDailiesOnWonDates } from "../src/published";
 import { getUserSince, listCompletionsForStats } from "../src/stats";
-import { users } from "../src/schema";
+import { completions, dailyPuzzles, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
@@ -14,7 +15,9 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  await ctx.db.execute(sql`truncate table users, completions cascade`);
+  await ctx.db.execute(
+    sql`truncate table users, completions, daily_puzzles cascade`,
+  );
 });
 
 afterAll(async () => {
@@ -152,5 +155,148 @@ describe("surface tripwire (ADR-0026 decision 5, plan 033 §3.1)", () => {
       "getUserSince",
       "listCompletionsForStats",
     ]);
+  });
+});
+
+function messages(error: unknown): string {
+  let out = "";
+  let current: unknown = error;
+  while (current instanceof Error) {
+    out += current.message;
+    current = current.cause;
+  }
+  return out;
+}
+
+async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
+  try {
+    await statement;
+    return undefined;
+  } catch (error) {
+    return error;
+  }
+}
+
+describe("migration 0014 admits the crossword (ADR-0086)", () => {
+  it("T-DB-S99: 'crossword' inserts into daily_puzzles and completions, and an unknown game is still rejected by name", async () => {
+    const userId = await createUser();
+
+    await ctx.db.execute(
+      sql`insert into daily_puzzles (game, date, seed, content, published_at)
+          values ('crossword', '2026-09-28', 1, '{}'::jsonb, now())`,
+    );
+    await ctx.db.execute(
+      sql`insert into completions (user_id, game, date, outcome, elapsed_ms, on_time)
+          values (${userId}, 'crossword', '2026-09-28', 'won', 5, true)`,
+    );
+    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(1);
+    expect(await ctx.db.select().from(completions)).toHaveLength(1);
+
+    const chessDaily = await thrownBy(
+      ctx.db.execute(
+        sql`insert into daily_puzzles (game, date, seed, content, published_at)
+            values ('chess', '2026-09-28', 1, '{}'::jsonb, now())`,
+      ),
+    );
+    expect(messages(chessDaily)).toContain("daily_puzzles_game_check");
+
+    const chessCompletion = await thrownBy(
+      ctx.db.execute(
+        sql`insert into completions (user_id, game, date, outcome, elapsed_ms, on_time)
+            values (${userId}, 'chess', '2026-09-28', 'won', 5, true)`,
+      ),
+    );
+    expect(messages(chessCompletion)).toContain("completions_game_check");
+  });
+});
+
+describe("listPublishedDailiesOnWonDates (ADR-0087)", () => {
+  function midnightOf(date: string): SQL {
+    return sql`(${date}::timestamp at time zone 'America/Sao_Paulo')`;
+  }
+
+  async function publish(
+    game: "binairo" | "sudoku" | "nonogram" | "termo" | "crossword",
+    date: string,
+    options: { insertedAfterMidnight?: boolean; killed?: boolean } = {},
+  ): Promise<void> {
+    await ctx.db.insert(dailyPuzzles).values({
+      game,
+      date,
+      seed: 1,
+      content: {},
+      publishedAt: midnightOf(date),
+      createdAt: options.insertedAfterMidnight
+        ? sql`${midnightOf(date)} + interval '1 hour'`
+        : sql`${midnightOf(date)} - interval '2 days'`,
+      killedAt: options.killed ? sql`now()` : undefined,
+    });
+  }
+
+  async function complete(
+    userId: string,
+    game: "binairo" | "sudoku" | "nonogram" | "termo" | "crossword",
+    date: string,
+    init: { outcome?: "won" | "lost"; onTime?: boolean } = {},
+  ): Promise<void> {
+    await ctx.db.insert(completions).values({
+      userId,
+      game,
+      date,
+      outcome: init.outcome ?? "won",
+      elapsedMs: 1_000,
+      guesses: game === "termo" ? 3 : null,
+      onTime: init.onTime ?? true,
+    });
+  }
+
+  it("T-DB-S100: returns the published, un-killed, buffered lineup of exactly the user's on-time-won dates, ordered by date then game", async () => {
+    const userId = await createUser();
+    const otherUserId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+    const [lost, late, other, buffered, launch] = [5, 4, 3, 2, 1].map((n) =>
+      addDaysLocal(today, -n),
+    );
+    const tomorrow = addDaysLocal(today, 1);
+    if (!lost || !late || !other || !buffered || !launch) {
+      throw new Error("date fixture");
+    }
+
+    await publish("termo", lost);
+    await complete(userId, "termo", lost, { outcome: "lost" });
+
+    await publish("binairo", late);
+    await complete(userId, "binairo", late, { onTime: false });
+
+    await publish("sudoku", other);
+    await complete(otherUserId, "sudoku", other);
+
+    await publish("binairo", buffered);
+    await publish("termo", buffered);
+    await publish("crossword", buffered, { killed: true });
+    await complete(userId, "binairo", buffered);
+
+    await publish("nonogram", launch);
+    await publish("crossword", launch, { insertedAfterMidnight: true });
+    await complete(userId, "nonogram", launch);
+
+    await publish("sudoku", today);
+    await complete(userId, "sudoku", today);
+
+    await publish("binairo", tomorrow);
+    await complete(userId, "binairo", tomorrow);
+
+    expect(await listPublishedDailiesOnWonDates(ctx.db, userId)).toEqual([
+      { date: buffered, game: "binairo" },
+      { date: buffered, game: "termo" },
+      { date: launch, game: "nonogram" },
+      { date: today, game: "sudoku" },
+    ]);
+    expect(await listPublishedDailiesOnWonDates(ctx.db, otherUserId)).toEqual([
+      { date: other, game: "sudoku" },
+    ]);
+    expect(
+      await listPublishedDailiesOnWonDates(ctx.db, await createUser()),
+    ).toEqual([]);
   });
 });

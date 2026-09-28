@@ -92,7 +92,7 @@ function dayRequest(token?: string, search = ""): NextRequest {
 
 async function insertHistoryRow(init: {
   userId: string;
-  game: "binairo" | "sudoku" | "nonogram" | "termo";
+  game: "binairo" | "crossword" | "sudoku" | "nonogram" | "termo";
   date: string;
   outcome: "won" | "lost";
   completedAtDate: string;
@@ -149,6 +149,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         sudoku: { status: "pending" },
         nonogram: { status: "pending" },
         binairo: { status: "pending" },
+        crossword: { status: "pending" },
       },
     });
 
@@ -175,7 +176,30 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         sudoku: { status: "completed", elapsedMs: 61_000, hintsUsed: 0 },
         nonogram: { status: "pending" },
         binairo: { status: "pending" },
+        crossword: { status: "pending" },
       },
+    });
+  });
+
+  it("T-API-S235: crossword completes like a grid game — status, elapsedMs and hintsUsed round-trip", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+
+    await insertHistoryRow({
+      userId,
+      game: "crossword",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 190_000,
+      hintsUsed: 1,
+    });
+
+    const body = await readDay(token);
+    expect(body.games.crossword).toEqual({
+      status: "completed",
+      elapsedMs: 190_000,
+      hintsUsed: 1,
     });
   });
 
@@ -209,6 +233,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         sudoku: { status: "pending" },
         nonogram: { status: "completed", elapsedMs: 512_000, hintsUsed: 0 },
         binairo: { status: "pending" },
+        crossword: { status: "pending" },
       },
     });
   });
@@ -261,6 +286,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         sudoku: { status: "completed", elapsedMs: 512_000, hintsUsed: 1 },
         nonogram: { status: "played" },
         binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
+        crossword: { status: "pending" },
       },
     });
   });
@@ -302,6 +328,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
           motifName: MOTIF_MARKER,
         },
         binairo: { status: "pending" },
+        crossword: { status: "pending" },
       },
     });
   });
@@ -529,6 +556,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         sudoku: { status: "pending" },
         nonogram: { status: "pending" },
         binairo: { status: "pending" },
+        crossword: { status: "pending" },
       },
     });
   });

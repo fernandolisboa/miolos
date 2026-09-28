@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { recordFor } from "../game";
+import { TIMED_GAMES } from "../stats";
 import { calendarDateString, isoDateString } from "./daily";
 
 const statCount = z.number().int().min(0);
@@ -34,9 +36,7 @@ export const termoStatsSchema = z.strictObject({
 
 export const statsResponseSchema = z.strictObject({
   date: isoDateString,
-  binairo: timedGameStatsSchema,
-  sudoku: timedGameStatsSchema,
-  nonogram: timedGameStatsSchema,
+  ...recordFor(TIMED_GAMES, () => timedGameStatsSchema),
   termo: termoStatsSchema,
   perfectDays: statCount,
   todayTermoGuesses: z.number().int().min(1).max(6).nullable(),

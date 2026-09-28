@@ -16,6 +16,7 @@ const validBody = {
     nonogram: { status: "played" },
 
     binairo: { status: "completed", elapsedMs: 407_000 },
+    crossword: { status: "pending" },
   },
 };
 

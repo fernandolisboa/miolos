@@ -4,7 +4,7 @@ import { closureOf, routesReaching } from "./module-graph";
 
 const DAILY_ROUTE = "apps/web/src/play/daily-route.tsx";
 const GAME_ROUTE = "apps/web/src/archive/game-route.tsx";
-const SCREEN_MODULE = /\/src\/(binairo|sudoku|nonogram|termo)\//;
+const SCREEN_MODULE = /\/src\/(binairo|sudoku|nonogram|termo|crossword)\//;
 const ARCHIVE_SCREEN = /\/src\/archive\/.*-screen/;
 const CONCLUSION = /\/src\/play\/conclusion-view\.tsx$/;
 
@@ -22,10 +22,12 @@ describe("the shared route envelopes are game-blind (T-WEB-S364)", () => {
     },
   );
 
-  it("reaches exactly the 8 daily and conclusion routes", () => {
+  it("reaches exactly the 10 daily and conclusion routes", () => {
     expect(routesReaching(DAILY_ROUTE)).toEqual([
       "apps/web/app/binairo/concluido/page.tsx",
       "apps/web/app/binairo/page.tsx",
+      "apps/web/app/cruzadinha/concluido/page.tsx",
+      "apps/web/app/cruzadinha/page.tsx",
       "apps/web/app/nonogram/concluido/page.tsx",
       "apps/web/app/nonogram/page.tsx",
       "apps/web/app/sudoku/concluido/page.tsx",
@@ -35,9 +37,10 @@ describe("the shared route envelopes are game-blind (T-WEB-S364)", () => {
     ]);
   });
 
-  it("reaches exactly the 4 archive play routes", () => {
+  it("reaches exactly the 5 archive play routes", () => {
     expect(routesReaching(GAME_ROUTE)).toEqual([
       "apps/web/app/arquivo/[data]/binairo/page.tsx",
+      "apps/web/app/arquivo/[data]/cruzadinha/page.tsx",
       "apps/web/app/arquivo/[data]/nonogram/page.tsx",
       "apps/web/app/arquivo/[data]/sudoku/page.tsx",
       "apps/web/app/arquivo/[data]/termo/page.tsx",

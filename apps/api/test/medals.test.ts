@@ -1,6 +1,6 @@
 import { medalsResponseSchema } from "@miolos/core";
 import { sessions, sql, users } from "@miolos/db";
-import { todaySaoPaulo } from "@miolos/db/publishing";
+import { dailyPuzzles, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions, medalGrants } from "@miolos/db/user";
 import { NextRequest } from "next/server";
@@ -33,7 +33,7 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  await ctx.db.execute(sql`truncate table users cascade`);
+  await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
 });
 
 afterEach(() => {
@@ -73,7 +73,7 @@ function medalsRequest(token?: string): NextRequest {
 
 async function insertLateWin(init: {
   userId: string;
-  game: "binairo" | "sudoku" | "nonogram" | "termo";
+  game: "binairo" | "crossword" | "sudoku" | "nonogram" | "termo";
   date: string;
   today: string;
 }): Promise<void> {
@@ -93,6 +93,27 @@ async function insertLateWin(init: {
 
 async function insertGrant(userId: string, medalId: string): Promise<void> {
   await ctx.db.insert(medalGrants).values({ userId, medalId });
+}
+
+function midnightOf(date: string) {
+  return sql`(${date}::timestamp at time zone 'America/Sao_Paulo')`;
+}
+
+async function publishDaily(
+  game: "binairo" | "crossword" | "nonogram" | "sudoku" | "termo",
+  date: string,
+  options: { insertedAfterPublish?: boolean } = {},
+): Promise<void> {
+  await ctx.db.insert(dailyPuzzles).values({
+    game,
+    date,
+    seed: 1,
+    content: {},
+    publishedAt: midnightOf(date),
+    createdAt: options.insertedAfterPublish
+      ? sql`${midnightOf(date)} + interval '1 hour'`
+      : sql`${midnightOf(date)} - interval '2 days'`,
+  });
 }
 
 async function readMedals(token: string): Promise<{ medals: string[] }> {
@@ -214,6 +235,41 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
     expect(await readMedals(caller.token)).toEqual({ medals: [] });
     expect(await readMedals(other.token)).toEqual({
       medals: ["first-win", "founder"],
+    });
+  });
+});
+
+describe("GET /medals — the crossword lineup (#276, ADR-0087)", () => {
+  it("T-API-S233: a five-game day, crossword included, earns perfect-1", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of [
+      "binairo",
+      "sudoku",
+      "nonogram",
+      "termo",
+      "crossword",
+    ] as const) {
+      await publishDaily(game, today);
+      await insertLateWin({ userId, game, date: today, today });
+    }
+
+    expect(await readMedals(token)).toEqual({
+      medals: ["first-win", "perfect-1", "all-games"],
+    });
+  });
+
+  it("T-API-S234: a launch-day four-game day earns perfect-1 when the crossword row was created after published_at", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
+      await publishDaily(game, today);
+      await insertLateWin({ userId, game, date: today, today });
+    }
+    await publishDaily("crossword", today, { insertedAfterPublish: true });
+
+    expect(await readMedals(token)).toEqual({
+      medals: ["first-win", "perfect-1", "all-games"],
     });
   });
 });

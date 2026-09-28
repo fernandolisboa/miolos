@@ -1,6 +1,6 @@
 # Miolos
 
-Daily-puzzle **web app** in pt-BR — Termo-like, Sudoku, Nonogram, Binairo. One fresh puzzle per game per day, identical for every user, published by the server. Streak is the core mechanic. Native iOS and Android follow the web launch. Solo developer, agent-driven workflow, largely driven from a phone.
+Daily-puzzle **web app** in pt-BR — Termo-like, Cruzadinha, Sudoku, Nonogram, Binairo. One fresh puzzle per game per day, identical for every user, published by the server. Streak is the core mechanic. Native iOS and Android follow the web launch. Solo developer, agent-driven workflow, largely driven from a phone.
 
 **Source of truth: [`docs/handoffs/001-handoff-project-foundation.md`](./docs/handoffs/001-handoff-project-foundation.md)**, as amended by the ADRs in [`docs/adr/`](./docs/adr/). The handoff is a snapshot, not a living document: where an ADR supersedes it, the ADR wins. Everywhere else the handoff is final. If this file or a ticket contradicts either, surface the contradiction to Fernando rather than silently picking a side.
 

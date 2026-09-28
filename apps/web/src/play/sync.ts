@@ -13,6 +13,7 @@ import {
   listPendingRecords,
   writePlayRecord,
   type BinairoPlayRecord,
+  type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
   type SudokuPlayRecord,
@@ -196,6 +197,7 @@ async function syncRecord(
 function buildBody(record: PlayRecord): string | undefined {
   switch (record.game) {
     case "binairo":
+    case "crossword":
     case "nonogram":
     case "sudoku":
       return gridBody(record);
@@ -211,7 +213,11 @@ function buildBody(record: PlayRecord): string | undefined {
 }
 
 function gridBody(
-  record: BinairoPlayRecord | NonogramPlayRecord | SudokuPlayRecord,
+  record:
+    | BinairoPlayRecord
+    | CrosswordPlayRecord
+    | NonogramPlayRecord
+    | SudokuPlayRecord,
 ): string | undefined {
   if (record.grid === undefined) {
     return undefined;

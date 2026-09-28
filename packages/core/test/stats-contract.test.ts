@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   statsCalendarResponseSchema,
   statsResponseSchema,
+  TIMED_GAMES,
   type StatsCalendarResponse,
   type StatsResponse,
 } from "../src/index";
@@ -26,6 +27,7 @@ const validStats: StatsResponse = {
   },
   sudoku: timedZero,
   nonogram: timedZero,
+  crossword: timedZero,
   termo: { solved: 5, distribution: [1, 0, 0, 2, 0, 0, 2] },
   perfectDays: 1,
   todayTermoGuesses: 4,
@@ -132,6 +134,20 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
     expect(statsCalendarResponseSchema.safeParse({ days: [] }).success).toBe(
       false,
     );
+  });
+
+  it("T-CORE-S128: every timed game, the crossword included, is a required timed block", () => {
+    for (const game of TIMED_GAMES) {
+      const without: Partial<StatsResponse> = { ...validStats };
+      delete without[game];
+      expect(statsResponseSchema.safeParse(without).success, game).toBe(false);
+    }
+    expect(
+      statsResponseSchema.safeParse({
+        ...validStats,
+        crossword: { solved: 0, distribution: [0, 0, 0, 0, 0, 0, 0] },
+      }).success,
+    ).toBe(false);
   });
 
   it("T-CORE-S69a: a calendar day must be a real day — a shape-valid non-day fails the parse instead of reaching a throwing parser", () => {

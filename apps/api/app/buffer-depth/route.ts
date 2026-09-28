@@ -1,4 +1,4 @@
-import { bufferDepthResponseSchema } from "@miolos/core";
+import { bufferDepthResponseSchema, GAMES, type Game } from "@miolos/core";
 import { bufferDepth, getRemoteConfig } from "@miolos/db/publishing";
 
 import { corsHeaders } from "../../src/cors";
@@ -15,12 +15,10 @@ export async function GET(): Promise<Response> {
   const db = getDb();
   const config = await getRemoteConfig(db);
 
-  const depths = {
-    termo: await bufferDepth(db, "termo"),
-    binairo: await bufferDepth(db, "binairo"),
-    nonogram: await bufferDepth(db, "nonogram"),
-    sudoku: await bufferDepth(db, "sudoku"),
-  };
+  const depthEntries = await Promise.all(
+    GAMES.map(async (game) => [game, await bufferDepth(db, game)] as const),
+  );
+  const depths = Object.fromEntries(depthEntries) as Record<Game, number>;
   const threshold = effectiveThreshold(config.bufferDepth);
   const termoAnswersRemaining = (await unusedTermoAnswers(db)).length;
   const body = bufferDepthResponseSchema.parse({

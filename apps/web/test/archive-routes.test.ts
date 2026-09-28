@@ -67,6 +67,9 @@ describe("the archive's paths have one home (T-WEB-S166)", () => {
     expect(archiveGameRoute("2026-08-01", "nonogram")).toBe(
       "/arquivo/2026-08-01/nonogram",
     );
+    expect(archiveGameRoute("2026-08-01", "crossword")).toBe(
+      "/arquivo/2026-08-01/cruzadinha",
+    );
   });
 
   it("no `/arquivo` string literal exists in apps/web outside routes.ts", () => {

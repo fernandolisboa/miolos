@@ -15,6 +15,7 @@ export const ACCENT_SHADOW = {
   sudoku: "#2E4E7E38",
   nonogram: "#B5563C38",
   binairo: "#4E6B5238",
+  crossword: "#6B456038",
 } as const;
 
 export const ACCENT_TAPE = {
@@ -22,6 +23,7 @@ export const ACCENT_TAPE = {
   sudoku: "#2E4E7E52",
   nonogram: "#B5563C52",
   binairo: "#4E6B5252",
+  crossword: "#6B456052",
 } as const;
 
 export const ACCENT_APP_SHADOW = "#9E3B2F38";

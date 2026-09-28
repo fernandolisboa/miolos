@@ -43,10 +43,12 @@ describe("what those modules are actually on, measured (T-WEB-S354)", () => {
     expect(leaked).toEqual([]);
   });
 
-  it("puts `day-state.ts` on the hub and on all four boards and conclusions", () => {
+  it("puts `day-state.ts` on the hub and on all five boards and conclusions", () => {
     expect(routesReaching(DAY_STATE)).toEqual([
       "apps/web/app/binairo/concluido/page.tsx",
       "apps/web/app/binairo/page.tsx",
+      "apps/web/app/cruzadinha/concluido/page.tsx",
+      "apps/web/app/cruzadinha/page.tsx",
       "apps/web/app/nonogram/concluido/page.tsx",
       "apps/web/app/nonogram/page.tsx",
       "apps/web/app/page.tsx",

@@ -98,8 +98,60 @@ export const dailyTermoResponseSchema = z.strictObject({
 
 export type DailyTermoResponse = z.infer<typeof dailyTermoResponseSchema>;
 
+const CROSSWORD_SIZE = 5;
+
+export const crosswordLetterSchema = z.string().regex(/^[a-z]$/);
+
+export const crosswordGridSchema = z
+  .array(z.array(crosswordLetterSchema.nullable()).length(CROSSWORD_SIZE))
+  .length(CROSSWORD_SIZE);
+
+export const crosswordDirectionSchema = z.enum(["across", "down"]);
+
+const crosswordIndexSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(CROSSWORD_SIZE - 1);
+
+const crosswordClueSchema = z.strictObject({
+  number: z.number().int().positive(),
+  direction: crosswordDirectionSchema,
+  row: crosswordIndexSchema,
+  col: crosswordIndexSchema,
+  length: z.number().int().min(1).max(CROSSWORD_SIZE),
+  clue: z.string().min(1),
+});
+
+type CrosswordClue = z.infer<typeof crosswordClueSchema>;
+
+function clueCellsAreWhite(
+  grid: z.infer<typeof crosswordGridSchema>,
+  { direction, row, col, length }: CrosswordClue,
+): boolean {
+  return Array.from({ length }, (_, k) =>
+    direction === "across" ? grid[row]?.[col + k] : grid[row + k]?.[col],
+  ).every((cell) => typeof cell === "string");
+}
+
+export const dailyCrosswordResponseSchema = z
+  .strictObject({
+    game: z.literal("crossword"),
+    date: isoDateString,
+    grid: crosswordGridSchema,
+    clues: z.array(crosswordClueSchema).min(1),
+  })
+  .refine((d) => d.clues.every((clue) => clueCellsAreWhite(d.grid, clue)), {
+    message: "every clue cell must be in bounds and white",
+  });
+
+export type DailyCrosswordResponse = z.infer<
+  typeof dailyCrosswordResponseSchema
+>;
+
 export const dailyPuzzleResponseSchema = z.discriminatedUnion("game", [
   dailyBinairoResponseSchema,
+  dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,

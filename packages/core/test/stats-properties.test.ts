@@ -9,6 +9,7 @@ import {
   perfectDays,
   COMPLETION_OUTCOMES,
   GAMES,
+  type PublishedDaily,
   type StatsRow,
 } from "../src/index";
 
@@ -31,22 +32,46 @@ function rowArb(todayDay: number): fc.Arbitrary<StatsRow> {
   });
 }
 
+function publishedArb(
+  rows: readonly StatsRow[],
+): fc.Arbitrary<PublishedDaily[]> {
+  const played = rows.map(({ date, game }) => ({ date, game }));
+  if (played.length === 0) {
+    return fc.constant([]);
+  }
+  return fc
+    .tuple(
+      fc.subarray(played),
+      fc.array(
+        fc.record({
+          date: fc.constantFrom(...played.map((daily) => daily.date)),
+          game: fc.constantFrom(...GAMES),
+        }),
+        { maxLength: 5 },
+      ),
+    )
+    .map(([fromRows, extra]) => [...fromRows, ...extra]);
+}
+
 const inputArb = todayDayArb.chain((todayDay) =>
-  fc.record({
-    todayDay: fc.constant(todayDay),
-    today: fc.constant(dateFromEpochDay(todayDay)),
-    rows: fc.array(rowArb(todayDay), { maxLength: 80 }),
-  }),
+  fc.array(rowArb(todayDay), { maxLength: 80 }).chain((rows) =>
+    fc.record({
+      todayDay: fc.constant(todayDay),
+      today: fc.constant(dateFromEpochDay(todayDay)),
+      rows: fc.constant(rows),
+      published: publishedArb(rows),
+    }),
+  ),
 );
 
 const sinceOffsetArb = fc.integer({ min: 0, max: 45 });
 const rolloverSlackDaysArb = fc.integer({ min: 0, max: 5 });
 
 describe("stats derivations — properties (ADR-0023)", () => {
-  it("T-CORE-S61: d ∈ perfectDays(rows) ⇔ all four games hold a won-on-time row dated d — a date set, never a run length", () => {
+  it("T-CORE-S61: d ∈ perfectDays(rows, published) ⇔ d's published lineup is non-empty and every game in it holds a won-on-time row dated d — a date set, never a run length", () => {
     fc.assert(
-      fc.property(inputArb, ({ rows }) => {
-        const result = perfectDays(rows);
+      fc.property(inputArb, ({ rows, published }) => {
+        const result = perfectDays(rows, published);
 
         expect([...result]).toEqual([...new Set(result)].sort());
 
@@ -60,8 +85,12 @@ describe("stats derivations — properties (ADR-0023)", () => {
               )
               .map((row) => row.game),
           );
+          const lineup = published
+            .filter((daily) => daily.date === date)
+            .map((daily) => daily.game);
           expect(result.includes(date)).toBe(
-            wonOnTimeGames.size === GAMES.length,
+            lineup.length > 0 &&
+              lineup.every((game) => wonOnTimeGames.has(game)),
           );
         }
 
@@ -81,26 +110,27 @@ describe("stats derivations — properties (ADR-0023)", () => {
         rolloverSlackDaysArb,
         fc.infiniteStream(fc.nat()),
         (
-          { todayDay, today, rows },
+          { todayDay, today, rows, published },
           sinceOffset,
           rolloverSlackDays,
           indices,
         ) => {
           const since = dateFromEpochDay(todayDay - sinceOffset);
-          const referencePerfect = perfectDays(rows);
+          const referencePerfect = perfectDays(rows, published);
           const referenceCalendar = computeCalendar(
             rows,
             since,
             today,
             rolloverSlackDays,
+            published,
           );
-          const referenceStats = computeStats(rows, today);
+          const referenceStats = computeStats(rows, today, published);
 
-          expect(perfectDays(rows)).toEqual(referencePerfect);
+          expect(perfectDays(rows, published)).toEqual(referencePerfect);
           expect(
-            computeCalendar(rows, since, today, rolloverSlackDays),
+            computeCalendar(rows, since, today, rolloverSlackDays, published),
           ).toEqual(referenceCalendar);
-          expect(computeStats(rows, today)).toEqual(referenceStats);
+          expect(computeStats(rows, today, published)).toEqual(referenceStats);
 
           const shuffled = [...rows];
           for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -113,11 +143,19 @@ describe("stats derivations — properties (ADR-0023)", () => {
               shuffled[j] = a;
             }
           }
-          expect(perfectDays(shuffled)).toEqual(referencePerfect);
+          expect(perfectDays(shuffled, published)).toEqual(referencePerfect);
           expect(
-            computeCalendar(shuffled, since, today, rolloverSlackDays),
+            computeCalendar(
+              shuffled,
+              since,
+              today,
+              rolloverSlackDays,
+              published,
+            ),
           ).toEqual(referenceCalendar);
-          expect(computeStats(shuffled, today)).toEqual(referenceStats);
+          expect(computeStats(shuffled, today, published)).toEqual(
+            referenceStats,
+          );
         },
       ),
       { numRuns: 100, seed: 20_260_829 },
@@ -130,11 +168,21 @@ describe("stats derivations — properties (ADR-0023)", () => {
         inputArb,
         sinceOffsetArb,
         rolloverSlackDaysArb,
-        ({ todayDay, today, rows }, sinceOffset, rolloverSlackDays) => {
+        (
+          { todayDay, today, rows, published },
+          sinceOffset,
+          rolloverSlackDays,
+        ) => {
           const sinceDay = todayDay - sinceOffset;
           const since = dateFromEpochDay(sinceDay);
-          const days = computeCalendar(rows, since, today, rolloverSlackDays);
-          const perfect = new Set(perfectDays(rows));
+          const days = computeCalendar(
+            rows,
+            since,
+            today,
+            rolloverSlackDays,
+            published,
+          );
+          const perfect = new Set(perfectDays(rows, published));
 
           expect(days.length).toBeGreaterThanOrEqual(1);
           expect(days.at(-1)?.date).toBe(today);
@@ -200,7 +248,13 @@ describe("stats derivations — properties (ADR-0023)", () => {
         ({ todayDay, today, rows }, sinceOffset, rolloverSlackDays) => {
           const sinceDay = todayDay - sinceOffset;
           const since = dateFromEpochDay(sinceDay);
-          const days = computeCalendar(rows, since, today, rolloverSlackDays);
+          const days = computeCalendar(
+            rows,
+            since,
+            today,
+            rolloverSlackDays,
+            [],
+          );
 
           const floor = sinceDay - rolloverSlackDays;
           for (const day of days) {

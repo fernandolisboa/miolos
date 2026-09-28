@@ -1,6 +1,7 @@
 import {
   GAMES,
   mergeDayState,
+  recordFor,
   type DayGameState,
   type DayGameStatus,
   type DayResponse,
@@ -22,24 +23,17 @@ export interface DayEntry {
 
 const PENDING: DayEntry = { status: "pending", elapsedMs: undefined };
 
-const NOTHING_DONE: Readonly<Record<Game, DayEntry>> = {
-  termo: PENDING,
-  sudoku: PENDING,
-  nonogram: PENDING,
-  binairo: PENDING,
-};
+const NOTHING_DONE: Readonly<Record<Game, DayEntry>> = recordFor(
+  GAMES,
+  () => PENDING,
+);
 
 export function readDayState(
   date: string,
   server?: DayResponse,
 ): Readonly<Record<Game, DayEntry>> {
   return applyDayTruth(
-    {
-      termo: entryFor("termo", date),
-      sudoku: entryFor("sudoku", date),
-      nonogram: entryFor("nonogram", date),
-      binairo: entryFor("binairo", date),
-    },
+    recordFor(GAMES, (game) => entryFor(game, date)),
     date,
     server,
   );
@@ -54,33 +48,12 @@ function applyDayTruth(
     return local;
   }
   const merged = mergeDayState(
-    {
-      termo: local.termo.status,
-      sudoku: local.sudoku.status,
-      nonogram: local.nonogram.status,
-      binairo: local.binairo.status,
-    },
-    {
-      termo: server.games.termo.status,
-      sudoku: server.games.sudoku.status,
-      nonogram: server.games.nonogram.status,
-      binairo: server.games.binairo.status,
-    },
+    recordFor(GAMES, (game) => local[game].status),
+    recordFor(GAMES, (game) => server.games[game].status),
   );
-  const next: Readonly<Record<Game, DayEntry>> = {
-    termo: entryFromMerge(local.termo, merged.termo, server.games.termo),
-    sudoku: entryFromMerge(local.sudoku, merged.sudoku, server.games.sudoku),
-    nonogram: entryFromMerge(
-      local.nonogram,
-      merged.nonogram,
-      server.games.nonogram,
-    ),
-    binairo: entryFromMerge(
-      local.binairo,
-      merged.binairo,
-      server.games.binairo,
-    ),
-  };
+  const next: Readonly<Record<Game, DayEntry>> = recordFor(GAMES, (game) =>
+    entryFromMerge(local[game], merged[game], server.games[game]),
+  );
   return GAMES.every((game) => next[game] === local[game]) ? local : next;
 }
 

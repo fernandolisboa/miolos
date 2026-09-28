@@ -80,6 +80,7 @@ function dayBody(
       sudoku: { status: "pending" },
       nonogram,
       binairo: { status: "pending" },
+      crossword: { status: "pending" },
     },
   };
 }

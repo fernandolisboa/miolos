@@ -1,11 +1,12 @@
 import { computeStreak } from "../streak";
 import { epochDay } from "../date";
-import { GAMES } from "../game";
+import type { Game } from "../game";
 import {
   countsLateWon,
   countsOnTimeWon,
   perfectDays,
   termoGuessOf,
+  type PublishedDaily,
   type StatsRow,
 } from "../stats";
 import { MEDAL_DEFINITIONS, type MedalId, type MedalRule } from "./definitions";
@@ -14,12 +15,21 @@ function countsAnyWon(row: StatsRow): boolean {
   return countsOnTimeWon(row) || countsLateWon(row);
 }
 
+// see ADR-0087
+const ORIGINAL_GAMES = [
+  "binairo",
+  "sudoku",
+  "nonogram",
+  "termo",
+] as const satisfies readonly Game[];
+
 type ComputableRule = Exclude<MedalRule, { readonly kind: "curated" }>;
 
 export function earnedMedals(
   rows: readonly StatsRow[],
   grants: readonly string[],
   today: string,
+  published: readonly PublishedDaily[],
 ): readonly MedalId[] {
   const todayDay = epochDay(today);
   const scoped = rows.filter((row) => epochDay(row.date) <= todayDay);
@@ -42,7 +52,7 @@ export function earnedMedals(
     }
   }
 
-  const perfectDayCount = perfectDays(scoped).length;
+  const perfectDayCount = perfectDays(scoped, published).length;
   const grantSet = new Set(grants);
 
   function earnedByRule(rule: ComputableRule): boolean {
@@ -69,7 +79,7 @@ export function earnedMedals(
           ).length >= rule.count
         );
       case "eachGameWon":
-        return GAMES.every((game) =>
+        return ORIGINAL_GAMES.every((game) =>
           scoped.some((row) => row.game === game && countsAnyWon(row)),
         );
     }

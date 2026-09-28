@@ -12,6 +12,7 @@ import {
   formatLongDate,
   formatMonth,
   messages,
+  routeSlugs,
   todaySaoPauloDate,
 } from "../src/i18n";
 import { ogCopy } from "../src/og/copy";
@@ -498,10 +499,10 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
   const appDir = APP_DIR;
   const cardSource = CARD_SOURCE;
 
-  const dailyCardFile = (game: string) =>
-    join(appDir, game, "opengraph-image.tsx");
-  const archiveCardFile = (game: string) =>
-    join(appDir, "arquivo", "[data]", game, "opengraph-image.tsx");
+  const dailyCardFile = (game: Game) =>
+    join(appDir, routeSlugs[game], "opengraph-image.tsx");
+  const archiveCardFile = (game: Game) =>
+    join(appDir, "arquivo", "[data]", routeSlugs[game], "opengraph-image.tsx");
 
   it("the ROOT site card reaches no database, transitively", () => {
     const graph = moduleGraph(cardSource);
@@ -553,7 +554,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     }
   });
 
-  it("within each family the four files differ ONLY in the game token", () => {
+  it("within each family the five files differ ONLY in the game token", () => {
     for (const [family, of] of [
       ["daily", dailyCardFile],
       ["archive", archiveCardFile],
@@ -566,7 +567,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
   });
 
   it("every member of GAMES has a route in each family and an alt string", () => {
-    expect(GAMES).toHaveLength(4);
+    expect(GAMES).toHaveLength(5);
     for (const game of GAMES) {
       expect.soft(existsSync(dailyCardFile(game)), game).toBe(true);
       expect.soft(existsSync(archiveCardFile(game)), game).toBe(true);
@@ -826,9 +827,15 @@ describe("the archive cards' trace shape cannot be simplified back (T-WEB-S336)"
     expect(found).toEqual([]);
 
     const playRouteModules = GAMES.map((game) =>
-      join(APP_DIR, "arquivo", "[data]", game, "opengraph-image.tsx"),
+      join(
+        APP_DIR,
+        "arquivo",
+        "[data]",
+        routeSlugs[game],
+        "opengraph-image.tsx",
+      ),
     ).filter((path) => existsSync(path));
-    expect(playRouteModules).toHaveLength(4);
+    expect(playRouteModules).toHaveLength(5);
 
     expect(existsSync(`${SHELL_STEMS[0]}.png`)).toBe(true);
   });

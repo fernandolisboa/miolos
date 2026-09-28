@@ -566,9 +566,9 @@ describe("the share deck's audits (T-WEB-S206)", () => {
       script,
     );
     expect(declaration, "FORBIDDEN_EVERYWHERE is not declared").not.toBeNull();
-    const forbidden = [...(declaration?.[1] ?? "").matchAll(/"([^"]+)"/g)].map(
-      (match) => match[1] ?? "",
-    );
+    const forbidden = [
+      ...(declaration?.[1] ?? "").matchAll(/marker:\s*"([^"]+)"/g),
+    ].map((match) => match[1] ?? "");
     expect(forbidden.length).toBeGreaterThanOrEqual(3);
 
     const rendered = [

@@ -51,6 +51,7 @@ function dayBody(
       sudoku: { status: "pending" },
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
+      crossword: { status: "pending" },
       ...games,
     },
   };
@@ -72,6 +73,7 @@ function statsBody(overrides: Partial<StatsResponse> = {}): StatsResponse {
     binairo: emptyTimed(),
     sudoku: emptyTimed(),
     nonogram: emptyTimed(),
+    crossword: emptyTimed(),
     termo: { solved: 3, distribution: [0, 1, 0, 2, 0, 0, 1] },
     perfectDays: 0,
     todayTermoGuesses: 4,

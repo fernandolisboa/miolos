@@ -6,7 +6,13 @@ import { accentVars } from "../src/play/accent";
 import { colorTokens } from "./css-source";
 import { contrast, luminance } from "./contrast";
 
-const GAMES: readonly Game[] = ["termo", "sudoku", "nonogram", "binairo"];
+const GAMES: readonly Game[] = [
+  "termo",
+  "sudoku",
+  "nonogram",
+  "binairo",
+  "crossword",
+];
 
 function contrastTools(theme: "light" | "dark") {
   const tokens = colorTokens(theme);
@@ -58,6 +64,7 @@ describe("every game's filled-surface label clears AA on its own fill (T-WEB-S29
       binairo: 5.3066,
       nonogram: 4.5063,
       termo: 4.8433,
+      crossword: 7.1191,
     };
     for (const game of GAMES) {
       const { accent, ink } = LIGHT.pair(game);

@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Brazilian adults who solve puzzles daily, on the web, in pt-BR. They arrive once a day — over coffee, on a commute, in a break — mostly on phones, often in short sessions. The job to be done: complete today's four puzzles (Termo, Sudoku, Nonogram, Binairo) and keep the streak alive. The same puzzle for everyone on the same day makes results shareable and comparable; the archive and free play serve the ones who want more than the daily.
+Brazilian adults who solve puzzles daily, on the web, in pt-BR. They arrive once a day — over coffee, on a commute, in a break — mostly on phones, often in short sessions. The job to be done: complete today's five puzzles (Termo, Cruzadinha, Sudoku, Nonogram, Binairo) and keep the streak alive. The same puzzle for everyone on the same day makes results shareable and comparable; the archive and free play serve the ones who want more than the daily.
 
 ## Product Purpose
 

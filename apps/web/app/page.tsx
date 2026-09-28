@@ -9,6 +9,7 @@ import {
   todaySaoPauloDate,
 } from "../src/i18n";
 import { accentVars } from "../src/play/accent";
+import { DAY_GAMES } from "../src/play/day-games";
 import { HubAttach } from "./hub-attach";
 import { HubCardAction, HubProgress } from "./hub-day-state";
 import { HubOnboarding } from "./hub-onboarding";
@@ -16,8 +17,6 @@ import { HubStreak } from "./hub-streak";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
-
-const gameOrder = ["termo", "sudoku", "nonogram", "binairo"] as const;
 
 function todayInSaoPaulo(now: Date): { weekday: string; rest: string } {
   const parts = new Intl.DateTimeFormat(locale, {
@@ -59,14 +58,14 @@ export default function HojePage() {
           <p className={styles.date}>
             {date.weekday} <span className={styles.dateRest}>{date.rest}</span>
           </p>
-          <HubProgress date={isoDate} total={gameOrder.length} />
+          <HubProgress date={isoDate} total={DAY_GAMES.length} />
         </div>
 
         <HubStreak />
       </header>
 
       <section className={styles.games}>
-        {gameOrder.map((game) => (
+        {DAY_GAMES.map((game) => (
           <article key={game} className={styles.card} style={accentVars(game)}>
             <div aria-hidden className={styles.tape} />
             <div className={styles.cardBody}>

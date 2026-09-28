@@ -730,6 +730,57 @@ describe("apps/web db wall — not a blanket ban", () => {
   });
 });
 
+describe("the crossword lexicon wall (ADR-0086 decision 9)", () => {
+  it("T-LINT-S66: @miolos/games/crossword fails lint anywhere in apps/web, static and dynamic; the @miolos/games root stays clean", async () => {
+    const paths = [
+      SOURCE_PATH,
+      APP_PATH,
+      TEST_PATH,
+      "apps/web/src/crossword/eslint-probe.ts",
+      "apps/web/app/cruzadinha/eslint-probe.ts",
+      "apps/web/src/free-play/eslint-probe.ts",
+      "apps/web/app/modo-livre/eslint-probe.ts",
+      "apps/web/src/og/eslint-probe.ts",
+    ];
+
+    for (const path of paths) {
+      const banned = await lintProbe(
+        path,
+        [
+          'import { crosswordDailyContentSchema } from "@miolos/games/crossword";',
+          "",
+          "export const shape = crosswordDailyContentSchema;",
+          "",
+        ].join("\n"),
+      );
+      expect.soft(ruleIds(banned), path).toContain("no-restricted-imports");
+
+      const dynamic = await lintProbe(
+        path,
+        [
+          "export const load = () =>",
+          '  import("@miolos/games/crossword");',
+          "",
+        ].join("\n"),
+      );
+      expect.soft(ruleIds(dynamic), path).toContain("no-restricted-syntax");
+    }
+
+    const clean = [
+      'import type { Weekday } from "@miolos/games";',
+      "",
+      "export type W = Weekday;",
+      "",
+    ].join("\n");
+    // The OG surface bans the whole `@miolos/games` package on its own terms
+    // (ADR-0033 decision 2), so it is excluded here — this assertion is about
+    // the crossword-only ban leaving the rest of the package alone.
+    for (const path of [SOURCE_PATH, APP_PATH, TEST_PATH]) {
+      expect.soft(wallHits(await lintProbe(path, clean)), path).toEqual([]);
+    }
+  });
+});
+
 describe("the no-session-replay wall (#33, ADR-0069 decision 1)", () => {
   it("T-LINT-S53: a replay-capable client is an import error in every tree, and the ban is not a substring heuristic", async () => {
     const bannedAt = [

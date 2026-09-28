@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S122` | `S121` | never used |
-| `T-DB` | `S99` | `S98` | `T-DB-21` |
-| `T-API` | `S220` | `S219` | `T-API-16` |
-| `T-WEB` | `S417` | `S416` | `T-WEB-23` |
-| `T-LINT` | `S66` | `S65` | `T-LINT-10` |
+| `T-CORE` | `S131` | `S130` | never used |
+| `T-DB` | `S101` | `S100` | `T-DB-21` |
+| `T-API` | `S236` | `S235` | `T-API-16` |
+| `T-WEB` | `S440` | `S439` | `T-WEB-23` |
+| `T-LINT` | `S67` | `S66` | `T-LINT-10` |
+
+#276 (the Cruzadinha daily, slice 2 of #274), across work packages A (core, db, migration), B (`apps/api`), C (the play screen) and D1/D2 (the rest of the web wiring), left every area's highest in use at the row above. Re-derived by the two-stage grep.
 
 #206 cluster 9 (the free-play generation hooks) reserved **`T-WEB-S415…S416`** and spent both, in `apps/web/test/free-play-generation.test.tsx`: `S415` (one build per `{level, run}`, the stale-result mask, `regenerate`'s identity) and `S416` (an inline game descriptor cannot loop the build).
 

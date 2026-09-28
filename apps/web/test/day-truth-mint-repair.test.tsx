@@ -22,6 +22,7 @@ function payload(overrides: Partial<DayResponse["games"]> = {}): DayResponse {
       sudoku: { status: "pending" },
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
+      crossword: { status: "pending" },
       ...overrides,
     },
   };

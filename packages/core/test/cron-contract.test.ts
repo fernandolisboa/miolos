@@ -5,6 +5,7 @@ import {
   cronNotifyResponseSchema,
   cronPublishGameResultSchema,
   cronPublishResponseSchema,
+  GAMES,
   streakReminderSchema,
   type BufferDepthResponse,
   type CronPublishGameResult,
@@ -24,25 +25,24 @@ const body: CronPublishResponse = {
     binairo: healthy,
     nonogram: healthy,
     sudoku: healthy,
+    crossword: healthy,
   },
 };
 
 describe("cronPublishResponseSchema", () => {
-  it("parses and round-trips a four-game body", () => {
+  it("parses and round-trips a five-game body", () => {
     expect(cronPublishResponseSchema.parse(body)).toEqual(body);
   });
 
-  it("rejects an unknown game key — the extension point survives the last v1 game", () => {
-    const withCrossword = {
-      games: { ...body.games, crossword: healthy },
+  it("rejects an unknown game key", () => {
+    const withChess = {
+      games: { ...body.games, chess: healthy },
     };
-    expect(cronPublishResponseSchema.safeParse(withCrossword).success).toBe(
-      false,
-    );
+    expect(cronPublishResponseSchema.safeParse(withChess).success).toBe(false);
   });
 
-  it("rejects a body missing a wired game", () => {
-    for (const missing of ["termo", "binairo", "nonogram", "sudoku"] as const) {
+  it("T-CORE-S128: rejects a body missing a wired game, the crossword included", () => {
+    for (const missing of GAMES) {
       const games = { ...body.games };
       delete games[missing];
       expect(
@@ -92,6 +92,7 @@ describe("cronPublishResponseSchema", () => {
           failures: [{ date: "2026-08-09", reason: "seed-retries-exhausted" }],
           error: null,
         },
+        crossword: healthy,
       },
     };
     expect(cronPublishResponseSchema.parse(degraded)).toEqual(degraded);
@@ -119,29 +120,27 @@ describe("cronPublishResponseSchema", () => {
 
 describe("bufferDepthResponseSchema", () => {
   const depths: BufferDepthResponse = {
-    depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 7 },
+    depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 7, crossword: 7 },
     threshold: 4,
     shallow: false,
     termoAnswersRemaining: 120,
     termoAnswersLow: false,
   };
 
-  it("parses and round-trips a four-game body", () => {
+  it("parses and round-trips a five-game body", () => {
     expect(bufferDepthResponseSchema.parse(depths)).toEqual(depths);
   });
 
-  it("rejects an unknown game key — the extension point survives the last v1 game", () => {
-    const withCrossword = {
+  it("rejects an unknown game key", () => {
+    const withChess = {
       ...depths,
-      depths: { ...depths.depths, crossword: 7 },
+      depths: { ...depths.depths, chess: 7 },
     };
-    expect(bufferDepthResponseSchema.safeParse(withCrossword).success).toBe(
-      false,
-    );
+    expect(bufferDepthResponseSchema.safeParse(withChess).success).toBe(false);
   });
 
-  it("rejects a body missing a wired game", () => {
-    for (const missing of ["termo", "binairo", "nonogram", "sudoku"] as const) {
+  it("T-CORE-S128: rejects a body missing a wired game, the crossword included", () => {
+    for (const missing of GAMES) {
       const remaining = { ...depths.depths };
       delete remaining[missing];
       expect(
@@ -154,7 +153,7 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode: one game drained, shallow true", () => {
     const drained: BufferDepthResponse = {
-      depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 0 },
+      depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 0, crossword: 7 },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,
@@ -165,7 +164,7 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode for the key #25 just added: nonogram drained alone", () => {
     const drained: BufferDepthResponse = {
-      depths: { termo: 7, binairo: 7, nonogram: 0, sudoku: 7 },
+      depths: { termo: 7, binairo: 7, nonogram: 0, sudoku: 7, crossword: 7 },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,
@@ -176,7 +175,7 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode for the key #27 just added: termo drained alone", () => {
     const drained: BufferDepthResponse = {
-      depths: { termo: 0, binairo: 7, nonogram: 7, sudoku: 7 },
+      depths: { termo: 0, binairo: 7, nonogram: 7, sudoku: 7, crossword: 7 },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,
@@ -192,13 +191,13 @@ describe("bufferDepthResponseSchema", () => {
     expect(
       bufferDepthResponseSchema.safeParse({
         ...depths,
-        depths: { termo: 7, binairo: -1, nonogram: 7, sudoku: 7 },
+        depths: { ...depths.depths, binairo: -1 },
       }).success,
     ).toBe(false);
     expect(
       bufferDepthResponseSchema.safeParse({
         ...depths,
-        depths: { termo: -1, binairo: 7, nonogram: 7, sudoku: 7 },
+        depths: { ...depths.depths, crossword: -1 },
       }).success,
     ).toBe(false);
   });

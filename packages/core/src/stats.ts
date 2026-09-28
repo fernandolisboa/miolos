@@ -1,6 +1,6 @@
 import type { CompletionOutcome } from "./completion";
 import { dateFromEpochDay, epochDay } from "./date";
-import { GAMES, type Game } from "./game";
+import { recordFor, type Game } from "./game";
 
 export interface StatsRow {
   readonly game: Game;
@@ -16,7 +16,17 @@ export interface StatsRow {
   readonly guesses: number | null;
 }
 
-export const TIMED_GAMES = ["binairo", "sudoku", "nonogram"] as const;
+export interface PublishedDaily {
+  readonly date: string;
+  readonly game: Game;
+}
+
+export const TIMED_GAMES = [
+  "binairo",
+  "sudoku",
+  "nonogram",
+  "crossword",
+] as const satisfies readonly Game[];
 export type TimedGame = (typeof TIMED_GAMES)[number];
 
 export const TIME_BUCKET_BOUNDS_MS = [
@@ -77,10 +87,9 @@ export interface TermoStats {
   ];
 }
 
-export interface StatsSummary {
-  readonly binairo: TimedGameStats;
-  readonly sudoku: TimedGameStats;
-  readonly nonogram: TimedGameStats;
+export interface StatsSummary extends Readonly<
+  Record<TimedGame, TimedGameStats>
+> {
   readonly termo: TermoStats;
 
   readonly perfectDays: number;
@@ -88,7 +97,19 @@ export interface StatsSummary {
   readonly todayTermoGuesses: number | null;
 }
 
-export function perfectDays(rows: readonly StatsRow[]): readonly string[] {
+function requiredOn(
+  date: string,
+  published: readonly PublishedDaily[],
+): readonly Game[] {
+  return published
+    .filter((daily) => daily.date === date)
+    .map((daily) => daily.game);
+}
+
+export function perfectDays(
+  rows: readonly StatsRow[],
+  published: readonly PublishedDaily[],
+): readonly string[] {
   const wonOnTimeGamesByDate = new Map<string, Set<Game>>();
   for (const row of rows) {
     if (!countsOnTimeWon(row)) {
@@ -100,7 +121,8 @@ export function perfectDays(rows: readonly StatsRow[]): readonly string[] {
   }
   const dates: string[] = [];
   for (const [date, games] of wonOnTimeGamesByDate) {
-    if (games.size === GAMES.length) {
+    const required = requiredOn(date, published);
+    if (required.length > 0 && required.every((game) => games.has(game))) {
       dates.push(date);
     }
   }
@@ -121,6 +143,7 @@ export function computeCalendar(
   since: string,
   today: string,
   rolloverSlackDays: number,
+  published: readonly PublishedDaily[],
 ): readonly CalendarDay[] {
   const sinceDay = epochDay(since);
   const todayDay = epochDay(today);
@@ -145,7 +168,9 @@ export function computeCalendar(
       effectiveSince = Math.min(effectiveSince, day);
     }
   }
-  const perfect = new Set(perfectDays(rows).map((date) => epochDay(date)));
+  const perfect = new Set(
+    perfectDays(rows, published).map((date) => epochDay(date)),
+  );
   const days: CalendarDay[] = [];
   for (let day = effectiveSince; day <= todayDay; day += 1) {
     days.push({
@@ -220,6 +245,7 @@ function termoStats(rows: readonly StatsRow[]): TermoStats {
 export function computeStats(
   rows: readonly StatsRow[],
   today: string,
+  published: readonly PublishedDaily[],
 ): StatsSummary {
   const windowFloorDay = epochDay(today) - 30;
 
@@ -236,24 +262,12 @@ export function computeStats(
       todayTermoGuesses = guesses;
     }
   }
-  const timed = timedGameBlocks(rows, windowFloorDay);
   return {
-    binairo: timed.binairo,
-    sudoku: timed.sudoku,
-    nonogram: timed.nonogram,
+    ...recordFor(TIMED_GAMES, (game) =>
+      timedGameStats(rows, game, windowFloorDay),
+    ),
     termo: termoStats(rows),
-    perfectDays: perfectDays(rows).length,
+    perfectDays: perfectDays(rows, published).length,
     todayTermoGuesses,
   };
-}
-
-function timedGameBlocks(
-  rows: readonly StatsRow[],
-  windowFloorDay: number,
-): Record<TimedGame, TimedGameStats> {
-  const blocks = {} as Record<TimedGame, TimedGameStats>;
-  for (const game of TIMED_GAMES) {
-    blocks[game] = timedGameStats(rows, game, windowFloorDay);
-  }
-  return blocks;
 }

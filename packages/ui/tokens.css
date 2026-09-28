@@ -15,6 +15,7 @@
   --accent-sudoku: #2E4E7E;
   --accent-nonogram: #B5563C;
   --accent-binairo: #4E6B52;
+  --accent-crossword: #6B4560;
 
   --accent-sudoku-text: var(--accent-sudoku);
   --accent-binairo-text: var(--accent-binairo);
@@ -71,6 +72,7 @@
     --accent-sudoku: #5883C2;
     --accent-nonogram: #C4684E;
     --accent-binairo: #658B6A;
+    --accent-crossword: #BD7F9D;
 
     --accent-sudoku-text: #5E87C4;
     --accent-binairo-text: #68906E;
@@ -95,6 +97,7 @@
   --accent-sudoku: #5883C2;
   --accent-nonogram: #C4684E;
   --accent-binairo: #658B6A;
+  --accent-crossword: #BD7F9D;
 
   --accent-sudoku-text: #5E87C4;
   --accent-binairo-text: #68906E;

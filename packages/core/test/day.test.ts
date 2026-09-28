@@ -11,6 +11,7 @@ import {
   GAMES,
   mergeDayState,
   mergeDayStatus,
+  recordFor,
   type DayGameStatus,
   type DayRow,
   type DayState,
@@ -24,13 +25,7 @@ const ALL_STATUSES: readonly DayGameStatus[] = DAY_STATUSES;
 function stateOf(
   overrides: Partial<Record<Game, DayGameStatus>> = {},
 ): DayState {
-  return {
-    termo: "pending",
-    sudoku: "pending",
-    nonogram: "pending",
-    binairo: "pending",
-    ...overrides,
-  };
+  return { ...recordFor(GAMES, () => "pending" as const), ...overrides };
 }
 
 function withStatus(
@@ -38,12 +33,7 @@ function withStatus(
   game: Game,
   status: DayGameStatus,
 ): DayState {
-  return {
-    termo: game === "termo" ? status : state.termo,
-    sudoku: game === "sudoku" ? status : state.sudoku,
-    nonogram: game === "nonogram" ? status : state.nonogram,
-    binairo: game === "binairo" ? status : state.binairo,
-  };
+  return recordFor(GAMES, (key) => (key === game ? status : state[key]));
 }
 
 const statusArb = fc.constantFrom(...ALL_STATUSES);
@@ -60,12 +50,9 @@ function rowOf(
   return { game, outcome, onTime, elapsedMs, hintsUsed };
 }
 
-const stateArb: fc.Arbitrary<DayState> = fc.record({
-  termo: statusArb,
-  sudoku: statusArb,
-  nonogram: statusArb,
-  binairo: statusArb,
-});
+const stateArb: fc.Arbitrary<DayState> = fc.record(
+  recordFor(GAMES, () => statusArb),
+);
 
 describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", () => {
   const valid = {
@@ -75,6 +62,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       sudoku: { status: "pending" },
       nonogram: { status: "played" },
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 1 },
+      crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 0 },
     },
   };
 
@@ -144,6 +132,14 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
     }
   });
 
+  it("T-CORE-S128: the crossword is a required game on the wire — a four-game body fails", () => {
+    const fourGames: Partial<typeof valid.games> = { ...valid.games };
+    delete fourGames.crossword;
+    expect(
+      dayResponseSchema.safeParse({ ...valid, games: fourGames }).success,
+    ).toBe(false);
+  });
+
   it("T-CORE-S95: the wire status enum is exactly the local projection's three verbs — an alias, never a second spelling", () => {
     expect([...DAY_STATUSES].sort()).toEqual([
       "completed",
@@ -185,12 +181,14 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
         rowOf("termo", "lost", true, 188_000),
         rowOf("nonogram", "won", false, 99_000),
         rowOf("binairo", "won", true, 407_000),
+        rowOf("crossword", "won", true, 212_000),
       ]),
     ).toEqual({
       termo: { status: "played" },
       sudoku: { status: "completed", elapsedMs: 512_000, hintsUsed: 0 },
       nonogram: { status: "pending" },
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
+      crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 0 },
     });
 
     expect(dayGamesFromRows([rowOf("termo", "won", true, 188_000)])).toEqual({
@@ -198,6 +196,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       sudoku: { status: "pending" },
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
+      crossword: { status: "pending" },
     });
 
     expect(
@@ -249,6 +248,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       sudoku: { status: "completed", elapsedMs: 512_000, hintsUsed: 1 },
       nonogram: { status: "played" },
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
+      crossword: { status: "pending" },
     });
 
     expect(
@@ -269,6 +269,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       sudoku: { status: "completed", elapsedMs: 500_000, hintsUsed: 1 },
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
+      crossword: { status: "pending" },
     };
     expect(dayGamesFromRows(rows)).toEqual(expected);
     expect(dayGamesFromRows([...rows].reverse())).toEqual(expected);
@@ -280,6 +281,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       rowOf("sudoku", "won", true, 407_000, 0),
       rowOf("termo", "won", true, 188_000, 0),
       rowOf("binairo", "won", true, 99_000, 0),
+      rowOf("crossword", "won", true, 212_000, 1),
     ];
     expect(
       dayGamesFromRows(rows, { nonogramMotifName: "Âncora" }),
@@ -293,10 +295,11 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
         motifName: "Âncora",
       },
       binairo: { status: "completed", elapsedMs: 99_000, hintsUsed: 0 },
+      crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 1 },
     });
 
     const named = dayGamesFromRows(rows, { nonogramMotifName: "Âncora" });
-    for (const game of ["termo", "sudoku", "binairo"] as const) {
+    for (const game of ["termo", "sudoku", "binairo", "crossword"] as const) {
       expect(Object.keys(named[game]), game).not.toContain("motifName");
     }
 

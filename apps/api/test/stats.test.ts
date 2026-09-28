@@ -1,6 +1,6 @@
 import { statsResponseSchema } from "@miolos/core";
 import { sessions, sql, users } from "@miolos/db";
-import { todaySaoPaulo } from "@miolos/db/publishing";
+import { dailyPuzzles, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
 import { NextRequest } from "next/server";
@@ -33,7 +33,7 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  await ctx.db.execute(sql`truncate table users cascade`);
+  await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
 });
 
 afterEach(() => {
@@ -73,7 +73,7 @@ function statsRequest(token?: string): NextRequest {
 
 async function insertHistoryRow(init: {
   userId: string;
-  game: "binairo" | "sudoku" | "nonogram" | "termo";
+  game: "binairo" | "crossword" | "sudoku" | "nonogram" | "termo";
   date: string;
   outcome: "won" | "lost";
   completedAtDate: string;
@@ -91,6 +91,27 @@ async function insertHistoryRow(init: {
     guesses: init.guesses,
 
     onTime: init.completedAtDate === init.date,
+  });
+}
+
+function midnightOf(date: string) {
+  return sql`(${date}::timestamp at time zone 'America/Sao_Paulo')`;
+}
+
+async function publishDaily(
+  game: "binairo" | "crossword" | "nonogram" | "sudoku" | "termo",
+  date: string,
+  options: { insertedAfterPublish?: boolean } = {},
+): Promise<void> {
+  await ctx.db.insert(dailyPuzzles).values({
+    game,
+    date,
+    seed: 1,
+    content: {},
+    publishedAt: midnightOf(date),
+    createdAt: options.insertedAfterPublish
+      ? sql`${midnightOf(date)} + interval '1 hour'`
+      : sql`${midnightOf(date)} - interval '2 days'`,
   });
 }
 
@@ -229,5 +250,56 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
     );
     expect(coldBody.todayTermoGuesses).toBeNull();
     expect(coldBody.termo.distribution).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe("GET /stats — the crossword lineup (#276, ADR-0087)", () => {
+  it("T-API-S231: a five-game day, crossword included, counts as one perfect day", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of [
+      "binairo",
+      "sudoku",
+      "nonogram",
+      "termo",
+      "crossword",
+    ] as const) {
+      await publishDaily(game, today);
+      await insertHistoryRow({
+        userId,
+        game,
+        date: today,
+        outcome: "won",
+        completedAtDate: today,
+        guesses: game === "termo" ? 3 : undefined,
+      });
+    }
+
+    const body = statsResponseSchema.parse(
+      await (await GET(statsRequest(token))).json(),
+    );
+    expect(body.perfectDays).toBe(1);
+  });
+
+  it("T-API-S232: a launch-day four-game day stays perfect when the crossword row was created after published_at", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
+      await publishDaily(game, today);
+      await insertHistoryRow({
+        userId,
+        game,
+        date: today,
+        outcome: "won",
+        completedAtDate: today,
+        guesses: game === "termo" ? 3 : undefined,
+      });
+    }
+    await publishDaily("crossword", today, { insertedAfterPublish: true });
+
+    const body = statsResponseSchema.parse(
+      await (await GET(statsRequest(token))).json(),
+    );
+    expect(body.perfectDays).toBe(1);
   });
 });

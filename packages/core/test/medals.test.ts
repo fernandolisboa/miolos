@@ -8,6 +8,7 @@ import {
   MEDAL_DEFINITIONS,
   MEDAL_IDS,
   type Game,
+  type PublishedDaily,
   type StatsRow,
 } from "../src/index";
 
@@ -39,6 +40,23 @@ function lateWins(game: Game, count: number, startDaysAgo = 1): StatsRow[] {
       guesses: game === "termo" ? 6 : null,
     }),
   );
+}
+
+const ORIGINAL_FOUR: readonly Game[] = [
+  "binairo",
+  "sudoku",
+  "nonogram",
+  "termo",
+];
+
+function perfectDay(date: string): StatsRow[] {
+  return ORIGINAL_FOUR.map((game) =>
+    row({ game, date, guesses: game === "termo" ? 3 : null }),
+  );
+}
+
+function lineup(date: string): PublishedDaily[] {
+  return ORIGINAL_FOUR.map((game) => ({ date, game }));
 }
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -191,7 +209,7 @@ describe("the definition harness (content/medals/README.md, ADR-0015 scaled)", (
 
 describe("earnedMedals — volume rules (ADR-0008 rule 2's totals posture)", () => {
   it("T-CORE-S71: a manufactured late win counts, a lost row never, a future-dated row never; per-game scoping holds; count − 1 rows leave a medal unearned and the nth row earns it", () => {
-    expect(earnedMedals(lateWins("binairo", 1), [], TODAY)).toEqual([
+    expect(earnedMedals(lateWins("binairo", 1), [], TODAY, [])).toEqual([
       "first-win",
     ]);
 
@@ -200,19 +218,25 @@ describe("earnedMedals — volume rules (ADR-0008 rule 2's totals posture)", () 
         [row({ game: "termo", date: daysAgo(1), outcome: "lost", guesses: 6 })],
         [],
         TODAY,
+        [],
       ),
     ).toEqual([]);
 
     expect(
-      earnedMedals([row({ date: dateFromEpochDay(TODAY_DAY + 1) })], [], TODAY),
+      earnedMedals(
+        [row({ date: dateFromEpochDay(TODAY_DAY + 1) })],
+        [],
+        TODAY,
+        [],
+      ),
     ).toEqual([]);
 
     const nine = lateWins("binairo", 9);
-    expect(earnedMedals(nine, [], TODAY)).toEqual(["first-win"]);
+    expect(earnedMedals(nine, [], TODAY, [])).toEqual(["first-win"]);
     const ten = lateWins("binairo", 10);
-    expect(earnedMedals(ten, [], TODAY)).toEqual(["first-win", "wins-10"]);
+    expect(earnedMedals(ten, [], TODAY, [])).toEqual(["first-win", "wins-10"]);
 
-    const sudokuThirty = earnedMedals(lateWins("sudoku", 30), [], TODAY);
+    const sudokuThirty = earnedMedals(lateWins("sudoku", 30), [], TODAY, []);
     expect(sudokuThirty).toContain("sudoku-30");
     expect(sudokuThirty).not.toContain("binairo-30");
     expect(sudokuThirty).toContain("wins-10");
@@ -222,12 +246,42 @@ describe("earnedMedals — volume rules (ADR-0008 rule 2's totals posture)", () 
       row({ game: "sudoku", date: daysAgo(20), onTime: false }),
       row({ game: "nonogram", date: daysAgo(30) }),
     ];
-    expect(earnedMedals(threeGames, [], TODAY)).not.toContain("all-games");
+    expect(earnedMedals(threeGames, [], TODAY, [])).not.toContain("all-games");
     const fourGames = [
       ...threeGames,
       row({ game: "termo", date: daysAgo(40), onTime: false, guesses: 3 }),
     ];
-    expect(earnedMedals(fourGames, [], TODAY)).toContain("all-games");
+    expect(earnedMedals(fourGames, [], TODAY, [])).toContain("all-games");
+  });
+});
+
+describe("the Cruzadinha's medals (ADR-0087)", () => {
+  it("T-CORE-S126: all-games needs the original four only — earned without the crossword, never earned through it", () => {
+    const originalFour = ORIGINAL_FOUR.map((game, i) =>
+      row({ game, date: daysAgo(i + 1), guesses: game === "termo" ? 3 : null }),
+    );
+    expect(earnedMedals(originalFour, [], TODAY, [])).toContain("all-games");
+
+    const crosswordForTermo = [
+      ...originalFour.filter((r) => r.game !== "termo"),
+      row({ game: "crossword", date: daysAgo(9) }),
+    ];
+    expect(earnedMedals(crosswordForTermo, [], TODAY, [])).not.toContain(
+      "all-games",
+    );
+  });
+
+  it("T-CORE-S127: crossword-30 follows termo-30, earns at the 30th crossword win and not the 29th, and the catalog holds 24", () => {
+    expect(MEDAL_IDS).toHaveLength(24);
+    expect(MEDAL_IDS.indexOf("crossword-30")).toBe(
+      MEDAL_IDS.indexOf("termo-30") + 1,
+    );
+    expect(
+      earnedMedals(lateWins("crossword", 29), [], TODAY, []),
+    ).not.toContain("crossword-30");
+    const thirty = earnedMedals(lateWins("crossword", 30), [], TODAY, []);
+    expect(thirty).toContain("crossword-30");
+    expect(thirty).not.toContain("termo-30");
   });
 });
 
@@ -236,49 +290,50 @@ describe("earnedMedals — streak medals (ADR-0052/D10, computeStreak reused)", 
     const sevenRun = Array.from({ length: 7 }, (_, i) =>
       row({ date: daysAgo(30 + i) }),
     );
-    const earned = earnedMedals(sevenRun, [], TODAY);
+    const earned = earnedMedals(sevenRun, [], TODAY, []);
     expect(earned).toContain("streak-3");
     expect(earned).toContain("streak-7");
     expect(earned).not.toContain("streak-30");
 
     const muchLater = dateFromEpochDay(TODAY_DAY + 300);
-    expect(earnedMedals(sevenRun, [], muchLater)).toContain("streak-7");
+    expect(earnedMedals(sevenRun, [], muchLater, [])).toContain("streak-7");
 
     const twoPlusLate = [
       row({ date: daysAgo(12) }),
       row({ date: daysAgo(11) }),
       row({ date: daysAgo(10), onTime: false }),
     ];
-    expect(earnedMedals(twoPlusLate, [], TODAY)).not.toContain("streak-3");
+    expect(earnedMedals(twoPlusLate, [], TODAY, [])).not.toContain("streak-3");
 
     const threeOnTime = [
       row({ date: daysAgo(12) }),
       row({ date: daysAgo(11) }),
       row({ date: daysAgo(10) }),
     ];
-    expect(earnedMedals(threeOnTime, [], TODAY)).toContain("streak-3");
+    expect(earnedMedals(threeOnTime, [], TODAY, [])).toContain("streak-3");
   });
 });
 
 describe("earnedMedals — perfect days and guess feats (on-time-only classes)", () => {
   it("T-CORE-S73: the nth perfect day earns; a late win-in-1 never counts a guess medal; a lost Termo counts nothing", () => {
-    function perfectDay(date: string): StatsRow[] {
-      return GAMES.map((game) =>
-        row({ game, date, guesses: game === "termo" ? 3 : null }),
-      );
-    }
-
     const fourDays = [10, 20, 30, 40].flatMap((i) => perfectDay(daysAgo(i)));
-    const fourEarned = earnedMedals(fourDays, [], TODAY);
+    const fourLineups = [10, 20, 30, 40].flatMap((i) => lineup(daysAgo(i)));
+    const fourEarned = earnedMedals(fourDays, [], TODAY, fourLineups);
     expect(fourEarned).toContain("perfect-1");
     expect(fourEarned).not.toContain("perfect-5");
     const fiveDays = [...fourDays, ...perfectDay(daysAgo(50))];
-    expect(earnedMedals(fiveDays, [], TODAY)).toContain("perfect-5");
+    expect(
+      earnedMedals(fiveDays, [], TODAY, [
+        ...fourLineups,
+        ...lineup(daysAgo(50)),
+      ]),
+    ).toContain("perfect-5");
+    expect(earnedMedals(fiveDays, [], TODAY, [])).not.toContain("perfect-1");
 
     const lateAce = [
       row({ game: "termo", date: daysAgo(3), onTime: false, guesses: 1 }),
     ];
-    const lateEarned = earnedMedals(lateAce, [], TODAY);
+    const lateEarned = earnedMedals(lateAce, [], TODAY, []);
     expect(lateEarned).toContain("first-win");
     expect(lateEarned).not.toContain("termo-first-try");
 
@@ -287,6 +342,7 @@ describe("earnedMedals — perfect days and guess feats (on-time-only classes)",
         [row({ game: "termo", date: daysAgo(3), guesses: 1 })],
         [],
         TODAY,
+        [],
       ),
     ).toContain("termo-first-try");
     expect(
@@ -294,6 +350,7 @@ describe("earnedMedals — perfect days and guess feats (on-time-only classes)",
         [row({ game: "termo", date: daysAgo(3), guesses: 6 })],
         [],
         TODAY,
+        [],
       ),
     ).toContain("termo-last-guess");
 
@@ -302,6 +359,7 @@ describe("earnedMedals — perfect days and guess feats (on-time-only classes)",
         [row({ game: "termo", date: daysAgo(3), outcome: "lost", guesses: 6 })],
         [],
         TODAY,
+        [],
       ),
     ).toEqual([]);
   });
@@ -309,18 +367,18 @@ describe("earnedMedals — perfect days and guess feats (on-time-only classes)",
 
 describe("earnedMedals — curated grants (ADR-0052/D2/D6)", () => {
   it("T-CORE-S74: a curated-id grant surfaces; rule-derived-id and unknown-id grants are ignored, never an error; duplicates collapse; output is in catalog order", () => {
-    expect(earnedMedals([], ["founder"], TODAY)).toEqual(["founder"]);
+    expect(earnedMedals([], ["founder"], TODAY, [])).toEqual(["founder"]);
 
-    expect(earnedMedals([], ["first-win"], TODAY)).toEqual([]);
+    expect(earnedMedals([], ["first-win"], TODAY, [])).toEqual([]);
 
-    expect(earnedMedals([], ["ghost-medal"], TODAY)).toEqual([]);
+    expect(earnedMedals([], ["ghost-medal"], TODAY, [])).toEqual([]);
 
-    expect(earnedMedals([], ["founder", "founder"], TODAY)).toEqual([
+    expect(earnedMedals([], ["founder", "founder"], TODAY, [])).toEqual([
       "founder",
     ]);
 
     expect(
-      earnedMedals([row({ date: daysAgo(1) })], ["founder"], TODAY),
+      earnedMedals([row({ date: daysAgo(1) })], ["founder"], TODAY, []),
     ).toEqual(["first-win", "founder"]);
   });
 });

@@ -1,0 +1,121 @@
+/* The /cruzadinha BOARD — everything the shared play layout in
+   `../play/screen.module.css` deliberately does not own (ADR-0029), in the
+   composite-widget shape ADR-0030 sets for a grid game. Geometry mirrors the
+   other three grid games' DESIGN.md:50 52px desktop cell. */
+
+.pageCrossword {
+  --grid-card-rot: 0.6deg;
+  --stats-card-rot: -0.4deg;
+  --tape-rot: 2deg;
+  --board-mobile-max: 346px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 52px);
+  grid-template-rows: repeat(5, 52px);
+  gap: 4px;
+  touch-action: manipulation;
+}
+
+.cell {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  background: var(--paper-desk);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-cell);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-settle),
+    background-color var(--duration-fast) var(--ease-settle),
+    border-color var(--duration-fast) var(--ease-settle),
+    color var(--duration-fast) var(--ease-settle),
+    box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+.cell:active {
+  transform: translate(1px, 1px);
+}
+
+.number {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* ── chromatic cell states, exactly one per cell ─────────────────────── */
+
+.cellBlock {
+  background: var(--ink);
+  border-color: var(--ink);
+  cursor: default;
+}
+
+.cellActive {
+  background: color-mix(in srgb, var(--accent) 12%, var(--paper-desk));
+}
+
+.cellHinted {
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper-desk));
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cellSelected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+.cellSelected .number {
+  color: var(--ink-on-accent);
+}
+
+/* ONE declaration block for the selected style and the focus ring
+   (ADR-0030 (c)), additive to whichever chromatic class is also present. */
+.cellSelected,
+.cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.cellSkeleton {
+  background: var(--paper-tint);
+  border: 1.5px solid color-mix(in srgb, var(--line) 55%, transparent);
+  border-radius: var(--radius-cell);
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+    aspect-ratio: 1;
+  }
+
+  .cell {
+    font-size: 20px;
+  }
+}

@@ -42,11 +42,13 @@ const termoRowAria = (
 
 const termoLetters = (word: string) => word.split("").join(", ");
 
+const letterAria = (letter: string) => `letra ${letter}`;
+
 export const messages = {
   meta: {
-    title: "Miolos — quatro jogos por dia",
+    title: "Miolos — jogos de raciocínio por dia",
     description:
-      "Quatro jogos de raciocínio por dia — Termo, Sudoku, Nonogram e Binairo. Um puzzle novo de cada, todos os dias, igual para todo mundo.",
+      "Jogos de raciocínio por dia — Termo, Cruzadinha, Sudoku, Nonogram e Binairo. Um puzzle novo de cada, todos os dias, igual para todo mundo.",
   },
   brand: {
     wordmark,
@@ -114,6 +116,7 @@ export const messages = {
         nonogram: "Nonogram",
         nonogramShort: "Nono.",
         binairo: "Binairo",
+        crossword: "Cruzadinha",
       },
     },
     streak: {
@@ -341,8 +344,8 @@ export const messages = {
     },
   },
   onboarding: {
-    invitation: "Quatro puzzles do dia, iguais para todo mundo.",
-    lead: "Termo, Sudoku, Nonogram e Binairo. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
+    invitation: "Puzzles do dia, iguais para todo mundo.",
+    lead: "Termo, Cruzadinha, Sudoku, Nonogram e Binairo. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
     rollover: "A virada é à meia-noite, no horário de Brasília.",
     noAccount: "Sem cadastro — é só jogar.",
     dismiss: "Entendi",
@@ -581,7 +584,7 @@ export const messages = {
           enterAria: "enviar a tentativa",
           eraseAria: "apagar a última letra",
 
-          letterAria: (letter: string) => `letra ${letter}`,
+          letterAria,
           letterStateAria: (
             letter: string,
             state: "correct" | "present" | "absent",
@@ -788,6 +791,62 @@ export const messages = {
         notYet: {
           title: "Você ainda não concluiu o Binairo de hoje.",
           cta: "Jogar o Binairo de hoje",
+        },
+      },
+    },
+    crossword: {
+      kicker: "Pistas",
+      name: "Cruzadinha",
+      description: "Preencha a grade com as respostas das pistas.",
+      play: {
+        title: "Cruzadinha",
+
+        rules:
+          "Preencha cada pista horizontal e vertical com as letras certas. Toque numa célula para escrever; toque de novo para trocar de direção.",
+
+        progressLong: (filled: number, total: number) =>
+          `${filled} de ${total} letras`,
+        progressShort: (filled: number, total: number) =>
+          `${filled} de ${total}`,
+        boardAria: "grade da Cruzadinha, 5 por 5",
+
+        direction: { across: "Horizontal", down: "Vertical" },
+        cluesHeading: "Pistas",
+        clueLabel: (n: number, dir: "across" | "down") =>
+          `${String(n)} ${dir === "across" ? "horizontal" : "vertical"}`,
+
+        cellAria: (row: number, column: number, value: string | null) =>
+          `linha ${row}, coluna ${column}: ${value === null ? "vazia" : letterAria(value)}`,
+        blockAria: "célula bloqueada",
+
+        keyboard: {
+          label: "teclado",
+          erase: "apagar",
+          eraseAria: "apagar a letra selecionada",
+          letterAria,
+        },
+
+        hint: {
+          available: "Usar dica — 1 disponível",
+          used: "Dica usada",
+          explain: {
+            correction: "Corrigimos uma letra errada.",
+            fill: "Preenchemos uma célula para você.",
+          },
+        },
+
+        unavailable: {
+          title: "A Cruzadinha de hoje ainda não chegou.",
+          body: "Alguma coisa saiu do lugar por aqui. Tente de novo daqui a pouco — o puzzle de hoje é o mesmo para todo mundo.",
+          cta: "Voltar para Hoje",
+        },
+      },
+      conclusion: {
+        title: "Cruzadinha",
+        kicker: "Pistas",
+        notYet: {
+          title: "Você ainda não concluiu a Cruzadinha de hoje.",
+          cta: "Jogar a Cruzadinha de hoje",
         },
       },
     },

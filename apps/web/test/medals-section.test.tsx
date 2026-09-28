@@ -1,4 +1,4 @@
-import type { MedalsResponse } from "@miolos/core";
+import { TIMED_GAMES, type MedalsResponse } from "@miolos/core";
 import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -85,7 +85,9 @@ describe("the medal section's nothings (T-WEB-S162)", () => {
     expect(container.querySelector(`.${styles.medals}`)).toBeNull();
 
     expect(screen.getByText(messages.stats.title)).toBeInTheDocument();
-    expect(screen.getAllByText(messages.stats.rows.best)).toHaveLength(3);
+    expect(screen.getAllByText(messages.stats.rows.best)).toHaveLength(
+      TIMED_GAMES.length,
+    );
   });
 
   it.each([

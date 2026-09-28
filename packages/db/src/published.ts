@@ -4,6 +4,7 @@ import {
   type DailyPuzzleResponse,
   type Game,
   type ProjectedGame,
+  type PublishedDaily,
 } from "@miolos/core";
 import {
   and,
@@ -11,6 +12,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   isNull,
   lte,
   sql,
@@ -18,7 +20,7 @@ import {
 } from "drizzle-orm";
 
 import type { Db } from "./client";
-import { dailyPuzzles } from "./schema";
+import { completions, dailyPuzzles } from "./schema";
 
 export const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo";
 
@@ -130,10 +132,7 @@ export async function getPublishedNonogramMotifName(
   }
 }
 
-export interface ArchivedDay {
-  readonly date: string;
-  readonly game: Game;
-}
+export type ArchivedDay = PublishedDaily;
 
 export async function getArchivedDaily<G extends ProjectedGame>(
   db: Db,
@@ -218,4 +217,32 @@ export async function archiveDateClass(
     );
   }
   return value;
+}
+
+export async function listPublishedDailiesOnWonDates(
+  db: Db,
+  userId: string,
+): Promise<PublishedDaily[]> {
+  const wonDates = db
+    .select({ date: completions.date })
+    .from(completions)
+    .where(
+      and(
+        eq(completions.userId, userId),
+        eq(completions.outcome, "won"),
+        eq(completions.onTime, true),
+      ),
+    );
+  return db
+    .select({ date: dailyPuzzles.date, game: dailyPuzzles.game })
+    .from(dailyPuzzles)
+    .where(
+      and(
+        ...publishedConjuncts(),
+        // see ADR-0087
+        lte(dailyPuzzles.createdAt, dailyPuzzles.publishedAt),
+        inArray(dailyPuzzles.date, wonDates),
+      ),
+    )
+    .orderBy(asc(dailyPuzzles.date), asc(dailyPuzzles.game));
 }
