@@ -42,7 +42,7 @@
 
 .games {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-7);
   margin-top: 52px;
 }
@@ -73,6 +73,9 @@
 }
 .card:nth-child(3) {
   transform: rotate(-0.4deg);
+}
+.card:nth-child(4) {
+  transform: rotate(0.6deg);
 }
 
 /* A card is a link: the whole surface must announce focus, and the ring is
@@ -110,6 +113,9 @@
 }
 .card:nth-child(3) .tape {
   transform: translateX(-50%) rotate(-3deg);
+}
+.card:nth-child(4) .tape {
+  transform: translateX(-50%) rotate(4deg);
 }
 
 .cardBody {
@@ -180,6 +186,9 @@
   .card:nth-child(3) {
     transform: rotate(-0.3deg);
   }
+  .card:nth-child(4) {
+    transform: rotate(0.3deg);
+  }
 
   .tape {
     top: -9px;
@@ -196,6 +205,9 @@
   }
   .card:nth-child(3) .tape {
     transform: rotate(-3deg);
+  }
+  .card:nth-child(4) .tape {
+    transform: rotate(4deg);
   }
 
   .kicker {

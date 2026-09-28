@@ -99,8 +99,7 @@ levels only when the interface shows the ladder.
   seguidos") and CONTEXT.md's Terms-to-avoid — `premium`, `Wordle`,
   `Picross`, `Griddler`, `Hanjie`, `paint-by-numbers`, and
   `dica`/`dicas`/`pista`/`pistas` (hints can never back a medal, so the
-  words have no legitimate place in medal copy); and the three bundle
-  canaries `então`, `mamãe`, `época`. Every entry is spelled out literally
+  words have no legitimate place in medal copy). Every entry is spelled out literally
   here because the harness asserts the README contains each one — the
   README→harness direction: dropping a word from this list fails the suite
   (T-WEB-S163b).

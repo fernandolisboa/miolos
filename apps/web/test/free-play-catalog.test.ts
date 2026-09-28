@@ -14,17 +14,13 @@ afterEach(() => {
 });
 
 describe("the free-play game set and level mapping (T-WEB-S109)", () => {
-  it("FREE_PLAY_GAMES set-equals GAMES minus Termo and minus Crossword (ADR-0085)", () => {
+  it("FREE_PLAY_GAMES set-equals GAMES minus Termo (ADR-0088)", () => {
     expect(GAMES).toHaveLength(5);
     expect(GAMES).toContain("termo");
-    expect(GAMES).toContain("crossword");
 
-    const expected = GAMES.filter(
-      (game) => game !== "termo" && game !== "crossword",
-    );
+    const expected = GAMES.filter((game) => game !== "termo");
     expect([...FREE_PLAY_GAMES].sort()).toEqual([...expected].sort());
     expect(FREE_PLAY_GAMES).not.toContain("termo");
-    expect(FREE_PLAY_GAMES).not.toContain("crossword");
   });
 
   it("maps the three levels onto the ramp's endpoints and middle (D2)", () => {
