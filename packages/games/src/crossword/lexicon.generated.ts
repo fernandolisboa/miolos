@@ -3808,7 +3808,7 @@ export const CROSSWORD_LEXICON: readonly CrosswordLexiconEntry[] = [
   { normalized: "traco", canonical: "traço", clue: "Risco feito a lápis" },
   { normalized: "traem", canonical: "traem", clue: "Eles ___ a confiança" },
   { normalized: "traga", canonical: "traga", clue: "___ um guarda-chuva!" },
-  { normalized: "trago", canonical: "trago", clue: "Eu sempre ___ presentes" },
+  { normalized: "trago", canonical: "trago", clue: "Eu ___ o lanche de casa" },
   { normalized: "trai", canonical: "traí", clue: "Eu ___ a confiança dele" },
   { normalized: "traia", canonical: "traia", clue: "Nunca ___ um amigo" },
   { normalized: "trair", canonical: "trair", clue: "Ser infiel" },

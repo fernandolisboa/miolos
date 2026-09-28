@@ -30,9 +30,9 @@
 ### §2 ⚡ What Dia Perfeito means once Cruzadinha is a fifth daily — issue #276
 
 - **Do:** answer in the project thread or on #276 with one letter. **(a)** every daily published that day, Cruzadinha included (the default); **(b)** only the original four, so Cruzadinha never counts toward it.
-- **Verify:** the answer is on #276, and ADR-0087 records it.
+- **Verify:** the answer is on #276, and ADR-0087 (reserved by #276's plan) records it.
 - **Blocks:** nothing. #276 ships with (a) unless you say (b) before it merges; switching later is a small change plus an ADR edit.
-- **Why it is yours:** ADR-0008 rule 4 defines Dia Perfeito as "all four dailies". Either answer changes a shipped medal's meaning. (a) also answers #200's option (c) for dark-Termo days.
+- **Why it is yours:** ADR-0008 rule 4 defines Dia Perfeito as "all four dailies". (a) changes a shipped medal's meaning; (b) keeps that rule as written. (a) also answers #200's option (c) for dark-Termo days.
 - **Source:** #275/#276 plan, 2026-09-28; asked in the project thread the same day.
 
 ---

@@ -154,7 +154,7 @@ describe("crossword lexicon harness", () => {
       false,
     );
     expect(clueTokens("Casarão").some((t) => t.startsWith("casa"))).toBe(true);
-    expect(clueKey("Que o melhor ___!")).toBe(clueKey("Que ___ o melhor"));
+    expect(clueKey("Tolo, bobo!")).toBe(clueKey("Bobo, tolo"));
   });
 
   it("each length keeps its floor", () => {
