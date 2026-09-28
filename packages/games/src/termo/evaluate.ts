@@ -1,4 +1,4 @@
-import { normalizeWord } from "./normalize";
+import { normalizeWord } from "../normalize";
 
 export type TileState = "correct" | "present" | "absent";
 

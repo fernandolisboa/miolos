@@ -319,6 +319,32 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     }
   });
 
+  it("T-LINT-S17a: the Cruzadinha's daily hook and screen root red from free play, static and dynamic; clean from a daily path", async () => {
+    for (const door of [
+      "../crossword/use-crossword-play",
+      "../crossword/crossword-screen",
+    ]) {
+      const source = `import * as banned from "${door}";\n\nexport const probe = banned;\n`;
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      expect
+        .soft(
+          ruleIds(
+            await lintProbe(
+              FREE_PATH,
+              `export const load = () => import("${door}");\n`,
+            ),
+          ),
+          door,
+        )
+        .toContain("no-restricted-syntax");
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+  });
+
   it("T-LINT-S21: the streak modules — client, hook, hub island and the bare barrel form — red from free play, clean from a daily path", async () => {
     const doors = [
       "../streak/streak-client",
@@ -930,5 +956,31 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
         ),
       ),
     ).toEqual([]);
+  });
+
+  it("T-LINT-S67: use-free-crossword.ts alone may import @miolos/games/crossword statically; a dynamic import, the sync module and Termo stay red there", async () => {
+    const exempt = "apps/web/src/free-play/use-free-crossword.ts";
+
+    expect(
+      wallHits(
+        await lintProbe(
+          exempt,
+          'import { generateCrossword } from "@miolos/games/crossword";\n\nexport const make = generateCrossword;\n',
+        ),
+      ),
+    ).toEqual([]);
+    expect(
+      ruleIds(
+        await lintProbe(
+          exempt,
+          'export const load = () => import("@miolos/games/crossword");\n',
+        ),
+      ),
+    ).toContain("no-restricted-syntax");
+    for (const door of ["../play/sync", "@miolos/games/termo"]) {
+      expect
+        .soft(ruleIds(await lintProbe(exempt, `import "${door}";\n`)), door)
+        .toContain("no-restricted-imports");
+    }
   });
 });

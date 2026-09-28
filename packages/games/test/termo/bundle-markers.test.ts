@@ -3,45 +3,73 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { normalizeWord } from "../../src/termo/normalize";
+import { normalizeWord } from "../../src/normalize";
 import {
   isValidGuess,
   TERMO_ANSWERS,
   TERMO_VALIDATION_WORDS,
 } from "../../src/termo/word-list";
 
-const FORBIDDEN_MARKERS: readonly string[] = ["então", "mamãe", "época"];
+const FORBIDDEN_PAIRS: readonly (readonly [string, string])[] = [
+  ["então", "agora"],
+  ["mamãe", "conta"],
+  ["época", "carne"],
+];
+
+const CONTROL_PAIR = ["zurre", "zurro"] as const;
 
 const EXPECTED_MARKERS: readonly string[] = ["zurro", "abaco"];
 
-const CANONICALS = new Set(TERMO_ANSWERS.map((answer) => answer.canonical));
+const SRC = join(import.meta.dirname, "..", "..", "src");
+const WORDS = readFileSync(join(SRC, "termo", "words.generated.ts"), "utf8");
+const LEXICON = readFileSync(
+  join(SRC, "crossword", "lexicon.generated.ts"),
+  "utf8",
+);
+
+function initialiser(name: string): string {
+  const from = WORDS.indexOf(`export const ${name}`);
+  const to = WORDS.indexOf("export const", from + 1);
+  return WORDS.slice(from, to === -1 ? undefined : to);
+}
+
+const escaped = ([first, second]: readonly [string, string]) =>
+  `${first}\\n${second}`;
+
+function adjacent(
+  list: readonly string[],
+  [first, second]: readonly [string, string],
+): boolean {
+  const at = list.indexOf(first);
+  return at !== -1 && list[at + 1] === second;
+}
+
+const CANONICALS = TERMO_ANSWERS.map((answer) => answer.canonical);
 const VALIDATION = new Set(TERMO_VALIDATION_WORDS);
 
 describe("the client-bundle tripwire's word-list markers", () => {
-  it("still resolve as answer canonicals, so the negatives are not vacuous", () => {
-    for (const marker of FORBIDDEN_MARKERS) {
+  it("are adjacent answers, stored as one escaped run in ANSWER_CANONICALS", () => {
+    for (const pair of FORBIDDEN_PAIRS) {
       expect(
-        CANONICALS.has(marker),
-        `\`${marker}\` no longer spells an answer: update this file AND \`FORBIDDEN_EVERYWHERE\` in apps/web/scripts/route-client-js.mjs`,
+        adjacent(CANONICALS, pair),
+        `\`${escaped(pair)}\` no longer spells two adjacent answers: update this file AND \`FORBIDDEN_EVERYWHERE\` in apps/web/scripts/route-client-js.mjs`,
       ).toBe(true);
+      expect(initialiser("ANSWER_CANONICALS")).toContain(escaped(pair));
     }
   });
 
-  it("are accented, which is the whole discriminator", () => {
-    for (const marker of FORBIDDEN_MARKERS) {
-      expect(normalizeWord(marker), `${marker} carries no accent`).not.toBe(
-        marker,
-      );
+  it("appear in no form the validation list or the crossword lexicon would ship", () => {
+    for (const pair of FORBIDDEN_PAIRS) {
+      expect(adjacent(TERMO_VALIDATION_WORDS, pair)).toBe(false);
+      expect(initialiser("VALIDATION_WORDS")).not.toContain(escaped(pair));
+      expect(LEXICON).not.toContain(escaped(pair));
+      expect(LEXICON).not.toContain(pair.join("\n"));
     }
   });
 
-  it("appear in NO form the validation list would ship", () => {
-    for (const marker of FORBIDDEN_MARKERS) {
-      expect(
-        VALIDATION.has(marker),
-        `\`${marker}\` is now a validation word, so its absence from the bundle would be a FALSE negative: replace it here AND in apps/web/scripts/route-client-js.mjs`,
-      ).toBe(false);
-    }
+  it("keep a positive control spelled the same way in the list that must ship", () => {
+    expect(adjacent(TERMO_VALIDATION_WORDS, CONTROL_PAIR)).toBe(true);
+    expect(initialiser("VALIDATION_WORDS")).toContain(escaped(CONTROL_PAIR));
   });
 
   it("keep their positive controls in the list that must ship", () => {

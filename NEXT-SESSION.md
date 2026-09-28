@@ -4,7 +4,7 @@
 
 ## Start here
 
-**The Cruzadinha is live as the fifth daily** (#274: #275 engine, #276 daily; ADR-0085/0086/0087). The first crossword is published by the first cron after the merge. Then, as one Quick change, add `/cruzadinha` and `/cruzadinha/concluido` to `impeccable.yml`'s URL scan, whose preflight needs a published row. After that: file per-game time buckets as an issue, then #206 cluster 10 (free-play `Frame` / `ErrorCard`).
+**The Cruzadinha joined free play** at `/modo-livre/cruzadinha` (#279, ADR-0088): no level, no clock, one hint, "Mais uma". The lexicon ships on that route only (+274.7 KB raw over `/`, budget 291 KB). Next, as one Quick change, add `/cruzadinha` and `/cruzadinha/concluido` to `impeccable.yml`'s URL scan, whose preflight needs a published row. The shared board already shows uneven key widths at 375 px and an em-dash advisory on the clue lists. After that: file per-game time buckets as an issue, then #206 cluster 10's `Frame` half (the `ErrorCard` half shipped in #279).
 
 ## Traps
 
@@ -18,4 +18,4 @@
 
 ## Next
 
-**Queued:** the telemetry opt-out UI (ADR-0069 decision 5) did not ship in #36 and belongs to #37; moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route and the two account routes); the Binairo `validate.test.ts` uniqueness property has no explicit timeout and hit the 5 s default under CI load on #264; #254 (the remote conclusion announces its body sentence twice); #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s duplicate module walker in `archive-day.test.tsx` onto `module-graph.ts`.
+**Queued:** the telemetry opt-out UI (ADR-0069 decision 5) did not ship in #36 and belongs to #37; moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route and the two account routes); #254 (the remote conclusion announces its body sentence twice); #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s duplicate module walker in `archive-day.test.tsx` onto `module-graph.ts`.

@@ -22,21 +22,26 @@ describe("the free-play route literals (T-WEB-S111)", () => {
     expect(routes.freePlayNonogram).toBe(
       `/${routeSlugs.freePlay}/${routeSlugs.nonogram}`,
     );
+    expect(routes.freePlayCrossword).toBe(
+      `/${routeSlugs.freePlay}/${routeSlugs.crossword}`,
+    );
   });
 
-  it("freePlayRoutes covers exactly the three grid games", () => {
+  it("freePlayRoutes covers exactly the four free-play games", () => {
     expect(Object.keys(freePlayRoutes).sort()).toEqual(
       [...FREE_PLAY_GAMES].sort(),
     );
     expect(Object.keys(freePlayRoutes)).not.toContain("termo");
     for (const game of FREE_PLAY_GAMES) {
-      expect(freePlayRoutes[game]).toBe(`/${routeSlugs.freePlay}/${game}`);
+      expect(freePlayRoutes[game]).toBe(
+        `/${routeSlugs.freePlay}/${routeSlugs[game]}`,
+      );
     }
   });
 });
 
 describe("the app/modo-livre segment (T-WEB-S112)", () => {
-  it("holds exactly the index and the three grid-game segments — no termo", () => {
+  it("holds exactly the index and the four game segments — no termo", () => {
     const segment = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       "..",
@@ -46,6 +51,7 @@ describe("the app/modo-livre segment (T-WEB-S112)", () => {
 
     expect(readdirSync(segment).sort()).toEqual([
       "binairo",
+      "cruzadinha",
       "nonogram",
       "page.module.css",
       "page.tsx",
@@ -55,7 +61,7 @@ describe("the app/modo-livre segment (T-WEB-S112)", () => {
 });
 
 describe("the Modo livre index (T-WEB-S113)", () => {
-  it("renders three card links, its marker, and no occurrence of Termo", () => {
+  it("renders four card links, its marker, and no occurrence of Termo", () => {
     const { container } = render(<FreePlayIndexPage />);
 
     const main = container.querySelector("main");
@@ -71,7 +77,7 @@ describe("the Modo livre index (T-WEB-S113)", () => {
     const cardAnchors = anchors.filter((anchor) =>
       anchor.getAttribute("href")?.startsWith(routes.freePlay),
     );
-    expect(cardAnchors).toHaveLength(3);
+    expect(cardAnchors).toHaveLength(4);
 
     expect(container.textContent).not.toContain("Termo");
 

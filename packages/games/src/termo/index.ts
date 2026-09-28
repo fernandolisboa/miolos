@@ -1,4 +1,4 @@
-export { normalizeWord } from "./normalize";
+export { normalizeWord } from "../normalize";
 export {
   evaluateGuess,
   WORD_LENGTH,

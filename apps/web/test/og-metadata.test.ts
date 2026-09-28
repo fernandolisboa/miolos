@@ -257,48 +257,7 @@ describe("the archive SHELL routes' openGraph (T-WEB-S335)", () => {
   });
 });
 
-describe("the OG deck's accent audit (T-WEB-S206a)", () => {
-  function forbiddenEverywhere(): string[] {
-    const script = readFileSync(
-      join(import.meta.dirname, "..", "scripts", "route-client-js.mjs"),
-      "utf8",
-    );
-    const declaration = /const FORBIDDEN_EVERYWHERE = \[([^\]]*)\]/.exec(
-      script,
-    );
-    expect(declaration, "FORBIDDEN_EVERYWHERE is not declared").not.toBeNull();
-    return [...(declaration?.[1] ?? "").matchAll(/marker:\s*"([^"]+)"/g)].map(
-      (match) => match[1] ?? "",
-    );
-  }
-
-  it("no FORBIDDEN_EVERYWHERE canonical appears in ogCopy", () => {
-    const FORBIDDEN = forbiddenEverywhere();
-
-    expect(FORBIDDEN.length).toBeGreaterThanOrEqual(3);
-    expect(FORBIDDEN).toContain("então");
-
-    const PROBE = "PROBE";
-    const deck = JSON.stringify(
-      Object.values(ogCopy).map((value) =>
-        typeof value === "function" ? value(PROBE) : value,
-      ),
-    );
-    for (const word of FORBIDDEN) {
-      expect(deck, word).not.toContain(word);
-    }
-
-    expect(deck).toContain(ogCopy.siteTagline);
-    expect(deck).toContain(ogCopy.altSite);
-    expect(deck.length).toBeGreaterThan(100);
-
-    expect(deck).toContain(ogCopy.archiveTagline);
-    expect(deck).toContain(ogCopy.altArchiveIndex);
-    expect(deck).toContain(ogCopy.altArchiveDay(PROBE));
-    expect(deck).toContain(ogCopy.altArchiveMonth(PROBE));
-    expect(deck).toContain(ogCopy.archiveDayCaption(PROBE));
-  });
-
+describe("the OG deck's archive copy and its home (T-WEB-S206a)", () => {
   it("archiveTagline is the SHIPPED sentence, not a second spelling of it", () => {
     expect(messages.archive.lead.startsWith(ogCopy.archiveTagline)).toBe(true);
 

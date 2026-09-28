@@ -18,6 +18,7 @@ import { countFilled } from "../play/progress";
 import screen from "../play/screen.module.css";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
+import { FreePlayErrorCard } from "./error-card";
 import styles from "./free-play.module.css";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
@@ -57,12 +58,11 @@ export function BinairoFreeScreen({
       kicker={messages.games.binairo.kicker}
       title={copy.title}
       rules={copy.rules}
-      level={level}
-      onLevelChange={setLevel}
+      level={{ value: level, onChange: setLevel }}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
-        <ErrorCard onRetry={regenerate} />
+        <FreePlayErrorCard onRetry={regenerate} />
       ) : (
         <GeneratingBoard />
       )}
@@ -143,8 +143,7 @@ function BinairoFreeBoard({
       kicker={messages.games.binairo.kicker}
       title={copy.title}
       rules={copy.rules}
-      level={level}
-      onLevelChange={onLevelChange}
+      level={{ value: level, onChange: onLevelChange }}
       state={{
         kind: "playing",
         readouts: {
@@ -191,17 +190,5 @@ function GeneratingBoard() {
 
       <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
-  );
-}
-
-function ErrorCard({ onRetry }: { readonly onRetry: () => void }) {
-  return (
-    <div className={styles.errorCard}>
-      <p className={styles.errorTitle}>{messages.freePlay.error.title}</p>
-      <p className={styles.errorBody}>{messages.freePlay.error.body}</p>
-      <button type="button" className={styles.retry} onClick={onRetry}>
-        {messages.freePlay.error.retry}
-      </button>
-    </div>
   );
 }

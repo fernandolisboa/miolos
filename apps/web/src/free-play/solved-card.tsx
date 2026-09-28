@@ -16,7 +16,7 @@ export function FreePlaySolvedCard({
   onAgain,
 }: {
   readonly game: FreePlayGame;
-  readonly level: FreePlayLevel;
+  readonly level?: FreePlayLevel;
 
   readonly picture?: ConclusionPicture;
   readonly onAgain: () => void;
@@ -34,7 +34,7 @@ export function FreePlaySolvedCard({
           {messages.freePlay.solved.modeLine(
             messages.freePlay.modeTag,
             messages.games[game].name,
-            messages.freePlay.level[level],
+            level === undefined ? undefined : messages.freePlay.level[level],
           )}
         </p>
         {picture !== undefined && (
@@ -52,7 +52,7 @@ export function FreePlaySolvedCard({
         )}
         <div className={styles.actions}>
           <button type="button" className={styles.again} onClick={onAgain}>
-            {messages.freePlay.solved.again}
+            {messages.freePlay.solved.again[game]}
           </button>
           <Link
             className={styles.backToIndex}

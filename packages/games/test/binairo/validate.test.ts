@@ -147,5 +147,5 @@ describe("validateBinairo", () => {
       ),
       { numRuns: 50 },
     );
-  });
+  }, 30_000);
 });

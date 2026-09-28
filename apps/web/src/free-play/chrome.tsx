@@ -33,7 +33,6 @@ export function FreePlayChrome({
   title,
   rules,
   level,
-  onLevelChange,
   state,
   children,
 }: {
@@ -42,8 +41,10 @@ export function FreePlayChrome({
   readonly kicker: string;
   readonly title: string;
   readonly rules: string;
-  readonly level: FreePlayLevel;
-  readonly onLevelChange: (level: FreePlayLevel) => void;
+  readonly level?: {
+    readonly value: FreePlayLevel;
+    readonly onChange: (level: FreePlayLevel) => void;
+  };
   readonly state: PlayChromeState;
   readonly children: ReactNode;
 }): ReactElement {
@@ -59,9 +60,11 @@ export function FreePlayChrome({
       rules={rules}
       note={null}
       clock="none"
-      extraStat={levelStat(level)}
+      extraStat={level === undefined ? null : levelStat(level.value)}
     >
-      <LevelPicker level={level} onChange={onLevelChange} />
+      {level !== undefined && (
+        <LevelPicker level={level.value} onChange={level.onChange} />
+      )}
       {children}
     </PlayScreenChrome>
   );

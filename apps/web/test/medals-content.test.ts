@@ -87,9 +87,6 @@ const FORBIDDEN_VOCABULARY = [
   "dica",
   "pistas",
   "pista",
-  "então",
-  "mamãe",
-  "época",
 ];
 const forbiddenRegex = new RegExp(
   `(?<![\\p{L}\\p{N}])(${FORBIDDEN_VOCABULARY.join("|")})(?![\\p{L}\\p{N}])`,

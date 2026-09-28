@@ -1,5 +1,5 @@
 import { type TileState, type TileStates } from "./evaluate";
-import { normalizeWord } from "./normalize";
+import { normalizeWord } from "../normalize";
 
 export interface EvaluatedGuess {
   readonly guess: string;
