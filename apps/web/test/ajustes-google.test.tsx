@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { StrictMode } from "react";
 import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -182,8 +183,10 @@ describe("the sign-in outcome notice (T-WEB-S472)", () => {
       expect(
         await screen.findByText(copy.outcome[outcome]),
       ).toBeInTheDocument();
-      expect(window.location.pathname + window.location.search).toBe(
-        "/ajustes?tema=x",
+      await waitFor(() =>
+        expect(window.location.pathname + window.location.search).toBe(
+          "/ajustes?tema=x",
+        ),
       );
     },
   );
@@ -215,6 +218,20 @@ describe("the sign-in outcome notice (T-WEB-S472)", () => {
       root?.unmount();
     });
     container.remove();
+  });
+
+  it("survives StrictMode's double mount effect", async () => {
+    window.history.replaceState(null, "", "/ajustes?google=switched");
+    stubGoogleState("linked");
+    render(
+      <StrictMode>
+        <GoogleSection />
+      </StrictMode>,
+    );
+    expect(await screen.findByText(copy.outcome.switched)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(window.location.search).toBe("");
+    });
   });
 
   it("an unknown word shows nothing and is still cleaned away", async () => {

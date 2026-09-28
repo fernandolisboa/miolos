@@ -5,7 +5,7 @@ import {
   type AccountGoogleResponse,
   type GoogleSignInOutcome,
 } from "@miolos/core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   fetchGoogleState,
@@ -24,25 +24,33 @@ type Card = {
   outcome: GoogleSignInOutcome | undefined;
 };
 
-function takeCallbackOutcome(): GoogleSignInOutcome | undefined {
-  const url = new URL(window.location.href);
+function readCallbackOutcome(): GoogleSignInOutcome | undefined {
   const parsed = googleSignInOutcomeSchema.safeParse(
-    url.searchParams.get("google"),
+    new URL(window.location.href).searchParams.get("google"),
   );
+  return parsed.success ? parsed.data : undefined;
+}
+
+function stripCallbackOutcome(): void {
+  const url = new URL(window.location.href);
   if (url.searchParams.has("google")) {
     url.searchParams.delete("google");
     window.history.replaceState(window.history.state, "", url);
   }
-  return parsed.success ? parsed.data : undefined;
 }
 
 async function readCard(): Promise<Card> {
-  const outcome = takeCallbackOutcome();
+  const outcome = readCallbackOutcome();
   return { state: (await fetchGoogleState()) ?? null, outcome };
 }
 
 export function GoogleSection() {
   const card = useMountFetch(readCard);
+  useEffect(() => {
+    if (card !== undefined) {
+      stripCallbackOutcome();
+    }
+  }, [card]);
   const [didUnlink, setDidUnlink] = useState(false);
   const [reread, setReread] = useState<
     AccountGoogleResponse["google"] | null

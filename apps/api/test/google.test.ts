@@ -28,6 +28,7 @@ import {
   type Flow,
 } from "../src/google/oauth";
 import { mintAttachToken } from "../src/attach/service";
+import { resolveGoogleSignIn } from "../src/google/service";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { requireUserId } from "../src/session/service";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
@@ -469,7 +470,7 @@ describe("GET /auth/google/callback", () => {
     expect(await completionOwners()).toEqual([{ userId: holder.userId }]);
   });
 
-  it("T-API-S275: an anonymous device's other sessions die on a merge or a link, since Google never proved them; an identified account's stay", async () => {
+  it("T-API-S275: an anonymous device is never linked in place: it merges into the Google account (a new one when Google is unknown) and none of its sessions follow; an identified account links in place and keeps its sessions", async () => {
     const device = await createUser();
     const planted = await addSession(device.userId);
     const holder = await createUser({ googleId: "sub-1" });
@@ -483,12 +484,16 @@ describe("GET /auth/google/callback", () => {
 
     const linker = await createUser();
     const linkerOther = await addSession(linker.userId);
+    await insertWin(linker.userId);
     const linked = await signIn({ sub: "sub-2", session: linker.token });
-    expect(await googleIdOf(linker.userId)).toBe("sub-2");
+    expect(linked.headers.get("location")).toBe(`${WEB}/ajustes?google=ok`);
+    const googleAccount = await requireUserId(ctx.db, sessionTokenOf(linked));
+    expect(googleAccount).not.toBe(linker.userId);
+    expect(await googleIdOf(googleAccount ?? "")).toBe("sub-2");
+    expect(await googleIdOf(linker.userId)).toBeNull();
     expect(await requireUserId(ctx.db, linkerOther)).toBeUndefined();
-    expect(await requireUserId(ctx.db, sessionTokenOf(linked))).toBe(
-      linker.userId,
-    );
+    expect(await requireUserId(ctx.db, linker.token)).toBeUndefined();
+    expect(await completionOwners()).toEqual([{ userId: googleAccount }]);
 
     const identified = await createUser({ email: "jogadora@example.com" });
     const laptop = await addSession(identified.userId);
@@ -497,7 +502,7 @@ describe("GET /auth/google/callback", () => {
     expect(await requireUserId(ctx.db, laptop)).toBe(identified.userId);
   });
 
-  it("T-API-S276: an anonymous device's pending magic link dies with the Google link, so it cannot attach an email to the Google account", async () => {
+  it("T-API-S276: a magic link for the anonymous device, pending or minted after the sign-in, cannot attach an email anywhere", async () => {
     const device = await createUser();
     const raw = generateSessionToken();
     await mintAttachToken(ctx.db, {
@@ -509,21 +514,53 @@ describe("GET /auth/google/callback", () => {
 
     const linked = await signIn({ sub: "sub-1", session: device.token });
     expect(linked.headers.get("location")).toBe(`${WEB}/ajustes?google=ok`);
-    expect(await googleIdOf(device.userId)).toBe("sub-1");
+    const late = generateSessionToken();
+    await mintAttachToken(ctx.db, {
+      userId: device.userId,
+      email: "outra-pessoa@example.com",
+      reminderConsent: false,
+      tokenHash: await hashSessionToken(late),
+    });
 
-    const confirm = await confirmPost(
-      new NextRequest(`${API}/attach/confirm`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: raw }),
-      }),
-    );
-    expect(confirm.status).toBe(410);
+    for (const token of [raw, late]) {
+      const confirm = await confirmPost(
+        new NextRequest(`${API}/attach/confirm`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ token }),
+        }),
+      );
+      expect(confirm.status).toBe(410);
+    }
     const emails = await ctx.db
       .select({ email: users.email })
       .from(users)
-      .where(sql`id = ${device.userId}`);
-    expect(emails).toEqual([{ email: null }]);
+      .where(sql`email is not null`);
+    expect(emails).toEqual([]);
+  });
+
+  it("T-API-S279: a sign-in that read the anonymous device before another one merged it lands only on its own Google account", async () => {
+    const device = await createUser();
+    await insertWin(device.userId);
+    const victim = await signIn({ sub: "victim-sub", session: device.token });
+    const victimAccount = await requireUserId(ctx.db, sessionTokenOf(victim));
+
+    const late = generateSessionToken();
+    const outcome = await resolveGoogleSignIn(ctx.db, "attacker-sub", {
+      requesterId: device.userId,
+      presentedHash: undefined,
+      freshHash: await hashSessionToken(late),
+    });
+    expect(outcome).toBe("ok");
+    const attackerAccount = await requireUserId(ctx.db, late);
+    expect(attackerAccount).not.toBe(victimAccount);
+    expect(await googleIdOf(attackerAccount ?? "")).toBe("attacker-sub");
+    const onVictim = await ctx.db
+      .select({ tokenHash: sessions.tokenHash })
+      .from(sessions)
+      .where(sql`user_id = ${victimAccount}`);
+    expect(onVictim).toHaveLength(1);
+    expect(await completionOwners()).toEqual([{ userId: victimAccount }]);
   });
 
   it("T-API-S277: while the merge runs, a planted copy of the device's cookie already resolves to nothing", async () => {
@@ -587,6 +624,7 @@ describe("GET /auth/google/callback", () => {
     expect(await requireUserId(ctx.db, sessionTokenOf(response))).toBe(
       holder.userId,
     );
+    expect(await requireUserId(ctx.db, other.token)).toBeUndefined();
     expect(await completionOwners()).toEqual([{ userId: other.userId }]);
     const otherRow = await ctx.db
       .select({ email: users.email, googleId: users.googleId })

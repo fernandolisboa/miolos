@@ -1,10 +1,6 @@
 import type { AccountGoogleResponse } from "@miolos/core";
 import { eq, sessions, sql, users, type Db } from "@miolos/db";
-import {
-  attachTokens,
-  holdsIdentityHandle,
-  mergeAccounts,
-} from "@miolos/db/user";
+import { holdsIdentityHandle, mergeAccounts } from "@miolos/db/user";
 
 import { createSessionForUser, deleteSession } from "../session/service";
 
@@ -55,7 +51,7 @@ export async function unlinkGoogle(db: Db, userId: string): Promise<boolean> {
   return rows.length === 1;
 }
 
-export type GoogleSessions = {
+type GoogleSessions = {
   requesterId: string | undefined;
   presentedHash: string | undefined;
   freshHash: string;
@@ -94,22 +90,6 @@ async function rotateInto(
   }
 }
 
-// Nothing an anonymous account holds was proven by this Google account, so
-// only the fresh session may follow it through a link or merge (ADR-0089).
-async function isolateAnonymous(
-  db: Db,
-  userId: string,
-  freshHash: string,
-): Promise<void> {
-  await createSessionForUser(db, freshHash, userId);
-  await db
-    .delete(sessions)
-    .where(
-      sql`${sessions.userId} = ${userId} and ${sessions.tokenHash} <> ${freshHash}`,
-    );
-  await db.delete(attachTokens).where(eq(attachTokens.userId, userId));
-}
-
 export async function resolveGoogleSignIn(
   db: Db,
   sub: string,
@@ -146,16 +126,13 @@ export async function resolveGoogleSignIn(
     return "ok";
   }
 
-  await isolateAnonymous(db, requesterId, session.freshHash);
-  if (holder === undefined) {
-    if (!(await linkGoogle(db, requesterId, sub))) {
-      return "conflict";
-    }
-    await assertHolder(db, sub, requesterId);
-    return "ok";
-  }
-  const { winnerId } = await mergeAccounts(db, requesterId, holder);
-  await assertHolder(db, sub, winnerId);
+  // An anonymous account is never linked in place: it merges, holding no
+  // session, into the Google account, whose only new session is the fresh one.
+  const googleUserId = holder ?? (await createGoogleUser(db, sub));
+  await createSessionForUser(db, session.freshHash, googleUserId);
+  await db.delete(sessions).where(eq(sessions.userId, requesterId));
+  await mergeAccounts(db, requesterId, googleUserId);
+  await assertHolder(db, sub, googleUserId);
   return "ok";
 }
 

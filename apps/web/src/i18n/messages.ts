@@ -546,7 +546,7 @@ export const messages = {
       heading: "Conta Google",
       lead: "Entre com o Google para levar a sua sequência para qualquer aparelho. Do Google, o Miolos recebe só um código que identifica a conta: nem nome, nem foto, nem e-mail.",
       mergeNote:
-        "Se este aparelho tiver jogos de uma conta sem e-mail, eles passam para a conta Google.",
+        "Se este aparelho tiver jogos de uma conta sem e-mail, eles passam para a conta Google. Nos outros aparelhos dessa conta, entre com o Google também.",
       start: "Entrar com o Google",
       linked:
         "Esta conta está conectada ao Google. Em outro aparelho, entre com o Google aqui em Ajustes para ver a mesma sequência.",

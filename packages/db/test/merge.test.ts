@@ -1240,6 +1240,7 @@ describe("identity handles across a merge (ADR-0089)", () => {
       .where(eq(users.id, winner));
     await insertSession(loser, "hash-loser-1");
 
+    let fired = false;
     const raced = new Proxy(ctx.db, {
       get(target, key, receiver) {
         if (key !== "execute") {
@@ -1248,6 +1249,7 @@ describe("identity handles across a merge (ADR-0089)", () => {
         return async (query: Parameters<typeof target.execute>[0]) => {
           const result = await target.execute(query);
           if (sqlText(query).includes("delete from notification_sends")) {
+            fired = true;
             await target
               .update(users)
               .set({ googleId: "google-sub-raced" })
@@ -1259,6 +1261,7 @@ describe("identity handles across a merge (ADR-0089)", () => {
     });
 
     await mergeAccounts(raced, winner, loser);
+    expect(fired).toBe(true);
     const rows = await ctx.db
       .select({ id: users.id, googleId: users.googleId })
       .from(users)
