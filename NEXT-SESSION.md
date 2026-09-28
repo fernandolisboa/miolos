@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-**Yes, one database step if it is still open: ledger NOW §3, migration 0014 on the Miolos database.** It only widens two CHECKs; #276 merged after Fernando confirmed it. Still open, low urgency: NOW §2 (Dia Perfeito with five games; the shipped default is "every daily published that day", ADR-0087) and NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**Yes, one database step if it is still open: ledger NOW §3, migration 0014 on the Miolos database.** It only widens two CHECKs; #276 merged after Fernando confirmed it. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 

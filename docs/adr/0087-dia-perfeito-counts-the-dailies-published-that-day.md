@@ -6,7 +6,7 @@
 
 ## Context
 
-ADR-0008 rule 4 defines Dia Perfeito as all four dailies won on time, and `perfectDays` compared against `GAMES.length`. With a fifth game, "every game" would un-perfect every past day and take back the `perfect-*` medals. A day with no Termo daily (#200) could never be perfect. Whether the Cruzadinha counts is still open with Fernando (ledger NOW §2). This ADR records the default, option (a).
+ADR-0008 rule 4 defines Dia Perfeito as all four dailies won on time, and `perfectDays` compared against `GAMES.length`. With a fifth game, "every game" would un-perfect every past day and take back the `perfect-*` medals. A day with no Termo daily (#200) could never be perfect. Fernando chose option (a) on 2026-09-28: the Cruzadinha counts.
 
 ## Decision
 
