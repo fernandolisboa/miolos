@@ -32,7 +32,7 @@
 
 - **Do:** in Google Cloud, project **Miolos** (never Refogando): configure the consent screen (External, app name Miolos, home `https://miolos.app`, privacy `https://miolos.app/privacidade`, terms `https://miolos.app/termos`, authorized domain `miolos.app`, **no scopes added**, then *Publish app*). Create an OAuth client of type *Web application* with one redirect URI, exactly `https://api.miolos.app/auth/google/callback`. On Vercel project **miolos-api**, Production only: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (Sensitive). Then say "feito" on #280 or in the Login com o Google project thread: an agent forces a deploy with an `apps/api` diff, because a new variable does nothing until then.
 - **Verify:** on miolos.app/ajustes the *Conta Google* card appears; *Entrar com o Google* comes back to Ajustes with "Pronto"; *Desconectar o Google* then works.
-- **Blocks:** Sign in with Google only. Until then the feature is dormant: no card, and both `/auth/google/*` routes answer 503.
+- **Blocks:** Sign in with Google only. Until then the feature is dormant: no sign-in in Ajustes, and both `/auth/google/*` routes answer 503.
 - **Source:** #280, ADR-0089 decision 6. The same steps with copy buttons: https://claude.ai/artifact/3cN7aBhzQxyzyg5xuWGwKe (private to Fernando).
 
 ---

@@ -27,10 +27,10 @@ import {
   startFlow,
   type Flow,
 } from "../src/google/oauth";
-import { mintAttachToken } from "../src/attach/service";
+import { attachEmailToUser, mintAttachToken } from "../src/attach/service";
 import { resolveGoogleSignIn } from "../src/google/service";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
-import { requireUserId } from "../src/session/service";
+import { createSessionForUser, requireUserId } from "../src/session/service";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
 const WEB = "https://miolos.app";
@@ -45,12 +45,14 @@ vi.mock("../src/db", () => ({
 }));
 
 const mergeHook = vi.hoisted(() => ({
+  before: undefined as (() => Promise<void>) | undefined,
   after: undefined as (() => Promise<void>) | undefined,
 }));
 vi.mock("@miolos/db/user", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@miolos/db/user")>();
-  const mergeAccounts: typeof actual.mergeAccounts = async (db, a, b) => {
-    const merged = await actual.mergeAccounts(db, a, b);
+  const mergeAccounts: typeof actual.mergeAccounts = async (...args) => {
+    await mergeHook.before?.();
+    const merged = await actual.mergeAccounts(...args);
     await mergeHook.after?.();
     return merged;
   };
@@ -70,6 +72,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  mergeHook.before = undefined;
   mergeHook.after = undefined;
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -610,6 +613,93 @@ describe("GET /auth/google/callback", () => {
       holder.userId,
     );
     expect(await requireUserId(ctx.db, device.token)).toBeUndefined();
+  });
+
+  it("T-API-S280: an email and a session that land on the anonymous device while it merges die with it", async () => {
+    const device = await createUser();
+    const holder = await createUser({ googleId: "sub-1" });
+    const attacker = generateSessionToken();
+    let fired = false;
+    const race = async () => {
+      fired = true;
+      await attachEmailToUser(ctx.db, {
+        userId: device.userId,
+        email: "intrusa@example.com",
+        reminderConsent: false,
+        tokenCreatedAt: new Date(),
+      });
+      await createSessionForUser(
+        ctx.db,
+        await hashSessionToken(attacker),
+        device.userId,
+      );
+    };
+    const raced = new Proxy(ctx.db, {
+      get(target, key, receiver) {
+        const original = Reflect.get(target, key, receiver) as unknown;
+        if (key !== "delete" && key !== "update") {
+          return original;
+        }
+        return (table: typeof sessions) => {
+          if (table !== sessions || fired) {
+            return (original as (t: unknown) => unknown).call(target, table);
+          }
+          if (key === "delete") {
+            return {
+              where: async (condition: never) => {
+                await race();
+                return target.delete(table).where(condition);
+              },
+            };
+          }
+          return {
+            set: (values: never) => ({
+              where: async (condition: never) => {
+                await race();
+                return target.update(table).set(values).where(condition);
+              },
+            }),
+          };
+        };
+      },
+    });
+
+    const fresh = generateSessionToken();
+    const outcome = await resolveGoogleSignIn(raced, "sub-1", {
+      requesterId: device.userId,
+      presentedHash: await hashSessionToken(device.token),
+      freshHash: await hashSessionToken(fresh),
+    });
+    expect(fired).toBe(true);
+    expect(outcome).toBe("ok");
+    expect(await requireUserId(ctx.db, attacker)).toBeUndefined();
+    expect(await requireUserId(ctx.db, fresh)).toBe(holder.userId);
+    const onHolder = await ctx.db
+      .select({ tokenHash: sessions.tokenHash })
+      .from(sessions)
+      .where(sql`user_id = ${holder.userId}`);
+    expect(onHolder).toHaveLength(2);
+    const emails = await ctx.db
+      .select({ email: users.email })
+      .from(users)
+      .where(sql`email is not null`);
+    expect(emails).toEqual([]);
+  });
+
+  it("T-API-S281: a merge that fails leaves the device account untouched and signs the browser in to Google", async () => {
+    const device = await createUser();
+    await insertWin(device.userId);
+    const holder = await createUser({ googleId: "sub-1" });
+    mergeHook.before = () => Promise.reject(new Error("database went away"));
+    const response = await signIn({ sub: "sub-1", session: device.token });
+    expect(response.headers.get("location")).toBe(
+      `${WEB}/ajustes?google=failed`,
+    );
+    expect(await requireUserId(ctx.db, sessionTokenOf(response))).toBe(
+      holder.userId,
+    );
+    expect(await requireUserId(ctx.db, device.token)).toBe(device.userId);
+    expect(await completionOwners()).toEqual([{ userId: device.userId }]);
   });
 
   it("T-API-S268: a device signed in to another identified account switches to the Google account, says so, and merges nothing", async () => {

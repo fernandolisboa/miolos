@@ -1,5 +1,5 @@
 import type { AccountGoogleResponse } from "@miolos/core";
-import { eq, sessions, sql, users, type Db } from "@miolos/db";
+import { eq, sql, users, type Db } from "@miolos/db";
 import { holdsIdentityHandle, mergeAccounts } from "@miolos/db/user";
 
 import { createSessionForUser, deleteSession } from "../session/service";
@@ -126,12 +126,9 @@ export async function resolveGoogleSignIn(
     return "ok";
   }
 
-  // An anonymous account is never linked in place: it merges, holding no
-  // session, into the Google account, whose only new session is the fresh one.
   const googleUserId = holder ?? (await createGoogleUser(db, sub));
   await createSessionForUser(db, session.freshHash, googleUserId);
-  await db.delete(sessions).where(eq(sessions.userId, requesterId));
-  await mergeAccounts(db, requesterId, googleUserId);
+  await mergeAccounts(db, requesterId, googleUserId, "drop");
   await assertHolder(db, sub, googleUserId);
   return "ok";
 }

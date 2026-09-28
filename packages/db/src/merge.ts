@@ -60,6 +60,7 @@ export async function mergeAccounts(
   db: Db,
   a: string,
   b: string,
+  loserSessions: "remap" | "drop" = "remap",
 ): Promise<{ winnerId: string; loserId: string }> {
   const candidates = await db
     .select({
@@ -110,10 +111,14 @@ export async function mergeAccounts(
     }
   }
 
-  await db
-    .update(sessions)
-    .set({ userId: winnerId })
-    .where(eq(sessions.userId, loserId));
+  if (loserSessions === "drop") {
+    await db.delete(sessions).where(eq(sessions.userId, loserId));
+  } else {
+    await db
+      .update(sessions)
+      .set({ userId: winnerId })
+      .where(eq(sessions.userId, loserId));
+  }
 
   await db
     .update(pushSubscriptions)

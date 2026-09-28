@@ -455,7 +455,7 @@ export const messages = {
     },
     account: {
       heading: "Sem cadastro",
-      body: "Você joga com uma conta anônima criada neste aparelho — sem e-mail, sem senha, sem formulário. Vincular um e-mail é opcional e serve só para recuperar e mover a sua sequência.",
+      body: "Você joga com uma conta anônima criada neste aparelho — sem e-mail, sem senha, sem formulário. Vincular um e-mail é opcional e serve só para recuperar e mover a sua sequência. Entrar com o Google também é opcional, e você desconecta em Ajustes.",
       privacyLead: "O que coletamos, e como apagar tudo, está na",
       privacyLinkLabel: "Política de Privacidade",
     },

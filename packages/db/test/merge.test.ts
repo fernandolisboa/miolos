@@ -1271,6 +1271,27 @@ describe("identity handles across a merge (ADR-0089)", () => {
       { id: loser, googleId: null },
     ]);
   });
+
+  it("T-DB-S123: with drop, the loser's sessions are deleted rather than moved, and the winner's stay", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await ctx.db
+      .update(users)
+      .set({ googleId: "google-sub-winner" })
+      .where(eq(users.id, winner));
+    await insertSession(winner, "hash-winner-1");
+    await insertSession(loser, "hash-loser-1");
+    await insertSession(loser, "hash-loser-2");
+
+    await mergeAccounts(ctx.db, winner, loser, "drop");
+    const rows = await ctx.db
+      .select({ tokenHash: sessions.tokenHash, userId: sessions.userId })
+      .from(sessions);
+    expect(rows).toContainEqual({ tokenHash: "hash-winner-1", userId: winner });
+    expect(rows.map((row) => row.tokenHash)).not.toContain("hash-loser-1");
+    expect(rows.map((row) => row.tokenHash)).not.toContain("hash-loser-2");
+    expect(rows.every((row) => row.userId === winner)).toBe(true);
+  });
 });
 
 function sqlText(query: unknown): string {
