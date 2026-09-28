@@ -4,7 +4,10 @@ import {
 } from "@miolos/core";
 import { describe, expect, it } from "vitest";
 
-import type { CrosswordPlayRecord } from "../src/play/play-record";
+import type {
+  BinairoPlayRecord,
+  CrosswordPlayRecord,
+} from "../src/play/play-record";
 import {
   crosswordPlayReducer,
   initCrosswordPlayState,
@@ -172,7 +175,13 @@ describe("backspace (T-WEB-S426)", () => {
   });
 
   it("moves back and clears the previous cell when the current one is already empty", () => {
-    const state = play(fresh(), { type: "select", index: 1 });
+    const state = play(
+      fresh(),
+      { type: "select", index: 0 },
+      { type: "type-letter", letter: "c" },
+      { type: "select", index: 1 },
+    );
+    expect(state.entries[0]).toBe("c");
     const erased = play(state, { type: "backspace" });
     expect(erased.selected).toBe(0);
     expect(erased.entries[0]).toBeNull();
@@ -343,5 +352,26 @@ describe("restore (T-WEB-S428)", () => {
     });
     expect(noRecord.hydrated).toBe(true);
     expect(noRecord.entries.every((entry) => entry === null)).toBe(true);
+
+    const binairoRecord: BinairoPlayRecord = {
+      v: 1,
+      game: "binairo",
+      date: DATE,
+      entries: Array<null>(64).fill(null),
+      elapsedMs: 12_000,
+      hintsUsed: 1,
+      concluded: false,
+      pendingSync: true,
+      syncOutcome: "pending",
+    };
+    const otherGame = play(fresh(), {
+      type: "restore",
+      record: binairoRecord,
+      now: 1000,
+    });
+    expect(otherGame.hydrated).toBe(true);
+    expect(otherGame.timer.accumulatedMs).toBe(0);
+    expect(otherGame.hint.used).toBe(0);
+    expect(otherGame.pendingSync).toBe(false);
   });
 });

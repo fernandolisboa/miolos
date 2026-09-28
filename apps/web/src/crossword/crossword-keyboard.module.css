@@ -1,6 +1,4 @@
-/* The Cruzadinha's on-screen keyboard, built on the shared
-   `../play/letter-keyboard.tsx` primitive. Same 20-column grid as Termo's
-   keyboard, minus the `enter` command — see ADR-0086. */
+/* Termo's 20-column keyboard grid, minus the `enter` command. */
 
 .keyboard {
   display: grid;

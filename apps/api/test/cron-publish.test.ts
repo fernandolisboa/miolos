@@ -3,6 +3,7 @@ import {
   crosswordDailyContentSchema,
   cronPublishGameResultSchema,
   cronPublishResponseSchema,
+  GAMES,
   nonogramDailyContentSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
@@ -611,7 +612,7 @@ describe("GET /cron/publish top-up", () => {
     expect(await rowsFor("binairo")).toHaveLength(3);
 
     expect(body.games.sudoku.generated).toBe(7);
-    const binairoLine: unknown = JSON.parse(logLines[0] ?? "null");
+    const binairoLine: unknown = JSON.parse(logLines[1] ?? "null");
     expect(binairoLine).toMatchObject({
       event: "cron-publish",
       game: "binairo",
@@ -619,7 +620,7 @@ describe("GET /cron/publish top-up", () => {
     });
   }, 30_000);
 
-  it("T-API-S8: one structured log line per game, in the shape the log query reads", async () => {
+  it("T-API-S8: one structured log line per game, cost-ascending, in the shape the log query reads", async () => {
     await authorizedRun();
 
     const logged: unknown[] = [];
@@ -629,13 +630,15 @@ describe("GET /cron/publish top-up", () => {
     }
     expect(logged).toHaveLength(5);
 
-    expect(logged.map((entry) => (entry as { game: string }).game)).toEqual([
-      "binairo",
-      "sudoku",
-      "nonogram",
+    const order = logged.map((entry) => (entry as { game: string }).game);
+    expect(order).toEqual([
       "termo",
+      "binairo",
+      "nonogram",
       "crossword",
+      "sudoku",
     ]);
+    expect([...order].sort()).toEqual([...GAMES].sort());
     for (const entry of logged) {
       expect(entry).toMatchObject({
         event: "cron-publish",

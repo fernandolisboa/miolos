@@ -2,7 +2,6 @@ import type { DailyTermoResponse } from "@miolos/core";
 import {
   deriveBoardStatus,
   isValidGuess,
-  normalizeWord,
   MAX_GUESSES,
   WORD_LENGTH,
 } from "@miolos/games/termo";
@@ -10,11 +9,10 @@ import {
 import { messages } from "../i18n";
 import type { PlayRecord, TermoPlayRecord } from "../play/play-record";
 import { applyTimerAction } from "../play/timer";
+import { typedLetter } from "../play/typed-letter";
 import type { TermoJudgedRow, TermoPlayAction, TermoPlayState } from "./types";
 
 const copy = messages.games.termo.play;
-
-const SINGLE_LETTER = /^[a-z]$/;
 
 export function initTermoPlayState(daily: DailyTermoResponse): TermoPlayState {
   return {
@@ -54,11 +52,11 @@ export function termoPlayReducer(
       };
 
     case "type": {
-      const letter = normalizeWord(action.letter);
+      const letter = typedLetter(action.letter);
       if (
         !accepting(state) ||
         state.draft.length >= WORD_LENGTH ||
-        !SINGLE_LETTER.test(letter)
+        letter === null
       ) {
         return state;
       }

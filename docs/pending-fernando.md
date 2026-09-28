@@ -20,6 +20,7 @@
 ### §1 ⚡ What Miolos does on a day with no Termo — issue #200
 
 - **Do:** answer #200 with one or two letters. **(a)** keep the dark screen, fix only the copy so it stops calling a permanent state a temporary glitch; **(b)** as (a), plus the hub hides the Termo tile on days it is not published; **(c)** redefine **Dia Perfeito** as "every daily that exists today", so three-for-three counts on a dark day; **(d)** recycle answers rather than go dark — **ADR-0040 rejected this** and choosing it means writing the ADR that reverses it. (a) and (b) compose with (c), so `b+c` is a valid answer.
+- **Already shipped: (c).** Since #276 (ADR-0087), Dia Perfeito counts the dailies published that day, so a dark-Termo day is perfect with the other four. Only (a) and (b) remain open.
 - **Verify:** the letters are on #200 and its `needs-info` label is dropped.
 - **Blocks:** #200 only. **It does not block #74**, which is the alert that stops us ever getting here and is ordinary agent work.
 - **Urgency: low, and stated so you can ignore it for a year.** The pool is 400 answers draining at exactly one per day — ≈ 13.1 months of dailies (ADR-0015: *"400 answer words (13+ months of dailies)"*). Today nothing is dark and nothing is close to dark.
@@ -30,7 +31,7 @@
 ### §2 ⚡ What Dia Perfeito means once Cruzadinha is a fifth daily — issue #276
 
 - **Do:** answer in the project thread or on #276 with one letter. **(a)** every daily published that day, Cruzadinha included (the default); **(b)** only the original four, so Cruzadinha never counts toward it.
-- **Verify:** the answer is on #276, and ADR-0087 (reserved by #276's plan) records it.
+- **Verify:** the answer is on #276. ADR-0087 records (a); answering (b) means amending it.
 - **Blocks:** nothing. #276 ships with (a) unless you say (b) before it merges; switching later is a small change plus an ADR edit.
 - **Why it is yours:** ADR-0008 rule 4 defines Dia Perfeito as "all four dailies". (a) changes a shipped medal's meaning; (b) keeps that rule as written. (a) also answers #200's option (c) for dark-Termo days.
 - **Source:** #275/#276 plan, 2026-09-28; asked in the project thread the same day.

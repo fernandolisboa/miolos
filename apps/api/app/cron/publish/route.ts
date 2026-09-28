@@ -1,6 +1,5 @@
 import {
   cronPublishResponseSchema,
-  GAMES,
   type CronPublishGameResult,
   type Game,
 } from "@miolos/core";
@@ -19,6 +18,14 @@ import {
 } from "../../../src/publishing/service";
 
 export const dynamic = "force-dynamic";
+
+const COST_ASCENDING_GAMES = [
+  "termo",
+  "binairo",
+  "nonogram",
+  "crossword",
+  "sudoku",
+] as const satisfies readonly Game[];
 
 async function runTopUp(
   db: Db,
@@ -57,7 +64,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const db = getDb();
   const config = await getRemoteConfig(db);
   const games = {} as Record<Game, CronPublishGameResult>;
-  for (const game of GAMES) {
+  for (const game of COST_ASCENDING_GAMES) {
     const result = await runTopUp(db, game, TOP_UPS[game], config.bufferDepth);
     games[game] = result;
     console.log(JSON.stringify({ event: "cron-publish", game, ...result }));

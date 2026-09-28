@@ -97,32 +97,27 @@ export interface StatsSummary extends Readonly<
   readonly todayTermoGuesses: number | null;
 }
 
-function requiredOn(
-  date: string,
-  published: readonly PublishedDaily[],
-): readonly Game[] {
-  return published
-    .filter((daily) => daily.date === date)
-    .map((daily) => daily.game);
+function gamesByDate(
+  dailies: readonly PublishedDaily[],
+): ReadonlyMap<string, ReadonlySet<Game>> {
+  const byDate = new Map<string, Set<Game>>();
+  for (const { date, game } of dailies) {
+    const games = byDate.get(date) ?? new Set<Game>();
+    games.add(game);
+    byDate.set(date, games);
+  }
+  return byDate;
 }
 
 export function perfectDays(
   rows: readonly StatsRow[],
   published: readonly PublishedDaily[],
 ): readonly string[] {
-  const wonOnTimeGamesByDate = new Map<string, Set<Game>>();
-  for (const row of rows) {
-    if (!countsOnTimeWon(row)) {
-      continue;
-    }
-    const games = wonOnTimeGamesByDate.get(row.date) ?? new Set<Game>();
-    games.add(row.game);
-    wonOnTimeGamesByDate.set(row.date, games);
-  }
+  const requiredByDate = gamesByDate(published);
   const dates: string[] = [];
-  for (const [date, games] of wonOnTimeGamesByDate) {
-    const required = requiredOn(date, published);
-    if (required.length > 0 && required.every((game) => games.has(game))) {
+  for (const [date, won] of gamesByDate(rows.filter(countsOnTimeWon))) {
+    const required = [...(requiredByDate.get(date) ?? [])];
+    if (required.length > 0 && required.every((game) => won.has(game))) {
       dates.push(date);
     }
   }

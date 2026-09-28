@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-09-28 (issue #276)
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md), [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md)
-**Amends:** ADR-0008 rule 4 (*"all four dailies"*). ADR-0051 decision 1: the derivations gain a second, read-only input. ADR-0052 decision 2: monotonicity now holds under a fixed lineup. ADR-0052 decision 3: breadth is the original four.
+**Amends:** ADR-0008 rule 4 (*"all four dailies"*). ADR-0051 decision 1: the derivations gain a second, read-only input. ADR-0052 decisions 1 and 2: the rules read the lineup too, and monotonicity now holds under a fixed lineup. ADR-0052 decision 3: breadth is the original four.
 
 ## Context
 
@@ -11,18 +11,19 @@ ADR-0008 rule 4 defines Dia Perfeito as all four dailies won on time, and `perfe
 ## Decision
 
 1. **A date is perfect iff its lineup is non-empty and every game in it was won on time.** The lineup is the day's `daily_puzzles` rows that are published, not killed, and have `created_at <= published_at`. That last condition means the row was buffered before its day began.
-2. **`requiredOn(date, published)`** in `packages/core/src/stats.ts` decides which games a date requires. `perfectDays`, `computeStats`, `computeCalendar` and `earnedMedals` take the lineup as `published: readonly PublishedDaily[]`.
+2. **`perfectDays`** in `packages/core/src/stats.ts` groups the lineup by date once and requires exactly that date's games. It, `computeStats`, `computeCalendar` and `earnedMedals` take the lineup as `published: readonly PublishedDaily[]`.
 3. **`listPublishedDailiesOnWonDates`** (`packages/db/src/published.ts`, exported from `@miolos/db/user` only) reads the lineup of the user's on-time-won dates. It reuses `publishedConjuncts()`.
-4. **`crossword-30` is added** after `termo-30`, making 24 medals. **`all-games` stays on `ORIGINAL_GAMES`**, which is local to `medals/derive.ts`. Nobody loses it, and its copy ("quatro jogos") stays true.
+4. **`crossword-30` is added** after `termo-30`, making 24 medals. **`all-games` stays on `ORIGINAL_GAMES`**, which is local to `medals/derive.ts`. Nobody loses it, and its copy names the four games it counts.
 
 ## Consequences
 
-- Past dates keep their four games. A day published before a game existed is perfect with fewer games, so the change only adds perfect days. A dark-Termo day is perfect with the other games, which is #200's option (c).
+- Past dates keep their four games. A day published before a game existed is perfect with fewer games. A dark-Termo day is perfect with the other games, which is #200's option (c).
+- The change can also remove a perfect day. A past date whose rows were all inserted after `published_at`, or all killed, has an empty lineup, so it stops being perfect. No such date is known, so this is theoretical.
 - On launch day, the cron inserts the first crossword after midnight, so the crossword is not required that day. A four-game perfect day earned before the insert stays perfect. The same happens whenever the buffer runs dry: a late row is not required. If every row of a day is late, the lineup is empty and the day cannot be perfect.
-- **The one remaining way to lose a perfect day is un-killing a row.** When `killed_at` goes back to null, that daily becomes required again.
+- **After the switch, only the kill switch changes a past day.** Un-killing a row makes that daily required again; killing every row of a day empties its lineup.
 - Adding completion rows still never takes a medal away when the lineup is fixed (T-CORE-S75). Only the kill switch changes the lineup of a past day.
 - Stats, calendar and medals reads each make one extra query.
-- **Switching to "only the original four" is not a one-line change.** `requiredOn` would return `ORIGINAL_GAMES`, and the lineup would then have no use. Removing it touches four core signatures, three API routes and the db reader. No data changes.
+- **Switching to "only the original four" is not a one-line change.** `perfectDays` would require `ORIGINAL_GAMES`, and the lineup would then have no use. Removing it touches four core signatures, three API routes and the db reader. No data changes.
 
 ## Rejected
 

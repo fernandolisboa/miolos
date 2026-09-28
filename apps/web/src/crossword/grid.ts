@@ -88,7 +88,7 @@ export function isSolved(
   );
 }
 
-export function countFilled(
+export function countAnswered(
   solution: readonly CrosswordCell[],
   entries: readonly CrosswordCell[],
 ): number {
@@ -114,10 +114,4 @@ export function hintGivens(
   solution: readonly CrosswordCell[],
 ): readonly CrosswordCell[] {
   return solution.map((cell) => (cell === null ? BLOCK_MARKER : null));
-}
-
-const ACCENT_MARKS = /\p{Mn}/gu;
-
-export function normalizeLetter(key: string): string {
-  return key.toLowerCase().normalize("NFD").replace(ACCENT_MARKS, "");
 }

@@ -154,7 +154,7 @@ they ship (an id is a wire value and a grant key).
 | 20 | `termo-first-try` | De primeira | Acertou o Termo na primeira tentativa. | termoGuessWins, 1 guess, 1× | The luck-and-vocabulary lightning strike; once is the feat. |
 | 21 | `termo-in-two` | Dez na segunda | Acertou o Termo na segunda tentativa 10 vezes. | termoGuessWins, 2 guesses, 10× | Win-in-2 once is common; ten times is skill. |
 | 22 | `termo-last-guess` | Por um fio | Acertou o Termo na última tentativa. | termoGuessWins, 6 guesses, 1× | Survival — the last-guess save is a story, not a statistic. |
-| 23 | `all-games` | Circuito completo | Venceu cada um dos quatro jogos ao menos uma vez. | eachGameWon | Breadth over the original four games, so the medal is never taken back when a game is added (ADR-0087). |
+| 23 | `all-games` | Circuito completo | Venceu Binairo, Sudoku, Nonogram e Termo ao menos uma vez. | eachGameWon | Breadth over the original four games, so the medal is never taken back when a game is added (ADR-0087). |
 | 24 | `founder` | Da primeira leva | Estava aqui quando tudo começou. | curated | Launch-window founder grant (#37 decides the instant; the one-shot bulk insert is documented in ADR-0052). |
 
 **Quota check against the table:** all-games totalWins 5 ∈ [4, 6] (1, 10, 50,

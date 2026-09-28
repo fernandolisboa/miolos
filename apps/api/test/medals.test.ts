@@ -1,6 +1,6 @@
 import { medalsResponseSchema } from "@miolos/core";
 import { sessions, sql, users } from "@miolos/db";
-import { dailyPuzzles, todaySaoPaulo } from "@miolos/db/publishing";
+import { todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions, medalGrants } from "@miolos/db/user";
 import { NextRequest } from "next/server";
@@ -16,6 +16,7 @@ import {
 } from "vitest";
 
 import { GET } from "../app/medals/route";
+import { publishDaily } from "./lineup-helpers";
 import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
@@ -93,27 +94,6 @@ async function insertLateWin(init: {
 
 async function insertGrant(userId: string, medalId: string): Promise<void> {
   await ctx.db.insert(medalGrants).values({ userId, medalId });
-}
-
-function midnightOf(date: string) {
-  return sql`(${date}::timestamp at time zone 'America/Sao_Paulo')`;
-}
-
-async function publishDaily(
-  game: "binairo" | "crossword" | "nonogram" | "sudoku" | "termo",
-  date: string,
-  options: { insertedAfterPublish?: boolean } = {},
-): Promise<void> {
-  await ctx.db.insert(dailyPuzzles).values({
-    game,
-    date,
-    seed: 1,
-    content: {},
-    publishedAt: midnightOf(date),
-    createdAt: options.insertedAfterPublish
-      ? sql`${midnightOf(date)} + interval '1 hour'`
-      : sql`${midnightOf(date)} - interval '2 days'`,
-  });
 }
 
 async function readMedals(token: string): Promise<{ medals: string[] }> {
@@ -250,7 +230,7 @@ describe("GET /medals — the crossword lineup (#276, ADR-0087)", () => {
       "termo",
       "crossword",
     ] as const) {
-      await publishDaily(game, today);
+      await publishDaily(ctx.db, game, today);
       await insertLateWin({ userId, game, date: today, today });
     }
 
@@ -263,10 +243,12 @@ describe("GET /medals — the crossword lineup (#276, ADR-0087)", () => {
     const today = await todaySaoPaulo(ctx.db);
     const { token, userId } = await createSession();
     for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
-      await publishDaily(game, today);
+      await publishDaily(ctx.db, game, today);
       await insertLateWin({ userId, game, date: today, today });
     }
-    await publishDaily("crossword", today, { insertedAfterPublish: true });
+    await publishDaily(ctx.db, "crossword", today, {
+      insertedAfterPublish: true,
+    });
 
     expect(await readMedals(token)).toEqual({
       medals: ["first-win", "perfect-1", "all-games"],

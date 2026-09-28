@@ -1,8 +1,3 @@
-/* The /cruzadinha BOARD — everything the shared play layout in
-   `../play/screen.module.css` deliberately does not own (ADR-0029), in the
-   composite-widget shape ADR-0030 sets for a grid game. Geometry mirrors the
-   other three grid games' DESIGN.md:50 52px desktop cell. */
-
 .pageCrossword {
   --grid-card-rot: 0.6deg;
   --stats-card-rot: -0.4deg;

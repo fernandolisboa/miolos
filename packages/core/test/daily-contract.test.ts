@@ -791,6 +791,15 @@ describe("dailyCrosswordResponseSchema", () => {
     }
   });
 
+  it("T-CORE-S131: a hostile clue length fails fast instead of walking a billion cells", () => {
+    const started = Date.now();
+    const result = dailyCrosswordResponseSchema.safeParse(
+      withClue({ length: 1e9 }),
+    );
+    expect(result.success).toBe(false);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
   it("T-CORE-S123: the grid is exactly 5x5 of a-z or null", () => {
     for (const grid of [
       valid.grid.slice(1),

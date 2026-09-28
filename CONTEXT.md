@@ -60,6 +60,6 @@ The ubiquitous language. Issue titles, test names, proposals and specs use these
 | **Direction** | Horizontal · Vertical | An entry's orientation: `across` or `down`. |
 | **Clue (crossword)** | Pista | The one-line hint for a crossword **entry**: `clue`. Never *dica* in the UI — a **dica** is the Hint. |
 
-**Games** (v1, build order): **Binairo**, **Sudoku**, **Nonogram**, **Termo**, **Crossword** — "Termo" is the product's name for its Termo-like game; don't call it Wordle. Crossword (Cruzadinha) is the handoff's "Cruzadas 5×5 no v1.1".
+**Games** (build order): **Binairo**, **Sudoku**, **Nonogram**, **Termo**, **Crossword** — "Termo" is the product's name for its Termo-like game; don't call it Wordle. Crossword (Cruzadinha) joined as the fifth daily.
 
 **Terms to avoid:** "win streak" (streaks count completions, not wins — except that a lost Termo alone doesn't complete); "coins/points/XP" (vetoed concepts, [ADR-0006](./docs/adr/0006-monetization-convenience-not-access.md)); "premium content" (nothing is gated, [ADR-0005](./docs/adr/0005-all-content-is-free.md)); "Picross", "Griddler", "Hanjie", "paint-by-numbers" (the game is **Nonogram**); *dica* or *pista* for a Nonogram's clue rails (those are **números**; *dica* is the hint); *dica* for a crossword clue (that is a **pista**).

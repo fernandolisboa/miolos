@@ -5,13 +5,17 @@ import type { CrosswordPlayRecord, PlayRecord } from "../play/play-record";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 import {
+  colOf,
   entryAt,
   flattenGrid,
+  GRID_SIZE,
   hintGivens,
+  indexOf,
   isBlock,
   isSolved,
   nextCellInEntry,
   prevCellInEntry,
+  rowOf,
   type CrosswordClue,
   type CrosswordDirection,
 } from "./grid";
@@ -167,13 +171,13 @@ function moved(
   if (selected === null) {
     return 0;
   }
-  const row = clamp(Math.floor(selected / 5) + move.rows);
-  const column = clamp((selected % 5) + move.columns);
-  return row * 5 + column;
+  const row = clamp(rowOf(selected) + move.rows);
+  const column = clamp(colOf(selected) + move.columns);
+  return indexOf(row, column);
 }
 
 function clamp(value: number): number {
-  return Math.min(Math.max(value, 0), 4);
+  return Math.min(Math.max(value, 0), GRID_SIZE - 1);
 }
 
 function withEntry(

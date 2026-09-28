@@ -730,7 +730,7 @@ describe("apps/web db wall — not a blanket ban", () => {
   });
 });
 
-describe("the crossword lexicon wall (ADR-0086 decision 9)", () => {
+describe("the crossword lexicon wall (ADR-0085 decision 7)", () => {
   it("T-LINT-S66: @miolos/games/crossword fails lint anywhere in apps/web, static and dynamic; the @miolos/games root stays clean", async () => {
     const paths = [
       SOURCE_PATH,

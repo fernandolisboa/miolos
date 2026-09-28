@@ -170,12 +170,78 @@ describe("physical keys (T-WEB-S436)", () => {
   });
 });
 
+const LEADING_BLOCK: DailyCrosswordResponse =
+  dailyCrosswordResponseSchema.parse({
+    game: "crossword",
+    date: DATE,
+    grid: [
+      [null, "a", "t", null, null],
+      [null, null, "o", null, null],
+      [null, null, null, null, null],
+      [null, null, null, null, null],
+      [null, null, null, null, null],
+    ],
+    clues: [
+      { number: 1, direction: "across", row: 0, col: 1, length: 2, clue: "a" },
+      { number: 2, direction: "down", row: 0, col: 2, length: 2, clue: "b" },
+    ],
+  });
+
 describe("hint, skipping a block (T-WEB-S437)", () => {
-  it("fills the first empty white cell before a block, never targeting the block", () => {
-    render(<CrosswordScreen daily={DAILY} />);
+  it("steps over a leading block and fills the first white cell", () => {
+    render(<CrosswordScreen daily={LEADING_BLOCK} />);
     fireEvent.click(screen.getByRole("button", { name: copy.hint.available }));
-    expect(cellAt(0).textContent).toContain("c");
-    expect(cellAt(3).textContent ?? "").not.toContain("c");
+    expect(cellAt(1).getAttribute("aria-label")).toBe(copy.cellAria(1, 2, "a"));
+    expect(cellAt(0).textContent).toBe("");
+    expect(cellAt(0).getAttribute("aria-label")).toBe(copy.blockAria);
+  });
+});
+
+describe("browser shortcuts pass through the board (T-WEB-S440)", () => {
+  it("Ctrl+F and Cmd+R are never prevented and write nothing", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    tap(cellAt(0));
+
+    const find = fireEvent.keyDown(boardOf(), { key: "f", ctrlKey: true });
+    const reload = fireEvent.keyDown(boardOf(), { key: "r", metaKey: true });
+    const altLetter = fireEvent.keyDown(boardOf(), { key: "a", altKey: true });
+
+    expect([find, reload, altLetter]).toEqual([true, true, true]);
+    expect(cellAt(0).getAttribute("aria-label")).toBe(
+      copy.cellAria(1, 1, null),
+    );
+    expect(cellAt(1).getAttribute("aria-label")).toBe(
+      copy.cellAria(1, 2, null),
+    );
+  });
+});
+
+describe("physical typing after a clue or an on-screen key (T-WEB-S441)", () => {
+  it("a clue tap hands focus to the board, so the next physical key lands", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `${copy.clueLabel(2, "down")} — verbo`,
+      }),
+    );
+    expect(document.activeElement).toBe(cellAt(2));
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "t" });
+    expect(cellAt(2).getAttribute("aria-label")).toBe(copy.cellAria(1, 3, "t"));
+  });
+
+  it("an on-screen key tap hands focus to the board as well", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    tap(cellAt(0));
+    const key = screen.getByRole("button", {
+      name: copy.keyboard.letterAria("c"),
+    });
+    key.focus();
+    fireEvent.click(key, { detail: 1 });
+    expect(document.activeElement).toBe(cellAt(1));
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "a" });
+    expect(cellAt(1).getAttribute("aria-label")).toBe(copy.cellAria(1, 2, "a"));
   });
 });
 

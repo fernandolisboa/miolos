@@ -13,7 +13,7 @@ import { nextHint } from "../play/grid-hint";
 import type { CrosswordPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
-import { countFilled, hintGivens } from "./grid";
+import { countAnswered, hintGivens } from "./grid";
 import {
   crosswordPlayReducer,
   initCrosswordPlayState,
@@ -69,7 +69,7 @@ export function useCrosswordPlay(
     () => solution.filter((cell) => cell !== null).length,
     [solution],
   );
-  const filled = countFilled(solution, entries);
+  const filled = countAnswered(solution, entries);
 
   usePlayLifecycle({
     game: "crossword",

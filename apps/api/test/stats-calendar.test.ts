@@ -1,6 +1,6 @@
 import { statsCalendarResponseSchema, statsResponseSchema } from "@miolos/core";
 import { eq, sessions, sql, users } from "@miolos/db";
-import { dailyPuzzles, todaySaoPaulo } from "@miolos/db/publishing";
+import { todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
 import { NextRequest } from "next/server";
@@ -16,6 +16,7 @@ import {
 } from "vitest";
 
 import { GET } from "../app/stats/calendar/route";
+import { publishDaily } from "./lineup-helpers";
 
 import { GET as statsGet } from "../app/stats/route";
 import { addDays } from "../src/publishing/dates";
@@ -104,27 +105,6 @@ async function insertHistoryRow(init: {
   });
 }
 
-function midnightOf(date: string) {
-  return sql`(${date}::timestamp at time zone 'America/Sao_Paulo')`;
-}
-
-async function publishDaily(
-  game: "binairo" | "crossword" | "nonogram" | "sudoku" | "termo",
-  date: string,
-  options: { insertedAfterPublish?: boolean } = {},
-): Promise<void> {
-  await ctx.db.insert(dailyPuzzles).values({
-    game,
-    date,
-    seed: 1,
-    content: {},
-    publishedAt: midnightOf(date),
-    createdAt: options.insertedAfterPublish
-      ? sql`${midnightOf(date)} + interval '1 hour'`
-      : sql`${midnightOf(date)} - interval '2 days'`,
-  });
-}
-
 describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-0051)", () => {
   it("T-API-S88: the range runs from created_at's SP day to the DB clock's today, three states from real rows, the perfect marker on a four-win day only, days and nothing else", async () => {
     const today = await todaySaoPaulo(ctx.db);
@@ -164,7 +144,7 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
       completedAtDate: today,
     });
     for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
-      await publishDaily(game, today);
+      await publishDaily(ctx.db, game, today);
     }
 
     const response = await GET(calendarRequest(token));
@@ -296,7 +276,7 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
       guesses: 2,
     });
     for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
-      await publishDaily(game, today);
+      await publishDaily(ctx.db, game, today);
     }
 
     const body = statsCalendarResponseSchema.parse(
@@ -374,7 +354,7 @@ describe("GET /stats/calendar — the crossword lineup (#276, ADR-0087)", () => 
       "termo",
       "crossword",
     ] as const) {
-      await publishDaily(game, today);
+      await publishDaily(ctx.db, game, today);
     }
     for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
       await insertHistoryRow({
@@ -413,7 +393,7 @@ describe("GET /stats/calendar — the crossword lineup (#276, ADR-0087)", () => 
     const today = await todaySaoPaulo(ctx.db);
     const { token, userId } = await createSession();
     for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
-      await publishDaily(game, today);
+      await publishDaily(ctx.db, game, today);
       await insertHistoryRow({
         userId,
         game,
@@ -423,7 +403,9 @@ describe("GET /stats/calendar — the crossword lineup (#276, ADR-0087)", () => 
         guesses: game === "termo" ? 3 : undefined,
       });
     }
-    await publishDaily("crossword", today, { insertedAfterPublish: true });
+    await publishDaily(ctx.db, "crossword", today, {
+      insertedAfterPublish: true,
+    });
 
     const body = statsCalendarResponseSchema.parse(
       await (await GET(calendarRequest(token))).json(),

@@ -92,7 +92,7 @@ export const medalCopy = {
   },
   "all-games": {
     name: "Circuito completo",
-    description: "Venceu cada um dos quatro jogos ao menos uma vez.",
+    description: "Venceu Binairo, Sudoku, Nonogram e Termo ao menos uma vez.",
   },
   founder: {
     name: "Da primeira leva",

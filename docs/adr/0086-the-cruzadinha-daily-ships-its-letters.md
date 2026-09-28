@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-09-28 (issue #276)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0085](./0085-cruzadinha-is-a-seeded-fill-from-a-curated-lexicon.md)
-**Amends:** ADR-0027's rejected bullet *"Shipping `solution` in the daily payload"*, for the crossword only. [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md) decision 4's "three timed games" become four (decision 3 below).
+**Amends:** ADR-0027's rejected bullet *"Shipping `solution` in the daily payload"*, for the crossword only. [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md) decision 4's "three timed games" become four (decision 3 below). The fifth game also grows [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) decisions 1, 2 and 13's counts, [ADR-0047](./0047-bundle-markers-are-route-scoped.md)'s forbidden-everywhere list, [ADR-0041](./0041-accents-colour-shapes-never-words.md) consequence (h) and [ADR-0080](./0080-paper-dark-accents-lighten-under-a-paper-label.md) decisions 2 and 3.
 
 ## Context
 
@@ -28,6 +28,7 @@ Why ship the letters:
 - **This gives up the devtools protection Termo keeps.** Anyone can read today's answers in the network tab. ADR-0004 guards against spoiling a puzzle before it is published. Today's grid is already public.
 - The server still judges every completion. Local validation is never the source of truth (ADR-0004).
 - For the grid games, ADR-0027's rejection still applies: their strip keeps blocking casual devtools reads.
+- The cron runs the crossword fourth, between nonogram and sudoku, under [ADR-0040](./0040-the-termo-daily-stores-the-drawn-answer.md) consequence (e)'s cost-ascending rule. Measured worst-case generation: termo trivial, binairo ~15 ms, nonogram ~20 ms, crossword ~88 ms, sudoku ~222 ms. `COST_ASCENDING_GAMES` in `apps/api/app/cron/publish/route.ts` holds the order.
 
 ## Rejected
 

@@ -73,9 +73,8 @@
   color: var(--accent-app);
 }
 
-/* Five cards, not four: paired word games (Termo, Cruzadinha) on their own
-   row, the three grid games below — the hub-order pairing decision 5 read
-   into layout instead of a broken 4-up row with one orphan. */
+/* Five cards on a six-column track: two on the first row, three on the
+   second, so no row orphans a single card. */
 .games {
   display: grid;
   grid-template-columns: repeat(6, 1fr);

@@ -1,6 +1,12 @@
-import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  type KeyboardEvent,
+  type RefObject,
+} from "react";
 
 import { messages } from "../i18n";
+import { typedLetter } from "../play/typed-letter";
 import {
   activeEntry,
   colOf,
@@ -8,7 +14,6 @@ import {
   firstPlayableIndex,
   GRID_SIZE,
   isBlock,
-  normalizeLetter,
   rowOf,
   type CrosswordClue,
   type CrosswordDirection,
@@ -17,7 +22,11 @@ import styles from "./crossword-board.module.css";
 
 const copy = messages.games.crossword.play;
 
-const SINGLE_LETTER = /^[a-z]$/;
+export function focusBoard(board: HTMLElement | null): void {
+  board
+    ?.querySelector<HTMLButtonElement>('[data-cell-index][tabindex="0"]')
+    ?.focus();
+}
 
 function numbering(
   clues: readonly CrosswordClue[],
@@ -33,6 +42,7 @@ function numbering(
 }
 
 export function Board({
+  boardRef,
   solution,
   clues,
   entries,
@@ -45,6 +55,7 @@ export function Board({
   onLetter,
   onBackspace,
 }: {
+  readonly boardRef: RefObject<HTMLDivElement | null>;
   readonly solution: readonly (string | null)[];
   readonly clues: readonly CrosswordClue[];
   readonly entries: readonly (string | null)[];
@@ -58,7 +69,6 @@ export function Board({
   readonly onLetter: (letter: string) => void;
   readonly onBackspace: () => void;
 }) {
-  const boardRef = useRef<HTMLDivElement>(null);
   const wasSelectedRef = useRef(false);
   const numbers = numbering(clues);
   const tabbable = selected ?? firstPlayableIndex(solution);
@@ -68,18 +78,15 @@ export function Board({
 
   useLayoutEffect(() => {
     const board = boardRef.current;
-    if (board === null || selected === null) {
-      return;
+    if (selected !== null && board?.contains(document.activeElement)) {
+      focusBoard(board);
     }
-    if (!board.contains(document.activeElement)) {
-      return;
-    }
-    board
-      .querySelector<HTMLButtonElement>(`[data-cell-index="${selected}"]`)
-      ?.focus();
-  }, [selected]);
+  }, [boardRef, selected]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
     const move = MOVES[event.key];
     if (move !== undefined) {
       event.preventDefault();
@@ -96,8 +103,8 @@ export function Board({
       onToggleDirection();
       return;
     }
-    const letter = normalizeLetter(event.key);
-    if (SINGLE_LETTER.test(letter)) {
+    const letter = typedLetter(event.key);
+    if (letter !== null) {
       event.preventDefault();
       onLetter(letter);
     }

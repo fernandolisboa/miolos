@@ -1,5 +1,4 @@
 import {
-  memo,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -61,7 +60,7 @@ function clamp(index: number, length: number): number {
   return Math.min(Math.max(index, 0), length - 1);
 }
 
-export const LetterKeyboard = memo(function LetterKeyboard({
+export function LetterKeyboard({
   rows,
   groupClassName,
   groupLabel,
@@ -141,7 +140,7 @@ export const LetterKeyboard = memo(function LetterKeyboard({
       )}
     </div>
   );
-});
+}
 
 function idOfNode(
   registry: ReadonlyMap<string, HTMLButtonElement>,

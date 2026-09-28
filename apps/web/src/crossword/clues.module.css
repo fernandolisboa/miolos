@@ -1,6 +1,3 @@
-/* The active-clue bar and the two clue lists — the part of `/cruzadinha`
-   with no counterpart in the other three grid games. */
-
 .activeBar {
   margin: 0;
   padding: var(--space-2) var(--space-3);
@@ -78,8 +75,13 @@
 
 .itemActive {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--ink);
   font-weight: 600;
+}
+
+.itemActive:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

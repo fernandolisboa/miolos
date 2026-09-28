@@ -1,13 +1,14 @@
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 
 import { formatLongDate, messages } from "../i18n";
 import screen from "../play/screen.module.css";
 import { DAILY_PLAY_BACK, PlayScreenChrome } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { ActiveClueBar, ClueLists } from "./clues";
-import { Board, BoardSkeleton } from "./board";
+import { Board, BoardSkeleton, focusBoard } from "./board";
 import boardStyles from "./crossword-board.module.css";
 import { Keyboard, KeyboardSkeleton } from "./keyboard";
+import type { CrosswordDirection } from "./grid";
 import type { CrosswordPlay } from "./use-crossword-play";
 
 const copy = messages.games.crossword.play;
@@ -19,8 +20,35 @@ export function PlayView({
   readonly play: CrosswordPlay;
   readonly archive?: ArchivePlayChrome;
 }) {
-  const { state } = play;
+  const { state, typeLetter, backspace, selectEntry } = play;
   const activeKeyRef = useRef<HTMLButtonElement | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  // A pointer-tapped on-screen key blurs itself; a keyboard-activated one keeps
+  // focus for its arrow navigation, so only the former hands focus back.
+  const reclaimFocus = useCallback(() => {
+    if (
+      document.activeElement === null ||
+      document.activeElement === document.body
+    ) {
+      focusBoard(boardRef.current);
+    }
+  }, []);
+  const typeFromKey = useCallback(
+    (letter: string) => {
+      reclaimFocus();
+      typeLetter(letter);
+    },
+    [reclaimFocus, typeLetter],
+  );
+  const eraseFromKey = useCallback(() => {
+    reclaimFocus();
+    backspace();
+  }, [reclaimFocus, backspace]);
+  const selectFromClue = (index: number, direction: CrosswordDirection) => {
+    focusBoard(boardRef.current);
+    selectEntry(index, direction);
+  };
 
   return (
     <PlayScreenChrome
@@ -51,6 +79,7 @@ export function PlayView({
     >
       <div className={screen.gridCard}>
         <Board
+          boardRef={boardRef}
           solution={state.solution}
           clues={state.clues}
           entries={state.entries}
@@ -60,8 +89,8 @@ export function PlayView({
           onSelect={play.selectCell}
           onToggleDirection={play.toggleDirection}
           onMove={play.moveSelection}
-          onLetter={play.typeLetter}
-          onBackspace={play.backspace}
+          onLetter={typeLetter}
+          onBackspace={backspace}
         />
       </div>
 
@@ -72,8 +101,8 @@ export function PlayView({
       />
 
       <Keyboard
-        onLetter={play.typeLetter}
-        onErase={play.backspace}
+        onLetter={typeFromKey}
+        onErase={eraseFromKey}
         activeKeyRef={activeKeyRef}
       />
 
@@ -81,7 +110,7 @@ export function PlayView({
         clues={state.clues}
         selected={state.selected}
         direction={state.direction}
-        onSelect={play.selectEntry}
+        onSelect={selectFromClue}
       />
     </PlayScreenChrome>
   );

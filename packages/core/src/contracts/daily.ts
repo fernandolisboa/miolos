@@ -129,6 +129,9 @@ function clueCellsAreWhite(
   grid: z.infer<typeof crosswordGridSchema>,
   { direction, row, col, length }: CrosswordClue,
 ): boolean {
+  if (length > CROSSWORD_SIZE) {
+    return false;
+  }
   return Array.from({ length }, (_, k) =>
     direction === "across" ? grid[row]?.[col + k] : grid[row + k]?.[col],
   ).every((cell) => typeof cell === "string");

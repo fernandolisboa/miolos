@@ -37,13 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S131` | `S130` | never used |
+| `T-CORE` | `S132` | `S131` | never used |
 | `T-DB` | `S101` | `S100` | `T-DB-21` |
 | `T-API` | `S236` | `S235` | `T-API-16` |
-| `T-WEB` | `S440` | `S439` | `T-WEB-23` |
+| `T-WEB` | `S444` | `S443` | `T-WEB-23` |
 | `T-LINT` | `S67` | `S66` | `T-LINT-10` |
 
-#276 (the Cruzadinha daily, slice 2 of #274), across work packages A (core, db, migration), B (`apps/api`), C (the play screen) and D1/D2 (the rest of the web wiring), left every area's highest in use at the row above. Re-derived by the two-stage grep.
+#276 (the Cruzadinha daily, ADR-0086/ADR-0087) spent **`T-CORE-S122…S131`**: `S122` (the stored content, strict), `S123` (the projection by allowlist, `FORBIDDEN_DAILY_KEYS`, clue cells in bounds and white), `S124` (the 25-cell completion grid), `S125` (`perfectDays` over the lineup), `S126` (`all-games` on the original four), `S127` (`crossword-30`), `S128` (the crossword required on every wire record), `S129` (its timed stats block), `S130` (`recordFor`, and the crossword as the fifth, timed game) and `S131` (a hostile clue length fails fast). **`T-DB-S99…S100`**: `S99` (the widened game CHECKs) and `S100` (the lineup reader). **`T-API-S220…S235`**: `S220` (`/daily/crossword` and its leak scan), `S221`–`S223` (the top-up: a valid week, the seed-retry budget, a schema rejection), `S224` (shallow on a drained crossword buffer), `S225`–`S228` (grid judging: exact, a wrong letter, a letter on a block, a late write), `S229`–`S234` (the lineup in the calendar, stats and medals, launch day included) and `S235` (`/day` round-trips a crossword completion). **`T-WEB-S417…S443`**: `S417` (`DAY_GAMES`), `S418` (the play record and completion body), `S419` (day-state merging), `S425` (grid helpers), `S426`–`S428` (the reducer, the hint, restore), `S429` (both pages), `S433` (`LetterKeyboard`), `S434`–`S439` (the play screen: a11y, the tap-toggle trap, physical keys, the hint over a block, the clue lists, rendering), `S440` (browser shortcuts pass through the board), `S441` (focus returns to the board after a clue or an on-screen key), `S442` (`typedLetter`, the one letter filter for Termo and the Cruzadinha) and `S443` (the active clue's words stay ink). **`T-LINT-S66`** (the `@miolos/games/crossword` wall). `T-WEB-S420…S424` and `S430…S432` were skipped and are burned below.
 
 #206 cluster 9 (the free-play generation hooks) reserved **`T-WEB-S415…S416`** and spent both, in `apps/web/test/free-play-generation.test.tsx`: `S415` (one build per `{level, run}`, the stale-result mask, `regenerate`'s identity) and `S416` (an inline game descriptor cannot loop the build).
 
@@ -723,6 +723,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-WEB-S286`, `T-WEB-S287`, `T-API-S141` | the whole of #140's on-issue reservation — reserved as headroom in case the fix needed web/api-side tests, and it needed none: the change is content and `packages/games` (which carries no ids), and the deploy-skew behaviour the issue names is already recorded in ADR-0038/ADR-0039. Burned unspent per the rule above |
 | `T-CORE-S115`, `T-DB-S88`, `T-API-S180`, `T-API-S181`, `T-WEB-S331`, `T-WEB-S332` | tails of the issue-#64 on-issue reservation (plan 066) — the reserved review-round headroom, unspent when PR #188 merged at step 8. **The six-lens step-6 round produced four blocking findings and took NO fresh id**, which is the widened-in-place precedent rather than a quiet shortage: `T-WEB-S329` was rewritten in place after a reviewer killed it by mutation, and `T-DB-S86` and `T-API-S177` were widened in place. `T-WEB-S330` is NOT here — it is spent headroom (the plan-040 `T-LINT-S45` case), taken at step 5 for the `all-caps-body` worst case over the motif library. Burned unspent per the rule above |
 | `T-CORE-S102`, `T-DB-S70`, `T-LINT-S51` | tails of the issue-#145 on-issue reservation — the reserved review-round headroom left unspent at step 7's exit. **`T-DB-S69` is NOT here (spent headroom, the plan-040 `T-LINT-S45` case — the users-column catalog pin), and neither are `T-API-S131`/`S132` and `T-WEB-S271`/`S272`, spent at step 7 on the review round** (the #83/`T-WEB-S282` precedent; the #145 paragraph below has each claim) |
+| `T-WEB-S420…S424`, `T-WEB-S430…S432` | skipped inside #276's `T-WEB-S417…S443` range and never spent. Burned unspent per the rule above |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.
 

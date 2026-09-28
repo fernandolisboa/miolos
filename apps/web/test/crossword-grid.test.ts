@@ -4,7 +4,7 @@ import {
   activeEntry,
   CELL_COUNT,
   colOf,
-  countFilled,
+  countAnswered,
   entryAt,
   entryCells,
   firstPlayableIndex,
@@ -13,7 +13,6 @@ import {
   isBlock,
   isSolved,
   nextCellInEntry,
-  normalizeLetter,
   prevCellInEntry,
   rowOf,
   type CrosswordClue,
@@ -150,22 +149,13 @@ describe("blocks and completion (T-WEB-S425)", () => {
 
   it("counts only the white cells that have a letter", () => {
     const entries = solution.map(() => null);
-    expect(countFilled(solution, entries)).toBe(0);
-    expect(countFilled(solution, [...solution])).toBe(5);
+    expect(countAnswered(solution, entries)).toBe(0);
+    expect(countAnswered(solution, [...solution])).toBe(5);
   });
 
   it("finds the first playable cell, skipping leading blocks", () => {
     const leadingBlocks = [null, null, "a", null, null] as const;
     expect(firstPlayableIndex(leadingBlocks)).toBe(2);
     expect(firstPlayableIndex([null, null])).toBe(0);
-  });
-});
-
-describe("normalizeLetter (T-WEB-S425)", () => {
-  it("lower-cases and strips a diacritic to its base letter", () => {
-    expect(normalizeLetter("Á")).toBe("a");
-    expect(normalizeLetter("ç")).toBe("c");
-    expect(normalizeLetter("õ")).toBe("o");
-    expect(normalizeLetter("k")).toBe("k");
   });
 });

@@ -49,7 +49,7 @@ const webDynamicCrosswordImport = {
   selector:
     "ImportExpression > Literal[value=/^@miolos\\/games\\/crossword(\\/|$)/i]",
   message:
-    'apps/web never imports @miolos/games/crossword, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/crossword")` (ADR-0086 decision 9).',
+    'apps/web never imports @miolos/games/crossword, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/crossword")` (ADR-0085 decision 7).',
 };
 
 const webComputedDynamicImport = {
@@ -127,7 +127,7 @@ const webWallImportPatterns = [
   {
     group: ["@miolos/games/crossword", "@miolos/games/crossword/*"],
     message:
-      "apps/web never imports @miolos/games/crossword: unlike the other engines, its module carries the whole lexicon, and the client judges nothing — the server ships the day's grid and judges the completion again (ADR-0086 decision 9).",
+      "apps/web never imports @miolos/games/crossword: unlike the other engines, its module carries the whole lexicon, and a clue → answer lookup spoils the day (ADR-0085 decision 7).",
   },
 
   ...replayCapableClientGroups,
