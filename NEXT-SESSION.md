@@ -1,16 +1,18 @@
 # Do I need to do anything?
 
-**No.** Migrations 0012 and 0013 are applied and in the ledger's Done table. The ⚡ decision on #200 is still open and still low urgency. To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**One open question, ledger NOW §2:** how Dia Perfeito counts once Cruzadinha is a fifth daily (default: every daily published that day). The ⚡ decision on #200 is still open and still low urgency; that default answers its option (c). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
-**#206 cluster 10** — the free-play `Frame` / `ErrorCard` in `apps/web/src/free-play/*-free-screen.tsx`. Re-derive the audit's numbers first; cluster 9's "~375 lines" was 297.
+**#276, the Cruzadinha daily end to end** (epic #274). The engine and lexicon shipped in #275 (ADR-0085); the reviewed plan is on #276. It needs migration 0014 on the Miolos database before merge. After it: #206 cluster 10 (free-play `Frame` / `ErrorCard`).
 
 ## Traps
 
 **Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** `users-updated-at.test.ts` scans `apps/api/src`, but the db test task's cache key does not include that folder, so pre-commit can replay a stale pass. Run `pnpm test --force` before trusting a green gate after an `apps/api` change.
 
 **Dependabot npm PRs cannot be merged as opened.** They change one `package.json` and never `pnpm-lock.yaml`, so `--frozen-lockfile` fails. Land them as one hand-made bump across every pin, outside `minimumReleaseAge` (7 days).
+
+**The crossword lexicon is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` and `pnpm test --force`.
 
 ## Next
 

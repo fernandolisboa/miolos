@@ -1,12 +1,6 @@
-const ANSWERS_HEADER = "canonical,normalized";
+import { splitLines } from "./split-lines.ts";
 
-function splitLines(name: string, raw: string): string[] {
-  if (raw.includes("\r")) {
-    throw new Error(`${name}: CRLF line endings are not allowed`);
-  }
-  const trimmed = raw.endsWith("\n") ? raw.slice(0, -1) : raw;
-  return trimmed.split("\n");
-}
+const ANSWERS_HEADER = "canonical,normalized";
 
 function parseAnswersCsv(answersCsv: string): string[] {
   const lines = splitLines("answers.csv", answersCsv);
