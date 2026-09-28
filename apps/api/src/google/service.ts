@@ -2,7 +2,11 @@ import type { AccountGoogleResponse } from "@miolos/core";
 import { eq, sql, users, type Db } from "@miolos/db";
 import { holdsIdentityHandle, mergeAccounts } from "@miolos/db/user";
 
-import { createSessionForUser, deleteSession } from "../session/service";
+import {
+  createSessionForUser,
+  deleteSession,
+  sessionExists,
+} from "../session/service";
 
 async function findGoogleHolder(
   db: Db,
@@ -128,7 +132,17 @@ export async function resolveGoogleSignIn(
 
   const googleUserId = holder ?? (await createGoogleUser(db, sub));
   await createSessionForUser(db, session.freshHash, googleUserId);
-  await mergeAccounts(db, requesterId, googleUserId, "drop");
+  try {
+    await mergeAccounts(db, requesterId, googleUserId, requesterId);
+  } catch (error) {
+    if (
+      session.presentedHash !== undefined &&
+      (await sessionExists(db, session.presentedHash))
+    ) {
+      await deleteSession(db, session.freshHash);
+    }
+    throw error;
+  }
   await assertHolder(db, sub, googleUserId);
   return "ok";
 }

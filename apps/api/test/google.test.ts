@@ -686,7 +686,7 @@ describe("GET /auth/google/callback", () => {
     expect(emails).toEqual([]);
   });
 
-  it("T-API-S281: a merge that fails leaves the device account untouched and signs the browser in to Google", async () => {
+  it("T-API-S281: a merge that fails before touching sessions leaves the device and its cookie as they were", async () => {
     const device = await createUser();
     await insertWin(device.userId);
     const holder = await createUser({ googleId: "sub-1" });
@@ -695,10 +695,37 @@ describe("GET /auth/google/callback", () => {
     expect(response.headers.get("location")).toBe(
       `${WEB}/ajustes?google=failed`,
     );
-    expect(await requireUserId(ctx.db, sessionTokenOf(response))).toBe(
-      holder.userId,
-    );
+    expect(sessionTokenOf(response)).toBeUndefined();
     expect(await requireUserId(ctx.db, device.token)).toBe(device.userId);
+    expect(await completionOwners()).toEqual([{ userId: device.userId }]);
+    const onHolder = await ctx.db
+      .select({ tokenHash: sessions.tokenHash })
+      .from(sessions)
+      .where(sql`user_id = ${holder.userId}`);
+    expect(onHolder).toHaveLength(1);
+  });
+
+  it("T-API-S282: a Google account that unlinks before an older device merges into it keeps its sessions, and the device keeps its cookie", async () => {
+    const device = await createUser({
+      createdAt: new Date("2026-01-01T12:00:00Z"),
+    });
+    await insertWin(device.userId);
+    const holder = await createUser({ googleId: "sub-1" });
+    const laptop = await addSession(holder.userId);
+    mergeHook.before = async () => {
+      await ctx.db
+        .update(users)
+        .set({ googleId: null })
+        .where(sql`id = ${holder.userId}`);
+    };
+    const response = await signIn({ sub: "sub-1", session: device.token });
+    expect(response.headers.get("location")).toBe(
+      `${WEB}/ajustes?google=failed`,
+    );
+    expect(sessionTokenOf(response)).toBeUndefined();
+    expect(await requireUserId(ctx.db, device.token)).toBe(device.userId);
+    expect(await requireUserId(ctx.db, laptop)).toBe(holder.userId);
+    expect(await requireUserId(ctx.db, holder.token)).toBe(holder.userId);
     expect(await completionOwners()).toEqual([{ userId: device.userId }]);
   });
 

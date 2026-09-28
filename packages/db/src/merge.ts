@@ -60,7 +60,7 @@ export async function mergeAccounts(
   db: Db,
   a: string,
   b: string,
-  loserSessions: "remap" | "drop" = "remap",
+  dropSessionsOf?: string,
 ): Promise<{ winnerId: string; loserId: string }> {
   const candidates = await db
     .select({
@@ -90,6 +90,11 @@ export async function mergeAccounts(
   if (loser.identified) {
     throw new Error(`mergeAccounts: ${IDENTITY_CLASH_SIGNATURE}`);
   }
+  if (dropSessionsOf !== undefined && dropSessionsOf !== loser.id) {
+    throw new Error(
+      `mergeAccounts: ${dropSessionsOf} would win, so its sessions cannot be dropped`,
+    );
+  }
   const winnerId = winner.id;
   const loserId = loser.id;
 
@@ -111,7 +116,7 @@ export async function mergeAccounts(
     }
   }
 
-  if (loserSessions === "drop") {
+  if (dropSessionsOf !== undefined) {
     await db.delete(sessions).where(eq(sessions.userId, loserId));
   } else {
     await db

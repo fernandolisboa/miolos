@@ -1272,7 +1272,7 @@ describe("identity handles across a merge (ADR-0089)", () => {
     ]);
   });
 
-  it("T-DB-S123: with drop, the loser's sessions are deleted rather than moved, and the winner's stay", async () => {
+  it("T-DB-S123: the loser named to drop has its sessions deleted rather than moved, and the winner's stay", async () => {
     const winner = await createUser(OLDER);
     const loser = await createUser(NEWER);
     await ctx.db
@@ -1283,7 +1283,7 @@ describe("identity handles across a merge (ADR-0089)", () => {
     await insertSession(loser, "hash-loser-1");
     await insertSession(loser, "hash-loser-2");
 
-    await mergeAccounts(ctx.db, winner, loser, "drop");
+    await mergeAccounts(ctx.db, winner, loser, loser);
     const rows = await ctx.db
       .select({ tokenHash: sessions.tokenHash, userId: sessions.userId })
       .from(sessions);
@@ -1291,6 +1291,19 @@ describe("identity handles across a merge (ADR-0089)", () => {
     expect(rows.map((row) => row.tokenHash)).not.toContain("hash-loser-1");
     expect(rows.map((row) => row.tokenHash)).not.toContain("hash-loser-2");
     expect(rows.every((row) => row.userId === winner)).toBe(true);
+  });
+
+  it("T-DB-S124: naming the account that would win as the one to drop refuses before any write", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await insertSession(winner, "hash-winner-1");
+    await insertSession(loser, "hash-loser-1");
+    const before = await ctx.db.select().from(sessions);
+
+    await expect(mergeAccounts(ctx.db, winner, loser, winner)).rejects.toThrow(
+      "would win",
+    );
+    expect(await ctx.db.select().from(sessions)).toEqual(before);
   });
 });
 
