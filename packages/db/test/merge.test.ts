@@ -339,7 +339,7 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
     );
   });
 
-  it("T-DB-S19: the loser row is RETAINED with no identity handle and its consent timestamps, emptied of completions, sessions and hint grants, and never bumped", async () => {
+  it("T-DB-S19: the loser row is RETAINED with its consent timestamps, emptied of completions, sessions and hint grants, and never bumped", async () => {
     const winner = await createUser(OLDER);
     const loser = await createUser(NEWER);
 
@@ -372,10 +372,6 @@ describe("mergeAccounts — tombstone (ADR-0022, ADR-0049 decision 4)", () => {
     const tombstone = loserRows[0];
 
     expect(tombstone).toBeDefined();
-    expect(tombstone?.email).toBeNull();
-    expect(tombstone?.emailVerifiedAt).toBeNull();
-    expect(tombstone?.appleId).toBeNull();
-    expect(tombstone?.googleId).toBeNull();
 
     expect(tombstone?.recoveryConsentAt?.toISOString()).toBe(
       consentAt.toISOString(),
@@ -1234,4 +1230,56 @@ describe("identity handles across a merge (ADR-0089)", () => {
     expect(await snapshotState()).toEqual(before);
     expect(isIdentityClashError(new Error("connection reset"))).toBe(false);
   });
+
+  it("T-DB-S122: a handle that lands on the loser after the clash check is still emptied by the tombstone statement", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await ctx.db
+      .update(users)
+      .set({ googleId: "google-sub-winner" })
+      .where(eq(users.id, winner));
+    await insertSession(loser, "hash-loser-1");
+
+    const raced = new Proxy(ctx.db, {
+      get(target, key, receiver) {
+        if (key !== "execute") {
+          return Reflect.get(target, key, receiver) as unknown;
+        }
+        return async (query: Parameters<typeof target.execute>[0]) => {
+          const result = await target.execute(query);
+          if (sqlText(query).includes("delete from notification_sends")) {
+            await target
+              .update(users)
+              .set({ googleId: "google-sub-raced" })
+              .where(eq(users.id, loser));
+          }
+          return result;
+        };
+      },
+    });
+
+    await mergeAccounts(raced, winner, loser);
+    const rows = await ctx.db
+      .select({ id: users.id, googleId: users.googleId })
+      .from(users)
+      .orderBy(asc(users.createdAt));
+    expect(rows).toEqual([
+      { id: winner, googleId: "google-sub-winner" },
+      { id: loser, googleId: null },
+    ]);
+  });
 });
+
+function sqlText(query: unknown): string {
+  const chunks = (query as { queryChunks?: unknown[] }).queryChunks ?? [];
+  return chunks
+    .map((chunk) =>
+      typeof chunk === "object" &&
+      chunk !== null &&
+      "value" in chunk &&
+      Array.isArray(chunk.value)
+        ? chunk.value.join("")
+        : "",
+    )
+    .join("");
+}

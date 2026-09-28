@@ -1,11 +1,12 @@
 import type { AccountGoogleResponse } from "@miolos/core";
 import { eq, sessions, sql, users, type Db } from "@miolos/db";
-import { holdsIdentityHandle, mergeAccounts } from "@miolos/db/user";
+import {
+  attachTokens,
+  holdsIdentityHandle,
+  mergeAccounts,
+} from "@miolos/db/user";
 
-import { deleteSession } from "../session/service";
-
-export type GoogleSignIn =
-  { outcome: "ok" | "switched"; userId: string } | { outcome: "conflict" };
+import { createSessionForUser, deleteSession } from "../session/service";
 
 async function findGoogleHolder(
   db: Db,
@@ -54,38 +55,77 @@ export async function unlinkGoogle(db: Db, userId: string): Promise<boolean> {
   return rows.length === 1;
 }
 
-async function listSessionHashes(db: Db, userId: string): Promise<string[]> {
-  const rows = await db
-    .select({ tokenHash: sessions.tokenHash })
-    .from(sessions)
-    .where(eq(sessions.userId, userId));
-  return rows.map((row) => row.tokenHash);
+export type GoogleSessions = {
+  requesterId: string | undefined;
+  presentedHash: string | undefined;
+  freshHash: string;
+};
+
+async function createGoogleUser(db: Db, sub: string): Promise<string> {
+  const created = await db.insert(users).values({ googleId: sub }).returning();
+  const fresh = created[0];
+  if (!fresh) {
+    throw new Error("google sign-in: users insert returned no row");
+  }
+  return fresh.id;
+}
+
+async function assertHolder(db: Db, sub: string, userId: string) {
+  if ((await findGoogleHolder(db, sub)) !== userId) {
+    throw new Error("google sign-in: the account lost its Google id mid-flow");
+  }
+}
+
+async function rotateInto(
+  db: Db,
+  sub: string,
+  userId: string,
+  session: GoogleSessions,
+): Promise<void> {
+  await createSessionForUser(db, session.freshHash, userId);
+  try {
+    await assertHolder(db, sub, userId);
+  } catch (error) {
+    await deleteSession(db, session.freshHash);
+    throw error;
+  }
+  if (session.presentedHash !== undefined) {
+    await deleteSession(db, session.presentedHash);
+  }
+}
+
+// Nothing an anonymous account holds was proven by this Google account, so
+// only the fresh session may follow it through a link or merge (ADR-0089).
+async function isolateAnonymous(
+  db: Db,
+  userId: string,
+  freshHash: string,
+): Promise<void> {
+  await createSessionForUser(db, freshHash, userId);
+  await db
+    .delete(sessions)
+    .where(
+      sql`${sessions.userId} = ${userId} and ${sessions.tokenHash} <> ${freshHash}`,
+    );
+  await db.delete(attachTokens).where(eq(attachTokens.userId, userId));
 }
 
 export async function resolveGoogleSignIn(
   db: Db,
-  requesterId: string | undefined,
   sub: string,
-): Promise<GoogleSignIn> {
+  session: GoogleSessions,
+): Promise<"ok" | "switched" | "conflict"> {
   const holder = await findGoogleHolder(db, sub);
+  const { requesterId } = session;
 
-  if (requesterId === undefined) {
-    if (holder !== undefined) {
-      return { outcome: "ok", userId: holder };
-    }
-    const created = await db
-      .insert(users)
-      .values({ googleId: sub })
-      .returning();
-    const fresh = created[0];
-    if (!fresh) {
-      throw new Error("google sign-in: users insert returned no row");
-    }
-    return { outcome: "ok", userId: fresh.id };
-  }
-
-  if (holder === requesterId) {
-    return { outcome: "ok", userId: holder };
+  if (requesterId === undefined || requesterId === holder) {
+    await rotateInto(
+      db,
+      sub,
+      holder ?? (await createGoogleUser(db, sub)),
+      session,
+    );
+    return "ok";
   }
 
   const requester = await readIdentity(db, requesterId);
@@ -94,36 +134,29 @@ export async function resolveGoogleSignIn(
       `google sign-in: requester ${requesterId} has no users row`,
     );
   }
-  if (holder !== undefined && requester.identified) {
-    return { outcome: "switched", userId: holder };
-  }
-  if (holder === undefined && requester.googleId !== null) {
-    return { outcome: "conflict" };
+  if (requester.identified) {
+    if (holder !== undefined) {
+      await rotateInto(db, sub, holder, session);
+      return "switched";
+    }
+    if (!(await linkGoogle(db, requesterId, sub))) {
+      return "conflict";
+    }
+    await rotateInto(db, sub, requesterId, session);
+    return "ok";
   }
 
-  // An anonymous requester's sessions were never proven by this Google
-  // account, so none of them may end up on it (ADR-0089).
-  const unproven = requester.identified
-    ? []
-    : await listSessionHashes(db, requesterId);
-  let userId: string;
+  await isolateAnonymous(db, requesterId, session.freshHash);
   if (holder === undefined) {
     if (!(await linkGoogle(db, requesterId, sub))) {
-      return { outcome: "conflict" };
+      return "conflict";
     }
-    userId = requesterId;
-  } else {
-    userId = (await mergeAccounts(db, requesterId, holder)).winnerId;
-    if (userId !== holder) {
-      throw new Error(
-        "google sign-in: the holder lost its Google id mid-merge",
-      );
-    }
+    await assertHolder(db, sub, requesterId);
+    return "ok";
   }
-  for (const tokenHash of unproven) {
-    await deleteSession(db, tokenHash);
-  }
-  return { outcome: "ok", userId };
+  const { winnerId } = await mergeAccounts(db, requesterId, holder);
+  await assertHolder(db, sub, winnerId);
+  return "ok";
 }
 
 export async function readGoogleState(

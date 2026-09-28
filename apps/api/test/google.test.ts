@@ -14,6 +14,8 @@ import {
 } from "vitest";
 
 import { GET as googleStateGet } from "../app/account/google/route";
+import { POST as confirmPost } from "../app/attach/confirm/route";
+import { POST as attachRequestPost } from "../app/attach/request/route";
 import { POST as unlinkPost } from "../app/account/unlink-google/route";
 import { GET as callbackGet } from "../app/auth/google/callback/route";
 import { GET as startGet } from "../app/auth/google/start/route";
@@ -25,6 +27,7 @@ import {
   startFlow,
   type Flow,
 } from "../src/google/oauth";
+import { mintAttachToken } from "../src/attach/service";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { requireUserId } from "../src/session/service";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
@@ -40,6 +43,19 @@ vi.mock("../src/db", () => ({
   getDb: () => ctx.db,
 }));
 
+const mergeHook = vi.hoisted(() => ({
+  after: undefined as (() => Promise<void>) | undefined,
+}));
+vi.mock("@miolos/db/user", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@miolos/db/user")>();
+  const mergeAccounts: typeof actual.mergeAccounts = async (db, a, b) => {
+    const merged = await actual.mergeAccounts(db, a, b);
+    await mergeHook.after?.();
+    return merged;
+  };
+  return { ...actual, mergeAccounts };
+});
+
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -53,6 +69,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  mergeHook.after = undefined;
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
@@ -478,6 +495,84 @@ describe("GET /auth/google/callback", () => {
     await signIn({ sub: "sub-3", session: identified.token });
     expect(await googleIdOf(identified.userId)).toBe("sub-3");
     expect(await requireUserId(ctx.db, laptop)).toBe(identified.userId);
+  });
+
+  it("T-API-S276: an anonymous device's pending magic link dies with the Google link, so it cannot attach an email to the Google account", async () => {
+    const device = await createUser();
+    const raw = generateSessionToken();
+    await mintAttachToken(ctx.db, {
+      userId: device.userId,
+      email: "outra-pessoa@example.com",
+      reminderConsent: false,
+      tokenHash: await hashSessionToken(raw),
+    });
+
+    const linked = await signIn({ sub: "sub-1", session: device.token });
+    expect(linked.headers.get("location")).toBe(`${WEB}/ajustes?google=ok`);
+    expect(await googleIdOf(device.userId)).toBe("sub-1");
+
+    const confirm = await confirmPost(
+      new NextRequest(`${API}/attach/confirm`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: raw }),
+      }),
+    );
+    expect(confirm.status).toBe(410);
+    const emails = await ctx.db
+      .select({ email: users.email })
+      .from(users)
+      .where(sql`id = ${device.userId}`);
+    expect(emails).toEqual([{ email: null }]);
+  });
+
+  it("T-API-S277: while the merge runs, a planted copy of the device's cookie already resolves to nothing", async () => {
+    const device = await createUser();
+    const planted = await addSession(device.userId);
+    const holder = await createUser({ googleId: "sub-1" });
+    let during: number | undefined;
+    mergeHook.after = async () => {
+      const response = await attachRequestPost(
+        new NextRequest(`${API}/attach/request`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            cookie: `${SESSION_COOKIE_NAME}=${planted}`,
+          },
+          body: JSON.stringify({ email: "intrusa@example.com" }),
+        }),
+      );
+      during = response.status;
+    };
+
+    const merged = await signIn({ sub: "sub-1", session: device.token });
+    expect(merged.headers.get("location")).toBe(`${WEB}/ajustes?google=ok`);
+    expect(during).toBe(401);
+    expect(await requireUserId(ctx.db, sessionTokenOf(merged))).toBe(
+      holder.userId,
+    );
+  });
+
+  it("T-API-S278: a Google id that leaves its account mid-flow fails the sign-in; the device keeps a working session", async () => {
+    const device = await createUser();
+    const holder = await createUser({
+      createdAt: new Date("2026-01-01T12:00:00Z"),
+      googleId: "sub-1",
+    });
+    mergeHook.after = async () => {
+      await ctx.db
+        .update(users)
+        .set({ googleId: null })
+        .where(sql`id = ${holder.userId}`);
+    };
+    const response = await signIn({ sub: "sub-1", session: device.token });
+    expect(response.headers.get("location")).toBe(
+      `${WEB}/ajustes?google=failed`,
+    );
+    expect(await requireUserId(ctx.db, sessionTokenOf(response))).toBe(
+      holder.userId,
+    );
+    expect(await requireUserId(ctx.db, device.token)).toBeUndefined();
   });
 
   it("T-API-S268: a device signed in to another identified account switches to the Google account, says so, and merges nothing", async () => {

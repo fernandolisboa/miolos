@@ -5,7 +5,7 @@ import {
   type AccountGoogleResponse,
   type GoogleSignInOutcome,
 } from "@miolos/core";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   fetchGoogleState,
@@ -19,55 +19,53 @@ import styles from "./page.module.css";
 
 const copy = messages.settings.google;
 
-function readCallbackOutcome(): GoogleSignInOutcome | undefined {
-  if (typeof window === "undefined") {
-    return undefined;
-  }
+type Card = {
+  state: AccountGoogleResponse["google"] | null;
+  outcome: GoogleSignInOutcome | undefined;
+};
+
+function takeCallbackOutcome(): GoogleSignInOutcome | undefined {
+  const url = new URL(window.location.href);
   const parsed = googleSignInOutcomeSchema.safeParse(
-    new URL(window.location.href).searchParams.get("google"),
+    url.searchParams.get("google"),
   );
+  if (url.searchParams.has("google")) {
+    url.searchParams.delete("google");
+    window.history.replaceState(window.history.state, "", url);
+  }
   return parsed.success ? parsed.data : undefined;
 }
 
-function useCallbackOutcome(): GoogleSignInOutcome | undefined {
-  const [outcome] = useState(readCallbackOutcome);
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.has("google")) {
-      url.searchParams.delete("google");
-      window.history.replaceState(window.history.state, "", url);
-    }
-  }, []);
-  return outcome;
+async function readCard(): Promise<Card> {
+  const outcome = takeCallbackOutcome();
+  return { state: (await fetchGoogleState()) ?? null, outcome };
 }
 
 export function GoogleSection() {
-  const fetched = useMountFetch(fetchGoogleState);
-  const outcome = useCallbackOutcome();
-  const [afterUnlink, setAfterUnlink] = useState<
+  const card = useMountFetch(readCard);
+  const [didUnlink, setDidUnlink] = useState(false);
+  const [reread, setReread] = useState<
     AccountGoogleResponse["google"] | null
   >();
-  const unlinked = afterUnlink !== undefined;
-  const state = unlinked ? "unlinked" : fetched;
-  const startUrl =
-    state === "unlinked" && (!unlinked || afterUnlink === "unlinked")
-      ? googleStartUrl()
-      : undefined;
+  const state = didUnlink ? reread : card?.state;
+  const outcome = didUnlink ? undefined : card?.outcome;
+  const done = didUnlink && state !== "linked";
 
-  if (state !== "linked" && state !== "unlinked" && !outcome) {
+  if (state !== "linked" && state !== "unlinked" && !outcome && !done) {
     return null;
   }
+  const startUrl = state === "unlinked" ? googleStartUrl() : undefined;
   return (
     <section className={styles.card} aria-labelledby="settings-google-heading">
       <h2 id="settings-google-heading" className={styles.heading}>
         {copy.heading}
       </h2>
-      {outcome && !unlinked && (
+      {outcome && (
         <p className={styles.body} role="status">
           {copy.outcome[outcome]}
         </p>
       )}
-      {unlinked && (
+      {done && (
         <p className={styles.body} role="status">
           {copy.unlink.done}
         </p>
@@ -79,9 +77,9 @@ export function GoogleSection() {
             labels={copy.unlink}
             run={unlinkGoogle}
             onDone={() => {
-              setAfterUnlink(null);
+              setDidUnlink(true);
               void fetchGoogleState().then((next) => {
-                setAfterUnlink(next ?? null);
+                setReread(next ?? null);
               });
             }}
           />

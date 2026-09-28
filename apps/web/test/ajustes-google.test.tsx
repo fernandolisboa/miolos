@@ -5,7 +5,8 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { hydrateRoot, type Root } from "react-dom/client";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GoogleSection } from "../app/ajustes/google-section";
@@ -162,6 +163,8 @@ describe("the linked card and its unlink (T-WEB-S473)", () => {
     });
     await act(async () => {});
     expect(screen.queryByRole("link", { name: copy.start })).toBeNull();
+    expect(screen.queryByText(copy.lead)).toBeNull();
+    expect(screen.getByText(copy.unlink.done)).toBeInTheDocument();
   });
 });
 
@@ -191,6 +194,27 @@ describe("the sign-in outcome notice (T-WEB-S472)", () => {
     render(<GoogleSection />);
     expect(await screen.findByText(copy.outcome.failed)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: copy.start })).toBeNull();
+  });
+
+  it("hydrates over the server's empty markup without a mismatch", async () => {
+    stubGoogleState("linked");
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<GoogleSection />);
+    window.history.replaceState(null, "", "/ajustes?google=ok");
+    document.body.append(container);
+    const recoverable = vi.fn();
+    let root: Root | undefined;
+    act(() => {
+      root = hydrateRoot(container, <GoogleSection />, {
+        onRecoverableError: recoverable,
+      });
+    });
+    expect(await screen.findByText(copy.outcome.ok)).toBeInTheDocument();
+    expect(recoverable).not.toHaveBeenCalled();
+    act(() => {
+      root?.unmount();
+    });
+    container.remove();
   });
 
   it("an unknown word shows nothing and is still cleaned away", async () => {

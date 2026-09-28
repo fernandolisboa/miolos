@@ -388,6 +388,10 @@ export const messages = {
       title: "Não deu para confirmar com este link.",
       body: "Aconteceu um imprevisto por aqui. Peça um novo link na página inicial.",
     },
+    signInAttached: {
+      title: "Este e-mail é de outra conta.",
+      body: "A conta deste aparelho já entra com o Google, e duas contas assim não se juntam. Para usar aqui a conta do e-mail, desconecte o Google em Ajustes e peça um novo link.",
+    },
     failed: "Não foi possível confirmar agora. Tente de novo.",
     backHome: "Voltar para Hoje",
   },

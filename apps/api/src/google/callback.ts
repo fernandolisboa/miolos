@@ -4,11 +4,7 @@ import {
 } from "@miolos/core";
 import type { Db } from "@miolos/db";
 
-import {
-  createSessionForUser,
-  deleteSession,
-  requireUserId,
-} from "../session/service";
+import { requireUserId, sessionExists } from "../session/service";
 import { generateSessionToken, hashSessionToken } from "../session/token";
 import {
   callbackUrl,
@@ -61,27 +57,21 @@ export async function completeGoogleSignIn(
   }
 
   const presented = callback.sessionCookie;
+  const sessionToken = generateSessionToken();
+  const freshHash = await hashSessionToken(sessionToken);
+  let outcome: GoogleSignInOutcome;
   try {
-    const resolved = await resolveGoogleSignIn(
-      db,
-      await requireUserId(db, presented),
-      sub,
-    );
-    if (resolved.outcome === "conflict") {
-      return { outcome: "conflict" };
-    }
-    const sessionToken = generateSessionToken();
-    await createSessionForUser(
-      db,
-      await hashSessionToken(sessionToken),
-      resolved.userId,
-    );
-    if (presented !== undefined) {
-      await deleteSession(db, await hashSessionToken(presented));
-    }
-    return { outcome: resolved.outcome, sessionToken };
+    outcome = await resolveGoogleSignIn(db, sub, {
+      requesterId: await requireUserId(db, presented),
+      presentedHash:
+        presented === undefined ? undefined : await hashSessionToken(presented),
+      freshHash,
+    });
   } catch (error) {
     console.error("google callback: sign-in failed", error);
-    return { outcome: "failed" };
+    outcome = "failed";
   }
+  return (await sessionExists(db, freshHash))
+    ? { outcome, sessionToken }
+    : { outcome };
 }
