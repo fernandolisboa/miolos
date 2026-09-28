@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-**Yes, one database step if it is still open: ledger NOW §3, migration 0014 on the Miolos database.** It only widens two CHECKs; #276 merged after Fernando confirmed it. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**No.** Migration 0014 ran on the Miolos database before #276 merged. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
