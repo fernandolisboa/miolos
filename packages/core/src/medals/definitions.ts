@@ -35,6 +35,10 @@ export const MEDAL_DEFINITIONS = [
     rule: { kind: "totalWins", game: "nonogram", count: 30 },
   },
   { id: "termo-30", rule: { kind: "totalWins", game: "termo", count: 30 } },
+  {
+    id: "crossword-30",
+    rule: { kind: "totalWins", game: "crossword", count: 30 },
+  },
 
   { id: "streak-3", rule: { kind: "streakReached", days: 3 } },
   { id: "streak-7", rule: { kind: "streakReached", days: 7 } },

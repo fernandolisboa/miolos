@@ -900,7 +900,13 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
     const occurrences = (needle: RegExp): number =>
       [...code.matchAll(needle)].length;
 
-    expect(occurrences(/dailyPuzzles\.publishedAt/g)).toBe(1);
+    const bufferedBeforePublished =
+      /lte\(\s*dailyPuzzles\.createdAt,\s*dailyPuzzles\.publishedAt,?\s*\)/g;
+    expect(occurrences(bufferedBeforePublished)).toBe(1);
+    expect(
+      occurrences(/dailyPuzzles\.publishedAt/g) -
+        occurrences(bufferedBeforePublished),
+    ).toBe(1);
     expect(occurrences(/isNull\(dailyPuzzles\.killedAt\)/g)).toBe(1);
     expect(occurrences(/killedAt/g)).toBe(1);
     expect(occurrences(/now\(\) at time zone/g)).toBe(1);
@@ -1084,6 +1090,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "getTodayDaily",
       "listArchivedDays",
       "listArchivedMonths",
+      "listPublishedDailiesOnWonDates",
     ]);
   });
 
@@ -1178,6 +1185,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "listCompletionsForStreak",
       "listEmailNudgeCandidates",
       "listMedalGrants",
+      "listPublishedDailiesOnWonDates",
       "listPushNudgeCandidates",
       "listUsedTermoAnswers",
       "medalGrants",
@@ -1198,6 +1206,6 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "wasSeenOn",
     ]);
 
-    expect(surface).toHaveLength(51);
+    expect(surface).toHaveLength(52);
   });
 });

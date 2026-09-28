@@ -1,10 +1,11 @@
-import { MAX_GUESSES, normalizeWord } from "@miolos/games/termo";
+import { MAX_GUESSES } from "@miolos/games/termo";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import { formatLongDate, messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import screen from "../play/screen.module.css";
+import { typedLetter } from "../play/typed-letter";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
 import { Keyboard, KeyboardSkeleton } from "./keyboard";
@@ -19,8 +20,6 @@ const ZWSP = "​";
 
 const INTERACTIVE_TARGET =
   'button, a[href], [role="button"], [tabindex], input, textarea, select, [contenteditable]';
-
-const SINGLE_LETTER = /^[a-z]$/;
 
 export function PlayView({
   play,
@@ -63,8 +62,8 @@ export function PlayView({
         return;
       }
 
-      const letter = normalizeWord(event.key);
-      if (SINGLE_LETTER.test(letter)) {
+      const letter = typedLetter(event.key);
+      if (letter !== null) {
         current.type(letter);
       }
     };

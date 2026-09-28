@@ -19,6 +19,7 @@ import {
 import { medalCopy } from "../../src/medals/copy";
 import { useMedals } from "../../src/medals/use-medals";
 import { accentVars } from "../../src/play/accent";
+import { DAY_GAMES } from "../../src/play/day-games";
 import {
   calendarMonths,
   neutralMonth,
@@ -29,8 +30,6 @@ import { useStatsCalendar } from "../../src/stats/use-stats-calendar";
 import styles from "./page.module.css";
 
 const BLANK_VALUE = " ";
-
-const GAME_ORDER = ["termo", "sudoku", "nonogram", "binairo"] as const;
 
 const TIMED_ZERO: TimedGameStats = {
   solved: 0,
@@ -54,7 +53,7 @@ export function StatsView() {
 
       <MedalsSection />
       <section className={styles.games}>
-        {GAME_ORDER.map((game) => (
+        {DAY_GAMES.map((game) => (
           <GameBlock key={game} game={game} stats={stats} />
         ))}
       </section>
@@ -122,7 +121,7 @@ function GameBlock({
   game,
   stats,
 }: {
-  readonly game: (typeof GAME_ORDER)[number];
+  readonly game: (typeof DAY_GAMES)[number];
   readonly stats: StatsResponse | null | undefined;
 }) {
   return (

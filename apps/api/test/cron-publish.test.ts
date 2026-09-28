@@ -1,7 +1,9 @@
 import {
   binairoDailyContentSchema,
+  crosswordDailyContentSchema,
   cronPublishGameResultSchema,
   cronPublishResponseSchema,
+  GAMES,
   nonogramDailyContentSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
@@ -17,6 +19,7 @@ import {
 import { createTestDb } from "@miolos/db/testing";
 import { isWeekday } from "@miolos/games";
 import { validateBinairo } from "@miolos/games/binairo";
+import { validateCrossword } from "@miolos/games/crossword";
 import { validateNonogram } from "@miolos/games/nonogram";
 import { sudokuCriteriaForWeekday, validateSudoku } from "@miolos/games/sudoku";
 import { TERMO_ANSWERS } from "@miolos/games/termo";
@@ -158,16 +161,17 @@ describe("GET /cron/publish auth (fail-closed, D15)", () => {
 });
 
 describe("GET /cron/publish top-up", () => {
-  it("T-API-S1: tops an empty database up to depth 7 for ALL FOUR games, with validated, correctly-dated content", async () => {
+  it("T-API-S1: tops an empty database up to depth 7 for ALL FIVE games, with validated, correctly-dated content", async () => {
     const response = await authorizedRun();
     expect(response.status).toBe(200);
     const body = cronPublishResponseSchema.parse(await response.json());
     expect(body).toEqual({
       games: {
-        termo: { generated: 7, depth: 7, failures: [], error: null },
         binairo: { generated: 7, depth: 7, failures: [], error: null },
-        nonogram: { generated: 7, depth: 7, failures: [], error: null },
         sudoku: { generated: 7, depth: 7, failures: [], error: null },
+        nonogram: { generated: 7, depth: 7, failures: [], error: null },
+        termo: { generated: 7, depth: 7, failures: [], error: null },
+        crossword: { generated: 7, depth: 7, failures: [], error: null },
       },
     });
 
@@ -239,6 +243,14 @@ describe("GET /cron/publish top-up", () => {
       expect(row.seed).toBeLessThan(2 ** 32);
     }
     expect(drawn.size).toBe(7);
+
+    const crosswordRows = await rowsFor("crossword");
+    expect(crosswordRows.map((row) => row.date).sort()).toEqual(expectedDates);
+    for (const row of crosswordRows) {
+      const content = crosswordDailyContentSchema.parse(row.content);
+      expect(validateCrossword(content).ok).toBe(true);
+      expect(row.seed).toBe(content.seed);
+    }
   }, 30_000);
 
   it("T-API-S2: a second run generates nothing for any game (idempotent reconciliation)", async () => {
@@ -254,7 +266,9 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.sudoku.depth).toBe(7);
     expect(body.games.termo.generated).toBe(0);
     expect(body.games.termo.depth).toBe(7);
-    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(28);
+    expect(body.games.crossword.generated).toBe(0);
+    expect(body.games.crossword.depth).toBe(7);
+    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(35);
   }, 30_000);
 
   it("T-API-S3: tops up a partial buffer of every game, existing rows untouched (D14)", async () => {
@@ -281,9 +295,11 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.sudoku.depth).toBe(7);
     expect(body.games.termo.generated).toBe(2);
     expect(body.games.termo.depth).toBe(7);
+    expect(body.games.crossword.generated).toBe(2);
+    expect(body.games.crossword.depth).toBe(7);
 
     const after = await ctx.db.select().from(dailyPuzzles);
-    expect(after).toHaveLength(28);
+    expect(after).toHaveLength(35);
     for (const row of after) {
       const snapshot = before.get(`${row.game}:${row.date}`);
       if (snapshot !== undefined) {
@@ -309,6 +325,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.depth).toBe(7);
     expect(body.games.termo.depth).toBe(7);
+    expect(body.games.crossword.depth).toBe(7);
   }, 30_000);
 
   it("T-API-S34a: 500 when TERMO alone sits below the effective threshold", async () => {
@@ -325,6 +342,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.binairo.depth).toBe(7);
     expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.depth).toBe(7);
+    expect(body.games.crossword.depth).toBe(7);
   }, 30_000);
 
   it("T-API-S4: 500 when SUDOKU alone sits below the effective threshold", async () => {
@@ -341,6 +359,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.nonogram.depth).toBe(7);
     expect(body.games.sudoku.depth).toBe(3);
     expect(body.games.termo.depth).toBe(7);
+    expect(body.games.crossword.depth).toBe(7);
   }, 30_000);
 
   it("T-API-S4: 500 when NONOGRAM alone sits below the effective threshold", async () => {
@@ -357,6 +376,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.nonogram.depth).toBe(3);
     expect(body.games.sudoku.depth).toBe(7);
     expect(body.games.termo.depth).toBe(7);
+    expect(body.games.crossword.depth).toBe(7);
   }, 30_000);
 
   it("T-API-S4: a tuned-low depth is healthy for every game, not alarming (A3)", async () => {
@@ -389,6 +409,12 @@ describe("GET /cron/publish top-up", () => {
       failures: [],
       error: null,
     });
+    expect(body.games.crossword).toEqual({
+      generated: 2,
+      depth: 2,
+      failures: [],
+      error: null,
+    });
   }, 30_000);
 
   it("remote_config bufferDepth=3 generates exactly 3 rows per game (AC 4)", async () => {
@@ -398,6 +424,7 @@ describe("GET /cron/publish top-up", () => {
     expect(await rowsFor("nonogram")).toHaveLength(3);
     expect(await rowsFor("sudoku")).toHaveLength(3);
     expect(await rowsFor("termo")).toHaveLength(3);
+    expect(await rowsFor("crossword")).toHaveLength(3);
   }, 30_000);
 
   it("T-API-S15: one game throwing never drains the other's top-up", async () => {
@@ -432,13 +459,20 @@ describe("GET /cron/publish top-up", () => {
       failures: [],
       error: null,
     });
+    expect(body.games.crossword).toEqual({
+      generated: 7,
+      depth: 7,
+      failures: [],
+      error: null,
+    });
     expect(await rowsFor("binairo")).toHaveLength(0);
     expect(await rowsFor("nonogram")).toHaveLength(7);
     expect(await rowsFor("sudoku")).toHaveLength(7);
     expect(await rowsFor("termo")).toHaveLength(7);
+    expect(await rowsFor("crossword")).toHaveLength(7);
   }, 30_000);
 
-  it("T-API-S21: the NONOGRAM top-up throwing never drains the other two", async () => {
+  it("T-API-S21: the NONOGRAM top-up throwing never drains the others", async () => {
     insertFailures.add("nonogram");
 
     const response = await authorizedRun();
@@ -472,13 +506,20 @@ describe("GET /cron/publish top-up", () => {
       failures: [],
       error: null,
     });
+    expect(body.games.crossword).toEqual({
+      generated: 7,
+      depth: 7,
+      failures: [],
+      error: null,
+    });
     expect(await rowsFor("nonogram")).toHaveLength(0);
     expect(await rowsFor("binairo")).toHaveLength(7);
     expect(await rowsFor("sudoku")).toHaveLength(7);
     expect(await rowsFor("termo")).toHaveLength(7);
+    expect(await rowsFor("crossword")).toHaveLength(7);
   }, 30_000);
 
-  it("T-API-S34a: the TERMO top-up throwing never drains the other three", async () => {
+  it("T-API-S34a: the TERMO top-up throwing never drains the others", async () => {
     insertFailures.add("termo");
 
     const response = await authorizedRun();
@@ -492,7 +533,12 @@ describe("GET /cron/publish top-up", () => {
       depth: 0,
       failures: [],
     });
-    for (const game of ["binairo", "nonogram", "sudoku"] as const) {
+    for (const game of [
+      "binairo",
+      "nonogram",
+      "sudoku",
+      "crossword",
+    ] as const) {
       expect(body.games[game]).toEqual({
         generated: 7,
         depth: 7,
@@ -574,7 +620,7 @@ describe("GET /cron/publish top-up", () => {
     });
   }, 30_000);
 
-  it("T-API-S8: one structured log line per game, in the shape the log query reads", async () => {
+  it("T-API-S8: one structured log line per game, cost-ascending, in the shape the log query reads", async () => {
     await authorizedRun();
 
     const logged: unknown[] = [];
@@ -582,14 +628,17 @@ describe("GET /cron/publish top-up", () => {
       const parsed: unknown = JSON.parse(line);
       logged.push(parsed);
     }
-    expect(logged).toHaveLength(4);
+    expect(logged).toHaveLength(5);
 
-    expect(logged.map((entry) => (entry as { game: string }).game)).toEqual([
+    const order = logged.map((entry) => (entry as { game: string }).game);
+    expect(order).toEqual([
       "termo",
       "binairo",
       "nonogram",
+      "crossword",
       "sudoku",
     ]);
+    expect([...order].sort()).toEqual([...GAMES].sort());
     for (const entry of logged) {
       expect(entry).toMatchObject({
         event: "cron-publish",

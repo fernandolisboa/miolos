@@ -21,6 +21,7 @@ function statsBody(): Record<string, unknown> {
       histogram: [1, 0, 1, 0, 0, 0],
     },
     nonogram: timed,
+    crossword: timed,
     termo: { solved: 1, distribution: [0, 0, 0, 1, 0, 0, 0] },
     perfectDays: 0,
     todayTermoGuesses: 4,

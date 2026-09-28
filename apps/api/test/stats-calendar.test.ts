@@ -16,6 +16,7 @@ import {
 } from "vitest";
 
 import { GET } from "../app/stats/calendar/route";
+import { publishDaily } from "./lineup-helpers";
 
 import { GET as statsGet } from "../app/stats/route";
 import { addDays } from "../src/publishing/dates";
@@ -35,7 +36,7 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  await ctx.db.execute(sql`truncate table users cascade`);
+  await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
 });
 
 afterEach(() => {
@@ -84,7 +85,7 @@ function calendarRequest(token?: string): NextRequest {
 
 async function insertHistoryRow(init: {
   userId: string;
-  game: "binairo" | "sudoku" | "nonogram" | "termo";
+  game: "binairo" | "crossword" | "sudoku" | "nonogram" | "termo";
   date: string;
   outcome: "won" | "lost";
   completedAtDate: string;
@@ -142,6 +143,9 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
       outcome: "won",
       completedAtDate: today,
     });
+    for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
+      await publishDaily(ctx.db, game, today);
+    }
 
     const response = await GET(calendarRequest(token));
     expect(response.status).toBe(200);
@@ -271,6 +275,9 @@ describe("GET /stats/calendar — the #29 day enumeration (plan 033 §5, ADR-005
       completedAtDate: today,
       guesses: 2,
     });
+    for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
+      await publishDaily(ctx.db, game, today);
+    }
 
     const body = statsCalendarResponseSchema.parse(
       await (await GET(calendarRequest(other.token))).json(),
@@ -333,5 +340,76 @@ describe("GET /stats/calendar — the archive widening (#31, ADR-0053)", () => {
 
     expect(statsBody.sudoku.bestMs).toBeNull();
     expect(statsBody.sudoku.averageMs).toBeNull();
+  });
+});
+
+describe("GET /stats/calendar — the crossword lineup (#276, ADR-0087)", () => {
+  it("T-API-S229: a five-game day is perfect only once the crossword is also won on time", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of [
+      "binairo",
+      "sudoku",
+      "nonogram",
+      "termo",
+      "crossword",
+    ] as const) {
+      await publishDaily(ctx.db, game, today);
+    }
+    for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
+      await insertHistoryRow({
+        userId,
+        game,
+        date: today,
+        outcome: "won",
+        completedAtDate: today,
+        guesses: game === "termo" ? 3 : undefined,
+      });
+    }
+
+    const stillMissing = statsCalendarResponseSchema.parse(
+      await (await GET(calendarRequest(token))).json(),
+    );
+    expect(stillMissing.days.at(-1)).toMatchObject({
+      date: today,
+      perfect: false,
+    });
+
+    await insertHistoryRow({
+      userId,
+      game: "crossword",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+    });
+
+    const complete = statsCalendarResponseSchema.parse(
+      await (await GET(calendarRequest(token))).json(),
+    );
+    expect(complete.days.at(-1)).toMatchObject({ date: today, perfect: true });
+  });
+
+  it("T-API-S230: a launch-day four-game day stays perfect when the crossword row was created after published_at", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
+      await publishDaily(ctx.db, game, today);
+      await insertHistoryRow({
+        userId,
+        game,
+        date: today,
+        outcome: "won",
+        completedAtDate: today,
+        guesses: game === "termo" ? 3 : undefined,
+      });
+    }
+    await publishDaily(ctx.db, "crossword", today, {
+      insertedAfterPublish: true,
+    });
+
+    const body = statsCalendarResponseSchema.parse(
+      await (await GET(calendarRequest(token))).json(),
+    );
+    expect(body.days.at(-1)).toMatchObject({ date: today, perfect: true });
   });
 });

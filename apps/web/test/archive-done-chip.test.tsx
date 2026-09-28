@@ -13,6 +13,7 @@ import {
   readPlayRecord,
   writePlayRecord,
   type BinairoPlayRecord,
+  type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
   type SudokuPlayRecord,
@@ -20,6 +21,7 @@ import {
 } from "../src/play/play-record";
 
 const DATE = "2026-08-01";
+const CROSSWORD_MS = 301_000;
 
 type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
 const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
@@ -82,6 +84,23 @@ function nonogramRecord(
   };
 }
 
+function crosswordRecord(
+  overrides: Partial<CrosswordPlayRecord> = {},
+): CrosswordPlayRecord {
+  return {
+    v: 1,
+    game: "crossword",
+    date: DATE,
+    entries: Array.from({ length: 25 }, () => null),
+    elapsedMs: CROSSWORD_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
 function wonTermoRecord(
   overrides: Partial<TermoPlayRecord> = {},
 ): TermoPlayRecord {
@@ -132,6 +151,8 @@ function openRecord(game: Game): PlayRecord {
         answer: undefined,
         outcome: undefined,
       };
+    case "crossword":
+      return crosswordRecord({ concluded: false });
   }
 }
 
@@ -145,6 +166,8 @@ function concludedRecord(game: Game): PlayRecord {
       return nonogramRecord();
     case "termo":
       return wonTermoRecord();
+    case "crossword":
+      return crosswordRecord();
   }
 }
 
@@ -164,6 +187,8 @@ function withSync(
       return nonogramRecord(sync);
     case "termo":
       return wonTermoRecord(sync);
+    case "crossword":
+      return crosswordRecord(sync);
   }
 }
 

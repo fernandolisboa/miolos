@@ -23,6 +23,7 @@ const BUDGETED = [
   "/nonogram",
   "/sudoku",
   "/termo",
+  "/cruzadinha",
   "/modo-livre",
   "/modo-livre/binairo",
   "/modo-livre/nonogram",
@@ -37,11 +38,13 @@ const BUDGETED = [
   "/arquivo/[data]/nonogram",
   "/arquivo/[data]/sudoku",
   "/arquivo/[data]/termo",
+  "/arquivo/[data]/cruzadinha",
 
   "/binairo/concluido",
   "/nonogram/concluido",
   "/sudoku/concluido",
   "/termo/concluido",
+  "/cruzadinha/concluido",
 ];
 
 const FREE_PLAY_PREFIX = "/modo-livre";
@@ -55,7 +58,12 @@ const FREE_PLAY_ROUTES = [
 
 const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;
 
-const FORBIDDEN_EVERYWHERE = ["então", "mamãe", "época"];
+const FORBIDDEN_EVERYWHERE = [
+  { marker: "então", reason: "Termo answer canonical" },
+  { marker: "mamãe", reason: "Termo answer canonical" },
+  { marker: "época", reason: "Termo answer canonical" },
+  { marker: "Calculadora de bolinhas", reason: "crossword lexicon clue" },
+];
 
 const FORBIDDEN_DAILY_SCOPE = [
   "Escada",
@@ -222,12 +230,12 @@ console.log(
 );
 
 console.log("");
-for (const marker of FORBIDDEN_EVERYWHERE) {
+for (const { marker, reason } of FORBIDDEN_EVERYWHERE) {
   const hits = everySource.filter((source) => source.includes(marker)).length;
   if (hits > 0) {
     fail(
       `\`${marker}\` appears in ${hits} client chunk(s); it must appear in 0 ` +
-        "anywhere (Termo answer canonical).",
+        `anywhere (${reason}).`,
     );
   } else {
     console.log(`ok    \`${marker}\` absent from every client chunk`);

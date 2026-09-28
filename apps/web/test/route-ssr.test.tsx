@@ -1,8 +1,10 @@
 import {
+  dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
   type DailyBinairoResponse,
+  type DailyCrosswordResponse,
   type DailyNonogramResponse,
   type DailySudokuResponse,
   type DailyTermoResponse,
@@ -51,6 +53,38 @@ const NONOGRAM: DailyNonogramResponse = dailyNonogramResponseSchema.parse({
 const TERMO: DailyTermoResponse = dailyTermoResponseSchema.parse({
   game: "termo",
   date: DATE,
+});
+
+// row0: c a t # #, row1: a # o # #, rows 2-4 blocked
+const CROSSWORD: DailyCrosswordResponse = dailyCrosswordResponseSchema.parse({
+  game: "crossword",
+  date: DATE,
+  grid: [
+    ["c", "a", "t", null, null],
+    ["a", null, "o", null, null],
+    [null, null, null, null, null],
+    [null, null, null, null, null],
+    [null, null, null, null, null],
+  ],
+  clues: [
+    {
+      number: 1,
+      direction: "across",
+      row: 0,
+      col: 0,
+      length: 3,
+      clue: "felino",
+    },
+    {
+      number: 1,
+      direction: "down",
+      row: 0,
+      col: 0,
+      length: 2,
+      clue: "pronome",
+    },
+    { number: 2, direction: "down", row: 0, col: 2, length: 2, clue: "verbo" },
+  ],
 });
 
 const spies = vi.hoisted(() => ({
@@ -141,6 +175,7 @@ interface RouteCase {
 
   readonly daily:
     | DailyBinairoResponse
+    | DailyCrosswordResponse
     | DailyNonogramResponse
     | DailySudokuResponse
     | DailyTermoResponse
@@ -201,6 +236,18 @@ const ROUTES: readonly RouteCase[] = [
     marker: "data-conclusion-state=",
     load: () => import("../app/termo/concluido/page"),
     daily: TERMO,
+  },
+  {
+    path: "/cruzadinha",
+    marker: "data-play-state=",
+    load: () => import("../app/cruzadinha/page"),
+    daily: CROSSWORD,
+  },
+  {
+    path: "/cruzadinha/concluido",
+    marker: "data-conclusion-state=",
+    load: () => import("../app/cruzadinha/concluido/page"),
+    daily: CROSSWORD,
   },
 
   {
@@ -303,6 +350,13 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/arquivo/[data]/termo/page"),
     props: { params: Promise.resolve({ data: DATE }) },
     daily: TERMO,
+  },
+  {
+    path: "/arquivo/[data]/cruzadinha",
+    marker: "data-play-state=",
+    load: () => import("../app/arquivo/[data]/cruzadinha/page"),
+    props: { params: Promise.resolve({ data: DATE }) },
+    daily: CROSSWORD,
   },
 ];
 

@@ -17,6 +17,10 @@ import { createTestDb } from "@miolos/db/testing";
 import { completions, hasCreditedPastDateToday } from "@miolos/db/user";
 import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
+import {
+  generateCrossword,
+  type CrosswordPuzzle,
+} from "@miolos/games/crossword";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku, type SudokuPuzzle } from "@miolos/games/sudoku";
 import { isValidGuess, TERMO_ANSWERS } from "@miolos/games/termo";
@@ -222,6 +226,69 @@ function wrongGrid(
 
 async function completionRows(): Promise<unknown[]> {
   return ctx.db.select().from(completions);
+}
+
+const crosswordCache = new Map<number, CrosswordPuzzle>();
+
+function crosswordPuzzle(seed: number): CrosswordPuzzle {
+  const cached = crosswordCache.get(seed);
+  if (cached) {
+    return cached;
+  }
+  const puzzle = generateCrossword(seed);
+  crosswordCache.set(seed, puzzle);
+  return puzzle;
+}
+
+async function seedCrosswordDaily(
+  date: string,
+  seed = 7,
+): Promise<readonly (string | null)[]> {
+  const puzzle = crosswordPuzzle(seed);
+  await insertDailyPuzzle(ctx.db, {
+    game: "crossword",
+    date,
+    seed,
+    content: puzzle,
+  });
+  return puzzle.grid.flat();
+}
+
+function crosswordCompletionBody(init: {
+  date: string;
+  grid: readonly (string | null)[];
+  elapsedMs?: number;
+  hintsUsed?: number;
+}): string {
+  return JSON.stringify({
+    game: "crossword",
+    date: init.date,
+    grid: [...init.grid],
+    elapsedMs: init.elapsedMs ?? 61_000,
+    hintsUsed: init.hintsUsed ?? 0,
+  });
+}
+
+function wrongLetterGrid(
+  solution: readonly (string | null)[],
+): readonly (string | null)[] {
+  const index = solution.findIndex((cell) => cell !== null);
+  if (index === -1) {
+    throw new Error("unreachable: a crossword grid has at least one letter");
+  }
+  return solution.map((cell, i) =>
+    i === index ? (cell === "a" ? "b" : "a") : cell,
+  );
+}
+
+function letterOnBlockGrid(
+  solution: readonly (string | null)[],
+): readonly (string | null)[] {
+  const index = solution.findIndex((cell) => cell === null);
+  if (index === -1) {
+    throw new Error("unreachable: a 5x5 crossword has at least one block");
+  }
+  return solution.map((cell, i) => (i === index ? "a" : cell));
 }
 
 const TERMO_ANSWER = TERMO_ANSWERS.find(
@@ -1279,6 +1346,99 @@ describe("POST /completions — nonogram (plan 020 §9.3)", () => {
 
     expect(await completionRows()).toHaveLength(1);
   });
+});
+
+describe("POST /completions — crossword (#276, ADR-0086)", () => {
+  it("T-API-S225: an exact grid wins ⇒ 200, recorded, on time, contract-parseable", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const solution = await seedCrosswordDaily(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: crosswordCompletionBody({
+          date: today,
+          grid: solution,
+          elapsedMs: 190_000,
+          hintsUsed: 1,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = completionResponseSchema.parse(await response.json());
+    expect(body).toEqual({
+      game: "crossword",
+      date: today,
+      outcome: "won",
+      onTime: true,
+      recorded: true,
+      elapsedMs: 190_000,
+      hintsUsed: 1,
+    });
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+
+  it("T-API-S226: one wrong letter ⇒ 422 grid-mismatch, the same status the grid games use", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const solution = await seedCrosswordDaily(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: crosswordCompletionBody({
+          date: today,
+          grid: wrongLetterGrid(solution),
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await errorOf(response)).toEqual({ error: "grid-mismatch" });
+    expect(await completionRows()).toHaveLength(0);
+  }, 30_000);
+
+  it("T-API-S227: a letter submitted on a block cell ⇒ 422 grid-mismatch", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const solution = await seedCrosswordDaily(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: crosswordCompletionBody({
+          date: today,
+          grid: letterOnBlockGrid(solution),
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await errorOf(response)).toEqual({ error: "grid-mismatch" });
+    expect(await completionRows()).toHaveLength(0);
+  }, 30_000);
+
+  it("T-API-S228: a two-days-old published row is now WRITTEN, late (#31)", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const twoDaysAgo = addDays(today, -2);
+    const oldSolution = await seedCrosswordDaily(twoDaysAgo, 13);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: crosswordCompletionBody({ date: twoDaysAgo, grid: oldSolution }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toMatchObject(
+      { date: twoDaysAgo, outcome: "won", onTime: false, recorded: true },
+    );
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
 });
 
 describe("POST /completions — termo (#27, ADR-0038)", () => {

@@ -6,11 +6,13 @@ import {
   calendarDateString,
   completionRequestSchema,
   completionResponseSchema,
+  crosswordCompletionRequestSchema,
   nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
   termoCompletionRequestSchema,
   type BinairoCompletionRequest,
   type CompletionResponse,
+  type CrosswordCompletionRequest,
   type NonogramCompletionRequest,
   type SudokuCompletionRequest,
   type TermoCompletionRequest,
@@ -586,6 +588,62 @@ describe("the completion request carries no instant (plan 017 D19)", () => {
   it("a body asserting its own completion instant is rejected, not ignored", () => {
     const asserted = { ...valid, completedAt: "2026-08-01T02:59:59.000Z" };
     expect(completionRequestSchema.safeParse(asserted).success).toBe(false);
+  });
+});
+
+describe("crosswordCompletionRequestSchema", () => {
+  const crosswordGrid: CrosswordCompletionRequest["grid"] = Array.from(
+    { length: 25 },
+    (_unused, index) => (index % 6 === 0 ? null : "a"),
+  );
+  const validCrossword: CrosswordCompletionRequest = {
+    game: "crossword",
+    date: "2026-09-28",
+    grid: crosswordGrid,
+    elapsedMs: 272_000,
+    hintsUsed: 1,
+  };
+
+  it("T-CORE-S124: parses and round-trips a row-major 25-cell grid, blocks as null, through the union too", () => {
+    expect(crosswordCompletionRequestSchema.parse(validCrossword)).toEqual(
+      validCrossword,
+    );
+    expect(completionRequestSchema.parse(validCrossword)).toEqual(
+      validCrossword,
+    );
+    expect(Object.keys(crosswordCompletionRequestSchema.shape).sort()).toEqual([
+      "date",
+      "elapsedMs",
+      "game",
+      "grid",
+      "hintsUsed",
+    ]);
+  });
+
+  it("T-CORE-S124: every cell is one a-z letter or null, and the grid is exactly 25 long", () => {
+    const withCell = (cell: unknown) => ({
+      ...validCrossword,
+      grid: [cell, ...crosswordGrid.slice(1)],
+    });
+    for (const body of [
+      withCell("A"),
+      withCell("é"),
+      withCell("ab"),
+      withCell(""),
+      withCell(0),
+      { ...validCrossword, grid: crosswordGrid.slice(1) },
+      { ...validCrossword, grid: [...crosswordGrid, "a"] },
+      { ...validCrossword, hintsUsed: 2 },
+      { ...validCrossword, date: "2026-02-30" },
+      { ...validCrossword, clues: [] },
+      { ...validSudoku, game: "crossword" },
+    ]) {
+      expect(
+        completionRequestSchema.safeParse(body).success,
+        JSON.stringify(body),
+      ).toBe(false);
+    }
+    expect(completionRequestSchema.safeParse(withCell("z")).success).toBe(true);
   });
 });
 

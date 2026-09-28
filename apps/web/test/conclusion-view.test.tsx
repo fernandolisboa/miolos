@@ -7,6 +7,7 @@ import { ConclusionView } from "../src/play/conclusion-view";
 import {
   writePlayRecord,
   type BinairoPlayRecord,
+  type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
@@ -40,6 +41,8 @@ const SUDOKU_ELAPSED_MS = 512_000;
 const SUDOKU_ELAPSED = formatElapsed(SUDOKU_ELAPSED_MS);
 
 const NONOGRAM_ELAPSED_MS = 623_000;
+
+const CROSSWORD_ELAPSED_MS = 301_000;
 
 const TERMO_ELAPSED_MS = 188_000;
 const TERMO_ELAPSED = formatElapsed(TERMO_ELAPSED_MS);
@@ -97,6 +100,24 @@ function concludedNonogram(
       index % 3 === 0 ? 1 : 0,
     ),
     elapsedMs: NONOGRAM_ELAPSED_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+function concludedCrossword(
+  overrides: Partial<CrosswordPlayRecord> = {},
+): CrosswordPlayRecord {
+  return {
+    v: 1,
+    game: "crossword",
+    date: DATE,
+    entries: Array.from({ length: 25 }, () => "a"),
+    grid: Array.from({ length: 25 }, () => "a"),
+    elapsedMs: CROSSWORD_ELAPSED_MS,
     hintsUsed: 0,
     concluded: true,
     pendingSync: false,
@@ -249,7 +270,7 @@ describe("the stamp (T-WEB-17)", () => {
 });
 
 describe("the day card and the CTA (T-WEB-18)", () => {
-  it("shows Binairo done and the other three honestly missing", () => {
+  it("shows Binairo done and the other four honestly missing", () => {
     writePlayRecord(concluded());
 
     render(
@@ -266,7 +287,7 @@ describe("the day card and the CTA (T-WEB-18)", () => {
 
     expect(
       screen.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
 
     expect(
       screen.getByText(messages.conclusion.dayCard.games.nonogram),
@@ -278,6 +299,7 @@ describe("the day card and the CTA (T-WEB-18)", () => {
 
   it("points the CTA at Hoje and the statistics link at /estatisticas", () => {
     writePlayRecord(concluded());
+    writePlayRecord(concludedCrossword());
     writePlayRecord(concludedNonogram());
     writePlayRecord(concludedSudoku());
     writePlayRecord(wonTermo());
@@ -315,9 +337,9 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
 
     expect(
       screen
-        .getByText(messages.conclusion.ctaNext(messages.games.sudoku.name))
+        .getByText(messages.conclusion.ctaNext(messages.games.crossword.name))
         .closest("a"),
-    ).toHaveAttribute("href", routes.sudoku);
+    ).toHaveAttribute("href", routes.crossword);
     expect(
       screen.queryByText(messages.conclusion.ctaHome),
     ).not.toBeInTheDocument();
@@ -336,16 +358,17 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     );
 
     const cta = screen
-      .getByText(messages.conclusion.ctaNext(messages.games.sudoku.name))
+      .getByText(messages.conclusion.ctaNext(messages.games.crossword.name))
       .closest("a");
     expect(cta?.style.getPropertyValue("--accent")).toBe(
-      "var(--accent-sudoku)",
+      "var(--accent-crossword)",
     );
   });
 
   it("never chains back to the game whose stamp is on screen", () => {
     writePlayRecord(concludedSudoku({ concluded: false, grid: undefined }));
     writePlayRecord(wonTermo());
+    writePlayRecord(concludedCrossword());
 
     render(
       <ConclusionView
@@ -370,6 +393,7 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
 
   it("falls back to Hoje when every playable daily is done", () => {
     writePlayRecord(concluded());
+    writePlayRecord(concludedCrossword());
     writePlayRecord(concludedNonogram());
     writePlayRecord(concludedSudoku());
     writePlayRecord(wonTermo());
@@ -451,7 +475,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 
   it("shows each concluded game's OWN time, never the current game's", () => {
@@ -471,7 +495,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(SUDOKU_ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it("counts the game being celebrated as done before its record is written", () => {
@@ -490,7 +514,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 
   it("understates rather than guesses: another device's solve reads falta", () => {
@@ -509,7 +533,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.queryByText(SUDOKU_ELAPSED)).not.toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 });
 
@@ -1140,9 +1164,9 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
     );
 
     const cta = screen
-      .getByText(messages.conclusion.ctaNext(messages.games.sudoku.name))
+      .getByText(messages.conclusion.ctaNext(messages.games.crossword.name))
       .closest("a");
-    expect(cta).toHaveAttribute("href", routes.sudoku);
+    expect(cta).toHaveAttribute("href", routes.crossword);
     expect(
       screen.queryByText(
         messages.conclusion.ctaNext(messages.games.termo.name),
@@ -1173,7 +1197,7 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
     expect(chip?.className).toContain("chipDone");
   });
 
-  it("leaves the three shipped games' overrides exactly as they were", () => {
+  it("leaves the other games' day-card entries exactly as they were", () => {
     writePlayRecord(concluded({ concluded: false, grid: undefined }));
 
     render(
@@ -1189,7 +1213,7 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 });
 

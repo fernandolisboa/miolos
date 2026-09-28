@@ -16,6 +16,7 @@ import {
 } from "vitest";
 
 import { GET } from "../app/medals/route";
+import { publishDaily } from "./lineup-helpers";
 import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
@@ -33,7 +34,7 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  await ctx.db.execute(sql`truncate table users cascade`);
+  await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
 });
 
 afterEach(() => {
@@ -73,7 +74,7 @@ function medalsRequest(token?: string): NextRequest {
 
 async function insertLateWin(init: {
   userId: string;
-  game: "binairo" | "sudoku" | "nonogram" | "termo";
+  game: "binairo" | "crossword" | "sudoku" | "nonogram" | "termo";
   date: string;
   today: string;
 }): Promise<void> {
@@ -214,6 +215,43 @@ describe("GET /medals — the earned id set (#30, ADR-0052)", () => {
     expect(await readMedals(caller.token)).toEqual({ medals: [] });
     expect(await readMedals(other.token)).toEqual({
       medals: ["first-win", "founder"],
+    });
+  });
+});
+
+describe("GET /medals — the crossword lineup (#276, ADR-0087)", () => {
+  it("T-API-S233: a five-game day, crossword included, earns perfect-1", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of [
+      "binairo",
+      "sudoku",
+      "nonogram",
+      "termo",
+      "crossword",
+    ] as const) {
+      await publishDaily(ctx.db, game, today);
+      await insertLateWin({ userId, game, date: today, today });
+    }
+
+    expect(await readMedals(token)).toEqual({
+      medals: ["first-win", "perfect-1", "all-games"],
+    });
+  });
+
+  it("T-API-S234: a launch-day four-game day earns perfect-1 when the crossword row was created after published_at", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
+      await publishDaily(ctx.db, game, today);
+      await insertLateWin({ userId, game, date: today, today });
+    }
+    await publishDaily(ctx.db, "crossword", today, {
+      insertedAfterPublish: true,
+    });
+
+    expect(await readMedals(token)).toEqual({
+      medals: ["first-win", "perfect-1", "all-games"],
     });
   });
 });

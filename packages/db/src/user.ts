@@ -15,6 +15,7 @@ export {
   mergeAccounts,
 } from "./merge";
 export { getUserSince, listCompletionsForStats } from "./stats";
+export { listPublishedDailiesOnWonDates } from "./published";
 export { listMedalGrants } from "./medals";
 export {
   claimNudgeSend,

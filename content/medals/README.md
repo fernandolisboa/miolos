@@ -35,7 +35,7 @@ union lacks, the candidate is rejected, never the union widened silently
 | Category (rule kind) | Quota | Threshold constraints |
 |---|---|---|
 | `totalWins`, all games (`game: null`) | 4–6 | counts strictly increasing, first = 1 (the first-win medal), last ≤ 1000 |
-| `totalWins`, per-game | 4–6 | every one of the four games appears in ≥ 1 medal; counts strictly increasing per game |
+| `totalWins`, per-game | 4–6 | every game appears in ≥ 1 medal; counts strictly increasing per game |
 | `streakReached` | 4–6 | days strictly increasing, 3 ≤ days ≤ 365 |
 | `perfectDaysReached` | 3–5 | counts strictly increasing, first = 1 |
 | `termoGuessWins` | 3–4 | `guesses ∈ {1, 2, 6}` only — win-in-1 and win-in-2 are skill feats, win-in-6 is survival; guess values 3, 4 and 5 are the middle of the distribution — ordinary outcomes the stats screen already reports, not feats — and are inexpressible in the type |
@@ -124,7 +124,7 @@ trigger the judgment; when it ships, its definition must precede its first
 grant, same reason); the bug-reporter medal. v1 ships 1–2 curated definitions
 from these classes.
 
-## The catalog (23 definitions, curated 2026-08-13)
+## The catalog (24 definitions, curated 2026-08-13; `crossword-30` added 2026-09-28)
 
 Catalog order is display order (no date exists on the wire to sort by —
 ADR-0052). Names and descriptions may be revised; ids are frozen the moment
@@ -141,28 +141,29 @@ they ship (an id is a wire value and a grant key).
 | 7 | `sudoku-30` | Trinta de Sudoku | Venceu o Sudoku diário 30 vezes. | totalWins, sudoku, 30 | Same mark per game — parity across the four, no favourite. |
 | 8 | `nonogram-30` | Trinta de Nonogram | Venceu o Nonogram diário 30 vezes. | totalWins, nonogram, 30 | Same. |
 | 9 | `termo-30` | Trinta de Termo | Venceu o Termo diário 30 vezes. | totalWins, termo, 30 | Same. |
-| 10 | `streak-3` | Três dias de tinta | Chegou a uma sequência de 3 dias. | streakReached, 3 | The habit's first foothold; the lower bound the quota table allows. |
-| 11 | `streak-7` | Sequência de sete | Chegou a uma sequência de 7 dias. | streakReached, 7 | The full week — the streak the reminder opt-in anchors on. |
-| 12 | `streak-30` | Um mês inteiro | Chegou a uma sequência de 30 dias. | streakReached, 30 | The month. |
-| 13 | `streak-100` | Centena corrida | Chegou a uma sequência de 100 dias. | streakReached, 100 | The round hundred, uninterrupted. |
-| 14 | `streak-365` | Um ano de caderno | Chegou a uma sequência de 365 dias. | streakReached, 365 | The year — the upper bound; nothing beyond it would be a feat, it would be a lifestyle audit. |
-| 15 | `perfect-1` | Quatro de quatro | Concluiu um Dia Perfeito: os quatro jogos no mesmo dia. | perfectDaysReached, 1 | The product's own defined feat (CONTEXT.md: Dia Perfeito), first occurrence. |
-| 16 | `perfect-5` | Mão firme | Concluiu 5 Dias Perfeitos. | perfectDaysReached, 5 | Repeatable mastery, not a fluke. |
-| 17 | `perfect-10` | Caderno caprichado | Concluiu 10 Dias Perfeitos. | perfectDaysReached, 10 | Exactly double 5. |
-| 18 | `perfect-30` | Trinta sem borrão | Concluiu 30 Dias Perfeitos. | perfectDaysReached, 30 | The deep mark; stationery register (a notebook with no blot). |
-| 19 | `termo-first-try` | De primeira | Acertou o Termo na primeira tentativa. | termoGuessWins, 1 guess, 1× | The luck-and-vocabulary lightning strike; once is the feat. |
-| 20 | `termo-in-two` | Dez na segunda | Acertou o Termo na segunda tentativa 10 vezes. | termoGuessWins, 2 guesses, 10× | Win-in-2 once is common; ten times is skill. |
-| 21 | `termo-last-guess` | Por um fio | Acertou o Termo na última tentativa. | termoGuessWins, 6 guesses, 1× | Survival — the last-guess save is a story, not a statistic. |
-| 22 | `all-games` | Circuito completo | Venceu cada um dos quatro jogos ao menos uma vez. | eachGameWon | Breadth: the whole product visited and beaten. |
-| 23 | `founder` | Da primeira leva | Estava aqui quando tudo começou. | curated | Launch-window founder grant (#37 decides the instant; the one-shot bulk insert is documented in ADR-0052). |
+| 10 | `crossword-30` | Trinta cruzadas | Venceu a Cruzadinha diária 30 vezes. | totalWins, crossword, 30 | Same mark for the fifth game. The name says *cruzadas*, the handoff's own word for the game, because the name rule forbids an *-inha* ending. |
+| 11 | `streak-3` | Três dias de tinta | Chegou a uma sequência de 3 dias. | streakReached, 3 | The habit's first foothold; the lower bound the quota table allows. |
+| 12 | `streak-7` | Sequência de sete | Chegou a uma sequência de 7 dias. | streakReached, 7 | The full week — the streak the reminder opt-in anchors on. |
+| 13 | `streak-30` | Um mês inteiro | Chegou a uma sequência de 30 dias. | streakReached, 30 | The month. |
+| 14 | `streak-100` | Centena corrida | Chegou a uma sequência de 100 dias. | streakReached, 100 | The round hundred, uninterrupted. |
+| 15 | `streak-365` | Um ano de caderno | Chegou a uma sequência de 365 dias. | streakReached, 365 | The year — the upper bound; nothing beyond it would be a feat, it would be a lifestyle audit. |
+| 16 | `perfect-1` | Tudo em dia | Concluiu um Dia Perfeito: todos os jogos daquele dia, no próprio dia. | perfectDaysReached, 1 | The product's own defined feat (CONTEXT.md: Dia Perfeito), first occurrence. Count-free, because the day's lineup is not always four games (ADR-0087). |
+| 17 | `perfect-5` | Mão firme | Concluiu 5 Dias Perfeitos. | perfectDaysReached, 5 | Repeatable mastery, not a fluke. |
+| 18 | `perfect-10` | Caderno caprichado | Concluiu 10 Dias Perfeitos. | perfectDaysReached, 10 | Exactly double 5. |
+| 19 | `perfect-30` | Trinta sem borrão | Concluiu 30 Dias Perfeitos. | perfectDaysReached, 30 | The deep mark; stationery register (a notebook with no blot). |
+| 20 | `termo-first-try` | De primeira | Acertou o Termo na primeira tentativa. | termoGuessWins, 1 guess, 1× | The luck-and-vocabulary lightning strike; once is the feat. |
+| 21 | `termo-in-two` | Dez na segunda | Acertou o Termo na segunda tentativa 10 vezes. | termoGuessWins, 2 guesses, 10× | Win-in-2 once is common; ten times is skill. |
+| 22 | `termo-last-guess` | Por um fio | Acertou o Termo na última tentativa. | termoGuessWins, 6 guesses, 1× | Survival — the last-guess save is a story, not a statistic. |
+| 23 | `all-games` | Circuito completo | Venceu Binairo, Sudoku, Nonogram e Termo ao menos uma vez. | eachGameWon | Breadth over the original four games, so the medal is never taken back when a game is added (ADR-0087). |
+| 24 | `founder` | Da primeira leva | Estava aqui quando tudo começou. | curated | Launch-window founder grant (#37 decides the instant; the one-shot bulk insert is documented in ADR-0052). |
 
 **Quota check against the table:** all-games totalWins 5 ∈ [4, 6] (1, 10, 50,
 100, 500 — strictly increasing, first 1, last ≤ 1000, each ≥ 2× its
-predecessor); per-game totalWins 4 ∈ [4, 6] (all four games, one mark each);
+predecessor); per-game totalWins 5 ∈ [4, 6] (all five games, one mark each);
 streakReached 5 ∈ [4, 6] (3, 7, 30, 100, 365 — in [3, 365], each ≥ 2×);
 perfectDaysReached 4 ∈ [3, 5] (1, 5, 10, 30 — first 1, each ≥ 2×);
 termoGuessWins 3 ∈ [3, 4] (guesses 1, 2, 6 — one per guess value);
-eachGameWon 1; curated 1 ∈ [1, 2]. **Total 23 ∈ [20, 30].**
+eachGameWon 1; curated 1 ∈ [1, 2]. **Total 24 ∈ [20, 30].**
 
 ## Rejected candidates (the judgment record, ≥ 10 rows)
 
@@ -188,6 +189,12 @@ tab-separated in spirit:
   completion fact; the founder class exists as a *curated* grant instead.
 - *Nível dourado / Colecionador de pontos* → vetoed vocabulary;
   medal-as-currency framing (ADR-0006).
+- *Trinta de Cruzadinha* (the name `crossword-30` would have had by the
+  per-game pattern) → the name rule forbids an *-inha* ending; the shipped
+  name says *cruzadas*.
+- *Cinco de cinco* (`all-games` over all five games) → the medal would be
+  taken back from everyone who earned it before the Cruzadinha shipped
+  (ADR-0087).
 
 ## Mechanical validation (the harness invariants)
 

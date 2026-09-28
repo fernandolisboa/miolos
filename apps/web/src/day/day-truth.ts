@@ -1,6 +1,6 @@
 "use client";
 
-import type { DayResponse } from "@miolos/core";
+import { GAMES, type DayResponse } from "@miolos/core";
 import { useSyncExternalStore } from "react";
 
 import { ensureSession } from "../session/bootstrap";
@@ -37,10 +37,7 @@ function sameGame(
 function samePayload(previous: DayResponse, next: DayResponse): boolean {
   return (
     previous.date === next.date &&
-    sameGame(previous.games.termo, next.games.termo) &&
-    sameGame(previous.games.sudoku, next.games.sudoku) &&
-    sameGame(previous.games.nonogram, next.games.nonogram) &&
-    sameGame(previous.games.binairo, next.games.binairo)
+    GAMES.every((game) => sameGame(previous.games[game], next.games[game]))
   );
 }
 

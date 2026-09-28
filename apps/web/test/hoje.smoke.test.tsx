@@ -138,7 +138,7 @@ describe("Hoje page", () => {
 
     expect(screen.getByText(messages.brand.wordmark)).toBeInTheDocument();
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(0, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(0, GAMES.length)),
     ).toBeInTheDocument();
     expect(screen.getByText(messages.hoje.streak.label)).toBeInTheDocument();
     expect(
@@ -146,15 +146,20 @@ describe("Hoje page", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders all four game cards pending, with copy from the messages module", () => {
+  it("renders all five game cards pending, with copy from the messages module", () => {
     render(<HojePage />);
-    for (const game of Object.values(messages.games)) {
-      expect(screen.getByText(game.name)).toBeInTheDocument();
-      expect(screen.getByText(game.kicker)).toBeInTheDocument();
-      expect(screen.getByText(game.description)).toBeInTheDocument();
+    for (const game of GAMES) {
+      const copy = messages.games[game];
+      expect(screen.getByText(copy.name)).toBeInTheDocument();
+      expect(screen.getByText(copy.kicker)).toBeInTheDocument();
+      expect(screen.getByText(copy.description)).toBeInTheDocument();
     }
-    expect(screen.getAllByText(messages.hoje.playCta)).toHaveLength(4);
-    expect(screen.getAllByText(messages.hoje.playCtaShort)).toHaveLength(4);
+    expect(screen.getAllByText(messages.hoje.playCta)).toHaveLength(
+      GAMES.length,
+    );
+    expect(screen.getAllByText(messages.hoje.playCtaShort)).toHaveLength(
+      GAMES.length,
+    );
   });
 
   it("renders the secondary links from the messages module", () => {
@@ -213,9 +218,11 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     ).toBeInTheDocument();
     expect(card.queryByText(messages.hoje.playCta)).not.toBeInTheDocument();
 
-    expect(screen.getAllByText(messages.hoje.playCta)).toHaveLength(3);
+    expect(screen.getAllByText(messages.hoje.playCta)).toHaveLength(
+      GAMES.length - 1,
+    );
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();
   });
 
@@ -237,7 +244,7 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     render(<HojePage />);
 
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();
   });
 
@@ -248,7 +255,7 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     render(<HojePage />);
 
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(2, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(2, GAMES.length)),
     ).toBeInTheDocument();
   });
 
@@ -261,7 +268,7 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     expect(card.queryByText(messages.hoje.done)).not.toBeInTheDocument();
     expect(card.getByText(messages.hoje.playCta)).toBeInTheDocument();
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(0, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(0, GAMES.length)),
     ).toBeInTheDocument();
   });
 });
@@ -286,7 +293,7 @@ describe("the Nonogram tile, activated (T-WEB-S55)", () => {
     );
     expect(link).toHaveAttribute("href", routes.nonogram);
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();
   });
 });
@@ -316,7 +323,7 @@ describe("the Termo tile, activated (T-WEB-S101)", () => {
 
     expect(cardFor("termo").textContent).not.toMatch(/\d{2}:\d{2}/);
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();
   });
 
@@ -337,7 +344,7 @@ describe("the Termo tile, activated (T-WEB-S101)", () => {
     expect(cardFor("termo").textContent).not.toMatch(/\d{2}:\d{2}/);
 
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(0, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(0, GAMES.length)),
     ).toBeInTheDocument();
   });
 });
@@ -352,7 +359,7 @@ describe("the hub's first paint (T-WEB-S17)", () => {
 
     expect(readStorage).not.toHaveBeenCalled();
     expect(clock).not.toHaveBeenCalled();
-    expect(markup).toContain(messages.hoje.completedOfTotal(0, 4));
+    expect(markup).toContain(messages.hoje.completedOfTotal(0, GAMES.length));
     expect(markup).not.toContain(messages.hoje.done);
     expect(markup).not.toContain(ELAPSED);
   });

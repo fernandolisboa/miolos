@@ -11,6 +11,7 @@ import {
   playRecordKey,
   writePlayRecord,
   type BinairoPlayRecord,
+  type CrosswordPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
@@ -20,6 +21,7 @@ const OTHER_DATE = "2026-07-29";
 const BINAIRO_MS = 407_000;
 const SUDOKU_MS = 512_000;
 const TERMO_MS = 188_000;
+const CROSSWORD_MS = 301_000;
 
 type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
 const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
@@ -81,6 +83,23 @@ function wonTermoRecord(
   };
 }
 
+function crosswordRecord(
+  overrides: Partial<CrosswordPlayRecord> = {},
+): CrosswordPlayRecord {
+  return {
+    v: 1,
+    game: "crossword",
+    date: DATE,
+    entries: Array.from({ length: 25 }, () => null),
+    elapsedMs: CROSSWORD_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
 function lostTermoRecord(
   overrides: Partial<TermoPlayRecord> = {},
 ): TermoPlayRecord {
@@ -115,7 +134,7 @@ describe("readDayState (T-WEB-S14)", () => {
     const state = readDayState(DATE);
 
     expect(Object.keys(state).sort()).toEqual(
-      ["binairo", "nonogram", "sudoku", "termo"].sort(),
+      ["binairo", "crossword", "nonogram", "sudoku", "termo"].sort(),
     );
   });
 
@@ -283,6 +302,7 @@ function dayPayload(
       sudoku: { status: "pending" },
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
+      crossword: { status: "pending" },
       ...games,
     },
   };
@@ -455,8 +475,42 @@ describe("the merge never invents a pending (T-WEB-S243)", () => {
   it("answers `pending` for a game only when both sides are silent", () => {
     const state = readDayState(DATE, dayPayload());
     expect(completedCount(state)).toBe(0);
-    for (const game of ["termo", "sudoku", "nonogram", "binairo"] as const) {
+    for (const game of [
+      "termo",
+      "sudoku",
+      "nonogram",
+      "binairo",
+      "crossword",
+    ] as const) {
       expect(state[game].status, game).toBe("pending");
     }
+  });
+});
+
+describe("the Cruzadinha reads and merges the same way the three grid games do (T-WEB-S419)", () => {
+  it("marks it completed from a concluded local record, duration included", () => {
+    writePlayRecord(crosswordRecord());
+
+    const state = readDayState(DATE);
+
+    expect(state.crossword).toEqual({
+      status: "completed",
+      elapsedMs: CROSSWORD_MS,
+    });
+    expect(completedCount(state)).toBe(1);
+  });
+
+  it("takes the server's duration on a cross-device completion", () => {
+    const SERVER_MS = 444_000;
+
+    const state = readDayState(
+      DATE,
+      dayPayload({ crossword: { status: "completed", elapsedMs: SERVER_MS } }),
+    );
+
+    expect(state.crossword).toEqual({
+      status: "completed",
+      elapsedMs: SERVER_MS,
+    });
   });
 });

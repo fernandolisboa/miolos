@@ -32,7 +32,7 @@ export {
   type DayRow,
   type DayState,
 } from "./day";
-export { GAMES, gameSchema, type Game } from "./game";
+export { GAMES, gameSchema, recordFor, type Game } from "./game";
 export { mergeCompletions, type MergeableCompletion } from "./merge";
 export {
   computeCalendar,
@@ -43,6 +43,7 @@ export {
   TIMED_GAMES,
   type CalendarDay,
   type CalendarDayState,
+  type PublishedDaily,
   type StatsRow,
   type StatsSummary,
   type TermoStats,
@@ -79,7 +80,9 @@ export {
 } from "./contracts/session";
 export {
   calendarDateString,
+  crosswordLetterSchema,
   dailyBinairoResponseSchema,
+  dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
   dailySudokuResponseSchema,
@@ -88,6 +91,7 @@ export {
   nonogramSizeSchema,
   sudokuDigitSchema,
   type DailyBinairoResponse,
+  type DailyCrosswordResponse,
   type DailyNonogramResponse,
   type DailyPuzzleResponse,
   type DailySudokuResponse,
@@ -98,12 +102,14 @@ export {
 
 export {
   binairoDailyContentSchema,
+  crosswordDailyContentSchema,
   DailyProjectionUnsupportedError,
   nonogramDailyContentSchema,
   stripDailyContent,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
   type BinairoDailyContent,
+  type CrosswordDailyContent,
   type NonogramDailyContent,
   type SudokuDailyContent,
   type TermoDailyContent,
@@ -146,6 +152,7 @@ export {
   binairoCompletionRequestSchema,
   completionRequestSchema,
   completionResponseSchema,
+  crosswordCompletionRequestSchema,
   nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
   termoCompletionRequestSchema,
@@ -153,6 +160,7 @@ export {
   type BinairoCompletionRequest,
   type CompletionRequest,
   type CompletionResponse,
+  type CrosswordCompletionRequest,
   type NonogramCompletionRequest,
   type SudokuCompletionRequest,
   type TermoCompletionRequest,

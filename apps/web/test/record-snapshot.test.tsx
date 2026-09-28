@@ -9,6 +9,7 @@ import { GAMES, type Game } from "@miolos/core";
 import {
   writePlayRecord,
   type BinairoPlayRecord,
+  type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
   type SudokuPlayRecord,
@@ -89,12 +90,27 @@ function termoRecord(date: string, elapsedMs: number): TermoPlayRecord {
   };
 }
 
+function crosswordRecord(date: string, elapsedMs: number): CrosswordPlayRecord {
+  return {
+    v: 1,
+    game: "crossword",
+    date,
+    entries: Array.from({ length: 25 }, () => null),
+    elapsedMs,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+  };
+}
+
 const BUILDERS: Record<Game, (date: string, elapsedMs: number) => PlayRecord> =
   {
     binairo: binairoRecord,
     sudoku: sudokuRecord,
     nonogram: nonogramRecord,
     termo: termoRecord,
+    crossword: crosswordRecord,
   };
 
 function elapsedFor(game: Game, date: string): number {

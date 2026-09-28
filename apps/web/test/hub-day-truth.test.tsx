@@ -1,5 +1,6 @@
 import {
   dailySudokuResponseSchema,
+  GAMES,
   type DailySudokuResponse,
   type DayResponse,
 } from "@miolos/core";
@@ -75,6 +76,7 @@ function dayBody(
       sudoku: { status: "pending" },
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
+      crossword: { status: "pending" },
       ...games,
     },
   };
@@ -142,7 +144,7 @@ describe("the hub's first paint is untouched (T-WEB-S239)", () => {
 
     expect(markup).toContain(messages.hoje.playCta);
     expect(markup).not.toContain(messages.hoje.done);
-    expect(markup).toContain(messages.hoje.completedOfTotal(0, 4));
+    expect(markup).toContain(messages.hoje.completedOfTotal(0, GAMES.length));
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -177,7 +179,7 @@ describe("a game completed on another device (T-WEB-S240)", () => {
       ),
     ).toBeNull();
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();
   });
 
@@ -192,7 +194,7 @@ describe("a game completed on another device (T-WEB-S240)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(messages.hoje.completedOfTotal(2, 4)),
+        screen.getByText(messages.hoje.completedOfTotal(2, GAMES.length)),
       ).toBeInTheDocument();
     });
 
@@ -231,7 +233,7 @@ describe("a game completed on another device (T-WEB-S240)", () => {
       ).toBeInTheDocument();
     });
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(0, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(0, GAMES.length)),
     ).toBeInTheDocument();
   });
 });
@@ -267,7 +269,7 @@ describe("a cross-device done tile shows its time exactly as a local one (T-WEB-
       card.getByText(messages.hoje.doneResultShort(elapsed)),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(1, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();
   });
 
@@ -302,7 +304,7 @@ describe("a cross-device done tile shows its time exactly as a local one (T-WEB-
     expect(serverAnchor.innerHTML).toBe(localAnchor.innerHTML);
     expect(serverAnchor.className).toBe(localAnchor.className);
     expect(
-      screen.getByText(messages.hoje.completedOfTotal(2, 4)),
+      screen.getByText(messages.hoje.completedOfTotal(2, GAMES.length)),
     ).toBeInTheDocument();
   });
 });
@@ -376,7 +378,7 @@ describe("a cross-device done tile keeps its href and writes no record (T-WEB-S2
 
     await waitFor(() => {
       expect(
-        screen.getByText(messages.hoje.completedOfTotal(2, 4)),
+        screen.getByText(messages.hoje.completedOfTotal(2, GAMES.length)),
       ).toBeInTheDocument();
     });
 

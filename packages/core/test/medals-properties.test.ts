@@ -8,6 +8,7 @@ import {
   epochDay,
   GAMES,
   MEDAL_DEFINITIONS,
+  type PublishedDaily,
   type StatsRow,
 } from "../src/index";
 
@@ -35,17 +36,41 @@ const grantArb = fc.oneof(
   fc.constantFrom("ghost-medal", "future-medal", "abc-123"),
 );
 
+function publishedArb(
+  rows: readonly StatsRow[],
+): fc.Arbitrary<PublishedDaily[]> {
+  const played = rows.map(({ date, game }) => ({ date, game }));
+  if (played.length === 0) {
+    return fc.constant([]);
+  }
+  return fc
+    .tuple(
+      fc.subarray(played),
+      fc.array(
+        fc.record({
+          date: fc.constantFrom(...played.map((daily) => daily.date)),
+          game: fc.constantFrom(...GAMES),
+        }),
+        { maxLength: 5 },
+      ),
+    )
+    .map(([fromRows, extra]) => [...fromRows, ...extra]);
+}
+
 const inputArb = todayDayArb.chain((todayDay) =>
-  fc.record({
-    todayDay: fc.constant(todayDay),
-    today: fc.constant(dateFromEpochDay(todayDay)),
-    rows: fc.array(rowArb(todayDay), { maxLength: 80 }),
-    grants: fc.array(grantArb, { maxLength: 8 }),
-  }),
+  fc.array(rowArb(todayDay), { maxLength: 80 }).chain((rows) =>
+    fc.record({
+      todayDay: fc.constant(todayDay),
+      today: fc.constant(dateFromEpochDay(todayDay)),
+      rows: fc.constant(rows),
+      grants: fc.array(grantArb, { maxLength: 8 }),
+      published: publishedArb(rows),
+    }),
+  ),
 );
 
 describe("earnedMedals — properties (ADR-0023, sampled evidence)", () => {
-  it("T-CORE-S75: monotonicity — adding rows never un-earns a medal — plus determinism and permutation invariance in rows and grants", () => {
+  it("T-CORE-S75: monotonicity — adding rows under one published lineup never un-earns a medal — plus determinism and permutation invariance in rows and grants", () => {
     fc.assert(
       fc.property(
         inputArb,
@@ -54,12 +79,19 @@ describe("earnedMedals — properties (ADR-0023, sampled evidence)", () => {
           { maxLength: 20 },
         ),
         fc.infiniteStream(fc.nat()),
-        ({ today, rows, grants }, extra, indices) => {
-          const reference = earnedMedals(rows, grants, today);
+        ({ today, rows, grants, published }, extra, indices) => {
+          const reference = earnedMedals(rows, grants, today, published);
 
-          expect(earnedMedals(rows, grants, today)).toEqual(reference);
+          expect(earnedMedals(rows, grants, today, published)).toEqual(
+            reference,
+          );
 
-          const widened = earnedMedals([...rows, ...extra], grants, today);
+          const widened = earnedMedals(
+            [...rows, ...extra],
+            grants,
+            today,
+            published,
+          );
           for (const id of reference) {
             expect(widened).toContain(id);
           }
@@ -75,10 +107,12 @@ describe("earnedMedals — properties (ADR-0023, sampled evidence)", () => {
               shuffled[j] = a;
             }
           }
-          expect(earnedMedals(shuffled, grants, today)).toEqual(reference);
-          expect(earnedMedals(rows, [...grants].reverse(), today)).toEqual(
+          expect(earnedMedals(shuffled, grants, today, published)).toEqual(
             reference,
           );
+          expect(
+            earnedMedals(rows, [...grants].reverse(), today, published),
+          ).toEqual(reference);
         },
       ),
       { numRuns: 100, seed: 20_260_813 },
@@ -88,7 +122,7 @@ describe("earnedMedals — properties (ADR-0023, sampled evidence)", () => {
   it("T-CORE-S76: streakReached agrees with an independent run-length oracle over counted days — the sampled evidence that licenses D10's future single-pass optimization", () => {
     fc.assert(
       fc.property(inputArb, ({ todayDay, today, rows, grants }) => {
-        const earned = new Set(earnedMedals(rows, grants, today));
+        const earned = new Set(earnedMedals(rows, grants, today, []));
 
         const countedDays = [
           ...new Set(

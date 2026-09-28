@@ -1,5 +1,9 @@
 import { generateBinairo } from "@miolos/games/binairo";
 import {
+  generateCrossword,
+  type CrosswordPuzzle,
+} from "@miolos/games/crossword";
+import {
   generateNonogram,
   type NonogramPuzzle,
   type Weekday as NonogramWeekday,
@@ -19,8 +23,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   binairoDailyContentSchema,
+  crosswordDailyContentSchema,
   DailyProjectionUnsupportedError,
   dailyBinairoResponseSchema,
+  dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
   dailySudokuResponseSchema,
@@ -29,6 +35,7 @@ import {
   stripDailyContent,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
+  type CrosswordDailyContent,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
 
@@ -639,5 +646,174 @@ describe("stripDailyContent (termo)", () => {
       date: "2026-12-31",
     });
     expect(() => stripDailyContent("termo", "31/12/2026", CONTENT)).toThrow();
+  });
+});
+
+const CROSSWORD_SEEDS = Array.from({ length: 12 }, (_, i) => 20_260_928 + i);
+
+function crosswordDaily(seed = CROSSWORD_SEEDS[0] ?? 0): CrosswordPuzzle {
+  return generateCrossword(seed);
+}
+
+function mutableCrossword(): CrosswordDailyContent {
+  return crosswordDailyContentSchema.parse(
+    JSON.parse(JSON.stringify(crosswordDaily())),
+  );
+}
+
+describe("crosswordDailyContentSchema", () => {
+  it("T-CORE-S122: real engine output parses and round-trips unchanged, and the type is the engine's", () => {
+    for (const seed of CROSSWORD_SEEDS) {
+      const puzzle = crosswordDaily(seed);
+      const parsed: CrosswordPuzzle = crosswordDailyContentSchema.parse(puzzle);
+      expect(parsed).toEqual(puzzle);
+    }
+  });
+
+  it("T-CORE-S122: strict at every level, and a malformed grid or entry fails", () => {
+    const withTopLevelExtra = { ...mutableCrossword(), solution: [] };
+    const withEntryExtra = mutableCrossword();
+    Object.assign(withEntryExtra.entries[0] ?? {}, { answer: "x" });
+    const withoutSeed: Partial<CrosswordDailyContent> = mutableCrossword();
+    delete withoutSeed.seed;
+    const shortGrid = mutableCrossword();
+    shortGrid.grid.pop();
+    const upperCell = mutableCrossword();
+    upperCell.grid[0]?.splice(0, 1, "A");
+    const noEntries = { ...mutableCrossword(), entries: [] };
+
+    for (const drifted of [
+      withTopLevelExtra,
+      withEntryExtra,
+      withoutSeed,
+      shortGrid,
+      upperCell,
+      noEntries,
+    ]) {
+      expect(crosswordDailyContentSchema.safeParse(drifted).success).toBe(
+        false,
+      );
+    }
+  });
+});
+
+describe("stripDailyContent (crossword)", () => {
+  it("T-CORE-S123: projects exactly game, date, grid and the clues, by allowlist, over real engine output", () => {
+    for (const seed of CROSSWORD_SEEDS) {
+      const puzzle = crosswordDaily(seed);
+      const projected = stripDailyContent("crossword", "2026-09-28", puzzle);
+      expect(dailyPuzzleResponseSchema.parse(projected)).toEqual(projected);
+      const stripped = dailyCrosswordResponseSchema.parse(projected);
+
+      expect(Object.keys(stripped).sort()).toEqual([
+        "clues",
+        "date",
+        "game",
+        "grid",
+      ]);
+      expect(stripped.grid).toEqual(puzzle.grid);
+      expect(stripped.clues).toEqual(
+        puzzle.entries.map((entry) => ({
+          number: entry.number,
+          direction: entry.direction,
+          row: entry.row,
+          col: entry.col,
+          length: entry.normalized.length,
+          clue: entry.clue,
+        })),
+      );
+
+      const keys = collectKeys(stripped);
+      for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+        expect(keys.has(forbidden), forbidden).toBe(false);
+      }
+    }
+  });
+
+  it("T-CORE-S123: FORBIDDEN_DAILY_KEYS names every withheld crossword key", () => {
+    for (const withheld of ["seed", "canonical", "normalized"]) {
+      expect(FORBIDDEN_DAILY_KEYS).toContain(withheld);
+    }
+  });
+
+  it("T-CORE-S123: a drifted content throws", () => {
+    for (const drifted of [
+      {},
+      { ...crosswordDaily(), extra: true },
+      { grid: crosswordDaily().grid, entries: crosswordDaily().entries },
+      null,
+    ]) {
+      expect(() =>
+        stripDailyContent("crossword", "2026-09-28", drifted),
+      ).toThrow();
+    }
+  });
+});
+
+describe("dailyCrosswordResponseSchema", () => {
+  const valid = dailyCrosswordResponseSchema.parse(
+    stripDailyContent("crossword", "2026-09-28", crosswordDaily()),
+  );
+  const blockAt = ((): readonly [number, number] => {
+    for (const [row, cells] of valid.grid.entries()) {
+      const col = cells.indexOf(null);
+      if (col !== -1) {
+        return [row, col];
+      }
+    }
+    throw new Error("no block in the fixture");
+  })();
+
+  function withClue(overrides: Record<string, unknown>): unknown {
+    const [first, ...rest] = valid.clues;
+    return { ...valid, clues: [{ ...first, ...overrides }, ...rest] };
+  }
+
+  it("T-CORE-S123: every clue cell must be in bounds and white", () => {
+    expect(dailyCrosswordResponseSchema.parse(valid)).toEqual(valid);
+
+    const [blockRow, blockCol] = blockAt;
+    for (const body of [
+      withClue({ row: 0, col: 3, direction: "across", length: 3 }),
+      withClue({ row: 3, col: 0, direction: "down", length: 3 }),
+      withClue({ row: -1 }),
+      withClue({ row: blockRow, col: blockCol, length: 1 }),
+      withClue({ extra: 1 }),
+      withClue({ direction: "diagonal" }),
+      { ...valid, clues: [] },
+      { ...valid, seed: 1 },
+    ]) {
+      expect(
+        dailyCrosswordResponseSchema.safeParse(body).success,
+        JSON.stringify(body),
+      ).toBe(false);
+      expect(dailyPuzzleResponseSchema.safeParse(body).success).toBe(false);
+    }
+  });
+
+  it("T-CORE-S131: a hostile clue length fails fast instead of walking a billion cells", () => {
+    const started = Date.now();
+    const result = dailyCrosswordResponseSchema.safeParse(
+      withClue({ length: 1e9 }),
+    );
+    expect(result.success).toBe(false);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it("T-CORE-S123: the grid is exactly 5x5 of a-z or null", () => {
+    for (const grid of [
+      valid.grid.slice(1),
+      valid.grid.map((row) => row.slice(1)),
+      valid.grid.map((row, index) =>
+        index === 0 ? row.map((cell) => (cell === null ? null : "é")) : row,
+      ),
+      valid.grid.map((row, index) =>
+        index === 0 ? row.map((cell) => (cell === null ? null : "ab")) : row,
+      ),
+    ]) {
+      expect(
+        dailyCrosswordResponseSchema.safeParse({ ...valid, grid }).success,
+      ).toBe(false);
+    }
   });
 });

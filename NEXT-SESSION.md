@@ -1,16 +1,18 @@
 # Do I need to do anything?
 
-**One open question, ledger NOW §2:** how Dia Perfeito counts once Cruzadinha is a fifth daily (default: every daily published that day). The ⚡ decision on #200 is still open and still low urgency; that default answers its option (c). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**No.** Migration 0014 ran on the Miolos database before #276 merged. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
-**#276, the Cruzadinha daily end to end** (epic #274). The engine and lexicon shipped in #275 (ADR-0085); the reviewed plan is on #276. It needs migration 0014 on the Miolos database before merge. After it: #206 cluster 10 (free-play `Frame` / `ErrorCard`).
+**The Cruzadinha is live as the fifth daily** (#274: #275 engine, #276 daily; ADR-0085/0086/0087). The first crossword is published by the first cron after the merge. Then, as one Quick change, add `/cruzadinha` and `/cruzadinha/concluido` to `impeccable.yml`'s URL scan, whose preflight needs a published row. After that: file per-game time buckets as an issue, then #206 cluster 10 (free-play `Frame` / `ErrorCard`).
 
 ## Traps
 
 **Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** `users-updated-at.test.ts` scans `apps/api/src`, but the db test task's cache key does not include that folder, so pre-commit can replay a stale pass. Run `pnpm test --force` before trusting a green gate after an `apps/api` change.
 
 **Dependabot npm PRs cannot be merged as opened.** They change one `package.json` and never `pnpm-lock.yaml`, so `--frozen-lockfile` fails. Land them as one hand-made bump across every pin, outside `minimumReleaseAge` (7 days).
+
+**A perfect day needs a lineup buffered before midnight (ADR-0087).** If every buffer ran dry and all of a day's rows were inserted after `published_at`, that day cannot be perfect. The buffer alert exists to prevent that.
 
 **The crossword lexicon is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` and `pnpm test --force`.
 

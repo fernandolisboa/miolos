@@ -4,6 +4,7 @@ import { completionOutcomeSchema } from "../completion";
 import { gameSchema } from "../game";
 import {
   calendarDateString,
+  crosswordLetterSchema,
   isoDateString,
   nonogramSizeSchema,
   sudokuDigitSchema,
@@ -69,8 +70,21 @@ export type TermoCompletionRequest = z.infer<
   typeof termoCompletionRequestSchema
 >;
 
+export const crosswordCompletionRequestSchema = z.strictObject({
+  game: z.literal("crossword"),
+  date: calendarDateString,
+  grid: z.array(crosswordLetterSchema.nullable()).length(25),
+  elapsedMs: z.number().int().min(0).max(86_400_000),
+  hintsUsed: z.number().int().min(0).max(1),
+});
+
+export type CrosswordCompletionRequest = z.infer<
+  typeof crosswordCompletionRequestSchema
+>;
+
 export const completionRequestSchema = z.discriminatedUnion("game", [
   binairoCompletionRequestSchema,
+  crosswordCompletionRequestSchema,
   nonogramCompletionRequestSchema,
   sudokuCompletionRequestSchema,
   termoCompletionRequestSchema,

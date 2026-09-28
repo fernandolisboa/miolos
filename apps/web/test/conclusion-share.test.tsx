@@ -8,6 +8,7 @@ import { ConclusionView } from "../src/play/conclusion-view";
 import {
   writePlayRecord,
   type BinairoPlayRecord,
+  type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
   type SudokuPlayRecord,
@@ -142,11 +143,24 @@ const termo = (): TermoPlayRecord => ({
   syncOutcome: "recorded",
 });
 
+const crossword = (): CrosswordPlayRecord => ({
+  v: 1,
+  game: "crossword",
+  date: DATE,
+  entries: Array.from({ length: 25 }, () => null),
+  elapsedMs: 301_000,
+  hintsUsed: 0,
+  concluded: true,
+  pendingSync: false,
+  syncOutcome: "recorded",
+});
+
 const RECORDS: Readonly<Record<Game, () => PlayRecord>> = {
   binairo,
   sudoku,
   nonogram,
   termo,
+  crossword,
 };
 
 const LOST = {

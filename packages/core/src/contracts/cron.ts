@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { GAMES, recordFor } from "../game";
 import { isoDateString } from "./daily";
 
 export const cronPublishGameResultSchema = z.strictObject({
@@ -15,12 +16,7 @@ export const cronPublishGameResultSchema = z.strictObject({
 export type CronPublishGameResult = z.infer<typeof cronPublishGameResultSchema>;
 
 export const cronPublishResponseSchema = z.strictObject({
-  games: z.strictObject({
-    termo: cronPublishGameResultSchema,
-    binairo: cronPublishGameResultSchema,
-    nonogram: cronPublishGameResultSchema,
-    sudoku: cronPublishGameResultSchema,
-  }),
+  games: z.strictObject(recordFor(GAMES, () => cronPublishGameResultSchema)),
 });
 
 export type CronPublishResponse = z.infer<typeof cronPublishResponseSchema>;
@@ -46,12 +42,7 @@ export const cronNotifyResponseSchema = z.strictObject({
 export type CronNotifyResponse = z.infer<typeof cronNotifyResponseSchema>;
 
 export const bufferDepthResponseSchema = z.strictObject({
-  depths: z.strictObject({
-    termo: z.number().int().min(0),
-    binairo: z.number().int().min(0),
-    nonogram: z.number().int().min(0),
-    sudoku: z.number().int().min(0),
-  }),
+  depths: z.strictObject(recordFor(GAMES, () => z.number().int().min(0))),
   threshold: z.number().int().positive(),
 
   shallow: z.boolean(),

@@ -3,10 +3,16 @@ import { describe, expect, it } from "vitest";
 import type { Game } from "@miolos/core";
 
 import { accentVars } from "../src/play/accent";
-import { colorTokens } from "./css-source";
+import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
 import { contrast, luminance } from "./contrast";
 
-const GAMES: readonly Game[] = ["termo", "sudoku", "nonogram", "binairo"];
+const GAMES: readonly Game[] = [
+  "termo",
+  "sudoku",
+  "nonogram",
+  "binairo",
+  "crossword",
+];
 
 function contrastTools(theme: "light" | "dark") {
   const tokens = colorTokens(theme);
@@ -58,6 +64,7 @@ describe("every game's filled-surface label clears AA on its own fill (T-WEB-S29
       binairo: 5.3066,
       nonogram: 4.5063,
       termo: 4.8433,
+      crossword: 7.1191,
     };
     for (const game of GAMES) {
       const { accent, ink } = LIGHT.pair(game);
@@ -184,7 +191,7 @@ function colorMix10(accentHex: string, paperHex: string): string {
   );
 }
 
-describe("the two .cellHinted sites keep their hint glyph readable on its own 10%-accent tint, dark (T-WEB-S395)", () => {
+describe("the .cellHinted sites keep their hint glyph readable on its own 10%-accent tint, dark (T-WEB-S395)", () => {
   it("clears >= 4.5:1 for --accent-sudoku-text and --accent-binairo-text on color-mix(accent 10%, --paper-desk)", () => {
     for (const name of ["sudoku", "binairo"] as const) {
       const accent = DARK.hexOf(`--accent-${name}`);
@@ -194,11 +201,49 @@ describe("the two .cellHinted sites keep their hint glyph readable on its own 10
     }
   });
 
+  it("measures the crossword's plain accent on its hinted cell at 6.1459:1 light and 5.1844:1 dark, so it needs no -text token", () => {
+    const hinted = bodyOf(
+      stylesheet("src/crossword/crossword-board.module.css"),
+      ".cellHinted",
+    );
+    expect(decl(hinted, "color")).toBe("var(--accent)");
+    expect(decl(hinted, "background")).toBe(
+      "color-mix(in srgb, var(--accent) 10%, var(--paper-desk))",
+    );
+
+    const measured = { light: 6.1459, dark: 5.1844 };
+    for (const [theme, tools] of [
+      ["light", LIGHT],
+      ["dark", DARK],
+    ] as const) {
+      const accent = tools.hexOf("--accent-crossword");
+      const background = colorMix10(accent, tools.hexOf("--paper-desk"));
+      expect(contrast(accent, background), theme).toBeCloseTo(
+        measured[theme],
+        4,
+      );
+    }
+  });
+
   it("stays under 4.5:1 for the plain accent on the same background — the reason the -text token exists", () => {
     for (const name of ["sudoku", "binairo"] as const) {
       const accent = DARK.hexOf(`--accent-${name}`);
       const background = colorMix10(accent, DARK.hexOf("--paper-desk"));
       expect(contrast(accent, background), name).toBeLessThan(4.5);
     }
+  });
+});
+
+describe("the crossword's active clue carries its state in shape, its words in ink (T-WEB-S443)", () => {
+  it("paints the active clue's text --ink, marks it with an accent fill and ring, and keeps that fill on hover", () => {
+    const css = stylesheet("src/crossword/clues.module.css");
+    const active = bodyOf(css, ".itemActive");
+    expect(decl(active, "color")).toBe("var(--ink)");
+    expect(decl(active, "background")).toContain("var(--accent)");
+    expect(decl(active, "box-shadow")).toContain("var(--accent)");
+
+    const activeHover = decl(bodyOf(css, ".itemActive:hover"), "background");
+    expect(activeHover).toContain("var(--accent)");
+    expect(activeHover).not.toContain("--paper-tint");
   });
 });

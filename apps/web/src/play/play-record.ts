@@ -1,5 +1,6 @@
 import {
   completionOutcomeSchema,
+  crosswordLetterSchema,
   isoDateString,
   nonogramSizeSchema,
   sudokuDigitSchema,
@@ -159,8 +160,32 @@ export const termoPlayRecordSchema = z
 
 export type TermoPlayRecord = z.infer<typeof termoPlayRecordSchema>;
 
+const CROSSWORD_CELLS = 25;
+
+export const crosswordPlayRecordSchema = z.strictObject({
+  v: z.literal(1),
+  game: z.literal("crossword"),
+  date: isoDateString,
+  entries: z
+    .array(z.union([crosswordLetterSchema, z.null()]))
+    .length(CROSSWORD_CELLS),
+
+  grid: z
+    .array(crosswordLetterSchema.nullable())
+    .length(CROSSWORD_CELLS)
+    .optional(),
+  elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+  hintsUsed: z.number().int().min(0).max(1),
+  concluded: z.boolean(),
+  pendingSync: z.boolean(),
+  syncOutcome: z.enum(["pending", "recorded", "rejected"]),
+});
+
+export type CrosswordPlayRecord = z.infer<typeof crosswordPlayRecordSchema>;
+
 export const playRecordSchema = z.discriminatedUnion("game", [
   binairoPlayRecordSchema,
+  crosswordPlayRecordSchema,
   nonogramPlayRecordSchema,
   sudokuPlayRecordSchema,
   termoPlayRecordSchema,

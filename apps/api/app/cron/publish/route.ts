@@ -1,7 +1,7 @@
 import {
   cronPublishResponseSchema,
   type CronPublishGameResult,
-  type CronPublishResponse,
+  type Game,
 } from "@miolos/core";
 import type { Db } from "@miolos/db";
 import { bufferDepth, getRemoteConfig } from "@miolos/db/publishing";
@@ -12,22 +12,25 @@ import { isAuthorized } from "../../../src/cron/auth";
 import { getDb } from "../../../src/db";
 import {
   effectiveThreshold,
+  TOP_UPS,
   TopUpAbortedError,
-  topUpBinairoBuffer,
-  topUpNonogramBuffer,
-  topUpSudokuBuffer,
-  topUpTermoBuffer,
-  type TopUpResult,
+  type TopUp,
 } from "../../../src/publishing/service";
 
 export const dynamic = "force-dynamic";
 
-type CronGame = keyof CronPublishResponse["games"];
+const COST_ASCENDING_GAMES = [
+  "termo",
+  "binairo",
+  "nonogram",
+  "crossword",
+  "sudoku",
+] as const satisfies readonly Game[];
 
 async function runTopUp(
   db: Db,
-  game: CronGame,
-  topUp: (db: Db, depth: number) => Promise<TopUpResult>,
+  game: Game,
+  topUp: TopUp,
   configuredDepth: number,
 ): Promise<CronPublishGameResult> {
   try {
@@ -38,9 +41,8 @@ async function runTopUp(
 
     const aborted = thrown instanceof TopUpAbortedError ? thrown : undefined;
 
-    // Only the MESSAGE is sanitised below. `query`, `params` and `cause`
-    // stay enumerable on the error, so logging the whole object re-opens the
-    // answer leak this split closes (ADR-0004).
+    // Only .message is sanitised: query/params/cause stay enumerable, so
+    // logging the whole error re-opens the answer leak this split closes (ADR-0004).
     const cause = aborted ? aborted.cause : thrown;
     const error =
       cause instanceof Error
@@ -61,24 +63,10 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
   const db = getDb();
   const config = await getRemoteConfig(db);
-  const games = {
-    termo: await runTopUp(db, "termo", topUpTermoBuffer, config.bufferDepth),
-    binairo: await runTopUp(
-      db,
-      "binairo",
-      topUpBinairoBuffer,
-      config.bufferDepth,
-    ),
-    nonogram: await runTopUp(
-      db,
-      "nonogram",
-      topUpNonogramBuffer,
-      config.bufferDepth,
-    ),
-    sudoku: await runTopUp(db, "sudoku", topUpSudokuBuffer, config.bufferDepth),
-  };
-
-  for (const [game, result] of Object.entries(games)) {
+  const games = {} as Record<Game, CronPublishGameResult>;
+  for (const game of COST_ASCENDING_GAMES) {
+    const result = await runTopUp(db, game, TOP_UPS[game], config.bufferDepth);
+    games[game] = result;
     console.log(JSON.stringify({ event: "cron-publish", game, ...result }));
   }
 

@@ -31,6 +31,7 @@ import {
   useServerDayClaim,
   type DayEntry,
 } from "./day-state";
+import { DAY_GAMES } from "./day-games";
 import { picturePath } from "./picture-path";
 import { BLANK_VALUE, ShareButton } from "./share-button";
 import { startCompletionSync } from "./sync";
@@ -46,8 +47,6 @@ const PushPromptCard = nextDynamic(
   () => import("./push-prompt-card").then((mod) => mod.PushPromptCard),
   { ssr: false },
 );
-
-const DAY_GAMES = ["termo", "sudoku", "nonogram", "binairo"] as const;
 
 export interface ConclusionResult {
   readonly elapsedMs: number;

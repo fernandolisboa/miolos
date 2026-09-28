@@ -16,6 +16,7 @@ export const routeSlugs = {
   sudoku: "sudoku",
   nonogram: "nonogram",
   termo: "termo",
+  crossword: "cruzadinha",
   conclusion: "concluido",
 } as const;
 
@@ -31,6 +32,8 @@ export const routes = {
   nonogramConclusion: `/${routeSlugs.nonogram}/${routeSlugs.conclusion}`,
   termo: `/${routeSlugs.termo}`,
   termoConclusion: `/${routeSlugs.termo}/${routeSlugs.conclusion}`,
+  crossword: `/${routeSlugs.crossword}`,
+  crosswordConclusion: `/${routeSlugs.crossword}/${routeSlugs.conclusion}`,
   freePlay: `/${routeSlugs.freePlay}`,
   freePlayBinairo: `/${routeSlugs.freePlay}/${routeSlugs.binairo}`,
   freePlaySudoku: `/${routeSlugs.freePlay}/${routeSlugs.sudoku}`,
@@ -72,6 +75,7 @@ export const playRoutes: Readonly<Record<Game, Route>> = {
   nonogram: routes.nonogram,
   sudoku: routes.sudoku,
   termo: routes.termo,
+  crossword: routes.crossword,
 };
 
 export const freePlayRoutes: Readonly<Record<FreePlayGame, Route>> = {

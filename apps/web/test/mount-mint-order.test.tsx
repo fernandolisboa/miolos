@@ -47,6 +47,13 @@ const STATS: StatsResponse = statsResponseSchema.parse({
     averageSampleCount: 0,
     histogram: [0, 0, 0, 0, 0, 0],
   },
+  crossword: {
+    solved: 0,
+    bestMs: null,
+    averageMs: null,
+    averageSampleCount: 0,
+    histogram: [0, 0, 0, 0, 0, 0],
+  },
   termo: { solved: 0, distribution: [0, 0, 0, 0, 0, 0, 0] },
   perfectDays: 0,
   todayTermoGuesses: null,

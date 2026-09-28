@@ -3,7 +3,10 @@ import { z } from "zod";
 import type { Game } from "../game";
 import {
   binairoCellSchema,
+  crosswordDirectionSchema,
+  crosswordGridSchema,
   dailyBinairoResponseSchema,
+  dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
@@ -76,6 +79,26 @@ export const termoDailyContentSchema = z.strictObject({
 
 export type TermoDailyContent = z.infer<typeof termoDailyContentSchema>;
 
+export const crosswordDailyContentSchema = z.strictObject({
+  seed: z.number().int().nonnegative(),
+  grid: crosswordGridSchema,
+  entries: z
+    .array(
+      z.strictObject({
+        number: z.number().int().positive(),
+        direction: crosswordDirectionSchema,
+        row: z.number().int().min(0),
+        col: z.number().int().min(0),
+        normalized: z.string().regex(/^[a-z]+$/),
+        canonical: z.string().min(1),
+        clue: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+export type CrosswordDailyContent = z.infer<typeof crosswordDailyContentSchema>;
+
 export class DailyProjectionUnsupportedError extends Error {
   readonly game: Game;
 
@@ -125,6 +148,22 @@ export function stripDailyContent(
     case "termo": {
       termoDailyContentSchema.parse(content);
       return dailyTermoResponseSchema.parse({ game: "termo", date });
+    }
+    case "crossword": {
+      const parsed = crosswordDailyContentSchema.parse(content);
+      return dailyCrosswordResponseSchema.parse({
+        game: "crossword",
+        date,
+        grid: parsed.grid,
+        clues: parsed.entries.map((entry) => ({
+          number: entry.number,
+          direction: entry.direction,
+          row: entry.row,
+          col: entry.col,
+          length: entry.normalized.length,
+          clue: entry.clue,
+        })),
+      });
     }
   }
 }

@@ -73,11 +73,21 @@
   color: var(--accent-app);
 }
 
+/* Five cards on a six-column track: two on the first row, three on the
+   second, so no row orphans a single card. */
 .games {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: var(--space-7);
   margin-top: 52px;
+}
+
+.card:nth-child(-n + 2) {
+  grid-column: span 3;
+}
+
+.card:nth-child(n + 3) {
+  grid-column: span 2;
 }
 
 .card {
@@ -114,6 +124,9 @@
 .card:nth-child(4) {
   transform: rotate(0.6deg);
 }
+.card:nth-child(5) {
+  transform: rotate(-0.5deg);
+}
 
 .tape {
   position: absolute;
@@ -136,6 +149,9 @@
 }
 .card:nth-child(4) .tape {
   transform: translateX(-50%) rotate(4deg);
+}
+.card:nth-child(5) .tape {
+  transform: translateX(-50%) rotate(-4deg);
 }
 
 .cardBody {
@@ -367,6 +383,9 @@
   .card:nth-child(4) {
     transform: rotate(0.4deg);
   }
+  .card:nth-child(5) {
+    transform: rotate(-0.4deg);
+  }
 
   .tape {
     top: -9px;
@@ -388,6 +407,9 @@
   }
   .card:nth-child(4) .tape {
     transform: rotate(4deg);
+  }
+  .card:nth-child(5) .tape {
+    transform: rotate(-4deg);
   }
 
   .kicker {

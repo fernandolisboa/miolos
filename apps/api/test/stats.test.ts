@@ -16,6 +16,7 @@ import {
 } from "vitest";
 
 import { GET } from "../app/stats/route";
+import { publishDaily } from "./lineup-helpers";
 import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
@@ -33,7 +34,7 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  await ctx.db.execute(sql`truncate table users cascade`);
+  await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
 });
 
 afterEach(() => {
@@ -73,7 +74,7 @@ function statsRequest(token?: string): NextRequest {
 
 async function insertHistoryRow(init: {
   userId: string;
-  game: "binairo" | "sudoku" | "nonogram" | "termo";
+  game: "binairo" | "crossword" | "sudoku" | "nonogram" | "termo";
   date: string;
   outcome: "won" | "lost";
   completedAtDate: string;
@@ -229,5 +230,58 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
     );
     expect(coldBody.todayTermoGuesses).toBeNull();
     expect(coldBody.termo.distribution).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe("GET /stats — the crossword lineup (#276, ADR-0087)", () => {
+  it("T-API-S231: a five-game day, crossword included, counts as one perfect day", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of [
+      "binairo",
+      "sudoku",
+      "nonogram",
+      "termo",
+      "crossword",
+    ] as const) {
+      await publishDaily(ctx.db, game, today);
+      await insertHistoryRow({
+        userId,
+        game,
+        date: today,
+        outcome: "won",
+        completedAtDate: today,
+        guesses: game === "termo" ? 3 : undefined,
+      });
+    }
+
+    const body = statsResponseSchema.parse(
+      await (await GET(statsRequest(token))).json(),
+    );
+    expect(body.perfectDays).toBe(1);
+  });
+
+  it("T-API-S232: a launch-day four-game day stays perfect when the crossword row was created after published_at", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+    for (const game of ["binairo", "sudoku", "nonogram", "termo"] as const) {
+      await publishDaily(ctx.db, game, today);
+      await insertHistoryRow({
+        userId,
+        game,
+        date: today,
+        outcome: "won",
+        completedAtDate: today,
+        guesses: game === "termo" ? 3 : undefined,
+      });
+    }
+    await publishDaily(ctx.db, "crossword", today, {
+      insertedAfterPublish: true,
+    });
+
+    const body = statsResponseSchema.parse(
+      await (await GET(statsRequest(token))).json(),
+    );
+    expect(body.perfectDays).toBe(1);
   });
 });

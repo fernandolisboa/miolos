@@ -1,4 +1,8 @@
-import { statsResponseSchema, type StatsCalendarResponse } from "@miolos/core";
+import {
+  statsResponseSchema,
+  TIMED_GAMES,
+  type StatsCalendarResponse,
+} from "@miolos/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -44,6 +48,13 @@ const STATS = statsResponseSchema.parse({
     averageSampleCount: 1,
     histogram: [0, 0, 0, 0, 1, 0],
   },
+  crossword: {
+    solved: 0,
+    bestMs: null,
+    averageMs: null,
+    averageSampleCount: 0,
+    histogram: [0, 0, 0, 0, 0, 0],
+  },
   termo: { solved: 12, distribution: [0, 1, 4, 5, 2, 0, 3] },
   perfectDays: 2,
   todayTermoGuesses: null,
@@ -83,8 +94,12 @@ describe("the stats screen's honest zero (T-WEB-S153)", () => {
       screen.getByText(messages.stats.perfectDays.label).closest("section"),
     ).toHaveAttribute("aria-hidden", "true");
 
-    expect(screen.getAllByText(messages.stats.rows.best)).toHaveLength(3);
-    expect(screen.getAllByText(messages.stats.rows.average)).toHaveLength(3);
+    expect(screen.getAllByText(messages.stats.rows.best)).toHaveLength(
+      TIMED_GAMES.length,
+    );
+    expect(screen.getAllByText(messages.stats.rows.average)).toHaveLength(
+      TIMED_GAMES.length,
+    );
     expect(
       screen.getByText(messages.stats.rows.solved(messages.games.termo.name)),
     ).toBeInTheDocument();
@@ -114,7 +129,8 @@ describe("the fetched aggregates render (T-WEB-S154)", () => {
       screen.getByText(messages.stats.rows.solved(messages.games.sudoku.name)),
     ).toBeInTheDocument();
 
-    expect(screen.getAllByText(messages.stats.emptyValue)).toHaveLength(2);
+    // binairo and crossword are both zero in STATS: best + average each, 4 blanks.
+    expect(screen.getAllByText(messages.stats.emptyValue)).toHaveLength(4);
 
     expect(
       screen.getByLabelText(

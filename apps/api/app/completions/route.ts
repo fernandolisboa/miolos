@@ -2,6 +2,7 @@ import {
   binairoDailyContentSchema,
   completionRequestSchema,
   completionResponseSchema,
+  crosswordDailyContentSchema,
   isWithinCreditWindow,
   nonogramDailyContentSchema,
   onTimeAtWrite,
@@ -61,7 +62,7 @@ type GridCompletionGame = Exclude<CompletionRequest["game"], "termo">;
 function storedSolution(
   game: GridCompletionGame,
   content: unknown,
-): readonly number[] {
+): readonly (number | string | null)[] {
   switch (game) {
     case "binairo":
       return binairoDailyContentSchema.parse(content).solution;
@@ -71,6 +72,8 @@ function storedSolution(
         .reveal.solution.flatMap((row) => row.map((cell) => (cell ? 1 : 0)));
     case "sudoku":
       return sudokuDailyContentSchema.parse(content).solution;
+    case "crossword":
+      return crosswordDailyContentSchema.parse(content).grid.flat();
   }
 }
 

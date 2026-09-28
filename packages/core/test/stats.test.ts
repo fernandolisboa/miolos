@@ -5,6 +5,8 @@ import {
   computeStats,
   perfectDays,
   timeBucketIndex,
+  type Game,
+  type PublishedDaily,
   type StatsRow,
 } from "../src/index";
 
@@ -24,57 +26,152 @@ function row(
   };
 }
 
-function perfectDay(date: string): StatsRow[] {
-  return [
-    row({ game: "binairo", date }),
-    row({ game: "sudoku", date }),
-    row({ game: "nonogram", date }),
-    row({ game: "termo", date }),
-  ];
+const ORIGINAL_FOUR: readonly Game[] = [
+  "binairo",
+  "sudoku",
+  "nonogram",
+  "termo",
+];
+
+function perfectDay(
+  date: string,
+  games: readonly Game[] = ORIGINAL_FOUR,
+): StatsRow[] {
+  return games.map((game) => row({ game, date }));
+}
+
+function lineup(
+  dates: readonly string[],
+  games: readonly Game[] = ORIGINAL_FOUR,
+): PublishedDaily[] {
+  return dates.flatMap((date) => games.map((game) => ({ date, game })));
 }
 
 describe("perfectDays (ADR-0051, plan 033 D7)", () => {
   it("T-CORE-S59: exactly four on-time wins of one day is perfect; any three are not", () => {
     const allFour = perfectDay("2026-08-10");
-    expect(perfectDays(allFour)).toEqual(["2026-08-10"]);
+    expect(perfectDays(allFour, lineup(["2026-08-10"]))).toEqual([
+      "2026-08-10",
+    ]);
 
     for (let i = 0; i < allFour.length; i += 1) {
       const three = allFour.filter((_, index) => index !== i);
-      expect(perfectDays(three)).toEqual([]);
+      expect(perfectDays(three, lineup(["2026-08-10"]))).toEqual([]);
     }
 
     expect(
-      perfectDays([...perfectDay("2026-08-11"), ...perfectDay("2026-08-09")]),
+      perfectDays(
+        [...perfectDay("2026-08-11"), ...perfectDay("2026-08-09")],
+        lineup(["2026-08-11", "2026-08-09"]),
+      ),
     ).toEqual(["2026-08-09", "2026-08-11"]);
   });
 
   it("T-CORE-S60: a lost Termo forfeits the day; a late win never counts; a played row never counts", () => {
     expect(
-      perfectDays([
-        row({ game: "binairo", date: TODAY }),
-        row({ game: "sudoku", date: TODAY }),
-        row({ game: "nonogram", date: TODAY }),
-        row({ game: "termo", date: TODAY, outcome: "lost", guesses: 6 }),
-      ]),
+      perfectDays(
+        [
+          row({ game: "binairo", date: TODAY }),
+          row({ game: "sudoku", date: TODAY }),
+          row({ game: "nonogram", date: TODAY }),
+          row({ game: "termo", date: TODAY, outcome: "lost", guesses: 6 }),
+        ],
+        lineup([TODAY]),
+      ),
     ).toEqual([]);
 
     expect(
-      perfectDays([
-        row({ game: "binairo", date: TODAY }),
-        row({ game: "sudoku", date: TODAY }),
-        row({ game: "nonogram", date: TODAY }),
-        row({ game: "termo", date: TODAY, onTime: false }),
-      ]),
+      perfectDays(
+        [
+          row({ game: "binairo", date: TODAY }),
+          row({ game: "sudoku", date: TODAY }),
+          row({ game: "nonogram", date: TODAY }),
+          row({ game: "termo", date: TODAY, onTime: false }),
+        ],
+        lineup([TODAY]),
+      ),
     ).toEqual([]);
 
     expect(
-      perfectDays([
-        row({ game: "binairo", date: TODAY, outcome: "lost" }),
-        row({ game: "sudoku", date: TODAY }),
-        row({ game: "nonogram", date: TODAY }),
-        row({ game: "termo", date: TODAY }),
-      ]),
+      perfectDays(
+        [
+          row({ game: "binairo", date: TODAY, outcome: "lost" }),
+          row({ game: "sudoku", date: TODAY }),
+          row({ game: "nonogram", date: TODAY }),
+          row({ game: "termo", date: TODAY }),
+        ],
+        lineup([TODAY]),
+      ),
     ).toEqual([]);
+  });
+});
+
+describe("perfectDays over the published lineup (ADR-0087)", () => {
+  const ALL_FIVE: readonly Game[] = [...ORIGINAL_FOUR, "crossword"];
+  const DARK_TERMO: readonly Game[] = [
+    "binairo",
+    "sudoku",
+    "nonogram",
+    "crossword",
+  ];
+
+  it("T-CORE-S125: a day published before the crossword needs its four; a five-game day needs all five", () => {
+    const early = "2026-09-01";
+    expect(perfectDays(perfectDay(early), lineup([early]))).toEqual([early]);
+
+    const five = "2026-10-01";
+    expect(perfectDays(perfectDay(five), lineup([five], ALL_FIVE))).toEqual([]);
+    expect(
+      perfectDays(perfectDay(five, ALL_FIVE), lineup([five], ALL_FIVE)),
+    ).toEqual([five]);
+  });
+
+  it("T-CORE-S125: a dark-Termo day needs the others; a lost Termo in the lineup still forfeits", () => {
+    const dark = "2026-10-02";
+    expect(
+      perfectDays(perfectDay(dark, DARK_TERMO), lineup([dark], DARK_TERMO)),
+    ).toEqual([dark]);
+
+    const rows = [
+      ...perfectDay(dark, DARK_TERMO),
+      row({ game: "termo", date: dark, outcome: "lost", guesses: 6 }),
+    ];
+    expect(perfectDays(rows, lineup([dark], ALL_FIVE))).toEqual([]);
+  });
+
+  it("T-CORE-S125: an empty lineup is never perfect, and a daily absent from it (killed, or inserted after midnight) is not required", () => {
+    const day = "2026-10-03";
+    expect(perfectDays(perfectDay(day, ALL_FIVE), [])).toEqual([]);
+
+    const launchDay = "2026-10-04";
+    const fourWins = perfectDay(launchDay);
+    expect(perfectDays(fourWins, lineup([launchDay]))).toEqual([launchDay]);
+    expect(
+      perfectDays(
+        [...fourWins, row({ game: "crossword", date: launchDay })],
+        lineup([launchDay]),
+      ),
+    ).toEqual([launchDay]);
+  });
+
+  it("T-CORE-S125: one date's lineup never decides another's, and the calendar and the count agree", () => {
+    const withCrossword = "2026-10-05";
+    const withoutCrossword = "2026-10-06";
+    const rows = [
+      ...perfectDay(withCrossword),
+      ...perfectDay(withoutCrossword),
+    ];
+    const published = [
+      ...lineup([withCrossword], ALL_FIVE),
+      ...lineup([withoutCrossword]),
+    ];
+    expect(perfectDays(rows, published)).toEqual([withoutCrossword]);
+    expect(computeStats(rows, "2026-10-06", published).perfectDays).toBe(1);
+    expect(
+      computeCalendar(rows, withCrossword, "2026-10-06", 1, published).map(
+        (day) => day.perfect,
+      ),
+    ).toEqual([false, true]);
   });
 });
 
@@ -94,6 +191,7 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
       SINCE,
       TODAY,
       1,
+      lineup([SINCE, "2026-08-11", "2026-08-12"]),
     );
     expect(mixed).toEqual([
       { date: "2026-08-10", state: "onTime", perfect: false },
@@ -102,7 +200,7 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
       { date: "2026-08-13", state: "missed", perfect: false },
     ]);
 
-    const empty = computeCalendar([], SINCE, TODAY, 1);
+    const empty = computeCalendar([], SINCE, TODAY, 1, []);
     expect(empty.map((day) => day.date)).toEqual([
       "2026-08-10",
       "2026-08-11",
@@ -116,6 +214,7 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
       SINCE,
       TODAY,
       1,
+      [],
     );
     expect(birthEdge[0]).toEqual({
       date: "2026-08-09",
@@ -124,7 +223,7 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
     });
 
     const farRow = row({ game: "binairo", date: "2026-08-03", onTime: false });
-    const clamped = computeCalendar([farRow], SINCE, TODAY, 1);
+    const clamped = computeCalendar([farRow], SINCE, TODAY, 1, []);
     expect(clamped.map((day) => day.date)).toEqual([
       "2026-08-10",
       "2026-08-11",
@@ -133,18 +232,19 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
     ]);
     expect(clamped.every((day) => day.date !== "2026-08-03")).toBe(true);
 
-    expect(computeStats([farRow], TODAY).binairo.solved).toBe(1);
+    expect(computeStats([farRow], TODAY, []).binairo.solved).toBe(1);
 
     const future = computeCalendar(
       [row({ game: "binairo", date: "2026-08-14" })],
       SINCE,
       TODAY,
       1,
+      [],
     );
     expect(future.at(-1)?.date).toBe(TODAY);
     expect(future).toHaveLength(4);
 
-    expect(computeCalendar([], "2026-08-14", TODAY, 1)).toEqual([]);
+    expect(computeCalendar([], "2026-08-14", TODAY, 1, [])).toEqual([]);
   });
 
   it("T-CORE-S63a: only a won row extends the range — a lost row at since − 1 never does, a won row there does, a far won row does not", () => {
@@ -155,16 +255,16 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
       onTime: false,
       guesses: 6,
     });
-    const lostOnly = computeCalendar([lostAtBirthEdge], SINCE, TODAY, 1);
+    const lostOnly = computeCalendar([lostAtBirthEdge], SINCE, TODAY, 1, []);
     expect(lostOnly.map((day) => day.date)).toEqual([
       "2026-08-10",
       "2026-08-11",
       "2026-08-12",
       "2026-08-13",
     ]);
-    expect(computeStats([lostAtBirthEdge], TODAY).termo.distribution[6]).toBe(
-      1,
-    );
+    expect(
+      computeStats([lostAtBirthEdge], TODAY, []).termo.distribution[6],
+    ).toBe(1);
 
     const wonAtBirthEdge = row({
       game: "binairo",
@@ -176,6 +276,7 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
       SINCE,
       TODAY,
       1,
+      [],
     );
     expect(wonExtends[0]).toEqual({
       date: "2026-08-09",
@@ -184,9 +285,9 @@ describe("computeCalendar (ADR-0008 rule 2, plan 033 D6)", () => {
     });
 
     const farWon = row({ game: "sudoku", date: "2026-08-01" });
-    const farOnly = computeCalendar([farWon], SINCE, TODAY, 1);
+    const farOnly = computeCalendar([farWon], SINCE, TODAY, 1, []);
     expect(farOnly[0]?.date).toBe(SINCE);
-    expect(computeStats([farWon], TODAY).sudoku.solved).toBe(1);
+    expect(computeStats([farWon], TODAY, []).sudoku.solved).toBe(1);
   });
 });
 
@@ -199,7 +300,7 @@ describe("computeCalendar after the archive widening (#31, ADR-0053)", () => {
       date: "2025-07-06",
       onTime: false,
     });
-    const days = computeCalendar([prebirth], SINCE, TODAY, 1);
+    const days = computeCalendar([prebirth], SINCE, TODAY, 1, []);
 
     expect(days.some((day) => day.date === "2025-07-06")).toBe(false);
     expect(days[0]?.date).toBe(SINCE);
@@ -207,16 +308,18 @@ describe("computeCalendar after the archive widening (#31, ADR-0053)", () => {
 
     expect(days.every((day) => day.date >= SINCE)).toBe(true);
 
-    expect(computeStats([prebirth], TODAY).binairo.solved).toBe(1);
+    expect(computeStats([prebirth], TODAY, []).binairo.solved).toBe(1);
   });
 
   it("T-CORE-S81: the clamp is fed by rollover slack, not by the write window", () => {
     for (const onTime of [true, false]) {
       const twoBack = row({ game: "sudoku", date: "2026-08-08", onTime });
-      expect(computeCalendar([twoBack], SINCE, TODAY, 1)[0]?.date).toBe(SINCE);
+      expect(computeCalendar([twoBack], SINCE, TODAY, 1, [])[0]?.date).toBe(
+        SINCE,
+      );
 
       const oneBack = row({ game: "sudoku", date: "2026-08-09", onTime });
-      expect(computeCalendar([oneBack], SINCE, TODAY, 1)[0]?.date).toBe(
+      expect(computeCalendar([oneBack], SINCE, TODAY, 1, [])[0]?.date).toBe(
         "2026-08-09",
       );
     }
@@ -241,6 +344,7 @@ describe("computeCalendar after the archive widening (#31, ADR-0053)", () => {
       SINCE,
       TODAY,
       1,
+      [],
     );
     expect(days).toEqual([
       { date: "2026-08-10", state: "missed", perfect: false },
@@ -259,12 +363,12 @@ describe("computeCalendar after the archive widening (#31, ADR-0053)", () => {
       onTime: false,
       guesses: 6,
     });
-    expect(computeCalendar([lateLoss], SINCE, TODAY, 1)[1]).toEqual({
+    expect(computeCalendar([lateLoss], SINCE, TODAY, 1, [])[1]).toEqual({
       date: "2026-08-11",
       state: "missed",
       perfect: false,
     });
-    expect(computeStats([lateLoss], TODAY).termo.distribution[6]).toBe(1);
+    expect(computeStats([lateLoss], TODAY, []).termo.distribution[6]).toBe(1);
 
     const lateAll = [
       row({ game: "binairo", date: "2026-08-11", onTime: false }),
@@ -272,9 +376,11 @@ describe("computeCalendar after the archive widening (#31, ADR-0053)", () => {
       row({ game: "nonogram", date: "2026-08-11", onTime: false }),
       row({ game: "termo", date: "2026-08-11", onTime: false }),
     ];
-    expect(perfectDays(lateAll)).toEqual([]);
+    expect(perfectDays(lateAll, lineup(["2026-08-11"]))).toEqual([]);
     expect(
-      computeCalendar(lateAll, SINCE, TODAY, 1).every((day) => !day.perfect),
+      computeCalendar(lateAll, SINCE, TODAY, 1, lineup(["2026-08-11"])).every(
+        (day) => !day.perfect,
+      ),
     ).toBe(true);
   });
 });
@@ -301,7 +407,7 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
         elapsedMs: 1_000,
       }),
     ];
-    const stats = computeStats(rows, TODAY);
+    const stats = computeStats(rows, TODAY, []);
 
     expect(stats.binairo.solved).toBe(5);
 
@@ -315,6 +421,7 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
     const stale = computeStats(
       [row({ game: "sudoku", date: "2026-07-01", elapsedMs: 400_000 })],
       TODAY,
+      [],
     );
     expect(stale.sudoku.bestMs).toBe(400_000);
     expect(stale.sudoku.averageMs).toBeNull();
@@ -331,6 +438,28 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
     expect(timeBucketIndex(239_999)).toBe(0);
     expect(timeBucketIndex(240_000)).toBe(1);
     expect(timeBucketIndex(540_000)).toBe(5);
+  });
+
+  it("T-CORE-S129: the crossword carries a timed block of its own, and no other game's rows reach it", () => {
+    const stats = computeStats(
+      [
+        row({ game: "crossword", date: TODAY, elapsedMs: 250_000 }),
+        row({ game: "crossword", date: YESTERDAY, elapsedMs: 90_000 }),
+        row({ game: "crossword", date: "2026-08-01", onTime: false }),
+        row({ game: "sudoku", date: TODAY, elapsedMs: 10_000 }),
+      ],
+      TODAY,
+      [],
+    );
+    expect(stats.crossword).toEqual({
+      solved: 3,
+      bestMs: 90_000,
+      averageMs: 170_000,
+      averageSampleCount: 2,
+      histogram: [1, 1, 0, 0, 0, 0],
+    });
+    expect(stats.sudoku.solved).toBe(1);
+    expect(stats.termo.solved).toBe(0);
   });
 
   it("T-CORE-S66: the distribution buckets on-time wins by guesses; the fail row counts every lost row, unqualified", () => {
@@ -359,6 +488,7 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
         row({ game: "termo", date: "2026-08-07", guesses: null }),
       ],
       TODAY,
+      [],
     );
     expect(stats.termo.distribution).toEqual([1, 0, 0, 2, 0, 0, 2]);
 
@@ -367,7 +497,7 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
 
   it("T-CORE-S67: todayTermoGuesses is the won-today row's count, else null", () => {
     expect(
-      computeStats([row({ game: "termo", date: TODAY, guesses: 5 })], TODAY)
+      computeStats([row({ game: "termo", date: TODAY, guesses: 5 })], TODAY, [])
         .todayTermoGuesses,
     ).toBe(5);
 
@@ -375,25 +505,31 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
       computeStats(
         [row({ game: "termo", date: TODAY, outcome: "lost", guesses: 6 })],
         TODAY,
+        [],
       ).todayTermoGuesses,
     ).toBeNull();
 
-    expect(computeStats([], TODAY).todayTermoGuesses).toBeNull();
+    expect(computeStats([], TODAY, []).todayTermoGuesses).toBeNull();
 
     expect(
-      computeStats([row({ game: "termo", date: YESTERDAY, guesses: 2 })], TODAY)
-        .todayTermoGuesses,
+      computeStats(
+        [row({ game: "termo", date: YESTERDAY, guesses: 2 })],
+        TODAY,
+        [],
+      ).todayTermoGuesses,
     ).toBeNull();
   });
 
   it("T-CORE-S67a: duplicate won-today termo rows answer the minimum guess count — total and order-independent", () => {
     const five = row({ game: "termo", date: TODAY, guesses: 5 });
     const two = row({ game: "termo", date: TODAY, guesses: 2 });
-    expect(computeStats([five, two], TODAY).todayTermoGuesses).toBe(2);
-    expect(computeStats([two, five], TODAY).todayTermoGuesses).toBe(2);
+    expect(computeStats([five, two], TODAY, []).todayTermoGuesses).toBe(2);
+    expect(computeStats([two, five], TODAY, []).todayTermoGuesses).toBe(2);
 
     const nullGuess = row({ game: "termo", date: TODAY, guesses: null });
-    expect(computeStats([nullGuess, five], TODAY).todayTermoGuesses).toBe(5);
-    expect(computeStats([nullGuess], TODAY).todayTermoGuesses).toBeNull();
+    expect(computeStats([nullGuess, five], TODAY, []).todayTermoGuesses).toBe(
+      5,
+    );
+    expect(computeStats([nullGuess], TODAY, []).todayTermoGuesses).toBeNull();
   });
 });

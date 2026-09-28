@@ -37,6 +37,10 @@ export const medalCopy = {
     name: "Trinta de Termo",
     description: "Venceu o Termo diário 30 vezes.",
   },
+  "crossword-30": {
+    name: "Trinta cruzadas",
+    description: "Venceu a Cruzadinha diária 30 vezes.",
+  },
   "streak-3": {
     name: "Três dias de tinta",
     description: "Chegou a uma sequência de 3 dias.",
@@ -58,8 +62,9 @@ export const medalCopy = {
     description: "Chegou a uma sequência de 365 dias.",
   },
   "perfect-1": {
-    name: "Quatro de quatro",
-    description: "Concluiu um Dia Perfeito: os quatro jogos no mesmo dia.",
+    name: "Tudo em dia",
+    description:
+      "Concluiu um Dia Perfeito: todos os jogos daquele dia, no próprio dia.",
   },
   "perfect-5": {
     name: "Mão firme",
@@ -87,7 +92,7 @@ export const medalCopy = {
   },
   "all-games": {
     name: "Circuito completo",
-    description: "Venceu cada um dos quatro jogos ao menos uma vez.",
+    description: "Venceu Binairo, Sudoku, Nonogram e Termo ao menos uma vez.",
   },
   founder: {
     name: "Da primeira leva",

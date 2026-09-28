@@ -1,5 +1,6 @@
 import {
   binairoDailyContentSchema,
+  crosswordDailyContentSchema,
   nonogramDailyContentSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
@@ -20,6 +21,11 @@ import {
   generateBinairo,
   validateBinairo,
 } from "@miolos/games/binairo";
+import {
+  CrosswordGenerationError,
+  generateCrossword,
+  validateCrossword,
+} from "@miolos/games/crossword";
 import {
   generateNonogram,
   NONOGRAM_WEEKDAY_CRITERIA,
@@ -315,6 +321,53 @@ export async function topUpNonogramBuffer(
   );
 }
 
+export const MAX_CROSSWORD_SEED_RETRIES_PER_DATE = 8;
+
+function attemptCrossword(seed: number): Attempt {
+  let puzzle;
+  try {
+    puzzle = generateCrossword(seed);
+  } catch (error) {
+    if (error instanceof CrosswordGenerationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+  const verdict = validateCrossword(puzzle);
+  if (!verdict.ok) {
+    return {
+      kind: "retry",
+      reason: `validator rejected: ${verdict.failures.join(", ")}`,
+    };
+  }
+  const content = crosswordDailyContentSchema.safeParse(puzzle);
+  if (!content.success) {
+    return {
+      kind: "stop",
+      reason: `content schema rejected: ${content.error.message}`,
+    };
+  }
+  return { kind: "content", content: content.data };
+}
+
+export async function topUpCrosswordBuffer(
+  db: Db,
+  depth: number,
+): Promise<TopUpResult> {
+  return topUpBuffer(
+    db,
+    "crossword",
+    depth,
+    () => (target, insert) =>
+      withSeedRetries(
+        target,
+        MAX_CROSSWORD_SEED_RETRIES_PER_DATE,
+        (seed) => attemptCrossword(seed),
+        insert,
+      ),
+  );
+}
+
 const LOW_ANSWER_LIST_WARNING = 30;
 
 export async function unusedTermoAnswers(db: Db): Promise<TermoAnswer[]> {
@@ -394,3 +447,13 @@ export async function topUpTermoBuffer(
     };
   });
 }
+
+export type TopUp = (db: Db, depth: number) => Promise<TopUpResult>;
+
+export const TOP_UPS: Record<Game, TopUp> = {
+  binairo: topUpBinairoBuffer,
+  sudoku: topUpSudokuBuffer,
+  nonogram: topUpNonogramBuffer,
+  termo: topUpTermoBuffer,
+  crossword: topUpCrosswordBuffer,
+};

@@ -219,7 +219,7 @@ describe("HubOnboarding is a full-width band, not a half-width note (T-WEB-S303)
 });
 
 describe("the hub with the card never blocks play (T-WEB-S248)", () => {
-  it("all four game links PRECEDE the card in document order, nothing is modal, and dismiss moves focus to the first game card's link — never <body>", async () => {
+  it("all game links PRECEDE the card in document order, nothing is modal, and dismiss moves focus to the first game card's link — never <body>", async () => {
     render(<HojePage />);
     const card = await screen.findByText(messages.onboarding.invitation);
 

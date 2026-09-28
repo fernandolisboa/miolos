@@ -1,4 +1,5 @@
 import {
+  crosswordDailyContentSchema,
   nonogramDailyContentSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
@@ -7,6 +8,7 @@ import { sql } from "@miolos/db";
 import { dailyPuzzles, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { isWeekday, type Weekday } from "@miolos/games";
+import { validateCrossword } from "@miolos/games/crossword";
 import {
   NONOGRAM_WEEKDAY_CRITERIA,
   validateNonogram,
@@ -29,11 +31,13 @@ import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 import {
   drawUniformIndex,
   MAX_BINAIRO_SEED_RETRIES_PER_DATE,
+  MAX_CROSSWORD_SEED_RETRIES_PER_DATE,
   MAX_NONOGRAM_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_RUN,
   TopUpAbortedError,
   topUpBinairoBuffer,
+  topUpCrosswordBuffer,
   topUpNonogramBuffer,
   topUpSudokuBuffer,
   topUpTermoBuffer,
@@ -95,6 +99,15 @@ const { nonogram } = vi.hoisted(() => {
 const { binairo } = vi.hoisted(() => ({
   binairo: {
     failWeekdays: new Set<number>(),
+    calls: 0,
+    rejectValidator: false,
+    injectStrayKey: false,
+  },
+}));
+
+const { crossword } = vi.hoisted(() => ({
+  crossword: {
+    failCount: 0,
     calls: 0,
     rejectValidator: false,
     injectStrayKey: false,
@@ -196,6 +209,33 @@ vi.mock("@miolos/games/binairo", async (importOriginal) => {
   };
 });
 
+vi.mock("@miolos/games/crossword", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@miolos/games/crossword")>();
+  return {
+    ...actual,
+    generateCrossword: (
+      seed: Parameters<typeof actual.generateCrossword>[0],
+    ) => {
+      crossword.calls += 1;
+      if (crossword.failCount > 0) {
+        crossword.failCount -= 1;
+        throw new actual.CrosswordGenerationError(seed, 1);
+      }
+      const puzzle = actual.generateCrossword(seed);
+      return crossword.injectStrayKey ? { ...puzzle, stray: 1 } : puzzle;
+    },
+    validateCrossword: (
+      puzzle: Parameters<typeof actual.validateCrossword>[0],
+    ) => {
+      if (crossword.rejectValidator) {
+        return { ok: false, failures: ["letters-mismatch"] };
+      }
+      return actual.validateCrossword(puzzle);
+    },
+  };
+});
+
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -218,6 +258,10 @@ beforeEach(async () => {
   binairo.calls = 0;
   binairo.rejectValidator = false;
   binairo.injectStrayKey = false;
+  crossword.failCount = 0;
+  crossword.calls = 0;
+  crossword.rejectValidator = false;
+  crossword.injectStrayKey = false;
 });
 
 afterAll(async () => {
@@ -253,6 +297,13 @@ function weekdayOf(date: string): Weekday {
     throw new Error(`unreachable: bad weekday for ${date}`);
   }
   return weekday;
+}
+
+async function crosswordRows(): Promise<{ date: string; content: unknown }[]> {
+  const rows = await ctx.db.select().from(dailyPuzzles);
+  return rows
+    .filter((row) => row.game === "crossword")
+    .map((row) => ({ date: row.date, content: row.content }));
 }
 
 describe("topUpBinairoBuffer", () => {
@@ -806,6 +857,70 @@ describe("topUpTermoBuffer", () => {
     expect(aborted.partial.generated).toBe(3);
     expect(aborted.partial.failures).toEqual([]);
   }, 30_000);
+});
+
+describe("topUpCrosswordBuffer", () => {
+  it("T-API-S221: covers a full week with content the strict contract and the validator both accept", async () => {
+    const result = await topUpCrosswordBuffer(ctx.db, 7);
+
+    expect(result).toEqual({ generated: 7, depth: 7, failures: [] });
+    const rows = await crosswordRows();
+    expect(rows).toHaveLength(7);
+    for (const row of rows) {
+      const content = crosswordDailyContentSchema.parse(row.content);
+      expect(validateCrossword(content).ok).toBe(true);
+    }
+  }, 30_000);
+
+  it("T-API-S222: a seed whose generation fails once retries and still fills the date", async () => {
+    crossword.failCount = 1;
+
+    const result = await topUpCrosswordBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(1);
+    expect(result.failures).toEqual([]);
+    expect(crossword.calls).toBe(2);
+    expect(await crosswordRows()).toHaveLength(1);
+  });
+
+  it("T-API-S222: a seed that always fails generation exhausts the per-date retry budget", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    crossword.failCount = Number.POSITIVE_INFINITY;
+
+    const result = await topUpCrosswordBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toContain("crossword generation failed");
+    expect(crossword.calls).toBe(MAX_CROSSWORD_SEED_RETRIES_PER_DATE);
+  });
+
+  it("T-API-S222: a validator that always rejects retries the full per-date budget", async () => {
+    crossword.rejectValidator = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpCrosswordBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toMatch(/^validator rejected:/);
+    expect(crossword.calls).toBe(MAX_CROSSWORD_SEED_RETRIES_PER_DATE);
+  });
+
+  it("T-API-S223: a schema rejection stops the date after one attempt", async () => {
+    crossword.injectStrayKey = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpCrosswordBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toMatch(/^content schema rejected:/);
+    expect(crossword.calls).toBe(1);
+  });
 });
 
 describe("drawUniformIndex", () => {

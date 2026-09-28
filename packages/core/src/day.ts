@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { CompletionOutcome } from "./completion";
-import type { Game } from "./game";
+import { GAMES, recordFor, type Game } from "./game";
 
 export const DAY_STATUSES = ["pending", "completed", "played"] as const;
 
@@ -66,12 +66,7 @@ function statusOfRow(row: DayRow): DayGameStatus {
 }
 
 export function dayStateFromRows(rows: readonly DayRow[]): DayState {
-  return {
-    termo: statusForGame(rows, "termo"),
-    sudoku: statusForGame(rows, "sudoku"),
-    nonogram: statusForGame(rows, "nonogram"),
-    binairo: statusForGame(rows, "binairo"),
-  };
+  return recordFor(GAMES, (game) => statusForGame(rows, game));
 }
 
 function statusForGame(rows: readonly DayRow[], game: Game): DayGameStatus {
@@ -94,12 +89,9 @@ export function dayGamesFromRows(
   extras?: DayClaimExtras,
 ): Readonly<Record<Game, DayGameState>> {
   const statuses = dayStateFromRows(rows);
-  return {
-    termo: claimForGame(rows, "termo", statuses.termo),
-    sudoku: claimForGame(rows, "sudoku", statuses.sudoku),
-    nonogram: claimForGame(rows, "nonogram", statuses.nonogram, extras),
-    binairo: claimForGame(rows, "binairo", statuses.binairo),
-  };
+  return recordFor(GAMES, (game) =>
+    claimForGame(rows, game, statuses[game], extras),
+  );
 }
 
 export interface DayClaimExtras {
@@ -150,10 +142,5 @@ export function mergeDayStatus(
 }
 
 export function mergeDayState(local: DayState, server: DayState): DayState {
-  return {
-    termo: mergeDayStatus(local.termo, server.termo),
-    sudoku: mergeDayStatus(local.sudoku, server.sudoku),
-    nonogram: mergeDayStatus(local.nonogram, server.nonogram),
-    binairo: mergeDayStatus(local.binairo, server.binairo),
-  };
+  return recordFor(GAMES, (game) => mergeDayStatus(local[game], server[game]));
 }
