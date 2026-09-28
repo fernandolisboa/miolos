@@ -25,7 +25,7 @@ const copy = messages.games.crossword.play;
 export function focusBoard(board: HTMLElement | null): void {
   board
     ?.querySelector<HTMLButtonElement>('[data-cell-index][tabindex="0"]')
-    ?.focus();
+    ?.focus({ preventScroll: true });
 }
 
 function numbering(

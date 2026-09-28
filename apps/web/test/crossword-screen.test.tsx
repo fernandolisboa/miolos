@@ -243,6 +243,46 @@ describe("physical typing after a clue or an on-screen key (T-WEB-S441)", () => 
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "a" });
     expect(cellAt(1).getAttribute("aria-label")).toBe(copy.cellAria(1, 2, "a"));
   });
+
+  it("a keyboard-activated on-screen key keeps focus for its arrow navigation", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    tap(cellAt(0));
+    const key = screen.getByRole("button", {
+      name: copy.keyboard.letterAria("c"),
+    });
+    key.focus();
+    fireEvent.click(key, { detail: 0 });
+    expect(document.activeElement).toBe(key);
+    expect(cellAt(0).getAttribute("aria-label")).toBe(copy.cellAria(1, 1, "c"));
+  });
+
+  it("a key tap with nothing selected types into the first white cell", () => {
+    render(<CrosswordScreen daily={LEADING_BLOCK} />);
+    const key = screen.getByRole("button", {
+      name: copy.keyboard.letterAria("a"),
+    });
+    key.focus();
+    fireEvent.click(key, { detail: 1 });
+    expect(cellAt(1).getAttribute("aria-label")).toBe(copy.cellAria(1, 2, "a"));
+    expect(cellAt(0).getAttribute("aria-label")).toBe(copy.blockAria);
+  });
+
+  it("moves focus without scrolling the page back up to the board", () => {
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    render(<CrosswordScreen daily={DAILY} />);
+    tap(cellAt(0));
+    const key = screen.getByRole("button", {
+      name: copy.keyboard.letterAria("c"),
+    });
+    key.focus();
+    focus.mockClear();
+    fireEvent.click(key, { detail: 1 });
+    expect(focus.mock.calls.length).toBeGreaterThan(0);
+    for (const [options] of focus.mock.calls) {
+      expect(options).toEqual({ preventScroll: true });
+    }
+    focus.mockRestore();
+  });
 });
 
 describe("the clue bar and lists (T-WEB-S438)", () => {
