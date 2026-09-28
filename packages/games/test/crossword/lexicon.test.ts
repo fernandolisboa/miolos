@@ -101,6 +101,10 @@ function clueTokens(clue: string): string[] {
     .filter((token) => token !== "");
 }
 
+function clueKey(clue: string): string {
+  return clueTokens(clue).sort().join(" ");
+}
+
 describe("crossword lexicon harness", () => {
   it("every answer is 3-5 letters a-z and its canonical normalizes to it", () => {
     for (const { normalized, canonical } of lexicon) {
@@ -121,8 +125,8 @@ describe("crossword lexicon harness", () => {
     }
   });
 
-  it("clues are unique across the lexicon", () => {
-    expect(duplicatesOf(lexicon.map((row) => row.clue))).toEqual([]);
+  it("clues are unique across the lexicon, ignoring case, accents, punctuation and word order", () => {
+    expect(duplicatesOf(lexicon.map((row) => clueKey(row.clue)))).toEqual([]);
   });
 
   it("no clue gives its answer away", () => {
@@ -131,6 +135,11 @@ describe("crossword lexicon harness", () => {
         expect(token, `${normalized}: ${clue}`).not.toBe(normalized);
         if (normalized.length >= 4) {
           expect(token.startsWith(normalized), `${normalized}: ${clue}`).toBe(
+            false,
+          );
+        }
+        if (token.length >= 3) {
+          expect(normalized.startsWith(token), `${normalized}: ${clue}`).toBe(
             false,
           );
         }
@@ -145,6 +154,7 @@ describe("crossword lexicon harness", () => {
       false,
     );
     expect(clueTokens("Casarão").some((t) => t.startsWith("casa"))).toBe(true);
+    expect(clueKey("Que o melhor ___!")).toBe(clueKey("Que ___ o melhor"));
   });
 
   it("each length keeps its floor", () => {

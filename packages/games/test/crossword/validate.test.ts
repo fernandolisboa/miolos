@@ -117,6 +117,14 @@ describe("validateCrossword", () => {
     expect(validateCrossword(tampered).failures).toEqual(["not-in-lexicon"]);
   });
 
+  it("rejects an entry whose canonical spelling alone differs", () => {
+    const tampered = withEntry(0, (entry) => ({
+      ...entry,
+      canonical: entry.canonical.toUpperCase(),
+    }));
+    expect(validateCrossword(tampered).failures).toEqual(["not-in-lexicon"]);
+  });
+
   it("rejects a repeated word, and not a merely wrong one", () => {
     const first = puzzle.entries[0];
     const index = puzzle.entries.findIndex(

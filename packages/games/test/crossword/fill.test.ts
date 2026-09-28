@@ -46,6 +46,24 @@ describe("fillSlots", () => {
     }
   });
 
+  it("finds a fill whose words straddle a 32-bit chunk boundary", () => {
+    const fillers = Array.from(
+      { length: 31 },
+      (_, i) =>
+        `q${String.fromCharCode(97 + (i % 26))}${String.fromCharCode(97 + Math.floor(i / 26))}`,
+    );
+    const words = [...fillers, "mar", "ela", "me", "al", "ra"];
+    for (let seed = 0; seed < 20; seed += 1) {
+      expect(fill(twoByThree, words, seed)).toEqual([
+        "mar",
+        "ela",
+        "me",
+        "al",
+        "ra",
+      ]);
+    }
+  });
+
   it("returns the lexicon entries themselves, clue included", () => {
     const lexicon = lexiconOf(["mar", "ela", "me", "al", "ra"]);
     const result = fillSlots(

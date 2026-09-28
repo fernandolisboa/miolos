@@ -248,6 +248,7 @@ cosa	cosa	inflection
 cosas	cosas	foreign
 coto	coto	obscure
 cova	cova	offensive
+covas	covas	offensive
 crack	crack	foreign
 cres	crês	inflection
 creta	creta	proper-noun
@@ -332,6 +333,7 @@ enel	enel	brand
 enema	enema	obscure
 enfia	enfia	obscene
 enfie	enfie	obscene
+enfio	enfio	obscene
 enter	enter	foreign
 eres	eres	foreign
 ereto	ereto	obscene
@@ -963,6 +965,8 @@ per	per	foreign
 peri	peri	proper-noun
 perla	perla	foreign
 pero	pero	archaic
+peru	peru	obscene
+perus	perus	obscene
 peta	peta	obscure
 petar	petar	not-a-word
 pete	pete	proper-noun
@@ -1038,6 +1042,7 @@ quota	quota	regional
 rabi	rabi	obscure
 rabo	rabo	obscene
 rabos	rabos	obscene
+racha	racha	obscene
 rad	rad	abbreviation
 rada	rada	not-a-word
 rafa	rafa	proper-noun
@@ -1095,6 +1100,7 @@ rojo	rojo	archaic
 rola	rola	obscene
 rom	rom	abbreviation
 romeu	romeu	proper-noun
+rosca	rosca	obscene
 rosco	rosco	regional
 roses	roses	foreign
 rouge	rouge	foreign
@@ -1345,6 +1351,8 @@ val	val	proper-noun
 valda	valda	brand
 vali	vali	inflection
 van	van	foreign
+vara	vara	obscene
+varas	varas	obscene
 varga	varga	regional
 vas	vás	inflection
 vasco	vasco	proper-noun
@@ -1411,6 +1419,7 @@ zito	zito	proper-noun
 zoe	zoe	proper-noun
 zola	zola	proper-noun
 zona	zona	offensive
+zonas	zonas	offensive
 zone	zone	inflection
 zoo	zoo	abbreviation
 zoom	zoom	foreign

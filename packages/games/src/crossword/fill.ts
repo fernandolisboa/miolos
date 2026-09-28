@@ -105,6 +105,8 @@ function countCandidates(state: SlotState, letters: Int8Array): number {
   return popcount(candidates);
 }
 
+// Backtracking fill: always branch on the slot with the fewest candidates (MRV),
+// counted by intersecting per-(position, letter) bitsets of the lexicon.
 export function fillSlots(
   slots: readonly CrosswordSlot[],
   index: CrosswordLexiconIndex,

@@ -40,11 +40,9 @@ export function generateFrom(
   const index = buildLexiconIndex(lexicon);
   const seedRng = createSeededRandom(normalizedSeed);
 
-  for (
-    let attempt = 1;
-    attempt <= CROSSWORD_MAX_GENERATION_ATTEMPTS;
-    attempt += 1
-  ) {
+  let attempts = 0;
+  while (attempts < CROSSWORD_MAX_GENERATION_ATTEMPTS) {
+    attempts += 1;
     const rng = createSeededRandom(Math.floor(seedRng.next() * 0x100000000));
     const template =
       CROSSWORD_TEMPLATES[rng.nextInt(CROSSWORD_TEMPLATES.length)]!;
@@ -56,10 +54,7 @@ export function generateFrom(
     }
   }
 
-  throw new CrosswordGenerationError(
-    normalizedSeed,
-    CROSSWORD_MAX_GENERATION_ATTEMPTS,
-  );
+  throw new CrosswordGenerationError(normalizedSeed, attempts);
 }
 
 export function generateCrossword(seed: number): CrosswordPuzzle {

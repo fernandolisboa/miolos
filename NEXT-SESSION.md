@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-**One open question, asked in the project thread:** how Dia Perfeito counts once Cruzadinha is a fifth daily (default: every daily published that day). The ⚡ decision on #200 is still open and still low urgency; that default answers its option (c). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**One open question, ledger NOW §2:** how Dia Perfeito counts once Cruzadinha is a fifth daily (default: every daily published that day). The ⚡ decision on #200 is still open and still low urgency; that default answers its option (c). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 

@@ -61,9 +61,11 @@ describe("generateCrossword", () => {
   });
 
   it("throws CrosswordGenerationError after every attempt fails", () => {
-    const unfillable = [
-      { normalized: "mar", canonical: "mar", clue: "Oceano" },
-    ];
+    const unfillable = ["mar", "casa", "praia"].map((word) => ({
+      normalized: word,
+      canonical: word,
+      clue: word,
+    }));
     let caught: unknown;
     try {
       generateFrom(7, unfillable);

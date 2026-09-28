@@ -17,11 +17,11 @@ The answer words and clues the Cruzadinha generator fills its 5×5 templates fro
 1. **Spelling check:** LibreOffice VERO `pt_BR.dic` and `pt_BR.aff` (Projeto VERO, Raimundo Moura and contributors; `https://github.com/LibreOffice/dictionaries`), dual-licensed LGPLv3 and MPL-2.0. Used only through a Hunspell lookup (`spylls`) to keep correctly spelled forms, inflected ones included. No dictionary data beyond membership ships: `lexicon.tsv` is a selection of ordinary Portuguese words with clues written for Miolos.
 2. **Frequency ranking:** hermitdave/FrequencyWords `pt_br_full.txt` (OpenSubtitles 2018), MIT code and CC-BY-SA-4.0 content. Used only to rank; no frequency ships.
 
-Both are pinned by sha256 in `candidates.py`, so an upstream change fails the run instead of shifting the pool. IME-USP, Termo's source, is not reachable from the build environment.
+Both are pinned by sha256 in `candidates.py`, so an upstream change fails the run instead of shifting the pool.
 
 ## Pipeline
 
-1. **Candidates** (`candidates.py`): lowercase words within the frequency top 60,000 that the VERO dictionary accepts and whose normalized form matches `^[a-z]{3,5}$`. The canonical is the most frequent spelling that normalizes to it. 5,610 candidates.
+1. **Candidates** (`candidates.py`): lowercase words within the frequency top 60,000 that the VERO dictionary accepts and whose normalized form matches `^[a-z]{3,5}$`. The canonical is the most frequent spelling that normalizes to it.
 2. **Curation** (model judgment, not reproducible, as with Termo): each candidate is kept with one clue or rejected with one reason. A consistency pass then re-reads every kept row.
 
 ## Constraints
@@ -37,8 +37,8 @@ Mechanical, enforced by the harness:
 
 - `normalized` matches `^[a-z]{3,5}$` and is the normalized form of `canonical`. Rows are sorted and unique.
 - A clue is at most 48 characters, starts with an uppercase letter or `___`, and has no terminal period.
-- Clues are unique across the lexicon.
-- No normalized clue token equals the answer. For answers of 4+ letters, no clue token starts with the answer. (A raw substring rule would ban `amarelo` for `mar`.)
+- Clues are unique across the lexicon, compared as sorted normalized tokens, so punctuation and word order do not make two clues different.
+- No normalized clue token equals the answer. For answers of 4+ letters, no clue token starts with the answer, and no answer starts with a clue token of 3+ letters. (A raw substring rule would ban `amarelo` for `mar`.)
 - Per-length floors: 3 letters ≥ 220, 4 letters ≥ 1,050, 5 letters ≥ 2,850. They protect fillability. If one binds, widen the pool; never lower the floor.
 - `rejected.tsv` uses only the closed reason set and shares no word with `lexicon.tsv`.
 
