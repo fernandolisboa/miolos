@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { renderTermoWordsModule } from "../../scripts/render-termo-words";
-import { normalizeWord } from "../../src/termo/normalize";
+import { normalizeWord } from "../../src/normalize";
 import {
   isValidGuess,
   TERMO_ANSWERS,

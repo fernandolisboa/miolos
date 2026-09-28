@@ -6,12 +6,12 @@ import {
   crosswordDirectionSchema,
   crosswordGridSchema,
   dailyBinairoResponseSchema,
-  dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
   nonogramCluesSchema,
   nonogramSizeSchema,
+  projectCrosswordDaily,
   sudokuDigitSchema,
   sudokuGivenCellSchema,
   sudokuTierSchema,
@@ -149,21 +149,10 @@ export function stripDailyContent(
       termoDailyContentSchema.parse(content);
       return dailyTermoResponseSchema.parse({ game: "termo", date });
     }
-    case "crossword": {
-      const parsed = crosswordDailyContentSchema.parse(content);
-      return dailyCrosswordResponseSchema.parse({
-        game: "crossword",
+    case "crossword":
+      return projectCrosswordDaily(
         date,
-        grid: parsed.grid,
-        clues: parsed.entries.map((entry) => ({
-          number: entry.number,
-          direction: entry.direction,
-          row: entry.row,
-          col: entry.col,
-          length: entry.normalized.length,
-          clue: entry.clue,
-        })),
-      });
-    }
+        crosswordDailyContentSchema.parse(content),
+      );
   }
 }

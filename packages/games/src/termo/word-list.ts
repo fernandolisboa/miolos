@@ -1,4 +1,4 @@
-import { normalizeWord } from "./normalize";
+import { normalizeWord } from "../normalize";
 import { ANSWER_CANONICALS, VALIDATION_WORDS } from "./words.generated";
 
 export interface TermoAnswer {

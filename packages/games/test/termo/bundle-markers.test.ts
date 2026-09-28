@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { normalizeWord } from "../../src/termo/normalize";
+import { normalizeWord } from "../../src/normalize";
 import {
   isValidGuess,
   TERMO_ANSWERS,

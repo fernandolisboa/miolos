@@ -9,7 +9,7 @@ import {
   renderCrosswordLexiconModule,
 } from "../../scripts/render-crossword-lexicon";
 import { CROSSWORD_LEXICON } from "../../src/crossword/lexicon.generated";
-import { normalizeWord } from "../../src/termo/normalize";
+import { normalizeWord } from "../../src/normalize";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const contentDir = join(

@@ -89,6 +89,7 @@ export {
   dailyTermoResponseSchema,
   isoDateString,
   nonogramSizeSchema,
+  projectCrosswordDaily,
   sudokuDigitSchema,
   type DailyBinairoResponse,
   type DailyCrosswordResponse,

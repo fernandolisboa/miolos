@@ -152,6 +152,37 @@ export type DailyCrosswordResponse = z.infer<
   typeof dailyCrosswordResponseSchema
 >;
 
+interface CrosswordProjectionSource {
+  readonly grid: readonly (readonly (string | null)[])[];
+  readonly entries: readonly {
+    readonly number: number;
+    readonly direction: CrosswordClue["direction"];
+    readonly row: number;
+    readonly col: number;
+    readonly normalized: string;
+    readonly clue: string;
+  }[];
+}
+
+export function projectCrosswordDaily(
+  date: string,
+  { grid, entries }: CrosswordProjectionSource,
+): DailyCrosswordResponse {
+  return dailyCrosswordResponseSchema.parse({
+    game: "crossword",
+    date,
+    grid,
+    clues: entries.map((entry) => ({
+      number: entry.number,
+      direction: entry.direction,
+      row: entry.row,
+      col: entry.col,
+      length: entry.normalized.length,
+      clue: entry.clue,
+    })),
+  });
+}
+
 export const dailyPuzzleResponseSchema = z.discriminatedUnion("game", [
   dailyBinairoResponseSchema,
   dailyCrosswordResponseSchema,
