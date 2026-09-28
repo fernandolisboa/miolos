@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { GAMES } from "@miolos/core";
 import { describe, expect, it, vi } from "vitest";
 
@@ -251,5 +254,56 @@ describe("the archive SHELL routes' openGraph (T-WEB-S335)", () => {
           .not.toContain("cartao");
       }
     }
+  });
+});
+
+describe("the OG deck's archive copy and its home (T-WEB-S206a)", () => {
+  it("archiveTagline is the SHIPPED sentence, not a second spelling of it", () => {
+    expect(messages.archive.lead.startsWith(ogCopy.archiveTagline)).toBe(true);
+
+    expect(ogCopy.archiveTagline.length).toBeGreaterThan(20);
+    expect(ogCopy.archiveTagline.endsWith(".")).toBe(true);
+
+    expect(messages.archive.meta.indexDescription.length).toBeGreaterThan(
+      ogCopy.archiveTagline.length,
+    );
+  });
+
+  it("the archive alt strings compose 'Arquivo' and the wordmark from messages", () => {
+    for (const alt of [
+      ogCopy.altArchiveIndex,
+      ogCopy.altArchiveMonth(formatMonth("2026-08-01")),
+    ]) {
+      expect.soft(alt, alt).toContain(messages.archive.title);
+      expect.soft(alt, alt).toContain(messages.brand.wordmark);
+    }
+
+    expect(ogCopy.altArchiveDay("3 de agosto de 2026")).toContain(
+      "3 de agosto de 2026",
+    );
+    expect(ogCopy.altArchiveMonth("agosto de 2026")).toContain(
+      "agosto de 2026",
+    );
+    expect(ogCopy.archiveDayCaption("2026")).toContain("2026");
+    expect(ogCopy.archiveDayCaption("2026")).toContain(messages.archive.title);
+  });
+
+  it("the deck is OUT of `messages` and out of the i18n barrel, both directions", () => {
+    expect(Object.keys(messages)).not.toContain("og");
+    const barrel = readFileSync(
+      join(import.meta.dirname, "..", "src", "i18n", "index.ts"),
+      "utf8",
+    );
+    const deckSource = readFileSync(
+      join(import.meta.dirname, "..", "src", "i18n", "messages.ts"),
+      "utf8",
+    );
+
+    expect(barrel).toContain("export { messages");
+    expect(deckSource).toContain("export const messages");
+
+    expect(barrel).not.toContain("og/copy");
+    expect(barrel).not.toContain("ogCopy");
+    expect(deckSource).not.toContain("ogCopy");
   });
 });

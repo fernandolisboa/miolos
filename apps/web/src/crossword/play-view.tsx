@@ -1,11 +1,12 @@
 import { formatLongDate, messages } from "../i18n";
-import screen from "../play/screen.module.css";
 import { DAILY_PLAY_BACK, PlayScreenChrome } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
-import { BoardSkeleton } from "./board";
-import { CrosswordBoardView, crosswordReadouts } from "./board-view";
+import {
+  CrosswordBoardView,
+  CrosswordSkeletonBody,
+  crosswordReadouts,
+} from "./board-view";
 import boardStyles from "./crossword-board.module.css";
-import { KeyboardSkeleton } from "./keyboard";
 import type { CrosswordPlay } from "./use-crossword-play";
 
 const copy = messages.games.crossword.play;
@@ -57,10 +58,7 @@ export function PlaySkeleton({
       extraStat={null}
       state={{ kind: "skeleton" }}
     >
-      <div aria-hidden className={screen.gridCard}>
-        <BoardSkeleton />
-      </div>
-      <KeyboardSkeleton />
+      <CrosswordSkeletonBody />
     </PlayScreenChrome>
   );
 }

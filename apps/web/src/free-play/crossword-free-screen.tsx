@@ -2,13 +2,14 @@
 
 import { useEffect } from "react";
 
-import { BoardSkeleton } from "../crossword/board";
-import { CrosswordBoardView, crosswordReadouts } from "../crossword/board-view";
+import {
+  CrosswordBoardView,
+  CrosswordSkeletonBody,
+  crosswordReadouts,
+} from "../crossword/board-view";
 import boardStyles from "../crossword/crossword-board.module.css";
-import { KeyboardSkeleton } from "../crossword/keyboard";
 import { useCrosswordBoard } from "../crossword/use-crossword-board";
 import { messages } from "../i18n";
-import screen from "../play/screen.module.css";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import styles from "./free-play.module.css";
@@ -90,10 +91,7 @@ function CrosswordFreeBoard({
 function GeneratingBoard() {
   return (
     <>
-      <div aria-hidden className={screen.gridCard}>
-        <BoardSkeleton />
-      </div>
-      <KeyboardSkeleton />
+      <CrosswordSkeletonBody />
       <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
   );

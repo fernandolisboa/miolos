@@ -20,7 +20,7 @@ import {
   type CrosswordPlayState,
 } from "./state";
 
-export type CrosswordHint = Hint<string>;
+type CrosswordHint = Hint<string>;
 
 export interface CrosswordBoard {
   readonly state: CrosswordPlayState;

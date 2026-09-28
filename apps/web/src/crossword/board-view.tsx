@@ -4,8 +4,8 @@ import { messages } from "../i18n";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
 import screen from "../play/screen.module.css";
 import { ActiveClueBar, ClueLists } from "./clues";
-import { Board, focusBoard } from "./board";
-import { Keyboard } from "./keyboard";
+import { Board, BoardSkeleton, focusBoard } from "./board";
+import { Keyboard, KeyboardSkeleton } from "./keyboard";
 import type { CrosswordDirection } from "./grid";
 import type { CrosswordBoard } from "./use-crossword-board";
 
@@ -97,6 +97,17 @@ export function CrosswordBoardView({
         direction={state.direction}
         onSelect={selectFromClue}
       />
+    </>
+  );
+}
+
+export function CrosswordSkeletonBody() {
+  return (
+    <>
+      <div aria-hidden className={screen.gridCard}>
+        <BoardSkeleton />
+      </div>
+      <KeyboardSkeleton />
     </>
   );
 }

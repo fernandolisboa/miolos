@@ -3,7 +3,7 @@
 **Status:** Accepted — 2026-09-28 (issue #279)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md)
 **Supersedes in part:** [ADR-0085](./0085-cruzadinha-is-a-seeded-fill-from-a-curated-lexicon.md) decision 7 and its consequence that free play needs a new decision; [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md) decision 6.
-**Amends:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md)'s consequence that generator code is "pure TS and small"; [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md) decision 6's markers; [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decisions 1–3 and 7; [ADR-0047](./0047-bundle-markers-are-route-scoped.md)'s forbidden-everywhere list.
+**Amends:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md)'s consequence that generator code is "pure TS and small"; [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md)'s root-barrel substrate, which gains `normalizeWord`; [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md) decision 6's markers; [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decisions 1–3 and 7; [ADR-0047](./0047-bundle-markers-are-route-scoped.md)'s forbidden-everywhere list; [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) decision 1, whose `T-WEB-S375` also asserts the wall's verdict at the exempt importer.
 
 ## Context
 
@@ -19,10 +19,10 @@ The lexicon also spells all 49 accented Termo answer canonicals, so the single-w
 
 ## Consequences
 
-- `/modo-livre/cruzadinha` is about 275 KB raw heavier than `/`, and carries its own budget in `PER_ROUTE_BUDGET`. The hub's `<Link>` prefetches that chunk: about 70 KB gzip, accepted.
+- `/modo-livre/cruzadinha` carries its own budget in `PER_ROUTE_BUDGET`. The hub's `<Link>` prefetches that chunk; accepted.
 - On that route, devtools can map a clue to an answer, but only for grids the device generates. Today's daily is already public.
-- The lexicon's 2,878 five-letter words shrink a Termo guesser's pool from 5,408 words, but they are not the answer pool. ADR-0045 decision 5 rests on cost and strip integrity, not on confidentiality.
-- `T-WEB-S444` proves in CI that only this route reaches the lexicon, since `bundle-check` is not in CI (#155).
+- The lexicon contains 397 of the 400 Termo answers, all 49 accented ones included, inside 2,878 five-letter words. That narrows a Termo guesser's pool from 5,408 words. This is accepted: ADR-0045 decision 5 rests on cost and strip integrity and does not keep the answer list confidential.
+- Until `bundle-check` runs in CI (#155), a module-graph test is what proves in CI that only this route reaches the lexicon.
 - `normalizeWord` lives at the `@miolos/games` root, so the crossword board reaches no Termo module from free play.
 
 ## Rejected

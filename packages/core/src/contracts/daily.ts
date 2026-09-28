@@ -125,8 +125,10 @@ const crosswordClueSchema = z.strictObject({
 
 type CrosswordClue = z.infer<typeof crosswordClueSchema>;
 
+type CrosswordGrid = z.infer<typeof crosswordGridSchema>;
+
 function clueCellsAreWhite(
-  grid: z.infer<typeof crosswordGridSchema>,
+  grid: CrosswordGrid,
   { direction, row, col, length }: CrosswordClue,
 ): boolean {
   if (length > CROSSWORD_SIZE) {
@@ -152,21 +154,19 @@ export type DailyCrosswordResponse = z.infer<
   typeof dailyCrosswordResponseSchema
 >;
 
-interface CrosswordProjectionSource {
-  readonly grid: readonly (readonly (string | null)[])[];
-  readonly entries: readonly {
-    readonly number: number;
-    readonly direction: CrosswordClue["direction"];
-    readonly row: number;
-    readonly col: number;
-    readonly normalized: string;
-    readonly clue: string;
-  }[];
-}
+type CrosswordEntrySource = Omit<CrosswordClue, "length"> & {
+  readonly normalized: string;
+};
 
 export function projectCrosswordDaily(
   date: string,
-  { grid, entries }: CrosswordProjectionSource,
+  {
+    grid,
+    entries,
+  }: {
+    readonly grid: ReadonlyArray<Readonly<CrosswordGrid[number]>>;
+    readonly entries: ReadonlyArray<Readonly<CrosswordEntrySource>>;
+  },
 ): DailyCrosswordResponse {
   return dailyCrosswordResponseSchema.parse({
     game: "crossword",

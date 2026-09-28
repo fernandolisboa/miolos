@@ -1,6 +1,7 @@
 # 0019 — Per-game subpath exports in packages/games
 
 **Status:** Accepted — 2026-07-31
+**Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — the root barrel's shared substrate gains `normalizeWord`, so the crossword board reaches no Termo module.
 
 ## Context
 
