@@ -4,7 +4,7 @@
 
 ## Start here
 
-**The Cruzadinha is live as the fifth daily** (#274: #275 engine, #276 daily; ADR-0085/0086/0087). The first crossword is published by the first cron after the merge. Then, as one Quick change, add `/cruzadinha` and `/cruzadinha/concluido` to `impeccable.yml`'s URL scan, whose preflight needs a published row. After that: file per-game time buckets as an issue, then #206 cluster 10 (free-play `Frame` / `ErrorCard`).
+**The Cruzadinha joined free play** at `/modo-livre/cruzadinha` (#279, ADR-0088): no level, no clock, one hint, "Mais uma". The lexicon ships on that route only (+274.7 KB raw over `/`, budget 291 KB). Next, as one Quick change, add `/cruzadinha` and `/cruzadinha/concluido` to `impeccable.yml`'s URL scan, whose preflight needs a published row. The shared board already shows uneven key widths at 375 px and an em-dash advisory on the clue lists. After that: file per-game time buckets as an issue, then #206 cluster 10's `Frame` half (the `ErrorCard` half shipped in #279).
 
 ## Traps
 
@@ -13,6 +13,8 @@
 **Dependabot npm PRs cannot be merged as opened.** They change one `package.json` and never `pnpm-lock.yaml`, so `--frozen-lockfile` fails. Land them as one hand-made bump across every pin, outside `minimumReleaseAge` (7 days).
 
 **A perfect day needs a lineup buffered before midnight (ADR-0087).** If every buffer ran dry and all of a day's rows were inserted after `published_at`, that day cannot be perfect. The buffer alert exists to prevent that.
+
+**The Termo bundle markers are answer-list pairs** (`então\nagora`, ADR-0088). The crossword lexicon spells every accented Termo answer, so a single-word marker fires on `/modo-livre/cruzadinha`. Never go back to single words; `packages/games/test/termo/bundle-markers.test.ts` pins the pairs.
 
 **The crossword lexicon is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` and `pnpm test --force`.
 

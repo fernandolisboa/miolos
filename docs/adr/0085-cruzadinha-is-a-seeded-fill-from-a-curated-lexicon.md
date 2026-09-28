@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-09-28 (issue #275)
 **Depends on:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md)
+**Superseded in part by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — decision 7 and the consequence that free play needs a new decision: the lexicon ships on `/modo-livre/cruzadinha`, and only there.
 
 ## Context
 
