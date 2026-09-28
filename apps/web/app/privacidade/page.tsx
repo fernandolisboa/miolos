@@ -18,6 +18,7 @@ export default function PrivacyPage() {
         <ul className={styles.list}>
           <li>{messages.privacy.collected.account}</li>
           <li>{messages.privacy.collected.email}</li>
+          <li>{messages.privacy.collected.google}</li>
           <li>{messages.privacy.collected.telemetry}</li>
           <li>{messages.privacy.collected.medals}</li>
           <li>{messages.privacy.collected.push}</li>

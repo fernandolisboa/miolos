@@ -420,6 +420,10 @@ describe("mergeAccounts — idempotence and the winner rule (ADR-0009, ADR-0049)
       .update(users)
       .set({ email: "loser@example.com" })
       .where(eq(users.id, loser));
+    await ctx.db
+      .update(users)
+      .set({ email: "winner@example.com" })
+      .where(eq(users.id, winner));
     await insertSession(winner, "hash-winner-1");
     await insertSession(loser, "hash-loser-1");
 
@@ -1187,5 +1191,105 @@ describe("consent_events across a merge (ADR-0050 decision 8, ADR-0082)", () => 
     expect(await owners()).toEqual(expected);
     await mergeAccounts(ctx.db, winner, loser);
     expect(await owners()).toEqual(expected);
+  });
+});
+
+describe("identity handles across a merge (#280, ADR-0088)", () => {
+  it("T-DB-S120: an account holding an identity handle beats an older anonymous one, in both argument orders; two handle-holders fall back to older created_at", async () => {
+    const anonymous = await createUser(OLDER);
+    const linked = await createUser(NEWER);
+    await ctx.db
+      .update(users)
+      .set({ googleId: "google-sub-1" })
+      .where(eq(users.id, linked));
+    expect(await mergeAccounts(ctx.db, anonymous, linked)).toEqual({
+      winnerId: linked,
+      loserId: anonymous,
+    });
+
+    await reset();
+    const anonymous2 = await createUser(OLDER);
+    const emailed = await createUser(NEWER);
+    await ctx.db
+      .update(users)
+      .set({ email: "titular@example.com", emailVerifiedAt: sql`now()` })
+      .where(eq(users.id, emailed));
+    expect(await mergeAccounts(ctx.db, emailed, anonymous2)).toEqual({
+      winnerId: emailed,
+      loserId: anonymous2,
+    });
+
+    await reset();
+    const olderLinked = await createUser(OLDER);
+    const newerLinked = await createUser(NEWER);
+    await ctx.db
+      .update(users)
+      .set({ googleId: "google-sub-2" })
+      .where(eq(users.id, olderLinked));
+    await ctx.db
+      .update(users)
+      .set({ email: "titular@example.com", emailVerifiedAt: sql`now()` })
+      .where(eq(users.id, newerLinked));
+    expect(await mergeAccounts(ctx.db, newerLinked, olderLinked)).toEqual({
+      winnerId: olderLinked,
+      loserId: newerLinked,
+    });
+  });
+
+  it("T-DB-S121: the tombstone statement carries the loser's Google id onto a winner that has none, keeps a winner's own, and a re-run changes nothing", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await ctx.db
+      .update(users)
+      .set({ email: "titular@example.com", emailVerifiedAt: sql`now()` })
+      .where(eq(users.id, winner));
+    await ctx.db
+      .update(users)
+      .set({ googleId: "google-sub-loser" })
+      .where(eq(users.id, loser));
+
+    await mergeAccounts(ctx.db, loser, winner);
+    const afterFirst = await snapshotState();
+
+    const rows = await ctx.db
+      .select({
+        id: users.id,
+        email: users.email,
+        googleId: users.googleId,
+      })
+      .from(users)
+      .orderBy(asc(users.createdAt));
+    expect(rows).toEqual([
+      {
+        id: winner,
+        email: "titular@example.com",
+        googleId: "google-sub-loser",
+      },
+      { id: loser, email: null, googleId: null },
+    ]);
+
+    await mergeAccounts(ctx.db, winner, loser);
+    expect(await snapshotState()).toEqual(afterFirst);
+
+    await reset();
+    const keeper = await createUser(OLDER);
+    const dropped = await createUser(NEWER);
+    await ctx.db
+      .update(users)
+      .set({ googleId: "google-sub-keeper" })
+      .where(eq(users.id, keeper));
+    await ctx.db
+      .update(users)
+      .set({ googleId: "google-sub-dropped" })
+      .where(eq(users.id, dropped));
+    await mergeAccounts(ctx.db, keeper, dropped);
+    const kept = await ctx.db
+      .select({ id: users.id, googleId: users.googleId })
+      .from(users)
+      .orderBy(asc(users.createdAt));
+    expect(kept).toEqual([
+      { id: keeper, googleId: "google-sub-keeper" },
+      { id: dropped, googleId: null },
+    ]);
   });
 });

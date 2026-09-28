@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-**No.** Migration 0014 ran on the Miolos database before #276 merged. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**Yes, one setup step:** NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089). Sign in with Google is merged but dormant until then. Migration 0014 ran on the Miolos database before #276 merged. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 

@@ -576,6 +576,44 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     expect(await requireUserId(ctx.db, fresh.token)).toBeUndefined();
   });
 
+  it("T-API-S273: an OLDER anonymous requester confirming a newer holder's email loses to the holder, which keeps its email, its Google id and its consent (ADR-0089)", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+
+    const requester = await createSession(OLDER);
+    await insertOnTimeWin({ userId: requester.userId, date: today });
+
+    const holder = await createSession(NEWER);
+    const consentAt = new Date("2026-07-01T12:00:00.000Z");
+    await ctx.db
+      .update(users)
+      .set({
+        email: EMAIL,
+        emailVerifiedAt: sql`now()`,
+        recoveryConsentAt: consentAt,
+        googleId: "google-sub-holder",
+      })
+      .where(sql`id = ${holder.userId}`);
+    await insertOnTimeWin({ userId: holder.userId, date: addDays(today, -1) });
+
+    const response = await postConfirm(await requestMagicLink(requester.token));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ merged: true });
+
+    const cookieToken = cookieTokenOf(response);
+    expect(await requireUserId(ctx.db, cookieToken)).toBe(holder.userId);
+    expect(await readStreak(cookieToken)).toBe(2);
+
+    const winner = await userRow(holder.userId);
+    expect(winner.email).toBe(EMAIL);
+    expect(winner.googleId).toBe("google-sub-holder");
+    expect(winner.recoveryConsentAt?.toISOString()).toBe(
+      consentAt.toISOString(),
+    );
+    const tombstone = await userRow(requester.userId);
+    expect(tombstone.email).toBeNull();
+    expect(tombstone.googleId).toBeNull();
+  });
+
   it("T-API-S72: a requester tombstoned between request and confirm gets 410 and no write anywhere", async () => {
     const { token, userId } = await createSession(OLDER);
     const raw = await requestMagicLink(token);

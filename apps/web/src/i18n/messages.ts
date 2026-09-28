@@ -402,6 +402,8 @@ export const messages = {
         "A conta anônima e o seu histórico de jogos — quais puzzles você concluiu e quando. É disso que a sequência é calculada. Puzzles antigos concluídos pelo arquivo são registrados do mesmo jeito, e ficam de fora da sequência.",
       email:
         "O seu e-mail, somente se você escolher vinculá-lo. Ninguém precisa vincular e-mail para jogar.",
+      google:
+        "O código que identifica a sua conta Google, somente se você escolher entrar com o Google. Não recebemos do Google o seu nome, a sua foto nem o seu e-mail. Para desconectar, use Ajustes.",
 
       telemetry:
         "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
@@ -432,7 +434,7 @@ export const messages = {
     },
     noPassword: {
       heading: "O que não existe aqui",
-      body: "Não existe senha no Miolos — o link mágico por e-mail é o único acesso. Não vendemos os seus dados a ninguém.",
+      body: "Não existe senha no Miolos — o acesso é pelo link mágico por e-mail ou pela sua conta Google. Não vendemos os seus dados a ninguém.",
     },
     revision:
       "Esta política cresce junto com o produto: uma versão completa acompanha as próximas funcionalidades.",
@@ -532,6 +534,34 @@ export const messages = {
         busy: "Removendo…",
         done: "E-mail removido.",
         error: "Não foi possível remover agora. Tente de novo.",
+      },
+    },
+    google: {
+      heading: "Conta Google",
+      lead: "Entre com o Google para levar a sua sequência para qualquer aparelho. Do Google, o Miolos recebe só um código que identifica a conta: nem nome, nem foto, nem e-mail.",
+      mergeNote:
+        "Se este aparelho tiver jogos de uma conta sem e-mail, eles passam para a conta Google.",
+      start: "Entrar com o Google",
+      linked:
+        "Esta conta está conectada ao Google. Em outro aparelho, entre com o Google aqui em Ajustes para ver a mesma sequência.",
+      outcome: {
+        ok: "Pronto: a conta Google está conectada neste aparelho.",
+        switched:
+          "Este aparelho agora mostra a conta ligada a esse Google. A conta que estava aqui continua guardada, e você volta a ela pelo e-mail dela.",
+        failed: "Não deu para entrar com o Google agora. Tente de novo.",
+        conflict:
+          "Esta conta já está conectada a outra conta Google. Desconecte aquela antes de conectar esta.",
+      },
+      unlink: {
+        start: "Desconectar o Google",
+        confirmTitle: "Desconectar o Google desta conta?",
+        confirmBody:
+          "Depois disso, entrar com esse Google não abre mais esta conta. Se ela não tiver e-mail, este aparelho passa a ser o único caminho até ela. A conta, a sequência e o histórico continuam aqui.",
+        confirm: "Sim, desconectar",
+        cancel: "Cancelar",
+        busy: "Desconectando…",
+        done: "Google desconectado.",
+        error: "Não foi possível desconectar agora. Tente de novo.",
       },
     },
     deletion: {

@@ -19,6 +19,15 @@ export function isWinnerLivenessError(error: unknown): boolean {
   );
 }
 
+function holdsIdentityHandle() {
+  return or(
+    isNotNull(users.email),
+    isNotNull(users.emailVerifiedAt),
+    isNotNull(users.appleId),
+    isNotNull(users.googleId),
+  );
+}
+
 function completedAtOrderSql() {
   return sql<string>`to_char(${completions.completedAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 }
@@ -49,7 +58,11 @@ export async function mergeAccounts(
     .select({ id: users.id })
     .from(users)
     .where(inArray(users.id, [a, b]))
-    .orderBy(asc(users.createdAt), asc(users.id));
+    .orderBy(
+      sql`${holdsIdentityHandle()} desc`,
+      asc(users.createdAt),
+      asc(users.id),
+    );
   const found = new Set(candidates.map((row) => row.id));
   for (const id of [a, b]) {
     if (!found.has(id)) {
@@ -74,17 +87,7 @@ export async function mergeAccounts(
     const winnerHandles = await db
       .select({ id: users.id })
       .from(users)
-      .where(
-        and(
-          eq(users.id, winnerId),
-          or(
-            isNotNull(users.email),
-            isNotNull(users.emailVerifiedAt),
-            isNotNull(users.appleId),
-            isNotNull(users.googleId),
-          ),
-        ),
-      )
+      .where(and(eq(users.id, winnerId), holdsIdentityHandle()))
       .limit(1);
     if (winnerHandles.length === 0) {
       throw new Error(
@@ -179,26 +182,35 @@ export async function mergeAccounts(
     sql`delete from notification_sends where user_id = ${loserId}`,
   );
 
-  await db
-    .update(users)
-    .set({
-      email: null,
-      emailVerifiedAt: null,
-      appleId: null,
-      googleId: null,
-      updatedAt: sql`now()`,
-    })
-    .where(
-      and(
-        eq(users.id, loserId),
-        or(
-          isNotNull(users.email),
-          isNotNull(users.emailVerifiedAt),
-          isNotNull(users.appleId),
-          isNotNull(users.googleId),
-        ),
-      ),
-    );
+  // One statement, the winner reading the emptied CTE, so the Google id is
+  // never on both rows when the unique index is checked (ADR-0089).
+  await db.execute(sql`
+    with loser as (
+      select id, google_id
+        from users
+       where id = ${loserId}::uuid
+         and (email is not null or email_verified_at is not null
+              or apple_id is not null or google_id is not null)
+         for update
+    ), emptied as (
+      update users u
+         set email = null,
+             email_verified_at = null,
+             apple_id = null,
+             google_id = null,
+             updated_at = now()
+        from loser l
+       where u.id = l.id
+      returning u.id
+    )
+    update users w
+       set google_id = l.google_id,
+           updated_at = now()
+      from loser l, emptied
+     where w.id = ${winnerId}::uuid
+       and w.google_id is null
+       and l.google_id is not null
+  `);
 
   return { winnerId, loserId };
 }

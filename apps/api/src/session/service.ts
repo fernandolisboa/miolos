@@ -57,6 +57,10 @@ export async function createSessionForUser(
   await recordSeenDay(db, userId);
 }
 
+export async function deleteSession(db: Db, tokenHash: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
+}
+
 export async function requireUserId(
   db: Db,
   token: string | undefined,

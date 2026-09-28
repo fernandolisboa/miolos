@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-13 (issue #21, shipped in #88)
 **Amended by:** [ADR-0083](./0083-the-email-hedge-is-a-second-arm-of-the-one-tick.md) — discharges decision 11's revisit trigger (#32's send infrastructure); [ADR-0082](./0082-settings-withdraws-consent-with-timestamps-removing-the-email-is-the-recovery-withdrawal.md) — decision 7: consent can now be withdrawn in Ajustes, with timestamps and a `consent_events` log; decisions 9 and 10: the Ajustes attach form skips the prompt's eligibility
+**Amended by:** [ADR-0089](./0089-sign-in-with-google-links-an-id-and-an-identified-account-wins-the-merge.md) — decision 5: an email holder wins over an anonymous requester whatever their ages
 **Depends on:** ADR-0003, ADR-0009, ADR-0012, ADR-0013, ADR-0022, ADR-0025, ADR-0026, ADR-0048, ADR-0049
 **Amends:** the tombstoning consequence of
 [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md)
