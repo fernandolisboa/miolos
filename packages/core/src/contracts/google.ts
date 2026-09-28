@@ -9,6 +9,19 @@ export const googleIdTokenClaimsSchema = z.object({
   sub: z.string().min(1).max(255),
 });
 
+export const googleCallbackQuerySchema = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+});
+
+export const googleSignInOutcomeSchema = z.enum([
+  "ok",
+  "switched",
+  "failed",
+  "conflict",
+]);
+export type GoogleSignInOutcome = z.infer<typeof googleSignInOutcomeSchema>;
+
 export const accountGoogleResponseSchema = z.strictObject({
   google: z.enum(["unavailable", "unlinked", "linked"]),
 });

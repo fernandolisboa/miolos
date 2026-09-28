@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  googleSignInOutcomeSchema,
+  type AccountGoogleResponse,
+  type GoogleSignInOutcome,
+} from "@miolos/core";
 import { useEffect, useState } from "react";
 
 import {
@@ -14,21 +19,17 @@ import styles from "./page.module.css";
 
 const copy = messages.settings.google;
 
-type Outcome = keyof typeof copy.outcome;
-
-function isOutcome(value: string | null): value is Outcome {
-  return value !== null && Object.hasOwn(copy.outcome, value);
-}
-
-function readCallbackOutcome(): Outcome | undefined {
+function readCallbackOutcome(): GoogleSignInOutcome | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }
-  const value = new URL(window.location.href).searchParams.get("google");
-  return isOutcome(value) ? value : undefined;
+  const parsed = googleSignInOutcomeSchema.safeParse(
+    new URL(window.location.href).searchParams.get("google"),
+  );
+  return parsed.success ? parsed.data : undefined;
 }
 
-function useCallbackOutcome(): Outcome | undefined {
+function useCallbackOutcome(): GoogleSignInOutcome | undefined {
   const [outcome] = useState(readCallbackOutcome);
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -43,11 +44,17 @@ function useCallbackOutcome(): Outcome | undefined {
 export function GoogleSection() {
   const fetched = useMountFetch(fetchGoogleState);
   const outcome = useCallbackOutcome();
-  const [unlinked, setUnlinked] = useState(false);
+  const [afterUnlink, setAfterUnlink] = useState<
+    AccountGoogleResponse["google"] | null
+  >();
+  const unlinked = afterUnlink !== undefined;
   const state = unlinked ? "unlinked" : fetched;
-  const startUrl = state === "unlinked" ? googleStartUrl() : undefined;
+  const startUrl =
+    state === "unlinked" && (!unlinked || afterUnlink === "unlinked")
+      ? googleStartUrl()
+      : undefined;
 
-  if (!state || state === "unavailable") {
+  if (state !== "linked" && state !== "unlinked" && !outcome) {
     return null;
   }
   return (
@@ -65,18 +72,22 @@ export function GoogleSection() {
           {copy.unlink.done}
         </p>
       )}
-      {state === "linked" ? (
+      {state === "linked" && (
         <>
           <p className={styles.body}>{copy.linked}</p>
           <ConfirmAction
             labels={copy.unlink}
             run={unlinkGoogle}
             onDone={() => {
-              setUnlinked(true);
+              setAfterUnlink(null);
+              void fetchGoogleState().then((next) => {
+                setAfterUnlink(next ?? null);
+              });
             }}
           />
         </>
-      ) : (
+      )}
+      {state === "unlinked" && (
         <>
           <p className={styles.body}>{copy.lead}</p>
           <p className={styles.note}>{copy.mergeNote}</p>

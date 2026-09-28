@@ -1,3 +1,4 @@
+import { apiErrorResponseSchema } from "@miolos/core";
 import type { ZodType } from "zod";
 
 export function apiBaseUrl(absence: string): string | undefined {
@@ -102,6 +103,23 @@ export async function apiPostParsed<T>(
 ): Promise<T | undefined> {
   const response = await apiPostRaw(path, body, absence);
   return response?.ok ? await parseJsonResponse(response, schema) : undefined;
+}
+
+export async function apiConfirm<T>(
+  path: string,
+  done: ZodType<T>,
+  alreadyDone: string,
+  absence: string,
+): Promise<boolean> {
+  const response = await apiPostRaw(path, { confirm: true }, absence);
+  if (response?.status === 409) {
+    const refusal = await parseJsonResponse(response, apiErrorResponseSchema);
+    return refusal?.error === alreadyDone;
+  }
+  return (
+    response?.ok === true &&
+    (await parseJsonResponse(response, done)) !== undefined
+  );
 }
 
 export async function apiPost(

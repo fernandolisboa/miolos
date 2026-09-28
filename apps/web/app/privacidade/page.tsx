@@ -29,6 +29,7 @@ export default function PrivacyPage() {
         <h2 className={styles.heading}>{messages.privacy.why.heading}</h2>
         <ul className={styles.list}>
           <li>{messages.privacy.why.recovery}</li>
+          <li>{messages.privacy.why.google}</li>
           <li>{messages.privacy.why.reminder}</li>
         </ul>
       </section>

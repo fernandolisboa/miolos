@@ -1,3 +1,7 @@
+import {
+  googleCallbackQuerySchema,
+  type GoogleSignInOutcome,
+} from "@miolos/core";
 import type { Db } from "@miolos/db";
 
 import {
@@ -16,7 +20,7 @@ import {
 import { resolveGoogleSignIn } from "./service";
 
 export type Completion = {
-  outcome: "ok" | "switched" | "failed" | "conflict";
+  outcome: GoogleSignInOutcome;
   sessionToken?: string;
 };
 
@@ -32,12 +36,16 @@ export async function completeGoogleSignIn(
   },
 ): Promise<Completion> {
   const flow = readFlowCookie(callback.flowCookie);
-  if (!flow || !callback.code || callback.state !== flow.state) {
+  const query = googleCallbackQuerySchema.safeParse({
+    code: callback.code,
+    state: callback.state,
+  });
+  if (!flow || !query.success || query.data.state !== flow.state) {
     return { outcome: "failed" };
   }
 
   const idToken = await exchangeCode(client, {
-    code: callback.code,
+    code: query.data.code,
     redirectUri: callbackUrl(callback.apiOrigin),
     verifier: flow.verifier,
   });
@@ -62,17 +70,15 @@ export async function completeGoogleSignIn(
     if (resolved.outcome === "conflict") {
       return { outcome: "conflict" };
     }
-    // A fresh session every time: a token someone else may know never ends
-    // up on the Google account (ADR-0089).
-    if (presented !== undefined) {
-      await deleteSession(db, await hashSessionToken(presented));
-    }
     const sessionToken = generateSessionToken();
     await createSessionForUser(
       db,
       await hashSessionToken(sessionToken),
       resolved.userId,
     );
+    if (presented !== undefined) {
+      await deleteSession(db, await hashSessionToken(presented));
+    }
     return { outcome: resolved.outcome, sessionToken };
   } catch (error) {
     console.error("google callback: sign-in failed", error);

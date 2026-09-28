@@ -1,5 +1,8 @@
-import { eq, sql, users, type Db } from "@miolos/db";
-import { mergeAccounts } from "@miolos/db/user";
+import type { AccountGoogleResponse } from "@miolos/core";
+import { eq, sessions, sql, users, type Db } from "@miolos/db";
+import { holdsIdentityHandle, mergeAccounts } from "@miolos/db/user";
+
+import { deleteSession } from "../session/service";
 
 export type GoogleSignIn =
   { outcome: "ok" | "switched"; userId: string } | { outcome: "conflict" };
@@ -18,28 +21,15 @@ async function findGoogleHolder(
 async function readIdentity(
   db: Db,
   userId: string,
-): Promise<{ googleId: string | null; identified: boolean }> {
+): Promise<{ googleId: string | null; identified: boolean } | undefined> {
   const rows = await db
     .select({
-      email: users.email,
-      emailVerifiedAt: users.emailVerifiedAt,
-      appleId: users.appleId,
       googleId: users.googleId,
+      identified: sql<boolean>`${holdsIdentityHandle()}`,
     })
     .from(users)
     .where(eq(users.id, userId));
-  const row = rows[0];
-  if (!row) {
-    throw new Error(`google sign-in: requester ${userId} has no users row`);
-  }
-  return {
-    googleId: row.googleId,
-    identified:
-      row.email !== null ||
-      row.emailVerifiedAt !== null ||
-      row.appleId !== null ||
-      row.googleId !== null,
-  };
+  return rows[0];
 }
 
 async function linkGoogle(
@@ -64,7 +54,14 @@ export async function unlinkGoogle(db: Db, userId: string): Promise<boolean> {
   return rows.length === 1;
 }
 
-// See ADR-0089: an identified requester switches, an anonymous one merges.
+async function listSessionHashes(db: Db, userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ tokenHash: sessions.tokenHash })
+    .from(sessions)
+    .where(eq(sessions.userId, userId));
+  return rows.map((row) => row.tokenHash);
+}
+
 export async function resolveGoogleSignIn(
   db: Db,
   requesterId: string | undefined,
@@ -92,26 +89,50 @@ export async function resolveGoogleSignIn(
   }
 
   const requester = await readIdentity(db, requesterId);
-  if (holder === undefined) {
-    if (requester.googleId !== null) {
-      return { outcome: "conflict" };
-    }
-    return (await linkGoogle(db, requesterId, sub))
-      ? { outcome: "ok", userId: requesterId }
-      : { outcome: "conflict" };
+  if (!requester) {
+    throw new Error(
+      `google sign-in: requester ${requesterId} has no users row`,
+    );
   }
-
-  if (requester.identified) {
+  if (holder !== undefined && requester.identified) {
     return { outcome: "switched", userId: holder };
   }
-  const { winnerId } = await mergeAccounts(db, requesterId, holder);
-  return { outcome: "ok", userId: winnerId };
+  if (holder === undefined && requester.googleId !== null) {
+    return { outcome: "conflict" };
+  }
+
+  // An anonymous requester's sessions were never proven by this Google
+  // account, so none of them may end up on it (ADR-0089).
+  const unproven = requester.identified
+    ? []
+    : await listSessionHashes(db, requesterId);
+  let userId: string;
+  if (holder === undefined) {
+    if (!(await linkGoogle(db, requesterId, sub))) {
+      return { outcome: "conflict" };
+    }
+    userId = requesterId;
+  } else {
+    userId = (await mergeAccounts(db, requesterId, holder)).winnerId;
+    if (userId !== holder) {
+      throw new Error(
+        "google sign-in: the holder lost its Google id mid-merge",
+      );
+    }
+  }
+  for (const tokenHash of unproven) {
+    await deleteSession(db, tokenHash);
+  }
+  return { outcome: "ok", userId };
 }
 
-export async function readGoogleLink(db: Db, userId: string): Promise<boolean> {
-  const rows = await db
-    .select({ googleId: users.googleId })
-    .from(users)
-    .where(eq(users.id, userId));
-  return rows[0]?.googleId != null;
+export async function readGoogleState(
+  db: Db,
+  userId: string,
+  configured: boolean,
+): Promise<AccountGoogleResponse["google"]> {
+  if ((await readIdentity(db, userId))?.googleId != null) {
+    return "linked";
+  }
+  return configured ? "unlinked" : "unavailable";
 }

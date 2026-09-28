@@ -12,6 +12,7 @@ import {
 } from "./schema";
 
 const WINNER_LIVENESS_SIGNATURE = "owns no session or identity handle";
+const IDENTITY_CLASH_SIGNATURE = "both accounts hold an identity handle";
 
 export function isWinnerLivenessError(error: unknown): boolean {
   return (
@@ -19,7 +20,13 @@ export function isWinnerLivenessError(error: unknown): boolean {
   );
 }
 
-function holdsIdentityHandle() {
+export function isIdentityClashError(error: unknown): boolean {
+  return (
+    error instanceof Error && error.message.includes(IDENTITY_CLASH_SIGNATURE)
+  );
+}
+
+export function holdsIdentityHandle() {
   return or(
     isNotNull(users.email),
     isNotNull(users.emailVerifiedAt),
@@ -55,7 +62,10 @@ export async function mergeAccounts(
   b: string,
 ): Promise<{ winnerId: string; loserId: string }> {
   const candidates = await db
-    .select({ id: users.id })
+    .select({
+      id: users.id,
+      identified: sql<boolean>`${holdsIdentityHandle()}`,
+    })
     .from(users)
     .where(inArray(users.id, [a, b]))
     .orderBy(
@@ -72,11 +82,15 @@ export async function mergeAccounts(
   if (a === b) {
     return { winnerId: a, loserId: a };
   }
-  const winnerId = candidates[0]?.id;
-  const loserId = candidates[1]?.id;
-  if (winnerId === undefined || loserId === undefined) {
+  const [winner, loser] = candidates;
+  if (winner === undefined || loser === undefined) {
     throw new Error("mergeAccounts: winner selection returned too few rows");
   }
+  if (loser.identified) {
+    throw new Error(`mergeAccounts: ${IDENTITY_CLASH_SIGNATURE}`);
+  }
+  const winnerId = winner.id;
+  const loserId = loser.id;
 
   const winnerSessions = await db
     .select({ userId: sessions.userId })
@@ -182,35 +196,16 @@ export async function mergeAccounts(
     sql`delete from notification_sends where user_id = ${loserId}`,
   );
 
-  // One statement, the winner reading the emptied CTE, so the Google id is
-  // never on both rows when the unique index is checked (ADR-0089).
-  await db.execute(sql`
-    with loser as (
-      select id, google_id
-        from users
-       where id = ${loserId}::uuid
-         and (email is not null or email_verified_at is not null
-              or apple_id is not null or google_id is not null)
-         for update
-    ), emptied as (
-      update users u
-         set email = null,
-             email_verified_at = null,
-             apple_id = null,
-             google_id = null,
-             updated_at = now()
-        from loser l
-       where u.id = l.id
-      returning u.id
-    )
-    update users w
-       set google_id = l.google_id,
-           updated_at = now()
-      from loser l, emptied
-     where w.id = ${winnerId}::uuid
-       and w.google_id is null
-       and l.google_id is not null
-  `);
+  await db
+    .update(users)
+    .set({
+      email: null,
+      emailVerifiedAt: null,
+      appleId: null,
+      googleId: null,
+      updatedAt: sql`now()`,
+    })
+    .where(and(eq(users.id, loserId), holdsIdentityHandle()));
 
   return { winnerId, loserId };
 }

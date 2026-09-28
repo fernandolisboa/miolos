@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,14 +35,15 @@ function stubFetch(respond: (url: string) => Promise<Response>) {
   return fetchMock;
 }
 
-function stubGoogleState(google: string) {
-  return stubFetch((url) =>
-    Promise.resolve(
-      url.endsWith("/account/unlink-google")
-        ? jsonResponse(200, { unlinked: true })
-        : jsonResponse(200, { google }),
-    ),
-  );
+function stubGoogleState(google: string, afterUnlink = "unlinked") {
+  let current = google;
+  return stubFetch((url) => {
+    if (url.endsWith("/account/unlink-google")) {
+      current = afterUnlink;
+      return Promise.resolve(jsonResponse(200, { unlinked: true }));
+    }
+    return Promise.resolve(jsonResponse(200, { google: current }));
+  });
 }
 
 beforeEach(() => {
@@ -96,11 +103,15 @@ describe("the Conta Google card in Ajustes (T-WEB-S471)", () => {
     expect(container).toBeEmptyDOMElement();
     unmount();
 
-    stubFetch(() => Promise.reject(new TypeError("offline")));
+    const failingFetch = stubFetch(() =>
+      Promise.reject(new TypeError("offline")),
+    );
     const failed = render(<GoogleSection />);
     await waitFor(() => {
-      expect(failed.container).toBeEmptyDOMElement();
+      expect(failingFetch).toHaveBeenCalled();
     });
+    await act(async () => {});
+    expect(failed.container).toBeEmptyDOMElement();
   });
 
   it("unlinked, it explains what Google gives us and links to the start route", async () => {
@@ -114,8 +125,10 @@ describe("the Conta Google card in Ajustes (T-WEB-S471)", () => {
       screen.getByRole("heading", { name: copy.heading }),
     ).toBeInTheDocument();
   });
+});
 
-  it("linked, it says so and unlinks only after the confirm, then offers the sign-in again (T-WEB-S473)", async () => {
+describe("the linked card and its unlink (T-WEB-S473)", () => {
+  it("says so and unlinks only after the confirm, then offers the sign-in again", async () => {
     const fetchMock = stubGoogleState("linked");
     render(<GoogleSection />);
     expect(await screen.findByText(copy.linked)).toBeInTheDocument();
@@ -131,7 +144,24 @@ describe("the Conta Google card in Ajustes (T-WEB-S471)", () => {
     fireEvent.click(screen.getByRole("button", { name: copy.unlink.start }));
     fireEvent.click(screen.getByRole("button", { name: copy.unlink.confirm }));
     expect(await screen.findByText(copy.unlink.done)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: copy.start })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: copy.start }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no sign-in after the unlink when the server says Google is unavailable", async () => {
+    const fetchMock = stubGoogleState("linked", "unavailable");
+    render(<GoogleSection />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.unlink.start }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: copy.unlink.confirm }));
+    expect(await screen.findByText(copy.unlink.done)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+    await act(async () => {});
+    expect(screen.queryByRole("link", { name: copy.start })).toBeNull();
   });
 });
 
@@ -155,6 +185,14 @@ describe("the sign-in outcome notice (T-WEB-S472)", () => {
     },
   );
 
+  it("shows even when the state read fails", async () => {
+    window.history.replaceState(null, "", "/ajustes?google=failed");
+    stubFetch(() => Promise.reject(new TypeError("offline")));
+    render(<GoogleSection />);
+    expect(await screen.findByText(copy.outcome.failed)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: copy.start })).toBeNull();
+  });
+
   it("an unknown word shows nothing and is still cleaned away", async () => {
     window.history.replaceState(null, "", "/ajustes?google=<b>hi</b>");
     stubGoogleState("unlinked");
@@ -168,9 +206,10 @@ describe("the sign-in outcome notice (T-WEB-S472)", () => {
 });
 
 describe("the policy names the Google identifier (T-WEB-S474)", () => {
-  it("lists what Google gives us and names Google as a way in", () => {
+  it("lists what Google gives us, what it is for, and names Google as a way in", () => {
     const policy = renderToStaticMarkup(<PrivacyPage />);
     expect(policy).toContain(messages.privacy.collected.google);
+    expect(policy).toContain(messages.privacy.why.google);
     expect(messages.privacy.collected.google).toContain(
       messages.settings.title,
     );

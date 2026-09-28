@@ -416,7 +416,9 @@ export const messages = {
     why: {
       heading: "Para que usamos",
       recovery:
-        "O e-mail existe para recuperar e mover a sua sequência — se você limpar o navegador ou trocar de aparelho, ele é o caminho de volta. Para remover o e-mail, use Ajustes: sem ele, os lembretes por e-mail também param.",
+        "O e-mail existe para recuperar e mover a sua sequência — se você limpar o navegador ou trocar de aparelho, ele é um caminho de volta. Para remover o e-mail, use Ajustes: sem ele, os lembretes por e-mail também param.",
+      google:
+        "O código do Google existe só para abrir a sua conta: entrando com o mesmo Google em outro aparelho, você vê a mesma sequência. Não usamos esse código para mais nada. Para desconectar, use Ajustes.",
       reminder:
         "Lembretes de sequência em risco só chegam por e-mail se você marcar o consentimento próprio para isso — e ele vem desmarcado. Se algum aparelho da sua conta recebe o lembrete no navegador, o e-mail não é enviado. Para parar, desmarque o lembrete por e-mail em Ajustes.",
     },
@@ -521,14 +523,14 @@ export const messages = {
     account: {
       heading: "Seu e-mail",
       attached: "E-mail vinculado a esta conta:",
-      none: "Sua conta não tem e-mail. Sem ele, não dá para recuperar a sua sequência em outro aparelho.",
+      none: "Sua conta não tem e-mail. Sem e-mail nem Google, não dá para recuperar a sua sequência em outro aparelho.",
       unavailable: "Não conseguimos carregar os dados da conta agora.",
       reminderError: "Não deu certo agora. Tente de novo em instantes.",
       detach: {
         start: "Remover e-mail",
         confirmTitle: "Remover o e-mail desta conta?",
         confirmBody:
-          "Sem ele, não dá para recuperar a sua sequência em outro aparelho, e os lembretes por e-mail param. A conta, a sequência e o histórico continuam aqui.",
+          "Sem e-mail nem Google, não dá para recuperar a sua sequência em outro aparelho, e os lembretes por e-mail param. A conta, a sequência e o histórico continuam aqui.",
         confirm: "Sim, remover",
         cancel: "Cancelar",
         busy: "Removendo…",
@@ -547,7 +549,7 @@ export const messages = {
       outcome: {
         ok: "Pronto: a conta Google está conectada neste aparelho.",
         switched:
-          "Este aparelho agora mostra a conta ligada a esse Google. A conta que estava aqui continua guardada, e você volta a ela pelo e-mail dela.",
+          "Este aparelho agora mostra a conta ligada a esse Google. A conta que estava aqui continua guardada, e você volta a ela pelo e-mail ou pelo Google dela.",
         failed: "Não deu para entrar com o Google agora. Tente de novo.",
         conflict:
           "Esta conta já está conectada a outra conta Google. Desconecte aquela antes de conectar esta.",
@@ -556,7 +558,7 @@ export const messages = {
         start: "Desconectar o Google",
         confirmTitle: "Desconectar o Google desta conta?",
         confirmBody:
-          "Depois disso, entrar com esse Google não abre mais esta conta. Se ela não tiver e-mail, este aparelho passa a ser o único caminho até ela. A conta, a sequência e o histórico continuam aqui.",
+          "Depois disso, entrar com esse Google não abre mais esta conta. Se ela não tiver e-mail, só os aparelhos que já estão nela continuam chegando até ela. A conta, a sequência e o histórico continuam aqui.",
         confirm: "Sim, desconectar",
         cancel: "Cancelar",
         busy: "Desconectando…",

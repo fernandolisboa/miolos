@@ -108,6 +108,14 @@ async function createUser(
   return { userId: user.id, token };
 }
 
+async function addSession(userId: string): Promise<string> {
+  const token = generateSessionToken();
+  await ctx.db
+    .insert(sessions)
+    .values({ tokenHash: await hashSessionToken(token), userId });
+  return token;
+}
+
 async function googleIdOf(userId: string): Promise<string | null> {
   const rows = await ctx.db
     .select({ googleId: users.googleId })
@@ -442,6 +450,34 @@ describe("GET /auth/google/callback", () => {
     expect(await requireUserId(ctx.db, holder.token)).toBe(holder.userId);
     expect(await googleIdOf(holder.userId)).toBe("sub-1");
     expect(await completionOwners()).toEqual([{ userId: holder.userId }]);
+  });
+
+  it("T-API-S275: an anonymous device's other sessions die on a merge or a link, since Google never proved them; an identified account's stay", async () => {
+    const device = await createUser();
+    const planted = await addSession(device.userId);
+    const holder = await createUser({ googleId: "sub-1" });
+    const merged = await signIn({ sub: "sub-1", session: device.token });
+    expect(merged.headers.get("location")).toBe(`${WEB}/ajustes?google=ok`);
+    expect(await requireUserId(ctx.db, planted)).toBeUndefined();
+    expect(await requireUserId(ctx.db, holder.token)).toBe(holder.userId);
+    expect(await requireUserId(ctx.db, sessionTokenOf(merged))).toBe(
+      holder.userId,
+    );
+
+    const linker = await createUser();
+    const linkerOther = await addSession(linker.userId);
+    const linked = await signIn({ sub: "sub-2", session: linker.token });
+    expect(await googleIdOf(linker.userId)).toBe("sub-2");
+    expect(await requireUserId(ctx.db, linkerOther)).toBeUndefined();
+    expect(await requireUserId(ctx.db, sessionTokenOf(linked))).toBe(
+      linker.userId,
+    );
+
+    const identified = await createUser({ email: "jogadora@example.com" });
+    const laptop = await addSession(identified.userId);
+    await signIn({ sub: "sub-3", session: identified.token });
+    expect(await googleIdOf(identified.userId)).toBe("sub-3");
+    expect(await requireUserId(ctx.db, laptop)).toBe(identified.userId);
   });
 
   it("T-API-S268: a device signed in to another identified account switches to the Google account, says so, and merges nothing", async () => {

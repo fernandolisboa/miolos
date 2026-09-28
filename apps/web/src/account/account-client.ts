@@ -1,17 +1,11 @@
 import {
   accountDetachEmailResponseSchema,
   accountStateResponseSchema,
-  apiErrorResponseSchema,
   reminderConsentResponseSchema,
   type AccountStateResponse,
 } from "@miolos/core";
 
-import {
-  apiGet,
-  apiPostParsed,
-  apiPostRaw,
-  parseJsonResponse,
-} from "../api/client";
+import { apiConfirm, apiGet, apiPostParsed } from "../api/client";
 
 const ABSENCE =
   "account calls skipped, the settings screen shows its neutral fallback";
@@ -35,18 +29,10 @@ export async function setReminderConsent(
 }
 
 export async function detachAccountEmail(): Promise<boolean> {
-  const response = await apiPostRaw(
+  return await apiConfirm(
     "/account/detach-email",
-    { confirm: true },
+    accountDetachEmailResponseSchema,
+    "no-email",
     ABSENCE,
-  );
-  if (response?.status === 409) {
-    const refusal = await parseJsonResponse(response, apiErrorResponseSchema);
-    return refusal?.error === "no-email";
-  }
-  return (
-    response?.ok === true &&
-    (await parseJsonResponse(response, accountDetachEmailResponseSchema)) !==
-      undefined
   );
 }
