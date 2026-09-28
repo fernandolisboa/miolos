@@ -57,6 +57,21 @@ export async function createSessionForUser(
   await recordSeenDay(db, userId);
 }
 
+export async function deleteSession(db: Db, tokenHash: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
+}
+
+export async function sessionExists(
+  db: Db,
+  tokenHash: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ tokenHash: sessions.tokenHash })
+    .from(sessions)
+    .where(eq(sessions.tokenHash, tokenHash));
+  return rows.length > 0;
+}
+
 export async function requireUserId(
   db: Db,
   token: string | undefined,

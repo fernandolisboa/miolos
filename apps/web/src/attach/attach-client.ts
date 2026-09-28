@@ -1,5 +1,6 @@
 import {
   accountDeleteResponseSchema,
+  apiErrorResponseSchema,
   attachConfirmResponseSchema,
   attachRequestResponseSchema,
   attachStateResponseSchema,
@@ -8,7 +9,13 @@ import {
   type AttachStateResponse,
 } from "@miolos/core";
 
-import { apiGet, apiPost, apiPostParsed, apiPostRaw } from "../api/client";
+import {
+  apiGet,
+  apiPost,
+  apiPostParsed,
+  apiPostRaw,
+  parseJsonResponse,
+} from "../api/client";
 
 const ABSENCE = "attach calls skipped, the prompt stays absent";
 
@@ -47,7 +54,11 @@ export async function requestAttachLink(
 }
 
 export type AttachConfirmResult =
-  AttachConfirmResponse | "invalid-or-expired" | "conflict" | undefined;
+  | AttachConfirmResponse
+  | "invalid-or-expired"
+  | "conflict"
+  | "sign-in-attached"
+  | undefined;
 
 export async function confirmAttach(
   token: string,
@@ -61,7 +72,10 @@ export async function confirmAttach(
       return "invalid-or-expired";
     }
     if (response.status === 409) {
-      return "conflict";
+      const refusal = await parseJsonResponse(response, apiErrorResponseSchema);
+      return refusal?.error === "sign-in-attached"
+        ? "sign-in-attached"
+        : "conflict";
     }
     if (!response.ok) {
       return undefined;

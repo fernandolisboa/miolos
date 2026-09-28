@@ -147,6 +147,8 @@ describe("attach-client (T-WEB-S361)", () => {
 
     stubFetch(() => jsonResponse(409, { error: "conflict" }));
     expect(await confirmAttach(TOKEN)).toBe("conflict");
+    stubFetch(() => jsonResponse(409, { error: "sign-in-attached" }));
+    expect(await confirmAttach(TOKEN)).toBe("sign-in-attached");
 
     stubFetch(() => jsonResponse(500, { error: "boom" }));
     expect(await confirmAttach(TOKEN)).toBeUndefined();

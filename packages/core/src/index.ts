@@ -199,6 +199,19 @@ export {
   type ReminderConsentResponse,
 } from "./contracts/account";
 export {
+  accountGoogleResponseSchema,
+  accountUnlinkGoogleResponseSchema,
+  accountUnlinkGoogleSchema,
+  googleCallbackQuerySchema,
+  googleIdTokenClaimsSchema,
+  googleSignInOutcomeSchema,
+  googleTokenResponseSchema,
+  type AccountGoogleResponse,
+  type AccountUnlinkGoogleRequest,
+  type AccountUnlinkGoogleResponse,
+  type GoogleSignInOutcome,
+} from "./contracts/google";
+export {
   medalIdSchema,
   medalsResponseSchema,
   type MedalsResponse,

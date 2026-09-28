@@ -388,6 +388,10 @@ export const messages = {
       title: "Não deu para confirmar com este link.",
       body: "Aconteceu um imprevisto por aqui. Peça um novo link na página inicial.",
     },
+    signInAttached: {
+      title: "Este e-mail é de outra conta.",
+      body: "A conta deste aparelho já entra com o Google, e duas contas assim não se juntam. Para usar aqui a conta do e-mail, desconecte o Google em Ajustes e peça um novo link.",
+    },
     failed: "Não foi possível confirmar agora. Tente de novo.",
     backHome: "Voltar para Hoje",
   },
@@ -402,6 +406,8 @@ export const messages = {
         "A conta anônima e o seu histórico de jogos — quais puzzles você concluiu e quando. É disso que a sequência é calculada. Puzzles antigos concluídos pelo arquivo são registrados do mesmo jeito, e ficam de fora da sequência.",
       email:
         "O seu e-mail, somente se você escolher vinculá-lo. Ninguém precisa vincular e-mail para jogar.",
+      google:
+        "O código que identifica a sua conta Google, somente se você escolher entrar com o Google. Não recebemos do Google o seu nome, a sua foto nem o seu e-mail. Para desconectar, use Ajustes.",
 
       telemetry:
         "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
@@ -414,7 +420,9 @@ export const messages = {
     why: {
       heading: "Para que usamos",
       recovery:
-        "O e-mail existe para recuperar e mover a sua sequência — se você limpar o navegador ou trocar de aparelho, ele é o caminho de volta. Para remover o e-mail, use Ajustes: sem ele, os lembretes por e-mail também param.",
+        "O e-mail existe para recuperar e mover a sua sequência — se você limpar o navegador ou trocar de aparelho, ele é um caminho de volta. Para remover o e-mail, use Ajustes: sem ele, os lembretes por e-mail também param.",
+      google:
+        "O código do Google existe só para abrir a sua conta: entrando com o mesmo Google em outro aparelho, você vê a mesma sequência. Não usamos esse código para mais nada. Para desconectar, use Ajustes.",
       reminder:
         "Lembretes de sequência em risco só chegam por e-mail se você marcar o consentimento próprio para isso — e ele vem desmarcado. Se algum aparelho da sua conta recebe o lembrete no navegador, o e-mail não é enviado. Para parar, desmarque o lembrete por e-mail em Ajustes.",
     },
@@ -432,7 +440,7 @@ export const messages = {
     },
     noPassword: {
       heading: "O que não existe aqui",
-      body: "Não existe senha no Miolos — o link mágico por e-mail é o único acesso. Não vendemos os seus dados a ninguém.",
+      body: "Não existe senha no Miolos — o acesso é pelo link mágico por e-mail ou pela sua conta Google. Não vendemos os seus dados a ninguém.",
     },
     revision:
       "Esta política cresce junto com o produto: uma versão completa acompanha as próximas funcionalidades.",
@@ -447,7 +455,7 @@ export const messages = {
     },
     account: {
       heading: "Sem cadastro",
-      body: "Você joga com uma conta anônima criada neste aparelho — sem e-mail, sem senha, sem formulário. Vincular um e-mail é opcional e serve só para recuperar e mover a sua sequência.",
+      body: "Você joga com uma conta anônima criada neste aparelho — sem e-mail, sem senha, sem formulário. Vincular um e-mail é opcional e serve só para recuperar e mover a sua sequência. Entrar com o Google também é opcional, e você desconecta em Ajustes.",
       privacyLead: "O que coletamos, e como apagar tudo, está na",
       privacyLinkLabel: "Política de Privacidade",
     },
@@ -519,19 +527,47 @@ export const messages = {
     account: {
       heading: "Seu e-mail",
       attached: "E-mail vinculado a esta conta:",
-      none: "Sua conta não tem e-mail. Sem ele, não dá para recuperar a sua sequência em outro aparelho.",
+      none: "Sua conta não tem e-mail. Sem e-mail nem Google, não dá para recuperar a sua sequência em outro aparelho.",
       unavailable: "Não conseguimos carregar os dados da conta agora.",
       reminderError: "Não deu certo agora. Tente de novo em instantes.",
       detach: {
         start: "Remover e-mail",
         confirmTitle: "Remover o e-mail desta conta?",
         confirmBody:
-          "Sem ele, não dá para recuperar a sua sequência em outro aparelho, e os lembretes por e-mail param. A conta, a sequência e o histórico continuam aqui.",
+          "Sem e-mail nem Google, não dá para recuperar a sua sequência em outro aparelho, e os lembretes por e-mail param. A conta, a sequência e o histórico continuam aqui.",
         confirm: "Sim, remover",
         cancel: "Cancelar",
         busy: "Removendo…",
         done: "E-mail removido.",
         error: "Não foi possível remover agora. Tente de novo.",
+      },
+    },
+    google: {
+      heading: "Conta Google",
+      lead: "Entre com o Google para levar a sua sequência para qualquer aparelho. Do Google, o Miolos recebe só um código que identifica a conta: nem nome, nem foto, nem e-mail.",
+      mergeNote:
+        "Se este aparelho tiver jogos de uma conta sem e-mail, eles passam para a conta Google. Nos outros aparelhos dessa conta, entre com o Google também.",
+      start: "Entrar com o Google",
+      linked:
+        "Esta conta está conectada ao Google. Em outro aparelho, entre com o Google aqui em Ajustes para ver a mesma sequência.",
+      outcome: {
+        ok: "Pronto: a conta Google está conectada neste aparelho.",
+        switched:
+          "Este aparelho agora mostra a conta ligada a esse Google. A conta que estava aqui continua guardada, e você volta a ela pelo e-mail ou pelo Google dela.",
+        failed: "Não deu para entrar com o Google agora. Tente de novo.",
+        conflict:
+          "Esta conta já está conectada a outra conta Google. Desconecte aquela antes de conectar esta.",
+      },
+      unlink: {
+        start: "Desconectar o Google",
+        confirmTitle: "Desconectar o Google desta conta?",
+        confirmBody:
+          "Depois disso, entrar com esse Google não abre mais esta conta. Se ela não tiver e-mail, só os aparelhos que já estão nela continuam chegando até ela. A conta, a sequência e o histórico continuam aqui.",
+        confirm: "Sim, desconectar",
+        cancel: "Cancelar",
+        busy: "Desconectando…",
+        done: "Google desconectado.",
+        error: "Não foi possível desconectar agora. Tente de novo.",
       },
     },
     deletion: {

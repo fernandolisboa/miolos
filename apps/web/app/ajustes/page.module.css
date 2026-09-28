@@ -181,6 +181,30 @@
   text-underline-offset: 4px;
 }
 
+.primaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-4);
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-5);
+  background: var(--accent-app);
+  color: var(--paper-card);
+  font: var(--text-button);
+  text-decoration: none;
+  border-radius: var(--radius);
+}
+
+.page .primaryLink:hover {
+  color: var(--paper-card);
+  text-decoration: none;
+}
+
+.primaryLink:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .switch {
     transition: none;

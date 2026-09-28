@@ -19,9 +19,9 @@ The design direction is editorial rather than arcade: a well-printed puzzle sect
 | **M2 — Catalogue** | Sudoku → Nonogram → Termo, plus client-generated free play on the grid games ([ADR-0011](./docs/adr/0011-free-play-is-generated-on-the-client.md)) and the Termo word-list validation harness ([ADR-0015](./docs/adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)) |
 | **M3 — Retention** | Stats, medals, Dia Perfeito, service worker + streak notifications (web push + email), archive routes, PostHog |
 | **M4 — Web launch** | Onboarding, settings, full LGPD review, Open Graph share cards, SEO, production |
-| **Post-launch** | Native iOS and Android, social login, monetization activation, crosswords v1.1 |
+| **Post-launch** | Native iOS and Android, Sign in with Apple, monetization activation, crosswords v1.1 |
 
-Launching deliberately **without** social login or active monetization.
+Launching deliberately **without** Sign in with Apple or active monetization; Sign in with Google ships at launch ([ADR-0089](./docs/adr/0089-sign-in-with-google-links-an-id-and-an-identified-account-wins-the-merge.md)).
 
 ## Planned architecture
 
