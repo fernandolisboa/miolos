@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 
+import { nextBinaryHint } from "../play/grid-hint";
 import type { NonogramPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
@@ -15,7 +16,6 @@ import {
   countFilledCells,
   filledTarget,
   hintKindOf,
-  nextNonogramHint,
   submittedCells,
   type NonogramHintKind,
 } from "./engine";
@@ -125,7 +125,7 @@ export function useNonogramPlay(
       return;
     }
 
-    const hint = nextNonogramHint(current.solution, current.entries);
+    const hint = nextBinaryHint(current.solution, current.entries);
     if (hint === null) {
       return;
     }

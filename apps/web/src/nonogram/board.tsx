@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { messages } from "../i18n";
+import { keyMove } from "../play/grid-selection";
 import { usePointerStroke } from "../play/use-pointer-stroke";
 import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
@@ -110,10 +111,10 @@ export const Board = memo(function Board({
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const move = moveFor(event.key, size);
+    const move = keyMove(event.key, size);
     if (move !== null) {
       event.preventDefault();
-      onMove(move[0], move[1]);
+      onMove(move.rows, move.columns);
       return;
     }
     const mark = asMark(event.key);
@@ -369,30 +370,6 @@ function cellClassName(state: {
   ]
     .filter((name) => name !== "")
     .join(" ");
-}
-
-function moveFor(key: string, size: number): readonly [number, number] | null {
-  const span = size - 1;
-  switch (key) {
-    case "ArrowUp":
-      return [-1, 0];
-    case "ArrowDown":
-      return [1, 0];
-    case "ArrowLeft":
-      return [0, -1];
-    case "ArrowRight":
-      return [0, 1];
-    case "Home":
-      return [0, -span];
-    case "End":
-      return [0, span];
-    case "PageUp":
-      return [-span, 0];
-    case "PageDown":
-      return [span, 0];
-    default:
-      return null;
-  }
 }
 
 function asMark(key: string): NonogramMark | null {

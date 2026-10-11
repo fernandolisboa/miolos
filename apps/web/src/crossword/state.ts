@@ -1,21 +1,19 @@
 import type { DailyCrosswordResponse } from "@miolos/core";
 
 import { nextHint } from "../play/grid-hint";
+import { movedSelection } from "../play/grid-selection";
 import type { CrosswordPlayRecord, PlayRecord } from "../play/play-record";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 import {
-  colOf,
   entryAt,
   flattenGrid,
   GRID_SIZE,
   hintGivens,
-  indexOf,
   isBlock,
   isSolved,
   nextCellInEntry,
   prevCellInEntry,
-  rowOf,
   type CrosswordClue,
   type CrosswordDirection,
 } from "./grid";
@@ -103,7 +101,10 @@ export function crosswordPlayReducer(
     }
 
     case "move-selection":
-      return { ...state, selected: moved(state.selected, action) };
+      return {
+        ...state,
+        selected: movedSelection(state.selected, action, GRID_SIZE),
+      };
 
     case "type-letter": {
       if (state.selected === null || isBlock(state.solution, state.selected)) {
@@ -162,22 +163,6 @@ export function crosswordPlayReducer(
     case "mark-synced":
       return state.pendingSync ? { ...state, pendingSync: false } : state;
   }
-}
-
-function moved(
-  selected: number | null,
-  move: { readonly rows: number; readonly columns: number },
-): number {
-  if (selected === null) {
-    return 0;
-  }
-  const row = clamp(rowOf(selected) + move.rows);
-  const column = clamp(colOf(selected) + move.columns);
-  return indexOf(row, column);
-}
-
-function clamp(value: number): number {
-  return Math.min(Math.max(value, 0), GRID_SIZE - 1);
 }
 
 function withEntry(

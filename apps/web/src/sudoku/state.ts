@@ -7,6 +7,7 @@ import {
 } from "@miolos/games/sudoku";
 
 import { nextHint } from "../play/grid-hint";
+import { movedSelection } from "../play/grid-selection";
 import type { PlayRecord, SudokuPlayRecord } from "../play/play-record";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
@@ -81,7 +82,10 @@ export function sudokuPlayReducer(
         : { ...state, selected: action.index };
 
     case "move-selection":
-      return { ...state, selected: moved(state.selected, action) };
+      return {
+        ...state,
+        selected: movedSelection(state.selected, action, SIDE),
+      };
 
     case "enter-digit": {
       const current = playableValue(state, state.selected);
@@ -154,22 +158,6 @@ function playableValue(
     return undefined;
   }
   return state.entries[index] ?? null;
-}
-
-function moved(
-  selected: number | null,
-  move: { readonly rows: number; readonly columns: number },
-): number {
-  if (selected === null) {
-    return 0;
-  }
-  const row = clamp(Math.floor(selected / SIDE) + move.rows);
-  const column = clamp((selected % SIDE) + move.columns);
-  return row * SIDE + column;
-}
-
-function clamp(value: number): number {
-  return Math.min(Math.max(value, 0), SIDE - 1);
 }
 
 interface DerivedEntries {

@@ -1,10 +1,12 @@
 import type { DailyNonogramResponse, NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
 
+import { nextBinaryHint } from "../play/grid-hint";
+import { movedSelection } from "../play/grid-selection";
 import type { NonogramPlayRecord, PlayRecord } from "../play/play-record";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
-import { isPictureComplete, nextNonogramHint, solutionMarks } from "./engine";
+import { isPictureComplete, solutionMarks } from "./engine";
 
 export type NonogramMark = 0 | 1;
 
@@ -81,7 +83,7 @@ export function nonogramPlayReducer(
         : { ...state, selected: action.index };
 
     case "move-selection": {
-      const next = moved(state.selected, action, state.size);
+      const next = movedSelection(state.selected, action, state.size);
       return state.selected === next ? state : { ...state, selected: next };
     }
 
@@ -141,7 +143,7 @@ export function nonogramPlayReducer(
       ) {
         return state;
       }
-      const hint = nextNonogramHint(state.solution, state.entries);
+      const hint = nextBinaryHint(state.solution, state.entries);
       if (hint === null) {
         return state;
       }
@@ -188,23 +190,6 @@ function cellValue(
     return undefined;
   }
   return state.entries[index] ?? null;
-}
-
-function moved(
-  selected: number | null,
-  move: { readonly rows: number; readonly columns: number },
-  size: number,
-): number {
-  if (selected === null) {
-    return 0;
-  }
-  const row = clamp(Math.floor(selected / size) + move.rows, size);
-  const column = clamp((selected % size) + move.columns, size);
-  return row * size + column;
-}
-
-function clamp(value: number, size: number): number {
-  return Math.min(Math.max(value, 0), size - 1);
 }
 
 function withEntry(

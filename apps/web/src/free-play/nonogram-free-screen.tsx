@@ -5,6 +5,7 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { messages } from "../i18n";
+import { nextBinaryHint } from "../play/grid-hint";
 import screen from "../play/screen.module.css";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
@@ -12,7 +13,6 @@ import {
   countFilledCells,
   filledTarget,
   hintKindOf,
-  nextNonogramHint,
   type NonogramHintKind,
 } from "../nonogram/engine";
 import { nonogramPageModifier } from "../nonogram/page-class";
@@ -152,7 +152,7 @@ function NonogramFreeBoard({
       return;
     }
 
-    const hint = nextNonogramHint(current.solution, current.entries);
+    const hint = nextBinaryHint(current.solution, current.entries);
     if (hint === null) {
       return;
     }

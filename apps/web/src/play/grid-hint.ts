@@ -30,3 +30,16 @@ export function nextHint<T>(
 
   return firstEmpty;
 }
+
+export function nextBinaryHint(
+  solution: readonly (0 | 1)[],
+  entries: readonly (0 | 1 | null)[],
+): Hint<0 | 1> | null {
+  const noGivens = solution.map(() => null);
+  const first = nextHint<0 | 1>(solution, noGivens, entries);
+  if (first === null || first.kind === "correction" || first.value === 1) {
+    return first;
+  }
+  const onesOnly = solution.map((mark) => (mark === 1 ? null : 0));
+  return nextHint<0 | 1>(solution, onesOnly, entries) ?? first;
+}
