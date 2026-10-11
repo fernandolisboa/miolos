@@ -9,6 +9,7 @@
     "./binairo": "./src/binairo/index.ts",
     "./crossword": "./src/crossword/index.ts",
     "./nonogram": "./src/nonogram/index.ts",
+    "./queens": "./src/queens/index.ts",
     "./sudoku": "./src/sudoku/index.ts",
     "./termo": "./src/termo/index.ts"
   },

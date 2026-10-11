@@ -1,7 +1,7 @@
-import { createSeededRandom } from "../random";
+import { createSeededRandom, shuffleInPlace } from "../random";
 import type { Weekday } from "../weekday";
 import { gradeInternal } from "./grade";
-import { countSolutionsInternal, fillGrid, shuffleInPlace } from "./solve";
+import { countSolutionsInternal, fillGrid } from "./solve";
 import type {
   SudokuApprovalCriteria,
   SudokuGrid,

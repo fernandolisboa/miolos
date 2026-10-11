@@ -1,4 +1,3 @@
-import type { SeededRandom } from "../random";
 import { BINAIRO_SIZE } from "./types";
 import type { BinairoGrid, BinairoSolvedGrid } from "./types";
 
@@ -55,16 +54,4 @@ export function toSolvedGrid(cells: readonly CellState[]): BinairoSolvedGrid {
     }
     return cell;
   });
-}
-
-export function seededPermutation(length: number, rng: SeededRandom): number[] {
-  const values = Array.from({ length }, (_, i) => i);
-  for (let i = length - 1; i > 0; i -= 1) {
-    const j = rng.nextInt(i + 1);
-    const a = intAt(values, i);
-    const b = intAt(values, j);
-    values[i] = b;
-    values[j] = a;
-  }
-  return values;
 }
