@@ -131,6 +131,26 @@ type Attempt =
   | { kind: "retry"; reason: string }
   | { kind: "stop"; reason: string };
 
+function contentAttempt(
+  schema: {
+    safeParse(
+      puzzle: unknown,
+    ):
+      | { success: true; data: unknown }
+      | { success: false; error: { message: string } };
+  },
+  puzzle: unknown,
+): Attempt {
+  const content = schema.safeParse(puzzle);
+  if (!content.success) {
+    return {
+      kind: "stop",
+      reason: `content schema rejected: ${content.error.message}`,
+    };
+  }
+  return { kind: "content", content: content.data };
+}
+
 async function withSeedRetries(
   target: string,
   maxAttempts: number,
@@ -177,14 +197,7 @@ function attemptBinairo(seed: number, weekday: Weekday): Attempt {
       reason: `validator rejected: ${verdict.reasons.join(", ")}`,
     };
   }
-  const content = binairoDailyContentSchema.safeParse(puzzle);
-  if (!content.success) {
-    return {
-      kind: "stop",
-      reason: `content schema rejected: ${content.error.message}`,
-    };
-  }
-  return { kind: "content", content: content.data };
+  return contentAttempt(binairoDailyContentSchema, puzzle);
 }
 
 export async function topUpBinairoBuffer(
@@ -228,14 +241,7 @@ function attemptSudoku(seed: number, weekday: Weekday): Attempt {
       reason: `validator rejected: ${verdict.reasons.join(", ")}`,
     };
   }
-  const content = sudokuDailyContentSchema.safeParse(puzzle);
-  if (!content.success) {
-    return {
-      kind: "stop",
-      reason: `content schema rejected: ${content.error.message}`,
-    };
-  }
-  return { kind: "content", content: content.data };
+  return contentAttempt(sudokuDailyContentSchema, puzzle);
 }
 
 export async function topUpSudokuBuffer(
@@ -293,14 +299,7 @@ function attemptNonogram(seed: number, weekday: Weekday): Attempt {
       reason: `validator rejected: ${verdict.failures.join(", ")}`,
     };
   }
-  const content = nonogramDailyContentSchema.safeParse(puzzle);
-  if (!content.success) {
-    return {
-      kind: "stop",
-      reason: `content schema rejected: ${content.error.message}`,
-    };
-  }
-  return { kind: "content", content: content.data };
+  return contentAttempt(nonogramDailyContentSchema, puzzle);
 }
 
 export async function topUpNonogramBuffer(
@@ -340,14 +339,7 @@ function attemptCrossword(seed: number): Attempt {
       reason: `validator rejected: ${verdict.failures.join(", ")}`,
     };
   }
-  const content = crosswordDailyContentSchema.safeParse(puzzle);
-  if (!content.success) {
-    return {
-      kind: "stop",
-      reason: `content schema rejected: ${content.error.message}`,
-    };
-  }
-  return { kind: "content", content: content.data };
+  return contentAttempt(crosswordDailyContentSchema, puzzle);
 }
 
 export async function topUpCrosswordBuffer(
