@@ -176,7 +176,7 @@ describe("conflicts show every rule kind and never flag a mark (T-WEB-S452)", ()
 });
 
 describe("the Rainhas hint (T-WEB-S453)", () => {
-  it("solves the board once, at init, and agrees with the engine", () => {
+  it("carries the engine's solution from init", () => {
     expect(initQueensPlayState(DAILY).solution).toEqual(SOLUTION);
   });
 

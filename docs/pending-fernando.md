@@ -41,8 +41,7 @@
 - **If yes:** PR 2 and PR 3 of #285 ship Rainhas as the sixth daily and add it to free play, and ADR-0091 amends the founding catalogue.
 - **If no:** Rainhas never reaches players. A follow-up PR removes the `@miolos/games/queens` engine, and ADR-0090 gets a `Superseded by:` line.
 - **Verify:** your answer is in that thread or on #285.
-- **If you do not answer:** your "next big feature" request says to go ahead with the recommendation when you stay silent, so PR 2 merges with Rainhas once it is green, reviewed and §4 is done. A later "no" still works: it triggers the follow-up above.
-- **Blocks:** nothing waits on it alone; #285 PR 2 waits on §4. PR 1 (the engine) shipped with nothing a player can see.
+- **Blocks:** #285 PR 2 (the Rainhas daily) does not merge without your yes. PR 1 (the engine) shipped with nothing a player can see. The session that merges PR 2 moves §3 and §4 to Done with your answers as evidence.
 - **Why it is yours:** a sixth game changes the founding catalogue (Termo, Sudoku, Nonogram, Binairo, then the Cruzadinha), and every Dia Perfeito then needs six puzzles.
 - **Source:** the 2026-10-11 "Next big feature" thread; Rainhas was the recommended option on the card.
 

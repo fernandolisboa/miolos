@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md)
-**Amended by:** [ADR-0092](./0092-the-rainhas-board-tap-cycles-drag-crosses-conflicts-show.md) (#285) — decision 3's *"`Enter`/`Space` … which is 'select'"*: on the Rainhas board activation also cycles the cell (undecided → crossed → queen → undecided). Decision 3's key table is now one function, `keyMove` in `apps/web/src/play/grid-selection.ts`, for every grid, so ADR-0037 decision 4's `PageUp`/`PageDown` (first/last row of the column) reach Sudoku and the Cruzadinha too.
+**Amended by:** [ADR-0092](./0092-the-rainhas-board-tap-cycles-drag-crosses-conflicts-show.md) (#285) — decision 3's *"`Enter`/`Space` … which is 'select'"*: on the Rainhas board activation also cycles the cell (undecided → crossed → queen → undecided). Decision 3's key table is now one function, `keyMove` in `apps/web/src/play/grid-selection.ts`, for every grid with a keyboard caret, so ADR-0037 decision 4's `PageUp`/`PageDown` (first/last row of the column) reach Sudoku and the Cruzadinha too.
 
 ## Context
 

@@ -45,7 +45,6 @@ function squareBinaryGridSchema(sizes: {
   const cellCounts = sizes.options.map((option) => option.value ** 2);
   return z
     .array(submittedCellSchema)
-    .max(Math.max(...cellCounts))
     .refine((g) => cellCounts.includes(g.length), {
       message: `grid length must be one of ${cellCounts.join(", ")}`,
     });

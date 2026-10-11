@@ -533,6 +533,16 @@ describe("the keyboard model (T-WEB-S28)", () => {
     expect(caretIndex(container)).toBe((SIDE - 1) * SIDE + 5);
   });
 
+  it("lets browser shortcuts through: Ctrl+PageUp is never prevented", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const board = boardOf();
+
+    fireEvent.click(cellAt(container, 4 * SIDE + 5));
+    const passed = fireEvent.keyDown(board, { key: "PageUp", ctrlKey: true });
+    expect(passed).toBe(true);
+    expect(caretIndex(container)).toBe(4 * SIDE + 5);
+  });
+
   it("writes with 1–9 and clears with 0, Backspace and Delete", () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
     const cell = cellAt(container, FIRST_EMPTY);

@@ -52,6 +52,9 @@ export function Board({
   }, [selected]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
     const move = keyMove(event.key, SIDE);
     if (move !== null) {
       event.preventDefault();
