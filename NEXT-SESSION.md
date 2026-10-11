@@ -4,7 +4,7 @@
 
 ## Start here
 
-**The Rainhas engine shipped** in `@miolos/games/queens` (#285 PR 1, ADR-0090): plant, grow and repair a region map, grade it with a deduction ladder, 7×7 Monday to 9×9 Sunday. Nothing a player can see changed. On 2,000 seeds per weekday no seed used more than 55 of 128 attempts, and the slowest puzzle took 124 ms. Fisher–Yates now lives once, as `shuffleInPlace` in `packages/games/src/random.ts`.
+**The Rainhas engine shipped** in `@miolos/games/queens` (#285 PR 1, ADR-0090): plant, grow and repair a region map, grade it with a deduction ladder, 7×7 Monday to 9×9 Sunday. Nothing a player can see changed. On 2,000 seeds per weekday no seed used more than 59 of 128 attempts. The slowest puzzle took 70 ms warm and 161 ms as a fresh process's first call (both Sundays).
 
 ## Traps
 

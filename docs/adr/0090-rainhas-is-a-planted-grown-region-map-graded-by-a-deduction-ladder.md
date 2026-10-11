@@ -5,7 +5,7 @@
 
 ## Context
 
-Rainhas (`queens`, #285) is an N×N board cut into N regions. The player places one queen in each row, column and region, and no two queens may touch, diagonals included. The board has no givens: the region map is the whole puzzle. So the generator must produce a map with exactly one solution, and a difficulty that ramps from Monday to Sunday.
+Rainhas (`queens`, #285) is an N×N board cut into N regions. The player places one queen in each row, column and region, and no two queens may touch, diagonals included. The board has no givens: the region map is the whole puzzle. So the generator must produce a map with exactly one solution, and a difficulty that ramps from Monday to Sunday. Whether Rainhas joins the catalogue is Fernando's call (`docs/pending-fernando.md` NOW §2) and the subject of ADR-0091; this ADR covers the engine only.
 
 ## Decision
 
@@ -19,7 +19,7 @@ Rainhas (`queens`, #285) is an N×N board cut into N regions. The player places 
 ## Consequences
 
 - A puzzle is a pure function of `(seed, weekday)`. Changing the ladder's scan order or the criteria changes what a seed produces and the step count stored with it.
-- Measured on Node 24 over 2,000 seeds per weekday, no seed used more than 55 of the 128 attempts, and the slowest puzzle of the week took 124 ms (a Sunday). The full table is in the PR body.
+- Measured on Node 24 over 2,000 seeds per weekday, no seed used more than 59 of the 128 attempts. The slowest puzzle took 70 ms in a warm process (a Sunday) and 161 ms as the first call of a fresh process.
 - The solver is cheap enough for the client hint: `solveQueens` takes under 0.5 ms at N=9.
 - The repair loop's uniqueness searches are the generator's cost centre, and each one rebuilds the board geometry, so `geometryOf` must stay O(N²).
 - The tests check uniqueness with an independent instrument that tries all N! column orders (`packages/games/test/queens/fixtures.ts`), never the engine solver.
