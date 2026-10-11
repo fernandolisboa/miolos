@@ -1,43 +1,21 @@
 import type { DailyQueensResponse } from "@miolos/core";
-import { useCallback, useReducer } from "react";
 
-import type { Hint } from "../play/grid-hint";
 import type { QueensPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
-import {
-  useBinaryGridControls,
-  type BinaryGridControls,
-} from "../play/use-binary-grid-controls";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
-import {
-  countQueens,
-  initQueensPlayState,
-  queensGrid,
-  queensPlayReducer,
-  type QueensMark,
-  type QueensPlayState,
-} from "./state";
+import { queensGrid, queensPlayReducer, type QueensPlayState } from "./state";
+import { useQueensBoard, type QueensBoardState } from "./use-queens-board";
 
-export type QueensHintKind = Hint<QueensMark>["kind"];
-
-export interface QueensPlay extends BinaryGridControls<QueensHintKind> {
-  readonly state: QueensPlayState;
+export interface QueensPlay extends QueensBoardState {
   readonly elapsed: number;
-  readonly placed: number;
-  readonly cycleCell: (index: number) => void;
-  readonly crossOver: (index: number) => void;
 }
 
 export function useQueensPlay(
   daily: DailyQueensResponse,
   remotelyClaimed = false,
 ): QueensPlay {
-  const [state, dispatch] = useReducer(
-    queensPlayReducer,
-    daily,
-    initQueensPlayState,
-  );
-  const controls = useBinaryGridControls(state, dispatch, hintKindOf);
+  const board = useQueensBoard(daily);
+  const { state, dispatch } = board;
 
   usePlayLifecycle({
     game: "queens",
@@ -49,26 +27,7 @@ export function useQueensPlay(
     persistDeps: [state.entries, state.hint.used],
   });
 
-  const cycleCell = useCallback((index: number) => {
-    dispatch({ type: "cycle", index });
-  }, []);
-
-  const crossOver = useCallback((index: number) => {
-    dispatch({ type: "cross-over", index });
-  }, []);
-
-  return {
-    ...controls,
-    state,
-    elapsed: elapsedMs(state.timer, state.now),
-    placed: countQueens(state.entries),
-    cycleCell,
-    crossOver,
-  };
-}
-
-function hintKindOf(hint: Hint<QueensMark>): QueensHintKind {
-  return hint.kind;
+  return { ...board, elapsed: elapsedMs(state.timer, state.now) };
 }
 
 function buildRecord(
