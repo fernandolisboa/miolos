@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-**Not for this PR.** The next one, PR 2 of #285 (the Rainhas daily), does not merge until you pick Rainhas as the sixth daily and run migration 0015 on the Miolos database. PR 2 adds both to `docs/pending-fernando.md`. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**Yes, one word: NOW §2.** Say yes or no to Rainhas as the sixth daily. PR 2 of #285 (the Rainhas daily) does not merge without it, nor without migration 0015 run on the Miolos database, which PR 2 adds to `docs/pending-fernando.md`. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 

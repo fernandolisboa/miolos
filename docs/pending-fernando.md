@@ -13,7 +13,7 @@
 
 ---
 
-## NOW — one ⚡ decision, not urgent
+## NOW — two ⚡ decisions
 
 *(Section numbers were positional and moved three times before the section emptied on 2026-08-21. Several Done rows carry that old numbering in their "Was pending in" column; each row is about its own subject, not about whatever held that number. **Cite Done rows by subject, never by section number.** As promised there, the next item filed starts at §1 again — this is it.)*
 
@@ -27,6 +27,14 @@
 - **Why it is yours and not an agent's:** the four options are different promises to the player, and (c) changes a shipped medal's meaning. The pt-BR wording, the tile's visual treatment and the ordering are **not** yours and will not be asked — CLAUDE.md, *"Do not bring him UI/UX choices."*
 - **Do NOT be re-asked the answer-pool direction.** You settled that on 2026-08-20 (bulk-extension accepted, live generation preferred long-term) and it is in the Done table as *"#74 answer-pool direction"*. That is about **refilling** the pool; #200 is about **running out**. Two questions, and #74's body ran them together, which is why #200 was split out.
 - **Source:** #74's exploration, 2026-08-22 (this session). The consequence that made it worth filing rather than leaving in the ticket: with no Termo daily, **Dia Perfeito is unreachable for every user indefinitely** — an achievement class silently freezes. The streak survives (ADR-0008 rule 3, *"the streak stays reachable through the three grid games"*), so the core mechanic does not break.
+
+### §2 ⚡ Rainhas as the sixth daily game — issue #285
+
+- **Do:** say yes or no to Rainhas, on the decision card in the "Next big feature" project thread or in one word on #285.
+- **Verify:** your answer is in that thread or on #285.
+- **Blocks:** #285 PR 2 (the Rainhas daily) does not merge without it. PR 1 (the engine) shipped with nothing a player can see.
+- **Why it is yours:** a sixth game changes the founding catalogue (Termo, Sudoku, Nonogram, Binairo, then the Cruzadinha), and every Dia Perfeito then needs six puzzles.
+- **Source:** the 2026-10-11 "Next big feature" thread; Rainhas was the recommended option on the card.
 
 ---
 
