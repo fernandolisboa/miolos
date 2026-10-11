@@ -1,7 +1,8 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { gradeQueens } from "../../src/queens/index";
-import { board, instrumentSolutions } from "./fixtures";
+import { board, instrumentSolutions, randomContiguousMap } from "./fixtures";
 
 describe("gradeQueens", () => {
   it("finishes a board that single candidates alone solve, with no advanced step", () => {
@@ -41,5 +42,21 @@ describe("gradeQueens", () => {
   it("never finishes a board with no solution or with several", () => {
     expect(gradeQueens(board("1002 0000 3333 3333")).solved).toBe(false);
     expect(gradeQueens(board("0000 1111 2222 3333")).solved).toBe(false);
+  });
+
+  it("property — a finished ladder means exactly one solution, on random maps N = 4..7", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 4, max: 7 }),
+        fc.integer({ min: 0, max: 0xffffffff }),
+        (size, seed) => {
+          const map = randomContiguousMap(size, seed);
+          if (gradeQueens(map).solved) {
+            expect(instrumentSolutions(map)).toHaveLength(1);
+          }
+        },
+      ),
+      { numRuns: 300 },
+    );
   });
 });

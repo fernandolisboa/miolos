@@ -22,7 +22,7 @@ const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom(...WEEKDAYS);
 
 describe("generateQueens", () => {
-  // ADR-0055: worst contended ms × 4, rounded up — P1 1987 → 8_000, P2 2317 → 10_000, P4 4591 → 19_000, Sundays 6391 → 26_000.
+  // ADR-0055: worst contended ms × 4, rounded up — P1 1987 → 8_000, P2 2317 → 10_000, P4 6920 → 28_000, Sundays 7208 → 29_000.
   it("P1 — generated puzzles are well-formed, unique and on the weekday ramp", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
@@ -82,13 +82,13 @@ describe("generateQueens", () => {
       }),
       { numRuns: 60 },
     );
-  }, 19_000);
+  }, 28_000);
 
   it("generates every Sunday of 200 fixed seeds within the attempt cap", () => {
     for (let seed = 0; seed < 200; seed += 1) {
       expect(generateQueens({ seed, weekday: 7 }).seed).toBe(seed);
     }
-  }, 26_000);
+  }, 29_000);
 });
 
 describe("repairRegions", () => {

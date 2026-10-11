@@ -1,4 +1,7 @@
+import { QUEENS_SIZES } from "./types";
 import type { QueensBoard, QueensGrid } from "./types";
+
+const MAX_SIZE = Math.max(...QUEENS_SIZES);
 
 export interface Geometry {
   readonly size: number;
@@ -10,9 +13,9 @@ export interface Geometry {
 }
 
 export function checkBoard({ size, regions }: QueensBoard): void {
-  if (!Number.isInteger(size) || size < 4) {
+  if (!Number.isInteger(size) || size < 4 || size > MAX_SIZE) {
     throw new RangeError(
-      `size must be an integer of at least 4, got ${String(size)}`,
+      `size must be an integer in 4..${MAX_SIZE}, got ${String(size)}`,
     );
   }
   if (regions.length !== size * size) {
@@ -73,12 +76,12 @@ export function attacks(geometry: Geometry, a: number, b: number): boolean {
 export function neighbours(size: number, cell: number): number[] {
   const row = Math.floor(cell / size);
   const col = cell % size;
-  return [
-    row > 0 ? cell - size : -1,
-    col > 0 ? cell - 1 : -1,
-    col < size - 1 ? cell + 1 : -1,
-    row < size - 1 ? cell + size : -1,
-  ].filter((next) => next >= 0);
+  const near: number[] = [];
+  if (row > 0) near.push(cell - size);
+  if (col > 0) near.push(cell - 1);
+  if (col < size - 1) near.push(cell + 1);
+  if (row < size - 1) near.push(cell + size);
+  return near;
 }
 
 export function floodRegion(

@@ -1,13 +1,17 @@
 import { createSeededRandom, shuffleInPlace } from "../random";
 import type { SeededRandom } from "../random";
-import { isWeekday } from "../weekday";
+import { assertWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
 import { gradeQueens } from "./grade";
 import { floodRegion, neighbours } from "./internal";
 import { searchQueens } from "./solve";
 import { QueensGenerationError } from "./types";
 import type { QueensPuzzle } from "./types";
-import { QUEENS_WEEKDAY_CRITERIA, validateQueens } from "./validate";
+import {
+  QUEENS_WEEKDAY_CRITERIA,
+  gradeFailures,
+  validateQueens,
+} from "./validate";
 
 export const QUEENS_MAX_GENERATION_ATTEMPTS = 128;
 const MAX_REPAIRS = 64;
@@ -60,26 +64,42 @@ function grow(
   rng: SeededRandom,
 ): number[] {
   const regions = new Array<number>(size * size).fill(-1);
-  queens.forEach((cell, id) => (regions[cell] = id));
-  const weights = queens.map(() => (1 - rng.next()) ** skew);
-  for (let free = size * size - size; free > 0; free -= 1) {
-    const frontier = queens.map((): number[] => []);
-    regions.forEach((id, cell) => {
-      if (id === -1) {
-        for (const next of adjacentRegions(size, regions, cell)) {
-          frontier[next]!.push(cell);
-        }
+  const frontiers = queens.map((): number[] => []);
+  const claim = (cell: number, id: number): void => {
+    regions[cell] = id;
+    for (const frontier of frontiers) {
+      const at = frontier.indexOf(cell);
+      if (at >= 0) {
+        frontier.splice(at, 1);
       }
-    });
-    const growing = frontier.flatMap((cells, id) =>
+    }
+    const own = frontiers[id]!;
+    for (const next of neighbours(size, cell)) {
+      if (regions[next] === -1 && !own.includes(next)) {
+        own.push(next);
+      }
+    }
+  };
+  queens.forEach((cell, id) => claim(cell, id));
+  // Repeated multiplication, not `**`: Math.pow is not correctly rounded on every engine.
+  const weights = queens.map(() => {
+    const u = 1 - rng.next();
+    let weight = 1;
+    for (let i = 0; i < skew; i += 1) {
+      weight *= u;
+    }
+    return weight;
+  });
+  for (let free = size * size - size; free > 0; free -= 1) {
+    const growing = frontiers.flatMap((cells, id) =>
       cells.length > 0 ? [id] : [],
     );
     let pick = rng.next() * growing.reduce((sum, id) => sum + weights[id]!, 0);
     const id =
       growing.find((candidate) => (pick -= weights[candidate]!) < 0) ??
       growing.at(-1)!;
-    const cells = frontier[id]!;
-    regions[cells[rng.nextInt(cells.length)]!] = id;
+    const frontier = frontiers[id]!;
+    claim(frontier[rng.nextInt(frontier.length)]!, id);
   }
   return regions;
 }
@@ -132,13 +152,9 @@ export function generateQueens(options: {
   weekday: Weekday;
 }): QueensPuzzle {
   const seed = options.seed >>> 0;
-  const { weekday } = options;
-  if (!isWeekday(weekday)) {
-    throw new RangeError(
-      `weekday must be an integer in 1..7 (ISO 8601), got ${String(weekday)}`,
-    );
-  }
-  const { size, skew } = QUEENS_WEEKDAY_CRITERIA[weekday];
+  const weekday = assertWeekday(options.weekday);
+  const criteria = QUEENS_WEEKDAY_CRITERIA[weekday];
+  const { size, skew } = criteria;
   const seedRng = createSeededRandom(seed);
   for (
     let attempt = 1;
@@ -153,7 +169,7 @@ export function generateQueens(options: {
     }
     const regions = relabel(grown);
     const grade = gradeQueens({ size, regions });
-    if (!grade.solved) {
+    if (gradeFailures(grade, criteria).length > 0) {
       continue;
     }
     const puzzle: QueensPuzzle = {

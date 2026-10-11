@@ -1,5 +1,6 @@
 import {
   isFilled,
+  openCount,
   openIn,
   openMarks,
   place,
@@ -20,20 +21,20 @@ function searchFrom(
   if (!placeSingles(geometry, marks)) {
     return;
   }
-  let branch: number[] | null = null;
+  let branch: readonly number[] | null = null;
+  let fewest = Infinity;
   for (const unit of geometry.units) {
-    if (!isFilled(marks, unit)) {
-      const open = openIn(marks, unit);
-      if (branch === null || open.length < branch.length) {
-        branch = open;
-      }
+    const open = isFilled(marks, unit) ? Infinity : openCount(marks, unit);
+    if (open < fewest) {
+      fewest = open;
+      branch = unit;
     }
   }
   if (branch === null) {
     found.push(marks.map((mark) => (mark === QUEEN ? 1 : 0)));
     return;
   }
-  for (const cell of branch) {
+  for (const cell of openIn(marks, branch)) {
     const next = [...marks];
     place(geometry, next, cell);
     searchFrom(geometry, next, limit, found);

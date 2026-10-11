@@ -1,3 +1,4 @@
+import { createSeededRandom } from "../../src/index";
 import type { QueensBoard, QueensGrid } from "../../src/queens/index";
 
 function rowsOf(spec: string): string[] {
@@ -93,4 +94,27 @@ export function isContiguous({ size, regions }: QueensBoard): boolean {
 export function isCanonical({ regions }: QueensBoard): boolean {
   const order = [...new Set(regions)];
   return order.every((id, index) => id === index);
+}
+
+export function randomContiguousMap(size: number, seed: number): QueensBoard {
+  const rng = createSeededRandom(seed);
+  const regions = new Array<number>(size * size).fill(-1);
+  for (let id = 0; id < size;) {
+    const cell = rng.nextInt(size * size);
+    if (regions[cell] === -1) {
+      regions[cell] = id;
+      id += 1;
+    }
+  }
+  while (regions.includes(-1)) {
+    const cell = rng.nextInt(size * size);
+    const near = [cell - size, cell + size]
+      .concat(cell % size > 0 ? [cell - 1] : [])
+      .concat(cell % size < size - 1 ? [cell + 1] : [])
+      .filter((next) => (regions[next] ?? -1) >= 0);
+    if (regions[cell] === -1 && near.length > 0) {
+      regions[cell] = regions[near[rng.nextInt(near.length)]!]!;
+    }
+  }
+  return { size, regions };
 }

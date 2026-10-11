@@ -1,10 +1,11 @@
-import { isWeekday } from "../weekday";
+import { assertWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
 import { gradeQueens } from "./grade";
 import { floodRegion } from "./internal";
 import { isValidQueensSolution } from "./rules";
 import { countQueensSolutions } from "./solve";
 import type {
+  QueensGrade,
   QueensPuzzle,
   QueensRejectionReason,
   QueensSize,
@@ -32,6 +33,26 @@ export const QUEENS_WEEKDAY_CRITERIA: Readonly<
   7: { size: 9, skew: 0, maxTier: 3, minSteps: 10, maxSteps: 40 },
 };
 
+export function gradeFailures(
+  grade: QueensGrade,
+  criteria: QueensCriteria,
+): QueensRejectionReason[] {
+  if (!grade.solved) {
+    return ["beyond-ladder"];
+  }
+  const failures: QueensRejectionReason[] = [];
+  if (
+    grade.maxTier > criteria.maxTier ||
+    grade.advancedSteps > criteria.maxSteps
+  ) {
+    failures.push("too-hard");
+  }
+  if (grade.advancedSteps < criteria.minSteps) {
+    failures.push("too-easy");
+  }
+  return failures;
+}
+
 function rejected(
   failures: readonly QueensRejectionReason[],
 ): QueensValidationResult {
@@ -39,18 +60,15 @@ function rejected(
 }
 
 export function validateQueens(puzzle: QueensPuzzle): QueensValidationResult {
-  const { weekday, size, regions, solution } = puzzle;
-  if (!isWeekday(weekday)) {
-    throw new RangeError(
-      `weekday must be an integer in 1..7 (ISO 8601), got ${String(weekday)}`,
-    );
-  }
-  const criteria = QUEENS_WEEKDAY_CRITERIA[weekday];
+  const { size, regions, solution } = puzzle;
+  const criteria = QUEENS_WEEKDAY_CRITERIA[assertWeekday(puzzle.weekday)];
   const cellCount = criteria.size * criteria.size;
   if (size !== criteria.size) {
     return rejected(["size-mismatch"]);
   }
   if (
+    !Array.isArray(regions) ||
+    !Array.isArray(solution) ||
     regions.length !== cellCount ||
     !regions.every((id) => Number.isInteger(id)) ||
     solution.length !== cellCount ||
@@ -79,25 +97,13 @@ export function validateQueens(puzzle: QueensPuzzle): QueensValidationResult {
   if (!isValidQueensSolution(puzzle, solution)) {
     failures.push("solution-invalid");
   }
-  if (countQueensSolutions(puzzle, 2) > 1) {
+  if (countQueensSolutions(puzzle) > 1) {
     failures.push("not-unique");
   }
   const grade = gradeQueens(puzzle);
-  if (!grade.solved) {
-    failures.push("beyond-ladder");
-  } else {
-    if (
-      grade.maxTier > criteria.maxTier ||
-      grade.advancedSteps > criteria.maxSteps
-    ) {
-      failures.push("too-hard");
-    }
-    if (grade.advancedSteps < criteria.minSteps) {
-      failures.push("too-easy");
-    }
-    if (grade.advancedSteps !== puzzle.advancedSteps) {
-      failures.push("steps-mismatch");
-    }
+  failures.push(...gradeFailures(grade, criteria));
+  if (grade.solved && grade.advancedSteps !== puzzle.advancedSteps) {
+    failures.push("steps-mismatch");
   }
   return failures.length > 0
     ? rejected(failures)

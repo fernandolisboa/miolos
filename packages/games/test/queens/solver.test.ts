@@ -1,10 +1,14 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { createSeededRandom } from "../../src/index";
 import { countQueensSolutions, solveQueens } from "../../src/queens/index";
 import type { QueensBoard } from "../../src/queens/index";
-import { board, instrumentSolutions, queens } from "./fixtures";
+import {
+  board,
+  instrumentSolutions,
+  queens,
+  randomContiguousMap,
+} from "./fixtures";
 
 const UNBOUNDED = Number.MAX_SAFE_INTEGER;
 
@@ -15,29 +19,6 @@ function striped(size: number): QueensBoard {
       Math.floor(cell / size),
     ),
   };
-}
-
-function randomContiguousMap(size: number, seed: number): QueensBoard {
-  const rng = createSeededRandom(seed);
-  const regions = new Array<number>(size * size).fill(-1);
-  for (let id = 0; id < size;) {
-    const cell = rng.nextInt(size * size);
-    if (regions[cell] === -1) {
-      regions[cell] = id;
-      id += 1;
-    }
-  }
-  while (regions.includes(-1)) {
-    const cell = rng.nextInt(size * size);
-    const near = [cell - size, cell + size]
-      .concat(cell % size > 0 ? [cell - 1] : [])
-      .concat(cell % size < size - 1 ? [cell + 1] : [])
-      .filter((next) => (regions[next] ?? -1) >= 0);
-    if (regions[cell] === -1 && near.length > 0) {
-      regions[cell] = regions[near[rng.nextInt(near.length)]!]!;
-    }
-  }
-  return { size, regions };
 }
 
 describe("the N!-permutation instrument", () => {

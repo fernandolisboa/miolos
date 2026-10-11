@@ -36,6 +36,19 @@ export function openIn(
   return unit.filter((cell) => marks[cell] === OPEN);
 }
 
+export function openCount(
+  marks: readonly Mark[],
+  unit: readonly number[],
+): number {
+  let count = 0;
+  for (const cell of unit) {
+    if (marks[cell] === OPEN) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 export function isFilled(
   marks: readonly Mark[],
   unit: readonly number[],
@@ -50,12 +63,16 @@ export function placeSingles(geometry: Geometry, marks: Mark[]): boolean {
       if (isFilled(marks, unit)) {
         continue;
       }
-      const open = openIn(marks, unit);
-      if (open.length === 0) {
+      const open = openCount(marks, unit);
+      if (open === 0) {
         return false;
       }
-      if (open.length === 1) {
-        place(geometry, marks, open[0]!);
+      if (open === 1) {
+        place(
+          geometry,
+          marks,
+          unit.find((cell) => marks[cell] === OPEN)!,
+        );
         changed = true;
       }
     }

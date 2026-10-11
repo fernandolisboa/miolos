@@ -66,6 +66,10 @@ describe("validateQueens", () => {
     expect(
       failuresOf({ ...monday, solution: notBinary as readonly (0 | 1)[] }),
     ).toEqual(["malformed"]);
+    const withoutRegions = { ...monday, regions: undefined };
+    expect(failuresOf(withoutRegions as unknown as QueensPuzzle)).toEqual([
+      "malformed",
+    ]);
   });
 
   it("rejects a map without exactly N region ids in range", () => {

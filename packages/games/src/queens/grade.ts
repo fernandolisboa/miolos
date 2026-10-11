@@ -94,14 +94,17 @@ function clearByTier3(geometry: Geometry, marks: Mark[]): boolean {
   const { size, rows, cols, regions, regionOf } = geometry;
   const open = openUnits(marks, regions);
   const ids = open.flatMap((cells, id) => (cells.length > 0 ? [id] : []));
+  const sides = [
+    { lines: rows, lineOf: (cell: number) => Math.floor(cell / size) },
+    { lines: cols, lineOf: (cell: number) => cell % size },
+  ].map(({ lines, lineOf }) => ({
+    lines,
+    masks: ids.map((id) =>
+      open[id]!.reduce((mask, cell) => mask | (1 << lineOf(cell)), 0),
+    ),
+  }));
   for (let k = 2; k <= size - 2; k += 1) {
-    for (const [lines, lineOf] of [
-      [rows, (cell: number) => Math.floor(cell / size)],
-      [cols, (cell: number) => cell % size],
-    ] as const) {
-      const masks = ids.map((id) =>
-        open[id]!.reduce((mask, cell) => mask | (1 << lineOf(cell)), 0),
-      );
+    for (const { lines, masks } of sides) {
       for (let subset = 0; subset < 1 << ids.length; subset += 1) {
         if (bitCount(subset) !== k) {
           continue;

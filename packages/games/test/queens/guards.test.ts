@@ -33,6 +33,15 @@ describe("weekday guard", () => {
 describe("board structure guard", () => {
   const malformed: [string, QueensBoard][] = [
     ["size below 4", { size: 3, regions: [0, 0, 0, 1, 1, 1, 2, 2, 2] }],
+    [
+      "size above 9",
+      {
+        size: 10,
+        regions: Array.from({ length: 100 }, (_, cell) =>
+          Math.floor(cell / 10),
+        ),
+      },
+    ],
     ["non-integer size", { size: 4.5, regions: FOUR.regions }],
     ["regions of the wrong length", { size: 4, regions: [0, 1, 2, 3] }],
     [
