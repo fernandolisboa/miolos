@@ -103,6 +103,8 @@ describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
 
       "hasCreditedPastDateToday",
       "hintGrants",
+      "holdsIdentityHandle",
+      "isIdentityClashError",
       "isWinnerLivenessError",
 
       "listCompletionsForDay",

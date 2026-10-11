@@ -12,10 +12,26 @@ import {
 } from "./schema";
 
 const WINNER_LIVENESS_SIGNATURE = "owns no session or identity handle";
+const IDENTITY_CLASH_SIGNATURE = "both accounts hold an identity handle";
 
 export function isWinnerLivenessError(error: unknown): boolean {
   return (
     error instanceof Error && error.message.includes(WINNER_LIVENESS_SIGNATURE)
+  );
+}
+
+export function isIdentityClashError(error: unknown): boolean {
+  return (
+    error instanceof Error && error.message.includes(IDENTITY_CLASH_SIGNATURE)
+  );
+}
+
+export function holdsIdentityHandle() {
+  return or(
+    isNotNull(users.email),
+    isNotNull(users.emailVerifiedAt),
+    isNotNull(users.appleId),
+    isNotNull(users.googleId),
   );
 }
 
@@ -44,12 +60,20 @@ export async function mergeAccounts(
   db: Db,
   a: string,
   b: string,
+  dropSessionsOf?: string,
 ): Promise<{ winnerId: string; loserId: string }> {
   const candidates = await db
-    .select({ id: users.id })
+    .select({
+      id: users.id,
+      identified: sql<boolean>`${holdsIdentityHandle()}`,
+    })
     .from(users)
     .where(inArray(users.id, [a, b]))
-    .orderBy(asc(users.createdAt), asc(users.id));
+    .orderBy(
+      sql`${holdsIdentityHandle()} desc`,
+      asc(users.createdAt),
+      asc(users.id),
+    );
   const found = new Set(candidates.map((row) => row.id));
   for (const id of [a, b]) {
     if (!found.has(id)) {
@@ -59,11 +83,20 @@ export async function mergeAccounts(
   if (a === b) {
     return { winnerId: a, loserId: a };
   }
-  const winnerId = candidates[0]?.id;
-  const loserId = candidates[1]?.id;
-  if (winnerId === undefined || loserId === undefined) {
+  const [winner, loser] = candidates;
+  if (winner === undefined || loser === undefined) {
     throw new Error("mergeAccounts: winner selection returned too few rows");
   }
+  if (loser.identified) {
+    throw new Error(`mergeAccounts: ${IDENTITY_CLASH_SIGNATURE}`);
+  }
+  if (dropSessionsOf !== undefined && dropSessionsOf !== loser.id) {
+    throw new Error(
+      `mergeAccounts: ${dropSessionsOf} would win, so its sessions cannot be dropped`,
+    );
+  }
+  const winnerId = winner.id;
+  const loserId = loser.id;
 
   const winnerSessions = await db
     .select({ userId: sessions.userId })
@@ -74,17 +107,7 @@ export async function mergeAccounts(
     const winnerHandles = await db
       .select({ id: users.id })
       .from(users)
-      .where(
-        and(
-          eq(users.id, winnerId),
-          or(
-            isNotNull(users.email),
-            isNotNull(users.emailVerifiedAt),
-            isNotNull(users.appleId),
-            isNotNull(users.googleId),
-          ),
-        ),
-      )
+      .where(and(eq(users.id, winnerId), holdsIdentityHandle()))
       .limit(1);
     if (winnerHandles.length === 0) {
       throw new Error(
@@ -93,10 +116,14 @@ export async function mergeAccounts(
     }
   }
 
-  await db
-    .update(sessions)
-    .set({ userId: winnerId })
-    .where(eq(sessions.userId, loserId));
+  if (dropSessionsOf !== undefined) {
+    await db.delete(sessions).where(eq(sessions.userId, loserId));
+  } else {
+    await db
+      .update(sessions)
+      .set({ userId: winnerId })
+      .where(eq(sessions.userId, loserId));
+  }
 
   await db
     .update(pushSubscriptions)
@@ -188,17 +215,7 @@ export async function mergeAccounts(
       googleId: null,
       updatedAt: sql`now()`,
     })
-    .where(
-      and(
-        eq(users.id, loserId),
-        or(
-          isNotNull(users.email),
-          isNotNull(users.emailVerifiedAt),
-          isNotNull(users.appleId),
-          isNotNull(users.googleId),
-        ),
-      ),
-    );
+    .where(and(eq(users.id, loserId), holdsIdentityHandle()));
 
   return { winnerId, loserId };
 }

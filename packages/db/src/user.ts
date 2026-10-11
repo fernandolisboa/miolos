@@ -10,6 +10,8 @@ export {
 } from "./completions";
 export { pruneSeenDays, recordSeenDay, wasSeenOn } from "./seen-days";
 export {
+  holdsIdentityHandle,
+  isIdentityClashError,
   isWinnerLivenessError,
   listCompletionsForMerge,
   mergeAccounts,

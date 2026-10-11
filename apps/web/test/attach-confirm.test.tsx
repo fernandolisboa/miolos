@@ -11,7 +11,11 @@ const confirmMock = vi.hoisted(() =>
     (
       token: string,
     ) => Promise<
-      { merged: boolean } | "invalid-or-expired" | "conflict" | undefined
+      | { merged: boolean }
+      | "invalid-or-expired"
+      | "conflict"
+      | "sign-in-attached"
+      | undefined
     >
   >(),
 );
@@ -112,6 +116,21 @@ describe("the confirm island (T-WEB-S140)", () => {
     expect(
       screen.getByRole("button", { name: messages.confirm.ready.cta }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("the sign-in-attached refusal (T-WEB-S475)", () => {
+  it("says the email belongs to another account and points to Ajustes, not to a new link alone", async () => {
+    confirmMock.mockResolvedValue("sign-in-attached");
+    render(<AttachConfirm token={TOKEN} />);
+    fireEvent.click(await findArmedButton());
+    expect(
+      await screen.findByText(messages.confirm.signInAttached.title),
+    ).toBeInTheDocument();
+    expect(messages.confirm.signInAttached.body).toContain(
+      messages.settings.title,
+    );
+    expect(screen.queryByText(messages.confirm.conflict.title)).toBeNull();
   });
 });
 
