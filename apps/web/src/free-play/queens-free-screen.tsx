@@ -1,6 +1,7 @@
 "use client";
 
 import type { QueensSize } from "@miolos/core";
+import { QUEENS_WEEKDAY_CRITERIA } from "@miolos/games/queens";
 import { useState } from "react";
 
 import { messages } from "../i18n";
@@ -9,7 +10,11 @@ import { BoardSkeleton } from "../queens/board";
 import { BoardPanel, queensReadouts } from "../queens/board-panel";
 import styles from "../queens/queens-board.module.css";
 import { useQueensBoard } from "../queens/use-queens-board";
-import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
+import {
+  DEFAULT_FREE_PLAY_LEVEL,
+  LEVEL_WEEKDAYS,
+  type FreePlayLevel,
+} from "./catalog";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import freePlay from "./free-play.module.css";
@@ -21,12 +26,6 @@ import {
 } from "./use-free-queens";
 
 const copy = messages.games.queens.play;
-
-const LEVEL_SIZES: Readonly<Record<FreePlayLevel, QueensSize>> = {
-  leve: 7,
-  medio: 8,
-  dificil: 9,
-};
 
 export function QueensFreeScreen({ deps }: { readonly deps?: FreeQueensDeps }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
@@ -57,7 +56,9 @@ export function QueensFreeScreen({ deps }: { readonly deps?: FreeQueensDeps }) {
       {phase.kind === "failed" ? (
         <FreePlayErrorCard onRetry={regenerate} />
       ) : (
-        <GeneratingBoard size={LEVEL_SIZES[level]} />
+        <GeneratingBoard
+          size={QUEENS_WEEKDAY_CRITERIA[LEVEL_WEEKDAYS[level]].size}
+        />
       )}
     </FreePlayChrome>
   );

@@ -42,7 +42,7 @@
 
 .games {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-7);
   margin-top: 52px;
 }
@@ -51,6 +51,7 @@
    with it. Spans inside (an <a> may not contain block flow content roles),
    laid out as the hub card's column. */
 .card {
+  grid-column: span 2;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -78,11 +79,9 @@
   transform: rotate(0.6deg);
 }
 
-/* Five cards in two columns: the fifth sits centred under the pairs. */
+/* Each card spans two of four tracks, so an odd fifth card can sit centred. */
 .card:nth-child(5) {
-  grid-column: 1 / -1;
-  justify-self: center;
-  width: calc((100% - var(--space-7)) / 2);
+  grid-column: 2 / 4;
   transform: rotate(-0.5deg);
 }
 

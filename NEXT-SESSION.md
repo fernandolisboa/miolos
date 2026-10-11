@@ -4,7 +4,7 @@
 
 ## Start here
 
-**Rainhas is complete** (#285): the engine (PR 1, ADR-0090), the daily and archive (PR 2, ADR-0091, ADR-0092) and free play at `/modo-livre/rainhas` (PR 3). Free play has three levels that are board sizes: Leve 7×7, Médio 8×8, Difícil 9×9, from `LEVEL_WEEKDAYS` like the other games. The Rainhas daily and free screens share `useQueensBoard` (reducer, controls, hint) and `BoardPanel`/`queensReadouts` (`apps/web/src/queens/`); only the daily's `use-queens-play.ts` adds the lifecycle. The free-play lint wall and its dynamic-import selector now ban `use-queens-play` and `queens-screen`. The modo-livre index lays out five cards: the fifth is centred under the pairs. `bundle-check` scans `/modo-livre/rainhas`, with `advancedSteps` as the free-play positive control.
+**Rainhas is complete** (#285): the engine (ADR-0090), the daily and archive (ADR-0091, ADR-0092) and free play at `/modo-livre/rainhas`. The daily and free screens share `useQueensBoard` and `BoardPanel` (`apps/web/src/queens/`); only `use-queens-play.ts` adds the lifecycle, and the free-play wall bans it.
 
 ## Traps
 

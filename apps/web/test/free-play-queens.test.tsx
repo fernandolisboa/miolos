@@ -167,6 +167,7 @@ describe("the free Rainhas spends its one hint on the solution, once (T-WEB-S480
     fireEvent.click(screen.getByText(copy.hint.available));
 
     expect(cellAt(8, firstQueen).querySelector("svg")).not.toBeNull();
+    expect(cellAt(8, firstQueen).className).toContain(styles.cellHinted);
     expect(screen.getByText(copy.hint.used).closest("button")).toHaveAttribute(
       "aria-disabled",
       "true",
@@ -198,7 +199,7 @@ describe("a failed free Rainhas offers a retry that recovers (T-WEB-S481)", () =
   });
 });
 
-describe("five free-play cards lay out without an orphan in the left column (T-WEB-S482)", () => {
+describe("the fifth free-play card is one column wide at both breakpoints (T-WEB-S482)", () => {
   const index = stylesheet("app/modo-livre/page.module.css");
   const mobile = bodyOf(index, "@media (max-width: 768px)");
   const ROTATION = /^rotate\(-?\d+(\.\d+)?deg\)$/;
@@ -207,9 +208,17 @@ describe("five free-play cards lay out without an orphan in the left column (T-W
   it("centres the fifth card under the pair rows on desktop", () => {
     const body = bodyOf(index, ".card:nth-child(5)");
 
-    expect(decl(body, "grid-column")).toBe("1 / -1");
-    expect(decl(body, "justify-self")).toBe("center");
-    expect(decl(body, "width")).toBe("calc((100% - var(--space-7)) / 2)");
+    expect(decl(bodyOf(index, ".games"), "grid-template-columns")).toBe(
+      "repeat(4, 1fr)",
+    );
+    expect(decl(bodyOf(index, ".card"), "grid-column")).toBe("span 2");
+    expect(decl(body, "grid-column")).toBe("2 / 4");
+    expect(body).not.toMatch(/\b(width|justify-self)\s*:/);
+  });
+
+  it("fills the single column on a phone", () => {
+    expect(decl(bodyOf(mobile, ".games"), "flex-direction")).toBe("column");
+    expect(bodyOf(mobile, ".card:nth-child(5)")).not.toMatch(/\bwidth\s*:/);
   });
 
   it.each([
