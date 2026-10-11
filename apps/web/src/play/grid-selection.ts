@@ -17,6 +17,14 @@ export function movedSelection(
   return row * size + column;
 }
 
+export function isShortcut(event: {
+  readonly metaKey: boolean;
+  readonly ctrlKey: boolean;
+  readonly altKey: boolean;
+}): boolean {
+  return event.metaKey || event.ctrlKey || event.altKey;
+}
+
 export function keyMove(key: string, size: number): GridMove | null {
   const span = size - 1;
   switch (key) {

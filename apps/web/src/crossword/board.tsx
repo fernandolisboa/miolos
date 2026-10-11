@@ -6,7 +6,7 @@ import {
 } from "react";
 
 import { messages } from "../i18n";
-import { keyMove } from "../play/grid-selection";
+import { isShortcut, keyMove } from "../play/grid-selection";
 import { typedLetter } from "../play/typed-letter";
 import {
   activeEntry,
@@ -85,7 +85,7 @@ export function Board({
   }, [boardRef, selected]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.metaKey || event.ctrlKey || event.altKey) {
+    if (isShortcut(event)) {
       return;
     }
     const move = keyMove(event.key, GRID_SIZE);

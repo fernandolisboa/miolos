@@ -168,6 +168,29 @@ describe("the Rainhas board is one composite widget (T-WEB-S456)", () => {
     expect(cellAt(N)).toHaveFocus();
   });
 
+  it("jumps a column with PageUp and PageDown and lets browser shortcuts through", () => {
+    render(<QueensScreen daily={DAILY} />);
+    focusAt(3 * N + 2);
+
+    press("PageUp");
+    expect(caret()).toBe(2);
+    press("PageDown");
+    expect(caret()).toBe((N - 1) * N + 2);
+
+    focusAt(N + 1);
+    press("1");
+    for (const shortcut of [
+      { key: "PageUp", ctrlKey: true },
+      { key: "0", ctrlKey: true },
+      { key: "2", metaKey: true },
+      { key: "ArrowLeft", altKey: true },
+    ]) {
+      expect(fireEvent.keyDown(boardOf(), shortcut), shortcut.key).toBe(true);
+    }
+    expect(caret()).toBe(N + 1);
+    expect(labelOf(N + 1)).toBe(expectedLabel(N + 1, 1));
+  });
+
   it("crosses empty cells on a drag and never touches a queen", () => {
     const { container } = render(<QueensScreen daily={DAILY} />);
     stubElementFromPoint(container);

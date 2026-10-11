@@ -2,7 +2,7 @@ import type { SudokuGrid } from "@miolos/games/sudoku";
 import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
 
 import { messages } from "../i18n";
-import { keyMove } from "../play/grid-selection";
+import { isShortcut, keyMove } from "../play/grid-selection";
 import { track } from "./engine";
 import type { SudokuCellValue, SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
@@ -52,7 +52,7 @@ export function Board({
   }, [selected]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.metaKey || event.ctrlKey || event.altKey) {
+    if (isShortcut(event)) {
       return;
     }
     const move = keyMove(event.key, SIDE);

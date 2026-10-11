@@ -533,7 +533,7 @@ describe("the keyboard model (T-WEB-S28)", () => {
     expect(caretIndex(container)).toBe((SIDE - 1) * SIDE + 5);
   });
 
-  it("lets browser shortcuts through: Ctrl+PageUp is never prevented", () => {
+  it("lets browser shortcuts through: Ctrl+PageUp and Cmd+5 are never prevented", () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
     const board = boardOf();
 
@@ -541,6 +541,10 @@ describe("the keyboard model (T-WEB-S28)", () => {
     const passed = fireEvent.keyDown(board, { key: "PageUp", ctrlKey: true });
     expect(passed).toBe(true);
     expect(caretIndex(container)).toBe(4 * SIDE + 5);
+
+    fireEvent.click(cellAt(container, FIRST_EMPTY));
+    expect(fireEvent.keyDown(board, { key: "5", metaKey: true })).toBe(true);
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
   });
 
   it("writes with 1–9 and clears with 0, Backspace and Delete", () => {

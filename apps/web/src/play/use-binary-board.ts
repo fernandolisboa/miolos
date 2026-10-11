@@ -8,7 +8,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 
-import { keyMove } from "./grid-selection";
+import { isShortcut, keyMove } from "./grid-selection";
 import { usePointerStroke } from "./use-pointer-stroke";
 
 export interface BinaryBoard {
@@ -74,6 +74,9 @@ export function useBinaryBoard(input: {
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isShortcut(event)) {
+      return;
+    }
     const move = keyMove(event.key, size);
     if (move !== null) {
       event.preventDefault();
