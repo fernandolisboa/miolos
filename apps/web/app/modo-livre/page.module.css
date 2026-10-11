@@ -78,6 +78,14 @@
   transform: rotate(0.6deg);
 }
 
+/* Five cards in two columns: the fifth sits centred under the pairs. */
+.card:nth-child(5) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: calc((100% - var(--space-7)) / 2);
+  transform: rotate(-0.5deg);
+}
+
 /* A card is a link: the whole surface must announce focus, and the ring is
    ink for the same reason as the shared play layer's `.hint` — termo never
    renders here, but the rule is per-accent and ink clears every one of
@@ -116,6 +124,9 @@
 }
 .card:nth-child(4) .tape {
   transform: translateX(-50%) rotate(4deg);
+}
+.card:nth-child(5) .tape {
+  transform: translateX(-50%) rotate(-4deg);
 }
 
 .cardBody {
@@ -189,6 +200,9 @@
   .card:nth-child(4) {
     transform: rotate(0.3deg);
   }
+  .card:nth-child(5) {
+    transform: rotate(-0.4deg);
+  }
 
   .tape {
     top: -9px;
@@ -208,6 +222,9 @@
   }
   .card:nth-child(4) .tape {
     transform: rotate(4deg);
+  }
+  .card:nth-child(5) .tape {
+    transform: rotate(-4deg);
   }
 
   .kicker {

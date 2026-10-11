@@ -131,9 +131,14 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
       reachesCrossword: valueGraph.includes(
         "packages/games/src/crossword/index.ts",
       ),
-      dailyCrosswordLifecycle: [
+      reachesQueensEngine: valueGraph.includes(
+        "packages/games/src/queens/index.ts",
+      ),
+      dailyLifecycle: [
         "apps/web/src/crossword/use-crossword-play.ts",
         "apps/web/src/crossword/crossword-screen.tsx",
+        "apps/web/src/queens/use-queens-play.ts",
+        "apps/web/src/queens/queens-screen.tsx",
         "apps/web/src/play/use-play-lifecycle.ts",
       ].filter((module) => valueGraph.includes(module)),
       typeEdgeIsFollowedByClosureOnly: [
@@ -151,7 +156,8 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
       reachesChrome: true,
       reachesBinairo: true,
       reachesCrossword: true,
-      dailyCrosswordLifecycle: [],
+      reachesQueensEngine: true,
+      dailyLifecycle: [],
       typeEdgeIsFollowedByClosureOnly: [true, false],
       termoScreenIo: [
         "apps/web/src/api/client.ts",

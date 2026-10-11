@@ -14,13 +14,11 @@ afterEach(() => {
 });
 
 describe("the free-play game set and level mapping (T-WEB-S109)", () => {
-  it("FREE_PLAY_GAMES set-equals GAMES minus Termo (ADR-0088) and minus Rainhas until its free play ships", () => {
+  it("FREE_PLAY_GAMES set-equals GAMES minus Termo (ADR-0088)", () => {
     expect(GAMES).toHaveLength(6);
     expect(GAMES).toContain("termo");
 
-    const expected = GAMES.filter(
-      (game) => game !== "termo" && game !== "queens",
-    );
+    const expected = GAMES.filter((game) => game !== "termo");
     expect([...FREE_PLAY_GAMES].sort()).toEqual([...expected].sort());
     expect(FREE_PLAY_GAMES).not.toContain("termo");
   });

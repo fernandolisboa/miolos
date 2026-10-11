@@ -345,6 +345,32 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     }
   });
 
+  it("T-LINT-S68: the Rainhas daily hook and screen root red from free play, static and dynamic; clean from a daily path", async () => {
+    for (const door of [
+      "../queens/use-queens-play",
+      "../queens/queens-screen",
+    ]) {
+      const source = `import * as banned from "${door}";\n\nexport const probe = banned;\n`;
+      expect
+        .soft(ruleIds(await lintProbe(FREE_PATH, source)), door)
+        .toContain("no-restricted-imports");
+      expect
+        .soft(
+          ruleIds(
+            await lintProbe(
+              FREE_PATH,
+              `export const load = () => import("${door}");\n`,
+            ),
+          ),
+          door,
+        )
+        .toContain("no-restricted-syntax");
+      expect
+        .soft(wallHits(await lintProbe(DAILY_PATH, source)), door)
+        .toEqual([]);
+    }
+  });
+
   it("T-LINT-S21: the streak modules — client, hook, hub island and the bare barrel form — red from free play, clean from a daily path", async () => {
     const doors = [
       "../streak/streak-client",

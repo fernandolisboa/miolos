@@ -32,6 +32,7 @@ const BUDGETED = [
   "/modo-livre/nonogram",
   "/modo-livre/sudoku",
   "/modo-livre/cruzadinha",
+  "/modo-livre/rainhas",
 
   "/estatisticas",
 
@@ -61,6 +62,7 @@ const FREE_PLAY_ROUTES = [
   "/modo-livre/nonogram",
   "/modo-livre/sudoku",
   "/modo-livre/cruzadinha",
+  "/modo-livre/rainhas",
 ];
 
 const LEXICON_ROUTE = "/modo-livre/cruzadinha";
@@ -99,7 +101,7 @@ const EXPECTED_DAILY_SCOPE = [
   "zurre\\nzurro",
 ];
 
-const EXPECTED_FREE_PLAY_SCOPE = ["Escada", "givensCount"];
+const EXPECTED_FREE_PLAY_SCOPE = ["Escada", "givensCount", "advancedSteps"];
 
 function fail(message) {
   console.error(`FAIL  ${message}`);

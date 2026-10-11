@@ -42,6 +42,7 @@ export const routes = {
   freePlaySudoku: `/${routeSlugs.freePlay}/${routeSlugs.sudoku}`,
   freePlayNonogram: `/${routeSlugs.freePlay}/${routeSlugs.nonogram}`,
   freePlayCrossword: `/${routeSlugs.freePlay}/${routeSlugs.crossword}`,
+  freePlayQueens: `/${routeSlugs.freePlay}/${routeSlugs.queens}`,
   stats: `/${routeSlugs.stats}`,
   attach: `/${routeSlugs.attach}`,
   privacy: `/${routeSlugs.privacy}`,
@@ -88,4 +89,5 @@ export const freePlayRoutes: Readonly<Record<FreePlayGame, Route>> = {
   sudoku: routes.freePlaySudoku,
   nonogram: routes.freePlayNonogram,
   crossword: routes.freePlayCrossword,
+  queens: routes.freePlayQueens,
 };

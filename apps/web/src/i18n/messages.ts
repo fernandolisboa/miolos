@@ -331,6 +331,7 @@ export const messages = {
         sudoku: "Mais um",
         nonogram: "Mais um",
         crossword: "Mais uma",
+        queens: "Mais uma",
       },
       backToIndex: "Voltar ao Modo livre",
       backHome: "Voltar para Hoje",
