@@ -1,48 +1,36 @@
 import type { DailyNonogramResponse, NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
 
-import { nextBinaryHint } from "../play/grid-hint";
-import { movedSelection } from "../play/grid-selection";
-import type { NonogramPlayRecord, PlayRecord } from "../play/play-record";
-import { applyTimerAction } from "../play/timer";
-import type { HintState, LifecycleAction, PlayCore } from "../play/types";
+import {
+  binaryCellValue,
+  binaryGridReducer,
+  settled,
+  withBinaryEntry,
+  type BinaryCellValue,
+  type BinaryGridAction,
+  type BinaryGridRules,
+  type BinaryGridState,
+  type BinaryMark,
+} from "../play/binary-grid";
 import { isPictureComplete, solutionMarks } from "./engine";
 
-export type NonogramMark = 0 | 1;
+export type NonogramMark = BinaryMark;
 
-export type NonogramCellValue = NonogramMark | null;
+export type NonogramCellValue = BinaryCellValue;
 
 export type NonogramBrush = "fill" | "cross" | "erase";
 
-export interface NonogramPlayState extends PlayCore {
+export interface NonogramPlayState extends BinaryGridState {
   readonly size: NonogramSize;
-
   readonly clues: NonogramClues;
-
-  readonly solution: readonly NonogramMark[] | null;
-
-  readonly entries: readonly NonogramCellValue[];
-
-  readonly selected: number | null;
   readonly brush: NonogramBrush;
-  readonly hint: HintState;
-  readonly status: "playing" | "solved";
 }
 
 export type NonogramPlayAction =
-  | LifecycleAction
-  | { readonly type: "select"; readonly index: number }
-  | {
-      readonly type: "move-selection";
-      readonly rows: number;
-      readonly columns: number;
-    }
+  | BinaryGridAction
   | { readonly type: "set-brush"; readonly brush: NonogramBrush }
   | { readonly type: "mark-cell"; readonly index: number }
-  | { readonly type: "enter-value"; readonly value: NonogramMark }
-  | { readonly type: "clear-cell" }
-  | { readonly type: "paint-over"; readonly index: number }
-  | { readonly type: "use-hint" };
+  | { readonly type: "paint-over"; readonly index: number };
 
 export function initNonogramPlayState(
   daily: DailyNonogramResponse,
@@ -65,104 +53,52 @@ export function initNonogramPlayState(
   };
 }
 
+const NONOGRAM_RULES: BinaryGridRules<NonogramPlayState> = {
+  game: "nonogram",
+  derive: (state, entries) =>
+    settled(
+      state,
+      entries,
+      state.solution !== null && isPictureComplete(state.solution, entries),
+    ),
+};
+
 export function nonogramPlayReducer(
   state: NonogramPlayState,
   action: NonogramPlayAction,
 ): NonogramPlayState {
   switch (action.type) {
-    case "restore":
-      return restore(state, action.record, action.now);
-
-    case "select":
-      if (cellValue(state, action.index) === undefined) {
-        return state;
-      }
-
-      return state.selected === action.index
-        ? state
-        : { ...state, selected: action.index };
-
-    case "move-selection": {
-      const next = movedSelection(state.selected, action, state.size);
-      return state.selected === next ? state : { ...state, selected: next };
-    }
-
     case "set-brush":
       return state.brush === action.brush
         ? state
         : { ...state, brush: action.brush };
 
     case "mark-cell": {
-      const current = cellValue(state, action.index);
+      const current = binaryCellValue(state, action.index);
       if (current === undefined) {
         return state;
       }
-
       const value = brushValue(state.brush);
-      return withEntry(state, action.index, current === value ? null : value);
-    }
-
-    case "enter-value": {
-      const current = cellValue(state, state.selected);
-      if (current === undefined || state.selected === null) {
-        return state;
-      }
-
-      return withEntry(
+      return withBinaryEntry(
         state,
-        state.selected,
-        current === action.value ? null : action.value,
+        action.index,
+        current === value ? null : value,
+        NONOGRAM_RULES,
       );
     }
 
-    case "clear-cell": {
-      const current = cellValue(state, state.selected);
-      if (
-        current === null ||
-        current === undefined ||
-        state.selected === null
-      ) {
-        return state;
-      }
-      return withEntry(state, state.selected, null);
-    }
+    case "paint-over":
+      return binaryCellValue(state, action.index) === undefined
+        ? state
+        : withBinaryEntry(
+            state,
+            action.index,
+            brushValue(state.brush),
+            NONOGRAM_RULES,
+          );
 
-    case "paint-over": {
-      const current = cellValue(state, action.index);
-      if (current === undefined) {
-        return state;
-      }
-      return withEntry(state, action.index, brushValue(state.brush));
-    }
-
-    case "use-hint": {
-      if (
-        state.hint.used >= state.hint.free ||
-        state.status !== "playing" ||
-        state.solution === null
-      ) {
-        return state;
-      }
-      const hint = nextBinaryHint(state.solution, state.entries);
-      if (hint === null) {
-        return state;
-      }
-
-      const revealed = withEntry(state, hint.index, hint.value);
-      return {
-        ...revealed,
-        hint: { free: 1, used: state.hint.used + 1, lastIndex: hint.index },
-      };
-    }
-
-    case "tick":
-    case "pause":
-    case "resume":
-      return {
-        ...state,
-        timer: applyTimerAction(state.timer, action),
-        now: action.now,
-      };
+    default:
+      return binaryGridReducer(state, action, NONOGRAM_RULES);
   }
 }
 
@@ -175,87 +111,4 @@ function brushValue(brush: NonogramBrush): NonogramCellValue {
     case "erase":
       return null;
   }
-}
-
-function cellValue(
-  state: NonogramPlayState,
-  index: number | null,
-): NonogramCellValue | undefined {
-  if (
-    index === null ||
-    !Number.isInteger(index) ||
-    index < 0 ||
-    index >= state.entries.length
-  ) {
-    return undefined;
-  }
-  return state.entries[index] ?? null;
-}
-
-function withEntry(
-  state: NonogramPlayState,
-  index: number,
-  value: NonogramCellValue,
-): NonogramPlayState {
-  if (state.status !== "playing") {
-    return state;
-  }
-  if ((state.entries[index] ?? null) === value) {
-    return state;
-  }
-  const entries = state.entries.map((entry, at) =>
-    at === index ? value : entry,
-  );
-  const written = derive(state, entries);
-  return state.hint.lastIndex === index
-    ? { ...written, hint: { ...written.hint, lastIndex: null } }
-    : written;
-}
-
-function derive(
-  state: NonogramPlayState,
-  entries: readonly NonogramCellValue[],
-): NonogramPlayState {
-  const status =
-    state.solution !== null && isPictureComplete(state.solution, entries)
-      ? "solved"
-      : "playing";
-  return {
-    ...state,
-    entries,
-    status,
-    pendingSync:
-      status === "solved" && state.status !== "solved"
-        ? true
-        : state.pendingSync,
-  };
-}
-
-function restore(
-  state: NonogramPlayState,
-  record: PlayRecord | undefined,
-  now: number,
-): NonogramPlayState {
-  if (
-    !isNonogramRecord(record) ||
-    record.size !== state.size ||
-    record.entries.length !== state.entries.length
-  ) {
-    return { ...state, now, hydrated: true };
-  }
-  const derived = derive(state, record.entries);
-  return {
-    ...derived,
-    timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: { free: 1, used: record.hintsUsed, lastIndex: null },
-    pendingSync: record.pendingSync,
-    now,
-    hydrated: true,
-  };
-}
-
-function isNonogramRecord(
-  record: PlayRecord | undefined,
-): record is NonogramPlayRecord {
-  return record?.game === "nonogram";
 }

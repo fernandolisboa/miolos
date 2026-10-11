@@ -1,8 +1,4 @@
-/* The /rainhas board, on the shared play layout (ADR-0029) and the ADR-0030
-   composite widget. Regions are carried three ways — a fill, a 2px ink
-   boundary and the cell's accessible name — so colour is never the only
-   carrier (ADR-0092). Every ratio this sheet relies on is pinned in
-   test/queens-board.test.tsx (T-WEB-S457). */
+/* see ADR-0092 */
 
 .pageQueens {
   --grid-card-rot: -0.5deg;
@@ -109,8 +105,8 @@
   cursor: default;
 }
 
-/* Selection and focus are one block (ADR-0030 decision 5). The caret sits
-   inside the rings, so a conflict or a hint stays visible under it. */
+/* The caret sits inside the rings, so a conflict or a hint stays visible
+   under it. */
 .cellSelected,
 .cell:focus-visible {
   outline: 2px solid var(--ink);

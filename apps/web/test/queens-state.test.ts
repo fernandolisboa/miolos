@@ -2,11 +2,7 @@ import {
   dailyQueensResponseSchema,
   type DailyQueensResponse,
 } from "@miolos/core";
-import {
-  generateQueens,
-  solveQueens,
-  type QueensPuzzle,
-} from "@miolos/games/queens";
+import { generateQueens, type QueensPuzzle } from "@miolos/games/queens";
 import { describe, expect, it } from "vitest";
 
 import type { QueensPlayRecord } from "../src/play/play-record";
@@ -180,17 +176,12 @@ describe("conflicts show every rule kind and never flag a mark (T-WEB-S452)", ()
 });
 
 describe("the Rainhas hint (T-WEB-S453)", () => {
-  const solution = solveQueens(PUZZLE);
-
-  it("agrees with the engine's own solution", () => {
-    expect(solution).toEqual(SOLUTION);
+  it("solves the board once, at init, and agrees with the engine", () => {
+    expect(initQueensPlayState(DAILY).solution).toEqual(SOLUTION);
   });
 
   it("places a queen on an untouched board and records the hint", () => {
-    const hinted = run(hydrated(DAILY), {
-      type: "use-hint",
-      solution: SOLUTION,
-    });
+    const hinted = run(hydrated(DAILY), { type: "use-hint" });
     const index = hinted.hint.lastIndex ?? -1;
     expect(SOLUTION[index]).toBe(1);
     expect(hinted.entries[index]).toBe(1);
@@ -201,7 +192,6 @@ describe("the Rainhas hint (T-WEB-S453)", () => {
     const wrong = SOLUTION.findIndex((cell) => cell === 0);
     const hinted = run(hydrated(DAILY), ...queensAt(wrong), {
       type: "use-hint",
-      solution: SOLUTION,
     });
     expect(hinted.hint.lastIndex).toBe(wrong);
     expect(hinted.entries[wrong]).toBe(0);
@@ -212,18 +202,15 @@ describe("the Rainhas hint (T-WEB-S453)", () => {
     const hinted = run(
       hydrated(DAILY),
       { type: "cycle", index: queenCell },
-      { type: "use-hint", solution: SOLUTION },
+      { type: "use-hint" },
     );
     expect(hinted.hint.lastIndex).toBe(queenCell);
     expect(hinted.entries[queenCell]).toBe(1);
   });
 
   it("gives one hint only, and the ring leaves when the player rewrites that cell", () => {
-    const hinted = run(hydrated(DAILY), {
-      type: "use-hint",
-      solution: SOLUTION,
-    });
-    const again = run(hinted, { type: "use-hint", solution: SOLUTION });
+    const hinted = run(hydrated(DAILY), { type: "use-hint" });
+    const again = run(hinted, { type: "use-hint" });
     expect(again).toBe(hinted);
     const index = hinted.hint.lastIndex ?? -1;
     const rewritten = run(hinted, { type: "cycle", index });

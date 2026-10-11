@@ -2,6 +2,7 @@ import type { SudokuGrid } from "@miolos/games/sudoku";
 import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
 
 import { messages } from "../i18n";
+import { keyMove } from "../play/grid-selection";
 import { track } from "./engine";
 import type { SudokuCellValue, SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
@@ -9,8 +10,6 @@ import styles from "./sudoku-board.module.css";
 const SIDE = 9;
 
 const EMPTY = 0;
-
-const ROW_SPAN = SIDE - 1;
 
 export function Board({
   givens,
@@ -53,10 +52,10 @@ export function Board({
   }, [selected]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const move = MOVES[event.key];
-    if (move !== undefined) {
+    const move = keyMove(event.key, SIDE);
+    if (move !== null) {
       event.preventDefault();
-      onMove(move[0], move[1]);
+      onMove(move.rows, move.columns);
       return;
     }
     const digit = asDigit(event.key);
@@ -189,15 +188,6 @@ function cellAria(
   }
   return copy.cellAria(row, column, value);
 }
-
-const MOVES: Readonly<Record<string, readonly [number, number]>> = {
-  ArrowUp: [-1, 0],
-  ArrowDown: [1, 0],
-  ArrowLeft: [0, -1],
-  ArrowRight: [0, 1],
-  Home: [0, -ROW_SPAN],
-  End: [0, ROW_SPAN],
-};
 
 function asDigit(key: string): SudokuDigit | null {
   switch (key) {

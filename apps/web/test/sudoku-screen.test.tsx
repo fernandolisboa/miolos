@@ -521,6 +521,18 @@ describe("the keyboard model (T-WEB-S28)", () => {
     expect(caretIndex(container)).toBe(4 * SIDE + SIDE - 1);
   });
 
+  it("jumps to the first and last row of the column with PageUp and PageDown", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const board = boardOf();
+
+    fireEvent.click(cellAt(container, 4 * SIDE + 5));
+    fireEvent.keyDown(board, { key: "PageUp" });
+    expect(caretIndex(container)).toBe(5);
+
+    fireEvent.keyDown(board, { key: "PageDown" });
+    expect(caretIndex(container)).toBe((SIDE - 1) * SIDE + 5);
+  });
+
   it("writes with 1–9 and clears with 0, Backspace and Delete", () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
     const cell = cellAt(container, FIRST_EMPTY);

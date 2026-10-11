@@ -1,10 +1,14 @@
 import { dailyQueensResponseSchema } from "@miolos/core";
 import { generateQueens } from "@miolos/games/queens";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { messages } from "../src/i18n";
-import { playRecordKey, queensPlayRecordSchema } from "../src/play/play-record";
+import { formatElapsed, messages } from "../src/i18n";
+import {
+  playRecordKey,
+  queensPlayRecordSchema,
+  type QueensPlayRecord,
+} from "../src/play/play-record";
 import styles from "../src/queens/queens-board.module.css";
 import { QueensScreen } from "../src/queens/queens-screen";
 import { contrast } from "./contrast";
@@ -89,9 +93,19 @@ function caret(): number {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   localStorage.clear();
   installPointerStubs();
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+function storedRecord(): QueensPlayRecord {
+  const raw = localStorage.getItem(playRecordKey("queens", DATE));
+  return queensPlayRecordSchema.parse(JSON.parse(raw ?? "null"));
+}
 
 describe("the Rainhas board is one composite widget (T-WEB-S456)", () => {
   it("is one labelled group, one tab stop, no role=grid, and names row, column and region per cell", () => {
@@ -216,8 +230,7 @@ describe("the Rainhas board is one composite widget (T-WEB-S456)", () => {
       press("1");
     }
 
-    const raw = localStorage.getItem(playRecordKey("queens", DATE));
-    const record = queensPlayRecordSchema.parse(JSON.parse(raw ?? "null"));
+    const record = storedRecord();
     expect(record.concluded).toBe(true);
     expect(record.grid).toEqual([...PUZZLE.solution]);
     for (const index of marked) {
@@ -296,11 +309,121 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
       expect(cell.style.background).toBe(
         `var(--queens-region-${String(region + 1)})`,
       );
+      const column = index % N;
       const above = index >= N ? DAILY.regions[index - N] : undefined;
+      const left = column > 0 ? DAILY.regions[index - 1] : undefined;
       expect(
         cell.className.includes(styles.edgeTop ?? "?"),
         `top ${index}`,
       ).toBe(above !== region);
+      expect(
+        cell.className.includes(styles.edgeLeft ?? "?"),
+        `left ${index}`,
+      ).toBe(left !== region);
+      expect(
+        cell.className.includes(styles.edgeRight ?? "?"),
+        `right ${index}`,
+      ).toBe(column === N - 1);
+      expect(
+        cell.className.includes(styles.edgeBottom ?? "?"),
+        `bottom ${index}`,
+      ).toBe(index >= N * (N - 1));
     }
+  });
+});
+
+describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB-S476)", () => {
+  it("spends the one free hint on a queen's cell and explains it", () => {
+    render(<QueensScreen daily={DAILY} />);
+
+    fireEvent.click(screen.getByText(copy.hint.available));
+
+    expect(screen.getByText(copy.hint.used)).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByText(copy.hint.explain.fill)).toBeInTheDocument();
+    const queens = QUEEN_CELLS.filter((index) =>
+      labelOf(index).endsWith(": rainha"),
+    );
+    expect(queens).toHaveLength(1);
+  });
+
+  it("first turns a wrong queen into an X, and says it corrected", () => {
+    render(<QueensScreen daily={DAILY} />);
+    const wrong = EMPTY_CELLS[0] ?? -1;
+    focusAt(wrong);
+    press("1");
+
+    fireEvent.click(screen.getByText(copy.hint.available));
+
+    expect(labelOf(wrong)).toBe(expectedLabel(wrong, 0));
+    expect(screen.getByText(copy.hint.explain.correction)).toBeInTheDocument();
+  });
+
+  it("swaps the conclusion in place on the last queen, with no navigation", async () => {
+    const { container } = render(<QueensScreen daily={DAILY} />);
+    for (const index of QUEEN_CELLS) {
+      focusAt(index);
+      press("1");
+    }
+
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
+    expect(container.querySelector("[data-conclusion-state]")).toHaveAttribute(
+      "data-conclusion-state",
+      "result",
+    );
+    expect(container.querySelector("[data-cell-index]")).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(sync.flushPendingCompletions).toHaveBeenCalled();
+  });
+
+  it("restores a finished day straight into the conclusion, clock stopped", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    const record: QueensPlayRecord = {
+      v: 1,
+      game: "queens",
+      date: DATE,
+      size: DAILY.size,
+      entries: [...PUZZLE.solution],
+      grid: [...PUZZLE.solution],
+      elapsedMs: 151_000,
+      hintsUsed: 1,
+      concluded: true,
+      pendingSync: false,
+      syncOutcome: "recorded",
+    };
+    localStorage.setItem(playRecordKey("queens", DATE), JSON.stringify(record));
+
+    const { container } = render(<QueensScreen daily={DAILY} />);
+    await act(async () => {
+      await import("../src/play/conclusion-view");
+    });
+
+    const stamped = messages.conclusion.stampAria(
+      messages.games.queens.conclusion.title,
+      formatElapsed(record.elapsedMs),
+      record.hintsUsed,
+    );
+    expect(container.querySelector("[data-cell-index]")).toBeNull();
+    expect(screen.getByLabelText(stamped)).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(screen.getByLabelText(stamped)).toBeInTheDocument();
+    expect(sync.flushPendingCompletions).not.toHaveBeenCalled();
+  });
+
+  it("saves a mid-game edit before any pagehide", () => {
+    render(<QueensScreen daily={DAILY} />);
+    focusAt(3);
+    press("2");
+
+    const record = storedRecord();
+    expect(record.concluded).toBe(false);
+    expect(record.entries[3]).toBe(0);
   });
 });

@@ -137,16 +137,51 @@ type Attempt =
   | { kind: "retry"; reason: string }
   | { kind: "stop"; reason: string };
 
-function contentAttempt(
-  schema: {
-    safeParse(
-      puzzle: unknown,
-    ):
-      | { success: true; data: unknown }
-      | { success: false; error: { message: string } };
-  },
-  puzzle: unknown,
+type Rejection = Exclude<Attempt, { kind: "content" }>;
+
+interface ContentSchema {
+  safeParse(
+    puzzle: unknown,
+  ):
+    | { success: true; data: unknown }
+    | { success: false; error: { message: string } };
+}
+
+function validatorRejection(
+  failures: readonly string[],
+): Rejection | undefined {
+  return failures.length === 0
+    ? undefined
+    : { kind: "retry", reason: `validator rejected: ${failures.join(", ")}` };
+}
+
+function okRejection(
+  verdict:
+    | { readonly ok: true }
+    | { readonly ok: false; readonly failures: readonly string[] },
+): Rejection | undefined {
+  return validatorRejection(verdict.ok ? [] : verdict.failures);
+}
+
+function seededAttempt<P>(
+  generate: () => P,
+  generationError: abstract new (...args: never[]) => Error,
+  rejection: (puzzle: P) => Rejection | undefined,
+  schema: ContentSchema,
 ): Attempt {
+  let puzzle: P;
+  try {
+    puzzle = generate();
+  } catch (error) {
+    if (error instanceof generationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+  const rejected = rejection(puzzle);
+  if (rejected !== undefined) {
+    return rejected;
+  }
   const content = schema.safeParse(puzzle);
   if (!content.success) {
     return {
@@ -184,43 +219,46 @@ async function withSeedRetries(
   return lastReason;
 }
 
-export const MAX_BINAIRO_SEED_RETRIES_PER_DATE = 8;
-
-function attemptBinairo(seed: number, weekday: Weekday): Attempt {
-  let puzzle;
-  try {
-    puzzle = generateBinairo({ seed, weekday });
-  } catch (error) {
-    if (error instanceof BinairoGenerationError) {
-      return { kind: "retry", reason: error.message };
-    }
-    throw error;
-  }
-  const verdict = validateBinairo(puzzle, weekday);
-  if (!verdict.approved) {
-    return {
-      kind: "retry",
-      reason: `validator rejected: ${verdict.reasons.join(", ")}`,
-    };
-  }
-  return contentAttempt(binairoDailyContentSchema, puzzle);
-}
-
-export async function topUpBinairoBuffer(
+function topUpWithSeedRetries(
   db: Db,
+  game: Game,
   depth: number,
+  maxAttemptsPerDate: number,
+  attempt: (seed: number, weekday: Weekday) => Attempt,
 ): Promise<TopUpResult> {
   return topUpBuffer(
     db,
-    "binairo",
+    game,
     depth,
     () => (target, insert) =>
-      withSeedRetries(
-        target,
-        MAX_BINAIRO_SEED_RETRIES_PER_DATE,
-        attemptBinairo,
-        insert,
-      ),
+      withSeedRetries(target, maxAttemptsPerDate, attempt, insert),
+  );
+}
+
+export const MAX_BINAIRO_SEED_RETRIES_PER_DATE = 8;
+
+function attemptBinairo(seed: number, weekday: Weekday): Attempt {
+  return seededAttempt(
+    () => generateBinairo({ seed, weekday }),
+    BinairoGenerationError,
+    (puzzle) => {
+      const verdict = validateBinairo(puzzle, weekday);
+      return validatorRejection(verdict.approved ? [] : verdict.reasons);
+    },
+    binairoDailyContentSchema,
+  );
+}
+
+export function topUpBinairoBuffer(
+  db: Db,
+  depth: number,
+): Promise<TopUpResult> {
+  return topUpWithSeedRetries(
+    db,
+    "binairo",
+    depth,
+    MAX_BINAIRO_SEED_RETRIES_PER_DATE,
+    attemptBinairo,
   );
 }
 
@@ -231,23 +269,15 @@ export const MAX_SUDOKU_SEED_RETRIES_PER_RUN = 4;
 const RUN_BUDGET_EXHAUSTED = "run seed-retry budget exhausted";
 
 function attemptSudoku(seed: number, weekday: Weekday): Attempt {
-  let puzzle;
-  try {
-    puzzle = generateDailySudoku({ seed, weekday });
-  } catch (error) {
-    if (error instanceof SudokuGenerationError) {
-      return { kind: "retry", reason: error.message };
-    }
-    throw error;
-  }
-  const verdict = validateSudoku(puzzle, sudokuCriteriaForWeekday(weekday));
-  if (!verdict.approved) {
-    return {
-      kind: "retry",
-      reason: `validator rejected: ${verdict.reasons.join(", ")}`,
-    };
-  }
-  return contentAttempt(sudokuDailyContentSchema, puzzle);
+  return seededAttempt(
+    () => generateDailySudoku({ seed, weekday }),
+    SudokuGenerationError,
+    (puzzle) => {
+      const verdict = validateSudoku(puzzle, sudokuCriteriaForWeekday(weekday));
+      return validatorRejection(verdict.approved ? [] : verdict.reasons);
+    },
+    sudokuDailyContentSchema,
+  );
 }
 
 export async function topUpSudokuBuffer(
@@ -277,132 +307,89 @@ export async function topUpSudokuBuffer(
 
 export const MAX_NONOGRAM_SEED_RETRIES_PER_DATE = 8;
 
-function attemptNonogram(seed: number, weekday: Weekday): Attempt {
-  let puzzle;
-  try {
-    puzzle = generateNonogram(seed, weekday);
-  } catch (error) {
-    if (error instanceof NonogramGenerationError) {
-      return { kind: "retry", reason: error.message };
-    }
-    throw error;
-  }
-
+function nonogramCrossCheck(
+  puzzle: ReturnType<typeof generateNonogram>,
+  weekday: Weekday,
+): Rejection | undefined {
   const expected = NONOGRAM_WEEKDAY_CRITERIA[weekday];
-  if (puzzle.weekday !== weekday || puzzle.size !== expected.size) {
-    return {
-      kind: "stop",
-      reason:
-        `weekday/size cross-check failed: expected weekday ${String(weekday)} ` +
-        `size ${String(expected.size)}, got weekday ${String(puzzle.weekday)} ` +
-        `size ${String(puzzle.size)}`,
-    };
+  if (puzzle.weekday === weekday && puzzle.size === expected.size) {
+    return undefined;
   }
-  const verdict = validateNonogram(puzzle);
-  if (!verdict.ok) {
-    return {
-      kind: "retry",
-      reason: `validator rejected: ${verdict.failures.join(", ")}`,
-    };
-  }
-  return contentAttempt(nonogramDailyContentSchema, puzzle);
+  return {
+    kind: "stop",
+    reason:
+      `weekday/size cross-check failed: expected weekday ${String(weekday)} ` +
+      `size ${String(expected.size)}, got weekday ${String(puzzle.weekday)} ` +
+      `size ${String(puzzle.size)}`,
+  };
 }
 
-export async function topUpNonogramBuffer(
+function attemptNonogram(seed: number, weekday: Weekday): Attempt {
+  return seededAttempt(
+    () => generateNonogram(seed, weekday),
+    NonogramGenerationError,
+    (puzzle) =>
+      nonogramCrossCheck(puzzle, weekday) ??
+      okRejection(validateNonogram(puzzle)),
+    nonogramDailyContentSchema,
+  );
+}
+
+export function topUpNonogramBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  return topUpBuffer(
+  return topUpWithSeedRetries(
     db,
     "nonogram",
     depth,
-    () => (target, insert) =>
-      withSeedRetries(
-        target,
-        MAX_NONOGRAM_SEED_RETRIES_PER_DATE,
-        attemptNonogram,
-        insert,
-      ),
+    MAX_NONOGRAM_SEED_RETRIES_PER_DATE,
+    attemptNonogram,
   );
 }
 
 export const MAX_CROSSWORD_SEED_RETRIES_PER_DATE = 8;
 
 function attemptCrossword(seed: number): Attempt {
-  let puzzle;
-  try {
-    puzzle = generateCrossword(seed);
-  } catch (error) {
-    if (error instanceof CrosswordGenerationError) {
-      return { kind: "retry", reason: error.message };
-    }
-    throw error;
-  }
-  const verdict = validateCrossword(puzzle);
-  if (!verdict.ok) {
-    return {
-      kind: "retry",
-      reason: `validator rejected: ${verdict.failures.join(", ")}`,
-    };
-  }
-  return contentAttempt(crosswordDailyContentSchema, puzzle);
+  return seededAttempt(
+    () => generateCrossword(seed),
+    CrosswordGenerationError,
+    (puzzle) => okRejection(validateCrossword(puzzle)),
+    crosswordDailyContentSchema,
+  );
 }
 
-export async function topUpCrosswordBuffer(
+export function topUpCrosswordBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  return topUpBuffer(
+  return topUpWithSeedRetries(
     db,
     "crossword",
     depth,
-    () => (target, insert) =>
-      withSeedRetries(
-        target,
-        MAX_CROSSWORD_SEED_RETRIES_PER_DATE,
-        (seed) => attemptCrossword(seed),
-        insert,
-      ),
+    MAX_CROSSWORD_SEED_RETRIES_PER_DATE,
+    attemptCrossword,
   );
 }
 
 export const MAX_QUEENS_SEED_RETRIES_PER_DATE = 8;
 
 function attemptQueens(seed: number, weekday: Weekday): Attempt {
-  let puzzle;
-  try {
-    puzzle = generateQueens({ seed, weekday });
-  } catch (error) {
-    if (error instanceof QueensGenerationError) {
-      return { kind: "retry", reason: error.message };
-    }
-    throw error;
-  }
-  const verdict = validateQueens(puzzle);
-  if (!verdict.ok) {
-    return {
-      kind: "retry",
-      reason: `validator rejected: ${verdict.failures.join(", ")}`,
-    };
-  }
-  return contentAttempt(queensDailyContentSchema, puzzle);
+  return seededAttempt(
+    () => generateQueens({ seed, weekday }),
+    QueensGenerationError,
+    (puzzle) => okRejection(validateQueens(puzzle)),
+    queensDailyContentSchema,
+  );
 }
 
-export async function topUpQueensBuffer(
-  db: Db,
-  depth: number,
-): Promise<TopUpResult> {
-  return topUpBuffer(
+export function topUpQueensBuffer(db: Db, depth: number): Promise<TopUpResult> {
+  return topUpWithSeedRetries(
     db,
     "queens",
     depth,
-    () => (target, insert) =>
-      withSeedRetries(
-        target,
-        MAX_QUEENS_SEED_RETRIES_PER_DATE,
-        attemptQueens,
-        insert,
-      ),
+    MAX_QUEENS_SEED_RETRIES_PER_DATE,
+    attemptQueens,
   );
 }
 

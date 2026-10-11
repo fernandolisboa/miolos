@@ -2,25 +2,19 @@
 
 import type { NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 
 import { messages } from "../i18n";
-import { nextBinaryHint } from "../play/grid-hint";
 import screen from "../play/screen.module.css";
+import { useBinaryGridControls } from "../play/use-binary-grid-controls";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
-import {
-  countFilledCells,
-  filledTarget,
-  hintKindOf,
-  type NonogramHintKind,
-} from "../nonogram/engine";
+import { countFilledCells, filledTarget, hintKindOf } from "../nonogram/engine";
 import { nonogramPageModifier } from "../nonogram/page-class";
 import {
   initNonogramPlayState,
   nonogramPlayReducer,
   type NonogramBrush,
-  type NonogramMark,
 } from "../nonogram/state";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
@@ -96,12 +90,15 @@ function NonogramFreeBoard({
     puzzle.daily,
     initNonogramPlayState,
   );
-  const [hintKind, setHintKind] = useState<NonogramHintKind | null>(null);
-
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  });
+  const {
+    hintReady,
+    hintKind,
+    selectCell,
+    moveSelection,
+    enterValue,
+    clearCell,
+    revealHint,
+  } = useBinaryGridControls(state, dispatch, hintKindOf);
 
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
@@ -109,18 +106,6 @@ function NonogramFreeBoard({
 
   const target = filledTarget(state.clues);
   const filled = countFilledCells(state.entries);
-  const hintReady =
-    state.solution !== null &&
-    state.hint.used < state.hint.free &&
-    state.status === "playing";
-
-  const selectCell = useCallback((index: number) => {
-    dispatch({ type: "select", index });
-  }, []);
-
-  const moveSelection = useCallback((rows: number, columns: number) => {
-    dispatch({ type: "move-selection", rows, columns });
-  }, []);
 
   const setBrush = useCallback((brush: NonogramBrush) => {
     dispatch({ type: "set-brush", brush });
@@ -130,34 +115,8 @@ function NonogramFreeBoard({
     dispatch({ type: "mark-cell", index });
   }, []);
 
-  const enterValue = useCallback((value: NonogramMark) => {
-    dispatch({ type: "enter-value", value });
-  }, []);
-
-  const clearCell = useCallback(() => {
-    dispatch({ type: "clear-cell" });
-  }, []);
-
   const paintOver = useCallback((index: number) => {
     dispatch({ type: "paint-over", index });
-  }, []);
-
-  const revealHint = useCallback(() => {
-    const current = stateRef.current;
-    if (
-      current.solution === null ||
-      current.hint.used >= current.hint.free ||
-      current.status !== "playing"
-    ) {
-      return;
-    }
-
-    const hint = nextBinaryHint(current.solution, current.entries);
-    if (hint === null) {
-      return;
-    }
-    setHintKind(hintKindOf(hint));
-    dispatch({ type: "use-hint" });
   }, []);
 
   if (state.status === "solved" && state.solution !== null) {

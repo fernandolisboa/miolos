@@ -141,7 +141,7 @@ they ship (an id is a wire value and a grant key).
 | 8 | `nonogram-30` | Trinta de Nonogram | Venceu o Nonogram diário 30 vezes. | totalWins, nonogram, 30 | Same. |
 | 9 | `termo-30` | Trinta de Termo | Venceu o Termo diário 30 vezes. | totalWins, termo, 30 | Same. |
 | 10 | `crossword-30` | Trinta cruzadas | Venceu a Cruzadinha diária 30 vezes. | totalWins, crossword, 30 | Same mark for the fifth game. The name says *cruzadas*, the handoff's own word for the game, because the name rule forbids an *-inha* ending. |
-| 11 | `queens-30` | Trinta de Rainhas | Venceu as Rainhas diárias 30 vezes. | totalWins, queens, 30 | Same mark for the sixth game, and the sixth per-game medal: the per-game quota is now full. |
+| 11 | `queens-30` | Trinta de Rainhas | Venceu as Rainhas diárias 30 vezes. | totalWins, queens, 30 | Same mark for the sixth game, and the sixth per-game medal: the per-game quota is now full. *Rainha* is a word, not a diminutive, so the -inha rule does not touch it. |
 | 12 | `streak-3` | Três dias de tinta | Chegou a uma sequência de 3 dias. | streakReached, 3 | The habit's first foothold; the lower bound the quota table allows. |
 | 13 | `streak-7` | Sequência de sete | Chegou a uma sequência de 7 dias. | streakReached, 7 | The full week — the streak the reminder opt-in anchors on. |
 | 14 | `streak-30` | Um mês inteiro | Chegou a uma sequência de 30 dias. | streakReached, 30 | The month. |
