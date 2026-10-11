@@ -10,6 +10,7 @@ export const FORBIDDEN_DAILY_KEYS = [
 
   "canonical",
   "normalized",
+  "advancedSteps",
 ] as const;
 
 export function collectKeys(

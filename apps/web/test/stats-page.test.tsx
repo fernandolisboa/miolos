@@ -55,6 +55,13 @@ const STATS = statsResponseSchema.parse({
     averageSampleCount: 0,
     histogram: [0, 0, 0, 0, 0, 0],
   },
+  queens: {
+    solved: 0,
+    bestMs: null,
+    averageMs: null,
+    averageSampleCount: 0,
+    histogram: [0, 0, 0, 0, 0, 0],
+  },
   termo: { solved: 12, distribution: [0, 1, 4, 5, 2, 0, 3] },
   perfectDays: 2,
   todayTermoGuesses: null,
@@ -129,8 +136,8 @@ describe("the fetched aggregates render (T-WEB-S154)", () => {
       screen.getByText(messages.stats.rows.solved(messages.games.sudoku.name)),
     ).toBeInTheDocument();
 
-    // binairo and crossword are both zero in STATS: best + average each, 4 blanks.
-    expect(screen.getAllByText(messages.stats.emptyValue)).toHaveLength(4);
+    // binairo, crossword and queens are zero in STATS: best + average each.
+    expect(screen.getAllByText(messages.stats.emptyValue)).toHaveLength(6);
 
     expect(
       screen.getByLabelText(

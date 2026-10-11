@@ -151,6 +151,7 @@ const webWallImportPaths = [
       "crosswordDailyContentSchema",
       "DailyProjectionUnsupportedError",
       "nonogramDailyContentSchema",
+      "queensDailyContentSchema",
       "stripDailyContent",
       "sudokuDailyContentSchema",
       "termoDailyContentSchema",

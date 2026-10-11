@@ -63,6 +63,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       nonogram: { status: "played" },
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 1 },
       crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 0 },
+      queens: { status: "completed", elapsedMs: 150_000, hintsUsed: 1 },
     },
   };
 
@@ -140,6 +141,14 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
     ).toBe(false);
   });
 
+  it("T-CORE-S137: Rainhas is a required game on the wire — a five-game body fails", () => {
+    const fiveGames: Partial<typeof valid.games> = { ...valid.games };
+    delete fiveGames.queens;
+    expect(
+      dayResponseSchema.safeParse({ ...valid, games: fiveGames }).success,
+    ).toBe(false);
+  });
+
   it("T-CORE-S95: the wire status enum is exactly the local projection's three verbs — an alias, never a second spelling", () => {
     expect([...DAY_STATUSES].sort()).toEqual([
       "completed",
@@ -182,6 +191,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
         rowOf("nonogram", "won", false, 99_000),
         rowOf("binairo", "won", true, 407_000),
         rowOf("crossword", "won", true, 212_000),
+        rowOf("queens", "won", true, 150_000),
       ]),
     ).toEqual({
       termo: { status: "played" },
@@ -189,6 +199,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       nonogram: { status: "pending" },
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
       crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 0 },
+      queens: { status: "completed", elapsedMs: 150_000, hintsUsed: 0 },
     });
 
     expect(dayGamesFromRows([rowOf("termo", "won", true, 188_000)])).toEqual({
@@ -197,6 +208,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
       crossword: { status: "pending" },
+      queens: { status: "pending" },
     });
 
     expect(
@@ -249,6 +261,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       nonogram: { status: "played" },
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
       crossword: { status: "pending" },
+      queens: { status: "pending" },
     });
 
     expect(
@@ -270,6 +283,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
       crossword: { status: "pending" },
+      queens: { status: "pending" },
     };
     expect(dayGamesFromRows(rows)).toEqual(expected);
     expect(dayGamesFromRows([...rows].reverse())).toEqual(expected);
@@ -282,6 +296,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       rowOf("termo", "won", true, 188_000, 0),
       rowOf("binairo", "won", true, 99_000, 0),
       rowOf("crossword", "won", true, 212_000, 1),
+      rowOf("queens", "won", true, 150_000, 0),
     ];
     expect(
       dayGamesFromRows(rows, { nonogramMotifName: "Âncora" }),
@@ -296,10 +311,17 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       },
       binairo: { status: "completed", elapsedMs: 99_000, hintsUsed: 0 },
       crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 1 },
+      queens: { status: "completed", elapsedMs: 150_000, hintsUsed: 0 },
     });
 
     const named = dayGamesFromRows(rows, { nonogramMotifName: "Âncora" });
-    for (const game of ["termo", "sudoku", "binairo", "crossword"] as const) {
+    for (const game of [
+      "termo",
+      "sudoku",
+      "binairo",
+      "crossword",
+      "queens",
+    ] as const) {
       expect(Object.keys(named[game]), game).not.toContain("motifName");
     }
 

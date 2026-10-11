@@ -1,0 +1,155 @@
+/* The /rainhas board, on the shared play layout (ADR-0029) and the ADR-0030
+   composite widget. Regions are carried three ways — a fill, a 2px ink
+   boundary and the cell's accessible name — so colour is never the only
+   carrier (ADR-0092). Every ratio this sheet relies on is pinned in
+   test/queens-board.test.tsx (T-WEB-S457). */
+
+.pageQueens {
+  --grid-card-rot: -0.5deg;
+  --stats-card-rot: 0.7deg;
+  --tape-rot: -2deg;
+  --board-mobile-max: 350px;
+}
+
+/* `none`, not `manipulation`: a drag crosses cells, and a touch drag that
+   scrolls the page instead loses the gesture. */
+.grid {
+  display: grid;
+  gap: 0;
+  touch-action: none;
+}
+
+.size7 {
+  grid-template-columns: repeat(7, 52px);
+  grid-template-rows: repeat(7, 52px);
+}
+
+.size8 {
+  grid-template-columns: repeat(8, 52px);
+  grid-template-rows: repeat(8, 52px);
+}
+
+.size9 {
+  grid-template-columns: repeat(9, 52px);
+  grid-template-rows: repeat(9, 52px);
+}
+
+.sizeCard {
+  font-size: 14px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  transition: box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+.edgeTop {
+  border-top: 2px solid var(--ink);
+}
+
+.edgeLeft {
+  border-left: 2px solid var(--ink);
+}
+
+.edgeRight {
+  border-right: 2px solid var(--ink);
+}
+
+.edgeBottom {
+  border-bottom: 2px solid var(--ink);
+}
+
+.queen {
+  width: 56%;
+  height: 56%;
+  fill: var(--ink);
+}
+
+/* The mark is drawn, never typed, so a cell's text content stays empty and
+   its state rides in the accessible name. */
+.cellMarked::before,
+.cellMarked::after {
+  content: "";
+  position: absolute;
+  width: 36%;
+  height: 2px;
+  background: var(--ink);
+}
+
+.cellMarked::before {
+  transform: rotate(45deg);
+}
+
+.cellMarked::after {
+  transform: rotate(-45deg);
+}
+
+.cellHinted {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.cellConflict {
+  box-shadow: inset 0 0 0 3px var(--accent-app);
+}
+
+.cellSkeleton {
+  cursor: default;
+}
+
+/* Selection and focus are one block (ADR-0030 decision 5). The caret sits
+   inside the rings, so a conflict or a hint stays visible under it. */
+.cellSelected,
+.cell:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -7px;
+}
+
+.affordance {
+  margin-top: 30px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 768px) {
+  .size7 {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: repeat(7, auto);
+  }
+
+  .size8 {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-rows: repeat(8, auto);
+  }
+
+  .size9 {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    grid-template-rows: repeat(9, auto);
+  }
+
+  .cell {
+    aspect-ratio: 1;
+  }
+
+  .affordance {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell {
+    transition: none;
+  }
+}

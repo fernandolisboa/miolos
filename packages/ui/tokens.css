@@ -16,6 +16,16 @@
   --accent-nonogram: #B5563C;
   --accent-binairo: #4E6B52;
   --accent-crossword: #6B4560;
+  --accent-queens: #7A569C;
+  --queens-region-1: #EECFAE;
+  --queens-region-2: #F8C8D0;
+  --queens-region-3: #C1DCBF;
+  --queens-region-4: #B8DAE7;
+  --queens-region-5: #E7CDE4;
+  --queens-region-6: #FACABB;
+  --queens-region-7: #B3DDD4;
+  --queens-region-8: #D8D6B0;
+  --queens-region-9: #CDD4EC;
 
   --accent-sudoku-text: var(--accent-sudoku);
   --accent-binairo-text: var(--accent-binairo);
@@ -73,6 +83,16 @@
     --accent-nonogram: #C4684E;
     --accent-binairo: #658B6A;
     --accent-crossword: #BD7F9D;
+    --accent-queens: #B48AD8;
+    --queens-region-1: #3F301D;
+    --queens-region-2: #462B32;
+    --queens-region-3: #253727;
+    --queens-region-4: #1C363F;
+    --queens-region-5: #3C2E3D;
+    --queens-region-6: #462C25;
+    --queens-region-7: #1A3734;
+    --queens-region-8: #33341E;
+    --queens-region-9: #2C3242;
 
     --accent-sudoku-text: #5E87C4;
     --accent-binairo-text: #68906E;
@@ -98,6 +118,16 @@
   --accent-nonogram: #C4684E;
   --accent-binairo: #658B6A;
   --accent-crossword: #BD7F9D;
+  --accent-queens: #B48AD8;
+  --queens-region-1: #3F301D;
+  --queens-region-2: #462B32;
+  --queens-region-3: #253727;
+  --queens-region-4: #1C363F;
+  --queens-region-5: #3C2E3D;
+  --queens-region-6: #462C25;
+  --queens-region-7: #1A3734;
+  --queens-region-8: #33341E;
+  --queens-region-9: #2C3242;
 
   --accent-sudoku-text: #5E87C4;
   --accent-binairo-text: #68906E;

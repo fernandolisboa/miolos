@@ -16,12 +16,14 @@ import {
   type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
+  type QueensPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
 
 const DATE = "2026-08-01";
 const CROSSWORD_MS = 301_000;
+const QUEENS_MS = 233_000;
 
 type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
 const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
@@ -76,6 +78,24 @@ function nonogramRecord(
     size: 5,
     entries: Array.from({ length: 25 }, () => null),
     elapsedMs: NONOGRAM_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+function queensRecord(
+  overrides: Partial<QueensPlayRecord> = {},
+): QueensPlayRecord {
+  return {
+    v: 1,
+    game: "queens",
+    date: DATE,
+    size: 7,
+    entries: Array.from({ length: 49 }, () => null),
+    elapsedMs: QUEENS_MS,
     hintsUsed: 0,
     concluded: true,
     pendingSync: false,
@@ -153,6 +173,8 @@ function openRecord(game: Game): PlayRecord {
       };
     case "crossword":
       return crosswordRecord({ concluded: false });
+    case "queens":
+      return queensRecord({ concluded: false });
   }
 }
 
@@ -168,6 +190,8 @@ function concludedRecord(game: Game): PlayRecord {
       return wonTermoRecord();
     case "crossword":
       return crosswordRecord();
+    case "queens":
+      return queensRecord();
   }
 }
 
@@ -189,6 +213,8 @@ function withSync(
       return wonTermoRecord(sync);
     case "crossword":
       return crosswordRecord(sync);
+    case "queens":
+      return queensRecord(sync);
   }
 }
 

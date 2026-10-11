@@ -1,4 +1,4 @@
-import { dayResponseSchema, type DayResponse } from "@miolos/core";
+import { dayResponseSchema, type DayResponse, type Game } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { sessions, sql, users } from "@miolos/db";
 import { insertDailyPuzzle, todaySaoPaulo } from "@miolos/db/publishing";
@@ -92,7 +92,7 @@ function dayRequest(token?: string, search = ""): NextRequest {
 
 async function insertHistoryRow(init: {
   userId: string;
-  game: "binairo" | "crossword" | "sudoku" | "nonogram" | "termo";
+  game: Game;
   date: string;
   outcome: "won" | "lost";
   completedAtDate: string;
@@ -150,6 +150,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         nonogram: { status: "pending" },
         binairo: { status: "pending" },
         crossword: { status: "pending" },
+        queens: { status: "pending" },
       },
     });
 
@@ -177,6 +178,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         nonogram: { status: "pending" },
         binairo: { status: "pending" },
         crossword: { status: "pending" },
+        queens: { status: "pending" },
       },
     });
   });
@@ -200,6 +202,28 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
       status: "completed",
       elapsedMs: 190_000,
       hintsUsed: 1,
+    });
+  });
+
+  it("T-API-S244: Rainhas completes like a grid game — status, elapsedMs and hintsUsed round-trip", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token, userId } = await createSession();
+
+    await insertHistoryRow({
+      userId,
+      game: "queens",
+      date: today,
+      outcome: "won",
+      completedAtDate: today,
+      elapsedMs: 140_000,
+      hintsUsed: 0,
+    });
+
+    const body = await readDay(token);
+    expect(body.games.queens).toEqual({
+      status: "completed",
+      elapsedMs: 140_000,
+      hintsUsed: 0,
     });
   });
 
@@ -234,6 +258,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         nonogram: { status: "completed", elapsedMs: 512_000, hintsUsed: 0 },
         binairo: { status: "pending" },
         crossword: { status: "pending" },
+        queens: { status: "pending" },
       },
     });
   });
@@ -287,6 +312,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         nonogram: { status: "played" },
         binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
         crossword: { status: "pending" },
+        queens: { status: "pending" },
       },
     });
   });
@@ -329,6 +355,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         },
         binairo: { status: "pending" },
         crossword: { status: "pending" },
+        queens: { status: "pending" },
       },
     });
   });
@@ -557,6 +584,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
         nonogram: { status: "pending" },
         binairo: { status: "pending" },
         crossword: { status: "pending" },
+        queens: { status: "pending" },
       },
     });
   });

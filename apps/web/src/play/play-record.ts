@@ -3,6 +3,7 @@ import {
   crosswordLetterSchema,
   isoDateString,
   nonogramSizeSchema,
+  queensSizeSchema,
   sudokuDigitSchema,
   TERMO_MAX_GUESSES,
   TERMO_WORD_LENGTH,
@@ -109,6 +110,13 @@ export const nonogramPlayRecordSchema = sizedBinaryRecordSchema(
 
 export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
 
+export const queensPlayRecordSchema = sizedBinaryRecordSchema(
+  "queens",
+  queensSizeSchema,
+);
+
+export type QueensPlayRecord = z.infer<typeof queensPlayRecordSchema>;
+
 export const termoPlayRecordSchema = z
   .strictObject({
     v: z.literal(1),
@@ -197,6 +205,7 @@ export const playRecordSchema = z.discriminatedUnion("game", [
   binairoPlayRecordSchema,
   crosswordPlayRecordSchema,
   nonogramPlayRecordSchema,
+  queensPlayRecordSchema,
   sudokuPlayRecordSchema,
   termoPlayRecordSchema,
 ]);

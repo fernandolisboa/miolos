@@ -22,6 +22,7 @@ function statsBody(): Record<string, unknown> {
     },
     nonogram: timed,
     crossword: timed,
+    queens: timed,
     termo: { solved: 1, distribution: [0, 0, 0, 1, 0, 0, 0] },
     perfectDays: 0,
     todayTermoGuesses: 4,

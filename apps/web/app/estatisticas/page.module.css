@@ -148,7 +148,7 @@
   color: var(--ink-2);
 }
 
-/* ——— the four per-game blocks ———————————————————————————————————————
+/* ——— the per-game blocks ———————————————————————————————————————
    The hub card's chrome (page.module.css "Game card" register): card
    paper, hairline border, hard shadow in the game's accent at 22%, washi
    tape, alternating static rotations. */
@@ -181,11 +181,11 @@
 .gameCard:nth-child(4) {
   transform: rotate(-0.3deg);
 }
-/* The fifth card is Binairo, alone in its row — spans both columns rather
-   than sitting half-width beside an empty cell. */
 .gameCard:nth-child(5) {
-  grid-column: 1 / -1;
   transform: rotate(-0.4deg);
+}
+.gameCard:nth-child(6) {
+  transform: rotate(0.4deg);
 }
 
 .tape {
@@ -212,6 +212,9 @@
 }
 .gameCard:nth-child(5) .tape {
   transform: translateX(-50%) rotate(-4deg);
+}
+.gameCard:nth-child(6) .tape {
+  transform: translateX(-50%) rotate(3deg);
 }
 
 /* The hub kicker's post-ADR-0041 form: --ink-2 (5.3003:1 on card paper),

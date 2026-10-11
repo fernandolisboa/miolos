@@ -41,6 +41,10 @@ export const medalCopy = {
     name: "Trinta cruzadas",
     description: "Venceu a Cruzadinha diária 30 vezes.",
   },
+  "queens-30": {
+    name: "Trinta de Rainhas",
+    description: "Venceu as Rainhas diárias 30 vezes.",
+  },
   "streak-3": {
     name: "Três dias de tinta",
     description: "Chegou a uma sequência de 3 dias.",

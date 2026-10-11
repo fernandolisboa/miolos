@@ -8,12 +8,14 @@ import {
   completionResponseSchema,
   crosswordCompletionRequestSchema,
   nonogramCompletionRequestSchema,
+  queensCompletionRequestSchema,
   sudokuCompletionRequestSchema,
   termoCompletionRequestSchema,
   type BinairoCompletionRequest,
   type CompletionResponse,
   type CrosswordCompletionRequest,
   type NonogramCompletionRequest,
+  type QueensCompletionRequest,
   type SudokuCompletionRequest,
   type TermoCompletionRequest,
 } from "../src/index";
@@ -644,6 +646,65 @@ describe("crosswordCompletionRequestSchema", () => {
       ).toBe(false);
     }
     expect(completionRequestSchema.safeParse(withCell("z")).success).toBe(true);
+  });
+});
+
+describe("queensCompletionRequestSchema", () => {
+  function queensGrid(size: number): QueensCompletionRequest["grid"] {
+    return Array.from({ length: size * size }, (_unused, index): 0 | 1 =>
+      index % (size + 2) === 0 ? 1 : 0,
+    );
+  }
+  const validQueens: QueensCompletionRequest = {
+    game: "queens",
+    date: "2026-10-12",
+    grid: queensGrid(9),
+    elapsedMs: 272_000,
+    hintsUsed: 1,
+  };
+
+  it.each([7, 8, 9])(
+    "T-CORE-S134: parses and round-trips a %i x %i queens grid, through the union too",
+    (size) => {
+      const body = { ...validQueens, grid: queensGrid(size) };
+      expect(queensCompletionRequestSchema.parse(body)).toEqual(body);
+      expect(completionRequestSchema.parse(body)).toEqual(body);
+    },
+  );
+
+  it("T-CORE-S134: the key set is the five audited fields — no size, no marks", () => {
+    expect(Object.keys(queensCompletionRequestSchema.shape).sort()).toEqual([
+      "date",
+      "elapsedMs",
+      "game",
+      "grid",
+      "hintsUsed",
+    ]);
+  });
+
+  it("T-CORE-S134: every cell is 0 or 1 — an X mark never reaches the wire — and the length is 49, 64 or 81", () => {
+    const withCell = (cell: unknown) => ({
+      ...validQueens,
+      grid: [cell, ...validQueens.grid.slice(1)],
+    });
+    for (const body of [
+      withCell(null),
+      withCell(2),
+      withCell("x"),
+      withCell(true),
+      { ...validQueens, grid: queensGrid(6) },
+      { ...validQueens, grid: queensGrid(10) },
+      { ...validQueens, grid: validQueens.grid.slice(1) },
+      { ...validQueens, hintsUsed: 2 },
+      { ...validQueens, date: "2026-02-30" },
+      { ...validQueens, size: 9 },
+      { ...validQueens, marks: [] },
+    ]) {
+      expect(
+        completionRequestSchema.safeParse(body).success,
+        JSON.stringify(body),
+      ).toBe(false);
+    }
   });
 });
 

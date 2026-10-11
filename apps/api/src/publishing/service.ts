@@ -2,6 +2,7 @@ import {
   binairoDailyContentSchema,
   crosswordDailyContentSchema,
   nonogramDailyContentSchema,
+  queensDailyContentSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
 } from "@miolos/core";
@@ -32,6 +33,11 @@ import {
   NonogramGenerationError,
   validateNonogram,
 } from "@miolos/games/nonogram";
+import {
+  generateQueens,
+  QueensGenerationError,
+  validateQueens,
+} from "@miolos/games/queens";
 import {
   generateDailySudoku,
   SudokuGenerationError,
@@ -360,6 +366,46 @@ export async function topUpCrosswordBuffer(
   );
 }
 
+export const MAX_QUEENS_SEED_RETRIES_PER_DATE = 8;
+
+function attemptQueens(seed: number, weekday: Weekday): Attempt {
+  let puzzle;
+  try {
+    puzzle = generateQueens({ seed, weekday });
+  } catch (error) {
+    if (error instanceof QueensGenerationError) {
+      return { kind: "retry", reason: error.message };
+    }
+    throw error;
+  }
+  const verdict = validateQueens(puzzle);
+  if (!verdict.ok) {
+    return {
+      kind: "retry",
+      reason: `validator rejected: ${verdict.failures.join(", ")}`,
+    };
+  }
+  return contentAttempt(queensDailyContentSchema, puzzle);
+}
+
+export async function topUpQueensBuffer(
+  db: Db,
+  depth: number,
+): Promise<TopUpResult> {
+  return topUpBuffer(
+    db,
+    "queens",
+    depth,
+    () => (target, insert) =>
+      withSeedRetries(
+        target,
+        MAX_QUEENS_SEED_RETRIES_PER_DATE,
+        attemptQueens,
+        insert,
+      ),
+  );
+}
+
 const LOW_ANSWER_LIST_WARNING = 30;
 
 export async function unusedTermoAnswers(db: Db): Promise<TermoAnswer[]> {
@@ -448,4 +494,5 @@ export const TOP_UPS: Record<Game, TopUp> = {
   nonogram: topUpNonogramBuffer,
   termo: topUpTermoBuffer,
   crossword: topUpCrosswordBuffer,
+  queens: topUpQueensBuffer,
 };

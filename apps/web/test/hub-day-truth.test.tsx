@@ -77,6 +77,7 @@ function dayBody(
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
       crossword: { status: "pending" },
+      queens: { status: "pending" },
       ...games,
     },
   };

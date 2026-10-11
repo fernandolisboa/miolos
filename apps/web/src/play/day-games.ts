@@ -6,4 +6,5 @@ export const DAY_GAMES = [
   "sudoku",
   "nonogram",
   "binairo",
+  "queens",
 ] as const satisfies readonly Game[];

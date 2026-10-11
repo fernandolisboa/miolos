@@ -16,6 +16,7 @@ export const ACCENT_SHADOW = {
   nonogram: "#B5563C38",
   binairo: "#4E6B5238",
   crossword: "#6B456038",
+  queens: "#7A569C38",
 } as const;
 
 export const ACCENT_TAPE = {
@@ -24,6 +25,7 @@ export const ACCENT_TAPE = {
   nonogram: "#B5563C52",
   binairo: "#4E6B5252",
   crossword: "#6B456052",
+  queens: "#7A569C52",
 } as const;
 
 export const ACCENT_APP_SHADOW = "#9E3B2F38";

@@ -12,6 +12,7 @@ import {
   writePlayRecord,
   type BinairoPlayRecord,
   type CrosswordPlayRecord,
+  type QueensPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
@@ -22,6 +23,7 @@ const BINAIRO_MS = 407_000;
 const SUDOKU_MS = 512_000;
 const TERMO_MS = 188_000;
 const CROSSWORD_MS = 301_000;
+const QUEENS_MS = 233_000;
 
 type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
 const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
@@ -83,6 +85,24 @@ function wonTermoRecord(
   };
 }
 
+function queensRecord(
+  overrides: Partial<QueensPlayRecord> = {},
+): QueensPlayRecord {
+  return {
+    v: 1,
+    game: "queens",
+    date: DATE,
+    size: 7,
+    entries: Array.from({ length: 49 }, () => null),
+    elapsedMs: QUEENS_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
 function crosswordRecord(
   overrides: Partial<CrosswordPlayRecord> = {},
 ): CrosswordPlayRecord {
@@ -134,7 +154,7 @@ describe("readDayState (T-WEB-S14)", () => {
     const state = readDayState(DATE);
 
     expect(Object.keys(state).sort()).toEqual(
-      ["binairo", "crossword", "nonogram", "sudoku", "termo"].sort(),
+      ["binairo", "crossword", "nonogram", "queens", "sudoku", "termo"].sort(),
     );
   });
 
@@ -303,6 +323,7 @@ function dayPayload(
       nonogram: { status: "pending" },
       binairo: { status: "pending" },
       crossword: { status: "pending" },
+      queens: { status: "pending" },
       ...games,
     },
   };
@@ -481,6 +502,7 @@ describe("the merge never invents a pending (T-WEB-S243)", () => {
       "nonogram",
       "binairo",
       "crossword",
+      "queens",
     ] as const) {
       expect(state[game].status, game).toBe("pending");
     }
@@ -512,5 +534,27 @@ describe("the Cruzadinha reads and merges the same way the three grid games do (
       status: "completed",
       elapsedMs: SERVER_MS,
     });
+  });
+});
+
+describe("Rainhas reads and merges the same way the other grid games do (T-WEB-S450)", () => {
+  it("marks it completed from a concluded local record, duration included", () => {
+    writePlayRecord(queensRecord());
+
+    const state = readDayState(DATE);
+
+    expect(state.queens).toEqual({ status: "completed", elapsedMs: QUEENS_MS });
+    expect(completedCount(state)).toBe(1);
+  });
+
+  it("takes the server's duration on a cross-device completion", () => {
+    const SERVER_MS = 555_000;
+
+    const state = readDayState(
+      DATE,
+      dayPayload({ queens: { status: "completed", elapsedMs: SERVER_MS } }),
+    );
+
+    expect(state.queens).toEqual({ status: "completed", elapsedMs: SERVER_MS });
   });
 });

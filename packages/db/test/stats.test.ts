@@ -177,36 +177,44 @@ async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
   }
 }
 
-describe("migration 0014 admits the crossword (ADR-0086)", () => {
-  it("T-DB-S99: 'crossword' inserts into daily_puzzles and completions, and an unknown game is still rejected by name", async () => {
-    const userId = await createUser();
+async function expectAdmitted(game: string, date: string): Promise<void> {
+  const userId = await createUser();
 
-    await ctx.db.execute(
+  await ctx.db.execute(
+    sql`insert into daily_puzzles (game, date, seed, content, published_at)
+        values (${game}, ${date}, 1, '{}'::jsonb, now())`,
+  );
+  await ctx.db.execute(
+    sql`insert into completions (user_id, game, date, outcome, elapsed_ms, on_time)
+        values (${userId}, ${game}, ${date}, 'won', 5, true)`,
+  );
+  expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(1);
+  expect(await ctx.db.select().from(completions)).toHaveLength(1);
+
+  const chessDaily = await thrownBy(
+    ctx.db.execute(
       sql`insert into daily_puzzles (game, date, seed, content, published_at)
-          values ('crossword', '2026-09-28', 1, '{}'::jsonb, now())`,
-    );
-    await ctx.db.execute(
+          values ('chess', ${date}, 1, '{}'::jsonb, now())`,
+    ),
+  );
+  expect(messages(chessDaily)).toContain("daily_puzzles_game_check");
+
+  const chessCompletion = await thrownBy(
+    ctx.db.execute(
       sql`insert into completions (user_id, game, date, outcome, elapsed_ms, on_time)
-          values (${userId}, 'crossword', '2026-09-28', 'won', 5, true)`,
-    );
-    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(1);
-    expect(await ctx.db.select().from(completions)).toHaveLength(1);
+          values (${userId}, 'chess', ${date}, 'won', 5, true)`,
+    ),
+  );
+  expect(messages(chessCompletion)).toContain("completions_game_check");
+}
 
-    const chessDaily = await thrownBy(
-      ctx.db.execute(
-        sql`insert into daily_puzzles (game, date, seed, content, published_at)
-            values ('chess', '2026-09-28', 1, '{}'::jsonb, now())`,
-      ),
-    );
-    expect(messages(chessDaily)).toContain("daily_puzzles_game_check");
+describe("the game CHECKs admit every daily", () => {
+  it("T-DB-S99: 'crossword' inserts into daily_puzzles and completions, and an unknown game is still rejected by name", async () => {
+    await expectAdmitted("crossword", "2026-09-28");
+  });
 
-    const chessCompletion = await thrownBy(
-      ctx.db.execute(
-        sql`insert into completions (user_id, game, date, outcome, elapsed_ms, on_time)
-            values (${userId}, 'chess', '2026-09-28', 'won', 5, true)`,
-      ),
-    );
-    expect(messages(chessCompletion)).toContain("completions_game_check");
+  it("T-DB-S101: 'queens' inserts into daily_puzzles and completions, and an unknown game is still rejected by name", async () => {
+    await expectAdmitted("queens", "2026-10-12");
   });
 });
 
