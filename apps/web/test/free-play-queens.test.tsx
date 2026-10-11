@@ -217,6 +217,7 @@ describe("the fifth free-play card is one column wide at both breakpoints (T-WEB
   });
 
   it("fills the single column on a phone", () => {
+    expect(decl(bodyOf(mobile, ".games"), "display")).toBe("flex");
     expect(decl(bodyOf(mobile, ".games"), "flex-direction")).toBe("column");
     expect(bodyOf(mobile, ".card:nth-child(5)")).not.toMatch(/\bwidth\s*:/);
   });
