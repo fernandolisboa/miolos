@@ -24,4 +24,6 @@
 
 **PR 3 of #285: free play at `/modo-livre/rainhas`**, per the plan on the issue. It removes the queens exclusion from T-WEB-S109 and adds the 5th free-play card rules at both breakpoints.
 
+**Once the cron publishes the first Rainhas row,** add `/rainhas` and `/rainhas/concluido` to `.github/workflows/impeccable.yml`'s preflight list and both scan lists. The preflight refuses a daily route with no published puzzle, so PR 2 could not add them.
+
 **Queued:** one daily/archive screen shell for the six games (the wrappers are ~95% alike); per-game time buckets as an issue; #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route and the three account routes); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.
