@@ -70,6 +70,10 @@ describe("validateQueens", () => {
     expect(failuresOf(withoutRegions as unknown as QueensPuzzle)).toEqual([
       "malformed",
     ]);
+    const withoutSolution = { ...monday, solution: undefined };
+    expect(failuresOf(withoutSolution as unknown as QueensPuzzle)).toEqual([
+      "malformed",
+    ]);
   });
 
   it("rejects a map without exactly N region ids in range", () => {
