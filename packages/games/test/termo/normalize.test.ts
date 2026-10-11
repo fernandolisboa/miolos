@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { normalizeWord } from "../../src/termo/normalize";
+import { normalizeWord } from "../../src/normalize";
 import { azWord, ptbrWord } from "./arbitraries";
 
 const anyString = fc.string();

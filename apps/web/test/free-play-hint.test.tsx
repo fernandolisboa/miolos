@@ -1,13 +1,15 @@
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateDailySudoku } from "@miolos/games/sudoku";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BinairoFreeScreen } from "../src/free-play/binairo-free-screen";
 import { LEVEL_WEEKDAYS } from "../src/free-play/catalog";
+import { CrosswordFreeScreen } from "../src/free-play/crossword-free-screen";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
+import { useFreeCrossword } from "../src/free-play/use-free-crossword";
 import { messages } from "../src/i18n";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
 
@@ -97,5 +99,43 @@ describe("one free hint per free-play puzzle, second press inert (T-WEB-S122)", 
 
     fireEvent.click(screen.getByText(copy.used));
     expect(marked()).toBe(1);
+  });
+});
+
+describe("the free crossword's one hint (T-WEB-S122a)", () => {
+  it("reveals the first white cell's letter, and a second press does nothing", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const deps = stableDeps(SEED);
+    const { result } = renderHook(() => useFreeCrossword(deps));
+    const { phase } = result.current;
+    if (phase.kind !== "ready") {
+      throw new Error("the crossword did not generate");
+    }
+    const cells = phase.puzzle.daily.grid.flat();
+    const first = cells.findIndex((cell) => cell !== null);
+    const copy = messages.games.crossword.play;
+    const aria = (letter: string | null) =>
+      copy.cellAria(Math.floor(first / 5) + 1, (first % 5) + 1, letter);
+    const { container } = render(
+      <CrosswordFreeScreen deps={stableDeps(SEED)} />,
+    );
+    const cell = () =>
+      container.querySelector(`[data-cell-index="${String(first)}"]`);
+
+    expect(cell()?.getAttribute("aria-label")).toBe(aria(null));
+    fireEvent.click(screen.getByText(copy.hint.available));
+
+    expect(cell()?.getAttribute("aria-label")).toBe(aria(cells[first] ?? ""));
+    const labels = () =>
+      [...container.querySelectorAll("[data-cell-index]")].map((at) =>
+        at.getAttribute("aria-label"),
+      );
+    const afterHint = labels();
+    fireEvent.click(screen.getByText(copy.hint.used));
+    expect(labels()).toEqual(afterHint);
+    expect(screen.getByText(copy.hint.used).closest("button")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 });

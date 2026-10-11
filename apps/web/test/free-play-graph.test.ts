@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   closureOf,
   resolveSpecifier,
+  routesReaching,
   valueClosureOf,
   valueSpecifiersOf,
 } from "./module-graph";
@@ -15,6 +16,7 @@ import { webSources, withoutComments } from "./ts-source";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
 const FREE_PLAY_PROBE = "apps/web/src/free-play/eslint-probe.ts";
+const CROSSWORD_IMPORTER = "apps/web/src/free-play/use-free-crossword.ts";
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
 const IO =
@@ -91,11 +93,12 @@ const eslint = new ESLint({
 });
 
 async function wallVerdictOn(
+  path: string,
   specifiers: readonly string[],
 ): Promise<readonly string[]> {
   const source = specifiers.map((s) => `import "${s}";`).join("\n") + "\n";
   const [result] = await eslint.lintText(source, {
-    filePath: join(REPO_ROOT, FREE_PLAY_PROBE),
+    filePath: join(REPO_ROOT, path),
   });
   if (result === undefined) {
     throw new Error("ESLint returned no result for the free-play probe");
@@ -125,6 +128,14 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
       reachesBinairo: valueGraph.includes(
         "packages/games/src/binairo/index.ts",
       ),
+      reachesCrossword: valueGraph.includes(
+        "packages/games/src/crossword/index.ts",
+      ),
+      dailyCrosswordLifecycle: [
+        "apps/web/src/crossword/use-crossword-play.ts",
+        "apps/web/src/crossword/crossword-screen.tsx",
+        "apps/web/src/play/use-play-lifecycle.ts",
+      ].filter((module) => valueGraph.includes(module)),
       typeEdgeIsFollowedByClosureOnly: [
         union(entries.map(closureOf)).includes(
           "apps/web/src/play/play-record.ts",
@@ -139,6 +150,8 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
       walled: [],
       reachesChrome: true,
       reachesBinairo: true,
+      reachesCrossword: true,
+      dailyCrosswordLifecycle: [],
       typeEdgeIsFollowedByClosureOnly: [true, false],
       termoScreenIo: [
         "apps/web/src/api/client.ts",
@@ -152,21 +165,23 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
 });
 
 describe("every specifier free play's runtime graph writes passes the real wall (T-WEB-S375)", () => {
-  it("at a free-play path, through both wall rules", async () => {
+  it("at a free-play path, through both wall rules, the crossword engine only at its one importer", async () => {
     const specifiers = specifiersWrittenBy(valueGraph);
 
     expect({
-      banned: await wallVerdictOn(specifiers),
+      banned: await wallVerdictOn(FREE_PLAY_PROBE, specifiers),
+      bannedAtImporter: await wallVerdictOn(CROSSWORD_IMPORTER, specifiers),
       reachesStylesheet: specifiers.includes("../play/screen.module.css"),
       reachesCore: specifiers.includes("@miolos/core"),
-      doorsAreCaught: await wallVerdictOn([
+      doorsAreCaught: await wallVerdictOn(CROSSWORD_IMPORTER, [
         ...specifiers,
         "../termo/termo-screen",
         "../streak/streak-client",
         "daily_puzzles",
       ]),
     }).toEqual({
-      banned: [],
+      banned: ["no-restricted-imports: @miolos/games/crossword"],
+      bannedAtImporter: [],
       reachesStylesheet: true,
       reachesCore: true,
       doorsAreCaught: [
@@ -175,6 +190,14 @@ describe("every specifier free play's runtime graph writes passes the real wall 
         "no-restricted-syntax: daily_puzzles",
       ],
     });
+  });
+});
+
+describe("of every page and layout, only /modo-livre/cruzadinha reaches the crossword lexicon (T-WEB-S444)", () => {
+  it("no daily route, archive route or shared layout pulls the lexicon", () => {
+    expect(
+      routesReaching("packages/games/src/crossword/lexicon.generated.ts"),
+    ).toEqual(["apps/web/app/modo-livre/cruzadinha/page.tsx"]);
   });
 });
 

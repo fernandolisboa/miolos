@@ -48,6 +48,7 @@ describe("the sitemap (T-WEB-S174)", () => {
       "/modo-livre/binairo",
       "/modo-livre/sudoku",
       "/modo-livre/nonogram",
+      "/modo-livre/cruzadinha",
       "/privacidade",
       "/termos",
       "/arquivo",

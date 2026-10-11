@@ -1,4 +1,4 @@
-import { normalizeWord } from "@miolos/games/termo";
+import { normalizeWord } from "@miolos/games";
 
 const SINGLE_LETTER = /^[a-z]$/;
 

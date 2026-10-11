@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-09-24
 **Depends on:** [ADR-0005](./0005-all-content-is-free.md), [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md)
 **Amends:** [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) consequence 2; [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) — its Rejected entry on banning all of `packages/games/src`, and its consequences on the 27 unguarded modules and on `T-WEB-S368` measuring specifiers rather than erasure
+**Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — decision 1's `T-WEB-S375` also runs the specifiers at `apps/web/src/free-play/use-free-crossword.ts`, the one path exempt from the crossword ban: the graph is clean there, and `@miolos/games/crossword` stays banned at any other free-play path.
 
 ## Context
 

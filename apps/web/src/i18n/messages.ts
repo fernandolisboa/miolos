@@ -310,9 +310,14 @@ export const messages = {
     },
     solved: {
       stamp: "Resolvido!",
-      modeLine: (mode: string, game: string, level: string) =>
-        `${mode} · ${game} · ${level}`,
-      again: "Mais um",
+      modeLine: (mode: string, game: string, level?: string) =>
+        [mode, game, level].filter((part) => part !== undefined).join(" · "),
+      again: {
+        binairo: "Mais um",
+        sudoku: "Mais um",
+        nonogram: "Mais um",
+        crossword: "Mais uma",
+      },
       backToIndex: "Voltar ao Modo livre",
       backHome: "Voltar para Hoje",
 

@@ -6,7 +6,7 @@ import {
   WORD_LENGTH,
   type TileState,
 } from "../../src/termo/evaluate";
-import { normalizeWord } from "../../src/termo/normalize";
+import { normalizeWord } from "../../src/normalize";
 import { azWord, ptbrWord } from "./arbitraries";
 
 const TILE_STATES: readonly TileState[] = ["correct", "present", "absent"];

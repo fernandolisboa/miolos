@@ -77,7 +77,7 @@ function driveFullSession(container: HTMLElement): void {
 
   expect(screen.getByText(messages.freePlay.solved.stamp)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByText(messages.freePlay.solved.again));
+  fireEvent.click(screen.getByText(messages.freePlay.solved.again.binairo));
   const nextFirstGiven = NEXT_PUZZLE.givens.findIndex((cell) => cell !== null);
   expect(cellAt(container, nextFirstGiven).textContent).toBe(
     String(NEXT_PUZZLE.givens[nextFirstGiven]),

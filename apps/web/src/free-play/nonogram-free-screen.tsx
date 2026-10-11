@@ -24,6 +24,7 @@ import {
 } from "../nonogram/state";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
+import { FreePlayErrorCard } from "./error-card";
 import styles from "./free-play.module.css";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
@@ -66,13 +67,12 @@ export function NonogramFreeScreen({
       kicker={messages.games.nonogram.kicker}
       title={copy.title}
       rules={copy.rules}
-      level={level}
-      onLevelChange={setLevel}
+      level={{ value: level, onChange: setLevel }}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
       pageModifier={nonogramPageModifier(LEVEL_SIZES[level])}
     >
       {phase.kind === "failed" ? (
-        <ErrorCard onRetry={regenerate} />
+        <FreePlayErrorCard onRetry={regenerate} />
       ) : (
         <GeneratingBoard size={LEVEL_SIZES[level]} />
       )}
@@ -181,8 +181,7 @@ function NonogramFreeBoard({
       kicker={messages.games.nonogram.kicker}
       title={copy.title}
       rules={copy.rules}
-      level={level}
-      onLevelChange={onLevelChange}
+      level={{ value: level, onChange: onLevelChange }}
       pageModifier={nonogramPageModifier(state.size)}
       state={{
         kind: "playing",
@@ -232,17 +231,5 @@ function GeneratingBoard({ size }: { readonly size: NonogramSize }) {
       <ControlsSkeleton />
       <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
-  );
-}
-
-function ErrorCard({ onRetry }: { readonly onRetry: () => void }) {
-  return (
-    <div className={styles.errorCard}>
-      <p className={styles.errorTitle}>{messages.freePlay.error.title}</p>
-      <p className={styles.errorBody}>{messages.freePlay.error.body}</p>
-      <button type="button" className={styles.retry} onClick={onRetry}>
-        {messages.freePlay.error.retry}
-      </button>
-    </div>
   );
 }

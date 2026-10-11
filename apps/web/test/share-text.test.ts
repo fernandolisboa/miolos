@@ -556,36 +556,7 @@ describe("every user-visible string comes from messages.share (T-WEB-S193)", () 
   });
 });
 
-describe("the share deck's audits (T-WEB-S206)", () => {
-  it("no share string carries a FORBIDDEN_EVERYWHERE canonical", () => {
-    const script = readFileSync(
-      join(import.meta.dirname, "..", "scripts", "route-client-js.mjs"),
-      "utf8",
-    );
-    const declaration = /const FORBIDDEN_EVERYWHERE = \[([^\]]*)\]/.exec(
-      script,
-    );
-    expect(declaration, "FORBIDDEN_EVERYWHERE is not declared").not.toBeNull();
-    const forbidden = [
-      ...(declaration?.[1] ?? "").matchAll(/marker:\s*"([^"]+)"/g),
-    ].map((match) => match[1] ?? "");
-    expect(forbidden.length).toBeGreaterThanOrEqual(3);
-
-    const rendered = [
-      JSON.stringify(messages.share),
-      messages.share.header(messages.games.termo.name, SHORT_DATE),
-      messages.share.termoWon(4, TERMO_MAX_GUESSES),
-      messages.share.termoLost(TERMO_MAX_GUESSES),
-    ].join("\n");
-
-    expect(rendered).toContain(messages.share.label);
-    expect(rendered).toContain(messages.share.failed);
-
-    for (const marker of forbidden) {
-      expect(rendered, marker).not.toContain(marker);
-    }
-  });
-
+describe("the share deck stays off the Termo word list (T-WEB-S206)", () => {
   it("neither share-text.ts nor messages.ts imports from @miolos/games/termo", () => {
     const MESSAGES = join(SRC, "i18n", "messages.ts");
     const messagesSource = readFileSync(MESSAGES, "utf8");

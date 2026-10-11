@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-07-30
 **Depends on:** [ADR-0005](./0005-all-content-is-free.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md)
+**Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — the consequence that generator code is "pure TS and small": the crossword generator carries its lexicon, about 275 KB raw, on its own route.
 
 ## Context
 

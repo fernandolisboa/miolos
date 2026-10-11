@@ -275,6 +275,12 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/modo-livre/nonogram/page"),
     daily: undefined,
   },
+  {
+    path: "/modo-livre/cruzadinha",
+    marker: "data-play-state=",
+    load: () => import("../app/modo-livre/cruzadinha/page"),
+    daily: undefined,
+  },
 
   {
     path: "/privacidade",

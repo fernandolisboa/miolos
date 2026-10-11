@@ -49,7 +49,7 @@ const webDynamicCrosswordImport = {
   selector:
     "ImportExpression > Literal[value=/^@miolos\\/games\\/crossword(\\/|$)/i]",
   message:
-    'apps/web never imports @miolos/games/crossword, dynamically either: `no-restricted-imports` never sees `import("@miolos/games/crossword")` (ADR-0085 decision 7).',
+    'apps/web never imports @miolos/games/crossword dynamically: `no-restricted-imports` never sees `import("@miolos/games/crossword")`, and a lazy chunk escapes the bundle-check route attribution (ADR-0088).',
 };
 
 const webComputedDynamicImport = {
@@ -80,6 +80,12 @@ const replayCapableClientGroups = [
       "no session replay, and no client PostHog SDK: telemetry is five server-anchored events over a hand-rolled capture in apps/api, so the ceiling and the published no-replay promise hold by construction (CLAUDE.md invariants, ADR-0069 decision 1, /privacidade's own copy).",
   },
 ];
+
+const crosswordEngineGroup = {
+  group: ["@miolos/games/crossword", "@miolos/games/crossword/*"],
+  message:
+    "@miolos/games/crossword carries the whole lexicon: only apps/web/src/free-play/use-free-crossword.ts imports it, statically, so the lexicon ships on /modo-livre/cruzadinha alone (ADR-0088).",
+};
 
 const webWallImportPatterns = [
   {
@@ -124,11 +130,7 @@ const webWallImportPatterns = [
     message:
       "apps/web reaches the engines through `@miolos/games` or `@miolos/games/<game>`, never by relative path into packages/games/src — every ban on a game is written against the package specifier, and for Termo the deep path walks past all of them and ships the whole answer list (ADR-0005, ADR-0015, ADR-0047, ADR-0078).",
   },
-  {
-    group: ["@miolos/games/crossword", "@miolos/games/crossword/*"],
-    message:
-      "apps/web never imports @miolos/games/crossword: unlike the other engines, its module carries the whole lexicon, and a clue → answer lookup spoils the day (ADR-0085 decision 7).",
-  },
+  crosswordEngineGroup,
 
   ...replayCapableClientGroups,
 ];
@@ -196,6 +198,8 @@ const freePlayBannedModuleGroups = [
       "**/nonogram/nonogram-screen",
 
       "**/nonogram/nonogram-conclusion",
+      "**/crossword/use-crossword-play",
+      "**/crossword/crossword-screen",
 
       "**/app/page",
       "**/app/hub-day-state",
@@ -277,7 +281,7 @@ const freePlayBannedModuleGroups = [
 
 const freePlayDynamicBannedModule = {
   selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route)|(^|\\/)termo(\\/|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/i]",
+    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route)|(^|\\/)termo(\\/|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|crossword\\/(use-crossword-play|crossword-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/i]",
   message:
     "free play records nothing, fetches nothing, fires no telemetry, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };
@@ -484,6 +488,23 @@ export default tseslint.config(
         webNormalForm,
         webCodeExtension,
         freePlayDynamicBannedModule,
+      ],
+    },
+  },
+  {
+    files: ["apps/web/src/free-play/use-free-crossword.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webWallImportPatterns.filter(
+              (pattern) => pattern !== crosswordEngineGroup,
+            ),
+            ...freePlayBannedModuleGroups,
+          ],
+          paths: webWallImportPaths,
+        },
       ],
     },
   },
