@@ -1,3 +1,4 @@
+import { shuffleInPlace } from "../random";
 import type { SeededRandom } from "../random";
 import { POPCOUNT, assertSudokuGrid, boxOf, colOf, rowOf } from "./board";
 import type { SudokuGrid } from "./types";
@@ -131,15 +132,6 @@ export function solveSudoku(givens: SudokuGrid): SudokuGrid | null {
   const record = new Array<number>(81).fill(0);
   const found = search([...givens], 1, record);
   return found === 0 ? null : Object.freeze(record);
-}
-
-export function shuffleInPlace(values: number[], rng: SeededRandom): void {
-  for (let k = values.length - 1; k > 0; k -= 1) {
-    const j = rng.nextInt(k + 1);
-    const tmp = values[k]!;
-    values[k] = values[j]!;
-    values[j] = tmp;
-  }
 }
 
 export function fillGrid(rng: SeededRandom): number[] {

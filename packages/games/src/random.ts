@@ -30,3 +30,12 @@ export function createSeededRandom(seed: number): SeededRandom {
     },
   };
 }
+
+export function shuffleInPlace<T>(values: T[], rng: SeededRandom): void {
+  for (let k = values.length - 1; k > 0; k -= 1) {
+    const j = rng.nextInt(k + 1);
+    const tmp = values[k]!;
+    values[k] = values[j]!;
+    values[j] = tmp;
+  }
+}

@@ -1,8 +1,8 @@
-import { createSeededRandom } from "../random";
+import { createSeededRandom, shuffleInPlace } from "../random";
 import type { SeededRandom } from "../random";
 import { isWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
-import { seededPermutation, toSolvedGrid } from "./internal";
+import { toSolvedGrid } from "./internal";
 import { countBinairoSolutions } from "./solve";
 import { emptyState, place, unplace } from "./techniques";
 import type { SolverState } from "./techniques";
@@ -84,7 +84,8 @@ export function generateBinairo(options: {
     const solution = buildSolvedGrid(rng);
     const spread = criteria.maxGivens - criteria.minGivens + 1;
     const target = criteria.minGivens + rng.nextInt(spread);
-    const order = seededPermutation(cellCount, rng);
+    const order = Array.from({ length: cellCount }, (_, i) => i);
+    shuffleInPlace(order, rng);
 
     const givens: BinairoCell[] = [...solution];
     let givensCount = cellCount;
