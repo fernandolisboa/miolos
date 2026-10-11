@@ -1,10 +1,10 @@
 # Do I need to do anything?
 
-**No.** Migration 0014 ran on the Miolos database before #276 merged. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**Not for this PR.** The next one, PR 2 of #285 (the Rainhas daily), does not merge until you pick Rainhas as the sixth daily and run migration 0015 on the Miolos database. PR 2 adds both to `docs/pending-fernando.md`. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
-**The Cruzadinha joined free play** at `/modo-livre/cruzadinha` (#279, ADR-0088): no level, no clock, one hint, "Mais uma". The lexicon ships on that route only (+274.7 KB raw over `/`, budget 291 KB). Next, as one Quick change, add `/cruzadinha` and `/cruzadinha/concluido` to `impeccable.yml`'s URL scan, whose preflight needs a published row. The shared board already shows uneven key widths at 375 px and an em-dash advisory on the clue lists. After that: file per-game time buckets as an issue, then #206 cluster 10's `Frame` half (the `ErrorCard` half shipped in #279).
+**The Rainhas engine shipped** in `@miolos/games/queens` (#285 PR 1, ADR-0090): plant, grow and repair a region map, grade it with a deduction ladder, 7×7 Monday to 9×9 Sunday. Nothing a player can see changed. On 2,000 seeds per weekday no seed used more than 55 of 128 attempts, and the slowest puzzle took 124 ms. Fisher–Yates now lives once, as `shuffleInPlace` in `packages/games/src/random.ts`.
 
 ## Traps
 
@@ -18,4 +18,6 @@
 
 ## Next
 
-**Queued:** the telemetry opt-out UI (ADR-0069 decision 5) did not ship in #36 and belongs to #37; moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route and the two account routes); #254 (the remote conclusion announces its body sentence twice); #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s duplicate module walker in `archive-day.test.tsx` onto `module-graph.ts`.
+**PR 2 of #285: the Rainhas daily, end to end**, per the plan and its binding revisions on the issue. It needs Fernando's pick and migration 0015 before merge (above). Its `queens-30` makes six per-game medals, the T-CORE-S70 maximum. Then PR 3, free play at `/modo-livre/rainhas`.
+
+**Queued:** `/cruzadinha` and `/cruzadinha/concluido` in `impeccable.yml`'s URL scan (a Quick change; its preflight needs a published row); per-game time buckets as an issue; #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.
