@@ -54,7 +54,7 @@
   ALTER TABLE "completions" ADD CONSTRAINT "completions_game_check" CHECK ("completions"."game" in ('binairo', 'sudoku', 'nonogram', 'termo', 'crossword', 'queens'));
   ALTER TABLE "daily_puzzles" ADD CONSTRAINT "daily_puzzles_game_check" CHECK ("daily_puzzles"."game" in ('binairo', 'sudoku', 'nonogram', 'termo', 'crossword', 'queens'));
   ```
-  Then reply "rodei" on #285.
+  Then reply "rodei" in the Rainhas thread. The same steps with copy buttons: https://claude.ai/artifact/KWo9xag7tBs2akP2dVBr99 (private to Fernando).
 - **Verify:** `SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conname IN ('completions_game_check','daily_puzzles_game_check');` returns two rows, each listing `'queens'`.
 - **Blocks:** #285 PR 2 does not merge without it. Without it, the cron's first Rainhas insert fails the CHECK.
 - **Source:** #285 PR 2, which widens both `game in (...)` CHECKs (ADR-0091).
