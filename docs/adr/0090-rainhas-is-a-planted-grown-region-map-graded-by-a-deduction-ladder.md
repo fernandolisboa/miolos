@@ -5,7 +5,7 @@
 
 ## Context
 
-Rainhas (`queens`, #285) is an N×N board cut into N regions. The player places one queen in each row, column and region, and no two queens may touch, diagonals included. The board has no givens: the region map is the whole puzzle. So the generator must produce a map with exactly one solution, and a difficulty that ramps from Monday to Sunday. Whether Rainhas joins the catalogue is Fernando's call (`docs/pending-fernando.md` NOW §2) and the subject of ADR-0091; this ADR covers the engine only.
+Rainhas (`queens`, #285) is an N×N board cut into N regions. The player places one queen in each row, column and region, and no two queens may touch, diagonals included. The board has no givens: the region map is the whole puzzle. So the generator must produce a map with exactly one solution, and a difficulty that ramps from Monday to Sunday. Whether Rainhas joins the catalogue is Fernando's call (`docs/pending-fernando.md` NOW §3) and the subject of ADR-0091; this ADR covers the engine only.
 
 ## Decision
 

@@ -1,6 +1,7 @@
 # ADR-0003 — Anonymous-first identity, with email attached once the streak has value
 
 **Status:** Accepted — 2026-07-29
+**Amended by:** [ADR-0089](./0089-sign-in-with-google-links-an-id-and-an-identified-account-wins-the-merge.md) — Sign in with Google ships before launch; Apple stays post-launch
 **Depends on:** [ADR-0001](./0001-web-is-the-launch-platform.md)
 **Supersedes in part:** [ADR-0001](./0001-web-is-the-launch-platform.md) — its anonymous-first "device → JWT" identity assumption (ADR-0001, Consequences: "Resolved by ADR-0003").
 **Amends:** the auth section of [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md)

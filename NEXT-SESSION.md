@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-**Yes, one word: NOW §2.** Say yes or no to Rainhas as the sixth daily. PR 2 of #285 (the Rainhas daily) does not merge without it, nor without migration 0015 run on the Miolos database, which PR 2 adds to `docs/pending-fernando.md`. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**Yes, two things.** NOW §3: say yes or no to Rainhas as the sixth daily; PR 2 of #285 (the Rainhas daily) does not merge without it, nor without migration 0015 run on the Miolos database, which PR 2 adds to `docs/pending-fernando.md`. NOW §2: the Google OAuth client and its two Vercel variables (#280, ADR-0089); Sign in with Google is merged but dormant until then. Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -20,4 +20,4 @@
 
 **PR 2 of #285: the Rainhas daily, end to end**, per the plan and its binding revisions on the issue. It needs Fernando's pick and migration 0015 before merge (above). Its `queens-30` makes six per-game medals, the T-CORE-S70 maximum. Then PR 3, free play at `/modo-livre/rainhas`.
 
-**Queued:** `/cruzadinha` and `/cruzadinha/concluido` in `impeccable.yml`'s URL scan (a Quick change; its preflight needs a published row); per-game time buckets as an issue; #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.
+**Queued:** `/cruzadinha` and `/cruzadinha/concluido` in `impeccable.yml`'s URL scan (a Quick change; its preflight needs a published row); per-game time buckets as an issue; #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route and the three account routes); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.

@@ -1,5 +1,9 @@
 import { attachConfirmResponseSchema, attachConfirmSchema } from "@miolos/core";
-import { isWinnerLivenessError, mergeAccounts } from "@miolos/db/user";
+import {
+  isIdentityClashError,
+  isWinnerLivenessError,
+  mergeAccounts,
+} from "@miolos/db/user";
 import type { Db } from "@miolos/db";
 import type { NextRequest } from "next/server";
 
@@ -51,7 +55,9 @@ async function resolveWinner(
   db: Db,
   requesterId: string,
   email: string,
-): Promise<{ winnerId: string; merged: boolean } | "gone" | "conflict"> {
+): Promise<
+  { winnerId: string; merged: boolean } | "gone" | "conflict" | "clash"
+> {
   const holder = await findVerifiedHolder(db, email);
   if (holder === undefined || holder === requesterId) {
     return { winnerId: requesterId, merged: false };
@@ -60,6 +66,9 @@ async function resolveWinner(
     const { winnerId } = await mergeAccounts(db, requesterId, holder);
     return { winnerId, merged: true };
   } catch (error) {
+    if (isIdentityClashError(error)) {
+      return "clash";
+    }
     if (!isWinnerLivenessError(error)) {
       console.error(
         "attach confirm: mergeAccounts failed mid-operation",
@@ -79,6 +88,9 @@ async function resolveWinner(
       const { winnerId } = await mergeAccounts(db, requesterId, freshHolder);
       return { winnerId, merged: true };
     } catch (retryError) {
+      if (isIdentityClashError(retryError)) {
+        return "clash";
+      }
       if (!isWinnerLivenessError(retryError)) {
         console.error(
           "attach confirm: mergeAccounts retry failed mid-operation",
@@ -150,6 +162,9 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   if (resolved === "conflict") {
     return errorResponse(409, "confirm-conflict");
+  }
+  if (resolved === "clash") {
+    return errorResponse(409, "sign-in-attached");
   }
 
   if (resolved.merged) {

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 const APP = new URL("../app/", import.meta.url);
 
 const AUTHENTICATED_GETS: Record<string, () => Promise<object>> = {
+  "account/google/route.ts": () => import("../app/account/google/route"),
   "account/state/route.ts": () => import("../app/account/state/route"),
   "attach/state/route.ts": () => import("../app/attach/state/route"),
   "day/route.ts": () => import("../app/day/route"),
@@ -41,7 +42,7 @@ async function scanAuthenticatedGets(): Promise<Map<string, string>> {
 const authenticatedGets = await scanAuthenticatedGets();
 
 describe("every authenticated GET goes through one envelope (T-API-S183)", () => {
-  it("the authenticated GETs under app/ are exactly the known nine", () => {
+  it("the authenticated GETs under app/ are exactly the known ten", () => {
     expect([...authenticatedGets.keys()]).toEqual(
       Object.keys(AUTHENTICATED_GETS).sort(),
     );

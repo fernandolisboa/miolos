@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const MODULES = [
   "attach/service.ts",
+  "google/service.ts",
   "onboarding/service.ts",
   "push/service.ts",
 ] as const;

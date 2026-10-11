@@ -9,9 +9,21 @@ import { useStreak } from "../../src/streak/use-streak";
 import styles from "./page.module.css";
 
 type Phase =
-  "ready" | "posting" | "attached" | "merged" | "invalid" | "conflict";
+  | "ready"
+  | "posting"
+  | "attached"
+  | "merged"
+  | "invalid"
+  | "conflict"
+  | "sign-in-attached";
 
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/;
+
+const refusalCopy = {
+  invalid: messages.confirm.invalid,
+  conflict: messages.confirm.conflict,
+  "sign-in-attached": messages.confirm.signInAttached,
+};
 
 export function AttachConfirm({ token }: { readonly token: string }) {
   const [phase, setPhase] = useState<Phase>("ready");
@@ -42,8 +54,8 @@ export function AttachConfirm({ token }: { readonly token: string }) {
       setPhase("invalid");
       return;
     }
-    if (result === "conflict") {
-      setPhase("conflict");
+    if (result === "conflict" || result === "sign-in-attached") {
+      setPhase(result);
       return;
     }
     if (result === undefined) {
@@ -68,11 +80,12 @@ export function AttachConfirm({ token }: { readonly token: string }) {
     );
   }
 
-  if (phase === "invalid" || phase === "conflict") {
-    const copy =
-      phase === "invalid"
-        ? messages.confirm.invalid
-        : messages.confirm.conflict;
+  if (
+    phase === "invalid" ||
+    phase === "conflict" ||
+    phase === "sign-in-attached"
+  ) {
+    const copy = refusalCopy[phase];
     return (
       <section className={styles.card} data-confirm-state={phase}>
         <h2 className={styles.stateTitle}>{copy.title}</h2>
