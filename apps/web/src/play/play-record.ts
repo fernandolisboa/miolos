@@ -16,10 +16,6 @@ const STORAGE_PREFIX = "miolos:play:";
 
 export const ELAPSED_CAP_MS = 86_400_000;
 
-const MAX_NONOGRAM_CELLS = Math.max(
-  ...nonogramSizeSchema.options.map((option) => option.value ** 2),
-);
-
 export const playRecordKey = (game: Game, date: string) =>
   `${STORAGE_PREFIX}${game}:${date}`;
 
@@ -58,44 +54,58 @@ export const sudokuPlayRecordSchema = z.strictObject({
 
 export type SudokuPlayRecord = z.infer<typeof sudokuPlayRecordSchema>;
 
-export const nonogramPlayRecordSchema = z
-  .strictObject({
-    v: z.literal(1),
-    game: z.literal("nonogram"),
-    date: isoDateString,
-    size: nonogramSizeSchema,
+function sizedBinaryRecordSchema<const G extends Game, S extends number>(
+  game: G,
+  sizeSchema: z.ZodUnion<readonly z.ZodLiteral<S>[]>,
+) {
+  const maxCells = Math.max(
+    ...sizeSchema.options.map((option) => option.value ** 2),
+  );
+  return z
+    .strictObject({
+      v: z.literal(1),
+      game: z.literal(game),
+      date: isoDateString,
+      size: sizeSchema,
 
-    entries: z
-      .array(z.union([z.literal(0), z.literal(1), z.null()]))
-      .max(MAX_NONOGRAM_CELLS),
+      entries: z
+        .array(z.union([z.literal(0), z.literal(1), z.null()]))
+        .max(maxCells),
 
-    grid: z
-      .array(z.union([z.literal(0), z.literal(1)]))
-      .max(MAX_NONOGRAM_CELLS)
-      .optional(),
-    elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-    hintsUsed: z.number().int().min(0).max(1),
-    concluded: z.boolean(),
-    pendingSync: z.boolean(),
-    syncOutcome: z.enum(["pending", "recorded", "rejected"]),
-  })
-  .superRefine((record, ctx) => {
-    const cells = record.size ** 2;
-    if (record.entries.length !== cells) {
-      ctx.addIssue({
-        code: "custom",
-        message: `entries must hold ${String(cells)} cells on a ${String(record.size)}×${String(record.size)} board`,
-        path: ["entries"],
-      });
-    }
-    if (record.grid !== undefined && record.grid.length !== cells) {
-      ctx.addIssue({
-        code: "custom",
-        message: `grid must hold ${String(cells)} cells on a ${String(record.size)}×${String(record.size)} board`,
-        path: ["grid"],
-      });
-    }
-  });
+      grid: z
+        .array(z.union([z.literal(0), z.literal(1)]))
+        .max(maxCells)
+        .optional(),
+      elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+      hintsUsed: z.number().int().min(0).max(1),
+      concluded: z.boolean(),
+      pendingSync: z.boolean(),
+      syncOutcome: z.enum(["pending", "recorded", "rejected"]),
+    })
+    .superRefine((record, ctx) => {
+      const size = record.size;
+      const cells = size ** 2;
+      if (record.entries.length !== cells) {
+        ctx.addIssue({
+          code: "custom",
+          message: `entries must hold ${String(cells)} cells on a ${String(size)}×${String(size)} board`,
+          path: ["entries"],
+        });
+      }
+      if (record.grid !== undefined && record.grid.length !== cells) {
+        ctx.addIssue({
+          code: "custom",
+          message: `grid must hold ${String(cells)} cells on a ${String(size)}×${String(size)} board`,
+          path: ["grid"],
+        });
+      }
+    });
+}
+
+export const nonogramPlayRecordSchema = sizedBinaryRecordSchema(
+  "nonogram",
+  nonogramSizeSchema,
+);
 
 export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
 
