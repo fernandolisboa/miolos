@@ -12,6 +12,7 @@ export const routeSlugs = {
   privacy: "privacidade",
   terms: "termos",
   settings: "ajustes",
+  admin: "admin",
   binairo: "binairo",
   sudoku: "sudoku",
   nonogram: "nonogram",
@@ -48,6 +49,7 @@ export const routes = {
   privacy: `/${routeSlugs.privacy}`,
   terms: `/${routeSlugs.terms}`,
   settings: `/${routeSlugs.settings}`,
+  admin: `/${routeSlugs.admin}`,
   archive: `/${routeSlugs.archive}`,
 } as const;
 

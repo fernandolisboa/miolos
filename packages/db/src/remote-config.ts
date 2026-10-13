@@ -1,29 +1,48 @@
 import {
   defaultRemoteConfig,
-  remoteConfigSchema,
+  remoteConfigField,
+  remoteConfigKeySchema,
   type RemoteConfig,
+  type RemoteConfigKey,
 } from "@miolos/core";
+import { sql } from "drizzle-orm";
 
 import type { Db } from "./client";
 import { remoteConfig } from "./schema";
 
-let warnedInvalidRemoteConfig = false;
+const warnedInvalidKeys = new Set<RemoteConfigKey>();
 
 export async function getRemoteConfig(db: Db): Promise<RemoteConfig> {
   const rows = await db.select().from(remoteConfig);
-  const merged: Record<string, unknown> = {};
+  const config = { ...defaultRemoteConfig };
   for (const row of rows) {
-    merged[row.key] = row.value;
-  }
-  const parsed = remoteConfigSchema.safeParse(merged);
-  if (!parsed.success) {
-    if (!warnedInvalidRemoteConfig) {
-      warnedInvalidRemoteConfig = true;
+    const key = remoteConfigKeySchema.safeParse(row.key);
+    if (!key.success) {
+      continue;
+    }
+    const value = remoteConfigField(key.data).safeParse(row.value);
+    if (value.success) {
+      config[key.data] = value.data;
+    } else if (!warnedInvalidKeys.has(key.data)) {
+      warnedInvalidKeys.add(key.data);
       console.error(
-        "remote_config holds invalid values; falling back to defaults (ADR-0025)",
+        `remote_config holds an invalid ${key.data}; falling back to its default (ADR-0097)`,
       );
     }
-    return defaultRemoteConfig;
   }
-  return parsed.data;
+  return config;
+}
+
+export async function setRemoteConfigValue(
+  db: Db,
+  key: RemoteConfigKey,
+  value: number,
+): Promise<void> {
+  await db
+    .insert(remoteConfig)
+    .values({ key, value })
+    .onConflictDoUpdate({
+      target: remoteConfig.key,
+      set: { value, updatedAt: sql`now()` },
+    });
 }

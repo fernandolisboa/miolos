@@ -102,6 +102,7 @@ describe("one mount, one read — and no call site can make it refetch (T-WEB-S3
       );
 
     expect(sites.map((site) => site.sourcePath).sort()).toEqual([
+      "app/admin/admin-config-section.tsx",
       "app/ajustes/account-section.tsx",
       "app/ajustes/google-section.tsx",
       "src/attach/use-attach-state.ts",

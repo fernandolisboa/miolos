@@ -1,3 +1,5 @@
+import type { RemoteConfigKey } from "@miolos/core";
+
 const wordmark = "Miolos";
 
 const back = "← Hoje";
@@ -601,6 +603,39 @@ export const messages = {
       lead: "Apaga a sua conta, a sequência e todo o histórico, de uma vez.",
       link: "Ir para a exclusão da conta",
     },
+  },
+  admin: {
+    title: "Administração",
+    lead: "Valores que valem para todo mundo e entram em vigor sem deploy.",
+    config: {
+      heading: "Configuração remota",
+      unavailable: "Não conseguimos carregar a configuração agora.",
+      notAdmin: "Esta página é só para quem administra o Miolos.",
+      userIdLabel: "O código da sua conta:",
+      range: (
+        min: number | undefined,
+        max: number | undefined,
+        fallback: number,
+      ) => `De ${min} a ${max} · padrão ${fallback}`,
+      save: "Salvar",
+      saveAria: (label: string) => `Salvar: ${label}`,
+      saved: "Salvo.",
+      failed: "Não deu certo agora. Tente de novo.",
+    },
+    keys: {
+      bufferDepth: {
+        label: "Dias de reserva",
+        hint: "Quantos dias à frente cada jogo fica gerado e validado.",
+      },
+      attachStreakThreshold: {
+        label: "Sequência para pedir o e-mail",
+        hint: "A partir de quantos dias de sequência a página Hoje convida a vincular um e-mail.",
+      },
+      pushOptInStreakThreshold: {
+        label: "Sequência para oferecer o lembrete",
+        hint: "A partir de quantos dias de sequência a conclusão oferece o lembrete de sequência em risco.",
+      },
+    } satisfies Record<RemoteConfigKey, { label: string; hint: string }>,
   },
   games: {
     termo: {

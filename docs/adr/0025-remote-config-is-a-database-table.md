@@ -1,6 +1,7 @@
 # 0025 — Remote config is a database table read through a typed accessor
 
 **Status:** Accepted — 2026-07-31
+**Amended by:** [ADR-0097](./0097-admins-are-an-env-allow-list-and-edit-remote-config-through-the-api.md) (#304) — an admin writes the table one key at a time through `apps/api`, and an invalid value now falls back to its own key's default, not the whole config; an admin's browser now sees config values through the API (`apps/web` still never names the table).
 
 ## Context
 
