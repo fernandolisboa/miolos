@@ -1,19 +1,13 @@
 import type { DailyBinairoResponse } from "@miolos/core";
 import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
+import { useHintKind } from "../play/use-hint-kind";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import {
   initPlayState,
@@ -42,6 +36,7 @@ export interface BinairoPlay {
 
   readonly toggleMode: (mode: PaintMode) => void;
   readonly revealHint: () => void;
+  readonly reset: () => void;
 }
 
 export function useBinairoPlay(
@@ -49,7 +44,8 @@ export function useBinairoPlay(
   remotelyClaimed = false,
 ): BinairoPlay {
   const [state, dispatch] = useReducer(playReducer, daily, initPlayState);
-  const [hintKind, setHintKind] = useState<BinairoHint["kind"] | null>(null);
+  const { hintKind, setHintKind, reset } =
+    useHintKind<BinairoHint["kind"]>(dispatch);
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -104,7 +100,7 @@ export function useBinairoPlay(
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution });
-  }, [solution]);
+  }, [solution, setHintKind]);
 
   return {
     state,
@@ -117,6 +113,7 @@ export function useBinairoPlay(
     paintOver,
     toggleMode,
     revealHint,
+    reset,
   };
 }
 

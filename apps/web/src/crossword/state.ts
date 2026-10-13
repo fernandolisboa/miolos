@@ -3,6 +3,7 @@ import type { DailyCrosswordResponse } from "@miolos/core";
 import { nextHint } from "../play/grid-hint";
 import { movedSelection } from "../play/grid-selection";
 import type { CrosswordPlayRecord, PlayRecord } from "../play/play-record";
+import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 import {
@@ -36,6 +37,7 @@ export interface CrosswordPlayState extends PlayCore {
 
 export type CrosswordPlayAction =
   | LifecycleAction
+  | ResetAction
   | { readonly type: "select"; readonly index: number }
   | {
       readonly type: "select-entry";
@@ -150,6 +152,9 @@ export function crosswordPlayReducer(
         hint: { free: 1, used: state.hint.used + 1, lastIndex: hint.index },
       };
     }
+
+    case "reset":
+      return resetBoard(state, (entries) => ({ ...state, entries }));
 
     case "tick":
     case "pause":

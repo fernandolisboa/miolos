@@ -5,12 +5,12 @@ import {
   useMemo,
   useRef,
   useReducer,
-  useState,
   type Dispatch,
 } from "react";
 
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
+import { useHintKind } from "../play/use-hint-kind";
 import { countAnswered, hintGivens } from "./grid";
 import {
   crosswordPlayReducer,
@@ -40,6 +40,7 @@ export interface CrosswordBoard {
   readonly typeLetter: (letter: string) => void;
   readonly backspace: () => void;
   readonly revealHint: () => void;
+  readonly reset: () => void;
 }
 
 export function useCrosswordBoard(
@@ -50,7 +51,8 @@ export function useCrosswordBoard(
     daily,
     initCrosswordPlayState,
   );
-  const [hintKind, setHintKind] = useState<CrosswordHint["kind"] | null>(null);
+  const { hintKind, setHintKind, reset } =
+    useHintKind<CrosswordHint["kind"]>(dispatch);
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -107,7 +109,7 @@ export function useCrosswordBoard(
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint" });
-  }, []);
+  }, [setHintKind]);
 
   return {
     state,
@@ -123,5 +125,6 @@ export function useCrosswordBoard(
     typeLetter,
     backspace,
     revealHint,
+    reset,
   };
 }

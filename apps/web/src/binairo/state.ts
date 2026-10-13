@@ -9,6 +9,7 @@ import {
 
 import { nextHint } from "../play/grid-hint";
 import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
+import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 
@@ -32,6 +33,7 @@ export interface PlayState extends PlayCore {
 
 export type PlayAction =
   | LifecycleAction
+  | ResetAction
   | { readonly type: "tap"; readonly index: number }
   | { readonly type: "paint-over"; readonly index: number }
   | { readonly type: "set-mode"; readonly mode: PaintMode }
@@ -99,6 +101,12 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
         hint: { free: 1, used: state.hint.used + 1, lastIndex: hint.index },
       };
     }
+
+    case "reset":
+      return resetBoard(state, (entries) => ({
+        ...state,
+        ...derive(state.givens, entries),
+      }));
 
     case "tick":
     case "pause":

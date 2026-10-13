@@ -5,6 +5,7 @@ import type {
   PlayRecord,
   QueensPlayRecord,
 } from "./play-record";
+import { resetBoard, type ResetAction } from "./reset-board";
 import { applyTimerAction } from "./timer";
 import type { HintState, LifecycleAction, PlayCore } from "./types";
 
@@ -25,6 +26,7 @@ export interface BinaryGridState extends PlayCore {
 
 export type BinaryGridAction =
   | LifecycleAction
+  | ResetAction
   | { readonly type: "select"; readonly index: number }
   | {
       readonly type: "move-selection";
@@ -94,6 +96,9 @@ export function binaryGridReducer<S extends BinaryGridState>(
         hint: { free: 1, used: state.hint.used + 1, lastIndex: hint.index },
       };
     }
+
+    case "reset":
+      return resetBoard(state, (entries) => rules.derive(state, entries));
 
     case "tick":
     case "pause":

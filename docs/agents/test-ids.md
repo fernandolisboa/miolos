@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S163` | `S162` | never used |
 | `T-DB` | `S125` | `S124` | `T-DB-21` |
 | `T-API` | `S283` | `S282` | `T-API-16` |
-| `T-WEB` | `S488` | `S487` | `T-WEB-23` |
+| `T-WEB` | `S492` | `S491` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#298 (Recomeçar, ADR-0094) spent **`T-WEB-S488…S491`**: `S488` (the reset on all five grid reducers: entries gone, givens and clock kept, the spent hint not refunded, the same object back on an empty or solved board), `S489` (`ResetControl`: the question, Cancelar first, focus in and out, the placeholder), `S490` (a daily's play record is rewritten with the hint still counted, nothing written when the board is empty) and `S491` (free play: the board, the hinted cell and the explanation go, nothing is written). `S366` (the chrome places six children) and `S367` (the reset slot's shape, and the empty-board placeholder) were widened in place and took no new id. Nothing is burned.
 
 #280 (Google sign-in, ADR-0089) spent `T-CORE-S160…S162`, `T-DB-S120…S124`, `T-API-S260…S282` (but not `S270`) and `T-WEB-S470…S475` without moving this table; #285 reconciled it. The gaps it skipped (`T-CORE-S139…S159`, `T-DB-S102…S119`, `T-API-S246…S259`, `T-WEB-S460…S469`) and `T-API-S270` are **burned**, never reused.
 

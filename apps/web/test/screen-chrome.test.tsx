@@ -111,6 +111,7 @@ const BINAIRO_PLAY = {
   paintOver: noop,
   toggleMode: noop,
   revealHint: noop,
+  reset: noop,
 };
 
 const SUDOKU_PLAY = {
@@ -124,6 +125,7 @@ const SUDOKU_PLAY = {
   enterDigit: noop,
   clearCell: noop,
   revealHint: noop,
+  reset: noop,
 };
 
 const NONOGRAM_PLAY = {
@@ -141,6 +143,7 @@ const NONOGRAM_PLAY = {
   clearCell: noop,
   paintOver: noop,
   revealHint: noop,
+  reset: noop,
 };
 
 function pageIn(root: ParentNode): Element {
@@ -161,7 +164,14 @@ function mountedPage(element: ReactElement): Element {
   return pageIn(render(element).container);
 }
 
-const GRID_AREAS = ["topBar", "titleBlock", "statsCard", "board", "hint"];
+const GRID_AREAS = [
+  "topBar",
+  "titleBlock",
+  "statsCard",
+  "board",
+  "reset",
+  "hint",
+];
 
 function placementOf(page: Element): Record<string, unknown> {
   return {
@@ -178,7 +188,7 @@ function placed(state: string): Record<string, unknown> {
   return { areas: GRID_AREAS, state };
 }
 
-describe("`.page` places the same five children, in DOM order, everywhere (T-WEB-S366)", () => {
+describe("`.page` places the same six children, in DOM order, everywhere (T-WEB-S366)", () => {
   it("holds for the nine shipped composition shapes", () => {
     expect({
       "binairo daily": placementOf(
@@ -258,11 +268,13 @@ function readouts(
   ready: boolean,
   explain: string | null,
   onReveal: () => void = noop,
+  onReset: (() => void) | null = noop,
 ): PlayChromeReadouts {
   return {
     progressShort: PROGRESS_SHORT,
     progressLong: PROGRESS_LONG,
     hint: { ready, label: "Dica", explain, onReveal },
+    onReset,
   };
 }
 
@@ -343,6 +355,22 @@ function localNamesOf(node: Element): readonly string[] {
   return [...node.classList].map((name) => LOCAL_NAME_OF.get(name) ?? name);
 }
 
+function resetSlotOf(page: Element): unknown {
+  const slot = page.querySelector(`.${cls("reset")}`);
+  return slot === null
+    ? "absent"
+    : {
+        buttons: slot.querySelectorAll("button").length,
+        hidden: slot.firstElementChild?.getAttribute("aria-hidden") ?? null,
+        disabled:
+          slot.querySelector("button")?.getAttribute("aria-disabled") ?? null,
+      };
+}
+
+const RESET_BUTTON = { buttons: 1, hidden: null, disabled: "false" };
+const RESET_IDLE = { buttons: 1, hidden: null, disabled: "true" };
+const RESET_PLACEHOLDER = { buttons: 0, hidden: "true", disabled: null };
+
 function shapeOf(page: Element): Record<string, unknown> {
   const hint = page.querySelector(`.${cls("hint")}`);
   return {
@@ -360,6 +388,7 @@ function shapeOf(page: Element): Record<string, unknown> {
     hintClasses: hint === null ? "absent" : localNamesOf(hint),
     hintDisabled: hint?.getAttribute("aria-disabled") ?? null,
     hintExplain: textOf(page, "hintExplain"),
+    reset: resetSlotOf(page),
     note: page.querySelector(".note-mark")?.textContent ?? "absent",
     extraStat: page.querySelector(".extra-mark")?.textContent ?? "absent",
     hidden: {
@@ -424,6 +453,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hintClasses: ["hint"],
         hintDisabled: "false",
         hintExplain: "absent",
+        reset: RESET_BUTTON,
         note: NOTE.text,
         extraStat: EXTRA.value,
         hidden: {
@@ -450,6 +480,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hintClasses: ["hint", "hintUsed", "placeholder"],
         hintDisabled: null,
         hintExplain: "absent",
+        reset: RESET_PLACEHOLDER,
         note: "absent",
         extraStat: "absent",
         hidden: {
@@ -476,6 +507,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hintClasses: ["hint", "hintUsed"],
         hintDisabled: "true",
         hintExplain: "porque sim",
+        reset: RESET_BUTTON,
         note: "absent",
         extraStat: EXTRA.value,
         hidden: {
@@ -502,6 +534,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hintClasses: ["hint", "hintUsed", "placeholder"],
         hintDisabled: null,
         hintExplain: "absent",
+        reset: RESET_PLACEHOLDER,
         note: "absent",
         extraStat: EXTRA.value,
         hidden: {
@@ -524,6 +557,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "placeholder",
         "progressBar",
         "progressCard",
+        "reset",
         "rules",
         "statLabel",
         "statRow",
@@ -540,6 +574,20 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "wordmark",
       ],
     });
+  });
+
+  it("renders a disabled trigger when the readouts carry no onReset", () => {
+    const page = staticPage(
+      chrome({
+        ...DAILY_LIVE,
+        state: {
+          kind: "playing",
+          readouts: readouts(true, null, noop, null),
+        },
+      }),
+    );
+
+    expect(resetSlotOf(page)).toEqual(RESET_IDLE);
   });
 });
 

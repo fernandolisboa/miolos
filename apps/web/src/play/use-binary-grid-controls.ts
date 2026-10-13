@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch } from "react";
+import { useCallback, useEffect, useRef, type Dispatch } from "react";
 
 import {
   canHint,
@@ -7,6 +7,7 @@ import {
   type BinaryMark,
 } from "./binary-grid";
 import { nextBinaryHint, type Hint } from "./grid-hint";
+import { useHintKind } from "./use-hint-kind";
 
 export interface BinaryGridControls<K> {
   readonly hintReady: boolean;
@@ -16,6 +17,7 @@ export interface BinaryGridControls<K> {
   readonly enterValue: (value: BinaryMark) => void;
   readonly clearCell: () => void;
   readonly revealHint: () => void;
+  readonly reset: () => void;
 }
 
 export function useBinaryGridControls<K>(
@@ -23,7 +25,7 @@ export function useBinaryGridControls<K>(
   dispatch: Dispatch<BinaryGridAction>,
   kindOf: (hint: Hint<BinaryMark>) => K,
 ): BinaryGridControls<K> {
-  const [hintKind, setHintKind] = useState<K | null>(null);
+  const { hintKind, setHintKind, reset } = useHintKind<K>(dispatch);
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -65,7 +67,7 @@ export function useBinaryGridControls<K>(
     }
     setHintKind(kindOf(hint));
     dispatch({ type: "use-hint" });
-  }, [dispatch, kindOf]);
+  }, [dispatch, kindOf, setHintKind]);
 
   return {
     hintReady: canHint(state),
@@ -75,5 +77,6 @@ export function useBinaryGridControls<K>(
     enterValue,
     clearCell,
     revealHint,
+    reset,
   };
 }

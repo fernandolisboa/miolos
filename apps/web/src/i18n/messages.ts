@@ -102,6 +102,11 @@ export const messages = {
     timerLabel: "Tempo",
     timerAria: (elapsed: string) => `tempo decorrido: ${elapsed}`,
     progressLabel: "Progresso",
+    reset: {
+      label: "Recomeçar",
+      question: "Recomeçar o puzzle? Suas jogadas serão apagadas.",
+      cancel: "Cancelar",
+    },
   },
   conclusion: {
     back,

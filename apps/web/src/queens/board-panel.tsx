@@ -1,4 +1,5 @@
 import { messages } from "../i18n";
+import { hasEntries } from "../play/reset-board";
 import screen from "../play/screen.module.css";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
 import { Board } from "./board";
@@ -19,6 +20,7 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
         board.hintKind === null ? null : copy.hint.explain[board.hintKind],
       onReveal: board.revealHint,
     },
+    onReset: hasEntries(state.entries) ? board.reset : null,
   };
 }
 

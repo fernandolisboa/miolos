@@ -1,0 +1,48 @@
+.control {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(var(--touch-target-min) * 2 + var(--space-4));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.trigger {
+  composes: cancel from "../components/confirm-action.module.css";
+}
+
+.idle {
+  composes: cancel from "../components/confirm-action.module.css";
+  color: var(--ink-2);
+  text-decoration-color: transparent;
+  cursor: default;
+}
+
+.cancel {
+  composes: cancel from "../components/confirm-action.module.css";
+}
+
+.confirm {
+  composes: confirmButton from "../components/confirm-action.module.css";
+}
+
+.ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.question {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
