@@ -148,6 +148,7 @@ function NonogramFreeBoard({
           entries={state.entries}
           selected={state.selected}
           hintIndex={state.hint.lastIndex}
+          spotlight={state.hint.spotlight}
           onSelect={selectCell}
           onMove={moveSelection}
           onMarkCell={markCell}

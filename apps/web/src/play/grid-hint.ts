@@ -21,6 +21,7 @@ export interface Revealed<T, R> {
   readonly index: number;
   readonly value: T;
   readonly reason: R;
+  readonly spotlight?: readonly number[];
 }
 
 export type LogicalHint<T, S> = Revealed<T, HintReason<S>>;

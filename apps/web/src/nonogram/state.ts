@@ -82,7 +82,7 @@ const NONOGRAM_RULES: BinaryGridRules<NonogramPlayState, NonogramHintReason> = {
       entries,
       state.solution !== null && isPictureComplete(state.solution, entries),
     ),
-  hint: (state) => nextNonogramHint(state.solution, state.entries),
+  hint: (state) => nextNonogramHint(state.clues, state.solution, state.entries),
 };
 
 export function nonogramPlayReducer(

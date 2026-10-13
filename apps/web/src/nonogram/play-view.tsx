@@ -59,6 +59,7 @@ export function PlayView({
           entries={state.entries}
           selected={state.selected}
           hintIndex={state.hint.lastIndex}
+          spotlight={state.hint.spotlight}
           onSelect={play.selectCell}
           onMove={play.moveSelection}
           onMarkCell={play.markCell}

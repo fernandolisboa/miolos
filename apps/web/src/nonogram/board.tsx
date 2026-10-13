@@ -25,6 +25,7 @@ export const Board = memo(function Board({
   entries,
   selected,
   hintIndex,
+  spotlight,
   onSelect,
   onMove,
   onMarkCell,
@@ -39,6 +40,7 @@ export const Board = memo(function Board({
 
   readonly selected: number | null;
   readonly hintIndex: number | null;
+  readonly spotlight: readonly number[];
   readonly onSelect: (index: number) => void;
   readonly onMove: (rows: number, columns: number) => void;
 
@@ -87,6 +89,7 @@ export const Board = memo(function Board({
                 size={size}
                 value={entries[index] ?? null}
                 hinted={hintIndex === index}
+                spotlit={spotlight.includes(index)}
                 selected={selected === index}
                 tabbable={board.tabbable === index}
                 onCellFocus={onSelect}
@@ -158,6 +161,7 @@ const Cell = memo(function Cell({
   size,
   value,
   hinted,
+  spotlit,
   selected,
   tabbable,
   onCellFocus,
@@ -169,6 +173,7 @@ const Cell = memo(function Cell({
   readonly size: NonogramSize;
   readonly value: NonogramCellValue;
   readonly hinted: boolean;
+  readonly spotlit: boolean;
 
   readonly selected: boolean;
 
@@ -183,7 +188,15 @@ const Cell = memo(function Cell({
   return (
     <button
       type="button"
-      className={cellClassName({ row, column, size, value, hinted, selected })}
+      className={cellClassName({
+        row,
+        column,
+        size,
+        value,
+        hinted,
+        spotlit,
+        selected,
+      })}
       style={{ gridColumn: column + 2, gridRow: row + 2 }}
       data-cell-index={index}
       tabIndex={tabbable ? 0 : -1}
@@ -274,6 +287,7 @@ function cellClassName(state: {
   readonly size: number;
   readonly value: NonogramCellValue;
   readonly hinted: boolean;
+  readonly spotlit: boolean;
   readonly selected: boolean;
 }): string {
   const chromatic =
@@ -287,6 +301,7 @@ function cellClassName(state: {
     ruleClasses(state.row, state.column, state.size),
     chromatic,
     state.hinted ? styles.cellHinted : "",
+    state.spotlit ? styles.cellSpotlit : "",
     state.selected ? styles.cellSelected : "",
   ]
     .filter((name) => name !== "")

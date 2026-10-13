@@ -4,7 +4,11 @@ import {
 } from "@miolos/core";
 import {
   generateNonogram,
+  nextNonogramStep,
+  type NonogramClues,
+  type NonogramLine,
   type NonogramPuzzle,
+  type NonogramStep,
   type Weekday,
 } from "@miolos/games/nonogram";
 import { describe, expect, it } from "vitest";
@@ -20,6 +24,7 @@ import {
   nonogramPlayReducer,
   type NonogramCellValue,
   type NonogramMark,
+  type NonogramPlayAction,
   type NonogramPlayState,
 } from "../src/nonogram/state";
 
@@ -200,40 +205,221 @@ describe("the second pass (P17)", () => {
     }
   });
 
-  it("falls back to pass 1's cross exactly where `use-hint` has already refused", () => {
+  it("hands a board with the picture painted a cross, which the first pass alone refuses", () => {
     for (const current of BOARDS) {
       const painted = current.solution.map((mark) => (mark === 1 ? 1 : null));
-      const hint = nextBinaryHint(current.solution, painted);
+      const hint = nextNonogramHint(
+        current.puzzle.clues,
+        current.solution,
+        painted,
+      );
 
+      expect(nextBinaryHint(current.solution, painted)?.value).toBe(0);
       expect(hint?.value).toBe(0);
-      expect(nextNonogramHint(current.solution, painted)?.reason).toEqual({
-        kind: "cross",
-      });
+      expect(hint?.reason.kind).toBe("step");
     }
   });
 });
 
-describe("nextNonogramHint's reason", () => {
-  const solution = [1, 0] as const;
+describe("nextNonogramHint corrects first, then reasons, then falls back (T-WEB-S563)", () => {
+  function correctPartial(
+    solution: readonly NonogramMark[],
+    seed: number,
+  ): readonly NonogramCellValue[] {
+    let state = seed;
+    return solution.map((mark) => {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
+      return state % 3 === 0 ? mark : null;
+    });
+  }
 
-  it("separates a correction, a fill and a cross", () => {
-    expect(nextNonogramHint(solution, [0, null])?.reason).toEqual({
-      kind: "correction",
-    });
-    expect(nextNonogramHint(solution, [1, 1])?.reason).toEqual({
-      kind: "correction",
-    });
-    expect(nextNonogramHint(solution, [null, null])?.reason).toEqual({
-      kind: "fill",
-    });
-    expect(nextNonogramHint(solution, [1, null])?.reason).toEqual({
-      kind: "cross",
-    });
+  it("never reveals a wrong cell, on a bare board and on correct partial boards of every weekday", () => {
+    for (const [at, current] of BOARDS.entries()) {
+      const boards = [
+        current.empty,
+        halfPainted(current.solution),
+        correctPartial(current.solution, at + 1),
+      ];
+      for (const entries of boards) {
+        const hint = nextNonogramHint(
+          current.puzzle.clues,
+          current.solution,
+          entries,
+        );
+
+        expect(hint).not.toBeNull();
+        expect(hint?.value).toBe(current.solution[hint?.index ?? -1]);
+        expect(entries[hint?.index ?? -1]).toBeNull();
+        expect(hint?.reason.kind).toBe("step");
+      }
+    }
   });
 
-  it("explains each reason, and nothing before a hint", () => {
+  it("lights the step's line, with the hinted cell on it", () => {
+    for (const current of BOARDS) {
+      const hint = nextNonogramHint(
+        current.puzzle.clues,
+        current.solution,
+        current.empty,
+      );
+      const step = nextNonogramStep(
+        current.puzzle.clues,
+        current.empty.map(() => "unknown"),
+      );
+
+      expect(hint?.spotlight).toEqual(step?.cells);
+      expect(hint?.spotlight).toContain(hint?.index);
+    }
+  });
+
+  it("corrects a wrong entry, a wrongly crossed picture cell included, before any step", () => {
+    for (const current of BOARDS) {
+      for (const [wrong, put] of [
+        [current.solution.indexOf(0), 1],
+        [current.solution.indexOf(1), 0],
+      ] as const) {
+        const entries = current.empty.map((cell, index) =>
+          index === wrong ? put : cell,
+        );
+        const hint = nextNonogramHint(
+          current.puzzle.clues,
+          current.solution,
+          entries,
+        );
+
+        expect(hint).toEqual({
+          index: wrong,
+          value: 1 - put,
+          reason: { kind: "correction" },
+        });
+      }
+    }
+  });
+
+  it("returns null once every cell is decided and correct", () => {
+    for (const current of BOARDS) {
+      expect(
+        nextNonogramHint(
+          current.puzzle.clues,
+          current.solution,
+          current.solution,
+        ),
+      ).toBeNull();
+    }
+  });
+
+  describe("when the clues and the solution disagree", () => {
+    const CLUES: NonogramClues = {
+      size: 5,
+      rows: [[5], [], [], [], []],
+      cols: [[1], [1], [1], [1], [1]],
+    };
+
+    it("falls back to a filled cell of the figure", () => {
+      const solution: readonly NonogramMark[] = Array.from(
+        { length: 25 },
+        (_unused, index) => (index === 24 ? 1 : 0),
+      );
+      const hint = nextNonogramHint(
+        CLUES,
+        solution,
+        solution.map(() => null),
+      );
+
+      expect(hint).toEqual({
+        index: 24,
+        value: 1,
+        reason: { kind: "fill" },
+      });
+    });
+
+    it("falls back to a cross once the figure is placed", () => {
+      const solution: readonly NonogramMark[] = Array.from(
+        { length: 25 },
+        () => 0,
+      );
+      const hint = nextNonogramHint(
+        CLUES,
+        solution,
+        solution.map(() => null),
+      );
+
+      expect(hint).toEqual({
+        index: 0,
+        value: 0,
+        reason: { kind: "cross" },
+      });
+    });
+  });
+});
+
+describe("every hint sentence (T-WEB-S565)", () => {
+  const SIDE = 9;
+
+  function explain(
+    line: NonogramLine,
+    across: number,
+    over: Partial<NonogramStep> = {},
+  ): string | null {
+    const cells = Array.from({ length: SIDE }, (_unused, k) =>
+      line.kind === "row" ? line.index * SIDE + k : k * SIDE + line.index,
+    );
+    return nonogramHintExplanation({
+      kind: "step",
+      step: {
+        index: cells[across] ?? -1,
+        value: 1,
+        line,
+        runs: [4, 1],
+        cells,
+        ...over,
+      },
+    });
+  }
+
+  const ROW: NonogramLine = { kind: "row", index: 2 };
+  const COLUMN: NonogramLine = { kind: "column", index: 5 };
+
+  it("names a row and a column with 1-based numbers, for a fill and for a cross", () => {
+    expect(explain(ROW, 5)).toBe(
+      "Na linha 3, os números 4, 1 só fecham com a célula da coluna 6 preenchida.",
+    );
+    expect(explain(ROW, 5, { value: 0 })).toBe(
+      "Na linha 3, os números 4, 1 só fecham com a célula da coluna 6 marcada.",
+    );
+    expect(explain(COLUMN, 3)).toBe(
+      "Na coluna 6, os números 4, 1 só fecham com a célula da linha 4 preenchida.",
+    );
+  });
+
+  it("says the number in the singular for a single run", () => {
+    expect(explain(ROW, 0, { runs: [4], value: 0 })).toBe(
+      "Na linha 3, o número 4 só fecha com a célula da coluna 1 marcada.",
+    );
+  });
+
+  it("explains a line with no números", () => {
+    expect(explain(ROW, 2, { runs: [], value: 0 })).toBe(
+      "A linha 3 não tem números, então a célula da coluna 3 fica marcada.",
+    );
+    expect(
+      explain({ kind: "column", index: 3 }, 4, { runs: [], value: 0 }),
+    ).toBe(
+      "A coluna 4 não tem números, então a célula da linha 5 fica marcada.",
+    );
+  });
+
+  it("explains the fallbacks and the correction, and nothing before a hint", () => {
     expect(nonogramHintExplanation(null)).toBeNull();
-    expect(nonogramHintExplanation({ kind: "cross" })).not.toBeNull();
+    expect(nonogramHintExplanation({ kind: "fill" })).toBe(
+      "Não achamos um passo lógico simples aqui, então preenchemos uma célula da figura para você.",
+    );
+    expect(nonogramHintExplanation({ kind: "cross" })).toBe(
+      "Não achamos um passo lógico simples aqui, então marcamos uma célula fora da figura.",
+    );
+    expect(nonogramHintExplanation({ kind: "correction" })).toBe(
+      "Corrigimos uma célula que não fecha com os números.",
+    );
   });
 });
 
@@ -276,7 +462,7 @@ describe("the reducer's accounting", () => {
     expect(cleared.hint).toEqual({
       used: 1,
       lastIndex: null,
-      reason: { kind: "fill" },
+      reason: hinted.hint.reason,
       spotlight: [],
     });
 
@@ -311,5 +497,85 @@ describe("the reducer's accounting", () => {
 
     expect(solved.status).toBe("solved");
     expect(nonogramPlayReducer(solved, { type: "use-hint" })).toBe(solved);
+  });
+});
+
+describe("use-hint records the reason and the spotlight (T-WEB-S564)", () => {
+  const CLUES = generateNonogram(20_260_801, 1).clues;
+  const STATE = initNonogramPlayState(daily(generateNonogram(20_260_801, 1)));
+  const STEP = nextNonogramStep(
+    CLUES,
+    STATE.entries.map(() => "unknown"),
+  );
+
+  function hinted(): NonogramPlayState {
+    return nonogramPlayReducer(
+      nonogramPlayReducer(STATE, { type: "select", index: 24 }),
+      { type: "use-hint" },
+    );
+  }
+
+  it("reveals the step's cell, lights its line, spends one hint and keeps the caret", () => {
+    const after = hinted();
+
+    expect(STEP).not.toBeNull();
+    expect(after.entries[STEP?.index ?? -1]).toBe(STEP?.value);
+    expect(after.hint).toEqual({
+      used: 1,
+      lastIndex: STEP?.index,
+      reason: { kind: "step", step: STEP },
+      spotlight: STEP?.cells,
+    });
+    expect(after.selected).toBe(24);
+  });
+
+  it("names a correction and lights nothing", () => {
+    const wrong = STATE.solution?.indexOf(0) ?? -1;
+    const after = nonogramPlayReducer(
+      nonogramPlayReducer(STATE, { type: "select", index: wrong }),
+      { type: "enter-value", value: 1 },
+    );
+    const corrected = nonogramPlayReducer(after, { type: "use-hint" });
+
+    expect(corrected.hint.reason).toEqual({ kind: "correction" });
+    expect(corrected.hint.spotlight).toEqual([]);
+  });
+
+  it.each<[string, NonogramPlayAction]>([
+    ["marking a cell", { type: "mark-cell", index: 0, press: "tap" }],
+    ["starting a stroke", { type: "stroke-start", index: 0, press: "tap" }],
+    ["selecting another cell", { type: "select", index: 0 }],
+    ["moving the selection", { type: "move-selection", rows: 0, columns: -1 }],
+  ])("puts the spotlight out on %s, and keeps the reason", (_name, action) => {
+    const after = nonogramPlayReducer(hinted(), action);
+
+    expect(after.hint.spotlight).toEqual([]);
+    expect(after.hint.reason).toEqual({ kind: "step", step: STEP });
+  });
+
+  it("puts the spotlight out when a stroke paints over a cell", () => {
+    const stroking = nonogramPlayReducer(hinted(), {
+      type: "stroke-start",
+      index: 0,
+      press: "tap",
+    });
+    const hintedAgain = { ...stroking, hint: hinted().hint };
+    const after = nonogramPlayReducer(hintedAgain, {
+      type: "paint-over",
+      index: 1,
+    });
+
+    expect(after.hint.spotlight).toEqual([]);
+  });
+
+  it("forgets the reason and the spotlight on reset", () => {
+    const after = nonogramPlayReducer(hinted(), { type: "reset" });
+
+    expect(after.hint).toEqual({
+      used: 1,
+      lastIndex: null,
+      reason: null,
+      spotlight: [],
+    });
   });
 });

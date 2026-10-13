@@ -4,7 +4,7 @@ import {
   type DailyNonogramResponse,
   type NonogramSize,
 } from "@miolos/core";
-import { generateNonogram } from "@miolos/games/nonogram";
+import { generateNonogram, nextNonogramStep } from "@miolos/games/nonogram";
 import {
   act,
   createEvent,
@@ -19,6 +19,7 @@ import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { formatElapsed, messages } from "../src/i18n";
 import { Board } from "../src/nonogram/board";
 import { filledTarget, solutionMarks } from "../src/nonogram/engine";
+import { nonogramHintExplanation } from "../src/nonogram/hint";
 import styles from "../src/nonogram/nonogram-board.module.css";
 import { NonogramConclusion } from "../src/nonogram/nonogram-conclusion";
 import { NonogramScreen } from "../src/nonogram/nonogram-screen";
@@ -74,6 +75,20 @@ function solutionOf(fixture: DailyNonogramResponse): readonly NonogramMark[] {
 
 const SOLUTION = solutionOf(SMALL);
 const TARGET = filledTarget(SMALL.clues);
+
+const FIRST_STEP = (() => {
+  const step = nextNonogramStep(
+    SMALL.clues,
+    SOLUTION.map(() => "unknown"),
+  );
+  if (step === null) {
+    throw new Error("a published daily always has a first step");
+  }
+  return step;
+})();
+
+const FIRST_SENTENCE =
+  nonogramHintExplanation({ kind: "step", step: FIRST_STEP }) ?? "";
 
 const PICTURE: readonly number[] = SOLUTION.flatMap((mark, index) =>
   mark === 1 ? [index] : [],
@@ -1011,7 +1026,7 @@ describe("the four branches (T-WEB-S47)", () => {
     expect(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE - 1)),
     ).toHaveAttribute("aria-disabled", "false");
-    expect(screen.getByText(copy.hint.explain.fill)).toBeInTheDocument();
+    expect(screen.getByText(FIRST_SENTENCE)).toBeInTheDocument();
     expect(screen.getByText(copy.progressLong(1, TARGET))).toBeInTheDocument();
 
     const filled = container.querySelectorAll(
@@ -1040,6 +1055,50 @@ describe("the four branches (T-WEB-S47)", () => {
 
     fireEvent.click(exhausted);
     expect(marked()).toBe(FREE_HINTS_PER_PUZZLE);
+  });
+});
+
+describe("the hint names its line and lights the cells it reasons about (T-WEB-S566)", () => {
+  function spotlit(container: HTMLElement): number[] {
+    return [...container.querySelectorAll<HTMLElement>("[data-cell-index]")]
+      .filter((cell) => cell.classList.contains(className("cellSpotlit")))
+      .map((cell) => Number(cell.dataset.cellIndex));
+  }
+
+  it("writes the step's cell, reads out why and tints the line until the next board action", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+    expect(spotlit(container)).toEqual([]);
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(markAt(container, FIRST_STEP.index)).toBe(FIRST_STEP.value);
+    expect(cellAt(container, FIRST_STEP.index).classList).toContain(
+      styles.cellHinted,
+    );
+    expect(screen.getByText(FIRST_SENTENCE)).toBeInTheDocument();
+    expect(spotlit(container)).toEqual(FIRST_STEP.cells);
+
+    fireEvent.click(cellAt(container, FIRST_STEP.cells.at(-1) ?? 0));
+
+    expect(spotlit(container)).toEqual([]);
+    expect(screen.getByText(FIRST_SENTENCE)).toBeInTheDocument();
+  });
+
+  it("reads out a correction and lights nothing", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+    const wrong = SOLUTION.indexOf(0);
+
+    fireEvent.click(cellAt(container, wrong));
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(
+      screen.getByText(messages.games.nonogram.play.hint.explain.correction),
+    ).toBeInTheDocument();
+    expect(spotlit(container)).toEqual([]);
   });
 });
 

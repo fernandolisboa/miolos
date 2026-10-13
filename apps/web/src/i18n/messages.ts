@@ -51,6 +51,30 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
 const runsText = (runs: readonly number[]) =>
   runs.length === 0 ? "0" : runs.join(", ");
 
+const NONOGRAM_LINE = {
+  row: { name: "linha", across: "coluna" },
+  column: { name: "coluna", across: "linha" },
+} as const;
+
+const nonogramStep = (
+  line: "row" | "column",
+  at: number,
+  runs: readonly number[],
+  across: number,
+  value: 0 | 1,
+) => {
+  const { name, across: otherName } = NONOGRAM_LINE[line];
+  const cell = `a célula da ${otherName} ${across}`;
+  if (runs.length === 0) {
+    return `A ${name} ${at} não tem números, então ${cell} fica marcada.`;
+  }
+  const numbers =
+    runs.length === 1
+      ? `o número ${runs[0]} só fecha`
+      : `os números ${runs.join(", ")} só fecham`;
+  return `Na ${name} ${at}, ${numbers} com ${cell} ${value === 1 ? "preenchida" : "marcada"}.`;
+};
+
 const TERMO_TILE = {
   correct: "certa",
   present: "na palavra",
@@ -868,9 +892,10 @@ export const messages = {
         hint: {
           explain: {
             correction: "Corrigimos uma célula que não fecha com os números.",
-            fill: "Preenchemos uma célula da figura para você.",
-
-            cross: "Marcamos uma célula que fica fora da figura.",
+            fill: "Não achamos um passo lógico simples aqui, então preenchemos uma célula da figura para você.",
+            cross:
+              "Não achamos um passo lógico simples aqui, então marcamos uma célula fora da figura.",
+            step: nonogramStep,
           },
         },
         unavailable: {

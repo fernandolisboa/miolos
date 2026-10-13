@@ -1,6 +1,6 @@
 import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
-import { generateNonogram } from "@miolos/games/nonogram";
+import { generateNonogram, nextNonogramStep } from "@miolos/games/nonogram";
 import { generateDailySudoku } from "@miolos/games/sudoku";
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +16,7 @@ import {
   nextCrosswordHint,
 } from "../src/crossword/hint";
 import { messages } from "../src/i18n";
+import { nonogramHintExplanation } from "../src/nonogram/hint";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
 import { sudokuHintExplanation } from "../src/sudoku/hint";
 import sudokuBoardStyles from "../src/sudoku/sudoku-board.module.css";
@@ -137,6 +138,44 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
     expect(tinted).toEqual(
       step.cells.filter((index) => index !== step.index).sort((a, b) => a - b),
     );
+  });
+});
+
+describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S566)", () => {
+  it("writes the step's cell, reads out why and tints the step's line", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const { clues } = generateNonogram(SEED, WEEKDAY);
+    const step = nextNonogramStep(
+      clues,
+      Array.from({ length: clues.size ** 2 }, () => "unknown"),
+    );
+    if (step === null) {
+      throw new Error("no first step");
+    }
+    const { container } = render(
+      <NonogramFreeScreen deps={stableDeps(SEED)} />,
+    );
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(
+      container
+        .querySelector(`[data-cell-index="${step.index}"]`)
+        ?.classList.contains(
+          (step.value === 1
+            ? boardStyles.cellFilled
+            : boardStyles.cellCrossed) ?? "",
+        ),
+    ).toBe(true);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      nonogramHintExplanation({ kind: "step", step }),
+    );
+    const tinted = [
+      ...container.querySelectorAll<HTMLElement>(`.${boardStyles.cellSpotlit}`),
+    ].map((cell) => Number(cell.dataset.cellIndex));
+    expect(tinted).toEqual(step.cells);
   });
 });
 
