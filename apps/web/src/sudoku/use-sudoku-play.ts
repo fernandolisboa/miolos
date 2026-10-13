@@ -1,5 +1,4 @@
-import type { DailySudokuResponse } from "@miolos/core";
-import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
 import {
   useCallback,
   useEffect,

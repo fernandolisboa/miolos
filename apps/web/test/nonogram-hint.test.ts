@@ -1,6 +1,5 @@
 import {
   dailyNonogramResponseSchema,
-  FREE_HINTS_PER_PUZZLE,
   type DailyNonogramResponse,
 } from "@miolos/core";
 import {
@@ -244,7 +243,6 @@ describe("the reducer's accounting", () => {
     expect(hinted.entries[hinted.hint.lastIndex ?? -1]).toBe(1);
 
     expect(hinted.selected).toBe(24);
-    expect(FREE_HINTS_PER_PUZZLE).toBe(FREE_HINTS_PER_PUZZLE);
   });
 
   it("drops the ring when the player writes the hinted cell again (T-WEB-S58)", () => {

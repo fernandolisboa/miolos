@@ -1,5 +1,4 @@
-import type { DailyBinairoResponse } from "@miolos/core";
-import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
 import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
 import {
   useCallback,
