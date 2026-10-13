@@ -120,47 +120,6 @@
   outline-offset: 2px;
 }
 
-.switchRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-top: var(--space-4);
-  font-size: 15px;
-  line-height: 1.4;
-}
-
-.switch {
-  flex-shrink: 0;
-  min-width: 112px;
-  min-height: var(--touch-target-min);
-  padding: var(--space-3) var(--space-5);
-  background: var(--paper-card);
-  color: var(--ink);
-  font: var(--text-button);
-  border: 1.5px solid var(--ink);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition:
-    background var(--duration-fast) var(--ease-settle),
-    color var(--duration-fast) var(--ease-settle);
-}
-
-.switch[aria-checked="true"] {
-  background: var(--ink);
-  color: var(--paper-card);
-}
-
-.switch:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.switch:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
 .deletion {
   margin-top: var(--space-12);
   padding-top: var(--space-6);
@@ -205,12 +164,6 @@
   outline-offset: 2px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .switch {
-    transition: none;
-  }
-}
-
 @media (max-width: 768px) {
   .page {
     padding: var(--space-5) var(--space-5) var(--space-6);
@@ -241,10 +194,6 @@
 
   .body {
     font-size: 14px;
-  }
-
-  .switchRow {
-    flex-wrap: wrap;
   }
 
   .deletion {

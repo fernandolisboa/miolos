@@ -8,6 +8,8 @@ import {
 import { messages } from "../i18n";
 import { isShortcut, keyMove } from "../play/grid-selection";
 import { typedLetter } from "../play/typed-letter";
+import { useWrongCells } from "../play/use-wrong-cells";
+import { WrongMark } from "../play/wrong-mark";
 import {
   activeEntry,
   colOf,
@@ -71,6 +73,7 @@ export function Board({
   readonly onBackspace: () => void;
 }) {
   const wasSelectedRef = useRef(false);
+  const wrong = useWrongCells("crossword", solution, null, entries);
   const numbers = numbering(clues);
   const tabbable = selected ?? firstPlayableIndex(solution);
   const clue =
@@ -125,6 +128,9 @@ export function Board({
         const blocked = isBlock(solution, index);
         const value = entries[index] ?? null;
         const number = numbers.get(index);
+        const label = blocked
+          ? copy.blockAria
+          : copy.cellAria(row + 1, column + 1, value);
 
         return (
           <button
@@ -140,9 +146,7 @@ export function Board({
             tabIndex={tabbable === index ? 0 : -1}
             aria-disabled={blocked}
             aria-label={
-              blocked
-                ? copy.blockAria
-                : copy.cellAria(row + 1, column + 1, value)
+              wrong.has(index) ? messages.play.wrongCell(label) : label
             }
             onFocus={() => {
               onSelect(index);
@@ -163,6 +167,7 @@ export function Board({
               </span>
             )}
             {blocked ? null : value}
+            {wrong.has(index) ? <WrongMark /> : null}
           </button>
         );
       })}

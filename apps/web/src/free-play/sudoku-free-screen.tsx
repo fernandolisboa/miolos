@@ -152,6 +152,7 @@ function SudokuFreeBoard({
       <div className={screen.gridCard}>
         <Board
           givens={state.givens}
+          solution={puzzle.solution}
           entries={state.entries}
           selected={state.selected}
           violating={state.violating}

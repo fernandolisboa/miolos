@@ -23,6 +23,7 @@ import {
 
 export interface SudokuPlay {
   readonly state: SudokuPlayState;
+  readonly solution: readonly SudokuDigit[] | null;
 
   readonly elapsed: number;
 
@@ -101,6 +102,7 @@ export function useSudokuPlay(
 
   return {
     state,
+    solution,
     elapsed,
     filled,
     hintReady: solution !== null && canHint(state, allowance),

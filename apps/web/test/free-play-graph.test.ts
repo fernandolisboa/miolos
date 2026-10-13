@@ -152,7 +152,7 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
         .filter(doesIo)
         .sort(),
     }).toEqual({
-      io: [],
+      io: ["apps/web/src/settings/settings.ts"],
       walled: [],
       reachesChrome: true,
       reachesBinairo: true,

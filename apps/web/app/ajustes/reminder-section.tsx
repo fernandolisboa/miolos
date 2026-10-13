@@ -10,6 +10,7 @@ import {
   unsubscribeAndForget,
 } from "../../src/push/subscribe";
 import { usePushState } from "../../src/push/use-push-state";
+import switchStyles from "../../src/components/switch.module.css";
 import styles from "./page.module.css";
 
 type BrowserPush =
@@ -124,12 +125,12 @@ export function ReminderSection() {
       ) : view === "error" ? (
         <p className={styles.note}>{copy.error}</p>
       ) : (
-        <div className={styles.switchRow}>
+        <div className={switchStyles.switchRow}>
           <span id="settings-push-toggle">{copy.toggle}</span>
           <button
             type="button"
             role="switch"
-            className={styles.switch}
+            className={switchStyles.switch}
             aria-labelledby="settings-push-toggle"
             aria-checked={view === "on"}
             disabled={!switchable || busy}

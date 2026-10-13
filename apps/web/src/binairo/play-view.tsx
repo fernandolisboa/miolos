@@ -48,6 +48,7 @@ export function PlayView({
       <div className={screen.gridCard}>
         <Grid
           givens={state.givens}
+          solution={play.solution}
           entries={state.entries}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}

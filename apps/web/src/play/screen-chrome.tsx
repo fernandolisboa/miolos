@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 
 import { messages } from "../i18n";
+import { useSettings } from "../settings/settings";
+import { GameSettingsButton } from "../settings/settings-dialog";
 import { accentVars } from "./accent";
 import { useFreeHintsPerPuzzle } from "./free-hints";
 import { ResetControl, ResetPlaceholder } from "./reset-control";
@@ -105,7 +107,7 @@ export function PlayScreenChrome({
   back,
   topDate,
   note,
-  clock,
+  clock: clockSetting,
   extraStat,
   children,
 }: {
@@ -120,6 +122,7 @@ export function PlayScreenChrome({
   readonly children: ReactNode;
 }): ReactElement {
   const allowance = useFreeHintsPerPuzzle() ?? FREE_HINTS_PER_PUZZLE;
+  const clock = useSettings().showClock ? clockSetting : "none";
   const skeleton = state.kind === "skeleton";
   const readouts = state.kind === "playing" ? state.readouts : null;
   const { kicker, play } = messages.games[game];
@@ -205,7 +208,10 @@ export function PlayScreenChrome({
         {readouts === null ? (
           <ResetPlaceholder />
         ) : (
-          <ResetControl onReset={readouts.onReset} />
+          <>
+            <ResetControl onReset={readouts.onReset} />
+            <GameSettingsButton game={game} general={clockSetting !== "none"} />
+          </>
         )}
       </div>
 

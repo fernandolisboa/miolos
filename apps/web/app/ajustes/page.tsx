@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PageTopBar } from "../../src/components/page-top-bar";
 import { deleteAccountAnchor, messages, routes } from "../../src/i18n";
 import { AccountSection } from "./account-section";
+import { GamesSection } from "./games-section";
 import { GoogleSection } from "./google-section";
 import styles from "./page.module.css";
 import { ReminderSection } from "./reminder-section";
@@ -26,6 +27,7 @@ export default function SettingsPage() {
       </div>
 
       <ThemeSection />
+      <GamesSection />
       <ReminderSection />
       <AccountSection />
       <GoogleSection />

@@ -55,6 +55,7 @@ export function PlayView({
       <div className={screen.gridCard}>
         <Board
           givens={state.givens}
+          solution={play.solution}
           entries={state.entries}
           selected={state.selected}
           violating={state.violating}

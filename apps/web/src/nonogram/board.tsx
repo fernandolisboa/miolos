@@ -6,6 +6,8 @@ import { messages } from "../i18n";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
+import { useWrongCells } from "../play/use-wrong-cells";
+import { WrongMark } from "../play/wrong-mark";
 import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
 
@@ -23,6 +25,7 @@ const SIZE_CLASS = {
 export const Board = memo(function Board({
   size,
   clues,
+  solution,
   entries,
   selected,
   hintIndex,
@@ -37,6 +40,7 @@ export const Board = memo(function Board({
 }: {
   readonly size: NonogramSize;
   readonly clues: NonogramClues;
+  readonly solution: readonly NonogramMark[] | null;
   readonly entries: readonly NonogramCellValue[];
 
   readonly selected: number | null;
@@ -54,6 +58,7 @@ export const Board = memo(function Board({
   readonly onPaintOver: (index: number) => void;
 }) {
   const copy = messages.games.nonogram.play;
+  const wrong = useWrongCells("nonogram", solution, null, entries);
   const board = useBinaryBoard({
     size,
     selected,
@@ -89,6 +94,7 @@ export const Board = memo(function Board({
                 column={column}
                 size={size}
                 value={entries[index] ?? null}
+                wrong={wrong.has(index)}
                 hinted={hintIndex === index}
                 spotlit={spotlight.includes(index)}
                 selected={selected === index}
@@ -161,6 +167,7 @@ const Cell = memo(function Cell({
   column,
   size,
   value,
+  wrong,
   hinted,
   spotlit,
   selected,
@@ -173,6 +180,7 @@ const Cell = memo(function Cell({
   readonly column: number;
   readonly size: NonogramSize;
   readonly value: NonogramCellValue;
+  readonly wrong: boolean;
   readonly hinted: boolean;
   readonly spotlit: boolean;
 
@@ -202,13 +210,19 @@ const Cell = memo(function Cell({
       data-cell-index={index}
       tabIndex={tabbable ? 0 : -1}
 
-      aria-label={copy.cellAria(row + 1, column + 1, value)}
+      aria-label={
+        wrong
+          ? messages.play.wrongCell(copy.cellAria(row + 1, column + 1, value))
+          : copy.cellAria(row + 1, column + 1, value)
+      }
 
       aria-describedby={`${rowRailId(row)} ${columnRailId(column)}`}
 
       onFocus={() => onCellFocus(index)}
       onClick={(event) => onCellClick(index, event)}
-    />
+    >
+      {wrong ? <WrongMark /> : null}
+    </button>
   );
 });
 

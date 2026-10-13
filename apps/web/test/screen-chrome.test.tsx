@@ -105,6 +105,7 @@ const noop = () => undefined;
 
 const BINAIRO_PLAY = {
   state: initPlayState(BINAIRO_DAILY),
+  solution: null,
   elapsed: ELAPSED,
   filled: 12,
   hintReady: true,
@@ -118,6 +119,7 @@ const BINAIRO_PLAY = {
 
 const SUDOKU_PLAY = {
   state: initSudokuPlayState(SUDOKU_DAILY),
+  solution: null,
   elapsed: ELAPSED,
   filled: 12,
   hintReady: false,
@@ -369,8 +371,8 @@ function resetSlotOf(page: Element): unknown {
       };
 }
 
-const RESET_BUTTON = { buttons: 1, hidden: null, disabled: "false" };
-const RESET_IDLE = { buttons: 1, hidden: null, disabled: "true" };
+const RESET_BUTTON = { buttons: 3, hidden: null, disabled: "false" };
+const RESET_IDLE = { buttons: 3, hidden: null, disabled: "true" };
 const RESET_PLACEHOLDER = { buttons: 0, hidden: "true", disabled: null };
 
 function shapeOf(page: Element): Record<string, unknown> {
