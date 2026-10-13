@@ -79,7 +79,7 @@ jobs:
           # (play-view.tsx / conclusion-view.tsx). "/" needs no marker: it reads
           # no database, so reachable and rendered are the same property there.
           status=0
-          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido" "/modo-livre" "/modo-livre/binairo" "/modo-livre/sudoku" "/modo-livre/nonogram" "/modo-livre/cruzadinha" "/privacidade" "/termos" "/vincular" "/estatisticas" "/arquivo" "/ajustes"; do
+          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido" "/cruzadinha" "/cruzadinha/concluido" "/modo-livre" "/modo-livre/binairo" "/modo-livre/sudoku" "/modo-livre/nonogram" "/modo-livre/cruzadinha" "/privacidade" "/termos" "/vincular" "/estatisticas" "/arquivo" "/ajustes"; do
             case "$path" in
               */concluido) marker='data-conclusion-state=' ;;
               # The free-play index (#28) is static and carries its own
@@ -186,14 +186,16 @@ jobs:
             test "$day_code" = "200" || { echo "preflight $day_path: $day_code — refusing to scan"; exit 1; }
             grep -q 'data-page=' "$day_body" || { echo "preflight $day_path: no data-page= — refusing to scan"; exit 1; }
             echo "preflight $day_path: 200 + data-page= (discovered)"
-            play_path=$(grep -oE '/arquivo/[0-9]{4}-[0-9]{2}-[0-9]{2}/(binairo|nonogram|sudoku|termo)' "$day_body" | head -n 1 || true)
+            play_path=$(grep -oE '/arquivo/[0-9]{4}-[0-9]{2}-[0-9]{2}/(binairo|nonogram|sudoku|termo|cruzadinha|rainhas)' "$day_body" | head -n 1 || true)
             rm -f "$day_body"
             test -n "$play_path" || { echo "preflight: $day_path lists no game — refusing to scan"; exit 1; }
             case "$play_path" in
               /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/binairo|\
               /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/nonogram|\
               /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/sudoku|\
-              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/termo) ;;
+              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/termo|\
+              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/cruzadinha|\
+              /arquivo/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/rainhas) ;;
               *) echo "preflight: discovered play path failed its grammar — refusing to scan"; exit 1 ;;
             esac
             play_body=$(mktemp)
@@ -267,6 +269,8 @@ jobs:
           "$DEPLOYMENT_URL/nonogram/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/termo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/termo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/cruzadinha?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/cruzadinha/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
@@ -310,6 +314,8 @@ jobs:
           "$DEPLOYMENT_URL/nonogram/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/termo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/termo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/cruzadinha?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/cruzadinha/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"

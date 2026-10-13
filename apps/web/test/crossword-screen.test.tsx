@@ -168,6 +168,15 @@ describe("physical keys (T-WEB-S436)", () => {
     fireEvent.keyDown(boardOf(), { key: "Backspace" });
     expect(cellAt(0).textContent).not.toContain("c");
   });
+
+  it("PageDown and PageUp jump to the column's last and first row", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    tap(cellAt(2));
+    fireEvent.keyDown(boardOf(), { key: "PageDown" });
+    expect(document.activeElement).toBe(cellAt(22));
+    fireEvent.keyDown(boardOf(), { key: "PageUp" });
+    expect(document.activeElement).toBe(cellAt(2));
+  });
 });
 
 const LEADING_BLOCK: DailyCrosswordResponse =

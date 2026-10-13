@@ -154,6 +154,25 @@ describe("perfectDays over the published lineup (ADR-0087)", () => {
     ).toEqual([launchDay]);
   });
 
+  it("T-CORE-S138: a six-game day needs Rainhas to be perfect; a day published before Rainhas stays perfect with five", () => {
+    const ALL_SIX: readonly Game[] = [...ALL_FIVE, "queens"];
+    const six = "2026-10-12";
+    expect(
+      perfectDays(perfectDay(six, ALL_FIVE), lineup([six], ALL_SIX)),
+    ).toEqual([]);
+    expect(
+      perfectDays(perfectDay(six, ALL_SIX), lineup([six], ALL_SIX)),
+    ).toEqual([six]);
+
+    const beforeQueens = "2026-10-11";
+    expect(
+      perfectDays(
+        perfectDay(beforeQueens, ALL_FIVE),
+        lineup([beforeQueens], ALL_FIVE),
+      ),
+    ).toEqual([beforeQueens]);
+  });
+
   it("T-CORE-S125: one date's lineup never decides another's, and the calendar and the count agree", () => {
     const withCrossword = "2026-10-05";
     const withoutCrossword = "2026-10-06";
@@ -460,6 +479,27 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
     });
     expect(stats.sudoku.solved).toBe(1);
     expect(stats.termo.solved).toBe(0);
+  });
+
+  it("T-CORE-S136: Rainhas carries a timed block of its own, and no other game's rows reach it", () => {
+    const stats = computeStats(
+      [
+        row({ game: "queens", date: TODAY, elapsedMs: 300_000 }),
+        row({ game: "queens", date: YESTERDAY, elapsedMs: 100_000 }),
+        row({ game: "queens", date: "2026-08-02", outcome: "lost" }),
+        row({ game: "crossword", date: TODAY, elapsedMs: 10_000 }),
+      ],
+      TODAY,
+      [],
+    );
+    expect(stats.queens).toEqual({
+      solved: 2,
+      bestMs: 100_000,
+      averageMs: 200_000,
+      averageSampleCount: 2,
+      histogram: [1, 0, 1, 0, 0, 0],
+    });
+    expect(stats.crossword.solved).toBe(1);
   });
 
   it("T-CORE-S66: the distribution buckets on-time wins by guesses; the fail row counts every lost row, unqualified", () => {

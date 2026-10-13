@@ -6,6 +6,7 @@ export const GAMES = [
   "nonogram",
   "termo",
   "crossword",
+  "queens",
 ] as const;
 
 export type Game = (typeof GAMES)[number];

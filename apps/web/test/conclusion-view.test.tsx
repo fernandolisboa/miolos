@@ -9,6 +9,7 @@ import {
   type BinairoPlayRecord,
   type CrosswordPlayRecord,
   type NonogramPlayRecord,
+  type QueensPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
@@ -43,6 +44,8 @@ const SUDOKU_ELAPSED = formatElapsed(SUDOKU_ELAPSED_MS);
 const NONOGRAM_ELAPSED_MS = 623_000;
 
 const CROSSWORD_ELAPSED_MS = 301_000;
+
+const QUEENS_ELAPSED_MS = 233_000;
 
 const TERMO_ELAPSED_MS = 188_000;
 const TERMO_ELAPSED = formatElapsed(TERMO_ELAPSED_MS);
@@ -118,6 +121,25 @@ function concludedCrossword(
     entries: Array.from({ length: 25 }, () => "a"),
     grid: Array.from({ length: 25 }, () => "a"),
     elapsedMs: CROSSWORD_ELAPSED_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+function concludedQueens(
+  overrides: Partial<QueensPlayRecord> = {},
+): QueensPlayRecord {
+  return {
+    v: 1,
+    game: "queens",
+    date: DATE,
+    size: 7,
+    entries: Array.from({ length: 49 }, () => null),
+    grid: Array.from({ length: 49 }, () => 0),
+    elapsedMs: QUEENS_ELAPSED_MS,
     hintsUsed: 0,
     concluded: true,
     pendingSync: false,
@@ -270,7 +292,7 @@ describe("the stamp (T-WEB-17)", () => {
 });
 
 describe("the day card and the CTA (T-WEB-18)", () => {
-  it("shows Binairo done and the other four honestly missing", () => {
+  it("shows Binairo done and the other five honestly missing", () => {
     writePlayRecord(concluded());
 
     render(
@@ -287,7 +309,7 @@ describe("the day card and the CTA (T-WEB-18)", () => {
 
     expect(
       screen.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
 
     expect(
       screen.getByText(messages.conclusion.dayCard.games.nonogram),
@@ -301,6 +323,7 @@ describe("the day card and the CTA (T-WEB-18)", () => {
     writePlayRecord(concluded());
     writePlayRecord(concludedCrossword());
     writePlayRecord(concludedNonogram());
+    writePlayRecord(concludedQueens());
     writePlayRecord(concludedSudoku());
     writePlayRecord(wonTermo());
 
@@ -395,6 +418,7 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     writePlayRecord(concluded());
     writePlayRecord(concludedCrossword());
     writePlayRecord(concludedNonogram());
+    writePlayRecord(concludedQueens());
     writePlayRecord(concludedSudoku());
     writePlayRecord(wonTermo());
 
@@ -475,7 +499,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
   });
 
   it("shows each concluded game's OWN time, never the current game's", () => {
@@ -495,7 +519,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(SUDOKU_ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 
   it("counts the game being celebrated as done before its record is written", () => {
@@ -514,7 +538,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
   });
 
   it("understates rather than guesses: another device's solve reads falta", () => {
@@ -533,7 +557,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.queryByText(SUDOKU_ELAPSED)).not.toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
   });
 });
 
@@ -1213,7 +1237,7 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
   });
 });
 

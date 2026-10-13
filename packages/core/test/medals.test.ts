@@ -271,8 +271,7 @@ describe("the Cruzadinha's medals (ADR-0087)", () => {
     );
   });
 
-  it("T-CORE-S127: crossword-30 follows termo-30, earns at the 30th crossword win and not the 29th, and the catalog holds 24", () => {
-    expect(MEDAL_IDS).toHaveLength(24);
+  it("T-CORE-S127: crossword-30 follows termo-30, earns at the 30th crossword win and not the 29th", () => {
     expect(MEDAL_IDS.indexOf("crossword-30")).toBe(
       MEDAL_IDS.indexOf("termo-30") + 1,
     );
@@ -282,6 +281,31 @@ describe("the Cruzadinha's medals (ADR-0087)", () => {
     const thirty = earnedMedals(lateWins("crossword", 30), [], TODAY, []);
     expect(thirty).toContain("crossword-30");
     expect(thirty).not.toContain("termo-30");
+  });
+});
+
+describe("the Rainhas medal", () => {
+  it("T-CORE-S135: queens-30 follows crossword-30, earns at the 30th Rainhas win and not the 29th, all-games ignores it, and the catalog holds 25", () => {
+    expect(MEDAL_IDS).toHaveLength(25);
+    expect(MEDAL_IDS.indexOf("queens-30")).toBe(
+      MEDAL_IDS.indexOf("crossword-30") + 1,
+    );
+    expect(earnedMedals(lateWins("queens", 29), [], TODAY, [])).not.toContain(
+      "queens-30",
+    );
+    const thirty = earnedMedals(lateWins("queens", 30), [], TODAY, []);
+    expect(thirty).toContain("queens-30");
+    expect(thirty).not.toContain("crossword-30");
+
+    const queensForTermo = [
+      ...ORIGINAL_FOUR.filter((game) => game !== "termo").map((game, i) =>
+        row({ game, date: daysAgo(i + 1) }),
+      ),
+      row({ game: "queens", date: daysAgo(9) }),
+    ];
+    expect(earnedMedals(queensForTermo, [], TODAY, [])).not.toContain(
+      "all-games",
+    );
   });
 });
 

@@ -6,16 +6,19 @@ import {
   binairoCompletionRequestSchema,
   completionRequestSchema,
   nonogramCompletionRequestSchema,
+  queensCompletionRequestSchema,
   sudokuCompletionRequestSchema,
 } from "@miolos/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
+  queensPlayRecordSchema,
   readPlayRecord,
   writePlayRecord,
   type BinairoPlayRecord,
   type NonogramPlayRecord,
+  type QueensPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
 
@@ -53,6 +56,33 @@ function pendingNonogramRecord(): NonogramPlayRecord {
     concluded: true,
     pendingSync: true,
     syncOutcome: "pending",
+  };
+}
+
+const QUEENS_ON_BOARD = [0, 9, 18, 27, 36, 45, 48];
+const QUEENS_GRID: NonNullable<QueensPlayRecord["grid"]> = Array.from(
+  { length: 49 },
+  (_unused, index) => (QUEENS_ON_BOARD.includes(index) ? 1 : 0),
+);
+
+function pendingQueensRecord(
+  overrides: Partial<QueensPlayRecord> = {},
+): QueensPlayRecord {
+  return {
+    v: 1,
+    game: "queens",
+    date: DATE,
+    size: 7,
+    entries: QUEENS_GRID.map((cell, index) =>
+      cell === 1 ? 1 : index % 3 === 0 ? 0 : null,
+    ),
+    grid: QUEENS_GRID,
+    elapsedMs: 233_000,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: true,
+    syncOutcome: "pending",
+    ...overrides,
   };
 }
 
@@ -436,6 +466,7 @@ describe("flushPendingCompletions", () => {
     writePlayRecord(pendingRecord());
     writePlayRecord(pendingSudokuRecord());
     writePlayRecord(pendingNonogramRecord());
+    writePlayRecord(pendingQueensRecord());
     const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
@@ -445,7 +476,7 @@ describe("flushPendingCompletions", () => {
       const raw: unknown = JSON.parse(requestInitSchema.parse(call[1]).body);
       return completionRequestSchema.parse(raw);
     });
-    expect(bodies).toHaveLength(3);
+    expect(bodies).toHaveLength(4);
     expect(
       binairoCompletionRequestSchema.parse(
         bodies.find((body) => body.game === "binairo"),
@@ -482,7 +513,19 @@ describe("flushPendingCompletions", () => {
     });
     expect(readPlayRecord("sudoku", DATE)?.pendingSync).toBe(false);
     expect(readPlayRecord("binairo", DATE)?.pendingSync).toBe(false);
+    expect(
+      queensCompletionRequestSchema.parse(
+        bodies.find((body) => body.game === "queens"),
+      ),
+    ).toEqual({
+      game: "queens",
+      date: DATE,
+      grid: QUEENS_GRID,
+      elapsedMs: 233_000,
+      hintsUsed: 0,
+    });
     expect(readPlayRecord("nonogram", DATE)?.pendingSync).toBe(false);
+    expect(readPlayRecord("queens", DATE)?.pendingSync).toBe(false);
   });
 
   it("does nothing when there is nothing queued", async () => {
@@ -933,5 +976,45 @@ describe("422 multi-date-sync settles the record with no retry (#58, ADR-0066) (
     await vi.runAllTimersAsync();
     expect(completionCalls(fetchMock)).toHaveLength(1);
     errorSpy.mockRestore();
+  });
+});
+
+describe("the Rainhas record is sized and its body carries queens only (T-WEB-S449)", () => {
+  it.each([7, 8, 9] as const)("accepts a %i×%i board", (size) => {
+    const cells = Array.from({ length: size ** 2 }, () => 0 as const);
+    expect(
+      queensPlayRecordSchema.safeParse(
+        pendingQueensRecord({ size, entries: cells, grid: cells }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it("rejects entries or a grid that disagree with the size", () => {
+    expect(
+      queensPlayRecordSchema.safeParse(pendingQueensRecord({ size: 8 }))
+        .success,
+    ).toBe(false);
+    expect(
+      queensPlayRecordSchema.safeParse(
+        pendingQueensRecord({ grid: QUEENS_GRID.slice(1) }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("posts the 0/1 queens grid, never the marks or the size", async () => {
+    writePlayRecord(pendingQueensRecord());
+    const fetchMock = stubFetch(() =>
+      jsonResponse(200, okBody({ game: "queens" })),
+    );
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+
+    const [call] = completionCalls(fetchMock);
+    const raw: unknown = JSON.parse(requestInitSchema.parse(call?.[1]).body);
+    expect(
+      Object.keys(queensCompletionRequestSchema.parse(raw)).sort(),
+    ).toEqual(["date", "elapsedMs", "game", "grid", "hintsUsed"]);
+    expect(raw).toMatchObject({ grid: QUEENS_GRID });
   });
 });

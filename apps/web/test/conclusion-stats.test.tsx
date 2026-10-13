@@ -114,6 +114,7 @@ function statsWith(
     sudoku: zero,
     nonogram: zero,
     crossword: zero,
+    queens: zero,
     termo: { solved: 5, distribution: [0, 1, 0, 2, 1, 0, 1] },
     perfectDays: 0,
     todayTermoGuesses,

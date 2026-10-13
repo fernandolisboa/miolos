@@ -5,7 +5,7 @@ import {
 } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
-import { nextHint } from "../src/play/grid-hint";
+import { nextBinaryHint, nextHint } from "../src/play/grid-hint";
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
@@ -138,5 +138,40 @@ describe("nextHint always agrees with the solver (T-WEB-11)", () => {
         kind: "correction",
       });
     }
+  });
+});
+
+describe("nextBinaryHint: a wrong cell first, then a 1 before a 0 (T-WEB-S458)", () => {
+  const solution = [0, 0, 1, 0, 1, 0] as const;
+
+  it("corrects the first wrong cell in row-major order, either way round", () => {
+    expect(nextBinaryHint(solution, [null, 1, null, null, 0, null])).toEqual({
+      index: 1,
+      value: 0,
+      kind: "correction",
+    });
+    expect(nextBinaryHint(solution, [null, null, 0, null, null, 1])).toEqual({
+      index: 2,
+      value: 1,
+      kind: "correction",
+    });
+  });
+
+  it("reveals the first empty 1 even when an empty 0 comes before it", () => {
+    expect(
+      nextBinaryHint(solution, [null, null, null, null, null, null]),
+    ).toEqual({ index: 2, value: 1, kind: "fill" });
+  });
+
+  it("reveals a 0 only once every 1 is in place", () => {
+    expect(nextBinaryHint(solution, [null, 0, 1, null, 1, null])).toEqual({
+      index: 0,
+      value: 0,
+      kind: "fill",
+    });
+  });
+
+  it("returns null on a finished board", () => {
+    expect(nextBinaryHint(solution, [0, 0, 1, 0, 1, 0])).toBeNull();
   });
 });

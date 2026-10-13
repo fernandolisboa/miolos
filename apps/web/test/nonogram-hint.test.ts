@@ -9,12 +9,8 @@ import {
 } from "@miolos/games/nonogram";
 import { describe, expect, it } from "vitest";
 
-import {
-  hintKindOf,
-  nextNonogramHint,
-  solutionMarks,
-} from "../src/nonogram/engine";
-import { nextHint } from "../src/play/grid-hint";
+import { hintKindOf, solutionMarks } from "../src/nonogram/engine";
+import { nextBinaryHint, nextHint } from "../src/play/grid-hint";
 import {
   initNonogramPlayState,
   nonogramPlayReducer,
@@ -87,7 +83,7 @@ function fullyCrossed(
 describe("the encoding tripwire (N9)", () => {
   it("never reads a correctly CROSSED cell as a contradiction, on any of the 280 boards", () => {
     const corrections = BOARDS.filter((current) => {
-      const hint = nextNonogramHint(
+      const hint = nextBinaryHint(
         current.solution,
         fullyCrossed(current.solution),
       );
@@ -100,7 +96,7 @@ describe("the encoding tripwire (N9)", () => {
 
   it("hands a fully-crossed board a FILL on a picture cell", () => {
     for (const current of BOARDS) {
-      const hint = nextNonogramHint(
+      const hint = nextBinaryHint(
         current.solution,
         fullyCrossed(current.solution),
       );
@@ -118,7 +114,7 @@ describe("the corrections", () => {
       const entries = current.empty.map((cell, index) =>
         index === wrong ? 1 : cell,
       );
-      const hint = nextNonogramHint(current.solution, entries);
+      const hint = nextBinaryHint(current.solution, entries);
 
       expect(wrong).toBeGreaterThanOrEqual(0);
       expect(hint).toEqual({ index: wrong, value: 0, kind: "correction" });
@@ -131,7 +127,7 @@ describe("the corrections", () => {
       const entries = current.empty.map((cell, index) =>
         index === wrong ? 0 : cell,
       );
-      const hint = nextNonogramHint(current.solution, entries);
+      const hint = nextBinaryHint(current.solution, entries);
 
       expect(wrong).toBeGreaterThanOrEqual(0);
       expect(hint).toEqual({ index: wrong, value: 1, kind: "correction" });
@@ -148,9 +144,9 @@ describe("the corrections", () => {
       index === wrong ? 1 : cell,
     );
 
-    expect(nextNonogramHint(first.solution, entries)?.kind).toBe("correction");
-    expect(nextNonogramHint(first.solution, entries)).toEqual(
-      nextNonogramHint(first.solution, entries),
+    expect(nextBinaryHint(first.solution, entries)?.kind).toBe("correction");
+    expect(nextBinaryHint(first.solution, entries)).toEqual(
+      nextBinaryHint(first.solution, entries),
     );
   });
 });
@@ -171,7 +167,7 @@ describe("the second pass (P17)", () => {
 
   it("lands on a picture cell on every fresh board", () => {
     for (const current of BOARDS) {
-      const hint = nextNonogramHint(current.solution, current.empty);
+      const hint = nextBinaryHint(current.solution, current.empty);
 
       expect(hint?.kind).toBe("fill");
       expect(hint?.value).toBe(1);
@@ -182,7 +178,7 @@ describe("the second pass (P17)", () => {
   it("lands on an UNDECIDED picture cell on every half-painted board", () => {
     for (const current of BOARDS) {
       const entries = halfPainted(current.solution);
-      const hint = nextNonogramHint(current.solution, entries);
+      const hint = nextBinaryHint(current.solution, entries);
 
       expect(hint?.kind).toBe("fill");
       expect(hint?.value).toBe(1);
@@ -196,14 +192,14 @@ describe("the second pass (P17)", () => {
     for (const current of BOARDS) {
       const decided = current.solution.map((mark) => mark);
 
-      expect(nextNonogramHint(current.solution, decided)).toBeNull();
+      expect(nextBinaryHint(current.solution, decided)).toBeNull();
     }
   });
 
   it("falls back to pass 1's cross exactly where `use-hint` has already refused", () => {
     for (const current of BOARDS) {
       const painted = current.solution.map((mark) => (mark === 1 ? 1 : null));
-      const hint = nextNonogramHint(current.solution, painted);
+      const hint = nextBinaryHint(current.solution, painted);
 
       expect(hint?.value).toBe(0);
       expect(hintKindOf(hint ?? { index: 0, value: 1, kind: "fill" })).toBe(

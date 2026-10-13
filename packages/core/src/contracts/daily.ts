@@ -183,10 +183,40 @@ export function projectCrosswordDaily(
   });
 }
 
+export const queensSizeSchema = z.union([
+  z.literal(7),
+  z.literal(8),
+  z.literal(9),
+]);
+
+export type QueensSize = z.infer<typeof queensSizeSchema>;
+
+export const queensRegionsSchema = z.array(z.number().int().min(0));
+
+export const dailyQueensResponseSchema = z
+  .strictObject({
+    game: z.literal("queens"),
+    date: isoDateString,
+    size: queensSizeSchema,
+    regions: queensRegionsSchema,
+  })
+  .refine((d) => d.regions.length === d.size ** 2, {
+    message: "regions must hold size x size cells",
+  })
+  .refine(
+    (d) =>
+      d.regions.every((id) => id < d.size) &&
+      new Set(d.regions).size === d.size,
+    { message: "regions must use every id in 0..size-1" },
+  );
+
+export type DailyQueensResponse = z.infer<typeof dailyQueensResponseSchema>;
+
 export const dailyPuzzleResponseSchema = z.discriminatedUnion("game", [
   dailyBinairoResponseSchema,
   dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
+  dailyQueensResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
 ]);

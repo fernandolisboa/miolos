@@ -1,6 +1,7 @@
 import {
   crosswordDailyContentSchema,
   nonogramDailyContentSchema,
+  queensDailyContentSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
 } from "@miolos/core";
@@ -14,6 +15,7 @@ import {
   validateNonogram,
   type NonogramPuzzle,
 } from "@miolos/games/nonogram";
+import { validateQueens } from "@miolos/games/queens";
 import { sudokuCriteriaForWeekday, validateSudoku } from "@miolos/games/sudoku";
 import { TERMO_ANSWERS } from "@miolos/games/termo";
 import {
@@ -33,12 +35,14 @@ import {
   MAX_BINAIRO_SEED_RETRIES_PER_DATE,
   MAX_CROSSWORD_SEED_RETRIES_PER_DATE,
   MAX_NONOGRAM_SEED_RETRIES_PER_DATE,
+  MAX_QUEENS_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_RUN,
   TopUpAbortedError,
   topUpBinairoBuffer,
   topUpCrosswordBuffer,
   topUpNonogramBuffer,
+  topUpQueensBuffer,
   topUpSudokuBuffer,
   topUpTermoBuffer,
   uniformDrawLimit,
@@ -107,6 +111,15 @@ const { binairo } = vi.hoisted(() => ({
 
 const { crossword } = vi.hoisted(() => ({
   crossword: {
+    failCount: 0,
+    calls: 0,
+    rejectValidator: false,
+    injectStrayKey: false,
+  },
+}));
+
+const { queens } = vi.hoisted(() => ({
+  queens: {
     failCount: 0,
     calls: 0,
     rejectValidator: false,
@@ -236,6 +249,32 @@ vi.mock("@miolos/games/crossword", async (importOriginal) => {
   };
 });
 
+vi.mock("@miolos/games/queens", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@miolos/games/queens")>();
+  return {
+    ...actual,
+    generateQueens: (options: Parameters<typeof actual.generateQueens>[0]) => {
+      queens.calls += 1;
+      if (queens.failCount > 0) {
+        queens.failCount -= 1;
+        throw new actual.QueensGenerationError(
+          options.seed,
+          options.weekday,
+          1,
+        );
+      }
+      const puzzle = actual.generateQueens(options);
+      return queens.injectStrayKey ? { ...puzzle, stray: 1 } : puzzle;
+    },
+    validateQueens: (puzzle: Parameters<typeof actual.validateQueens>[0]) => {
+      if (queens.rejectValidator) {
+        return { ok: false, failures: ["too-hard"] };
+      }
+      return actual.validateQueens(puzzle);
+    },
+  };
+});
+
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -262,6 +301,10 @@ beforeEach(async () => {
   crossword.calls = 0;
   crossword.rejectValidator = false;
   crossword.injectStrayKey = false;
+  queens.failCount = 0;
+  queens.calls = 0;
+  queens.rejectValidator = false;
+  queens.injectStrayKey = false;
 });
 
 afterAll(async () => {
@@ -920,6 +963,82 @@ describe("topUpCrosswordBuffer", () => {
     expect(result.failures[0]?.date).toBe(today);
     expect(result.failures[0]?.reason).toMatch(/^content schema rejected:/);
     expect(crossword.calls).toBe(1);
+  });
+});
+
+async function queensRows(): Promise<
+  { date: string; seed: number; content: unknown }[]
+> {
+  const rows = await ctx.db.select().from(dailyPuzzles);
+  return rows
+    .filter((row) => row.game === "queens")
+    .map((row) => ({ date: row.date, seed: row.seed, content: row.content }));
+}
+
+describe("topUpQueensBuffer", () => {
+  it("T-API-S237: covers a full week with content the strict contract and the validator both accept, each on its own weekday", async () => {
+    const result = await topUpQueensBuffer(ctx.db, 7);
+
+    expect(result).toEqual({ generated: 7, depth: 7, failures: [] });
+    const rows = await queensRows();
+    expect(rows).toHaveLength(7);
+    for (const row of rows) {
+      const content = queensDailyContentSchema.parse(row.content);
+      const weekday = weekdayOf(row.date);
+      expect(content.weekday).toBe(weekday);
+      expect(content.seed).toBe(row.seed);
+      expect(validateQueens({ ...content, weekday }).ok).toBe(true);
+    }
+  }, 30_000);
+
+  it("T-API-S238: a seed whose generation fails once retries and still fills the date", async () => {
+    queens.failCount = 1;
+
+    const result = await topUpQueensBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(1);
+    expect(result.failures).toEqual([]);
+    expect(queens.calls).toBe(2);
+    expect(await queensRows()).toHaveLength(1);
+  });
+
+  it("T-API-S238: a seed that always fails generation exhausts the per-date retry budget", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    queens.failCount = Number.POSITIVE_INFINITY;
+
+    const result = await topUpQueensBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toContain("queens generation failed");
+    expect(queens.calls).toBe(MAX_QUEENS_SEED_RETRIES_PER_DATE);
+  });
+
+  it("T-API-S238: a validator that always rejects retries the full per-date budget", async () => {
+    queens.rejectValidator = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpQueensBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toEqual([
+      { date: today, reason: "validator rejected: too-hard" },
+    ]);
+    expect(queens.calls).toBe(MAX_QUEENS_SEED_RETRIES_PER_DATE);
+  });
+
+  it("T-API-S239: a schema rejection stops the date after one attempt", async () => {
+    queens.injectStrayKey = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpQueensBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toMatch(/^content schema rejected:/);
+    expect(queens.calls).toBe(1);
   });
 });
 

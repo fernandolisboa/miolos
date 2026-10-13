@@ -1,18 +1,9 @@
 import type { NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
-import {
-  Fragment,
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  type KeyboardEvent,
-  type MouseEvent as ReactMouseEvent,
-} from "react";
+import { Fragment, memo, type MouseEvent as ReactMouseEvent } from "react";
 
 import { messages } from "../i18n";
-import { usePointerStroke } from "../play/use-pointer-stroke";
+import { useBinaryBoard } from "../play/use-binary-board";
 import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
 
@@ -57,89 +48,22 @@ export const Board = memo(function Board({
   readonly onPaintOver: (index: number) => void;
 }) {
   const copy = messages.games.nonogram.play;
-  const boardRef = useRef<HTMLDivElement>(null);
-
-  const tabbable = selected ?? 0;
-
-  useLayoutEffect(() => {
-    const board = boardRef.current;
-    if (board === null || selected === null) {
-      return;
-    }
-
-    if (!board.contains(document.activeElement)) {
-      return;
-    }
-    focusCell(board, selected);
-  }, [selected]);
-
-  const stroke = usePointerStroke({
-    painting: true,
+  const board = useBinaryBoard({
+    size,
+    selected,
     onTap: onMarkCell,
     onPaintOver,
-    onStrokeEnd: (index) => {
-      const board = boardRef.current;
-      if (board !== null) {
-        focusCell(board, index);
-      }
-    },
+    onMove,
+    onEnterValue,
+    onClear,
   });
-
-  const consumedClickRef = useRef(stroke.consumedClick);
-  useEffect(() => {
-    consumedClickRef.current = stroke.consumedClick;
-  });
-
-  const onCellFocus = useCallback(
-    (index: number) => {
-      onSelect(index);
-    },
-    [onSelect],
-  );
-
-  const onCellClick = useCallback(
-    (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
-      event.currentTarget.focus();
-      if (consumedClickRef.current(event)) {
-        return;
-      }
-
-      onMarkCell(index);
-    },
-    [onMarkCell],
-  );
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const move = moveFor(event.key, size);
-    if (move !== null) {
-      event.preventDefault();
-      onMove(move[0], move[1]);
-      return;
-    }
-    const mark = asMark(event.key);
-    if (mark !== null) {
-      event.preventDefault();
-      onEnterValue(mark);
-      return;
-    }
-    if (
-      event.key === "0" ||
-      event.key === "Backspace" ||
-      event.key === "Delete"
-    ) {
-      event.preventDefault();
-      onClear();
-    }
-  };
 
   return (
     <div
-      ref={boardRef}
+      {...board.boardProps}
       className={`${styles.grid} ${SIZE_CLASS[size]}`}
       role="group"
       aria-label={copy.boardAria(size)}
-      onKeyDown={onKeyDown}
-      {...stroke.handlers}
     >
       {clues.cols.map((runs, column) => (
         <ColRail key={column} column={column} runs={runs} />
@@ -160,9 +84,9 @@ export const Board = memo(function Board({
                 value={entries[index] ?? null}
                 hinted={hintIndex === index}
                 selected={selected === index}
-                tabbable={tabbable === index}
-                onCellFocus={onCellFocus}
-                onCellClick={onCellClick}
+                tabbable={board.tabbable === index}
+                onCellFocus={onSelect}
+                onCellClick={board.onCellClick}
               />
             );
           })}
@@ -325,12 +249,6 @@ function columnRailId(column: number): string {
   return `nonogram-clue-col-${column}`;
 }
 
-function focusCell(board: HTMLDivElement, index: number): void {
-  board
-    .querySelector<HTMLButtonElement>(`[data-cell-index="${index}"]`)
-    ?.focus();
-}
-
 function numbersOf(runs: readonly number[]): readonly number[] {
   return runs.length === 0 ? EMPTY_LINE : runs;
 }
@@ -369,39 +287,4 @@ function cellClassName(state: {
   ]
     .filter((name) => name !== "")
     .join(" ");
-}
-
-function moveFor(key: string, size: number): readonly [number, number] | null {
-  const span = size - 1;
-  switch (key) {
-    case "ArrowUp":
-      return [-1, 0];
-    case "ArrowDown":
-      return [1, 0];
-    case "ArrowLeft":
-      return [0, -1];
-    case "ArrowRight":
-      return [0, 1];
-    case "Home":
-      return [0, -span];
-    case "End":
-      return [0, span];
-    case "PageUp":
-      return [-span, 0];
-    case "PageDown":
-      return [span, 0];
-    default:
-      return null;
-  }
-}
-
-function asMark(key: string): NonogramMark | null {
-  switch (key) {
-    case "1":
-      return 1;
-    case "2":
-      return 0;
-    default:
-      return null;
-  }
 }

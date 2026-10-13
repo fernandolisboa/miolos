@@ -24,6 +24,7 @@ const COST_ASCENDING_GAMES = [
   "binairo",
   "nonogram",
   "crossword",
+  "queens",
   "sudoku",
 ] as const satisfies readonly Game[];
 

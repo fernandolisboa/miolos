@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { messages } from "../i18n";
+import { isShortcut, keyMove } from "../play/grid-selection";
 import { typedLetter } from "../play/typed-letter";
 import {
   activeEntry,
@@ -84,13 +85,13 @@ export function Board({
   }, [boardRef, selected]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.metaKey || event.ctrlKey || event.altKey) {
+    if (isShortcut(event)) {
       return;
     }
-    const move = MOVES[event.key];
-    if (move !== undefined) {
+    const move = keyMove(event.key, GRID_SIZE);
+    if (move !== null) {
       event.preventDefault();
-      onMove(move[0], move[1]);
+      onMove(move.rows, move.columns);
       return;
     }
     if (event.key === "Backspace" || event.key === "Delete") {
@@ -195,12 +196,3 @@ function cellClassName(state: {
       : "";
   return `${styles.cell}${chromatic}${state.selected ? ` ${styles.cellSelected}` : ""}`;
 }
-
-const MOVES: Readonly<Record<string, readonly [number, number]>> = {
-  ArrowUp: [-1, 0],
-  ArrowDown: [1, 0],
-  ArrowLeft: [0, -1],
-  ArrowRight: [0, 1],
-  Home: [0, -GRID_SIZE + 1],
-  End: [0, GRID_SIZE - 1],
-};

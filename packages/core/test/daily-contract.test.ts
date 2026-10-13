@@ -9,6 +9,11 @@ import {
   type Weekday as NonogramWeekday,
 } from "@miolos/games/nonogram";
 import {
+  generateQueens,
+  isValidQueensSolution,
+  type QueensPuzzle,
+} from "@miolos/games/queens";
+import {
   generateDailySudoku,
   type SudokuPuzzle,
   type Weekday,
@@ -29,13 +34,16 @@ import {
   dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
+  dailyQueensResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
   nonogramDailyContentSchema,
+  queensDailyContentSchema,
   stripDailyContent,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
   type CrosswordDailyContent,
+  type QueensDailyContent,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
 
@@ -814,6 +822,106 @@ describe("dailyCrosswordResponseSchema", () => {
       expect(
         dailyCrosswordResponseSchema.safeParse({ ...valid, grid }).success,
       ).toBe(false);
+    }
+  });
+});
+
+const queensDailies: readonly QueensPuzzle[] = WEEKDAYS.map((weekday) =>
+  generateQueens({ seed: 20_261_011 + weekday, weekday }),
+);
+
+function mutableQueens(): QueensDailyContent {
+  return queensDailyContentSchema.parse(
+    JSON.parse(JSON.stringify(queensDailies[0])),
+  );
+}
+
+describe("queensDailyContentSchema", () => {
+  it("T-CORE-S132: real engine output parses and round-trips unchanged, with exactly the engine's keys", () => {
+    for (const puzzle of queensDailies) {
+      const parsed: Omit<QueensPuzzle, "weekday"> =
+        queensDailyContentSchema.parse(puzzle);
+      expect(parsed).toEqual(puzzle);
+      expect(Object.keys(queensDailyContentSchema.shape).sort()).toEqual(
+        Object.keys(puzzle).sort(),
+      );
+    }
+  });
+
+  it("T-CORE-S132: strict, sized and closed — an extra key, a missing key, a wrong size or a non-binary cell fails", () => {
+    const withoutSteps: Partial<QueensDailyContent> = mutableQueens();
+    delete withoutSteps.advancedSteps;
+    const shortSolution = mutableQueens();
+    shortSolution.solution.pop();
+    const shortRegions = mutableQueens();
+    shortRegions.regions.pop();
+
+    for (const drifted of [
+      { ...mutableQueens(), extra: true },
+      withoutSteps,
+      { ...mutableQueens(), size: 6 },
+      { ...mutableQueens(), size: 10 },
+      shortSolution,
+      shortRegions,
+      { ...mutableQueens(), solution: mutableQueens().solution.map(() => 2) },
+      { ...mutableQueens(), weekday: 8 },
+    ]) {
+      expect(queensDailyContentSchema.safeParse(drifted).success).toBe(false);
+    }
+  });
+});
+
+describe("stripDailyContent (queens)", () => {
+  it("T-CORE-S133: projects exactly game, date, size and regions, by allowlist, over real engine output of every weekday", () => {
+    for (const puzzle of queensDailies) {
+      const projected = stripDailyContent("queens", "2026-10-12", puzzle);
+      expect(dailyPuzzleResponseSchema.parse(projected)).toEqual(projected);
+      const stripped = dailyQueensResponseSchema.parse(projected);
+
+      expect(stripped).toEqual({
+        game: "queens",
+        date: "2026-10-12",
+        size: puzzle.size,
+        regions: puzzle.regions,
+      });
+      expect(
+        isValidQueensSolution(
+          { size: stripped.size, regions: stripped.regions },
+          puzzle.solution,
+        ),
+      ).toBe(true);
+
+      const keys = collectKeys(stripped);
+      for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+        expect(keys.has(forbidden), forbidden).toBe(false);
+      }
+      expect(keys.has("weekday")).toBe(false);
+    }
+  });
+
+  it("T-CORE-S133: FORBIDDEN_DAILY_KEYS names every withheld queens key but the weekday", () => {
+    for (const withheld of ["solution", "seed", "advancedSteps"]) {
+      expect(FORBIDDEN_DAILY_KEYS).toContain(withheld);
+    }
+  });
+
+  it("T-CORE-S133: a region map must be size x size, use only ids 0..size-1, and use every one", () => {
+    const valid = dailyQueensResponseSchema.parse(
+      stripDailyContent("queens", "2026-10-12", queensDailies[0]),
+    );
+    const top = valid.size - 1;
+    const missingId = valid.regions.map((id) => (id === top ? 0 : id));
+    for (const body of [
+      { ...valid, regions: valid.regions.slice(1) },
+      { ...valid, regions: [...valid.regions, 0] },
+      { ...valid, regions: [valid.size, ...valid.regions.slice(1)] },
+      { ...valid, regions: [-1, ...valid.regions.slice(1)] },
+      { ...valid, regions: [0.5, ...valid.regions.slice(1)] },
+      { ...valid, regions: missingId },
+      { ...valid, size: 8 },
+      { ...valid, solution: [] },
+    ]) {
+      expect(dailyQueensResponseSchema.safeParse(body).success).toBe(false);
     }
   });
 });

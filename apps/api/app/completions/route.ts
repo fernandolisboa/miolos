@@ -6,6 +6,7 @@ import {
   isWithinCreditWindow,
   nonogramDailyContentSchema,
   onTimeAtWrite,
+  queensDailyContentSchema,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
   type CompletionOutcome,
@@ -74,6 +75,8 @@ function storedSolution(
       return sudokuDailyContentSchema.parse(content).solution;
     case "crossword":
       return crosswordDailyContentSchema.parse(content).grid.flat();
+    case "queens":
+      return queensDailyContentSchema.parse(content).solution;
   }
 }
 

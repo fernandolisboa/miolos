@@ -7,11 +7,14 @@ import {
   crosswordGridSchema,
   dailyBinairoResponseSchema,
   dailyNonogramResponseSchema,
+  dailyQueensResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
   nonogramCluesSchema,
   nonogramSizeSchema,
   projectCrosswordDaily,
+  queensRegionsSchema,
+  queensSizeSchema,
   sudokuDigitSchema,
   sudokuGivenCellSchema,
   sudokuTierSchema,
@@ -99,6 +102,23 @@ export const crosswordDailyContentSchema = z.strictObject({
 
 export type CrosswordDailyContent = z.infer<typeof crosswordDailyContentSchema>;
 
+export const queensDailyContentSchema = z
+  .strictObject({
+    size: queensSizeSchema,
+    seed: z.number().int().nonnegative(),
+    weekday: z.number().int().min(1).max(7),
+    regions: queensRegionsSchema,
+    solution: z.array(z.union([z.literal(0), z.literal(1)])),
+    advancedSteps: z.number().int().nonnegative(),
+  })
+  .refine(
+    (c) =>
+      c.regions.length === c.size ** 2 && c.solution.length === c.size ** 2,
+    { message: "regions and solution must hold size x size cells" },
+  );
+
+export type QueensDailyContent = z.infer<typeof queensDailyContentSchema>;
+
 export class DailyProjectionUnsupportedError extends Error {
   readonly game: Game;
 
@@ -154,5 +174,14 @@ export function stripDailyContent(
         date,
         crosswordDailyContentSchema.parse(content),
       );
+    case "queens": {
+      const parsed = queensDailyContentSchema.parse(content);
+      return dailyQueensResponseSchema.parse({
+        game: "queens",
+        date,
+        size: parsed.size,
+        regions: parsed.regions,
+      });
+    }
   }
 }

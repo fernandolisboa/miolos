@@ -22,6 +22,7 @@ import {
   type CrosswordPuzzle,
 } from "@miolos/games/crossword";
 import { generateNonogram } from "@miolos/games/nonogram";
+import { generateQueens } from "@miolos/games/queens";
 import { generateDailySudoku, type SudokuPuzzle } from "@miolos/games/sudoku";
 import { isValidGuess, TERMO_ANSWERS } from "@miolos/games/termo";
 import { readFile } from "node:fs/promises";
@@ -289,6 +290,29 @@ function letterOnBlockGrid(
     throw new Error("unreachable: a 5x5 crossword has at least one block");
   }
   return solution.map((cell, i) => (i === index ? "a" : cell));
+}
+
+async function seedSundayQueensDaily(
+  date: string,
+): Promise<readonly (0 | 1)[]> {
+  const puzzle = generateQueens({ seed: 5, weekday: 7 });
+  await insertDailyPuzzle(ctx.db, {
+    game: "queens",
+    date,
+    seed: puzzle.seed,
+    content: puzzle,
+  });
+  return puzzle.solution;
+}
+
+function queensCompletionBody(date: string, grid: readonly (0 | 1)[]): string {
+  return JSON.stringify({
+    game: "queens",
+    date,
+    grid: [...grid],
+    elapsedMs: 150_000,
+    hintsUsed: 0,
+  });
 }
 
 const TERMO_ANSWER = TERMO_ANSWERS.find(
@@ -1438,6 +1462,74 @@ describe("POST /completions — crossword (#276, ADR-0086)", () => {
       { date: twoDaysAgo, outcome: "won", onTime: false, recorded: true },
     );
     expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+});
+
+describe("POST /completions — queens", () => {
+  it("T-API-S241: the exact queens grid wins ⇒ 200, recorded, on time, contract-parseable", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const solution = await seedSundayQueensDaily(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({ token, body: queensCompletionBody(today, solution) }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toEqual({
+      game: "queens",
+      date: today,
+      outcome: "won",
+      onTime: true,
+      recorded: true,
+      elapsedMs: 150_000,
+      hintsUsed: 0,
+    });
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+
+  it("T-API-S242: one queen moved to another cell ⇒ 422 grid-mismatch, nothing recorded", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const solution = await seedSundayQueensDaily(today);
+    const { token } = await createSession();
+    const from = solution.indexOf(1);
+    const to = solution.indexOf(0);
+    const moved = solution.map((cell, i): 0 | 1 =>
+      i === from ? 0 : i === to ? 1 : cell,
+    );
+
+    const response = await POST(
+      completionRequest({ token, body: queensCompletionBody(today, moved) }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await errorOf(response)).toEqual({ error: "grid-mismatch" });
+    expect(await completionRows()).toHaveLength(0);
+  }, 30_000);
+
+  it("T-API-S243: a 7x7 grid against a 9x9 daily ⇒ 422 grid-mismatch; a non-square length ⇒ 400", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const solution = await seedSundayQueensDaily(today);
+    const { token } = await createSession();
+
+    const smaller = await POST(
+      completionRequest({
+        token,
+        body: queensCompletionBody(today, solution.slice(0, 49)),
+      }),
+    );
+    expect(smaller.status).toBe(422);
+    expect(await errorOf(smaller)).toEqual({ error: "grid-mismatch" });
+
+    const ragged = await POST(
+      completionRequest({
+        token,
+        body: queensCompletionBody(today, solution.slice(0, 80)),
+      }),
+    );
+    expect(ragged.status).toBe(400);
+    expect(await errorOf(ragged)).toEqual({ error: "invalid-body" });
+    expect(await completionRows()).toHaveLength(0);
   }, 30_000);
 });
 

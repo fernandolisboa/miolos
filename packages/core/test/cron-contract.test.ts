@@ -26,11 +26,12 @@ const body: CronPublishResponse = {
     nonogram: healthy,
     sudoku: healthy,
     crossword: healthy,
+    queens: healthy,
   },
 };
 
 describe("cronPublishResponseSchema", () => {
-  it("parses and round-trips a five-game body", () => {
+  it("parses and round-trips a six-game body", () => {
     expect(cronPublishResponseSchema.parse(body)).toEqual(body);
   });
 
@@ -93,6 +94,7 @@ describe("cronPublishResponseSchema", () => {
           error: null,
         },
         crossword: healthy,
+        queens: healthy,
       },
     };
     expect(cronPublishResponseSchema.parse(degraded)).toEqual(degraded);
@@ -120,14 +122,21 @@ describe("cronPublishResponseSchema", () => {
 
 describe("bufferDepthResponseSchema", () => {
   const depths: BufferDepthResponse = {
-    depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 7, crossword: 7 },
+    depths: {
+      termo: 7,
+      binairo: 7,
+      nonogram: 7,
+      sudoku: 7,
+      crossword: 7,
+      queens: 7,
+    },
     threshold: 4,
     shallow: false,
     termoAnswersRemaining: 120,
     termoAnswersLow: false,
   };
 
-  it("parses and round-trips a five-game body", () => {
+  it("parses and round-trips a six-game body", () => {
     expect(bufferDepthResponseSchema.parse(depths)).toEqual(depths);
   });
 
@@ -153,7 +162,14 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode: one game drained, shallow true", () => {
     const drained: BufferDepthResponse = {
-      depths: { termo: 7, binairo: 7, nonogram: 7, sudoku: 0, crossword: 7 },
+      depths: {
+        termo: 7,
+        binairo: 7,
+        nonogram: 7,
+        sudoku: 0,
+        crossword: 7,
+        queens: 7,
+      },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,
@@ -164,7 +180,14 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode for the key #25 just added: nonogram drained alone", () => {
     const drained: BufferDepthResponse = {
-      depths: { termo: 7, binairo: 7, nonogram: 0, sudoku: 7, crossword: 7 },
+      depths: {
+        termo: 7,
+        binairo: 7,
+        nonogram: 0,
+        sudoku: 7,
+        crossword: 7,
+        queens: 7,
+      },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,
@@ -175,7 +198,14 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode for the key #27 just added: termo drained alone", () => {
     const drained: BufferDepthResponse = {
-      depths: { termo: 0, binairo: 7, nonogram: 7, sudoku: 7, crossword: 7 },
+      depths: {
+        termo: 0,
+        binairo: 7,
+        nonogram: 7,
+        sudoku: 7,
+        crossword: 7,
+        queens: 7,
+      },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,

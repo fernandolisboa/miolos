@@ -26,6 +26,7 @@ const BUDGETED = [
   "/sudoku",
   "/termo",
   "/cruzadinha",
+  "/rainhas",
   "/modo-livre",
   "/modo-livre/binairo",
   "/modo-livre/nonogram",
@@ -42,12 +43,14 @@ const BUDGETED = [
   "/arquivo/[data]/sudoku",
   "/arquivo/[data]/termo",
   "/arquivo/[data]/cruzadinha",
+  "/arquivo/[data]/rainhas",
 
   "/binairo/concluido",
   "/nonogram/concluido",
   "/sudoku/concluido",
   "/termo/concluido",
   "/cruzadinha/concluido",
+  "/rainhas/concluido",
 ];
 
 const FREE_PLAY_PREFIX = "/modo-livre";
@@ -82,6 +85,7 @@ const FORBIDDEN_DAILY_SCOPE = [
   "reveal.solution must be size x size",
   "givensCount",
   "clueCount",
+  "advancedSteps",
 ];
 
 const FORBIDDEN_FREE_PLAY_SCOPE = ["zurro"];

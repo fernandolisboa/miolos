@@ -4,7 +4,7 @@ import type { Game } from "@miolos/core";
 
 import { accentVars } from "../src/play/accent";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
-import { contrast, luminance } from "./contrast";
+import { contrast, deltaE76, luminance } from "./contrast";
 
 const GAMES: readonly Game[] = [
   "termo",
@@ -12,6 +12,7 @@ const GAMES: readonly Game[] = [
   "nonogram",
   "binairo",
   "crossword",
+  "queens",
 ];
 
 function contrastTools(theme: "light" | "dark") {
@@ -65,6 +66,7 @@ describe("every game's filled-surface label clears AA on its own fill (T-WEB-S29
       nonogram: 4.5063,
       termo: 4.8433,
       crossword: 7.1191,
+      queens: 5.1756,
     };
     for (const game of GAMES) {
       const { accent, ink } = LIGHT.pair(game);
@@ -245,5 +247,30 @@ describe("the crossword's active clue carries its state in shape, its words in i
     const activeHover = decl(bodyOf(css, ".itemActive:hover"), "background");
     expect(activeHover).toContain("var(--accent)");
     expect(activeHover).not.toContain("--paper-tint");
+  });
+});
+
+describe("the Rainhas accent stands apart from every other accent (T-WEB-S448a)", () => {
+  it("keeps --accent-queens at ΔE76 >= 25 from each game accent and --accent-app, in both themes", () => {
+    const measured = {
+      light: { sudoku: 26.78, crossword: 26.27 },
+      dark: { sudoku: 28.95, crossword: 28.08 },
+    };
+    for (const [theme, tools] of [
+      ["light", LIGHT],
+      ["dark", DARK],
+    ] as const) {
+      const queens = tools.hexOf("--accent-queens");
+      for (const other of [...GAMES.filter((g) => g !== "queens"), "app"]) {
+        const distance = deltaE76(queens, tools.hexOf(`--accent-${other}`));
+        expect(distance, `${theme} vs ${other}`).toBeGreaterThanOrEqual(25);
+      }
+      for (const [other, value] of Object.entries(measured[theme])) {
+        expect(
+          deltaE76(queens, tools.hexOf(`--accent-${other}`)),
+          `${theme} vs ${other}`,
+        ).toBeCloseTo(value, 2);
+      }
+    }
   });
 });

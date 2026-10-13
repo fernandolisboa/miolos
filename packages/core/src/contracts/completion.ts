@@ -7,6 +7,7 @@ import {
   crosswordLetterSchema,
   isoDateString,
   nonogramSizeSchema,
+  queensSizeSchema,
   sudokuDigitSchema,
 } from "./daily";
 
@@ -38,18 +39,21 @@ export type SudokuCompletionRequest = z.infer<
   typeof sudokuCompletionRequestSchema
 >;
 
-const NONOGRAM_CELL_COUNTS: readonly number[] = nonogramSizeSchema.options.map(
-  (option) => option.value ** 2,
-);
+function squareBinaryGridSchema(sizes: {
+  readonly options: readonly { readonly value: number }[];
+}) {
+  const cellCounts = sizes.options.map((option) => option.value ** 2);
+  return z
+    .array(submittedCellSchema)
+    .refine((g) => cellCounts.includes(g.length), {
+      message: `grid length must be one of ${cellCounts.join(", ")}`,
+    });
+}
 
 export const nonogramCompletionRequestSchema = z.strictObject({
   game: z.literal("nonogram"),
   date: calendarDateString,
-  grid: z
-    .array(submittedCellSchema)
-    .refine((g) => NONOGRAM_CELL_COUNTS.includes(g.length), {
-      message: "grid length must be 25, 64, 100 or 225",
-    }),
+  grid: squareBinaryGridSchema(nonogramSizeSchema),
   elapsedMs: z.number().int().min(0).max(86_400_000),
   hintsUsed: z.number().int().min(0).max(1),
 });
@@ -82,10 +86,23 @@ export type CrosswordCompletionRequest = z.infer<
   typeof crosswordCompletionRequestSchema
 >;
 
+export const queensCompletionRequestSchema = z.strictObject({
+  game: z.literal("queens"),
+  date: calendarDateString,
+  grid: squareBinaryGridSchema(queensSizeSchema),
+  elapsedMs: z.number().int().min(0).max(86_400_000),
+  hintsUsed: z.number().int().min(0).max(1),
+});
+
+export type QueensCompletionRequest = z.infer<
+  typeof queensCompletionRequestSchema
+>;
+
 export const completionRequestSchema = z.discriminatedUnion("game", [
   binairoCompletionRequestSchema,
   crosswordCompletionRequestSchema,
   nonogramCompletionRequestSchema,
+  queensCompletionRequestSchema,
   sudokuCompletionRequestSchema,
   termoCompletionRequestSchema,
 ]);

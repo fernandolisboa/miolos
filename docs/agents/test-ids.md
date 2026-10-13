@@ -37,11 +37,15 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S132` | `S131` | never used |
-| `T-DB` | `S101` | `S100` | `T-DB-21` |
-| `T-API` | `S236` | `S235` | `T-API-16` |
-| `T-WEB` | `S448` | `S447` | `T-WEB-23` |
+| `T-CORE` | `S163` | `S162` | never used |
+| `T-DB` | `S125` | `S124` | `T-DB-21` |
+| `T-API` | `S283` | `S282` | `T-API-16` |
+| `T-WEB` | `S477` | `S476` | `T-WEB-23` |
 | `T-LINT` | `S68` | `S67` | `T-LINT-10` |
+
+#280 (Google sign-in, ADR-0089) spent `T-CORE-S160…S162`, `T-DB-S120…S124`, `T-API-S260…S282` (but not `S270`) and `T-WEB-S470…S475` without moving this table; #285 reconciled it. The gaps it skipped (`T-CORE-S139…S159`, `T-DB-S102…S119`, `T-API-S246…S259`, `T-WEB-S460…S469`) and `T-API-S270` are **burned**, never reused.
+
+#285 (the Rainhas daily) spent **`T-CORE-S132…S138`**: `S132` (the stored content, strict), `S133` (the projection by allowlist, the forbidden-key scan on real engine output, the region map's validity), `S134` (the 49/64/81-cell completion grid, 0/1 only), `S135` (`queens-30` and the 25-medal catalog), `S136` (its timed stats block), `S137` (Rainhas required on `/day`) and `S138` (a six-game day needs Rainhas; a day before it stays perfect with five). **`T-DB-S101`** (the widened game CHECKs, migration 0015). **`T-API-S236…S245`**: `S236` (`/daily/queens` and its leak scan), `S237`–`S239` (the top-up: a valid week, the seed-retry budget, a schema rejection), `S240` (shallow on a drained queens buffer), `S241`–`S243` (grid judging: exact, a moved queen, a wrong length), `S244` (`/day` round-trips a queens completion) and `S245` (the cron's cost-ascending order). **`T-WEB-S448…S459`**: `S448` (every list of games, the routes and copy, with the sibling `S448a` for the accent's ΔE76 ≥ 25), `S449` (the play record and the queens-only completion body), `S450` (day-state merging), `S451` (the reducer), `S452` (conflicts per rule kind), `S453` (the hint), `S454` (restore), `S455` (the pages, the archive and the OG metadata), `S456` (the board's a11y, keys, tap cycle and drag), `S457` (the region palette, glyph and ring ratios), `S458` (`nextBinaryHint`, the Nonogram's hint unchanged), `S459` (the six-card hub and stats layout) and, past #280's ids, `S476` (the screen wiring: the hint, the conclusion swap, a concluded restore, a mid-game save). Nothing is burned.
 
 #279 (Cruzadinha free play, ADR-0088) spent **`T-WEB-S444…S447`**: `S444` (only `/modo-livre/cruzadinha` reaches the lexicon), `S445` (the free crossword's wire shape, `FREE_PLAY_DATE`, one puzzle per seed), `S446` (a zero-fetch, zero-write session with no clock and no level, through "Mais uma") and `S447` (the shared error card's retry), with the sibling `S122a` (the crossword's one hint); **`T-LINT-S67`** (the one exempt static importer), with the sibling `S17a` (the Cruzadinha's daily hook and screen root red from free play). Nothing is burned. **Retired at #279:** the marker case of `T-WEB-S206a` (the OG deck held no single-word Termo marker) and of `T-WEB-S206`, plus the three canaries in `medals-content.test.ts`'s `FORBIDDEN_VOCABULARY`. The markers became answer-list pairs, which no copy can spell. `S206` keeps its import check; `S206a` keeps its archive-copy and barrel arms.
 

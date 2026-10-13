@@ -521,6 +521,32 @@ describe("the keyboard model (T-WEB-S28)", () => {
     expect(caretIndex(container)).toBe(4 * SIDE + SIDE - 1);
   });
 
+  it("jumps to the first and last row of the column with PageUp and PageDown", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const board = boardOf();
+
+    fireEvent.click(cellAt(container, 4 * SIDE + 5));
+    fireEvent.keyDown(board, { key: "PageUp" });
+    expect(caretIndex(container)).toBe(5);
+
+    fireEvent.keyDown(board, { key: "PageDown" });
+    expect(caretIndex(container)).toBe((SIDE - 1) * SIDE + 5);
+  });
+
+  it("lets browser shortcuts through: Ctrl+PageUp and Cmd+5 are never prevented", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const board = boardOf();
+
+    fireEvent.click(cellAt(container, 4 * SIDE + 5));
+    const passed = fireEvent.keyDown(board, { key: "PageUp", ctrlKey: true });
+    expect(passed).toBe(true);
+    expect(caretIndex(container)).toBe(4 * SIDE + 5);
+
+    fireEvent.click(cellAt(container, FIRST_EMPTY));
+    expect(fireEvent.keyDown(board, { key: "5", metaKey: true })).toBe(true);
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
+  });
+
   it("writes with 1–9 and clears with 0, Backspace and Delete", () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
     const cell = cellAt(container, FIRST_EMPTY);

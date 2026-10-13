@@ -14,6 +14,7 @@ import {
   type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
+  type QueensPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
@@ -114,6 +115,19 @@ const termo = (): TermoPlayRecord => ({
   syncOutcome: "recorded",
 });
 
+const queens = (): QueensPlayRecord => ({
+  v: 1,
+  game: "queens",
+  date: DATE,
+  size: 7,
+  entries: Array.from({ length: 49 }, () => null),
+  elapsedMs: 233_000,
+  hintsUsed: 0,
+  concluded: true,
+  pendingSync: false,
+  syncOutcome: "recorded",
+});
+
 const crossword = (): CrosswordPlayRecord => ({
   v: 1,
   game: "crossword",
@@ -132,6 +146,7 @@ const RECORDS: Readonly<Record<Game, () => PlayRecord>> = {
   nonogram,
   termo,
   crossword,
+  queens,
 };
 
 const GAMES = ["binairo", "sudoku", "nonogram", "termo"] as const;

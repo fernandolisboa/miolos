@@ -73,8 +73,7 @@
   color: var(--accent-app);
 }
 
-/* Five cards on a six-column track: two on the first row, three on the
-   second, so no row orphans a single card. */
+/* Six cards on a six-column track, each spanning two: two rows of three. */
 .games {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -82,15 +81,8 @@
   margin-top: 52px;
 }
 
-.card:nth-child(-n + 2) {
-  grid-column: span 3;
-}
-
-.card:nth-child(n + 3) {
-  grid-column: span 2;
-}
-
 .card {
+  grid-column: span 2;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -127,6 +119,9 @@
 .card:nth-child(5) {
   transform: rotate(-0.5deg);
 }
+.card:nth-child(6) {
+  transform: rotate(0.4deg);
+}
 
 .tape {
   position: absolute;
@@ -152,6 +147,9 @@
 }
 .card:nth-child(5) .tape {
   transform: translateX(-50%) rotate(-4deg);
+}
+.card:nth-child(6) .tape {
+  transform: translateX(-50%) rotate(3deg);
 }
 
 .cardBody {
@@ -386,6 +384,9 @@
   .card:nth-child(5) {
     transform: rotate(-0.4deg);
   }
+  .card:nth-child(6) {
+    transform: rotate(0.3deg);
+  }
 
   .tape {
     top: -9px;
@@ -410,6 +411,9 @@
   }
   .card:nth-child(5) .tape {
     transform: rotate(-4deg);
+  }
+  .card:nth-child(6) .tape {
+    transform: rotate(3deg);
   }
 
   .kicker {

@@ -12,6 +12,7 @@ import {
   type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
+  type QueensPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
@@ -90,6 +91,21 @@ function termoRecord(date: string, elapsedMs: number): TermoPlayRecord {
   };
 }
 
+function queensRecord(date: string, elapsedMs: number): QueensPlayRecord {
+  return {
+    v: 1,
+    game: "queens",
+    date,
+    size: 7,
+    entries: Array.from({ length: 49 }, () => null),
+    elapsedMs,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+  };
+}
+
 function crosswordRecord(date: string, elapsedMs: number): CrosswordPlayRecord {
   return {
     v: 1,
@@ -111,6 +127,7 @@ const BUILDERS: Record<Game, (date: string, elapsedMs: number) => PlayRecord> =
     nonogram: nonogramRecord,
     termo: termoRecord,
     crossword: crosswordRecord,
+    queens: queensRecord,
   };
 
 function elapsedFor(game: Game, date: string): number {

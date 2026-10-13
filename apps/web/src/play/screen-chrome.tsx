@@ -15,6 +15,7 @@ const ACCENTS: Readonly<Record<ChromeGame, CSSProperties>> = {
   nonogram: accentVars("nonogram"),
   binairo: accentVars("binairo"),
   crossword: accentVars("crossword"),
+  queens: accentVars("queens"),
 };
 
 const BLANK_READOUT = "\u00a0";

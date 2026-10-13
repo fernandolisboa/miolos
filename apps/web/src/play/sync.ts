@@ -16,6 +16,7 @@ import {
   type CrosswordPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
+  type QueensPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "./play-record";
@@ -199,6 +200,7 @@ function buildBody(record: PlayRecord): string | undefined {
     case "binairo":
     case "crossword":
     case "nonogram":
+    case "queens":
     case "sudoku":
       return gridBody(record);
     case "termo":
@@ -217,6 +219,7 @@ function gridBody(
     | BinairoPlayRecord
     | CrosswordPlayRecord
     | NonogramPlayRecord
+    | QueensPlayRecord
     | SudokuPlayRecord,
 ): string | undefined {
   if (record.grid === undefined) {

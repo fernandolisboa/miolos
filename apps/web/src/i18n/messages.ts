@@ -44,11 +44,24 @@ const termoLetters = (word: string) => word.split("").join(", ");
 
 const letterAria = (letter: string) => `letra ${letter}`;
 
+const QUEENS_CELL = { 1: "rainha", 0: "marcada" } as const;
+
+const cellAriaQueens = (
+  row: number,
+  column: number,
+  region: number,
+  value: 0 | 1 | null,
+  conflict: boolean,
+) =>
+  `linha ${row}, coluna ${column}, região ${region}: ${
+    value === null ? "vazia" : QUEENS_CELL[value]
+  }${conflict ? ", em conflito" : ""}`;
+
 export const messages = {
   meta: {
     title: "Miolos — jogos de raciocínio por dia",
     description:
-      "Jogos de raciocínio por dia — Termo, Cruzadinha, Sudoku, Nonogram e Binairo. Um puzzle novo de cada, todos os dias, igual para todo mundo.",
+      "Jogos de raciocínio por dia — Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. Um puzzle novo de cada, todos os dias, igual para todo mundo.",
   },
   brand: {
     wordmark,
@@ -117,6 +130,7 @@ export const messages = {
         nonogramShort: "Nono.",
         binairo: "Binairo",
         crossword: "Cruzadinha",
+        queens: "Rainhas",
       },
     },
     streak: {
@@ -350,7 +364,7 @@ export const messages = {
   },
   onboarding: {
     invitation: "Puzzles do dia, iguais para todo mundo.",
-    lead: "Termo, Cruzadinha, Sudoku, Nonogram e Binairo. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
+    lead: "Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
     rollover: "A virada é à meia-noite, no horário de Brasília.",
     noAccount: "Sem cadastro — é só jogar.",
     dismiss: "Entendi",
@@ -888,6 +902,50 @@ export const messages = {
         notYet: {
           title: "Você ainda não concluiu a Cruzadinha de hoje.",
           cta: "Jogar a Cruzadinha de hoje",
+        },
+      },
+    },
+    queens: {
+      kicker: "Regiões",
+      name: "Rainhas",
+      description: "Uma rainha por linha, coluna e região.",
+      play: {
+        title: "Rainhas",
+
+        rules:
+          "Ponha uma rainha em cada linha, em cada coluna e em cada região. Duas rainhas nunca se tocam, nem na diagonal. Toque uma vez para marcar, duas para pôr a rainha; arraste para marcar várias casas.",
+
+        progressLong: (placed: number, total: number) =>
+          `${placed} de ${total} rainhas`,
+        progressShort: (size: number, placed: number, total: number) =>
+          `${boardSize(size)} · ${placed} de ${total}`,
+        sizeLabel: "Tamanho",
+        size: boardSize,
+        boardAria: (size: number) => `grade das Rainhas, ${size} por ${size}`,
+        cellAria: cellAriaQueens,
+        affordance: "No teclado: 1 põe a rainha, 2 marca, 0 apaga.",
+
+        hint: {
+          available: "Usar dica — 1 disponível",
+          used: "Dica usada",
+          explain: {
+            correction: "Corrigimos uma casa que não fecha com a solução.",
+            fill: "Pusemos uma rainha para você.",
+          },
+        },
+
+        unavailable: {
+          title: "As Rainhas de hoje ainda não chegaram.",
+          body: "Alguma coisa saiu do lugar por aqui. Tente de novo daqui a pouco — o puzzle de hoje é o mesmo para todo mundo.",
+          cta: "Voltar para Hoje",
+        },
+      },
+      conclusion: {
+        title: "Rainhas",
+        kicker: "Regiões",
+        notYet: {
+          title: "Você ainda não concluiu as Rainhas de hoje.",
+          cta: "Jogar as Rainhas de hoje",
         },
       },
     },
