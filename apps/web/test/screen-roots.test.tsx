@@ -1,6 +1,6 @@
 import type { DayGameState, Game } from "@miolos/core";
 import { render } from "@testing-library/react";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ArchiveBinairoScreen } from "../src/archive/binairo-screen";
@@ -24,6 +24,7 @@ const spies = vi.hoisted(() => ({
   claim: vi.fn(),
   daily: vi.fn(),
   archive: vi.fn(),
+  ownConclusion: vi.fn(),
   hooks: {
     binairo: vi.fn(),
     sudoku: vi.fn(),
@@ -37,6 +38,13 @@ const spies = vi.hoisted(() => ({
 vi.mock("../src/play/day-state", async (original) => ({
   ...(await original<object>()),
   useServerDayClaim: spies.claim,
+}));
+vi.mock("../src/play/conclusion-lazy", async (original) => ({
+  ...(await original<object>()),
+  resilientConclusion: () => (props: object) => {
+    spies.ownConclusion(props);
+    return null;
+  },
 }));
 vi.mock("../src/play/daily-screen", () => ({
   DailyScreen: (props: object) => {
@@ -118,10 +126,28 @@ const ROOTS: readonly Root[] = [
 ];
 
 const PLAY = {
-  state: { date: DATE, hint: { used: 1 }, solution: [], hydrated: true },
+  state: {
+    date: DATE,
+    hint: { used: 1 },
+    solution: [],
+    hydrated: true,
+    timer: { accumulatedMs: ELAPSED, runningSince: null },
+    now: 0,
+    size: 5,
+    entries: [],
+    guesses: [],
+  },
   elapsed: ELAPSED,
   unavailable: false,
 };
+
+const UNAVAILABLE_PLAY = {
+  ...PLAY,
+  state: { ...PLAY.state, solution: null },
+  unavailable: true,
+};
+
+const OWN_CONCLUSION_ROOTS = ROOTS.filter((root) => root.ownConclusion);
 
 function dailyOf(game: Game): never {
   return { game, date: DATE } as never;
@@ -155,8 +181,18 @@ describe("every screen root wires its game into the shared shell (T-WEB-S487)", 
         conclusion?: unknown;
       };
       if (root.ownConclusion) {
-        expect(props.conclusion).toBeDefined();
         expect(props.result).toBeUndefined();
+        const own = props.conclusion as { render: () => ReactNode };
+        render(<>{own.render()}</>);
+        expect(spies.ownConclusion).toHaveBeenCalledWith(
+          expect.objectContaining({
+            date: DATE,
+            result: {
+              elapsedMs: ELAPSED,
+              hintsUsed: root.game === "termo" ? 0 : 1,
+            },
+          }),
+        );
       } else {
         expect(props.result).toEqual({ elapsedMs: ELAPSED, hintsUsed: 1 });
       }
@@ -174,6 +210,25 @@ describe("every screen root wires its game into the shared shell (T-WEB-S487)", 
       expect(spies.hooks[root.game]).toHaveBeenCalledWith(daily);
       expect(spies.archive).toHaveBeenCalledWith(
         expect.objectContaining({ game: root.game, state: PLAY.state }),
+      );
+    },
+  );
+
+  it.each(OWN_CONCLUSION_ROOTS)(
+    "$game: both roots pass the hook's unavailable verdict to the shell",
+    (root) => {
+      spies.hooks[root.game].mockReturnValue(UNAVAILABLE_PLAY);
+      const daily = dailyOf(root.game);
+      const Daily = root.daily;
+      const Archive = root.archive;
+      render(<Daily daily={daily} />);
+      render(<Archive daily={daily} />);
+
+      expect(spies.daily).toHaveBeenCalledWith(
+        expect.objectContaining({ unavailable: true }),
+      );
+      expect(spies.archive).toHaveBeenCalledWith(
+        expect.objectContaining({ unavailable: true }),
       );
     },
   );
