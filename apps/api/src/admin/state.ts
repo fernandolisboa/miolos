@@ -9,8 +9,6 @@ import {
   listAdminMembers,
 } from "@miolos/db/publishing";
 
-import { errorResponse } from "../http/responses";
-
 export async function adminState(
   db: Db,
   userId: string,
@@ -29,10 +27,4 @@ export async function adminState(
     config,
     members: await listAdminMembers(db),
   });
-}
-
-export function webOriginUnset(): Response | undefined {
-  return process.env.WEB_ORIGIN
-    ? undefined
-    : errorResponse(503, "web-origin-unconfigured");
 }

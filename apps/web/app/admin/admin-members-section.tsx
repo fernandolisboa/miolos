@@ -23,6 +23,11 @@ import styles from "./admin.module.css";
 
 const copy = messages.admin.members;
 
+function parseRole(value: string): AdminMemberRole | undefined {
+  const role = adminMemberRoleSchema.safeParse(value);
+  return role.success ? role.data : undefined;
+}
+
 function RoleOptions() {
   return ADMIN_MEMBER_ROLES.map((role) => (
     <option key={role} value={role}>
@@ -70,13 +75,9 @@ export function AdminMembersCard({
                   value={member.role}
                   disabled={busy || locked}
                   onChange={(event) => {
-                    const role = adminMemberRoleSchema.safeParse(
-                      event.target.value,
-                    );
-                    if (role.success) {
-                      void write(() =>
-                        saveAdminMember(member.email, role.data),
-                      );
+                    const role = parseRole(event.target.value);
+                    if (role) {
+                      void write(() => saveAdminMember(member.email, role));
                     }
                   }}
                 >
@@ -100,7 +101,7 @@ export function AdminMembersCard({
         })}
       </ul>
       <div className={styles.addRow}>
-        <div className={styles.field}>
+        <div className={styles.fieldGrow}>
           <label className={styles.label} htmlFor="admin-member-email">
             {copy.emailLabel}
           </label>
@@ -128,9 +129,9 @@ export function AdminMembersCard({
             value={draftRole}
             disabled={busy}
             onChange={(event) => {
-              const role = adminMemberRoleSchema.safeParse(event.target.value);
-              if (role.success) {
-                setDraftRole(role.data);
+              const role = parseRole(event.target.value);
+              if (role) {
+                setDraftRole(role);
               }
             }}
           >

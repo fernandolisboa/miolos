@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { attachTokens, consentEvents, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
+import { messages, thrownBy } from "./fixtures";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -27,25 +28,6 @@ async function createUser(): Promise<string> {
     throw new Error("users insert returned no row");
   }
   return user.id;
-}
-
-function messages(error: unknown): string {
-  let out = "";
-  let current: unknown = error;
-  while (current instanceof Error) {
-    out += current.message;
-    current = current.cause;
-  }
-  return out;
-}
-
-async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
-  try {
-    await statement;
-    return undefined;
-  } catch (error) {
-    return error;
-  }
 }
 
 describe("attach_tokens (migration 0004, ADR-0050 decision 2)", () => {

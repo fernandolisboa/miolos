@@ -1,3 +1,4 @@
+import type { AdminMember } from "@miolos/core";
 import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import {
@@ -19,6 +20,7 @@ import {
 } from "../src/admin-users";
 import { users } from "../src/schema";
 import { createTestDb } from "../src/testing";
+import { messages, thrownBy } from "./fixtures";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -53,32 +55,11 @@ async function createUser(
   return user.id;
 }
 
-async function seed(
-  rows: { email: string; role: "superuser" | "admin" }[],
-): Promise<void> {
+async function seed(rows: AdminMember[]): Promise<void> {
   for (const { email, role } of rows) {
     await ctx.db.execute(
       sql`insert into admin_users (email, role) values (${email}, ${role})`,
     );
-  }
-}
-
-function messages(error: unknown): string {
-  let out = "";
-  let current: unknown = error;
-  while (current instanceof Error) {
-    out += current.message;
-    current = current.cause;
-  }
-  return out;
-}
-
-async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
-  try {
-    await statement;
-    return undefined;
-  } catch (error) {
-    return error;
   }
 }
 

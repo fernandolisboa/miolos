@@ -1,4 +1,4 @@
-import { adminStateResponseSchema } from "@miolos/core";
+import { adminStateResponseSchema, type AdminMemberRole } from "@miolos/core";
 import { sessions, sql, users } from "@miolos/db";
 import {
   getRemoteConfig,
@@ -86,7 +86,7 @@ async function createSession(email: string | null = null): Promise<Session> {
 }
 
 async function createMember(
-  role: "superuser" | "admin",
+  role: AdminMemberRole,
 ): Promise<Session & { email: string }> {
   sessionCount += 1;
   const email = `${role}-${sessionCount}@example.com`;
@@ -141,6 +141,34 @@ function writeMembers(
       body,
     }),
   );
+}
+
+async function expectWritePreamble(
+  token: string,
+  good: string,
+  send: (headers: Headers, body: string) => Promise<Response>,
+): Promise<void> {
+  const cross = jsonHeaders(token);
+  cross.set("sec-fetch-site", "cross-site");
+  const text = new Headers({ "content-type": "text/plain" });
+  text.set("cookie", jsonHeaders(token).get("cookie") ?? "");
+
+  for (const { headers, body, status, error } of [
+    { headers: cross, body: good, status: 403, error: "cross-site" },
+    { headers: text, body: good, status: 415, error: "unsupported-media-type" },
+    { headers: jsonHeaders(), body: good, status: 401, error: "no-session" },
+    {
+      headers: jsonHeaders(token),
+      body: "{",
+      status: 400,
+      error: "invalid-body",
+    },
+  ]) {
+    const response = await send(headers, body);
+    expect(response.status, error).toBe(status);
+    expect(await response.json()).toEqual({ error });
+    expect(response.headers.get("access-control-allow-origin")).toBe(WEB);
+  }
 }
 
 describe("GET /admin/state", () => {
@@ -223,33 +251,11 @@ describe("GET /admin/state", () => {
 describe("POST /admin/config", () => {
   it("T-API-S294: the write preamble answers 403 cross-site, 415, 401 and 400 with the CORS grant, and OPTIONS is a 204 preflight", async () => {
     const { token } = await createMember("admin");
-    const good = JSON.stringify({ key: "bufferDepth", value: 9 });
-    const cross = jsonHeaders(token);
-    cross.set("sec-fetch-site", "cross-site");
-    const text = new Headers({ "content-type": "text/plain" });
-    text.set("cookie", jsonHeaders(token).get("cookie") ?? "");
-
-    for (const { headers, body, status, error } of [
-      { headers: cross, body: good, status: 403, error: "cross-site" },
-      {
-        headers: text,
-        body: good,
-        status: 415,
-        error: "unsupported-media-type",
-      },
-      { headers: jsonHeaders(), body: good, status: 401, error: "no-session" },
-      {
-        headers: jsonHeaders(token),
-        body: "{",
-        status: 400,
-        error: "invalid-body",
-      },
-    ]) {
-      const response = await writeConfig(headers, body);
-      expect(response.status, error).toBe(status);
-      expect(await response.json()).toEqual({ error });
-      expect(response.headers.get("access-control-allow-origin")).toBe(WEB);
-    }
+    await expectWritePreamble(
+      token,
+      JSON.stringify({ key: "bufferDepth", value: 9 }),
+      writeConfig,
+    );
     expect(await storedRows()).toEqual([]);
 
     const preflight = configRoute.OPTIONS();
@@ -349,40 +355,14 @@ describe("POST /admin/config", () => {
 describe("/admin/members (ADR-0100)", () => {
   it("T-API-S314: the write preamble answers 403 cross-site, 415, 401 and 400 on POST and DELETE, and OPTIONS is a 204 preflight for both", async () => {
     const { token } = await createMember("superuser");
-    const good = JSON.stringify({ email: "bia@example.com", role: "admin" });
-    const cross = jsonHeaders(token);
-    cross.set("sec-fetch-site", "cross-site");
-    const text = new Headers({ "content-type": "text/plain" });
-    text.set("cookie", jsonHeaders(token).get("cookie") ?? "");
     const before = await listAdminMembers(ctx.db);
 
     for (const method of ["POST", "DELETE"] as const) {
-      for (const { headers, body, status, error } of [
-        { headers: cross, body: good, status: 403, error: "cross-site" },
-        {
-          headers: text,
-          body: good,
-          status: 415,
-          error: "unsupported-media-type",
-        },
-        {
-          headers: jsonHeaders(),
-          body: good,
-          status: 401,
-          error: "no-session",
-        },
-        {
-          headers: jsonHeaders(token),
-          body: "{",
-          status: 400,
-          error: "invalid-body",
-        },
-      ]) {
-        const response = await writeMembers(method, headers, body);
-        expect(response.status, `${method} ${error}`).toBe(status);
-        expect(await response.json()).toEqual({ error });
-        expect(response.headers.get("access-control-allow-origin")).toBe(WEB);
-      }
+      await expectWritePreamble(
+        token,
+        JSON.stringify({ email: "bia@example.com", role: "admin" }),
+        (headers, body) => writeMembers(method, headers, body),
+      );
     }
     for (const [method, body] of [
       ["POST", { email: "bia@example.com", role: "none" }],

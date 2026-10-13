@@ -1,3 +1,4 @@
+import type { AdminMember } from "@miolos/core";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,9 +29,12 @@ const MEMBERS = [
   { email: EMAIL, role: "superuser" },
   { email: "bia@example.com", role: "admin" },
 ] as const;
-const superuser = (
-  members: readonly { email: string; role: "superuser" | "admin" }[] = MEMBERS,
-) => ({ role: "superuser", email: EMAIL, config: CONFIG, members });
+const superuser = (members: readonly AdminMember[] = MEMBERS) => ({
+  role: "superuser",
+  email: EMAIL,
+  config: CONFIG,
+  members,
+});
 const copy = messages.admin;
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -462,7 +466,7 @@ describe("a member's role changes from its select and Remover deletes it (T-WEB-
     );
   });
 
-  it("a 409 says failed and leaves the list as the server last answered", async () => {
+  it("a role change answered 409 says failed and leaves the list as the server last answered", async () => {
     serve(
       superuser([
         { email: EMAIL, role: "superuser" },
@@ -477,12 +481,24 @@ describe("a member's role changes from its select and Remover deletes it (T-WEB-
     });
     expect(await screen.findByText(copy.config.failed)).toBeInTheDocument();
     expect(roleSelect("bia@example.com").value).toBe("superuser");
+  });
 
-    fireEvent.click(removeButton("bia@example.com"));
-    await waitFor(() => {
-      expect(removeButton("bia@example.com")).toBeEnabled();
-    });
-    expect(screen.getByText(copy.config.failed)).toBeInTheDocument();
+  it("a Remover answered 409 says failed and keeps the member", async () => {
+    const fetchMock = serve(
+      superuser([
+        { email: EMAIL, role: "superuser" },
+        { email: "bia@example.com", role: "superuser" },
+      ]),
+      () => Promise.resolve(jsonResponse(409, { error: "last-superuser" })),
+    );
+    render(<AdminConfigSection />);
+
+    fireEvent.click(await waitFor(() => removeButton("bia@example.com")));
+    expect(await screen.findByText(copy.config.failed)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${API_URL}/admin/members`,
+      expect.objectContaining({ method: "DELETE" }),
+    );
     expect(screen.getByText("bia@example.com")).toBeInTheDocument();
   });
 });

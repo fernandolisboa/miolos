@@ -2,10 +2,11 @@ import { adminConfigWriteSchema } from "@miolos/core";
 import { adminRoleOf, setRemoteConfigValue } from "@miolos/db/publishing";
 import type { NextRequest } from "next/server";
 
-import { adminState, webOriginUnset } from "../../../src/admin/state";
+import { adminState } from "../../../src/admin/state";
 import { corsHeaders, preflightResponse } from "../../../src/cors";
 import { errorResponse } from "../../../src/http/responses";
 import { writePreamble } from "../../../src/http/write-preamble";
+import { webOriginUnset } from "../../../src/http/web-origin-unset";
 
 export const dynamic = "force-dynamic";
 

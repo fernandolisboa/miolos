@@ -49,10 +49,16 @@ const mergeControl = vi.hoisted(() => ({
   failuresRemaining: 0,
   calls: 0,
   failWith: undefined as string | undefined,
+  afterMerge: undefined as (() => Promise<void>) | undefined,
 }));
 vi.mock("@miolos/db/user", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@miolos/db/user")>();
-  const mergeAccounts: typeof actual.mergeAccounts = async (db, a, b) => {
+  const mergeAccounts: typeof actual.mergeAccounts = async (
+    db,
+    a,
+    b,
+    dropSessionsOf,
+  ) => {
     mergeControl.calls += 1;
     if (mergeControl.failuresRemaining > 0) {
       mergeControl.failuresRemaining -= 1;
@@ -61,7 +67,9 @@ vi.mock("@miolos/db/user", async (importOriginal) => {
           "mergeAccounts: winner owns no session or identity handle (concurrent merge?)",
       );
     }
-    return actual.mergeAccounts(db, a, b);
+    const merged = await actual.mergeAccounts(db, a, b, dropSessionsOf);
+    await mergeControl.afterMerge?.();
+    return merged;
   };
   return { ...actual, mergeAccounts };
 });
@@ -101,6 +109,7 @@ afterEach(() => {
   mergeControl.failuresRemaining = 0;
   mergeControl.calls = 0;
   mergeControl.failWith = undefined;
+  mergeControl.afterMerge = undefined;
   attachControl.failUniqueOnce = false;
   vi.unstubAllEnvs();
 });
@@ -724,6 +733,33 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     expect(await ctx.db.select().from(sessions)).toHaveLength(1);
     expect(await readStreak(cookieToken)).toBe(1);
     expect(await ctx.db.select().from(completions)).toHaveLength(1);
+  });
+
+  it("T-API-S322: a merging confirm deletes the requester's sessions inside the merge — its old cookie never resolves to the holder, not even before the revocation", async () => {
+    const holder = await createSession(OLDER);
+    await ctx.db
+      .update(users)
+      .set({ email: EMAIL, emailVerifiedAt: sql`now()` })
+      .where(sql`id = ${holder.userId}`);
+    const requester = await createSession(NEWER);
+    const raw = await requestMagicLink(requester.token);
+
+    const resolvedRightAfterMerge: (string | undefined)[] = [];
+    mergeControl.afterMerge = async () => {
+      resolvedRightAfterMerge.push(
+        await requireUserId(ctx.db, requester.token),
+      );
+    };
+
+    const response = await postConfirm(raw);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ merged: true });
+
+    expect(resolvedRightAfterMerge).toEqual([undefined]);
+    expect(await requireUserId(ctx.db, requester.token)).toBeUndefined();
+    expect(await requireUserId(ctx.db, cookieTokenOf(response))).toBe(
+      holder.userId,
+    );
   });
 
   it("T-API-S79a: the stale-intent guard runs BEFORE any merge — a live E2 token whose email has a verified holder is 409 with ZERO merge, holder untouched, no tombstone", async () => {

@@ -83,3 +83,22 @@ export function nonogramContentFixture(): Record<string, unknown> {
 export function termoContentFixture(): Record<string, unknown> {
   return { canonical: "pombo", normalized: "pombo" };
 }
+
+export function messages(error: unknown): string {
+  let out = "";
+  let current: unknown = error;
+  while (current instanceof Error) {
+    out += current.message;
+    current = current.cause;
+  }
+  return out;
+}
+
+export async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
+  try {
+    await statement;
+    return undefined;
+  } catch (error) {
+    return error;
+  }
+}

@@ -7,6 +7,7 @@ import { listPublishedDailiesOnWonDates } from "../src/published";
 import { getUserSince, listCompletionsForStats } from "../src/stats";
 import { completions, dailyPuzzles, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
+import { messages, thrownBy } from "./fixtures";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -157,25 +158,6 @@ describe("surface tripwire (ADR-0026 decision 5, plan 033 §3.1)", () => {
     ]);
   });
 });
-
-function messages(error: unknown): string {
-  let out = "";
-  let current: unknown = error;
-  while (current instanceof Error) {
-    out += current.message;
-    current = current.cause;
-  }
-  return out;
-}
-
-async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
-  try {
-    await statement;
-    return undefined;
-  } catch (error) {
-    return error;
-  }
-}
 
 async function expectAdmitted(game: string, date: string): Promise<void> {
   const userId = await createUser();

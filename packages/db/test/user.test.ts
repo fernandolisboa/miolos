@@ -26,6 +26,7 @@ import * as schema from "../src/schema";
 import { completions, hintGrants, userSeenDays, users } from "../src/schema";
 import { pruneSeenDays, recordSeenDay, wasSeenOn } from "../src/seen-days";
 import { createTestDb } from "../src/testing";
+import { messages, thrownBy } from "./fixtures";
 
 type Dialect = "neonHttp" | "pglite";
 
@@ -65,25 +66,6 @@ function addDaysLocal(date: string, days: number): string {
   }
   const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-}
-
-function messages(error: unknown): string {
-  let out = "";
-  let current: unknown = error;
-  while (current instanceof Error) {
-    out += current.message;
-    current = current.cause;
-  }
-  return out;
-}
-
-async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
-  try {
-    await statement;
-    return undefined;
-  } catch (error) {
-    return error;
-  }
 }
 
 describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
