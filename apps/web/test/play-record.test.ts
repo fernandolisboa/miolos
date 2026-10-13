@@ -567,7 +567,7 @@ describe("the shared record header (T-WEB-S485)", () => {
   });
 });
 
-describe("the hint cap on a play record (T-WEB-S495)", () => {
+describe("the hint cap on a play record (T-WEB-S510)", () => {
   it("reads a record at the free-hint cap and refuses one past it", () => {
     const atCap = record({ hintsUsed: FREE_HINTS_PER_PUZZLE });
     writePlayRecord(atCap);
