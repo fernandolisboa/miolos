@@ -1,4 +1,4 @@
-import type { DailySudokuResponse } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
 import {
   getSudokuConflicts,
   isSudokuSolved,
@@ -61,7 +61,7 @@ export function initSudokuPlayState(
     selected: null,
     tier: daily.tier,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: 1, used: 0, lastIndex: null },
+    hint: { used: 0, lastIndex: null },
     violating: derived.violating,
     status: derived.status,
     pendingSync: false,
@@ -115,7 +115,10 @@ export function sudokuPlayReducer(
     }
 
     case "use-hint": {
-      if (state.hint.used >= state.hint.free || state.status !== "playing") {
+      if (
+        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
+        state.status !== "playing"
+      ) {
         return state;
       }
       const hint = nextHint(
@@ -130,7 +133,10 @@ export function sudokuPlayReducer(
       const revealed = withEntry(state, hint.index, hint.value);
       return {
         ...revealed,
-        hint: { free: 1, used: state.hint.used + 1, lastIndex: hint.index },
+        hint: {
+          used: state.hint.used + 1,
+          lastIndex: hint.index,
+        },
       };
     }
 
@@ -218,7 +224,10 @@ function restore(
     ...state,
     ...derived,
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: { free: 1, used: record.hintsUsed, lastIndex: null },
+    hint: {
+      used: record.hintsUsed,
+      lastIndex: null,
+    },
     pendingSync: record.pendingSync,
     now,
     hydrated: true,

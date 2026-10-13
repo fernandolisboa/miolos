@@ -316,6 +316,13 @@ const ROUTES: readonly RouteCase[] = [
   },
 
   {
+    path: routes.admin,
+    marker: "data-page=",
+    load: () => import("../app/admin/page"),
+    daily: undefined,
+  },
+
+  {
     path: routes.archive,
     marker: "data-page=",
     load: () => import("../app/arquivo/page"),

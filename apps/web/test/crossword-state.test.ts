@@ -1,5 +1,6 @@
 import {
   dailyCrosswordResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailyCrosswordResponse,
 } from "@miolos/core";
 import { describe, expect, it } from "vitest";
@@ -298,16 +299,55 @@ describe("hint (T-WEB-S427)", () => {
     expect(hinted.hint.lastIndex).toBe(0);
     expect(hinted.entries[0]).toBe("c");
   });
+});
 
-  it("is spent after the one free use", () => {
-    const once = play(fresh(), { type: "use-hint" });
-    const twice = play(
-      once,
-      { type: "select", index: 5 },
-      { type: "use-hint" },
+describe("three free hints per puzzle (T-WEB-S511c)", () => {
+  function hintTimes(
+    state: CrosswordPlayState,
+    times: number,
+  ): CrosswordPlayState {
+    return play(
+      state,
+      ...Array.from({ length: times }, () => ({ type: "use-hint" }) as const),
     );
-    expect(twice.hint.used).toBe(1);
-    expect(twice.entries[5]).toBeNull();
+  }
+
+  it("fills a solution letter on each free press", () => {
+    let current = fresh();
+    for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {
+      current = play(current, { type: "use-hint" });
+
+      expect(current.hint.lastIndex).not.toBeNull();
+      expect(current.hint.used).toBe(press);
+      expect(current.entries[current.hint.lastIndex ?? -1]).toBe(
+        current.solution[current.hint.lastIndex ?? -1],
+      );
+    }
+  });
+
+  it("returns the same state on the press after the last free hint", () => {
+    const spent = hintTimes(fresh(), FREE_HINTS_PER_PUZZLE);
+
+    expect(play(spent, { type: "use-hint" })).toBe(spent);
+  });
+
+  it("leaves exactly one hint after a restore with two spent", () => {
+    const record: CrosswordPlayRecord = {
+      v: 1,
+      game: "crossword",
+      date: DATE,
+      entries: Array<null>(25).fill(null),
+      elapsedMs: 0,
+      hintsUsed: 2,
+      concluded: false,
+      pendingSync: false,
+      syncOutcome: "pending",
+    };
+    const restored = play(fresh(), { type: "restore", record, now: 1 });
+    const last = play(restored, { type: "use-hint" });
+
+    expect(last.hint.used).toBe(3);
+    expect(play(last, { type: "use-hint" })).toBe(last);
   });
 });
 

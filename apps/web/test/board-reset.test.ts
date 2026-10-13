@@ -1,5 +1,6 @@
 import {
   dailyCrosswordResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   dailyNonogramResponseSchema,
   dailyQueensResponseSchema,
   dailySudokuResponseSchema,
@@ -344,8 +345,16 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
       expect(after.pendingSync).toBe(played.pendingSync);
     });
 
-    it("does not refund the hint", () => {
-      expect(board.useHint(after)).toBe(after);
+    it("does not refund a hint: the count carries on, and a spent cap stays spent", () => {
+      expect(board.useHint(after).hint.used).toBe(played.hint.used + 1);
+      let spent = played;
+      for (let i = played.hint.used; i < FREE_HINTS_PER_PUZZLE; i += 1) {
+        spent = board.useHint(spent);
+      }
+      const cleared = board.reduce(spent, RESET);
+      expect(cleared.status).toBe("playing");
+      expect(cleared.hint.used).toBe(FREE_HINTS_PER_PUZZLE);
+      expect(board.useHint(cleared)).toBe(cleared);
     });
 
     it("returns the same object when no cell is decided and on a solved board", () => {

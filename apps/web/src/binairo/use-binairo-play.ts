@@ -1,4 +1,4 @@
-import type { DailyBinairoResponse } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
 import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
@@ -74,7 +74,10 @@ export function useBinairoPlay(
       return;
     }
     const current = stateRef.current;
-    if (current.hint.used >= current.hint.free || current.status === "solved") {
+    if (
+      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
+      current.status === "solved"
+    ) {
       return;
     }
 
@@ -92,7 +95,9 @@ export function useBinairoPlay(
     elapsed,
     filled,
     hintReady:
-      solution !== null && hintsUsed < state.hint.free && status === "playing",
+      solution !== null &&
+      hintsUsed < FREE_HINTS_PER_PUZZLE &&
+      status === "playing",
     hintKind,
     revealHint,
     reset,

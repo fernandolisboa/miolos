@@ -11,5 +11,5 @@ export {
   getPublishedNonogramMotifName,
   type DailyPuzzleRow,
 } from "./published";
-export { getRemoteConfig } from "./remote-config";
+export { getRemoteConfig, setRemoteConfigValue } from "./remote-config";
 export { dailyPuzzles, remoteConfig } from "./schema";

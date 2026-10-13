@@ -133,7 +133,7 @@ function NonogramFreeBoard({
           progressLong: copy.progressLong(filled, target),
           hint: {
             ready: hintReady,
-            label: hintReady ? copy.hint.available : copy.hint.used,
+            used: state.hint.used,
             explain: hintKind === null ? null : copy.hint.explain[hintKind],
             onReveal: revealHint,
           },

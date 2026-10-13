@@ -8,4 +8,12 @@ export const remoteConfigSchema = z.object({
 
 export type RemoteConfig = z.infer<typeof remoteConfigSchema>;
 
+export const remoteConfigKeySchema = remoteConfigSchema.keyof();
+
+export type RemoteConfigKey = z.infer<typeof remoteConfigKeySchema>;
+
+export function remoteConfigField(key: RemoteConfigKey) {
+  return remoteConfigSchema.shape[key].unwrap();
+}
+
 export const defaultRemoteConfig: RemoteConfig = remoteConfigSchema.parse({});

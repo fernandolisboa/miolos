@@ -9,6 +9,7 @@ import {
   writePlayRecord,
   type BinairoPlayRecord,
 } from "../src/play/play-record";
+import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 installPointerStubs();
@@ -68,10 +69,8 @@ function driveFullSession(container: HTMLElement): void {
   const firstEmpty = PUZZLE.givens.findIndex((cell) => cell === null);
   fireEvent.click(cellAt(container, firstEmpty));
 
-  fireEvent.click(screen.getByText(messages.games.binairo.play.hint.available));
-  expect(
-    screen.getByText(messages.games.binairo.play.hint.used),
-  ).toBeInTheDocument();
+  spendFreeHints();
+  expect(screen.getByText(messages.play.hint.used)).toBeInTheDocument();
 
   solveRemaining(container);
 

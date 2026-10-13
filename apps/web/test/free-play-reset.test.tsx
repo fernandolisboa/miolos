@@ -2,6 +2,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
+
 import { BinairoFreeScreen } from "../src/free-play/binairo-free-screen";
 import { CrosswordFreeScreen } from "../src/free-play/crossword-free-screen";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
@@ -13,36 +15,31 @@ import screenStyles from "../src/play/screen.module.css";
 const SEED = 20_261_013;
 const DEPS = { pickSeed: () => SEED };
 const reset = messages.play.reset;
+const hint = messages.play.hint;
 
 const SCREENS: readonly {
   readonly name: string;
   readonly screen: ReactElement;
-  readonly hint: { readonly available: string; readonly used: string };
 }[] = [
   {
     name: "Sudoku",
     screen: <SudokuFreeScreen deps={DEPS} />,
-    hint: messages.games.sudoku.play.hint,
   },
   {
     name: "Nonogram",
     screen: <NonogramFreeScreen deps={DEPS} />,
-    hint: messages.games.nonogram.play.hint,
   },
   {
     name: "Binairo",
     screen: <BinairoFreeScreen deps={DEPS} />,
-    hint: messages.games.binairo.play.hint,
   },
   {
     name: "Rainhas",
     screen: <QueensFreeScreen deps={DEPS} />,
-    hint: messages.games.queens.play.hint,
   },
   {
     name: "Cruzadinha",
     screen: <CrosswordFreeScreen deps={DEPS} />,
-    hint: messages.games.crossword.play.hint,
   },
 ];
 
@@ -64,7 +61,7 @@ afterEach(() => {
 describe("Recomeçar in free play clears the board and keeps the hint spent (T-WEB-S517)", () => {
   it.each(SCREENS)(
     "$name: the board, the hinted cell and the explanation go; the spent hint stays; nothing is written",
-    ({ screen: element, hint }) => {
+    ({ screen: element }) => {
       vi.stubGlobal(
         "fetch",
         vi.fn(() => {
@@ -79,7 +76,7 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
         "true",
       );
 
-      fireEvent.click(screen.getByText(hint.available));
+      fireEvent.click(screen.getByText(hint.available(FREE_HINTS_PER_PUZZLE)));
       expect(cells(container)).not.toEqual(fresh);
       expect(explanation(container)).not.toBeNull();
 
@@ -99,10 +96,9 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
         "true",
       );
       expect(explanation(container)).toBeNull();
-      expect(screen.getByText(hint.used).closest("button")).toHaveAttribute(
-        "aria-disabled",
-        "true",
-      );
+      expect(
+        screen.getByText(hint.available(FREE_HINTS_PER_PUZZLE - 1)),
+      ).toBeInTheDocument();
       expect(screen.queryByRole("group", { name: reset.question })).toBeNull();
       expect(setItem).not.toHaveBeenCalled();
     },

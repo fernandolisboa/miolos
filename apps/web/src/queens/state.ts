@@ -47,7 +47,7 @@ export function initQueensPlayState(
     conflicts: new Set(),
     selected: null,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: 1, used: 0, lastIndex: null },
+    hint: { used: 0, lastIndex: null },
     status: "playing",
     pendingSync: false,
     now: 0,

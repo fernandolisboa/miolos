@@ -1,4 +1,4 @@
-import type { DailyBinairoResponse } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
@@ -76,7 +76,10 @@ describe("initPlayState", () => {
     expect(elapsedMs(state.timer, state.now)).toBe(0);
     expect(state.timer.runningSince).toBeNull();
     expect(state.paint).toEqual({ kind: "cycle" });
-    expect(state.hint).toEqual({ free: 1, used: 0, lastIndex: null });
+    expect(state.hint).toEqual({
+      used: 0,
+      lastIndex: null,
+    });
     expect(state.violating.size).toBe(0);
     expect(state.status).toBe("playing");
     expect(state.pendingSync).toBe(false);
@@ -340,7 +343,7 @@ describe("completion detection (D12, T-WEB-13)", () => {
 });
 
 describe("use-hint (§10.3)", () => {
-  it("writes the solution's value, spends the one free hint and marks the cell", () => {
+  it("writes the solution's value, spends a free hint and marks the cell", () => {
     const givens = [...REAL_PUZZLE.givens];
     const first = playReducer(initPlayState(daily(givens)), {
       type: "use-hint",
@@ -351,12 +354,55 @@ describe("use-hint (§10.3)", () => {
     expect(first.hint.lastIndex).not.toBeNull();
     const index = first.hint.lastIndex ?? -1;
     expect(first.entries[index]).toBe(REAL_PUZZLE.solution[index]);
+  });
+});
 
-    const second = playReducer(first, {
+describe("three free hints per puzzle (T-WEB-S511b)", () => {
+  const initial = initPlayState(daily([...REAL_PUZZLE.givens]));
+
+  function hint(state: PlayState): PlayState {
+    return playReducer(state, {
       type: "use-hint",
       solution: REAL_PUZZLE.solution,
     });
-    expect(second).toBe(first);
+  }
+
+  function hintTimes(state: PlayState, times: number): PlayState {
+    let current = state;
+    for (let press = 0; press < times; press += 1) {
+      current = hint(current);
+    }
+    return current;
+  }
+
+  it("writes a solution value on each free press", () => {
+    let current = initial;
+    for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {
+      current = hint(current);
+      const index = current.hint.lastIndex ?? -1;
+
+      expect(current.hint.lastIndex).not.toBeNull();
+      expect(current.hint.used).toBe(press);
+      expect(current.entries[index]).toBe(REAL_PUZZLE.solution[index]);
+    }
+  });
+
+  it("returns the same state on the press after the last free hint", () => {
+    const spent = hintTimes(initial, FREE_HINTS_PER_PUZZLE);
+
+    expect(hint(spent)).toBe(spent);
+  });
+
+  it("leaves exactly one hint after a restore with two spent", () => {
+    const restored = playReducer(initial, {
+      type: "restore",
+      record: record({ hintsUsed: 2 }),
+      now: 1,
+    });
+    const last = hint(restored);
+
+    expect(last.hint.used).toBe(3);
+    expect(hint(last)).toBe(last);
   });
 });
 
@@ -442,7 +488,10 @@ describe("restore (T-WEB-14b)", () => {
     expect(state.timer.accumulatedMs).toBe(42_000);
     expect(state.timer.runningSince).toBeNull();
     expect(elapsedMs(state.timer, 100_000)).toBe(42_000);
-    expect(state.hint).toEqual({ free: 1, used: 1, lastIndex: null });
+    expect(state.hint).toEqual({
+      used: 1,
+      lastIndex: null,
+    });
     expect(state.pendingSync).toBe(true);
     expect([...state.violating].toSorted()).toEqual([0, 1, 2]);
     expect(state.status).toBe("playing");

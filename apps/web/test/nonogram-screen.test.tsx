@@ -1,5 +1,6 @@
 import {
   dailyNonogramResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailyNonogramResponse,
   type NonogramSize,
 } from "@miolos/core";
@@ -28,6 +29,7 @@ import {
 } from "../src/play/play-record";
 import sharedStyles from "../src/play/screen.module.css";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
+import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 const sync = vi.hoisted(() => ({
@@ -826,7 +828,9 @@ describe("the four branches (T-WEB-S47)", () => {
     expect(markup).not.toContain(
       messages.games.nonogram.play.progressLong(0, TARGET),
     );
-    expect(markup).not.toContain(messages.games.nonogram.play.hint.available);
+    expect(markup).not.toContain(
+      messages.play.hint.available(FREE_HINTS_PER_PUZZLE),
+    );
 
     expect(markup).not.toContain(messages.conclusion.stampLabel);
     expect(markup).not.toContain("data-cell-index");
@@ -993,18 +997,20 @@ describe("the four branches (T-WEB-S47)", () => {
     assertNoEyebrowAboveHeadings(conclusion);
   });
 
-  it("spends the one free hint on a picture cell and explains which case fired", () => {
+  it("spends a free hint on a picture cell and explains which case fired", () => {
     const { container } = render(<NonogramScreen daily={SMALL} />);
     const copy = messages.games.nonogram.play;
 
     fireEvent.keyDown(boardOf(SMALL), { key: "ArrowRight" });
     const caret = caretIndex(container);
 
-    fireEvent.click(screen.getByText(copy.hint.available));
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
 
-    const exhausted = screen.getByText(copy.hint.used);
-    expect(exhausted).toHaveAttribute("aria-disabled", "true");
-
+    expect(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE - 1)),
+    ).toHaveAttribute("aria-disabled", "false");
     expect(screen.getByText(copy.hint.explain.fill)).toBeInTheDocument();
     expect(screen.getByText(copy.progressLong(1, TARGET))).toBeInTheDocument();
 
@@ -1017,6 +1023,23 @@ describe("the four branches (T-WEB-S47)", () => {
     );
 
     expect(caretIndex(container)).toBe(caret);
+  });
+
+  it("goes inert once every free hint is spent", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+    const marked = () =>
+      container.querySelectorAll(
+        `.${className("cellFilled")}[data-cell-index], .${className("cellCrossed")}[data-cell-index]`,
+      ).length;
+
+    spendFreeHints();
+
+    const exhausted = screen.getByText(messages.play.hint.used);
+    expect(exhausted).toHaveAttribute("aria-disabled", "true");
+    expect(marked()).toBe(FREE_HINTS_PER_PUZZLE);
+
+    fireEvent.click(exhausted);
+    expect(marked()).toBe(FREE_HINTS_PER_PUZZLE);
   });
 });
 

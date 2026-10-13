@@ -112,7 +112,7 @@ function registerDaily<P extends Play>({ name, usePlay, enter }: Daily<P>) {
       expect(record.elapsedMs).toBeGreaterThanOrEqual(ELAPSED_MS);
       expect(result.current.elapsed).toBeGreaterThanOrEqual(ELAPSED_MS);
       expect(result.current.hintKind).toBeNull();
-      expect(result.current.hintReady).toBe(false);
+      expect(result.current.hintReady).toBe(true);
     });
 
     it("writes nothing when no cell is decided yet", () => {

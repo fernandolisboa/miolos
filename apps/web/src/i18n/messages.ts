@@ -1,3 +1,5 @@
+import type { RemoteConfigKey } from "@miolos/core";
+
 const wordmark = "Miolos";
 
 const back = "← Hoje";
@@ -12,7 +14,8 @@ const cellAria = (row: number, column: number, value: 0 | 1 | null) =>
 const cellAriaSudoku = (row: number, column: number, value: number | null) =>
   `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
 
-const hintsUsed = (used: number) => (used === 0 ? "sem dicas" : "com 1 dica");
+const hintsUsed = (used: number) =>
+  used === 0 ? "sem dicas" : used === 1 ? "com 1 dica" : `com ${used} dicas`;
 
 const boardSize = (size: number) => `${size} × ${size}`;
 
@@ -102,6 +105,11 @@ export const messages = {
     timerLabel: "Tempo",
     timerAria: (elapsed: string) => `tempo decorrido: ${elapsed}`,
     progressLabel: "Progresso",
+    hint: {
+      available: (left: number) =>
+        `Usar dica — ${left} ${left === 1 ? "disponível" : "disponíveis"}`,
+      used: "Dicas usadas",
+    },
     reset: {
       label: "Recomeçar",
       question: "Recomeçar o puzzle? Suas jogadas serão apagadas.",
@@ -601,6 +609,39 @@ export const messages = {
       link: "Ir para a exclusão da conta",
     },
   },
+  admin: {
+    title: "Administração",
+    lead: "Valores que valem para todo mundo e entram em vigor sem deploy.",
+    config: {
+      heading: "Configuração remota",
+      unavailable: "Não conseguimos carregar a configuração agora.",
+      notAdmin: "Esta página é só para quem administra o Miolos.",
+      userIdLabel: "O código da sua conta:",
+      range: (
+        min: number | undefined,
+        max: number | undefined,
+        fallback: number,
+      ) => `De ${min} a ${max} · padrão ${fallback}`,
+      save: "Salvar",
+      saveAria: (label: string) => `Salvar: ${label}`,
+      saved: "Salvo.",
+      failed: "Não deu certo agora. Tente de novo.",
+    },
+    keys: {
+      bufferDepth: {
+        label: "Dias de reserva",
+        hint: "Quantos dias à frente cada jogo fica gerado e validado.",
+      },
+      attachStreakThreshold: {
+        label: "Sequência para pedir o e-mail",
+        hint: "A partir de quantos dias de sequência a página Hoje convida a vincular um e-mail.",
+      },
+      pushOptInStreakThreshold: {
+        label: "Sequência para oferecer o lembrete",
+        hint: "A partir de quantos dias de sequência a conclusão oferece o lembrete de sequência em risco.",
+      },
+    } satisfies Record<RemoteConfigKey, { label: string; hint: string }>,
+  },
   games: {
     termo: {
       kicker: "Palavras",
@@ -719,8 +760,6 @@ export const messages = {
             "ou use o teclado: 1–9 para escrever, Backspace para apagar",
         },
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos um número que não fecha com as regras.",
             fill: "Preenchemos uma célula para você.",
@@ -770,8 +809,6 @@ export const messages = {
           affordance: "No teclado: 1 preenche, 2 marca, 0 apaga.",
         },
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos uma célula que não fecha com os números.",
             fill: "Preenchemos uma célula da figura para você.",
@@ -827,8 +864,6 @@ export const messages = {
         cellInvalidAria: (row: number, column: number, value: 0 | 1 | null) =>
           `${cellAria(row, column, value)} — esta célula quebra uma regra`,
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos uma célula que não fecha com as regras.",
             fill: "Preenchemos uma célula para você.",
@@ -882,8 +917,6 @@ export const messages = {
         },
 
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos uma letra errada.",
             fill: "Preenchemos uma célula para você.",
@@ -926,8 +959,6 @@ export const messages = {
         affordance: "No teclado: 1 põe a rainha, 2 marca, 0 apaga.",
 
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos uma casa que não fecha com a solução.",
             fill: "Pusemos uma rainha para você.",
