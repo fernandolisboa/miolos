@@ -7,6 +7,8 @@
 
 **Amended by:** [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) (#64) — decision 1's honest-absence table gains the motif **name** as a second recorded absence on the Nonogram row (the picture's absence is untouched and still exact), and decision 2's one-wire-field template is the one `motifName` is built to. Both annotated in place; nothing deleted.
 
+**Amended by:** [ADR-0093](./0093-the-daily-and-archive-ladders-are-shared.md) (#289) — decision 3's seat: the remote-claim branch now sits in the shared `DailyScreen`, after the closed-and-frozen rung, instead of in each screen root. The order, and the local record winning first, are unchanged.
+
 **ADR-0053 decision 10 is obeyed, not amended** — in those words, because ADR-0060 said them too and a reviewer will ask: layer 3's honest gap survives **on the archive, where it lives**. The archive screens never import the day seam (`T-WEB-S183`'s ban keeps that mechanical), an archived date's route still renders a playable board, and the late write still works. What is withdrawn is only ADR-0060 decision 8's *citation* of that layer for the **daily hub** path — the daily path now has server evidence the archive path structurally does not.
 
 **Numbering, coordinated:** the in-flight siblings assigned ADR numbers up front rather than "next free" — the assigned map was **0062→#145, 0063→#58, 0064→#140, 0065→#142**. The map shifted under this branch: at its pre-gate merge-from-main, #140 had landed as **ADR-0062** (`0062-termo-guess-dictionary-gaps-close-with-curated-additions.md`) rather than 0064, so the unlanded siblings' numbers move — **0065→#142 is unaffected and is the number this ADR holds**, said here so the next collision is read against the map as it actually resolved.

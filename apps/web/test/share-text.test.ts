@@ -481,7 +481,9 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
     for (const [game, expected] of Object.entries(SHAPES)) {
       const shape = shapes[game];
       expect(shape, `${game}: no .shape`).toBeDefined();
-      expect(Object.keys(shape ?? {}), game).toEqual([...expected]);
+      expect(Object.keys(shape ?? {}).sort(), game).toEqual(
+        [...expected].sort(),
+      );
       expect(Object.keys(shape ?? {}), `${game}: tier`).not.toContain("tier");
     }
   });

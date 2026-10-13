@@ -139,6 +139,7 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
         "apps/web/src/crossword/crossword-screen.tsx",
         "apps/web/src/queens/use-queens-play.ts",
         "apps/web/src/queens/queens-screen.tsx",
+        "apps/web/src/play/daily-screen.tsx",
         "apps/web/src/play/use-play-lifecycle.ts",
       ].filter((module) => valueGraph.includes(module)),
       typeEdgeIsFollowedByClosureOnly: [

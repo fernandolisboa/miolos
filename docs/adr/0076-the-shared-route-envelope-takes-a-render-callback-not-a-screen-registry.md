@@ -21,6 +21,8 @@ The `render` callback. **Neither shared envelope imports a per-game screen or co
 
   **Annotated at #206 cluster 6** — [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) amends that clause: the shared layer now also holds the game-agnostic page frame `play/screen.module.css`'s grid areas define. This decision is unaffected. `PlayScreenChrome` obeys the same rule the `render` callback does — it imports no per-game module, and the game is a literal argument.
 
+**Annotated at #289** — [ADR-0093](./0093-the-daily-and-archive-ladders-are-shared.md): the same rule now holds for the shared screen shells, and for `play/conclusion-lazy.tsx`, whose Termo and Nonogram preloads moved into those two screens so it imports no per-game module. `T-WEB-S364a` is the wall.
+
 ## Rejected
 
 - **A `Record<ProjectedGame, ComponentType>` registry in the shared module.** Reads better and matches `og/handlers.ts` more literally, but couples every consumer to every game, with no gate that fails when it happens.

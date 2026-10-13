@@ -1,12 +1,9 @@
 import type { QueensSize } from "@miolos/core";
 
-import { formatLongDate, messages } from "../i18n";
+import { messages } from "../i18n";
+import { DailyPlayChrome } from "../play/daily-chrome";
 import screen from "../play/screen.module.css";
-import {
-  DAILY_PLAY_BACK,
-  PlayScreenChrome,
-  type PlayChromeStat,
-} from "../play/screen-chrome";
+import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { BoardSkeleton } from "./board";
 import { BoardPanel, queensReadouts } from "./board-panel";
@@ -25,15 +22,11 @@ export function PlayView({
   const { state } = play;
 
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="queens"
       pageModifier={styles.pageQueens ?? ""}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(state.date)}
-      kicker={messages.games.queens.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={state.date}
+      archive={archive}
       clock={{ elapsedMs: play.elapsed }}
       extraStat={sizeStat(state.size)}
       state={{
@@ -42,7 +35,7 @@ export function PlayView({
       }}
     >
       <BoardPanel board={play} />
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }
 
@@ -58,15 +51,11 @@ export function PlaySkeleton({
   readonly archive?: ArchivePlayChrome;
 }) {
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="queens"
       pageModifier={styles.pageQueens ?? ""}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(date)}
-      kicker={messages.games.queens.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={date}
+      archive={archive}
       clock="blank"
       extraStat={sizeStat(size)}
       state={{ kind: "skeleton" }}
@@ -77,7 +66,7 @@ export function PlaySkeleton({
       <p aria-hidden className={styles.affordance}>
         {copy.affordance}
       </p>
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }
 

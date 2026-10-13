@@ -10,7 +10,7 @@ import {
 
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
-import type { SudokuPlayRecord } from "../play/play-record";
+import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
@@ -148,15 +148,9 @@ function buildRecord(
     ? solvedDigits(mergedGrid(state.givens, state.entries))
     : null;
   return {
-    v: 1,
+    ...recordHeader(state, now, closed, state.hint.used),
     game: "sudoku",
-    date: state.date,
     entries: [...state.entries],
     grid: solved === null ? undefined : [...solved],
-    elapsedMs: elapsedMs(state.timer, now),
-    hintsUsed: state.hint.used,
-    concluded: closed,
-    pendingSync: closed,
-    syncOutcome: "pending",
   };
 }

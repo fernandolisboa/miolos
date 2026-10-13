@@ -51,9 +51,6 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
     <FreePlayChrome
       game="sudoku"
       pageModifier={boardStyles.pageSudoku ?? ""}
-      kicker={messages.games.sudoku.kicker}
-      title={copy.title}
-      rules={copy.rules}
       level={{ value: level, onChange: setLevel }}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
@@ -144,9 +141,6 @@ function SudokuFreeBoard({
     <FreePlayChrome
       game="sudoku"
       pageModifier={boardStyles.pageSudoku ?? ""}
-      kicker={messages.games.sudoku.kicker}
-      title={copy.title}
-      rules={copy.rules}
       level={{ value: level, onChange: onLevelChange }}
       state={{
         kind: "playing",

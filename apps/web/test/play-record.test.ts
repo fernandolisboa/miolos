@@ -1,16 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  binairoPlayRecordSchema,
+  crosswordPlayRecordSchema,
   listPendingRecords,
+  nonogramPlayRecordSchema,
   playRecordKey,
   playRecordSchema,
   prunePlayRecords,
+  queensPlayRecordSchema,
   readPlayRecord,
+  recordHeader,
+  sudokuPlayRecordSchema,
+  termoPlayRecordSchema,
   writePlayRecord,
   type BinairoPlayRecord,
   type NonogramPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
+import type { PlayCore } from "../src/play/types";
 
 const EMPTY_ENTRIES: BinairoPlayRecord["entries"] = Array.from(
   { length: 64 },
@@ -482,5 +490,78 @@ describe("the nonogram member (T-WEB-S40)", () => {
     expect(playRecordSchema.parse(sudoku)).toEqual(sudoku);
     expect(playRecordSchema.parse(binairo).v).toBe(1);
     expect(playRecordSchema.parse(sudoku).v).toBe(1);
+  });
+});
+
+describe("the shared record header (T-WEB-S485)", () => {
+  const core: PlayCore = {
+    date: "2026-07-30",
+    timer: { accumulatedMs: 4_000, runningSince: 10_000 },
+    status: "playing",
+    pendingSync: false,
+    now: 12_500,
+    hydrated: true,
+  };
+
+  it("is open while the board is, with the elapsed time read off the timer", () => {
+    expect(recordHeader(core, 12_500, false, 0)).toEqual({
+      v: 1,
+      date: "2026-07-30",
+      elapsedMs: 6_500,
+      hintsUsed: 0,
+      concluded: false,
+      pendingSync: false,
+      syncOutcome: "pending",
+    });
+  });
+
+  it("is concluded and queued for sync once the board closes", () => {
+    expect(recordHeader(core, 12_500, true, 1)).toMatchObject({
+      hintsUsed: 1,
+      concluded: true,
+      pendingSync: true,
+      syncOutcome: "pending",
+    });
+  });
+
+  it("completes every game's record with a shape its own schema accepts", () => {
+    const header = recordHeader(core, 12_500, false, 0);
+    const bodies = [
+      [
+        binairoPlayRecordSchema,
+        { game: "binairo", entries: Array.from({ length: 64 }, () => null) },
+      ],
+      [
+        sudokuPlayRecordSchema,
+        { game: "sudoku", entries: Array.from({ length: 81 }, () => null) },
+      ],
+      [
+        crosswordPlayRecordSchema,
+        { game: "crossword", entries: Array.from({ length: 25 }, () => null) },
+      ],
+      [
+        nonogramPlayRecordSchema,
+        {
+          game: "nonogram",
+          size: 5,
+          entries: Array.from({ length: 25 }, () => null),
+        },
+      ],
+      [
+        queensPlayRecordSchema,
+        {
+          game: "queens",
+          size: 7,
+          entries: Array.from({ length: 49 }, () => null),
+        },
+      ],
+      [termoPlayRecordSchema, { game: "termo", guesses: [] }],
+    ] as const;
+
+    for (const [schema, body] of bodies) {
+      const built = { ...header, ...body };
+      expect(schema.safeParse(built).success, body.game).toBe(true);
+      expect(playRecordSchema.safeParse(built).success, body.game).toBe(true);
+    }
   });
 });

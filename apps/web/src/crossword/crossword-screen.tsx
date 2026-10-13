@@ -1,16 +1,9 @@
 "use client";
 
 import type { DailyCrosswordResponse } from "@miolos/core";
-import { useEffect } from "react";
 
-import { messages } from "../i18n";
-import {
-  ConclusionView,
-  preloadConclusionView,
-  RemoteConclusionView,
-} from "../play/conclusion-lazy";
+import { DailyScreen } from "../play/daily-screen";
 import { useServerDayClaim } from "../play/day-state";
-import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useCrosswordPlay } from "./use-crossword-play";
 
@@ -22,38 +15,14 @@ export function CrosswordScreen({
   const claim = useServerDayClaim(daily.date, "crossword");
   const play = useCrosswordPlay(daily, claim !== undefined);
 
-  useEffect(() => {
-    preloadConclusionView();
-  }, []);
-
-  if (!play.state.hydrated) {
-    return <PlaySkeleton date={daily.date} />;
-  }
-
-  if (isClosedAndFrozen(play.state) && play.state.status === "solved") {
-    return (
-      <ConclusionView
-        game="crossword"
-        date={daily.date}
-        copy={messages.games.crossword.conclusion}
-        result={{
-          elapsedMs: play.elapsed,
-          hintsUsed: play.state.hint.used,
-        }}
-      />
-    );
-  }
-
-  if (claim !== undefined) {
-    return (
-      <RemoteConclusionView
-        game="crossword"
-        date={daily.date}
-        copy={messages.games.crossword.conclusion}
-        claim={claim}
-      />
-    );
-  }
-
-  return <PlayView play={play} />;
+  return (
+    <DailyScreen
+      game="crossword"
+      claim={claim}
+      state={play.state}
+      result={{ elapsedMs: play.elapsed, hintsUsed: play.state.hint.used }}
+      skeleton={<PlaySkeleton date={daily.date} />}
+      view={<PlayView play={play} />}
+    />
+  );
 }

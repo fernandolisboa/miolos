@@ -439,6 +439,8 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
       "app/arquivo/[data]/sudoku/page.tsx",
       "app/arquivo/[data]/nonogram/page.tsx",
       "app/arquivo/[data]/termo/page.tsx",
+      "app/arquivo/[data]/cruzadinha/page.tsx",
+      "app/arquivo/[data]/rainhas/page.tsx",
     ].map((path) => join(import.meta.dirname, "..", path));
 
     const graph = entries.flatMap((entry) => moduleGraph(entry));
@@ -452,6 +454,9 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
       "sudoku-screen",
       "nonogram-screen",
       "termo-screen",
+      "crossword-screen",
+      "queens-screen",
+      "daily-screen",
     ];
     const leaks = Object.fromEntries(
       forbidden.map((name) => [
@@ -459,7 +464,9 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
         graph.filter(
           (path) =>
             path.includes(`/src/play/${name}`) ||
-            (/\/src\/(?:binairo|sudoku|nonogram|termo)\//.test(path) &&
+            (/\/src\/(?:binairo|sudoku|nonogram|termo|crossword|queens)\//.test(
+              path,
+            ) &&
               path.endsWith(`${name}.tsx`)),
         ),
       ]),

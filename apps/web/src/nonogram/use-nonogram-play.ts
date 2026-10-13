@@ -1,7 +1,7 @@
 import type { DailyNonogramResponse } from "@miolos/core";
 import { useCallback, useMemo, useReducer } from "react";
 
-import type { NonogramPlayRecord } from "../play/play-record";
+import { recordHeader, type NonogramPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import {
   useBinaryGridControls,
@@ -89,16 +89,10 @@ function buildRecord(
     ? submittedCells(state.entries, state.size ** 2)
     : null;
   return {
-    v: 1,
+    ...recordHeader(state, now, closed, state.hint.used),
     game: "nonogram",
-    date: state.date,
     size: state.size,
     entries: [...state.entries],
     grid: submitted === null ? undefined : [...submitted],
-    elapsedMs: elapsedMs(state.timer, now),
-    hintsUsed: state.hint.used,
-    concluded: closed,
-    pendingSync: closed,
-    syncOutcome: "pending",
   };
 }

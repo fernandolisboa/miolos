@@ -1,13 +1,10 @@
 import type { NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
 
-import { formatLongDate, messages } from "../i18n";
+import { messages } from "../i18n";
+import { DailyPlayChrome } from "../play/daily-chrome";
 import screen from "../play/screen.module.css";
-import {
-  DAILY_PLAY_BACK,
-  PlayScreenChrome,
-  type PlayChromeStat,
-} from "../play/screen-chrome";
+import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
 import { Controls, ControlsSkeleton } from "./controls";
@@ -27,15 +24,11 @@ export function PlayView({
   const { state } = play;
 
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="nonogram"
       pageModifier={nonogramPageModifier(state.size)}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(state.date)}
-      kicker={messages.games.nonogram.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={state.date}
+      archive={archive}
       clock={{ elapsedMs: play.elapsed }}
       extraStat={sizeStat(state.size)}
       state={{
@@ -73,7 +66,7 @@ export function PlayView({
         />
       </div>
       <Controls brush={state.brush} onSetBrush={play.setBrush} />
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }
 
@@ -89,15 +82,11 @@ export function PlaySkeleton({
   readonly archive?: ArchivePlayChrome;
 }) {
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="nonogram"
       pageModifier={nonogramPageModifier(size)}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(date)}
-      kicker={messages.games.nonogram.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={date}
+      archive={archive}
       clock="blank"
       extraStat={sizeStat(size)}
       state={{ kind: "skeleton" }}
@@ -106,7 +95,7 @@ export function PlaySkeleton({
         <BoardSkeleton size={size} clues={clues} />
       </div>
       <ControlsSkeleton />
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }
 

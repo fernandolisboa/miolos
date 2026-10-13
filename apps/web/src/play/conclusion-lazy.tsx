@@ -183,11 +183,3 @@ export const RemoteConclusionView =
 export function preloadConclusionView(): void {
   void import("./conclusion-view").catch(() => undefined);
 }
-
-export function preloadTermoConclusion(): void {
-  void import("../termo/termo-conclusion").catch(() => undefined);
-}
-
-export function preloadNonogramConclusion(): void {
-  void import("../nonogram/nonogram-conclusion").catch(() => undefined);
-}

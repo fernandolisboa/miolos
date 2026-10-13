@@ -2,8 +2,7 @@ import type { DailyTermoResponse } from "@miolos/core";
 import { deriveKeyboardState, type KeyboardState } from "@miolos/games/termo";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
-import type { TermoPlayRecord } from "../play/play-record";
-import { elapsedMs } from "../play/timer";
+import { recordHeader, type TermoPlayRecord } from "../play/play-record";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import { postGuesses } from "./guess-client";
 import { initTermoPlayState, termoPlayReducer } from "./state";
@@ -165,19 +164,13 @@ function buildRecord(
   closed: boolean,
 ): TermoPlayRecord {
   return {
-    v: 1,
+    ...recordHeader(state, now, closed, 0),
     game: "termo",
-    date: state.date,
     guesses: state.guesses.map((row) => ({
       guess: row.guess,
       tiles: [...row.tiles],
     })),
     answer: closed ? state.answer : undefined,
     outcome: closed ? (state.status === "solved" ? "won" : "lost") : undefined,
-    elapsedMs: elapsedMs(state.timer, now),
-    hintsUsed: 0,
-    concluded: closed,
-    pendingSync: closed,
-    syncOutcome: "pending",
   };
 }

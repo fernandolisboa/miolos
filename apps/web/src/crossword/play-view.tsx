@@ -1,5 +1,4 @@
-import { formatLongDate, messages } from "../i18n";
-import { DAILY_PLAY_BACK, PlayScreenChrome } from "../play/screen-chrome";
+import { DailyPlayChrome } from "../play/daily-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import {
   CrosswordBoardView,
@@ -9,8 +8,6 @@ import {
 import boardStyles from "./crossword-board.module.css";
 import type { CrosswordPlay } from "./use-crossword-play";
 
-const copy = messages.games.crossword.play;
-
 export function PlayView({
   play,
   archive,
@@ -19,21 +16,17 @@ export function PlayView({
   readonly archive?: ArchivePlayChrome;
 }) {
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="crossword"
       pageModifier={boardStyles.pageCrossword ?? ""}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(play.state.date)}
-      kicker={messages.games.crossword.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={play.state.date}
+      archive={archive}
       clock={{ elapsedMs: play.elapsed }}
       extraStat={null}
       state={{ kind: "playing", readouts: crosswordReadouts(play) }}
     >
       <CrosswordBoardView board={play} />
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }
 
@@ -45,20 +38,16 @@ export function PlaySkeleton({
   readonly archive?: ArchivePlayChrome;
 }) {
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="crossword"
       pageModifier={boardStyles.pageCrossword ?? ""}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(date)}
-      kicker={messages.games.crossword.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={date}
+      archive={archive}
       clock="blank"
       extraStat={null}
       state={{ kind: "skeleton" }}
     >
       <CrosswordSkeletonBody />
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }

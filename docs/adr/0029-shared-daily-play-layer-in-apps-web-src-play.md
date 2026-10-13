@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md)
 **Amended by:** [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) — decision 2 and consequence (b)
+**Amended by:** [ADR-0093](./0093-the-daily-and-archive-ladders-are-shared.md) (#289) — decision 2: the screen root is no longer per game; the daily and archive ladders are shared shells that take the board and skeleton as nodes.
 
 ## Context
 

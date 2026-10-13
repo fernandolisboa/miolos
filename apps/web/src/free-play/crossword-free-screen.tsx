@@ -20,8 +20,6 @@ import {
   type FreeCrosswordPuzzle,
 } from "./use-free-crossword";
 
-const copy = messages.games.crossword.play;
-
 export function CrosswordFreeScreen({
   deps,
 }: {
@@ -43,9 +41,6 @@ export function CrosswordFreeScreen({
     <FreePlayChrome
       game="crossword"
       pageModifier={boardStyles.pageCrossword ?? ""}
-      kicker={messages.games.crossword.kicker}
-      title={copy.title}
-      rules={copy.rules}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
@@ -78,9 +73,6 @@ function CrosswordFreeBoard({
     <FreePlayChrome
       game="crossword"
       pageModifier={boardStyles.pageCrossword ?? ""}
-      kicker={messages.games.crossword.kicker}
-      title={copy.title}
-      rules={copy.rules}
       state={{ kind: "playing", readouts: crosswordReadouts(board) }}
     >
       <CrosswordBoardView board={board} />

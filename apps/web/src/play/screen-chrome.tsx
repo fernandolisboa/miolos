@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import type { Game } from "@miolos/core";
 
-import { messages, routes } from "../i18n";
+import { messages } from "../i18n";
 import { accentVars } from "./accent";
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
@@ -54,12 +54,6 @@ export type PlayChromeState =
 
 export type PlayChromeClock = "none" | "blank" | { readonly elapsedMs: number };
 
-export const DAILY_PLAY_BACK: PlayChromeBack = {
-  href: routes.home,
-  label: messages.play.back,
-  ariaLabel: messages.play.backAria,
-};
-
 function clockBar(clock: PlayChromeClock): ReactNode {
   if (clock === "none") {
     return null;
@@ -101,9 +95,6 @@ export function PlayScreenChrome({
   state,
   back,
   topDate,
-  kicker,
-  title,
-  rules,
   note,
   clock,
   extraStat,
@@ -114,9 +105,6 @@ export function PlayScreenChrome({
   readonly state: PlayChromeState;
   readonly back: PlayChromeBack;
   readonly topDate: string;
-  readonly kicker: string;
-  readonly title: string;
-  readonly rules: string;
   readonly note: PlayChromeNote | null;
   readonly clock: PlayChromeClock;
   readonly extraStat: PlayChromeStat | null;
@@ -124,6 +112,7 @@ export function PlayScreenChrome({
 }): ReactElement {
   const skeleton = state.kind === "skeleton";
   const readouts = state.kind === "playing" ? state.readouts : null;
+  const { kicker, play } = messages.games[game];
 
   return (
     <main
@@ -149,7 +138,7 @@ export function PlayScreenChrome({
         <p className={screen.titleKicker}>{kicker}</p>
 
         <div className={screen.titleRow}>
-          <h1 className={screen.title}>{title}</h1>
+          <h1 className={screen.title}>{play.title}</h1>
           <span
             aria-hidden={readouts === null ? true : undefined}
             className={screen.progressBar}
@@ -157,7 +146,7 @@ export function PlayScreenChrome({
             {readouts === null ? BLANK_READOUT : readouts.progressShort}
           </span>
         </div>
-        <p className={screen.rules}>{rules}</p>
+        <p className={screen.rules}>{play.rules}</p>
         {note === null ? null : <p className={note.className}>{note.text}</p>}
       </div>
 

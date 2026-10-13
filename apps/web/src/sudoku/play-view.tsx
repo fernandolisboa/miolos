@@ -1,12 +1,9 @@
 import type { SudokuTier } from "@miolos/games/sudoku";
 
-import { formatLongDate, messages } from "../i18n";
+import { messages } from "../i18n";
+import { DailyPlayChrome } from "../play/daily-chrome";
 import screen from "../play/screen.module.css";
-import {
-  DAILY_PLAY_BACK,
-  PlayScreenChrome,
-  type PlayChromeStat,
-} from "../play/screen-chrome";
+import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
 import { Keypad, KeypadSkeleton } from "./keypad";
@@ -27,15 +24,11 @@ export function PlayView({
   const { state } = play;
 
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="sudoku"
       pageModifier={styles.pageSudoku ?? ""}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(state.date)}
-      kicker={messages.games.sudoku.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={state.date}
+      archive={archive}
       clock={{ elapsedMs: play.elapsed }}
       extraStat={levelStat(state.tier)}
       state={{
@@ -71,7 +64,7 @@ export function PlayView({
         />
       </div>
       <Keypad onDigit={play.enterDigit} onClear={play.clearCell} />
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }
 
@@ -85,15 +78,11 @@ export function PlaySkeleton({
   readonly archive?: ArchivePlayChrome;
 }) {
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="sudoku"
       pageModifier={styles.pageSudoku ?? ""}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(date)}
-      kicker={messages.games.sudoku.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={date}
+      archive={archive}
       clock="blank"
       extraStat={levelStat(tier)}
       state={{ kind: "skeleton" }}
@@ -102,7 +91,7 @@ export function PlaySkeleton({
         <BoardSkeleton />
       </div>
       <KeypadSkeleton />
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }
 
