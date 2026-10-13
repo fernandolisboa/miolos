@@ -155,6 +155,8 @@ function createLadder(givens: readonly number[]): Ladder {
   const homes = new Array<number>(9).fill(0);
   const lineHomes = new Array<number>(9).fill(0);
 
+  // homes[d] and `keep` are position masks (bit k = the unit's kth cell);
+  // `mask` in clearUnit is a digit mask (bit d = digit d + 1).
   const fillHomes = (unit: readonly number[]): void => {
     homes.fill(0);
     for (let k = 0; k < 9; k += 1) {

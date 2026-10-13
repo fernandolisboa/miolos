@@ -71,7 +71,7 @@ function buildPeers(): readonly (readonly number[])[] {
 export const PEERS: readonly (readonly number[])[] = buildPeers();
 
 export function sudokuPeers(index: number): readonly number[] {
-  return PEERS[index] ?? [];
+  return PEERS[index]!;
 }
 
 export function assertSudokuGrid(grid: SudokuGrid): void {
