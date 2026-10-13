@@ -512,7 +512,9 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
     }
     for (const selected of [ROW_GIVEN, Number(hinted.dataset.cellIndex)]) {
       fireEvent.click(cellAt(container, selected));
-      expect(sharesUnit(selected, Number(hinted.dataset.cellIndex))).toBe(true);
+      if (!sharesUnit(selected, Number(hinted.dataset.cellIndex))) {
+        throw new Error("the fixture's hint is not in the row given's units");
+      }
       expect(hinted.classList).toContain(className("cellHinted"));
       expect(hinted.classList).not.toContain(className("cellUnit"));
       expect(hinted.classList).not.toContain(className("cellSameDigit"));

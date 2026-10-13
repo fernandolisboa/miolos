@@ -203,7 +203,9 @@ describe("the selection's reach (T-WEB-S495)", () => {
       cell === digit ? [index] : [],
     );
 
-    expect(copies).toContain(empty);
+    if (!copies.includes(empty)) {
+      throw new Error("the entered copy did not land in the merged grid");
+    }
     for (const index of copies) {
       expect(highlights.get(index), `cell ${index}`).toBe("same-digit");
     }

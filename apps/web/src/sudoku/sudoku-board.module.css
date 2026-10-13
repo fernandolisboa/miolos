@@ -201,11 +201,6 @@
   color: var(--ink-on-accent);
 }
 
-.cellSameDigit.cellSelected,
-.cellSameDigit:focus-visible {
-  outline-color: var(--ink-on-accent);
-}
-
 /* ── the caret ───────────────────────────────────────────────────────── */
 
 /* ONE declaration block for the selection AND the focus ring, so ADR-0030's
@@ -223,6 +218,13 @@
 .cell:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -3px;
+}
+
+/* After the caret block: `.cell:focus-visible` has the same specificity, so
+   order is what keeps the caret visible on the accent fill. */
+.cellSameDigit.cellSelected,
+.cellSameDigit:focus-visible {
+  outline-color: var(--ink-on-accent);
 }
 
 /* The pre-hydration placeholder cell (finding

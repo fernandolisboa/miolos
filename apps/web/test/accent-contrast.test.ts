@@ -310,6 +310,19 @@ describe("the Sudoku selection's reach keeps every digit readable (T-WEB-S497)",
     expect(decl(same, "color")).toBe("var(--ink-on-accent)");
   });
 
+  it("keeps the caret visible on a filled copy, mouse or keyboard, by coming after the caret block", () => {
+    const override = ".cellSameDigit:focus-visible {";
+    expect(
+      decl(bodyOf(css, ".cellSameDigit:focus-visible"), "outline-color"),
+    ).toBe("var(--ink-on-accent)");
+    expect(css).toMatch(
+      /^\.cellSameDigit\.cellSelected,\n\.cellSameDigit:focus-visible \{/m,
+    );
+    expect(css.indexOf(override)).toBeGreaterThan(
+      css.indexOf(".cell:focus-visible {"),
+    );
+  });
+
   it("clears >= 4.5:1 for a given and an entered digit on the tint, and for a copy on its fill, in both themes", () => {
     for (const [theme, tools] of [
       ["light", LIGHT],
