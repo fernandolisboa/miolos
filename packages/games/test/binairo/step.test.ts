@@ -230,7 +230,7 @@ describe("nextBinairoStep", () => {
     );
   });
 
-  // ADR-0055: CI 4235 ms at 25 runs (~16.9 s at 100) / local 2232 ms × 4 → 70 s.
+  // ADR-0055: gate 4235 ms (25 runs) / nightly 2361 ms (100) / local 2232 ms; 4235 × 4 → 20 s.
   it("walks every daily to its solution by rules that really apply", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, maskArb, (seed, weekday, mask) => {
@@ -254,5 +254,5 @@ describe("nextBinairoStep", () => {
       }),
       { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
-  }, 70_000);
+  }, 20_000);
 });
