@@ -10,6 +10,8 @@ export type BinairoSolvedGrid = readonly (0 | 1)[];
 
 export type BinairoTier = 1 | 2;
 
+export type BinairoRule = "pair" | "gap" | "count" | "duplicate" | "lookahead";
+
 export interface BinairoPuzzle {
   readonly size: typeof BINAIRO_SIZE;
 

@@ -1,4 +1,10 @@
-import { cellAt, intAt, sideLength, toCellStates } from "./internal";
+import {
+  cellAt,
+  intAt,
+  lineIndices,
+  sideLength,
+  toCellStates,
+} from "./internal";
 import type { CellState } from "./internal";
 import type { BinairoGrid, BinairoSolvedGrid } from "./types";
 
@@ -6,14 +12,6 @@ export interface BinairoViolation {
   readonly rule: "run" | "balance" | "duplicate-line";
 
   readonly cells: readonly number[];
-}
-
-function lineIndices(n: number, isRow: boolean, line: number): number[] {
-  const indices: number[] = [];
-  for (let i = 0; i < n; i += 1) {
-    indices.push(isRow ? line * n + i : i * n + line);
-  }
-  return indices;
 }
 
 export function findBinairoViolations(

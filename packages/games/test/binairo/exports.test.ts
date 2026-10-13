@@ -5,6 +5,7 @@ describe("@miolos/games exports map", () => {
     const mod = await import("@miolos/games/binairo");
     expect(mod.BINAIRO_SIZE).toBe(8);
     expect(typeof mod.generateBinairo).toBe("function");
+    expect(typeof mod.nextBinairoStep).toBe("function");
   });
 
   it("resolves the root barrel (shared substrate only)", async () => {
