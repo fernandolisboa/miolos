@@ -4,7 +4,7 @@
 
 ## Start here
 
-**`/admin` shipped** (#304 PR 1, ADR-0094): an admin edits each `remote_config` key within its schema bounds, no deploy. Admins are the user ids in `ADMIN_USER_IDS` on `apps/api`. `getRemoteConfig` now falls back per key.
+**`/admin` shipped** (#304 PR 1, ADR-0097): an admin edits each `remote_config` key within its schema bounds, no deploy. Admins are the user ids in `ADMIN_USER_IDS` on `apps/api`. `getRemoteConfig` now falls back per key.
 
 **Rainhas is complete** (#285): the engine (ADR-0090), the daily and archive (ADR-0091, ADR-0092) and free play at `/modo-livre/rainhas`. The daily and free screens share `useQueensBoard` and `BoardPanel` (`apps/web/src/queens/`); only `use-queens-play.ts` adds the lifecycle, and the free-play wall bans it.
 

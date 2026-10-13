@@ -26,7 +26,7 @@ export async function getRemoteConfig(db: Db): Promise<RemoteConfig> {
     } else if (!warnedInvalidKeys.has(key.data)) {
       warnedInvalidKeys.add(key.data);
       console.error(
-        `remote_config holds an invalid ${key.data}; falling back to its default (ADR-0094)`,
+        `remote_config holds an invalid ${key.data}; falling back to its default (ADR-0097)`,
       );
     }
   }

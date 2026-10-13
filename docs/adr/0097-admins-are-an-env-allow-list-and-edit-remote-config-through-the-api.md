@@ -1,4 +1,4 @@
-# ADR-0094 — Admins are an env allow-list of user ids and edit remote config through the API, one key at a time
+# ADR-0097 — Admins are an env allow-list of user ids and edit remote config through the API, one key at a time
 
 **Status:** Accepted — 2026-10-13 (issue #304)
 **Depends on:** [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md)

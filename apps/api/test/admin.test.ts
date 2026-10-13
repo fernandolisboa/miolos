@@ -108,7 +108,7 @@ async function storedRows() {
   }));
 }
 
-describe("isAdmin reads ADMIN_USER_IDS on every call (ADR-0094)", () => {
+describe("isAdmin reads ADMIN_USER_IDS on every call (ADR-0097)", () => {
   it("T-API-S290: unset, empty or only commas admits nobody; a listed id matches whole, trimmed and in any case", () => {
     const id = "0b6f3c1e-2d4a-4e8b-9f10-3a5c7d9e1f20";
     expect(isAdmin(id)).toBe(false);

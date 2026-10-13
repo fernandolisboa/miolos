@@ -18,7 +18,7 @@ function rejects(
   }
 }
 
-describe("the admin config write (ADR-0094)", () => {
+describe("the admin config write (ADR-0097)", () => {
   it("T-CORE-S170: one known key and an integer inside that key's bounds, nothing else", () => {
     expect(
       adminConfigWriteSchema.safeParse({ key: "bufferDepth", value: 31 })
@@ -70,7 +70,7 @@ describe("the admin config write (ADR-0094)", () => {
   });
 });
 
-describe("the admin state response (ADR-0094)", () => {
+describe("the admin state response (ADR-0097)", () => {
   it("T-CORE-S172: strict, the viewer's own id, and every key or a null config", () => {
     const config = {
       bufferDepth: 7,

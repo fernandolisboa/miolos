@@ -61,7 +61,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("/admin is a noindex static shell (T-WEB-S500)", () => {
+describe("/admin is a noindex static shell (T-WEB-S530)", () => {
   it("renders its marker, title and section heading with no fetch resolved, and is noindex", () => {
     const markup = renderToStaticMarkup(<AdminPage />);
     expect(markup).toContain('data-page="admin"');
@@ -71,7 +71,7 @@ describe("/admin is a noindex static shell (T-WEB-S500)", () => {
   });
 });
 
-describe("a failed read shows the neutral fallback (T-WEB-S501)", () => {
+describe("a failed read shows the neutral fallback (T-WEB-S531)", () => {
   it("a non-OK answer or a malformed body lands on the unavailable line", async () => {
     for (const respond of [
       () => Promise.resolve(jsonResponse(401, { error: "no-session" })),
@@ -91,7 +91,7 @@ describe("a failed read shows the neutral fallback (T-WEB-S501)", () => {
   });
 });
 
-describe("a non-admin sees the refusal and their own id (T-WEB-S502)", () => {
+describe("a non-admin sees the refusal and their own id (T-WEB-S532)", () => {
   it("shows the id in a code element and no input", async () => {
     serve({ userId: USER_ID, config: null });
     render(<AdminConfigSection />);
@@ -101,7 +101,7 @@ describe("a non-admin sees the refusal and their own id (T-WEB-S502)", () => {
   });
 });
 
-describe("an admin sees one row per key, bounded by the schema (T-WEB-S503)", () => {
+describe("an admin sees one row per key, bounded by the schema (T-WEB-S533)", () => {
   it("each input carries its value, min, max and step, and the row names its range and default", async () => {
     serve({ userId: USER_ID, config: { ...CONFIG, bufferDepth: 12 } });
     render(<AdminConfigSection />);
@@ -124,7 +124,7 @@ describe("an admin sees one row per key, bounded by the schema (T-WEB-S503)", ()
   });
 });
 
-describe("saving a row posts that key and redraws every row from the answer (T-WEB-S504)", () => {
+describe("saving a row posts that key and redraws every row from the answer (T-WEB-S534)", () => {
   it("posts {key, value}, says saved, and every row shows the server's answer", async () => {
     const fetchMock = serve(
       { userId: USER_ID, config: { ...CONFIG, attachStreakThreshold: 9 } },
@@ -156,7 +156,7 @@ describe("saving a row posts that key and redraws every row from the answer (T-W
   });
 });
 
-describe("a failed save keeps the draft and says so (T-WEB-S505)", () => {
+describe("a failed save keeps the draft and says so (T-WEB-S535)", () => {
   it("a 403, a malformed answer or a network error leave the typed value in place", async () => {
     for (const write of [
       () => Promise.resolve(jsonResponse(403, { error: "not-admin" })),
@@ -179,7 +179,7 @@ describe("a failed save keeps the draft and says so (T-WEB-S505)", () => {
   });
 });
 
-describe("Salvar is offered only for a changed, valid draft and holds still in flight (T-WEB-S506)", () => {
+describe("Salvar is offered only for a changed, valid draft and holds still in flight (T-WEB-S536)", () => {
   it("is disabled while unchanged, empty, out of range or fractional, and while the write is pending", async () => {
     let finish: (response: Response) => void = () => undefined;
     serve(
@@ -216,7 +216,7 @@ describe("Salvar is offered only for a changed, valid draft and holds still in f
   });
 });
 
-describe("one save at a time, so an older answer never overwrites a newer one (T-WEB-S507)", () => {
+describe("one save at a time, so an older answer never overwrites a newer one (T-WEB-S537)", () => {
   it("holds every row while any row's write is pending", async () => {
     let finish: (response: Response) => void = () => undefined;
     serve(
