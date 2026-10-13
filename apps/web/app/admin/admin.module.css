@@ -1,0 +1,75 @@
+.row {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+/* 16px, deliberately: below that iOS zooms the page on focus. */
+.input {
+  box-sizing: border-box;
+  width: 7ch;
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--paper-desk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.range {
+  font-size: 14px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.save {
+  min-height: var(--touch-target-min);
+  margin-left: auto;
+  padding: var(--space-3) var(--space-5);
+  background: var(--paper-card);
+  color: var(--ink);
+  font: var(--text-button);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.save:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.userId {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}

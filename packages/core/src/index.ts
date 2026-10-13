@@ -66,8 +66,11 @@ export {
 export { computeStreak, type StreakRow, type StreakStatus } from "./streak";
 export {
   defaultRemoteConfig,
+  remoteConfigField,
+  remoteConfigKeySchema,
   remoteConfigSchema,
   type RemoteConfig,
+  type RemoteConfigKey,
 } from "./remote-config";
 export { healthResponseSchema, type HealthResponse } from "./contracts/health";
 export {
@@ -220,6 +223,12 @@ export {
   type AccountUnlinkGoogleResponse,
   type GoogleSignInOutcome,
 } from "./contracts/google";
+export {
+  adminConfigWriteSchema,
+  adminStateResponseSchema,
+  type AdminConfigWriteRequest,
+  type AdminStateResponse,
+} from "./contracts/admin";
 export {
   medalIdSchema,
   medalsResponseSchema,
