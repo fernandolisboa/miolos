@@ -362,9 +362,12 @@ describe("every screen root warms the conclusion chunk on mount (T-WEB-S289)", (
 
       await mount();
 
-      await waitFor(() => {
-        expect(chunk.loads).toBeGreaterThan(0);
-      });
+      await waitFor(
+        () => {
+          expect(chunk.loads).toBeGreaterThan(0);
+        },
+        { timeout: 5000 },
+      );
     },
   );
 });

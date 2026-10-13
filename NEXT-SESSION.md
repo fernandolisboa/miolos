@@ -18,6 +18,8 @@
 
 **The Sudoku board shows the selection's reach** (#302): selecting a cell tints its row, column and box, and fills every other copy of its digit with the accent; violating and hinted cells keep their own look. The rule lives in `selectionHighlights` and `sharesUnit` (`apps/web/src/sudoku/engine.ts`), which #296's explained hint can reuse. Test ids `T-WEB-S495…S497`.
 
+**Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `useHintKind` (`play/use-hint-kind.ts`) clears the hint note with it, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds, so a change to hint counts (#295) needs no change to the reset. Test ids `T-WEB-S514…S517`.
+
 ## Traps
 
 **Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** `users-updated-at.test.ts` scans `apps/api/src`, but the db test task's cache key does not include that folder, so pre-commit can replay a stale pass. Run `pnpm test --force` before trusting a green gate after an `apps/api` change.

@@ -5,6 +5,7 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import { useEffect, useReducer, useState } from "react";
 
 import { messages } from "../i18n";
+import { hasDecidedCell } from "../play/reset-board";
 import screen from "../play/screen.module.css";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
@@ -91,6 +92,7 @@ function NonogramFreeBoard({
     enterValue,
     clearCell,
     revealHint,
+    reset,
     setBrush,
     markCell,
     strokeStart,
@@ -135,6 +137,7 @@ function NonogramFreeBoard({
             explain: hintKind === null ? null : copy.hint.explain[hintKind],
             onReveal: revealHint,
           },
+          onReset: hasDecidedCell(state.entries) ? reset : null,
         },
       }}
     >

@@ -6,6 +6,7 @@ import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 import { messages } from "../i18n";
 import { accentVars } from "./accent";
 import { useFreeHintsPerPuzzle } from "./free-hints";
+import { ResetControl, ResetPlaceholder } from "./reset-control";
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
 
@@ -47,6 +48,7 @@ export interface PlayChromeReadouts {
     readonly explain: string | null;
     readonly onReveal: () => void;
   };
+  readonly onReset: (() => void) | null;
 }
 
 export type PlayChromeState =
@@ -194,6 +196,14 @@ export function PlayScreenChrome({
           <p className={screen.hintExplain}>{readouts.hint.explain}</p>
         )}
       </section>
+
+      <div className={screen.reset}>
+        {readouts === null ? (
+          <ResetPlaceholder />
+        ) : (
+          <ResetControl onReset={readouts.onReset} />
+        )}
+      </div>
 
       {readouts === null ? (
         <div

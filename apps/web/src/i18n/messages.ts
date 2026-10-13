@@ -110,6 +110,11 @@ export const messages = {
         `Usar dica — ${left} ${left === 1 ? "disponível" : "disponíveis"}`,
       used: "Dicas usadas",
     },
+    reset: {
+      label: "Recomeçar",
+      question: "Recomeçar o puzzle? Suas jogadas serão apagadas.",
+      cancel: "Cancelar",
+    },
   },
   conclusion: {
     back,

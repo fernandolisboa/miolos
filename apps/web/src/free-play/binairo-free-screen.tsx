@@ -12,6 +12,8 @@ import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
+import { hasDecidedCell } from "../play/reset-board";
+import { useHintKind } from "../play/use-hint-kind";
 import screen from "../play/screen.module.css";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
@@ -82,9 +84,8 @@ function BinairoFreeBoard({
   );
   const { tapCell, strokeStart, paintOver, toggleMode } =
     useBinairoControls(dispatch);
-  const [hintKind, setHintKind] = useState<Hint<0 | 1 | null>["kind"] | null>(
-    null,
-  );
+  const { hintKind, setHintKind, reset } =
+    useHintKind<Hint<0 | 1 | null>["kind"]>(dispatch);
   const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
@@ -111,7 +112,7 @@ function BinairoFreeBoard({
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution: puzzle.solution });
-  }, [puzzle.solution, allowance]);
+  }, [puzzle.solution, setHintKind, allowance]);
 
   if (state.status === "solved") {
     return <FreePlaySolvedCard game="binairo" level={level} onAgain={onNext} />;
@@ -133,6 +134,7 @@ function BinairoFreeBoard({
             explain: hintKind === null ? null : copy.hint.explain[hintKind],
             onReveal: revealHint,
           },
+          onReset: hasDecidedCell(state.entries) ? reset : null,
         },
       }}
     >

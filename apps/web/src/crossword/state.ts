@@ -7,6 +7,7 @@ import { nextHint } from "../play/grid-hint";
 import { movedSelection } from "../play/grid-selection";
 import { hasHintLeft } from "../play/hint-allowance";
 import type { CrosswordPlayRecord, PlayRecord } from "../play/play-record";
+import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 import {
@@ -40,6 +41,7 @@ export interface CrosswordPlayState extends PlayCore {
 
 export type CrosswordPlayAction =
   | LifecycleAction
+  | ResetAction
   | { readonly type: "select"; readonly index: number }
   | {
       readonly type: "select-entry";
@@ -157,6 +159,9 @@ export function crosswordPlayReducer(
         },
       };
     }
+
+    case "reset":
+      return resetBoard(state, (entries) => ({ ...state, entries }));
 
     case "tick":
     case "pause":

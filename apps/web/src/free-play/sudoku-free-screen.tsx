@@ -7,6 +7,8 @@ import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
+import { hasDecidedCell } from "../play/reset-board";
+import { useHintKind } from "../play/use-hint-kind";
 import screen from "../play/screen.module.css";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { playableGivens } from "../sudoku/engine";
@@ -81,9 +83,8 @@ function SudokuFreeBoard({
     puzzle.daily,
     initSudokuPlayState,
   );
-  const [hintKind, setHintKind] = useState<Hint<SudokuDigit>["kind"] | null>(
-    null,
-  );
+  const { hintKind, setHintKind, reset } =
+    useHintKind<Hint<SudokuDigit>["kind"]>(dispatch);
   const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
@@ -130,7 +131,7 @@ function SudokuFreeBoard({
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution: puzzle.solution });
-  }, [puzzle.solution, allowance]);
+  }, [puzzle.solution, setHintKind, allowance]);
 
   if (state.status === "solved") {
     return <FreePlaySolvedCard game="sudoku" level={level} onAgain={onNext} />;
@@ -156,6 +157,7 @@ function SudokuFreeBoard({
             explain: hintKind === null ? null : copy.hint.explain[hintKind],
             onReveal: revealHint,
           },
+          onReset: hasDecidedCell(state.entries) ? reset : null,
         },
       }}
     >
