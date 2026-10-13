@@ -318,7 +318,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
     const { played } = board;
     const after = board.reduce(played, RESET);
 
-    it("starts from a board with entries, a spent hint and a running clock", () => {
+    it("starts from a board with decided cells, a spent hint and a running clock", () => {
       expect(played.entries.some((entry) => entry !== null)).toBe(true);
       expect(played.hint.used).toBe(1);
       expect(played.timer.runningSince).not.toBeNull();

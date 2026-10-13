@@ -5,7 +5,7 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import { useCallback, useEffect, useReducer, useState } from "react";
 
 import { messages } from "../i18n";
-import { hasEntries } from "../play/reset-board";
+import { hasDecidedCell } from "../play/reset-board";
 import screen from "../play/screen.module.css";
 import { useBinaryGridControls } from "../play/use-binary-grid-controls";
 import { Board, BoardSkeleton } from "../nonogram/board";
@@ -149,7 +149,7 @@ function NonogramFreeBoard({
             explain: hintKind === null ? null : copy.hint.explain[hintKind],
             onReveal: revealHint,
           },
-          onReset: hasEntries(state.entries) ? reset : null,
+          onReset: hasDecidedCell(state.entries) ? reset : null,
         },
       }}
     >

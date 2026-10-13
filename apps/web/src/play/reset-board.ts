@@ -2,7 +2,7 @@ import type { HintState, PlayCore } from "./types";
 
 export type ResetAction = { readonly type: "reset" };
 
-export function hasEntries(entries: readonly unknown[]): boolean {
+export function hasDecidedCell(entries: readonly unknown[]): boolean {
   return entries.some((entry) => entry !== null);
 }
 
@@ -12,7 +12,7 @@ export function resetBoard<
     readonly hint: HintState;
   },
 >(state: S, rederive: (entries: readonly null[]) => S): S {
-  if (state.status !== "playing" || !hasEntries(state.entries)) {
+  if (state.status !== "playing" || !hasDecidedCell(state.entries)) {
     return state;
   }
   return {

@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 
 import { messages } from "../i18n";
-import { hasEntries } from "../play/reset-board";
+import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
 import screen from "../play/screen.module.css";
 import { ActiveClueBar, ClueLists } from "./clues";
@@ -23,7 +23,7 @@ export function crosswordReadouts(board: CrosswordBoard): PlayChromeReadouts {
         board.hintKind === null ? null : copy.hint.explain[board.hintKind],
       onReveal: board.revealHint,
     },
-    onReset: hasEntries(board.state.entries) ? board.reset : null,
+    onReset: hasDecidedCell(board.state.entries) ? board.reset : null,
   };
 }
 

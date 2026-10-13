@@ -73,14 +73,14 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
       );
       const setItem = vi.spyOn(Storage.prototype, "setItem");
       const { container } = render(element);
-      const empty = cells(container);
+      const fresh = cells(container);
       expect(screen.getByRole("button", { name: reset.label })).toHaveAttribute(
         "aria-disabled",
         "true",
       );
 
       fireEvent.click(screen.getByText(hint.available));
-      expect(cells(container)).not.toEqual(empty);
+      expect(cells(container)).not.toEqual(fresh);
       expect(explanation(container)).not.toBeNull();
 
       fireEvent.click(screen.getByRole("button", { name: reset.label }));
@@ -93,7 +93,7 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
         ),
       );
 
-      expect(cells(container)).toEqual(empty);
+      expect(cells(container)).toEqual(fresh);
       expect(screen.getByRole("button", { name: reset.label })).toHaveAttribute(
         "aria-disabled",
         "true",

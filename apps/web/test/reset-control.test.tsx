@@ -71,7 +71,7 @@ describe("ResetControl asks before it clears (T-WEB-S499)", () => {
     expect(screen.queryByRole("group")).toBeNull();
   });
 
-  it("keeps focus on the trigger when the confirmed reset empties the board", () => {
+  it("keeps focus on the trigger when the confirmed reset leaves no cell decided", () => {
     let onReset: (() => void) | null = () => {
       onReset = null;
     };
@@ -86,7 +86,7 @@ describe("ResetControl asks before it clears (T-WEB-S499)", () => {
     expect(trigger).toHaveFocus();
   });
 
-  it("stops asking, without taking focus, if the board empties while it asks", () => {
+  it("stops asking, without taking focus, if no cell is decided any more while it asks", () => {
     const onReset = vi.fn();
     const { rerender } = mount(onReset);
     open();

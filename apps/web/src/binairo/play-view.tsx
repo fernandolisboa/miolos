@@ -1,6 +1,6 @@
 import { messages } from "../i18n";
 import { DailyPlayChrome } from "../play/daily-chrome";
-import { hasEntries } from "../play/reset-board";
+import { hasDecidedCell } from "../play/reset-board";
 import screen from "../play/screen.module.css";
 import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
@@ -41,7 +41,7 @@ export function PlayView({
               play.hintKind === null ? null : copy.hint.explain[play.hintKind],
             onReveal: play.revealHint,
           },
-          onReset: hasEntries(state.entries) ? play.reset : null,
+          onReset: hasDecidedCell(state.entries) ? play.reset : null,
         },
       }}
     >

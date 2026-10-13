@@ -15,7 +15,7 @@ import { messages } from "../i18n";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
-import { hasEntries } from "../play/reset-board";
+import { hasDecidedCell } from "../play/reset-board";
 import { useHintKind } from "../play/use-hint-kind";
 import screen from "../play/screen.module.css";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
@@ -150,7 +150,7 @@ function BinairoFreeBoard({
             explain: hintKind === null ? null : copy.hint.explain[hintKind],
             onReveal: revealHint,
           },
-          onReset: hasEntries(state.entries) ? reset : null,
+          onReset: hasDecidedCell(state.entries) ? reset : null,
         },
       }}
     >

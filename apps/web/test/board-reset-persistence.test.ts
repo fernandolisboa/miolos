@@ -86,7 +86,7 @@ function registerDaily<P extends Play>({ name, usePlay, enter }: Daily<P>) {
       return hook;
     }
 
-    it("rewrites the record with no entries, the hint still spent and the clock not rewound", () => {
+    it("rewrites the record with every cell undecided, the hint still spent and the clock not rewound", () => {
       const { result } = started();
       act(() => {
         enter(result.current);
