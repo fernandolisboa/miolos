@@ -7,6 +7,8 @@ import {
   completionRequestSchema,
   completionResponseSchema,
   crosswordCompletionRequestSchema,
+  dayGameStateSchema,
+  FREE_HINTS_PER_PUZZLE,
   nonogramCompletionRequestSchema,
   queensCompletionRequestSchema,
   sudokuCompletionRequestSchema,
@@ -72,6 +74,69 @@ const validTermo: TermoCompletionRequest = {
   elapsedMs: 272_000,
   hintsUsed: 1,
 };
+
+const crosswordGrid: CrosswordCompletionRequest["grid"] = Array.from(
+  { length: 25 },
+  (_unused, index) => (index % 6 === 0 ? null : "a"),
+);
+
+const validCrossword: CrosswordCompletionRequest = {
+  game: "crossword",
+  date: "2026-09-28",
+  grid: crosswordGrid,
+  elapsedMs: 272_000,
+  hintsUsed: 1,
+};
+
+function queensGrid(size: number): QueensCompletionRequest["grid"] {
+  return Array.from({ length: size * size }, (_unused, index): 0 | 1 =>
+    index % (size + 2) === 0 ? 1 : 0,
+  );
+}
+
+const validQueens: QueensCompletionRequest = {
+  game: "queens",
+  date: "2026-10-12",
+  grid: queensGrid(9),
+  elapsedMs: 272_000,
+  hintsUsed: 1,
+};
+
+describe("hintsUsedSchema", () => {
+  const validBodies = [
+    valid,
+    validCrossword,
+    validNonogram,
+    validQueens,
+    validSudoku,
+    validTermo,
+  ];
+
+  it("T-CORE-S163: every completion member and a completed /day claim accept 0..FREE_HINTS_PER_PUZZLE hints and nothing else", () => {
+    expect(validBodies.map((body) => body.game).sort()).toEqual(
+      completionRequestSchema.options
+        .map((member) => member.shape.game.value)
+        .sort(),
+    );
+    const parsers = [
+      ...validBodies.map(
+        (body) => (hintsUsed: number) =>
+          completionRequestSchema.safeParse({ ...body, hintsUsed }).success,
+      ),
+      (hintsUsed: number) =>
+        dayGameStateSchema.safeParse({ status: "completed", hintsUsed })
+          .success,
+    ];
+    for (const accepts of parsers) {
+      for (let hints = 0; hints <= FREE_HINTS_PER_PUZZLE; hints += 1) {
+        expect(accepts(hints), String(hints)).toBe(true);
+      }
+      for (const bad of [FREE_HINTS_PER_PUZZLE + 1, -1, 1.5]) {
+        expect(accepts(bad), String(bad)).toBe(false);
+      }
+    }
+  });
+});
 
 describe("binairoCompletionRequestSchema", () => {
   it("parses and round-trips a valid submission", () => {
@@ -159,17 +224,6 @@ describe("binairoCompletionRequestSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects hintsUsed: 2 — v1 grants exactly one free hint per puzzle (plan 017 D21)", () => {
-    expect(
-      binairoCompletionRequestSchema.safeParse({ ...valid, hintsUsed: 2 })
-        .success,
-    ).toBe(false);
-    expect(
-      binairoCompletionRequestSchema.safeParse({ ...valid, hintsUsed: 0 })
-        .success,
-    ).toBe(true);
-  });
-
   it("T-CORE-S23: the union now carries termo, and a relabelled binairo body still fails", () => {
     expect(completionRequestSchema.safeParse(validTermo).success).toBe(true);
     expect(
@@ -250,7 +304,7 @@ describe("termoCompletionRequestSchema", () => {
       { elapsedMs: -1 },
       { elapsedMs: 86_400_001 },
       { elapsedMs: 1.5 },
-      { hintsUsed: 2 },
+      { hintsUsed: FREE_HINTS_PER_PUZZLE + 1 },
       { hintsUsed: -1 },
     ]) {
       expect(
@@ -335,21 +389,6 @@ describe("nonogramCompletionRequestSchema", () => {
     expect(nonogramCompletionRequestSchema.safeParse(threeState).success).toBe(
       false,
     );
-  });
-
-  it("rejects hintsUsed: 2 — v1 grants exactly one free hint per puzzle (plan 017 D21)", () => {
-    expect(
-      nonogramCompletionRequestSchema.safeParse({
-        ...validNonogram,
-        hintsUsed: 2,
-      }).success,
-    ).toBe(false);
-    expect(
-      nonogramCompletionRequestSchema.safeParse({
-        ...validNonogram,
-        hintsUsed: 0,
-      }).success,
-    ).toBe(true);
   });
 
   it("rejects a negative, an over-cap and a non-integer elapsedMs", () => {
@@ -437,17 +476,6 @@ describe("sudokuCompletionRequestSchema", () => {
         elapsedMs: 1.5,
       }).success,
     ).toBe(false);
-  });
-
-  it("rejects hintsUsed: 2 — v1 grants exactly one free hint per puzzle (plan 017 D21)", () => {
-    expect(
-      sudokuCompletionRequestSchema.safeParse({ ...validSudoku, hintsUsed: 2 })
-        .success,
-    ).toBe(false);
-    expect(
-      sudokuCompletionRequestSchema.safeParse({ ...validSudoku, hintsUsed: 0 })
-        .success,
-    ).toBe(true);
   });
 
   it("rejects the impossible date the shape regex alone accepts", () => {
@@ -594,18 +622,6 @@ describe("the completion request carries no instant (plan 017 D19)", () => {
 });
 
 describe("crosswordCompletionRequestSchema", () => {
-  const crosswordGrid: CrosswordCompletionRequest["grid"] = Array.from(
-    { length: 25 },
-    (_unused, index) => (index % 6 === 0 ? null : "a"),
-  );
-  const validCrossword: CrosswordCompletionRequest = {
-    game: "crossword",
-    date: "2026-09-28",
-    grid: crosswordGrid,
-    elapsedMs: 272_000,
-    hintsUsed: 1,
-  };
-
   it("T-CORE-S124: parses and round-trips a row-major 25-cell grid, blocks as null, through the union too", () => {
     expect(crosswordCompletionRequestSchema.parse(validCrossword)).toEqual(
       validCrossword,
@@ -635,7 +651,7 @@ describe("crosswordCompletionRequestSchema", () => {
       withCell(0),
       { ...validCrossword, grid: crosswordGrid.slice(1) },
       { ...validCrossword, grid: [...crosswordGrid, "a"] },
-      { ...validCrossword, hintsUsed: 2 },
+      { ...validCrossword, hintsUsed: FREE_HINTS_PER_PUZZLE + 1 },
       { ...validCrossword, date: "2026-02-30" },
       { ...validCrossword, clues: [] },
       { ...validSudoku, game: "crossword" },
@@ -650,19 +666,6 @@ describe("crosswordCompletionRequestSchema", () => {
 });
 
 describe("queensCompletionRequestSchema", () => {
-  function queensGrid(size: number): QueensCompletionRequest["grid"] {
-    return Array.from({ length: size * size }, (_unused, index): 0 | 1 =>
-      index % (size + 2) === 0 ? 1 : 0,
-    );
-  }
-  const validQueens: QueensCompletionRequest = {
-    game: "queens",
-    date: "2026-10-12",
-    grid: queensGrid(9),
-    elapsedMs: 272_000,
-    hintsUsed: 1,
-  };
-
   it.each([7, 8, 9])(
     "T-CORE-S134: parses and round-trips a %i x %i queens grid, through the union too",
     (size) => {
@@ -695,7 +698,7 @@ describe("queensCompletionRequestSchema", () => {
       { ...validQueens, grid: queensGrid(6) },
       { ...validQueens, grid: queensGrid(10) },
       { ...validQueens, grid: validQueens.grid.slice(1) },
-      { ...validQueens, hintsUsed: 2 },
+      { ...validQueens, hintsUsed: FREE_HINTS_PER_PUZZLE + 1 },
       { ...validQueens, date: "2026-02-30" },
       { ...validQueens, size: 9 },
       { ...validQueens, marks: [] },

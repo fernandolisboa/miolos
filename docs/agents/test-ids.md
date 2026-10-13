@@ -37,10 +37,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S163` | `S162` | never used |
+| `T-CORE` | `S164` | `S163` | never used |
 | `T-DB` | `S125` | `S124` | `T-DB-21` |
-| `T-API` | `S283` | `S282` | `T-API-16` |
-| `T-WEB` | `S488` | `S487` | `T-WEB-23` |
+| `T-API` | `S284` | `S283` | `T-API-16` |
+| `T-WEB` | `S496` | `S495` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
 #280 (Google sign-in, ADR-0089) spent `T-CORE-S160…S162`, `T-DB-S120…S124`, `T-API-S260…S282` (but not `S270`) and `T-WEB-S470…S475` without moving this table; #285 reconciled it. The gaps it skipped (`T-CORE-S139…S159`, `T-DB-S102…S119`, `T-API-S246…S259`, `T-WEB-S460…S469`) and `T-API-S270` are **burned**, never reused.
@@ -50,6 +50,8 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 #285 PR 3 (Rainhas free play) spent **`T-WEB-S477…S482`**: `S477` (the free puzzle's wire shape per level, `FREE_PLAY_DATE`, no solution key), `S478` (a zero-fetch, zero-write solve with no clock, through "Mais uma"), `S479` (a level switch remounts at 7, 8, 9), `S480` (the one hint), `S481` (the error card's retry) and `S482` (the fifth card's layout at both breakpoints); **`T-LINT-S68`** (the Rainhas daily hook and screen root red from free play). `T-WEB-S56`, `S109`, `S374` (now also pins the queens engine on the graph and the queens lifecycle modules off it), `S111`–`S113` and `S174` were widened in place and took no new id.
 
 #289 (the shared daily and archive screen shells, ADR-0093) spent **`T-WEB-S483…S487`**: `S483` (the daily ladder rung by rung, and the preload on mount), `S484` (the archive ladder), `S485` (the shared record header, and each game's record parsing with it) and `S486` (the chrome's per-game copy, and `DailyPlayChrome`'s back link and note) and `S487` (each of the twelve screen roots hands its game, claim, state, result or own conclusion, and unavailable verdict to its shell); the sibling **`T-WEB-S364a`** (neither shell reaches a per-game module, the archive shell no conclusion); and **`T-LINT-S69`** (`play/daily-screen` red from free play). `T-WEB-S183` (the archive's forbidden names now cover all six games and `daily-screen`), `S374` (`daily-screen` joins the daily lifecycle modules kept off free play's graph) and `S191` (`share-text.test.ts` case c compares the record schema's key set, since the shared header changes key order) were widened in place and took no new id. Nothing is burned.
+
+#295 PR A (the hint wire accepts three, ADR-0094) spent **`T-CORE-S163`** (every completion member and a completed `/day` claim accept `0..FREE_HINTS_PER_PUZZLE` hints and nothing else), **`T-API-S283`** (a completion at the cap is accepted and `/day` answers 200 with it) and **`T-WEB-S495`** (a play record at the cap reads, one past it does not). `T-WEB-S488…S494` are live reservations of parallel threads, not free space. `T-CORE-S22`, `S103`, `S124` and `S134` now reject `FREE_HINTS_PER_PUZZLE + 1` in place and took no new id. Nothing is burned.
 
 #279 (Cruzadinha free play, ADR-0088) spent **`T-WEB-S444…S447`**: `S444` (only `/modo-livre/cruzadinha` reaches the lexicon), `S445` (the free crossword's wire shape, `FREE_PLAY_DATE`, one puzzle per seed), `S446` (a zero-fetch, zero-write session with no clock and no level, through "Mais uma") and `S447` (the shared error card's retry), with the sibling `S122a` (the crossword's one hint); **`T-LINT-S67`** (the one exempt static importer), with the sibling `S17a` (the Cruzadinha's daily hook and screen root red from free play). Nothing is burned. **Retired at #279:** the marker case of `T-WEB-S206a` (the OG deck held no single-word Termo marker) and of `T-WEB-S206`, plus the three canaries in `medals-content.test.ts`'s `FORBIDDEN_VOCABULARY`. The markers became answer-list pairs, which no copy can spell. `S206` keeps its import check; `S206a` keeps its archive-copy and barrel arms.
 
