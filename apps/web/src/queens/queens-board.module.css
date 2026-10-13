@@ -13,6 +13,7 @@
   display: grid;
   gap: 0;
   touch-action: none;
+  --spotlight-strength: 16%;
 }
 
 .size7 {

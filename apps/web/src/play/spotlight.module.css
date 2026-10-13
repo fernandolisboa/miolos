@@ -1,0 +1,10 @@
+/* Doubled class: outranks each board's `background` shorthand whatever order
+   the stylesheets load in. Each board sets `--spotlight-strength`. */
+.spotlit.spotlit {
+  --spotlight: color-mix(
+    in srgb,
+    var(--accent) var(--spotlight-strength),
+    transparent
+  );
+  background-image: linear-gradient(var(--spotlight), var(--spotlight));
+}

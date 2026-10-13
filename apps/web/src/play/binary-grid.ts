@@ -1,9 +1,10 @@
 import { HINTS_PER_PUZZLE_CEILING } from "@miolos/core";
 
 import { toggled } from "./brush";
-import { nextBinaryHint } from "./grid-hint";
+import type { Revealed } from "./grid-hint";
 import { movedSelection } from "./grid-selection";
 import { hasHintLeft } from "./hint-allowance";
+import { idleHint, spentHint, unlit } from "./hint-state";
 import type {
   NonogramPlayRecord,
   PlayRecord,
@@ -19,12 +20,12 @@ export type BinaryCellValue = BinaryMark | null;
 
 type BinaryRecord = NonogramPlayRecord | QueensPlayRecord;
 
-export interface BinaryGridState extends PlayCore {
+export interface BinaryGridState<R = unknown> extends PlayCore {
   readonly size: number;
   readonly solution: readonly BinaryMark[] | null;
   readonly entries: readonly BinaryCellValue[];
   readonly selected: number | null;
-  readonly hint: HintState;
+  readonly hint: HintState<R>;
   readonly status: "playing" | "solved";
 }
 
@@ -41,15 +42,18 @@ export type BinaryGridAction =
   | { readonly type: "clear-cell" }
   | { readonly type: "use-hint" };
 
-export interface BinaryGridRules<S extends BinaryGridState> {
+export interface BinaryGridRules<S extends BinaryGridState<R>, R> {
   readonly game: BinaryRecord["game"];
   readonly derive: (state: S, entries: readonly BinaryCellValue[]) => S;
+  readonly hint: (state: Solved<S>) => Revealed<BinaryMark, R> | null;
 }
 
-export function binaryGridReducer<S extends BinaryGridState>(
+type Solved<S> = S & { readonly solution: readonly BinaryMark[] };
+
+export function binaryGridReducer<S extends BinaryGridState<R>, R>(
   state: S,
   action: BinaryGridAction,
-  rules: BinaryGridRules<S>,
+  rules: BinaryGridRules<S, R>,
 ): S {
   switch (action.type) {
     case "restore":
@@ -61,11 +65,13 @@ export function binaryGridReducer<S extends BinaryGridState>(
       }
       return state.selected === action.index
         ? state
-        : { ...state, selected: action.index };
+        : { ...unlit(state), selected: action.index };
 
     case "move-selection": {
       const next = movedSelection(state.selected, action, state.size);
-      return state.selected === next ? state : { ...state, selected: next };
+      return state.selected === next
+        ? state
+        : { ...unlit(state), selected: next };
     }
 
     case "enter-value": {
@@ -89,19 +95,13 @@ export function binaryGridReducer<S extends BinaryGridState>(
 
     case "use-hint": {
       const hint = canHint(state, HINTS_PER_PUZZLE_CEILING)
-        ? nextBinaryHint(state.solution, state.entries)
+        ? rules.hint(state)
         : null;
       if (hint === null) {
         return state;
       }
       const revealed = withBinaryEntry(state, hint.index, hint.value, rules);
-      return {
-        ...revealed,
-        hint: {
-          used: state.hint.used + 1,
-          lastIndex: hint.index,
-        },
-      };
+      return { ...revealed, hint: spentHint(state.hint, hint) };
     }
 
     case "reset":
@@ -144,22 +144,27 @@ export function binaryCellValue(
   return state.entries[index] ?? null;
 }
 
-export function withBinaryEntry<S extends BinaryGridState>(
+export function withBinaryEntry<S extends BinaryGridState<R>, R>(
   state: S,
   index: number,
   value: BinaryCellValue,
-  rules: BinaryGridRules<S>,
+  rules: BinaryGridRules<S, R>,
 ): S {
-  if (state.status !== "playing" || (state.entries[index] ?? null) === value) {
+  if (state.status !== "playing") {
     return state;
+  }
+  if ((state.entries[index] ?? null) === value) {
+    return unlit(state);
   }
   const entries = state.entries.map((entry, at) =>
     at === index ? value : entry,
   );
   const written = rules.derive(state, entries);
-  return state.hint.lastIndex === index
-    ? { ...written, hint: { ...written.hint, lastIndex: null } }
-    : written;
+  return unlit(
+    state.hint.lastIndex === index
+      ? { ...written, hint: { ...written.hint, lastIndex: null } }
+      : written,
+  );
 }
 
 export function settled<S extends BinaryGridState>(
@@ -175,11 +180,11 @@ export function settled<S extends BinaryGridState>(
   };
 }
 
-function restore<S extends BinaryGridState>(
+function restore<S extends BinaryGridState<R>, R>(
   state: S,
   record: PlayRecord | undefined,
   now: number,
-  rules: BinaryGridRules<S>,
+  rules: BinaryGridRules<S, R>,
 ): S {
   if (
     !isBinaryRecord(record) ||
@@ -192,10 +197,7 @@ function restore<S extends BinaryGridState>(
   return {
     ...rules.derive(state, record.entries),
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: {
-      used: record.hintsUsed,
-      lastIndex: null,
-    },
+    hint: idleHint(record.hintsUsed),
     pendingSync: record.pendingSync,
     now,
     hydrated: true,

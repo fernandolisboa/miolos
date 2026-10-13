@@ -8,6 +8,7 @@ import { ActiveClueBar, ClueLists } from "./clues";
 import { Board, BoardSkeleton, focusBoard } from "./board";
 import { Keyboard, KeyboardSkeleton } from "./keyboard";
 import type { CrosswordDirection } from "./grid";
+import { crosswordHintExplanation } from "./hint";
 import type { CrosswordBoard } from "./use-crossword-board";
 
 const copy = messages.games.crossword.play;
@@ -19,8 +20,7 @@ export function crosswordReadouts(board: CrosswordBoard): PlayChromeReadouts {
     hint: {
       ready: board.hintReady,
       used: board.state.hint.used,
-      explain:
-        board.hintKind === null ? null : copy.hint.explain[board.hintKind],
+      explain: crosswordHintExplanation(board.state.hint.reason),
       onReveal: board.revealHint,
     },
     onReset: hasDecidedCell(board.state.entries) ? board.reset : null,

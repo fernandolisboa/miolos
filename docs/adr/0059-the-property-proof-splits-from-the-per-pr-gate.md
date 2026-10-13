@@ -117,6 +117,7 @@ nonogram, termo and `grade.test.ts` keep running their full counts on **every**
 pull request, because introducing the split where there is no measured cost
 would weaken the gate to buy single-digit seconds. **A property joins the split
 only with its own measured gate rows in the pull request that adds it.**
+The Binairo step property joined at #297 ([ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md)).
 
 **5. The nightly fails loudly, and cannot be deleted in silence.**
 

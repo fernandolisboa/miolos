@@ -42,6 +42,7 @@
   /* Scoped to the board so a paint drag never fights the page scroll, and
      the rest of the screen still scrolls normally (§8.2). */
   touch-action: none;
+  --spotlight-strength: 12%;
 }
 
 .cell {

@@ -1,3 +1,4 @@
+import type { GridLine } from "../line";
 import type { Weekday } from "../weekday";
 
 export const QUEENS_SIZES = [7, 8, 9] as const;
@@ -25,6 +26,27 @@ export interface QueensGrade {
   readonly solved: boolean;
   readonly maxTier: QueensTier;
   readonly advancedSteps: number;
+}
+
+export type QueensEntry = 0 | 1 | null;
+
+export type QueensElimination =
+  | "regionInRow"
+  | "regionInColumn"
+  | "rowInRegion"
+  | "columnInRegion"
+  | "blocking"
+  | "regionGroupRows"
+  | "regionGroupColumns";
+
+export type QueensUnit =
+  GridLine | { readonly kind: "region"; readonly index: number };
+
+export interface QueensStep {
+  readonly index: number;
+  readonly unit: QueensUnit;
+  readonly cells: readonly number[];
+  readonly after: QueensElimination | null;
 }
 
 export type QueensRejectionReason =

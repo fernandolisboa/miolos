@@ -4,7 +4,7 @@
 
 ## Start here
 
-The Sudoku hint reveals and explains the next logical step (#296, ADR-0099); `nextSudokuHint` is in `apps/web/src/sudoku/hint.ts`, `nextSudokuStep` in `packages/games/src/sudoku/grade.ts`.
+Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0101). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
 
 **`/admin`** (#304, #314, ADR-0097, ADR-0100): an admin edits each `remote_config` key within its bounds, no deploy. Admins and superusers are verified attached emails in `admin_users` (migration 0016, `packages/db/src/admin-users.ts`); a superuser manages them on the page, and one locking statement keeps the last superuser. `ADMIN_USER_IDS` is gone.
 
@@ -14,13 +14,9 @@ The Sudoku hint reveals and explains the next logical step (#296, ADR-0099); `ne
 
 **One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
 
-**Three free hints per puzzle shipped** (#295, ADR-0095): `FREE_HINTS_PER_PUZZLE` in `@miolos/core` is the default and free play's count; the chrome builds the countdown label from `used`.
-
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
-**The Sudoku board shows the selection's reach** (#302): selecting a cell tints its row, column and box, and fills every other copy of its digit with the accent; violating and hinted cells keep their own look. The rule lives in `selectionHighlights` (`apps/web/src/sudoku/engine.ts`), on the games package's `sudokuPeers`. Test ids `T-WEB-S495…S497`.
-
-**Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `useHintKind` (`play/use-hint-kind.ts`) clears the hint note with it, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds, so a change to hint counts (#295) needs no change to the reset. Test ids `T-WEB-S514…S517`.
+**Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds, so a change to hint counts (#295) needs no change to the reset. Test ids `T-WEB-S514…S517`.
 
 ## Traps
 
@@ -38,6 +34,6 @@ The Sudoku hint reveals and explains the next logical step (#296, ADR-0099); `ne
 
 **Next:** file per-game time buckets as an issue.
 
-**Then:** #297: the same for the other grid games.
+**Then:** #300 (per-game settings, "Mostrar erros") and #303 (better use of space), which touch every game.
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and the two `/admin` writes); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.

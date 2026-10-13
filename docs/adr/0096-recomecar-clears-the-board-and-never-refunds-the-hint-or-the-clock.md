@@ -17,7 +17,7 @@ A player who has wedged a Sudoku, Binairo, Nonogram, Rainhas or Cruzadinha board
 
 ## Consequences
 
-- A board with a spent hint, once reset, is played again with only the hints that were left before the reset. The hint note is cleared with the board (`useHintKind`).
+- A board with a spent hint, once reset, is played again with only the hints that were left before the reset. The hint note is cleared with the board (`resetBoard` clears the reason and the spotlight).
 - Streaks, stats and medals are untouched: a reset changes nothing a completion is judged on.
 
 ## Rejected

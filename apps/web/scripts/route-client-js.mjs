@@ -93,7 +93,7 @@ const FORBIDDEN_DAILY_SCOPE = [
 const FORBIDDEN_FREE_PLAY_SCOPE = ["zurro"];
 
 const EXPECTED_DAILY_SCOPE = [
-  "Preenchemos uma célula da figura para você.",
+  "então preenchemos uma célula da figura para você.",
   "Revele a figura escondida pelos números.",
   "Nível",
   "malformed nonogram clues: size must be an integer in 1..",

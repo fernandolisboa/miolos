@@ -9,6 +9,7 @@ import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
 import { Controls, ControlsSkeleton } from "./controls";
+import { nonogramHintExplanation } from "./hint";
 import styles from "./nonogram-board.module.css";
 import { nonogramPageModifier } from "./page-class";
 import type { NonogramPlay } from "./use-nonogram-play";
@@ -44,8 +45,7 @@ export function PlayView({
           hint: {
             ready: play.hintReady,
             used: state.hint.used,
-            explain:
-              play.hintKind === null ? null : copy.hint.explain[play.hintKind],
+            explain: nonogramHintExplanation(state.size, state.hint.reason),
             onReveal: play.revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? play.reset : null,
@@ -59,6 +59,7 @@ export function PlayView({
           entries={state.entries}
           selected={state.selected}
           hintIndex={state.hint.lastIndex}
+          spotlight={state.hint.spotlight}
           onSelect={play.selectCell}
           onMove={play.moveSelection}
           onMarkCell={play.markCell}

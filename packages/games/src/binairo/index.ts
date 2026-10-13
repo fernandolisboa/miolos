@@ -3,6 +3,7 @@ export {
   type BinairoCell,
   type BinairoGrid,
   type BinairoPuzzle,
+  type BinairoRule,
   type BinairoSolvedGrid,
   type BinairoTier,
 } from "./types";
@@ -17,6 +18,8 @@ export {
   solveBinairo,
   type BinairoGrade,
 } from "./solve";
+export type { GridLine as BinairoLine } from "../line";
+export { nextBinairoStep, type BinairoStep } from "./step";
 export {
   BINAIRO_MAX_GENERATION_ATTEMPTS,
   BinairoGenerationError,

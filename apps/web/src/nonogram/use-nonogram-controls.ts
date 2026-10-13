@@ -9,15 +9,13 @@ import {
   useBinaryGridControls,
   type BinaryGridControls,
 } from "../play/use-binary-grid-controls";
-import { hintKindOf, type NonogramHintKind } from "./engine";
 import type {
   NonogramBrush,
   NonogramPlayAction,
   NonogramPlayState,
 } from "./state";
 
-export interface NonogramControls
-  extends BinaryGridControls<NonogramHintKind>, StrokeControls {
+export interface NonogramControls extends BinaryGridControls, StrokeControls {
   readonly setBrush: (brush: NonogramBrush) => void;
   readonly markCell: (index: number, press: Press) => void;
 }
@@ -26,7 +24,7 @@ export function useNonogramControls(
   state: NonogramPlayState,
   dispatch: Dispatch<NonogramPlayAction>,
 ): NonogramControls {
-  const controls = useBinaryGridControls(state, dispatch, hintKindOf);
+  const controls = useBinaryGridControls(state, dispatch);
   const strokes = useStrokeControls(dispatch);
 
   const setBrush = useCallback(

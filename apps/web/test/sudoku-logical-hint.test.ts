@@ -75,6 +75,7 @@ describe("a wrong entry is corrected before any step (T-WEB-S547)", () => {
           index: wrongAt,
           value: correct,
           reason: { kind: "correction" },
+          spotlight: [],
         });
       }
     },
@@ -99,6 +100,7 @@ describe("the hint reveals the next logical step (T-WEB-S548)", () => {
             index: step.index,
             value: solution[step.index],
             reason: { kind: "step", step },
+            spotlight: step.cells,
           });
           expect(entries[step.index]).toBeNull();
           expect(puzzle.givens[step.index]).toBe(0);
@@ -129,6 +131,7 @@ describe("the hint falls back to the first empty cell (T-WEB-S549)", () => {
       index: 0,
       value: solution[0],
       reason: { kind: "fill" },
+      spotlight: [],
     });
   });
 
@@ -146,6 +149,7 @@ describe("the hint falls back to the first empty cell (T-WEB-S549)", () => {
       index: first,
       value: relabelled[first],
       reason: { kind: "fill" },
+      spotlight: [],
     });
   });
 });

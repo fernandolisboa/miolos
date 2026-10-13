@@ -7,6 +7,7 @@ import {
   generateQueens,
   gradeQueens,
   isValidQueensSolution,
+  nextQueensStep,
   solveQueens,
   validateQueens,
 } from "../../src/queens/index";
@@ -60,6 +61,20 @@ describe("board structure guard", () => {
     expect(() => countQueensSolutions(bad)).toThrow(RangeError);
     expect(() => solveQueens(bad)).toThrow(RangeError);
     expect(() => gradeQueens(bad)).toThrow(RangeError);
+    expect(() =>
+      nextQueensStep(
+        bad,
+        bad.regions.map(() => null),
+      ),
+    ).toThrow(RangeError);
+  });
+
+  it("nextQueensStep throws RangeError on entries that do not fit the board", () => {
+    expect(() => nextQueensStep(FOUR, [null, 1])).toThrow(RangeError);
+    const notEntry = FOUR.regions.map((_, cell) => (cell === 0 ? 2 : null));
+    expect(() =>
+      nextQueensStep(FOUR, notEntry as readonly (0 | 1 | null)[]),
+    ).toThrow(RangeError);
   });
 
   it("the rules throw RangeError on a queens grid that does not fit the board", () => {

@@ -19,12 +19,14 @@ import {
   type BinaryGridState,
   type BinaryMark,
 } from "../play/binary-grid";
+import { idleHint } from "../play/hint-state";
+import { nextQueensHint, type QueensHintReason } from "./hint";
 
 export type QueensMark = BinaryMark;
 
 export type QueensCellValue = BinaryCellValue;
 
-export interface QueensPlayState extends BinaryGridState {
+export interface QueensPlayState extends BinaryGridState<QueensHintReason> {
   readonly size: QueensSize;
   readonly regions: readonly number[];
   readonly conflicts: ReadonlySet<number>;
@@ -47,7 +49,7 @@ export function initQueensPlayState(
     conflicts: new Set(),
     selected: null,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { used: 0, lastIndex: null },
+    hint: idleHint(0),
     status: "playing",
     pendingSync: false,
     now: 0,
@@ -55,8 +57,14 @@ export function initQueensPlayState(
   };
 }
 
-const QUEENS_RULES: BinaryGridRules<QueensPlayState> = {
+const QUEENS_RULES: BinaryGridRules<QueensPlayState, QueensHintReason> = {
   game: "queens",
+  hint: (state) =>
+    nextQueensHint(
+      { size: state.size, regions: state.regions },
+      state.solution,
+      state.entries,
+    ),
   derive(state, entries) {
     const board: QueensBoard = { size: state.size, regions: state.regions };
     const grid = queensGrid(entries);

@@ -20,7 +20,9 @@ import {
   type BinaryGridState,
   type BinaryMark,
 } from "../play/binary-grid";
+import { idleHint } from "../play/hint-state";
 import { isPictureComplete, solutionMarks } from "./engine";
+import { nextNonogramHint, type NonogramHintReason } from "./hint";
 
 export type NonogramMark = BinaryMark;
 
@@ -28,7 +30,7 @@ export type NonogramCellValue = BinaryCellValue;
 
 export type NonogramBrush = "fill" | "cross";
 
-export interface NonogramPlayState extends BinaryGridState {
+export interface NonogramPlayState extends BinaryGridState<NonogramHintReason> {
   readonly size: NonogramSize;
   readonly clues: NonogramClues;
   readonly brush: NonogramBrush;
@@ -64,7 +66,7 @@ export function initNonogramPlayState(
     brush: "fill",
     stroke: null,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { used: 0, lastIndex: null },
+    hint: idleHint(0),
     status: "playing",
     pendingSync: false,
     now: 0,
@@ -72,7 +74,7 @@ export function initNonogramPlayState(
   };
 }
 
-const NONOGRAM_RULES: BinaryGridRules<NonogramPlayState> = {
+const NONOGRAM_RULES: BinaryGridRules<NonogramPlayState, NonogramHintReason> = {
   game: "nonogram",
   derive: (state, entries) =>
     settled(
@@ -80,6 +82,7 @@ const NONOGRAM_RULES: BinaryGridRules<NonogramPlayState> = {
       entries,
       state.solution !== null && isPictureComplete(state.solution, entries),
     ),
+  hint: (state) => nextNonogramHint(state.clues, state.solution, state.entries),
 };
 
 export function nonogramPlayReducer(

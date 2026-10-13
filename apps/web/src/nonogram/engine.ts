@@ -1,7 +1,5 @@
 import { solveNonogram, type NonogramClues } from "@miolos/games/nonogram";
 
-import type { Hint } from "../play/grid-hint";
-
 import type { NonogramCellValue, NonogramMark } from "./state";
 
 export function solutionMarks(
@@ -71,13 +69,4 @@ export function submittedCells(
     return null;
   }
   return entries.map((entry) => (entry === 1 ? 1 : 0));
-}
-
-export type NonogramHintKind = "correction" | "fill" | "cross";
-
-export function hintKindOf(hint: Hint<NonogramMark>): NonogramHintKind {
-  if (hint.kind === "correction") {
-    return "correction";
-  }
-  return hint.value === 1 ? "fill" : "cross";
 }

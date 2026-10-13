@@ -113,6 +113,7 @@
   display: grid;
   gap: 0;
   touch-action: none;
+  --spotlight-strength: 8%;
 }
 
 /* The stats card's third row — Sudoku's `.levelCard` verbatim, rendered inside

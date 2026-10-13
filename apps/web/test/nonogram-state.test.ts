@@ -94,6 +94,8 @@ describe("initNonogramPlayState", () => {
     expect(MONDAY_STATE.hint).toEqual({
       used: 0,
       lastIndex: null,
+      reason: null,
+      spotlight: [],
     });
     expect(MONDAY_STATE.status).toBe("playing");
     expect(MONDAY_STATE.hydrated).toBe(false);
@@ -631,6 +633,8 @@ describe("restore (T-WEB-S37)", () => {
     expect(restored.hint).toEqual({
       used: 1,
       lastIndex: null,
+      reason: null,
+      spotlight: [],
     });
     expect(restored.hydrated).toBe(true);
     expect(restored.now).toBe(NOW);

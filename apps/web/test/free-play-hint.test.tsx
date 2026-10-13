@@ -1,7 +1,8 @@
 import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
-import { generateBinairo } from "@miolos/games/binairo";
-import { generateNonogram } from "@miolos/games/nonogram";
-import { generateDailySudoku } from "@miolos/games/sudoku";
+import { generateBinairo, nextBinairoStep } from "@miolos/games/binairo";
+import { generateNonogram, nextNonogramStep } from "@miolos/games/nonogram";
+import { generateQueens, nextQueensStep } from "@miolos/games/queens";
+import { generateDailySudoku, nextSudokuStep } from "@miolos/games/sudoku";
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,10 +10,19 @@ import { BinairoFreeScreen } from "../src/free-play/binairo-free-screen";
 import { LEVEL_WEEKDAYS } from "../src/free-play/catalog";
 import { CrosswordFreeScreen } from "../src/free-play/crossword-free-screen";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
+import { QueensFreeScreen } from "../src/free-play/queens-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { useFreeCrossword } from "../src/free-play/use-free-crossword";
+import {
+  crosswordHintExplanation,
+  nextCrosswordHint,
+} from "../src/crossword/hint";
+import { binairoHintExplanation } from "../src/binairo/hint";
 import { messages } from "../src/i18n";
+import { nonogramHintExplanation } from "../src/nonogram/hint";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
+import spotlightStyles from "../src/play/spotlight.module.css";
+import { queensHintExplanation } from "../src/queens/hint";
 import { sudokuHintExplanation } from "../src/sudoku/hint";
 import sudokuBoardStyles from "../src/sudoku/sudoku-board.module.css";
 import { freeHintSteps, spendFreeHints } from "./free-hints";
@@ -28,6 +38,16 @@ function cellText(container: HTMLElement, index: number): string {
   return (
     container.querySelector(`[data-cell-index="${index}"]`)?.textContent ?? ""
   );
+}
+
+function cellAt(container: HTMLElement, index: number): HTMLElement {
+  const cell = container.querySelector<HTMLElement>(
+    `[data-cell-index="${index}"]`,
+  );
+  if (cell === null) {
+    throw new Error(`no cell at index ${index}`);
+  }
+  return cell;
 }
 
 function boardText(container: HTMLElement): readonly string[] {
@@ -53,7 +73,6 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
   it("Binairo: the hint writes the generator solution's cell, then stops", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateBinairo({ seed: SEED, weekday: WEEKDAY });
-    const firstEmpty = puzzle.givens.findIndex((cell) => cell === null);
     const { container } = render(<BinairoFreeScreen deps={stableDeps(SEED)} />);
 
     const button = screen
@@ -62,9 +81,13 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
     expect(button).toHaveAttribute("aria-disabled", "false");
     spendFreeHints();
 
-    expect(cellText(container, firstEmpty)).toBe(
-      String(puzzle.solution[firstEmpty]),
-    );
+    for (const { index } of freeHintSteps(
+      puzzle.givens,
+      nextBinairoStep,
+      (step) => step.value,
+    )) {
+      expect(cellText(container, index)).toBe(String(puzzle.solution[index]));
+    }
     const spent = boardText(container);
     fireEvent.click(exhaustedHint());
     expect(boardText(container)).toEqual(spent);
@@ -77,7 +100,11 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
 
     spendFreeHints();
 
-    for (const { index } of freeHintSteps(puzzle.givens)) {
+    for (const { index } of freeHintSteps(
+      puzzle.givens,
+      nextSudokuStep,
+      (step) => step.digit,
+    )) {
       expect(cellText(container, index)).toBe(String(puzzle.solution[index]));
     }
     const spent = boardText(container);
@@ -111,7 +138,11 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
   it("writes the step's digit, reads out why and tints the step's cells", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateDailySudoku({ seed: SEED, weekday: WEEKDAY });
-    const [step] = freeHintSteps(puzzle.givens);
+    const [step] = freeHintSteps(
+      puzzle.givens,
+      nextSudokuStep,
+      (step) => step.digit,
+    );
     if (step === undefined) {
       throw new Error("no first step");
     }
@@ -136,8 +167,125 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
   });
 });
 
+describe("free-play Binairo reveals and explains the next logical step (T-WEB-S567)", () => {
+  it("writes the step's value, reads out why and tints the rule's cells until a board action", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const puzzle = generateBinairo({ seed: SEED, weekday: WEEKDAY });
+    const [step] = freeHintSteps(
+      puzzle.givens,
+      nextBinairoStep,
+      (step) => step.value,
+    );
+    if (step === undefined) {
+      throw new Error("no first step");
+    }
+    const { container } = render(<BinairoFreeScreen deps={stableDeps(SEED)} />);
+    const tinted = () =>
+      [
+        ...container.querySelectorAll<HTMLElement>(
+          `.${spotlightStyles.spotlit}`,
+        ),
+      ].map((cell) => Number(cell.dataset.cellIndex));
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(cellText(container, step.index)).toBe(String(step.value));
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      binairoHintExplanation({ kind: "step", step }),
+    );
+    expect(tinted()).toEqual(step.cells);
+
+    const other = puzzle.givens.findIndex(
+      (given, index) => given === null && index !== step.index,
+    );
+    fireEvent.click(cellAt(container, other));
+    expect(tinted()).toEqual([]);
+  });
+});
+
+describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S571)", () => {
+  it("writes the step's cell, reads out why and tints the step's line", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const { clues } = generateNonogram(SEED, WEEKDAY);
+    const step = nextNonogramStep(
+      clues,
+      Array.from({ length: clues.size ** 2 }, () => "unknown"),
+    );
+    if (step === null) {
+      throw new Error("no first step");
+    }
+    const { container } = render(
+      <NonogramFreeScreen deps={stableDeps(SEED)} />,
+    );
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(
+      container
+        .querySelector(`[data-cell-index="${step.index}"]`)
+        ?.classList.contains(
+          (step.value === 1
+            ? boardStyles.cellFilled
+            : boardStyles.cellCrossed) ?? "",
+        ),
+    ).toBe(true);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      nonogramHintExplanation(clues.size, { kind: "step", step }),
+    );
+    const tinted = [
+      ...container.querySelectorAll<HTMLElement>(`.${spotlightStyles.spotlit}`),
+    ].map((cell) => Number(cell.dataset.cellIndex));
+    expect(tinted).toEqual(step.cells);
+  });
+});
+
+describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S575)", () => {
+  it("places the step's queen, reads out why and tints the step's unit", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const puzzle = generateQueens({ seed: SEED, weekday: WEEKDAY });
+    const step = nextQueensStep(
+      puzzle,
+      puzzle.solution.map(() => null),
+    );
+    if (step === null) {
+      throw new Error("no first step");
+    }
+    const { container } = render(<QueensFreeScreen deps={stableDeps(SEED)} />);
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(
+      container.querySelector(`[data-cell-index="${step.index}"] svg`),
+    ).not.toBeNull();
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      queensHintExplanation(puzzle.size, { kind: "step", step }),
+    );
+    const tinted = [
+      ...container.querySelectorAll<HTMLElement>(`.${spotlightStyles.spotlit}`),
+    ].map((cell) => Number(cell.dataset.cellIndex));
+    expect(tinted).toEqual(step.cells);
+
+    const other = container.querySelector(
+      `[data-cell-index="${step.cells[0] === 0 ? 1 : 0}"]`,
+    );
+    if (other === null) {
+      throw new Error("no cell to tap");
+    }
+    fireEvent.click(other, { detail: 0 });
+    expect(
+      container.querySelectorAll(`.${spotlightStyles.spotlit}`),
+    ).toHaveLength(0);
+  });
+});
+
 describe("the free crossword's free hints (T-WEB-S122a)", () => {
-  it("reveals the first white cell's letter, and the press after the last does nothing", () => {
+  it("reveals a letter of the first open pista, and the press after the last does nothing", () => {
     vi.stubGlobal("fetch", vi.fn());
     const deps = stableDeps(SEED);
     const { result } = renderHook(() => useFreeCrossword(deps));
@@ -145,8 +293,16 @@ describe("the free crossword's free hints (T-WEB-S122a)", () => {
     if (phase.kind !== "ready") {
       throw new Error("the crossword did not generate");
     }
-    const cells = phase.puzzle.daily.grid.flat();
-    const first = cells.findIndex((cell) => cell !== null);
+    const { grid, clues } = phase.puzzle.daily;
+    const cells = grid.flat();
+    const first =
+      nextCrosswordHint(
+        cells,
+        clues,
+        cells.map(() => null),
+        null,
+        "across",
+      )?.index ?? -1;
     const copy = messages.games.crossword.play;
     const aria = (letter: string | null) =>
       copy.cellAria(Math.floor(first / 5) + 1, (first % 5) + 1, letter);
@@ -172,5 +328,37 @@ describe("the free crossword's free hints (T-WEB-S122a)", () => {
     const spent = labels();
     fireEvent.click(exhaustedHint());
     expect(labels()).toEqual(spent);
+  });
+});
+
+describe("the free crossword's hint names its pista (T-WEB-S579)", () => {
+  it("reads out the sentence for the pista it wrote a letter in", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const deps = stableDeps(SEED);
+    const { result } = renderHook(() => useFreeCrossword(deps));
+    const { phase } = result.current;
+    if (phase.kind !== "ready") {
+      throw new Error("the crossword did not generate");
+    }
+    const { grid, clues } = phase.puzzle.daily;
+    const hint = nextCrosswordHint(
+      grid.flat(),
+      clues,
+      grid.flat().map(() => null),
+      null,
+      "across",
+    );
+    const { container } = render(
+      <CrosswordFreeScreen deps={stableDeps(SEED)} />,
+    );
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(hint?.reason.kind).toBe("step");
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      crosswordHintExplanation(hint?.reason ?? null),
+    );
   });
 });

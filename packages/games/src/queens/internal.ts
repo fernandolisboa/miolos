@@ -1,5 +1,5 @@
 import { QUEENS_SIZES } from "./types";
-import type { QueensBoard, QueensGrid } from "./types";
+import type { QueensBoard, QueensEntry, QueensGrid } from "./types";
 
 const MAX_SIZE = Math.max(...QUEENS_SIZES);
 
@@ -35,6 +35,20 @@ export function checkGrid(size: number, grid: QueensGrid): void {
   ) {
     throw new RangeError(
       `a queens grid must hold ${size * size} cells of 0 or 1`,
+    );
+  }
+}
+
+export function checkEntries(
+  size: number,
+  entries: readonly QueensEntry[],
+): void {
+  if (
+    entries.length !== size * size ||
+    !entries.every((cell) => cell === 0 || cell === 1 || cell === null)
+  ) {
+    throw new RangeError(
+      `queens entries must hold ${size * size} cells of 0, 1 or null`,
     );
   }
 }

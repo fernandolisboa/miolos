@@ -7,28 +7,7 @@ import {
   isValidBinairoSolution,
   solveBinairo,
 } from "../../src/binairo/index";
-import type { BinairoGrid, BinairoSolvedGrid } from "../../src/binairo/index";
-
-function grid(spec: string): BinairoGrid {
-  return spec
-    .split(/\s+/)
-    .filter((row) => row.length > 0)
-    .flatMap((row) =>
-      [...row].map((ch) => {
-        if (ch === "0") return 0;
-        if (ch === "1") return 1;
-        if (ch === ".") return null;
-        throw new Error(`bad cell char: ${ch}`);
-      }),
-    );
-}
-
-function solved(spec: string): BinairoSolvedGrid {
-  return grid(spec).map((cell) => {
-    if (cell === null) throw new Error("fixture grid is incomplete");
-    return cell;
-  });
-}
+import { grid, solved } from "./fixtures";
 
 const VALID_4X4 = "0101 1010 0110 1001";
 

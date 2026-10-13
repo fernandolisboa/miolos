@@ -251,9 +251,7 @@ describe("completion (T-WEB-S426)", () => {
 });
 
 describe("hint (T-WEB-S427)", () => {
-  it("fills the first empty white cell, row-major, skipping a block before it", () => {
-    // Row0's blocks sit AFTER its letters here, so use a grid whose first
-    // row-major cell is a block to prove the hint steps over it.
+  it("fills a letter of the first open pista, stepping over a block before it", () => {
     const withLeadingBlock = dailyCrosswordResponseSchema.parse({
       game: "crossword",
       date: DATE,
@@ -285,8 +283,8 @@ describe("hint (T-WEB-S427)", () => {
     });
     const state = initCrosswordPlayState(withLeadingBlock);
     const hinted = play(state, { type: "use-hint" });
-    expect(hinted.hint.lastIndex).toBe(1);
-    expect(hinted.entries[1]).toBe("a");
+    expect(hinted.hint.lastIndex).toBe(2);
+    expect(hinted.entries[2]).toBe("t");
     expect(hinted.hint.used).toBe(1);
   });
 

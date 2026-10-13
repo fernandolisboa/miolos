@@ -43,6 +43,14 @@ export function sideLength(cellCount: number): number {
   return n;
 }
 
+export function lineIndices(n: number, isRow: boolean, line: number): number[] {
+  const indices: number[] = [];
+  for (let i = 0; i < n; i += 1) {
+    indices.push(isRow ? line * n + i : i * n + line);
+  }
+  return indices;
+}
+
 export function toCellStates(grid: BinairoGrid): CellState[] {
   return grid.map((cell) => (cell === null ? -1 : cell));
 }

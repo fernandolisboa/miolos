@@ -2,6 +2,8 @@ export { deriveClues } from "./clues";
 export { NONOGRAM_WEEKDAY_CRITERIA } from "./difficulty";
 export { NONOGRAM_MAX_GENERATION_ATTEMPTS, generateNonogram } from "./generate";
 export { effortScore, solveNonogram } from "./solve";
+export type { GridLine as NonogramLine } from "../line";
+export { nextNonogramStep, type NonogramStep } from "./step";
 export { NonogramGenerationError } from "./types";
 export { validateNonogram } from "./validate";
 export type { Weekday } from "../weekday";

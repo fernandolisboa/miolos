@@ -55,6 +55,59 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
 const runsText = (runs: readonly number[]) =>
   runs.length === 0 ? "0" : runs.join(", ");
 
+type LineKind = "row" | "column";
+
+const LINE = {
+  row: { name: "linha", across: "coluna" },
+  column: { name: "coluna", across: "linha" },
+} as const;
+
+const nonogramStep = (
+  line: LineKind,
+  at: number,
+  runs: readonly number[],
+  across: number,
+  value: 0 | 1,
+) => {
+  const { name, across: otherName } = LINE[line];
+  const cell = `a célula da ${otherName} ${across}`;
+  if (runs.length === 0) {
+    return `A ${name} ${at} não tem números, então ${cell} fica marcada.`;
+  }
+  const numbers =
+    runs.length === 1
+      ? `o número ${runs[0]} só fecha`
+      : `os números ${runs.join(", ")} só fecham`;
+  return `Na ${name} ${at}, ${numbers} com ${cell} ${value === 1 ? "preenchida" : "marcada"}.`;
+};
+
+const BINAIRO_COUNT_WORDS = ["zero", "um", "dois", "três", "quatro"] as const;
+
+const binairoStep = {
+  pair: (line: LineKind, at: number, along: number, value: 0 | 1) =>
+    `Na ${LINE[line].name} ${at}, dois ${1 - value} seguidos obrigam um ${value} ao lado, na célula da ${LINE[line].across} ${along}.`,
+  gap: (line: LineKind, at: number, along: number, value: 0 | 1) =>
+    `Na ${LINE[line].name} ${at}, a célula da ${LINE[line].across} ${along} fica entre dois ${1 - value}, então leva ${value}.`,
+  count: (
+    line: LineKind,
+    at: number,
+    along: number,
+    value: 0 | 1,
+    half: number,
+  ) =>
+    `A ${LINE[line].name} ${at} já tem ${BINAIRO_COUNT_WORDS[half] ?? half} ${1 - value}, então a célula da ${LINE[line].across} ${along} leva ${value}.`,
+  duplicate: (
+    line: LineKind,
+    at: number,
+    along: number,
+    value: 0 | 1,
+    twin: number,
+  ) =>
+    `A ${LINE[line].name} ${at} não pode repetir a ${LINE[line].name} ${twin}, então a célula da ${LINE[line].across} ${along} leva ${value}.`,
+  lookahead: (row: number, column: number, value: 0 | 1) =>
+    `Um ${1 - value} na linha ${row}, coluna ${column} quebraria uma regra logo adiante, então ali vai ${value}.`,
+} as const;
+
 const TERMO_TILE = {
   correct: "certa",
   present: "na palavra",
@@ -76,6 +129,33 @@ const termoLetters = (word: string) => word.split("").join(", ");
 const letterAria = (letter: string) => `letra ${letter}`;
 
 const QUEENS_CELL = { 1: "rainha", 0: "marcada" } as const;
+
+const QUEENS_TECHNIQUE = {
+  regionInRow: "região presa numa só linha ou coluna",
+  regionInColumn: "região presa numa só linha ou coluna",
+  rowInRegion: "linha ou coluna presa numa só região",
+  columnInRegion: "linha ou coluna presa numa só região",
+  blocking: "casa que deixaria uma região sem lugar",
+  regionGroupRows: "grupo de regiões presas nas mesmas linhas ou colunas",
+  regionGroupColumns: "grupo de regiões presas nas mesmas linhas ou colunas",
+} as const;
+
+const queensStep = (
+  unit: LineKind | "region",
+  at: number,
+  row: number,
+  column: number,
+  after: keyof typeof QUEENS_TECHNIQUE | null,
+) => {
+  const only =
+    unit === "region"
+      ? `Na região ${at}, só a casa da linha ${row}, coluna ${column}`
+      : `Na ${LINE[unit].name} ${at}, só a casa da ${LINE[unit].across} ${unit === "row" ? column : row}`;
+  const sentence = `${only} ainda pode ter rainha.`;
+  return after === null
+    ? sentence
+    : `Com uma técnica avançada (${QUEENS_TECHNIQUE[after]}), ${sentence.charAt(0).toLowerCase()}${sentence.slice(1)}`;
+};
 
 const cellAriaQueens = (
   row: number,
@@ -890,9 +970,10 @@ export const messages = {
         hint: {
           explain: {
             correction: "Corrigimos uma célula que não fecha com os números.",
-            fill: "Preenchemos uma célula da figura para você.",
-
-            cross: "Marcamos uma célula que fica fora da figura.",
+            fill: "Não achamos um passo lógico simples aqui, então preenchemos uma célula da figura para você.",
+            cross:
+              "Não achamos um passo lógico simples aqui, então marcamos uma célula fora da figura.",
+            step: nonogramStep,
           },
         },
         unavailable: {
@@ -945,7 +1026,8 @@ export const messages = {
         hint: {
           explain: {
             correction: "Corrigimos uma célula que não fecha com as regras.",
-            fill: "Preenchemos uma célula para você.",
+            fill: "Não achamos um passo lógico simples aqui, então preenchemos uma célula para você.",
+            step: binairoStep,
           },
         },
         unavailable: {
@@ -998,7 +1080,14 @@ export const messages = {
         hint: {
           explain: {
             correction: "Corrigimos uma letra errada.",
-            fill: "Preenchemos uma célula para você.",
+            fill: "Não achamos uma pista aberta, então preenchemos uma letra para você.",
+            step: (
+              clue: string,
+              crossing: string | null,
+              row: number,
+              column: number,
+            ) =>
+              `Uma letra da pista ${clue}${crossing === null ? "" : `, que também ajuda na ${crossing}`}: linha ${row}, coluna ${column}.`,
           },
         },
 
@@ -1040,7 +1129,8 @@ export const messages = {
         hint: {
           explain: {
             correction: "Corrigimos uma casa que não fecha com a solução.",
-            fill: "Pusemos uma rainha para você.",
+            fill: "Não achamos um passo lógico simples aqui, então pusemos uma rainha para você.",
+            step: queensStep,
           },
         },
 

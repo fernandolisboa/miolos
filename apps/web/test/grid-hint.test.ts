@@ -5,7 +5,12 @@ import {
 } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
-import { nextBinaryHint, nextHint } from "../src/play/grid-hint";
+import {
+  nextBinaryHint,
+  nextHint,
+  nextLogicalHint,
+  toRowColumn,
+} from "../src/play/grid-hint";
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
@@ -173,5 +178,71 @@ describe("nextBinaryHint: a wrong cell first, then a 1 before a 0 (T-WEB-S458)",
 
   it("returns null on a finished board", () => {
     expect(nextBinaryHint(solution, [0, 0, 1, 0, 1, 0])).toBeNull();
+  });
+});
+
+describe("nextLogicalHint: a correction, then a checked step, then the first empty (T-WEB-S563)", () => {
+  const solution: readonly number[] = [1, 2, 3, 4];
+  const fill = { index: 0, value: 1, kind: "fill" } as const;
+  const found = (index: number, value: number) => () => ({
+    index,
+    value,
+    step: "why",
+    cells: [index, 1],
+  });
+
+  it("returns a correction without looking for a step", () => {
+    const correction = { index: 2, value: 3, kind: "correction" } as const;
+    let looked = 0;
+    const hint = nextLogicalHint(solution, correction, () => {
+      looked += 1;
+      return { index: 0, value: 1, step: "why", cells: [0] };
+    });
+    expect(hint).toEqual({
+      index: 2,
+      value: 3,
+      reason: { kind: "correction" },
+      spotlight: [],
+    });
+    expect(looked).toBe(0);
+  });
+
+  it("returns the step when its value is the solution's", () => {
+    expect(nextLogicalHint(solution, fill, found(3, 4))).toEqual({
+      index: 3,
+      value: 4,
+      reason: { kind: "step", step: "why" },
+      spotlight: [3, 1],
+    });
+  });
+
+  it("falls back to the first empty cell when the step disagrees with the solution", () => {
+    expect(nextLogicalHint(solution, fill, found(3, 9))).toEqual({
+      index: 0,
+      value: 1,
+      reason: { kind: "fill" },
+      spotlight: [],
+    });
+  });
+
+  it("falls back to the first empty cell when there is no step", () => {
+    expect(nextLogicalHint(solution, fill, () => null)).toEqual({
+      index: 0,
+      value: 1,
+      reason: { kind: "fill" },
+      spotlight: [],
+    });
+  });
+
+  it("returns null when there is nothing left to hint", () => {
+    expect(nextLogicalHint(solution, null, found(0, 1))).toBeNull();
+  });
+});
+
+describe("toRowColumn", () => {
+  it("names a cell by its 1-based row and column", () => {
+    expect(toRowColumn(0, 8)).toEqual({ row: 1, column: 1 });
+    expect(toRowColumn(13, 8)).toEqual({ row: 2, column: 6 });
+    expect(toRowColumn(80, 9)).toEqual({ row: 9, column: 9 });
   });
 });

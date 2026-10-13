@@ -9,10 +9,8 @@ import {
 } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
-import type { Hint } from "../play/grid-hint";
-import { nextHint } from "../play/grid-hint";
-import { useHintKind } from "../play/use-hint-kind";
-import { countAnswered, hintGivens } from "./grid";
+import { useReset } from "../play/use-reset";
+import { countAnswered } from "./grid";
 import {
   canHint,
   crosswordPlayReducer,
@@ -22,8 +20,6 @@ import {
   type CrosswordPlayState,
 } from "./state";
 
-type CrosswordHint = Hint<string>;
-
 export interface CrosswordBoard {
   readonly state: CrosswordPlayState;
 
@@ -31,8 +27,6 @@ export interface CrosswordBoard {
   readonly total: number;
 
   readonly hintReady: boolean;
-
-  readonly hintKind: CrosswordHint["kind"] | null;
   readonly selectCell: (index: number) => void;
 
   readonly selectEntry: (index: number, direction: CrosswordDirection) => void;
@@ -53,8 +47,6 @@ export function useCrosswordBoard(
     daily,
     initCrosswordPlayState,
   );
-  const { hintKind, setHintKind, reset } =
-    useHintKind<CrosswordHint["kind"]>(dispatch);
   const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
@@ -98,21 +90,12 @@ export function useCrosswordBoard(
   }, []);
 
   const revealHint = useCallback(() => {
-    const current = stateRef.current;
-    if (!canHint(current, allowance)) {
-      return;
+    if (canHint(stateRef.current, allowance)) {
+      dispatch({ type: "use-hint" });
     }
-    const hint = nextHint(
-      current.solution,
-      hintGivens(current.solution),
-      current.entries,
-    );
-    if (hint === null) {
-      return;
-    }
-    setHintKind(hint.kind);
-    dispatch({ type: "use-hint" });
-  }, [setHintKind, allowance]);
+  }, [allowance]);
+
+  const reset = useReset(dispatch);
 
   return {
     state,
@@ -120,7 +103,6 @@ export function useCrosswordBoard(
     filled,
     total,
     hintReady: canHint(state, allowance),
-    hintKind,
     selectCell,
     selectEntry,
     toggleDirection,

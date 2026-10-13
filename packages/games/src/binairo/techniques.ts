@@ -1,6 +1,6 @@
 import { cellAt, intAt, setCellAt, sideLength, toCellStates } from "./internal";
 import type { CellState } from "./internal";
-import type { BinairoGrid } from "./types";
+import type { BinairoGrid, BinairoRule } from "./types";
 
 export interface SolverState {
   readonly n: number;
@@ -192,41 +192,48 @@ export function unplace(state: SolverState, index: number): void {
   colCounts[col] = intAt(colCounts, col) - 1;
 }
 
-type RuleOutcome = "progress" | "none" | "contradiction";
+type Verdict = "continue" | "stop" | "contradiction";
+
+export type Visitor = (
+  index: number,
+  value: 0 | 1,
+  rule: BinairoRule,
+  isRow: boolean,
+  witness: number,
+) => Verdict;
+
+type RuleOutcome = "progress" | "none" | Exclude<Verdict, "continue">;
 
 function flip(value: 0 | 1): 0 | 1 {
   return value === 0 ? 1 : 0;
 }
 
-function applyTier1(state: SolverState): RuleOutcome {
+export function applyTier1(state: SolverState, visit: Visitor): RuleOutcome {
   const { n, half, cells } = state;
   let progress = false;
 
   for (const isRow of [true, false]) {
+    const stride = isRow ? 1 : n;
     for (let line = 0; line < n; line += 1) {
       for (let start = 0; start + 2 < n; start += 1) {
         const i0 = isRow ? line * n + start : start * n + line;
-        const i1 = isRow ? line * n + start + 1 : (start + 1) * n + line;
-        const i2 = isRow ? line * n + start + 2 : (start + 2) * n + line;
+        const i1 = i0 + stride;
+        const i2 = i1 + stride;
         const a = cellAt(cells, i0);
         const b = cellAt(cells, i1);
         const c = cellAt(cells, i2);
-
+        let verdict: Verdict | null = null;
         if (a !== -1 && a === b && c === -1) {
-          if (!place(state, i2, flip(a))) {
-            return "contradiction";
-          }
-          progress = true;
+          verdict = visit(i2, flip(a), "pair", isRow, i0);
         } else if (b !== -1 && b === c && a === -1) {
-          if (!place(state, i0, flip(b))) {
-            return "contradiction";
-          }
-          progress = true;
+          verdict = visit(i0, flip(b), "pair", isRow, i1);
         } else if (a !== -1 && a === c && b === -1) {
-          if (!place(state, i1, flip(a))) {
-            return "contradiction";
-          }
+          verdict = visit(i1, flip(a), "gap", isRow, i0);
+        }
+        if (verdict === "continue") {
           progress = true;
+        } else if (verdict !== null) {
+          return verdict;
         }
       }
     }
@@ -245,8 +252,9 @@ function applyTier1(state: SolverState): RuleOutcome {
         for (let i = 0; i < n; i += 1) {
           const index = isRow ? line * n + i : i * n + line;
           if (cellAt(cells, index) === -1) {
-            if (!place(state, index, flip(digit))) {
-              return "contradiction";
+            const verdict = visit(index, flip(digit), "count", isRow, line);
+            if (verdict !== "continue") {
+              return verdict;
             }
             progress = true;
           }
@@ -258,23 +266,8 @@ function applyTier1(state: SolverState): RuleOutcome {
   return progress ? "progress" : "none";
 }
 
-function applyTier2(state: SolverState): RuleOutcome {
+function applyDuplicate(state: SolverState, visit: Visitor): RuleOutcome {
   const { n, cells } = state;
-
-  for (let index = 0; index < cells.length; index += 1) {
-    if (cellAt(cells, index) !== -1) {
-      continue;
-    }
-    for (const value of [0, 1] as const) {
-      const scratch = cloneState(state);
-      if (!place(scratch, index, value) || !propagate(scratch, 1)) {
-        if (!place(state, index, flip(value))) {
-          return "contradiction";
-        }
-        return "progress";
-      }
-    }
-  }
 
   for (const isRow of [true, false]) {
     for (let a = 0; a < n; a += 1) {
@@ -288,24 +281,26 @@ function applyTier2(state: SolverState): RuleOutcome {
         if (b === a) {
           continue;
         }
-        const empties: number[] = [];
+        let e1 = -1;
+        let e2 = -1;
+        let empties = 0;
         let agrees = true;
-        for (let i = 0; i < n; i += 1) {
+        for (let i = 0; i < n && agrees && empties <= 2; i += 1) {
           const aIndex = isRow ? a * n + i : i * n + a;
           const bIndex = isRow ? b * n + i : i * n + b;
           const bValue = cellAt(cells, bIndex);
           if (bValue === -1) {
-            empties.push(i);
+            empties += 1;
+            if (empties === 1) {
+              e1 = i;
+            } else {
+              e2 = i;
+            }
           } else if (bValue !== cellAt(cells, aIndex)) {
             agrees = false;
-            break;
           }
         }
-        if (!agrees || empties.length !== 2) {
-          continue;
-        }
-        const [e1, e2] = empties;
-        if (e1 === undefined || e2 === undefined) {
+        if (!agrees || empties !== 2) {
           continue;
         }
         const a1 = cellAt(cells, isRow ? a * n + e1 : e1 * n + a);
@@ -315,10 +310,34 @@ function applyTier2(state: SolverState): RuleOutcome {
         }
         const b1 = isRow ? b * n + e1 : e1 * n + b;
         const b2 = isRow ? b * n + e2 : e2 * n + b;
-        if (!place(state, b1, a2) || !place(state, b2, a1)) {
-          return "contradiction";
+        const first = visit(b1, a2, "duplicate", isRow, a);
+        if (first !== "continue") {
+          return first;
         }
-        return "progress";
+        const second = visit(b2, a1, "duplicate", isRow, a);
+        return second === "continue" ? "progress" : second;
+      }
+    }
+  }
+
+  return "none";
+}
+
+export function applyTier2(state: SolverState, visit: Visitor): RuleOutcome {
+  const duplicate = applyDuplicate(state, visit);
+  if (duplicate !== "none") {
+    return duplicate;
+  }
+
+  for (let index = 0; index < state.cells.length; index += 1) {
+    if (cellAt(state.cells, index) !== -1) {
+      continue;
+    }
+    for (const value of [0, 1] as const) {
+      const scratch = cloneState(state);
+      if (!place(scratch, index, value) || !propagate(scratch, 1)) {
+        const verdict = visit(index, flip(value), "lookahead", true, index);
+        return verdict === "continue" ? "progress" : verdict;
       }
     }
   }
@@ -327,8 +346,10 @@ function applyTier2(state: SolverState): RuleOutcome {
 }
 
 export function propagate(state: SolverState, maxTier: 1 | 2): boolean {
+  const visit: Visitor = (index, value) =>
+    place(state, index, value) ? "continue" : "contradiction";
   for (;;) {
-    const tier1 = applyTier1(state);
+    const tier1 = applyTier1(state, visit);
     if (tier1 === "contradiction") {
       return false;
     }
@@ -338,7 +359,7 @@ export function propagate(state: SolverState, maxTier: 1 | 2): boolean {
     if (maxTier === 1) {
       return true;
     }
-    const tier2 = applyTier2(state);
+    const tier2 = applyTier2(state, visit);
     if (tier2 === "contradiction") {
       return false;
     }

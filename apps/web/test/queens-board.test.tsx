@@ -1,5 +1,5 @@
 import { dailyQueensResponseSchema, FREE_HINTS_PER_PUZZLE } from "@miolos/core";
-import { generateQueens } from "@miolos/games/queens";
+import { generateQueens, nextQueensStep } from "@miolos/games/queens";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,7 +9,9 @@ import {
   queensPlayRecordSchema,
   type QueensPlayRecord,
 } from "../src/play/play-record";
+import spotlightStyles from "../src/play/spotlight.module.css";
 import styles from "../src/queens/queens-board.module.css";
+import { queensHintExplanation } from "../src/queens/hint";
 import { QueensScreen } from "../src/queens/queens-screen";
 import { contrast } from "./contrast";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
@@ -351,6 +353,58 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
     },
   );
 
+  it.each(["light", "dark"] as const)(
+    "keeps --ink >= 7:1 and the hint ring >= 3:1 on every region tint under the spotlight (%s)",
+    (theme) => {
+      const tokens = colorTokens(theme);
+      const hex = (name: string): string => {
+        const value = tokens.get(name);
+        if (value === undefined) {
+          throw new Error(`${name} missing from the ${theme} block`);
+        }
+        return value;
+      };
+      const spotlight = stylesheet("src/play/spotlight.module.css");
+      expect(
+        decl(bodyOf(spotlight, ".spotlit.spotlit"), "--spotlight")?.replace(
+          /\s+/g,
+          " ",
+        ),
+      ).toBe(
+        "color-mix( in srgb, var(--accent) var(--spotlight-strength), transparent )",
+      );
+      const share =
+        Number(
+          /^(\d+)%$/.exec(
+            decl(bodyOf(css, ".grid"), "--spotlight-strength") ?? "",
+          )?.[1],
+        ) / 100;
+      const channel = (color: string, at: number): number =>
+        parseInt(color.slice(at, at + 2), 16);
+      const tinted = (fill: string): string =>
+        `#${[1, 3, 5]
+          .map((at) =>
+            Math.round(
+              channel(hex("--accent-queens"), at) * share +
+                channel(fill, at) * (1 - share),
+            )
+              .toString(16)
+              .padStart(2, "0"),
+          )
+          .join("")}`;
+
+      expect(share).toBeGreaterThan(0);
+      for (const region of REGIONS) {
+        const fill = tinted(hex(region));
+        expect(contrast(hex("--ink"), fill), region).toBeGreaterThanOrEqual(7);
+        expect(
+          contrast(hex("--accent-queens"), fill),
+          `${region} hint ring`,
+        ).toBeGreaterThanOrEqual(3);
+      }
+    },
+  );
+
   it("draws the queen and the mark in --ink and the rings as shapes, never accent text", () => {
     expect(decl(bodyOf(css, ".queen"), "fill")).toBe("var(--ink)");
     expect(decl(bodyOf(css, ".cellMarked::after"), "background")).toBe(
@@ -385,7 +439,7 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
     for (let index = 0; index < N * N; index += 1) {
       const cell = cellAt(index);
       const region = DAILY.regions[index] ?? -1;
-      expect(cell.style.background).toBe(
+      expect(cell.style.backgroundColor).toBe(
         `var(--queens-region-${String(region + 1)})`,
       );
       const column = index % N;
@@ -411,6 +465,53 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
   });
 });
 
+describe("the Rainhas hint says why and tints its unit (T-WEB-S575)", () => {
+  const EMPTY = DAILY.regions.map(() => null);
+  const STEP = nextQueensStep({ size: N, regions: DAILY.regions }, EMPTY);
+  if (STEP === null) {
+    throw new Error("a bare Rainhas board always has a first step");
+  }
+
+  function spotlit(): number[] {
+    return [...boardOf().querySelectorAll<HTMLElement>("[data-cell-index]")]
+      .filter((cell) => cell.classList.contains(spotlightStyles.spotlit ?? "?"))
+      .map((cell) => Number(cell.dataset.cellIndex));
+  }
+
+  it("places the step's queen, reads out why and tints its unit until the next board action", () => {
+    render(<QueensScreen daily={DAILY} />);
+    expect(spotlit()).toEqual([]);
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    const sentence = queensHintExplanation(N, { kind: "step", step: STEP });
+    expect(labelOf(STEP.index)).toBe(expectedLabel(STEP.index, 1));
+    expect(cellAt(STEP.index).classList).toContain(styles.cellHinted);
+    expect(screen.getByText(sentence ?? "")).toBeInTheDocument();
+    expect(spotlit()).toEqual(STEP.cells);
+
+    fireEvent.click(cellAt(STEP.cells[0] === 0 ? 1 : 0), { detail: 0 });
+
+    expect(spotlit()).toEqual([]);
+    expect(screen.getByText(sentence ?? "")).toBeInTheDocument();
+  });
+
+  it("reads out a correction and tints nothing", () => {
+    render(<QueensScreen daily={DAILY} />);
+    focusAt(EMPTY_CELLS[0] ?? -1);
+    press("1");
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(screen.getByText(copy.hint.explain.correction)).toBeInTheDocument();
+    expect(spotlit()).toEqual([]);
+  });
+});
+
 describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB-S476)", () => {
   it("spends the free hints on queens' cells and explains them", () => {
     render(<QueensScreen daily={DAILY} />);
@@ -421,7 +522,7 @@ describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB
       "aria-disabled",
       "true",
     );
-    expect(screen.getByText(copy.hint.explain.fill)).toBeInTheDocument();
+    expect(screen.getByText(/ainda pode ter rainha\.$/)).toBeInTheDocument();
     const queens = QUEEN_CELLS.filter((index) =>
       labelOf(index).endsWith(": rainha"),
     );
