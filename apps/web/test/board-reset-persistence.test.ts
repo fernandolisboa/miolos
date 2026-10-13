@@ -129,7 +129,7 @@ function registerDaily<P extends Play>({ name, usePlay, enter }: Daily<P>) {
   });
 }
 
-describe("Recomeçar on a daily board rewrites the play record (T-WEB-S490)", () => {
+describe("Recomeçar on a daily board rewrites the play record (T-WEB-S500)", () => {
   registerDaily({
     name: "sudoku",
     usePlay: () => useSudokuPlay(SUDOKU_DAILY),

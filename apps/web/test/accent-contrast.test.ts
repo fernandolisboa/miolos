@@ -274,3 +274,90 @@ describe("the Rainhas accent stands apart from every other accent (T-WEB-S448a)"
     }
   });
 });
+
+describe("the Sudoku selection's reach keeps every digit readable (T-WEB-S497)", () => {
+  const css = stylesheet("src/sudoku/sudoku-board.module.css");
+
+  function overlay(accentHex: string, paperHex: string, share: number) {
+    const channel = (hex: string, index: number): number =>
+      parseInt(hex.slice(index, index + 2), 16);
+    return `#${[1, 3, 5]
+      .map((index) =>
+        Math.round(
+          channel(accentHex, index) * share +
+            channel(paperHex, index) * (1 - share),
+        )
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")}`;
+  }
+
+  const unitShare =
+    Number(
+      /color-mix\(in srgb, var\(--accent\) (\d+)%, transparent\)/.exec(
+        decl(bodyOf(css, ".cellUnit"), "background-image") ?? "",
+      )?.[1],
+    ) / 100;
+
+  it("draws the tint as an overlay, and the copies as the accent fill", () => {
+    expect(unitShare).toBeGreaterThan(0);
+    expect(decl(bodyOf(css, ".cellEntered.cellUnit"), "color")).toBe(
+      "var(--accent-sudoku-text)",
+    );
+    const same = bodyOf(css, ".cellSameDigit");
+    expect(decl(same, "background-color")).toBe("var(--accent)");
+    expect(decl(same, "color")).toBe("var(--ink-on-accent)");
+  });
+
+  it("keeps the caret visible on a filled copy, mouse or keyboard, by coming after the caret block", () => {
+    const override = ".cellSameDigit:focus-visible {";
+    expect(
+      decl(bodyOf(css, ".cellSameDigit:focus-visible"), "outline-color"),
+    ).toBe("var(--ink-on-accent)");
+    expect(css).toMatch(
+      /^\.cellSameDigit\.cellSelected,\n\.cellSameDigit:focus-visible \{/m,
+    );
+    expect(css.indexOf(override)).toBeGreaterThan(
+      css.indexOf(".cell:focus-visible {"),
+    );
+  });
+
+  it("paints the fill and the tint over a given's and an entered digit's own look, by coming after them", () => {
+    for (const highlight of [".cellUnit {", ".cellSameDigit {"]) {
+      for (const tone of [".cellGiven {", ".cellEntered {"]) {
+        expect(css.indexOf(tone), tone).toBeGreaterThan(-1);
+        expect(
+          css.indexOf(highlight),
+          `${highlight} after ${tone}`,
+        ).toBeGreaterThan(css.indexOf(tone));
+      }
+    }
+  });
+
+  it("clears >= 4.5:1 for a given and an entered digit on the tint, and for a copy on its fill, in both themes", () => {
+    for (const [theme, tools] of [
+      ["light", LIGHT],
+      ["dark", DARK],
+    ] as const) {
+      const accent = tools.hexOf("--accent-sudoku");
+      const entered =
+        theme === "light" ? accent : tools.hexOf("--accent-sudoku-text");
+      const ink = tools.hexOf("--ink");
+      const givenTint = overlay(accent, tools.hexOf("--paper-tint"), unitShare);
+      const deskTint = overlay(accent, tools.hexOf("--paper-desk"), unitShare);
+
+      expect(contrast(ink, givenTint), `${theme} given`).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(
+        contrast(entered, deskTint),
+        `${theme} entered`,
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrast(tools.pair("sudoku").ink, accent),
+        `${theme} copy`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});

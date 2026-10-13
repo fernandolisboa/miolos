@@ -40,10 +40,12 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S163` | `S162` | never used |
 | `T-DB` | `S125` | `S124` | `T-DB-21` |
 | `T-API` | `S283` | `S282` | `T-API-16` |
-| `T-WEB` | `S492` | `S491` | `T-WEB-23` |
+| `T-WEB` | `S502` | `S501` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
-#298 (Recomeçar, ADR-0094) spent **`T-WEB-S488…S491`**: `S488` (the reset on all five grid reducers: entries gone, givens and clock kept, the spent hint not refunded, the same object back on an empty or solved board), `S489` (`ResetControl`: the question, Cancelar first, focus in and out, the placeholder), `S490` (a daily's play record is rewritten with the hint still counted, nothing written when the board is empty) and `S491` (free play: the board, the hinted cell and the explanation go, nothing is written). `S366` (the chrome places six children) and `S367` (the reset slot's shape, and the empty-board placeholder) were widened in place and took no new id. Nothing is burned.
+#302 (the Sudoku selection's reach) spent **`T-WEB-S495…S497`**: `S495` (`sharesUnit` and `selectionHighlights`), `S496` (the board's highlight classes, unchanged names, the conflict and hint rings kept) and `S497` (the tint and fill contrast in both themes, and the caret's order on a filled copy). `S488…S494` were left to the branches running beside it the same day (#295, #298, #299, #301, #304); whatever none of them spent is burned.
+
+#298 (Recomeçar, ADR-0094) spent **`T-WEB-S498…S501`**: `S498` (the reset on all five grid reducers: entries gone, givens and clock kept, the spent hint not refunded, the same object back on an empty or solved board), `S499` (`ResetControl`: the question, Cancelar first, focus in and out, the disabled trigger, the skeleton placeholder), `S500` (a daily's play record is rewritten with the hint still counted, nothing written when the board is empty) and `S501` (free play: the board, the hinted cell and the explanation go, nothing is written). `S366` (the chrome places six children) and `S367` (the reset slot's shape) were widened in place and took no new id. It took no id in `S488…S494`.
 
 #280 (Google sign-in, ADR-0089) spent `T-CORE-S160…S162`, `T-DB-S120…S124`, `T-API-S260…S282` (but not `S270`) and `T-WEB-S470…S475` without moving this table; #285 reconciled it. The gaps it skipped (`T-CORE-S139…S159`, `T-DB-S102…S119`, `T-API-S246…S259`, `T-WEB-S460…S469`) and `T-API-S270` are **burned**, never reused.
 

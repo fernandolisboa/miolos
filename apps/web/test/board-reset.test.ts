@@ -352,7 +352,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
   });
 }
 
-describe("Recomeçar clears the entries and refunds nothing (T-WEB-S488)", () => {
+describe("Recomeçar clears the entries and refunds nothing (T-WEB-S498)", () => {
   registerCase(sudokuCase());
   registerCase(binairoCase());
   registerCase(nonogramCase());

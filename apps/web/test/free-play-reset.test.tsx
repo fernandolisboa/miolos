@@ -49,7 +49,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("Recomeçar in free play clears the board and keeps the hint spent (T-WEB-S491)", () => {
+describe("Recomeçar in free play clears the board and keeps the hint spent (T-WEB-S501)", () => {
   it.each(SCREENS)(
     "$name: the board, the hinted cell and the explanation go; the spent hint stays; nothing is written",
     ({ screen: element, hint }) => {
