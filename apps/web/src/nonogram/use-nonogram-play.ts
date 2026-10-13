@@ -1,35 +1,25 @@
 import type { DailyNonogramResponse } from "@miolos/core";
-import { useCallback, useMemo, useReducer } from "react";
+import { useMemo, useReducer } from "react";
 
 import { recordHeader, type NonogramPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
-import {
-  useBinaryGridControls,
-  type BinaryGridControls,
-} from "../play/use-binary-grid-controls";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
-import {
-  countFilledCells,
-  filledTarget,
-  hintKindOf,
-  submittedCells,
-  type NonogramHintKind,
-} from "./engine";
+import { countFilledCells, filledTarget, submittedCells } from "./engine";
 import {
   initNonogramPlayState,
   nonogramPlayReducer,
-  type NonogramBrush,
   type NonogramPlayState,
 } from "./state";
+import {
+  useNonogramControls,
+  type NonogramControls,
+} from "./use-nonogram-controls";
 
-export interface NonogramPlay extends BinaryGridControls<NonogramHintKind> {
+export interface NonogramPlay extends NonogramControls {
   readonly state: NonogramPlayState;
   readonly elapsed: number;
   readonly filled: number;
   readonly target: number;
-  readonly setBrush: (brush: NonogramBrush) => void;
-  readonly markCell: (index: number) => void;
-  readonly paintOver: (index: number) => void;
 }
 
 export function useNonogramPlay(
@@ -41,7 +31,7 @@ export function useNonogramPlay(
     daily,
     initNonogramPlayState,
   );
-  const controls = useBinaryGridControls(state, dispatch, hintKindOf);
+  const controls = useNonogramControls(state, dispatch);
 
   const { clues } = state;
   const target = useMemo(() => filledTarget(clues), [clues]);
@@ -56,27 +46,12 @@ export function useNonogramPlay(
     persistDeps: [state.entries, state.hint.used],
   });
 
-  const setBrush = useCallback((brush: NonogramBrush) => {
-    dispatch({ type: "set-brush", brush });
-  }, []);
-
-  const markCell = useCallback((index: number) => {
-    dispatch({ type: "mark-cell", index });
-  }, []);
-
-  const paintOver = useCallback((index: number) => {
-    dispatch({ type: "paint-over", index });
-  }, []);
-
   return {
     ...controls,
     state,
     elapsed: elapsedMs(state.timer, state.now),
     filled: countFilledCells(state.entries),
     target,
-    setBrush,
-    markCell,
-    paintOver,
   };
 }
 

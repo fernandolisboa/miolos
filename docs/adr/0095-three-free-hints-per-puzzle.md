@@ -1,4 +1,4 @@
-# ADR-0094 — Three free hints per puzzle
+# ADR-0095 — Three free hints per puzzle
 
 **Status:** Accepted — 2026-10-13 (issue #295)
 **Depends on:** [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md)

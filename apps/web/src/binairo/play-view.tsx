@@ -3,7 +3,7 @@ import { DailyPlayChrome } from "../play/daily-chrome";
 import screen from "../play/screen.module.css";
 import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
-import { Controls } from "./controls";
+import { Controls, ControlsSkeleton } from "./controls";
 import { Grid } from "./grid";
 import type { BinairoPlay } from "./use-binairo-play";
 
@@ -51,6 +51,7 @@ export function PlayView({
           hintIndex={state.hint.lastIndex}
           painting={state.paint.kind !== "cycle"}
           onTap={play.tapCell}
+          onStrokeStart={play.strokeStart}
           onPaintOver={play.paintOver}
         />
       </div>
@@ -87,24 +88,7 @@ export function PlaySkeleton({
         </div>
       </div>
 
-      <div aria-hidden className={styles.controls}>
-        <div
-          className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
-        >
-          {copy.controls.zero}
-        </div>
-        <div
-          className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
-        >
-          {copy.controls.one}
-        </div>
-        <div
-          className={`${styles.control} ${styles.controlErase} ${styles.placeholder}`}
-        >
-          {copy.controls.erase}
-        </div>
-        <span className={styles.affordance}>{copy.controls.affordance}</span>
-      </div>
+      <ControlsSkeleton />
     </DailyPlayChrome>
   );
 }

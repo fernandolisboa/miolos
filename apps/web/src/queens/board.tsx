@@ -2,6 +2,7 @@ import type { QueensSize } from "@miolos/core";
 import { memo, type MouseEvent as ReactMouseEvent } from "react";
 
 import { messages } from "../i18n";
+import type { Press } from "../play/brush";
 import { useBinaryBoard } from "../play/use-binary-board";
 import styles from "./queens-board.module.css";
 import type { QueensCellValue, QueensMark } from "./state";
@@ -21,7 +22,7 @@ export const Board = memo(function Board({
   hintIndex,
   onSelect,
   onMove,
-  onCycle,
+  onTap,
   onCrossOver,
   onEnterValue,
   onClear,
@@ -34,7 +35,7 @@ export const Board = memo(function Board({
   readonly hintIndex: number | null;
   readonly onSelect: (index: number) => void;
   readonly onMove: (rows: number, columns: number) => void;
-  readonly onCycle: (index: number) => void;
+  readonly onTap: (index: number, press: Press) => void;
   readonly onCrossOver: (index: number) => void;
   readonly onEnterValue: (value: QueensMark) => void;
   readonly onClear: () => void;
@@ -42,7 +43,8 @@ export const Board = memo(function Board({
   const board = useBinaryBoard({
     size,
     selected,
-    onTap: onCycle,
+    onTap,
+    onStrokeStart: onCrossOver,
     onPaintOver: onCrossOver,
     onMove,
     onEnterValue,

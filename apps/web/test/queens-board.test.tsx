@@ -262,6 +262,61 @@ describe("the Rainhas board is one composite widget (T-WEB-S456)", () => {
   });
 });
 
+describe("the Rainhas mouse buttons (T-WEB-S500)", () => {
+  function click(index: number, button: number): void {
+    const at = {
+      clientX: index,
+      clientY: 0,
+      pointerId: 1,
+      pointerType: "mouse",
+      button,
+    };
+    fireEvent.pointerDown(boardOf(), at);
+    fireEvent.pointerUp(boardOf(), at);
+  }
+
+  it("a right click places a queen and the next removes it, with no mark between", () => {
+    const { container } = render(<QueensScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+
+    click(5, 2);
+    expect(labelOf(5)).toBe(expectedLabel(5, 1));
+    click(5, 2);
+    expect(labelOf(5)).toBe(expectedLabel(5, null));
+  });
+
+  it("a left click keeps the cycle, and a right click over a mark crowns it", () => {
+    const { container } = render(<QueensScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+
+    click(5, 0);
+    expect(labelOf(5)).toBe(expectedLabel(5, 0));
+    click(5, 2);
+    expect(labelOf(5)).toBe(expectedLabel(5, 1));
+    click(5, 0);
+    expect(labelOf(5)).toBe(expectedLabel(5, null));
+  });
+
+  it("a right drag still crosses empty cells and blocks the context menu on the board", () => {
+    const { container } = render(<QueensScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+    const board = boardOf();
+    const base = { clientY: 0, pointerId: 1, pointerType: "mouse", button: 2 };
+
+    fireEvent.pointerDown(board, { ...base, clientX: 0 });
+    fireEvent.pointerMove(board, { ...base, clientX: 1 });
+    fireEvent.pointerMove(board, { ...base, clientX: 2 });
+    fireEvent.pointerUp(board, { ...base, clientX: 2 });
+
+    expect([0, 1, 2].map(labelOf)).toStrictEqual([
+      expectedLabel(0, 0),
+      expectedLabel(1, 0),
+      expectedLabel(2, 0),
+    ]);
+    expect(fireEvent.contextMenu(board)).toBe(false);
+  });
+});
+
 describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)", () => {
   const css = stylesheet("src/queens/queens-board.module.css");
   const REGIONS = Array.from(
