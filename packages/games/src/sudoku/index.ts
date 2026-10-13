@@ -8,7 +8,7 @@ export {
 } from "./types";
 export { getSudokuConflicts, isSudokuSolved } from "./board";
 export { countSudokuSolutions, solveSudoku } from "./solve";
-export { gradeSudoku } from "./grade";
+export { gradeSudoku, nextSudokuStep, type SudokuStep } from "./grade";
 export {
   SUDOKU_TIER_CRITERIA,
   SUDOKU_WEEKDAY_CRITERIA,

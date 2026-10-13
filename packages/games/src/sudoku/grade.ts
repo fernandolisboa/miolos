@@ -21,6 +21,23 @@ export type SudokuTechnique =
   | "xWingRows"
   | "xWingCols";
 
+type SudokuSingle = "nakedSingle" | "hiddenSingle";
+
+type SudokuElimination = Exclude<SudokuTechnique, SudokuSingle>;
+
+const TECHNIQUE_TIER: Readonly<Record<SudokuTechnique, SudokuTier>> = {
+  nakedSingle: 1,
+  hiddenSingle: 2,
+  pointing: 3,
+  claiming: 3,
+  nakedPair: 4,
+  hiddenPair: 4,
+  nakedTriple: 5,
+  hiddenTriple: 5,
+  xWingRows: 5,
+  xWingCols: 5,
+};
+
 export interface GradeResult {
   readonly grade: SudokuGrade;
 
@@ -29,7 +46,36 @@ export interface GradeResult {
   readonly techniques: ReadonlySet<SudokuTechnique>;
 }
 
-export function gradeInternal(givens: readonly number[]): GradeResult {
+export interface SudokuStep {
+  readonly index: number;
+  readonly digit: number;
+  readonly technique: SudokuSingle;
+  readonly unit: {
+    readonly kind: "row" | "column" | "box";
+    readonly index: number;
+  } | null;
+  readonly cells: readonly number[];
+  readonly after: SudokuElimination | null;
+}
+
+type LadderStep =
+  | {
+      readonly technique: SudokuSingle;
+      readonly placed: {
+        readonly index: number;
+        readonly digit: number;
+        readonly unit: number | null;
+      };
+    }
+  | { readonly technique: SudokuElimination; readonly placed: null };
+
+interface Ladder {
+  readonly grid: readonly number[];
+  remaining(): number;
+  step(): LadderStep | null;
+}
+
+function createLadder(givens: readonly number[]): Ladder {
   const val = [...givens];
   const rows = new Array<number>(9).fill(0);
   const cols = new Array<number>(9).fill(0);
@@ -51,7 +97,6 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
       empties += 1;
     }
   }
-  const techniques = new Set<SudokuTechnique>();
 
   const place = (i: number, d: number): void => {
     const bit = 1 << (d - 1);
@@ -63,19 +108,23 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
     }
   };
 
-  const nakedSingle = (): boolean => {
+  const nakedSingle = (): LadderStep | null => {
     for (let i = 0; i < 81; i += 1) {
       if (val[i]! === 0 && POPCOUNT[cand[i]!]! === 1) {
-        place(i, 32 - Math.clz32(cand[i]!));
-        techniques.add("nakedSingle");
-        return true;
+        const digit = 32 - Math.clz32(cand[i]!);
+        place(i, digit);
+        return {
+          technique: "nakedSingle",
+          placed: { index: i, digit, unit: null },
+        };
       }
     }
-    return false;
+    return null;
   };
 
-  const hiddenSingle = (): boolean => {
-    for (const unit of UNITS) {
+  const hiddenSingle = (): LadderStep | null => {
+    for (let u = 0; u < UNITS.length; u += 1) {
+      const unit = UNITS[u]!;
       for (let d = 1; d <= 9; d += 1) {
         const bit = 1 << (d - 1);
         let count = 0;
@@ -88,15 +137,17 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
         }
         if (count === 1) {
           place(cell, d);
-          techniques.add("hiddenSingle");
-          return true;
+          return {
+            technique: "hiddenSingle",
+            placed: { index: cell, digit: d, unit: u },
+          };
         }
       }
     }
-    return false;
+    return null;
   };
 
-  const lockedCandidates = (): boolean => {
+  const lockedCandidates = (): LadderStep | null => {
     for (let b = 0; b < 9; b += 1) {
       const box = UNITS[18 + b]!;
       for (let d = 1; d <= 9; d += 1) {
@@ -120,8 +171,7 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
             }
           }
           if (removed) {
-            techniques.add("pointing");
-            return true;
+            return { technique: "pointing", placed: null };
           }
         }
         if (cellCols.size === 1) {
@@ -135,8 +185,7 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
             }
           }
           if (removed) {
-            techniques.add("pointing");
-            return true;
+            return { technique: "pointing", placed: null };
           }
         }
       }
@@ -162,16 +211,15 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
             }
           }
           if (removed) {
-            techniques.add("claiming");
-            return true;
+            return { technique: "claiming", placed: null };
           }
         }
       }
     }
-    return false;
+    return null;
   };
 
-  const pairs = (): boolean => {
+  const pairs = (): LadderStep | null => {
     for (const unit of UNITS) {
       const twos = unit.filter(
         (i) => val[i]! === 0 && POPCOUNT[cand[i]!]! === 2,
@@ -197,8 +245,7 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
             }
           }
           if (removed) {
-            techniques.add("nakedPair");
-            return true;
+            return { technique: "nakedPair", placed: null };
           }
         }
       }
@@ -227,16 +274,15 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
             }
           }
           if (changed) {
-            techniques.add("hiddenPair");
-            return true;
+            return { technique: "hiddenPair", placed: null };
           }
         }
       }
     }
-    return false;
+    return null;
   };
 
-  const triplesAndXWing = (): boolean => {
+  const triplesAndXWing = (): LadderStep | null => {
     for (const unit of UNITS) {
       const cells = unit.filter(
         (i) =>
@@ -266,8 +312,7 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
               }
             }
             if (removed) {
-              techniques.add("nakedTriple");
-              return true;
+              return { technique: "nakedTriple", placed: null };
             }
           }
         }
@@ -307,8 +352,7 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
               }
             }
             if (changed) {
-              techniques.add("hiddenTriple");
-              return true;
+              return { technique: "hiddenTriple", placed: null };
             }
           }
         }
@@ -351,40 +395,83 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
               }
             }
             if (removed) {
-              techniques.add(transpose ? "xWingCols" : "xWingRows");
-              return true;
+              return {
+                technique: transpose ? "xWingCols" : "xWingRows",
+                placed: null,
+              };
             }
           }
         }
       }
     }
-    return false;
+    return null;
   };
 
+  return {
+    grid: val,
+    remaining: () => empties,
+    step: () =>
+      nakedSingle() ??
+      hiddenSingle() ??
+      lockedCandidates() ??
+      pairs() ??
+      triplesAndXWing(),
+  };
+}
+
+export function gradeInternal(givens: readonly number[]): GradeResult {
+  const ladder = createLadder(givens);
+  const techniques = new Set<SudokuTechnique>();
   let grade: SudokuTier = 1;
-  while (empties > 0) {
-    if (nakedSingle()) {
-      continue;
+  while (ladder.remaining() > 0) {
+    const step = ladder.step();
+    if (step === null) {
+      return { grade: "beyond", solved: null, techniques };
     }
-    if (hiddenSingle()) {
-      grade = grade < 2 ? 2 : grade;
-      continue;
-    }
-    if (lockedCandidates()) {
-      grade = grade < 3 ? 3 : grade;
-      continue;
-    }
-    if (pairs()) {
-      grade = grade < 4 ? 4 : grade;
-      continue;
-    }
-    if (triplesAndXWing()) {
-      grade = 5;
-      continue;
-    }
-    return { grade: "beyond", solved: null, techniques };
+    techniques.add(step.technique);
+    const tier = TECHNIQUE_TIER[step.technique];
+    grade = tier > grade ? tier : grade;
   }
-  return { grade, solved: val, techniques };
+  return { grade, solved: ladder.grid, techniques };
+}
+
+export function nextSudokuStep(grid: SudokuGrid): SudokuStep | null {
+  assertSudokuGrid(grid);
+  const ladder = createLadder(grid);
+  let after: SudokuElimination | null = null;
+  while (ladder.remaining() > 0) {
+    const step = ladder.step();
+    if (step === null) {
+      return null;
+    }
+    if (step.placed !== null) {
+      const { index, digit, unit } = step.placed;
+      return {
+        index,
+        digit,
+        technique: step.technique,
+        unit: unit === null ? null : unitOf(unit),
+        cells: unit === null ? PEERS[index]! : UNITS[unit]!,
+        after,
+      };
+    }
+    if (
+      after === null ||
+      TECHNIQUE_TIER[step.technique] > TECHNIQUE_TIER[after]
+    ) {
+      after = step.technique;
+    }
+  }
+  return null;
+}
+
+function unitOf(unit: number): NonNullable<SudokuStep["unit"]> {
+  if (unit < 9) {
+    return { kind: "row", index: unit };
+  }
+  return unit < 18
+    ? { kind: "column", index: unit - 9 }
+    : { kind: "box", index: unit - 18 };
 }
 
 export function gradeSudoku(givens: SudokuGrid): SudokuGrade {
