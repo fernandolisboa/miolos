@@ -260,11 +260,12 @@ function readouts(
   ready: boolean,
   explain: string | null,
   onReveal: () => void = noop,
+  used = 0,
 ): PlayChromeReadouts {
   return {
     progressShort: PROGRESS_SHORT,
     progressLong: PROGRESS_LONG,
-    hint: { ready, label: "Dica", explain, onReveal },
+    hint: { ready, used, explain, onReveal },
   };
 }
 
@@ -542,6 +543,40 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "wordmark",
       ],
     });
+  });
+});
+
+describe("the hint button counts the free hints down from `used` (T-WEB-S512)", () => {
+  function hintOf(ready: boolean, used: number): Element {
+    const page = staticPage(
+      chrome({
+        ...FREE_PLAYING,
+        state: { kind: "playing", readouts: readouts(ready, null, noop, used) },
+      }),
+    );
+    const hint = page.querySelector(`.${cls("hint")}`);
+    if (hint === null) {
+      throw new Error("the live chrome rendered no hint control");
+    }
+    return hint;
+  }
+
+  it("reads the hints left, then that they are spent", () => {
+    expect(
+      [0, 1, 2, 3].map((used) => hintOf(used < 3, used).textContent),
+    ).toEqual([
+      "Usar dica — 3 disponíveis",
+      "Usar dica — 2 disponíveis",
+      "Usar dica — 1 disponível",
+      "Dicas usadas",
+    ]);
+  });
+
+  it("keeps the count on a board closed before any hint, disabled", () => {
+    const hint = hintOf(false, 0);
+
+    expect(hint.textContent).toBe("Usar dica — 3 disponíveis");
+    expect(hint.getAttribute("aria-disabled")).toBe("true");
   });
 });
 

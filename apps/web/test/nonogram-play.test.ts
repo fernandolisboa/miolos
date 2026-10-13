@@ -1,5 +1,6 @@
 import {
   dailyNonogramResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailyNonogramResponse,
 } from "@miolos/core";
 import { generateNonogram } from "@miolos/games/nonogram";
@@ -226,7 +227,7 @@ describe("useNonogramPlay", () => {
     }
   });
 
-  it("spends the free hint once and reports which case it fired", () => {
+  it("spends every free hint, then stops, and reports which case it fired", () => {
     const { result } = renderHook(() => useNonogramPlay(DAILY));
     act(() => {
       vi.advanceTimersByTime(0);
@@ -238,15 +239,18 @@ describe("useNonogramPlay", () => {
 
     expect(result.current.hintKind).toBe("fill");
     expect(result.current.state.hint.used).toBe(1);
-    expect(result.current.hintReady).toBe(false);
+    expect(result.current.hintReady).toBe(true);
     expect(result.current.filled).toBe(1);
 
-    act(() => {
-      result.current.revealHint();
-    });
+    for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {
+      act(() => {
+        result.current.revealHint();
+      });
+    }
 
-    expect(result.current.state.hint.used).toBe(1);
-    expect(storedRecord().hintsUsed).toBe(1);
+    expect(result.current.hintReady).toBe(false);
+    expect(result.current.state.hint.used).toBe(FREE_HINTS_PER_PUZZLE);
+    expect(storedRecord().hintsUsed).toBe(FREE_HINTS_PER_PUZZLE);
   });
 
   it("restores a stored board on mount without re-posting a settled day", () => {

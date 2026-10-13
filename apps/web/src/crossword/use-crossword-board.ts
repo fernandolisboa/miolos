@@ -1,4 +1,7 @@
-import type { DailyCrosswordResponse } from "@miolos/core";
+import {
+  FREE_HINTS_PER_PUZZLE,
+  type DailyCrosswordResponse,
+} from "@miolos/core";
 import {
   useCallback,
   useEffect,
@@ -94,7 +97,10 @@ export function useCrosswordBoard(
 
   const revealHint = useCallback(() => {
     const current = stateRef.current;
-    if (current.hint.used >= current.hint.free || current.status === "solved") {
+    if (
+      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
+      current.status === "solved"
+    ) {
       return;
     }
     const hint = nextHint(
@@ -114,7 +120,7 @@ export function useCrosswordBoard(
     dispatch,
     filled,
     total,
-    hintReady: state.hint.used < state.hint.free && status === "playing",
+    hintReady: state.hint.used < FREE_HINTS_PER_PUZZLE && status === "playing",
     hintKind,
     selectCell,
     selectEntry,

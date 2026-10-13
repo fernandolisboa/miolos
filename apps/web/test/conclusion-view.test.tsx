@@ -291,6 +291,34 @@ describe("the stamp (T-WEB-17)", () => {
   });
 });
 
+describe("the stamp counts up to three hints (T-WEB-S513)", () => {
+  it("words each hint count", () => {
+    expect([0, 1, 2, 3].map(messages.conclusion.hints)).toEqual([
+      "sem dicas",
+      "com 1 dica",
+      "com 2 dicas",
+      "com 3 dicas",
+    ]);
+    expect(messages.conclusion.stampAria("Binairo", "02:05", 2)).toBe(
+      "Binairo concluído em 02:05, com 2 dicas",
+    );
+  });
+
+  it("renders a record with every free hint spent", () => {
+    writePlayRecord(concluded({ hintsUsed: 3 }));
+
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    expect(screen.getByText("com 3 dicas")).toBeInTheDocument();
+  });
+});
+
 describe("the day card and the CTA (T-WEB-18)", () => {
   it("shows Binairo done and the other five honestly missing", () => {
     writePlayRecord(concluded());

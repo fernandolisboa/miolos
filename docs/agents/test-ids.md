@@ -37,10 +37,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S164` | `S163` | never used |
-| `T-DB` | `S125` | `S124` | `T-DB-21` |
-| `T-API` | `S284` | `S283` | `T-API-16` |
-| `T-WEB` | `S514` | `S510` | `T-WEB-23` |
+| `T-CORE` | `S180` | `S172` | never used |
+| `T-DB` | `S135` | `S131` | `T-DB-21` |
+| `T-API` | `S310` | `S298` | `T-API-16` |
+| `T-WEB` | `S538` | `S537` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
 #302 (the Sudoku selection's reach) spent **`T-WEB-S495…S497`**: `S495` (`sharesUnit` and `selectionHighlights`), `S496` (the board's highlight classes, unchanged names, the conflict and hint rings kept) and `S497` (the tint and fill contrast in both themes, and the caret's order on a filled copy). `S488…S494` were left to the branches running beside it the same day (#295, #298, #299, #301, #304); whatever none of them spent is burned.
@@ -57,7 +57,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 #304 PR 1 (the admin page, ADR-0097) reserved `T-CORE-S170…S179`, `T-DB-S130…S134` and `T-API-S290…S309` on the issue, and spent **`T-CORE-S170…S172`** (the one-key write within its bounds, the keys and bounds pinned, the strict state response), **`T-DB-S130`/`S131`** (`setRemoteConfigValue` upserts and moves `updated_at`; an invalid row falls back for its own key only), **`T-API-S290…S298`** (`isAdmin`, the two routes, the 503 while `WEB_ORIGIN` is unset) and **`T-WEB-S530…S537`** (the shell, the fallback, the non-admin id, the bounded rows, saving, a failed save, when *Salvar* is offered, one save at a time). Its web reservation `S500…S514` collided with #299 and #295, which merged first, so it moved past them; `T-WEB-S514…S529` are left to the threads running beside it, and whatever none spends is burned. `T-DB-9c`, `T-DB-S5`, `T-API-S183`, `T-WEB-S56`, `T-WEB-S352` and `T-WEB-S396` were widened in place. The tails `T-CORE-S173…S179`, `T-DB-S132…S134` and `T-API-S299…S309` are **burned**, never reused.
 
-#295 PR A (the hint wire accepts three, ADR-0095) spent **`T-CORE-S163`** (every completion member and a completed `/day` claim accept `0..FREE_HINTS_PER_PUZZLE` hints and nothing else), **`T-API-S283`** (a completion with three hints is accepted and `/day` answers 200 with it) and **`T-WEB-S510`** (a play record at the cap reads, one past it does not). `T-WEB-S508…S509` were left to the threads running beside it (#298, #304); whatever neither spent is burned. `T-WEB-S511…S513` are held for #295 PR B. `T-CORE-S22`, `S103`, `S124` and `S134` now reject `FREE_HINTS_PER_PUZZLE + 1` in place and took no new id.
+#295 PR A (the hint wire accepts three, ADR-0095) spent **`T-CORE-S163`** (every completion member and a completed `/day` claim accept `0..FREE_HINTS_PER_PUZZLE` hints and nothing else), **`T-API-S283`** (a completion with three hints is accepted and `/day` answers 200 with it) and **`T-WEB-S510`** (a play record at the cap reads, one past it does not). `T-WEB-S508…S509` were left to the threads running beside it (#298, #304); whatever neither spent is burned. #295 PR B (three free hints and the countdown label) spent **`T-WEB-S511a…e`** (the Sudoku, Binairo, Cruzadinha, Nonogram and Rainhas reducers: three hints, the fourth press inert, a restore with two spent leaves one), **`T-WEB-S512`** (the chrome builds the countdown label from `used`, not `ready`) and **`T-WEB-S513`** (the stamp words up to three hints); the screen hint tests (`T-WEB-9`, `S28a`, `S122`, `S122a`, `S476`, `S480`) now spend every free hint in place and took no new id. `T-CORE-S22`, `S103`, `S124` and `S134` now reject `FREE_HINTS_PER_PUZZLE + 1` in place and took no new id.
 
 #279 (Cruzadinha free play, ADR-0088) spent **`T-WEB-S444…S447`**: `S444` (only `/modo-livre/cruzadinha` reaches the lexicon), `S445` (the free crossword's wire shape, `FREE_PLAY_DATE`, one puzzle per seed), `S446` (a zero-fetch, zero-write session with no clock and no level, through "Mais uma") and `S447` (the shared error card's retry), with the sibling `S122a` (the crossword's one hint); **`T-LINT-S67`** (the one exempt static importer), with the sibling `S17a` (the Cruzadinha's daily hook and screen root red from free play). Nothing is burned. **Retired at #279:** the marker case of `T-WEB-S206a` (the OG deck held no single-word Termo marker) and of `T-WEB-S206`, plus the three canaries in `medals-content.test.ts`'s `FORBIDDEN_VOCABULARY`. The markers became answer-list pairs, which no copy can spell. `S206` keeps its import check; `S206a` keeps its archive-copy and barrel arms.
 

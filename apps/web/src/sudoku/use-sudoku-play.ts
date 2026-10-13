@@ -1,4 +1,4 @@
-import type { DailySudokuResponse } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
 import {
   useCallback,
   useEffect,
@@ -106,7 +106,7 @@ export function useSudokuPlay(
     }
     const current = stateRef.current;
     if (
-      current.hint.used >= current.hint.free ||
+      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
       current.status !== "playing"
     ) {
       return;
@@ -129,7 +129,9 @@ export function useSudokuPlay(
     elapsed,
     filled,
     hintReady:
-      solution !== null && hintsUsed < state.hint.free && status === "playing",
+      solution !== null &&
+      hintsUsed < FREE_HINTS_PER_PUZZLE &&
+      status === "playing",
     hintKind,
     selectCell,
     moveSelection,

@@ -290,8 +290,8 @@
    The ring is the INVERSE of the
    cell's own ink, which is why one colour cannot serve both: `--ink-2` is
    1.18:1 on terracotta and `--accent` is 1:1 on it. A copied
-   `background: color-mix(… 10% …)` would REPLACE the fill and render the day's
-   one free hint as a ~10% tint on a board where the fill IS the payload. */
+   `background: color-mix(… 10% …)` would REPLACE the fill and render a free
+   hint as a ~10% tint on a board where the fill IS the payload. */
 .cellFilled.cellHinted {
   box-shadow: inset 0 0 0 2px var(--paper-desk);
 }
@@ -392,7 +392,7 @@
    away leaves the outline where it was and the occluded hint ring does not
    come back. That is the accepted cost, stated as it actually behaves: the
    caret is singular and the stronger signal, it occludes exactly one cell,
-   and the ring underneath it is the day's one free hint on a cell the player
+   and the ring underneath it is a free hint on a cell the player
    has already been shown. Scoping the outline to `:focus-visible` alone was
    rejected — WebKit does not focus-visible a clicked button, so the pointer
    path would lose its caret entirely. */

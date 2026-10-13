@@ -17,7 +17,7 @@ export function crosswordReadouts(board: CrosswordBoard): PlayChromeReadouts {
     progressLong: copy.progressLong(board.filled, board.total),
     hint: {
       ready: board.hintReady,
-      label: board.hintReady ? copy.hint.available : copy.hint.used,
+      used: board.state.hint.used,
       explain:
         board.hintKind === null ? null : copy.hint.explain[board.hintKind],
       onReveal: board.revealHint,

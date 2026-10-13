@@ -1,5 +1,6 @@
 import {
   dailySudokuResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailySudokuResponse,
 } from "@miolos/core";
 import { generateDailySudoku } from "@miolos/games/sudoku";
@@ -132,7 +133,7 @@ describe("useSudokuPlay", () => {
     expect(sync.flushPendingCompletions).toHaveBeenCalledWith(record);
   });
 
-  it("spends the free hint once and reports which case it fired", () => {
+  it("spends every free hint, then stops, and reports which case it fired", () => {
     const { result } = renderHook(() => useSudokuPlay(DAILY));
     act(() => {
       vi.advanceTimersByTime(0);
@@ -146,13 +147,16 @@ describe("useSudokuPlay", () => {
 
     expect(result.current.state.entries[first]).toBe(SOLUTION[first]);
     expect(result.current.hintKind).toBe("fill");
+    expect(result.current.hintReady).toBe(true);
+
+    for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {
+      act(() => {
+        result.current.revealHint();
+      });
+    }
+
     expect(result.current.hintReady).toBe(false);
-
-    act(() => {
-      result.current.revealHint();
-    });
-
-    expect(result.current.state.hint.used).toBe(1);
-    expect(storedRecord().hintsUsed).toBe(1);
+    expect(result.current.state.hint.used).toBe(FREE_HINTS_PER_PUZZLE);
+    expect(storedRecord().hintsUsed).toBe(FREE_HINTS_PER_PUZZLE);
   });
 });

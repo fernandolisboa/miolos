@@ -1,4 +1,4 @@
-import type { DailyBinairoResponse } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -15,6 +15,7 @@ import {
 } from "../src/play/play-record";
 import { formatElapsed, messages } from "../src/i18n";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
+import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 const sync = vi.hoisted(() => ({
@@ -594,20 +595,21 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
   });
 });
 
-describe("the one free hint (T-WEB-9)", () => {
-  it("fills exactly one cell, then renders the exhausted variant", () => {
+describe("the free hints (T-WEB-9)", () => {
+  it("fills one cell per free hint, then renders the exhausted variant", () => {
     render(<BinairoScreen daily={DAILY} />);
 
-    fireEvent.click(
-      screen.getByText(messages.games.binairo.play.hint.available),
-    );
+    spendFreeHints();
 
     expect(
       screen.getByText(
-        messages.games.binairo.play.progressLong(GIVENS_COUNT + 1, 64),
+        messages.games.binairo.play.progressLong(
+          GIVENS_COUNT + FREE_HINTS_PER_PUZZLE,
+          64,
+        ),
       ),
     ).toBeInTheDocument();
-    const exhausted = screen.getByText(messages.games.binairo.play.hint.used);
+    const exhausted = screen.getByText(messages.play.hint.used);
     expect(exhausted).toHaveAttribute("aria-disabled", "true");
 
     expect(
@@ -618,7 +620,10 @@ describe("the one free hint (T-WEB-9)", () => {
 
     expect(
       screen.getByText(
-        messages.games.binairo.play.progressLong(GIVENS_COUNT + 1, 64),
+        messages.games.binairo.play.progressLong(
+          GIVENS_COUNT + FREE_HINTS_PER_PUZZLE,
+          64,
+        ),
       ),
     ).toBeInTheDocument();
   });
@@ -803,7 +808,9 @@ describe("the first paint (T-WEB-9d)", () => {
     expect(markup).not.toContain(
       messages.games.binairo.play.progressLong(GIVENS_COUNT, 64),
     );
-    expect(markup).not.toContain(messages.games.binairo.play.hint.available);
+    expect(markup).not.toContain(
+      messages.play.hint.available(FREE_HINTS_PER_PUZZLE),
+    );
     expect(markup).not.toContain("<button");
 
     expect(markup).not.toContain(messages.conclusion.stampLabel);

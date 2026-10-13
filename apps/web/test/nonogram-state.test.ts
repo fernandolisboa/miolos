@@ -1,5 +1,6 @@
 import {
   dailyNonogramResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailyNonogramResponse,
 } from "@miolos/core";
 import { generateNonogram, type NonogramPuzzle } from "@miolos/games/nonogram";
@@ -89,7 +90,10 @@ describe("initNonogramPlayState", () => {
       accumulatedMs: 0,
       runningSince: null,
     });
-    expect(MONDAY_STATE.hint).toEqual({ free: 1, used: 0, lastIndex: null });
+    expect(MONDAY_STATE.hint).toEqual({
+      used: 0,
+      lastIndex: null,
+    });
     expect(MONDAY_STATE.status).toBe("playing");
     expect(MONDAY_STATE.hydrated).toBe(false);
     expect(MONDAY_STATE.now).toBe(0);
@@ -623,7 +627,10 @@ describe("restore (T-WEB-S37)", () => {
       accumulatedMs: 61_000,
       runningSince: null,
     });
-    expect(restored.hint).toEqual({ free: 1, used: 1, lastIndex: null });
+    expect(restored.hint).toEqual({
+      used: 1,
+      lastIndex: null,
+    });
     expect(restored.hydrated).toBe(true);
     expect(restored.now).toBe(NOW);
   });
@@ -726,5 +733,56 @@ describe("restore (T-WEB-S37)", () => {
     expect(restored.status).toBe("solved");
 
     expect(restored.pendingSync).toBe(false);
+  });
+});
+
+describe("three free hints per puzzle (T-WEB-S511d)", () => {
+  function hintTimes(
+    state: NonogramPlayState,
+    times: number,
+  ): NonogramPlayState {
+    return play(
+      state,
+      ...Array.from({ length: times }, () => ({ type: "use-hint" }) as const),
+    );
+  }
+
+  it("writes a solution mark on each free press", () => {
+    const solution = solutionOf(MONDAY_STATE);
+    let current = MONDAY_STATE;
+    for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {
+      current = play(current, { type: "use-hint" });
+      const index = current.hint.lastIndex ?? -1;
+
+      expect(current.hint.lastIndex).not.toBeNull();
+      expect(current.hint.used).toBe(press);
+      expect(current.entries[index]).toBe(solution[index]);
+    }
+  });
+
+  it("returns the same state on the press after the last free hint", () => {
+    const spent = hintTimes(MONDAY_STATE, FREE_HINTS_PER_PUZZLE);
+
+    expect(play(spent, { type: "use-hint" })).toBe(spent);
+  });
+
+  it("leaves exactly one hint after a restore with two spent", () => {
+    const record: NonogramPlayRecord = {
+      v: 1,
+      game: "nonogram",
+      date: DATE,
+      size: 5,
+      entries: Array.from({ length: 25 }, () => null),
+      elapsedMs: 0,
+      hintsUsed: 2,
+      concluded: false,
+      pendingSync: false,
+      syncOutcome: "pending",
+    };
+    const restored = play(MONDAY_STATE, { type: "restore", record, now: 1 });
+    const last = play(restored, { type: "use-hint" });
+
+    expect(last.hint.used).toBe(3);
+    expect(play(last, { type: "use-hint" })).toBe(last);
   });
 });

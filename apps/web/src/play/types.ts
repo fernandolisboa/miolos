@@ -26,7 +26,6 @@ export interface ArchivePlayChrome {
 }
 
 export interface HintState {
-  readonly free: 1;
   readonly used: number;
 
   readonly lastIndex: number | null;

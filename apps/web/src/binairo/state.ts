@@ -1,4 +1,4 @@
-import type { DailyBinairoResponse } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
 import {
   findBinairoViolations,
   isValidBinairoSolution,
@@ -63,7 +63,7 @@ export function initPlayState(daily: DailyBinairoResponse): PlayState {
     paint: { kind: "cycle" },
     stroke: null,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: 1, used: 0, lastIndex: null },
+    hint: { used: 0, lastIndex: null },
     violating: derived.violating,
     status: derived.status,
     pendingSync: false,
@@ -126,7 +126,10 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       };
 
     case "use-hint": {
-      if (state.hint.used >= state.hint.free || state.status === "solved") {
+      if (
+        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
+        state.status === "solved"
+      ) {
         return state;
       }
       const hint = nextHint(action.solution, state.givens, state.entries);
@@ -136,7 +139,10 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       const revealed = withEntry(state, hint.index, hint.value);
       return {
         ...revealed,
-        hint: { free: 1, used: state.hint.used + 1, lastIndex: hint.index },
+        hint: {
+          used: state.hint.used + 1,
+          lastIndex: hint.index,
+        },
       };
     }
 
@@ -246,7 +252,10 @@ function restore(
     ...state,
     ...derived,
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: { free: 1, used: record.hintsUsed, lastIndex: null },
+    hint: {
+      used: record.hintsUsed,
+      lastIndex: null,
+    },
     pendingSync: record.pendingSync,
     now,
     hydrated: true,

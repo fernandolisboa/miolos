@@ -332,6 +332,10 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
           () => [build({ hintsUsed: 0 }), build({ hintsUsed: 1 })],
         ],
         [
+          `${name}: hintsUsed at the cap`,
+          () => [build({ hintsUsed: 0 }), build({ hintsUsed: 3 })],
+        ],
+        [
           `${name}: syncOutcome pending/recorded`,
           () => [
             build({ syncOutcome: "pending" }),
