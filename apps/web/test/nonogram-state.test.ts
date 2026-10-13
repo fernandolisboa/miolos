@@ -754,6 +754,7 @@ describe("three free hints per puzzle (T-WEB-S511d)", () => {
       current = play(current, { type: "use-hint" });
       const index = current.hint.lastIndex ?? -1;
 
+      expect(current.hint.lastIndex).not.toBeNull();
       expect(current.hint.used).toBe(press);
       expect(current.entries[index]).toBe(solution[index]);
     }
