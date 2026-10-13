@@ -79,7 +79,7 @@ jobs:
           # (play-view.tsx / conclusion-view.tsx). "/" needs no marker: it reads
           # no database, so reachable and rendered are the same property there.
           status=0
-          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido" "/cruzadinha" "/cruzadinha/concluido" "/modo-livre" "/modo-livre/binairo" "/modo-livre/sudoku" "/modo-livre/nonogram" "/modo-livre/cruzadinha" "/modo-livre/rainhas" "/privacidade" "/termos" "/vincular" "/estatisticas" "/arquivo" "/ajustes"; do
+          for path in "/" "/binairo" "/binairo/concluido" "/sudoku" "/sudoku/concluido" "/nonogram" "/nonogram/concluido" "/termo" "/termo/concluido" "/cruzadinha" "/cruzadinha/concluido" "/rainhas" "/rainhas/concluido" "/modo-livre" "/modo-livre/binairo" "/modo-livre/sudoku" "/modo-livre/nonogram" "/modo-livre/cruzadinha" "/modo-livre/rainhas" "/privacidade" "/termos" "/vincular" "/estatisticas" "/arquivo" "/ajustes"; do
             case "$path" in
               */concluido) marker='data-conclusion-state=' ;;
               # The free-play index (#28) is static and carries its own
@@ -271,6 +271,8 @@ jobs:
           "$DEPLOYMENT_URL/termo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/cruzadinha?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/cruzadinha/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/rainhas?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/rainhas/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
@@ -317,6 +319,8 @@ jobs:
           "$DEPLOYMENT_URL/termo/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/cruzadinha?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/cruzadinha/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/rainhas?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/rainhas/concluido?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
