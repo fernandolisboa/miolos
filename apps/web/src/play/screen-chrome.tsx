@@ -5,6 +5,7 @@ import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 
 import { messages } from "../i18n";
 import { accentVars } from "./accent";
+import { useFreeHintsPerPuzzle } from "./free-hints";
 import { ResetControl, ResetPlaceholder } from "./reset-control";
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
@@ -72,9 +73,9 @@ function clockBar(clock: PlayChromeClock): ReactNode {
   );
 }
 
-function hintLabel(used: number): string {
-  return used < FREE_HINTS_PER_PUZZLE
-    ? messages.play.hint.available(FREE_HINTS_PER_PUZZLE - used)
+function hintLabel(used: number, allowance: number): string {
+  return used < allowance
+    ? messages.play.hint.available(allowance - used)
     : messages.play.hint.used;
 }
 
@@ -118,6 +119,7 @@ export function PlayScreenChrome({
   readonly extraStat: PlayChromeStat | null;
   readonly children: ReactNode;
 }): ReactElement {
+  const allowance = useFreeHintsPerPuzzle() ?? FREE_HINTS_PER_PUZZLE;
   const skeleton = state.kind === "skeleton";
   const readouts = state.kind === "playing" ? state.readouts : null;
   const { kicker, play } = messages.games[game];
@@ -217,7 +219,7 @@ export function PlayScreenChrome({
           aria-disabled={!readouts.hint.ready}
           onClick={readouts.hint.onReveal}
         >
-          {hintLabel(readouts.hint.used)}
+          {hintLabel(readouts.hint.used, allowance)}
         </button>
       )}
     </main>

@@ -1,6 +1,7 @@
-import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
+import type { DailySudokuResponse } from "@miolos/core";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
@@ -15,6 +16,7 @@ import {
   solvedDigits,
 } from "./engine";
 import {
+  canHint,
   initSudokuPlayState,
   sudokuPlayReducer,
   type SudokuDigit,
@@ -54,13 +56,14 @@ export function useSudokuPlay(
   );
   const { hintKind, setHintKind, reset } =
     useHintKind<SudokuHint["kind"]>(dispatch);
+  const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   });
 
-  const { givens, entries, timer, status } = state;
+  const { givens, entries, timer } = state;
   const hintsUsed = state.hint.used;
   const elapsed = elapsedMs(timer, state.now);
 
@@ -101,10 +104,7 @@ export function useSudokuPlay(
       return;
     }
     const current = stateRef.current;
-    if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
-      current.status !== "playing"
-    ) {
+    if (!canHint(current, allowance)) {
       return;
     }
 
@@ -118,16 +118,13 @@ export function useSudokuPlay(
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution });
-  }, [solution, setHintKind]);
+  }, [solution, setHintKind, allowance]);
 
   return {
     state,
     elapsed,
     filled,
-    hintReady:
-      solution !== null &&
-      hintsUsed < FREE_HINTS_PER_PUZZLE &&
-      status === "playing",
+    hintReady: solution !== null && canHint(state, allowance),
     hintKind,
     selectCell,
     moveSelection,

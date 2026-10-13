@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { FetchedFreeHints } from "../../../../src/api/free-hints-provider";
 import { ArchiveSudokuScreen } from "../../../../src/archive/sudoku-screen";
 import {
   archiveGameMetadata,
@@ -17,6 +18,8 @@ export async function generateMetadata(
 
 export default async function ArchiveSudokuPage(props: ArchiveGameParams) {
   return archiveGamePage("sudoku", props, (daily) => (
-    <ArchiveSudokuScreen daily={daily} />
+    <FetchedFreeHints>
+      <ArchiveSudokuScreen daily={daily} />
+    </FetchedFreeHints>
   ));
 }

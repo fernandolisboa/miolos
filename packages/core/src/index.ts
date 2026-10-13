@@ -4,6 +4,7 @@ export {
   FREE_HINTS_PER_PUZZLE,
   HINT_GRANT_SOURCES,
   hintGrantSourceSchema,
+  HINTS_PER_PUZZLE_CEILING,
   hintsUsedSchema,
   type CompletionOutcome,
   type HintGrantSource,
@@ -231,6 +232,10 @@ export {
   type AdminConfigWriteRequest,
   type AdminStateResponse,
 } from "./contracts/admin";
+export {
+  hintAllowanceResponseSchema,
+  type HintAllowanceResponse,
+} from "./contracts/hints";
 export {
   medalIdSchema,
   medalsResponseSchema,

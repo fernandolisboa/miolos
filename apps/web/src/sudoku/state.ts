@@ -1,4 +1,7 @@
-import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
+import {
+  HINTS_PER_PUZZLE_CEILING,
+  type DailySudokuResponse,
+} from "@miolos/core";
 import {
   getSudokuConflicts,
   isSudokuSolved,
@@ -8,6 +11,7 @@ import {
 
 import { nextHint } from "../play/grid-hint";
 import { movedSelection } from "../play/grid-selection";
+import { hasHintLeft } from "../play/hint-allowance";
 import type { PlayRecord, SudokuPlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
@@ -115,10 +119,7 @@ export function sudokuPlayReducer(
     }
 
     case "use-hint": {
-      if (
-        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
-        state.status !== "playing"
-      ) {
+      if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
       const hint = nextHint(
@@ -238,4 +239,8 @@ function isSudokuRecord(
   record: PlayRecord | undefined,
 ): record is SudokuPlayRecord {
   return record?.game === "sudoku";
+}
+
+export function canHint(state: SudokuPlayState, limit: number | null): boolean {
+  return hasHintLeft(state.hint.used, limit) && state.status === "playing";
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { FetchedFreeHints } from "../../../../src/api/free-hints-provider";
 import { ArchiveBinairoScreen } from "../../../../src/archive/binairo-screen";
 import {
   archiveGameMetadata,
@@ -17,6 +18,8 @@ export async function generateMetadata(
 
 export default async function ArchiveBinairoPage(props: ArchiveGameParams) {
   return archiveGamePage("binairo", props, (daily) => (
-    <ArchiveBinairoScreen daily={daily} />
+    <FetchedFreeHints>
+      <ArchiveBinairoScreen daily={daily} />
+    </FetchedFreeHints>
   ));
 }

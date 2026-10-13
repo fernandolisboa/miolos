@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { FetchedFreeHints } from "../../../../src/api/free-hints-provider";
 import { ArchiveNonogramScreen } from "../../../../src/archive/nonogram-screen";
 import {
   archiveGameMetadata,
@@ -17,6 +18,8 @@ export async function generateMetadata(
 
 export default async function ArchiveNonogramPage(props: ArchiveGameParams) {
   return archiveGamePage("nonogram", props, (daily) => (
-    <ArchiveNonogramScreen daily={daily} />
+    <FetchedFreeHints>
+      <ArchiveNonogramScreen daily={daily} />
+    </FetchedFreeHints>
   ));
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { messages } from "../i18n";
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
@@ -14,6 +14,7 @@ import { Board, BoardSkeleton } from "../sudoku/board";
 import { playableGivens } from "../sudoku/engine";
 import { Keypad, KeypadSkeleton } from "../sudoku/keypad";
 import {
+  canHint,
   initSudokuPlayState,
   sudokuPlayReducer,
   type SudokuDigit,
@@ -84,6 +85,7 @@ function SudokuFreeBoard({
   );
   const { hintKind, setHintKind, reset } =
     useHintKind<Hint<SudokuDigit>["kind"]>(dispatch);
+  const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -95,8 +97,7 @@ function SudokuFreeBoard({
   }, []);
 
   const filled = countFilled(playableGivens(state.givens), state.entries);
-  const hintReady =
-    state.hint.used < FREE_HINTS_PER_PUZZLE && state.status === "playing";
+  const hintReady = canHint(state, allowance);
 
   const selectCell = useCallback((index: number) => {
     dispatch({ type: "select", index });
@@ -116,10 +117,7 @@ function SudokuFreeBoard({
 
   const revealHint = useCallback(() => {
     const current = stateRef.current;
-    if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
-      current.status !== "playing"
-    ) {
+    if (!canHint(current, allowance)) {
       return;
     }
 
@@ -133,7 +131,7 @@ function SudokuFreeBoard({
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution: puzzle.solution });
-  }, [puzzle.solution, setHintKind]);
+  }, [puzzle.solution, setHintKind, allowance]);
 
   if (state.status === "solved") {
     return <FreePlaySolvedCard game="sudoku" level={level} onAgain={onNext} />;

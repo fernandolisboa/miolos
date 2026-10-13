@@ -1,4 +1,4 @@
-import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
+import { HINTS_PER_PUZZLE_CEILING } from "@miolos/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -568,14 +568,14 @@ describe("the shared record header (T-WEB-S485)", () => {
 });
 
 describe("the hint cap on a play record (T-WEB-S510)", () => {
-  it("reads a record at the free-hint cap and refuses one past it", () => {
-    const atCap = record({ hintsUsed: FREE_HINTS_PER_PUZZLE });
+  it("reads a record at the hint ceiling and refuses one past it", () => {
+    const atCap = record({ hintsUsed: HINTS_PER_PUZZLE_CEILING });
     writePlayRecord(atCap);
     expect(readPlayRecord("binairo", "2026-07-30")).toEqual(atCap);
 
     window.localStorage.setItem(
       playRecordKey("binairo", "2026-07-30"),
-      JSON.stringify(record({ hintsUsed: FREE_HINTS_PER_PUZZLE + 1 })),
+      JSON.stringify(record({ hintsUsed: HINTS_PER_PUZZLE_CEILING + 1 })),
     );
     expect(readPlayRecord("binairo", "2026-07-30")).toBeUndefined();
   });

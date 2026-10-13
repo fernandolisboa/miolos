@@ -17,6 +17,7 @@ const CONFIG = {
   bufferDepth: 7,
   attachStreakThreshold: 5,
   pushOptInStreakThreshold: 3,
+  freeHintsPerPuzzle: 3,
 };
 const copy = messages.admin;
 
@@ -106,11 +107,12 @@ describe("an admin sees one row per key, bounded by the schema (T-WEB-S533)", ()
     serve({ userId: USER_ID, config: { ...CONFIG, bufferDepth: 12 } });
     render(<AdminConfigSection />);
 
-    expect(await screen.findAllByRole("spinbutton")).toHaveLength(3);
+    expect(await screen.findAllByRole("spinbutton")).toHaveLength(4);
     for (const [key, value, min, max, fallback] of [
       ["bufferDepth", "12", "1", "30", 7],
       ["attachStreakThreshold", "5", "1", "365", 5],
       ["pushOptInStreakThreshold", "3", "1", "365", 3],
+      ["freeHintsPerPuzzle", "3", "1", "9", 3],
     ] as const) {
       const field = await input(key);
       expect(field.value, key).toBe(value);

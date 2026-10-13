@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import {
   dailyNonogramResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   dailySudokuResponseSchema,
   type DailyBinairoResponse,
   type DailyNonogramResponse,
@@ -32,6 +33,7 @@ import {
 import { initNonogramPlayState } from "../src/nonogram/state";
 import { accentVars } from "../src/play/accent";
 import { DailyPlayChrome } from "../src/play/daily-chrome";
+import { FreeHintsContext } from "../src/play/free-hints";
 import {
   PlayScreenChrome,
   type ChromeGame,
@@ -594,21 +596,27 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
   });
 });
 
-describe("the hint button counts the free hints down from `used` (T-WEB-S512)", () => {
-  function hintOf(ready: boolean, used: number): Element {
-    const page = staticPage(
-      chrome({
+function hintOf(
+  ready: boolean,
+  used: number,
+  allowance: number | null = FREE_HINTS_PER_PUZZLE,
+): Element {
+  const page = staticPage(
+    <FreeHintsContext value={allowance}>
+      {chrome({
         ...FREE_PLAYING,
         state: { kind: "playing", readouts: readouts(ready, null, noop, used) },
-      }),
-    );
-    const hint = page.querySelector(`.${cls("hint")}`);
-    if (hint === null) {
-      throw new Error("the live chrome rendered no hint control");
-    }
-    return hint;
+      })}
+    </FreeHintsContext>,
+  );
+  const hint = page.querySelector(`.${cls("hint")}`);
+  if (hint === null) {
+    throw new Error("the live chrome rendered no hint control");
   }
+  return hint;
+}
 
+describe("the hint button counts the free hints down from `used` (T-WEB-S512)", () => {
   it("reads the hints left, then that they are spent", () => {
     expect(
       [0, 1, 2, 3].map((used) => hintOf(used < 3, used).textContent),
@@ -625,6 +633,32 @@ describe("the hint button counts the free hints down from `used` (T-WEB-S512)", 
 
     expect(hint.textContent).toBe("Usar dica — 3 disponíveis");
     expect(hint.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("counts from the default while the allowance loads, and is not ready", () => {
+    const hint = hintOf(false, 0, null);
+
+    expect(hint.textContent).toBe("Usar dica — 3 disponíveis");
+    expect(hint.getAttribute("aria-disabled")).toBe("true");
+  });
+});
+
+describe("the hint button counts down from the served allowance (T-WEB-S538)", () => {
+  it("reads five hints left down to spent under an allowance of five", () => {
+    expect(
+      [0, 1, 2, 3, 4, 5].map((used) => hintOf(used < 5, used, 5).textContent),
+    ).toEqual([
+      "Usar dica — 5 disponíveis",
+      "Usar dica — 4 disponíveis",
+      "Usar dica — 3 disponíveis",
+      "Usar dica — 2 disponíveis",
+      "Usar dica — 1 disponível",
+      "Dicas usadas",
+    ]);
+  });
+
+  it("reads spent when a restored count is past a lowered allowance", () => {
+    expect(hintOf(false, 3, 2).textContent).toBe("Dicas usadas");
   });
 });
 

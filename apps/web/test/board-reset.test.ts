@@ -28,6 +28,7 @@ import {
   nonogramPlayReducer,
   type NonogramPlayState,
 } from "../src/nonogram/state";
+import { hasHintLeft } from "../src/play/hint-allowance";
 import { resetBoard, type ResetAction } from "../src/play/reset-board";
 import {
   initQueensPlayState,
@@ -354,7 +355,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
       const cleared = board.reduce(spent, RESET);
       expect(cleared.status).toBe("playing");
       expect(cleared.hint.used).toBe(FREE_HINTS_PER_PUZZLE);
-      expect(board.useHint(cleared)).toBe(cleared);
+      expect(hasHintLeft(cleared.hint.used, FREE_HINTS_PER_PUZZLE)).toBe(false);
     });
 
     it("returns the same object when no cell is decided and on a solved board", () => {

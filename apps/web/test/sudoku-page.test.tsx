@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { messages } from "../src/i18n";
+import { hintedScreen } from "./hinted-screen";
 
 const PUZZLE = generateDailySudoku({ seed: 20_260_801, weekday: 1 });
 
@@ -99,7 +100,7 @@ describe("/sudoku (T-WEB-S22, T-WEB-S24)", () => {
     spies.getTodayDaily.mockResolvedValue(DAILY);
     const { play } = await loadPages();
 
-    const element = elementSchema.parse(await play.default());
+    const element = elementSchema.parse(hintedScreen(await play.default()));
 
     expect(dailySudokuResponseSchema.parse(element.props.daily)).toEqual(DAILY);
     expect(Object.keys(element.props).toSorted()).toEqual(["daily"]);
@@ -116,7 +117,7 @@ describe("/sudoku (T-WEB-S22, T-WEB-S24)", () => {
     spies.getTodayDaily.mockResolvedValue(DAILY);
     const { play } = await loadPages();
 
-    const element = elementSchema.parse(await play.default());
+    const element = elementSchema.parse(hintedScreen(await play.default()));
 
     expect(spies.getTodayDaily).toHaveBeenCalledWith(spies.stubDb, "sudoku");
     expect(dailySudokuResponseSchema.parse(element.props.daily).game).toBe(

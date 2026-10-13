@@ -56,6 +56,7 @@ describe("the admin config write (ADR-0097)", () => {
       "bufferDepth",
       "attachStreakThreshold",
       "pushOptInStreakThreshold",
+      "freeHintsPerPuzzle",
     ]);
     expect(
       remoteConfigKeySchema.options.map((key) => {
@@ -66,6 +67,7 @@ describe("the admin config write (ADR-0097)", () => {
       ["bufferDepth", 1, 30],
       ["attachStreakThreshold", 1, 365],
       ["pushOptInStreakThreshold", 1, 365],
+      ["freeHintsPerPuzzle", 1, 9],
     ]);
   });
 });
@@ -76,6 +78,7 @@ describe("the admin state response (ADR-0097)", () => {
       bufferDepth: 7,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     };
     expect(
       adminStateResponseSchema.parse({ userId: USER_ID, config: null }),
