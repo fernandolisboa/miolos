@@ -19,14 +19,13 @@ import {
   type Press,
   type StrokeEffect,
 } from "../play/brush";
-import type { PlainHintReason } from "../play/grid-hint";
 import { hasHintLeft } from "../play/hint-allowance";
 import { idleHint, spentHint, unlit } from "../play/hint-state";
 import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
-import { nextBinairoHint } from "./hint";
+import { nextBinairoHint, type BinairoHintReason } from "./hint";
 
 export type CellValue = BinairoCell;
 
@@ -40,7 +39,7 @@ export interface PlayState extends PlayCore {
   readonly entries: readonly CellValue[];
   readonly paint: PaintMode;
   readonly stroke: StrokeEffect | null;
-  readonly hint: HintState<PlainHintReason>;
+  readonly hint: HintState<BinairoHintReason>;
 
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";

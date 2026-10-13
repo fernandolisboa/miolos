@@ -51,6 +51,7 @@ export function PlayView({
           entries={state.entries}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}
+          spotlight={state.hint.spotlight}
           painting={state.paint.kind !== "cycle"}
           onTap={play.tapCell}
           onStrokeStart={play.strokeStart}

@@ -136,6 +136,7 @@ function BinairoFreeBoard({
           entries={state.entries}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}
+          spotlight={state.hint.spotlight}
           painting={state.paint.kind !== "cycle"}
           onTap={tapCell}
           onStrokeStart={strokeStart}

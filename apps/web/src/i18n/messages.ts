@@ -75,6 +75,38 @@ const nonogramStep = (
   return `Na ${name} ${at}, ${numbers} com ${cell} ${value === 1 ? "preenchida" : "marcada"}.`;
 };
 
+const BINAIRO_LINE = {
+  row: { name: "linha", across: "coluna" },
+  column: { name: "coluna", across: "linha" },
+} as const;
+
+const BINAIRO_COUNT_WORDS = ["zero", "um", "dois", "três", "quatro"] as const;
+
+const binairoStep = {
+  pair: (line: "row" | "column", at: number, along: number, value: 0 | 1) =>
+    `Na ${BINAIRO_LINE[line].name} ${at}, dois ${1 - value} seguidos obrigam um ${value} ao lado, na célula da ${BINAIRO_LINE[line].across} ${along}.`,
+  gap: (line: "row" | "column", at: number, along: number, value: 0 | 1) =>
+    `Na ${BINAIRO_LINE[line].name} ${at}, a célula da ${BINAIRO_LINE[line].across} ${along} fica entre dois ${1 - value}, então leva ${value}.`,
+  count: (
+    line: "row" | "column",
+    at: number,
+    along: number,
+    value: 0 | 1,
+    half: number,
+  ) =>
+    `A ${BINAIRO_LINE[line].name} ${at} já tem ${BINAIRO_COUNT_WORDS[half] ?? half} ${1 - value}, então a célula da ${BINAIRO_LINE[line].across} ${along} leva ${value}.`,
+  duplicate: (
+    line: "row" | "column",
+    at: number,
+    along: number,
+    value: 0 | 1,
+    twin: number,
+  ) =>
+    `A ${BINAIRO_LINE[line].name} ${at} não pode repetir a ${BINAIRO_LINE[line].name} ${twin}, então a célula da ${BINAIRO_LINE[line].across} ${along} leva ${value}.`,
+  lookahead: (row: number, column: number, value: 0 | 1) =>
+    `Um ${1 - value} na linha ${row}, coluna ${column} quebraria uma regra logo adiante, então ali vai ${value}.`,
+} as const;
+
 const TERMO_TILE = {
   correct: "certa",
   present: "na palavra",
@@ -948,7 +980,8 @@ export const messages = {
         hint: {
           explain: {
             correction: "Corrigimos uma célula que não fecha com as regras.",
-            fill: "Preenchemos uma célula para você.",
+            fill: "Não achamos um passo lógico simples aqui, então preenchemos uma célula para você.",
+            step: binairoStep,
           },
         },
         unavailable: {

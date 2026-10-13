@@ -15,12 +15,14 @@ import {
   crosswordHintExplanation,
   nextCrosswordHint,
 } from "../src/crossword/hint";
+import { binairoHintExplanation } from "../src/binairo/hint";
+import binairoBoardStyles from "../src/binairo/binairo-screen.module.css";
 import { messages } from "../src/i18n";
 import { nonogramHintExplanation } from "../src/nonogram/hint";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
 import { sudokuHintExplanation } from "../src/sudoku/hint";
 import sudokuBoardStyles from "../src/sudoku/sudoku-board.module.css";
-import { freeHintSteps, spendFreeHints } from "./free-hints";
+import { freeBinairoSteps, freeHintSteps, spendFreeHints } from "./free-hints";
 
 const SEED = 20_260_812;
 const WEEKDAY = LEVEL_WEEKDAYS.medio;
@@ -33,6 +35,16 @@ function cellText(container: HTMLElement, index: number): string {
   return (
     container.querySelector(`[data-cell-index="${index}"]`)?.textContent ?? ""
   );
+}
+
+function cellAt(container: HTMLElement, index: number): HTMLElement {
+  const cell = container.querySelector<HTMLElement>(
+    `[data-cell-index="${index}"]`,
+  );
+  if (cell === null) {
+    throw new Error(`no cell at index ${index}`);
+  }
+  return cell;
 }
 
 function boardText(container: HTMLElement): readonly string[] {
@@ -58,7 +70,6 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
   it("Binairo: the hint writes the generator solution's cell, then stops", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateBinairo({ seed: SEED, weekday: WEEKDAY });
-    const firstEmpty = puzzle.givens.findIndex((cell) => cell === null);
     const { container } = render(<BinairoFreeScreen deps={stableDeps(SEED)} />);
 
     const button = screen
@@ -67,9 +78,9 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
     expect(button).toHaveAttribute("aria-disabled", "false");
     spendFreeHints();
 
-    expect(cellText(container, firstEmpty)).toBe(
-      String(puzzle.solution[firstEmpty]),
-    );
+    for (const { index } of freeBinairoSteps(puzzle.givens)) {
+      expect(cellText(container, index)).toBe(String(puzzle.solution[index]));
+    }
     const spent = boardText(container);
     fireEvent.click(exhaustedHint());
     expect(boardText(container)).toEqual(spent);
@@ -138,6 +149,40 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
     expect(tinted).toEqual(
       step.cells.filter((index) => index !== step.index).sort((a, b) => a - b),
     );
+  });
+});
+
+describe("free-play Binairo reveals and explains the next logical step (T-WEB-S562)", () => {
+  it("writes the step's value, reads out why and tints the rule's cells until a board action", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const puzzle = generateBinairo({ seed: SEED, weekday: WEEKDAY });
+    const [step] = freeBinairoSteps(puzzle.givens);
+    if (step === undefined) {
+      throw new Error("no first step");
+    }
+    const { container } = render(<BinairoFreeScreen deps={stableDeps(SEED)} />);
+    const tinted = () =>
+      [
+        ...container.querySelectorAll<HTMLElement>(
+          `.${binairoBoardStyles.cellSpotlit}`,
+        ),
+      ].map((cell) => Number(cell.dataset.cellIndex));
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(cellText(container, step.index)).toBe(String(step.value));
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      binairoHintExplanation({ kind: "step", step }),
+    );
+    expect(tinted()).toEqual(step.cells);
+
+    const other = puzzle.givens.findIndex(
+      (given, index) => given === null && index !== step.index,
+    );
+    fireEvent.click(cellAt(container, other));
+    expect(tinted()).toEqual([]);
   });
 });
 

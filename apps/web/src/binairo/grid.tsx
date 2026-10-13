@@ -13,6 +13,7 @@ export function Grid({
   entries,
   violating,
   hintIndex,
+  spotlight,
   painting,
   onTap,
   onStrokeStart,
@@ -22,6 +23,7 @@ export function Grid({
   readonly entries: readonly CellValue[];
   readonly violating: ReadonlySet<number>;
   readonly hintIndex: number | null;
+  readonly spotlight: readonly number[];
 
   readonly painting: boolean;
   readonly onTap: (index: number, press: Press) => void;
@@ -40,11 +42,12 @@ export function Grid({
       {givens.map((given, index) => {
         const row = Math.floor(index / COLUMNS) + 1;
         const column = (index % COLUMNS) + 1;
+        const spotlit = spotlight.includes(index);
         if (given !== null) {
           return (
             <div
               key={index}
-              className={`${styles.cell} ${styles.cellGiven}`}
+              className={`${styles.cell} ${styles.cellGiven}${spotlit ? ` ${styles.cellSpotlit}` : ""}`}
               data-cell-index={index}
               aria-disabled="true"
               aria-label={messages.games.binairo.play.cellGivenAria(
@@ -63,7 +66,12 @@ export function Grid({
           <button
             key={index}
             type="button"
-            className={cellClassName(value, invalid, hintIndex === index)}
+            className={cellClassName(
+              value,
+              invalid,
+              hintIndex === index,
+              spotlit,
+            )}
             data-cell-index={index}
 
             aria-label={
@@ -94,6 +102,7 @@ function cellClassName(
   value: CellValue,
   invalid: boolean,
   hinted: boolean,
+  spotlit: boolean,
 ): string {
   if (invalid) {
     return `${styles.cell} ${styles.cellViolating}`;
@@ -101,5 +110,11 @@ function cellClassName(
   if (hinted) {
     return `${styles.cell} ${styles.cellHinted}`;
   }
-  return `${styles.cell}${value === null ? "" : ` ${styles.cellEntered}`}`;
+  return [
+    styles.cell,
+    value === null ? "" : styles.cellEntered,
+    spotlit ? styles.cellSpotlit : "",
+  ]
+    .filter((name) => name !== "")
+    .join(" ");
 }

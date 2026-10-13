@@ -1,4 +1,9 @@
 import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
+import {
+  nextBinairoStep,
+  type BinairoGrid,
+  type BinairoStep,
+} from "@miolos/games/binairo";
 import { nextSudokuStep, type SudokuStep } from "@miolos/games/sudoku";
 import { fireEvent, screen } from "@testing-library/react";
 
@@ -21,6 +26,20 @@ export function freeHintSteps(
       throw new Error("the fixture's puzzle stalls before its free hints");
     }
     grid[step.index] = step.digit;
+    steps.push(step);
+  }
+  return steps;
+}
+
+export function freeBinairoSteps(givens: BinairoGrid): readonly BinairoStep[] {
+  const grid = [...givens];
+  const steps: BinairoStep[] = [];
+  while (steps.length < FREE_HINTS_PER_PUZZLE) {
+    const step = nextBinairoStep(grid);
+    if (step === null) {
+      throw new Error("the fixture's puzzle stalls before its free hints");
+    }
+    grid[step.index] = step.value;
     steps.push(step);
   }
   return steps;

@@ -115,6 +115,16 @@
   font-weight: 600;
 }
 
+/* The cells a hint reasoned about: an overlay image, so a given keeps its paper
+   tint beneath it. It must follow .cellGiven and .cell, whose `background`
+   shorthand would reset it. */
+.cellSpotlit {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--accent-binairo) 12%, transparent),
+    color-mix(in srgb, var(--accent-binairo) 12%, transparent)
+  );
+}
+
 /* ── controls ────────────────────────────────────────────────────────── */
 
 .controls {

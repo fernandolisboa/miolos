@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BinairoScreen } from "../src/binairo/binairo-screen";
 import styles from "../src/binairo/binairo-screen.module.css";
+import { binairoHintExplanation } from "../src/binairo/hint";
 import sharedStyles from "../src/play/screen.module.css";
 import {
   playRecordKey,
@@ -15,7 +16,7 @@ import {
 } from "../src/play/play-record";
 import { formatElapsed, messages } from "../src/i18n";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
-import { spendFreeHints } from "./free-hints";
+import { freeBinairoSteps, spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 const sync = vi.hoisted(() => ({
@@ -595,6 +596,64 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
   });
 });
 
+const FREE_STEPS = freeBinairoSteps(PUZZLE.givens);
+const FREE_SENTENCES = FREE_STEPS.map((step) =>
+  binairoHintExplanation({ kind: "step", step }),
+);
+
+describe("the hint names its rule and lights the cells it reasons about (T-WEB-S562)", () => {
+  const [FIRST] = FREE_STEPS;
+  const SENTENCE = FREE_SENTENCES[0] ?? "";
+
+  function spotlit(container: HTMLElement): number[] {
+    return [...container.querySelectorAll<HTMLElement>("[data-cell-index]")]
+      .filter((cell) => cell.classList.contains(styles.cellSpotlit ?? ""))
+      .map((cell) => Number(cell.dataset.cellIndex));
+  }
+
+  it("writes the step's cell, reads out why and tints the rule's cells until the next board action", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    expect(spotlit(container)).toEqual([]);
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(cellAt(container, FIRST?.index ?? -1).textContent).toBe(
+      String(FIRST?.value),
+    );
+    expect(cellAt(container, FIRST?.index ?? -1).classList).toContain(
+      styles.cellHinted,
+    );
+    expect(screen.getByText(SENTENCE)).toBeInTheDocument();
+    expect(spotlit(container)).toEqual(FIRST?.cells);
+
+    fireEvent.click(cellAt(container, FIRST_EMPTY));
+
+    expect(spotlit(container)).toEqual([]);
+    expect(screen.getByText(SENTENCE)).toBeInTheDocument();
+  });
+
+  it("reads out a correction and lights nothing", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    const wrong = PUZZLE.solution[FIRST_EMPTY] === 1 ? 0 : 1;
+
+    fireEvent.click(cellAt(container, FIRST_EMPTY));
+    if (cellAt(container, FIRST_EMPTY).textContent !== String(wrong)) {
+      fireEvent.click(cellAt(container, FIRST_EMPTY));
+    }
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe(String(wrong));
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(
+      screen.getByText(messages.games.binairo.play.hint.explain.correction),
+    ).toBeInTheDocument();
+    expect(spotlit(container)).toEqual([]);
+  });
+});
+
 describe("the free hints (T-WEB-9)", () => {
   it("fills one cell per free hint, then renders the exhausted variant", () => {
     render(<BinairoScreen daily={DAILY} />);
@@ -612,9 +671,7 @@ describe("the free hints (T-WEB-9)", () => {
     const exhausted = screen.getByText(messages.play.hint.used);
     expect(exhausted).toHaveAttribute("aria-disabled", "true");
 
-    expect(
-      screen.getByText(messages.games.binairo.play.hint.explain.fill),
-    ).toBeInTheDocument();
+    expect(screen.getByText(FREE_SENTENCES.at(-1) ?? "")).toBeInTheDocument();
 
     fireEvent.click(exhausted);
 
