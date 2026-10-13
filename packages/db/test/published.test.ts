@@ -1129,6 +1129,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
 
       "listUsedTermoAnswers",
       "remoteConfig",
+      "setRemoteConfigValue",
       "todaySaoPaulo",
     ]);
   });
@@ -1202,12 +1203,13 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "recordSeenDay",
       "remoteConfig",
       "sessions",
+      "setRemoteConfigValue",
       "sql",
       "todaySaoPaulo",
       "users",
       "wasSeenOn",
     ]);
 
-    expect(surface).toHaveLength(54);
+    expect(surface).toHaveLength(55);
   });
 });

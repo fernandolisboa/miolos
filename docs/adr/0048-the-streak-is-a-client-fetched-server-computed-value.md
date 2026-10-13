@@ -1,6 +1,7 @@
 # ADR-0048 — The streak is a client-fetched, server-computed value, alive until the rollover
 
 **Status:** Accepted — 2026-08-13
+**Amended by:** [ADR-0097](./0097-admins-are-an-env-allow-list-and-edit-remote-config-through-the-api.md) (#304) — the admin state response may gain a key in place; admin-only, and the skew window closes when both apps redeploy from one commit.
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0009](./0009-account-merge-recomputes-from-the-union-of-completions.md), [ADR-0014](./0014-apps-web-reads-the-database-directly-for-public-pages.md), [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md)
 **Amends:** [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md) —
 decision 5's *"#19 replaces `readDayState`'s body and nothing else"* is narrowed:
