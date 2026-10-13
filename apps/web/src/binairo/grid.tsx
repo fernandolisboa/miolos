@@ -1,6 +1,7 @@
 import type { BinairoGrid } from "@miolos/games/binairo";
 
 import { messages } from "../i18n";
+import type { Press } from "../play/brush";
 import { usePointerStroke } from "../play/use-pointer-stroke";
 import styles from "./binairo-screen.module.css";
 import type { CellValue } from "./state";
@@ -14,6 +15,7 @@ export function Grid({
   hintIndex,
   painting,
   onTap,
+  onStrokeStart,
   onPaintOver,
 }: {
   readonly givens: BinairoGrid;
@@ -22,10 +24,16 @@ export function Grid({
   readonly hintIndex: number | null;
 
   readonly painting: boolean;
-  readonly onTap: (index: number) => void;
+  readonly onTap: (index: number, press: Press) => void;
+  readonly onStrokeStart: (index: number, press: Press) => void;
   readonly onPaintOver: (index: number) => void;
 }) {
-  const stroke = usePointerStroke({ painting, onTap, onPaintOver });
+  const stroke = usePointerStroke({
+    painting,
+    onTap,
+    onStrokeStart,
+    onPaintOver,
+  });
 
   return (
     <div className={styles.grid} {...stroke.handlers}>
@@ -68,10 +76,10 @@ export function Grid({
                 : messages.games.binairo.play.cellAria(row, column, value)
             }
             onClick={(event) => {
-              if (stroke.consumedClick(event)) {
-                return;
+              const press = stroke.clickPress(event);
+              if (press !== null) {
+                onTap(index, press);
               }
-              onTap(index);
             }}
           >
             {value}

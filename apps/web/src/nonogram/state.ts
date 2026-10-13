@@ -2,6 +2,14 @@ import type { DailyNonogramResponse, NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
 
 import {
+  painted,
+  pressedMark,
+  startStroke,
+  toggled,
+  type Press,
+  type StrokeEffect,
+} from "../play/brush";
+import {
   binaryCellValue,
   binaryGridReducer,
   settled,
@@ -18,18 +26,28 @@ export type NonogramMark = BinaryMark;
 
 export type NonogramCellValue = BinaryCellValue;
 
-export type NonogramBrush = "fill" | "cross" | "erase";
+export type NonogramBrush = "fill" | "cross";
 
 export interface NonogramPlayState extends BinaryGridState {
   readonly size: NonogramSize;
   readonly clues: NonogramClues;
   readonly brush: NonogramBrush;
+  readonly stroke: StrokeEffect | null;
 }
 
 export type NonogramPlayAction =
   | BinaryGridAction
   | { readonly type: "set-brush"; readonly brush: NonogramBrush }
-  | { readonly type: "mark-cell"; readonly index: number }
+  | {
+      readonly type: "mark-cell";
+      readonly index: number;
+      readonly press: Press;
+    }
+  | {
+      readonly type: "stroke-start";
+      readonly index: number;
+      readonly press: Press;
+    }
   | { readonly type: "paint-over"; readonly index: number };
 
 export function initNonogramPlayState(
@@ -44,6 +62,7 @@ export function initNonogramPlayState(
     entries: Array.from({ length: size ** 2 }, () => null),
     selected: null,
     brush: "fill",
+    stroke: null,
     timer: { accumulatedMs: 0, runningSince: null },
     hint: { free: 1, used: 0, lastIndex: null },
     status: "playing",
@@ -75,40 +94,51 @@ export function nonogramPlayReducer(
 
     case "mark-cell": {
       const current = binaryCellValue(state, action.index);
-      if (current === undefined) {
-        return state;
-      }
-      const value = brushValue(state.brush);
-      return withBinaryEntry(
-        state,
-        action.index,
-        current === value ? null : value,
-        NONOGRAM_RULES,
-      );
-    }
-
-    case "paint-over":
-      return binaryCellValue(state, action.index) === undefined
+      return current === undefined
         ? state
         : withBinaryEntry(
             state,
             action.index,
-            brushValue(state.brush),
+            toggled(current, pressedMark(brushMark(state.brush), action.press)),
             NONOGRAM_RULES,
           );
+    }
+
+    case "stroke-start": {
+      const current = binaryCellValue(state, action.index);
+      if (current === undefined) {
+        return { ...state, stroke: null };
+      }
+      const { stroke, first } = startStroke(
+        current,
+        brushMark(state.brush),
+        action.press,
+      );
+      return withBinaryEntry(
+        { ...state, stroke },
+        action.index,
+        first,
+        NONOGRAM_RULES,
+      );
+    }
+
+    case "paint-over": {
+      const current = binaryCellValue(state, action.index);
+      return current === undefined || state.stroke === null
+        ? state
+        : withBinaryEntry(
+            state,
+            action.index,
+            painted(state.stroke, current),
+            NONOGRAM_RULES,
+          );
+    }
 
     default:
       return binaryGridReducer(state, action, NONOGRAM_RULES);
   }
 }
 
-function brushValue(brush: NonogramBrush): NonogramCellValue {
-  switch (brush) {
-    case "fill":
-      return 1;
-    case "cross":
-      return 0;
-    case "erase":
-      return null;
-  }
+function brushMark(brush: NonogramBrush): NonogramMark {
+  return brush === "fill" ? 1 : 0;
 }

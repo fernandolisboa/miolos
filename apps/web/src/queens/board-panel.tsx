@@ -36,7 +36,7 @@ export function BoardPanel({ board }: { readonly board: QueensBoardState }) {
           hintIndex={state.hint.lastIndex}
           onSelect={board.selectCell}
           onMove={board.moveSelection}
-          onCycle={board.cycleCell}
+          onTap={board.tapCell}
           onCrossOver={board.crossOver}
           onEnterValue={board.enterValue}
           onClear={board.clearCell}

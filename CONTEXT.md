@@ -65,6 +65,7 @@ The ubiquitous language. Issue titles, test names, proposals and specs use these
 | **Region** | Região | One of a Rainhas board's N contiguous areas: `regions[i]` is a cell's region id, `0..N−1`. Shown by a fill, a 2 px ink boundary and "região N" in the cell's name ([ADR-0092](./docs/adr/0092-the-rainhas-board-tap-cycles-drag-crosses-conflicts-show.md)). |
 | **Queen** | Rainha | A Rainhas cell the player crowned, encoded `1`. The queens alone are the completion body. |
 | **Conflict** | Conflito | A Rainhas queen that breaks a rule — a second queen in its row, column or region, or a queen touching it. Shown as a ring and "em conflito" in the cell's name; a check against the public rules, never against the solution ([ADR-0092](./docs/adr/0092-the-rainhas-board-tap-cycles-drag-crosses-conflicts-show.md)). |
+| **Press** | — | The kind of pointer press a board receives (`Press` in `apps/web/src/play/brush.ts`): `tap` (touch, pen or keyboard), `left` (mouse button 0) or `right` (the secondary button, mouse or pen). A `right` press writes the opposite mark ([ADR-0094](./docs/adr/0094-the-secondary-mouse-button-writes-the-opposite-mark.md)). |
 
 **Games** (build order): **Binairo**, **Sudoku**, **Nonogram**, **Termo**, **Crossword**, **Queens** — "Termo" is the product's name for its Termo-like game; don't call it Wordle. Crossword (Cruzadinha) joined as the fifth daily, Queens (Rainhas) as the sixth.
 

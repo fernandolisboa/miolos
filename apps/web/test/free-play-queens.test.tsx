@@ -14,6 +14,7 @@ import { useFreeQueens } from "../src/free-play/use-free-queens";
 import { messages } from "../src/i18n";
 import styles from "../src/queens/queens-board.module.css";
 import { bodyOf, decl, stylesheet } from "./css-source";
+import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 const SEED = 20_260_928;
 const NEXT_SEED = 20_260_929;
@@ -232,5 +233,29 @@ describe("the fifth free-play card is one column wide at both breakpoints (T-WEB
     expect(decl(bodyOf(css, ".card:nth-child(5) .tape"), "transform")).toMatch(
       TAPE,
     );
+  });
+});
+
+describe("free Rainhas right click (T-WEB-S500c)", () => {
+  it("places a queen with the right button through the shared board", () => {
+    installPointerStubs();
+    const { container } = render(
+      <QueensFreeScreen deps={{ pickSeed: () => SEED }} />,
+    );
+    stubElementFromPoint(container);
+    const board = boardOf(8);
+    const at = {
+      clientX: 3,
+      clientY: 0,
+      pointerId: 1,
+      pointerType: "mouse",
+      button: 2,
+    };
+
+    fireEvent.pointerDown(board, at);
+    fireEvent.pointerUp(board, at);
+
+    expect(cellAt(8, 3).getAttribute("aria-label")).toContain(": rainha");
+    expect(fireEvent.contextMenu(board)).toBe(false);
   });
 });

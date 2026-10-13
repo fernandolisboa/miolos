@@ -1,8 +1,11 @@
 import {
   useEffect,
   useRef,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+
+import type { Press } from "./brush";
 
 interface PointerStrokeHandlers {
   readonly onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
@@ -10,27 +13,30 @@ interface PointerStrokeHandlers {
   readonly onPointerUp: (e: ReactPointerEvent<HTMLDivElement>) => void;
   readonly onPointerCancel: (e: ReactPointerEvent<HTMLDivElement>) => void;
   readonly onLostPointerCapture: (e: ReactPointerEvent<HTMLDivElement>) => void;
+  readonly onContextMenu: (e: ReactMouseEvent<HTMLDivElement>) => void;
 }
 
 export interface PointerStroke {
   readonly handlers: PointerStrokeHandlers;
 
-  readonly consumedClick: (event: { readonly detail: number }) => boolean;
+  readonly clickPress: (event: { readonly detail: number }) => Press | null;
 }
 
 export function usePointerStroke(input: {
   readonly painting: boolean;
-  readonly onTap: (index: number) => void;
+  readonly onTap: (index: number, press: Press) => void;
+  readonly onStrokeStart: (index: number, press: Press) => void;
   readonly onPaintOver: (index: number) => void;
 
   readonly onStrokeEnd?: (index: number) => void;
 }): PointerStroke {
-  const { painting, onTap, onPaintOver, onStrokeEnd } = input;
+  const { painting, onTap, onStrokeStart, onPaintOver, onStrokeEnd } = input;
 
   const dragging = useRef(false);
   const dragged = useRef(false);
 
   const tapped = useRef(false);
+  const press = useRef<Press>("tap");
   const startIndex = useRef<number | null>(null);
   const lastIndex = useRef<number | null>(null);
 
@@ -54,15 +60,43 @@ export function usePointerStroke(input: {
     };
   };
 
-  useEffect(() => () => detachWindowEnd.current?.(), []);
+  const releaseContextNet = useRef<(() => void) | null>(null);
+  const lapseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+
+  // Windows fires `contextmenu` after mouseup at the element under the cursor,
+  // so a right press released off the board would open the page menu.
+  const armContextNet = () => {
+    releaseContextNet.current?.();
+    const swallow = (native: Event) => {
+      native.preventDefault();
+      releaseContextNet.current?.();
+    };
+    window.addEventListener("contextmenu", swallow, true);
+    releaseContextNet.current = () => {
+      clearTimeout(lapseTimer.current);
+      window.removeEventListener("contextmenu", swallow, true);
+      releaseContextNet.current = null;
+    };
+  };
+
+  useEffect(
+    () => () => {
+      detachWindowEnd.current?.();
+      releaseContextNet.current?.();
+    },
+    [],
+  );
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) {
+    const opened = pressOf(event);
+    if (opened === null || strokePointer.current !== null) {
       return;
     }
-
-    if (strokePointer.current !== null) {
-      return;
+    press.current = opened;
+    if (opened === "right") {
+      armContextNet();
     }
     strokePointer.current = event.pointerId;
     dragged.current = false;
@@ -95,21 +129,25 @@ export function usePointerStroke(input: {
     if (index === null || index === lastIndex.current) {
       return;
     }
-    if (!dragged.current) {
-      dragged.current = true;
-
-      if (startIndex.current !== null) {
-        onPaintOver(startIndex.current);
-      }
-    }
+    const from = startIndex.current;
+    const first = !dragged.current;
+    dragged.current = true;
     lastIndex.current = index;
-    onPaintOver(index);
+    if (first) {
+      onStrokeStart(from ?? index, press.current);
+    }
+    if (!first || from !== null) {
+      onPaintOver(index);
+    }
   };
 
   const endDrag = () => {
     dragging.current = false;
     strokePointer.current = null;
     detachWindowEnd.current?.();
+    if (releaseContextNet.current !== null) {
+      lapseTimer.current = setTimeout(() => releaseContextNet.current?.(), 0);
+    }
   };
 
   const endStroke = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -125,14 +163,9 @@ export function usePointerStroke(input: {
     }
     const start = startIndex.current;
     const end = cellIndexAt(event.clientX, event.clientY);
-    if (
-      dragging.current &&
-      !dragged.current &&
-      start !== null &&
-      end === start
-    ) {
+    if (!dragged.current && start !== null && end === start) {
       tapped.current = true;
-      onTap(start);
+      onTap(start, press.current);
     }
     endDrag();
     if (end !== null) {
@@ -147,10 +180,28 @@ export function usePointerStroke(input: {
       onPointerUp,
       onPointerCancel: endStroke,
       onLostPointerCapture: endStroke,
+      onContextMenu: (event) => event.preventDefault(),
     },
-    consumedClick: (event) =>
-      event.detail > 0 && (dragged.current || tapped.current),
+    clickPress: (event) => {
+      if (event.detail === 0) {
+        return "tap";
+      }
+      const consumed = dragged.current || tapped.current;
+      dragged.current = false;
+      tapped.current = false;
+      return consumed ? null : press.current;
+    },
   };
+}
+
+function pressOf(event: ReactPointerEvent<HTMLDivElement>): Press | null {
+  if (event.button === 2) {
+    return "right";
+  }
+  if (event.button !== 0) {
+    return null;
+  }
+  return event.pointerType === "mouse" ? "left" : "tap";
 }
 
 function cellIndexAt(x: number, y: number): number | null {

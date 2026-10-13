@@ -795,14 +795,9 @@ export const messages = {
         columnCluesAria: (column: number, runs: readonly number[]) =>
           `números da coluna ${column}: ${runsText(runs)}`,
         controls: {
-          fill: "preencher",
-          cross: "marcar",
-          erase: "apagar",
           fillAria: "preencher células",
-
           crossAria: "marcar células fora da figura",
-          eraseAria: "apagar células",
-          affordance: "ou use o teclado: 1 preenche, 2 marca, 0 apaga",
+          affordance: "No teclado: 1 preenche, 2 marca, 0 apaga.",
         },
         hint: {
           available: "Usar dica — 1 disponível",
@@ -851,11 +846,10 @@ export const messages = {
         controls: {
           zero: "0",
           one: "1",
-          erase: "apagar",
           zeroAria: "pintar zeros",
           oneAria: "pintar uns",
-          eraseAria: "apagar células",
-          affordance: "ou clique na célula para alternar",
+          affordance:
+            "No mouse, um botão põe 1 e o outro põe 0; clicar de novo apaga.",
         },
         cellAria,
         cellGivenAria: (row: number, column: number, value: 0 | 1) =>

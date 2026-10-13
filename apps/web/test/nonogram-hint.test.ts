@@ -253,7 +253,11 @@ describe("the reducer's accounting", () => {
     const index = hinted.hint.lastIndex ?? -1;
     expect(hinted.entries[index]).toBe(1);
 
-    const cleared = nonogramPlayReducer(hinted, { type: "mark-cell", index });
+    const cleared = nonogramPlayReducer(hinted, {
+      type: "mark-cell",
+      index,
+      press: "tap",
+    });
     expect(cleared.entries[index]).toBeNull();
     expect(cleared.hint.lastIndex).toBeNull();
 
@@ -270,6 +274,7 @@ describe("the reducer's accounting", () => {
     const elsewhere = nonogramPlayReducer(hinted, {
       type: "mark-cell",
       index: index === 0 ? 1 : 0,
+      press: "tap",
     });
     expect(elsewhere.hint.lastIndex).toBe(index);
   });
@@ -278,7 +283,11 @@ describe("the reducer's accounting", () => {
     const solved = solutionOf(STATE).reduce<NonogramPlayState>(
       (current, mark, index) =>
         mark === 1
-          ? nonogramPlayReducer(current, { type: "mark-cell", index })
+          ? nonogramPlayReducer(current, {
+              type: "mark-cell",
+              index,
+              press: "tap",
+            })
           : current,
       STATE,
     );

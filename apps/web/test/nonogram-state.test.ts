@@ -64,7 +64,11 @@ function fillOnly(state: NonogramPlayState): NonogramPlayState {
   return solutionOf(state).reduce(
     (current, mark, index) =>
       mark === 1
-        ? nonogramPlayReducer(current, { type: "mark-cell", index })
+        ? nonogramPlayReducer(current, {
+            type: "mark-cell",
+            index,
+            press: "tap",
+          })
         : current,
     state,
   );
@@ -99,36 +103,37 @@ describe("initNonogramPlayState", () => {
 
 describe("mark-cell", () => {
   it("applies the brush, and re-applying the same brush clears the cell", () => {
-    const painted = play(MONDAY_STATE, { type: "mark-cell", index: 3 });
+    const painted = play(MONDAY_STATE, {
+      type: "mark-cell",
+      index: 3,
+      press: "tap",
+    });
     expect(painted.entries[3]).toBe(1);
 
-    const cleared = play(painted, { type: "mark-cell", index: 3 });
+    const cleared = play(painted, {
+      type: "mark-cell",
+      index: 3,
+      press: "tap",
+    });
     expect(cleared.entries[3]).toBeNull();
   });
 
-  it("writes 0 under the cross brush and null under the erase brush", () => {
+  it("writes 0 under the cross brush", () => {
     const crossed = play(
       MONDAY_STATE,
       { type: "set-brush", brush: "cross" },
-      { type: "mark-cell", index: 7 },
+      { type: "mark-cell", index: 7, press: "tap" },
     );
     expect(crossed.entries[7]).toBe(0);
-
-    const erased = play(
-      play(MONDAY_STATE, { type: "mark-cell", index: 7 }),
-      { type: "set-brush", brush: "erase" },
-      { type: "mark-cell", index: 7 },
-    );
-    expect(erased.entries[7]).toBeNull();
   });
 
   it("is a no-op for an index that is not on the board", () => {
-    expect(play(MONDAY_STATE, { type: "mark-cell", index: -1 })).toBe(
-      MONDAY_STATE,
-    );
-    expect(play(MONDAY_STATE, { type: "mark-cell", index: 25 })).toBe(
-      MONDAY_STATE,
-    );
+    expect(
+      play(MONDAY_STATE, { type: "mark-cell", index: -1, press: "tap" }),
+    ).toBe(MONDAY_STATE);
+    expect(
+      play(MONDAY_STATE, { type: "mark-cell", index: 25, press: "tap" }),
+    ).toBe(MONDAY_STATE);
   });
 });
 
@@ -179,26 +184,80 @@ describe("clear-cell", () => {
   });
 });
 
-describe("paint-over", () => {
+describe("a right press writes the opposite mark (T-WEB-S494)", () => {
+  it("crosses under the fill brush, and a second right press clears the cross", () => {
+    const crossed = play(MONDAY_STATE, {
+      type: "mark-cell",
+      index: 3,
+      press: "right",
+    });
+    expect(crossed.entries[3]).toBe(0);
+
+    const cleared = play(crossed, {
+      type: "mark-cell",
+      index: 3,
+      press: "right",
+    });
+    expect(cleared.entries[3]).toBeNull();
+  });
+
+  it("fills under the cross brush", () => {
+    const filled = play(
+      MONDAY_STATE,
+      { type: "set-brush", brush: "cross" },
+      { type: "mark-cell", index: 3, press: "right" },
+    );
+    expect(filled.entries[3]).toBe(1);
+  });
+
+  it("a left press and a tap use the brush, and a left press on a filled cell clears it", () => {
+    const left = play(MONDAY_STATE, {
+      type: "mark-cell",
+      index: 3,
+      press: "left",
+    });
+    expect(left.entries[3]).toBe(1);
+    expect(
+      play(left, { type: "mark-cell", index: 3, press: "tap" }).entries[3],
+    ).toBeNull();
+  });
+
+  it("a right press over a filled cell turns it into a cross", () => {
+    const filled = play(MONDAY_STATE, {
+      type: "mark-cell",
+      index: 3,
+      press: "tap",
+    });
+    expect(
+      play(filled, { type: "mark-cell", index: 3, press: "right" }).entries[3],
+    ).toBe(0);
+  });
+});
+
+describe("a stroke (T-WEB-S505)", () => {
   it("is a plain SET, so a stroke crossing a cell twice leaves it painted", () => {
-    const once = play(MONDAY_STATE, { type: "paint-over", index: 9 });
+    const started = play(MONDAY_STATE, {
+      type: "stroke-start",
+      index: 8,
+      press: "tap",
+    });
+    const once = play(started, { type: "paint-over", index: 9 });
     const twice = play(once, { type: "paint-over", index: 9 });
 
+    expect(started.entries[8]).toBe(1);
     expect(once.entries[9]).toBe(1);
-    expect(twice.entries[9]).toBe(1);
-
     expect(twice).toBe(once);
   });
 
   it("overwrites a cross rather than toggling it", () => {
-    const crossed = play(
-      MONDAY_STATE,
-      { type: "set-brush", brush: "cross" },
-      { type: "paint-over", index: 9 },
-    );
+    const crossed = play(MONDAY_STATE, {
+      type: "mark-cell",
+      index: 9,
+      press: "right",
+    });
     const repainted = play(
       crossed,
-      { type: "set-brush", brush: "fill" },
+      { type: "stroke-start", index: 8, press: "tap" },
       { type: "paint-over", index: 9 },
     );
 
@@ -206,10 +265,85 @@ describe("paint-over", () => {
     expect(repainted.entries[9]).toBe(1);
   });
 
-  it("is a no-op off the board", () => {
-    expect(play(MONDAY_STATE, { type: "paint-over", index: 999 })).toBe(
+  it("a right stroke crosses every cell it enters, over a fill", () => {
+    const filled = play(MONDAY_STATE, {
+      type: "mark-cell",
+      index: 9,
+      press: "tap",
+    });
+    const crossed = play(
+      filled,
+      { type: "stroke-start", index: 8, press: "right" },
+      { type: "paint-over", index: 9 },
+      { type: "paint-over", index: 10 },
+    );
+
+    expect([8, 9, 10].map((index) => crossed.entries[index])).toStrictEqual([
+      0, 0, 0,
+    ]);
+  });
+
+  it("from a filled cell clears the filled cells it enters and leaves the crosses", () => {
+    const board = play(
+      MONDAY_STATE,
+      { type: "mark-cell", index: 8, press: "tap" },
+      { type: "mark-cell", index: 9, press: "right" },
+      { type: "mark-cell", index: 10, press: "tap" },
+    );
+    const cleared = play(
+      board,
+      { type: "stroke-start", index: 8, press: "tap" },
+      { type: "paint-over", index: 9 },
+      { type: "paint-over", index: 10 },
+      { type: "paint-over", index: 11 },
+    );
+
+    expect([8, 9, 10, 11].map((index) => cleared.entries[index])).toStrictEqual(
+      [null, 0, null, null],
+    );
+  });
+
+  it("(a) the next stroke replaces a clearing latch, so one starting off the cells does not clear", () => {
+    const next = play(
+      MONDAY_STATE,
+      { type: "mark-cell", index: 8, press: "tap" },
+      { type: "mark-cell", index: 10, press: "tap" },
+      { type: "stroke-start", index: 8, press: "tap" },
+      { type: "stroke-start", index: 9, press: "tap" },
+      { type: "paint-over", index: 10 },
+    );
+
+    expect([8, 9, 10].map((index) => next.entries[index])).toStrictEqual([
+      null,
+      1,
+      1,
+    ]);
+  });
+
+  it("a paint-over with no stroke open writes nothing", () => {
+    expect(play(MONDAY_STATE, { type: "paint-over", index: 9 })).toBe(
       MONDAY_STATE,
     );
+  });
+
+  it("(T-WEB-S502) off the board writes nothing and drops the old latch", () => {
+    const latched = play(MONDAY_STATE, {
+      type: "stroke-start",
+      index: 8,
+      press: "tap",
+    });
+    expect(latched.stroke).not.toBeNull();
+
+    const lost = play(latched, {
+      type: "stroke-start",
+      index: 999,
+      press: "tap",
+    });
+    const after = play(lost, { type: "paint-over", index: 9 });
+
+    expect(lost.stroke).toBeNull();
+    expect(lost.entries).toBe(latched.entries);
+    expect(after.entries).toBe(latched.entries);
   });
 });
 
@@ -224,7 +358,9 @@ describe("set-brush", () => {
     const crossing = play(MONDAY_STATE, { type: "set-brush", brush: "cross" });
 
     expect(crossing.brush).toBe("cross");
-    expect(play(crossing, { type: "mark-cell", index: 1 }).entries[1]).toBe(0);
+    expect(
+      play(crossing, { type: "mark-cell", index: 1, press: "tap" }).entries[1],
+    ).toBe(0);
   });
 });
 
@@ -329,7 +465,11 @@ describe("status and pendingSync", () => {
     const partial = solution.reduce<NonogramPlayState>(
       (current, mark, index) =>
         mark === 1 && index !== firstPictureCell(MONDAY_STATE)
-          ? nonogramPlayReducer(current, { type: "mark-cell", index })
+          ? nonogramPlayReducer(current, {
+              type: "mark-cell",
+              index,
+              press: "tap",
+            })
           : current,
       MONDAY_STATE,
     );
@@ -341,6 +481,7 @@ describe("status and pendingSync", () => {
     const solved = nonogramPlayReducer(partial, {
       type: "mark-cell",
       index: firstPictureCell(MONDAY_STATE),
+      press: "tap",
     });
 
     expect(solved.status).toBe("solved");
@@ -354,6 +495,7 @@ describe("status and pendingSync", () => {
       nonogramPlayReducer(MONDAY_STATE, {
         type: "mark-cell",
         index: emptyCell,
+        press: "tap",
       }),
     );
 
@@ -377,7 +519,7 @@ describe("status and pendingSync", () => {
             type: "set-brush",
             brush: mark === 1 ? "fill" : "cross",
           }),
-          { type: "mark-cell", index },
+          { type: "mark-cell", index, press: "tap" },
         ),
       MONDAY_STATE,
     );
@@ -393,8 +535,12 @@ describe("status and pendingSync", () => {
     expect(outside).toBeGreaterThanOrEqual(0);
 
     for (const action of [
-      { type: "mark-cell", index: firstPictureCell(MONDAY_STATE) },
-      { type: "paint-over", index: outside },
+      {
+        type: "mark-cell",
+        index: firstPictureCell(MONDAY_STATE),
+        press: "tap",
+      },
+      { type: "stroke-start", index: outside, press: "tap" },
       { type: "enter-value", value: 0 },
       { type: "clear-cell" },
     ] as const satisfies readonly NonogramPlayAction[]) {
@@ -411,8 +557,12 @@ describe("status and pendingSync", () => {
     }
 
     expect(
-      nonogramPlayReducer(solved, { type: "paint-over", index: outside }),
-    ).toBe(solved);
+      nonogramPlayReducer(solved, {
+        type: "stroke-start",
+        index: outside,
+        press: "tap",
+      }).entries,
+    ).toBe(solved.entries);
 
     expect(solved.pendingSync).toBe(true);
   });
@@ -422,7 +572,7 @@ describe("status and pendingSync", () => {
     const outside = solutionOf(MONDAY_STATE).indexOf(0);
     const after = play(
       running,
-      { type: "paint-over", index: outside },
+      { type: "stroke-start", index: outside, press: "tap" },
       { type: "pause", now: 10_000 },
     );
 
