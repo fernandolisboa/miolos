@@ -1226,22 +1226,22 @@ describe("the board geometry (T-WEB-S48)", () => {
     expect(decl(cell, "border-top")).toBe(hairline);
     expect(decl(cell, "border-left")).toBe(hairline);
     expect(decl(bodyOf(GAME_CSS, ".cellRuleTop"), "border-top-width")).toBe(
-      "2px",
+      "3px",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellRuleTop"), "border-top-color")).toBe(
       "var(--ink)",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellRuleLeft"), "border-left-width")).toBe(
-      "2px",
+      "3px",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellRuleLeft"), "border-left-color")).toBe(
       "var(--ink)",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellEdgeRight"), "border-right")).toBe(
-      "2px solid var(--ink)",
+      "3px solid var(--ink)",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellEdgeBottom"), "border-bottom")).toBe(
-      "2px solid var(--ink)",
+      "3px solid var(--ink)",
     );
   });
 

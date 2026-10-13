@@ -61,9 +61,13 @@ every interior junction.
    non-text boundary. `--line` was measured at **1.37:1** on the same
    paper and is not a separator at all.
 
-2. **The frame and the every-5-cells group rules are 2 px `var(--ink)` on
+2. **The frame and the every-5-cells group rules are 3 px `var(--ink)` on
    the same borders** — **15.01:1** on paper and **3.48:1** on a filled
-   cell, so the structure survives the picture painting over it. The
+   cell (14.50 and 3.02 in paper-dark), so the structure survives the
+   picture painting over it. They shipped at 2 px; beside the 1 px
+   hairline that did not read as a block edge at phone size, so #301
+   raised them to 3 px. On the 8×8 board the rule stays after column and
+   row 5: it marks every fifth cell for counting, not the board's middle. The
    group rules and the frame's TOP and LEFT edges come from one modulo on
    the cell's own index — the same rule at `index % 5 === 0`, which covers
    0 (the frame) and 5/10 (the groups). The frame's **right and bottom**
