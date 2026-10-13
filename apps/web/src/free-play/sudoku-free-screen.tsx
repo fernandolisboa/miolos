@@ -7,6 +7,7 @@ import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { countFilled } from "../play/progress";
 import { hasDecidedCell } from "../play/reset-board";
 import screen from "../play/screen.module.css";
+import { useReset } from "../play/use-reset";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { playableGivens } from "../sudoku/engine";
 import { sudokuHintExplanation } from "../sudoku/hint";
@@ -118,9 +119,7 @@ function SudokuFreeBoard({
     dispatch({ type: "use-hint", solution: puzzle.solution });
   }, [puzzle.solution, allowance]);
 
-  const reset = useCallback(() => {
-    dispatch({ type: "reset" });
-  }, []);
+  const reset = useReset(dispatch);
 
   if (state.status === "solved") {
     return <FreePlaySolvedCard game="sudoku" level={level} onAgain={onNext} />;

@@ -9,6 +9,7 @@ import {
   nextBinaryHint,
   nextHint,
   nextLogicalHint,
+  toRowColumn,
 } from "../src/play/grid-hint";
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
@@ -181,12 +182,13 @@ describe("nextBinaryHint: a wrong cell first, then a 1 before a 0 (T-WEB-S458)",
 });
 
 describe("nextLogicalHint: a correction, then a checked step, then the first empty (T-WEB-S563)", () => {
-  const solution = [1, 2, 3, 4] as const;
+  const solution: readonly number[] = [1, 2, 3, 4];
   const fill = { index: 0, value: 1, kind: "fill" } as const;
   const found = (index: number, value: number) => () => ({
     index,
     value,
     step: "why",
+    cells: [index, 1],
   });
 
   it("returns a correction without looking for a step", () => {
@@ -194,12 +196,13 @@ describe("nextLogicalHint: a correction, then a checked step, then the first emp
     let looked = 0;
     const hint = nextLogicalHint(solution, correction, () => {
       looked += 1;
-      return { index: 0, value: 1, step: "why" };
+      return { index: 0, value: 1, step: "why", cells: [0] };
     });
     expect(hint).toEqual({
       index: 2,
       value: 3,
       reason: { kind: "correction" },
+      spotlight: [],
     });
     expect(looked).toBe(0);
   });
@@ -209,6 +212,7 @@ describe("nextLogicalHint: a correction, then a checked step, then the first emp
       index: 3,
       value: 4,
       reason: { kind: "step", step: "why" },
+      spotlight: [3, 1],
     });
   });
 
@@ -217,6 +221,7 @@ describe("nextLogicalHint: a correction, then a checked step, then the first emp
       index: 0,
       value: 1,
       reason: { kind: "fill" },
+      spotlight: [],
     });
   });
 
@@ -225,10 +230,19 @@ describe("nextLogicalHint: a correction, then a checked step, then the first emp
       index: 0,
       value: 1,
       reason: { kind: "fill" },
+      spotlight: [],
     });
   });
 
   it("returns null when there is nothing left to hint", () => {
     expect(nextLogicalHint(solution, null, found(0, 1))).toBeNull();
+  });
+});
+
+describe("toRowColumn", () => {
+  it("names a cell by its 1-based row and column", () => {
+    expect(toRowColumn(0, 8)).toEqual({ row: 1, column: 1 });
+    expect(toRowColumn(13, 8)).toEqual({ row: 2, column: 6 });
+    expect(toRowColumn(80, 9)).toEqual({ row: 9, column: 9 });
   });
 });

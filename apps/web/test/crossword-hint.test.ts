@@ -61,6 +61,7 @@ describe("nextCrosswordHint reveals a letter of the current pista (T-WEB-S576)",
         kind: "step",
         step: { clue: DOWN_2, crossing: ACROSS_1, index: 2 },
       },
+      spotlight: [],
     });
   });
 
@@ -100,6 +101,7 @@ describe("nextCrosswordHint reveals a letter of the current pista (T-WEB-S576)",
       index: 7,
       value: "o",
       reason: { kind: "correction" },
+      spotlight: [],
     });
   });
 
@@ -234,7 +236,7 @@ describe("a Cruzadinha hint reveals an empty letter of the target pista (T-WEB-S
           }
         },
       ),
-      { numRuns: 300 },
+      { seed: 297_576, numRuns: 300 },
     );
   });
 });

@@ -9,6 +9,7 @@ import {
   queensPlayRecordSchema,
   type QueensPlayRecord,
 } from "../src/play/play-record";
+import spotlightStyles from "../src/play/spotlight.module.css";
 import styles from "../src/queens/queens-board.module.css";
 import { queensHintExplanation } from "../src/queens/hint";
 import { QueensScreen } from "../src/queens/queens-screen";
@@ -363,10 +364,19 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
         }
         return value;
       };
+      const spotlight = stylesheet("src/play/spotlight.module.css");
+      expect(
+        decl(bodyOf(spotlight, ".spotlit.spotlit"), "--spotlight")?.replace(
+          /\s+/g,
+          " ",
+        ),
+      ).toBe(
+        "color-mix( in srgb, var(--accent) var(--spotlight-strength), transparent )",
+      );
       const share =
         Number(
-          /color-mix\(in srgb, var\(--accent\) (\d+)%, transparent\)/.exec(
-            decl(bodyOf(css, ".cellSpotlit"), "background-image") ?? "",
+          /^(\d+)%$/.exec(
+            decl(bodyOf(css, ".grid"), "--spotlight-strength") ?? "",
           )?.[1],
         ) / 100;
       const channel = (color: string, at: number): number =>
@@ -464,7 +474,7 @@ describe("the Rainhas hint says why and tints its unit (T-WEB-S575)", () => {
 
   function spotlit(): number[] {
     return [...boardOf().querySelectorAll<HTMLElement>("[data-cell-index]")]
-      .filter((cell) => cell.classList.contains(styles.cellSpotlit ?? "?"))
+      .filter((cell) => cell.classList.contains(spotlightStyles.spotlit ?? "?"))
       .map((cell) => Number(cell.dataset.cellIndex));
   }
 

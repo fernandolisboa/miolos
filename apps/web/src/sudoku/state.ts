@@ -131,10 +131,7 @@ export function sudokuPlayReducer(
       const revealed = withEntry(state, hint.index, hint.value);
       return {
         ...revealed,
-        hint: spentHint(state.hint, {
-          ...hint,
-          spotlight: hint.reason.kind === "step" ? hint.reason.step.cells : [],
-        }),
+        hint: spentHint(state.hint, hint),
       };
     }
 

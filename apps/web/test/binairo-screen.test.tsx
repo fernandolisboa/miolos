@@ -1,5 +1,5 @@
 import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
-import { generateBinairo } from "@miolos/games/binairo";
+import { generateBinairo, nextBinairoStep } from "@miolos/games/binairo";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +8,7 @@ import { BinairoScreen } from "../src/binairo/binairo-screen";
 import styles from "../src/binairo/binairo-screen.module.css";
 import { binairoHintExplanation } from "../src/binairo/hint";
 import sharedStyles from "../src/play/screen.module.css";
+import spotlightStyles from "../src/play/spotlight.module.css";
 import {
   playRecordKey,
   readPlayRecord,
@@ -16,7 +17,7 @@ import {
 } from "../src/play/play-record";
 import { formatElapsed, messages } from "../src/i18n";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
-import { freeBinairoSteps, spendFreeHints } from "./free-hints";
+import { freeHintSteps, spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 const sync = vi.hoisted(() => ({
@@ -596,7 +597,11 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
   });
 });
 
-const FREE_STEPS = freeBinairoSteps(PUZZLE.givens);
+const FREE_STEPS = freeHintSteps(
+  PUZZLE.givens,
+  nextBinairoStep,
+  (step) => step.value,
+);
 const FREE_SENTENCES = FREE_STEPS.map((step) =>
   binairoHintExplanation({ kind: "step", step }),
 );
@@ -607,7 +612,7 @@ describe("the hint names its rule and lights the cells it reasons about (T-WEB-S
 
   function spotlit(container: HTMLElement): number[] {
     return [...container.querySelectorAll<HTMLElement>("[data-cell-index]")]
-      .filter((cell) => cell.classList.contains(styles.cellSpotlit ?? ""))
+      .filter((cell) => cell.classList.contains(spotlightStyles.spotlit ?? ""))
       .map((cell) => Number(cell.dataset.cellIndex));
   }
 

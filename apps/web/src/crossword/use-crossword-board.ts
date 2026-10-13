@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { useReset } from "../play/use-reset";
 import { countAnswered } from "./grid";
 import {
   canHint,
@@ -94,9 +95,7 @@ export function useCrosswordBoard(
     }
   }, [allowance]);
 
-  const reset = useCallback(() => {
-    dispatch({ type: "reset" });
-  }, []);
+  const reset = useReset(dispatch);
 
   return {
     state,

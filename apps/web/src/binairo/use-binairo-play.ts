@@ -1,5 +1,5 @@
 import type { DailyBinairoResponse } from "@miolos/core";
-import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
+import { solveBinairo } from "@miolos/games/binairo";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
@@ -7,10 +7,12 @@ import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
+import { useReset } from "../play/use-reset";
 import {
   canHint,
   initPlayState,
   isSolvedGrid,
+  mergedGrid,
   playReducer,
   type PlayState,
 } from "./state";
@@ -68,9 +70,7 @@ export function useBinairoPlay(
     }
   }, [solution, allowance]);
 
-  const reset = useCallback(() => {
-    dispatch({ type: "reset" });
-  }, []);
+  const reset = useReset(dispatch);
 
   return {
     ...controls,
@@ -88,9 +88,7 @@ function buildRecord(
   now: number,
   closed: boolean,
 ): BinairoPlayRecord {
-  const merged: BinairoGrid = state.givens.map(
-    (given, index) => given ?? state.entries[index] ?? null,
-  );
+  const merged = mergedGrid(state);
   return {
     ...recordHeader(state, now, closed, state.hint.used),
     game: "binairo",

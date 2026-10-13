@@ -88,7 +88,7 @@ function allDigits(grid: SudokuGrid): readonly SudokuDigit[] | null {
   return digits;
 }
 
-function asDigit(cell: number | undefined): SudokuDigit | null {
+export function asDigit(cell: number | undefined): SudokuDigit | null {
   switch (cell) {
     case 1:
     case 2:

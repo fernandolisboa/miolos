@@ -3,7 +3,7 @@ import {
   FREE_HINTS_PER_PUZZLE,
   type DailySudokuResponse,
 } from "@miolos/core";
-import { generateDailySudoku } from "@miolos/games/sudoku";
+import { generateDailySudoku, nextSudokuStep } from "@miolos/games/sudoku";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -144,7 +144,11 @@ describe("useSudokuPlay", () => {
       result.current.revealHint();
     });
 
-    const [step] = freeHintSteps(PUZZLE.givens);
+    const [step] = freeHintSteps(
+      PUZZLE.givens,
+      nextSudokuStep,
+      (step) => step.digit,
+    );
     if (step === undefined) {
       throw new Error("no first step");
     }

@@ -42,6 +42,7 @@
   /* Scoped to the board so a paint drag never fights the page scroll, and
      the rest of the screen still scrolls normally (§8.2). */
   touch-action: none;
+  --spotlight-strength: 12%;
 }
 
 .cell {
@@ -113,16 +114,6 @@
   border-color: var(--accent-binairo);
   color: var(--accent-binairo-text);
   font-weight: 600;
-}
-
-/* The cells a hint reasoned about: an overlay image, so a given keeps its paper
-   tint beneath it. It must follow .cellGiven and .cell, whose `background`
-   shorthand would reset it. */
-.cellSpotlit {
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--accent-binairo) 12%, transparent),
-    color-mix(in srgb, var(--accent-binairo) 12%, transparent)
-  );
 }
 
 /* ── controls ────────────────────────────────────────────────────────── */

@@ -3,6 +3,7 @@ import { memo, type MouseEvent as ReactMouseEvent } from "react";
 
 import { messages } from "../i18n";
 import type { Press } from "../play/brush";
+import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
 import styles from "./queens-board.module.css";
 import type { QueensCellValue, QueensMark } from "./state";
@@ -121,7 +122,7 @@ const Cell = memo(function Cell({
         edgeClasses(index, size, regions),
         value === 0 ? styles.cellMarked : "",
         hinted ? styles.cellHinted : "",
-        spotlit ? styles.cellSpotlit : "",
+        spotlit ? spotlightStyles.spotlit : "",
         conflict ? styles.cellConflict : "",
         selected ? styles.cellSelected : "",
       ]

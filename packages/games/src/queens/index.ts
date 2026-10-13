@@ -3,6 +3,7 @@ export {
   QueensGenerationError,
   type QueensBoard,
   type QueensElimination,
+  type QueensEntry,
   type QueensGrade,
   type QueensGrid,
   type QueensPuzzle,

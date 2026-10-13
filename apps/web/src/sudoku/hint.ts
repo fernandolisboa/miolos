@@ -8,10 +8,11 @@ import { messages } from "../i18n";
 import {
   nextHint,
   nextLogicalHint,
+  toRowColumn,
   type HintReason,
   type LogicalHint,
 } from "../play/grid-hint";
-import { mergedGrid, playableGivens } from "./engine";
+import { asDigit, mergedGrid, playableGivens } from "./engine";
 import type { SudokuCellValue, SudokuDigit } from "./state";
 
 export type SudokuHintReason = HintReason<SudokuStep>;
@@ -30,9 +31,10 @@ export function nextSudokuHint(
   const first = nextHint(solution, playableGivens(givens), entries);
   return nextLogicalHint(solution, first, () => {
     const step = nextSudokuStep(mergedGrid(givens, entries));
-    return step === null
+    const value = step === null ? null : asDigit(step.digit);
+    return step === null || value === null
       ? null
-      : { index: step.index, value: step.digit, step };
+      : { index: step.index, value, step, cells: step.cells };
   });
 }
 
@@ -46,10 +48,7 @@ export function sudokuHintExplanation(
     return copy[reason.kind];
   }
   const { index, digit, unit, after } = reason.step;
-  const cell = {
-    row: Math.floor(index / SIDE) + 1,
-    column: (index % SIDE) + 1,
-  };
+  const cell = toRowColumn(index, SIDE);
   if (after === null) {
     return unit === null
       ? copy.nakedSingle(digit, cell)

@@ -10,9 +10,11 @@ import { messages } from "../i18n";
 import {
   nextHint,
   nextLogicalHint,
+  toRowColumn,
   type HintReason,
-  type Revealed,
+  type LogicalHint,
 } from "../play/grid-hint";
+import { mergeGrid } from "./engine";
 import type { CellValue } from "./state";
 
 export type BinairoHintReason = HintReason<BinairoStep>;
@@ -23,22 +25,13 @@ export function nextBinairoHint(
   solution: BinairoSolvedGrid,
   givens: BinairoGrid,
   entries: readonly CellValue[],
-): Revealed<0 | 1, BinairoHintReason> | null {
-  const hint = nextLogicalHint(
-    solution,
-    nextHint(solution, givens, entries),
-    () => {
-      const step = nextBinairoStep(
-        givens.map((given, index) => given ?? entries[index] ?? null),
-      );
-      return step === null
-        ? null
-        : { index: step.index, value: step.value, step };
-    },
-  );
-  return hint !== null && hint.reason.kind === "step"
-    ? { ...hint, spotlight: hint.reason.step.cells }
-    : hint;
+): LogicalHint<0 | 1, BinairoStep> | null {
+  return nextLogicalHint(solution, nextHint(solution, givens, entries), () => {
+    const step = nextBinairoStep(mergeGrid(givens, entries));
+    return step === null
+      ? null
+      : { index: step.index, value: step.value, step, cells: step.cells };
+  });
 }
 
 export function binairoHintExplanation(
@@ -50,9 +43,8 @@ export function binairoHintExplanation(
   if (reason.kind !== "step") {
     return copy[reason.kind];
   }
-  const { index, value, rule, line, twin, cells } = reason.step;
-  const row = Math.floor(index / BINAIRO_SIZE) + 1;
-  const column = (index % BINAIRO_SIZE) + 1;
+  const { index, value, rule, line, twin } = reason.step;
+  const { row, column } = toRowColumn(index, BINAIRO_SIZE);
   if (rule === "lookahead" || line === null) {
     return copy.step.lookahead(row, column, value);
   }
@@ -63,7 +55,7 @@ export function binairoHintExplanation(
     case "gap":
       return copy.step[rule](line.kind, at, along, value);
     case "count":
-      return copy.step.count(line.kind, at, along, value, cells.length / 2);
+      return copy.step.count(line.kind, at, along, value, BINAIRO_SIZE / 2);
     case "duplicate":
       return copy.step.duplicate(
         line.kind,

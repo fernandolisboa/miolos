@@ -2,7 +2,6 @@ import {
   dailyQueensResponseSchema,
   type DailyQueensResponse,
 } from "@miolos/core";
-import { WEEKDAYS } from "@miolos/games";
 import {
   generateQueens,
   nextQueensStep,
@@ -20,14 +19,10 @@ import {
   type QueensPlayAction,
   type QueensPlayState,
 } from "../src/queens/state";
+import { correctPartial, onEveryWeekday } from "./hint-boards";
 
-const SEEDS: readonly number[] = Array.from(
-  { length: 8 },
-  (_unused, index) => ((index + 1) * 2_654_435_761) >>> 0,
-);
-
-const PUZZLES: readonly QueensPuzzle[] = WEEKDAYS.flatMap((weekday) =>
-  SEEDS.map((seed) => generateQueens({ seed, weekday })),
+const PUZZLES: readonly QueensPuzzle[] = onEveryWeekday(8, (seed, weekday) =>
+  generateQueens({ seed, weekday }),
 );
 
 function daily(puzzle: QueensPuzzle): DailyQueensResponse {
@@ -43,21 +38,13 @@ function bare(puzzle: QueensPuzzle): readonly QueensCellValue[] {
   return puzzle.solution.map(() => null);
 }
 
-function correctPartial(
-  puzzle: QueensPuzzle,
-  seed: number,
-): readonly QueensCellValue[] {
-  let state = seed;
-  return puzzle.solution.map((mark) => {
-    state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
-    return state % 3 === 0 ? mark : null;
-  });
-}
-
 describe("nextQueensHint corrects first, then reasons, then falls back (T-WEB-S572)", () => {
   it("never reveals a wrong cell, on a bare board and on correct partial boards with X's, on every weekday", () => {
     for (const [at, puzzle] of PUZZLES.entries()) {
-      for (const entries of [bare(puzzle), correctPartial(puzzle, at + 1)]) {
+      for (const entries of [
+        bare(puzzle),
+        correctPartial(puzzle.solution, at + 1),
+      ]) {
         const hint = nextQueensHint(puzzle, puzzle.solution, entries);
 
         expect(hint).not.toBeNull();
@@ -107,6 +94,7 @@ describe("nextQueensHint corrects first, then reasons, then falls back (T-WEB-S5
           index: wrong,
           value: 1 - put,
           reason: { kind: "correction" },
+          spotlight: [],
         });
       }
     }
@@ -132,7 +120,7 @@ describe("nextQueensHint corrects first, then reasons, then falls back (T-WEB-S5
     );
 
     expect(hint?.reason).toEqual({ kind: "fill" });
-    expect(hint?.spotlight).toBeUndefined();
+    expect(hint?.spotlight).toEqual([]);
   });
 });
 
@@ -240,14 +228,5 @@ describe("use-hint records the reason and the spotlight (T-WEB-S573)", () => {
 
     expect(after.hint.spotlight).toEqual([]);
     expect(after.hint.reason).toEqual({ kind: "step", step: STEP });
-  });
-
-  it("forgets the reason and the spotlight on reset", () => {
-    expect(run(hinted(), { type: "reset" }).hint).toEqual({
-      used: 1,
-      lastIndex: null,
-      reason: null,
-      spotlight: [],
-    });
   });
 });

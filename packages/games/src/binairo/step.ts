@@ -1,3 +1,4 @@
+import type { GridLine } from "../line";
 import { lineIndices } from "./internal";
 import {
   applyTier1,
@@ -8,16 +9,11 @@ import {
 import type { Visitor } from "./techniques";
 import type { BinairoGrid, BinairoRule } from "./types";
 
-export interface BinairoLine {
-  readonly kind: "row" | "column";
-  readonly index: number;
-}
-
 export interface BinairoStep {
   readonly index: number;
   readonly value: 0 | 1;
   readonly rule: BinairoRule;
-  readonly line: BinairoLine | null;
+  readonly line: GridLine | null;
   readonly twin: number | null;
   readonly cells: readonly number[];
 }

@@ -8,8 +8,9 @@ import { messages } from "../i18n";
 import {
   nextBinaryHint,
   nextLogicalHint,
+  toRowColumn,
   type HintReason,
-  type Revealed,
+  type LogicalHint,
 } from "../play/grid-hint";
 import type { QueensCellValue, QueensMark } from "./state";
 
@@ -21,18 +22,13 @@ export function nextQueensHint(
   board: QueensBoard,
   solution: readonly QueensMark[],
   entries: readonly QueensCellValue[],
-): Revealed<QueensMark, QueensHintReason> | null {
-  const hint = nextLogicalHint(
-    solution,
-    nextBinaryHint(solution, entries),
-    () => {
-      const step = nextQueensStep(board, entries);
-      return step === null ? null : { index: step.index, value: 1, step };
-    },
-  );
-  return hint?.reason.kind === "step"
-    ? { ...hint, spotlight: hint.reason.step.cells }
-    : hint;
+): LogicalHint<QueensMark, QueensStep> | null {
+  return nextLogicalHint(solution, nextBinaryHint(solution, entries), () => {
+    const step = nextQueensStep(board, entries);
+    return step === null
+      ? null
+      : { index: step.index, value: 1, step, cells: step.cells };
+  });
 }
 
 export function queensHintExplanation(
@@ -46,11 +42,6 @@ export function queensHintExplanation(
     return copy[reason.kind];
   }
   const { index, unit, after } = reason.step;
-  return copy.step(
-    unit.kind,
-    unit.index + 1,
-    Math.floor(index / size) + 1,
-    (index % size) + 1,
-    after,
-  );
+  const { row, column } = toRowColumn(index, size);
+  return copy.step(unit.kind, unit.index + 1, row, column, after);
 }

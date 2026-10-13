@@ -9,6 +9,7 @@ import { messages } from "../i18n";
 import {
   nextBinaryHint,
   nextLogicalHint,
+  toRowColumn,
   type HintReason,
   type Revealed,
 } from "../play/grid-hint";
@@ -35,21 +36,16 @@ export function nextNonogramHint(
       const step = nextNonogramStep(clues, entries.map(stateOf));
       return step === null
         ? null
-        : { index: step.index, value: step.value, step };
+        : { index: step.index, value: step.value, step, cells: step.cells };
     },
   );
-  if (hint === null) {
-    return null;
-  }
-  if (hint.reason.kind === "step") {
-    return { ...hint, spotlight: hint.reason.step.cells };
-  }
-  return hint.reason.kind === "fill" && hint.value === 0
+  return hint?.reason.kind === "fill" && hint.value === 0
     ? { ...hint, reason: { kind: "cross" } }
     : hint;
 }
 
 export function nonogramHintExplanation(
+  size: number,
   reason: NonogramHintReason | null,
 ): string | null {
   if (reason === null) {
@@ -58,12 +54,13 @@ export function nonogramHintExplanation(
   if (reason.kind !== "step") {
     return copy[reason.kind];
   }
-  const { index, value, line, runs, cells } = reason.step;
+  const { index, value, line, runs } = reason.step;
+  const { row, column } = toRowColumn(index, size);
   return copy.step(
     line.kind,
     line.index + 1,
     runs,
-    cells.indexOf(index) + 1,
+    line.kind === "row" ? column : row,
     value,
   );
 }

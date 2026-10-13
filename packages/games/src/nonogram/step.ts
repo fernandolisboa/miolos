@@ -1,15 +1,11 @@
+import type { GridLine } from "../line";
 import { isWellFormedClues, solveLine } from "./solve";
 import type { NonogramCellState, NonogramClues } from "./types";
-
-export interface NonogramLine {
-  readonly kind: "row" | "column";
-  readonly index: number;
-}
 
 export interface NonogramStep {
   readonly index: number;
   readonly value: 0 | 1;
-  readonly line: NonogramLine;
+  readonly line: GridLine;
   readonly runs: readonly number[];
   readonly cells: readonly number[];
 }

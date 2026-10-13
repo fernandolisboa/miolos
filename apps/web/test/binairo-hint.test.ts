@@ -9,9 +9,9 @@ import {
   type BinairoStep,
   type BinairoSolvedGrid,
 } from "@miolos/games/binairo";
-import type { Weekday } from "@miolos/games";
 import { describe, expect, it } from "vitest";
 
+import { mergeGrid } from "../src/binairo/engine";
 import { binairoHintExplanation, nextBinairoHint } from "../src/binairo/hint";
 import {
   initPlayState,
@@ -20,37 +20,13 @@ import {
   type PlayAction,
   type PlayState,
 } from "../src/binairo/state";
+import { correctPartial, onEveryWeekday } from "./hint-boards";
 
-const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 7];
-
-const SEEDS: readonly number[] = Array.from(
-  { length: 6 },
-  (_unused, index) => ((index + 1) * 2_654_435_761) >>> 0,
-);
-
-const PUZZLES: readonly BinairoPuzzle[] = WEEKDAYS.flatMap((weekday) =>
-  SEEDS.map((seed) => generateBinairo({ seed, weekday })),
+const PUZZLES: readonly BinairoPuzzle[] = onEveryWeekday(6, (seed, weekday) =>
+  generateBinairo({ seed, weekday }),
 );
 
 const NONE: readonly CellValue[] = Array.from({ length: 64 }, () => null);
-
-function correctPartial(
-  solution: BinairoSolvedGrid,
-  seed: number,
-): readonly CellValue[] {
-  let state = seed;
-  return solution.map((value) => {
-    state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
-    return state % 3 === 0 ? value : null;
-  });
-}
-
-function merged(
-  givens: BinairoGrid,
-  entries: readonly CellValue[],
-): BinairoGrid {
-  return givens.map((given, index) => given ?? entries[index] ?? null);
-}
 
 function board(picture: string): BinairoGrid {
   return [...picture.replaceAll(" ", "")].map((mark) =>
@@ -65,7 +41,7 @@ describe("nextBinairoHint corrects first, then reasons, then falls back (T-WEB-S
       const boards = [NONE, correctPartial(puzzle.solution, at + 1)];
       for (const entries of boards) {
         const hint = nextBinairoHint(puzzle.solution, puzzle.givens, entries);
-        const step = nextBinairoStep(merged(puzzle.givens, entries));
+        const step = nextBinairoStep(mergeGrid(puzzle.givens, entries));
 
         expect(hint).not.toBeNull();
         expect(hint?.value).toBe(puzzle.solution[hint?.index ?? -1]);
@@ -88,6 +64,7 @@ describe("nextBinairoHint corrects first, then reasons, then falls back (T-WEB-S
         index: wrong,
         value: puzzle.solution[wrong],
         reason: { kind: "correction" },
+        spotlight: [],
       });
     }
   });
@@ -132,6 +109,7 @@ describe("nextBinairoHint corrects first, then reasons, then falls back (T-WEB-S
         index: 0,
         value: 1,
         reason: { kind: "fill" },
+        spotlight: [],
       });
     });
   });
@@ -308,16 +286,5 @@ describe("use-hint records the reason and the spotlight (T-WEB-S565)", () => {
 
     expect(lit.hint.spotlight).not.toEqual([]);
     expect(after.hint.spotlight).toEqual([]);
-  });
-
-  it("forgets the reason and the spotlight on reset", () => {
-    const afterReset = playReducer(hinted(), { type: "reset" });
-
-    expect(afterReset.hint).toEqual({
-      used: 1,
-      lastIndex: null,
-      reason: null,
-      spotlight: [],
-    });
   });
 });

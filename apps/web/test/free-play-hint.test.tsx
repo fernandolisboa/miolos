@@ -1,8 +1,8 @@
 import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
-import { generateBinairo } from "@miolos/games/binairo";
+import { generateBinairo, nextBinairoStep } from "@miolos/games/binairo";
 import { generateNonogram, nextNonogramStep } from "@miolos/games/nonogram";
 import { generateQueens, nextQueensStep } from "@miolos/games/queens";
-import { generateDailySudoku } from "@miolos/games/sudoku";
+import { generateDailySudoku, nextSudokuStep } from "@miolos/games/sudoku";
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -18,15 +18,14 @@ import {
   nextCrosswordHint,
 } from "../src/crossword/hint";
 import { binairoHintExplanation } from "../src/binairo/hint";
-import binairoBoardStyles from "../src/binairo/binairo-screen.module.css";
 import { messages } from "../src/i18n";
 import { nonogramHintExplanation } from "../src/nonogram/hint";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
+import spotlightStyles from "../src/play/spotlight.module.css";
 import { queensHintExplanation } from "../src/queens/hint";
-import queensBoardStyles from "../src/queens/queens-board.module.css";
 import { sudokuHintExplanation } from "../src/sudoku/hint";
 import sudokuBoardStyles from "../src/sudoku/sudoku-board.module.css";
-import { freeBinairoSteps, freeHintSteps, spendFreeHints } from "./free-hints";
+import { freeHintSteps, spendFreeHints } from "./free-hints";
 
 const SEED = 20_260_812;
 const WEEKDAY = LEVEL_WEEKDAYS.medio;
@@ -82,7 +81,11 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
     expect(button).toHaveAttribute("aria-disabled", "false");
     spendFreeHints();
 
-    for (const { index } of freeBinairoSteps(puzzle.givens)) {
+    for (const { index } of freeHintSteps(
+      puzzle.givens,
+      nextBinairoStep,
+      (step) => step.value,
+    )) {
       expect(cellText(container, index)).toBe(String(puzzle.solution[index]));
     }
     const spent = boardText(container);
@@ -97,7 +100,11 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
 
     spendFreeHints();
 
-    for (const { index } of freeHintSteps(puzzle.givens)) {
+    for (const { index } of freeHintSteps(
+      puzzle.givens,
+      nextSudokuStep,
+      (step) => step.digit,
+    )) {
       expect(cellText(container, index)).toBe(String(puzzle.solution[index]));
     }
     const spent = boardText(container);
@@ -131,7 +138,11 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
   it("writes the step's digit, reads out why and tints the step's cells", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateDailySudoku({ seed: SEED, weekday: WEEKDAY });
-    const [step] = freeHintSteps(puzzle.givens);
+    const [step] = freeHintSteps(
+      puzzle.givens,
+      nextSudokuStep,
+      (step) => step.digit,
+    );
     if (step === undefined) {
       throw new Error("no first step");
     }
@@ -160,7 +171,11 @@ describe("free-play Binairo reveals and explains the next logical step (T-WEB-S5
   it("writes the step's value, reads out why and tints the rule's cells until a board action", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateBinairo({ seed: SEED, weekday: WEEKDAY });
-    const [step] = freeBinairoSteps(puzzle.givens);
+    const [step] = freeHintSteps(
+      puzzle.givens,
+      nextBinairoStep,
+      (step) => step.value,
+    );
     if (step === undefined) {
       throw new Error("no first step");
     }
@@ -168,7 +183,7 @@ describe("free-play Binairo reveals and explains the next logical step (T-WEB-S5
     const tinted = () =>
       [
         ...container.querySelectorAll<HTMLElement>(
-          `.${binairoBoardStyles.cellSpotlit}`,
+          `.${spotlightStyles.spotlit}`,
         ),
       ].map((cell) => Number(cell.dataset.cellIndex));
 
@@ -219,10 +234,10 @@ describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S
         ),
     ).toBe(true);
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
-      nonogramHintExplanation({ kind: "step", step }),
+      nonogramHintExplanation(clues.size, { kind: "step", step }),
     );
     const tinted = [
-      ...container.querySelectorAll<HTMLElement>(`.${boardStyles.cellSpotlit}`),
+      ...container.querySelectorAll<HTMLElement>(`.${spotlightStyles.spotlit}`),
     ].map((cell) => Number(cell.dataset.cellIndex));
     expect(tinted).toEqual(step.cells);
   });
@@ -252,9 +267,7 @@ describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S5
       queensHintExplanation(puzzle.size, { kind: "step", step }),
     );
     const tinted = [
-      ...container.querySelectorAll<HTMLElement>(
-        `.${queensBoardStyles.cellSpotlit}`,
-      ),
+      ...container.querySelectorAll<HTMLElement>(`.${spotlightStyles.spotlit}`),
     ].map((cell) => Number(cell.dataset.cellIndex));
     expect(tinted).toEqual(step.cells);
 
@@ -266,7 +279,7 @@ describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S5
     }
     fireEvent.click(other, { detail: 0 });
     expect(
-      container.querySelectorAll(`.${queensBoardStyles.cellSpotlit}`),
+      container.querySelectorAll(`.${spotlightStyles.spotlit}`),
     ).toHaveLength(0);
   });
 });

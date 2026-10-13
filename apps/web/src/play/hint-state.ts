@@ -17,13 +17,13 @@ export function spentHint<R>(
   revealed: {
     readonly index: number;
     readonly reason: R;
-    readonly spotlight?: readonly number[];
+    readonly spotlight: readonly number[];
   },
 ): HintState<R> {
   return {
     used: hint.used + 1,
     lastIndex: revealed.index,
     reason: revealed.reason,
-    spotlight: revealed.spotlight ?? [],
+    spotlight: revealed.spotlight,
   };
 }

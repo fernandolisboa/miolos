@@ -45,7 +45,7 @@ export function PlayView({
           hint: {
             ready: play.hintReady,
             used: state.hint.used,
-            explain: nonogramHintExplanation(state.hint.reason),
+            explain: nonogramHintExplanation(state.size, state.hint.reason),
             onReveal: play.revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? play.reset : null,

@@ -13,6 +13,7 @@ import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { countFilled } from "../play/progress";
 import { hasDecidedCell } from "../play/reset-board";
 import screen from "../play/screen.module.css";
+import { useReset } from "../play/use-reset";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
@@ -102,9 +103,7 @@ function BinairoFreeBoard({
     }
   }, [puzzle.solution, allowance]);
 
-  const reset = useCallback(() => {
-    dispatch({ type: "reset" });
-  }, []);
+  const reset = useReset(dispatch);
 
   if (state.status === "solved") {
     return <FreePlaySolvedCard game="binairo" level={level} onAgain={onNext} />;

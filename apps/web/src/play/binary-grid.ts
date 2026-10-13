@@ -150,8 +150,11 @@ export function withBinaryEntry<S extends BinaryGridState<R>, R>(
   value: BinaryCellValue,
   rules: BinaryGridRules<S, R>,
 ): S {
-  if (state.status !== "playing" || (state.entries[index] ?? null) === value) {
+  if (state.status !== "playing") {
     return state;
+  }
+  if ((state.entries[index] ?? null) === value) {
+    return unlit(state);
   }
   const entries = state.entries.map((entry, at) =>
     at === index ? value : entry,

@@ -53,12 +53,14 @@ describe("idleHint, unlit and spentHint (T-WEB-S562)", () => {
 
   it("spentHint adds one to the count and records the cell, the reason and the spotlight", () => {
     const hint: HintState<string> = idleHint(1);
-    expect(spentHint(hint, { index: 7, reason: "why" })).toEqual({
-      used: 2,
-      lastIndex: 7,
-      reason: "why",
-      spotlight: [],
-    });
+    expect(spentHint(hint, { index: 7, reason: "why", spotlight: [] })).toEqual(
+      {
+        used: 2,
+        lastIndex: 7,
+        reason: "why",
+        spotlight: [],
+      },
+    );
     expect(
       spentHint(hint, { index: 7, reason: "why", spotlight: [3, 4] }).spotlight,
     ).toEqual([3, 4]);
@@ -211,5 +213,26 @@ describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
       { type: "tap", index, press: "tap" },
     );
     expect(tapped.hint.spotlight).toEqual([]);
+  });
+
+  it("clears it on a write that changes nothing", () => {
+    const written = {
+      ...lit,
+      entries: lit.entries.map((entry, index) => (index === 0 ? 1 : entry)),
+    };
+    expect(
+      nonogramPlayReducer(written, { type: "enter-value", value: 1 }).hint
+        .spotlight,
+    ).toEqual([]);
+
+    const binairo = { ...initPlayState(BINAIRO_DAILY), hint: LIT };
+    const given = BINAIRO.givens.findIndex((cell) => cell !== null);
+    const painting = playReducer(binairo, { type: "set-mode", value: 1 });
+    for (const [state, action] of [
+      [binairo, { type: "tap", index: given, press: "tap" }],
+      [painting, { type: "stroke-start", index: given, press: "tap" }],
+    ] as const) {
+      expect(playReducer(state, action).hint.spotlight).toEqual([]);
+    }
   });
 });

@@ -134,7 +134,7 @@ function NonogramFreeBoard({
           hint: {
             ready: hintReady,
             used: state.hint.used,
-            explain: nonogramHintExplanation(state.hint.reason),
+            explain: nonogramHintExplanation(state.size, state.hint.reason),
             onReveal: revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? reset : null,

@@ -7,6 +7,7 @@ import {
   type BinaryMark,
 } from "./binary-grid";
 import { useFreeHintsPerPuzzle } from "./free-hints";
+import { useReset } from "./use-reset";
 
 export interface BinaryGridControls {
   readonly hintReady: boolean;
@@ -60,9 +61,7 @@ export function useBinaryGridControls(
     }
   }, [dispatch, allowance]);
 
-  const reset = useCallback(() => {
-    dispatch({ type: "reset" });
-  }, [dispatch]);
+  const reset = useReset(dispatch);
 
   return {
     hintReady: canHint(state, allowance),

@@ -6,6 +6,7 @@ import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
+import { useReset } from "../play/use-reset";
 import {
   mergedGrid,
   playableGivens,
@@ -96,9 +97,7 @@ export function useSudokuPlay(
     }
   }, [solution, allowance]);
 
-  const reset = useCallback(() => {
-    dispatch({ type: "reset" });
-  }, []);
+  const reset = useReset(dispatch);
 
   return {
     state,

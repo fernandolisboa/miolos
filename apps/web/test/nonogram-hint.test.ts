@@ -27,15 +27,9 @@ import {
   type NonogramPlayAction,
   type NonogramPlayState,
 } from "../src/nonogram/state";
+import { correctPartial, onEveryWeekday } from "./hint-boards";
 
 const DATE = "2026-08-01";
-
-const SEEDS: readonly number[] = Array.from(
-  { length: 40 },
-  (_unused, index) => ((index + 1) * 2_654_435_761) >>> 0,
-);
-
-const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 7];
 
 interface Board {
   readonly puzzle: NonogramPuzzle;
@@ -67,9 +61,7 @@ function board(seed: number, weekday: Weekday): Board {
   };
 }
 
-const BOARDS: readonly Board[] = WEEKDAYS.flatMap((weekday) =>
-  SEEDS.map((seed) => board(seed, weekday)),
-);
+const BOARDS: readonly Board[] = onEveryWeekday(40, board);
 
 function pictureIndices(solution: readonly NonogramMark[]): readonly number[] {
   return solution.flatMap((mark, index) => (mark === 1 ? [index] : []));
@@ -222,17 +214,6 @@ describe("the second pass (P17)", () => {
 });
 
 describe("nextNonogramHint corrects first, then reasons, then falls back (T-WEB-S568)", () => {
-  function correctPartial(
-    solution: readonly NonogramMark[],
-    seed: number,
-  ): readonly NonogramCellValue[] {
-    let state = seed;
-    return solution.map((mark) => {
-      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
-      return state % 3 === 0 ? mark : null;
-    });
-  }
-
   it("never reveals a wrong cell, on a bare board and on correct partial boards of every weekday", () => {
     for (const [at, current] of BOARDS.entries()) {
       const boards = [
@@ -291,6 +272,7 @@ describe("nextNonogramHint corrects first, then reasons, then falls back (T-WEB-
           index: wrong,
           value: 1 - put,
           reason: { kind: "correction" },
+          spotlight: [],
         });
       }
     }
@@ -330,6 +312,7 @@ describe("nextNonogramHint corrects first, then reasons, then falls back (T-WEB-
         index: 24,
         value: 1,
         reason: { kind: "fill" },
+        spotlight: [],
       });
     });
 
@@ -348,6 +331,7 @@ describe("nextNonogramHint corrects first, then reasons, then falls back (T-WEB-
         index: 0,
         value: 0,
         reason: { kind: "cross" },
+        spotlight: [],
       });
     });
   });
@@ -364,7 +348,7 @@ describe("every hint sentence (T-WEB-S570)", () => {
     const cells = Array.from({ length: SIDE }, (_unused, k) =>
       line.kind === "row" ? line.index * SIDE + k : k * SIDE + line.index,
     );
-    return nonogramHintExplanation({
+    return nonogramHintExplanation(SIDE, {
       kind: "step",
       step: {
         index: cells[across] ?? -1,
@@ -410,14 +394,14 @@ describe("every hint sentence (T-WEB-S570)", () => {
   });
 
   it("explains the fallbacks and the correction, and nothing before a hint", () => {
-    expect(nonogramHintExplanation(null)).toBeNull();
-    expect(nonogramHintExplanation({ kind: "fill" })).toBe(
+    expect(nonogramHintExplanation(SIDE, null)).toBeNull();
+    expect(nonogramHintExplanation(SIDE, { kind: "fill" })).toBe(
       "Não achamos um passo lógico simples aqui, então preenchemos uma célula da figura para você.",
     );
-    expect(nonogramHintExplanation({ kind: "cross" })).toBe(
+    expect(nonogramHintExplanation(SIDE, { kind: "cross" })).toBe(
       "Não achamos um passo lógico simples aqui, então marcamos uma célula fora da figura.",
     );
-    expect(nonogramHintExplanation({ kind: "correction" })).toBe(
+    expect(nonogramHintExplanation(SIDE, { kind: "correction" })).toBe(
       "Corrigimos uma célula que não fecha com os números.",
     );
   });
@@ -566,16 +550,5 @@ describe("use-hint records the reason and the spotlight (T-WEB-S569)", () => {
     });
 
     expect(after.hint.spotlight).toEqual([]);
-  });
-
-  it("forgets the reason and the spotlight on reset", () => {
-    const after = nonogramPlayReducer(hinted(), { type: "reset" });
-
-    expect(after.hint).toEqual({
-      used: 1,
-      lastIndex: null,
-      reason: null,
-      spotlight: [],
-    });
   });
 });

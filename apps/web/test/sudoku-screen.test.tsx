@@ -3,7 +3,7 @@ import {
   FREE_HINTS_PER_PUZZLE,
   type DailySudokuResponse,
 } from "@miolos/core";
-import { generateDailySudoku } from "@miolos/games/sudoku";
+import { generateDailySudoku, nextSudokuStep } from "@miolos/games/sudoku";
 import {
   act,
   createEvent,
@@ -78,7 +78,11 @@ function solutionOf(): readonly SudokuDigit[] {
 
 const SOLUTION = solutionOf();
 
-const HINT_STEPS = freeHintSteps(PUZZLE.givens);
+const HINT_STEPS = freeHintSteps(
+  PUZZLE.givens,
+  nextSudokuStep,
+  (step) => step.digit,
+);
 
 function cellAt(container: HTMLElement, index: number): HTMLElement {
   const cell = container.querySelector<HTMLElement>(

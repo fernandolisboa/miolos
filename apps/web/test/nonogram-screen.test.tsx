@@ -29,6 +29,7 @@ import {
   type NonogramPlayRecord,
 } from "../src/play/play-record";
 import sharedStyles from "../src/play/screen.module.css";
+import spotlightStyles from "../src/play/spotlight.module.css";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
 import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
@@ -88,7 +89,7 @@ const FIRST_STEP = (() => {
 })();
 
 const FIRST_SENTENCE =
-  nonogramHintExplanation({ kind: "step", step: FIRST_STEP }) ?? "";
+  nonogramHintExplanation(SMALL.size, { kind: "step", step: FIRST_STEP }) ?? "";
 
 const PICTURE: readonly number[] = SOLUTION.flatMap((mark, index) =>
   mark === 1 ? [index] : [],
@@ -1061,7 +1062,7 @@ describe("the four branches (T-WEB-S47)", () => {
 describe("the hint names its line and lights the cells it reasons about (T-WEB-S571)", () => {
   function spotlit(container: HTMLElement): number[] {
     return [...container.querySelectorAll<HTMLElement>("[data-cell-index]")]
-      .filter((cell) => cell.classList.contains(className("cellSpotlit")))
+      .filter((cell) => cell.classList.contains(spotlightStyles.spotlit ?? ""))
       .map((cell) => Number(cell.dataset.cellIndex));
   }
 

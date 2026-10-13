@@ -18,7 +18,8 @@ export {
   solveBinairo,
   type BinairoGrade,
 } from "./solve";
-export { nextBinairoStep, type BinairoLine, type BinairoStep } from "./step";
+export type { GridLine as BinairoLine } from "../line";
+export { nextBinairoStep, type BinairoStep } from "./step";
 export {
   BINAIRO_MAX_GENERATION_ATTEMPTS,
   BinairoGenerationError,

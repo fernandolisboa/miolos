@@ -113,6 +113,7 @@
   display: grid;
   gap: 0;
   touch-action: none;
+  --spotlight-strength: 8%;
 }
 
 /* The stats card's third row — Sudoku's `.levelCard` verbatim, rendered inside
@@ -264,17 +265,6 @@
 
 .cellCrossed::after {
   transform: rotate(-45deg);
-}
-
-/* The line a hint reasoned about: Sudoku's `.cellUnit` tint, an overlay image
-   so it sits on a crossed or empty cell without replacing its fill. It must
-   follow `.cellFilled`/`.cellCrossed`, whose `background` shorthand would
-   reset it; on a filled cell accent over accent is invisible, which is right. */
-.cellSpotlit {
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--accent) 8%, transparent),
-    color-mix(in srgb, var(--accent) 8%, transparent)
-  );
 }
 
 /* The pre-hydration placeholder cell. Colour only: every dimension still comes

@@ -1,3 +1,4 @@
+import type { GridLine } from "../line";
 import type { Weekday } from "../weekday";
 
 export const QUEENS_SIZES = [7, 8, 9] as const;
@@ -38,10 +39,8 @@ export type QueensElimination =
   | "regionGroupRows"
   | "regionGroupColumns";
 
-export interface QueensUnit {
-  readonly kind: "row" | "column" | "region";
-  readonly index: number;
-}
+export type QueensUnit =
+  GridLine | { readonly kind: "region"; readonly index: number };
 
 export interface QueensStep {
   readonly index: number;

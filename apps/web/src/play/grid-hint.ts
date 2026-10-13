@@ -4,24 +4,22 @@ export interface Hint<T> {
   readonly kind: "correction" | "fill";
 }
 
-export interface PlainHintReason {
-  readonly kind: "correction" | "fill";
-}
-
 export type HintReason<S> =
-  PlainHintReason | { readonly kind: "step"; readonly step: S };
+  | { readonly kind: "correction" | "fill" }
+  | { readonly kind: "step"; readonly step: S };
 
-export interface FoundStep<S> {
+export interface FoundStep<T, S> {
   readonly index: number;
-  readonly value: unknown;
+  readonly value: T;
   readonly step: S;
+  readonly cells: readonly number[];
 }
 
 export interface Revealed<T, R> {
   readonly index: number;
   readonly value: T;
   readonly reason: R;
-  readonly spotlight?: readonly number[];
+  readonly spotlight: readonly number[];
 }
 
 export type LogicalHint<T, S> = Revealed<T, HintReason<S>>;
@@ -69,31 +67,31 @@ export function nextBinaryHint(
 export function nextLogicalHint<T, S>(
   solution: readonly T[],
   first: Hint<T> | null,
-  findStep: () => FoundStep<S> | null,
+  findStep: () => FoundStep<T, S> | null,
 ): LogicalHint<T, S> | null {
   if (first === null) {
     return null;
   }
   const found = first.kind === "fill" ? findStep() : null;
-  const target = found === null ? undefined : solution[found.index];
-  if (found !== null && target !== undefined && target === found.value) {
+  if (found !== null && solution[found.index] === found.value) {
     return {
       index: found.index,
-      value: target,
+      value: found.value,
       reason: { kind: "step", step: found.step },
+      spotlight: found.cells,
     };
   }
   return {
     index: first.index,
     value: first.value,
     reason: { kind: first.kind },
+    spotlight: [],
   };
 }
 
-export function plainHint<T>(
-  hint: Hint<T> | null,
-): Revealed<T, PlainHintReason> | null {
-  return hint === null
-    ? null
-    : { index: hint.index, value: hint.value, reason: { kind: hint.kind } };
+export function toRowColumn(
+  index: number,
+  side: number,
+): { readonly row: number; readonly column: number } {
+  return { row: Math.floor(index / side) + 1, column: (index % side) + 1 };
 }

@@ -25,6 +25,7 @@ import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
+import { mergeGrid } from "./engine";
 import { nextBinairoHint, type BinairoHintReason } from "./hint";
 
 export type CellValue = BinairoCell;
@@ -87,7 +88,7 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
     case "tap": {
       const current = playableValue(state, action.index);
       if (current === undefined) {
-        return state;
+        return unlit(state);
       }
       return withEntry(
         state,
@@ -111,7 +112,7 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       );
       const started = { ...state, stroke };
       return current === undefined
-        ? started
+        ? unlit(started)
         : withEntry(started, action.index, first);
     }
 
@@ -174,13 +175,6 @@ export function mergedGrid(state: PlayState): BinairoGrid {
 
 export function isSolvedGrid(grid: BinairoGrid): grid is BinairoSolvedGrid {
   return grid.every((cell) => cell !== null);
-}
-
-function mergeGrid(
-  givens: BinairoGrid,
-  entries: readonly CellValue[],
-): BinairoGrid {
-  return givens.map((given, index) => given ?? entries[index] ?? null);
 }
 
 function playableValue(state: PlayState, index: number): CellValue | undefined {

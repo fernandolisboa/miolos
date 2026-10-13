@@ -2,16 +2,16 @@ import { messages } from "../i18n";
 import {
   nextHint,
   nextLogicalHint,
+  toRowColumn,
   type HintReason,
   type LogicalHint,
 } from "../play/grid-hint";
 import {
   activeEntry,
-  colOf,
   entryAt,
   entryCells,
+  GRID_SIZE,
   hintGivens,
-  rowOf,
   type CrosswordClue,
   type CrosswordDirection,
 } from "./grid";
@@ -64,7 +64,12 @@ export function nextCrosswordHint(
     const value = index === undefined ? undefined : solution[index];
     return index === undefined || value === undefined
       ? null
-      : { index, value, step: { clue, crossing: crossingOf(index), index } };
+      : {
+          index,
+          value,
+          step: { clue, crossing: crossingOf(index), index },
+          cells: [],
+        };
   });
 }
 
@@ -78,12 +83,13 @@ export function crosswordHintExplanation(
     return copy.hint.explain[reason.kind];
   }
   const { clue, crossing, index } = reason.step;
+  const { row, column } = toRowColumn(index, GRID_SIZE);
   return copy.hint.explain.step(
     copy.clueLabel(clue.number, clue.direction),
     crossing === null
       ? null
       : copy.clueLabel(crossing.number, crossing.direction),
-    rowOf(index) + 1,
-    colOf(index) + 1,
+    row,
+    column,
   );
 }

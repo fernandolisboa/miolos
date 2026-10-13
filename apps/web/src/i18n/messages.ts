@@ -55,19 +55,21 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
 const runsText = (runs: readonly number[]) =>
   runs.length === 0 ? "0" : runs.join(", ");
 
-const NONOGRAM_LINE = {
+type LineKind = "row" | "column";
+
+const LINE = {
   row: { name: "linha", across: "coluna" },
   column: { name: "coluna", across: "linha" },
 } as const;
 
 const nonogramStep = (
-  line: "row" | "column",
+  line: LineKind,
   at: number,
   runs: readonly number[],
   across: number,
   value: 0 | 1,
 ) => {
-  const { name, across: otherName } = NONOGRAM_LINE[line];
+  const { name, across: otherName } = LINE[line];
   const cell = `a célula da ${otherName} ${across}`;
   if (runs.length === 0) {
     return `A ${name} ${at} não tem números, então ${cell} fica marcada.`;
@@ -79,34 +81,29 @@ const nonogramStep = (
   return `Na ${name} ${at}, ${numbers} com ${cell} ${value === 1 ? "preenchida" : "marcada"}.`;
 };
 
-const BINAIRO_LINE = {
-  row: { name: "linha", across: "coluna" },
-  column: { name: "coluna", across: "linha" },
-} as const;
-
 const BINAIRO_COUNT_WORDS = ["zero", "um", "dois", "três", "quatro"] as const;
 
 const binairoStep = {
-  pair: (line: "row" | "column", at: number, along: number, value: 0 | 1) =>
-    `Na ${BINAIRO_LINE[line].name} ${at}, dois ${1 - value} seguidos obrigam um ${value} ao lado, na célula da ${BINAIRO_LINE[line].across} ${along}.`,
-  gap: (line: "row" | "column", at: number, along: number, value: 0 | 1) =>
-    `Na ${BINAIRO_LINE[line].name} ${at}, a célula da ${BINAIRO_LINE[line].across} ${along} fica entre dois ${1 - value}, então leva ${value}.`,
+  pair: (line: LineKind, at: number, along: number, value: 0 | 1) =>
+    `Na ${LINE[line].name} ${at}, dois ${1 - value} seguidos obrigam um ${value} ao lado, na célula da ${LINE[line].across} ${along}.`,
+  gap: (line: LineKind, at: number, along: number, value: 0 | 1) =>
+    `Na ${LINE[line].name} ${at}, a célula da ${LINE[line].across} ${along} fica entre dois ${1 - value}, então leva ${value}.`,
   count: (
-    line: "row" | "column",
+    line: LineKind,
     at: number,
     along: number,
     value: 0 | 1,
     half: number,
   ) =>
-    `A ${BINAIRO_LINE[line].name} ${at} já tem ${BINAIRO_COUNT_WORDS[half] ?? half} ${1 - value}, então a célula da ${BINAIRO_LINE[line].across} ${along} leva ${value}.`,
+    `A ${LINE[line].name} ${at} já tem ${BINAIRO_COUNT_WORDS[half] ?? half} ${1 - value}, então a célula da ${LINE[line].across} ${along} leva ${value}.`,
   duplicate: (
-    line: "row" | "column",
+    line: LineKind,
     at: number,
     along: number,
     value: 0 | 1,
     twin: number,
   ) =>
-    `A ${BINAIRO_LINE[line].name} ${at} não pode repetir a ${BINAIRO_LINE[line].name} ${twin}, então a célula da ${BINAIRO_LINE[line].across} ${along} leva ${value}.`,
+    `A ${LINE[line].name} ${at} não pode repetir a ${LINE[line].name} ${twin}, então a célula da ${LINE[line].across} ${along} leva ${value}.`,
   lookahead: (row: number, column: number, value: 0 | 1) =>
     `Um ${1 - value} na linha ${row}, coluna ${column} quebraria uma regra logo adiante, então ali vai ${value}.`,
 } as const;
@@ -144,17 +141,16 @@ const QUEENS_TECHNIQUE = {
 } as const;
 
 const queensStep = (
-  unit: "row" | "column" | "region",
+  unit: LineKind | "region",
   at: number,
   row: number,
   column: number,
   after: keyof typeof QUEENS_TECHNIQUE | null,
 ) => {
-  const only = {
-    row: `Na linha ${at}, só a casa da coluna ${column}`,
-    column: `Na coluna ${at}, só a casa da linha ${row}`,
-    region: `Na região ${at}, só a casa da linha ${row}, coluna ${column}`,
-  }[unit];
+  const only =
+    unit === "region"
+      ? `Na região ${at}, só a casa da linha ${row}, coluna ${column}`
+      : `Na ${LINE[unit].name} ${at}, só a casa da ${LINE[unit].across} ${unit === "row" ? column : row}`;
   const sentence = `${only} ainda pode ter rainha.`;
   return after === null
     ? sentence

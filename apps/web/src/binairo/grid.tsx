@@ -2,6 +2,7 @@ import type { BinairoGrid } from "@miolos/games/binairo";
 
 import { messages } from "../i18n";
 import type { Press } from "../play/brush";
+import spotlightStyles from "../play/spotlight.module.css";
 import { usePointerStroke } from "../play/use-pointer-stroke";
 import styles from "./binairo-screen.module.css";
 import type { CellValue } from "./state";
@@ -47,7 +48,7 @@ export function Grid({
           return (
             <div
               key={index}
-              className={`${styles.cell} ${styles.cellGiven}${spotlit ? ` ${styles.cellSpotlit}` : ""}`}
+              className={`${styles.cell} ${styles.cellGiven}${spotlit ? ` ${spotlightStyles.spotlit}` : ""}`}
               data-cell-index={index}
               aria-disabled="true"
               aria-label={messages.games.binairo.play.cellGivenAria(
@@ -104,17 +105,12 @@ function cellClassName(
   hinted: boolean,
   spotlit: boolean,
 ): string {
+  const tint = spotlit ? ` ${spotlightStyles.spotlit}` : "";
   if (invalid) {
-    return `${styles.cell} ${styles.cellViolating}`;
+    return `${styles.cell} ${styles.cellViolating}${tint}`;
   }
   if (hinted) {
-    return `${styles.cell} ${styles.cellHinted}`;
+    return `${styles.cell} ${styles.cellHinted}${tint}`;
   }
-  return [
-    styles.cell,
-    value === null ? "" : styles.cellEntered,
-    spotlit ? styles.cellSpotlit : "",
-  ]
-    .filter((name) => name !== "")
-    .join(" ");
+  return `${styles.cell}${value === null ? "" : ` ${styles.cellEntered}`}${tint}`;
 }
