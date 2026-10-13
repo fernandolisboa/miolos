@@ -3,6 +3,7 @@ import { hasDecidedCell } from "../play/reset-board";
 import screen from "../play/screen.module.css";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
 import { Board } from "./board";
+import { queensHintExplanation } from "./hint";
 import styles from "./queens-board.module.css";
 import type { QueensBoardState } from "./use-queens-board";
 
@@ -16,8 +17,7 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
     hint: {
       ready: board.hintReady,
       used: state.hint.used,
-      explain:
-        board.hintKind === null ? null : copy.hint.explain[board.hintKind],
+      explain: queensHintExplanation(state.hint.reason),
       onReveal: board.revealHint,
     },
     onReset: hasDecidedCell(state.entries) ? board.reset : null,

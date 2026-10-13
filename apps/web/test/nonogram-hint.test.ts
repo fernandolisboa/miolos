@@ -9,7 +9,11 @@ import {
 } from "@miolos/games/nonogram";
 import { describe, expect, it } from "vitest";
 
-import { hintKindOf, solutionMarks } from "../src/nonogram/engine";
+import { solutionMarks } from "../src/nonogram/engine";
+import {
+  nextNonogramHint,
+  nonogramHintExplanation,
+} from "../src/nonogram/hint";
 import { nextBinaryHint, nextHint } from "../src/play/grid-hint";
 import {
   initNonogramPlayState,
@@ -202,23 +206,34 @@ describe("the second pass (P17)", () => {
       const hint = nextBinaryHint(current.solution, painted);
 
       expect(hint?.value).toBe(0);
-      expect(hintKindOf(hint ?? { index: 0, value: 1, kind: "fill" })).toBe(
-        "cross",
-      );
+      expect(nextNonogramHint(current.solution, painted)?.reason).toEqual({
+        kind: "cross",
+      });
     }
   });
 });
 
-describe("hintKindOf", () => {
+describe("nextNonogramHint's reason", () => {
+  const solution = [1, 0] as const;
+
   it("separates a correction, a fill and a cross", () => {
-    expect(hintKindOf({ index: 0, value: 1, kind: "correction" })).toBe(
-      "correction",
-    );
-    expect(hintKindOf({ index: 0, value: 0, kind: "correction" })).toBe(
-      "correction",
-    );
-    expect(hintKindOf({ index: 0, value: 1, kind: "fill" })).toBe("fill");
-    expect(hintKindOf({ index: 0, value: 0, kind: "fill" })).toBe("cross");
+    expect(nextNonogramHint(solution, [0, null])?.reason).toEqual({
+      kind: "correction",
+    });
+    expect(nextNonogramHint(solution, [1, 1])?.reason).toEqual({
+      kind: "correction",
+    });
+    expect(nextNonogramHint(solution, [null, null])?.reason).toEqual({
+      kind: "fill",
+    });
+    expect(nextNonogramHint(solution, [1, null])?.reason).toEqual({
+      kind: "cross",
+    });
+  });
+
+  it("explains each reason, and nothing before a hint", () => {
+    expect(nonogramHintExplanation(null)).toBeNull();
+    expect(nonogramHintExplanation({ kind: "cross" })).not.toBeNull();
   });
 });
 
@@ -261,6 +276,8 @@ describe("the reducer's accounting", () => {
     expect(cleared.hint).toEqual({
       used: 1,
       lastIndex: null,
+      reason: { kind: "fill" },
+      spotlight: [],
     });
 
     const selected = nonogramPlayReducer(hinted, { type: "select", index });

@@ -5,7 +5,11 @@ import {
 } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
-import { nextBinaryHint, nextHint } from "../src/play/grid-hint";
+import {
+  nextBinaryHint,
+  nextHint,
+  nextLogicalHint,
+} from "../src/play/grid-hint";
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
@@ -173,5 +177,58 @@ describe("nextBinaryHint: a wrong cell first, then a 1 before a 0 (T-WEB-S458)",
 
   it("returns null on a finished board", () => {
     expect(nextBinaryHint(solution, [0, 0, 1, 0, 1, 0])).toBeNull();
+  });
+});
+
+describe("nextLogicalHint: a correction, then a checked step, then the first empty (T-WEB-S558)", () => {
+  const solution = [1, 2, 3, 4] as const;
+  const fill = { index: 0, value: 1, kind: "fill" } as const;
+  const found = (index: number, value: number) => () => ({
+    index,
+    value,
+    step: "why",
+  });
+
+  it("returns a correction without looking for a step", () => {
+    const correction = { index: 2, value: 3, kind: "correction" } as const;
+    let looked = 0;
+    const hint = nextLogicalHint(solution, correction, () => {
+      looked += 1;
+      return { index: 0, value: 1, step: "why" };
+    });
+    expect(hint).toEqual({
+      index: 2,
+      value: 3,
+      reason: { kind: "correction" },
+    });
+    expect(looked).toBe(0);
+  });
+
+  it("returns the step when its value is the solution's", () => {
+    expect(nextLogicalHint(solution, fill, found(3, 4))).toEqual({
+      index: 3,
+      value: 4,
+      reason: { kind: "step", step: "why" },
+    });
+  });
+
+  it("falls back to the first empty cell when the step disagrees with the solution", () => {
+    expect(nextLogicalHint(solution, fill, found(3, 9))).toEqual({
+      index: 0,
+      value: 1,
+      reason: { kind: "fill" },
+    });
+  });
+
+  it("falls back to the first empty cell when there is no step", () => {
+    expect(nextLogicalHint(solution, fill, () => null)).toEqual({
+      index: 0,
+      value: 1,
+      reason: { kind: "fill" },
+    });
+  });
+
+  it("returns null when there is nothing left to hint", () => {
+    expect(nextLogicalHint(solution, null, found(0, 1))).toBeNull();
   });
 });

@@ -83,6 +83,8 @@ describe("initPlayState", () => {
     expect(state.hint).toEqual({
       used: 0,
       lastIndex: null,
+      reason: null,
+      spotlight: [],
     });
     expect(state.violating.size).toBe(0);
     expect(state.status).toBe("playing");
@@ -481,6 +483,8 @@ describe("restore (T-WEB-14b)", () => {
     expect(state.hint).toEqual({
       used: 1,
       lastIndex: null,
+      reason: null,
+      spotlight: [],
     });
     expect(state.pendingSync).toBe(true);
     expect([...state.violating].toSorted()).toEqual([0, 1, 2]);

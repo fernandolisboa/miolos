@@ -3,27 +3,21 @@ import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
-import type { Hint } from "../play/grid-hint";
-import { nextHint } from "../play/grid-hint";
 import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
-import { useHintKind } from "../play/use-hint-kind";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import {
   canHint,
   initPlayState,
   isSolvedGrid,
   playReducer,
-  type CellValue,
   type PlayState,
 } from "./state";
 import {
   useBinairoControls,
   type BinairoControls,
 } from "./use-binairo-controls";
-
-export type BinairoHint = Hint<CellValue>;
 
 export interface BinairoPlay extends BinairoControls {
   readonly state: PlayState;
@@ -33,8 +27,6 @@ export interface BinairoPlay extends BinairoControls {
   readonly filled: number;
 
   readonly hintReady: boolean;
-
-  readonly hintKind: BinairoHint["kind"] | null;
   readonly revealHint: () => void;
   readonly reset: () => void;
 }
@@ -44,8 +36,6 @@ export function useBinairoPlay(
   remotelyClaimed = false,
 ): BinairoPlay {
   const [state, dispatch] = useReducer(playReducer, daily, initPlayState);
-  const { hintKind, setHintKind, reset } =
-    useHintKind<BinairoHint["kind"]>(dispatch);
   const allowance = useFreeHintsPerPuzzle();
   const controls = useBinairoControls(dispatch);
 
@@ -73,21 +63,14 @@ export function useBinairoPlay(
   });
 
   const revealHint = useCallback(() => {
-    if (solution === null) {
-      return;
+    if (solution !== null && canHint(stateRef.current, allowance)) {
+      dispatch({ type: "use-hint", solution });
     }
-    const current = stateRef.current;
-    if (!canHint(current, allowance)) {
-      return;
-    }
+  }, [solution, allowance]);
 
-    const hint = nextHint(solution, current.givens, current.entries);
-    if (hint === null) {
-      return;
-    }
-    setHintKind(hint.kind);
-    dispatch({ type: "use-hint", solution });
-  }, [solution, setHintKind, allowance]);
+  const reset = useCallback(() => {
+    dispatch({ type: "reset" });
+  }, []);
 
   return {
     ...controls,
@@ -95,7 +78,6 @@ export function useBinairoPlay(
     elapsed,
     filled,
     hintReady: solution !== null && canHint(state, allowance),
-    hintKind,
     revealHint,
     reset,
   };

@@ -154,7 +154,10 @@ const CROSSWORD_LAST = lastIndexWhere(
 );
 
 interface HintedPlay {
-  readonly state: { readonly hint: HintState; readonly hydrated: boolean };
+  readonly state: {
+    readonly hint: HintState<unknown>;
+    readonly hydrated: boolean;
+  };
   readonly hintReady: boolean;
   readonly revealHint: () => void;
   readonly finish: () => void;

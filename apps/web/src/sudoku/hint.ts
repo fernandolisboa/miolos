@@ -5,19 +5,18 @@ import {
 } from "@miolos/games/sudoku";
 
 import { messages } from "../i18n";
-import { nextHint } from "../play/grid-hint";
+import {
+  nextHint,
+  nextLogicalHint,
+  type HintReason,
+  type LogicalHint,
+} from "../play/grid-hint";
 import { mergedGrid, playableGivens } from "./engine";
 import type { SudokuCellValue, SudokuDigit } from "./state";
 
-export type SudokuHintReason =
-  | { readonly kind: "correction" | "fill" }
-  | { readonly kind: "step"; readonly step: SudokuStep };
+export type SudokuHintReason = HintReason<SudokuStep>;
 
-export interface SudokuHint {
-  readonly index: number;
-  readonly value: SudokuDigit;
-  readonly reason: SudokuHintReason;
-}
+export type SudokuHint = LogicalHint<SudokuDigit, SudokuStep>;
 
 const copy = messages.games.sudoku.play.hint;
 
@@ -29,22 +28,12 @@ export function nextSudokuHint(
   entries: readonly SudokuCellValue[],
 ): SudokuHint | null {
   const first = nextHint(solution, playableGivens(givens), entries);
-  if (first === null) {
-    return null;
-  }
-  const step =
-    first.kind === "fill" ? nextSudokuStep(mergedGrid(givens, entries)) : null;
-  if (step !== null) {
-    const value = solution[step.index];
-    if (value === step.digit) {
-      return { index: step.index, value, reason: { kind: "step", step } };
-    }
-  }
-  return {
-    index: first.index,
-    value: first.value,
-    reason: { kind: first.kind },
-  };
+  return nextLogicalHint(solution, first, () => {
+    const step = nextSudokuStep(mergedGrid(givens, entries));
+    return step === null
+      ? null
+      : { index: step.index, value: step.digit, step };
+  });
 }
 
 export function sudokuHintExplanation(

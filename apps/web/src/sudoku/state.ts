@@ -11,6 +11,7 @@ import {
 
 import { movedSelection } from "../play/grid-selection";
 import { hasHintLeft } from "../play/hint-allowance";
+import { idleHint, spentHint, unlit } from "../play/hint-state";
 import type { PlayRecord, SudokuPlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
@@ -20,21 +21,9 @@ import { nextSudokuHint, type SudokuHintReason } from "./hint";
 
 const SIDE = 9;
 
-const NO_HINT: SudokuHintState = {
-  used: 0,
-  lastIndex: null,
-  reason: null,
-  spotlight: [],
-};
-
 export type SudokuDigit = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export type SudokuCellValue = SudokuDigit | null;
-
-export interface SudokuHintState extends HintState {
-  readonly reason: SudokuHintReason | null;
-  readonly spotlight: readonly number[];
-}
 
 export interface SudokuPlayState extends PlayCore {
   readonly givens: SudokuGrid;
@@ -44,7 +33,7 @@ export interface SudokuPlayState extends PlayCore {
   readonly selected: number | null;
 
   readonly tier: SudokuTier;
-  readonly hint: SudokuHintState;
+  readonly hint: HintState<SudokuHintReason>;
 
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
@@ -77,7 +66,7 @@ export function initSudokuPlayState(
     selected: null,
     tier: daily.tier,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: NO_HINT,
+    hint: idleHint(0),
     violating: derived.violating,
     status: derived.status,
     pendingSync: false,
@@ -142,24 +131,18 @@ export function sudokuPlayReducer(
       const revealed = withEntry(state, hint.index, hint.value);
       return {
         ...revealed,
-        hint: {
-          used: state.hint.used + 1,
-          lastIndex: hint.index,
-          reason: hint.reason,
+        hint: spentHint(state.hint, {
+          ...hint,
           spotlight: hint.reason.kind === "step" ? hint.reason.step.cells : [],
-        },
+        }),
       };
     }
 
-    case "reset": {
-      const reset = resetBoard(state, (entries) => ({
+    case "reset":
+      return resetBoard(state, (entries) => ({
         ...state,
         ...derive(state.givens, entries),
       }));
-      return reset === state
-        ? state
-        : { ...reset, hint: { ...reset.hint, reason: null, spotlight: [] } };
-    }
 
     case "tick":
     case "pause":
@@ -173,12 +156,6 @@ export function sudokuPlayReducer(
     case "mark-synced":
       return state.pendingSync ? { ...state, pendingSync: false } : state;
   }
-}
-
-function unlit(state: SudokuPlayState): SudokuPlayState {
-  return state.hint.spotlight.length === 0
-    ? state
-    : { ...state, hint: { ...state.hint, spotlight: [] } };
 }
 
 function playableValue(
@@ -245,7 +222,7 @@ function restore(
     ...state,
     ...derived,
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: { ...NO_HINT, used: record.hintsUsed },
+    hint: idleHint(record.hintsUsed),
     pendingSync: record.pendingSync,
     now,
     hydrated: true,

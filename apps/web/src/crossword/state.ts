@@ -3,9 +3,10 @@ import {
   type DailyCrosswordResponse,
 } from "@miolos/core";
 
-import { nextHint } from "../play/grid-hint";
+import type { PlainHintReason } from "../play/grid-hint";
 import { movedSelection } from "../play/grid-selection";
 import { hasHintLeft } from "../play/hint-allowance";
+import { idleHint, spentHint } from "../play/hint-state";
 import type { CrosswordPlayRecord, PlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
@@ -14,7 +15,6 @@ import {
   entryAt,
   flattenGrid,
   GRID_SIZE,
-  hintGivens,
   isBlock,
   isSolved,
   nextCellInEntry,
@@ -22,6 +22,7 @@ import {
   type CrosswordClue,
   type CrosswordDirection,
 } from "./grid";
+import { nextCrosswordHint } from "./hint";
 
 export type { CrosswordDirection } from "./grid";
 
@@ -34,7 +35,7 @@ export interface CrosswordPlayState extends PlayCore {
   readonly entries: readonly CrosswordCellValue[];
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
-  readonly hint: HintState;
+  readonly hint: HintState<PlainHintReason>;
 
   readonly status: "playing" | "solved";
 }
@@ -72,7 +73,7 @@ export function initCrosswordPlayState(
     selected: null,
     direction: "across",
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { used: 0, lastIndex: null },
+    hint: idleHint(0),
     status: "playing",
     pendingSync: false,
     now: 0,
@@ -142,22 +143,12 @@ export function crosswordPlayReducer(
       if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
-      const hint = nextHint(
-        state.solution,
-        hintGivens(state.solution),
-        state.entries,
-      );
+      const hint = nextCrosswordHint(state.solution, state.entries);
       if (hint === null) {
         return state;
       }
       const revealed = withEntry(state, hint.index, hint.value);
-      return {
-        ...revealed,
-        hint: {
-          used: state.hint.used + 1,
-          lastIndex: hint.index,
-        },
-      };
+      return { ...revealed, hint: spentHint(state.hint, hint) };
     }
 
     case "reset":
@@ -207,10 +198,7 @@ function restore(
     entries: record.entries,
     status: isSolved(state.solution, record.entries) ? "solved" : "playing",
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: {
-      used: record.hintsUsed,
-      lastIndex: null,
-    },
+    hint: idleHint(record.hintsUsed),
     pendingSync: record.pendingSync,
     now,
     hydrated: true,

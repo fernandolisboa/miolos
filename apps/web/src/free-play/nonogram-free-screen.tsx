@@ -10,6 +10,7 @@ import screen from "../play/screen.module.css";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
 import { countFilledCells, filledTarget } from "../nonogram/engine";
+import { nonogramHintExplanation } from "../nonogram/hint";
 import { nonogramPageModifier } from "../nonogram/page-class";
 import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
@@ -86,7 +87,6 @@ function NonogramFreeBoard({
   );
   const {
     hintReady,
-    hintKind,
     selectCell,
     moveSelection,
     enterValue,
@@ -134,7 +134,7 @@ function NonogramFreeBoard({
           hint: {
             ready: hintReady,
             used: state.hint.used,
-            explain: hintKind === null ? null : copy.hint.explain[hintKind],
+            explain: nonogramHintExplanation(state.hint.reason),
             onReveal: revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? reset : null,

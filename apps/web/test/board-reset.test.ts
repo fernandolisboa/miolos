@@ -343,7 +343,8 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
       expect(after.hint).toEqual({
         ...played.hint,
         lastIndex: null,
-        ...("reason" in played.hint ? { reason: null, spotlight: [] } : {}),
+        reason: null,
+        spotlight: [],
       });
       expect(after.timer).toBe(played.timer);
       expect(after.now).toBe(played.now);

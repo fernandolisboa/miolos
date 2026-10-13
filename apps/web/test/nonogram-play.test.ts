@@ -237,7 +237,7 @@ describe("useNonogramPlay", () => {
       result.current.revealHint();
     });
 
-    expect(result.current.hintKind).toBe("fill");
+    expect(result.current.state.hint.reason).toEqual({ kind: "fill" });
     expect(result.current.state.hint.used).toBe(1);
     expect(result.current.hintReady).toBe(true);
     expect(result.current.filled).toBe(1);

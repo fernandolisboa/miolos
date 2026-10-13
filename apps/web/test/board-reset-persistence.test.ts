@@ -151,6 +151,6 @@ describe("Recomeçar on a daily board rewrites the play record (T-WEB-S516)", ()
       play.selectCell(0);
       play.enterValue(1);
     },
-    hintNoted: (play) => play.hintKind !== null,
+    hintNoted: (play) => play.state.hint.reason !== null,
   });
 });

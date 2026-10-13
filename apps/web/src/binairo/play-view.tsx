@@ -6,6 +6,7 @@ import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
 import { Controls, ControlsSkeleton } from "./controls";
 import { Grid } from "./grid";
+import { binairoHintExplanation } from "./hint";
 import type { BinairoPlay } from "./use-binairo-play";
 
 const TOTAL_CELLS = 64;
@@ -37,8 +38,7 @@ export function PlayView({
           hint: {
             ready: play.hintReady,
             used: state.hint.used,
-            explain:
-              play.hintKind === null ? null : copy.hint.explain[play.hintKind],
+            explain: binairoHintExplanation(state.hint.reason),
             onReveal: play.revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? play.reset : null,

@@ -25,10 +25,12 @@ export interface ArchivePlayChrome {
   };
 }
 
-export interface HintState {
+export interface HintState<R> {
   readonly used: number;
 
   readonly lastIndex: number | null;
+  readonly reason: R | null;
+  readonly spotlight: readonly number[];
 }
 
 export type LifecycleAction =

@@ -19,12 +19,14 @@ import {
   type Press,
   type StrokeEffect,
 } from "../play/brush";
-import { nextHint } from "../play/grid-hint";
+import type { PlainHintReason } from "../play/grid-hint";
 import { hasHintLeft } from "../play/hint-allowance";
+import { idleHint, spentHint, unlit } from "../play/hint-state";
 import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
+import { nextBinairoHint } from "./hint";
 
 export type CellValue = BinairoCell;
 
@@ -38,7 +40,7 @@ export interface PlayState extends PlayCore {
   readonly entries: readonly CellValue[];
   readonly paint: PaintMode;
   readonly stroke: StrokeEffect | null;
-  readonly hint: HintState;
+  readonly hint: HintState<PlainHintReason>;
 
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
@@ -69,7 +71,7 @@ export function initPlayState(daily: DailyBinairoResponse): PlayState {
     paint: { kind: "cycle" },
     stroke: null,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { used: 0, lastIndex: null },
+    hint: idleHint(0),
     violating: derived.violating,
     status: derived.status,
     pendingSync: false,
@@ -135,18 +137,16 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
-      const hint = nextHint(action.solution, state.givens, state.entries);
+      const hint = nextBinairoHint(
+        action.solution,
+        state.givens,
+        state.entries,
+      );
       if (hint === null) {
         return state;
       }
       const revealed = withEntry(state, hint.index, hint.value);
-      return {
-        ...revealed,
-        hint: {
-          used: state.hint.used + 1,
-          lastIndex: hint.index,
-        },
-      };
+      return { ...revealed, hint: spentHint(state.hint, hint) };
     }
 
     case "reset":
@@ -238,14 +238,14 @@ function withEntry(
     at === index ? value : entry,
   );
   const derived = derive(state.givens, entries);
-  return {
+  return unlit({
     ...state,
     ...derived,
     pendingSync:
       derived.status === "solved" && state.status !== "solved"
         ? true
         : state.pendingSync,
-  };
+  });
 }
 
 function restore(
@@ -261,10 +261,7 @@ function restore(
     ...state,
     ...derived,
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: {
-      used: record.hintsUsed,
-      lastIndex: null,
-    },
+    hint: idleHint(record.hintsUsed),
     pendingSync: record.pendingSync,
     now,
     hydrated: true,

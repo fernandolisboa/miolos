@@ -4,6 +4,27 @@ export interface Hint<T> {
   readonly kind: "correction" | "fill";
 }
 
+export interface PlainHintReason {
+  readonly kind: "correction" | "fill";
+}
+
+export type HintReason<S> =
+  PlainHintReason | { readonly kind: "step"; readonly step: S };
+
+export interface FoundStep<S> {
+  readonly index: number;
+  readonly value: unknown;
+  readonly step: S;
+}
+
+export interface Revealed<T, R> {
+  readonly index: number;
+  readonly value: T;
+  readonly reason: R;
+}
+
+export type LogicalHint<T, S> = Revealed<T, HintReason<S>>;
+
 export function nextHint<T>(
   solution: readonly T[],
   givens: readonly (T | null)[],
@@ -42,4 +63,36 @@ export function nextBinaryHint(
   }
   const onesOnly = solution.map((mark) => (mark === 1 ? null : 0));
   return nextHint<0 | 1>(solution, onesOnly, entries) ?? first;
+}
+
+export function nextLogicalHint<T, S>(
+  solution: readonly T[],
+  first: Hint<T> | null,
+  findStep: () => FoundStep<S> | null,
+): LogicalHint<T, S> | null {
+  if (first === null) {
+    return null;
+  }
+  const found = first.kind === "fill" ? findStep() : null;
+  const target = found === null ? undefined : solution[found.index];
+  if (found !== null && target !== undefined && target === found.value) {
+    return {
+      index: found.index,
+      value: target,
+      reason: { kind: "step", step: found.step },
+    };
+  }
+  return {
+    index: first.index,
+    value: first.value,
+    reason: { kind: first.kind },
+  };
+}
+
+export function plainHint<T>(
+  hint: Hint<T> | null,
+): Revealed<T, PlainHintReason> | null {
+  return hint === null
+    ? null
+    : { index: hint.index, value: hint.value, reason: { kind: hint.kind } };
 }
