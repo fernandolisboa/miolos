@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-10-13 (issue #296)
 **Depends on:** [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md), [ADR-0095](./0095-three-free-hints-per-puzzle.md), [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md), [ADR-0098](./0098-the-free-hint-allowance-is-a-remote-config-key-under-a-wire-ceiling.md)
+**Amended by:** [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md) (#297) — decision 4: the reason and the spotlight live in the shared `HintState<R>`, not `SudokuHintState`.
 **Amends:** [ADR-0027](./0027-the-hint-is-computed-on-the-client.md) decision 1, for Sudoku only: with no wrong entry, the hint fills the next deducible cell, not the first empty one.
 
 ## Context
