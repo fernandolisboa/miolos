@@ -25,8 +25,6 @@ import {
   type FreeQueensPuzzle,
 } from "./use-free-queens";
 
-const copy = messages.games.queens.play;
-
 export function QueensFreeScreen({ deps }: { readonly deps?: FreeQueensDeps }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
   const { phase, regenerate } = useFreeQueens(level, deps);
@@ -46,9 +44,6 @@ export function QueensFreeScreen({ deps }: { readonly deps?: FreeQueensDeps }) {
   return (
     <FreePlayChrome
       game="queens"
-      kicker={messages.games.queens.kicker}
-      title={copy.title}
-      rules={copy.rules}
       level={{ value: level, onChange: setLevel }}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
       pageModifier={styles.pageQueens ?? ""}
@@ -84,9 +79,6 @@ function QueensFreeBoard({
   return (
     <FreePlayChrome
       game="queens"
-      kicker={messages.games.queens.kicker}
-      title={copy.title}
-      rules={copy.rules}
       level={{ value: level, onChange: onLevelChange }}
       pageModifier={styles.pageQueens ?? ""}
       state={{ kind: "playing", readouts: queensReadouts(board) }}

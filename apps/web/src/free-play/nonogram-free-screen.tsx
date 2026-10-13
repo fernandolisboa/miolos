@@ -58,9 +58,6 @@ export function NonogramFreeScreen({
   return (
     <FreePlayChrome
       game="nonogram"
-      kicker={messages.games.nonogram.kicker}
-      title={copy.title}
-      rules={copy.rules}
       level={{ value: level, onChange: setLevel }}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
       pageModifier={nonogramPageModifier(LEVEL_SIZES[level])}
@@ -137,9 +134,6 @@ function NonogramFreeBoard({
   return (
     <FreePlayChrome
       game="nonogram"
-      kicker={messages.games.nonogram.kicker}
-      title={copy.title}
-      rules={copy.rules}
       level={{ value: level, onChange: onLevelChange }}
       pageModifier={nonogramPageModifier(state.size)}
       state={{

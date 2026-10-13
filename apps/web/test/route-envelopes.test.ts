@@ -58,3 +58,31 @@ describe("the shared route envelopes are game-blind (T-WEB-S364)", () => {
     expect(closure).toContain(DAILY_ROUTE);
   });
 });
+
+describe("the shared screen shells are game-blind (T-WEB-S364a)", () => {
+  const DAILY_SHELL = "apps/web/src/play/daily-screen.tsx";
+  const ARCHIVE_SHELL = "apps/web/src/archive/archive-screen.tsx";
+  const PER_GAME =
+    /^(apps\/web\/src\/(binairo|sudoku|nonogram|termo|crossword|queens)|packages\/games\/src\/[^/]+)\//;
+
+  it.each([DAILY_SHELL, ARCHIVE_SHELL])(
+    "%s reaches no per-game module",
+    (shell) => {
+      expect(
+        [...closureOf(shell)].filter((path) => PER_GAME.test(path)),
+      ).toEqual([]);
+    },
+  );
+
+  it("the archive shell never reaches the conclusion tree", () => {
+    expect(
+      [...closureOf(ARCHIVE_SHELL)].filter((path) => CONCLUSION.test(path)),
+    ).toEqual([]);
+  });
+
+  it("the daily shell does reach the shared conclusion, so a green run above means something", () => {
+    expect([...closureOf(DAILY_SHELL)]).toContain(
+      "apps/web/src/play/conclusion-view.tsx",
+    );
+  });
+});

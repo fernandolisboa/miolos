@@ -11,7 +11,7 @@ import {
 
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
-import type { BinairoPlayRecord } from "../play/play-record";
+import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
@@ -129,15 +129,9 @@ function buildRecord(
     (given, index) => given ?? state.entries[index] ?? null,
   );
   return {
-    v: 1,
+    ...recordHeader(state, now, closed, state.hint.used),
     game: "binairo",
-    date: state.date,
     entries: [...state.entries],
     grid: closed && isSolvedGrid(merged) ? [...merged] : undefined,
-    elapsedMs: elapsedMs(state.timer, now),
-    hintsUsed: state.hint.used,
-    concluded: closed,
-    pendingSync: closed,
-    syncOutcome: "pending",
   };
 }

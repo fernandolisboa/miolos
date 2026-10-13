@@ -55,9 +55,6 @@ export function BinairoFreeScreen({
     <FreePlayChrome
       game="binairo"
       pageModifier={boardStyles.pageBinairo ?? ""}
-      kicker={messages.games.binairo.kicker}
-      title={copy.title}
-      rules={copy.rules}
       level={{ value: level, onChange: setLevel }}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
@@ -140,9 +137,6 @@ function BinairoFreeBoard({
     <FreePlayChrome
       game="binairo"
       pageModifier={boardStyles.pageBinairo ?? ""}
-      kicker={messages.games.binairo.kicker}
-      title={copy.title}
-      rules={copy.rules}
       level={{ value: level, onChange: onLevelChange }}
       state={{
         kind: "playing",

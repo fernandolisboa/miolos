@@ -1,19 +1,15 @@
 "use client";
 
 import type { DailyTermoResponse } from "@miolos/core";
-import { useEffect } from "react";
 
-import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
 import {
   ConclusionChunkFallback,
-  preloadTermoConclusion,
-  RemoteConclusionView,
   resilientConclusion,
 } from "../play/conclusion-lazy";
+import { DailyScreen } from "../play/daily-screen";
 import { useServerDayClaim } from "../play/day-state";
 import { elapsedMs } from "../play/timer";
-import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useTermoPlay } from "./use-termo-play";
 
@@ -24,55 +20,44 @@ const TermoConclusion = resilientConclusion<
   () => <ConclusionChunkFallback copy={messages.games.termo.conclusion} />,
 );
 
+function preloadTermoConclusion(): void {
+  void import("./termo-conclusion").catch(() => undefined);
+}
+
 export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
   const claim = useServerDayClaim(daily.date, "termo");
   const play = useTermoPlay(daily, claim !== undefined);
+  const { state } = play;
 
-  useEffect(() => {
-    preloadTermoConclusion();
-  }, []);
-
-  if (play.unavailable) {
-    return <DailyUnavailable copy={messages.games.termo.play.unavailable} />;
-  }
-
-  if (!play.state.hydrated) {
-    return <PlaySkeleton date={daily.date} />;
-  }
-
-  if (isClosedAndFrozen(play.state)) {
-    return (
-      <TermoConclusion
-        date={daily.date}
-
-        result={{
-          elapsedMs: elapsedMs(play.state.timer, play.state.now),
-          hintsUsed: 0,
-        }}
-
-        live={
-          play.state.answer === undefined
-            ? undefined
-            : {
-                won: play.state.status === "solved",
-                used: play.state.guesses.length,
-                canonical: play.state.answer,
-              }
-        }
-      />
-    );
-  }
-
-  if (claim !== undefined) {
-    return (
-      <RemoteConclusionView
-        game="termo"
-        date={daily.date}
-        copy={messages.games.termo.conclusion}
-        claim={claim}
-      />
-    );
-  }
-
-  return <PlayView play={play} />;
+  return (
+    <DailyScreen
+      game="termo"
+      claim={claim}
+      state={state}
+      unavailable={play.unavailable}
+      conclusion={{
+        render: () => (
+          <TermoConclusion
+            date={daily.date}
+            result={{
+              elapsedMs: elapsedMs(state.timer, state.now),
+              hintsUsed: 0,
+            }}
+            live={
+              state.answer === undefined
+                ? undefined
+                : {
+                    won: state.status === "solved",
+                    used: state.guesses.length,
+                    canonical: state.answer,
+                  }
+            }
+          />
+        ),
+        preload: preloadTermoConclusion,
+      }}
+      skeleton={<PlaySkeleton date={daily.date} />}
+      view={<PlayView play={play} />}
+    />
+  );
 }

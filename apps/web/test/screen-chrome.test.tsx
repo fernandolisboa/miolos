@@ -24,16 +24,18 @@ import { initPlayState } from "../src/binairo/state";
 import { BinairoFreeScreen } from "../src/free-play/binairo-free-screen";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
-import { formatElapsed, messages } from "../src/i18n";
+import { formatElapsed, formatLongDate, messages, routes } from "../src/i18n";
 import {
   PlaySkeleton as NonogramSkeleton,
   PlayView as NonogramView,
 } from "../src/nonogram/play-view";
 import { initNonogramPlayState } from "../src/nonogram/state";
 import { accentVars } from "../src/play/accent";
+import { DailyPlayChrome } from "../src/play/daily-chrome";
 import {
-  DAILY_PLAY_BACK,
   PlayScreenChrome,
+  type ChromeGame,
+  type PlayChromeBack,
   type PlayChromeClock,
   type PlayChromeNote,
   type PlayChromeReadouts,
@@ -41,6 +43,7 @@ import {
   type PlayChromeState,
 } from "../src/play/screen-chrome";
 import screen from "../src/play/screen.module.css";
+import type { ArchivePlayChrome } from "../src/play/types";
 import {
   PlaySkeleton as SudokuSkeleton,
   PlayView as SudokuView,
@@ -245,6 +248,11 @@ const EXTRA: PlayChromeStat = {
 const PROGRESS_SHORT = "12/64";
 const PROGRESS_LONG = "12 de 64 células";
 const PAGE_MODIFIER = "page-binairo";
+const BACK: PlayChromeBack = {
+  href: "/volta",
+  label: "Voltar",
+  ariaLabel: "Voltar para a volta",
+};
 
 function readouts(
   ready: boolean,
@@ -269,11 +277,8 @@ function chrome(variant: {
       game="binairo"
       pageModifier={PAGE_MODIFIER}
       state={variant.state}
-      back={DAILY_PLAY_BACK}
+      back={BACK}
       topDate="18 de agosto"
-      kicker="binário"
-      title="Binairo"
-      rules="as regras"
       note={variant.note}
       clock={variant.clock}
       extraStat={variant.extraStat}
@@ -541,5 +546,82 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
 describe("the chrome's back link is routed (T-WEB-S376)", () => {
   it("imports next/link", () => {
     expect(valueSpecifiersOf(CHROME)).toContain("next/link");
+  });
+});
+
+describe("the chrome looks its copy up by game (T-WEB-S486)", () => {
+  const GAMES: readonly ChromeGame[] = [
+    "sudoku",
+    "nonogram",
+    "binairo",
+    "crossword",
+    "queens",
+  ];
+
+  function dailyChrome(
+    game: ChromeGame,
+    archive?: ArchivePlayChrome,
+  ): ReactElement {
+    return (
+      <DailyPlayChrome
+        game={game}
+        pageModifier={PAGE_MODIFIER}
+        date={DATE}
+        archive={archive}
+        clock="blank"
+        extraStat={null}
+        state={{ kind: "skeleton" }}
+      >
+        <div className={screen.gridCard} />
+      </DailyPlayChrome>
+    );
+  }
+
+  it("shows each game's kicker, title and rules", () => {
+    for (const game of GAMES) {
+      const page = staticPage(dailyChrome(game));
+      const copy = messages.games[game];
+      expect(
+        {
+          barKicker: textOf(page, "barKicker"),
+          titleKicker: textOf(page, "titleKicker"),
+          title: textOf(page, "title"),
+          rules: textOf(page, "rules"),
+        },
+        game,
+      ).toEqual({
+        barKicker: copy.kicker,
+        titleKicker: copy.kicker,
+        title: copy.play.title,
+        rules: copy.play.rules,
+      });
+    }
+  });
+
+  it("links home with the long date and no note on a daily", () => {
+    const page = staticPage(dailyChrome("binairo"));
+    const back = page.querySelector(`.${cls("back")}`);
+
+    expect(back?.getAttribute("href")).toBe(routes.home);
+    expect(back?.textContent).toBe(messages.play.back);
+    expect(back?.getAttribute("aria-label")).toBe(messages.play.backAria);
+    expect(textOf(page, "topDate")).toBe(formatLongDate(DATE));
+    expect(page.querySelectorAll(`.${cls("titleBlock")} > p`)).toHaveLength(2);
+  });
+
+  it("links to the archive and carries its note when it is one", () => {
+    const archive: ArchivePlayChrome = {
+      back: { href: "/arquivo", label: "Arquivo", ariaLabel: "Voltar" },
+      note: { text: "Jogo do arquivo", className: "archive-note" },
+    };
+    const page = staticPage(dailyChrome("binairo", archive));
+    const back = page.querySelector(`.${cls("back")}`);
+
+    expect(back?.getAttribute("href")).toBe("/arquivo");
+    expect(back?.textContent).toBe("Arquivo");
+    expect(page.querySelector(".archive-note")?.textContent).toBe(
+      "Jogo do arquivo",
+    );
+    expect(page.querySelectorAll(`.${cls("titleBlock")} > p`)).toHaveLength(3);
   });
 });

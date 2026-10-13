@@ -371,6 +371,23 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     }
   });
 
+  it("T-LINT-S69: the shared daily screen shell red from free play, static and dynamic; clean from a daily path", async () => {
+    const door = "../play/daily-screen";
+    const source = `import * as banned from "${door}";\n\nexport const probe = banned;\n`;
+    expect(ruleIds(await lintProbe(FREE_PATH, source))).toContain(
+      "no-restricted-imports",
+    );
+    expect(
+      ruleIds(
+        await lintProbe(
+          FREE_PATH,
+          `export const load = () => import("${door}");\n`,
+        ),
+      ),
+    ).toContain("no-restricted-syntax");
+    expect(wallHits(await lintProbe(DAILY_PATH, source))).toEqual([]);
+  });
+
   it("T-LINT-S21: the streak modules — client, hook, hub island and the bare barrel form — red from free play, clean from a daily path", async () => {
     const doors = [
       "../streak/streak-client",

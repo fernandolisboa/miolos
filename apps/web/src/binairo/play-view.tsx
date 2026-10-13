@@ -1,6 +1,6 @@
-import { formatLongDate, messages } from "../i18n";
+import { messages } from "../i18n";
+import { DailyPlayChrome } from "../play/daily-chrome";
 import screen from "../play/screen.module.css";
-import { DAILY_PLAY_BACK, PlayScreenChrome } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
 import { Controls } from "./controls";
@@ -21,15 +21,11 @@ export function PlayView({
   const { state } = play;
 
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="binairo"
       pageModifier={styles.pageBinairo ?? ""}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(state.date)}
-      kicker={messages.games.binairo.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={state.date}
+      archive={archive}
       clock={{ elapsedMs: play.elapsed }}
       extraStat={null}
       state={{
@@ -59,7 +55,7 @@ export function PlayView({
         />
       </div>
       <Controls paint={state.paint} onToggleMode={play.toggleMode} />
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }
 
@@ -71,15 +67,11 @@ export function PlaySkeleton({
   readonly archive?: ArchivePlayChrome;
 }) {
   return (
-    <PlayScreenChrome
+    <DailyPlayChrome
       game="binairo"
       pageModifier={styles.pageBinairo ?? ""}
-      back={archive?.back ?? DAILY_PLAY_BACK}
-      topDate={formatLongDate(date)}
-      kicker={messages.games.binairo.kicker}
-      title={copy.title}
-      rules={copy.rules}
-      note={archive?.note ?? null}
+      date={date}
+      archive={archive}
       clock="blank"
       extraStat={null}
       state={{ kind: "skeleton" }}
@@ -113,6 +105,6 @@ export function PlaySkeleton({
         </div>
         <span className={styles.affordance}>{copy.controls.affordance}</span>
       </div>
-    </PlayScreenChrome>
+    </DailyPlayChrome>
   );
 }

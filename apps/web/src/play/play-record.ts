@@ -13,6 +13,9 @@ import {
 } from "@miolos/core";
 import { z } from "zod";
 
+import { elapsedMs } from "./timer";
+import type { PlayCore } from "./types";
+
 const STORAGE_PREFIX = "miolos:play:";
 
 export const ELAPSED_CAP_MS = 86_400_000;
@@ -20,37 +23,54 @@ export const ELAPSED_CAP_MS = 86_400_000;
 export const playRecordKey = (game: Game, date: string) =>
   `${STORAGE_PREFIX}${game}:${date}`;
 
-export const binairoPlayRecordSchema = z.strictObject({
+const recordHeaderShape = {
   v: z.literal(1),
-  game: z.literal("binairo"),
   date: isoDateString,
+  elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
+  hintsUsed: z.number().int().min(0).max(1),
+  concluded: z.boolean(),
+  pendingSync: z.boolean(),
+  syncOutcome: z.enum(["pending", "recorded", "rejected"]),
+};
+
+type RecordHeader = z.infer<z.ZodObject<typeof recordHeaderShape>>;
+
+export function recordHeader(
+  state: PlayCore,
+  now: number,
+  closed: boolean,
+  hintsUsed: number,
+): RecordHeader {
+  return {
+    v: 1,
+    date: state.date,
+    elapsedMs: elapsedMs(state.timer, now),
+    hintsUsed,
+    concluded: closed,
+    pendingSync: closed,
+    syncOutcome: "pending",
+  };
+}
+
+export const binairoPlayRecordSchema = z.strictObject({
+  ...recordHeaderShape,
+  game: z.literal("binairo"),
   entries: z.array(z.union([z.literal(0), z.literal(1), z.null()])).length(64),
 
   grid: z
     .array(z.union([z.literal(0), z.literal(1)]))
     .length(64)
     .optional(),
-  elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-  hintsUsed: z.number().int().min(0).max(1),
-  concluded: z.boolean(),
-  pendingSync: z.boolean(),
-  syncOutcome: z.enum(["pending", "recorded", "rejected"]),
 });
 
 export type BinairoPlayRecord = z.infer<typeof binairoPlayRecordSchema>;
 
 export const sudokuPlayRecordSchema = z.strictObject({
-  v: z.literal(1),
+  ...recordHeaderShape,
   game: z.literal("sudoku"),
-  date: isoDateString,
   entries: z.array(z.union([sudokuDigitSchema, z.null()])).length(81),
 
   grid: z.array(sudokuDigitSchema).length(81).optional(),
-  elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-  hintsUsed: z.number().int().min(0).max(1),
-  concluded: z.boolean(),
-  pendingSync: z.boolean(),
-  syncOutcome: z.enum(["pending", "recorded", "rejected"]),
 });
 
 export type SudokuPlayRecord = z.infer<typeof sudokuPlayRecordSchema>;
@@ -64,9 +84,8 @@ function sizedBinaryRecordSchema<const G extends Game, S extends number>(
   );
   return z
     .strictObject({
-      v: z.literal(1),
+      ...recordHeaderShape,
       game: z.literal(game),
-      date: isoDateString,
       size: sizeSchema,
 
       entries: z
@@ -77,11 +96,6 @@ function sizedBinaryRecordSchema<const G extends Game, S extends number>(
         .array(z.union([z.literal(0), z.literal(1)]))
         .max(maxCells)
         .optional(),
-      elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-      hintsUsed: z.number().int().min(0).max(1),
-      concluded: z.boolean(),
-      pendingSync: z.boolean(),
-      syncOutcome: z.enum(["pending", "recorded", "rejected"]),
     })
     .superRefine((record, ctx) => {
       const size = record.size;
@@ -119,9 +133,8 @@ export type QueensPlayRecord = z.infer<typeof queensPlayRecordSchema>;
 
 export const termoPlayRecordSchema = z
   .strictObject({
-    v: z.literal(1),
+    ...recordHeaderShape,
     game: z.literal("termo"),
-    date: isoDateString,
 
     guesses: z
       .array(
@@ -135,12 +148,6 @@ export const termoPlayRecordSchema = z
     answer: z.string().length(TERMO_WORD_LENGTH).optional(),
 
     outcome: completionOutcomeSchema.optional(),
-    elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-
-    hintsUsed: z.number().int().min(0).max(1),
-    concluded: z.boolean(),
-    pendingSync: z.boolean(),
-    syncOutcome: z.enum(["pending", "recorded", "rejected"]),
   })
   .superRefine((record, ctx) => {
     const wonAt = record.guesses.findIndex((row) =>
@@ -181,9 +188,8 @@ export type TermoPlayRecord = z.infer<typeof termoPlayRecordSchema>;
 const CROSSWORD_CELLS = 25;
 
 export const crosswordPlayRecordSchema = z.strictObject({
-  v: z.literal(1),
+  ...recordHeaderShape,
   game: z.literal("crossword"),
-  date: isoDateString,
   entries: z
     .array(z.union([crosswordLetterSchema, z.null()]))
     .length(CROSSWORD_CELLS),
@@ -192,11 +198,6 @@ export const crosswordPlayRecordSchema = z.strictObject({
     .array(crosswordLetterSchema.nullable())
     .length(CROSSWORD_CELLS)
     .optional(),
-  elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-  hintsUsed: z.number().int().min(0).max(1),
-  concluded: z.boolean(),
-  pendingSync: z.boolean(),
-  syncOutcome: z.enum(["pending", "recorded", "rejected"]),
 });
 
 export type CrosswordPlayRecord = z.infer<typeof crosswordPlayRecordSchema>;

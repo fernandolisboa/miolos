@@ -29,18 +29,12 @@ function levelStat(level: FreePlayLevel): PlayChromeStat {
 export function FreePlayChrome({
   game,
   pageModifier,
-  kicker,
-  title,
-  rules,
   level,
   state,
   children,
 }: {
   readonly game: ChromeGame;
   readonly pageModifier: string;
-  readonly kicker: string;
-  readonly title: string;
-  readonly rules: string;
   readonly level?: {
     readonly value: FreePlayLevel;
     readonly onChange: (level: FreePlayLevel) => void;
@@ -55,9 +49,6 @@ export function FreePlayChrome({
       state={state}
       back={BACK}
       topDate={messages.freePlay.modeTag}
-      kicker={kicker}
-      title={title}
-      rules={rules}
       note={null}
       clock="none"
       extraStat={level === undefined ? null : levelStat(level.value)}

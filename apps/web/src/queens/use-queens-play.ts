@@ -1,6 +1,6 @@
 import type { DailyQueensResponse } from "@miolos/core";
 
-import type { QueensPlayRecord } from "../play/play-record";
+import { recordHeader, type QueensPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import { queensGrid, queensPlayReducer, type QueensPlayState } from "./state";
@@ -36,16 +36,10 @@ function buildRecord(
   closed: boolean,
 ): QueensPlayRecord {
   return {
-    v: 1,
+    ...recordHeader(state, now, closed, state.hint.used),
     game: "queens",
-    date: state.date,
     size: state.size,
     entries: [...state.entries],
     grid: closed ? [...queensGrid(state.entries)] : undefined,
-    elapsedMs: elapsedMs(state.timer, now),
-    hintsUsed: state.hint.used,
-    concluded: closed,
-    pendingSync: closed,
-    syncOutcome: "pending",
   };
 }
