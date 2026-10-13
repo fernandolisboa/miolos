@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { pushSubscriptions, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
+import { thrownBy } from "./fixtures";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -25,15 +26,6 @@ async function createUser(): Promise<string> {
     throw new Error("users insert returned no row");
   }
   return user.id;
-}
-
-async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
-  try {
-    await statement;
-    return undefined;
-  } catch (error) {
-    return error;
-  }
 }
 
 describe("push_subscriptions (migration 0007, ADR-0064)", () => {

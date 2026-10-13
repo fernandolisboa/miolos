@@ -1,6 +1,7 @@
 # ADR-0097 — Admins are an env allow-list of user ids and edit remote config through the API, one key at a time
 
 **Status:** Accepted — 2026-10-13 (issue #304)
+**Superseded in part by:** [ADR-0100](./0100-admins-and-superusers-are-attached-emails-in-admin-users.md) (#314) — decisions 1 and 2: admins and superusers are attached emails in `admin_users`, managed on `/admin`, and the state is a union on `role`. Decisions 3–5 stand.
 **Depends on:** [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md)
 **Amends:** [ADR-0025](./0025-remote-config-is-a-database-table.md) (the table now has a writer reached from a client, and invalid values fall back per key); [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md) (decision 3: a scoped exception for the admin-only state response)
 

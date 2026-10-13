@@ -63,7 +63,12 @@ async function resolveWinner(
     return { winnerId: requesterId, merged: false };
   }
   try {
-    const { winnerId } = await mergeAccounts(db, requesterId, holder);
+    const { winnerId } = await mergeAccounts(
+      db,
+      requesterId,
+      holder,
+      requesterId,
+    );
     return { winnerId, merged: true };
   } catch (error) {
     if (isIdentityClashError(error)) {
@@ -85,7 +90,12 @@ async function resolveWinner(
       return { winnerId: requesterId, merged: false };
     }
     try {
-      const { winnerId } = await mergeAccounts(db, requesterId, freshHolder);
+      const { winnerId } = await mergeAccounts(
+        db,
+        requesterId,
+        freshHolder,
+        requesterId,
+      );
       return { winnerId, merged: true };
     } catch (retryError) {
       if (isIdentityClashError(retryError)) {

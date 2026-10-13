@@ -1,4 +1,9 @@
-import { COMPLETION_OUTCOMES, GAMES, HINT_GRANT_SOURCES } from "@miolos/core";
+import {
+  ADMIN_MEMBER_ROLES,
+  COMPLETION_OUTCOMES,
+  GAMES,
+  HINT_GRANT_SOURCES,
+} from "@miolos/core";
 import { isNotNull, sql } from "drizzle-orm";
 import {
   bigint,
@@ -246,3 +251,16 @@ export const remoteConfig = pgTable("remote_config", {
   value: jsonb("value").notNull(),
   updatedAt: timestamptz("updated_at").notNull().defaultNow(),
 });
+
+export const adminUsers = pgTable(
+  "admin_users",
+  {
+    email: text("email").primaryKey(),
+    role: text("role", { enum: ADMIN_MEMBER_ROLES }).notNull(),
+    addedAt: timestamptz("added_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check("admin_users_email_check", sql`${t.email} = lower(${t.email})`),
+    check("admin_users_role_check", sql`${t.role} in ('superuser', 'admin')`),
+  ],
+);
