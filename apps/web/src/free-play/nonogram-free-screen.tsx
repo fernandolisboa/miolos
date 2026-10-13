@@ -2,20 +2,16 @@
 
 import type { NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 
 import { messages } from "../i18n";
 import screen from "../play/screen.module.css";
-import { useBinaryGridControls } from "../play/use-binary-grid-controls";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
-import { countFilledCells, filledTarget, hintKindOf } from "../nonogram/engine";
+import { countFilledCells, filledTarget } from "../nonogram/engine";
 import { nonogramPageModifier } from "../nonogram/page-class";
-import {
-  initNonogramPlayState,
-  nonogramPlayReducer,
-  type NonogramBrush,
-} from "../nonogram/state";
+import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
+import { useNonogramControls } from "../nonogram/use-nonogram-controls";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
@@ -95,7 +91,11 @@ function NonogramFreeBoard({
     enterValue,
     clearCell,
     revealHint,
-  } = useBinaryGridControls(state, dispatch, hintKindOf);
+    setBrush,
+    markCell,
+    strokeStart,
+    paintOver,
+  } = useNonogramControls(state, dispatch);
 
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
@@ -103,18 +103,6 @@ function NonogramFreeBoard({
 
   const target = filledTarget(state.clues);
   const filled = countFilledCells(state.entries);
-
-  const setBrush = useCallback((brush: NonogramBrush) => {
-    dispatch({ type: "set-brush", brush });
-  }, []);
-
-  const markCell = useCallback((index: number) => {
-    dispatch({ type: "mark-cell", index });
-  }, []);
-
-  const paintOver = useCallback((index: number) => {
-    dispatch({ type: "paint-over", index });
-  }, []);
 
   if (state.status === "solved" && state.solution !== null) {
     return (
@@ -160,6 +148,7 @@ function NonogramFreeBoard({
           onSelect={selectCell}
           onMove={moveSelection}
           onMarkCell={markCell}
+          onStrokeStart={strokeStart}
           onEnterValue={enterValue}
           onClear={clearCell}
           onPaintOver={paintOver}

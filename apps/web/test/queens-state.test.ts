@@ -66,7 +66,7 @@ const solutionCells = SOLUTION.flatMap((cell, index) =>
 
 describe("the Rainhas reducer (T-WEB-S451)", () => {
   it("cycles a tapped cell empty → marked → queen → empty", () => {
-    const tap: QueensPlayAction = { type: "cycle", index: 3 };
+    const tap: QueensPlayAction = { type: "tap", index: 3, press: "tap" };
     const once = run(hydrated(DAILY), tap);
     const twice = run(once, tap);
     const thrice = run(twice, tap);
@@ -75,10 +75,29 @@ describe("the Rainhas reducer (T-WEB-S451)", () => {
     expect(thrice.entries[3]).toBeNull();
   });
 
+  it("(T-WEB-S497) places a queen on a right press and removes it on the next, leaving left and tap on the cycle", () => {
+    const right: QueensPlayAction = { type: "tap", index: 3, press: "right" };
+    const placed = run(hydrated(DAILY), right);
+    expect(placed.entries[3]).toBe(1);
+    expect(run(placed, right).entries[3]).toBeNull();
+
+    const marked = run(hydrated(DAILY), {
+      type: "tap",
+      index: 3,
+      press: "left",
+    });
+    expect(marked.entries[3]).toBe(0);
+    expect(run(marked, right).entries[3]).toBe(1);
+    expect(
+      run(marked, { type: "tap", index: 3, press: "tap" }).entries[3],
+    ).toBe(1);
+  });
+
   it("crosses only empty cells on a drag, never a queen or an existing mark", () => {
     const start = run(hydrated(DAILY), ...queensAt(4), {
-      type: "cycle",
+      type: "tap",
       index: 5,
+      press: "tap",
     });
     const dragged = run(
       start,
@@ -118,14 +137,18 @@ describe("the Rainhas reducer (T-WEB-S451)", () => {
   it("ignores a select or a tap outside the board", () => {
     const start = hydrated(DAILY);
     expect(run(start, { type: "select", index: 49 })).toBe(start);
-    expect(run(start, { type: "cycle", index: -1 })).toBe(start);
+    expect(run(start, { type: "tap", index: -1, press: "tap" })).toBe(start);
   });
 
   it("solves when the placement is valid, marks it for sync once, and then freezes the board", () => {
     const solved = run(hydrated(DAILY), ...queensAt(...solutionCells));
     expect(solved.status).toBe("solved");
     expect(solved.pendingSync).toBe(true);
-    const frozen = run(solved, { type: "cycle", index: solutionCells[0] ?? 0 });
+    const frozen = run(solved, {
+      type: "tap",
+      index: solutionCells[0] ?? 0,
+      press: "tap",
+    });
     expect(frozen.entries).toEqual(solved.entries);
   });
 
@@ -133,7 +156,7 @@ describe("the Rainhas reducer (T-WEB-S451)", () => {
     const marked = run(
       hydrated(DAILY),
       ...SOLUTION.flatMap((cell, index): QueensPlayAction[] =>
-        cell === 0 ? [{ type: "cycle", index }] : [],
+        cell === 0 ? [{ type: "tap", index, press: "tap" }] : [],
       ),
       ...queensAt(...solutionCells),
     );
@@ -160,8 +183,8 @@ describe("conflicts show every rule kind and never flag a mark (T-WEB-S452)", ()
     const state = run(
       hydrated(STRIPES),
       ...queensAt(at(0, 0), at(2, 3)),
-      { type: "cycle", index: at(0, 1) },
-      { type: "cycle", index: at(1, 1) },
+      { type: "tap", index: at(0, 1), press: "tap" },
+      { type: "tap", index: at(1, 1), press: "tap" },
     );
     expect(state.entries[at(1, 1)]).toBe(0);
     expect(state.conflicts.size).toBe(0);
@@ -201,7 +224,7 @@ describe("the Rainhas hint (T-WEB-S453)", () => {
     const queenCell = solutionCells.at(-1) ?? 0;
     const hinted = run(
       hydrated(DAILY),
-      { type: "cycle", index: queenCell },
+      { type: "tap", index: queenCell, press: "tap" },
       { type: "use-hint" },
     );
     expect(hinted.hint.lastIndex).toBe(queenCell);
@@ -213,7 +236,7 @@ describe("the Rainhas hint (T-WEB-S453)", () => {
     const again = run(hinted, { type: "use-hint" });
     expect(again).toBe(hinted);
     const index = hinted.hint.lastIndex ?? -1;
-    const rewritten = run(hinted, { type: "cycle", index });
+    const rewritten = run(hinted, { type: "tap", index, press: "tap" });
     expect(rewritten.hint.lastIndex).toBeNull();
   });
 });

@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Depends on:** [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0032](./0032-a-nonogram-is-finished-when-the-picture-is-painted.md), [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md)
+**Amended by:** [ADR-0094](./0094-the-secondary-mouse-button-writes-the-opposite-mark.md) (#299) — decision 1 for the mouse: the brush has two modes, `apagar` is gone, and a tap or a stroke starting on a cell already holding the brush mark clears.
 
 ## Context
 

@@ -403,9 +403,6 @@
 
 /* ── brush controls ──────────────────────────────────────────────────── */
 
-/* Binairo's shipped control vocabulary, not a new one: a card-shaped button
-   that INVERTS when active. Non-zero padding on BOTH axes for the same
-   `cramped-padding` reason `.control` and the shared `.hint` carry it. */
 .controls {
   display: flex;
   align-items: center;
@@ -413,32 +410,38 @@
   margin-top: 30px;
 }
 
+/* One paper frame holding both segments; the active one is raised out of it by
+   a fill change and a hard shadow, so it survives greyscale. `aria-pressed`
+   carries the state to AT. */
+.brushToggle {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--paper-tint);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+}
+
 .control {
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2) var(--space-3);
+  width: 56px;
   height: 52px;
-  background: var(--paper-card);
-  border: 1.5px solid var(--accent);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1.5px solid transparent;
   border-radius: var(--radius);
   color: var(--accent);
-  font: var(--text-button);
   cursor: pointer;
-  box-shadow: var(--shadow-sm)
-    color-mix(in srgb, var(--accent) 22%, transparent);
   transition:
     transform var(--duration-fast) var(--ease-settle),
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* DESIGN.md's press — the element slides 1px toward its shadow and the shadow
-   shrinks by the same 1px — honoured here because a control HAS a shadow to
-   slide toward, unlike a board cell (deviation 6). --shadow-sm is 3px. */
 .control:active {
   transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .control:focus-visible {
@@ -446,33 +449,24 @@
   outline-offset: 2px;
 }
 
-/* THREE carriers, so the pressed brush survives greyscale: the fill inverts,
-   the label inverts, and `aria-pressed` carries it to AT. The 1.5px border is
-   NOT one of them and is deliberately not restated — `.control` already
-   resolves it to `var(--accent)`, so a `border-color: var(--accent)` here
-   would be a no-op that reads to a test (and to the next reader) as a third
-   visual carrier it is not.
-
-   `--paper-card` and not Binairo's `--paper-desk` on the inverted state: desk
-   on terracotta is 4.32:1, an AA failure for a 14px word. Binairo's shipped
-   `.controlDigitActive` gets away with desk because its label is a 24px
-   Fraunces numeral, i.e. WCAG large text at a 3:1 floor; a brush label is not.
-   Computed: label 4.51:1 unpressed and 4.51:1 pressed, border 4.51:1 in both. */
 .controlActive {
   background: var(--accent);
   color: var(--paper-card);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-/* The keyboard affordance: BINAIRO's rule, not Sudoku's, and the distinction
-   is structural rather than cosmetic. Sudoku grid-places its affordance on an
-   explicit second row (`sudoku-board.module.css`, `grid-row: 2`); `.controls`
-   here is a `display: flex; align-items: center` ROW, where a top margin does
-   not start a new line — it just pushes the span down against the centred
-   buttons. Measured at 1440px, `margin-top: var(--space-3)` sat it 6px below
-   their centre line while it stayed inline to their right. `margin-left` is
-   what Binairo ships for exactly this layout, and 13px is the size both
-   shipped affordances use. Desktop-only: hidden on a phone that has no
-   keyboard to afford. */
+.controlActive:active {
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.brushIcon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+/* Beside the toggle in the flex row, hidden on a phone that has no keyboard. */
 .affordance {
   margin-left: var(--space-3);
   font-size: 13px;
@@ -531,48 +525,20 @@
 
 /* ≤768px, BLOCK 2 of 2 — the CHROME block (§12.4 rule ii).
 
-   Three equal controls at 320px: row `min(350, 280) = 280`, minus 2 × 8px gap
-   = 264 free → 88px each, height 60px. On a size-5 day the inherited cap is
-   310px and the row reads 3 × 98px at 390px; at 320px both caps resolve to
-   280 and the arithmetic is identical. Both clear the 44px token with room.
-
-   `min-width: 0` is what makes that arithmetic TRUE rather than aspirational,
-   and it is a shipped fix rather than a precaution: a flex item's automatic
-   minimum size is its min-content width, so `flex: 1` cannot shrink an item
-   below its own label. Measured in Chrome at 320px against the built CSS and
-   the real font: without it the row comes out 89.06 / 87.47 / 87.47 instead
-   of 88 / 88 / 88 — "preencher" refuses its share and the other two absorb
-   the deficit. Three controls the design calls equal, unequal at the
-   narrowest viewport §12 designs for, on the one size the CI mobile scan
-   (390px) never visits. A step-6 measurement against the deployed page put
-   the skew larger still (94.4 / 84.8 / 84.8); either way the direction is the
-   same and `min-width: 0` closes it.
-
-   The inline padding drops to `--space-1` in the same edit, because
-   `min-width: 0` alone would make the label spill instead: "preencher" is
-   68.4px at 600 14px, and an 88px border-box button with a 12px inset and a
-   1.5px border leaves 61px of content. 4px leaves 77px, so every label fits
-   its equal share whole rather than clipping — and 4px still clears
-   `cramped-padding`'s `≤ 2` branch, which is why it is not 0.
-
-   The `width: 100%` + cap pair is not decoration — it is the fix for the
-   shipped finding `mobile-controls-shrink-to-fit-and-sub-44px-targets`:
-   without it `.board`'s column-flex cross axis resolves the ratios against a
-   max-content row and the buttons come out sub-44px. */
+   Two 64 × 60px segments clear the 44px token at every width down to 320px.
+   The `width: 100%` + cap pair keeps `.board`'s column-flex cross axis from
+   resolving the row against a max-content width. */
 @media (max-width: 768px) {
   .controls {
     box-sizing: border-box;
     display: flex;
-    gap: 8px;
     width: 100%;
     max-width: var(--board-mobile-max);
     margin-top: var(--space-5);
   }
 
   .control {
-    flex: 1;
-    min-width: 0;
-    padding: var(--space-2) var(--space-1);
+    width: 64px;
     height: 60px;
   }
 

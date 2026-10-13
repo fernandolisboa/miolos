@@ -1,6 +1,7 @@
 import type { DailyQueensResponse } from "@miolos/core";
 import { useCallback, useReducer, type Dispatch } from "react";
 
+import type { Press } from "../play/brush";
 import type { Hint } from "../play/grid-hint";
 import {
   useBinaryGridControls,
@@ -21,7 +22,7 @@ export interface QueensBoardState extends BinaryGridControls<QueensHintKind> {
   readonly state: QueensPlayState;
   readonly dispatch: Dispatch<QueensPlayAction>;
   readonly placed: number;
-  readonly cycleCell: (index: number) => void;
+  readonly tapCell: (index: number, press: Press) => void;
   readonly crossOver: (index: number) => void;
 }
 
@@ -33,8 +34,8 @@ export function useQueensBoard(daily: DailyQueensResponse): QueensBoardState {
   );
   const controls = useBinaryGridControls(state, dispatch, hintKindOf);
 
-  const cycleCell = useCallback((index: number) => {
-    dispatch({ type: "cycle", index });
+  const tapCell = useCallback((index: number, press: Press) => {
+    dispatch({ type: "tap", index, press });
   }, []);
 
   const crossOver = useCallback((index: number) => {
@@ -46,7 +47,7 @@ export function useQueensBoard(daily: DailyQueensResponse): QueensBoardState {
     state,
     dispatch,
     placed: countQueens(state.entries),
-    cycleCell,
+    tapCell,
     crossOver,
   };
 }

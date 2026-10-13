@@ -5,12 +5,8 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import boardStyles from "../binairo/binairo-screen.module.css";
 import { Controls } from "../binairo/controls";
 import { Grid } from "../binairo/grid";
-import {
-  initPlayState,
-  playReducer,
-  sameMode,
-  type PaintMode,
-} from "../binairo/state";
+import { initPlayState, playReducer } from "../binairo/state";
+import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
@@ -83,6 +79,8 @@ function BinairoFreeBoard({
     puzzle.daily,
     initPlayState,
   );
+  const { tapCell, strokeStart, paintOver, toggleMode } =
+    useBinairoControls(dispatch);
   const [hintKind, setHintKind] = useState<Hint<0 | 1 | null>["kind"] | null>(
     null,
   );
@@ -99,21 +97,6 @@ function BinairoFreeBoard({
   const filled = countFilled(state.givens, state.entries);
   const hintReady =
     state.hint.used < state.hint.free && state.status === "playing";
-
-  const tapCell = useCallback((index: number) => {
-    dispatch({ type: "tap", index });
-  }, []);
-
-  const paintOver = useCallback((index: number) => {
-    dispatch({ type: "paint-over", index });
-  }, []);
-
-  const toggleMode = useCallback((mode: PaintMode) => {
-    dispatch({
-      type: "set-mode",
-      mode: sameMode(stateRef.current.paint, mode) ? { kind: "cycle" } : mode,
-    });
-  }, []);
 
   const revealHint = useCallback(() => {
     const current = stateRef.current;
@@ -160,6 +143,7 @@ function BinairoFreeBoard({
           hintIndex={state.hint.lastIndex}
           painting={state.paint.kind !== "cycle"}
           onTap={tapCell}
+          onStrokeStart={strokeStart}
           onPaintOver={paintOver}
         />
       </div>

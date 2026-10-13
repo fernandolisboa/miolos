@@ -6,6 +6,7 @@ import { LEVEL_WEEKDAYS } from "../src/free-play/catalog";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
 import { messages } from "../src/i18n";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
+import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 const SEED = 20_260_812;
 const LEVE_PUZZLE = generateNonogram(SEED, LEVEL_WEEKDAYS.leve);
@@ -121,5 +122,40 @@ describe("level switch remounts the board (T-WEB-S121)", () => {
     const dificil = generateNonogram(SEED + 2, LEVEL_WEEKDAYS.dificil);
     expect(dificil.size).toBe(15);
     expect(cells(container)).toHaveLength(225);
+  });
+});
+
+describe("free-play Nonogram right click (T-WEB-S500a)", () => {
+  it("crosses with the right button and fills with the left, through the shared board", () => {
+    installPointerStubs();
+    vi.stubGlobal("fetch", vi.fn());
+    const { container } = render(
+      <NonogramFreeScreen deps={stableDeps([SEED, SEED + 1])} />,
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: messages.freePlay.level.aria("Leve") }),
+    );
+    stubElementFromPoint(container);
+    const board = screen.getByRole("group", {
+      name: messages.games.nonogram.play.boardAria(5),
+    });
+    const press = (index: number, button: number) => {
+      const at = {
+        clientX: index,
+        clientY: 0,
+        pointerId: 1,
+        pointerType: "mouse",
+        button,
+      };
+      fireEvent.pointerDown(board, at);
+      fireEvent.pointerUp(board, at);
+    };
+
+    press(0, 2);
+    press(1, 0);
+
+    expect(cellAt(container, 0)?.className).toContain(boardStyles.cellCrossed);
+    expect(cellAt(container, 1)?.className).toContain(boardStyles.cellFilled);
+    expect(fireEvent.contextMenu(board)).toBe(false);
   });
 });

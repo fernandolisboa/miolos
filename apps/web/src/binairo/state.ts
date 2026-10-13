@@ -7,6 +7,15 @@ import {
   type BinairoSolvedGrid,
 } from "@miolos/games/binairo";
 
+import {
+  cycled,
+  painted,
+  pressedMark,
+  strokeEffect,
+  toggled,
+  type Press,
+  type StrokeEffect,
+} from "../play/brush";
 import { nextHint } from "../play/grid-hint";
 import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
 import { applyTimerAction } from "../play/timer";
@@ -16,14 +25,14 @@ export type CellValue = BinairoCell;
 
 export type PaintMode =
   | { readonly kind: "cycle" }
-  | { readonly kind: "paint"; readonly value: 0 | 1 }
-  | { readonly kind: "erase" };
+  | { readonly kind: "paint"; readonly value: 0 | 1 };
 
 export interface PlayState extends PlayCore {
   readonly givens: BinairoGrid;
 
   readonly entries: readonly CellValue[];
   readonly paint: PaintMode;
+  readonly stroke: StrokeEffect | null;
   readonly hint: HintState;
 
   readonly violating: ReadonlySet<number>;
@@ -32,7 +41,12 @@ export interface PlayState extends PlayCore {
 
 export type PlayAction =
   | LifecycleAction
-  | { readonly type: "tap"; readonly index: number }
+  | { readonly type: "tap"; readonly index: number; readonly press: Press }
+  | {
+      readonly type: "stroke-start";
+      readonly index: number;
+      readonly press: Press;
+    }
   | { readonly type: "paint-over"; readonly index: number }
   | { readonly type: "set-mode"; readonly mode: PaintMode }
   | { readonly type: "use-hint"; readonly solution: BinairoSolvedGrid }
@@ -47,6 +61,7 @@ export function initPlayState(daily: DailyBinairoResponse): PlayState {
     givens,
     entries: derived.entries,
     paint: { kind: "cycle" },
+    stroke: null,
     timer: { accumulatedMs: 0, runningSince: null },
     hint: { free: 1, used: 0, lastIndex: null },
     violating: derived.violating,
@@ -67,23 +82,41 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       if (current === undefined) {
         return state;
       }
-      return withEntry(state, action.index, tapped(state.paint, current));
+      return withEntry(
+        state,
+        action.index,
+        tapped(state.paint, current, action.press),
+      );
     }
 
-    case "paint-over": {
+    case "stroke-start": {
       if (state.paint.kind === "cycle") {
         return state;
       }
+      const value = pressedMark(state.paint.value, action.press);
       const current = playableValue(state, action.index);
-      if (current === undefined) {
+      const stroke = strokeEffect(current ?? null, value);
+      const started = { ...state, stroke };
+      return current === undefined
+        ? started
+        : withEntry(started, action.index, painted(stroke, current));
+    }
+
+    case "paint-over": {
+      const current = playableValue(state, action.index);
+      if (current === undefined || state.stroke === null) {
         return state;
       }
-      const value = state.paint.kind === "erase" ? null : state.paint.value;
-      return withEntry(state, action.index, value);
+      return withEntry(state, action.index, painted(state.stroke, current));
     }
 
     case "set-mode":
-      return { ...state, paint: action.mode };
+      return {
+        ...state,
+        paint: sameMode(state.paint, action.mode)
+          ? { kind: "cycle" }
+          : action.mode,
+      };
 
     case "use-hint": {
       if (state.hint.used >= state.hint.free || state.status === "solved") {
@@ -137,7 +170,7 @@ function playableValue(state: PlayState, index: number): CellValue | undefined {
   return state.entries[index] ?? null;
 }
 
-export function sameMode(current: PaintMode, next: PaintMode): boolean {
+function sameMode(current: PaintMode, next: PaintMode): boolean {
   if (current.kind !== next.kind) {
     return false;
   }
@@ -146,15 +179,14 @@ export function sameMode(current: PaintMode, next: PaintMode): boolean {
     : true;
 }
 
-function tapped(mode: PaintMode, current: CellValue): CellValue {
-  switch (mode.kind) {
-    case "cycle":
-      return current === null ? 0 : current === 0 ? 1 : null;
-    case "paint":
-      return current === mode.value ? null : mode.value;
-    case "erase":
-      return null;
+function tapped(mode: PaintMode, current: CellValue, press: Press): CellValue {
+  if (mode.kind === "cycle" && press === "tap") {
+    return cycled(current);
   }
+  return toggled(
+    current,
+    pressedMark(mode.kind === "paint" ? mode.value : 1, press),
+  );
 }
 
 interface DerivedEntries {

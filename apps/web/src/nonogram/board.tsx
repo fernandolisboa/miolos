@@ -3,6 +3,7 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import { Fragment, memo, type MouseEvent as ReactMouseEvent } from "react";
 
 import { messages } from "../i18n";
+import type { Press } from "../play/brush";
 import { useBinaryBoard } from "../play/use-binary-board";
 import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
@@ -27,6 +28,7 @@ export const Board = memo(function Board({
   onSelect,
   onMove,
   onMarkCell,
+  onStrokeStart,
   onEnterValue,
   onClear,
   onPaintOver,
@@ -40,7 +42,8 @@ export const Board = memo(function Board({
   readonly onSelect: (index: number) => void;
   readonly onMove: (rows: number, columns: number) => void;
 
-  readonly onMarkCell: (index: number) => void;
+  readonly onMarkCell: (index: number, press: Press) => void;
+  readonly onStrokeStart: (index: number, press: Press) => void;
 
   readonly onEnterValue: (value: NonogramMark) => void;
   readonly onClear: () => void;
@@ -52,6 +55,7 @@ export const Board = memo(function Board({
     size,
     selected,
     onTap: onMarkCell,
+    onStrokeStart,
     onPaintOver,
     onMove,
     onEnterValue,

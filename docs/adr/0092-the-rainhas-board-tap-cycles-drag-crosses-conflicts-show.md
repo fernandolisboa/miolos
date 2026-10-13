@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-11 (issue #285)
 **Depends on:** [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0091](./0091-rainhas-joins-the-catalogue-as-the-sixth-daily.md)
 **Amends:** ADR-0030 decision 3, for Rainhas only: `Enter`/`Space` activation cycles the cell instead of only selecting it.
+**Amended by:** [ADR-0094](./0094-the-secondary-mouse-button-writes-the-opposite-mark.md) (#299) — decision 1 for the mouse: a right click places or removes a queen; tap and left click keep the cycle.
 
 ## Context
 

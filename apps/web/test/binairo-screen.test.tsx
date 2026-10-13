@@ -319,17 +319,106 @@ describe("paint mode (T-WEB-8)", () => {
     expect(zero).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("clears a cell in erase mode", () => {
+  it("has no erase control, and a tap on the cell holding the brush's value clears it", () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
+    const { controls } = messages.games.binairo.play;
+
+    expect(screen.queryByText("apagar")).toBeNull();
+    expect(screen.getAllByRole("button", { pressed: false })).toHaveLength(2);
+
+    fireEvent.click(screen.getByLabelText(controls.oneAria));
     fireEvent.click(cellAt(container, FIRST_EMPTY));
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
+
+    fireEvent.click(cellAt(container, FIRST_EMPTY));
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
+  });
+});
+
+describe("the mouse buttons write the two values (T-WEB-S499)", () => {
+  function press(
+    container: HTMLElement,
+    index: number,
+    init: { readonly button: number; readonly pointerType: string },
+  ): void {
+    const grid = gridOf(container);
+    const at = { clientX: index, clientY: 0, pointerId: 1, ...init };
+    fireEvent.pointerDown(grid, at);
+    fireEvent.pointerUp(grid, at);
+  }
+
+  it("a right click writes 0, a left click writes 1, and the same button again clears", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+
+    press(container, FIRST_EMPTY, { button: 2, pointerType: "mouse" });
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
 
-    fireEvent.click(
-      screen.getByLabelText(messages.games.binairo.play.controls.eraseAria),
-    );
-    fireEvent.click(cellAt(container, FIRST_EMPTY));
-
+    press(container, FIRST_EMPTY, { button: 2, pointerType: "mouse" });
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
+
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "mouse" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
+
+    press(container, FIRST_EMPTY, { button: 2, pointerType: "mouse" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
+  });
+
+  it("with a brush, left writes the brush and right the other value", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.zeroAria),
+    );
+
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "mouse" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
+
+    press(container, FIRST_EMPTY, { button: 2, pointerType: "mouse" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
+  });
+
+  it("a right drag under a brush writes the other value across the stroke", () => {
+    const [a, b, c] = playableQuad();
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+    fireEvent.click(
+      screen.getByLabelText(messages.games.binairo.play.controls.oneAria),
+    );
+    const grid = gridOf(container);
+    const base = { clientY: 0, pointerId: 1, pointerType: "mouse", button: 2 };
+
+    fireEvent.pointerDown(grid, { ...base, clientX: a });
+    fireEvent.pointerMove(grid, { ...base, clientX: b });
+    fireEvent.pointerMove(grid, { ...base, clientX: c });
+    fireEvent.pointerUp(grid, { ...base, clientX: c });
+
+    for (const index of [a, b, c]) {
+      expect(cellAt(container, index).textContent).toBe("0");
+    }
+  });
+
+  it("a touch tap still cycles, from pointerup and not again from the click", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "touch" });
+    fireEvent.click(cellAt(container, FIRST_EMPTY), { detail: 1 });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
+
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "touch" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
+  });
+
+  it("blocks the context menu on the grid", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+
+    expect(fireEvent.contextMenu(gridOf(container))).toBe(false);
+    expect(
+      fireEvent.contextMenu(
+        screen.getByLabelText(messages.games.binairo.play.controls.zeroAria),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -419,31 +508,7 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
   });
 
-  it("clears a cell with one tap in erase mode", () => {
-    const { container } = render(<BinairoScreen daily={DAILY} />);
-    stubElementFromPoint(container);
-    fireEvent.click(cellAt(container, FIRST_EMPTY));
-    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
-    fireEvent.click(
-      screen.getByLabelText(messages.games.binairo.play.controls.eraseAria),
-    );
-    const grid = gridOf(container);
-
-    fireEvent.pointerDown(grid, {
-      clientX: FIRST_EMPTY,
-      clientY: 0,
-      pointerId: 1,
-    });
-    fireEvent.pointerUp(grid, {
-      clientX: FIRST_EMPTY,
-      clientY: 0,
-      pointerId: 1,
-    });
-
-    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
-  });
-
-  it("writes nothing when a non-primary button opens the stroke", () => {
+  it("writes nothing when a middle button opens the stroke", () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
     stubElementFromPoint(container);
     enterPaintMode();
@@ -453,13 +518,13 @@ describe("a single tap in paint mode (T-WEB-8c)", () => {
       clientX: FIRST_EMPTY,
       clientY: 0,
       pointerId: 1,
-      button: 2,
+      button: 1,
     });
     fireEvent.pointerUp(grid, {
       clientX: FIRST_EMPTY,
       clientY: 0,
       pointerId: 1,
-      button: 2,
+      button: 1,
     });
 
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
@@ -836,17 +901,27 @@ describe("the mobile board and controls (layout tripwires)", () => {
     const row = Math.min(cap, NARROWEST_VIEWPORT - PAGE_PADDING);
     const free = row - 2 * pixels(decl(controls, "gap"));
     const digit = Number(decl(bodyOf(MOBILE, ".controlDigit"), "flex"));
-    const erase = Number(decl(bodyOf(MOBILE, ".controlErase"), "flex"));
-    const total = 2 * digit + erase;
     const minimum = token("--touch-target-min");
 
-    expect(free * (digit / total)).toBeGreaterThanOrEqual(minimum);
-    expect(free * (erase / total)).toBeGreaterThanOrEqual(minimum);
+    expect(free * (digit / (2 * digit))).toBeGreaterThanOrEqual(minimum);
     expect(
       pixels(decl(bodyOf(MOBILE, ".controlDigit"), "height")),
     ).toBeGreaterThanOrEqual(minimum);
-    expect(
-      pixels(decl(bodyOf(MOBILE, ".controlErase"), "height")),
-    ).toBeGreaterThanOrEqual(minimum);
+  });
+});
+
+describe("the mouse hint (T-WEB-S499a)", () => {
+  it("shows the affordance only where a fine pointer can hover", () => {
+    const base = bodyOf(GAME_CSS, ".affordance");
+    const fine = bodyOf(GAME_CSS, "@media (hover: hover) and (pointer: fine)");
+
+    expect(decl(base, "display")).toBe("none");
+    expect(decl(bodyOf(fine, ".affordance"), "display")).not.toBe("none");
+  });
+
+  it("is reserved by the skeleton as well", () => {
+    const html = renderToStaticMarkup(<BinairoScreen daily={DAILY} />);
+
+    expect(html).toContain(messages.games.binairo.play.controls.affordance);
   });
 });
