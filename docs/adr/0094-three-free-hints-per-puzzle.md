@@ -1,12 +1,13 @@
 # ADR-0094 — Three free hints per puzzle
 
-**Status:** Proposed — 2026-10-13 (issue #295)
+**Status:** Accepted — 2026-10-13 (issue #295)
 **Depends on:** [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md)
 **Supersedes in part:** [ADR-0027](./0027-the-hint-is-computed-on-the-client.md) decision 2; [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decision 5
+**Amends:** the `.max(1)` bound named in ADR-0045 decision 2 and ADR-0065 decision 2; both rules (one bound for every game, read and write caps together) stand
 
 ## Context
 
-Fernando's product call on 2026-10-13: a puzzle gets three free hints, not one. Today the cap of one is repeated in eight Zod schemas (six completion request members, the `/day` claim, the local play record) and in thirteen `free: 1` literals and the `HintState` type in the web. Raising it in place would leave the next change to find all of them again.
+Fernando's product call on 2026-10-13: a puzzle gets three free hints, not one. The cap of one was repeated across the completion request members, the `/day` claim, the local play record and the web's hint state. Raising it in place would leave the next change to find every copy again.
 
 ## Decision
 

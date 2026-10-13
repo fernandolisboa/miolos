@@ -8,7 +8,7 @@
 
 **One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
 
-**The hint wire accepts up to three** (#295 PR A, ADR-0094, Proposed): `FREE_HINTS_PER_PUZZLE` and `hintsUsedSchema` in `@miolos/core` bound the completion bodies, the `/day` claim and the play record. The web still grants one.
+**The hint wire accepts up to three** (#295 PR A, ADR-0094): `FREE_HINTS_PER_PUZZLE` and `hintsUsedSchema` in `@miolos/core` bound the completion bodies, the `/day` claim and the play record. The web still grants one.
 
 ## Traps
 

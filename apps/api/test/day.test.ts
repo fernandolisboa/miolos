@@ -1,7 +1,6 @@
 import {
   completionResponseSchema,
   dayResponseSchema,
-  FREE_HINTS_PER_PUZZLE,
   type DayResponse,
   type Game,
 } from "@miolos/core";
@@ -213,7 +212,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     });
   });
 
-  it("T-API-S283: a completion spending every free hint is accepted, and /day answers 200 with that hintsUsed on the claim", async () => {
+  it("T-API-S283: a completion spending three hints is accepted, and /day answers 200 with that hintsUsed on the claim", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const { token } = await createSession();
     const weekday = isoWeekdayOf(today);
@@ -240,20 +239,20 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
           date: today,
           grid: content.solution,
           elapsedMs: 272_000,
-          hintsUsed: FREE_HINTS_PER_PUZZLE,
+          hintsUsed: 3,
         }),
       }),
     );
     expect(posted.status).toBe(200);
     expect(completionResponseSchema.parse(await posted.json()).hintsUsed).toBe(
-      FREE_HINTS_PER_PUZZLE,
+      3,
     );
 
     const body = await readDay(token);
     expect(body.games.binairo).toEqual({
       status: "completed",
       elapsedMs: 272_000,
-      hintsUsed: FREE_HINTS_PER_PUZZLE,
+      hintsUsed: 3,
     });
   });
 
