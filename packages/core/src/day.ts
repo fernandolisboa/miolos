@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { CompletionOutcome } from "./completion";
+import { hintsUsedSchema, type CompletionOutcome } from "./completion";
 import { GAMES, recordFor, type Game } from "./game";
 
 export const DAY_STATUSES = ["pending", "completed", "played"] as const;
@@ -15,7 +15,7 @@ export const dayGameStateSchema = z
 
     elapsedMs: z.number().int().min(0).max(86_400_000).optional(),
 
-    hintsUsed: z.number().int().min(0).max(1).optional(),
+    hintsUsed: hintsUsedSchema.optional(),
 
     motifName: z.string().min(1).optional(),
   })

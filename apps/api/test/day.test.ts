@@ -1,10 +1,16 @@
-import { dayResponseSchema, type DayResponse, type Game } from "@miolos/core";
+import {
+  completionResponseSchema,
+  dayResponseSchema,
+  type DayResponse,
+  type Game,
+} from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { sessions, sql, users } from "@miolos/db";
 import { insertDailyPuzzle, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
 import { isWeekday } from "@miolos/games";
+import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { NextRequest } from "next/server";
 import {
@@ -18,6 +24,7 @@ import {
   vi,
 } from "vitest";
 
+import { POST } from "../app/completions/route";
 import { GET } from "../app/day/route";
 import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
@@ -202,6 +209,50 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
       status: "completed",
       elapsedMs: 190_000,
       hintsUsed: 1,
+    });
+  });
+
+  it("T-API-S283: a completion spending three hints is accepted, and /day answers 200 with that hintsUsed on the claim", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const { token } = await createSession();
+    const weekday = isoWeekdayOf(today);
+    if (!isWeekday(weekday)) {
+      throw new Error(`unreachable: bad weekday for ${today}`);
+    }
+    const content = generateBinairo({ seed: 7, weekday });
+    await insertDailyPuzzle(ctx.db, {
+      game: "binairo",
+      date: today,
+      seed: 7,
+      content,
+    });
+
+    const posted = await POST(
+      new NextRequest("http://localhost:3001/completions", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        },
+        body: JSON.stringify({
+          game: "binairo",
+          date: today,
+          grid: content.solution,
+          elapsedMs: 272_000,
+          hintsUsed: 3,
+        }),
+      }),
+    );
+    expect(posted.status).toBe(200);
+    expect(completionResponseSchema.parse(await posted.json()).hintsUsed).toBe(
+      3,
+    );
+
+    const body = await readDay(token);
+    expect(body.games.binairo).toEqual({
+      status: "completed",
+      elapsedMs: 272_000,
+      hintsUsed: 3,
     });
   });
 
