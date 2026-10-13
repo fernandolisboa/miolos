@@ -1,6 +1,7 @@
 import {
   dailyQueensResponseSchema,
   FREE_HINTS_PER_PUZZLE,
+  HINTS_PER_PUZZLE_CEILING,
   type DailyQueensResponse,
 } from "@miolos/core";
 import { generateQueens, type QueensPuzzle } from "@miolos/games/queens";
@@ -240,10 +241,8 @@ describe("the Rainhas hint (T-WEB-S453)", () => {
   });
 });
 
-describe("three free hints per puzzle (T-WEB-S511e)", () => {
+describe("the reducer's hints stop at the ceiling (T-WEB-S511e)", () => {
   const hint: QueensPlayAction = { type: "use-hint" };
-  const spentAll = (state: QueensPlayState) =>
-    run(state, ...Array.from({ length: FREE_HINTS_PER_PUZZLE }, () => hint));
 
   it("places a solution queen on each free press", () => {
     let current = hydrated(DAILY);
@@ -257,13 +256,7 @@ describe("three free hints per puzzle (T-WEB-S511e)", () => {
     }
   });
 
-  it("returns the same state on the press after the last free hint", () => {
-    const spent = spentAll(hydrated(DAILY));
-
-    expect(run(spent, hint)).toBe(spent);
-  });
-
-  it("leaves exactly one hint after a restore with two spent", () => {
+  it("leaves exactly one hint after a restore one short of the ceiling, and the press after it is inert", () => {
     const restored = queensPlayReducer(initQueensPlayState(DAILY), {
       type: "restore",
       record: {
@@ -273,7 +266,7 @@ describe("three free hints per puzzle (T-WEB-S511e)", () => {
         size: PUZZLE.size,
         entries: Array.from({ length: PUZZLE.size ** 2 }, () => null),
         elapsedMs: 0,
-        hintsUsed: 2,
+        hintsUsed: HINTS_PER_PUZZLE_CEILING - 1,
         concluded: false,
         pendingSync: false,
         syncOutcome: "pending",
@@ -282,7 +275,7 @@ describe("three free hints per puzzle (T-WEB-S511e)", () => {
     });
     const last = run(restored, hint);
 
-    expect(last.hint.used).toBe(3);
+    expect(last.hint.used).toBe(HINTS_PER_PUZZLE_CEILING);
     expect(run(last, hint)).toBe(last);
   });
 });

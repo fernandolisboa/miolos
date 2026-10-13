@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { FetchedFreeHints } from "../../../../src/api/free-hints-provider";
 import { ArchiveQueensScreen } from "../../../../src/archive/queens-screen";
 import {
   archiveGameMetadata,
@@ -17,6 +18,8 @@ export async function generateMetadata(
 
 export default async function ArchiveRainhasPage(props: ArchiveGameParams) {
   return archiveGamePage("queens", props, (daily) => (
-    <ArchiveQueensScreen daily={daily} />
+    <FetchedFreeHints>
+      <ArchiveQueensScreen daily={daily} />
+    </FetchedFreeHints>
   ));
 }

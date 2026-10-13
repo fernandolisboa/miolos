@@ -1,4 +1,4 @@
-import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
+import type { DailyBinairoResponse } from "@miolos/core";
 import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
 import {
   useCallback,
@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
@@ -16,6 +17,7 @@ import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import {
+  canHint,
   initPlayState,
   isSolvedGrid,
   playReducer,
@@ -48,6 +50,7 @@ export function useBinairoPlay(
 ): BinairoPlay {
   const [state, dispatch] = useReducer(playReducer, daily, initPlayState);
   const [hintKind, setHintKind] = useState<BinairoHint["kind"] | null>(null);
+  const allowance = useFreeHintsPerPuzzle();
   const controls = useBinairoControls(dispatch);
 
   const stateRef = useRef(state);
@@ -55,7 +58,7 @@ export function useBinairoPlay(
     stateRef.current = state;
   });
 
-  const { givens, entries, timer, status } = state;
+  const { givens, entries, timer } = state;
   const hintsUsed = state.hint.used;
   const elapsed = elapsedMs(timer, state.now);
   const filled = countFilled(givens, entries);
@@ -78,10 +81,7 @@ export function useBinairoPlay(
       return;
     }
     const current = stateRef.current;
-    if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
-      current.status === "solved"
-    ) {
+    if (!canHint(current, allowance)) {
       return;
     }
 
@@ -91,17 +91,14 @@ export function useBinairoPlay(
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution });
-  }, [solution]);
+  }, [solution, allowance]);
 
   return {
     ...controls,
     state,
     elapsed,
     filled,
-    hintReady:
-      solution !== null &&
-      hintsUsed < FREE_HINTS_PER_PUZZLE &&
-      status === "playing",
+    hintReady: solution !== null && canHint(state, allowance),
     hintKind,
     revealHint,
   };

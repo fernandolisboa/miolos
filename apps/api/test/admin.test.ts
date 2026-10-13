@@ -26,6 +26,7 @@ const DEFAULTS = {
   bufferDepth: 7,
   attachStreakThreshold: 5,
   pushOptInStreakThreshold: 3,
+  freeHintsPerPuzzle: 3,
 };
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;

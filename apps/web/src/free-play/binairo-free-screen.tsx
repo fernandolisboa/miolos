@@ -1,14 +1,14 @@
 "use client";
 
-import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
 import { Controls } from "../binairo/controls";
 import { Grid } from "../binairo/grid";
-import { initPlayState, playReducer } from "../binairo/state";
+import { canHint, initPlayState, playReducer } from "../binairo/state";
 import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
@@ -85,6 +85,7 @@ function BinairoFreeBoard({
   const [hintKind, setHintKind] = useState<Hint<0 | 1 | null>["kind"] | null>(
     null,
   );
+  const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -96,15 +97,11 @@ function BinairoFreeBoard({
   }, []);
 
   const filled = countFilled(state.givens, state.entries);
-  const hintReady =
-    state.hint.used < FREE_HINTS_PER_PUZZLE && state.status === "playing";
+  const hintReady = canHint(state, allowance);
 
   const revealHint = useCallback(() => {
     const current = stateRef.current;
-    if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
-      current.status === "solved"
-    ) {
+    if (!canHint(current, allowance)) {
       return;
     }
 
@@ -114,7 +111,7 @@ function BinairoFreeBoard({
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution: puzzle.solution });
-  }, [puzzle.solution]);
+  }, [puzzle.solution, allowance]);
 
   if (state.status === "solved") {
     return <FreePlaySolvedCard game="binairo" level={level} onAgain={onNext} />;

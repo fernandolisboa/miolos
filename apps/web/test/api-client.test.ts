@@ -69,10 +69,14 @@ const ABSENCE_SITES: readonly (readonly [string, string])[] = [
     "session bootstrap skipped, no identity will be minted",
   ],
   ["telemetry/client.ts", "puzzle_started not reported, telemetry stays blind"],
+  [
+    "api/free-hints-provider.tsx",
+    "hint allowance fetch skipped, every puzzle offers the default free hints",
+  ],
 ];
 
 describe("the one API client every credentialed request goes through (T-WEB-S363)", () => {
-  it("all twelve absence clauses survive the move, each still in the module it describes", () => {
+  it("all thirteen absence clauses survive the move, each still in the module it describes", () => {
     for (const [module, absence] of ABSENCE_SITES) {
       expect(webCodeOf(`src/${module}`), `${module} — ${absence}`).toContain(
         absence,

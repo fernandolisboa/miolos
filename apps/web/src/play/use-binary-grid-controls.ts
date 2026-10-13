@@ -6,6 +6,7 @@ import {
   type BinaryGridState,
   type BinaryMark,
 } from "./binary-grid";
+import { useFreeHintsPerPuzzle } from "./free-hints";
 import { nextBinaryHint, type Hint } from "./grid-hint";
 
 export interface BinaryGridControls<K> {
@@ -24,6 +25,7 @@ export function useBinaryGridControls<K>(
   kindOf: (hint: Hint<BinaryMark>) => K,
 ): BinaryGridControls<K> {
   const [hintKind, setHintKind] = useState<K | null>(null);
+  const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -57,7 +59,7 @@ export function useBinaryGridControls<K>(
 
   const revealHint = useCallback(() => {
     const current = stateRef.current;
-    const hint = canHint(current)
+    const hint = canHint(current, allowance)
       ? nextBinaryHint(current.solution, current.entries)
       : null;
     if (hint === null) {
@@ -65,10 +67,10 @@ export function useBinaryGridControls<K>(
     }
     setHintKind(kindOf(hint));
     dispatch({ type: "use-hint" });
-  }, [dispatch, kindOf]);
+  }, [dispatch, kindOf, allowance]);
 
   return {
-    hintReady: canHint(state),
+    hintReady: canHint(state, allowance),
     hintKind,
     selectCell,
     moveSelection,
