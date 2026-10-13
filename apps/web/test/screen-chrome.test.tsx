@@ -606,7 +606,7 @@ describe("the chrome looks its copy up by game (T-WEB-S486)", () => {
     expect(back?.textContent).toBe(messages.play.back);
     expect(back?.getAttribute("aria-label")).toBe(messages.play.backAria);
     expect(textOf(page, "topDate")).toBe(formatLongDate(DATE));
-    expect(page.querySelector(".archive-note")).toBeNull();
+    expect(page.querySelectorAll(`.${cls("titleBlock")} > p`)).toHaveLength(2);
   });
 
   it("links to the archive and carries its note when it is one", () => {
@@ -622,5 +622,6 @@ describe("the chrome looks its copy up by game (T-WEB-S486)", () => {
     expect(page.querySelector(".archive-note")?.textContent).toBe(
       "Jogo do arquivo",
     );
+    expect(page.querySelectorAll(`.${cls("titleBlock")} > p`)).toHaveLength(3);
   });
 });

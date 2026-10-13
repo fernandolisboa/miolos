@@ -33,7 +33,7 @@ const recordHeaderShape = {
   syncOutcome: z.enum(["pending", "recorded", "rejected"]),
 };
 
-export type RecordHeader = z.infer<z.ZodObject<typeof recordHeaderShape>>;
+type RecordHeader = z.infer<z.ZodObject<typeof recordHeaderShape>>;
 
 export function recordHeader(
   state: PlayCore,

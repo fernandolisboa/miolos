@@ -186,6 +186,16 @@ describe("the conclusion chunk is warmed on mount (T-WEB-S483)", () => {
     expect(lazy.preloadConclusionView).not.toHaveBeenCalled();
   });
 
+  it("warms it once across re-renders, even with a fresh preload each time", () => {
+    const first = { render: () => <div />, preload: vi.fn() };
+    const second = { render: () => <div />, preload: vi.fn() };
+    const { rerender } = render(dailyScreen({}, first));
+    rerender(dailyScreen({}, second));
+
+    expect(first.preload).toHaveBeenCalledTimes(1);
+    expect(second.preload).not.toHaveBeenCalled();
+  });
+
   it("warms it even when the daily is unavailable", () => {
     render(dailyScreen({ unavailable: true }));
 

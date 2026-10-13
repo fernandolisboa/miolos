@@ -2,11 +2,11 @@
 
 **Status:** Accepted — 2026-10-13 (issue #289)
 **Depends on:** [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md), [ADR-0076](./0076-the-shared-route-envelope-takes-a-render-callback-not-a-screen-registry.md), [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md)
-**Amends:** [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md) decision 2 (the screen root is no longer per game), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md) decision 3 (the remote-claim branch moves from the screen roots into the shell), [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (the shared chrome now looks up per-game copy)
+**Amends:** [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md) decision 2 (the branch ladder inside each screen root is shared; the root stays per game), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md) decision 3 (the remote-claim branch moves from the screen roots into the shell), [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (the shared chrome now looks up per-game copy)
 
 ## Context
 
-Six daily screen roots and six archive screen roots each carried the same ladder: unavailable, skeleton, closed and frozen, remote claim, board. Rainhas (#285) copied it a sixth time. The ladders drifted already: the grid games guarded the conclusion with `status === "solved"` and Termo and the archive did not. Every ladder change had to land in twelve files, and a test could not pin the order once.
+Six daily screen roots each carried the same ladder (skeleton, closed and frozen, remote claim, board), and six archive screen roots each carried theirs (skeleton, late result, board); Termo and Nonogram added an unavailable rung to both. Rainhas (#285) copied them a sixth time. The ladders drifted already: the grid games guarded the conclusion with `status === "solved"` and Termo and the archive did not. Every ladder change had to land in twelve files, and a test could not pin the order once.
 
 ## Decision
 
@@ -19,7 +19,7 @@ Six daily screen roots and six archive screen roots each carried the same ladder
 
 ## Consequences
 
-- The ladder's order is tested once (`T-WEB-S483`, `T-WEB-S484`), not twelve times.
+- The ladder's order is tested once (`T-WEB-S483`, `T-WEB-S484`), not twelve times; each root's wiring into its shell is pinned per game (`T-WEB-S487`).
 - The grid games now conclude on any closed board, not only a `solved` one. Their status is `"playing" | "solved"`, so nothing changes today; a game that can lose reaches its conclusion without a new branch.
 - A new daily is a play hook, two views and two six-line screen roots.
 

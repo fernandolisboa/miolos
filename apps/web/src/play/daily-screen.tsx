@@ -1,7 +1,7 @@
 "use client";
 
 import type { DayGameState, Game } from "@miolos/core";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
@@ -36,9 +36,10 @@ export function DailyScreen(props: DailyScreenProps) {
   const { game, claim, state, unavailable = false, skeleton, view } = props;
   const preload = props.conclusion?.preload ?? preloadConclusionView;
 
+  const preloadOnMount = useRef(preload);
   useEffect(() => {
-    preload();
-  }, [preload]);
+    preloadOnMount.current();
+  }, []);
 
   const copy = messages.games[game];
 
