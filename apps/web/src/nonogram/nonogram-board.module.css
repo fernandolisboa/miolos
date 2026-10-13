@@ -202,27 +202,28 @@
    none is divisible by 5 — so `.cellEdgeRight` and `.cellEdgeBottom` below are
    two further per-cell borders, not a duplicate of these two.
 
-   2px `var(--ink)` = 15.01:1 on desk paper and 3.48:1 on a filled cell, so the
-   structure survives the picture. `--ink-2` was rejected at 1.18:1 on a filled
-   cell. The 1px hairline over a filled cell is 1.93:1 and therefore invisible
+   3px `var(--ink)` = 15.01:1 on desk paper and 3.48:1 on a filled cell (14.50
+   and 3.02 in paper-dark), so the structure survives the picture. 3px, not 2px:
+   beside the 1px hairline, 2px did not read as a block edge at phone size
+   (#301). `--ink-2` was rejected at 1.18:1 on a filled cell. The 1px hairline over a filled cell is 1.93:1 and therefore invisible
    between two adjacent filled cells — correct, not a defect: a run of filled
    cells IS one visual block, and that boundary carries no information. */
 .cellRuleTop {
-  border-top-width: 2px;
+  border-top-width: 3px;
   border-top-color: var(--ink);
 }
 
 .cellRuleLeft {
-  border-left-width: 2px;
+  border-left-width: 3px;
   border-left-color: var(--ink);
 }
 
 .cellEdgeRight {
-  border-right: 2px solid var(--ink);
+  border-right: 3px solid var(--ink);
 }
 
 .cellEdgeBottom {
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
 }
 
 /* ── chromatic cell states ───────────────────────────────────────────── */
