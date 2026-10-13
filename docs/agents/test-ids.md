@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S323` | `S322` | `T-API-16` |
-| `T-WEB` | `S580` | `S579` | `T-WEB-23` |
+| `T-WEB` | `S587` | `S586` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#303 (boards size from the space they have, ADR-0102) spent **`T-WEB-S580…S586`** in `apps/web/test/board-sizing.test.tsx`: `S580` the shared well and `--board-side`, `S581` each game's ceiling, font floor and fluid tracks, `S582` the floor (fits 320px, cells at or above 24px), `S583` every `gridCard` inside a `boardWell`, `S584` the reset overlay and the 44px targets, `S585` the one fold at 1023px, `S586` the reserved explanation slot. `T-WEB-S34`, `S48` (A1–A3, A6, A7, A10; A12 retired), `S91` and `S102` and the Binairo layout tripwires were rewritten in place. `T-WEB-S367`'s class list gained `hintSlot`. `packages/games/test/nonogram/clue-bounds.test.ts` carries no id and gained the column-run bound `WORST_COLUMN_RUNS`.
 
 #297 (the grid-game hints reveal the next logical step, ADR-0101) spent **`T-WEB-S562…S579`**: `S562` (the shared hint state: `idleHint`, `unlit`, `spentHint`, and every reducer's reset clearing the reason and the spotlight), `S563` (`nextLogicalHint`'s order), `S564…S567` Binairo, `S568…S571` Nonogram, `S572…S575` Rainhas and `S576…S579` the Cruzadinha (each: the hint's order on generated boards, the reducer, every sentence, the daily and free-play screens). `T-WEB-9`, `S122`, `S122a`, `S427`, `S437`, `S453`, `S457`, `S476`, `S480` and the Sudoku ids were updated in place. packages/games tests carry no ids.
 

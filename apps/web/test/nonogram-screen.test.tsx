@@ -30,7 +30,14 @@ import {
 } from "../src/play/play-record";
 import sharedStyles from "../src/play/screen.module.css";
 import spotlightStyles from "../src/play/spotlight.module.css";
-import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
+import {
+  bodyOf,
+  boardFloor,
+  decl,
+  pixels,
+  stylesheet,
+  token,
+} from "./css-source";
 import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
@@ -1201,15 +1208,12 @@ describe("the picture reveal (T-WEB-S51)", () => {
 });
 
 describe("the board geometry (T-WEB-S48)", () => {
-  const PAGE_PADDING = 2 * token("--space-5");
-
-  const FOLD_COLUMN = 1141 - (80 + 330 + 72 + 80);
-
   const CARD_BORDER = 1;
   const SIZES: readonly NonogramSize[] = [5, 8, 10, 15];
 
   const DIGIT = 6.609375;
   const TWO_DIGIT = 2 * DIGIT;
+  const CLUE_LINE = 11;
 
   const WORST_ROW: Readonly<Record<NonogramSize, readonly [number, number]>> = {
     5: [3, 3],
@@ -1218,20 +1222,18 @@ describe("the board geometry (T-WEB-S48)", () => {
     15: [5, 5],
   };
 
-  const MOBILE_GEOMETRY = bodyOf(GAME_CSS, "@media (max-width: 768px)");
-  const AFTER_GEOMETRY = GAME_CSS.slice(
-    GAME_CSS.indexOf(MOBILE_GEOMETRY) + MOBILE_GEOMETRY.length,
-  );
-  const MOBILE_CHROME = bodyOf(AFTER_GEOMETRY, "@media (max-width: 768px)");
+  const WORST_COLUMN_RUNS: Readonly<Record<NonogramSize, number>> = {
+    5: 3,
+    8: 4,
+    10: 3,
+    15: 3,
+  };
+
+  const MOBILE = bodyOf(GAME_CSS, "@media (max-width: 768px)");
   const SHARED_MOBILE = bodyOf(SHARED_CSS, "@media (max-width: 768px)");
 
-  function mobileCap(size: NonogramSize): number {
-    return pixels(
-      decl(
-        bodyOf(GAME_CSS, size === 5 ? ".mobileCap5" : ".pageNonogram"),
-        "--board-mobile-max",
-      ),
-    );
+  function sizeClass(size: NonogramSize): string {
+    return bodyOf(GAME_CSS, `.pageSize${String(size)}`);
   }
 
   function gutterWidth(size: NonogramSize): number {
@@ -1242,62 +1244,42 @@ describe("the board geometry (T-WEB-S48)", () => {
     return chars * DIGIT + (runs - 1) * gap + pad;
   }
 
-  function innerWidth(size: NonogramSize, viewport: number): number {
+  function cellAtFloor(size: NonogramSize): number {
     const padding = pixels(decl(bodyOf(SHARED_MOBILE, ".gridCard"), "padding"));
-    const card = Math.min(mobileCap(size), viewport - PAGE_PADDING);
-    return card - 2 * padding - 2 * CARD_BORDER;
-  }
-
-  function mobileCell(size: NonogramSize, viewport: number): number {
-    return (innerWidth(size, viewport) - gutterWidth(size)) / size;
-  }
-
-  function desktopCell(size: NonogramSize): number {
-    const template = decl(
-      bodyOf(GAME_CSS, `.size${size}`),
-      "grid-template-columns",
-    );
-    return Number(
-      /repeat\(\d+,\s*(\d+(?:\.\d+)?)px\)/.exec(template ?? "")?.[1],
+    return (
+      (boardFloor() - 2 * padding - 2 * CARD_BORDER - gutterWidth(size)) / size
     );
   }
 
-  it("declares its two mobile blocks in the fixed order the assertions read", () => {
-    expect(MOBILE_GEOMETRY).toContain(".size15");
-    expect(MOBILE_CHROME).toContain(".controls");
-  });
-
-  it("A1 — sizes the board fluidly on a phone, with no px cell track left", () => {
+  it("A1 — sizes the board fluidly at every width, with no px cell track left", () => {
     for (const size of SIZES) {
       const template = decl(
-        bodyOf(MOBILE_GEOMETRY, `.size${size}`),
+        bodyOf(GAME_CSS, `.size${String(size)}`),
         "grid-template-columns",
       );
       expect(template).toBe(
         `max-content repeat(${String(size)}, minmax(0, 1fr))`,
       );
-
       expect(template).not.toMatch(/\d+px/);
     }
+    expect(decl(bodyOf(GAME_CSS, ".cell"), "aspect-ratio")).toBe("1");
   });
 
-  it("A2 — declares the mobile cap the shared sheet reads with NO fallback", () => {
-    expect(mobileCap(15)).toBe(350);
-    expect(mobileCap(15)).toBeLessThanOrEqual(390 - PAGE_PADDING);
+  it("A2 — declares a ceiling per size class, the larger boards higher", () => {
+    const ceiling = (size: NonogramSize) =>
+      pixels(decl(sizeClass(size), "--board-max"));
 
-    expect(decl(bodyOf(SHARED_MOBILE, ".gridCard"), "max-width")).toBe(
-      "var(--board-mobile-max)",
-    );
+    expect(ceiling(5)).toBeLessThanOrEqual(ceiling(8));
+    expect(ceiling(8)).toBeLessThanOrEqual(ceiling(10));
+    expect(ceiling(10)).toBe(ceiling(15));
   });
 
-  it("A3 — clears the two-digit column-clue floor at 320px and at 390px", () => {
+  it("A3 — clears the two-digit column-clue floor at the board floor", () => {
     for (const size of SIZES) {
-      expect(mobileCell(size, 320)).toBeGreaterThanOrEqual(TWO_DIGIT);
-      expect(mobileCell(size, 390)).toBeGreaterThanOrEqual(TWO_DIGIT);
-      expect(mobileCell(size, 390)).toBeGreaterThan(mobileCell(size, 320));
+      expect(cellAtFloor(size)).toBeGreaterThanOrEqual(TWO_DIGIT);
     }
 
-    expect(mobileCell(15, 320) - TWO_DIGIT).toBeLessThan(1.5);
+    expect(cellAtFloor(15) - TWO_DIGIT).toBeLessThan(1.5);
   });
 
   it("A4 — draws the ruled field as per-cell borders, at gap 0", () => {
@@ -1337,20 +1319,36 @@ describe("the board geometry (T-WEB-S48)", () => {
     expect(decl(cell, "border-radius")).toBeUndefined();
   });
 
-  it("A6 — every desktop board still fits the shared 1140px fold", () => {
-    for (const size of SIZES) {
-      const board = gutterWidth(size) + size * desktopCell(size);
-      const card = board + 2 * token("--space-4") + 2;
+  it("A6 — reserves the clue rail's overhang, so the card never outgrows its well", () => {
+    const rail = bodyOf(GAME_CSS, ".clueCol");
+    const row = bodyOf(GAME_CSS, ".clueRow");
+    const leftMinimum = DIGIT + pixels(decl(row, "padding-inline-end"));
 
-      expect(card).toBeLessThanOrEqual(FOLD_COLUMN);
+    for (const size of SIZES) {
+      const runs = WORST_COLUMN_RUNS[size];
+      const top =
+        runs * CLUE_LINE +
+        (runs - 1) * pixels(decl(rail, "row-gap")) +
+        pixels(decl(rail, "padding-block-end"));
+
+      expect(
+        pixels(decl(sizeClass(size), "--board-overhang")),
+      ).toBeGreaterThanOrEqual(top - leftMinimum);
     }
+
+    expect(decl(bodyOf(GAME_CSS, ".pageNonogram"), "--board-below")).toContain(
+      "var(--board-overhang)",
+    );
+    expect(decl(bodyOf(MOBILE, ".pageNonogram"), "--board-below")).toContain(
+      "var(--board-overhang)",
+    );
   });
 
-  it("A7 — every desktop template is square", () => {
+  it("A7 — every size template is N cell columns and N cell rows behind one rail each", () => {
     for (const size of SIZES) {
-      const body = bodyOf(GAME_CSS, `.size${size}`);
-      expect(decl(body, "grid-template-rows")).toBe(
-        decl(body, "grid-template-columns"),
+      const body = bodyOf(GAME_CSS, `.size${String(size)}`);
+      expect(decl(body, "grid-template-rows")).toMatch(
+        new RegExp(`^max-content repeat\\(${String(size)}, auto\\)$`),
       );
     }
   });
@@ -1380,20 +1378,19 @@ describe("the board geometry (T-WEB-S48)", () => {
   });
 
   it("A10 — keeps both brush segments clear of the 44px touch target", () => {
-    const controls = bodyOf(MOBILE_CHROME, ".controls");
+    const controls = bodyOf(GAME_CSS, ".controls");
     const minimum = token("--touch-target-min");
 
-    expect(decl(controls, "width")).toBe("100%");
-    expect(decl(controls, "max-width")).toBe("var(--board-mobile-max)");
+    expect(decl(controls, "width")).toBe("var(--board-side)");
 
-    const segment = bodyOf(MOBILE_CHROME, ".control");
+    const segment = bodyOf(MOBILE, ".control");
     expect(pixels(decl(segment, "height"))).toBeGreaterThanOrEqual(minimum);
     expect(pixels(decl(segment, "width"))).toBeGreaterThanOrEqual(minimum);
+    expect(2 * pixels(decl(segment, "width"))).toBeLessThanOrEqual(
+      boardFloor(),
+    );
 
-    const row = Math.min(mobileCap(15), 320 - PAGE_PADDING);
-    expect(2 * pixels(decl(segment, "width"))).toBeLessThanOrEqual(row);
-
-    expect(decl(bodyOf(MOBILE_CHROME, ".affordance"), "display")).toBe("none");
+    expect(decl(bodyOf(MOBILE, ".affordance"), "display")).toBe("none");
   });
 
   it("A10c — draws the toggle as one paper frame with the token radius, the active segment raised", () => {
@@ -1441,15 +1438,6 @@ describe("the board geometry (T-WEB-S48)", () => {
       const other = bodyOf(stylesheet(sheet), local);
       expect(mine).not.toEqual(rotations.map((name) => decl(other, name)));
     }
-  });
-
-  it("A12 — caps a Monday's CARD so the board still fills its paper", () => {
-    expect(mobileCap(5)).toBe(310);
-
-    expect(Math.abs(mobileCell(5, 390) - 52)).toBeLessThan(1);
-    expect(
-      decl(bodyOf(MOBILE_GEOMETRY, ".size5"), "max-width"),
-    ).toBeUndefined();
   });
 
   it("A13 — spends the last free channel on the hint, additively", () => {

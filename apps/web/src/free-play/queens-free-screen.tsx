@@ -5,9 +5,11 @@ import { QUEENS_WEEKDAY_CRITERIA } from "@miolos/games/queens";
 import { useState } from "react";
 
 import { messages } from "../i18n";
-import screen from "../play/screen.module.css";
-import { BoardSkeleton } from "../queens/board";
-import { BoardPanel, queensReadouts } from "../queens/board-panel";
+import {
+  BoardPanel,
+  BoardPanelSkeleton,
+  queensReadouts,
+} from "../queens/board-panel";
 import styles from "../queens/queens-board.module.css";
 import { useQueensBoard } from "../queens/use-queens-board";
 import {
@@ -91,12 +93,10 @@ function QueensFreeBoard({
 function GeneratingBoard({ size }: { readonly size: QueensSize }) {
   return (
     <>
-      <div aria-hidden className={screen.gridCard}>
-        <BoardSkeleton
-          size={size}
-          regions={Array.from({ length: size * size }, () => 0)}
-        />
-      </div>
+      <BoardPanelSkeleton
+        size={size}
+        regions={Array.from({ length: size * size }, () => 0)}
+      />
       <p className={freePlay.generating}>{messages.freePlay.generating}</p>
     </>
   );

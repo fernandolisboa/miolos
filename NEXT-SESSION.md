@@ -16,7 +16,9 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
-**Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds, so a change to hint counts (#295) needs no change to the reset. Test ids `T-WEB-S514…S517`.
+**Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds. Test ids `T-WEB-S514…S517`.
+
+**Boards size from the space they have** (#303 part 1, ADR-0102): `BoardCard` (`play/board-card.tsx`) wraps every board but the Cruzadinha in a size container, `.boardWell`, and `--board-side` is the largest square the column and viewport allow, up to the game's `--board-max`. A game's page class sets only custom properties (`--board-max`, `--board-below` for the controls under the card, `--board-aspect` for Termo). The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, and `.hintSlot` reserves the explanation. Pinned by `T-WEB-S580…S586` (`apps/web/test/board-sizing.test.tsx`); jsdom has no layout, so re-measure in a browser (seven viewports, 360×780 to 1440×900) after any change to the shared sheet.
 
 ## Traps
 
@@ -32,8 +34,6 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 ## Next
 
-**Next:** file per-game time buckets as an issue.
+**Next:** #303 part 2, the Cruzadinha. Put its clue list beside the grid in a crossword-owned container at 640px and up, and behind a **Pistas** disclosure below that. Then wrap its grid in `BoardCard` and delete the `--board-side` rule in `crossword-board.module.css`, the `.gridCard` fallback `auto` in `screen.module.css`, and `PENDING_CRUZADINHA` in `T-WEB-S583`.
 
-**Then:** #300 (per-game settings, "Mostrar erros") and #303 (better use of space), which touch every game.
-
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and the two `/admin` writes); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.
+**Then:** file per-game time buckets as an issue; #300 (per-game settings, "Mostrar erros"). **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and the two `/admin` writes); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.

@@ -2,7 +2,6 @@
   --grid-card-rot: 0.6deg;
   --stats-card-rot: -0.4deg;
   --tape-rot: 2deg;
-  --board-mobile-max: 346px;
 }
 
 .grid {
@@ -103,6 +102,10 @@
 }
 
 @media (max-width: 768px) {
+  .pageCrossword {
+    --board-side: min(100%, 346px);
+  }
+
   .grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-template-rows: repeat(5, minmax(0, 1fr));

@@ -35,6 +35,31 @@ function worstRowPerSize(): Map<number, Bound> {
   return worst;
 }
 
+const WORST_COLUMN_RUNS: Readonly<Record<number, number>> = {
+  5: 3,
+  8: 4,
+  10: 3,
+  15: 3,
+};
+
+function worstColumnRunsPerSize(): Map<number, number> {
+  const worst = new Map<number, number>();
+  for (const motif of MOTIFS) {
+    const base = motifBitmap(motif);
+
+    const bitmaps = motif.mirrorable ? [base, mirrorH(base)] : [base];
+    for (const bitmap of bitmaps) {
+      for (const line of deriveClues(bitmap).cols) {
+        worst.set(
+          motif.size,
+          Math.max(worst.get(motif.size) ?? 0, line.length),
+        );
+      }
+    }
+  }
+  return worst;
+}
+
 describe("row-clue bound", () => {
   it("holds the per-size maximum apps/web's WORST_ROW is pinned to", () => {
     const worst = worstRowPerSize();
@@ -46,6 +71,17 @@ describe("row-clue bound", () => {
         [bound.chars, bound.runs],
         `size ${String(size)}: update WORST_ROW in apps/web/test/nonogram-screen.test.tsx, then re-check assertion A3`,
       ).toEqual(pinned);
+    }
+  });
+});
+
+describe("column-clue bound", () => {
+  it("holds the per-size run maximum apps/web's WORST_COLUMN_RUNS is pinned to", () => {
+    for (const [size, runs] of worstColumnRunsPerSize()) {
+      expect(
+        runs,
+        `size ${String(size)}: update WORST_COLUMN_RUNS in apps/web/test/nonogram-screen.test.tsx, then re-check assertion A6`,
+      ).toBe(WORST_COLUMN_RUNS[size]);
     }
   });
 });

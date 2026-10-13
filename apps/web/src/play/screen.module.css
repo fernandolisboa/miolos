@@ -2,29 +2,21 @@
    css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
    either fails the build or leaks globally.
 
-   What differs per game is never a cascade override — CSS
-   Modules hash class names per file, so a `.gridCard` declared in a game's
-   module would resolve against this one by stylesheet INJECTION ORDER, which
-   Next does not guarantee. */
-
-/* The two-column hard minimum is set by the widest board this
-   layer serves: Binairo needs 80 + 330 + 72 + (8×52 + 7×4 + 2×16 + 2) + 80 =
-   1040px and Sudoku needs 80 + 330 + 72 + 546 + 80 = 1108px, so one shared
-   fold has to sit at or above 1108 — 1140 leaves margin.
-   Below it the fixed cells cannot shrink, so the two-column layout overflows,
-   and neither scanned viewport (1440×900, 390×844) is in that band, so CI
-   would never catch it.
+   What differs per game is never a cascade override: CSS Modules hash class
+   names per file, so a `.gridCard` declared in a game's module would resolve
+   against this one by stylesheet injection order, which Next does not
+   guarantee. Games set custom properties on the page element instead.
 
    Named areas rather than `display: contents`: the reflow has to move the
    timer and the progress readout ACROSS subtrees (.statsCard is a child of
    the sidebar column, .topBar its sibling), which `display: contents`
-   cannot do. */
+   cannot do. See ADR-0102 for the board sizing and the fold. */
 .page {
   box-sizing: border-box;
-  min-height: 100dvh;
+  min-height: 100svh;
   display: grid;
-  grid-template-columns: 330px 1fr;
-  column-gap: 72px;
+  grid-template-columns: clamp(280px, 26vw, 330px) minmax(0, 1fr);
+  column-gap: clamp(48px, 5vw, 72px);
   grid-template-rows: auto auto auto 1fr auto;
   grid-template-areas:
     "bar   bar"
@@ -32,7 +24,7 @@
     "stats board"
     "reset board"
     "hint  board";
-  padding: var(--space-11) 80px;
+  padding: var(--space-8) clamp(40px, 6vw, 80px);
 }
 
 /* Per-screen hover accent — anchored on .page, never a bare `a:hover`,
@@ -196,11 +188,17 @@
 /* ── reset ───────────────────────────────────────────────────────────── */
 
 /* The 1fr `reset` row pins .hint to the sidebar bottom; Termo renders no
-   reset node, so there the row stays an empty spacer. */
+   reset node, so there the row stays an empty spacer. While the confirm is
+   open it covers .hint (see reset-control.module.css), which is hidden so
+   it leaves the tab order and the accessibility tree with it. */
 .reset {
   grid-area: reset;
   align-self: end;
   padding-bottom: 14px;
+}
+
+.reset:has([role="group"]) + .hint {
+  visibility: hidden;
 }
 
 /* ── hint ────────────────────────────────────────────────────────────── */
@@ -257,6 +255,7 @@
 /* ── board ───────────────────────────────────────────────────────────── */
 
 .board {
+  position: relative;
   grid-area: board;
   display: flex;
   flex-direction: column;
@@ -265,7 +264,33 @@
   padding-top: 32px;
 }
 
+/* The size container every board is measured against. It takes the height
+   the rest of the section leaves over, so the board is the largest square the
+   column and the viewport allow, up to the game's --board-max. --board-below
+   is the height of whatever the game draws under the card inside the well, and
+   --board-aspect the card's width over its height where it is not square.
+   --board-side stays unregistered on purpose: the cq units must resolve where
+   it is read, inside the container, not on the container itself. */
+.boardWell {
+  --board-side: min(
+    100cqi,
+    (100cqb - var(--board-below, 0px)) * var(--board-aspect, 1),
+    var(--board-max)
+  );
+
+  flex: 1 1 0;
+  align-self: stretch;
+  min-height: calc(var(--board-min, 280px) + var(--board-below, 0px));
+  container-type: size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .gridCard {
+  box-sizing: border-box;
+  width: var(--board-side, auto);
   background: var(--paper-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -275,9 +300,15 @@
   transform: rotate(var(--grid-card-rot, 0.4deg));
 }
 
+.hintSlot {
+  display: flow-root;
+  align-self: stretch;
+}
+
 .hintExplain {
-  margin: var(--space-4) 0 0;
+  margin: var(--space-3) 0 0;
   font-size: 13px;
+  line-height: 1.5;
   color: var(--ink-2);
   text-align: center;
 }
@@ -302,7 +333,13 @@
   }
 }
 
-@media (max-width: 1140px) {
+@media (min-width: 1024px) {
+  .hintSlot {
+    min-height: calc(var(--space-3) + 2 * 19.5px);
+  }
+}
+
+@media (max-width: 1023px) {
   .page {
     grid-template-columns: 1fr;
     column-gap: 0;
@@ -350,46 +387,49 @@
 
   .hint {
     margin-top: 14px;
-    /* F4 draws a 50px bar. Expressed as padding + min-height rather than a
-       fixed height so the computed vertical padding is non-zero: with
-       box-sizing border-box, 14px line + 2×16px + 3px border = 49px, and
-       min-height pins the frame's 50px exactly. */
     padding: var(--space-4) var(--space-5);
     min-height: 50px;
     height: auto;
   }
 }
 
-/* Page padding is 20px, not F4's 16px:
-   impeccable's body-text-viewport-edge fires on a >40-char <p> whose
-   rect.left < 16, and the mobile rules paragraph lands exactly on 16.0 —
-   one sub-pixel of layout rounding tips it red. Hoje ships 20px for the
-   same reason. */
+@media (max-width: 1023px) and (min-height: 800px) {
+  .hintSlot {
+    min-height: calc(var(--space-3) + 3 * 19.5px);
+  }
+}
+
+/* Page padding is 20px, not 16px: impeccable's body-text-viewport-edge fires
+   on a >40-char <p> whose rect.left < 16, and the rules paragraph lands
+   exactly on 16.0 — one sub-pixel of layout rounding tips it red. */
 @media (max-width: 768px) {
   .page {
-    padding: var(--space-5) var(--space-5) var(--space-6);
+    padding: var(--space-3) var(--space-5) var(--space-5);
   }
 
   .title {
-    font-size: 34px;
+    font-size: 28px;
+  }
+
+  .titleBlock {
+    padding-top: var(--space-1);
   }
 
   .rules {
-    margin-top: var(--space-3);
+    margin-top: var(--space-2);
     font-size: 13px;
     line-height: 1.5;
   }
 
+  .board {
+    padding-top: var(--space-2);
+  }
+
+  .hint {
+    margin-top: var(--space-3);
+  }
+
   .gridCard {
-    box-sizing: border-box;
-    /* .board is `align-items: center`, so the card is shrink-to-fit by
-       default. `width: 100%` + a cap makes the board FLUID instead: the
-       per-game cap at 390 and above, the page's own width below that. Width
-       rather than `align-self: stretch`, because .board is a COLUMN flex
-       container — its cross axis is the horizontal one, where stretch and a
-       centring margin fight each other. */
-    width: 100%;
-    max-width: var(--board-mobile-max);
     padding: 10px;
     /* 5px 5px 0 is intentional: F4 draws the mobile board shadow between
        --shadow-md and --shadow-lg; no token carries that value. */

@@ -3,16 +3,16 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
-import { Controls } from "../binairo/controls";
+import { Controls, ControlsSkeleton } from "../binairo/controls";
 import { Grid } from "../binairo/grid";
 import { binairoHintExplanation } from "../binairo/hint";
 import { canHint, initPlayState, playReducer } from "../binairo/state";
 import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { countFilled } from "../play/progress";
 import { hasDecidedCell } from "../play/reset-board";
-import screen from "../play/screen.module.css";
 import { useReset } from "../play/use-reset";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
@@ -129,7 +129,9 @@ function BinairoFreeBoard({
         },
       }}
     >
-      <div className={screen.gridCard}>
+      <BoardCard
+        below={<Controls paint={state.paint} onToggleMode={toggleMode} />}
+      >
         <Grid
           givens={state.givens}
           entries={state.entries}
@@ -141,8 +143,7 @@ function BinairoFreeBoard({
           onStrokeStart={strokeStart}
           onPaintOver={paintOver}
         />
-      </div>
-      <Controls paint={state.paint} onToggleMode={toggleMode} />
+      </BoardCard>
     </FreePlayChrome>
   );
 }
@@ -150,7 +151,7 @@ function BinairoFreeBoard({
 function GeneratingBoard() {
   return (
     <>
-      <div aria-hidden className={screen.gridCard}>
+      <BoardCard placeholder below={<ControlsSkeleton />}>
         <div className={boardStyles.grid}>
           {Array.from({ length: TOTAL_CELLS }, (_unused, index) => (
             <div
@@ -159,8 +160,7 @@ function GeneratingBoard() {
             />
           ))}
         </div>
-      </div>
-
+      </BoardCard>
       <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
   );

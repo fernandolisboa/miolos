@@ -1,8 +1,10 @@
+import type { QueensSize } from "@miolos/core";
+
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { hasDecidedCell } from "../play/reset-board";
-import screen from "../play/screen.module.css";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
-import { Board } from "./board";
+import { Board, BoardSkeleton } from "./board";
 import { queensHintExplanation } from "./hint";
 import styles from "./queens-board.module.css";
 import type { QueensBoardState } from "./use-queens-board";
@@ -27,25 +29,43 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
 export function BoardPanel({ board }: { readonly board: QueensBoardState }) {
   const { state } = board;
   return (
-    <>
-      <div className={screen.gridCard}>
-        <Board
-          size={state.size}
-          regions={state.regions}
-          entries={state.entries}
-          conflicts={state.conflicts}
-          selected={state.selected}
-          hintIndex={state.hint.lastIndex}
-          spotlight={state.hint.spotlight}
-          onSelect={board.selectCell}
-          onMove={board.moveSelection}
-          onTap={board.tapCell}
-          onCrossOver={board.crossOver}
-          onEnterValue={board.enterValue}
-          onClear={board.clearCell}
-        />
-      </div>
-      <p className={styles.affordance}>{copy.affordance}</p>
-    </>
+    <BoardCard below={<p className={styles.affordance}>{copy.affordance}</p>}>
+      <Board
+        size={state.size}
+        regions={state.regions}
+        entries={state.entries}
+        conflicts={state.conflicts}
+        selected={state.selected}
+        hintIndex={state.hint.lastIndex}
+        spotlight={state.hint.spotlight}
+        onSelect={board.selectCell}
+        onMove={board.moveSelection}
+        onTap={board.tapCell}
+        onCrossOver={board.crossOver}
+        onEnterValue={board.enterValue}
+        onClear={board.clearCell}
+      />
+    </BoardCard>
+  );
+}
+
+export function BoardPanelSkeleton({
+  size,
+  regions,
+}: {
+  readonly size: QueensSize;
+  readonly regions: readonly number[];
+}) {
+  return (
+    <BoardCard
+      placeholder
+      below={
+        <p aria-hidden className={styles.affordance}>
+          {copy.affordance}
+        </p>
+      }
+    >
+      <BoardSkeleton size={size} regions={regions} />
+    </BoardCard>
   );
 }

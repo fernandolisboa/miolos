@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { countFilled } from "../play/progress";
 import { hasDecidedCell } from "../play/reset-board";
-import screen from "../play/screen.module.css";
 import { useReset } from "../play/use-reset";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { playableGivens } from "../sudoku/engine";
@@ -149,7 +149,7 @@ function SudokuFreeBoard({
         },
       }}
     >
-      <div className={screen.gridCard}>
+      <BoardCard below={<Keypad onDigit={enterDigit} onClear={clearCell} />}>
         <Board
           givens={state.givens}
           entries={state.entries}
@@ -162,8 +162,7 @@ function SudokuFreeBoard({
           onDigit={enterDigit}
           onClear={clearCell}
         />
-      </div>
-      <Keypad onDigit={enterDigit} onClear={clearCell} />
+      </BoardCard>
     </FreePlayChrome>
   );
 }
@@ -171,10 +170,9 @@ function SudokuFreeBoard({
 function GeneratingBoard() {
   return (
     <>
-      <div aria-hidden className={screen.gridCard}>
+      <BoardCard placeholder below={<KeypadSkeleton />}>
         <BoardSkeleton />
-      </div>
-      <KeypadSkeleton />
+      </BoardCard>
       <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
   );

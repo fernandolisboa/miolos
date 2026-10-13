@@ -30,15 +30,11 @@
    RECORDED DESIGN-SYSTEM DEVIATIONS (§12.1), each with its arithmetic. There
    are SEVEN and T-WEB-S102 counts them, so deleting one for tidiness reds
    rather than passing quietly:
-     1. The mobile tile is 44px, not DESIGN.md:50's 38px. 38px was written
-        against the F4 8x8 Binairo frame, where 8 x 38 + 7 x 3 = 325 is the
-        largest board that fits a 350px cap. A FIVE-column board at 38px is
-        5 x 38 + 4 x 3 = 202px inside a 350px field — 74px of dead paper each
-        side, on a screen whose whole argument is paper that hugs its board
-        (the argument nonogram-board.module.css:81-92 makes for .mobileCap5).
-        At 44px the card is 5 x 44 + 4 x 3 + 2 x 10 + 2 x 1 = 254px against
-        the 280px available at 320px, so the larger tile costs nothing and
-        buys 16 % more glyph.
+     1. The tile is a fluid square, not DESIGN.md:50's 52px desktop / 38px
+        mobile. It grows with the space the well leaves (ADR-0102): 49px at the
+        280px floor, about 62px at the 360px ceiling. A five-column board
+        capped at 38px would leave dead paper each side of the card, on a
+        screen whose argument is paper that hugs its board.
      2. Touch targets fall below 44px on the HORIZONTAL axis, consciously.
         10 x 44 = 440px exceeds the 350px available at the reference phone
         BEFORE any gap, so PRODUCT.md:39 / DESIGN.md:40's >=44px is
@@ -93,62 +89,40 @@
         the shared `.hint` ring on this same screen so one screen never shows
         two focus treatments. nonogram-board.module.css:400 and :445 were the
         precedent.
-     7. Off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale".
-        THREE VALUES, in four kinds of place — an earlier version of this item
-        counted two and missed the gaps, which are the case the deviation
-        actually governs (step-6 finding B-13). `T-WEB-S102` now reads them
-        off the stylesheet rather than out of this prose, so the count cannot
-        drift again.
-        - `margin-top: 30px` on `.keyboard`. INHERITED — screen.module.css
-          ships `margin-top: 30px` on `.statsCard` and `margin: 18px 0 0` on
-          `.rules`, so the shared sheet already carries
-          off-scale vertical rhythm and matching it is what makes the keyboard
-          sit where the sidebar card sits.
+     7. Off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale". TWO
+        VALUES, and `T-WEB-S102` reads them off the stylesheet rather than out
+        of this prose, so the count cannot drift.
         - `text-underline-offset: 3px`, on `.keyPresent` and on
           `.noticeRetry`. A decoration offset on a 17px glyph, not spacing
           between boxes; the BOARD's own offsets are 4px at both viewports,
           deviation-free, precisely so the scale holds where it governs.
         - `gap: 3px` on `.grid` and `.row` at <=768px. This IS spacing between
           boxes and it is the honest half of the item. The VALUE is inherited
-          rather than invented — sudoku-board.module.css:425 and
-          binairo-screen.module.css:240 already ship a 3px mobile grid gap —
-          and it is load-bearing arithmetic: 5 x 44 + 4 x 3 + 2 x padding +
-          2 x border is exactly `--board-mobile-max`, which the desktop 4px
-          would overshoot at 320px.
+          rather than invented — sudoku-board.module.css and
+          binairo-screen.module.css already ship a 3px mobile grid gap.
         - `padding-inline: 2px` on `.keyCommand` at <=768px, argued in full at
           the rule itself: 11px is `undersized-ui-text`'s floor exactly, so
           the 320px fit for `enviar`/`apagar` is bought with padding instead
-          of type size.
-
-   Desktop geometry is DESIGN.md:50 verbatim — 52px cells, 4px gap — so there
-   is no geometry deviation to record there. Termo is the first board narrow
-   enough to honour the spec exactly; deviations 5-7 are colour, weight and
-   rhythm, not cell size. */
+          of type size. */
 
 /* ── page root ───────────────────────────────────────────────────────── */
 
 /* The per-game half of the shared layout, carried on the SAME element as
-   `screen.page`. Custom properties, never a redeclared `.gridCard`: CSS
-   Modules hash class names per file, so a same-name rule in two modules
-   resolves by stylesheet injection order, which Next does not guarantee
-   (landmine 10).
+   `screen.page`: custom properties only, never a redeclared `.gridCard`
+   (ADR-0029). The card is 5 tiles wide by 6 rows tall plus padding, a
+   width-over-height of 0.841 to 0.845 at every size; 0.83 keeps it, and its
+   rotation, inside the well. --board-min is the card HEIGHT at the narrowest
+   phone (280px wide).
 
-   A FOURTH distinct rotation signature, beside Binairo's (0.4/-0.5/-3),
-   Sudoku's (-0.4/0.5/3) and Nonogram's (-0.7/0.9/-4), so four screens read as
-   different sheets from the same pad rather than as copies. All three sit
-   inside --rotate-card-max (2.4deg); the tape inside DESIGN.md:37's 3-5deg.
-
-   `--board-mobile-max` is declared UNCONDITIONALLY and is not optional:
-   `screen.module.css`'s `@media (max-width: 768px)` `.gridCard` is
-   `max-width: var(--board-mobile-max)` with NO
-   fallback, so omitting it here makes the declaration invalid at
-   computed-value time, falls back to `none`, and deletes the <=768px cap in
-   silence. 254 = 5 x 44 board + 4 x 3 gaps + 2 x 10 padding + 2 x 1 border. */
+   A FOURTH distinct rotation signature, beside Binairo's, Sudoku's and
+   Nonogram's. */
 .pageTermo {
   --grid-card-rot: 0.7deg;
   --stats-card-rot: -0.9deg;
   --tape-rot: 4deg;
-  --board-mobile-max: 254px;
+  --board-max: 360px;
+  --board-aspect: 0.83;
+  --board-min: 338px;
 }
 
 /* ── board ───────────────────────────────────────────────────────────── */
@@ -188,14 +162,15 @@
   justify-content: center;
   margin: 0;
   padding: 0;
-  width: 52px;
-  height: 52px;
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 1;
   background: var(--paper-desk);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-cell);
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: clamp(14px, calc(var(--board-side) * 0.105), 34px);
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;
@@ -264,16 +239,11 @@
   text-decoration-thickness: 2px;
 }
 
-/* offset 4px, not 6. `text-underline-offset` is measured from the alphabetic
-   baseline, so the mark occupies baseline+offset to baseline+offset+thickness.
-   At <=768px the tile's content box is 44 - 2 x 1.5 = 41px, the line-box top
-   is (41 - 24)/2 = 8.5px and the baseline is 8.5 + 0.85 x 24 = 28.9px — so at
-   offset 6 / thickness 3 the gap to the border was 41 - (28.9+6+3) = 3.1px, a
-   3px ink rule three pixels above a 1.5px ink border of the SAME colour, and
-   the pair read as one doubled edge in a real render. At offset 4 /
-   thickness 2 it is 6.1px, 4.1x the border's own thickness; desktop is
-   49 - (34.3+4+3) = 7.7px, 5.1x. 4px is on the 4pt scale at both viewports,
-   which is why deviation 7 lists only the KEYBOARD's 3px offset. */
+/* offset 4px, not 6: `text-underline-offset` is measured from the alphabetic
+   baseline, and at offset 6 / thickness 3 the mark ended about 3px above the
+   1.5px ink border of the SAME colour on the smallest tile, so the pair read
+   as one doubled edge. At offset 4 it clears the border by at least 6px at
+   every tile size, and 4px is on the 4pt scale. */
 .tilePresent {
   border-color: var(--ink);
   text-decoration: underline;
@@ -347,7 +317,7 @@
   justify-content: center;
   gap: var(--space-2);
   min-height: 36px;
-  margin-top: var(--space-4);
+  margin-top: var(--space-2);
 }
 
 /* Non-zero padding on BOTH axes: `cramped-padding`'s flush branch reads a
@@ -444,14 +414,14 @@
 .keyboard {
   display: grid;
   grid-template-columns: repeat(20, minmax(0, 1fr));
-  grid-template-rows: repeat(3, 52px);
+  grid-template-rows: repeat(3, 48px);
   /* The TOKEN, not the literal 8px it resolves to: the same file's mobile
      `.keyboard` already reaches for `var(--space-1)`, and two idioms for one
      kind of length in one stylesheet is how a token stops being the source of
      truth (step-6 finding B-13). */
   gap: var(--space-2);
   width: 552px;
-  margin-top: 30px;
+  margin-top: var(--space-5);
   touch-action: manipulation;
 }
 
@@ -604,15 +574,8 @@
 /* ── <=768px, geometry ───────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
-  .tile {
-    width: 44px;
-    height: 44px;
-    font-size: 24px;
-  }
-
-  /* Stepped WITH the glyph: at 28px -> 24px and 52px -> 44px a 3px mark ends
-     3.1px above the 1.5px border of the same colour (see `.tilePresent`).
-     The OFFSET stays at 4px — only the thickness moves. */
+  /* The mark is stepped down on the smaller glyph: a 3px mark would end 3.1px
+     above the 1.5px border of the same colour (see `.tilePresent`). */
   .tilePresent {
     text-decoration-thickness: 2px;
   }
@@ -633,9 +596,7 @@
     box-sizing: border-box;
     width: 100%;
     max-width: 350px;
-    grid-template-rows: repeat(3, 48px);
     gap: var(--space-1);
-    margin-top: var(--space-5);
   }
 
   .key {

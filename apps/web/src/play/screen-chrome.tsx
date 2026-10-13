@@ -192,7 +192,7 @@ export function PlayScreenChrome({
 
       <section className={screen.board}>
         {children}
-        <div aria-live="polite">
+        <div aria-live="polite" className={screen.hintSlot}>
           {readouts === null || readouts.hint.explain === null ? null : (
             <p key={readouts.hint.used} className={screen.hintExplain}>
               {readouts.hint.explain}

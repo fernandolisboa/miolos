@@ -16,7 +16,14 @@ import {
   type BinairoPlayRecord,
 } from "../src/play/play-record";
 import { formatElapsed, messages } from "../src/i18n";
-import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
+import {
+  bodyOf,
+  boardFloor,
+  decl,
+  pixels,
+  stylesheet,
+  token,
+} from "./css-source";
 import { freeHintSteps, spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
@@ -917,65 +924,46 @@ describe("the first paint (T-WEB-9d)", () => {
   });
 });
 
-describe("the mobile board and controls (layout tripwires)", () => {
-  const CSS = GAME_CSS;
-  const MOBILE = bodyOf(CSS, "@media (max-width: 768px)");
+describe("the board and controls track the board side (layout tripwires)", () => {
+  const MOBILE = bodyOf(GAME_CSS, "@media (max-width: 768px)");
 
-  const SHARED_MOBILE = bodyOf(SHARED_CSS, "@media (max-width: 768px)");
+  it("sizes the board fluidly at every width, never from a fixed track", () => {
+    const grid = bodyOf(GAME_CSS, ".grid");
 
-  const PAGE_PADDING = 2 * token("--space-5");
-
-  const NARROWEST_VIEWPORT = 320;
-
-  it("sizes the board fluidly with 38px as a cap, never as a fixed track", () => {
-    const grid = bodyOf(MOBILE, ".grid");
-    const card = bodyOf(SHARED_MOBILE, ".gridCard");
-
-    expect(decl(grid, "grid-template-columns")).not.toMatch(/\d+px/);
     expect(decl(grid, "grid-template-columns")).toBe(
       "repeat(8, minmax(0, 1fr))",
     );
-
-    expect(decl(card, "box-sizing")).toBe("border-box");
-    expect(decl(card, "width")).toBe("100%");
-    expect(decl(card, "max-width")).toBe("var(--board-mobile-max)");
-  });
-
-  it("keeps the cap at DESIGN.md's 38px cells and inside a 390px viewport", () => {
-    const cap = pixels(decl(bodyOf(CSS, ".pageBinairo"), "--board-mobile-max"));
-    const gap = pixels(decl(bodyOf(MOBILE, ".grid"), "gap"));
-    const padding = pixels(decl(bodyOf(SHARED_MOBILE, ".gridCard"), "padding"));
-
-    const border = 1;
-
-    const cell = (cap - 2 * padding - 2 * border - 7 * gap) / 8;
-
-    expect(cell).toBe(38);
-    expect(cap).toBeLessThanOrEqual(390 - PAGE_PADDING);
+    expect(decl(bodyOf(GAME_CSS, ".cell"), "aspect-ratio")).toBe("1");
+    expect(decl(bodyOf(GAME_CSS, ".pageBinairo"), "--board-max")).toMatch(
+      /^\d+px$/,
+    );
   });
 
   it("gives the control row the board's width so its flex ratios apply", () => {
-    const controls = bodyOf(MOBILE, ".controls");
-
-    expect(decl(controls, "width")).toBe("100%");
-    expect(decl(controls, "max-width")).toBe("var(--board-mobile-max)");
+    expect(decl(bodyOf(GAME_CSS, ".controls"), "width")).toBe(
+      "var(--board-side)",
+    );
+    expect(decl(bodyOf(MOBILE, ".controlDigit"), "flex")).toBe("1");
   });
 
-  it("leaves every control clear of the 44px touch target at 320px", () => {
+  it("leaves every control clear of the 44px touch target at the board floor", () => {
     const controls = bodyOf(MOBILE, ".controls");
-
-    expect(decl(controls, "width")).toBe("100%");
-
-    const cap = pixels(decl(bodyOf(CSS, ".pageBinairo"), "--board-mobile-max"));
-    const row = Math.min(cap, NARROWEST_VIEWPORT - PAGE_PADDING);
-    const free = row - 2 * pixels(decl(controls, "gap"));
-    const digit = Number(decl(bodyOf(MOBILE, ".controlDigit"), "flex"));
     const minimum = token("--touch-target-min");
+    const digit = (boardFloor() - pixels(decl(controls, "gap"))) / 2;
 
-    expect(free * (digit / (2 * digit))).toBeGreaterThanOrEqual(minimum);
+    expect(digit).toBeGreaterThanOrEqual(minimum);
     expect(
       pixels(decl(bodyOf(MOBILE, ".controlDigit"), "height")),
     ).toBeGreaterThanOrEqual(minimum);
+  });
+
+  it("reserves the control row under the card, desktop and phone", () => {
+    const desktop = decl(bodyOf(GAME_CSS, ".pageBinairo"), "--board-below");
+    const phone = decl(bodyOf(MOBILE, ".pageBinairo"), "--board-below");
+    const height = pixels(decl(bodyOf(MOBILE, ".controlDigit"), "height"));
+
+    expect(desktop).toBe("calc(var(--space-6) + 52px)");
+    expect(phone).toBe(`calc(var(--space-4) + ${String(height)}px)`);
   });
 });
 

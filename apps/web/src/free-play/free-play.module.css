@@ -57,7 +57,9 @@
 /* ── generating ──────────────────────────────────────────────────────── */
 
 .generating {
-  margin: var(--space-4) 0 0;
+  position: absolute;
+  inset: auto 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--ink-2);
   text-align: center;

@@ -1,6 +1,7 @@
 # ADR-0035 — The Nonogram board is a ruled continuous field, not a grid of separated cells
 
 **Status:** Accepted — 2026-08-01
+**Amended by:** [ADR-0102](./0102-boards-size-from-the-space-they-have-not-from-fixed-cells.md) (#303) — decisions 5–7: the cells are fractional and the 1140px fold is gone. The ruled field, the 13.203px clue floor and the 14.20px cell at 320px stand.
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0021](./0021-nonogram-pictures-are-a-curated-motif-library.md), [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0032](./0032-a-nonogram-is-finished-when-the-picture-is-painted.md), [ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md)
 
 ## Context
