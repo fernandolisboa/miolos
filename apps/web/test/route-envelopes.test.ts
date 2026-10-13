@@ -86,3 +86,20 @@ describe("the shared screen shells are game-blind (T-WEB-S364a)", () => {
     );
   });
 });
+
+describe("only the hinted play routes fetch the hint allowance (T-WEB-S544)", () => {
+  it("reaches exactly the 10 daily and archive routes of the hinted games", () => {
+    expect(routesReaching("apps/web/src/api/free-hints-provider.tsx")).toEqual([
+      "apps/web/app/arquivo/[data]/binairo/page.tsx",
+      "apps/web/app/arquivo/[data]/cruzadinha/page.tsx",
+      "apps/web/app/arquivo/[data]/nonogram/page.tsx",
+      "apps/web/app/arquivo/[data]/rainhas/page.tsx",
+      "apps/web/app/arquivo/[data]/sudoku/page.tsx",
+      "apps/web/app/binairo/page.tsx",
+      "apps/web/app/cruzadinha/page.tsx",
+      "apps/web/app/nonogram/page.tsx",
+      "apps/web/app/rainhas/page.tsx",
+      "apps/web/app/sudoku/page.tsx",
+    ]);
+  });
+});

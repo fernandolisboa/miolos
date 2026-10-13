@@ -1,16 +1,18 @@
 "use client";
 
-import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { messages } from "../i18n";
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { countFilled } from "../play/progress";
+import { hasDecidedCell } from "../play/reset-board";
 import screen from "../play/screen.module.css";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { playableGivens } from "../sudoku/engine";
 import { sudokuHintExplanation } from "../sudoku/hint";
 import { Keypad, KeypadSkeleton } from "../sudoku/keypad";
 import {
+  canHint,
   initSudokuPlayState,
   sudokuPlayReducer,
   type SudokuDigit,
@@ -79,13 +81,19 @@ function SudokuFreeBoard({
     puzzle.daily,
     initSudokuPlayState,
   );
+  const allowance = useFreeHintsPerPuzzle();
+
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
+
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
 
   const filled = countFilled(playableGivens(state.givens), state.entries);
-  const hintReady =
-    state.hint.used < FREE_HINTS_PER_PUZZLE && state.status === "playing";
+  const hintReady = canHint(state, allowance);
 
   const selectCell = useCallback((index: number) => {
     dispatch({ type: "select", index });
@@ -104,8 +112,15 @@ function SudokuFreeBoard({
   }, []);
 
   const revealHint = useCallback(() => {
+    if (!canHint(stateRef.current, allowance)) {
+      return;
+    }
     dispatch({ type: "use-hint", solution: puzzle.solution });
-  }, [puzzle.solution]);
+  }, [puzzle.solution, allowance]);
+
+  const reset = useCallback(() => {
+    dispatch({ type: "reset" });
+  }, []);
 
   if (state.status === "solved") {
     return <FreePlaySolvedCard game="sudoku" level={level} onAgain={onNext} />;
@@ -131,6 +146,7 @@ function SudokuFreeBoard({
             explain: sudokuHintExplanation(state.hint.reason),
             onReveal: revealHint,
           },
+          onReset: hasDecidedCell(state.entries) ? reset : null,
         },
       }}
     >

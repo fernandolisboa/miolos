@@ -1,6 +1,7 @@
-import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
-import { useCallback, useMemo, useReducer } from "react";
+import type { DailySudokuResponse } from "@miolos/core";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
@@ -12,6 +13,7 @@ import {
   solvedDigits,
 } from "./engine";
 import {
+  canHint,
   initSudokuPlayState,
   sudokuPlayReducer,
   type SudokuDigit,
@@ -33,6 +35,7 @@ export interface SudokuPlay {
   readonly enterDigit: (digit: SudokuDigit) => void;
   readonly clearCell: () => void;
   readonly revealHint: () => void;
+  readonly reset: () => void;
 }
 
 export function useSudokuPlay(
@@ -44,7 +47,14 @@ export function useSudokuPlay(
     daily,
     initSudokuPlayState,
   );
-  const { givens, entries, timer, status } = state;
+  const allowance = useFreeHintsPerPuzzle();
+
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
+
+  const { givens, entries, timer } = state;
   const hintsUsed = state.hint.used;
   const elapsed = elapsedMs(timer, state.now);
 
@@ -81,24 +91,26 @@ export function useSudokuPlay(
   }, []);
 
   const revealHint = useCallback(() => {
-    if (solution !== null) {
+    if (solution !== null && canHint(stateRef.current, allowance)) {
       dispatch({ type: "use-hint", solution });
     }
-  }, [solution]);
+  }, [solution, allowance]);
+
+  const reset = useCallback(() => {
+    dispatch({ type: "reset" });
+  }, []);
 
   return {
     state,
     elapsed,
     filled,
-    hintReady:
-      solution !== null &&
-      hintsUsed < FREE_HINTS_PER_PUZZLE &&
-      status === "playing",
+    hintReady: solution !== null && canHint(state, allowance),
     selectCell,
     moveSelection,
     enterDigit,
     clearCell,
     revealHint,
+    reset,
   };
 }
 

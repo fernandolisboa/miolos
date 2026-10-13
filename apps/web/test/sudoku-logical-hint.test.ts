@@ -58,7 +58,7 @@ function everyThird(
   );
 }
 
-describe("a wrong entry is corrected before any step (T-WEB-S538)", () => {
+describe("a wrong entry is corrected before any step (T-WEB-S547)", () => {
   it(
     "fixes the wrong cell and names it a correction, on every weekday",
     () => {
@@ -82,7 +82,7 @@ describe("a wrong entry is corrected before any step (T-WEB-S538)", () => {
   );
 });
 
-describe("the hint reveals the next logical step (T-WEB-S539)", () => {
+describe("the hint reveals the next logical step (T-WEB-S548)", () => {
   it(
     "places the step's digit on a bare and on a correct partial board, on every weekday",
     () => {
@@ -119,7 +119,7 @@ describe("the hint reveals the next logical step (T-WEB-S539)", () => {
   });
 });
 
-describe("the hint falls back to the first empty cell (T-WEB-S540)", () => {
+describe("the hint falls back to the first empty cell (T-WEB-S549)", () => {
   it("when the ladder cannot move", () => {
     const solution = solutionOf(puzzleFor(1).solution);
     const blank = Array.from({ length: 81 }, () => 0);
@@ -167,7 +167,7 @@ function step(overrides: Partial<SudokuStep>): SudokuReasonStep {
   };
 }
 
-describe("every hint sentence (T-WEB-S543)", () => {
+describe("every hint sentence (T-WEB-S552)", () => {
   const hidden = (
     kind: "row" | "column" | "box",
     unit: number,

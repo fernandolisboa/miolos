@@ -107,7 +107,7 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
   });
 });
 
-describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S545)", () => {
+describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S554)", () => {
   it("writes the step's digit, reads out why and tints the step's cells", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateDailySudoku({ seed: SEED, weekday: WEEKDAY });

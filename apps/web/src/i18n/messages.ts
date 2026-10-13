@@ -1,4 +1,4 @@
-import type { RemoteConfigKey } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type RemoteConfigKey } from "@miolos/core";
 
 const wordmark = "Miolos";
 
@@ -133,6 +133,11 @@ export const messages = {
       available: (left: number) =>
         `Usar dica — ${left} ${left === 1 ? "disponível" : "disponíveis"}`,
       used: "Dicas usadas",
+    },
+    reset: {
+      label: "Recomeçar",
+      question: "Recomeçar o puzzle? Suas jogadas serão apagadas.",
+      cancel: "Cancelar",
     },
   },
   conclusion: {
@@ -658,6 +663,10 @@ export const messages = {
       pushOptInStreakThreshold: {
         label: "Sequência para oferecer o lembrete",
         hint: "A partir de quantos dias de sequência a conclusão oferece o lembrete de sequência em risco.",
+      },
+      freeHintsPerPuzzle: {
+        label: "Dicas por puzzle",
+        hint: `Quantas dicas grátis cada puzzle do dia e do arquivo oferece. No modo livre são sempre ${FREE_HINTS_PER_PUZZLE}; o Termo não tem dicas.`,
       },
     } satisfies Record<RemoteConfigKey, { label: string; hint: string }>,
   },

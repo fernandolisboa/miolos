@@ -14,8 +14,10 @@ export const hintGrantSourceSchema = z.enum(HINT_GRANT_SOURCES);
 
 export const FREE_HINTS_PER_PUZZLE = 3;
 
+export const HINTS_PER_PUZZLE_CEILING = 9;
+
 export const hintsUsedSchema = z
   .number()
   .int()
   .min(0)
-  .max(FREE_HINTS_PER_PUZZLE);
+  .max(HINTS_PER_PUZZLE_CEILING);

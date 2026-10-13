@@ -2,6 +2,7 @@ import type { SudokuTier } from "@miolos/games/sudoku";
 
 import { messages } from "../i18n";
 import { DailyPlayChrome } from "../play/daily-chrome";
+import { hasDecidedCell } from "../play/reset-board";
 import screen from "../play/screen.module.css";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
@@ -47,6 +48,7 @@ export function PlayView({
             explain: sudokuHintExplanation(state.hint.reason),
             onReveal: play.revealHint,
           },
+          onReset: hasDecidedCell(state.entries) ? play.reset : null,
         },
       }}
     >

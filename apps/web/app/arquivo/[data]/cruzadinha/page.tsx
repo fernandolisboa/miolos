@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { FetchedFreeHints } from "../../../../src/api/free-hints-provider";
 import { ArchiveCrosswordScreen } from "../../../../src/archive/crossword-screen";
 import {
   archiveGameMetadata,
@@ -17,6 +18,8 @@ export async function generateMetadata(
 
 export default async function ArchiveCruzadinhaPage(props: ArchiveGameParams) {
   return archiveGamePage("crossword", props, (daily) => (
-    <ArchiveCrosswordScreen daily={daily} />
+    <FetchedFreeHints>
+      <ArchiveCrosswordScreen daily={daily} />
+    </FetchedFreeHints>
   ));
 }

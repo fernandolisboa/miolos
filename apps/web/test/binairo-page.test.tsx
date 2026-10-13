@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { messages } from "../src/i18n";
+import { hintedScreen } from "./hinted-screen";
 
 const PUZZLE = generateBinairo({ seed: 20_260_730, weekday: 3 });
 
@@ -96,7 +97,7 @@ describe("/binairo (T-WEB-3)", () => {
     spies.getTodayDaily.mockResolvedValue(DAILY);
     const { play } = await loadPages();
 
-    const element = elementSchema.parse(await play.default());
+    const element = elementSchema.parse(hintedScreen(await play.default()));
 
     expect(dailyBinairoResponseSchema.parse(element.props.daily)).toEqual(
       DAILY,

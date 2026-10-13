@@ -1,6 +1,7 @@
 import {
   dailyCrosswordResponseSchema,
   FREE_HINTS_PER_PUZZLE,
+  HINTS_PER_PUZZLE_CEILING,
   type DailyCrosswordResponse,
 } from "@miolos/core";
 import { describe, expect, it } from "vitest";
@@ -301,17 +302,7 @@ describe("hint (T-WEB-S427)", () => {
   });
 });
 
-describe("three free hints per puzzle (T-WEB-S511c)", () => {
-  function hintTimes(
-    state: CrosswordPlayState,
-    times: number,
-  ): CrosswordPlayState {
-    return play(
-      state,
-      ...Array.from({ length: times }, () => ({ type: "use-hint" }) as const),
-    );
-  }
-
+describe("the reducer's hints stop at the ceiling (T-WEB-S511c)", () => {
   it("fills a solution letter on each free press", () => {
     let current = fresh();
     for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {
@@ -325,20 +316,14 @@ describe("three free hints per puzzle (T-WEB-S511c)", () => {
     }
   });
 
-  it("returns the same state on the press after the last free hint", () => {
-    const spent = hintTimes(fresh(), FREE_HINTS_PER_PUZZLE);
-
-    expect(play(spent, { type: "use-hint" })).toBe(spent);
-  });
-
-  it("leaves exactly one hint after a restore with two spent", () => {
+  it("leaves exactly one hint after a restore one short of the ceiling, and the press after it is inert", () => {
     const record: CrosswordPlayRecord = {
       v: 1,
       game: "crossword",
       date: DATE,
       entries: Array<null>(25).fill(null),
       elapsedMs: 0,
-      hintsUsed: 2,
+      hintsUsed: HINTS_PER_PUZZLE_CEILING - 1,
       concluded: false,
       pendingSync: false,
       syncOutcome: "pending",
@@ -346,7 +331,7 @@ describe("three free hints per puzzle (T-WEB-S511c)", () => {
     const restored = play(fresh(), { type: "restore", record, now: 1 });
     const last = play(restored, { type: "use-hint" });
 
-    expect(last.hint.used).toBe(3);
+    expect(last.hint.used).toBe(HINTS_PER_PUZZLE_CEILING);
     expect(play(last, { type: "use-hint" })).toBe(last);
   });
 });

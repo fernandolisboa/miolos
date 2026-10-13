@@ -1,4 +1,7 @@
-import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
+import {
+  HINTS_PER_PUZZLE_CEILING,
+  type DailySudokuResponse,
+} from "@miolos/core";
 import {
   getSudokuConflicts,
   isSudokuSolved,
@@ -7,7 +10,9 @@ import {
 } from "@miolos/games/sudoku";
 
 import { movedSelection } from "../play/grid-selection";
+import { hasHintLeft } from "../play/hint-allowance";
 import type { PlayRecord, SudokuPlayRecord } from "../play/play-record";
+import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 import { mergedGrid } from "./engine";
@@ -47,6 +52,7 @@ export interface SudokuPlayState extends PlayCore {
 
 export type SudokuPlayAction =
   | LifecycleAction
+  | ResetAction
   | { readonly type: "select"; readonly index: number }
   | {
       readonly type: "move-selection";
@@ -125,10 +131,7 @@ export function sudokuPlayReducer(
     }
 
     case "use-hint": {
-      if (
-        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
-        state.status !== "playing"
-      ) {
+      if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
       const hint = nextSudokuHint(action.solution, state.givens, state.entries);
@@ -146,6 +149,16 @@ export function sudokuPlayReducer(
           spotlight: hint.reason.kind === "step" ? hint.reason.step.cells : [],
         },
       };
+    }
+
+    case "reset": {
+      const reset = resetBoard(state, (entries) => ({
+        ...state,
+        ...derive(state.givens, entries),
+      }));
+      return reset === state
+        ? state
+        : { ...reset, hint: { ...reset.hint, reason: null, spotlight: [] } };
     }
 
     case "tick":
@@ -243,4 +256,8 @@ function isSudokuRecord(
   record: PlayRecord | undefined,
 ): record is SudokuPlayRecord {
   return record?.game === "sudoku";
+}
+
+export function canHint(state: SudokuPlayState, limit: number | null): boolean {
+  return hasHintLeft(state.hint.used, limit) && state.status === "playing";
 }

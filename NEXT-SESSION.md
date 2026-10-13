@@ -1,22 +1,26 @@
 # Do I need to do anything?
 
-**Not for Rainhas.** You said yes to it and ran migration 0015 on the Miolos database before #285 PR 2 merged; both are in the ledger's Done table. Also NOW §2: the Google OAuth client and its two Vercel variables (#280, ADR-0089); Sign in with Google is merged but dormant until then. **New: NOW §3** — set `ADMIN_USER_IDS` on miolos-api so `/admin` works for you (#304). Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**Not for Rainhas.** You said yes to it and ran migration 0015 on the Miolos database before #285 PR 2 merged; both are in the ledger's Done table. Also NOW §2: the Google OAuth client and its two Vercel variables (#280, ADR-0089); Sign in with Google is merged but dormant until then. **NOW §3** — set `ADMIN_USER_IDS` on miolos-api so `/admin` works for you (#304). Still open, low urgency: NOW §1 (#200). To work through the ledger: start a session with *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
-The Sudoku hint reveals and explains the next logical step (#296, ADR-0098); `nextSudokuHint` is in `apps/web/src/sudoku/hint.ts`, `nextSudokuStep` in `packages/games/src/sudoku/grade.ts`.
+The Sudoku hint reveals and explains the next logical step (#296, ADR-0099); `nextSudokuHint` is in `apps/web/src/sudoku/hint.ts`, `nextSudokuStep` in `packages/games/src/sudoku/grade.ts`.
 
-**`/admin` shipped** (#304 PR 1, ADR-0097): an admin edits each `remote_config` key within its schema bounds, no deploy. Admins are the user ids in `ADMIN_USER_IDS` on `apps/api`. `getRemoteConfig` now falls back per key.
+**`/admin` shipped** (#304, ADR-0097, ADR-0098): an admin edits each `remote_config` key within its schema bounds, no deploy. Admins are the user ids in `ADMIN_USER_IDS` on `apps/api`. `getRemoteConfig` now falls back per key. #304 is closed.
+
+**The free hint allowance is the `freeHintsPerPuzzle` key** (1 to 9, default 3, ADR-0098): daily and archive puzzles read it from `GET /hints` through `FetchedFreeHints`; free play stays at `FREE_HINTS_PER_PUZZLE`. `HINTS_PER_PUZZLE_CEILING` (9) is the only wire bound. Before rolling either app back, set the key to 3 or less and wait for the rollover.
 
 **Rainhas is complete** (#285): the engine (ADR-0090), the daily and archive (ADR-0091, ADR-0092) and free play at `/modo-livre/rainhas`. The daily and free screens share `useQueensBoard` and `BoardPanel` (`apps/web/src/queens/`); only `use-queens-play.ts` adds the lifecycle, and the free-play wall bans it.
 
 **One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
 
-**Three free hints per puzzle shipped** (#295, ADR-0095): one constant, `FREE_HINTS_PER_PUZZLE` in `@miolos/core`; the chrome builds the countdown label from `used`.
+**Three free hints per puzzle shipped** (#295, ADR-0095): `FREE_HINTS_PER_PUZZLE` in `@miolos/core` is the default and free play's count; the chrome builds the countdown label from `used`.
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
 **The Sudoku board shows the selection's reach** (#302): selecting a cell tints its row, column and box, and fills every other copy of its digit with the accent; violating and hinted cells keep their own look. The rule lives in `selectionHighlights` (`apps/web/src/sudoku/engine.ts`), on the games package's `sudokuPeers`. Test ids `T-WEB-S495…S497`.
+
+**Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `useHintKind` (`play/use-hint-kind.ts`) clears the hint note with it, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds, so a change to hint counts (#295) needs no change to the reset. Test ids `T-WEB-S514…S517`.
 
 ## Traps
 
@@ -34,6 +38,6 @@ The Sudoku hint reveals and explains the next logical step (#296, ADR-0098); `ne
 
 **Next:** file per-game time buckets as an issue.
 
-**Then:** #297: the same for the other grid games. Also #304 PR 2: the hint allowance becomes a `remote_config` key on `/admin`, defaulting to `FREE_HINTS_PER_PUZZLE` (a schema field and a label in `messages.admin.keys`).
+**Then:** #297: the same for the other grid games.
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and `/admin/config`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.

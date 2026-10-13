@@ -1,13 +1,15 @@
-import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
+import { HINTS_PER_PUZZLE_CEILING } from "@miolos/core";
 
 import { toggled } from "./brush";
 import { nextBinaryHint } from "./grid-hint";
 import { movedSelection } from "./grid-selection";
+import { hasHintLeft } from "./hint-allowance";
 import type {
   NonogramPlayRecord,
   PlayRecord,
   QueensPlayRecord,
 } from "./play-record";
+import { resetBoard, type ResetAction } from "./reset-board";
 import { applyTimerAction } from "./timer";
 import type { HintState, LifecycleAction, PlayCore } from "./types";
 
@@ -28,6 +30,7 @@ export interface BinaryGridState extends PlayCore {
 
 export type BinaryGridAction =
   | LifecycleAction
+  | ResetAction
   | { readonly type: "select"; readonly index: number }
   | {
       readonly type: "move-selection";
@@ -85,7 +88,7 @@ export function binaryGridReducer<S extends BinaryGridState>(
         : withBinaryEntry(state, state.selected, null, rules);
 
     case "use-hint": {
-      const hint = canHint(state)
+      const hint = canHint(state, HINTS_PER_PUZZLE_CEILING)
         ? nextBinaryHint(state.solution, state.entries)
         : null;
       if (hint === null) {
@@ -101,6 +104,9 @@ export function binaryGridReducer<S extends BinaryGridState>(
       };
     }
 
+    case "reset":
+      return resetBoard(state, (entries) => rules.derive(state, entries));
+
     case "tick":
     case "pause":
     case "resume":
@@ -114,10 +120,11 @@ export function binaryGridReducer<S extends BinaryGridState>(
 
 export function canHint(
   state: BinaryGridState,
+  limit: number | null,
 ): state is BinaryGridState & { readonly solution: readonly BinaryMark[] } {
   return (
     state.solution !== null &&
-    state.hint.used < FREE_HINTS_PER_PUZZLE &&
+    hasHintLeft(state.hint.used, limit) &&
     state.status === "playing"
   );
 }

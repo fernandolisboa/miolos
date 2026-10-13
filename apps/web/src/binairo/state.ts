@@ -1,4 +1,7 @@
-import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
+import {
+  HINTS_PER_PUZZLE_CEILING,
+  type DailyBinairoResponse,
+} from "@miolos/core";
 import {
   findBinairoViolations,
   isValidBinairoSolution,
@@ -17,7 +20,9 @@ import {
   type StrokeEffect,
 } from "../play/brush";
 import { nextHint } from "../play/grid-hint";
+import { hasHintLeft } from "../play/hint-allowance";
 import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
+import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 
@@ -41,6 +46,7 @@ export interface PlayState extends PlayCore {
 
 export type PlayAction =
   | LifecycleAction
+  | ResetAction
   | { readonly type: "tap"; readonly index: number; readonly press: Press }
   | {
       readonly type: "stroke-start";
@@ -126,10 +132,7 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       };
 
     case "use-hint": {
-      if (
-        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
-        state.status === "solved"
-      ) {
+      if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
       const hint = nextHint(action.solution, state.givens, state.entries);
@@ -145,6 +148,12 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
         },
       };
     }
+
+    case "reset":
+      return resetBoard(state, (entries) => ({
+        ...state,
+        ...derive(state.givens, entries),
+      }));
 
     case "tick":
     case "pause":
@@ -266,4 +275,8 @@ function isBinairoRecord(
   record: PlayRecord | undefined,
 ): record is BinairoPlayRecord {
   return record?.game === "binairo";
+}
+
+export function canHint(state: PlayState, limit: number | null): boolean {
+  return hasHintLeft(state.hint.used, limit) && state.status !== "solved";
 }

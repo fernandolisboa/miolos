@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import {
   dailyNonogramResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   dailySudokuResponseSchema,
   type DailyBinairoResponse,
   type DailyNonogramResponse,
@@ -32,6 +33,7 @@ import {
 import { initNonogramPlayState } from "../src/nonogram/state";
 import { accentVars } from "../src/play/accent";
 import { DailyPlayChrome } from "../src/play/daily-chrome";
+import { FreeHintsContext } from "../src/play/free-hints";
 import {
   PlayScreenChrome,
   type ChromeGame,
@@ -112,6 +114,7 @@ const BINAIRO_PLAY = {
   paintOver: noop,
   toggleMode: noop,
   revealHint: noop,
+  reset: noop,
 };
 
 const SUDOKU_PLAY = {
@@ -124,6 +127,7 @@ const SUDOKU_PLAY = {
   enterDigit: noop,
   clearCell: noop,
   revealHint: noop,
+  reset: noop,
 };
 
 const NONOGRAM_PLAY = {
@@ -142,6 +146,7 @@ const NONOGRAM_PLAY = {
   clearCell: noop,
   paintOver: noop,
   revealHint: noop,
+  reset: noop,
 };
 
 function pageIn(root: ParentNode): Element {
@@ -162,7 +167,14 @@ function mountedPage(element: ReactElement): Element {
   return pageIn(render(element).container);
 }
 
-const GRID_AREAS = ["topBar", "titleBlock", "statsCard", "board", "hint"];
+const GRID_AREAS = [
+  "topBar",
+  "titleBlock",
+  "statsCard",
+  "board",
+  "reset",
+  "hint",
+];
 
 function placementOf(page: Element): Record<string, unknown> {
   return {
@@ -179,7 +191,7 @@ function placed(state: string): Record<string, unknown> {
   return { areas: GRID_AREAS, state };
 }
 
-describe("`.page` places the same five children, in DOM order, everywhere (T-WEB-S366)", () => {
+describe("`.page` places the same six children, in DOM order, everywhere (T-WEB-S366)", () => {
   it("holds for the nine shipped composition shapes", () => {
     expect({
       "binairo daily": placementOf(
@@ -260,11 +272,13 @@ function readouts(
   explain: string | null,
   onReveal: () => void = noop,
   used = 0,
+  onReset: (() => void) | null = noop,
 ): PlayChromeReadouts {
   return {
     progressShort: PROGRESS_SHORT,
     progressLong: PROGRESS_LONG,
     hint: { ready, used, explain, onReveal },
+    onReset,
   };
 }
 
@@ -345,6 +359,22 @@ function localNamesOf(node: Element): readonly string[] {
   return [...node.classList].map((name) => LOCAL_NAME_OF.get(name) ?? name);
 }
 
+function resetSlotOf(page: Element): unknown {
+  const slot = page.querySelector(`.${cls("reset")}`);
+  return slot === null
+    ? "absent"
+    : {
+        buttons: slot.querySelectorAll("button").length,
+        hidden: slot.firstElementChild?.getAttribute("aria-hidden") ?? null,
+        disabled:
+          slot.querySelector("button")?.getAttribute("aria-disabled") ?? null,
+      };
+}
+
+const RESET_BUTTON = { buttons: 1, hidden: null, disabled: "false" };
+const RESET_IDLE = { buttons: 1, hidden: null, disabled: "true" };
+const RESET_PLACEHOLDER = { buttons: 0, hidden: "true", disabled: null };
+
 function shapeOf(page: Element): Record<string, unknown> {
   const hint = page.querySelector(`.${cls("hint")}`);
   return {
@@ -362,6 +392,7 @@ function shapeOf(page: Element): Record<string, unknown> {
     hintClasses: hint === null ? "absent" : localNamesOf(hint),
     hintDisabled: hint?.getAttribute("aria-disabled") ?? null,
     hintExplain: textOf(page, "hintExplain"),
+    reset: resetSlotOf(page),
     note: page.querySelector(".note-mark")?.textContent ?? "absent",
     extraStat: page.querySelector(".extra-mark")?.textContent ?? "absent",
     hidden: {
@@ -426,6 +457,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hintClasses: ["hint"],
         hintDisabled: "false",
         hintExplain: "absent",
+        reset: RESET_BUTTON,
         note: NOTE.text,
         extraStat: EXTRA.value,
         hidden: {
@@ -452,6 +484,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hintClasses: ["hint", "hintUsed", "placeholder"],
         hintDisabled: null,
         hintExplain: "absent",
+        reset: RESET_PLACEHOLDER,
         note: "absent",
         extraStat: "absent",
         hidden: {
@@ -478,6 +511,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hintClasses: ["hint", "hintUsed"],
         hintDisabled: "true",
         hintExplain: "porque sim",
+        reset: RESET_BUTTON,
         note: "absent",
         extraStat: EXTRA.value,
         hidden: {
@@ -504,6 +538,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hintClasses: ["hint", "hintUsed", "placeholder"],
         hintDisabled: null,
         hintExplain: "absent",
+        reset: RESET_PLACEHOLDER,
         note: "absent",
         extraStat: EXTRA.value,
         hidden: {
@@ -526,6 +561,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "placeholder",
         "progressBar",
         "progressCard",
+        "reset",
         "rules",
         "statLabel",
         "statRow",
@@ -543,23 +579,43 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
       ],
     });
   });
-});
 
-describe("the hint button counts the free hints down from `used` (T-WEB-S512)", () => {
-  function hintOf(ready: boolean, used: number): Element {
+  it("renders a disabled trigger when the readouts carry no onReset", () => {
     const page = staticPage(
       chrome({
-        ...FREE_PLAYING,
-        state: { kind: "playing", readouts: readouts(ready, null, noop, used) },
+        ...DAILY_LIVE,
+        state: {
+          kind: "playing",
+          readouts: readouts(true, null, noop, 0, null),
+        },
       }),
     );
-    const hint = page.querySelector(`.${cls("hint")}`);
-    if (hint === null) {
-      throw new Error("the live chrome rendered no hint control");
-    }
-    return hint;
-  }
 
+    expect(resetSlotOf(page)).toEqual(RESET_IDLE);
+  });
+});
+
+function hintOf(
+  ready: boolean,
+  used: number,
+  allowance: number | null = FREE_HINTS_PER_PUZZLE,
+): Element {
+  const page = staticPage(
+    <FreeHintsContext value={allowance}>
+      {chrome({
+        ...FREE_PLAYING,
+        state: { kind: "playing", readouts: readouts(ready, null, noop, used) },
+      })}
+    </FreeHintsContext>,
+  );
+  const hint = page.querySelector(`.${cls("hint")}`);
+  if (hint === null) {
+    throw new Error("the live chrome rendered no hint control");
+  }
+  return hint;
+}
+
+describe("the hint button counts the free hints down from `used` (T-WEB-S512)", () => {
   it("reads the hints left, then that they are spent", () => {
     expect(
       [0, 1, 2, 3].map((used) => hintOf(used < 3, used).textContent),
@@ -577,9 +633,35 @@ describe("the hint button counts the free hints down from `used` (T-WEB-S512)", 
     expect(hint.textContent).toBe("Usar dica — 3 disponíveis");
     expect(hint.getAttribute("aria-disabled")).toBe("true");
   });
+
+  it("counts from the default while the allowance loads, and is not ready", () => {
+    const hint = hintOf(false, 0, null);
+
+    expect(hint.textContent).toBe("Usar dica — 3 disponíveis");
+    expect(hint.getAttribute("aria-disabled")).toBe("true");
+  });
 });
 
-describe("the hint's reason is read out from one polite live region (T-WEB-S546)", () => {
+describe("the hint button counts down from the served allowance (T-WEB-S538)", () => {
+  it("reads five hints left down to spent under an allowance of five", () => {
+    expect(
+      [0, 1, 2, 3, 4, 5].map((used) => hintOf(used < 5, used, 5).textContent),
+    ).toEqual([
+      "Usar dica — 5 disponíveis",
+      "Usar dica — 4 disponíveis",
+      "Usar dica — 3 disponíveis",
+      "Usar dica — 2 disponíveis",
+      "Usar dica — 1 disponível",
+      "Dicas usadas",
+    ]);
+  });
+
+  it("reads spent when a restored count is past a lowered allowance", () => {
+    expect(hintOf(false, 3, 2).textContent).toBe("Dicas usadas");
+  });
+});
+
+describe("the hint's reason is read out from one polite live region (T-WEB-S555)", () => {
   function liveRegions(root: ParentNode): readonly Element[] {
     return [...root.querySelectorAll(`.${cls("board")} [aria-live]`)];
   }

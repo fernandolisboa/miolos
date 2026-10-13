@@ -457,7 +457,7 @@ describe("the free hints (T-WEB-S28a)", () => {
   });
 });
 
-describe("the hint names its step and lights the cells it reasons about (T-WEB-S544)", () => {
+describe("the hint names its step and lights the cells it reasons about (T-WEB-S553)", () => {
   const step = HINT_STEPS[0]!;
 
   function tinted(container: HTMLElement): number[] {

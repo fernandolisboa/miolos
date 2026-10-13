@@ -1,6 +1,7 @@
 import {
   dailySudokuResponseSchema,
   FREE_HINTS_PER_PUZZLE,
+  HINTS_PER_PUZZLE_CEILING,
   type DailySudokuResponse,
 } from "@miolos/core";
 import {
@@ -468,7 +469,7 @@ describe("use-hint", () => {
   });
 });
 
-describe("use-hint records the reason and the spotlight (T-WEB-S541)", () => {
+describe("use-hint records the reason and the spotlight (T-WEB-S550)", () => {
   const initial = initSudokuPlayState(daily());
 
   it("reveals the next logical step, spends a free hint and lights its cells", () => {
@@ -503,7 +504,7 @@ describe("use-hint records the reason and the spotlight (T-WEB-S541)", () => {
   });
 });
 
-describe("the spotlight lasts until the next board action, the reason until the next hint (T-WEB-S542)", () => {
+describe("the spotlight lasts until the next board action, the reason until the next hint (T-WEB-S551)", () => {
   const FIRST_GIVEN = PUZZLE.givens.findIndex((cell) => cell !== 0);
   const STEP_INDEX = nextSudokuStep(PUZZLE.givens)?.index;
   const STILL_EMPTY = PUZZLE.givens.findIndex(
@@ -557,6 +558,29 @@ describe("the spotlight lasts until the next board action, the reason until the 
     expect(sudokuPlayReducer(at, { type: "clear-cell" })).toBe(at);
   });
 
+  it("reset drops the reason and the spotlight and keeps the hint spent", () => {
+    const before = play(hinted(FIRST_GIVEN), {
+      type: "select",
+      index: STILL_EMPTY,
+    });
+    const written = sudokuPlayReducer(
+      { ...before, hint: { ...before.hint, spotlight: [0] } },
+      { type: "enter-digit", digit: 1 },
+    );
+
+    const reset = sudokuPlayReducer(
+      { ...written, hint: { ...written.hint, spotlight: [0] } },
+      { type: "reset" },
+    );
+
+    expect(reset.hint).toEqual({
+      used: 1,
+      lastIndex: null,
+      reason: null,
+      spotlight: [],
+    });
+  });
+
   it("restore drops the reason and the spotlight", () => {
     const restored = sudokuPlayReducer(hinted(FIRST_GIVEN), {
       type: "restore",
@@ -569,19 +593,11 @@ describe("the spotlight lasts until the next board action, the reason until the 
   });
 });
 
-describe("three free hints per puzzle (T-WEB-S511a)", () => {
+describe("the reducer's hints stop at the ceiling (T-WEB-S511a)", () => {
   const initial = initSudokuPlayState(daily());
 
   function hint(state: SudokuPlayState): SudokuPlayState {
     return sudokuPlayReducer(state, { type: "use-hint", solution: SOLUTION });
-  }
-
-  function hintTimes(state: SudokuPlayState, times: number): SudokuPlayState {
-    let current = state;
-    for (let press = 0; press < times; press += 1) {
-      current = hint(current);
-    }
-    return current;
   }
 
   it("reveals a solution digit on each free press", () => {
@@ -596,21 +612,15 @@ describe("three free hints per puzzle (T-WEB-S511a)", () => {
     }
   });
 
-  it("returns the same state on the press after the last free hint", () => {
-    const spent = hintTimes(initial, FREE_HINTS_PER_PUZZLE);
-
-    expect(hint(spent)).toBe(spent);
-  });
-
-  it("leaves exactly one hint after a restore with two spent", () => {
+  it("leaves exactly one hint after a restore one short of the ceiling, and the press after it is inert", () => {
     const restored = sudokuPlayReducer(initial, {
       type: "restore",
-      record: record({ hintsUsed: 2 }),
+      record: record({ hintsUsed: HINTS_PER_PUZZLE_CEILING - 1 }),
       now: 1,
     });
     const last = hint(restored);
 
-    expect(last.hint.used).toBe(3);
+    expect(last.hint.used).toBe(HINTS_PER_PUZZLE_CEILING);
     expect(hint(last)).toBe(last);
   });
 });

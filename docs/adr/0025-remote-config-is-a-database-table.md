@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-07-31
 **Amended by:** [ADR-0097](./0097-admins-are-an-env-allow-list-and-edit-remote-config-through-the-api.md) (#304) — an admin writes the table one key at a time through `apps/api`, and an invalid value now falls back to its own key's default, not the whole config; an admin's browser now sees config values through the API (`apps/web` still never names the table).
+**Amended by:** [ADR-0098](./0098-the-free-hint-allowance-is-a-remote-config-key-under-a-wire-ceiling.md) (#304) — one config value, `freeHintsPerPuzzle`, reaches client-serving code through `GET /hints`; the web still never reads the table.
 
 ## Context
 
