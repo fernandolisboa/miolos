@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S163` | `S162` | never used |
 | `T-DB` | `S125` | `S124` | `T-DB-21` |
 | `T-API` | `S283` | `S282` | `T-API-16` |
-| `T-WEB` | `S488` | `S487` | `T-WEB-23` |
+| `T-WEB` | `S498` | `S497` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#302 (the Sudoku selection's reach) spent **`T-WEB-S495…S497`**: `S495` (`sharesUnit` and `selectionHighlights`), `S496` (the board's highlight classes, unchanged names, the conflict and hint rings kept) and `S497` (the tint and fill contrast in both themes, and the caret's order on a filled copy). `S488…S494` were left to the branches running beside it the same day (#295, #298, #299, #301, #304); whatever none of them spent is burned.
 
 #280 (Google sign-in, ADR-0089) spent `T-CORE-S160…S162`, `T-DB-S120…S124`, `T-API-S260…S282` (but not `S270`) and `T-WEB-S470…S475` without moving this table; #285 reconciled it. The gaps it skipped (`T-CORE-S139…S159`, `T-DB-S102…S119`, `T-API-S246…S259`, `T-WEB-S460…S469`) and `T-API-S270` are **burned**, never reused.
 
