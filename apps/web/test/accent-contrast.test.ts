@@ -323,6 +323,18 @@ describe("the Sudoku selection's reach keeps every digit readable (T-WEB-S497)",
     );
   });
 
+  it("paints the fill and the tint over a given's and an entered digit's own look, by coming after them", () => {
+    for (const highlight of [".cellUnit {", ".cellSameDigit {"]) {
+      for (const tone of [".cellGiven {", ".cellEntered {"]) {
+        expect(css.indexOf(tone), tone).toBeGreaterThan(-1);
+        expect(
+          css.indexOf(highlight),
+          `${highlight} after ${tone}`,
+        ).toBeGreaterThan(css.indexOf(tone));
+      }
+    }
+  });
+
   it("clears >= 4.5:1 for a given and an entered digit on the tint, and for a copy on its fill, in both themes", () => {
     for (const [theme, tools] of [
       ["light", LIGHT],

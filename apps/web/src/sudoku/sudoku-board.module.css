@@ -181,9 +181,10 @@
 
 /* ── the selection's reach ───────────────────────────────────────────── */
 
-/* Never on a violating or hinted cell, so neither ring is ever covered. The
-   unit tint is an overlay image, so a given keeps its paper tint beneath it;
-   in dark, plain --accent text drops under 4.5:1 on it, hence the -text token. */
+/* Violating and hinted cells keep their own look; the fill would erase the
+   hint's accent border. The tint is an overlay image, so a given keeps its
+   paper tint beneath it; in dark, plain --accent text drops under 4.5:1 on
+   it, hence the -text token. These rules must follow .cellGiven/.cellEntered. */
 .cellUnit {
   background-image: linear-gradient(
     color-mix(in srgb, var(--accent) 8%, transparent),
