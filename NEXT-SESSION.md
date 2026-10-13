@@ -4,7 +4,7 @@
 
 ## Start here
 
-The Sudoku hint reveals and explains the next logical step (#296, ADR-0099); `nextSudokuHint` is in `apps/web/src/sudoku/hint.ts`, `nextSudokuStep` in `packages/games/src/sudoku/grade.ts`.
+Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0100). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer; `useHintKind` is gone. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
 
 **`/admin` shipped** (#304, ADR-0097, ADR-0098): an admin edits each `remote_config` key within its schema bounds, no deploy. Admins are the user ids in `ADMIN_USER_IDS` on `apps/api`. `getRemoteConfig` now falls back per key. #304 is closed.
 
@@ -38,6 +38,6 @@ The Sudoku hint reveals and explains the next logical step (#296, ADR-0099); `ne
 
 **Next:** file per-game time buckets as an issue.
 
-**Then:** #297: the same for the other grid games.
+**Then:** #300 (per-game settings, "Mostrar erros") and #303 (better use of space), which touch every game.
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and `/admin/config`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.
