@@ -179,6 +179,29 @@
   box-shadow: inset 0 0 0 1.5px var(--accent-app);
 }
 
+/* ── the selection's reach ───────────────────────────────────────────── */
+
+/* Violating and hinted cells keep their own look; the fill would erase the
+   hint's accent border. The tint is an overlay image, so a given keeps its
+   paper tint beneath it; in dark, plain --accent text drops under 4.5:1 on
+   it, hence the -text token. These rules must follow .cellGiven/.cellEntered. */
+.cellUnit {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--accent) 8%, transparent),
+    color-mix(in srgb, var(--accent) 8%, transparent)
+  );
+}
+
+.cellEntered.cellUnit {
+  color: var(--accent-sudoku-text);
+}
+
+.cellSameDigit {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink-on-accent);
+}
+
 /* ── the caret ───────────────────────────────────────────────────────── */
 
 /* ONE declaration block for the selection AND the focus ring, so ADR-0030's
@@ -196,6 +219,13 @@
 .cell:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -3px;
+}
+
+/* After the caret block: `.cell:focus-visible` has the same specificity, so
+   order is what keeps the caret visible on the accent fill. */
+.cellSameDigit.cellSelected,
+.cellSameDigit:focus-visible {
+  outline-color: var(--ink-on-accent);
 }
 
 /* The pre-hydration placeholder cell (finding

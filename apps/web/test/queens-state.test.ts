@@ -75,7 +75,7 @@ describe("the Rainhas reducer (T-WEB-S451)", () => {
     expect(thrice.entries[3]).toBeNull();
   });
 
-  it("(T-WEB-S497) places a queen on a right press and removes it on the next, leaving left and tap on the cycle", () => {
+  it("(T-WEB-S507) places a queen on a right press and removes it on the next, leaving left and tap on the cycle", () => {
     const right: QueensPlayAction = { type: "tap", index: 3, press: "right" };
     const placed = run(hydrated(DAILY), right);
     expect(placed.entries[3]).toBe(1);

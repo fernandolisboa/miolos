@@ -117,7 +117,7 @@ describe("tap — the cell state machine (D7)", () => {
   });
 });
 
-describe("a mouse press writes a value (T-WEB-S496)", () => {
+describe("a mouse press writes a value (T-WEB-S506)", () => {
   it("left writes 1 and right writes 0 in cycle mode, and the same press again clears", () => {
     const start = initPlayState(daily());
 
@@ -160,7 +160,7 @@ describe("a mouse press writes a value (T-WEB-S496)", () => {
   });
 });
 
-describe("stroke-start and paint-over — the drag path (T-WEB-S496a)", () => {
+describe("stroke-start and paint-over — the drag path (T-WEB-S506a)", () => {
   function stroke(
     state: PlayState,
     kind: Press,

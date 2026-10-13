@@ -234,7 +234,7 @@ describe("a right press writes the opposite mark (T-WEB-S494)", () => {
   });
 });
 
-describe("a stroke (T-WEB-S495)", () => {
+describe("a stroke (T-WEB-S505)", () => {
   it("is a plain SET, so a stroke crossing a cell twice leaves it painted", () => {
     const started = play(MONDAY_STATE, {
       type: "stroke-start",
