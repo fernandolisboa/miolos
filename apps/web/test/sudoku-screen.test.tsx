@@ -17,7 +17,7 @@ import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { formatElapsed, messages } from "../src/i18n";
 import { playRecordKey, type SudokuPlayRecord } from "../src/play/play-record";
 import sharedStyles from "../src/play/screen.module.css";
-import { solutionDigits, track } from "../src/sudoku/engine";
+import { sharesUnit, solutionDigits, track } from "../src/sudoku/engine";
 import type { SudokuDigit } from "../src/sudoku/state";
 import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
@@ -436,6 +436,89 @@ describe("the one free hint (T-WEB-S28a)", () => {
     );
 
     expect(caretIndex(container)).toBe(FIRST_EMPTY);
+  });
+});
+
+describe("the selection's reach on the board (T-WEB-S496)", () => {
+  function cellsWith(container: HTMLElement, local: string): number[] {
+    return [...container.querySelectorAll<HTMLElement>("[data-cell-index]")]
+      .filter((cell) => cell.classList.contains(className(local)))
+      .map((cell) => Number(cell.dataset.cellIndex));
+  }
+
+  function labels(container: HTMLElement): (string | null)[] {
+    return [...container.querySelectorAll("[data-cell-index]")].map((cell) =>
+      cell.getAttribute("aria-label"),
+    );
+  }
+
+  const ROW_GIVEN = PUZZLE.givens.findIndex(
+    (cell, index) =>
+      cell !== 0 && Math.floor(index / SIDE) === Math.floor(FIRST_EMPTY / SIDE),
+  );
+
+  it("tints the empty cell's row, column and box, and names nothing differently", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const before = labels(container);
+
+    fireEvent.click(cellAt(container, FIRST_EMPTY));
+
+    const unit = Array.from(
+      { length: TOTAL_CELLS },
+      (_unused, index) => index,
+    ).filter((index) => sharesUnit(index, FIRST_EMPTY));
+    expect(cellsWith(container, "cellUnit")).toEqual(unit);
+    expect(cellsWith(container, "cellSameDigit")).toEqual([]);
+    expect(labels(container)).toEqual(before);
+  });
+
+  it("marks every copy of a selected given's digit, stronger than the tint", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const digit = PUZZLE.givens[ROW_GIVEN];
+
+    fireEvent.click(cellAt(container, ROW_GIVEN));
+
+    const copies = PUZZLE.givens.flatMap((cell, index) =>
+      cell === digit ? [index] : [],
+    );
+    expect(copies.length).toBeGreaterThan(1);
+    expect(cellsWith(container, "cellSameDigit")).toEqual(copies);
+    for (const index of cellsWith(container, "cellUnit")) {
+      expect(PUZZLE.givens[index]).not.toBe(digit);
+    }
+  });
+
+  it("never covers the conflict ring or the hint ring", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const digit = String(PUZZLE.givens[ROW_GIVEN]);
+
+    type(container, FIRST_EMPTY, digit);
+    fireEvent.click(cellAt(container, ROW_GIVEN));
+
+    const conflicting = cellAt(container, FIRST_EMPTY);
+    expect(conflicting.classList).toContain(className("cellViolating"));
+    expect(conflicting.classList).not.toContain(className("cellSameDigit"));
+    expect(conflicting.classList).not.toContain(className("cellUnit"));
+
+    type(container, FIRST_EMPTY, "Backspace");
+    fireEvent.click(
+      screen.getByText(messages.games.sudoku.play.hint.available),
+    );
+    const hinted = container.querySelector<HTMLElement>(
+      `.${className("cellHinted")}`,
+    );
+    if (hinted === null) {
+      throw new Error("the hint revealed no cell");
+    }
+    for (const selected of [ROW_GIVEN, Number(hinted.dataset.cellIndex)]) {
+      fireEvent.click(cellAt(container, selected));
+      if (!sharesUnit(selected, Number(hinted.dataset.cellIndex))) {
+        throw new Error("the fixture's hint is not in the row given's units");
+      }
+      expect(hinted.classList).toContain(className("cellHinted"));
+      expect(hinted.classList).not.toContain(className("cellUnit"));
+      expect(hinted.classList).not.toContain(className("cellSameDigit"));
+    }
   });
 });
 

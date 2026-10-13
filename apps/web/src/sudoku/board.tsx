@@ -3,7 +3,12 @@ import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
 
 import { messages } from "../i18n";
 import { isShortcut, keyMove } from "../play/grid-selection";
-import { track } from "./engine";
+import {
+  mergedGrid,
+  selectionHighlights,
+  track,
+  type CellHighlight,
+} from "./engine";
 import type { SudokuCellValue, SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
 
@@ -36,6 +41,7 @@ export function Board({
   const boardRef = useRef<HTMLDivElement>(null);
 
   const tabbable = selected ?? 0;
+  const highlights = selectionHighlights(mergedGrid(givens, entries), selected);
 
   useLayoutEffect(() => {
     const board = boardRef.current;
@@ -107,6 +113,7 @@ export function Board({
               entered: given === EMPTY && value !== null,
               hinted: hintIndex === index,
               invalid,
+              highlight: highlights.get(index) ?? null,
               selected: selected === index,
             })}
             style={cellPlacement(row, column)}
@@ -161,18 +168,41 @@ function cellClassName(state: {
   readonly entered: boolean;
   readonly hinted: boolean;
   readonly invalid: boolean;
+  readonly highlight: CellHighlight | null;
   readonly selected: boolean;
 }): string {
-  const chromatic = state.invalid
-    ? ` ${styles.cellViolating}`
+  const tone = state.invalid
+    ? [styles.cellViolating]
     : state.hinted
-      ? ` ${styles.cellHinted}`
-      : state.entered
-        ? ` ${styles.cellEntered}`
-        : state.given
-          ? ` ${styles.cellGiven}`
-          : "";
-  return `${styles.cell}${chromatic}${state.selected ? ` ${styles.cellSelected}` : ""}`;
+      ? [styles.cellHinted]
+      : [
+          state.entered
+            ? styles.cellEntered
+            : state.given
+              ? styles.cellGiven
+              : undefined,
+          highlightClassName(state.highlight),
+        ];
+  return [
+    styles.cell,
+    ...tone,
+    state.selected ? styles.cellSelected : undefined,
+  ]
+    .filter((name) => name !== undefined)
+    .join(" ");
+}
+
+function highlightClassName(
+  highlight: CellHighlight | null,
+): string | undefined {
+  switch (highlight) {
+    case "unit":
+      return styles.cellUnit;
+    case "same-digit":
+      return styles.cellSameDigit;
+    case null:
+      return undefined;
+  }
 }
 
 function cellAria(

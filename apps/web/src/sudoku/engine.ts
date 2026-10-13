@@ -6,6 +6,12 @@ const EMPTY = 0;
 
 const CELLS = 81;
 
+const SIDE = 9;
+
+const BOX = 3;
+
+export type CellHighlight = "unit" | "same-digit";
+
 export const track = (index: number): number =>
   index + 1 + (index >= 3 ? 1 : 0) + (index >= 6 ? 1 : 0);
 
@@ -16,6 +22,36 @@ export function mergedGrid(
   return givens.map((given, index) =>
     given !== EMPTY ? given : (entries[index] ?? EMPTY),
   );
+}
+
+export function sharesUnit(a: number, b: number): boolean {
+  const [rowA, columnA] = [Math.floor(a / SIDE), a % SIDE];
+  const [rowB, columnB] = [Math.floor(b / SIDE), b % SIDE];
+  return (
+    rowA === rowB ||
+    columnA === columnB ||
+    (Math.floor(rowA / BOX) === Math.floor(rowB / BOX) &&
+      Math.floor(columnA / BOX) === Math.floor(columnB / BOX))
+  );
+}
+
+export function selectionHighlights(
+  grid: SudokuGrid,
+  selected: number | null,
+): ReadonlyMap<number, CellHighlight> {
+  const highlights = new Map<number, CellHighlight>();
+  if (selected === null) {
+    return highlights;
+  }
+  const digit = grid[selected] ?? EMPTY;
+  for (const [index, cell] of grid.entries()) {
+    if (digit !== EMPTY && cell === digit) {
+      highlights.set(index, "same-digit");
+    } else if (sharesUnit(index, selected)) {
+      highlights.set(index, "unit");
+    }
+  }
+  return highlights;
 }
 
 export function isPlayable(givens: SudokuGrid, index: number): boolean {
