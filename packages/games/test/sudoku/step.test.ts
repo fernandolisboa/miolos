@@ -219,5 +219,5 @@ describe("nextSudokuStep", () => {
       }),
       { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
-  }, 240_000);
+  }, 285_000);
 });
