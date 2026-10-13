@@ -3,7 +3,6 @@ import {
   type DailyCrosswordResponse,
 } from "@miolos/core";
 
-import type { PlainHintReason } from "../play/grid-hint";
 import { movedSelection } from "../play/grid-selection";
 import { hasHintLeft } from "../play/hint-allowance";
 import { idleHint, spentHint } from "../play/hint-state";
@@ -22,7 +21,7 @@ import {
   type CrosswordClue,
   type CrosswordDirection,
 } from "./grid";
-import { nextCrosswordHint } from "./hint";
+import { nextCrosswordHint, type CrosswordHintReason } from "./hint";
 
 export type { CrosswordDirection } from "./grid";
 
@@ -35,7 +34,7 @@ export interface CrosswordPlayState extends PlayCore {
   readonly entries: readonly CrosswordCellValue[];
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
-  readonly hint: HintState<PlainHintReason>;
+  readonly hint: HintState<CrosswordHintReason>;
 
   readonly status: "playing" | "solved";
 }
@@ -143,7 +142,13 @@ export function crosswordPlayReducer(
       if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
-      const hint = nextCrosswordHint(state.solution, state.entries);
+      const hint = nextCrosswordHint(
+        state.solution,
+        state.clues,
+        state.entries,
+        state.selected,
+        state.direction,
+      );
       if (hint === null) {
         return state;
       }

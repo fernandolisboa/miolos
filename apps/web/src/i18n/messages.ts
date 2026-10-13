@@ -976,7 +976,14 @@ export const messages = {
         hint: {
           explain: {
             correction: "Corrigimos uma letra errada.",
-            fill: "Preenchemos uma célula para você.",
+            fill: "Não achamos uma pista aberta, então preenchemos uma letra para você.",
+            step: (
+              clue: string,
+              crossing: string | null,
+              row: number,
+              column: number,
+            ) =>
+              `Uma letra da pista ${clue}${crossing === null ? "" : `, que também ajuda na ${crossing}`}: linha ${row}, coluna ${column}.`,
           },
         },
 

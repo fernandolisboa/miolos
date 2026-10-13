@@ -198,14 +198,17 @@ const LEADING_BLOCK: DailyCrosswordResponse =
   });
 
 describe("hint, skipping a block (T-WEB-S437)", () => {
-  it("steps over a leading block and fills the first white cell", () => {
+  it("steps over a leading block and fills a letter of the first open pista", () => {
     render(<CrosswordScreen daily={LEADING_BLOCK} />);
     fireEvent.click(
       screen.getByRole("button", {
         name: messages.play.hint.available(FREE_HINTS_PER_PUZZLE),
       }),
     );
-    expect(cellAt(1).getAttribute("aria-label")).toBe(copy.cellAria(1, 2, "a"));
+    expect(cellAt(2).getAttribute("aria-label")).toBe(copy.cellAria(1, 3, "t"));
+    expect(cellAt(1).getAttribute("aria-label")).toBe(
+      copy.cellAria(1, 2, null),
+    );
     expect(cellAt(0).textContent).toBe("");
     expect(cellAt(0).getAttribute("aria-label")).toBe(copy.blockAria);
   });
@@ -361,5 +364,27 @@ describe("daily rendering (T-WEB-S439)", () => {
     );
     render(<CrosswordScreen daily={DAILY} />);
     expect(screen.queryByRole("group", { name: copy.boardAria })).toBeNull();
+  });
+});
+
+describe("the hint names its pista (T-WEB-S574)", () => {
+  it("writes a letter of the selected pista and reads out which, keeping the selection", () => {
+    const { container } = render(<CrosswordScreen daily={DAILY} />);
+    tap(cellAt(7));
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      "",
+    );
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(cellAt(2).getAttribute("aria-label")).toBe(copy.cellAria(1, 3, "t"));
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      "Uma letra da pista 2 vertical, que também ajuda na 1 horizontal: linha 1, coluna 3.",
+    );
+    expect(screen.getByRole("status").textContent).toContain(
+      copy.clueLabel(2, "down"),
+    );
   });
 });

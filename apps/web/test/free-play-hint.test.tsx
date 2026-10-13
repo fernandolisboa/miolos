@@ -11,6 +11,10 @@ import { CrosswordFreeScreen } from "../src/free-play/crossword-free-screen";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { useFreeCrossword } from "../src/free-play/use-free-crossword";
+import {
+  crosswordHintExplanation,
+  nextCrosswordHint,
+} from "../src/crossword/hint";
 import { messages } from "../src/i18n";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
 import { sudokuHintExplanation } from "../src/sudoku/hint";
@@ -137,7 +141,7 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
 });
 
 describe("the free crossword's free hints (T-WEB-S122a)", () => {
-  it("reveals the first white cell's letter, and the press after the last does nothing", () => {
+  it("reveals a letter of the first open pista, and the press after the last does nothing", () => {
     vi.stubGlobal("fetch", vi.fn());
     const deps = stableDeps(SEED);
     const { result } = renderHook(() => useFreeCrossword(deps));
@@ -145,8 +149,16 @@ describe("the free crossword's free hints (T-WEB-S122a)", () => {
     if (phase.kind !== "ready") {
       throw new Error("the crossword did not generate");
     }
-    const cells = phase.puzzle.daily.grid.flat();
-    const first = cells.findIndex((cell) => cell !== null);
+    const { grid, clues } = phase.puzzle.daily;
+    const cells = grid.flat();
+    const first =
+      nextCrosswordHint(
+        cells,
+        clues,
+        cells.map(() => null),
+        null,
+        "across",
+      )?.index ?? -1;
     const copy = messages.games.crossword.play;
     const aria = (letter: string | null) =>
       copy.cellAria(Math.floor(first / 5) + 1, (first % 5) + 1, letter);
@@ -172,5 +184,37 @@ describe("the free crossword's free hints (T-WEB-S122a)", () => {
     const spent = labels();
     fireEvent.click(exhaustedHint());
     expect(labels()).toEqual(spent);
+  });
+});
+
+describe("the free crossword's hint names its pista (T-WEB-S574)", () => {
+  it("reads out the sentence for the pista it wrote a letter in", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const deps = stableDeps(SEED);
+    const { result } = renderHook(() => useFreeCrossword(deps));
+    const { phase } = result.current;
+    if (phase.kind !== "ready") {
+      throw new Error("the crossword did not generate");
+    }
+    const { grid, clues } = phase.puzzle.daily;
+    const hint = nextCrosswordHint(
+      grid.flat(),
+      clues,
+      grid.flat().map(() => null),
+      null,
+      "across",
+    );
+    const { container } = render(
+      <CrosswordFreeScreen deps={stableDeps(SEED)} />,
+    );
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(hint?.reason.kind).toBe("step");
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      crosswordHintExplanation(hint?.reason ?? null),
+    );
   });
 });
