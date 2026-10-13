@@ -10,7 +10,7 @@ After #296 only Sudoku's hint taught anything. The other games still filled the 
 
 ## Decision
 
-1. **One order for every grid game:** `nextLogicalHint` in `apps/web/src/play/grid-hint.ts` corrects a wrong entry first; else takes the engine's step if its value equals the solution's; else falls back to today's reveal (the first empty cell; in Nonogram and Rainhas the first empty picture cell or queen) with a sentence saying no simple step was found.
+1. **One order for every grid game:** `nextLogicalHint` in `apps/web/src/play/grid-hint.ts` corrects a wrong entry first; else takes the engine's step if its value equals the solution's; else falls back to the first empty cell (the first empty picture cell or queen in Nonogram and Rainhas) with a sentence saying no simple step was found.
 2. **One scan, two callers per engine,** as ADR-0099 decision 1: `applyTier1`/`applyTier2` hand each deduction to a visitor (`propagate` places, `nextBinairoStep` stops at the first); `nextQueensStep` and `gradeQueens` share the ladder in `queens/ladder.ts` (its own module, so the daily route ships the step without the grader); `nextNonogramStep` calls `solveLine`. Generation and grading output are pinned and unchanged.
 3. **Binairo runs the duplicate-line scan before the lookahead.** The lookahead otherwise finds every such cell first, so its rule was never named. Rules 1–4 are sound and monotone, so the fixpoint and every grade are unchanged.
 4. **Nonogram prefers a fill;** a cross only when no single line fixes a fill. Only fills complete the picture. A cross is still a one-line deduction the player writes down, while reaching a fill through several lines would need a sentence naming them all.
@@ -22,7 +22,7 @@ After #296 only Sudoku's hint taught anything. The other games still filled the 
 
 - Each tap costs one step: at most about 1.4 ms (Rainhas, 9×9), 0.3 ms (Nonogram, 15×15) and 0.2 ms (Binairo) on desktop Node.
 - Generation output is unchanged. Binairo generation time is unchanged; Rainhas generation is faster, because `loneOpenCell` finds a unit's single in one pass.
-- The three step properties run at full count on every pull request (ADR-0059 decision 4).
+- The Binairo step property joins the pull-request split (ADR-0059 decision 4): 4235 ms on the gate at 25 runs. The Nonogram and Rainhas step properties run at full count on every pull request.
 - Binairo's lookahead has no witness cells, so its sentence names only the cell.
 
 ## Rejected

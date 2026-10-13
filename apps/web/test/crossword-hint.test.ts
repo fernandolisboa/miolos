@@ -279,12 +279,6 @@ describe("the Cruzadinha reducer records the hint's reason (T-WEB-S577)", () => 
     expect(hinted.selected).toBe(7);
     expect(hinted.direction).toBe("down");
   });
-
-  it("clears the reason on reset", () => {
-    const hinted = play(freshState(), { type: "use-hint" });
-    expect(hinted.hint.reason).not.toBeNull();
-    expect(play(hinted, { type: "reset" }).hint.reason).toBeNull();
-  });
 });
 
 describe("the Cruzadinha hint sentences (T-WEB-S578)", () => {

@@ -216,21 +216,24 @@ describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
   });
 
   it("clears it on a write that changes nothing", () => {
-    const written = {
+    const painting = {
       ...lit,
       entries: lit.entries.map((entry, index) => (index === 0 ? 1 : entry)),
-    };
-    expect(
-      nonogramPlayReducer(written, { type: "enter-value", value: 1 }).hint
-        .spotlight,
-    ).toEqual([]);
+      stroke: { value: 1, clears: false },
+    } as const;
+    const repainted = nonogramPlayReducer(painting, {
+      type: "paint-over",
+      index: 0,
+    });
+    expect(repainted.entries).toEqual(painting.entries);
+    expect(repainted.hint.spotlight).toEqual([]);
 
     const binairo = { ...initPlayState(BINAIRO_DAILY), hint: LIT };
     const given = BINAIRO.givens.findIndex((cell) => cell !== null);
-    const painting = playReducer(binairo, { type: "set-mode", value: 1 });
+    const brushed = playReducer(binairo, { type: "set-mode", value: 1 });
     for (const [state, action] of [
       [binairo, { type: "tap", index: given, press: "tap" }],
-      [painting, { type: "stroke-start", index: given, press: "tap" }],
+      [brushed, { type: "stroke-start", index: given, press: "tap" }],
     ] as const) {
       expect(playReducer(state, action).hint.spotlight).toEqual([]);
     }

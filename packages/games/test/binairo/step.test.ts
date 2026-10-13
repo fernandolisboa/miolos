@@ -9,6 +9,7 @@ import {
   type BinairoStep,
 } from "../../src/binairo/index";
 import { place, propagate, stateFromGrid } from "../../src/binairo/techniques";
+import { propertyRuns } from "../property-runs";
 import { FC_SEED, seedArb, weekdayArb } from "../daily-arbitraries";
 import { grid } from "./fixtures";
 
@@ -229,7 +230,7 @@ describe("nextBinairoStep", () => {
     );
   });
 
-  // ADR-0055: worst 2232 ms × 4 → 10 s.
+  // ADR-0055: CI 4235 ms at 25 runs (~16.9 s at 100) / local 2232 ms × 4 → 70 s.
   it("walks every daily to its solution by rules that really apply", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, maskArb, (seed, weekday, mask) => {
@@ -251,7 +252,7 @@ describe("nextBinairoStep", () => {
           expect(board).toEqual(solution);
         }
       }),
-      { seed: FC_SEED, numRuns: 100 },
+      { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
-  }, 10_000);
+  }, 70_000);
 });

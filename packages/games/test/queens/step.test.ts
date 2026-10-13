@@ -283,7 +283,7 @@ describe("nextQueensStep", () => {
     expect(nextQueensStep(puzzle, bare)).toEqual(nextQueensStep(puzzle, bare));
   });
 
-  // ADR-0055: worst 2440 ms × 4 → 10 s.
+  // ADR-0055: CI 3026 ms / local 2440 ms × 4 → 15 s.
   it("walks every daily to its solution one honest queen at a time, bare and from correct partial boards", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, revealArb, (seed, weekday, reveal) => {
@@ -301,5 +301,5 @@ describe("nextQueensStep", () => {
       }),
       { seed: FC_SEED, numRuns: 100 },
     );
-  }, 10_000);
+  }, 15_000);
 });
