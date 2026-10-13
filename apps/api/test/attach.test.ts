@@ -735,32 +735,40 @@ describe("POST /attach/confirm — attach, single use, expiry (plan 031 §7)", (
     expect(await ctx.db.select().from(completions)).toHaveLength(1);
   });
 
-  it("T-API-S322: a merging confirm deletes the requester's sessions inside the merge — its old cookie never resolves to the holder, not even before the revocation", async () => {
-    const holder = await createSession(OLDER);
-    await ctx.db
-      .update(users)
-      .set({ email: EMAIL, emailVerifiedAt: sql`now()` })
-      .where(sql`id = ${holder.userId}`);
-    const requester = await createSession(NEWER);
-    const raw = await requestMagicLink(requester.token);
+  it.each([
+    ["the first merge", 0],
+    ["the liveness retry", 1],
+  ])(
+    "T-API-S322: a merging confirm deletes the requester's sessions inside %s — its old cookie never resolves to the holder, not even before the revocation",
+    async (_label, failures) => {
+      const holder = await createSession(OLDER);
+      await ctx.db
+        .update(users)
+        .set({ email: EMAIL, emailVerifiedAt: sql`now()` })
+        .where(sql`id = ${holder.userId}`);
+      const requester = await createSession(NEWER);
+      const raw = await requestMagicLink(requester.token);
+      mergeControl.failuresRemaining = failures;
 
-    const resolvedRightAfterMerge: (string | undefined)[] = [];
-    mergeControl.afterMerge = async () => {
-      resolvedRightAfterMerge.push(
-        await requireUserId(ctx.db, requester.token),
+      const resolvedRightAfterMerge: (string | undefined)[] = [];
+      mergeControl.afterMerge = async () => {
+        resolvedRightAfterMerge.push(
+          await requireUserId(ctx.db, requester.token),
+        );
+      };
+
+      const response = await postConfirm(raw);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ merged: true });
+
+      expect(mergeControl.calls).toBe(failures + 1);
+      expect(resolvedRightAfterMerge).toEqual([undefined]);
+      expect(await requireUserId(ctx.db, requester.token)).toBeUndefined();
+      expect(await requireUserId(ctx.db, cookieTokenOf(response))).toBe(
+        holder.userId,
       );
-    };
-
-    const response = await postConfirm(raw);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ merged: true });
-
-    expect(resolvedRightAfterMerge).toEqual([undefined]);
-    expect(await requireUserId(ctx.db, requester.token)).toBeUndefined();
-    expect(await requireUserId(ctx.db, cookieTokenOf(response))).toBe(
-      holder.userId,
-    );
-  });
+    },
+  );
 
   it("T-API-S79a: the stale-intent guard runs BEFORE any merge — a live E2 token whose email has a verified holder is 409 with ZERO merge, holder untouched, no tombstone", async () => {
     const today = await todaySaoPaulo(ctx.db);
