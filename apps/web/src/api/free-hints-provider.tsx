@@ -27,9 +27,7 @@ export function FetchedFreeHints({
   readonly children: ReactNode;
 }): ReactElement {
   const fetched = useMountFetch(fetchHintAllowance);
-  const allowance =
-    fetched === undefined
-      ? null
-      : (fetched?.freeHintsPerPuzzle ?? FREE_HINTS_PER_PUZZLE);
+  const settled = fetched?.freeHintsPerPuzzle ?? FREE_HINTS_PER_PUZZLE;
+  const allowance = fetched === undefined ? null : settled;
   return <FreeHintsContext value={allowance}>{children}</FreeHintsContext>;
 }

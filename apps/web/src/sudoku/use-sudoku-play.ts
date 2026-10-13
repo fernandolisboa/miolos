@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 
-import { hasHintLeft, useFreeHintsPerPuzzle } from "../play/free-hints";
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
@@ -22,6 +22,7 @@ import {
   solvedDigits,
 } from "./engine";
 import {
+  canHint,
   initSudokuPlayState,
   sudokuPlayReducer,
   type SudokuDigit,
@@ -66,7 +67,7 @@ export function useSudokuPlay(
     stateRef.current = state;
   });
 
-  const { givens, entries, timer, status } = state;
+  const { givens, entries, timer } = state;
   const hintsUsed = state.hint.used;
   const elapsed = elapsedMs(timer, state.now);
 
@@ -107,10 +108,7 @@ export function useSudokuPlay(
       return;
     }
     const current = stateRef.current;
-    if (
-      !hasHintLeft(current.hint.used, allowance) ||
-      current.status !== "playing"
-    ) {
+    if (!canHint(current, allowance)) {
       return;
     }
 
@@ -130,10 +128,7 @@ export function useSudokuPlay(
     state,
     elapsed,
     filled,
-    hintReady:
-      solution !== null &&
-      hasHintLeft(hintsUsed, allowance) &&
-      status === "playing",
+    hintReady: solution !== null && canHint(state, allowance),
     hintKind,
     selectCell,
     moveSelection,

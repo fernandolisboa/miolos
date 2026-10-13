@@ -8,7 +8,3 @@ export const FreeHintsContext = createContext<number | null>(
 export function useFreeHintsPerPuzzle(): number | null {
   return useContext(FreeHintsContext);
 }
-
-export function hasHintLeft(used: number, allowance: number | null): boolean {
-  return allowance !== null && used < allowance;
-}

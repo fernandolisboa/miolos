@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { messages } from "../src/i18n";
-import { hintedScreen } from "./free-hints";
+import { hintedScreen } from "./hinted-screen";
 
 const DATE = "2026-08-01";
 

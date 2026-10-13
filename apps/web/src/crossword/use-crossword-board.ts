@@ -9,11 +9,12 @@ import {
   type Dispatch,
 } from "react";
 
-import { hasHintLeft, useFreeHintsPerPuzzle } from "../play/free-hints";
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countAnswered, hintGivens } from "./grid";
 import {
+  canHint,
   crosswordPlayReducer,
   initCrosswordPlayState,
   type CrosswordDirection,
@@ -59,7 +60,7 @@ export function useCrosswordBoard(
     stateRef.current = state;
   });
 
-  const { solution, entries, status } = state;
+  const { solution, entries } = state;
 
   const total = useMemo(
     () => solution.filter((cell) => cell !== null).length,
@@ -96,10 +97,7 @@ export function useCrosswordBoard(
 
   const revealHint = useCallback(() => {
     const current = stateRef.current;
-    if (
-      !hasHintLeft(current.hint.used, allowance) ||
-      current.status === "solved"
-    ) {
+    if (!canHint(current, allowance)) {
       return;
     }
     const hint = nextHint(
@@ -119,7 +117,7 @@ export function useCrosswordBoard(
     dispatch,
     filled,
     total,
-    hintReady: hasHintLeft(state.hint.used, allowance) && status === "playing",
+    hintReady: canHint(state, allowance),
     hintKind,
     selectCell,
     selectEntry,

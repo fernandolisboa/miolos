@@ -1,9 +1,9 @@
 import { HINTS_PER_PUZZLE_CEILING } from "@miolos/core";
 
 import { toggled } from "./brush";
-import { hasHintLeft } from "./free-hints";
 import { nextBinaryHint } from "./grid-hint";
 import { movedSelection } from "./grid-selection";
+import { hasHintLeft } from "./hint-allowance";
 import type {
   NonogramPlayRecord,
   PlayRecord,

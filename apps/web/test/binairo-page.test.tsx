@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { messages } from "../src/i18n";
-import { hintedScreen } from "./free-hints";
+import { hintedScreen } from "./hinted-screen";
 
 const PUZZLE = generateBinairo({ seed: 20_260_730, weekday: 3 });
 

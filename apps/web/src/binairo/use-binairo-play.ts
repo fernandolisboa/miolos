@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import { hasHintLeft, useFreeHintsPerPuzzle } from "../play/free-hints";
+import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
@@ -17,6 +17,7 @@ import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import {
+  canHint,
   initPlayState,
   isSolvedGrid,
   playReducer,
@@ -57,7 +58,7 @@ export function useBinairoPlay(
     stateRef.current = state;
   });
 
-  const { givens, entries, timer, status } = state;
+  const { givens, entries, timer } = state;
   const hintsUsed = state.hint.used;
   const elapsed = elapsedMs(timer, state.now);
   const filled = countFilled(givens, entries);
@@ -80,10 +81,7 @@ export function useBinairoPlay(
       return;
     }
     const current = stateRef.current;
-    if (
-      !hasHintLeft(current.hint.used, allowance) ||
-      current.status === "solved"
-    ) {
+    if (!canHint(current, allowance)) {
       return;
     }
 
@@ -100,10 +98,7 @@ export function useBinairoPlay(
     state,
     elapsed,
     filled,
-    hintReady:
-      solution !== null &&
-      hasHintLeft(hintsUsed, allowance) &&
-      status === "playing",
+    hintReady: solution !== null && canHint(state, allowance),
     hintKind,
     revealHint,
   };

@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FetchedFreeHints } from "../src/api/free-hints-provider";
 import { useBinairoPlay } from "../src/binairo/use-binairo-play";
 import { useCrosswordPlay } from "../src/crossword/use-crossword-play";
+import { solutionMarks } from "../src/nonogram/engine";
 import { useNonogramPlay } from "../src/nonogram/use-nonogram-play";
 import {
   FreeHintsContext,
@@ -27,7 +28,6 @@ import {
   playRecordKey,
   playRecordSchema,
   type PlayRecord,
-  type SudokuPlayRecord,
 } from "../src/play/play-record";
 import type { HintState } from "../src/play/types";
 import { useQueensPlay } from "../src/queens/use-queens-play";
@@ -60,12 +60,14 @@ const SUDOKU: DailySudokuResponse = dailySudokuResponseSchema.parse({
   givens: SUDOKU_PUZZLE.givens,
   tier: SUDOKU_PUZZLE.tier,
 });
+const SUDOKU_SOLUTION = solutionDigits(SUDOKU_PUZZLE.givens) ?? [];
 
+const BINAIRO_PUZZLE = generateBinairo({ seed: 20_260_801, weekday: 6 });
 const BINAIRO: DailyBinairoResponse = {
   game: "binairo",
   date: DATE,
   size: 8,
-  givens: [...generateBinairo({ seed: 20_260_801, weekday: 6 }).givens],
+  givens: [...BINAIRO_PUZZLE.givens],
 };
 
 const NONOGRAM_PUZZLE = generateNonogram(20_260_801, 6);
@@ -75,6 +77,7 @@ const NONOGRAM = dailyNonogramResponseSchema.parse({
   size: NONOGRAM_PUZZLE.size,
   clues: NONOGRAM_PUZZLE.clues,
 });
+const NONOGRAM_SOLUTION = solutionMarks(NONOGRAM.clues) ?? [];
 
 const QUEENS_PUZZLE = generateQueens({ seed: 20_260_801, weekday: 6 });
 const QUEENS = dailyQueensResponseSchema.parse({
@@ -113,32 +116,176 @@ const CROSSWORD = dailyCrosswordResponseSchema.parse({
     },
   ],
 });
+const CROSSWORD_LETTERS = CROSSWORD.grid.flat();
+
+const HEADER = {
+  v: 1,
+  date: DATE,
+  elapsedMs: 60_000,
+  concluded: false,
+  pendingSync: false,
+  syncOutcome: "pending",
+} as const;
+
+function lastIndexWhere<T>(cells: readonly T[], keep: (cell: T) => boolean) {
+  return cells.findLastIndex(keep);
+}
+
+function value<T>(cell: T | undefined): T {
+  if (cell === undefined) {
+    throw new Error("the fixture's solution covers every cell");
+  }
+  return cell;
+}
+
+const SUDOKU_LAST = lastIndexWhere(
+  SUDOKU_PUZZLE.givens,
+  (given) => given === 0,
+);
+const BINAIRO_LAST = lastIndexWhere(BINAIRO.givens, (given) => given === null);
+const NONOGRAM_LAST = lastIndexWhere(NONOGRAM_SOLUTION, (mark) => mark === 1);
+const QUEENS_LAST = lastIndexWhere(
+  QUEENS_PUZZLE.solution,
+  (mark) => mark === 1,
+);
+const CROSSWORD_LAST = lastIndexWhere(
+  CROSSWORD_LETTERS,
+  (letter) => letter !== null,
+);
 
 interface HintedPlay {
-  readonly state: { readonly hint: HintState };
+  readonly state: { readonly hint: HintState; readonly hydrated: boolean };
   readonly hintReady: boolean;
   readonly revealHint: () => void;
+  readonly finish: () => void;
 }
 
-const HOOKS: readonly {
+interface Case {
   readonly game: PlayRecord["game"];
   readonly useHook: () => HintedPlay;
-}[] = [
-  { game: "sudoku", useHook: () => useSudokuPlay(SUDOKU) },
-  { game: "binairo", useHook: () => useBinairoPlay(BINAIRO) },
-  { game: "nonogram", useHook: () => useNonogramPlay(NONOGRAM) },
-  { game: "queens", useHook: () => useQueensPlay(QUEENS) },
-  { game: "crossword", useHook: () => useCrosswordPlay(CROSSWORD) },
-];
-
-function allowanceOf(value: number | null) {
-  return function Allowance({ children }: { children: ReactNode }) {
-    return <FreeHintsContext value={value}>{children}</FreeHintsContext>;
-  };
+  readonly oneMoveFromSolved: (hintsUsed: number) => PlayRecord;
 }
 
-function Fetched({ children }: { children: ReactNode }) {
-  return <FetchedFreeHints>{children}</FetchedFreeHints>;
+const HOOKS: readonly Case[] = [
+  {
+    game: "sudoku",
+    useHook: () => {
+      const play = useSudokuPlay(SUDOKU);
+      return {
+        ...play,
+        finish: () => {
+          play.selectCell(SUDOKU_LAST);
+          play.enterDigit(value(SUDOKU_SOLUTION[SUDOKU_LAST]));
+        },
+      };
+    },
+    oneMoveFromSolved: (hintsUsed) => ({
+      ...HEADER,
+      hintsUsed,
+      game: "sudoku",
+      entries: SUDOKU_PUZZLE.givens.map((given, index) =>
+        given === 0 && index !== SUDOKU_LAST
+          ? value(SUDOKU_SOLUTION[index])
+          : null,
+      ),
+    }),
+  },
+  {
+    game: "binairo",
+    useHook: () => {
+      const play = useBinairoPlay(BINAIRO);
+      return {
+        ...play,
+        finish: () => {
+          play.toggleMode(value(BINAIRO_PUZZLE.solution[BINAIRO_LAST]));
+          play.tapCell(BINAIRO_LAST, "tap");
+        },
+      };
+    },
+    oneMoveFromSolved: (hintsUsed) => ({
+      ...HEADER,
+      hintsUsed,
+      game: "binairo",
+      entries: BINAIRO.givens.map((given, index) =>
+        given === null && index !== BINAIRO_LAST
+          ? value(BINAIRO_PUZZLE.solution[index])
+          : null,
+      ),
+    }),
+  },
+  {
+    game: "nonogram",
+    useHook: () => {
+      const play = useNonogramPlay(NONOGRAM);
+      return {
+        ...play,
+        finish: () => {
+          play.selectCell(NONOGRAM_LAST);
+          play.enterValue(1);
+        },
+      };
+    },
+    oneMoveFromSolved: (hintsUsed) => ({
+      ...HEADER,
+      hintsUsed,
+      game: "nonogram",
+      size: NONOGRAM.size,
+      entries: NONOGRAM_SOLUTION.map((mark, index) =>
+        index === NONOGRAM_LAST ? null : mark,
+      ),
+    }),
+  },
+  {
+    game: "queens",
+    useHook: () => {
+      const play = useQueensPlay(QUEENS);
+      return {
+        ...play,
+        finish: () => {
+          play.selectCell(QUEENS_LAST);
+          play.enterValue(1);
+        },
+      };
+    },
+    oneMoveFromSolved: (hintsUsed) => ({
+      ...HEADER,
+      hintsUsed,
+      game: "queens",
+      size: QUEENS.size,
+      entries: QUEENS_PUZZLE.solution.map((mark, index) =>
+        index === QUEENS_LAST ? null : mark,
+      ),
+    }),
+  },
+  {
+    game: "crossword",
+    useHook: () => {
+      const play = useCrosswordPlay(CROSSWORD);
+      return {
+        ...play,
+        finish: () => {
+          play.selectCell(CROSSWORD_LAST);
+          play.typeLetter(
+            value(CROSSWORD_LETTERS[CROSSWORD_LAST] ?? undefined),
+          );
+        },
+      };
+    },
+    oneMoveFromSolved: (hintsUsed) => ({
+      ...HEADER,
+      hintsUsed,
+      game: "crossword",
+      entries: CROSSWORD_LETTERS.map((letter, index) =>
+        index === CROSSWORD_LAST ? null : letter,
+      ),
+    }),
+  },
+];
+
+function allowanceOf(allowance: number | null) {
+  return function Allowance({ children }: { children: ReactNode }) {
+    return <FreeHintsContext value={allowance}>{children}</FreeHintsContext>;
+  };
 }
 
 function storedRecord(game: PlayRecord["game"]): PlayRecord {
@@ -151,6 +298,28 @@ function storedRecord(game: PlayRecord["game"]): PlayRecord {
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
+}
+
+function stubFetch(answer: () => Promise<Response>) {
+  const fetchMock = vi.fn(answer);
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+function deferredFetch() {
+  let resolve: (response: Response) => void = () => undefined;
+  const fetchMock = stubFetch(
+    () =>
+      new Promise<Response>((settle) => {
+        resolve = settle;
+      }),
+  );
+  return {
+    fetchMock,
+    answer: (body: unknown) => {
+      resolve(jsonResponse(200, body));
+    },
+  };
 }
 
 function hydrate(): void {
@@ -200,74 +369,41 @@ describe("each daily hook offers the served allowance (T-WEB-S539)", () => {
 });
 
 describe("a record past a lowered allowance still plays and completes (T-WEB-S540)", () => {
-  it("restores three hints under an allowance of two, offers none, and the completion carries three", () => {
-    vi.useFakeTimers();
-    const solution = solutionDigits(SUDOKU_PUZZLE.givens);
-    if (solution === null) {
-      throw new Error("a published daily is uniquely solvable by construction");
-    }
-    const open = SUDOKU_PUZZLE.givens.flatMap((given, index) =>
-      given === 0 ? [index] : [],
-    );
-    const last = open.at(-1) ?? -1;
-    const record: SudokuPlayRecord = {
-      v: 1,
-      game: "sudoku",
-      date: DATE,
-      entries: SUDOKU_PUZZLE.givens.map((given, index) =>
-        given === 0 && index !== last ? (solution[index] ?? null) : null,
-      ),
-      elapsedMs: 60_000,
-      hintsUsed: 3,
-      concluded: false,
-      pendingSync: false,
-      syncOutcome: "pending",
-    };
-    window.localStorage.setItem(
-      playRecordKey("sudoku", DATE),
-      JSON.stringify(record),
-    );
+  it.each(HOOKS)(
+    "$game: restores three hints under an allowance of two, offers none, and the completion carries three",
+    ({ game, useHook, oneMoveFromSolved }) => {
+      vi.useFakeTimers();
+      window.localStorage.setItem(
+        playRecordKey(game, DATE),
+        JSON.stringify(oneMoveFromSolved(3)),
+      );
 
-    const { result } = renderHook(() => useSudokuPlay(SUDOKU), {
-      wrapper: allowanceOf(2),
-    });
-    hydrate();
+      const { result } = renderHook(useHook, { wrapper: allowanceOf(2) });
+      hydrate();
 
-    expect(result.current.state.hydrated).toBe(true);
-    expect(result.current.state.hint.used).toBe(3);
-    expect(result.current.hintReady).toBe(false);
-    reveal(result, 1);
-    expect(result.current.state.hint.used).toBe(3);
+      expect(result.current.state.hint.used).toBe(3);
+      expect(result.current.hintReady).toBe(false);
+      reveal(result, 1);
+      expect(result.current.state.hint.used).toBe(3);
 
-    const digit = solution[last];
-    if (digit === undefined) {
-      throw new Error("the last open cell has a solution digit");
-    }
-    act(() => {
-      result.current.selectCell(last);
-    });
-    act(() => {
-      result.current.enterDigit(digit);
-    });
+      act(() => {
+        result.current.finish();
+      });
 
-    expect(sync.flushPendingCompletions).toHaveBeenCalledWith(
-      expect.objectContaining({ concluded: true, hintsUsed: 3 }),
-    );
-  });
+      expect(sync.flushPendingCompletions).toHaveBeenCalledWith(
+        expect.objectContaining({ game, concluded: true, hintsUsed: 3 }),
+      );
+    },
+  );
 });
 
 describe("the fetched allowance: loading, then the served value (T-WEB-S541)", () => {
   it("is null while /hints is in flight and the served value after", async () => {
-    let answer: (response: Response) => void = () => undefined;
-    const fetchMock = vi.fn(
-      () =>
-        new Promise<Response>((resolve) => {
-          answer = resolve;
-        }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const { fetchMock, answer } = deferredFetch();
 
-    const { result } = renderHook(useFreeHintsPerPuzzle, { wrapper: Fetched });
+    const { result } = renderHook(useFreeHintsPerPuzzle, {
+      wrapper: FetchedFreeHints,
+    });
     expect(result.current).toBeNull();
 
     await waitFor(() => {
@@ -276,44 +412,36 @@ describe("the fetched allowance: loading, then the served value (T-WEB-S541)", (
     expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/hints`, {
       credentials: "include",
     });
-    answer(jsonResponse(200, { freeHintsPerPuzzle: 5 }));
+    answer({ freeHintsPerPuzzle: 5 });
 
     await waitFor(() => {
       expect(result.current).toBe(5);
     });
   });
 
-  it("a hook mounted while loading offers no hint, then reveals up to the loaded value", async () => {
-    let answer: (response: Response) => void = () => undefined;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        () =>
-          new Promise<Response>((resolve) => {
-            answer = resolve;
-          }),
-      ),
-    );
+  it.each(HOOKS)(
+    "$game: mounted while loading it offers no hint, then reveals up to the loaded value",
+    async ({ useHook }) => {
+      const { answer } = deferredFetch();
 
-    const { result } = renderHook(() => useSudokuPlay(SUDOKU), {
-      wrapper: Fetched,
-    });
-    await waitFor(() => {
-      expect(result.current.state.hydrated).toBe(true);
-    });
-    expect(result.current.hintReady).toBe(false);
-    reveal(result, 1);
-    expect(result.current.state.hint.used).toBe(0);
+      const { result } = renderHook(useHook, { wrapper: FetchedFreeHints });
+      await waitFor(() => {
+        expect(result.current.state.hydrated).toBe(true);
+      });
+      expect(result.current.hintReady).toBe(false);
+      reveal(result, 1);
+      expect(result.current.state.hint.used).toBe(0);
 
-    answer(jsonResponse(200, { freeHintsPerPuzzle: 5 }));
-    await waitFor(() => {
-      expect(result.current.hintReady).toBe(true);
-    });
-    reveal(result, 6);
+      answer({ freeHintsPerPuzzle: 5 });
+      await waitFor(() => {
+        expect(result.current.hintReady).toBe(true);
+      });
+      reveal(result, 6);
 
-    expect(result.current.state.hint.used).toBe(5);
-    expect(result.current.hintReady).toBe(false);
-  });
+      expect(result.current.state.hint.used).toBe(5);
+      expect(result.current.hintReady).toBe(false);
+    },
+  );
 });
 
 describe("a failed allowance read falls back to the default (T-WEB-S542)", () => {
@@ -323,53 +451,33 @@ describe("a failed allowance read falls back to the default (T-WEB-S542)", () =>
   }[] = [
     {
       name: "a network error",
-      arrange: () => {
-        vi.stubGlobal(
-          "fetch",
-          vi.fn(() => Promise.reject(new TypeError("down"))),
-        );
-      },
+      arrange: () => stubFetch(() => Promise.reject(new TypeError("down"))),
     },
     {
       name: "a 500",
-      arrange: () => {
-        vi.stubGlobal(
-          "fetch",
-          vi.fn(() =>
-            Promise.resolve(jsonResponse(500, { error: "internal" })),
-          ),
-        );
-      },
+      arrange: () =>
+        stubFetch(() =>
+          Promise.resolve(jsonResponse(500, { error: "internal" })),
+        ),
     },
     {
       name: "a 404 from an api without the route",
-      arrange: () => {
-        vi.stubGlobal(
-          "fetch",
-          vi.fn(() => Promise.resolve(new Response("", { status: 404 }))),
-        );
-      },
+      arrange: () =>
+        stubFetch(() => Promise.resolve(new Response("", { status: 404 }))),
     },
     {
       name: "a body outside the contract",
-      arrange: () => {
-        vi.stubGlobal(
-          "fetch",
-          vi.fn(() =>
-            Promise.resolve(jsonResponse(200, { freeHintsPerPuzzle: 10 })),
-          ),
-        );
-      },
+      arrange: () =>
+        stubFetch(() =>
+          Promise.resolve(jsonResponse(200, { freeHintsPerPuzzle: 10 })),
+        ),
     },
     {
       name: "a failed mint",
       arrange: () => {
         bootstrap.ensureSession.mockRejectedValue(new Error("mint"));
-        vi.stubGlobal(
-          "fetch",
-          vi.fn(() =>
-            Promise.resolve(jsonResponse(200, { freeHintsPerPuzzle: 5 })),
-          ),
+        stubFetch(() =>
+          Promise.resolve(jsonResponse(200, { freeHintsPerPuzzle: 5 })),
         );
       },
     },
@@ -384,7 +492,7 @@ describe("a failed allowance read falls back to the default (T-WEB-S542)", () =>
           allowance: useFreeHintsPerPuzzle(),
           play: useSudokuPlay(SUDOKU),
         }),
-        { wrapper: Fetched },
+        { wrapper: FetchedFreeHints },
       );
 
       await waitFor(() => {

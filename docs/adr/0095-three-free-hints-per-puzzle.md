@@ -1,7 +1,7 @@
 # ADR-0095 — Three free hints per puzzle
 
 **Status:** Accepted — 2026-10-13 (issue #295)
-**Superseded in part by:** [ADR-0098](./0098-the-free-hint-allowance-is-a-remote-config-key-under-a-wire-ceiling.md) (#304) — decision 1 and the "A configurable limit now" rejection: the allowance is the `freeHintsPerPuzzle` remote config key, and `HINTS_PER_PUZZLE_CEILING` is the wire bound.
+**Superseded in part by:** [ADR-0098](./0098-the-free-hint-allowance-is-a-remote-config-key-under-a-wire-ceiling.md) (#304) — decision 1 and the "A configurable limit now" rejection: the allowance is the `freeHintsPerPuzzle` remote config key, and `HINTS_PER_PUZZLE_CEILING` is the wire bound; and decision 2's "Free play gets the same three": free play keeps `FREE_HINTS_PER_PUZZLE` while the daily may differ. The rest of decision 2 stands.
 **Depends on:** [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md)
 **Supersedes in part:** [ADR-0027](./0027-the-hint-is-computed-on-the-client.md) decision 2; [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decision 5
 **Amends:** the `.max(1)` bound named in ADR-0045 decision 2 and ADR-0065 decision 2; both rules (one bound for every game, read and write caps together) stand

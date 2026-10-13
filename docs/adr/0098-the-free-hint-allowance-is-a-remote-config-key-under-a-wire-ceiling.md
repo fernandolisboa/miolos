@@ -1,8 +1,8 @@
 # ADR-0098 — The free hint allowance is a remote config key served by `GET /hints`, under a wire ceiling
 
 **Status:** Accepted — 2026-10-13 (issue #304)
-**Depends on:** [ADR-0025](./0025-remote-config-is-a-database-table.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md), [ADR-0097](./0097-admins-are-an-env-allow-list-and-edit-remote-config-through-the-api.md)
-**Supersedes in part:** [ADR-0095](./0095-three-free-hints-per-puzzle.md) decision 1 and its "A configurable limit now" rejection
+**Depends on:** [ADR-0025](./0025-remote-config-is-a-database-table.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md), [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md), [ADR-0097](./0097-admins-are-an-env-allow-list-and-edit-remote-config-through-the-api.md)
+**Supersedes in part:** [ADR-0095](./0095-three-free-hints-per-puzzle.md) decision 1, its "A configurable limit now" rejection, and decision 2's "Free play gets the same three" (free play keeps `FREE_HINTS_PER_PUZZLE`; the daily may differ)
 **Amends:** [ADR-0025](./0025-remote-config-is-a-database-table.md) — client-serving code now reads one config value, through `GET /hints`
 
 ## Context
@@ -14,7 +14,7 @@ Fernando wants to tune how many free hints a daily or archive puzzle offers from
 1. **`freeHintsPerPuzzle` is a `remoteConfigSchema` key**, an integer from 1 to `HINTS_PER_PUZZLE_CEILING` (9), defaulting to `FREE_HINTS_PER_PUZZLE` (3). It appears on `/admin` like every other key.
 2. **`HINTS_PER_PUZZLE_CEILING` is the only wire number.** `hintsUsedSchema` (`packages/core/src/completion.ts`) bounds every completion member, the `/day` claim and `recordHeaderShape` with it, and the reducers stop there. The server enforces only the ceiling: hints are computed on the client (ADR-0027), and lowering the value must never reject a completion already played.
 3. **`GET /hints` (`apps/api/app/hints/route.ts`) answers `hintAllowanceResponseSchema`**, its own strict contract (ADR-0048 decision 3), as a credentialed `no-store` read with no session.
-4. **Only the ten hinted daily and archive pages fetch it**, through `FetchedFreeHints` (`apps/web/src/api/free-hints-provider.tsx`). The play hooks and the chrome read `useFreeHintsPerPuzzle()` (`apps/web/src/play/free-hints.tsx`): `null` while loading (no hint offered, the label counts from 3), 3 on any failure. Free play has no provider and reads the default, so the free-play wall stays closed (ADR-0078).
+4. **Only the ten hinted daily and archive pages fetch it**, through `FetchedFreeHints` (`apps/web/src/api/free-hints-provider.tsx`). The play hooks and the chrome read `useFreeHintsPerPuzzle()` (`apps/web/src/play/free-hints.ts`): `null` while loading (no hint offered, the label counts from 3), 3 on any failure. Free play has no provider and reads the default, so the free-play wall stays closed (ADR-0078).
 
 ## Consequences
 
@@ -22,6 +22,7 @@ Fernando wants to tune how many free hints a daily or archive puzzle offers from
 - **Rollback floor:** set the key to 3 or less and wait for the São Paulo rollover before rolling either app back. Even then, an old web reads a local record with more than 3 hints as no record on any date, archive included, and an open tab on the old bundle fails to parse a `/day` claim with more than 3 hints from another device.
 - An open tab keeps the value it loaded. Each hinted view costs one small query.
 - `FreeHintsContext` is the first React context in `apps/web`.
+- Activating ADR-0006's dormant hint grant would need `HINTS_PER_PUZZLE_CEILING` raised above the allowance's maximum first, read and write caps together (ADR-0065 decision 2).
 
 ## Rejected
 
