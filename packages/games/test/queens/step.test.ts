@@ -1,7 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { WEEKDAYS } from "../../src/index";
 import {
   generateQueens,
   nextQueensStep,
@@ -11,14 +10,11 @@ import {
   type QueensStep,
   type QueensUnit,
 } from "../../src/queens/index";
-import { propertyRuns } from "../property-runs";
+import { FC_SEED, seedArb, weekdayArb } from "../daily-arbitraries";
 import { board, entries } from "./fixtures";
 
 type Entries = readonly (0 | 1 | null)[];
 
-const FC_SEED = 297_297;
-const seedArb = fc.integer({ min: 0, max: 0xffffffff });
-const weekdayArb = fc.constantFrom(...WEEKDAYS);
 const revealArb = fc.array(fc.nat({ max: 3 }), {
   minLength: 81,
   maxLength: 81,
@@ -287,7 +283,7 @@ describe("nextQueensStep", () => {
     expect(nextQueensStep(puzzle, bare)).toEqual(nextQueensStep(puzzle, bare));
   });
 
-  // ADR-0055: worst contended local 2440 ms (MIOLOS_FULL_PROPERTIES) × 4, next 5_000 → 10_000.
+  // ADR-0055: worst 2440 ms × 4 → 10 s.
   it("walks every daily to its solution one honest queen at a time, bare and from correct partial boards", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, revealArb, (seed, weekday, reveal) => {
@@ -303,7 +299,7 @@ describe("nextQueensStep", () => {
           ),
         );
       }),
-      { seed: FC_SEED, numRuns: propertyRuns(100) },
+      { seed: FC_SEED, numRuns: 100 },
     );
   }, 10_000);
 });

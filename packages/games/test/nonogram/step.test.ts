@@ -9,12 +9,8 @@ import {
   type NonogramClues,
   type NonogramStep,
 } from "../../src/nonogram/index";
-import { WEEKDAYS } from "../../src/weekday";
-import { propertyRuns } from "../property-runs";
+import { FC_SEED, seedArb, weekdayArb } from "../daily-arbitraries";
 
-const FC_SEED = 297_297;
-const seedArb = fc.integer({ min: 0, max: 0xffffffff });
-const weekdayArb = fc.constantFrom(...WEEKDAYS);
 const densityArb = fc.integer({ min: 0, max: 100 });
 const maskArb = fc.array(fc.integer({ min: 0, max: 99 }), {
   minLength: 225,
@@ -222,7 +218,7 @@ describe("nextNonogramStep", () => {
           }
         },
       ),
-      { seed: FC_SEED, numRuns: propertyRuns(200) },
+      { seed: FC_SEED, numRuns: 200 },
     );
   });
 });

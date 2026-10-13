@@ -9,15 +9,11 @@ import {
   type BinairoStep,
 } from "../../src/binairo/index";
 import { place, propagate, stateFromGrid } from "../../src/binairo/techniques";
-import { WEEKDAYS } from "../../src/index";
-import { propertyRuns } from "../property-runs";
+import { FC_SEED, seedArb, weekdayArb } from "../daily-arbitraries";
 import { grid } from "./fixtures";
 
-const FC_SEED = 297_297;
 const N = 8;
 const HALF = N / 2;
-const seedArb = fc.integer({ min: 0, max: 0xffffffff });
-const weekdayArb = fc.constantFrom(...WEEKDAYS);
 const maskArb = fc.array(fc.boolean(), { minLength: N * N, maxLength: N * N });
 
 function lineCells({ kind, index }: BinairoLine): number[] {
@@ -233,6 +229,7 @@ describe("nextBinairoStep", () => {
     );
   });
 
+  // ADR-0055: worst 2232 ms × 4 → 10 s.
   it("walks every daily to its solution by rules that really apply", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, maskArb, (seed, weekday, mask) => {
@@ -254,7 +251,7 @@ describe("nextBinairoStep", () => {
           expect(board).toEqual(solution);
         }
       }),
-      { seed: FC_SEED, numRuns: propertyRuns(100) },
+      { seed: FC_SEED, numRuns: 100 },
     );
   }, 10_000);
 });
