@@ -37,7 +37,7 @@
 
 ### §3 Make your two emails superusers — issue #314
 
-- **Do:** open the private SQL page for #314. In the Neon SQL editor, on the **Miolos** database (never Refogando), paste the whole script and run it once. It creates the `admin_users` table (migration `0016_fat_famine`) and adds your two emails as superusers. Then say "rodei" on #314 or in the session.
+- **Do:** open the private SQL page for #314 (https://claude.ai/artifact/8JGWb4it1HYifK95zDxZWT, only you can open it). In the Neon SQL editor, on the **Miolos** database (never Refogando), paste the whole script and run it once. It creates the `admin_users` table (migration `0016_fat_famine`) and adds your two emails as superusers. Then say "rodei" on #314 or in the session.
 - **Verify:** `SELECT email, role FROM admin_users ORDER BY email;` shows two rows, both `superuser`. `SELECT has_table_privilege('miolos_web', 'public.admin_users', 'SELECT');` shows `false`. After the merge, `/admin` on an account with one of those emails attached in Ajustes shows *Quem administra*.
 - **Blocks:** the merge of #314's PR; it waits for your "rodei". Running the script early is harmless.
 - **Source:** #314, ADR-0100.
