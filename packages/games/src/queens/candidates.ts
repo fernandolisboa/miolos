@@ -56,23 +56,39 @@ export function isFilled(
   return unit.some((cell) => marks[cell] === QUEEN);
 }
 
+const NO_SINGLE = -1;
+export const NO_CANDIDATE = -2;
+
+export function loneOpenCell(
+  marks: readonly Mark[],
+  unit: readonly number[],
+): number {
+  let lone = NO_CANDIDATE;
+  for (const cell of unit) {
+    const mark = marks[cell];
+    if (mark === QUEEN) {
+      return NO_SINGLE;
+    }
+    if (mark === OPEN) {
+      if (lone >= 0) {
+        return NO_SINGLE;
+      }
+      lone = cell;
+    }
+  }
+  return lone;
+}
+
 export function placeSingles(geometry: Geometry, marks: Mark[]): boolean {
   for (let changed = true; changed;) {
     changed = false;
     for (const unit of geometry.units) {
-      if (isFilled(marks, unit)) {
-        continue;
-      }
-      const open = openCount(marks, unit);
-      if (open === 0) {
+      const cell = loneOpenCell(marks, unit);
+      if (cell === NO_CANDIDATE) {
         return false;
       }
-      if (open === 1) {
-        place(
-          geometry,
-          marks,
-          unit.find((cell) => marks[cell] === OPEN)!,
-        );
+      if (cell >= 0) {
+        place(geometry, marks, cell);
         changed = true;
       }
     }

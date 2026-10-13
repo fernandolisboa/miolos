@@ -19,6 +19,12 @@ export function queens(spec: string): QueensGrid {
   );
 }
 
+export function entries(spec: string): (0 | 1 | null)[] {
+  return rowsOf(spec).flatMap((row) =>
+    [...row].map((ch) => (ch === "Q" ? 1 : ch === "x" ? 0 : null)),
+  );
+}
+
 function permutationIsSolution(
   { size, regions }: QueensBoard,
   columns: readonly number[],

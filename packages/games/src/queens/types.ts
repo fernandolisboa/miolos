@@ -27,6 +27,29 @@ export interface QueensGrade {
   readonly advancedSteps: number;
 }
 
+export type QueensEntry = 0 | 1 | null;
+
+export type QueensElimination =
+  | "regionInRow"
+  | "regionInColumn"
+  | "rowInRegion"
+  | "columnInRegion"
+  | "blocking"
+  | "regionGroupRows"
+  | "regionGroupColumns";
+
+export interface QueensUnit {
+  readonly kind: "row" | "column" | "region";
+  readonly index: number;
+}
+
+export interface QueensStep {
+  readonly index: number;
+  readonly unit: QueensUnit;
+  readonly cells: readonly number[];
+  readonly after: QueensElimination | null;
+}
+
 export type QueensRejectionReason =
   | "malformed"
   | "size-mismatch"

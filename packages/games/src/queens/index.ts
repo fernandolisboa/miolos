@@ -2,17 +2,20 @@ export {
   QUEENS_SIZES,
   QueensGenerationError,
   type QueensBoard,
+  type QueensElimination,
   type QueensGrade,
   type QueensGrid,
   type QueensPuzzle,
   type QueensRejectionReason,
   type QueensSize,
+  type QueensStep,
   type QueensTier,
+  type QueensUnit,
   type QueensValidationResult,
 } from "./types";
 export { findQueensViolations, isValidQueensSolution } from "./rules";
 export { countQueensSolutions, solveQueens } from "./solve";
-export { gradeQueens } from "./grade";
+export { gradeQueens, nextQueensStep } from "./grade";
 export {
   QUEENS_WEEKDAY_CRITERIA,
   validateQueens,
