@@ -8,7 +8,7 @@ import {
   completionResponseSchema,
   crosswordCompletionRequestSchema,
   dayGameStateSchema,
-  FREE_HINTS_PER_PUZZLE,
+  HINTS_PER_PUZZLE_CEILING,
   nonogramCompletionRequestSchema,
   queensCompletionRequestSchema,
   sudokuCompletionRequestSchema,
@@ -112,7 +112,7 @@ describe("hintsUsedSchema", () => {
     validTermo,
   ];
 
-  it("T-CORE-S163: every completion member and a completed /day claim accept 0..FREE_HINTS_PER_PUZZLE hints and nothing else", () => {
+  it("T-CORE-S163: every completion member and a completed /day claim accept 0..HINTS_PER_PUZZLE_CEILING hints and nothing else", () => {
     expect(validBodies.map((body) => body.game).sort()).toEqual(
       completionRequestSchema.options
         .map((member) => member.shape.game.value)
@@ -128,10 +128,10 @@ describe("hintsUsedSchema", () => {
           .success,
     ];
     for (const accepts of parsers) {
-      for (let hints = 0; hints <= FREE_HINTS_PER_PUZZLE; hints += 1) {
+      for (let hints = 0; hints <= HINTS_PER_PUZZLE_CEILING; hints += 1) {
         expect(accepts(hints), String(hints)).toBe(true);
       }
-      for (const bad of [FREE_HINTS_PER_PUZZLE + 1, -1, 1.5]) {
+      for (const bad of [HINTS_PER_PUZZLE_CEILING + 1, -1, 1.5]) {
         expect(accepts(bad), String(bad)).toBe(false);
       }
     }
@@ -304,7 +304,7 @@ describe("termoCompletionRequestSchema", () => {
       { elapsedMs: -1 },
       { elapsedMs: 86_400_001 },
       { elapsedMs: 1.5 },
-      { hintsUsed: FREE_HINTS_PER_PUZZLE + 1 },
+      { hintsUsed: HINTS_PER_PUZZLE_CEILING + 1 },
       { hintsUsed: -1 },
     ]) {
       expect(
@@ -651,7 +651,7 @@ describe("crosswordCompletionRequestSchema", () => {
       withCell(0),
       { ...validCrossword, grid: crosswordGrid.slice(1) },
       { ...validCrossword, grid: [...crosswordGrid, "a"] },
-      { ...validCrossword, hintsUsed: FREE_HINTS_PER_PUZZLE + 1 },
+      { ...validCrossword, hintsUsed: HINTS_PER_PUZZLE_CEILING + 1 },
       { ...validCrossword, date: "2026-02-30" },
       { ...validCrossword, clues: [] },
       { ...validSudoku, game: "crossword" },
@@ -698,7 +698,7 @@ describe("queensCompletionRequestSchema", () => {
       { ...validQueens, grid: queensGrid(6) },
       { ...validQueens, grid: queensGrid(10) },
       { ...validQueens, grid: validQueens.grid.slice(1) },
-      { ...validQueens, hintsUsed: FREE_HINTS_PER_PUZZLE + 1 },
+      { ...validQueens, hintsUsed: HINTS_PER_PUZZLE_CEILING + 1 },
       { ...validQueens, date: "2026-02-30" },
       { ...validQueens, size: 9 },
       { ...validQueens, marks: [] },

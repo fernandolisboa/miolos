@@ -1,4 +1,4 @@
-import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
+import type { DailySudokuResponse } from "@miolos/core";
 import {
   useCallback,
   useEffect,
@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 
+import { hasHintLeft, useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
@@ -58,6 +59,7 @@ export function useSudokuPlay(
     initSudokuPlayState,
   );
   const [hintKind, setHintKind] = useState<SudokuHint["kind"] | null>(null);
+  const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -106,7 +108,7 @@ export function useSudokuPlay(
     }
     const current = stateRef.current;
     if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
+      !hasHintLeft(current.hint.used, allowance) ||
       current.status !== "playing"
     ) {
       return;
@@ -122,7 +124,7 @@ export function useSudokuPlay(
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution });
-  }, [solution]);
+  }, [solution, allowance]);
 
   return {
     state,
@@ -130,7 +132,7 @@ export function useSudokuPlay(
     filled,
     hintReady:
       solution !== null &&
-      hintsUsed < FREE_HINTS_PER_PUZZLE &&
+      hasHintLeft(hintsUsed, allowance) &&
       status === "playing",
     hintKind,
     selectCell,

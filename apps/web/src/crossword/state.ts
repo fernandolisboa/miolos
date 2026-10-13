@@ -1,5 +1,5 @@
 import {
-  FREE_HINTS_PER_PUZZLE,
+  HINTS_PER_PUZZLE_CEILING,
   type DailyCrosswordResponse,
 } from "@miolos/core";
 
@@ -137,7 +137,7 @@ export function crosswordPlayReducer(
 
     case "use-hint": {
       if (
-        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
+        state.hint.used >= HINTS_PER_PUZZLE_CEILING ||
         state.status === "solved"
       ) {
         return state;

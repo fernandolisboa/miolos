@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { messages } from "../src/i18n";
+import { hintedScreen } from "./free-hints";
 
 const DATE = "2026-08-01";
 
@@ -80,7 +81,7 @@ describe("/rainhas (T-WEB-S455)", () => {
     spies.getTodayDaily.mockResolvedValue(DAILY);
     const { play } = await loadPages();
 
-    const element = elementSchema.parse(await play.default());
+    const element = elementSchema.parse(hintedScreen(await play.default()));
     expect(dailyQueensResponseSchema.parse(element.props.daily)).toEqual(DAILY);
     expect(Object.keys(element.props).toSorted()).toEqual(["daily"]);
 
@@ -116,7 +117,9 @@ describe("/arquivo/[data]/rainhas (T-WEB-S455)", () => {
     const { archive } = await loadPages();
 
     const element = elementSchema.parse(
-      await archive.default({ params: Promise.resolve({ data: DATE }) }),
+      hintedScreen(
+        await archive.default({ params: Promise.resolve({ data: DATE }) }),
+      ),
     );
     expect(dailyQueensResponseSchema.parse(element.props.daily)).toEqual(DAILY);
     expect(spies.getArchivedDaily).toHaveBeenCalledWith(

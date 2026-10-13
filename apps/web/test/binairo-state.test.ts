@@ -1,4 +1,8 @@
-import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
+import {
+  FREE_HINTS_PER_PUZZLE,
+  HINTS_PER_PUZZLE_CEILING,
+  type DailyBinairoResponse,
+} from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
@@ -357,7 +361,7 @@ describe("use-hint (§10.3)", () => {
   });
 });
 
-describe("three free hints per puzzle (T-WEB-S511b)", () => {
+describe("the reducer's hints stop at the ceiling (T-WEB-S511b)", () => {
   const initial = initPlayState(daily([...REAL_PUZZLE.givens]));
 
   function hint(state: PlayState): PlayState {
@@ -365,14 +369,6 @@ describe("three free hints per puzzle (T-WEB-S511b)", () => {
       type: "use-hint",
       solution: REAL_PUZZLE.solution,
     });
-  }
-
-  function hintTimes(state: PlayState, times: number): PlayState {
-    let current = state;
-    for (let press = 0; press < times; press += 1) {
-      current = hint(current);
-    }
-    return current;
   }
 
   it("writes a solution value on each free press", () => {
@@ -387,21 +383,15 @@ describe("three free hints per puzzle (T-WEB-S511b)", () => {
     }
   });
 
-  it("returns the same state on the press after the last free hint", () => {
-    const spent = hintTimes(initial, FREE_HINTS_PER_PUZZLE);
-
-    expect(hint(spent)).toBe(spent);
-  });
-
-  it("leaves exactly one hint after a restore with two spent", () => {
+  it("leaves exactly one hint after a restore one short of the ceiling, and the press after it is inert", () => {
     const restored = playReducer(initial, {
       type: "restore",
-      record: record({ hintsUsed: 2 }),
+      record: record({ hintsUsed: HINTS_PER_PUZZLE_CEILING - 1 }),
       now: 1,
     });
     const last = hint(restored);
 
-    expect(last.hint.used).toBe(3);
+    expect(last.hint.used).toBe(HINTS_PER_PUZZLE_CEILING);
     expect(hint(last)).toBe(last);
   });
 });

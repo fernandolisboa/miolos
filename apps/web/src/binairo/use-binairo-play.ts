@@ -1,4 +1,4 @@
-import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
+import type { DailyBinairoResponse } from "@miolos/core";
 import { solveBinairo, type BinairoGrid } from "@miolos/games/binairo";
 import {
   useCallback,
@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { hasHintLeft, useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
@@ -48,6 +49,7 @@ export function useBinairoPlay(
 ): BinairoPlay {
   const [state, dispatch] = useReducer(playReducer, daily, initPlayState);
   const [hintKind, setHintKind] = useState<BinairoHint["kind"] | null>(null);
+  const allowance = useFreeHintsPerPuzzle();
   const controls = useBinairoControls(dispatch);
 
   const stateRef = useRef(state);
@@ -79,7 +81,7 @@ export function useBinairoPlay(
     }
     const current = stateRef.current;
     if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
+      !hasHintLeft(current.hint.used, allowance) ||
       current.status === "solved"
     ) {
       return;
@@ -91,7 +93,7 @@ export function useBinairoPlay(
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution });
-  }, [solution]);
+  }, [solution, allowance]);
 
   return {
     ...controls,
@@ -100,7 +102,7 @@ export function useBinairoPlay(
     filled,
     hintReady:
       solution !== null &&
-      hintsUsed < FREE_HINTS_PER_PUZZLE &&
+      hasHintLeft(hintsUsed, allowance) &&
       status === "playing",
     hintKind,
     revealHint,

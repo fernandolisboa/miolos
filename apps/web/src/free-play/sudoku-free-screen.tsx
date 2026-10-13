@@ -4,6 +4,7 @@ import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { messages } from "../i18n";
+import { hasHintLeft } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
@@ -95,7 +96,8 @@ function SudokuFreeBoard({
 
   const filled = countFilled(playableGivens(state.givens), state.entries);
   const hintReady =
-    state.hint.used < FREE_HINTS_PER_PUZZLE && state.status === "playing";
+    hasHintLeft(state.hint.used, FREE_HINTS_PER_PUZZLE) &&
+    state.status === "playing";
 
   const selectCell = useCallback((index: number) => {
     dispatch({ type: "select", index });
@@ -116,7 +118,7 @@ function SudokuFreeBoard({
   const revealHint = useCallback(() => {
     const current = stateRef.current;
     if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
+      !hasHintLeft(current.hint.used, FREE_HINTS_PER_PUZZLE) ||
       current.status !== "playing"
     ) {
       return;

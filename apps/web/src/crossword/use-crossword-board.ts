@@ -1,7 +1,4 @@
-import {
-  FREE_HINTS_PER_PUZZLE,
-  type DailyCrosswordResponse,
-} from "@miolos/core";
+import type { DailyCrosswordResponse } from "@miolos/core";
 import {
   useCallback,
   useEffect,
@@ -12,6 +9,7 @@ import {
   type Dispatch,
 } from "react";
 
+import { hasHintLeft, useFreeHintsPerPuzzle } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countAnswered, hintGivens } from "./grid";
@@ -54,6 +52,7 @@ export function useCrosswordBoard(
     initCrosswordPlayState,
   );
   const [hintKind, setHintKind] = useState<CrosswordHint["kind"] | null>(null);
+  const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -98,7 +97,7 @@ export function useCrosswordBoard(
   const revealHint = useCallback(() => {
     const current = stateRef.current;
     if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
+      !hasHintLeft(current.hint.used, allowance) ||
       current.status === "solved"
     ) {
       return;
@@ -113,14 +112,14 @@ export function useCrosswordBoard(
     }
     setHintKind(hint.kind);
     dispatch({ type: "use-hint" });
-  }, []);
+  }, [allowance]);
 
   return {
     state,
     dispatch,
     filled,
     total,
-    hintReady: state.hint.used < FREE_HINTS_PER_PUZZLE && status === "playing",
+    hintReady: hasHintLeft(state.hint.used, allowance) && status === "playing",
     hintKind,
     selectCell,
     selectEntry,

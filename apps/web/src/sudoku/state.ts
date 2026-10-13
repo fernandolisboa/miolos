@@ -1,4 +1,7 @@
-import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
+import {
+  HINTS_PER_PUZZLE_CEILING,
+  type DailySudokuResponse,
+} from "@miolos/core";
 import {
   getSudokuConflicts,
   isSudokuSolved,
@@ -114,7 +117,7 @@ export function sudokuPlayReducer(
 
     case "use-hint": {
       if (
-        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
+        state.hint.used >= HINTS_PER_PUZZLE_CEILING ||
         state.status !== "playing"
       ) {
         return state;

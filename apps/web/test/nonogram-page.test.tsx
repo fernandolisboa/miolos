@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { messages } from "../src/i18n";
+import { hintedScreen } from "./free-hints";
 
 const PUZZLE = generateNonogram(20_260_801, 1);
 
@@ -99,7 +100,7 @@ describe("/nonogram (T-WEB-S53a)", () => {
     spies.getTodayDaily.mockResolvedValue(DAILY);
     const { play } = await loadPages();
 
-    const element = elementSchema.parse(await play.default());
+    const element = elementSchema.parse(hintedScreen(await play.default()));
 
     expect(dailyNonogramResponseSchema.parse(element.props.daily)).toEqual(
       DAILY,
@@ -117,7 +118,7 @@ describe("/nonogram (T-WEB-S53a)", () => {
     spies.getTodayDaily.mockResolvedValue(DAILY);
     const { play } = await loadPages();
 
-    const element = elementSchema.parse(await play.default());
+    const element = elementSchema.parse(hintedScreen(await play.default()));
 
     expect(spies.getTodayDaily).toHaveBeenCalledWith(spies.stubDb, "nonogram");
     expect(dailyNonogramResponseSchema.parse(element.props.daily).game).toBe(

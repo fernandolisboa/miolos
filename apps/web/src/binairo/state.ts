@@ -1,4 +1,7 @@
-import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
+import {
+  HINTS_PER_PUZZLE_CEILING,
+  type DailyBinairoResponse,
+} from "@miolos/core";
 import {
   findBinairoViolations,
   isValidBinairoSolution,
@@ -127,7 +130,7 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
 
     case "use-hint": {
       if (
-        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
+        state.hint.used >= HINTS_PER_PUZZLE_CEILING ||
         state.status === "solved"
       ) {
         return state;

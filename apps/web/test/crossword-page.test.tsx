@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { messages } from "../src/i18n";
+import { hintedScreen } from "./free-hints";
 
 const DATE = "2026-08-01";
 
@@ -100,7 +101,7 @@ describe("/cruzadinha (T-WEB-S429)", () => {
     spies.getTodayDaily.mockResolvedValue(DAILY);
     const { play } = await loadPages();
 
-    const element = elementSchema.parse(await play.default());
+    const element = elementSchema.parse(hintedScreen(await play.default()));
     expect(dailyCrosswordResponseSchema.parse(element.props.daily)).toEqual(
       DAILY,
     );
@@ -123,7 +124,9 @@ describe("/arquivo/[data]/cruzadinha (T-WEB-S429)", () => {
     const { archive } = await loadPages();
 
     const element = elementSchema.parse(
-      await archive.default({ params: Promise.resolve({ data: DATE }) }),
+      hintedScreen(
+        await archive.default({ params: Promise.resolve({ data: DATE }) }),
+      ),
     );
     expect(dailyCrosswordResponseSchema.parse(element.props.daily)).toEqual(
       DAILY,

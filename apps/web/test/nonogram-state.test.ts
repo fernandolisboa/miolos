@@ -1,6 +1,7 @@
 import {
   dailyNonogramResponseSchema,
   FREE_HINTS_PER_PUZZLE,
+  HINTS_PER_PUZZLE_CEILING,
   type DailyNonogramResponse,
 } from "@miolos/core";
 import { generateNonogram, type NonogramPuzzle } from "@miolos/games/nonogram";
@@ -736,17 +737,7 @@ describe("restore (T-WEB-S37)", () => {
   });
 });
 
-describe("three free hints per puzzle (T-WEB-S511d)", () => {
-  function hintTimes(
-    state: NonogramPlayState,
-    times: number,
-  ): NonogramPlayState {
-    return play(
-      state,
-      ...Array.from({ length: times }, () => ({ type: "use-hint" }) as const),
-    );
-  }
-
+describe("the reducer's hints stop at the ceiling (T-WEB-S511d)", () => {
   it("writes a solution mark on each free press", () => {
     const solution = solutionOf(MONDAY_STATE);
     let current = MONDAY_STATE;
@@ -760,13 +751,7 @@ describe("three free hints per puzzle (T-WEB-S511d)", () => {
     }
   });
 
-  it("returns the same state on the press after the last free hint", () => {
-    const spent = hintTimes(MONDAY_STATE, FREE_HINTS_PER_PUZZLE);
-
-    expect(play(spent, { type: "use-hint" })).toBe(spent);
-  });
-
-  it("leaves exactly one hint after a restore with two spent", () => {
+  it("leaves exactly one hint after a restore one short of the ceiling, and the press after it is inert", () => {
     const record: NonogramPlayRecord = {
       v: 1,
       game: "nonogram",
@@ -774,7 +759,7 @@ describe("three free hints per puzzle (T-WEB-S511d)", () => {
       size: 5,
       entries: Array.from({ length: 25 }, () => null),
       elapsedMs: 0,
-      hintsUsed: 2,
+      hintsUsed: HINTS_PER_PUZZLE_CEILING - 1,
       concluded: false,
       pendingSync: false,
       syncOutcome: "pending",
@@ -782,7 +767,7 @@ describe("three free hints per puzzle (T-WEB-S511d)", () => {
     const restored = play(MONDAY_STATE, { type: "restore", record, now: 1 });
     const last = play(restored, { type: "use-hint" });
 
-    expect(last.hint.used).toBe(3);
+    expect(last.hint.used).toBe(HINTS_PER_PUZZLE_CEILING);
     expect(play(last, { type: "use-hint" })).toBe(last);
   });
 });

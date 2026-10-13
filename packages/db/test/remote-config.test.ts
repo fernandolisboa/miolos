@@ -36,6 +36,7 @@ describe("getRemoteConfig", () => {
       bufferDepth: 7,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
   });
 
@@ -45,6 +46,7 @@ describe("getRemoteConfig", () => {
       bufferDepth: 3,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
   });
 
@@ -56,6 +58,7 @@ describe("getRemoteConfig", () => {
       bufferDepth: 7,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
   });
 
@@ -67,6 +70,7 @@ describe("getRemoteConfig", () => {
       bufferDepth: 7,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
   });
 
@@ -78,6 +82,7 @@ describe("getRemoteConfig", () => {
       bufferDepth: 7,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
   });
 
@@ -95,6 +100,7 @@ describe("getRemoteConfig", () => {
         bufferDepth: 12,
         attachStreakThreshold: 5,
         pushOptInStreakThreshold: 9,
+        freeHintsPerPuzzle: 3,
       });
     }
     const logged = error.mock.calls.filter((call) =>
@@ -124,6 +130,7 @@ describe("setRemoteConfigValue", () => {
       bufferDepth: 4,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
   });
 });

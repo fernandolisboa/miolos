@@ -145,17 +145,20 @@ describe("remoteConfigSchema.attachStreakThreshold (D10, ADR-0003/ADR-0025)", ()
       bufferDepth: 7,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
     expect(defaultRemoteConfig).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
 
     expect(remoteConfigSchema.parse({ attachStreakThreshold: 3 })).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 3,
       pushOptInStreakThreshold: 3,
+      freeHintsPerPuzzle: 3,
     });
 
     for (const bad of [0, 366, 2.5, "5", null]) {

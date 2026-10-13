@@ -9,6 +9,7 @@ import { Grid } from "../binairo/grid";
 import { initPlayState, playReducer } from "../binairo/state";
 import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
+import { hasHintLeft } from "../play/free-hints";
 import type { Hint } from "../play/grid-hint";
 import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
@@ -97,12 +98,13 @@ function BinairoFreeBoard({
 
   const filled = countFilled(state.givens, state.entries);
   const hintReady =
-    state.hint.used < FREE_HINTS_PER_PUZZLE && state.status === "playing";
+    hasHintLeft(state.hint.used, FREE_HINTS_PER_PUZZLE) &&
+    state.status === "playing";
 
   const revealHint = useCallback(() => {
     const current = stateRef.current;
     if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
+      !hasHintLeft(current.hint.used, FREE_HINTS_PER_PUZZLE) ||
       current.status === "solved"
     ) {
       return;
