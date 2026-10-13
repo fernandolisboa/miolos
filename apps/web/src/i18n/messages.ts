@@ -600,14 +600,17 @@ export const messages = {
   },
   admin: {
     title: "Administração",
-    lead: "Ajustes que valem para todo mundo e entram em vigor sem deploy.",
+    lead: "Valores que valem para todo mundo e entram em vigor sem deploy.",
     config: {
       heading: "Configuração remota",
       unavailable: "Não conseguimos carregar a configuração agora.",
       notAdmin: "Esta página é só para quem administra o Miolos.",
       userIdLabel: "O código da sua conta:",
-      range: (min: number, max: number, fallback: number) =>
-        `De ${min} a ${max} · padrão ${fallback}`,
+      range: (
+        min: number | undefined,
+        max: number | undefined,
+        fallback: number,
+      ) => `De ${min} a ${max} · padrão ${fallback}`,
       save: "Salvar",
       saveAria: (label: string) => `Salvar: ${label}`,
       saved: "Salvo.",

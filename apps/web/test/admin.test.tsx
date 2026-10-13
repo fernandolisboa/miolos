@@ -215,3 +215,38 @@ describe("Salvar is offered only for a changed, valid draft and holds still in f
     expect(field).toBeEnabled();
   });
 });
+
+describe("one save at a time, so an older answer never overwrites a newer one (T-WEB-S507)", () => {
+  it("holds every row while any row's write is pending", async () => {
+    let finish: (response: Response) => void = () => undefined;
+    serve(
+      { userId: USER_ID, config: CONFIG },
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(<AdminConfigSection />);
+    const depth = await input("bufferDepth");
+    const attach = await input("attachStreakThreshold");
+    fireEvent.change(attach, { target: { value: "8" } });
+    fireEvent.change(depth, { target: { value: "10" } });
+
+    fireEvent.click(saveButton("bufferDepth"));
+    await waitFor(() => {
+      expect(saveButton("attachStreakThreshold")).toBeDisabled();
+    });
+    expect(attach).toBeDisabled();
+
+    finish(
+      jsonResponse(200, {
+        userId: USER_ID,
+        config: { ...CONFIG, bufferDepth: 10 },
+      }),
+    );
+    await waitFor(() => {
+      expect(saveButton("attachStreakThreshold")).toBeEnabled();
+    });
+    expect(attach.value).toBe("8");
+  });
+});

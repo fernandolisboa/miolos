@@ -38,6 +38,11 @@ export async function POST(request: NextRequest): Promise<Response> {
       context.body.key,
       context.body.value,
     );
+    console.info("admin config write", {
+      userId: context.userId,
+      key: context.body.key,
+      value: context.body.value,
+    });
     return Response.json(
       adminStateResponseSchema.parse({
         userId: context.userId,

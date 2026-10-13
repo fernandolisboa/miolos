@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { PageTopBar } from "../../src/components/page-top-bar";
 import { messages } from "../../src/i18n";
-import styles from "../ajustes/page.module.css";
+import settings from "../ajustes/page.module.css";
 import { AdminConfigSection } from "./admin-config-section";
 
 export const metadata: Metadata = {
@@ -13,12 +13,12 @@ export const metadata: Metadata = {
 export default function AdminPage() {
   const copy = messages.admin;
   return (
-    <main className={styles.page} data-page="admin">
+    <main className={settings.page} data-page="admin">
       <PageTopBar />
 
-      <div className={styles.titleBlock}>
-        <h1 className={styles.title}>{copy.title}</h1>
-        <p className={styles.lead}>{copy.lead}</p>
+      <div className={settings.titleBlock}>
+        <h1 className={settings.title}>{copy.title}</h1>
+        <p className={settings.lead}>{copy.lead}</p>
       </div>
 
       <AdminConfigSection />

@@ -45,25 +45,8 @@
 }
 
 .save {
-  min-height: var(--touch-target-min);
+  composes: switch from "../ajustes/page.module.css";
   margin-left: auto;
-  padding: var(--space-3) var(--space-5);
-  background: var(--paper-card);
-  color: var(--ink);
-  font: var(--text-button);
-  border: 1.5px solid var(--ink);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.save:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.save:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
 }
 
 .userId {

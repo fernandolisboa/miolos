@@ -23,15 +23,20 @@ const copy = messages.admin;
 function ConfigRow({
   configKey,
   value,
+  busy,
+  setBusy,
   onSaved,
 }: {
   configKey: RemoteConfigKey;
   value: number;
+  busy: boolean;
+  setBusy: (busy: boolean) => void;
   onSaved: (state: AdminStateResponse) => void;
 }) {
   const field = remoteConfigField(configKey);
+  const min = field.minValue ?? undefined;
+  const max = field.maxValue ?? undefined;
   const [draft, setDraft] = useState<string>();
-  const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<"saved" | "failed">();
   const shown = draft ?? String(value);
   const parsed = field.safeParse(shown === "" ? Number.NaN : Number(shown));
@@ -60,8 +65,8 @@ function ConfigRow({
           className={styles.input}
           type="number"
           inputMode="numeric"
-          min={field.minValue ?? undefined}
-          max={field.maxValue ?? undefined}
+          min={min}
+          max={max}
           step={1}
           value={shown}
           disabled={busy}
@@ -71,11 +76,7 @@ function ConfigRow({
           }}
         />
         <span className={styles.range}>
-          {copy.config.range(
-            field.minValue ?? Number.NaN,
-            field.maxValue ?? Number.NaN,
-            defaultRemoteConfig[configKey],
-          )}
+          {copy.config.range(min, max, defaultRemoteConfig[configKey])}
         </span>
         <button
           type="button"
@@ -103,6 +104,7 @@ function ConfigRow({
 function AdminBody() {
   const fetched = useMountFetch(fetchAdminState);
   const [current, setCurrent] = useState<AdminStateResponse>();
+  const [saving, setSaving] = useState(false);
   const state = current ?? fetched;
 
   if (state === undefined) {
@@ -130,6 +132,8 @@ function AdminBody() {
           key={key}
           configKey={key}
           value={config[key]}
+          busy={saving}
+          setBusy={setSaving}
           onSaved={setCurrent}
         />
       ))}

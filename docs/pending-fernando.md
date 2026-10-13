@@ -37,8 +37,8 @@
 
 ### §3 Make yourself an admin — issue #304
 
-- **Do:** (1) On miolos.app, sign in to your identified account first (your email; Google once §2 is live). An anonymous id dies with its cookie, so do not copy that one. (2) Open `https://miolos.app/admin` and copy the code shown under "O código da sua conta". (3) On Vercel project **miolos-api**, **Production** scope: add `ADMIN_USER_IDS` with that code as the value. (4) A new variable reaches the API only on a deploy with a real `apps/api` change (turbo-ignore). If you set it before #304's deploy, nothing else is needed. If not, say "redeploy api" in a session and an agent ships one.
-- **Verify:** reload `/admin`. The three settings appear with their values and a *Salvar* button each.
+- **Do:** (1) On miolos.app, sign in to your identified account first (your email; Google once §2 is live). An anonymous id dies with its cookie, so do not copy that one. (2) Open `https://miolos.app/admin` and copy the code shown next to "O código da sua conta". (3) On Vercel project **miolos-api**, **Production** scope: add `ADMIN_USER_IDS` with that code as the value. (4) A new variable reaches the API only on a deploy with a real `apps/api` change (turbo-ignore). So after setting it, say "feito" on #304 or in a session: an agent ships a deploy with an `apps/api` change.
+- **Verify:** reload `/admin`. The three values appear with their values and a *Salvar* button each.
 - **Blocks:** only `/admin`. Until then it shows "Esta página é só para quem administra o Miolos." to everyone, and the tunables stay as they are.
 - **Source:** #304, ADR-0094.
 

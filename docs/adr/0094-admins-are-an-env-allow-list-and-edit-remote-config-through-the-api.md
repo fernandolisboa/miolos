@@ -1,8 +1,8 @@
 # ADR-0094 — Admins are an env allow-list of user ids and edit remote config through the API, one key at a time
 
 **Status:** Accepted — 2026-10-13 (issue #304)
-**Depends on:** [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md)
-**Amends:** [ADR-0025](./0025-remote-config-is-a-database-table.md) (the table now has a writer reached from a client, and invalid values fall back per key)
+**Depends on:** [ADR-0022](./0022-opaque-session-tokens-in-a-sessions-table.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md)
+**Amends:** [ADR-0025](./0025-remote-config-is-a-database-table.md) (the table now has a writer reached from a client, and invalid values fall back per key); [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md) (decision 3: a scoped exception for the admin-only state response)
 
 ## Context
 
