@@ -8,7 +8,8 @@ import {
   type PlayChromeStat,
 } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
-import { Board, BoardSkeleton } from "./board";
+import { BoardSkeleton } from "./board";
+import { BoardPanel, queensReadouts } from "./board-panel";
 import styles from "./queens-board.module.css";
 import type { QueensPlay } from "./use-queens-play";
 
@@ -37,40 +38,10 @@ export function PlayView({
       extraStat={sizeStat(state.size)}
       state={{
         kind: "playing",
-        readouts: {
-          progressShort: copy.progressShort(
-            state.size,
-            play.placed,
-            state.size,
-          ),
-          progressLong: copy.progressLong(play.placed, state.size),
-          hint: {
-            ready: play.hintReady,
-            label: play.hintReady ? copy.hint.available : copy.hint.used,
-            explain:
-              play.hintKind === null ? null : copy.hint.explain[play.hintKind],
-            onReveal: play.revealHint,
-          },
-        },
+        readouts: queensReadouts(play),
       }}
     >
-      <div className={screen.gridCard}>
-        <Board
-          size={state.size}
-          regions={state.regions}
-          entries={state.entries}
-          conflicts={state.conflicts}
-          selected={state.selected}
-          hintIndex={state.hint.lastIndex}
-          onSelect={play.selectCell}
-          onMove={play.moveSelection}
-          onCycle={play.cycleCell}
-          onCrossOver={play.crossOver}
-          onEnterValue={play.enterValue}
-          onClear={play.clearCell}
-        />
-      </div>
-      <p className={styles.affordance}>{copy.affordance}</p>
+      <BoardPanel board={play} />
     </PlayScreenChrome>
   );
 }

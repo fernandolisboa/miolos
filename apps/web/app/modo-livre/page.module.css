@@ -42,7 +42,7 @@
 
 .games {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-7);
   margin-top: 52px;
 }
@@ -51,6 +51,7 @@
    with it. Spans inside (an <a> may not contain block flow content roles),
    laid out as the hub card's column. */
 .card {
+  grid-column: span 2;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -76,6 +77,12 @@
 }
 .card:nth-child(4) {
   transform: rotate(0.6deg);
+}
+
+/* Each card spans two of four tracks, so an odd fifth card can sit centred. */
+.card:nth-child(5) {
+  grid-column: 2 / 4;
+  transform: rotate(-0.5deg);
 }
 
 /* A card is a link: the whole surface must announce focus, and the ring is
@@ -116,6 +123,9 @@
 }
 .card:nth-child(4) .tape {
   transform: translateX(-50%) rotate(4deg);
+}
+.card:nth-child(5) .tape {
+  transform: translateX(-50%) rotate(-4deg);
 }
 
 .cardBody {
@@ -189,6 +199,9 @@
   .card:nth-child(4) {
     transform: rotate(0.3deg);
   }
+  .card:nth-child(5) {
+    transform: rotate(-0.4deg);
+  }
 
   .tape {
     top: -9px;
@@ -208,6 +221,9 @@
   }
   .card:nth-child(4) .tape {
     transform: rotate(4deg);
+  }
+  .card:nth-child(5) .tape {
+    transform: rotate(-4deg);
   }
 
   .kicker {

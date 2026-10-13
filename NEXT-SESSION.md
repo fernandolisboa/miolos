@@ -4,9 +4,7 @@
 
 ## Start here
 
-**The Rainhas engine shipped** in `@miolos/games/queens` (#285 PR 1, ADR-0090): plant, grow and repair a region map, grade it with a deduction ladder, 7×7 Monday to 9×9 Sunday. Nothing a player can see changed. On 2,000 seeds per weekday no seed used more than 59 of 128 attempts. The slowest puzzle took 70 ms warm and 161 ms as a fresh process's first call (both Sundays).
-
-**The Rainhas daily shipped** at `/rainhas` and `/arquivo/<data>/rainhas` (#285 PR 2, ADR-0091 and ADR-0092): tap cycles undecided → crossed (X) → queen, a drag crosses, conflicts get a ring and "em conflito". The hub is two rows of three. The Nonogram and Rainhas boards share `useBinaryBoard`, `binaryGridReducer` (`apps/web/src/play/binary-grid.ts`), `useBinaryGridControls`, `nextBinaryHint` and `sizedBinaryRecordSchema`; the grid games' cron attempts share `seededAttempt`; every grid caret moves through `keyMove`/`movedSelection` in `apps/web/src/play/grid-selection.ts`.
+**Rainhas is complete** (#285): the engine (ADR-0090), the daily and archive (ADR-0091, ADR-0092) and free play at `/modo-livre/rainhas`. The daily and free screens share `useQueensBoard` and `BoardPanel` (`apps/web/src/queens/`); only `use-queens-play.ts` adds the lifecycle, and the free-play wall bans it.
 
 ## Traps
 
@@ -21,8 +19,6 @@
 **The crossword lexicon is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` and `pnpm test --force`.
 
 ## Next
-
-**PR 3 of #285: free play at `/modo-livre/rainhas`**, per the plan on the issue. It removes the queens exclusion from T-WEB-S109 and adds the 5th free-play card rules at both breakpoints.
 
 **#290: once the cron publishes the first Rainhas row,** add `/rainhas` and `/rainhas/concluido` to `.github/workflows/impeccable.yml`'s preflight list and both scan lists. The preflight refuses a daily route with no published puzzle, so PR 2 could not add them.
 
