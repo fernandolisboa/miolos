@@ -1,3 +1,4 @@
+import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchDayTruth } from "../src/day/day-client";
@@ -116,7 +117,7 @@ describe("fetchDayTruth (T-WEB-S234)", () => {
         ...validBody,
         games: {
           ...validBody.games,
-          sudoku: { status: "completed", hintsUsed: 2 },
+          sudoku: { status: "completed", hintsUsed: FREE_HINTS_PER_PUZZLE + 1 },
         },
       },
       { ...validBody, date: "19/08/2026" },

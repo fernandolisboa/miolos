@@ -1,8 +1,10 @@
 export {
   COMPLETION_OUTCOMES,
   completionOutcomeSchema,
+  FREE_HINTS_PER_PUZZLE,
   HINT_GRANT_SOURCES,
   hintGrantSourceSchema,
+  hintsUsedSchema,
   type CompletionOutcome,
   type HintGrantSource,
 } from "./completion";

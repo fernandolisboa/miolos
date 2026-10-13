@@ -10,6 +10,8 @@
 
 **One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
 
+**The hint wire accepts up to three** (#295 PR A, ADR-0095): `FREE_HINTS_PER_PUZZLE` and `hintsUsedSchema` in `@miolos/core` bound the completion bodies, the `/day` claim and the play record. The web still grants one.
+
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
 **The Sudoku board shows the selection's reach** (#302): selecting a cell tints its row, column and box, and fills every other copy of its digit with the accent; violating and hinted cells keep their own look. The rule lives in `selectionHighlights` and `sharesUnit` (`apps/web/src/sudoku/engine.ts`), which #296's explained hint can reuse. Test ids `T-WEB-S495…S497`.
@@ -28,6 +30,8 @@
 
 ## Next
 
-**First:** #304 PR 2: the hint allowance becomes a `remote_config` key on `/admin` once #295 is on `main` (a schema field and a label in `messages.admin.keys`).
+**Next: #295 PR B** — grant three hints and the countdown label. Merge it only after the miolos-api production deployment of PR A is Ready.
+
+**Then:** #304 PR 2: the hint allowance becomes a `remote_config` key on `/admin`, defaulting to `FREE_HINTS_PER_PUZZLE` (a schema field and a label in `messages.admin.keys`).
 
 **Queued:** per-game time buckets as an issue; #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and `/admin/config`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.

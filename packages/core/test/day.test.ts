@@ -8,6 +8,7 @@ import {
   dayGamesFromRows,
   dayResponseSchema,
   dayStateFromRows,
+  FREE_HINTS_PER_PUZZLE,
   GAMES,
   mergeDayState,
   mergeDayStatus,
@@ -230,7 +231,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       withGame({ status: "completed", hintsUsed: -1 }),
       withGame({ status: "completed", hintsUsed: 0.5 }),
       withGame({ status: "completed", hintsUsed: "1" }),
-      withGame({ status: "completed", hintsUsed: 2 }),
+      withGame({ status: "completed", hintsUsed: FREE_HINTS_PER_PUZZLE + 1 }),
     ]) {
       expect(
         dayResponseSchema.safeParse(body).success,
