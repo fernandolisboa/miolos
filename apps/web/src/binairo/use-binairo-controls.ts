@@ -1,18 +1,22 @@
 import { useCallback, type Dispatch } from "react";
 
 import type { Press } from "../play/brush";
-import type { PaintMode, PlayAction } from "./state";
+import {
+  useStrokeControls,
+  type StrokeControls,
+} from "../play/use-stroke-controls";
+import type { PlayAction } from "./state";
 
-export interface BinairoControls {
+export interface BinairoControls extends StrokeControls {
   readonly tapCell: (index: number, press: Press) => void;
-  readonly strokeStart: (index: number, press: Press) => void;
-  readonly paintOver: (index: number) => void;
-  readonly toggleMode: (mode: PaintMode) => void;
+  readonly toggleMode: (value: 0 | 1) => void;
 }
 
 export function useBinairoControls(
   dispatch: Dispatch<PlayAction>,
 ): BinairoControls {
+  const strokes = useStrokeControls(dispatch);
+
   const tapCell = useCallback(
     (index: number, press: Press) => {
       dispatch({ type: "tap", index, press });
@@ -20,26 +24,12 @@ export function useBinairoControls(
     [dispatch],
   );
 
-  const strokeStart = useCallback(
-    (index: number, press: Press) => {
-      dispatch({ type: "stroke-start", index, press });
-    },
-    [dispatch],
-  );
-
-  const paintOver = useCallback(
-    (index: number) => {
-      dispatch({ type: "paint-over", index });
-    },
-    [dispatch],
-  );
-
   const toggleMode = useCallback(
-    (mode: PaintMode) => {
-      dispatch({ type: "set-mode", mode });
+    (value: 0 | 1) => {
+      dispatch({ type: "set-mode", value });
     },
     [dispatch],
   );
 
-  return { tapCell, strokeStart, paintOver, toggleMode };
+  return { ...strokes, tapCell, toggleMode };
 }

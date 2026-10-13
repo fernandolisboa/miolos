@@ -11,7 +11,7 @@ import {
   cycled,
   painted,
   pressedMark,
-  strokeEffect,
+  startStroke,
   toggled,
   type Press,
   type StrokeEffect,
@@ -48,7 +48,7 @@ export type PlayAction =
       readonly press: Press;
     }
   | { readonly type: "paint-over"; readonly index: number }
-  | { readonly type: "set-mode"; readonly mode: PaintMode }
+  | { readonly type: "set-mode"; readonly value: 0 | 1 }
   | { readonly type: "use-hint"; readonly solution: BinairoSolvedGrid }
   | { readonly type: "mark-synced" };
 
@@ -93,13 +93,19 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       if (state.paint.kind === "cycle") {
         return state;
       }
-      const value = pressedMark(state.paint.value, action.press);
+      if (state.givens[action.index] === undefined) {
+        return { ...state, stroke: null };
+      }
       const current = playableValue(state, action.index);
-      const stroke = strokeEffect(current ?? null, value);
+      const { stroke, first } = startStroke(
+        current ?? null,
+        state.paint.value,
+        action.press,
+      );
       const started = { ...state, stroke };
       return current === undefined
         ? started
-        : withEntry(started, action.index, painted(stroke, current));
+        : withEntry(started, action.index, first);
     }
 
     case "paint-over": {
@@ -113,9 +119,10 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
     case "set-mode":
       return {
         ...state,
-        paint: sameMode(state.paint, action.mode)
-          ? { kind: "cycle" }
-          : action.mode,
+        paint:
+          state.paint.kind === "paint" && state.paint.value === action.value
+            ? { kind: "cycle" }
+            : { kind: "paint", value: action.value },
       };
 
     case "use-hint": {
@@ -168,15 +175,6 @@ function playableValue(state: PlayState, index: number): CellValue | undefined {
     return undefined;
   }
   return state.entries[index] ?? null;
-}
-
-function sameMode(current: PaintMode, next: PaintMode): boolean {
-  if (current.kind !== next.kind) {
-    return false;
-  }
-  return current.kind === "paint" && next.kind === "paint"
-    ? current.value === next.value
-    : true;
 }
 
 function tapped(mode: PaintMode, current: CellValue, press: Press): CellValue {

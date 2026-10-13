@@ -44,7 +44,7 @@ function press(state: PlayState, kind: Press, ...indices: number[]): PlayState {
 function brushed(value: 0 | 1): PlayState {
   return playReducer(initPlayState(daily()), {
     type: "set-mode",
-    mode: { kind: "paint", value },
+    value,
   });
 }
 
@@ -107,7 +107,7 @@ describe("tap — the cell state machine (D7)", () => {
   it("sets the value directly in paint mode and clears it on a re-tap", () => {
     let state = playReducer(initPlayState(daily()), {
       type: "set-mode",
-      mode: { kind: "paint", value: 1 },
+      value: 1,
     });
 
     state = tap(state, 9);
@@ -205,7 +205,7 @@ describe("stroke-start and paint-over — the drag path (T-WEB-S496a)", () => {
     givens[2] = 0;
     let state = playReducer(initPlayState(daily(givens)), {
       type: "set-mode",
-      mode: { kind: "paint", value: 1 },
+      value: 1,
     });
     state = press(state, "tap", 11, 12);
     state = stroke(state, "tap", 11);
@@ -219,16 +219,16 @@ describe("stroke-start and paint-over — the drag path (T-WEB-S496a)", () => {
   });
 });
 
-describe("set-mode", () => {
+describe("set-mode takes the digit (T-WEB-S501)", () => {
   it("returns to cycle when the active brush is pressed again", () => {
     const zeros = brushed(0);
     const again = playReducer(zeros, {
       type: "set-mode",
-      mode: { kind: "paint", value: 0 },
+      value: 0,
     });
     const other = playReducer(zeros, {
       type: "set-mode",
-      mode: { kind: "paint", value: 1 },
+      value: 1,
     });
 
     expect(again.paint).toEqual({ kind: "cycle" });
@@ -239,11 +239,32 @@ describe("set-mode", () => {
     const filled = tap(initPlayState(daily()), 1);
     const state = playReducer(filled, {
       type: "set-mode",
-      mode: { kind: "paint", value: 1 },
+      value: 1,
     });
 
     expect(state.paint).toEqual({ kind: "paint", value: 1 });
     expect(state.entries).toEqual(filled.entries);
+  });
+});
+
+describe("a stroke that starts nowhere (T-WEB-S502)", () => {
+  it("drops the old latch instead of leaving it to paint the next cells", () => {
+    const latched = playReducer(brushed(1), {
+      type: "stroke-start",
+      index: 3,
+      press: "tap",
+    });
+    expect(latched.stroke).not.toBeNull();
+
+    const lost = playReducer(latched, {
+      type: "stroke-start",
+      index: 999,
+      press: "tap",
+    });
+    const after = playReducer(lost, { type: "paint-over", index: 4 });
+
+    expect(lost.stroke).toBeNull();
+    expect(after.entries[4]).toBeNull();
   });
 });
 

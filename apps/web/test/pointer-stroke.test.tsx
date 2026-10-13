@@ -470,3 +470,119 @@ describe("the board's context menu (T-WEB-S491)", () => {
     expect(fireEvent.contextMenu(outside)).toBe(true);
   });
 });
+
+describe("a right press keeps the page menu away after the pointer leaves (T-WEB-S503)", () => {
+  function outsideOf(container: HTMLElement): HTMLElement {
+    const outside = container.querySelector<HTMLElement>(
+      '[data-testid="outside"]',
+    );
+    if (outside === null) {
+      throw new Error("the harness sibling is missing");
+    }
+    return outside;
+  }
+
+  const right = { clientY: 0, pointerId: 1, pointerType: "mouse", button: 2 };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ["a painting board", true],
+    ["a board that only taps", false],
+  ] as const)(
+    "prevents the one menu a release outside %s opens, and no later one",
+    (_name, painting) => {
+      vi.useFakeTimers();
+      const { container } = render(<StrokeHarness painting={painting} />);
+      stubElementFromPoint(container);
+      const board = boardOf(container);
+      const outside = outsideOf(container);
+
+      fireEvent.pointerDown(board, { ...right, clientX: 3 });
+      fireEvent.pointerUp(painting ? board : window, {
+        ...right,
+        clientX: 99,
+      });
+
+      expect(fireEvent.contextMenu(outside)).toBe(false);
+      expect(fireEvent.contextMenu(outside)).toBe(true);
+    },
+  );
+
+  it("lets the net lapse one task after the stroke ends when no menu came", () => {
+    vi.useFakeTimers();
+    const { container } = render(<StrokeHarness />);
+    stubElementFromPoint(container);
+    const board = boardOf(container);
+
+    fireEvent.pointerDown(board, { ...right, clientX: 3 });
+    fireEvent.pointerUp(board, { ...right, clientX: 99 });
+    vi.advanceTimersByTime(0);
+
+    expect(fireEvent.contextMenu(outsideOf(container))).toBe(true);
+  });
+
+  it("does not arm for a left press", () => {
+    const { container } = render(<StrokeHarness />);
+    stubElementFromPoint(container);
+    const board = boardOf(container);
+    const left = { ...right, button: 0 };
+
+    fireEvent.pointerDown(board, { ...left, clientX: 3 });
+    fireEvent.pointerUp(board, { ...left, clientX: 99 });
+
+    expect(fireEvent.contextMenu(outsideOf(container))).toBe(true);
+  });
+
+  it("leaves nothing behind on unmount", () => {
+    const { container, unmount } = render(<StrokeHarness />);
+    stubElementFromPoint(container);
+    const detached = document.createElement("div");
+    document.body.append(detached);
+
+    fireEvent.pointerDown(boardOf(container), { ...right, clientX: 3 });
+    unmount();
+
+    expect(fireEvent.contextMenu(detached)).toBe(true);
+  });
+});
+
+describe("a click is consumed once (T-WEB-S504)", () => {
+  it("lets a later click with no pointerdown before it through", () => {
+    const spies = { tap: vi.fn(), start: vi.fn(), over: vi.fn() };
+    const { container } = render(
+      <StrokeHarness painting={false} spies={spies} />,
+    );
+    stubElementFromPoint(container);
+    const board = boardOf(container);
+    const init = { clientX: 2, clientY: 0, pointerId: 1, pointerType: "touch" };
+
+    fireEvent.pointerDown(board, init);
+    fireEvent.pointerUp(board, init);
+    fireEvent.click(cellAt(container, 2), { detail: 1 });
+    fireEvent.click(cellAt(container, 6), { detail: 1 });
+
+    expect(spies.tap.mock.calls).toStrictEqual([
+      [2, "tap"],
+      [6, "tap"],
+    ]);
+  });
+
+  it("consumes the click that follows a drag, then lets the next through", () => {
+    const spies = { tap: vi.fn(), start: vi.fn(), over: vi.fn() };
+    const { container } = render(<StrokeHarness spies={spies} />);
+    stubElementFromPoint(container);
+    const board = boardOf(container);
+    const init = { clientY: 0, pointerId: 1, pointerType: "touch" };
+
+    fireEvent.pointerDown(board, { ...init, clientX: 1 });
+    fireEvent.pointerMove(board, { ...init, clientX: 2 });
+    fireEvent.pointerUp(board, { ...init, clientX: 2 });
+    fireEvent.click(cellAt(container, 1), { detail: 1 });
+    fireEvent.click(cellAt(container, 5), { detail: 1 });
+
+    expect(spies.tap.mock.calls).toStrictEqual([[5, "tap"]]);
+  });
+});

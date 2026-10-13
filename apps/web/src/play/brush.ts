@@ -42,3 +42,12 @@ export function painted(
   }
   return current === effect.value ? null : current;
 }
+
+export function startStroke(
+  start: BinaryCellValue,
+  brush: BinaryMark,
+  press: Press,
+): { readonly stroke: StrokeEffect; readonly first: BinaryCellValue } {
+  const stroke = strokeEffect(start, pressedMark(brush, press));
+  return { stroke, first: painted(stroke, start) };
+}

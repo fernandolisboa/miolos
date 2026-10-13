@@ -4,7 +4,7 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import {
   painted,
   pressedMark,
-  strokeEffect,
+  startStroke,
   toggled,
   type Press,
   type StrokeEffect,
@@ -107,16 +107,17 @@ export function nonogramPlayReducer(
     case "stroke-start": {
       const current = binaryCellValue(state, action.index);
       if (current === undefined) {
-        return state;
+        return { ...state, stroke: null };
       }
-      const stroke = strokeEffect(
+      const { stroke, first } = startStroke(
         current,
-        pressedMark(brushMark(state.brush), action.press),
+        brushMark(state.brush),
+        action.press,
       );
       return withBinaryEntry(
         { ...state, stroke },
         action.index,
-        painted(stroke, current),
+        first,
         NONOGRAM_RULES,
       );
     }

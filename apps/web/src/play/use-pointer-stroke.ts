@@ -60,7 +60,34 @@ export function usePointerStroke(input: {
     };
   };
 
-  useEffect(() => () => detachWindowEnd.current?.(), []);
+  const releaseContextNet = useRef<(() => void) | null>(null);
+  const lapseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+
+  // Windows fires `contextmenu` after mouseup at the element under the cursor,
+  // so a right press released off the board would open the page menu.
+  const armContextNet = () => {
+    releaseContextNet.current?.();
+    const swallow = (native: Event) => {
+      native.preventDefault();
+      releaseContextNet.current?.();
+    };
+    window.addEventListener("contextmenu", swallow, true);
+    releaseContextNet.current = () => {
+      clearTimeout(lapseTimer.current);
+      window.removeEventListener("contextmenu", swallow, true);
+      releaseContextNet.current = null;
+    };
+  };
+
+  useEffect(
+    () => () => {
+      detachWindowEnd.current?.();
+      releaseContextNet.current?.();
+    },
+    [],
+  );
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     const opened = pressOf(event);
@@ -68,6 +95,9 @@ export function usePointerStroke(input: {
       return;
     }
     press.current = opened;
+    if (opened === "right") {
+      armContextNet();
+    }
     strokePointer.current = event.pointerId;
     dragged.current = false;
     tapped.current = false;
@@ -115,6 +145,9 @@ export function usePointerStroke(input: {
     dragging.current = false;
     strokePointer.current = null;
     detachWindowEnd.current?.();
+    if (releaseContextNet.current !== null) {
+      lapseTimer.current = setTimeout(() => releaseContextNet.current?.(), 0);
+    }
   };
 
   const endStroke = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -153,7 +186,10 @@ export function usePointerStroke(input: {
       if (event.detail === 0) {
         return "tap";
       }
-      return dragged.current || tapped.current ? null : press.current;
+      const consumed = dragged.current || tapped.current;
+      dragged.current = false;
+      tapped.current = false;
+      return consumed ? null : press.current;
     },
   };
 }

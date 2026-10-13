@@ -14,7 +14,7 @@ export function Controls({
   onToggleMode,
 }: {
   readonly paint: PaintMode;
-  readonly onToggleMode: (mode: PaintMode) => void;
+  readonly onToggleMode: (value: 0 | 1) => void;
 }) {
   return (
     <div className={styles.controls}>
@@ -27,7 +27,7 @@ export function Controls({
             className={`${styles.control} ${styles.controlDigit}${active ? ` ${styles.controlDigitActive}` : ""}`}
             aria-label={aria}
             aria-pressed={active}
-            onClick={() => onToggleMode({ kind: "paint", value })}
+            onClick={() => onToggleMode(value)}
           >
             {label}
           </button>

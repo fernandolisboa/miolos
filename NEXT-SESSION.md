@@ -8,7 +8,7 @@
 
 **One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
 
-**The right mouse button writes the opposite mark** (#299, ADR-0094): Nonogram, Binairo and Rainhas read a `Press` (`tap`, `left`, `right`) from `usePointerStroke`, and `apps/web/src/play/brush.ts` holds the pure mark and stroke rules. The Nonogram brush is two icons with no erase; a mark on the same mark clears. Touch and keyboard are unchanged.
+**Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
 ## Traps
 

@@ -910,7 +910,7 @@ describe("the mobile board and controls (layout tripwires)", () => {
   });
 });
 
-describe("the mouse hint (T-WEB-S499a)", () => {
+describe("the mouse affordance (T-WEB-S499a)", () => {
   it("shows the affordance only where a fine pointer can hover", () => {
     const base = bodyOf(GAME_CSS, ".affordance");
     const fine = bodyOf(GAME_CSS, "@media (hover: hover) and (pointer: fine)");

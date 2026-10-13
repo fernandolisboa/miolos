@@ -2,6 +2,10 @@ import { useCallback, type Dispatch } from "react";
 
 import type { Press } from "../play/brush";
 import {
+  useStrokeControls,
+  type StrokeControls,
+} from "../play/use-stroke-controls";
+import {
   useBinaryGridControls,
   type BinaryGridControls,
 } from "../play/use-binary-grid-controls";
@@ -12,11 +16,10 @@ import type {
   NonogramPlayState,
 } from "./state";
 
-export interface NonogramControls extends BinaryGridControls<NonogramHintKind> {
+export interface NonogramControls
+  extends BinaryGridControls<NonogramHintKind>, StrokeControls {
   readonly setBrush: (brush: NonogramBrush) => void;
   readonly markCell: (index: number, press: Press) => void;
-  readonly strokeStart: (index: number, press: Press) => void;
-  readonly paintOver: (index: number) => void;
 }
 
 export function useNonogramControls(
@@ -24,6 +27,7 @@ export function useNonogramControls(
   dispatch: Dispatch<NonogramPlayAction>,
 ): NonogramControls {
   const controls = useBinaryGridControls(state, dispatch, hintKindOf);
+  const strokes = useStrokeControls(dispatch);
 
   const setBrush = useCallback(
     (brush: NonogramBrush) => {
@@ -39,19 +43,5 @@ export function useNonogramControls(
     [dispatch],
   );
 
-  const strokeStart = useCallback(
-    (index: number, press: Press) => {
-      dispatch({ type: "stroke-start", index, press });
-    },
-    [dispatch],
-  );
-
-  const paintOver = useCallback(
-    (index: number) => {
-      dispatch({ type: "paint-over", index });
-    },
-    [dispatch],
-  );
-
-  return { ...controls, setBrush, markCell, strokeStart, paintOver };
+  return { ...controls, ...strokes, setBrush, markCell };
 }

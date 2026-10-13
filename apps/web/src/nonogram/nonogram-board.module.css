@@ -411,9 +411,7 @@
   margin-top: 30px;
 }
 
-/* One paper frame holding both segments; the active one is raised out of it by
-   a fill change and a hard shadow, so it survives greyscale. `aria-pressed`
-   carries the state to AT. */
+/* `aria-pressed` carries the state to AT; the shadow is for sight only. */
 .brushToggle {
   display: flex;
   gap: var(--space-1);
@@ -441,10 +439,6 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-.control:active {
-  transform: translate(1px, 1px);
-}
-
 .control:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -458,6 +452,7 @@
 }
 
 .controlActive:active {
+  transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
@@ -467,7 +462,6 @@
   height: 24px;
 }
 
-/* Beside the toggle in the flex row, hidden on a phone that has no keyboard. */
 .affordance {
   margin-left: var(--space-3);
   font-size: 13px;

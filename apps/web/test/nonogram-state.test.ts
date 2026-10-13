@@ -326,10 +326,24 @@ describe("a stroke (T-WEB-S495)", () => {
     );
   });
 
-  it("is a no-op off the board", () => {
-    expect(
-      play(MONDAY_STATE, { type: "stroke-start", index: 999, press: "tap" }),
-    ).toBe(MONDAY_STATE);
+  it("(T-WEB-S502) off the board writes nothing and drops the old latch", () => {
+    const latched = play(MONDAY_STATE, {
+      type: "stroke-start",
+      index: 8,
+      press: "tap",
+    });
+    expect(latched.stroke).not.toBeNull();
+
+    const lost = play(latched, {
+      type: "stroke-start",
+      index: 999,
+      press: "tap",
+    });
+    const after = play(lost, { type: "paint-over", index: 9 });
+
+    expect(lost.stroke).toBeNull();
+    expect(lost.entries).toBe(latched.entries);
+    expect(after.entries).toBe(latched.entries);
   });
 });
 
