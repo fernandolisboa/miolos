@@ -1,23 +1,56 @@
+import {
+  nextQueensStep,
+  type QueensBoard,
+  type QueensStep,
+} from "@miolos/games/queens";
+
 import { messages } from "../i18n";
 import {
   nextBinaryHint,
-  plainHint,
-  type PlainHintReason,
+  nextLogicalHint,
+  type HintReason,
   type Revealed,
 } from "../play/grid-hint";
 import type { QueensCellValue, QueensMark } from "./state";
 
-const copy = messages.games.queens.play.hint;
+export type QueensHintReason = HintReason<QueensStep>;
+
+const copy = messages.games.queens.play.hint.explain;
 
 export function nextQueensHint(
+  board: QueensBoard,
   solution: readonly QueensMark[],
   entries: readonly QueensCellValue[],
-): Revealed<QueensMark, PlainHintReason> | null {
-  return plainHint(nextBinaryHint(solution, entries));
+): Revealed<QueensMark, QueensHintReason> | null {
+  const hint = nextLogicalHint(
+    solution,
+    nextBinaryHint(solution, entries),
+    () => {
+      const step = nextQueensStep(board, entries);
+      return step === null ? null : { index: step.index, value: 1, step };
+    },
+  );
+  return hint?.reason.kind === "step"
+    ? { ...hint, spotlight: hint.reason.step.cells }
+    : hint;
 }
 
 export function queensHintExplanation(
-  reason: PlainHintReason | null,
+  size: number,
+  reason: QueensHintReason | null,
 ): string | null {
-  return reason === null ? null : copy.explain[reason.kind];
+  if (reason === null) {
+    return null;
+  }
+  if (reason.kind !== "step") {
+    return copy[reason.kind];
+  }
+  const { index, unit, after } = reason.step;
+  return copy.step(
+    unit.kind,
+    unit.index + 1,
+    Math.floor(index / size) + 1,
+    (index % size) + 1,
+    after,
+  );
 }

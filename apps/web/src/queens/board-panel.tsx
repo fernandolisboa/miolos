@@ -17,7 +17,7 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
     hint: {
       ready: board.hintReady,
       used: state.hint.used,
-      explain: queensHintExplanation(state.hint.reason),
+      explain: queensHintExplanation(state.size, state.hint.reason),
       onReveal: board.revealHint,
     },
     onReset: hasDecidedCell(state.entries) ? board.reset : null,
@@ -36,6 +36,7 @@ export function BoardPanel({ board }: { readonly board: QueensBoardState }) {
           conflicts={state.conflicts}
           selected={state.selected}
           hintIndex={state.hint.lastIndex}
+          spotlight={state.hint.spotlight}
           onSelect={board.selectCell}
           onMove={board.moveSelection}
           onTap={board.tapCell}

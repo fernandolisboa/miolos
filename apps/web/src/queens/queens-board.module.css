@@ -97,6 +97,14 @@
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 
+/* An overlay image over the inline region colour, so the rings still win. */
+.cellSpotlit {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--accent) 16%, transparent),
+    color-mix(in srgb, var(--accent) 16%, transparent)
+  );
+}
+
 .cellConflict {
   box-shadow: inset 0 0 0 3px var(--accent-app);
 }

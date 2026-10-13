@@ -1,6 +1,7 @@
 import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram, nextNonogramStep } from "@miolos/games/nonogram";
+import { generateQueens, nextQueensStep } from "@miolos/games/queens";
 import { generateDailySudoku } from "@miolos/games/sudoku";
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +10,7 @@ import { BinairoFreeScreen } from "../src/free-play/binairo-free-screen";
 import { LEVEL_WEEKDAYS } from "../src/free-play/catalog";
 import { CrosswordFreeScreen } from "../src/free-play/crossword-free-screen";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
+import { QueensFreeScreen } from "../src/free-play/queens-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { useFreeCrossword } from "../src/free-play/use-free-crossword";
 import {
@@ -20,6 +22,8 @@ import binairoBoardStyles from "../src/binairo/binairo-screen.module.css";
 import { messages } from "../src/i18n";
 import { nonogramHintExplanation } from "../src/nonogram/hint";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
+import { queensHintExplanation } from "../src/queens/hint";
+import queensBoardStyles from "../src/queens/queens-board.module.css";
 import { sudokuHintExplanation } from "../src/sudoku/hint";
 import sudokuBoardStyles from "../src/sudoku/sudoku-board.module.css";
 import { freeBinairoSteps, freeHintSteps, spendFreeHints } from "./free-hints";
@@ -221,6 +225,49 @@ describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S
       ...container.querySelectorAll<HTMLElement>(`.${boardStyles.cellSpotlit}`),
     ].map((cell) => Number(cell.dataset.cellIndex));
     expect(tinted).toEqual(step.cells);
+  });
+});
+
+describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S570)", () => {
+  it("places the step's queen, reads out why and tints the step's unit", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const puzzle = generateQueens({ seed: SEED, weekday: WEEKDAY });
+    const step = nextQueensStep(
+      puzzle,
+      puzzle.solution.map(() => null),
+    );
+    if (step === null) {
+      throw new Error("no first step");
+    }
+    const { container } = render(<QueensFreeScreen deps={stableDeps(SEED)} />);
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(
+      container.querySelector(`[data-cell-index="${step.index}"] svg`),
+    ).not.toBeNull();
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      queensHintExplanation(puzzle.size, { kind: "step", step }),
+    );
+    const tinted = [
+      ...container.querySelectorAll<HTMLElement>(
+        `.${queensBoardStyles.cellSpotlit}`,
+      ),
+    ].map((cell) => Number(cell.dataset.cellIndex));
+    expect(tinted).toEqual(step.cells);
+
+    const other = container.querySelector(
+      `[data-cell-index="${step.cells[0] === 0 ? 1 : 0}"]`,
+    );
+    if (other === null) {
+      throw new Error("no cell to tap");
+    }
+    fireEvent.click(other, { detail: 0 });
+    expect(
+      container.querySelectorAll(`.${queensBoardStyles.cellSpotlit}`),
+    ).toHaveLength(0);
   });
 });
 

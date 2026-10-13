@@ -129,6 +129,34 @@ const letterAria = (letter: string) => `letra ${letter}`;
 
 const QUEENS_CELL = { 1: "rainha", 0: "marcada" } as const;
 
+const QUEENS_TECHNIQUE = {
+  regionInRow: "região presa numa só linha ou coluna",
+  regionInColumn: "região presa numa só linha ou coluna",
+  rowInRegion: "linha ou coluna presa numa só região",
+  columnInRegion: "linha ou coluna presa numa só região",
+  blocking: "casa que deixaria uma região sem lugar",
+  regionGroupRows: "grupo de regiões presas nas mesmas linhas ou colunas",
+  regionGroupColumns: "grupo de regiões presas nas mesmas linhas ou colunas",
+} as const;
+
+const queensStep = (
+  unit: "row" | "column" | "region",
+  at: number,
+  row: number,
+  column: number,
+  after: keyof typeof QUEENS_TECHNIQUE | null,
+) => {
+  const only = {
+    row: `Na linha ${at}, só a casa da coluna ${column}`,
+    column: `Na coluna ${at}, só a casa da linha ${row}`,
+    region: `Na região ${at}, só a casa da linha ${row}, coluna ${column}`,
+  }[unit];
+  const sentence = `${only} ainda pode ter rainha.`;
+  return after === null
+    ? sentence
+    : `Com uma técnica avançada (${QUEENS_TECHNIQUE[after]}), ${sentence.charAt(0).toLowerCase()}${sentence.slice(1)}`;
+};
+
 const cellAriaQueens = (
   row: number,
   column: number,
@@ -1083,7 +1111,8 @@ export const messages = {
         hint: {
           explain: {
             correction: "Corrigimos uma casa que não fecha com a solução.",
-            fill: "Pusemos uma rainha para você.",
+            fill: "Não achamos um passo lógico simples aqui, então pusemos uma rainha para você.",
+            step: queensStep,
           },
         },
 

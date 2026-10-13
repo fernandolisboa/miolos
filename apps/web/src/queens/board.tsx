@@ -20,6 +20,7 @@ export const Board = memo(function Board({
   conflicts,
   selected,
   hintIndex,
+  spotlight,
   onSelect,
   onMove,
   onTap,
@@ -33,6 +34,7 @@ export const Board = memo(function Board({
   readonly conflicts: ReadonlySet<number>;
   readonly selected: number | null;
   readonly hintIndex: number | null;
+  readonly spotlight: readonly number[];
   readonly onSelect: (index: number) => void;
   readonly onMove: (rows: number, columns: number) => void;
   readonly onTap: (index: number, press: Press) => void;
@@ -67,6 +69,7 @@ export const Board = memo(function Board({
           value={entries[index] ?? null}
           conflict={conflicts.has(index)}
           hinted={hintIndex === index}
+          spotlit={spotlight.includes(index)}
           selected={selected === index}
           tabbable={board.tabbable === index}
           onCellFocus={onSelect}
@@ -86,6 +89,7 @@ const Cell = memo(function Cell({
   value,
   conflict,
   hinted,
+  spotlit,
   selected,
   tabbable,
   onCellFocus,
@@ -98,6 +102,7 @@ const Cell = memo(function Cell({
   readonly value: QueensCellValue;
   readonly conflict: boolean;
   readonly hinted: boolean;
+  readonly spotlit: boolean;
   readonly selected: boolean;
   readonly tabbable: boolean;
   readonly onCellFocus: (index: number) => void;
@@ -116,6 +121,7 @@ const Cell = memo(function Cell({
         edgeClasses(index, size, regions),
         value === 0 ? styles.cellMarked : "",
         hinted ? styles.cellHinted : "",
+        spotlit ? styles.cellSpotlit : "",
         conflict ? styles.cellConflict : "",
         selected ? styles.cellSelected : "",
       ]
@@ -169,7 +175,7 @@ function QueenGlyph() {
 }
 
 function regionFill(region: number) {
-  return { background: `var(--queens-region-${String(region + 1)})` };
+  return { backgroundColor: `var(--queens-region-${String(region + 1)})` };
 }
 
 function edgeClasses(

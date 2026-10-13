@@ -182,7 +182,7 @@ describe("the free Rainhas spends its free hints on the solution (T-WEB-S480)", 
       "aria-disabled",
       "true",
     );
-    expect(screen.getByText(copy.hint.explain.fill)).toBeInTheDocument();
+    expect(screen.getByText(/ainda pode ter rainha\.$/)).toBeInTheDocument();
     expect(queens()).toBe(FREE_HINTS_PER_PUZZLE);
 
     fireEvent.click(exhausted);

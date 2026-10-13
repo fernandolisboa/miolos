@@ -15,7 +15,8 @@ export {
 } from "./types";
 export { findQueensViolations, isValidQueensSolution } from "./rules";
 export { countQueensSolutions, solveQueens } from "./solve";
-export { gradeQueens, nextQueensStep } from "./grade";
+export { gradeQueens } from "./grade";
+export { nextQueensStep } from "./step";
 export {
   QUEENS_WEEKDAY_CRITERIA,
   validateQueens,
