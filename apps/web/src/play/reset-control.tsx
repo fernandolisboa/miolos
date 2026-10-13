@@ -68,7 +68,7 @@ export function ResetControl({
         <button
           ref={triggerRef}
           type="button"
-          className={onReset === null ? styles.idle : styles.trigger}
+          className={onReset === null ? styles.idle : styles.cancel}
           aria-disabled={onReset === null}
           onClick={() => {
             setConfirming(onReset !== null);

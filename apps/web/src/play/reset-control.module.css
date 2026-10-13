@@ -8,10 +8,6 @@
   justify-content: flex-end;
 }
 
-.trigger {
-  composes: cancel from "../components/confirm-action.module.css";
-}
-
 .idle {
   composes: cancel from "../components/confirm-action.module.css";
   color: var(--ink-2);

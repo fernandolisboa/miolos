@@ -193,16 +193,17 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── hint ────────────────────────────────────────────────────────────── */
+/* ── reset ───────────────────────────────────────────────────────────── */
 
-/* The 1fr `reset` row between .stats and .hint pins the hint button to the
-   bottom of the sidebar, as F3 draws it; Termo renders no reset node, so its
-   row stays an empty spacer. */
+/* The 1fr `reset` row pins .hint to the sidebar bottom; Termo renders no
+   reset node, so there the row stays an empty spacer. */
 .reset {
   grid-area: reset;
   align-self: end;
   padding-bottom: 14px;
 }
+
+/* ── hint ────────────────────────────────────────────────────────────── */
 
 .hint {
   grid-area: hint;

@@ -133,6 +133,7 @@ const BINAIRO_DAILY: DailyBinairoResponse = {
   givens: [...BINAIRO.givens],
 };
 const BINAIRO_SOLUTION = solveBinairo(BINAIRO.givens) ?? [];
+const BINAIRO_SIDE = Math.sqrt(BINAIRO.givens.length);
 const BINAIRO_PLAYABLE = BINAIRO.givens.flatMap((cell, index) =>
   cell === null ? [index] : [],
 );
@@ -148,6 +149,9 @@ function binairoCase(): BoardCase<PlayState> {
     { type: "tap", index: first },
     { type: "tap", index: second },
     { type: "use-hint", solution: BINAIRO_SOLUTION },
+    ...BINAIRO_PLAYABLE.filter(
+      (index) => index < BINAIRO_SIDE && index !== first && index !== second,
+    ).map((index) => ({ type: "tap" as const, index })),
   ]);
   return {
     name: "binairo",
@@ -167,7 +171,7 @@ function binairoCase(): BoardCase<PlayState> {
     reduce,
     useHint: (state) =>
       reduce(state, { type: "use-hint", solution: BINAIRO_SOLUTION }),
-    flagged: null,
+    flagged: (state) => state.violating.size,
     kept: (state) => [state.givens, state.paint],
   };
 }
@@ -323,7 +327,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
       }
     });
 
-    it("clears every entry and leaves the givens, status and flags clean", () => {
+    it("undecides every cell and leaves the givens, status and flags clean", () => {
       expect(after.entries.every((entry) => entry === null)).toBe(true);
       expect(after.entries).toHaveLength(played.entries.length);
       expect(after.status).toBe("playing");
@@ -344,7 +348,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
       expect(board.useHint(after)).toBe(after);
     });
 
-    it("returns the same object on an empty board and on a solved one", () => {
+    it("returns the same object when no cell is decided and on a solved board", () => {
       expect(board.reduce(board.fresh, RESET)).toBe(board.fresh);
       expect(board.solved.status).toBe("solved");
       expect(board.reduce(board.solved, RESET)).toBe(board.solved);
@@ -352,7 +356,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
   });
 }
 
-describe("Recomeçar clears the entries and refunds nothing (T-WEB-S498)", () => {
+describe("Recomeçar clears the board and refunds nothing (T-WEB-S498)", () => {
   registerCase(sudokuCase());
   registerCase(binairoCase());
   registerCase(nonogramCase());

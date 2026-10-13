@@ -2,8 +2,10 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { BinairoFreeScreen } from "../src/free-play/binairo-free-screen";
 import { CrosswordFreeScreen } from "../src/free-play/crossword-free-screen";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
+import { QueensFreeScreen } from "../src/free-play/queens-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
 import screenStyles from "../src/play/screen.module.css";
@@ -26,6 +28,16 @@ const SCREENS: readonly {
     name: "Nonogram",
     screen: <NonogramFreeScreen deps={DEPS} />,
     hint: messages.games.nonogram.play.hint,
+  },
+  {
+    name: "Binairo",
+    screen: <BinairoFreeScreen deps={DEPS} />,
+    hint: messages.games.binairo.play.hint,
+  },
+  {
+    name: "Rainhas",
+    screen: <QueensFreeScreen deps={DEPS} />,
+    hint: messages.games.queens.play.hint,
   },
   {
     name: "Cruzadinha",

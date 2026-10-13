@@ -115,7 +115,7 @@ function registerDaily<P extends Play>({ name, usePlay, enter }: Daily<P>) {
       expect(result.current.hintReady).toBe(false);
     });
 
-    it("writes nothing when the board is already empty", () => {
+    it("writes nothing when no cell is decided yet", () => {
       const { result } = started();
       const setItem = vi.spyOn(Storage.prototype, "setItem");
 
