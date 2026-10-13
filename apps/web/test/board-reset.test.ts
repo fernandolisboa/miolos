@@ -340,7 +340,11 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
     });
 
     it("keeps the hint spent, the clock and the sync flag, and drops the hinted cell", () => {
-      expect(after.hint).toEqual({ ...played.hint, lastIndex: null });
+      expect(after.hint).toEqual({
+        ...played.hint,
+        lastIndex: null,
+        ...("reason" in played.hint ? { reason: null, spotlight: [] } : {}),
+      });
       expect(after.timer).toBe(played.timer);
       expect(after.now).toBe(played.now);
       expect(after.pendingSync).toBe(played.pendingSync);

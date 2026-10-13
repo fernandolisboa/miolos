@@ -30,7 +30,6 @@ interface Play {
   readonly state: { readonly entries: readonly unknown[] };
   readonly elapsed: number;
   readonly hintReady: boolean;
-  readonly hintKind: string | null;
   readonly reset: () => void;
   readonly revealHint: () => void;
 }
@@ -39,6 +38,7 @@ interface Daily<P extends Play> {
   readonly name: "sudoku" | "nonogram";
   readonly usePlay: () => P;
   readonly enter: (play: P) => void;
+  readonly hintNoted: (play: P) => boolean;
 }
 
 const SUDOKU = generateDailySudoku({ seed: SEED, weekday: 1 });
@@ -76,7 +76,12 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function registerDaily<P extends Play>({ name, usePlay, enter }: Daily<P>) {
+function registerDaily<P extends Play>({
+  name,
+  usePlay,
+  enter,
+  hintNoted,
+}: Daily<P>) {
   describe(name, () => {
     function started() {
       const hook = renderHook(usePlay);
@@ -97,7 +102,7 @@ function registerDaily<P extends Play>({ name, usePlay, enter }: Daily<P>) {
       act(() => {
         vi.advanceTimersByTime(ELAPSED_MS);
       });
-      expect(result.current.hintKind).not.toBeNull();
+      expect(hintNoted(result.current)).toBe(true);
 
       act(() => {
         result.current.reset();
@@ -111,7 +116,7 @@ function registerDaily<P extends Play>({ name, usePlay, enter }: Daily<P>) {
       expect(record.hintsUsed).toBe(1);
       expect(record.elapsedMs).toBeGreaterThanOrEqual(ELAPSED_MS);
       expect(result.current.elapsed).toBeGreaterThanOrEqual(ELAPSED_MS);
-      expect(result.current.hintKind).toBeNull();
+      expect(hintNoted(result.current)).toBe(false);
       expect(result.current.hintReady).toBe(true);
     });
 
@@ -137,6 +142,7 @@ describe("Recomeçar on a daily board rewrites the play record (T-WEB-S516)", ()
       play.selectCell(SUDOKU_FIRST_PLAYABLE);
       play.enterDigit(9);
     },
+    hintNoted: (play) => play.state.hint.reason !== null,
   });
   registerDaily({
     name: "nonogram",
@@ -145,5 +151,6 @@ describe("Recomeçar on a daily board rewrites the play record (T-WEB-S516)", ()
       play.selectCell(0);
       play.enterValue(1);
     },
+    hintNoted: (play) => play.hintKind !== null,
   });
 });

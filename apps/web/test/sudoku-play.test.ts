@@ -15,6 +15,7 @@ import {
 import { solutionDigits } from "../src/sudoku/engine";
 import type { SudokuDigit } from "../src/sudoku/state";
 import { useSudokuPlay } from "../src/sudoku/use-sudoku-play";
+import { freeHintSteps } from "./free-hints";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -143,10 +144,13 @@ describe("useSudokuPlay", () => {
       result.current.revealHint();
     });
 
-    const first = PUZZLE.givens.findIndex((cell) => cell === 0);
+    const [step] = freeHintSteps(PUZZLE.givens);
+    if (step === undefined) {
+      throw new Error("no first step");
+    }
 
-    expect(result.current.state.entries[first]).toBe(SOLUTION[first]);
-    expect(result.current.hintKind).toBe("fill");
+    expect(result.current.state.entries[step.index]).toBe(SOLUTION[step.index]);
+    expect(result.current.state.hint.reason).toEqual({ kind: "step", step });
     expect(result.current.hintReady).toBe(true);
 
     for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {

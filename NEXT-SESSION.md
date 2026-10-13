@@ -4,6 +4,8 @@
 
 ## Start here
 
+The Sudoku hint reveals and explains the next logical step (#296, ADR-0099); `nextSudokuHint` is in `apps/web/src/sudoku/hint.ts`, `nextSudokuStep` in `packages/games/src/sudoku/grade.ts`.
+
 **`/admin` shipped** (#304, ADR-0097, ADR-0098): an admin edits each `remote_config` key within its schema bounds, no deploy. Admins are the user ids in `ADMIN_USER_IDS` on `apps/api`. `getRemoteConfig` now falls back per key. #304 is closed.
 
 **The free hint allowance is the `freeHintsPerPuzzle` key** (1 to 9, default 3, ADR-0098): daily and archive puzzles read it from `GET /hints` through `FetchedFreeHints`; free play stays at `FREE_HINTS_PER_PUZZLE`. `HINTS_PER_PUZZLE_CEILING` (9) is the only wire bound. Before rolling either app back, set the key to 3 or less and wait for the rollover.
@@ -16,7 +18,7 @@
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
-**The Sudoku board shows the selection's reach** (#302): selecting a cell tints its row, column and box, and fills every other copy of its digit with the accent; violating and hinted cells keep their own look. The rule lives in `selectionHighlights` and `sharesUnit` (`apps/web/src/sudoku/engine.ts`), which #296's explained hint can reuse. Test ids `T-WEB-S495…S497`.
+**The Sudoku board shows the selection's reach** (#302): selecting a cell tints its row, column and box, and fills every other copy of its digit with the accent; violating and hinted cells keep their own look. The rule lives in `selectionHighlights` (`apps/web/src/sudoku/engine.ts`), on the games package's `sudokuPeers`. Test ids `T-WEB-S495…S497`.
 
 **Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `useHintKind` (`play/use-hint-kind.ts`) clears the hint note with it, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds, so a change to hint counts (#295) needs no change to the reset. Test ids `T-WEB-S514…S517`.
 
@@ -35,5 +37,7 @@
 ## Next
 
 **Next:** file per-game time buckets as an issue.
+
+**Then:** #297: the same for the other grid games.
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and `/admin/config`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.

@@ -18,12 +18,18 @@ import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { formatElapsed, messages } from "../src/i18n";
 import { playRecordKey, type SudokuPlayRecord } from "../src/play/play-record";
 import sharedStyles from "../src/play/screen.module.css";
-import { sharesUnit, solutionDigits, track } from "../src/sudoku/engine";
+import {
+  mergedGrid,
+  selectionHighlights,
+  solutionDigits,
+  track,
+} from "../src/sudoku/engine";
+import { sudokuHintExplanation } from "../src/sudoku/hint";
 import type { SudokuDigit } from "../src/sudoku/state";
 import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
-import { spendFreeHints } from "./free-hints";
+import { freeHintSteps, spendFreeHints } from "./free-hints";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -43,6 +49,8 @@ vi.mock("next/navigation", () => ({
 const DATE = "2026-08-01";
 const SIDE = 9;
 const TOTAL_CELLS = 81;
+
+const BLANK: readonly number[] = Array.from({ length: TOTAL_CELLS }, () => 0);
 
 const PUZZLE = generateDailySudoku({ seed: 20_260_801, weekday: 1 });
 
@@ -69,6 +77,8 @@ function solutionOf(): readonly SudokuDigit[] {
 }
 
 const SOLUTION = solutionOf();
+
+const HINT_STEPS = freeHintSteps(PUZZLE.givens);
 
 function cellAt(container: HTMLElement, index: number): HTMLElement {
   const cell = container.querySelector<HTMLElement>(
@@ -417,7 +427,9 @@ describe("the free hints (T-WEB-S28a)", () => {
     expect(exhausted).toHaveAttribute("aria-disabled", "true");
 
     expect(
-      screen.getByText(messages.games.sudoku.play.hint.explain.fill),
+      screen.getByText(
+        sudokuHintExplanation({ kind: "step", step: HINT_STEPS[2]! }) ?? "",
+      ),
     ).toBeInTheDocument();
 
     fireEvent.click(exhausted);
@@ -442,6 +454,83 @@ describe("the free hints (T-WEB-S28a)", () => {
     );
 
     expect(caretIndex(container)).toBe(FIRST_EMPTY);
+  });
+});
+
+describe("the hint names its step and lights the cells it reasons about (T-WEB-S553)", () => {
+  const step = HINT_STEPS[0]!;
+
+  function tinted(container: HTMLElement): number[] {
+    return [...container.querySelectorAll<HTMLElement>("[data-cell-index]")]
+      .filter((cell) => cell.classList.contains(className("cellUnit")))
+      .map((cell) => Number(cell.dataset.cellIndex));
+  }
+
+  function liveRegion(container: HTMLElement): HTMLElement {
+    const region = container.querySelector<HTMLElement>(
+      `.${className("board")} [aria-live="polite"]`,
+    );
+    if (region === null) {
+      throw new Error("the board renders no live region");
+    }
+    return region;
+  }
+
+  it("writes the step's cell, reads out why, and tints its cells until the next board action", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    expect(liveRegion(container).textContent).toBe("");
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    const hinted = cellAt(container, step.index);
+    expect(hinted.textContent).toBe(String(step.digit));
+    expect(hinted.classList).toContain(className("cellHinted"));
+    expect(liveRegion(container).textContent).toBe(
+      sudokuHintExplanation({ kind: "step", step }),
+    );
+    expect(tinted(container)).toEqual(
+      [...step.cells]
+        .filter((index) => index !== step.index)
+        .sort((a, b) => a - b),
+    );
+
+    fireEvent.click(cellAt(container, FIRST_GIVEN));
+
+    const entries = PUZZLE.givens.map((_, index) =>
+      index === step.index ? (SOLUTION[index] ?? null) : null,
+    );
+    const reach = selectionHighlights(
+      mergedGrid(PUZZLE.givens, entries),
+      FIRST_GIVEN,
+    );
+    expect(tinted(container)).toEqual(
+      [...reach]
+        .filter(([index, kind]) => kind === "unit" && index !== step.index)
+        .map(([index]) => index),
+    );
+    expect(hinted.classList).toContain(className("cellHinted"));
+    expect(liveRegion(container).textContent).toBe(
+      sudokuHintExplanation({ kind: "step", step }),
+    );
+  });
+
+  it("reads out a correction", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const wrong = SOLUTION[FIRST_EMPTY] === 9 ? "1" : "9";
+    type(container, FIRST_EMPTY, wrong);
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe(
+      String(SOLUTION[FIRST_EMPTY]),
+    );
+    expect(liveRegion(container).textContent).toBe(
+      messages.games.sudoku.play.hint.correction,
+    );
   });
 });
 
@@ -472,7 +561,7 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
     const unit = Array.from(
       { length: TOTAL_CELLS },
       (_unused, index) => index,
-    ).filter((index) => sharesUnit(index, FIRST_EMPTY));
+    ).filter((index) => selectionHighlights(BLANK, FIRST_EMPTY).has(index));
     expect(cellsWith(container, "cellUnit")).toEqual(unit);
     expect(cellsWith(container, "cellSameDigit")).toEqual([]);
     expect(labels(container)).toEqual(before);
@@ -518,7 +607,11 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
     }
     for (const selected of [ROW_GIVEN, Number(hinted.dataset.cellIndex)]) {
       fireEvent.click(cellAt(container, selected));
-      if (!sharesUnit(selected, Number(hinted.dataset.cellIndex))) {
+      if (
+        !selectionHighlights(BLANK, Number(hinted.dataset.cellIndex)).has(
+          selected,
+        )
+      ) {
         throw new Error("the fixture's hint is not in the row given's units");
       }
       expect(hinted.classList).toContain(className("cellHinted"));

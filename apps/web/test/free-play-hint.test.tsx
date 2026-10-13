@@ -13,7 +13,9 @@ import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { useFreeCrossword } from "../src/free-play/use-free-crossword";
 import { messages } from "../src/i18n";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
-import { spendFreeHints } from "./free-hints";
+import { sudokuHintExplanation } from "../src/sudoku/hint";
+import sudokuBoardStyles from "../src/sudoku/sudoku-board.module.css";
+import { freeHintSteps, spendFreeHints } from "./free-hints";
 
 const SEED = 20_260_812;
 const WEEKDAY = LEVEL_WEEKDAYS.medio;
@@ -71,14 +73,13 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
   it("Sudoku: the hint writes the narrowed solution digit, then stops", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateDailySudoku({ seed: SEED, weekday: WEEKDAY });
-    const firstEmpty = puzzle.givens.findIndex((cell) => cell === 0);
     const { container } = render(<SudokuFreeScreen deps={stableDeps(SEED)} />);
 
     spendFreeHints();
 
-    expect(cellText(container, firstEmpty)).toBe(
-      String(puzzle.solution[firstEmpty]),
-    );
+    for (const { index } of freeHintSteps(puzzle.givens)) {
+      expect(cellText(container, index)).toBe(String(puzzle.solution[index]));
+    }
     const spent = boardText(container);
     fireEvent.click(exhaustedHint());
     expect(boardText(container)).toEqual(spent);
@@ -103,6 +104,35 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
     expect(marked()).toBe(FREE_HINTS_PER_PUZZLE);
     fireEvent.click(exhaustedHint());
     expect(marked()).toBe(FREE_HINTS_PER_PUZZLE);
+  });
+});
+
+describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S554)", () => {
+  it("writes the step's digit, reads out why and tints the step's cells", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const puzzle = generateDailySudoku({ seed: SEED, weekday: WEEKDAY });
+    const [step] = freeHintSteps(puzzle.givens);
+    if (step === undefined) {
+      throw new Error("no first step");
+    }
+    const { container } = render(<SudokuFreeScreen deps={stableDeps(SEED)} />);
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
+
+    expect(cellText(container, step.index)).toBe(String(step.digit));
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      sudokuHintExplanation({ kind: "step", step }),
+    );
+    const tinted = [
+      ...container.querySelectorAll<HTMLElement>(
+        `.${sudokuBoardStyles.cellUnit}`,
+      ),
+    ].map((cell) => Number(cell.dataset.cellIndex));
+    expect(tinted).toEqual(
+      step.cells.filter((index) => index !== step.index).sort((a, b) => a - b),
+    );
   });
 });
 

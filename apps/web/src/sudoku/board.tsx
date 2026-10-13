@@ -6,6 +6,7 @@ import { isShortcut, keyMove } from "../play/grid-selection";
 import {
   mergedGrid,
   selectionHighlights,
+  spotlightHighlights,
   track,
   type CellHighlight,
 } from "./engine";
@@ -22,6 +23,7 @@ export function Board({
   selected,
   violating,
   hintIndex,
+  spotlight,
   onSelect,
   onMove,
   onDigit,
@@ -33,6 +35,7 @@ export function Board({
   readonly selected: number | null;
   readonly violating: ReadonlySet<number>;
   readonly hintIndex: number | null;
+  readonly spotlight: readonly number[];
   readonly onSelect: (index: number) => void;
   readonly onMove: (rows: number, columns: number) => void;
   readonly onDigit: (digit: SudokuDigit) => void;
@@ -41,7 +44,10 @@ export function Board({
   const boardRef = useRef<HTMLDivElement>(null);
 
   const tabbable = selected ?? 0;
-  const highlights = selectionHighlights(mergedGrid(givens, entries), selected);
+  const highlights =
+    spotlight.length > 0
+      ? spotlightHighlights(spotlight)
+      : selectionHighlights(mergedGrid(givens, entries), selected);
 
   useLayoutEffect(() => {
     const board = boardRef.current;

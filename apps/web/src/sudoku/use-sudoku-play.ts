@@ -2,12 +2,9 @@ import type { DailySudokuResponse } from "@miolos/core";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
-import type { Hint } from "../play/grid-hint";
-import { nextHint } from "../play/grid-hint";
 import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
-import { useHintKind } from "../play/use-hint-kind";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import {
   mergedGrid,
@@ -23,8 +20,6 @@ import {
   type SudokuPlayState,
 } from "./state";
 
-export type SudokuHint = Hint<SudokuDigit>;
-
 export interface SudokuPlay {
   readonly state: SudokuPlayState;
 
@@ -33,8 +28,6 @@ export interface SudokuPlay {
   readonly filled: number;
 
   readonly hintReady: boolean;
-
-  readonly hintKind: SudokuHint["kind"] | null;
   readonly selectCell: (index: number) => void;
 
   readonly moveSelection: (rows: number, columns: number) => void;
@@ -54,8 +47,6 @@ export function useSudokuPlay(
     daily,
     initSudokuPlayState,
   );
-  const { hintKind, setHintKind, reset } =
-    useHintKind<SudokuHint["kind"]>(dispatch);
   const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
@@ -100,32 +91,20 @@ export function useSudokuPlay(
   }, []);
 
   const revealHint = useCallback(() => {
-    if (solution === null) {
-      return;
+    if (solution !== null && canHint(stateRef.current, allowance)) {
+      dispatch({ type: "use-hint", solution });
     }
-    const current = stateRef.current;
-    if (!canHint(current, allowance)) {
-      return;
-    }
+  }, [solution, allowance]);
 
-    const hint = nextHint(
-      solution,
-      playableGivens(current.givens),
-      current.entries,
-    );
-    if (hint === null) {
-      return;
-    }
-    setHintKind(hint.kind);
-    dispatch({ type: "use-hint", solution });
-  }, [solution, setHintKind, allowance]);
+  const reset = useCallback(() => {
+    dispatch({ type: "reset" });
+  }, []);
 
   return {
     state,
     elapsed,
     filled,
     hintReady: solution !== null && canHint(state, allowance),
-    hintKind,
     selectCell,
     moveSelection,
     enterDigit,

@@ -8,6 +8,7 @@ import {
   generateDailySudoku,
   getSudokuConflicts,
   isSudokuSolved,
+  nextSudokuStep,
 } from "@miolos/games/sudoku";
 import { describe, expect, it } from "vitest";
 
@@ -130,6 +131,8 @@ describe("initSudokuPlayState", () => {
     expect(state.hint).toEqual({
       used: 0,
       lastIndex: null,
+      reason: null,
+      spotlight: [],
     });
     expect(state.violating).toEqual(new Set());
     expect(state.status).toBe("playing");
@@ -422,20 +425,6 @@ describe("move-selection", () => {
 
 describe("use-hint", () => {
   const initial = initSudokuPlayState(daily());
-  const firstEmpty = PUZZLE.givens.findIndex((cell) => cell === 0);
-
-  it("reveals the first empty cell and spends a free hint", () => {
-    const hinted = sudokuPlayReducer(initial, {
-      type: "use-hint",
-      solution: SOLUTION,
-    });
-
-    expect(hinted.entries[firstEmpty]).toBe(SOLUTION[firstEmpty]);
-    expect(hinted.hint).toEqual({
-      used: 1,
-      lastIndex: firstEmpty,
-    });
-  });
 
   it("leaves the caret exactly where the player put it", () => {
     const at = play(initial, { type: "select", index: 80 });
@@ -477,6 +466,130 @@ describe("use-hint", () => {
 
     expect(hinted.hint.lastIndex).toBe(LAST_PLAYABLE);
     expect(hinted.entries[LAST_PLAYABLE]).toBe(correct);
+  });
+});
+
+describe("use-hint records the reason and the spotlight (T-WEB-S550)", () => {
+  const initial = initSudokuPlayState(daily());
+
+  it("reveals the next logical step, spends a free hint and lights its cells", () => {
+    const step = nextSudokuStep(PUZZLE.givens);
+    if (step === null) {
+      throw new Error("a published daily always has a first step");
+    }
+    const hinted = sudokuPlayReducer(initial, {
+      type: "use-hint",
+      solution: SOLUTION,
+    });
+
+    expect(hinted.entries[step.index]).toBe(step.digit);
+    expect(hinted.hint).toEqual({
+      used: 1,
+      lastIndex: step.index,
+      reason: { kind: "step", step },
+      spotlight: step.cells,
+    });
+  });
+
+  it("names a correction and lights nothing", () => {
+    const correct = digitAt(LAST_PLAYABLE);
+    const wrongAt = write(initial, LAST_PLAYABLE, correct === 9 ? 1 : 9);
+    const hinted = sudokuPlayReducer(wrongAt, {
+      type: "use-hint",
+      solution: SOLUTION,
+    });
+
+    expect(hinted.hint.reason).toEqual({ kind: "correction" });
+    expect(hinted.hint.spotlight).toEqual([]);
+  });
+});
+
+describe("the spotlight lasts until the next board action, the reason until the next hint (T-WEB-S551)", () => {
+  const FIRST_GIVEN = PUZZLE.givens.findIndex((cell) => cell !== 0);
+  const STEP_INDEX = nextSudokuStep(PUZZLE.givens)?.index;
+  const STILL_EMPTY = PUZZLE.givens.findIndex(
+    (cell, index) => cell === 0 && index !== STEP_INDEX,
+  );
+
+  function hinted(selected: number): SudokuPlayState {
+    return play(
+      initSudokuPlayState(daily()),
+      { type: "select", index: selected },
+      { type: "use-hint", solution: SOLUTION },
+    );
+  }
+
+  it.each<[string, number, SudokuPlayAction]>([
+    ["selecting another cell", FIRST_GIVEN, { type: "select", index: 80 }],
+    [
+      "moving the selection",
+      FIRST_GIVEN,
+      { type: "move-selection", rows: 0, columns: 1 },
+    ],
+    ["writing a digit", STILL_EMPTY, { type: "enter-digit", digit: 1 }],
+    ["writing on a given", FIRST_GIVEN, { type: "enter-digit", digit: 1 }],
+    ["clearing an empty cell", STILL_EMPTY, { type: "clear-cell" }],
+    ["clearing a given", FIRST_GIVEN, { type: "clear-cell" }],
+  ])("%s clears the spotlight and keeps the reason", (_, at, action) => {
+    const before = hinted(at);
+    expect(before.hint.spotlight).not.toEqual([]);
+
+    const after = sudokuPlayReducer(before, action);
+
+    expect(after.hint.spotlight).toEqual([]);
+    expect(after.hint.reason).toEqual(before.hint.reason);
+    expect(after.hint.used).toBe(1);
+  });
+
+  it("keeps the spotlight when the same cell is selected again", () => {
+    const before = hinted(FIRST_GIVEN);
+
+    expect(
+      sudokuPlayReducer(before, { type: "select", index: FIRST_GIVEN }),
+    ).toBe(before);
+  });
+
+  it("returns the same state for a board action with nothing to clear", () => {
+    const at = play(initSudokuPlayState(daily()), {
+      type: "select",
+      index: FIRST_GIVEN,
+    });
+
+    expect(sudokuPlayReducer(at, { type: "clear-cell" })).toBe(at);
+  });
+
+  it("reset drops the reason and the spotlight and keeps the hint spent", () => {
+    const before = play(hinted(FIRST_GIVEN), {
+      type: "select",
+      index: STILL_EMPTY,
+    });
+    const written = sudokuPlayReducer(
+      { ...before, hint: { ...before.hint, spotlight: [0] } },
+      { type: "enter-digit", digit: 1 },
+    );
+
+    const reset = sudokuPlayReducer(
+      { ...written, hint: { ...written.hint, spotlight: [0] } },
+      { type: "reset" },
+    );
+
+    expect(reset.hint).toEqual({
+      used: 1,
+      lastIndex: null,
+      reason: null,
+      spotlight: [],
+    });
+  });
+
+  it("restore drops the reason and the spotlight", () => {
+    const restored = sudokuPlayReducer(hinted(FIRST_GIVEN), {
+      type: "restore",
+      record: record({ hintsUsed: 1 }),
+      now: 1,
+    });
+
+    expect(restored.hint.reason).toBeNull();
+    expect(restored.hint.spotlight).toEqual([]);
   });
 });
 
@@ -533,6 +646,8 @@ describe("restore", () => {
     expect(restored.hint).toEqual({
       used: 1,
       lastIndex: null,
+      reason: null,
+      spotlight: [],
     });
     expect(restored.now).toBe(1_700_000_000_000);
   });

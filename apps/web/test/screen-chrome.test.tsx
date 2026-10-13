@@ -122,7 +122,6 @@ const SUDOKU_PLAY = {
   elapsed: ELAPSED,
   filled: 12,
   hintReady: false,
-  hintKind: "correction" as const,
   selectCell: noop,
   moveSelection: noop,
   enterDigit: noop,
@@ -659,6 +658,55 @@ describe("the hint button counts down from the served allowance (T-WEB-S538)", (
 
   it("reads spent when a restored count is past a lowered allowance", () => {
     expect(hintOf(false, 3, 2).textContent).toBe("Dicas usadas");
+  });
+});
+
+describe("the hint's reason is read out from one polite live region (T-WEB-S555)", () => {
+  function liveRegions(root: ParentNode): readonly Element[] {
+    return [...root.querySelectorAll(`.${cls("board")} [aria-live]`)];
+  }
+
+  it("mounts the region before any reason, and fills that same node", () => {
+    const { container, rerender } = render(chrome(DAILY_LIVE));
+    const [region, ...others] = liveRegions(container);
+
+    expect(others).toEqual([]);
+    expect(region?.getAttribute("aria-live")).toBe("polite");
+    expect(region?.getAttribute("role")).toBeNull();
+    expect(region?.textContent).toBe("");
+
+    rerender(chrome(FREE_PLAYING));
+
+    expect(liveRegions(container)).toEqual([region]);
+    expect(region?.querySelector(`.${cls("hintExplain")}`)?.textContent).toBe(
+      "porque sim",
+    );
+  });
+
+  it("mounts a new sentence for each hint, so the same words are read again", () => {
+    const afterHints = (used: number) =>
+      chrome({
+        ...FREE_PLAYING,
+        state: {
+          kind: "playing",
+          readouts: readouts(true, "porque sim", noop, used),
+        },
+      });
+    const { container, rerender } = render(afterHints(1));
+    const first = container.querySelector(`.${cls("hintExplain")}`);
+
+    rerender(afterHints(2));
+    const second = container.querySelector(`.${cls("hintExplain")}`);
+
+    expect(second?.textContent).toBe("porque sim");
+    expect(second).not.toBe(first);
+    expect(first?.isConnected).toBe(false);
+  });
+
+  it("is there on the skeleton too, empty", () => {
+    const regions = liveRegions(staticPage(chrome(DAILY_SKELETON)));
+
+    expect(regions.map((region) => region.textContent)).toEqual([""]);
   });
 });
 

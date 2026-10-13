@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S183` | `S182` | never used |
 | `T-DB` | `S135` | `S131` | `T-DB-21` |
 | `T-API` | `S313` | `S312` | `T-API-16` |
-| `T-WEB` | `S545` | `S544` | `T-WEB-23` |
+| `T-WEB` | `S557` | `S555` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#296 (the Sudoku hint reveals the next logical step, ADR-0099) spent **`T-WEB-S547…S555`**: `S547` (a wrong entry is corrected before any step), `S548` (the step on bare and correct partial boards, every weekday), `S549` (the first-empty fallback), `S550` (`use-hint` records the reason and the spotlight), `S551` (the spotlight clears on the next board action and on reset, the reason on the next hint or reset), `S552` (every hint sentence, naming the cell, and every technique name), `S553` (the daily screen), `S554` (free play) and `S555` (the chrome's one polite live region, re-announcing a repeated sentence). `T-WEB-S28a`, `S122`, `S495` and `S496` were updated in place, as was the shared `SUDOKU_PLAY` fixture in `screen-chrome.test.tsx`. Its first reservation, `S538…S546` with `S547` as headroom, collided with #304 PR 2, which merged first; `S545`, `S546` and `S556` went unspent and are burned.
 
 #302 (the Sudoku selection's reach) spent **`T-WEB-S495…S497`**: `S495` (`sharesUnit` and `selectionHighlights`), `S496` (the board's highlight classes, unchanged names, the conflict and hint rings kept) and `S497` (the tint and fill contrast in both themes, and the caret's order on a filled copy). `S488…S494` were left to the branches running beside it the same day (#295, #298, #299, #301, #304); whatever none of them spent is burned.
 
@@ -746,6 +748,7 @@ Four same-file, same-claim duplicates predate this branch and are deliberately l
 | `T-CORE-S115`, `T-DB-S88`, `T-API-S180`, `T-API-S181`, `T-WEB-S331`, `T-WEB-S332` | tails of the issue-#64 on-issue reservation (plan 066) — the reserved review-round headroom, unspent when PR #188 merged at step 8. **The six-lens step-6 round produced four blocking findings and took NO fresh id**, which is the widened-in-place precedent rather than a quiet shortage: `T-WEB-S329` was rewritten in place after a reviewer killed it by mutation, and `T-DB-S86` and `T-API-S177` were widened in place. `T-WEB-S330` is NOT here — it is spent headroom (the plan-040 `T-LINT-S45` case), taken at step 5 for the `all-caps-body` worst case over the motif library. Burned unspent per the rule above |
 | `T-CORE-S102`, `T-DB-S70`, `T-LINT-S51` | tails of the issue-#145 on-issue reservation — the reserved review-round headroom left unspent at step 7's exit. **`T-DB-S69` is NOT here (spent headroom, the plan-040 `T-LINT-S45` case — the users-column catalog pin), and neither are `T-API-S131`/`S132` and `T-WEB-S271`/`S272`, spent at step 7 on the review round** (the #83/`T-WEB-S282` precedent; the #145 paragraph below has each claim) |
 | `T-WEB-S420…S424`, `T-WEB-S430…S432` | skipped inside #276's `T-WEB-S417…S443` range and never spent. Burned unspent per the rule above |
+| `T-WEB-S545`, `T-WEB-S546`, `T-WEB-S556` | #296's renumbered range: the two ids its move past #304 PR 2 skipped, and the review-round headroom. Burned unspent per the rule above |
 
 Not burned, and not reusable either: `T-WEB-S2`, `S4`…`S7` are covered by the `T-WEB-S1..S7` range comment at `apps/web/test/sudoku-state.test.ts:23` rather than by per-`it` markers.
 

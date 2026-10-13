@@ -46,6 +46,12 @@ function buildUnits(): readonly (readonly number[])[] {
 
 export const UNITS: readonly (readonly number[])[] = buildUnits();
 
+export const ROW_UNITS = 0;
+
+export const COLUMN_UNITS = 9;
+
+export const BOX_UNITS = 18;
+
 function buildPeers(): readonly (readonly number[])[] {
   return Array.from({ length: 81 }, (_, i) => {
     const peers = new Set<number>();
@@ -63,6 +69,10 @@ function buildPeers(): readonly (readonly number[])[] {
 }
 
 export const PEERS: readonly (readonly number[])[] = buildPeers();
+
+export function sudokuPeers(index: number): readonly number[] {
+  return PEERS[index]!;
+}
 
 export function assertSudokuGrid(grid: SudokuGrid): void {
   const shape: unknown = grid;

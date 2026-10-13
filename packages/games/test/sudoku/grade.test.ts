@@ -1,117 +1,18 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { gradeInternal, type SudokuTechnique } from "../../src/sudoku/grade";
+import { gradeInternal } from "../../src/sudoku/grade";
 import {
   generateDailySudoku,
   gradeSudoku,
   solveSudoku,
-  type SudokuGrid,
-  type SudokuTier,
   type Weekday,
 } from "../../src/sudoku/index";
-import { FULL_GRID, TWO_SOLUTION_GRID } from "./fixtures";
+import { FULL_GRID, TECHNIQUE_FIXTURES, TWO_SOLUTION_GRID } from "./fixtures";
 
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
-
-const TECHNIQUE_FIXTURES: readonly {
-  readonly technique: SudokuTechnique;
-  readonly tier: SudokuTier;
-  readonly givens: SudokuGrid;
-}[] = [
-  {
-    technique: "hiddenSingle",
-    tier: 2,
-    givens: [
-      0, 0, 5, 0, 3, 0, 9, 0, 1, 0, 0, 0, 7, 8, 0, 0, 0, 5, 2, 0, 9, 1, 0, 0, 0,
-      0, 8, 0, 9, 1, 0, 0, 8, 3, 7, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9, 0, 7, 0, 9, 0,
-      0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 2, 0, 0, 0, 6, 4, 0, 0, 5, 0, 0, 7, 0, 5, 2,
-      0, 7, 4, 0, 0, 0,
-    ],
-  },
-  {
-    technique: "pointing",
-    tier: 3,
-    givens: [
-      3, 0, 0, 5, 0, 6, 8, 0, 2, 0, 2, 0, 9, 4, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0,
-      0, 1, 0, 0, 0, 4, 0, 0, 0, 0, 0, 9, 0, 5, 0, 0, 3, 0, 7, 0, 0, 0, 0, 8, 5,
-      0, 0, 0, 0, 1, 7, 0, 6, 0, 0, 0, 0, 8, 6, 0, 0, 0, 0, 0, 0, 9, 0, 0, 9, 0,
-      0, 8, 0, 4, 0, 0,
-    ],
-  },
-  {
-    technique: "claiming",
-    tier: 3,
-    givens: [
-      5, 0, 0, 0, 9, 1, 0, 0, 0, 3, 9, 0, 0, 0, 0, 6, 1, 0, 4, 0, 0, 6, 0, 0, 0,
-      0, 0, 9, 0, 0, 3, 0, 0, 4, 0, 0, 8, 0, 0, 0, 7, 2, 0, 0, 1, 0, 0, 0, 0, 0,
-      0, 5, 9, 0, 0, 0, 8, 0, 1, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 1, 0, 0,
-      0, 0, 0, 0, 8, 0,
-    ],
-  },
-  {
-    technique: "nakedPair",
-    tier: 4,
-    givens: [
-      5, 9, 0, 0, 0, 8, 0, 2, 7, 2, 0, 0, 3, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      3, 0, 0, 0, 5, 0, 0, 1, 0, 0, 0, 0, 7, 0, 6, 0, 0, 3, 9, 0, 0, 6, 0, 9, 3,
-      5, 0, 0, 0, 0, 0, 4, 0, 5, 7, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 4, 8,
-    ],
-  },
-  {
-    technique: "hiddenPair",
-    tier: 4,
-    givens: [
-      0, 9, 5, 1, 0, 0, 0, 3, 0, 0, 4, 0, 0, 7, 6, 0, 9, 0, 0, 6, 0, 0, 0, 4, 0,
-      0, 8, 0, 0, 0, 3, 2, 0, 4, 0, 0, 2, 8, 9, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 1, 7, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 6,
-      4, 0, 0, 0, 0, 0,
-    ],
-  },
-  {
-    technique: "nakedTriple",
-    tier: 5,
-    givens: [
-      0, 0, 0, 2, 0, 0, 4, 0, 0, 0, 6, 0, 0, 0, 9, 0, 0, 0, 0, 4, 0, 0, 7, 5, 9,
-      0, 3, 0, 8, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 5, 9, 2, 0, 0,
-      0, 1, 6, 0, 0, 0, 9, 0, 0, 7, 0, 0, 0, 0, 0, 5, 9, 0, 0, 0, 2, 0, 0, 0, 0,
-      0, 3, 0, 8, 0, 9,
-    ],
-  },
-  {
-    technique: "hiddenTriple",
-    tier: 5,
-    givens: [
-      0, 2, 0, 0, 0, 0, 0, 3, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 8, 0, 4, 0,
-      1, 0, 0, 0, 5, 0, 9, 7, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 8, 0, 0, 0, 0, 0,
-      0, 0, 0, 4, 7, 0, 0, 6, 0, 0, 3, 0, 0, 0, 0, 0, 0, 8, 5, 0, 7, 0, 0, 0, 0,
-      0, 4, 1, 0, 0, 9,
-    ],
-  },
-  {
-    technique: "xWingRows",
-    tier: 5,
-    givens: [
-      3, 0, 0, 5, 0, 6, 8, 0, 2, 0, 2, 0, 9, 4, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0,
-      0, 1, 0, 0, 0, 4, 0, 0, 0, 0, 0, 9, 8, 0, 0, 0, 3, 0, 7, 4, 0, 0, 0, 8, 5,
-      0, 0, 0, 0, 1, 7, 0, 6, 0, 0, 0, 2, 8, 6, 0, 0, 0, 0, 0, 0, 9, 0, 0, 9, 0,
-      0, 8, 0, 4, 0, 0,
-    ],
-  },
-  {
-    technique: "xWingCols",
-    tier: 5,
-    givens: [
-      8, 0, 0, 9, 0, 0, 0, 0, 3, 3, 9, 0, 0, 4, 0, 7, 0, 0, 0, 0, 6, 0, 1, 0, 9,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 7, 5, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-      7, 0, 0, 4, 5, 0, 0, 1, 0, 0, 0, 0, 2, 6, 0, 0, 2, 0, 8, 0, 0, 0, 0, 0, 3,
-      0, 0, 9, 5, 1, 0,
-    ],
-  },
-];
 
 describe("gradeSudoku", () => {
   it("grades a naked-singles-only puzzle 1", () => {
