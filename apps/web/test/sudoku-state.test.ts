@@ -127,7 +127,6 @@ describe("initSudokuPlayState", () => {
     expect(elapsedMs(state.timer, state.now)).toBe(0);
     expect(state.timer.runningSince).toBeNull();
     expect(state.hint).toEqual({
-      free: FREE_HINTS_PER_PUZZLE,
       used: 0,
       lastIndex: null,
     });
@@ -432,7 +431,6 @@ describe("use-hint", () => {
 
     expect(hinted.entries[firstEmpty]).toBe(SOLUTION[firstEmpty]);
     expect(hinted.hint).toEqual({
-      free: FREE_HINTS_PER_PUZZLE,
       used: 1,
       lastIndex: firstEmpty,
     });
@@ -545,7 +543,6 @@ describe("restore", () => {
       runningSince: null,
     });
     expect(restored.hint).toEqual({
-      free: FREE_HINTS_PER_PUZZLE,
       used: 1,
       lastIndex: null,
     });

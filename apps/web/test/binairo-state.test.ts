@@ -77,7 +77,6 @@ describe("initPlayState", () => {
     expect(state.timer.runningSince).toBeNull();
     expect(state.paint).toEqual({ kind: "cycle" });
     expect(state.hint).toEqual({
-      free: FREE_HINTS_PER_PUZZLE,
       used: 0,
       lastIndex: null,
     });
@@ -489,7 +488,6 @@ describe("restore (T-WEB-14b)", () => {
     expect(state.timer.runningSince).toBeNull();
     expect(elapsedMs(state.timer, 100_000)).toBe(42_000);
     expect(state.hint).toEqual({
-      free: FREE_HINTS_PER_PUZZLE,
       used: 1,
       lastIndex: null,
     });

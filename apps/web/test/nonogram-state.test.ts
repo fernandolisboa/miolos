@@ -91,7 +91,6 @@ describe("initNonogramPlayState", () => {
       runningSince: null,
     });
     expect(MONDAY_STATE.hint).toEqual({
-      free: FREE_HINTS_PER_PUZZLE,
       used: 0,
       lastIndex: null,
     });
@@ -629,7 +628,6 @@ describe("restore (T-WEB-S37)", () => {
       runningSince: null,
     });
     expect(restored.hint).toEqual({
-      free: FREE_HINTS_PER_PUZZLE,
       used: 1,
       lastIndex: null,
     });

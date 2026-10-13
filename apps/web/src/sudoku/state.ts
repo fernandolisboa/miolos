@@ -59,7 +59,7 @@ export function initSudokuPlayState(
     selected: null,
     tier: daily.tier,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: FREE_HINTS_PER_PUZZLE, used: 0, lastIndex: null },
+    hint: { used: 0, lastIndex: null },
     violating: derived.violating,
     status: derived.status,
     pendingSync: false,
@@ -113,7 +113,10 @@ export function sudokuPlayReducer(
     }
 
     case "use-hint": {
-      if (state.hint.used >= state.hint.free || state.status !== "playing") {
+      if (
+        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
+        state.status !== "playing"
+      ) {
         return state;
       }
       const hint = nextHint(
@@ -129,7 +132,6 @@ export function sudokuPlayReducer(
       return {
         ...revealed,
         hint: {
-          free: FREE_HINTS_PER_PUZZLE,
           used: state.hint.used + 1,
           lastIndex: hint.index,
         },
@@ -215,7 +217,6 @@ function restore(
     ...derived,
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
     hint: {
-      free: FREE_HINTS_PER_PUZZLE,
       used: record.hintsUsed,
       lastIndex: null,
     },

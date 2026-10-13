@@ -69,7 +69,7 @@ export function initCrosswordPlayState(
     selected: null,
     direction: "across",
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: FREE_HINTS_PER_PUZZLE, used: 0, lastIndex: null },
+    hint: { used: 0, lastIndex: null },
     status: "playing",
     pendingSync: false,
     now: 0,
@@ -136,7 +136,10 @@ export function crosswordPlayReducer(
     }
 
     case "use-hint": {
-      if (state.hint.used >= state.hint.free || state.status === "solved") {
+      if (
+        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
+        state.status === "solved"
+      ) {
         return state;
       }
       const hint = nextHint(
@@ -151,7 +154,6 @@ export function crosswordPlayReducer(
       return {
         ...revealed,
         hint: {
-          free: FREE_HINTS_PER_PUZZLE,
           used: state.hint.used + 1,
           lastIndex: hint.index,
         },
@@ -203,7 +205,6 @@ function restore(
     status: isSolved(state.solution, record.entries) ? "solved" : "playing",
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
     hint: {
-      free: FREE_HINTS_PER_PUZZLE,
       used: record.hintsUsed,
       lastIndex: null,
     },

@@ -1,5 +1,6 @@
 "use client";
 
+import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
@@ -96,11 +97,14 @@ function BinairoFreeBoard({
 
   const filled = countFilled(state.givens, state.entries);
   const hintReady =
-    state.hint.used < state.hint.free && state.status === "playing";
+    state.hint.used < FREE_HINTS_PER_PUZZLE && state.status === "playing";
 
   const revealHint = useCallback(() => {
     const current = stateRef.current;
-    if (current.hint.used >= current.hint.free || current.status === "solved") {
+    if (
+      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
+      current.status === "solved"
+    ) {
       return;
     }
 

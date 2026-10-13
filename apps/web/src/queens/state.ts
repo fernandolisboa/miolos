@@ -1,8 +1,4 @@
-import {
-  FREE_HINTS_PER_PUZZLE,
-  type DailyQueensResponse,
-  type QueensSize,
-} from "@miolos/core";
+import type { DailyQueensResponse, QueensSize } from "@miolos/core";
 import {
   findQueensViolations,
   isValidQueensSolution,
@@ -51,7 +47,7 @@ export function initQueensPlayState(
     conflicts: new Set(),
     selected: null,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: FREE_HINTS_PER_PUZZLE, used: 0, lastIndex: null },
+    hint: { used: 0, lastIndex: null },
     status: "playing",
     pendingSync: false,
     now: 0,

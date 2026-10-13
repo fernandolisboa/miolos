@@ -95,7 +95,6 @@ export function binaryGridReducer<S extends BinaryGridState>(
       return {
         ...revealed,
         hint: {
-          free: FREE_HINTS_PER_PUZZLE,
           used: state.hint.used + 1,
           lastIndex: hint.index,
         },
@@ -118,7 +117,7 @@ export function canHint(
 ): state is BinaryGridState & { readonly solution: readonly BinaryMark[] } {
   return (
     state.solution !== null &&
-    state.hint.used < state.hint.free &&
+    state.hint.used < FREE_HINTS_PER_PUZZLE &&
     state.status === "playing"
   );
 }
@@ -187,7 +186,6 @@ function restore<S extends BinaryGridState>(
     ...rules.derive(state, record.entries),
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
     hint: {
-      free: FREE_HINTS_PER_PUZZLE,
       used: record.hintsUsed,
       lastIndex: null,
     },

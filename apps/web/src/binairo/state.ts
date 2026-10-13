@@ -63,7 +63,7 @@ export function initPlayState(daily: DailyBinairoResponse): PlayState {
     paint: { kind: "cycle" },
     stroke: null,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: FREE_HINTS_PER_PUZZLE, used: 0, lastIndex: null },
+    hint: { used: 0, lastIndex: null },
     violating: derived.violating,
     status: derived.status,
     pendingSync: false,
@@ -126,7 +126,10 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       };
 
     case "use-hint": {
-      if (state.hint.used >= state.hint.free || state.status === "solved") {
+      if (
+        state.hint.used >= FREE_HINTS_PER_PUZZLE ||
+        state.status === "solved"
+      ) {
         return state;
       }
       const hint = nextHint(action.solution, state.givens, state.entries);
@@ -137,7 +140,6 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       return {
         ...revealed,
         hint: {
-          free: FREE_HINTS_PER_PUZZLE,
           used: state.hint.used + 1,
           lastIndex: hint.index,
         },
@@ -251,7 +253,6 @@ function restore(
     ...derived,
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
     hint: {
-      free: FREE_HINTS_PER_PUZZLE,
       used: record.hintsUsed,
       lastIndex: null,
     },
