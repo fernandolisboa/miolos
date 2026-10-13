@@ -367,7 +367,7 @@ describe("daily rendering (T-WEB-S439)", () => {
   });
 });
 
-describe("the hint names its pista (T-WEB-S574)", () => {
+describe("the hint names its pista (T-WEB-S579)", () => {
   it("writes a letter of the selected pista and reads out which, keeping the selection", () => {
     const { container } = render(<CrosswordScreen daily={DAILY} />);
     tap(cellAt(7));

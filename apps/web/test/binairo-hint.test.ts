@@ -58,7 +58,7 @@ function board(picture: string): BinairoGrid {
   );
 }
 
-describe("nextBinairoHint corrects first, then reasons, then falls back (T-WEB-S559)", () => {
+describe("nextBinairoHint corrects first, then reasons, then falls back (T-WEB-S564)", () => {
   it("never reveals a wrong cell, on a bare board and on correct partial boards of every weekday", () => {
     expect(PUZZLES).toHaveLength(42);
     for (const [at, puzzle] of PUZZLES.entries()) {
@@ -137,7 +137,7 @@ describe("nextBinairoHint corrects first, then reasons, then falls back (T-WEB-S
   });
 });
 
-describe("every hint sentence (T-WEB-S561)", () => {
+describe("every hint sentence (T-WEB-S566)", () => {
   function explain(
     rule: BinairoRule,
     index: number,
@@ -236,7 +236,7 @@ describe("every hint sentence (T-WEB-S561)", () => {
   });
 });
 
-describe("use-hint records the reason and the spotlight (T-WEB-S560)", () => {
+describe("use-hint records the reason and the spotlight (T-WEB-S565)", () => {
   const PUZZLE = generateBinairo({ seed: 20_260_730, weekday: 3 });
   const DAILY: DailyBinairoResponse = {
     game: "binairo",

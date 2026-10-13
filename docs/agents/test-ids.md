@@ -40,10 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S183` | `S182` | never used |
 | `T-DB` | `S135` | `S131` | `T-DB-21` |
 | `T-API` | `S313` | `S312` | `T-API-16` |
-| `T-WEB` | `S575` | `S574` | `T-WEB-23` |
+| `T-WEB` | `S580` | `S579` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
-#297 (the grid-game hints reveal the next logical step, ADR-0100) spent **`T-WEB-S557…S574`**: `S557` (the shared hint state: `idleHint`, `unlit`, `spentHint`, and every reducer's reset clearing the reason and the spotlight), `S558` (`nextLogicalHint`'s order), `S559…S562` Binairo, `S563…S566` Nonogram, `S567…S570` Rainhas and `S571…S574` the Cruzadinha (each: the hint's order on generated boards, the reducer, every sentence, the daily and free-play screens). `T-WEB-9`, `S122`, `S122a`, `S427`, `S437`, `S453`, `S476`, `S480` and the Sudoku ids were updated in place. packages/games tests carry no ids.
+#297 (the grid-game hints reveal the next logical step, ADR-0101) spent **`T-WEB-S562…S579`**: `S562` (the shared hint state: `idleHint`, `unlit`, `spentHint`, and every reducer's reset clearing the reason and the spotlight), `S563` (`nextLogicalHint`'s order), `S564…S567` Binairo, `S568…S571` Nonogram, `S572…S575` Rainhas and `S576…S579` the Cruzadinha (each: the hint's order on generated boards, the reducer, every sentence, the daily and free-play screens). It first took `S557…S574` and ADR-0100, which #314 claimed while this branch was open. `T-WEB-9`, `S122`, `S122a`, `S427`, `S437`, `S453`, `S457`, `S476`, `S480` and the Sudoku ids were updated in place. packages/games tests carry no ids.
 
 #296 (the Sudoku hint reveals the next logical step, ADR-0099) spent **`T-WEB-S547…S555`**: `S547` (a wrong entry is corrected before any step), `S548` (the step on bare and correct partial boards, every weekday), `S549` (the first-empty fallback), `S550` (`use-hint` records the reason and the spotlight), `S551` (the spotlight clears on the next board action and on reset, the reason on the next hint or reset), `S552` (every hint sentence, naming the cell, and every technique name), `S553` (the daily screen), `S554` (free play) and `S555` (the chrome's one polite live region, re-announcing a repeated sentence). `T-WEB-S28a`, `S122`, `S495` and `S496` were updated in place, as was the shared `SUDOKU_PLAY` fixture in `screen-chrome.test.tsx`. Its first reservation, `S538…S546` with `S547` as headroom, collided with #304 PR 2, which merged first; `S545`, `S546` and `S556` went unspent and are burned.
 

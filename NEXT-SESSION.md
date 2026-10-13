@@ -4,7 +4,7 @@
 
 ## Start here
 
-Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0100). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer; `useHintKind` is gone. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
+Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0101). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer; `useHintKind` is gone. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
 
 **`/admin` shipped** (#304, ADR-0097, ADR-0098): an admin edits each `remote_config` key within its schema bounds, no deploy. Admins are the user ids in `ADMIN_USER_IDS` on `apps/api`. `getRemoteConfig` now falls back per key. #304 is closed.
 

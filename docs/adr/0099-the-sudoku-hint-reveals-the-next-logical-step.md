@@ -20,7 +20,7 @@ The Sudoku hint filled the first empty cell in reading order and said only *"Pre
 
 - `grade.ts` now ships on the daily Sudoku routes; generation output is unchanged (the pinned regression in `generate.test.ts` holds).
 - One tap costs one ladder run: at most about 0.4 ms on desktop Node on the hardest boards measured. The elimination scans allocate nothing, which also made generation about 18 % faster.
-- The other games got their step in [ADR-0100](./0100-the-grid-game-hints-reveal-the-next-logical-step.md), which also moved `SudokuHintState` onto the shared `HintState<R>`.
+- The other games got their step in [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md), which also moved `SudokuHintState` onto the shared `HintState<R>`.
 
 ## Rejected
 

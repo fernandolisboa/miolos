@@ -601,7 +601,7 @@ const FREE_SENTENCES = FREE_STEPS.map((step) =>
   binairoHintExplanation({ kind: "step", step }),
 );
 
-describe("the hint names its rule and lights the cells it reasons about (T-WEB-S562)", () => {
+describe("the hint names its rule and lights the cells it reasons about (T-WEB-S567)", () => {
   const [FIRST] = FREE_STEPS;
   const SENTENCE = FREE_SENTENCES[0] ?? "";
 

@@ -156,7 +156,7 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
   });
 });
 
-describe("free-play Binairo reveals and explains the next logical step (T-WEB-S562)", () => {
+describe("free-play Binairo reveals and explains the next logical step (T-WEB-S567)", () => {
   it("writes the step's value, reads out why and tints the rule's cells until a board action", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateBinairo({ seed: SEED, weekday: WEEKDAY });
@@ -190,7 +190,7 @@ describe("free-play Binairo reveals and explains the next logical step (T-WEB-S5
   });
 });
 
-describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S566)", () => {
+describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S571)", () => {
   it("writes the step's cell, reads out why and tints the step's line", () => {
     vi.stubGlobal("fetch", vi.fn());
     const { clues } = generateNonogram(SEED, WEEKDAY);
@@ -228,7 +228,7 @@ describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S
   });
 });
 
-describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S570)", () => {
+describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S575)", () => {
   it("places the step's queen, reads out why and tints the step's unit", () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateQueens({ seed: SEED, weekday: WEEKDAY });
@@ -318,7 +318,7 @@ describe("the free crossword's free hints (T-WEB-S122a)", () => {
   });
 });
 
-describe("the free crossword's hint names its pista (T-WEB-S574)", () => {
+describe("the free crossword's hint names its pista (T-WEB-S579)", () => {
   it("reads out the sentence for the pista it wrote a letter in", () => {
     vi.stubGlobal("fetch", vi.fn());
     const deps = stableDeps(SEED);

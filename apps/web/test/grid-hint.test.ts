@@ -180,7 +180,7 @@ describe("nextBinaryHint: a wrong cell first, then a 1 before a 0 (T-WEB-S458)",
   });
 });
 
-describe("nextLogicalHint: a correction, then a checked step, then the first empty (T-WEB-S558)", () => {
+describe("nextLogicalHint: a correction, then a checked step, then the first empty (T-WEB-S563)", () => {
   const solution = [1, 2, 3, 4] as const;
   const fill = { index: 0, value: 1, kind: "fill" } as const;
   const found = (index: number, value: number) => () => ({

@@ -455,7 +455,7 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
   });
 });
 
-describe("the Rainhas hint says why and tints its unit (T-WEB-S570)", () => {
+describe("the Rainhas hint says why and tints its unit (T-WEB-S575)", () => {
   const EMPTY = DAILY.regions.map(() => null);
   const STEP = nextQueensStep({ size: N, regions: DAILY.regions }, EMPTY);
   if (STEP === null) {

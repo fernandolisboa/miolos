@@ -51,7 +51,7 @@ function hintFor(
   return nextCrosswordHint(GRID, CLUES, board(filled), selected, direction);
 }
 
-describe("nextCrosswordHint reveals a letter of the current pista (T-WEB-S571)", () => {
+describe("nextCrosswordHint reveals a letter of the current pista (T-WEB-S576)", () => {
   it("takes the active entry and prefers a cell whose crossing pista is still open", () => {
     const hint = hintFor({}, 7, "down");
     expect(hint).toEqual({
@@ -177,7 +177,7 @@ const dailyShaped = fc
     ),
   );
 
-describe("a Cruzadinha hint reveals an empty letter of the target pista (T-WEB-S571)", () => {
+describe("a Cruzadinha hint reveals an empty letter of the target pista (T-WEB-S576)", () => {
   it("holds for random daily-shaped boards", () => {
     fc.assert(
       fc.property(
@@ -257,7 +257,7 @@ function play(
   return actions.reduce(crosswordPlayReducer, state);
 }
 
-describe("the Cruzadinha reducer records the hint's reason (T-WEB-S572)", () => {
+describe("the Cruzadinha reducer records the hint's reason (T-WEB-S577)", () => {
   it("writes the letter, spends a hint, keeps the selection and names the pista", () => {
     const hinted = play(
       freshState(),
@@ -285,7 +285,7 @@ describe("the Cruzadinha reducer records the hint's reason (T-WEB-S572)", () => 
   });
 });
 
-describe("the Cruzadinha hint sentences (T-WEB-S573)", () => {
+describe("the Cruzadinha hint sentences (T-WEB-S578)", () => {
   it("names the pista and the cell, and the crossing pista when there is one", () => {
     expect(
       crosswordHintExplanation({

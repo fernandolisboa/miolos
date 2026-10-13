@@ -54,7 +54,7 @@ function correctPartial(
   });
 }
 
-describe("nextQueensHint corrects first, then reasons, then falls back (T-WEB-S567)", () => {
+describe("nextQueensHint corrects first, then reasons, then falls back (T-WEB-S572)", () => {
   it("never reveals a wrong cell, on a bare board and on correct partial boards with X's, on every weekday", () => {
     for (const [at, puzzle] of PUZZLES.entries()) {
       for (const entries of [bare(puzzle), correctPartial(puzzle, at + 1)]) {
@@ -136,7 +136,7 @@ describe("nextQueensHint corrects first, then reasons, then falls back (T-WEB-S5
   });
 });
 
-describe("every Rainhas hint sentence (T-WEB-S569)", () => {
+describe("every Rainhas hint sentence (T-WEB-S574)", () => {
   const unitStep = (
     kind: QueensStep["unit"]["kind"],
     after: QueensElimination | null,
@@ -188,7 +188,7 @@ describe("every Rainhas hint sentence (T-WEB-S569)", () => {
   });
 });
 
-describe("use-hint records the reason and the spotlight (T-WEB-S568)", () => {
+describe("use-hint records the reason and the spotlight (T-WEB-S573)", () => {
   const PUZZLE = generateQueens({ seed: 20_260_801, weekday: 1 });
   const STATE = queensPlayReducer(initQueensPlayState(daily(PUZZLE)), {
     type: "restore",

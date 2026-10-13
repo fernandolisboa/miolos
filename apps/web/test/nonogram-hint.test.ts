@@ -221,7 +221,7 @@ describe("the second pass (P17)", () => {
   });
 });
 
-describe("nextNonogramHint corrects first, then reasons, then falls back (T-WEB-S563)", () => {
+describe("nextNonogramHint corrects first, then reasons, then falls back (T-WEB-S568)", () => {
   function correctPartial(
     solution: readonly NonogramMark[],
     seed: number,
@@ -353,7 +353,7 @@ describe("nextNonogramHint corrects first, then reasons, then falls back (T-WEB-
   });
 });
 
-describe("every hint sentence (T-WEB-S565)", () => {
+describe("every hint sentence (T-WEB-S570)", () => {
   const SIDE = 9;
 
   function explain(
@@ -500,7 +500,7 @@ describe("the reducer's accounting", () => {
   });
 });
 
-describe("use-hint records the reason and the spotlight (T-WEB-S564)", () => {
+describe("use-hint records the reason and the spotlight (T-WEB-S569)", () => {
   const CLUES = generateNonogram(20_260_801, 1).clues;
   const STATE = initNonogramPlayState(daily(generateNonogram(20_260_801, 1)));
   const STEP = nextNonogramStep(

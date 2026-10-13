@@ -28,7 +28,7 @@ import { initSudokuPlayState, sudokuPlayReducer } from "../src/sudoku/state";
 const DATE = "2026-10-13";
 const SEED = 20_261_013;
 
-describe("idleHint, unlit and spentHint (T-WEB-S557)", () => {
+describe("idleHint, unlit and spentHint (T-WEB-S562)", () => {
   it("idleHint keeps the count and clears the cell, the reason and the spotlight", () => {
     expect(idleHint(2)).toEqual({
       used: 2,
@@ -139,7 +139,7 @@ const CROSSWORD_FRESH = initCrosswordPlayState(
   }),
 );
 
-describe("Recomeçar forgets the reason and the spotlight in every reducer (T-WEB-S557)", () => {
+describe("Recomeçar forgets the reason and the spotlight in every reducer (T-WEB-S562)", () => {
   const cases = [
     resetCase("sudoku", SUDOKU_FRESH, 1, sudokuPlayReducer),
     resetCase("binairo", initPlayState(BINAIRO_DAILY), 1, playReducer),
@@ -180,7 +180,7 @@ describe("Recomeçar forgets the reason and the spotlight in every reducer (T-WE
   );
 });
 
-describe("the next board action puts the spotlight out (T-WEB-S557)", () => {
+describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
   const nonogram = initNonogramPlayState(
     dailyNonogramResponseSchema.parse({
       game: "nonogram",

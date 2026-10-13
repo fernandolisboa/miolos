@@ -1058,7 +1058,7 @@ describe("the four branches (T-WEB-S47)", () => {
   });
 });
 
-describe("the hint names its line and lights the cells it reasons about (T-WEB-S566)", () => {
+describe("the hint names its line and lights the cells it reasons about (T-WEB-S571)", () => {
   function spotlit(container: HTMLElement): number[] {
     return [...container.querySelectorAll<HTMLElement>("[data-cell-index]")]
       .filter((cell) => cell.classList.contains(className("cellSpotlit")))
