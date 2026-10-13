@@ -1,22 +1,17 @@
-import { adminConfigWriteSchema, adminStateResponseSchema } from "@miolos/core";
-import { getRemoteConfig, setRemoteConfigValue } from "@miolos/db/publishing";
+import { adminConfigWriteSchema } from "@miolos/core";
+import { adminRoleOf, setRemoteConfigValue } from "@miolos/db/publishing";
 import type { NextRequest } from "next/server";
 
-import { isAdmin } from "../../../src/admin/allow-list";
+import { adminState } from "../../../src/admin/state";
 import { corsHeaders, preflightResponse } from "../../../src/cors";
 import { errorResponse } from "../../../src/http/responses";
 import { writePreamble } from "../../../src/http/write-preamble";
+import { webOriginUnset } from "../../../src/http/web-origin-unset";
 
 export const dynamic = "force-dynamic";
 
 export function OPTIONS(): Response {
   return preflightResponse();
-}
-
-function webOriginUnset(): Response | undefined {
-  return process.env.WEB_ORIGIN
-    ? undefined
-    : errorResponse(503, "web-origin-unconfigured");
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -29,7 +24,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (context.failure) {
       return context.failure;
     }
-    if (!isAdmin(context.userId)) {
+    const { role } = await adminRoleOf(context.db, context.userId);
+    if (role === null) {
       return errorResponse(403, "not-admin");
     }
 
@@ -43,13 +39,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       key: context.body.key,
       value: context.body.value,
     });
-    return Response.json(
-      adminStateResponseSchema.parse({
-        userId: context.userId,
-        config: await getRemoteConfig(context.db),
-      }),
-      { headers: corsHeaders({ credentials: true }) },
-    );
+    return Response.json(await adminState(context.db, context.userId), {
+      headers: corsHeaders({ credentials: true }),
+    });
   } catch {
     return errorResponse(500, "internal");
   }

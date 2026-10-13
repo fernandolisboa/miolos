@@ -1,4 +1,8 @@
-import { FREE_HINTS_PER_PUZZLE, type RemoteConfigKey } from "@miolos/core";
+import {
+  FREE_HINTS_PER_PUZZLE,
+  type AdminMemberRole,
+  type RemoteConfigKey,
+} from "@miolos/core";
 
 const wordmark = "Miolos";
 
@@ -724,7 +728,9 @@ export const messages = {
       heading: "Configuração remota",
       unavailable: "Não conseguimos carregar a configuração agora.",
       notAdmin: "Esta página é só para quem administra o Miolos.",
-      userIdLabel: "O código da sua conta:",
+      emailLabel: "O e-mail vinculado à sua conta:",
+      noEmail:
+        "Esta conta não tem e-mail vinculado. Para administrar, vincule um e-mail em Ajustes.",
       range: (
         min: number | undefined,
         max: number | undefined,
@@ -753,6 +759,22 @@ export const messages = {
         hint: `Quantas dicas grátis cada puzzle do dia e do arquivo oferece. No modo livre são sempre ${FREE_HINTS_PER_PUZZLE}; o Termo não tem dicas.`,
       },
     } satisfies Record<RemoteConfigKey, { label: string; hint: string }>,
+    members: {
+      heading: "Quem administra",
+      lead: "Administradores mudam a configuração; superusuários também decidem quem administra. Vale para a conta com esse e-mail vinculado.",
+      roles: {
+        superuser: "Superusuário",
+        admin: "Administrador",
+      } satisfies Record<AdminMemberRole, string>,
+      roleLabel: "Papel",
+      roleAria: (email: string) => `Papel de ${email}`,
+      emailLabel: "E-mail",
+      add: "Adicionar",
+      remove: "Remover",
+      removeAria: (email: string) => `Remover ${email}`,
+      lastSuperuser:
+        "É o único superusuário. Adicione outro antes de mudar ou remover este.",
+    },
   },
   games: {
     termo: {

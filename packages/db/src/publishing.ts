@@ -1,4 +1,10 @@
 export {
+  adminRoleOf,
+  listAdminMembers,
+  removeAdminMember,
+  upsertAdminMember,
+} from "./admin-users";
+export {
   bufferDepth,
   insertDailyPuzzle,
   listBufferedDates,

@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { listMedalGrants } from "../src/medals";
 import { medalGrants, users } from "../src/schema";
 import { createTestDb } from "../src/testing";
+import { messages, thrownBy } from "./fixtures";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -30,25 +31,6 @@ async function createUser(): Promise<string> {
 
 async function insertGrant(userId: string, medalId: string): Promise<void> {
   await ctx.db.insert(medalGrants).values({ userId, medalId });
-}
-
-function messages(error: unknown): string {
-  let out = "";
-  let current: unknown = error;
-  while (current instanceof Error) {
-    out += current.message;
-    current = current.cause;
-  }
-  return out;
-}
-
-async function thrownBy(statement: Promise<unknown>): Promise<unknown> {
-  try {
-    await statement;
-    return undefined;
-  } catch (error) {
-    return error;
-  }
 }
 
 describe("listMedalGrants (ADR-0052)", () => {
@@ -90,6 +72,7 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
            order by table_name`,
     );
     expect(result.rows.map((row) => row["table_name"])).toEqual([
+      "admin_users",
       "attach_tokens",
       "completions",
       "consent_events",

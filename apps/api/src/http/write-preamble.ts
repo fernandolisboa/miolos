@@ -8,7 +8,7 @@ import { SESSION_COOKIE_NAME } from "../session/cookie";
 import { isCrossSiteWrite, warnIfGuardDegraded } from "../session/origin-guard";
 import { requireUserId } from "../session/service";
 
-type BodySchema<T> = {
+export type BodySchema<T> = {
   safeParse(raw: unknown): { success: true; data: T } | { success: false };
 };
 
