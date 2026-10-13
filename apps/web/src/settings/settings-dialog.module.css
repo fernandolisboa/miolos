@@ -2,6 +2,12 @@
   composes: cancel from "../components/confirm-action.module.css";
 }
 
+.placeholder {
+  composes: trigger;
+  display: inline-block;
+  visibility: hidden;
+}
+
 .close {
   composes: cancel from "../components/confirm-action.module.css";
   margin-top: var(--space-3);

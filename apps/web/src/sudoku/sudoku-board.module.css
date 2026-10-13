@@ -242,8 +242,8 @@
 
 /* ── keypad ──────────────────────────────────────────────────────────── */
 
-/* Commands, not modes (S3): `apagar` and the digits carry no `aria-pressed`,
-   because there is no plausible "paint 7s by dragging" for Sudoku.
+/* A digit carries `aria-pressed` only while the digit-lock setting is on; the
+   locked one is filled with the accent.
 
    The digit row shares the BOARD's exact track template, so digit n sits
    directly under column n and the box rhythm is legible twice. 512px is the
@@ -259,6 +259,7 @@
   row-gap: 8px;
   width: 512px;
   margin-top: 30px;
+  touch-action: manipulation;
 }
 
 /* Row 2 has TWO explicit occupants and no auto-placement: the first two box
@@ -339,6 +340,11 @@
 .keypadDigit:active {
   transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.keypadDigit[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--ink-on-accent);
 }
 
 .keypadDigit:focus-visible {

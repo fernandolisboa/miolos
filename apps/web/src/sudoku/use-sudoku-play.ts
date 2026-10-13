@@ -20,6 +20,7 @@ import {
   type SudokuDigit,
   type SudokuPlayState,
 } from "./state";
+import { useDigitLock, type DigitLock } from "./use-digit-lock";
 
 export interface SudokuPlay {
   readonly state: SudokuPlayState;
@@ -36,6 +37,7 @@ export interface SudokuPlay {
 
   readonly enterDigit: (digit: SudokuDigit) => void;
   readonly clearCell: () => void;
+  readonly lock: DigitLock;
   readonly revealHint: () => void;
   readonly reset: () => void;
 }
@@ -98,6 +100,8 @@ export function useSudokuPlay(
     }
   }, [solution, allowance]);
 
+  const lock = useDigitLock(state, dispatch);
+
   const reset = useReset(dispatch);
 
   return {
@@ -110,6 +114,7 @@ export function useSudokuPlay(
     moveSelection,
     enterDigit,
     clearCell,
+    lock,
     revealHint,
     reset,
   };

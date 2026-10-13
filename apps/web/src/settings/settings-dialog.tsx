@@ -56,3 +56,11 @@ export function GameSettingsButton({
     </>
   );
 }
+
+export function GameSettingsPlaceholder() {
+  return (
+    <span aria-hidden className={styles.placeholder}>
+      {"\u00a0"}
+    </span>
+  );
+}

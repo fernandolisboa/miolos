@@ -127,6 +127,13 @@ const SUDOKU_PLAY = {
   moveSelection: noop,
   enterDigit: noop,
   clearCell: noop,
+  lock: {
+    enabled: false,
+    locked: null,
+    pressDigit: noop,
+    pressErase: noop,
+    tapCell: noop,
+  },
   revealHint: noop,
   reset: noop,
 };
@@ -790,5 +797,30 @@ describe("the chrome looks its copy up by game (T-WEB-S486)", () => {
       "Jogo do arquivo",
     );
     expect(page.querySelectorAll(`.${cls("titleBlock")} > p`)).toHaveLength(3);
+  });
+});
+
+describe("the reset slot keeps its height from the skeleton to the board (T-WEB-S593)", () => {
+  function slotOf(variant: Parameters<typeof chrome>[0]): Element {
+    const slot = staticPage(chrome(variant)).querySelector(`.${cls("reset")}`);
+    if (slot === null) {
+      throw new Error("no reset slot");
+    }
+    return slot;
+  }
+
+  it("holds a child for each of the board's visible ones, the settings one included", () => {
+    expect(slotOf(DAILY_SKELETON).children).toHaveLength(
+      slotOf(DAILY_LIVE).querySelectorAll(":scope > :not(dialog)").length,
+    );
+  });
+
+  it("is inert and hidden in the skeleton, with no control in it", () => {
+    const slot = slotOf(DAILY_SKELETON);
+
+    expect(slot.querySelector("button, a, input")).toBeNull();
+    for (const child of slot.children) {
+      expect(child).toHaveAttribute("aria-hidden", "true");
+    }
   });
 });

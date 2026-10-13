@@ -5,7 +5,10 @@ import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 
 import { messages } from "../i18n";
 import { useSettings } from "../settings/settings";
-import { GameSettingsButton } from "../settings/settings-dialog";
+import {
+  GameSettingsButton,
+  GameSettingsPlaceholder,
+} from "../settings/settings-dialog";
 import { accentVars } from "./accent";
 import { useFreeHintsPerPuzzle } from "./free-hints";
 import { ResetControl, ResetPlaceholder } from "./reset-control";
@@ -206,7 +209,10 @@ export function PlayScreenChrome({
 
       <div className={screen.reset}>
         {readouts === null ? (
-          <ResetPlaceholder />
+          <>
+            <ResetPlaceholder />
+            <GameSettingsPlaceholder />
+          </>
         ) : (
           <>
             <ResetControl onReset={readouts.onReset} />

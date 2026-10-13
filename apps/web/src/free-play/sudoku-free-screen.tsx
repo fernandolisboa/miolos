@@ -19,6 +19,7 @@ import {
   type SudokuDigit,
 } from "../sudoku/state";
 import boardStyles from "../sudoku/sudoku-board.module.css";
+import { useDigitLock } from "../sudoku/use-digit-lock";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
@@ -119,6 +120,8 @@ function SudokuFreeBoard({
     dispatch({ type: "use-hint", solution: puzzle.solution });
   }, [puzzle.solution, allowance]);
 
+  const lock = useDigitLock(state, dispatch);
+
   const reset = useReset(dispatch);
 
   if (state.status === "solved") {
@@ -162,9 +165,10 @@ function SudokuFreeBoard({
           onMove={moveSelection}
           onDigit={enterDigit}
           onClear={clearCell}
+          onTapCell={lock.tapCell}
         />
       </div>
-      <Keypad onDigit={enterDigit} onClear={clearCell} />
+      <Keypad lock={lock} />
     </FreePlayChrome>
   );
 }

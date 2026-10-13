@@ -35,6 +35,7 @@ export function Board({
   onMove,
   onDigit,
   onClear,
+  onTapCell,
 }: {
   readonly givens: SudokuGrid;
   readonly solution: readonly SudokuDigit[] | null;
@@ -48,6 +49,7 @@ export function Board({
   readonly onMove: (rows: number, columns: number) => void;
   readonly onDigit: (digit: SudokuDigit) => void;
   readonly onClear: () => void;
+  readonly onTapCell: (index: number) => void;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
 
@@ -155,6 +157,9 @@ export function Board({
 
             onClick={(event) => {
               event.currentTarget.focus();
+              if (event.detail > 0) {
+                onTapCell(index);
+              }
             }}
           >
             {value}

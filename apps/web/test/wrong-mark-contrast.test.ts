@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { accentVars } from "../src/play/accent";
 import { contrast } from "./contrast";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
 
@@ -50,6 +51,42 @@ describe("the wrong-cell flag reads on every surface it can sit on, in both them
         );
         expect(best, `${theme} ${surface}`).toBeGreaterThanOrEqual(3);
       }
+    });
+  }
+});
+
+describe("the locked Sudoku key reads against the unlocked ones, in both themes (T-WEB-S594)", () => {
+  const LOCKED = bodyOf(
+    stylesheet("src/sudoku/sudoku-board.module.css"),
+    '.keypadDigit[aria-pressed="true"]',
+  );
+
+  it("is filled with the accent and numbered in the ink on that accent", () => {
+    expect(decl(LOCKED, "background")).toBe("var(--accent)");
+    expect(decl(LOCKED, "color")).toBe("var(--ink-on-accent)");
+    expect(accentVars("sudoku")).toMatchObject({
+      "--accent": "var(--accent-sudoku)",
+      "--ink-on-accent": "var(--paper-desk)",
+    });
+  });
+
+  for (const theme of ["light", "dark"] as const) {
+    it(`${theme}: the fill clears 3:1 on the unlocked key paper, and the numeral clears 3:1 on the fill`, () => {
+      const tokens = colorTokens(theme);
+      const hex = (name: string): string => {
+        const value = tokens.get(name);
+        if (value === undefined) {
+          throw new Error(`${name} missing in ${theme}`);
+        }
+        return value;
+      };
+
+      expect(
+        contrast(hex("--accent-sudoku"), hex("--paper-card")),
+      ).toBeGreaterThanOrEqual(3);
+      expect(
+        contrast(hex("--paper-desk"), hex("--accent-sudoku")),
+      ).toBeGreaterThanOrEqual(3);
     });
   }
 });

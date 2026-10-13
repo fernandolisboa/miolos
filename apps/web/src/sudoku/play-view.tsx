@@ -65,9 +65,10 @@ export function PlayView({
           onMove={play.moveSelection}
           onDigit={play.enterDigit}
           onClear={play.clearCell}
+          onTapCell={play.lock.tapCell}
         />
       </div>
-      <Keypad onDigit={play.enterDigit} onClear={play.clearCell} />
+      <Keypad lock={play.lock} />
     </DailyPlayChrome>
   );
 }
