@@ -1,6 +1,9 @@
 import {
+  BOX_UNITS,
+  COLUMN_UNITS,
   PEERS,
   POPCOUNT,
+  ROW_UNITS,
   UNITS,
   assertSudokuGrid,
   boxOf,
@@ -46,14 +49,16 @@ export interface GradeResult {
   readonly techniques: ReadonlySet<SudokuTechnique>;
 }
 
+export interface SudokuUnit {
+  readonly kind: "row" | "column" | "box";
+  readonly index: number;
+}
+
 export interface SudokuStep {
   readonly index: number;
   readonly digit: number;
   readonly technique: SudokuSingle;
-  readonly unit: {
-    readonly kind: "row" | "column" | "box";
-    readonly index: number;
-  } | null;
+  readonly unit: SudokuUnit | null;
   readonly cells: readonly number[];
   readonly after: SudokuElimination | null;
 }
@@ -147,128 +152,140 @@ function createLadder(givens: readonly number[]): Ladder {
     return null;
   };
 
+  const homes = new Array<number>(9).fill(0);
+  const lineHomes = new Array<number>(9).fill(0);
+
+  const fillHomes = (unit: readonly number[]): void => {
+    homes.fill(0);
+    for (let k = 0; k < 9; k += 1) {
+      const cell = unit[k]!;
+      for (let m = val[cell]! === 0 ? cand[cell]! : 0; m !== 0; m &= m - 1) {
+        const d = 31 - Math.clz32(m & -m);
+        homes[d] = homes[d]! | (1 << k);
+      }
+    }
+  };
+
+  const clearOutside = (
+    cells: readonly number[],
+    bit: number,
+    keep: readonly number[],
+  ): boolean => {
+    let removed = false;
+    for (const i of cells) {
+      if (!keep.includes(i) && val[i]! === 0 && (cand[i]! & bit) !== 0) {
+        cand[i] = cand[i]! & ~bit;
+        removed = true;
+      }
+    }
+    return removed;
+  };
+
+  const clearUnit = (
+    unit: readonly number[],
+    mask: number,
+    keep: number,
+  ): boolean => {
+    let removed = false;
+    for (let k = 0; k < 9; k += 1) {
+      const i = unit[k]!;
+      if ((keep & (1 << k)) === 0 && val[i]! === 0 && (cand[i]! & mask) !== 0) {
+        cand[i] = cand[i]! & ~mask;
+        removed = true;
+      }
+    }
+    return removed;
+  };
+
   const lockedCandidates = (): LadderStep | null => {
     for (let b = 0; b < 9; b += 1) {
-      const box = UNITS[18 + b]!;
+      const box = UNITS[BOX_UNITS + b]!;
       for (let d = 1; d <= 9; d += 1) {
         const bit = 1 << (d - 1);
-        const cells = box.filter(
-          (i) => val[i]! === 0 && (cand[i]! & bit) !== 0,
-        );
-        if (cells.length < 2) {
+        let count = 0;
+        let row = -1;
+        let col = -1;
+        for (const i of box) {
+          if (val[i]! === 0 && (cand[i]! & bit) !== 0) {
+            row = count === 0 || rowOf(i) === row ? rowOf(i) : -1;
+            col = count === 0 || colOf(i) === col ? colOf(i) : -1;
+            count += 1;
+          }
+        }
+        if (count < 2) {
           continue;
         }
-        const cellRows = new Set(cells.map(rowOf));
-        const cellCols = new Set(cells.map(colOf));
-        if (cellRows.size === 1) {
-          const r = rowOf(cells[0]!);
-          let removed = false;
-          for (let c = 0; c < 9; c += 1) {
-            const i = r * 9 + c;
-            if (boxOf(i) !== b && val[i]! === 0 && (cand[i]! & bit) !== 0) {
-              cand[i] = cand[i]! & ~bit;
-              removed = true;
-            }
-          }
-          if (removed) {
-            return { technique: "pointing", placed: null };
-          }
+        if (row !== -1 && clearOutside(UNITS[ROW_UNITS + row]!, bit, box)) {
+          return { technique: "pointing", placed: null };
         }
-        if (cellCols.size === 1) {
-          const c = colOf(cells[0]!);
-          let removed = false;
-          for (let r = 0; r < 9; r += 1) {
-            const i = r * 9 + c;
-            if (boxOf(i) !== b && val[i]! === 0 && (cand[i]! & bit) !== 0) {
-              cand[i] = cand[i]! & ~bit;
-              removed = true;
-            }
-          }
-          if (removed) {
-            return { technique: "pointing", placed: null };
-          }
+        if (col !== -1 && clearOutside(UNITS[COLUMN_UNITS + col]!, bit, box)) {
+          return { technique: "pointing", placed: null };
         }
       }
     }
-    for (let li = 0; li < 18; li += 1) {
+    for (let li = 0; li < BOX_UNITS; li += 1) {
       const line = UNITS[li]!;
       for (let d = 1; d <= 9; d += 1) {
         const bit = 1 << (d - 1);
-        const cells = line.filter(
-          (i) => val[i]! === 0 && (cand[i]! & bit) !== 0,
-        );
-        if (cells.length < 2) {
-          continue;
+        let count = 0;
+        let box = -1;
+        for (const i of line) {
+          if (val[i]! === 0 && (cand[i]! & bit) !== 0) {
+            box = count === 0 || boxOf(i) === box ? boxOf(i) : -1;
+            count += 1;
+          }
         }
-        const cellBoxes = new Set(cells.map(boxOf));
-        if (cellBoxes.size === 1) {
-          const b = boxOf(cells[0]!);
-          let removed = false;
-          for (const i of UNITS[18 + b]!) {
-            if (!line.includes(i) && val[i]! === 0 && (cand[i]! & bit) !== 0) {
-              cand[i] = cand[i]! & ~bit;
-              removed = true;
-            }
-          }
-          if (removed) {
-            return { technique: "claiming", placed: null };
-          }
+        if (
+          count >= 2 &&
+          box !== -1 &&
+          clearOutside(UNITS[BOX_UNITS + box]!, bit, line)
+        ) {
+          return { technique: "claiming", placed: null };
         }
       }
     }
     return null;
   };
 
+  const isPairCell = (i: number): boolean =>
+    val[i]! === 0 && POPCOUNT[cand[i]!]! === 2;
+
+  const isTripleCell = (i: number): boolean =>
+    val[i]! === 0 && POPCOUNT[cand[i]!]! >= 2 && POPCOUNT[cand[i]!]! <= 3;
+
   const pairs = (): LadderStep | null => {
     for (const unit of UNITS) {
-      const twos = unit.filter(
-        (i) => val[i]! === 0 && POPCOUNT[cand[i]!]! === 2,
-      );
-      for (let a = 0; a < twos.length; a += 1) {
-        for (let b = a + 1; b < twos.length; b += 1) {
-          const cellA = twos[a]!;
-          const cellB = twos[b]!;
-          if (cand[cellA]! !== cand[cellB]!) {
-            continue;
-          }
-          const mask = cand[cellA];
-          let removed = false;
-          for (const i of unit) {
-            if (
-              val[i]! === 0 &&
-              i !== cellA &&
-              i !== cellB &&
-              (cand[i]! & mask) !== 0
-            ) {
-              cand[i] = cand[i]! & ~mask;
-              removed = true;
-            }
-          }
-          if (removed) {
+      for (let a = 0; a < 9; a += 1) {
+        const cellA = unit[a]!;
+        if (!isPairCell(cellA)) {
+          continue;
+        }
+        for (let b = a + 1; b < 9; b += 1) {
+          const cellB = unit[b]!;
+          if (
+            isPairCell(cellB) &&
+            cand[cellA]! === cand[cellB]! &&
+            clearUnit(unit, cand[cellA], (1 << a) | (1 << b))
+          ) {
             return { technique: "nakedPair", placed: null };
           }
         }
       }
-      for (let d1 = 1; d1 <= 8; d1 += 1) {
-        for (let d2 = d1 + 1; d2 <= 9; d2 += 1) {
-          const bit1 = 1 << (d1 - 1);
-          const bit2 = 1 << (d2 - 1);
-          const cells1 = unit.filter(
-            (i) => val[i]! === 0 && (cand[i]! & bit1) !== 0,
-          );
-          const cells2 = unit.filter(
-            (i) => val[i]! === 0 && (cand[i]! & bit2) !== 0,
-          );
-          if (cells1.length !== 2 || cells2.length !== 2) {
+      fillHomes(unit);
+      for (let d1 = 0; d1 < 8; d1 += 1) {
+        const at = homes[d1]!;
+        if (POPCOUNT[at]! !== 2) {
+          continue;
+        }
+        for (let d2 = d1 + 1; d2 < 9; d2 += 1) {
+          if (homes[d2]! !== at) {
             continue;
           }
-          if (cells1[0]! !== cells2[0]! || cells1[1]! !== cells2[1]!) {
-            continue;
-          }
-          const mask = bit1 | bit2;
+          const mask = (1 << d1) | (1 << d2);
           let changed = false;
-          for (const i of cells1) {
-            if (cand[i]! !== mask) {
+          for (let k = 0; k < 9; k += 1) {
+            const i = unit[k]!;
+            if ((at & (1 << k)) !== 0 && cand[i]! !== mask) {
               cand[i] = mask;
               changed = true;
             }
@@ -282,71 +299,47 @@ function createLadder(givens: readonly number[]): Ladder {
     return null;
   };
 
-  const triplesAndXWing = (): LadderStep | null => {
+  const triples = (): LadderStep | null => {
     for (const unit of UNITS) {
-      const cells = unit.filter(
-        (i) =>
-          val[i]! === 0 && POPCOUNT[cand[i]!]! >= 2 && POPCOUNT[cand[i]!]! <= 3,
-      );
-      for (let a = 0; a < cells.length; a += 1) {
-        for (let b = a + 1; b < cells.length; b += 1) {
-          for (let c = b + 1; c < cells.length; c += 1) {
-            const cellA = cells[a]!;
-            const cellB = cells[b]!;
-            const cellC = cells[c]!;
-            const union = cand[cellA]! | cand[cellB]! | cand[cellC]!;
-            if (POPCOUNT[union]! !== 3) {
+      for (let a = 0; a < 9; a += 1) {
+        if (!isTripleCell(unit[a]!)) {
+          continue;
+        }
+        for (let b = a + 1; b < 9; b += 1) {
+          if (!isTripleCell(unit[b]!)) {
+            continue;
+          }
+          const pair = cand[unit[a]!]! | cand[unit[b]!]!;
+          for (let c = b + 1; c < 9; c += 1) {
+            if (!isTripleCell(unit[c]!)) {
               continue;
             }
-            let removed = false;
-            for (const i of unit) {
-              if (
-                val[i]! === 0 &&
-                i !== cellA &&
-                i !== cellB &&
-                i !== cellC &&
-                (cand[i]! & union) !== 0
-              ) {
-                cand[i] = cand[i]! & ~union;
-                removed = true;
-              }
-            }
-            if (removed) {
+            const union = pair | cand[unit[c]!]!;
+            if (
+              POPCOUNT[union]! === 3 &&
+              clearUnit(unit, union, (1 << a) | (1 << b) | (1 << c))
+            ) {
               return { technique: "nakedTriple", placed: null };
             }
           }
         }
       }
-      for (let d1 = 1; d1 <= 7; d1 += 1) {
-        for (let d2 = d1 + 1; d2 <= 8; d2 += 1) {
-          for (let d3 = d2 + 1; d3 <= 9; d3 += 1) {
-            const mask1 = 1 << (d1 - 1);
-            const mask2 = 1 << (d2 - 1);
-            const mask3 = 1 << (d3 - 1);
-            const cells1 = unit.filter(
-              (i) => val[i]! === 0 && (cand[i]! & mask1) !== 0,
-            );
-            const cells2 = unit.filter(
-              (i) => val[i]! === 0 && (cand[i]! & mask2) !== 0,
-            );
-            const cells3 = unit.filter(
-              (i) => val[i]! === 0 && (cand[i]! & mask3) !== 0,
-            );
-            if (
-              cells1.length === 0 ||
-              cells2.length === 0 ||
-              cells3.length === 0
-            ) {
+      fillHomes(unit);
+      for (let d1 = 0; d1 < 7; d1 += 1) {
+        for (let d2 = d1 + 1; d2 < 8; d2 += 1) {
+          for (let d3 = d2 + 1; d3 < 9; d3 += 1) {
+            const at1 = homes[d1]!;
+            const at2 = homes[d2]!;
+            const at3 = homes[d3]!;
+            const at = at1 | at2 | at3;
+            if (at1 === 0 || at2 === 0 || at3 === 0 || POPCOUNT[at]! !== 3) {
               continue;
             }
-            const cellUnion = [...new Set([...cells1, ...cells2, ...cells3])];
-            if (cellUnion.length !== 3) {
-              continue;
-            }
-            const mask = mask1 | mask2 | mask3;
+            const mask = (1 << d1) | (1 << d2) | (1 << d3);
             let changed = false;
-            for (const i of cellUnion) {
-              if ((cand[i]! & ~mask) !== 0) {
+            for (let k = 0; k < 9; k += 1) {
+              const i = unit[k]!;
+              if ((at & (1 << k)) !== 0 && (cand[i]! & ~mask) !== 0) {
                 cand[i] = cand[i]! & mask;
                 changed = true;
               }
@@ -358,48 +351,47 @@ function createLadder(givens: readonly number[]): Ladder {
         }
       }
     }
-    for (const transpose of [false, true]) {
-      for (let d = 1; d <= 9; d += 1) {
-        const bit = 1 << (d - 1);
-        const linesWithTwo: (readonly [number, number, number])[] = [];
-        for (let a = 0; a < 9; a += 1) {
-          const positions: number[] = [];
-          for (let b = 0; b < 9; b += 1) {
-            const i = transpose ? b * 9 + a : a * 9 + b;
-            if (val[i]! === 0 && (cand[i]! & bit) !== 0) {
-              positions.push(b);
-            }
-          }
-          if (positions.length === 2) {
-            linesWithTwo.push([a, positions[0]!, positions[1]!]);
+    return null;
+  };
+
+  const xWing = (lines: number): LadderStep | null => {
+    for (let d = 0; d < 9; d += 1) {
+      const bit = 1 << d;
+      for (let a = 0; a < 9; a += 1) {
+        const line = UNITS[lines + a]!;
+        let at = 0;
+        for (let k = 0; k < 9; k += 1) {
+          const i = line[k]!;
+          if (val[i]! === 0 && (cand[i]! & bit) !== 0) {
+            at |= 1 << k;
           }
         }
-        for (let x = 0; x < linesWithTwo.length; x += 1) {
-          for (let y = x + 1; y < linesWithTwo.length; y += 1) {
-            const [line1, pos1, pos2] = linesWithTwo[x]!;
-            const [line2, other1, other2] = linesWithTwo[y]!;
-            if (pos1 !== other1 || pos2 !== other2) {
-              continue;
+        lineHomes[a] = at;
+      }
+      for (let x = 0; x < 9; x += 1) {
+        const at = lineHomes[x]!;
+        if (POPCOUNT[at]! !== 2) {
+          continue;
+        }
+        for (let y = x + 1; y < 9; y += 1) {
+          if (lineHomes[y]! !== at) {
+            continue;
+          }
+          let removed = false;
+          for (let a = 0; a < 9; a += 1) {
+            if (
+              a !== x &&
+              a !== y &&
+              clearUnit(UNITS[lines + a]!, bit, ~at & 0x1ff)
+            ) {
+              removed = true;
             }
-            let removed = false;
-            for (let a = 0; a < 9; a += 1) {
-              if (a === line1 || a === line2) {
-                continue;
-              }
-              for (const p of [pos1, pos2]) {
-                const i = transpose ? p * 9 + a : a * 9 + p;
-                if (val[i]! === 0 && (cand[i]! & bit) !== 0) {
-                  cand[i] = cand[i]! & ~bit;
-                  removed = true;
-                }
-              }
-            }
-            if (removed) {
-              return {
-                technique: transpose ? "xWingCols" : "xWingRows",
-                placed: null,
-              };
-            }
+          }
+          if (removed) {
+            return {
+              technique: lines === ROW_UNITS ? "xWingRows" : "xWingCols",
+              placed: null,
+            };
           }
         }
       }
@@ -415,7 +407,9 @@ function createLadder(givens: readonly number[]): Ladder {
       hiddenSingle() ??
       lockedCandidates() ??
       pairs() ??
-      triplesAndXWing(),
+      triples() ??
+      xWing(ROW_UNITS) ??
+      xWing(COLUMN_UNITS),
   };
 }
 
@@ -465,13 +459,13 @@ export function nextSudokuStep(grid: SudokuGrid): SudokuStep | null {
   return null;
 }
 
-function unitOf(unit: number): NonNullable<SudokuStep["unit"]> {
-  if (unit < 9) {
-    return { kind: "row", index: unit };
+function unitOf(unit: number): SudokuUnit {
+  if (unit < COLUMN_UNITS) {
+    return { kind: "row", index: unit - ROW_UNITS };
   }
-  return unit < 18
-    ? { kind: "column", index: unit - 9 }
-    : { kind: "box", index: unit - 18 };
+  return unit < BOX_UNITS
+    ? { kind: "column", index: unit - COLUMN_UNITS }
+    : { kind: "box", index: unit - BOX_UNITS };
 }
 
 export function gradeSudoku(givens: SudokuGrid): SudokuGrade {

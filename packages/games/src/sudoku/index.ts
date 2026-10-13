@@ -6,9 +6,14 @@ export {
   type SudokuPuzzle,
   type SudokuTier,
 } from "./types";
-export { getSudokuConflicts, isSudokuSolved } from "./board";
+export { getSudokuConflicts, isSudokuSolved, sudokuPeers } from "./board";
 export { countSudokuSolutions, solveSudoku } from "./solve";
-export { gradeSudoku, nextSudokuStep, type SudokuStep } from "./grade";
+export {
+  gradeSudoku,
+  nextSudokuStep,
+  type SudokuStep,
+  type SudokuUnit,
+} from "./grade";
 export {
   SUDOKU_TIER_CRITERIA,
   SUDOKU_WEEKDAY_CRITERIA,

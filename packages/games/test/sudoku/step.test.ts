@@ -1,12 +1,19 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { PEERS, UNITS } from "../../src/sudoku/board";
+import {
+  BOX_UNITS,
+  COLUMN_UNITS,
+  PEERS,
+  ROW_UNITS,
+  UNITS,
+} from "../../src/sudoku/board";
 import {
   generateDailySudoku,
   nextSudokuStep,
   type SudokuGrid,
   type SudokuStep,
+  type SudokuUnit,
   type Weekday,
 } from "../../src/sudoku/index";
 import { propertyRuns } from "../property-runs";
@@ -40,6 +47,10 @@ function firstStall(givens: SudokuGrid): SudokuGrid {
   return grid;
 }
 
+function digitsOf(row: string): SudokuGrid {
+  return [...row].map(Number);
+}
+
 function candidates(grid: SudokuGrid, index: number): readonly number[] {
   if (grid[index] !== 0) {
     return [];
@@ -59,8 +70,10 @@ function hiddenSinglesIn(grid: SudokuGrid, unit: readonly number[]): number[] {
   });
 }
 
-function unitCells(unit: NonNullable<SudokuStep["unit"]>): readonly number[] {
-  const offset = { row: 0, column: 9, box: 18 }[unit.kind];
+function unitCells(unit: SudokuUnit): readonly number[] {
+  const offset = { row: ROW_UNITS, column: COLUMN_UNITS, box: BOX_UNITS }[
+    unit.kind
+  ];
   return UNITS[offset + unit.index]!;
 }
 
@@ -122,12 +135,14 @@ describe("nextSudokuStep", () => {
 
   it.each([
     {
-      fixture: "pointing",
+      board: "the pointing fixture's stall",
+      grid: firstStall(givensOf("pointing")),
       step: { index: 56, digit: 4, technique: "nakedSingle", unit: null },
       after: "pointing",
     },
     {
-      fixture: "hiddenPair",
+      board: "the hiddenPair fixture's stall",
+      grid: firstStall(givensOf("hiddenPair")),
       step: {
         index: 24,
         digit: 7,
@@ -137,14 +152,30 @@ describe("nextSudokuStep", () => {
       after: "hiddenPair",
     },
     {
-      fixture: "xWingRows",
+      board: "the xWingRows fixture's stall",
+      grid: firstStall(givensOf("xWingRows")),
       step: { index: 11, digit: 6, technique: "nakedSingle", unit: null },
       after: "xWingRows",
     },
+    {
+      board: "a stall whose last elimination is a claiming",
+      grid: digitsOf(
+        "000200078002070963760038000000400380010002046070000009001053004027000000006020000",
+      ),
+      step: { index: 36, digit: 3, technique: "nakedSingle", unit: null },
+      after: "nakedPair",
+    },
+    {
+      board: "a stall with a naked pair before a hidden pair",
+      grid: digitsOf(
+        "800900003390040700006010900000000000475000200000007004500100002600258000003009510",
+      ),
+      step: { index: 11, digit: 1, technique: "nakedSingle", unit: null },
+      after: "nakedPair",
+    },
   ])(
-    "names $after as the elimination that unlocks the $fixture fixture's stall",
-    ({ fixture, step, after }) => {
-      const grid = firstStall(givensOf(fixture));
+    "names $after, the hardest and first-seen elimination, on $board",
+    ({ grid, step, after }) => {
       const found = nextSudokuStep(grid);
 
       expect(found).toMatchObject({ ...step, after });
@@ -174,13 +205,12 @@ describe("nextSudokuStep", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, maskArb, (seed, weekday, mask) => {
         const puzzle = generateDailySudoku({ seed, weekday });
-        const bare = nextSudokuStep(puzzle.givens);
-        expect(bare).not.toBeNull();
         const partial = puzzle.givens.map((given, i) =>
           mask[i]! ? puzzle.solution[i]! : given,
         );
         for (const grid of [puzzle.givens, partial]) {
           const step = nextSudokuStep(grid);
+          expect(step === null).toBe(!grid.includes(0));
           if (step !== null) {
             expect(step.digit).toBe(puzzle.solution[step.index]);
             expectHonest(grid, step);
