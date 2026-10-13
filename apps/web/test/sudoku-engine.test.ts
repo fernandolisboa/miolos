@@ -11,7 +11,6 @@ import {
   mergedGrid,
   playableGivens,
   selectionHighlights,
-  sharesUnit,
   solutionDigits,
   solvedDigits,
   track,
@@ -159,9 +158,14 @@ describe("solvedDigits", () => {
 describe("the selection's reach (T-WEB-S495)", () => {
   const CENTRE = 40;
 
-  it("shares a unit along the row, the column and the 3×3 box, and nowhere else", () => {
-    const peers = Array.from({ length: 81 }, (_unused, index) => index).filter(
-      (index) => sharesUnit(index, CENTRE),
+  const BLANK: readonly number[] = Array.from({ length: 81 }, () => 0);
+
+  const reaches = (selected: number, index: number) =>
+    selectionHighlights(BLANK, selected).has(index);
+
+  it("tints the row, the column and the 3×3 box, and nowhere else", () => {
+    const peers = [...selectionHighlights(BLANK, CENTRE).keys()].sort(
+      (a, b) => a - b,
     );
 
     expect(peers).toEqual([
@@ -188,7 +192,7 @@ describe("the selection's reach (T-WEB-S495)", () => {
   it("marks every copy of the selected digit, given or entered, above the unit tint", () => {
     const empty = firstPlayable();
     const given = PUZZLE.givens.findIndex(
-      (cell, index) => cell !== 0 && !sharesUnit(index, empty),
+      (cell, index) => cell !== 0 && !reaches(empty, index),
     );
     const digit = playableGivens(PUZZLE.givens)[given];
     if (digit === undefined || digit === null) {
@@ -211,7 +215,7 @@ describe("the selection's reach (T-WEB-S495)", () => {
     }
     for (const [index, kind] of highlights) {
       if (kind === "unit") {
-        expect(sharesUnit(index, given)).toBe(true);
+        expect(reaches(given, index)).toBe(true);
         expect(grid[index]).not.toBe(digit);
       }
     }

@@ -21,6 +21,8 @@ export interface SudokuHint {
 
 const copy = messages.games.sudoku.play.hint;
 
+const SIDE = 9;
+
 export function nextSudokuHint(
   solution: readonly SudokuDigit[],
   givens: SudokuGrid,
@@ -30,10 +32,11 @@ export function nextSudokuHint(
   if (first === null) {
     return null;
   }
-  if (first.kind === "fill") {
-    const step = nextSudokuStep(mergedGrid(givens, entries));
-    const value = step === null ? undefined : solution[step.index];
-    if (step !== null && value === step.digit) {
+  const step =
+    first.kind === "fill" ? nextSudokuStep(mergedGrid(givens, entries)) : null;
+  if (step !== null) {
+    const value = solution[step.index];
+    if (value === step.digit) {
       return { index: step.index, value, reason: { kind: "step", step } };
     }
   }
@@ -53,14 +56,18 @@ export function sudokuHintExplanation(
   if (reason.kind !== "step") {
     return copy[reason.kind];
   }
-  const { digit, unit, after } = reason.step;
+  const { index, digit, unit, after } = reason.step;
+  const cell = {
+    row: Math.floor(index / SIDE) + 1,
+    column: (index % SIDE) + 1,
+  };
   if (after === null) {
     return unit === null
-      ? copy.nakedSingle(digit)
-      : copy.hiddenSingle(unit, digit);
+      ? copy.nakedSingle(digit, cell)
+      : copy.hiddenSingle(unit.kind, digit, cell);
   }
   const technique = copy.technique[after];
   return unit === null
-    ? copy.afterNaked(technique, digit)
-    : copy.afterHidden(technique, unit, digit);
+    ? copy.afterNaked(technique, digit, cell)
+    : copy.afterHidden(technique, unit.kind, digit, cell);
 }

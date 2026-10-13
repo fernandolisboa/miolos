@@ -601,6 +601,26 @@ describe("the hint's reason is read out from one polite live region (T-WEB-S546)
     );
   });
 
+  it("mounts a new sentence for each hint, so the same words are read again", () => {
+    const afterHints = (used: number) =>
+      chrome({
+        ...FREE_PLAYING,
+        state: {
+          kind: "playing",
+          readouts: readouts(true, "porque sim", noop, used),
+        },
+      });
+    const { container, rerender } = render(afterHints(1));
+    const first = container.querySelector(`.${cls("hintExplain")}`);
+
+    rerender(afterHints(2));
+    const second = container.querySelector(`.${cls("hintExplain")}`);
+
+    expect(second?.textContent).toBe("porque sim");
+    expect(second).not.toBe(first);
+    expect(first?.isConnected).toBe(false);
+  });
+
   it("is there on the skeleton too, empty", () => {
     const regions = liveRegions(staticPage(chrome(DAILY_SKELETON)));
 

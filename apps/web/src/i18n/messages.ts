@@ -14,20 +14,29 @@ const cellAria = (row: number, column: number, value: 0 | 1 | null) =>
 const cellAriaSudoku = (row: number, column: number, value: number | null) =>
   `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
 
-interface SudokuUnitCopy {
-  readonly kind: "row" | "column" | "box";
-  readonly index: number;
+interface SudokuCellCopy {
+  readonly row: number;
+  readonly column: number;
 }
 
-const inSudokuUnit = (unit: SudokuUnitCopy) =>
-  unit.kind === "box"
-    ? "Neste bloco"
-    : `Na ${unit.kind === "row" ? "linha" : "coluna"} ${unit.index + 1}`;
+type SudokuUnitKind = "row" | "column" | "box";
 
-const ofSudokuUnit = (unit: SudokuUnitCopy) =>
-  unit.kind === "box"
-    ? "deste bloco"
-    : `da ${unit.kind === "row" ? "linha" : "coluna"} ${unit.index + 1}`;
+const sudokuCell = ({ row, column }: SudokuCellCopy) =>
+  `linha ${row}, coluna ${column}`;
+
+const sudokuLine = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
+  kind === "row" ? `linha ${cell.row}` : `coluna ${cell.column}`;
+
+const inSudokuUnit = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
+  kind === "box" ? "Neste bloco" : `Na ${sudokuLine(kind, cell)}`;
+
+const ofSudokuUnit = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
+  kind === "box" ? "deste bloco" : `da ${sudokuLine(kind, cell)}`;
+
+const sudokuSpot = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
+  kind === "box"
+    ? sudokuCell(cell)
+    : sudokuLine(kind === "row" ? "column" : "row", cell);
 
 const hintsUsed = (used: number) =>
   used === 0 ? "sem dicas" : used === 1 ? "com 1 dica" : `com ${used} dicas`;
@@ -772,18 +781,27 @@ export const messages = {
         hint: {
           correction: "Corrigimos um número que não fecha com as regras.",
           fill: "Não achamos um passo lógico simples aqui, então preenchemos uma célula para você.",
-          nakedSingle: (digit: number) =>
-            `Só o ${digit} cabe nesta célula: a linha, a coluna e o bloco já têm os outros números.`,
-          hiddenSingle: (unit: SudokuUnitCopy, digit: number) =>
-            `${inSudokuUnit(unit)}, o ${digit} só cabe nesta célula.`,
-          afterNaked: (technique: string, digit: number) =>
-            `Com uma técnica avançada (${technique}), só o ${digit} sobra para esta célula.`,
+          nakedSingle: (digit: number, cell: SudokuCellCopy) =>
+            `Na ${sudokuCell(cell)}, só o ${digit} cabe: a linha, a coluna e o bloco já têm os outros números.`,
+          hiddenSingle: (
+            kind: SudokuUnitKind,
+            digit: number,
+            cell: SudokuCellCopy,
+          ) =>
+            `${inSudokuUnit(kind, cell)}, o ${digit} só cabe na ${sudokuSpot(kind, cell)}.`,
+          afterNaked: (
+            technique: string,
+            digit: number,
+            cell: SudokuCellCopy,
+          ) =>
+            `Com uma técnica avançada (${technique}), só o ${digit} sobra na ${sudokuCell(cell)}.`,
           afterHidden: (
             technique: string,
-            unit: SudokuUnitCopy,
+            kind: SudokuUnitKind,
             digit: number,
+            cell: SudokuCellCopy,
           ) =>
-            `Com uma técnica avançada (${technique}), o ${digit} só cabe nesta célula ${ofSudokuUnit(unit)}.`,
+            `Com uma técnica avançada (${technique}), o ${digit} só cabe na ${sudokuSpot(kind, cell)} ${ofSudokuUnit(kind, cell)}.`,
           technique: {
             pointing: "candidato travado",
             claiming: "candidato travado",

@@ -21,7 +21,6 @@ import sharedStyles from "../src/play/screen.module.css";
 import {
   mergedGrid,
   selectionHighlights,
-  sharesUnit,
   solutionDigits,
   track,
 } from "../src/sudoku/engine";
@@ -50,6 +49,8 @@ vi.mock("next/navigation", () => ({
 const DATE = "2026-08-01";
 const SIDE = 9;
 const TOTAL_CELLS = 81;
+
+const BLANK: readonly number[] = Array.from({ length: TOTAL_CELLS }, () => 0);
 
 const PUZZLE = generateDailySudoku({ seed: 20_260_801, weekday: 1 });
 
@@ -560,7 +561,7 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
     const unit = Array.from(
       { length: TOTAL_CELLS },
       (_unused, index) => index,
-    ).filter((index) => sharesUnit(index, FIRST_EMPTY));
+    ).filter((index) => selectionHighlights(BLANK, FIRST_EMPTY).has(index));
     expect(cellsWith(container, "cellUnit")).toEqual(unit);
     expect(cellsWith(container, "cellSameDigit")).toEqual([]);
     expect(labels(container)).toEqual(before);
@@ -606,7 +607,11 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
     }
     for (const selected of [ROW_GIVEN, Number(hinted.dataset.cellIndex)]) {
       fireEvent.click(cellAt(container, selected));
-      if (!sharesUnit(selected, Number(hinted.dataset.cellIndex))) {
+      if (
+        !selectionHighlights(BLANK, Number(hinted.dataset.cellIndex)).has(
+          selected,
+        )
+      ) {
         throw new Error("the fixture's hint is not in the row given's units");
       }
       expect(hinted.classList).toContain(className("cellHinted"));

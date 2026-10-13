@@ -168,34 +168,42 @@ function step(overrides: Partial<SudokuStep>): SudokuReasonStep {
 }
 
 describe("every hint sentence (T-WEB-S543)", () => {
-  const hidden = (kind: "row" | "column" | "box", index: number) =>
-    ({ technique: "hiddenSingle", unit: { kind, index } }) as const;
+  const hidden = (
+    kind: "row" | "column" | "box",
+    unit: number,
+    index: number,
+  ) =>
+    ({
+      index,
+      technique: "hiddenSingle",
+      unit: { kind, index: unit },
+    }) as const;
 
-  it("says why, in the words the Sudoku screen already uses", () => {
+  it("says why, and which cell, in the words the Sudoku screen already uses", () => {
     expect(
       [
         { kind: "correction" } as const,
         { kind: "fill" } as const,
-        step({}),
-        step(hidden("row", 2)),
-        step(hidden("column", 4)),
-        step(hidden("box", 8)),
-        step({ after: "hiddenPair" }),
-        step({ ...hidden("row", 2), after: "pointing" }),
-        step({ ...hidden("column", 0), after: "xWingCols" }),
-        step({ ...hidden("box", 0), after: "nakedTriple" }),
+        step({ index: 23 }),
+        step(hidden("row", 2, 23)),
+        step(hidden("column", 4, 13)),
+        step(hidden("box", 8, 79)),
+        step({ index: 23, after: "hiddenPair" }),
+        step({ ...hidden("row", 2, 23), after: "pointing" }),
+        step({ ...hidden("column", 0, 45), after: "xWingCols" }),
+        step({ ...hidden("box", 0, 19), after: "nakedTriple" }),
       ].map(sudokuHintExplanation),
     ).toEqual([
       "Corrigimos um número que não fecha com as regras.",
       "Não achamos um passo lógico simples aqui, então preenchemos uma célula para você.",
-      "Só o 4 cabe nesta célula: a linha, a coluna e o bloco já têm os outros números.",
-      "Na linha 3, o 4 só cabe nesta célula.",
-      "Na coluna 5, o 4 só cabe nesta célula.",
-      "Neste bloco, o 4 só cabe nesta célula.",
-      "Com uma técnica avançada (par escondido), só o 4 sobra para esta célula.",
-      "Com uma técnica avançada (candidato travado), o 4 só cabe nesta célula da linha 3.",
-      "Com uma técnica avançada (X-Wing), o 4 só cabe nesta célula da coluna 1.",
-      "Com uma técnica avançada (trio fechado), o 4 só cabe nesta célula deste bloco.",
+      "Na linha 3, coluna 6, só o 4 cabe: a linha, a coluna e o bloco já têm os outros números.",
+      "Na linha 3, o 4 só cabe na coluna 6.",
+      "Na coluna 5, o 4 só cabe na linha 2.",
+      "Neste bloco, o 4 só cabe na linha 9, coluna 8.",
+      "Com uma técnica avançada (par escondido), só o 4 sobra na linha 3, coluna 6.",
+      "Com uma técnica avançada (candidato travado), o 4 só cabe na coluna 6 da linha 3.",
+      "Com uma técnica avançada (X-Wing), o 4 só cabe na linha 6 da coluna 1.",
+      "Com uma técnica avançada (trio fechado), o 4 só cabe na linha 3, coluna 2 deste bloco.",
     ]);
   });
 
