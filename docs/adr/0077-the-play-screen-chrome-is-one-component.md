@@ -4,7 +4,7 @@
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0076](./0076-the-shared-route-envelope-takes-a-render-callback-not-a-screen-registry.md)
 **Amends:** [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md) decision 2 and consequence (b)
 **Amended by:** [ADR-0093](./0093-the-daily-and-archive-ladders-are-shared.md) (#289) — the chrome takes the kicker, title and rules from `messages.games[game]` instead of props, and `DailyPlayChrome` fills the daily and archive back link, date and note. This ADR's rejected `<PlayShell>` layout stays rejected: `DailyScreen` selects a branch and lays nothing out.
-**Amended by:** [ADR-0094](./0094-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (#298) — the grid gains a sixth area, `reset`, holding one stateful child, `ResetControl`; the chrome itself is still data props plus one `children` slot.
+**Amended by:** [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (#298) — the grid gains a sixth area, `reset`, holding one stateful child, `ResetControl`; the chrome itself is still data props plus one `children` slot.
 **Amended by:** [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) (#255, #257) — the games-wide ban this ADR rejected as out of scope now ships; the 27 unguarded modules are covered by the runtime-graph proof; `T-WEB-S368` is retired, and the check measures runtime edges, not written specifiers.
 
 ## Context

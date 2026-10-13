@@ -9,7 +9,7 @@ import {
   writePlayRecord,
   type BinairoPlayRecord,
 } from "../src/play/play-record";
-import { installPointerStubs } from "./pointer";
+import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 installPointerStubs();
 
@@ -196,5 +196,46 @@ describe("free play writes nothing to localStorage (T-WEB-S117)", () => {
     writePlayRecord({ ...dailyRecord, elapsedMs: 62_000 });
 
     expect(keyspace()).not.toEqual(before);
+  });
+});
+
+describe("free-play Binairo mouse buttons (T-WEB-S500b)", () => {
+  it("writes 0 on a right click and 1 on a left click, and has no erase control", () => {
+    const { container } = render(
+      <BinairoFreeScreen deps={pinnedDeps([SEED])} />,
+    );
+    stubElementFromPoint(container);
+    const grid =
+      container.querySelector<HTMLElement>("[data-cell-index]")?.parentElement;
+    const [first, second] = PUZZLE.givens.flatMap((given, index) =>
+      given === null ? [index] : [],
+    );
+    if (
+      grid === null ||
+      grid === undefined ||
+      first === undefined ||
+      second === undefined
+    ) {
+      throw new Error("the board did not render");
+    }
+    const press = (index: number, button: number) => {
+      const at = {
+        clientX: index,
+        clientY: 0,
+        pointerId: 1,
+        pointerType: "mouse",
+        button,
+      };
+      fireEvent.pointerDown(grid, at);
+      fireEvent.pointerUp(grid, at);
+    };
+
+    press(first, 2);
+    press(second, 0);
+
+    expect(cellAt(container, first).textContent).toBe("0");
+    expect(cellAt(container, second).textContent).toBe("1");
+    expect(screen.queryByText("apagar")).toBeNull();
+    expect(fireEvent.contextMenu(grid)).toBe(false);
   });
 });

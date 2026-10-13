@@ -62,6 +62,7 @@ export function PlayView({
           onSelect={play.selectCell}
           onMove={play.moveSelection}
           onMarkCell={play.markCell}
+          onStrokeStart={play.strokeStart}
           onEnterValue={play.enterValue}
           onClear={play.clearCell}
           onPaintOver={play.paintOver}

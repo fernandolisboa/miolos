@@ -440,30 +440,11 @@ describe("the clue rails (T-WEB-S43)", () => {
 describe("the brush (T-WEB-S44)", () => {
   const copy = messages.games.nonogram.play.controls;
 
-  function brushButton(mode: "fill" | "cross" | "erase"): HTMLElement {
+  function brushButton(mode: "fill" | "cross"): HTMLElement {
     return screen.getByLabelText(
-      { fill: copy.fillAria, cross: copy.crossAria, erase: copy.eraseAria }[
-        mode
-      ],
+      { fill: copy.fillAria, cross: copy.crossAria }[mode],
     );
   }
-
-  it("is three sticky modes with exactly one pressed, `preencher` first", () => {
-    render(<NonogramScreen daily={SMALL} />);
-
-    const pressed = screen
-      .getAllByRole("button", { pressed: true })
-      .map((button) => button.getAttribute("aria-label"));
-    expect(pressed).toEqual([copy.fillAria]);
-    expect(screen.getAllByRole("button", { pressed: false })).toHaveLength(2);
-
-    expect(brushButton("fill").className).toContain(className("controlActive"));
-    for (const mode of ["cross", "erase"] as const) {
-      expect(brushButton(mode).className).not.toContain(
-        className("controlActive"),
-      );
-    }
-  });
 
   it("changes what a tap writes, and pressing the active brush is a no-op", () => {
     const { container } = render(<NonogramScreen daily={SMALL} />);
@@ -479,10 +460,167 @@ describe("the brush (T-WEB-S44)", () => {
     expect(brushButton("cross")).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(cellAt(container, 3));
     expect(markAt(container, 3)).toBe(0);
+  });
 
-    fireEvent.click(brushButton("erase"));
+  it("clears with a tap on a cell already holding the brush's mark, since there is no erase button", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+
+    fireEvent.click(cellAt(container, 1));
     fireEvent.click(cellAt(container, 1));
     expect(markAt(container, 1)).toBeNull();
+
+    fireEvent.click(brushButton("cross"));
+    fireEvent.click(cellAt(container, 2));
+    fireEvent.click(cellAt(container, 2));
+    expect(markAt(container, 2)).toBeNull();
+  });
+});
+
+describe("the brush is two icons (T-WEB-S498)", () => {
+  const copy = messages.games.nonogram.play.controls;
+
+  it("is two aria-pressed buttons named by their aria copy, with exactly one pressed", () => {
+    render(<NonogramScreen daily={SMALL} />);
+
+    const buttons = screen
+      .getAllByRole("button")
+      .filter((button) => button.hasAttribute("aria-pressed"));
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toStrictEqual([
+      copy.crossAria,
+      copy.fillAria,
+    ]);
+
+    const pressed = screen.getAllByRole("button", { pressed: true });
+    expect(pressed.map((b) => b.getAttribute("aria-label"))).toEqual([
+      copy.fillAria,
+    ]);
+    expect(pressed[0]?.className).toContain(className("controlActive"));
+    expect(screen.getByLabelText(copy.crossAria).className).not.toContain(
+      className("controlActive"),
+    );
+  });
+
+  it("shows an icon and no visible words, and has no erase control", () => {
+    render(<NonogramScreen daily={SMALL} />);
+
+    for (const label of [copy.fillAria, copy.crossAria]) {
+      const button = screen.getByLabelText(label);
+      expect(button.textContent).toBe("");
+      expect(button.querySelector("svg[aria-hidden]")).not.toBeNull();
+    }
+    expect(screen.queryByLabelText("apagar células")).toBeNull();
+    expect(screen.queryByText("apagar")).toBeNull();
+  });
+
+  it("keeps only the keys in the affordance line", () => {
+    render(<NonogramScreen daily={SMALL} />);
+
+    expect(screen.getByText(copy.affordance)).toBeInTheDocument();
+    expect(copy.affordance).toMatch(/^No teclado:/);
+  });
+
+  it("switches by click and the skeleton reserves both segments", () => {
+    const html = renderToStaticMarkup(<NonogramScreen daily={SMALL} />);
+    const host = parsed(html);
+
+    expect(host.querySelectorAll(`.${className("control")}`)).toHaveLength(2);
+  });
+});
+
+describe("the mouse buttons on the board (T-WEB-S498a)", () => {
+  const MOUSE = { pointerId: 1, pointerType: "mouse" } as const;
+
+  function click(board: HTMLElement, index: number, button: number): void {
+    const at = { ...MOUSE, clientX: index, clientY: 0, button };
+    fireEvent.pointerDown(board, at);
+    fireEvent.pointerUp(board, at);
+  }
+
+  it("a left click uses the brush and a right click writes the opposite", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+    stubElementFromPoint(container);
+    const board = boardOf(SMALL);
+
+    click(board, 1, 0);
+    click(board, 2, 2);
+    expect([1, 2].map((i) => markAt(container, i))).toStrictEqual([1, 0]);
+
+    click(board, 1, 2);
+    click(board, 2, 0);
+    expect([1, 2].map((i) => markAt(container, i))).toStrictEqual([0, 1]);
+
+    click(board, 1, 2);
+    expect(markAt(container, 1)).toBeNull();
+  });
+
+  it("under the cross brush the buttons swap", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+    stubElementFromPoint(container);
+    const board = boardOf(SMALL);
+    fireEvent.click(
+      screen.getByLabelText(messages.games.nonogram.play.controls.crossAria),
+    );
+
+    click(board, 1, 0);
+    click(board, 2, 2);
+
+    expect([1, 2].map((i) => markAt(container, i))).toStrictEqual([0, 1]);
+  });
+
+  it("a right drag crosses every cell, and the board's context menu is blocked", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+    stubElementFromPoint(container);
+    const board = boardOf(SMALL);
+    const base = { ...MOUSE, clientY: 0, button: 2 };
+
+    fireEvent.pointerDown(board, { ...base, clientX: 0 });
+    fireEvent.pointerMove(board, { ...base, clientX: 1 });
+    fireEvent.pointerMove(board, { ...base, clientX: 2 });
+    fireEvent.pointerUp(board, { ...base, clientX: 2 });
+
+    expect([0, 1, 2].map((i) => markAt(container, i))).toStrictEqual([0, 0, 0]);
+    expect(fireEvent.contextMenu(board)).toBe(false);
+    expect(
+      fireEvent.contextMenu(
+        screen.getByLabelText(messages.games.nonogram.play.controls.fillAria),
+      ),
+    ).toBe(true);
+  });
+
+  it("a stroke from a filled cell clears the filled cells and leaves the crosses", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+    stubElementFromPoint(container);
+    const board = boardOf(SMALL);
+    click(board, 0, 0);
+    click(board, 1, 2);
+    click(board, 2, 0);
+    const base = { ...MOUSE, clientY: 0, button: 0 };
+
+    fireEvent.pointerDown(board, { ...base, clientX: 0 });
+    fireEvent.pointerMove(board, { ...base, clientX: 1 });
+    fireEvent.pointerMove(board, { ...base, clientX: 2 });
+    fireEvent.pointerMove(board, { ...base, clientX: 3 });
+    fireEvent.pointerUp(board, { ...base, clientX: 3 });
+
+    expect([0, 1, 2, 3].map((i) => markAt(container, i))).toStrictEqual([
+      null,
+      0,
+      null,
+      null,
+    ]);
+  });
+
+  it("leaves a touch stroke on the brush", () => {
+    const { container } = render(<NonogramScreen daily={SMALL} />);
+    stubElementFromPoint(container);
+    const board = boardOf(SMALL);
+    const base = { pointerId: 1, pointerType: "touch", clientY: 0, button: 0 };
+
+    fireEvent.pointerDown(board, { ...base, clientX: 0 });
+    fireEvent.pointerMove(board, { ...base, clientX: 1 });
+    fireEvent.pointerUp(board, { ...base, clientX: 1 });
+
+    expect([0, 1].map((i) => markAt(container, i))).toStrictEqual([1, 1]);
   });
 });
 
@@ -517,7 +655,7 @@ describe("the stroke (T-WEB-S45)", () => {
     expect(markAt(container, 4)).toBe(1);
   });
 
-  it("writes nothing for a non-primary button", () => {
+  it("writes nothing for a middle button", () => {
     const { container } = render(<NonogramScreen daily={SMALL} />);
     stubElementFromPoint(container);
     const board = boardOf(SMALL);
@@ -526,13 +664,13 @@ describe("the stroke (T-WEB-S45)", () => {
       clientX: 4,
       clientY: 0,
       pointerId: 1,
-      button: 2,
+      button: 1,
     });
     fireEvent.pointerUp(board, {
       clientX: 4,
       clientY: 0,
       pointerId: 1,
-      button: 2,
+      button: 1,
     });
 
     expect(markAt(container, 4)).toBeNull();
@@ -718,7 +856,8 @@ describe("the four branches (T-WEB-S47)", () => {
       ["cell", SMALL.size ** 2],
       ["clueRow", SMALL.size],
       ["clueCol", SMALL.size],
-      ["control", 3],
+      ["control", 2],
+      ["brushToggle", 1],
     ] as const) {
       expect(skeleton.querySelectorAll(`.${className(local)}`)).toHaveLength(
         count,
@@ -1157,26 +1296,30 @@ describe("the board geometry (T-WEB-S48)", () => {
     expect(decl(number, "font-variant-numeric")).toBe("tabular-nums");
   });
 
-  it("A10 — keeps every brush control clear of the 44px touch target", () => {
+  it("A10 — keeps both brush segments clear of the 44px touch target", () => {
     const controls = bodyOf(MOBILE_CHROME, ".controls");
     const minimum = token("--touch-target-min");
 
     expect(decl(controls, "width")).toBe("100%");
     expect(decl(controls, "max-width")).toBe("var(--board-mobile-max)");
-    const gap = pixels(decl(controls, "gap"));
 
-    for (const cap of [mobileCap(15), mobileCap(5)]) {
-      const row = Math.min(cap, 320 - PAGE_PADDING);
-      expect((row - 2 * gap) / 3).toBeGreaterThanOrEqual(minimum);
-    }
-    const control = bodyOf(MOBILE_CHROME, ".control");
-    expect(pixels(decl(control, "height"))).toBeGreaterThanOrEqual(minimum);
+    const segment = bodyOf(MOBILE_CHROME, ".control");
+    expect(pixels(decl(segment, "height"))).toBeGreaterThanOrEqual(minimum);
+    expect(pixels(decl(segment, "width"))).toBeGreaterThanOrEqual(minimum);
 
-    expect(decl(control, "min-width")).toBe("0");
-
-    expect(decl(control, "padding")).toBe("var(--space-2) var(--space-1)");
+    const row = Math.min(mobileCap(15), 320 - PAGE_PADDING);
+    expect(2 * pixels(decl(segment, "width"))).toBeLessThanOrEqual(row);
 
     expect(decl(bodyOf(MOBILE_CHROME, ".affordance"), "display")).toBe("none");
+  });
+
+  it("A10c — draws the toggle as one paper frame with the token radius, the active segment raised", () => {
+    const frame = bodyOf(GAME_CSS, ".brushToggle");
+    const active = bodyOf(GAME_CSS, ".controlActive");
+
+    expect(decl(frame, "border-radius")).toBe("var(--radius)");
+    expect(decl(active, "box-shadow")).toContain("var(--shadow-sm)");
+    expect(decl(active, "background")).toBe("var(--accent)");
   });
 
   it("A10b — places the keyboard affordance the way a flex ROW allows", () => {
@@ -1245,7 +1388,7 @@ describe("the board geometry (T-WEB-S48)", () => {
 
     const control = bodyOf(GAME_CSS, ".control");
     const active = bodyOf(GAME_CSS, ".controlActive");
-    expect(decl(control, "background")).toBe("var(--paper-card)");
+    expect(decl(control, "background")).toBe("transparent");
     expect(decl(control, "color")).toBe("var(--accent)");
     expect(decl(active, "background")).toBe("var(--accent)");
     expect(decl(active, "color")).toBe("var(--paper-card)");

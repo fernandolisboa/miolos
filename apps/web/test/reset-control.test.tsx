@@ -15,7 +15,7 @@ function open(): HTMLElement {
   return screen.getByRole("group");
 }
 
-describe("ResetControl asks before it clears (T-WEB-S499)", () => {
+describe("ResetControl asks before it clears (T-WEB-S515)", () => {
   it("shows one button and takes no focus on mount", () => {
     mount();
 

@@ -1,3 +1,4 @@
+import { toggled } from "./brush";
 import { nextBinaryHint } from "./grid-hint";
 import { movedSelection } from "./grid-selection";
 import type {
@@ -72,7 +73,7 @@ export function binaryGridReducer<S extends BinaryGridState>(
       return withBinaryEntry(
         state,
         state.selected,
-        current === action.value ? null : action.value,
+        toggled(current, action.value),
         rules,
       );
     }

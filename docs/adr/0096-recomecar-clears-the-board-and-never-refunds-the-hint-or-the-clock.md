@@ -1,4 +1,4 @@
-# ADR-0094 — Recomeçar clears the board and never refunds the hint or the clock
+# ADR-0096 — Recomeçar clears the board and never refunds the hint or the clock
 
 **Status:** Accepted — 2026-10-13 (issue #298)
 **Depends on:** [ADR-0042](./0042-the-termo-board-is-read-only-output.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md)

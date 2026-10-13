@@ -2,6 +2,7 @@ import type { DailyBinairoResponse } from "@miolos/core";
 import { generateBinairo } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
+import type { Press } from "../src/play/brush";
 import type { BinairoPlayRecord } from "../src/play/play-record";
 import { elapsedMs } from "../src/play/timer";
 import {
@@ -26,9 +27,25 @@ function daily(
 
 function tap(state: PlayState, ...indices: number[]): PlayState {
   return indices.reduce(
-    (current, index) => playReducer(current, { type: "tap", index }),
+    (current, index) =>
+      playReducer(current, { type: "tap", index, press: "tap" }),
     state,
   );
+}
+
+function press(state: PlayState, kind: Press, ...indices: number[]): PlayState {
+  return indices.reduce(
+    (current, index) =>
+      playReducer(current, { type: "tap", index, press: kind }),
+    state,
+  );
+}
+
+function brushed(value: 0 | 1): PlayState {
+  return playReducer(initPlayState(daily()), {
+    type: "set-mode",
+    value,
+  });
 }
 
 const REAL_PUZZLE = generateBinairo({ seed: 20_260_730, weekday: 3 });
@@ -90,7 +107,7 @@ describe("tap — the cell state machine (D7)", () => {
   it("sets the value directly in paint mode and clears it on a re-tap", () => {
     let state = playReducer(initPlayState(daily()), {
       type: "set-mode",
-      mode: { kind: "paint", value: 1 },
+      value: 1,
     });
 
     state = tap(state, 9);
@@ -98,70 +115,156 @@ describe("tap — the cell state machine (D7)", () => {
     state = tap(state, 9);
     expect(state.entries[9]).toBeNull();
   });
+});
 
-  it("clears in erase mode whatever the cell held", () => {
-    let state = tap(initPlayState(daily()), 3, 3);
-    expect(state.entries[3]).toBe(1);
+describe("a mouse press writes a value (T-WEB-S506)", () => {
+  it("left writes 1 and right writes 0 in cycle mode, and the same press again clears", () => {
+    const start = initPlayState(daily());
 
-    state = playReducer(state, { type: "set-mode", mode: { kind: "erase" } });
-    state = tap(state, 3);
-    expect(state.entries[3]).toBeNull();
+    const one = press(start, "left", 5);
+    expect(one.entries[5]).toBe(1);
+    expect(press(one, "left", 5).entries[5]).toBeNull();
+
+    const zero = press(start, "right", 5);
+    expect(zero.entries[5]).toBe(0);
+    expect(press(zero, "right", 5).entries[5]).toBeNull();
+
+    expect(press(one, "right", 5).entries[5]).toBe(0);
+  });
+
+  it("a tap still cycles in cycle mode", () => {
+    expect(tap(initPlayState(daily()), 5).entries[5]).toBe(0);
+  });
+
+  it("left and a tap use the brush, right the other value", () => {
+    const zeros = brushed(0);
+
+    expect(press(zeros, "tap", 3).entries[3]).toBe(0);
+    expect(press(zeros, "left", 3).entries[3]).toBe(0);
+    expect(press(zeros, "right", 3).entries[3]).toBe(1);
+    expect(press(zeros, "tap", 3, 3).entries[3]).toBeNull();
+
+    const ones = brushed(1);
+    expect(press(ones, "right", 3).entries[3]).toBe(0);
+    expect(press(ones, "left", 3, 3).entries[3]).toBeNull();
+  });
+
+  it("never changes a given, whatever the press", () => {
+    const givens = [...EMPTY_GIVENS];
+    givens[0] = 1;
+    const state = initPlayState(daily(givens));
+
+    for (const kind of ["tap", "left", "right"] as const) {
+      expect(press(state, kind, 0).entries[0]).toBeNull();
+    }
   });
 });
 
-describe("paint-over — the drag path (T-WEB-12b)", () => {
-  it("is a no-op in cycle mode: cycling on drag is chaos (D8)", () => {
-    const state = playReducer(initPlayState(daily()), {
-      type: "paint-over",
-      index: 4,
-    });
+describe("stroke-start and paint-over — the drag path (T-WEB-S506a)", () => {
+  function stroke(
+    state: PlayState,
+    kind: Press,
+    start: number,
+    ...over: number[]
+  ): PlayState {
+    return over.reduce(
+      (current, index) => playReducer(current, { type: "paint-over", index }),
+      playReducer(state, { type: "stroke-start", index: start, press: kind }),
+    );
+  }
 
-    expect(state.entries[4]).toBeNull();
+  it("is a no-op in cycle mode: cycling on drag is chaos (D8)", () => {
+    const state = stroke(initPlayState(daily()), "left", 4, 5, 6);
+
+    expect(state.entries).toEqual(EMPTY_GIVENS);
   });
 
   it("sets, never toggles, and is idempotent over the same cell in paint mode", () => {
-    let state = playReducer(initPlayState(daily()), {
-      type: "set-mode",
-      mode: { kind: "paint", value: 0 },
-    });
+    const state = stroke(brushed(0), "tap", 6, 7, 7, 7);
 
-    state = playReducer(state, { type: "paint-over", index: 7 });
-    state = playReducer(state, { type: "paint-over", index: 7 });
-
-    expect(state.entries[7]).toBe(0);
+    expect(state.entries.slice(6, 8)).toEqual([0, 0]);
   });
 
-  it("clears in erase mode and leaves givens alone in every mode", () => {
+  it("a right stroke writes the other value", () => {
+    const state = stroke(brushed(1), "right", 6, 7);
+
+    expect(state.entries.slice(6, 8)).toEqual([0, 0]);
+  });
+
+  it("from a cell already holding the brush's value clears only cells holding it", () => {
+    let state = press(brushed(1), "tap", 8, 10);
+    state = press(state, "right", 9);
+
+    const cleared = stroke(state, "tap", 8, 9, 10, 11);
+
+    expect(cleared.entries.slice(8, 12)).toEqual([null, 0, null, null]);
+  });
+
+  it("(a) a stroke starting on a given writes, and the next stroke replaces a clearing latch", () => {
     const givens = [...EMPTY_GIVENS];
     givens[2] = 0;
     let state = playReducer(initPlayState(daily(givens)), {
       type: "set-mode",
-      mode: { kind: "paint", value: 1 },
+      value: 1,
     });
+    state = press(state, "tap", 11, 12);
+    state = stroke(state, "tap", 11);
 
-    state = playReducer(state, { type: "paint-over", index: 2 });
-    expect(state.entries[2]).toBeNull();
+    const fromGiven = stroke(state, "tap", 2, 3, 12);
 
-    state = tap(state, 11);
-    expect(state.entries[11]).toBe(1);
-    state = playReducer(state, { type: "set-mode", mode: { kind: "erase" } });
-    state = playReducer(state, { type: "paint-over", index: 11 });
-    expect(state.entries[11]).toBeNull();
-    state = playReducer(state, { type: "paint-over", index: 2 });
-    expect(mergedGrid(state)[2]).toBe(0);
+    expect(fromGiven.entries[2]).toBeNull();
+    expect(fromGiven.entries[3]).toBe(1);
+    expect(fromGiven.entries[12]).toBe(1);
+    expect(mergedGrid(fromGiven)[2]).toBe(0);
   });
 });
 
-describe("set-mode", () => {
+describe("set-mode takes the digit (T-WEB-S501)", () => {
+  it("returns to cycle when the active brush is pressed again", () => {
+    const zeros = brushed(0);
+    const again = playReducer(zeros, {
+      type: "set-mode",
+      value: 0,
+    });
+    const other = playReducer(zeros, {
+      type: "set-mode",
+      value: 1,
+    });
+
+    expect(again.paint).toEqual({ kind: "cycle" });
+    expect(other.paint).toEqual({ kind: "paint", value: 1 });
+  });
+
   it("swaps the sticky paint mode without touching the grid", () => {
     const filled = tap(initPlayState(daily()), 1);
     const state = playReducer(filled, {
       type: "set-mode",
-      mode: { kind: "paint", value: 1 },
+      value: 1,
     });
 
     expect(state.paint).toEqual({ kind: "paint", value: 1 });
     expect(state.entries).toEqual(filled.entries);
+  });
+});
+
+describe("a stroke that starts nowhere (T-WEB-S502)", () => {
+  it("drops the old latch instead of leaving it to paint the next cells", () => {
+    const latched = playReducer(brushed(1), {
+      type: "stroke-start",
+      index: 3,
+      press: "tap",
+    });
+    expect(latched.stroke).not.toBeNull();
+
+    const lost = playReducer(latched, {
+      type: "stroke-start",
+      index: 999,
+      press: "tap",
+    });
+    const after = playReducer(lost, { type: "paint-over", index: 4 });
+
+    expect(lost.stroke).toBeNull();
+    expect(after.entries[4]).toBeNull();
   });
 });
 

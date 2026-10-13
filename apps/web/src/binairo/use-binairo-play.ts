@@ -13,15 +13,17 @@ import {
   initPlayState,
   isSolvedGrid,
   playReducer,
-  sameMode,
   type CellValue,
-  type PaintMode,
   type PlayState,
 } from "./state";
+import {
+  useBinairoControls,
+  type BinairoControls,
+} from "./use-binairo-controls";
 
 export type BinairoHint = Hint<CellValue>;
 
-export interface BinairoPlay {
+export interface BinairoPlay extends BinairoControls {
   readonly state: PlayState;
 
   readonly elapsed: number;
@@ -31,10 +33,6 @@ export interface BinairoPlay {
   readonly hintReady: boolean;
 
   readonly hintKind: BinairoHint["kind"] | null;
-  readonly tapCell: (index: number) => void;
-  readonly paintOver: (index: number) => void;
-
-  readonly toggleMode: (mode: PaintMode) => void;
   readonly revealHint: () => void;
   readonly reset: () => void;
 }
@@ -46,6 +44,7 @@ export function useBinairoPlay(
   const [state, dispatch] = useReducer(playReducer, daily, initPlayState);
   const { hintKind, setHintKind, reset } =
     useHintKind<BinairoHint["kind"]>(dispatch);
+  const controls = useBinairoControls(dispatch);
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -70,21 +69,6 @@ export function useBinairoPlay(
     persistDeps: [givens, entries, hintsUsed],
   });
 
-  const tapCell = useCallback((index: number) => {
-    dispatch({ type: "tap", index });
-  }, []);
-
-  const paintOver = useCallback((index: number) => {
-    dispatch({ type: "paint-over", index });
-  }, []);
-
-  const toggleMode = useCallback((mode: PaintMode) => {
-    dispatch({
-      type: "set-mode",
-      mode: sameMode(stateRef.current.paint, mode) ? { kind: "cycle" } : mode,
-    });
-  }, []);
-
   const revealHint = useCallback(() => {
     if (solution === null) {
       return;
@@ -103,15 +87,13 @@ export function useBinairoPlay(
   }, [solution, setHintKind]);
 
   return {
+    ...controls,
     state,
     elapsed,
     filled,
     hintReady:
       solution !== null && hintsUsed < state.hint.free && status === "playing",
     hintKind,
-    tapCell,
-    paintOver,
-    toggleMode,
     revealHint,
     reset,
   };

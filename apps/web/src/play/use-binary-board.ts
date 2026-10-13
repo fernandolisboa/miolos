@@ -8,6 +8,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 
+import type { Press } from "./brush";
 import { isShortcut, keyMove } from "./grid-selection";
 import { usePointerStroke } from "./use-pointer-stroke";
 
@@ -23,14 +24,23 @@ export interface BinaryBoard {
 export function useBinaryBoard(input: {
   readonly size: number;
   readonly selected: number | null;
-  readonly onTap: (index: number) => void;
+  readonly onTap: (index: number, press: Press) => void;
+  readonly onStrokeStart: (index: number, press: Press) => void;
   readonly onPaintOver: (index: number) => void;
   readonly onMove: (rows: number, columns: number) => void;
   readonly onEnterValue: (value: 0 | 1) => void;
   readonly onClear: () => void;
 }): BinaryBoard {
-  const { size, selected, onTap, onPaintOver, onMove, onEnterValue, onClear } =
-    input;
+  const {
+    size,
+    selected,
+    onTap,
+    onStrokeStart,
+    onPaintOver,
+    onMove,
+    onEnterValue,
+    onClear,
+  } = input;
   const boardRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -48,6 +58,7 @@ export function useBinaryBoard(input: {
   const stroke = usePointerStroke({
     painting: true,
     onTap,
+    onStrokeStart,
     onPaintOver,
     onStrokeEnd: (index) => {
       const board = boardRef.current;
@@ -57,18 +68,18 @@ export function useBinaryBoard(input: {
     },
   });
 
-  const consumedClickRef = useRef(stroke.consumedClick);
+  const clickPressRef = useRef(stroke.clickPress);
   useEffect(() => {
-    consumedClickRef.current = stroke.consumedClick;
+    clickPressRef.current = stroke.clickPress;
   });
 
   const onCellClick = useCallback(
     (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
       event.currentTarget.focus();
-      if (consumedClickRef.current(event)) {
-        return;
+      const press = clickPressRef.current(event);
+      if (press !== null) {
+        onTap(index, press);
       }
-      onTap(index);
     },
     [onTap],
   );

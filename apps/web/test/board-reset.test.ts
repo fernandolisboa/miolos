@@ -145,13 +145,13 @@ function binairoCase(): BoardCase<PlayState> {
   const played = run(reduce, start, [
     { type: "resume", now: 1000 },
     { type: "tick", now: 5000 },
-    { type: "set-mode", mode: { kind: "paint", value: 1 } },
-    { type: "tap", index: first },
-    { type: "tap", index: second },
+    { type: "set-mode", value: 1 },
+    { type: "tap", index: first, press: "tap" },
+    { type: "tap", index: second, press: "tap" },
     { type: "use-hint", solution: BINAIRO_SOLUTION },
     ...BINAIRO_PLAYABLE.filter(
       (index) => index < BINAIRO_SIDE && index !== first && index !== second,
-    ).map((index) => ({ type: "tap" as const, index })),
+    ).map((index) => ({ type: "tap" as const, index, press: "tap" as const })),
   ]);
   return {
     name: "binairo",
@@ -192,8 +192,8 @@ function nonogramCase(): BoardCase<NonogramPlayState> {
     { type: "resume", now: 1000 },
     { type: "tick", now: 5000 },
     { type: "set-brush", brush: "cross" },
-    { type: "mark-cell", index: 0 },
-    { type: "mark-cell", index: 1 },
+    { type: "mark-cell", index: 0, press: "tap" },
+    { type: "mark-cell", index: 1, press: "tap" },
     { type: "use-hint" },
   ]);
   return {
@@ -232,10 +232,10 @@ function queensCase(): BoardCase<QueensPlayState> {
     { type: "resume", now: 1000 },
     { type: "tick", now: 5000 },
     { type: "use-hint" },
-    { type: "cycle", index: 0 },
-    { type: "cycle", index: 0 },
-    { type: "cycle", index: 1 },
-    { type: "cycle", index: 1 },
+    { type: "tap", index: 0, press: "tap" },
+    { type: "tap", index: 0, press: "tap" },
+    { type: "tap", index: 1, press: "tap" },
+    { type: "tap", index: 1, press: "tap" },
   ]);
   return {
     name: "queens",
@@ -356,7 +356,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
   });
 }
 
-describe("Recomeçar clears the board and refunds nothing (T-WEB-S498)", () => {
+describe("Recomeçar clears the board and refunds nothing (T-WEB-S514)", () => {
   registerCase(sudokuCase());
   registerCase(binairoCase());
   registerCase(nonogramCase());

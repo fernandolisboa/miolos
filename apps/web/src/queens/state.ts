@@ -7,6 +7,7 @@ import {
   type QueensGrid,
 } from "@miolos/games/queens";
 
+import { cycled, toggled, type Press } from "../play/brush";
 import {
   binaryCellValue,
   binaryGridReducer,
@@ -31,7 +32,7 @@ export interface QueensPlayState extends BinaryGridState {
 
 export type QueensPlayAction =
   | BinaryGridAction
-  | { readonly type: "cycle"; readonly index: number }
+  | { readonly type: "tap"; readonly index: number; readonly press: Press }
   | { readonly type: "cross-over"; readonly index: number };
 
 export function initQueensPlayState(
@@ -71,11 +72,16 @@ export function queensPlayReducer(
   action: QueensPlayAction,
 ): QueensPlayState {
   switch (action.type) {
-    case "cycle": {
+    case "tap": {
       const current = binaryCellValue(state, action.index);
       return current === undefined
         ? state
-        : withBinaryEntry(state, action.index, cycled(current), QUEENS_RULES);
+        : withBinaryEntry(
+            state,
+            action.index,
+            action.press === "right" ? toggled(current, 1) : cycled(current),
+            QUEENS_RULES,
+          );
     }
 
     case "cross-over":
@@ -94,8 +100,4 @@ export function queensGrid(entries: readonly QueensCellValue[]): QueensGrid {
 
 export function countQueens(entries: readonly QueensCellValue[]): number {
   return entries.filter((entry) => entry === 1).length;
-}
-
-function cycled(current: QueensCellValue): QueensCellValue {
-  return current === null ? 0 : current === 0 ? 1 : null;
 }

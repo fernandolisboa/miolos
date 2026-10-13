@@ -87,7 +87,7 @@ describe("useNonogramPlay", () => {
     expect(setItem).not.toHaveBeenCalled();
 
     act(() => {
-      result.current.markCell(0);
+      result.current.markCell(0, "tap");
     });
 
     expect(setItem).toHaveBeenCalledTimes(1);
@@ -102,7 +102,7 @@ describe("useNonogramPlay", () => {
     const setItem = vi.spyOn(Storage.prototype, "setItem");
 
     act(() => {
-      result.current.paintOver(1);
+      result.current.strokeStart(1, "tap");
     });
     expect(setItem).toHaveBeenCalledTimes(1);
 
@@ -132,7 +132,7 @@ describe("useNonogramPlay", () => {
       result.current.setBrush("cross");
     });
     act(() => {
-      result.current.markCell(SOLUTION.indexOf(0));
+      result.current.markCell(SOLUTION.indexOf(0), "tap");
     });
 
     expect(result.current.filled).toBe(0);
@@ -144,7 +144,7 @@ describe("useNonogramPlay", () => {
       vi.advanceTimersByTime(0);
     });
     act(() => {
-      result.current.markCell(PICTURE[0] ?? 0);
+      result.current.markCell(PICTURE[0] ?? 0, "tap");
     });
 
     const record = storedRecord();
@@ -166,7 +166,7 @@ describe("useNonogramPlay", () => {
 
     for (const index of PICTURE) {
       act(() => {
-        result.current.markCell(index);
+        result.current.markCell(index, "tap");
       });
     }
 
@@ -197,7 +197,7 @@ describe("useNonogramPlay", () => {
     });
     for (const index of PICTURE) {
       act(() => {
-        result.current.markCell(index);
+        result.current.markCell(index, "tap");
       });
     }
     act(() => {
