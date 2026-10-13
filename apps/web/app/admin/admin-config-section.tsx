@@ -7,49 +7,43 @@ import {
   type AdminStateResponse,
   type RemoteConfigKey,
 } from "@miolos/core";
+import Link from "next/link";
 import { useState } from "react";
 
 import {
   fetchAdminState,
   saveRemoteConfigValue,
 } from "../../src/admin/admin-client";
+import {
+  useAdminWrite,
+  type AdminWriteProps,
+} from "../../src/admin/use-admin-write";
 import { useMountFetch } from "../../src/api/use-mount-fetch";
-import { messages } from "../../src/i18n";
+import { messages, routes } from "../../src/i18n";
 import settings from "../ajustes/page.module.css";
 import styles from "./admin.module.css";
+import { AdminMembersCard } from "./admin-members-section";
 
 const copy = messages.admin;
 
 function ConfigRow({
   configKey,
   value,
-  busy,
-  setBusy,
-  onSaved,
-}: {
-  configKey: RemoteConfigKey;
-  value: number;
-  busy: boolean;
-  setBusy: (busy: boolean) => void;
-  onSaved: (state: AdminStateResponse) => void;
-}) {
+  ...writeProps
+}: AdminWriteProps & { configKey: RemoteConfigKey; value: number }) {
   const field = remoteConfigField(configKey);
   const min = field.minValue ?? undefined;
   const max = field.maxValue ?? undefined;
   const [draft, setDraft] = useState<string>();
-  const [outcome, setOutcome] = useState<"saved" | "failed">();
+  const { outcome, clearOutcome, write } = useAdminWrite(writeProps);
+  const { busy } = writeProps;
   const shown = draft ?? String(value);
   const parsed = field.safeParse(shown === "" ? Number.NaN : Number(shown));
   const id = `admin-${configKey}`;
 
   async function save(next: number): Promise<void> {
-    setBusy(true);
-    const state = await saveRemoteConfigValue(configKey, next);
-    setBusy(false);
-    setOutcome(state ? "saved" : "failed");
-    if (state) {
+    if (await write(() => saveRemoteConfigValue(configKey, next))) {
       setDraft(undefined);
-      onSaved(state);
     }
   }
 
@@ -72,7 +66,7 @@ function ConfigRow({
           disabled={busy}
           onChange={(event) => {
             setDraft(event.target.value);
-            setOutcome(undefined);
+            clearOutcome();
           }}
         />
         <span className={styles.range}>
@@ -101,30 +95,40 @@ function ConfigRow({
   );
 }
 
-function AdminBody() {
-  const fetched = useMountFetch(fetchAdminState);
-  const [current, setCurrent] = useState<AdminStateResponse>();
-  const [saving, setSaving] = useState(false);
-  const state = current ?? fetched;
+function NotAdmin({ email }: { email: string | null }) {
+  return (
+    <>
+      <p className={settings.body}>{copy.config.notAdmin}</p>
+      {email === null ? (
+        <>
+          <p className={settings.note}>{copy.config.noEmail}</p>
+          <Link className={settings.textLink} href={routes.settings}>
+            {messages.settings.title}
+          </Link>
+        </>
+      ) : (
+        <p className={settings.note}>
+          {copy.config.emailLabel} <code className={styles.email}>{email}</code>
+        </p>
+      )}
+    </>
+  );
+}
 
+function ConfigBody({
+  state,
+  ...writeProps
+}: AdminWriteProps & { state: AdminStateResponse | null | undefined }) {
   if (state === undefined) {
     return null;
   }
   if (state === null) {
     return <p className={settings.body}>{copy.config.unavailable}</p>;
   }
-  const { config } = state;
-  if (config === null) {
-    return (
-      <>
-        <p className={settings.body}>{copy.config.notAdmin}</p>
-        <p className={settings.note}>
-          {copy.config.userIdLabel}{" "}
-          <code className={styles.userId}>{state.userId}</code>
-        </p>
-      </>
-    );
+  if (state.role === "none") {
+    return <NotAdmin email={state.email} />;
   }
+  const { config } = state;
   return (
     <>
       {remoteConfigKeySchema.options.map((key) => (
@@ -132,9 +136,7 @@ function AdminBody() {
           key={key}
           configKey={key}
           value={config[key]}
-          busy={saving}
-          setBusy={setSaving}
-          onSaved={setCurrent}
+          {...writeProps}
         />
       ))}
     </>
@@ -142,12 +144,23 @@ function AdminBody() {
 }
 
 export function AdminConfigSection() {
+  const fetched = useMountFetch(fetchAdminState);
+  const [current, setCurrent] = useState<AdminStateResponse>();
+  const [saving, setSaving] = useState(false);
+  const state = current ?? fetched;
+  const writeProps = { busy: saving, setBusy: setSaving, onSaved: setCurrent };
+
   return (
-    <section className={settings.card} aria-labelledby="admin-config-heading">
-      <h2 id="admin-config-heading" className={settings.heading}>
-        {copy.config.heading}
-      </h2>
-      <AdminBody />
-    </section>
+    <>
+      <section className={settings.card} aria-labelledby="admin-config-heading">
+        <h2 id="admin-config-heading" className={settings.heading}>
+          {copy.config.heading}
+        </h2>
+        <ConfigBody state={state} {...writeProps} />
+      </section>
+      {state?.role === "superuser" && (
+        <AdminMembersCard members={state.members} {...writeProps} />
+      )}
+    </>
   );
 }

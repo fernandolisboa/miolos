@@ -90,6 +90,7 @@ describe("the migration's constraints (ADR-0006 guard, ADR-0052)", () => {
            order by table_name`,
     );
     expect(result.rows.map((row) => row["table_name"])).toEqual([
+      "admin_users",
       "attach_tokens",
       "completions",
       "consent_events",

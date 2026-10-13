@@ -95,14 +95,33 @@ export async function apiPostRaw(
   return await apiSend("POST", path, body, absence);
 }
 
+async function apiSendParsed<T>(
+  method: JsonMethod,
+  path: string,
+  body: unknown,
+  schema: ZodType<T>,
+  absence: string,
+): Promise<T | undefined> {
+  const response = await apiSend(method, path, body, absence);
+  return response?.ok ? await parseJsonResponse(response, schema) : undefined;
+}
+
 export async function apiPostParsed<T>(
   path: string,
   body: unknown,
   schema: ZodType<T>,
   absence: string,
 ): Promise<T | undefined> {
-  const response = await apiPostRaw(path, body, absence);
-  return response?.ok ? await parseJsonResponse(response, schema) : undefined;
+  return await apiSendParsed("POST", path, body, schema, absence);
+}
+
+export async function apiDeleteParsed<T>(
+  path: string,
+  body: unknown,
+  schema: ZodType<T>,
+  absence: string,
+): Promise<T | undefined> {
+  return await apiSendParsed("DELETE", path, body, schema, absence);
 }
 
 export async function apiConfirm<T>(

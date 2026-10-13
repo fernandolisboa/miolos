@@ -2,12 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import {
   adminConfigWriteSchema,
+  adminMemberRemoveSchema,
+  adminMemberWriteSchema,
   adminStateResponseSchema,
   remoteConfigField,
   remoteConfigKeySchema,
 } from "../src/index";
 
 const USER_ID = "0b6f3c1e-2d4a-4e8b-9f10-3a5c7d9e1f20";
+const CONFIG = {
+  bufferDepth: 7,
+  attachStreakThreshold: 5,
+  pushOptInStreakThreshold: 3,
+  freeHintsPerPuzzle: 3,
+};
 
 function rejects(
   schema: { safeParse: (value: unknown) => { success: boolean } },
@@ -72,29 +80,88 @@ describe("the admin config write (ADR-0097)", () => {
   });
 });
 
-describe("the admin state response (ADR-0097)", () => {
-  it("T-CORE-S172: strict, the viewer's own id, and every key or a null config", () => {
-    const config = {
-      bufferDepth: 7,
-      attachStreakThreshold: 5,
-      pushOptInStreakThreshold: 3,
-      freeHintsPerPuzzle: 3,
-    };
-    expect(
-      adminStateResponseSchema.parse({ userId: USER_ID, config: null }),
-    ).toEqual({ userId: USER_ID, config: null });
-    expect(adminStateResponseSchema.parse({ userId: USER_ID, config })).toEqual(
-      { userId: USER_ID, config },
-    );
+describe("the admin state response (ADR-0100)", () => {
+  it("T-CORE-S183: strict, one variant per role, members only for a superuser", () => {
+    const members = [
+      { email: "ana@example.com", role: "superuser" },
+      { email: "bia@example.com", role: "admin" },
+    ];
+    const states = [
+      { role: "none", email: null },
+      { role: "none", email: "zeca@example.com" },
+      { role: "admin", email: "bia@example.com", config: CONFIG },
+      { role: "superuser", email: "ana@example.com", config: CONFIG, members },
+      {
+        role: "superuser",
+        email: "ana@example.com",
+        config: CONFIG,
+        members: [],
+      },
+    ];
+    for (const state of states) {
+      expect(adminStateResponseSchema.parse(state)).toEqual(state);
+    }
 
     rejects(adminStateResponseSchema, [
-      { userId: USER_ID },
-      { config: null },
-      { userId: "not-a-uuid", config: null },
-      { userId: USER_ID, config: null, role: "admin" },
-      { userId: USER_ID, config: { bufferDepth: 7 } },
-      { userId: USER_ID, config: { ...config, someFutureTunable: 1 } },
-      { userId: USER_ID, config: { ...config, bufferDepth: 31 } },
+      { email: null },
+      { role: "owner", email: null },
+      { role: "none" },
+      { role: "none", email: "not-an-email" },
+      { role: "none", email: null, config: CONFIG },
+      { role: "admin", email: null, config: CONFIG },
+      { role: "admin", email: "bia@example.com" },
+      { role: "admin", email: "bia@example.com", config: CONFIG, members },
+      { role: "superuser", email: "ana@example.com", config: CONFIG },
+      { role: "admin", email: "bia@example.com", config: { bufferDepth: 7 } },
+      {
+        role: "admin",
+        email: "bia@example.com",
+        config: { ...CONFIG, someFutureTunable: 1 },
+      },
+      {
+        role: "superuser",
+        email: "ana@example.com",
+        config: CONFIG,
+        members: [{ email: "ana@example.com", role: "none" }],
+      },
+      {
+        role: "superuser",
+        email: "ana@example.com",
+        config: CONFIG,
+        members: [{ email: "ana@example.com", role: "admin", addedAt: 1 }],
+      },
+      { userId: USER_ID, config: null },
+    ]);
+  });
+});
+
+describe("the member writes (ADR-0100)", () => {
+  it("T-CORE-S184: the upsert trims and lowercases the email and takes either role, nothing else", () => {
+    for (const role of ["superuser", "admin"]) {
+      expect(
+        adminMemberWriteSchema.parse({ email: "  Ana@Example.COM ", role }),
+      ).toEqual({ email: "ana@example.com", role });
+    }
+    rejects(adminMemberWriteSchema, [
+      { email: "ana@example.com", role: "none" },
+      { email: "ana@example.com", role: "owner" },
+      { email: "ana@example.com" },
+      { role: "admin" },
+      { email: "not-an-email", role: "admin" },
+      { email: `${"a".repeat(243)}@example.com`, role: "admin" },
+      { email: "ana@example.com", role: "admin", extra: true },
+    ]);
+  });
+
+  it("T-CORE-S185: the removal takes one normalised email, nothing else", () => {
+    expect(
+      adminMemberRemoveSchema.parse({ email: " Bia@Example.com" }),
+    ).toEqual({ email: "bia@example.com" });
+    rejects(adminMemberRemoveSchema, [
+      {},
+      { email: "not-an-email" },
+      { email: `${"a".repeat(243)}@example.com` },
+      { email: "bia@example.com", role: "admin" },
     ]);
   });
 });

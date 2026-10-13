@@ -227,9 +227,16 @@ export {
   type GoogleSignInOutcome,
 } from "./contracts/google";
 export {
+  ADMIN_MEMBER_ROLES,
   adminConfigWriteSchema,
+  adminMemberRemoveSchema,
+  adminMemberRoleSchema,
+  adminMemberSchema,
+  adminMemberWriteSchema,
   adminStateResponseSchema,
   type AdminConfigWriteRequest,
+  type AdminMember,
+  type AdminMemberRole,
   type AdminStateResponse,
 } from "./contracts/admin";
 export {

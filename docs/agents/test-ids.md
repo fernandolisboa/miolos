@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S183` | `S182` | never used |
-| `T-DB` | `S135` | `S131` | `T-DB-21` |
-| `T-API` | `S313` | `S312` | `T-API-16` |
-| `T-WEB` | `S557` | `S555` | `T-WEB-23` |
+| `T-CORE` | `S187` | `S185` | never used |
+| `T-DB` | `S142` | `S140` | `T-DB-21` |
+| `T-API` | `S322` | `S320` | `T-API-16` |
+| `T-WEB` | `S562` | `S560` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#314 (admins and superusers in `admin_users`, ADR-0100) spent **`T-CORE-S183…S185`** (the state union, the member upsert, the removal), **`T-DB-S135…S140`** (`adminRoleOf`, list and upsert, removal, the last-superuser guard, its `for update` lock, the two CHECKs), **`T-API-S313…S320`** (a superuser's state, the members route's preamble, 403 `not-superuser`, upsert, removal, 409 `last-superuser`, 503 without `WEB_ORIGIN`, the role read per request) and **`T-WEB-S557…S560`** (the members card, Adicionar, role change and Remover, the locked last superuser). `T-CORE-S172` and `T-API-S290` are **retired** and never reused: they pinned the `{ userId, config }` state and `isAdmin`, both gone. `T-CORE-S186`, `T-DB-S141`, `T-API-S321` and `T-WEB-S561` are **burned**. `T-API-S292` and `S295`, and `T-WEB-S532`, were re-founded in place; `T-DB-9c`, `S5`, `S39`, `T-API-S291`, `S293`, `S294`, `S296…S298` and `T-WEB-S530`, `S531`, `S533…S537` were widened in place.
 
 #296 (the Sudoku hint reveals the next logical step, ADR-0099) spent **`T-WEB-S547…S555`**: `S547` (a wrong entry is corrected before any step), `S548` (the step on bare and correct partial boards, every weekday), `S549` (the first-empty fallback), `S550` (`use-hint` records the reason and the spotlight), `S551` (the spotlight clears on the next board action and on reset, the reason on the next hint or reset), `S552` (every hint sentence, naming the cell, and every technique name), `S553` (the daily screen), `S554` (free play) and `S555` (the chrome's one polite live region, re-announcing a repeated sentence). `T-WEB-S28a`, `S122`, `S495` and `S496` were updated in place, as was the shared `SUDOKU_PLAY` fixture in `screen-chrome.test.tsx`. Its first reservation, `S538…S546` with `S547` as headroom, collided with #304 PR 2, which merged first; `S545`, `S546` and `S556` went unspent and are burned.
 

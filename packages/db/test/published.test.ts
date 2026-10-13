@@ -1117,6 +1117,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
   it("T-DB-9c: the publishing entry exports exactly the audited dangerous set", async () => {
     const publishing = await import("../src/publishing");
     expect(Object.keys(publishing).sort()).toEqual([
+      "adminRoleOf",
       "bufferDepth",
       "createPublishingDb",
       "dailyPuzzles",
@@ -1125,12 +1126,15 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "getPublishedNonogramMotifName",
       "getRemoteConfig",
       "insertDailyPuzzle",
+      "listAdminMembers",
       "listBufferedDates",
 
       "listUsedTermoAnswers",
       "remoteConfig",
+      "removeAdminMember",
       "setRemoteConfigValue",
       "todaySaoPaulo",
+      "upsertAdminMember",
     ]);
   });
 
@@ -1150,6 +1154,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
     const surface = entries.flatMap((entry) => Object.keys(entry));
     expect([...new Set(surface)].sort()).toEqual([
       "SAO_PAULO_TIME_ZONE",
+      "adminRoleOf",
       "archiveDateClass",
       "attachTokens",
       "bufferDepth",
@@ -1178,6 +1183,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "insertDailyPuzzle",
       "isIdentityClashError",
       "isWinnerLivenessError",
+      "listAdminMembers",
       "listArchivedDays",
       "listArchivedMonths",
       "listBufferedDates",
@@ -1202,14 +1208,16 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "recordCompletion",
       "recordSeenDay",
       "remoteConfig",
+      "removeAdminMember",
       "sessions",
       "setRemoteConfigValue",
       "sql",
       "todaySaoPaulo",
+      "upsertAdminMember",
       "users",
       "wasSeenOn",
     ]);
 
-    expect(surface).toHaveLength(55);
+    expect(surface).toHaveLength(59);
   });
 });
