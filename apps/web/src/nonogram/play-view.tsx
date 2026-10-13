@@ -42,7 +42,7 @@ export function PlayView({
           progressLong: copy.progressLong(play.filled, play.target),
           hint: {
             ready: play.hintReady,
-            label: play.hintReady ? copy.hint.available : copy.hint.used,
+            used: state.hint.used,
             explain:
               play.hintKind === null ? null : copy.hint.explain[play.hintKind],
             onReveal: play.revealHint,

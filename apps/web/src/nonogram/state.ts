@@ -1,4 +1,8 @@
-import type { DailyNonogramResponse, NonogramSize } from "@miolos/core";
+import {
+  FREE_HINTS_PER_PUZZLE,
+  type DailyNonogramResponse,
+  type NonogramSize,
+} from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
 
 import {
@@ -64,7 +68,7 @@ export function initNonogramPlayState(
     brush: "fill",
     stroke: null,
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: 1, used: 0, lastIndex: null },
+    hint: { free: FREE_HINTS_PER_PUZZLE, used: 0, lastIndex: null },
     status: "playing",
     pendingSync: false,
     now: 0,

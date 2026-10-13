@@ -14,7 +14,7 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
     progressLong: copy.progressLong(board.placed, state.size),
     hint: {
       ready: board.hintReady,
-      label: board.hintReady ? copy.hint.available : copy.hint.used,
+      used: state.hint.used,
       explain:
         board.hintKind === null ? null : copy.hint.explain[board.hintKind],
       onReveal: board.revealHint,

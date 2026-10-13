@@ -1,4 +1,7 @@
-import type { DailyCrosswordResponse } from "@miolos/core";
+import {
+  FREE_HINTS_PER_PUZZLE,
+  type DailyCrosswordResponse,
+} from "@miolos/core";
 
 import { nextHint } from "../play/grid-hint";
 import { movedSelection } from "../play/grid-selection";
@@ -66,7 +69,7 @@ export function initCrosswordPlayState(
     selected: null,
     direction: "across",
     timer: { accumulatedMs: 0, runningSince: null },
-    hint: { free: 1, used: 0, lastIndex: null },
+    hint: { free: FREE_HINTS_PER_PUZZLE, used: 0, lastIndex: null },
     status: "playing",
     pendingSync: false,
     now: 0,
@@ -147,7 +150,11 @@ export function crosswordPlayReducer(
       const revealed = withEntry(state, hint.index, hint.value);
       return {
         ...revealed,
-        hint: { free: 1, used: state.hint.used + 1, lastIndex: hint.index },
+        hint: {
+          free: FREE_HINTS_PER_PUZZLE,
+          used: state.hint.used + 1,
+          lastIndex: hint.index,
+        },
       };
     }
 
@@ -195,7 +202,11 @@ function restore(
     entries: record.entries,
     status: isSolved(state.solution, record.entries) ? "solved" : "playing",
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: { free: 1, used: record.hintsUsed, lastIndex: null },
+    hint: {
+      free: FREE_HINTS_PER_PUZZLE,
+      used: record.hintsUsed,
+      lastIndex: null,
+    },
     pendingSync: record.pendingSync,
     now,
     hydrated: true,

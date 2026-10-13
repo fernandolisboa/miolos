@@ -1,3 +1,5 @@
+import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
+
 import { toggled } from "./brush";
 import { nextBinaryHint } from "./grid-hint";
 import { movedSelection } from "./grid-selection";
@@ -92,7 +94,11 @@ export function binaryGridReducer<S extends BinaryGridState>(
       const revealed = withBinaryEntry(state, hint.index, hint.value, rules);
       return {
         ...revealed,
-        hint: { free: 1, used: state.hint.used + 1, lastIndex: hint.index },
+        hint: {
+          free: FREE_HINTS_PER_PUZZLE,
+          used: state.hint.used + 1,
+          lastIndex: hint.index,
+        },
       };
     }
 
@@ -180,7 +186,11 @@ function restore<S extends BinaryGridState>(
   return {
     ...rules.derive(state, record.entries),
     timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    hint: { free: 1, used: record.hintsUsed, lastIndex: null },
+    hint: {
+      free: FREE_HINTS_PER_PUZZLE,
+      used: record.hintsUsed,
+      lastIndex: null,
+    },
     pendingSync: record.pendingSync,
     now,
     hydrated: true,

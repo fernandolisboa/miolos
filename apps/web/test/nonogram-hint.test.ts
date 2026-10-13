@@ -1,5 +1,6 @@
 import {
   dailyNonogramResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailyNonogramResponse,
 } from "@miolos/core";
 import {
@@ -234,7 +235,7 @@ describe("the reducer's accounting", () => {
     return state.solution;
   }
 
-  it("reveals one cell, spends the free hint and leaves the caret alone", () => {
+  it("reveals one cell, spends a free hint and leaves the caret alone", () => {
     const selected = nonogramPlayReducer(STATE, { type: "select", index: 24 });
     const hinted = nonogramPlayReducer(selected, { type: "use-hint" });
 
@@ -243,9 +244,7 @@ describe("the reducer's accounting", () => {
     expect(hinted.entries[hinted.hint.lastIndex ?? -1]).toBe(1);
 
     expect(hinted.selected).toBe(24);
-
-    expect(nonogramPlayReducer(hinted, { type: "use-hint" })).toBe(hinted);
-    expect(hinted.hint.free).toBe(1);
+    expect(hinted.hint.free).toBe(FREE_HINTS_PER_PUZZLE);
   });
 
   it("drops the ring when the player writes the hinted cell again (T-WEB-S58)", () => {
@@ -261,7 +260,11 @@ describe("the reducer's accounting", () => {
     expect(cleared.entries[index]).toBeNull();
     expect(cleared.hint.lastIndex).toBeNull();
 
-    expect(cleared.hint).toEqual({ free: 1, used: 1, lastIndex: null });
+    expect(cleared.hint).toEqual({
+      free: FREE_HINTS_PER_PUZZLE,
+      used: 1,
+      lastIndex: null,
+    });
 
     const selected = nonogramPlayReducer(hinted, { type: "select", index });
     const overridden = nonogramPlayReducer(selected, {

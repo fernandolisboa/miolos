@@ -1,5 +1,6 @@
 import {
   dailySudokuResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailySudokuResponse,
 } from "@miolos/core";
 import {
@@ -125,7 +126,11 @@ describe("initSudokuPlayState", () => {
     expect(state.now).toBe(0);
     expect(elapsedMs(state.timer, state.now)).toBe(0);
     expect(state.timer.runningSince).toBeNull();
-    expect(state.hint).toEqual({ free: 1, used: 0, lastIndex: null });
+    expect(state.hint).toEqual({
+      free: FREE_HINTS_PER_PUZZLE,
+      used: 0,
+      lastIndex: null,
+    });
     expect(state.violating).toEqual(new Set());
     expect(state.status).toBe("playing");
     expect(state.pendingSync).toBe(false);
@@ -419,14 +424,18 @@ describe("use-hint", () => {
   const initial = initSudokuPlayState(daily());
   const firstEmpty = PUZZLE.givens.findIndex((cell) => cell === 0);
 
-  it("reveals the first empty cell and spends the one free hint", () => {
+  it("reveals the first empty cell and spends a free hint", () => {
     const hinted = sudokuPlayReducer(initial, {
       type: "use-hint",
       solution: SOLUTION,
     });
 
     expect(hinted.entries[firstEmpty]).toBe(SOLUTION[firstEmpty]);
-    expect(hinted.hint).toEqual({ free: 1, used: 1, lastIndex: firstEmpty });
+    expect(hinted.hint).toEqual({
+      free: FREE_HINTS_PER_PUZZLE,
+      used: 1,
+      lastIndex: firstEmpty,
+    });
   });
 
   it("leaves the caret exactly where the player put it", () => {
@@ -437,19 +446,6 @@ describe("use-hint", () => {
     });
 
     expect(hinted.selected).toBe(80);
-  });
-
-  it("is capped at one", () => {
-    const hinted = sudokuPlayReducer(initial, {
-      type: "use-hint",
-      solution: SOLUTION,
-    });
-    const again = sudokuPlayReducer(hinted, {
-      type: "use-hint",
-      solution: SOLUTION,
-    });
-
-    expect(again).toBe(hinted);
   });
 
   it("is a no-op once the grid is closed", () => {
@@ -485,6 +481,51 @@ describe("use-hint", () => {
   });
 });
 
+describe("three free hints per puzzle (T-WEB-S511a)", () => {
+  const initial = initSudokuPlayState(daily());
+
+  function hint(state: SudokuPlayState): SudokuPlayState {
+    return sudokuPlayReducer(state, { type: "use-hint", solution: SOLUTION });
+  }
+
+  function hintTimes(state: SudokuPlayState, times: number): SudokuPlayState {
+    let current = state;
+    for (let press = 0; press < times; press += 1) {
+      current = hint(current);
+    }
+    return current;
+  }
+
+  it("reveals a solution digit on each free press", () => {
+    let current = initial;
+    for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {
+      current = hint(current);
+      const index = current.hint.lastIndex ?? -1;
+
+      expect(current.hint.used).toBe(press);
+      expect(current.entries[index]).toBe(SOLUTION[index]);
+    }
+  });
+
+  it("returns the same state on the press after the last free hint", () => {
+    const spent = hintTimes(initial, FREE_HINTS_PER_PUZZLE);
+
+    expect(hint(spent)).toBe(spent);
+  });
+
+  it("leaves exactly one hint after a restore with two spent", () => {
+    const restored = sudokuPlayReducer(initial, {
+      type: "restore",
+      record: record({ hintsUsed: 2 }),
+      now: 1,
+    });
+    const last = hint(restored);
+
+    expect(last.hint.used).toBe(3);
+    expect(hint(last)).toBe(last);
+  });
+});
+
 describe("restore", () => {
   const initial = initSudokuPlayState(daily());
 
@@ -503,7 +544,11 @@ describe("restore", () => {
       accumulatedMs: 90_000,
       runningSince: null,
     });
-    expect(restored.hint).toEqual({ free: 1, used: 1, lastIndex: null });
+    expect(restored.hint).toEqual({
+      free: FREE_HINTS_PER_PUZZLE,
+      used: 1,
+      lastIndex: null,
+    });
     expect(restored.now).toBe(1_700_000_000_000);
   });
 

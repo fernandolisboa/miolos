@@ -1,5 +1,6 @@
 import {
   dailyQueensResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailyQueensResponse,
 } from "@miolos/core";
 import { generateQueens, type QueensPuzzle } from "@miolos/games/queens";
@@ -231,13 +232,57 @@ describe("the Rainhas hint (T-WEB-S453)", () => {
     expect(hinted.entries[queenCell]).toBe(1);
   });
 
-  it("gives one hint only, and the ring leaves when the player rewrites that cell", () => {
+  it("drops the ring when the player rewrites the hinted cell", () => {
     const hinted = run(hydrated(DAILY), { type: "use-hint" });
-    const again = run(hinted, { type: "use-hint" });
-    expect(again).toBe(hinted);
     const index = hinted.hint.lastIndex ?? -1;
     const rewritten = run(hinted, { type: "tap", index, press: "tap" });
     expect(rewritten.hint.lastIndex).toBeNull();
+  });
+});
+
+describe("three free hints per puzzle (T-WEB-S511e)", () => {
+  const hint: QueensPlayAction = { type: "use-hint" };
+  const spentAll = (state: QueensPlayState) =>
+    run(state, ...Array.from({ length: FREE_HINTS_PER_PUZZLE }, () => hint));
+
+  it("places a solution queen on each free press", () => {
+    let current = hydrated(DAILY);
+    for (let press = 1; press <= FREE_HINTS_PER_PUZZLE; press += 1) {
+      current = run(current, hint);
+      const index = current.hint.lastIndex ?? -1;
+
+      expect(current.hint.used).toBe(press);
+      expect(current.entries[index]).toBe(SOLUTION[index]);
+    }
+  });
+
+  it("returns the same state on the press after the last free hint", () => {
+    const spent = spentAll(hydrated(DAILY));
+
+    expect(run(spent, hint)).toBe(spent);
+  });
+
+  it("leaves exactly one hint after a restore with two spent", () => {
+    const restored = queensPlayReducer(initQueensPlayState(DAILY), {
+      type: "restore",
+      record: {
+        v: 1,
+        game: "queens",
+        date: DATE,
+        size: PUZZLE.size,
+        entries: Array.from({ length: PUZZLE.size ** 2 }, () => null),
+        elapsedMs: 0,
+        hintsUsed: 2,
+        concluded: false,
+        pendingSync: false,
+        syncOutcome: "pending",
+      },
+      now: 1,
+    });
+    const last = run(restored, hint);
+
+    expect(last.hint.used).toBe(3);
+    expect(run(last, hint)).toBe(last);
   });
 });
 

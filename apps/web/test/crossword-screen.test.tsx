@@ -1,5 +1,6 @@
 import {
   dailyCrosswordResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailyCrosswordResponse,
 } from "@miolos/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -199,7 +200,11 @@ const LEADING_BLOCK: DailyCrosswordResponse =
 describe("hint, skipping a block (T-WEB-S437)", () => {
   it("steps over a leading block and fills the first white cell", () => {
     render(<CrosswordScreen daily={LEADING_BLOCK} />);
-    fireEvent.click(screen.getByRole("button", { name: copy.hint.available }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: messages.play.hint.available(FREE_HINTS_PER_PUZZLE),
+      }),
+    );
     expect(cellAt(1).getAttribute("aria-label")).toBe(copy.cellAria(1, 2, "a"));
     expect(cellAt(0).textContent).toBe("");
     expect(cellAt(0).getAttribute("aria-label")).toBe(copy.blockAria);

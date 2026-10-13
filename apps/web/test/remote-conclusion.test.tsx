@@ -348,7 +348,7 @@ describe("the /concluido remote mount leaves the local play keys empty (T-WEB-S2
             nonogram: {
               status: "completed",
               elapsedMs: ELAPSED_MS,
-              hintsUsed: 1,
+              hintsUsed: 3,
             },
           }),
         ),
@@ -371,6 +371,7 @@ describe("the /concluido remote mount leaves the local play keys empty (T-WEB-S2
       ).not.toBeNull();
     });
 
+    expect(screen.getByText(messages.conclusion.hints(3))).toBeInTheDocument();
     expect(playRecordKeys()).toEqual([]);
   });
 });

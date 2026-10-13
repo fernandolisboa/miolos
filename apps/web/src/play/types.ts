@@ -1,3 +1,5 @@
+import type { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
+
 import type { PlayRecord } from "./play-record";
 import type { TimerState } from "./timer";
 
@@ -26,7 +28,7 @@ export interface ArchivePlayChrome {
 }
 
 export interface HintState {
-  readonly free: 1;
+  readonly free: typeof FREE_HINTS_PER_PUZZLE;
   readonly used: number;
 
   readonly lastIndex: number | null;

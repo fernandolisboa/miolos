@@ -12,7 +12,8 @@ const cellAria = (row: number, column: number, value: 0 | 1 | null) =>
 const cellAriaSudoku = (row: number, column: number, value: number | null) =>
   `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
 
-const hintsUsed = (used: number) => (used === 0 ? "sem dicas" : "com 1 dica");
+const hintsUsed = (used: number) =>
+  used === 0 ? "sem dicas" : used === 1 ? "com 1 dica" : `com ${used} dicas`;
 
 const boardSize = (size: number) => `${size} × ${size}`;
 
@@ -102,6 +103,11 @@ export const messages = {
     timerLabel: "Tempo",
     timerAria: (elapsed: string) => `tempo decorrido: ${elapsed}`,
     progressLabel: "Progresso",
+    hint: {
+      available: (left: number) =>
+        `Usar dica — ${left} ${left === 1 ? "disponível" : "disponíveis"}`,
+      used: "Dicas usadas",
+    },
   },
   conclusion: {
     back,
@@ -714,8 +720,6 @@ export const messages = {
             "ou use o teclado: 1–9 para escrever, Backspace para apagar",
         },
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos um número que não fecha com as regras.",
             fill: "Preenchemos uma célula para você.",
@@ -765,8 +769,6 @@ export const messages = {
           affordance: "No teclado: 1 preenche, 2 marca, 0 apaga.",
         },
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos uma célula que não fecha com os números.",
             fill: "Preenchemos uma célula da figura para você.",
@@ -822,8 +824,6 @@ export const messages = {
         cellInvalidAria: (row: number, column: number, value: 0 | 1 | null) =>
           `${cellAria(row, column, value)} — esta célula quebra uma regra`,
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos uma célula que não fecha com as regras.",
             fill: "Preenchemos uma célula para você.",
@@ -877,8 +877,6 @@ export const messages = {
         },
 
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos uma letra errada.",
             fill: "Preenchemos uma célula para você.",
@@ -921,8 +919,6 @@ export const messages = {
         affordance: "No teclado: 1 põe a rainha, 2 marca, 0 apaga.",
 
         hint: {
-          available: "Usar dica — 1 disponível",
-          used: "Dica usada",
           explain: {
             correction: "Corrigimos uma casa que não fecha com a solução.",
             fill: "Pusemos uma rainha para você.",

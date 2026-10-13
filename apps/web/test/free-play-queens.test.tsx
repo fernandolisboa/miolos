@@ -1,3 +1,4 @@
+import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { FORBIDDEN_DAILY_KEYS, collectKeys } from "@miolos/core/testing";
 import { generateQueens } from "@miolos/games/queens";
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
@@ -155,8 +156,8 @@ describe("a level switch remounts the Rainhas board (T-WEB-S479)", () => {
   });
 });
 
-describe("the free Rainhas spends its one hint on the solution, once (T-WEB-S480)", () => {
-  it("places the solution's first queen, then goes inert", () => {
+describe("the free Rainhas spends its free hints on the solution (T-WEB-S480)", () => {
+  it("places the solution's first queen, then goes inert once all are spent", () => {
     vi.stubGlobal("fetch", vi.fn());
     const { solution } = generateQueens({
       seed: SEED,
@@ -165,15 +166,27 @@ describe("the free Rainhas spends its one hint on the solution, once (T-WEB-S480
     const firstQueen = solution.indexOf(1);
     render(<QueensFreeScreen deps={{ pickSeed: () => SEED }} />);
 
-    fireEvent.click(screen.getByText(copy.hint.available));
+    const queens = () => boardOf(8).querySelectorAll("svg").length;
+
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
 
     expect(cellAt(8, firstQueen).querySelector("svg")).not.toBeNull();
     expect(cellAt(8, firstQueen).className).toContain(styles.cellHinted);
-    expect(screen.getByText(copy.hint.used).closest("button")).toHaveAttribute(
+    for (let left = FREE_HINTS_PER_PUZZLE - 1; left > 0; left -= 1) {
+      fireEvent.click(screen.getByText(messages.play.hint.available(left)));
+    }
+    const exhausted = screen.getByText(messages.play.hint.used);
+    expect(exhausted.closest("button")).toHaveAttribute(
       "aria-disabled",
       "true",
     );
     expect(screen.getByText(copy.hint.explain.fill)).toBeInTheDocument();
+    expect(queens()).toBe(FREE_HINTS_PER_PUZZLE);
+
+    fireEvent.click(exhausted);
+    expect(queens()).toBe(FREE_HINTS_PER_PUZZLE);
   });
 });
 

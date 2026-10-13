@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 import Link from "next/link";
 
-import type { Game } from "@miolos/core";
+import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 
 import { messages } from "../i18n";
 import { accentVars } from "./accent";
@@ -42,7 +42,7 @@ export interface PlayChromeReadouts {
   readonly progressLong: string;
   readonly hint: {
     readonly ready: boolean;
-    readonly label: string;
+    readonly used: number;
     readonly explain: string | null;
     readonly onReveal: () => void;
   };
@@ -68,6 +68,12 @@ function clockBar(clock: PlayChromeClock): ReactNode {
   return (
     <TimerReadout className={screen.timerBar} elapsedMs={clock.elapsedMs} />
   );
+}
+
+function hintLabel(used: number): string {
+  return used < FREE_HINTS_PER_PUZZLE
+    ? messages.play.hint.available(FREE_HINTS_PER_PUZZLE - used)
+    : messages.play.hint.used;
 }
 
 function clockRow(clock: PlayChromeClock): ReactNode {
@@ -201,7 +207,7 @@ export function PlayScreenChrome({
           aria-disabled={!readouts.hint.ready}
           onClick={readouts.hint.onReveal}
         >
-          {readouts.hint.label}
+          {hintLabel(readouts.hint.used)}
         </button>
       )}
     </main>

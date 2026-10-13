@@ -1,4 +1,4 @@
-import { dailyQueensResponseSchema } from "@miolos/core";
+import { dailyQueensResponseSchema, FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { generateQueens } from "@miolos/games/queens";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +13,7 @@ import styles from "../src/queens/queens-board.module.css";
 import { QueensScreen } from "../src/queens/queens-screen";
 import { contrast } from "./contrast";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
+import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 const sync = vi.hoisted(() => ({
@@ -411,12 +412,12 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
 });
 
 describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB-S476)", () => {
-  it("spends the one free hint on a queen's cell and explains it", () => {
+  it("spends the free hints on queens' cells and explains them", () => {
     render(<QueensScreen daily={DAILY} />);
 
-    fireEvent.click(screen.getByText(copy.hint.available));
+    spendFreeHints();
 
-    expect(screen.getByText(copy.hint.used)).toHaveAttribute(
+    expect(screen.getByText(messages.play.hint.used)).toHaveAttribute(
       "aria-disabled",
       "true",
     );
@@ -424,7 +425,7 @@ describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB
     const queens = QUEEN_CELLS.filter((index) =>
       labelOf(index).endsWith(": rainha"),
     );
-    expect(queens).toHaveLength(1);
+    expect(queens).toHaveLength(FREE_HINTS_PER_PUZZLE);
   });
 
   it("first turns a wrong queen into an X, and says it corrected", () => {
@@ -433,7 +434,9 @@ describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB
     focusAt(wrong);
     press("1");
 
-    fireEvent.click(screen.getByText(copy.hint.available));
+    fireEvent.click(
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
+    );
 
     expect(labelOf(wrong)).toBe(expectedLabel(wrong, 0));
     expect(screen.getByText(copy.hint.explain.correction)).toBeInTheDocument();

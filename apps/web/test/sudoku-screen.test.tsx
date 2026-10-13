@@ -1,5 +1,6 @@
 import {
   dailySudokuResponseSchema,
+  FREE_HINTS_PER_PUZZLE,
   type DailySudokuResponse,
 } from "@miolos/core";
 import { generateDailySudoku } from "@miolos/games/sudoku";
@@ -22,6 +23,7 @@ import type { SudokuDigit } from "../src/sudoku/state";
 import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
+import { spendFreeHints } from "./free-hints";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -397,20 +399,21 @@ describe("writing with the keypad (T-WEB-S27)", () => {
   });
 });
 
-describe("the one free hint (T-WEB-S28a)", () => {
-  it("fills exactly one cell, then renders the exhausted variant", () => {
+describe("the free hints (T-WEB-S28a)", () => {
+  it("fills one cell per free hint, then renders the exhausted variant", () => {
     render(<SudokuScreen daily={DAILY} />);
 
-    fireEvent.click(
-      screen.getByText(messages.games.sudoku.play.hint.available),
-    );
+    spendFreeHints();
 
     expect(
       screen.getByText(
-        messages.games.sudoku.play.progressLong(CLUE_COUNT + 1, TOTAL_CELLS),
+        messages.games.sudoku.play.progressLong(
+          CLUE_COUNT + FREE_HINTS_PER_PUZZLE,
+          TOTAL_CELLS,
+        ),
       ),
     ).toBeInTheDocument();
-    const exhausted = screen.getByText(messages.games.sudoku.play.hint.used);
+    const exhausted = screen.getByText(messages.play.hint.used);
     expect(exhausted).toHaveAttribute("aria-disabled", "true");
 
     expect(
@@ -421,7 +424,10 @@ describe("the one free hint (T-WEB-S28a)", () => {
 
     expect(
       screen.getByText(
-        messages.games.sudoku.play.progressLong(CLUE_COUNT + 1, TOTAL_CELLS),
+        messages.games.sudoku.play.progressLong(
+          CLUE_COUNT + FREE_HINTS_PER_PUZZLE,
+          TOTAL_CELLS,
+        ),
       ),
     ).toBeInTheDocument();
   });
@@ -432,7 +438,7 @@ describe("the one free hint (T-WEB-S28a)", () => {
     expect(caretIndex(container)).toBe(FIRST_EMPTY);
 
     fireEvent.click(
-      screen.getByText(messages.games.sudoku.play.hint.available),
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
     );
 
     expect(caretIndex(container)).toBe(FIRST_EMPTY);
@@ -502,7 +508,7 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
 
     type(container, FIRST_EMPTY, "Backspace");
     fireEvent.click(
-      screen.getByText(messages.games.sudoku.play.hint.available),
+      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
     );
     const hinted = container.querySelector<HTMLElement>(
       `.${className("cellHinted")}`,
@@ -761,7 +767,9 @@ describe("the first paint (T-WEB-S30, T-WEB-S31)", () => {
     expect(markup).not.toContain(
       messages.games.sudoku.play.progressLong(CLUE_COUNT, TOTAL_CELLS),
     );
-    expect(markup).not.toContain(messages.games.sudoku.play.hint.available);
+    expect(markup).not.toContain(
+      messages.play.hint.available(FREE_HINTS_PER_PUZZLE),
+    );
     expect(markup).not.toContain("<button");
 
     expect(markup).not.toContain(messages.conclusion.stampLabel);

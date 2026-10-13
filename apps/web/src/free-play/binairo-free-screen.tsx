@@ -128,7 +128,7 @@ function BinairoFreeBoard({
           progressLong: copy.progressLong(filled, TOTAL_CELLS),
           hint: {
             ready: hintReady,
-            label: hintReady ? copy.hint.available : copy.hint.used,
+            used: state.hint.used,
             explain: hintKind === null ? null : copy.hint.explain[hintKind],
             onReveal: revealHint,
           },
