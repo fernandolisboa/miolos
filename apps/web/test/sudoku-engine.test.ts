@@ -10,6 +10,8 @@ import {
   isPlayable,
   mergedGrid,
   playableGivens,
+  selectionHighlights,
+  sharesUnit,
   solutionDigits,
   solvedDigits,
   track,
@@ -151,5 +153,65 @@ describe("solvedDigits", () => {
     expect(
       solvedDigits(mergedGrid(PUZZLE.givens, entriesWith(0, 5))),
     ).toBeNull();
+  });
+});
+
+describe("the selection's reach (T-WEB-S495)", () => {
+  const CENTRE = 40;
+
+  it("shares a unit along the row, the column and the 3×3 box, and nowhere else", () => {
+    const peers = Array.from({ length: 81 }, (_unused, index) => index).filter(
+      (index) => sharesUnit(index, CENTRE),
+    );
+
+    expect(peers).toEqual([
+      4, 13, 22, 30, 31, 32, 36, 37, 38, 39, 40, 41, 42, 43, 44, 48, 49, 50, 58,
+      67, 76,
+    ]);
+  });
+
+  it("is empty with nothing selected", () => {
+    expect(selectionHighlights(PUZZLE.givens, null).size).toBe(0);
+  });
+
+  it("tints only the unit when the selected cell is empty", () => {
+    const empty = firstPlayable();
+    const highlights = selectionHighlights(PUZZLE.givens, empty);
+
+    expect([...highlights.values()].every((kind) => kind === "unit")).toBe(
+      true,
+    );
+    expect(highlights.size).toBe(21);
+    expect(highlights.get(empty)).toBe("unit");
+  });
+
+  it("marks every copy of the selected digit, given or entered, above the unit tint", () => {
+    const empty = firstPlayable();
+    const given = PUZZLE.givens.findIndex(
+      (cell, index) => cell !== 0 && !sharesUnit(index, empty),
+    );
+    const digit = playableGivens(PUZZLE.givens)[given];
+    if (digit === undefined || digit === null) {
+      throw new Error(
+        "the fixture puzzle has no given outside the first empty cell's units",
+      );
+    }
+    const grid = mergedGrid(PUZZLE.givens, entriesWith(empty, digit));
+
+    const highlights = selectionHighlights(grid, given);
+    const copies = grid.flatMap((cell, index) =>
+      cell === digit ? [index] : [],
+    );
+
+    expect(copies).toContain(empty);
+    for (const index of copies) {
+      expect(highlights.get(index), `cell ${index}`).toBe("same-digit");
+    }
+    for (const [index, kind] of highlights) {
+      if (kind === "unit") {
+        expect(sharesUnit(index, given)).toBe(true);
+        expect(grid[index]).not.toBe(digit);
+      }
+    }
   });
 });
