@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { completionOutcomeSchema } from "../completion";
+import { completionOutcomeSchema, hintsUsedSchema } from "../completion";
 import { gameSchema } from "../game";
 import {
   calendarDateString,
@@ -20,7 +20,7 @@ export const binairoCompletionRequestSchema = z.strictObject({
   date: calendarDateString,
   grid: z.array(submittedCellSchema).length(64),
   elapsedMs: z.number().int().min(0).max(86_400_000),
-  hintsUsed: z.number().int().min(0).max(1),
+  hintsUsed: hintsUsedSchema,
 });
 
 export type BinairoCompletionRequest = z.infer<
@@ -32,7 +32,7 @@ export const sudokuCompletionRequestSchema = z.strictObject({
   date: calendarDateString,
   grid: z.array(sudokuDigitSchema).length(81),
   elapsedMs: z.number().int().min(0).max(86_400_000),
-  hintsUsed: z.number().int().min(0).max(1),
+  hintsUsed: hintsUsedSchema,
 });
 
 export type SudokuCompletionRequest = z.infer<
@@ -55,7 +55,7 @@ export const nonogramCompletionRequestSchema = z.strictObject({
   date: calendarDateString,
   grid: squareBinaryGridSchema(nonogramSizeSchema),
   elapsedMs: z.number().int().min(0).max(86_400_000),
-  hintsUsed: z.number().int().min(0).max(1),
+  hintsUsed: hintsUsedSchema,
 });
 
 export type NonogramCompletionRequest = z.infer<
@@ -67,7 +67,7 @@ export const termoCompletionRequestSchema = z.strictObject({
   date: calendarDateString,
   guesses: z.array(termoGuessWordSchema).min(1).max(TERMO_MAX_GUESSES),
   elapsedMs: z.number().int().min(0).max(86_400_000),
-  hintsUsed: z.number().int().min(0).max(1),
+  hintsUsed: hintsUsedSchema,
 });
 
 export type TermoCompletionRequest = z.infer<
@@ -79,7 +79,7 @@ export const crosswordCompletionRequestSchema = z.strictObject({
   date: calendarDateString,
   grid: z.array(crosswordLetterSchema.nullable()).length(25),
   elapsedMs: z.number().int().min(0).max(86_400_000),
-  hintsUsed: z.number().int().min(0).max(1),
+  hintsUsed: hintsUsedSchema,
 });
 
 export type CrosswordCompletionRequest = z.infer<
@@ -91,7 +91,7 @@ export const queensCompletionRequestSchema = z.strictObject({
   date: calendarDateString,
   grid: squareBinaryGridSchema(queensSizeSchema),
   elapsedMs: z.number().int().min(0).max(86_400_000),
-  hintsUsed: z.number().int().min(0).max(1),
+  hintsUsed: hintsUsedSchema,
 });
 
 export type QueensCompletionRequest = z.infer<

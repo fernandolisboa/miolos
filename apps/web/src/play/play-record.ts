@@ -1,6 +1,7 @@
 import {
   completionOutcomeSchema,
   crosswordLetterSchema,
+  hintsUsedSchema,
   isoDateString,
   nonogramSizeSchema,
   queensSizeSchema,
@@ -27,7 +28,7 @@ const recordHeaderShape = {
   v: z.literal(1),
   date: isoDateString,
   elapsedMs: z.number().int().min(0).max(ELAPSED_CAP_MS),
-  hintsUsed: z.number().int().min(0).max(1),
+  hintsUsed: hintsUsedSchema,
   concluded: z.boolean(),
   pendingSync: z.boolean(),
   syncOutcome: z.enum(["pending", "recorded", "rejected"]),
