@@ -1,15 +1,6 @@
 import { FREE_HINTS_PER_PUZZLE, type DailySudokuResponse } from "@miolos/core";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useMemo, useReducer } from "react";
 
-import type { Hint } from "../play/grid-hint";
-import { nextHint } from "../play/grid-hint";
 import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
@@ -27,8 +18,6 @@ import {
   type SudokuPlayState,
 } from "./state";
 
-export type SudokuHint = Hint<SudokuDigit>;
-
 export interface SudokuPlay {
   readonly state: SudokuPlayState;
 
@@ -37,8 +26,6 @@ export interface SudokuPlay {
   readonly filled: number;
 
   readonly hintReady: boolean;
-
-  readonly hintKind: SudokuHint["kind"] | null;
   readonly selectCell: (index: number) => void;
 
   readonly moveSelection: (rows: number, columns: number) => void;
@@ -57,13 +44,6 @@ export function useSudokuPlay(
     daily,
     initSudokuPlayState,
   );
-  const [hintKind, setHintKind] = useState<SudokuHint["kind"] | null>(null);
-
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  });
-
   const { givens, entries, timer, status } = state;
   const hintsUsed = state.hint.used;
   const elapsed = elapsedMs(timer, state.now);
@@ -101,27 +81,9 @@ export function useSudokuPlay(
   }, []);
 
   const revealHint = useCallback(() => {
-    if (solution === null) {
-      return;
+    if (solution !== null) {
+      dispatch({ type: "use-hint", solution });
     }
-    const current = stateRef.current;
-    if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
-      current.status !== "playing"
-    ) {
-      return;
-    }
-
-    const hint = nextHint(
-      solution,
-      playableGivens(current.givens),
-      current.entries,
-    );
-    if (hint === null) {
-      return;
-    }
-    setHintKind(hint.kind);
-    dispatch({ type: "use-hint", solution });
   }, [solution]);
 
   return {
@@ -132,7 +94,6 @@ export function useSudokuPlay(
       solution !== null &&
       hintsUsed < FREE_HINTS_PER_PUZZLE &&
       status === "playing",
-    hintKind,
     selectCell,
     moveSelection,
     enterDigit,

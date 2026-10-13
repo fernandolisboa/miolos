@@ -14,6 +14,21 @@ const cellAria = (row: number, column: number, value: 0 | 1 | null) =>
 const cellAriaSudoku = (row: number, column: number, value: number | null) =>
   `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
 
+interface SudokuUnitCopy {
+  readonly kind: "row" | "column" | "box";
+  readonly index: number;
+}
+
+const inSudokuUnit = (unit: SudokuUnitCopy) =>
+  unit.kind === "box"
+    ? "Neste bloco"
+    : `Na ${unit.kind === "row" ? "linha" : "coluna"} ${unit.index + 1}`;
+
+const ofSudokuUnit = (unit: SudokuUnitCopy) =>
+  unit.kind === "box"
+    ? "deste bloco"
+    : `da ${unit.kind === "row" ? "linha" : "coluna"} ${unit.index + 1}`;
+
 const hintsUsed = (used: number) =>
   used === 0 ? "sem dicas" : used === 1 ? "com 1 dica" : `com ${used} dicas`;
 
@@ -755,9 +770,29 @@ export const messages = {
             "ou use o teclado: 1–9 para escrever, Backspace para apagar",
         },
         hint: {
-          explain: {
-            correction: "Corrigimos um número que não fecha com as regras.",
-            fill: "Preenchemos uma célula para você.",
+          correction: "Corrigimos um número que não fecha com as regras.",
+          fill: "Não achamos um passo lógico simples aqui, então preenchemos uma célula para você.",
+          nakedSingle: (digit: number) =>
+            `Só o ${digit} cabe nesta célula: a linha, a coluna e o bloco já têm os outros números.`,
+          hiddenSingle: (unit: SudokuUnitCopy, digit: number) =>
+            `${inSudokuUnit(unit)}, o ${digit} só cabe nesta célula.`,
+          afterNaked: (technique: string, digit: number) =>
+            `Com uma técnica avançada (${technique}), só o ${digit} sobra para esta célula.`,
+          afterHidden: (
+            technique: string,
+            unit: SudokuUnitCopy,
+            digit: number,
+          ) =>
+            `Com uma técnica avançada (${technique}), o ${digit} só cabe nesta célula ${ofSudokuUnit(unit)}.`,
+          technique: {
+            pointing: "candidato travado",
+            claiming: "candidato travado",
+            nakedPair: "par fechado",
+            hiddenPair: "par escondido",
+            nakedTriple: "trio fechado",
+            hiddenTriple: "trio escondido",
+            xWingRows: "X-Wing",
+            xWingCols: "X-Wing",
           },
         },
         unavailable: {

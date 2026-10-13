@@ -54,6 +54,12 @@ export function selectionHighlights(
   return highlights;
 }
 
+export function spotlightHighlights(
+  cells: readonly number[],
+): ReadonlyMap<number, CellHighlight> {
+  return new Map(cells.map((index) => [index, "unit"]));
+}
+
 export function isPlayable(givens: SudokuGrid, index: number): boolean {
   return givens[index] === EMPTY;
 }

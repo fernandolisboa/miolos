@@ -188,9 +188,11 @@ export function PlayScreenChrome({
 
       <section className={screen.board}>
         {children}
-        {readouts === null || readouts.hint.explain === null ? null : (
-          <p className={screen.hintExplain}>{readouts.hint.explain}</p>
-        )}
+        <div aria-live="polite">
+          {readouts === null || readouts.hint.explain === null ? null : (
+            <p className={screen.hintExplain}>{readouts.hint.explain}</p>
+          )}
+        </div>
       </section>
 
       {readouts === null ? (

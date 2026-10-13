@@ -4,6 +4,8 @@
 
 ## Start here
 
+**The Sudoku hint reveals the next logical step** (#296, ADR-0098): `nextSudokuStep` (`packages/games/src/sudoku/grade.ts`) steps the grader's own ladder on the player's board; `nextSudokuHint` (`apps/web/src/sudoku/hint.ts`) corrects a wrong entry first, then takes the step, then the first empty cell. The reason and the tinted cells live in the Sudoku reducer; the chrome reads the reason from one `aria-live="polite"` region for every game.
+
 **`/admin` shipped** (#304 PR 1, ADR-0097): an admin edits each `remote_config` key within its schema bounds, no deploy. Admins are the user ids in `ADMIN_USER_IDS` on `apps/api`. `getRemoteConfig` now falls back per key.
 
 **Rainhas is complete** (#285): the engine (ADR-0090), the daily and archive (ADR-0091, ADR-0092) and free play at `/modo-livre/rainhas`. The daily and free screens share `useQueensBoard` and `BoardPanel` (`apps/web/src/queens/`); only `use-queens-play.ts` adds the lifecycle, and the free-play wall bans it.
@@ -14,7 +16,7 @@
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
-**The Sudoku board shows the selection's reach** (#302): selecting a cell tints its row, column and box, and fills every other copy of its digit with the accent; violating and hinted cells keep their own look. The rule lives in `selectionHighlights` and `sharesUnit` (`apps/web/src/sudoku/engine.ts`), which #296's explained hint can reuse. Test ids `T-WEB-S495…S497`.
+**The Sudoku board shows the selection's reach** (#302): selecting a cell tints its row, column and box, and fills every other copy of its digit with the accent; violating and hinted cells keep their own look. The rule lives in `selectionHighlights` and `sharesUnit` (`apps/web/src/sudoku/engine.ts`). Test ids `T-WEB-S495…S497`.
 
 ## Traps
 
@@ -32,6 +34,6 @@
 
 **Next:** file per-game time buckets as an issue.
 
-**Then:** #304 PR 2: the hint allowance becomes a `remote_config` key on `/admin`, defaulting to `FREE_HINTS_PER_PUZZLE` (a schema field and a label in `messages.admin.keys`).
+**Then:** #297, the explained hint for the other games: copy Sudoku's shape (an engine step with `index`, `value`, `technique`, `cells`; a web `reason` and `spotlight` in the reducer; one sentence), and lift a shared `HintReason` into `play/` once a second game uses it. Also #304 PR 2: the hint allowance becomes a `remote_config` key on `/admin`, defaulting to `FREE_HINTS_PER_PUZZLE` (a schema field and a label in `messages.admin.keys`).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and `/admin/config`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.

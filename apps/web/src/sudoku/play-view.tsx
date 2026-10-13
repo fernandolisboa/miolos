@@ -6,6 +6,7 @@ import screen from "../play/screen.module.css";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
+import { sudokuHintExplanation } from "./hint";
 import { Keypad, KeypadSkeleton } from "./keypad";
 import styles from "./sudoku-board.module.css";
 import type { SudokuPlay } from "./use-sudoku-play";
@@ -43,8 +44,7 @@ export function PlayView({
           hint: {
             ready: play.hintReady,
             used: state.hint.used,
-            explain:
-              play.hintKind === null ? null : copy.hint.explain[play.hintKind],
+            explain: sudokuHintExplanation(state.hint.reason),
             onReveal: play.revealHint,
           },
         },
@@ -57,6 +57,7 @@ export function PlayView({
           selected={state.selected}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}
+          spotlight={state.hint.spotlight}
           onSelect={play.selectCell}
           onMove={play.moveSelection}
           onDigit={play.enterDigit}

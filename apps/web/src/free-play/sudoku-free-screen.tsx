@@ -1,15 +1,14 @@
 "use client";
 
 import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 
 import { messages } from "../i18n";
-import type { Hint } from "../play/grid-hint";
-import { nextHint } from "../play/grid-hint";
 import { countFilled } from "../play/progress";
 import screen from "../play/screen.module.css";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { playableGivens } from "../sudoku/engine";
+import { sudokuHintExplanation } from "../sudoku/hint";
 import { Keypad, KeypadSkeleton } from "../sudoku/keypad";
 import {
   initSudokuPlayState,
@@ -80,15 +79,6 @@ function SudokuFreeBoard({
     puzzle.daily,
     initSudokuPlayState,
   );
-  const [hintKind, setHintKind] = useState<Hint<SudokuDigit>["kind"] | null>(
-    null,
-  );
-
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  });
-
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
@@ -114,23 +104,6 @@ function SudokuFreeBoard({
   }, []);
 
   const revealHint = useCallback(() => {
-    const current = stateRef.current;
-    if (
-      current.hint.used >= FREE_HINTS_PER_PUZZLE ||
-      current.status !== "playing"
-    ) {
-      return;
-    }
-
-    const hint = nextHint(
-      puzzle.solution,
-      playableGivens(current.givens),
-      current.entries,
-    );
-    if (hint === null) {
-      return;
-    }
-    setHintKind(hint.kind);
     dispatch({ type: "use-hint", solution: puzzle.solution });
   }, [puzzle.solution]);
 
@@ -155,7 +128,7 @@ function SudokuFreeBoard({
           hint: {
             ready: hintReady,
             used: state.hint.used,
-            explain: hintKind === null ? null : copy.hint.explain[hintKind],
+            explain: sudokuHintExplanation(state.hint.reason),
             onReveal: revealHint,
           },
         },
@@ -168,6 +141,7 @@ function SudokuFreeBoard({
           selected={state.selected}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}
+          spotlight={state.hint.spotlight}
           onSelect={selectCell}
           onMove={moveSelection}
           onDigit={enterDigit}
