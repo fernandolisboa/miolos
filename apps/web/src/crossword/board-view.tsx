@@ -1,11 +1,12 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
-import screen from "../play/screen.module.css";
-import { ActiveClueBar, ClueLists } from "./clues";
+import { ClueBar, ClueBarSkeleton, ClueLists } from "./clues";
 import { Board, BoardSkeleton, focusBoard } from "./board";
+import styles from "./crossword-board.module.css";
 import { Keyboard, KeyboardSkeleton } from "./keyboard";
 import type { CrosswordDirection } from "./grid";
 import { crosswordHintExplanation } from "./hint";
@@ -57,59 +58,136 @@ export function CrosswordBoardView({
     reclaimFocus();
     backspace();
   }, [reclaimFocus, backspace]);
+  const [cluesOpen, setCluesOpen] = useState(false);
   const selectFromClue = (index: number, direction: CrosswordDirection) => {
+    setCluesOpen(false);
     focusBoard(boardRef.current);
     selectEntry(index, direction);
   };
 
   return (
-    <>
-      <div className={screen.gridCard}>
-        <Board
-          boardRef={boardRef}
-          solution={state.solution}
+    <CrosswordLayout
+      board={
+        <BoardCard>
+          <Board
+            boardRef={boardRef}
+            solution={state.solution}
+            clues={state.clues}
+            entries={state.entries}
+            selected={state.selected}
+            direction={state.direction}
+            hintIndex={state.hint.lastIndex}
+            onSelect={board.selectCell}
+            onToggleDirection={board.toggleDirection}
+            onMove={board.moveSelection}
+            onLetter={typeLetter}
+            onBackspace={backspace}
+          />
+        </BoardCard>
+      }
+      clueBar={
+        <ClueBar
           clues={state.clues}
-          entries={state.entries}
           selected={state.selected}
           direction={state.direction}
-          hintIndex={state.hint.lastIndex}
-          onSelect={board.selectCell}
-          onToggleDirection={board.toggleDirection}
-          onMove={board.moveSelection}
-          onLetter={typeLetter}
-          onBackspace={backspace}
         />
-      </div>
-
-      <ActiveClueBar
-        clues={state.clues}
-        selected={state.selected}
-        direction={state.direction}
-      />
-
-      <Keyboard
-        onLetter={typeFromKey}
-        onErase={eraseFromKey}
-        activeKeyRef={activeKeyRef}
-      />
-
-      <ClueLists
-        clues={state.clues}
-        selected={state.selected}
-        direction={state.direction}
-        onSelect={selectFromClue}
-      />
-    </>
+      }
+      clues={{
+        list: (
+          <ClueLists
+            clues={state.clues}
+            selected={state.selected}
+            direction={state.direction}
+            onSelect={selectFromClue}
+          />
+        ),
+        open: cluesOpen,
+        onToggle: () => {
+          setCluesOpen((open) => !open);
+        },
+      }}
+      keyboard={
+        <Keyboard
+          onLetter={typeFromKey}
+          onErase={eraseFromKey}
+          activeKeyRef={activeKeyRef}
+        />
+      }
+    />
   );
 }
 
-export function CrosswordSkeletonBody() {
+export function CrosswordSkeletonBody({
+  overlay,
+}: {
+  readonly overlay?: ReactNode;
+}) {
   return (
-    <>
-      <div aria-hidden className={screen.gridCard}>
-        <BoardSkeleton />
+    <CrosswordLayout
+      board={
+        <BoardCard placeholder overlay={overlay}>
+          <BoardSkeleton />
+        </BoardCard>
+      }
+      clueBar={<ClueBarSkeleton />}
+      clues={null}
+      keyboard={<KeyboardSkeleton />}
+    />
+  );
+}
+
+function CrosswordLayout({
+  board,
+  clueBar,
+  clues,
+  keyboard,
+}: {
+  readonly board: ReactNode;
+  readonly clueBar: ReactNode;
+  readonly clues: {
+    readonly list: ReactNode;
+    readonly open: boolean;
+    readonly onToggle: () => void;
+  } | null;
+  readonly keyboard: ReactNode;
+}) {
+  const listsId = useId();
+  return (
+    <div className={styles.layout}>
+      <div className={styles.columns}>
+        <div className={styles.wellSlot}>{board}</div>
+        <div className={styles.rowSlot}>
+          {clueBar}
+          {clues === null ? (
+            <span aria-hidden className={styles.toggle}>
+              {copy.cluesHeading}
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={styles.toggle}
+              aria-expanded={clues.open}
+              aria-controls={listsId}
+              onClick={clues.onToggle}
+            >
+              {copy.cluesHeading}
+            </button>
+          )}
+        </div>
+        {clues === null ? null : (
+          <div
+            id={listsId}
+            className={
+              clues.open
+                ? styles.listsSlot
+                : `${styles.listsSlot} ${styles.listsFolded}`
+            }
+          >
+            {clues.list}
+          </div>
+        )}
+        <div className={styles.keysSlot}>{keyboard}</div>
       </div>
-      <KeyboardSkeleton />
-    </>
+    </div>
   );
 }

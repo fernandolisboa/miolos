@@ -17,7 +17,7 @@ import { useReset } from "../play/use-reset";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
-import styles from "./free-play.module.css";
+import { GeneratingNote } from "./generating-note";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeBinairo,
@@ -155,9 +155,7 @@ function GeneratingBoard() {
       <BoardCard
         placeholder
         below={<ControlsSkeleton />}
-        overlay={
-          <p className={styles.generating}>{messages.freePlay.generating}</p>
-        }
+        overlay={<GeneratingNote />}
       >
         <div className={boardStyles.grid}>
           {Array.from({ length: TOTAL_CELLS }, (_unused, index) => (

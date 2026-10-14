@@ -9,10 +9,9 @@ import {
 } from "../crossword/board-view";
 import boardStyles from "../crossword/crossword-board.module.css";
 import { useCrosswordBoard } from "../crossword/use-crossword-board";
-import { messages } from "../i18n";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
-import styles from "./free-play.module.css";
+import { GeneratingNote } from "./generating-note";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeCrossword,
@@ -81,12 +80,5 @@ function CrosswordFreeBoard({
 }
 
 function GeneratingBoard() {
-  return (
-    <>
-      <CrosswordSkeletonBody />
-      <p className={`${styles.generating} ${styles.generatingAfter}`}>
-        {messages.freePlay.generating}
-      </p>
-    </>
-  );
+  return <CrosswordSkeletonBody overlay={<GeneratingNote />} />;
 }

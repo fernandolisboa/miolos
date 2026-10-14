@@ -10,7 +10,7 @@
    `@media (max-width: 768px)`, then `@media (prefers-reduced-motion:
    reduce)`. There is exactly ONE top-level `.cell` rule.
 
-   Recorded design-system deviations (ADR-0035, amended by ADR-0103):
+   Recorded design-system deviations (ADR-0035; sizing ADR-0103):
      1. Cell gap 0 instead of 4px/3px: a gapped 15-class board falls below the
         13.203px two-digit column-clue floor at the narrowest board.
      2. No --radius-cell on cells: at gap 0 a radius notches every junction.

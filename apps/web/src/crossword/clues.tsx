@@ -9,7 +9,7 @@ import styles from "./clues.module.css";
 
 const copy = messages.games.crossword.play;
 
-export function ActiveClueBar({
+export function ClueBar({
   clues,
   selected,
   direction,
@@ -22,9 +22,21 @@ export function ActiveClueBar({
     selected === null ? undefined : activeEntry(clues, selected, direction);
   return (
     <p role="status" className={styles.activeBar}>
-      {clue === undefined
-        ? " "
-        : `${copy.clueLabel(clue.number, clue.direction)} · ${clue.clue}`}
+      <span className={styles.activeText}>
+        {selected === null
+          ? copy.cluePrompt
+          : clue === undefined
+            ? "\u00a0"
+            : `${copy.clueLabel(clue.number, clue.direction)} · ${clue.clue}`}
+      </span>
+    </p>
+  );
+}
+
+export function ClueBarSkeleton() {
+  return (
+    <p aria-hidden className={styles.activeBar}>
+      <span className={styles.activeText}>{copy.cluePrompt}</span>
     </p>
   );
 }
@@ -38,7 +50,6 @@ export function ClueLists({
   readonly clues: readonly CrosswordClue[];
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
-
   readonly onSelect: (index: number, direction: CrosswordDirection) => void;
 }) {
   const active =

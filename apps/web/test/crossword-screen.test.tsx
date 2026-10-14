@@ -8,7 +8,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { messages } from "../src/i18n";
 import type { CrosswordPlayRecord } from "../src/play/play-record";
+import boardStyles from "../src/crossword/crossword-board.module.css";
+import clueStyles from "../src/crossword/clues.module.css";
 import { CrosswordScreen } from "../src/crossword/crossword-screen";
+import { bodyOf, decl, stylesheet } from "./css-source";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -323,6 +326,101 @@ describe("the clue bar and lists (T-WEB-S438)", () => {
     );
     const tabbable = boardOf().querySelector('[data-cell-index][tabindex="0"]');
     expect(tabbable?.getAttribute("data-cell-index")).toBe("2");
+  });
+});
+
+describe("the clue list folds behind a Pistas button on a narrow board (T-WEB-S604)", () => {
+  function toggle(): HTMLElement {
+    return screen.getByRole("button", { name: copy.cluesHeading });
+  }
+
+  function lists(): HTMLElement {
+    const id = toggle().getAttribute("aria-controls") ?? "";
+    const element = document.getElementById(id);
+    if (element === null) {
+      throw new Error("the Pistas button controls no element");
+    }
+    return element;
+  }
+
+  function folded(): boolean {
+    return lists().classList.contains(boardStyles.listsFolded ?? "");
+  }
+
+  it("asks for a tap until a cell is selected, instead of a blank bar", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+
+    expect(screen.getByRole("status").textContent).toBe(copy.cluePrompt);
+  });
+
+  it("drops the prompt once a cell is selected, even a block", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    tap(cellAt(3));
+
+    expect(screen.getByRole("status").textContent).toBe("\u00a0");
+  });
+
+  it("starts folded, opens on the button, and folds again once a clue is chosen", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(folded()).toBe(true);
+
+    fireEvent.click(toggle());
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    expect(folded()).toBe(false);
+
+    fireEvent.click(
+      within(lists()).getByRole("button", {
+        name: `${copy.clueLabel(2, "down")} — verbo`,
+      }),
+    );
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(folded()).toBe(true);
+    expect(document.activeElement).toBe(cellAt(2));
+  });
+
+  it("folds only below a 640px board column, where the button shows", () => {
+    const board = stylesheet("src/crossword/crossword-board.module.css");
+    const narrow = bodyOf(board, "@container crossword (width < 640px)");
+    const wide = bodyOf(board, "@container crossword (width >= 640px)");
+
+    expect(decl(bodyOf(board, ".layout"), "container")).toBe(
+      "crossword / inline-size",
+    );
+    expect(decl(bodyOf(narrow, ".listsFolded"), "display")).toBe("none");
+    expect(board.replace(narrow, "")).not.toContain(".listsFolded");
+    expect(decl(bodyOf(wide, ".toggle"), "display")).toBe("none");
+  });
+});
+
+describe("the clue bar keeps one height for every clue (T-WEB-S605)", () => {
+  it("is a fixed two lines, and a longer clue ends in an ellipsis there", () => {
+    const clues = stylesheet("src/crossword/clues.module.css");
+    const bar = bodyOf(clues, ".activeBar");
+    const text = bodyOf(clues, ".activeText");
+
+    expect(decl(bar, "height")).toBe(
+      "calc(2 * 1.3em + 2 * var(--space-2) + 3px)",
+    );
+    expect(decl(bar, "line-height")).toBe("1.3");
+    expect(decl(bar, "box-sizing")).toBe("border-box");
+    expect(decl(text, "-webkit-line-clamp")).toBe("2");
+    expect(decl(text, "overflow")).toBe("hidden");
+    expect(clues).not.toMatch(/@container|@media \(max-width/);
+  });
+
+  it("keeps the whole clue in the status text a screen reader hears", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `${copy.clueLabel(2, "down")} — verbo`,
+      }),
+    );
+
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe(`${copy.clueLabel(2, "down")} · verbo`);
+    expect(status.firstElementChild?.className).toBe(clueStyles.activeText);
   });
 });
 

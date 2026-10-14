@@ -17,7 +17,7 @@ import { useNonogramControls } from "../nonogram/use-nonogram-controls";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
-import styles from "./free-play.module.css";
+import { GeneratingNote } from "./generating-note";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeNonogram,
@@ -174,9 +174,7 @@ function GeneratingBoard({ size }: { readonly size: NonogramSize }) {
       <BoardCard
         placeholder
         below={<ControlsSkeleton />}
-        overlay={
-          <p className={styles.generating}>{messages.freePlay.generating}</p>
-        }
+        overlay={<GeneratingNote />}
       >
         <BoardSkeleton size={size} clues={emptyClues} />
       </BoardCard>

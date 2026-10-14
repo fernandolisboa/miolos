@@ -190,7 +190,7 @@
   padding-bottom: 14px;
 }
 
-.reset:has([role="group"]) > :not(:first-child),
+.reset:has([role="group"]) > :not(:has([role="group"])),
 .reset:has([role="group"]) + .hint {
   visibility: hidden;
 }
@@ -278,7 +278,7 @@
 
 .gridCard {
   box-sizing: border-box;
-  width: var(--board-side, auto);
+  width: var(--board-side);
   background: var(--paper-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -288,9 +288,8 @@
   transform: rotate(var(--grid-card-rot, 0.4deg));
 }
 
-/* Centred on the card, outside it so it is not aria-hidden: the card and its
-   controls are centred in the well, so the card's centre is (height - below)
-   / 2 whatever the board side. */
+/* Outside the card so it is not aria-hidden; centred on the well's height
+   above --board-below, which always falls on the card. */
 .boardOverlay {
   position: absolute;
   top: calc((100cqb - var(--board-below, 0px)) / 2);
@@ -399,7 +398,6 @@
   }
 }
 
-/* 20px, not 16px: impeccable's body-text-viewport-edge fires on text at 16.0. */
 @media (max-width: 768px) {
   .page {
     padding: var(--space-3) var(--space-5) var(--space-5);

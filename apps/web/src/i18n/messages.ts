@@ -1095,6 +1095,7 @@ export const messages = {
 
         direction: { across: "Horizontal", down: "Vertical" },
         cluesHeading: "Pistas",
+        cluePrompt: "Toque numa célula para ver a pista.",
         clueLabel: (n: number, dir: "across" | "down") =>
           `${String(n)} ${dir === "across" ? "horizontal" : "vertical"}`,
 
