@@ -1,0 +1,44 @@
+.trigger {
+  composes: cancel from "../components/confirm-action.module.css";
+}
+
+.placeholder {
+  composes: trigger;
+  display: inline-block;
+  visibility: hidden;
+}
+
+.close {
+  composes: cancel from "../components/confirm-action.module.css";
+  margin-top: var(--space-3);
+}
+
+.dialog {
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 2 * var(--space-5)));
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  background: var(--paper-card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md) color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.note {
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}

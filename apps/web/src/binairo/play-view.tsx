@@ -50,6 +50,7 @@ export function PlayView({
       >
         <Grid
           givens={state.givens}
+          solution={play.solution}
           entries={state.entries}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}

@@ -6,6 +6,7 @@
 **Amended by:** [ADR-0093](./0093-the-daily-and-archive-ladders-are-shared.md) (#289) — the chrome takes the kicker, title and rules from `messages.games[game]` instead of props, and `DailyPlayChrome` fills the daily and archive back link, date and note. This ADR's rejected `<PlayShell>` layout stays rejected: `DailyScreen` selects a branch and lays nothing out.
 **Amended by:** [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (#298) — the grid gains a sixth area, `reset`, holding one stateful child, `ResetControl`; the chrome itself is still data props plus one `children` slot.
 **Amended by:** [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) (#255, #257) — the games-wide ban this ADR rejected as out of scope now ships; the 27 unguarded modules are covered by the runtime-graph proof; `T-WEB-S368` is retired, and the check measures runtime edges, not written specifiers.
+**Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — the reset area gains a second stateful child, `GameSettingsButton`, and the chrome hides its clock when *Mostrar cronômetro* is off (`useSettings`).
 
 ## Context
 

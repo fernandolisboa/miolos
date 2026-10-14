@@ -24,6 +24,28 @@ export interface Revealed<T, R> {
 
 export type LogicalHint<T, S> = Revealed<T, HintReason<S>>;
 
+function contradicts<T>(
+  target: T | null | undefined,
+  entry: T | null,
+): boolean {
+  return entry !== null && target != null && entry !== target;
+}
+
+export function wrongCells<T>(
+  solution: readonly (T | null)[],
+  givens: readonly unknown[] | null,
+  entries: readonly (T | null)[],
+): ReadonlySet<number> {
+  const wrong = new Set<number>();
+  for (const [index, target] of solution.entries()) {
+    const given = givens?.[index] ?? null;
+    if (given === null && contradicts(target, entries[index] ?? null)) {
+      wrong.add(index);
+    }
+  }
+  return wrong;
+}
+
 export function nextHint<T>(
   solution: readonly T[],
   givens: readonly (T | null)[],
@@ -40,7 +62,7 @@ export function nextHint<T>(
       continue;
     }
     const entry = entries[index] ?? null;
-    if (entry !== null && entry !== target) {
+    if (contradicts(target, entry)) {
       return { index, value: target, kind: "correction" };
     }
     if (entry === null && firstEmpty === null) {

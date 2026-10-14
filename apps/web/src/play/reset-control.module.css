@@ -25,7 +25,7 @@
 }
 
 /* Opens downward over the hint, which is hidden while it is open, so the page
-   never grows. See ADR-0102. */
+   never grows. See ADR-0103. */
 .ask {
   position: absolute;
   inset: 0 0 auto;

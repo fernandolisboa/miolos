@@ -61,7 +61,7 @@ function clampAt(value: string | undefined, viewport: number): number {
   return Math.min(high ?? 0, Math.max(low ?? 0, ((vw ?? 0) * viewport) / 100));
 }
 
-describe("the board well sizes every board from the space it has (T-WEB-S580)", () => {
+describe("the board well sizes every board from the space it has (T-WEB-S596)", () => {
   const well = bodyOf(SHARED_CSS, ".boardWell");
 
   it("is a size container, so the cq units resolve against the space the section leaves", () => {
@@ -81,7 +81,7 @@ describe("the board well sizes every board from the space it has (T-WEB-S580)", 
   });
 });
 
-describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S581)", () => {
+describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S597)", () => {
   it("declares --board-max at or above the floor, and a font that never drops below 14px", () => {
     for (const [game, sheet] of Object.entries(GAME_SHEETS)) {
       const ceilings = [...sheet.matchAll(/--board-max:\s*([^;]+);/g)].map(
@@ -133,7 +133,7 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S581
   });
 });
 
-describe("every board keeps a usable cell at the floor (T-WEB-S582)", () => {
+describe("every board keeps a usable cell at the floor (T-WEB-S598)", () => {
   const inner = boardFloor() - 2 * mobilePadding() - 2 * CARD_BORDER;
 
   it("fits the narrowest phone, so nothing overflows sideways at 320px", () => {
@@ -169,7 +169,7 @@ describe("every board keeps a usable cell at the floor (T-WEB-S582)", () => {
   });
 });
 
-describe("every gridCard sits inside a boardWell (T-WEB-S583)", () => {
+describe("every gridCard sits inside a boardWell (T-WEB-S599)", () => {
   const PENDING_CRUZADINHA = ["crossword/board-view.tsx"];
 
   it("is rendered only by BoardCard, outside the Cruzadinha", () => {
@@ -225,14 +225,13 @@ describe("every gridCard sits inside a boardWell (T-WEB-S583)", () => {
   });
 });
 
-describe("the reset confirm opens over the hint and never moves the page (T-WEB-S584)", () => {
-  it("takes the covered hint out of the tab order and the accessibility tree", () => {
-    expect(
-      decl(
-        bodyOf(SHARED_CSS, '.reset:has([role="group"]) + .hint'),
-        "visibility",
-      ),
-    ).toBe("hidden");
+describe("the reset confirm opens over the hint and never moves the page (T-WEB-S600)", () => {
+  it("takes what it covers, Ajustes and the hint, out of the tab order and the accessibility tree", () => {
+    const covered = bodyOf(
+      SHARED_CSS,
+      '.reset:has([role="group"]) > :not(:first-child),\n.reset:has([role="group"]) + .hint',
+    );
+    expect(decl(covered, "visibility")).toBe("hidden");
   });
 
   it("renders the confirm inside the control, where the trigger was", () => {
@@ -282,7 +281,7 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
   });
 });
 
-describe("one fold at 1023px, one two-column band above it (T-WEB-S585)", () => {
+describe("one fold at 1023px, one two-column band above it (T-WEB-S601)", () => {
   const page = bodyOf(SHARED_CSS, ".page");
   const [sidebar = ""] = (decl(page, "grid-template-columns") ?? "").split(
     " minmax",
@@ -316,7 +315,7 @@ describe("one fold at 1023px, one two-column band above it (T-WEB-S585)", () => 
   });
 });
 
-describe("the hint explanation keeps a reserved slot where the height allows (T-WEB-S586)", () => {
+describe("the hint explanation keeps a reserved slot where the height allows (T-WEB-S602)", () => {
   const slot = bodyOf(SHARED_CSS, ".hintSlot");
   const line = pixels(decl(slot, "--hint-line"));
 

@@ -1,4 +1,4 @@
-# ADR-0102 — Boards size from the space they have, not from fixed cells
+# ADR-0103 — Boards size from the space they have, not from fixed cells
 
 **Status:** Accepted — 2026-10-13 (issue #303)
 **Depends on:** [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md), [ADR-0042](./0042-the-termo-board-is-read-only-output.md), [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md), [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md)
@@ -23,7 +23,7 @@ Every board had fixed desktop cells (52px; Nonogram 52/52/48/32) and a ~350px ph
 
 - Sudoku at 1280×800 goes from 550 to about 490px so its keypad and hint fit; Termo at 1024×768 is bound by the keyboard stack under it, not by the width.
 - Cruzadinha keeps its fixed cells and clue list until the second part of #303.
-- jsdom has no layout, so the rules are pinned as stylesheet text (`T-WEB-S580…S586`, `apps/web/test/board-sizing.test.tsx`, plus each game's geometry suite). The real geometry is not a CI gate.
+- jsdom has no layout, so the rules are pinned as stylesheet text (`T-WEB-S596…S602`, `apps/web/test/board-sizing.test.tsx`, plus each game's geometry suite). The real geometry is not a CI gate.
 - `--board-below` is a maintained mirror of the rows each game draws under its card. It drifts when a row changes; a well whose content overflows it is how to catch that.
 - Sudoku's desktop keypad mirrors the board's columns but is never narrower than nine 44px targets, so under a 474px board the digits no longer sit under their columns.
 - Termo's `--board-aspect` is 0.83, under the 0.841–0.845 the card measures, so the rotated card stays inside the well.

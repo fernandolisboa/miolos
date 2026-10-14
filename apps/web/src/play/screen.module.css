@@ -2,7 +2,7 @@
    css-loader's `pure` mode, so a bare type selector fails the build or leaks.
    Games set custom properties on the page element, never redeclare a class
    here: hashed names resolve by injection order, which Next does not
-   guarantee. Board sizing and the fold: ADR-0102. */
+   guarantee. Board sizing and the fold: ADR-0103. */
 .page {
   box-sizing: border-box;
   min-height: 100svh;
@@ -181,14 +181,16 @@
 
 /* The 1fr `reset` row pins .hint to the sidebar bottom; Termo renders no
    reset node, so there the row stays an empty spacer. While the confirm is
-   open it covers .hint (see reset-control.module.css), which is hidden so
-   it leaves the tab order and the accessibility tree with it. */
+   open it covers what sits under it (Ajustes, then .hint; see
+   reset-control.module.css), hidden so it leaves the tab order and the
+   accessibility tree with it. */
 .reset {
   grid-area: reset;
   align-self: end;
   padding-bottom: 14px;
 }
 
+.reset:has([role="group"]) > :not(:first-child),
 .reset:has([role="group"]) + .hint {
   visibility: hidden;
 }

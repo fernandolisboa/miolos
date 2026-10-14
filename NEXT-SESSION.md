@@ -1,10 +1,12 @@
 # Do I need to do anything?
 
-**No.** Rainhas (migration 0015) and `/admin` (migration 0016, superuser seed) are in the ledger's Done table. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+**No.** Rainhas (migration 0015) and `/admin` (migration 0016, superuser seed) are in the ledger's Done table. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
 Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0101). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
+
+**Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`apps/web/src/settings/settings.ts`); shown in Ajustes' *Jogos* card and each grid game's *Ajustes* dialog (`settings/settings-dialog.tsx`, in `PlayScreenChrome`). *Mostrar erros* is `wrongCells` in `play/grid-hint.ts` (the hint's correction uses the same predicate) drawn as `WrongMark`; the Sudoku *Número fixo* lives in the reducer (`locked`) with its 300 ms gesture in `sudoku/use-digit-lock.ts`. A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Account sync is #317.
 
 **`/admin`** (#304, #314, ADR-0097, ADR-0100): an admin edits each `remote_config` key within its bounds, no deploy. Admins and superusers are verified attached emails in `admin_users` (migration 0016, `packages/db/src/admin-users.ts`); a superuser manages them on the page, and one locking statement keeps the last superuser. `ADMIN_USER_IDS` is gone.
 
@@ -16,8 +18,8 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds. Test ids `T-WEB-S514…S517`.
 
-**Boards size from the space they have** (#303 part 1, ADR-0102): `BoardCard` (`play/board-card.tsx`) wraps every board but the Cruzadinha in a size container; `--board-side` is the largest square the column and viewport allow, up to the page class's `--board-max`. `--board-below` is a hand-kept mirror of the rows under the card.
-The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, `.hintSlot` reserves the explanation, and free play's "Preparando o puzzle…" is `BoardCard`'s `overlay`. Pinned by `T-WEB-S580…S586`; jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
+**Boards size from the space they have** (#303 part 1, ADR-0103): `BoardCard` (`play/board-card.tsx`) wraps every board but the Cruzadinha in a size container; `--board-side` is the largest square the column and viewport allow, up to the page class's `--board-max`. `--board-below` is a hand-kept mirror of the rows under the card.
+The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, `.hintSlot` reserves the explanation, and free play's "Preparando o puzzle…" is `BoardCard`'s `overlay`. Pinned by `T-WEB-S596…S602`; jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
 ## Traps
 
@@ -33,6 +35,6 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 ## Next
 
-**Next:** #303 part 2, the Cruzadinha: its clue list beside the grid at 640px and up, behind a **Pistas** disclosure below that. Then wrap its grid in `BoardCard` and delete the `--board-side` rule in `crossword-board.module.css`, the `.gridCard` fallback `auto` in `screen.module.css`, `PENDING_CRUZADINHA` in `T-WEB-S583` and `.generatingAfter` in `free-play.module.css`. **Then:** file per-game time buckets as an issue; #300 (per-game settings, "Mostrar erros").
+**Next:** #303 part 2, the Cruzadinha: its clue list beside the grid at 640px and up, behind a **Pistas** disclosure below that. Then wrap its grid in `BoardCard` and delete the `--board-side` rule in `crossword-board.module.css`, the `.gridCard` fallback `auto` in `screen.module.css`, `PENDING_CRUZADINHA` in `T-WEB-S599` and `.generatingAfter` in `free-play.module.css`. **Then:** file per-game time buckets as an issue; #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.

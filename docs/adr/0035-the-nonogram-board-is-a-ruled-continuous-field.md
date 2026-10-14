@@ -1,8 +1,8 @@
 # ADR-0035 — The Nonogram board is a ruled continuous field, not a grid of separated cells
 
 **Status:** Accepted — 2026-08-01
-**Superseded in part by:** [ADR-0102](./0102-boards-size-from-the-space-they-have-not-from-fixed-cells.md) (#303) — decision 5 (fixed 52 / 52 / 48 / 32px cells) and decision 6 (the 1140px fold): the cells are fractional and the play screen folds at 1024px. The ruled field, the 13.203px clue floor and the 14.20px cell at 320px stand.
-**Amended by:** ADR-0102 — decision 7 only: the exemption stands; the mobile brush control is 48px tall, not 60px.
+**Superseded in part by:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md) (#303) — decision 5 (fixed 52 / 52 / 48 / 32px cells) and decision 6 (the 1140px fold): the cells are fractional and the play screen folds at 1024px. The ruled field, the 13.203px clue floor and the 14.20px cell at 320px stand.
+**Amended by:** ADR-0103 — decision 7 only: the exemption stands; the mobile brush control is 48px tall, not 60px.
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0021](./0021-nonogram-pictures-are-a-curated-motif-library.md), [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0032](./0032-a-nonogram-is-finished-when-the-picture-is-painted.md), [ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md)
 
 ## Context

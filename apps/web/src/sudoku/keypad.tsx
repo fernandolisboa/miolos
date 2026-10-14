@@ -1,16 +1,11 @@
 import { messages } from "../i18n";
 import type { SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
+import type { DigitLock } from "./use-digit-lock";
 
 const DIGITS: readonly SudokuDigit[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-export function Keypad({
-  onDigit,
-  onClear,
-}: {
-  readonly onDigit: (digit: SudokuDigit) => void;
-  readonly onClear: () => void;
-}) {
+export function Keypad({ lock }: { readonly lock: DigitLock }) {
   const copy = messages.games.sudoku.play.keypad;
 
   return (
@@ -21,7 +16,10 @@ export function Keypad({
           type="button"
           className={styles.keypadDigit}
           aria-label={copy.digitAria(digit)}
-          onClick={() => onDigit(digit)}
+          aria-pressed={lock.enabled ? lock.locked === digit : undefined}
+          onClick={(event) => {
+            lock.pressDigit(digit, event.detail > 0);
+          }}
         >
           {digit}
         </button>
@@ -31,7 +29,9 @@ export function Keypad({
         type="button"
         className={styles.keypadErase}
         aria-label={copy.eraseAria}
-        onClick={onClear}
+        onClick={(event) => {
+          lock.pressErase(event.detail > 0);
+        }}
       >
         {copy.erase}
       </button>

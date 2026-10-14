@@ -359,21 +359,6 @@ describe("writing with the keypad (T-WEB-S27)", () => {
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
   });
 
-  it("carries no pressed state: the keypad writes, it does not switch modes", () => {
-    render(<SudokuScreen daily={DAILY} />);
-
-    for (const key of [
-      ...Array.from({ length: SIDE }, (_, index) =>
-        messages.games.sudoku.play.keypad.digitAria(index + 1),
-      ),
-      messages.games.sudoku.play.keypad.eraseAria,
-    ]) {
-      expect(screen.getByLabelText(key).hasAttribute("aria-pressed")).toBe(
-        false,
-      );
-    }
-  });
-
   it("clears the selected cell with apagar", () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
 

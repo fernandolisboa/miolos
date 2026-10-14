@@ -105,6 +105,7 @@ const noop = () => undefined;
 
 const BINAIRO_PLAY = {
   state: initPlayState(BINAIRO_DAILY),
+  solution: null,
   elapsed: ELAPSED,
   filled: 12,
   hintReady: true,
@@ -118,6 +119,7 @@ const BINAIRO_PLAY = {
 
 const SUDOKU_PLAY = {
   state: initSudokuPlayState(SUDOKU_DAILY),
+  solution: null,
   elapsed: ELAPSED,
   filled: 12,
   hintReady: false,
@@ -125,6 +127,13 @@ const SUDOKU_PLAY = {
   moveSelection: noop,
   enterDigit: noop,
   clearCell: noop,
+  lock: {
+    enabled: false,
+    locked: null,
+    pressDigit: noop,
+    pressErase: noop,
+    tapCell: noop,
+  },
   revealHint: noop,
   reset: noop,
 };
@@ -369,8 +378,8 @@ function resetSlotOf(page: Element): unknown {
       };
 }
 
-const RESET_BUTTON = { buttons: 1, hidden: null, disabled: "false" };
-const RESET_IDLE = { buttons: 1, hidden: null, disabled: "true" };
+const RESET_BUTTON = { buttons: 3, hidden: null, disabled: "false" };
+const RESET_IDLE = { buttons: 3, hidden: null, disabled: "true" };
 const RESET_PLACEHOLDER = { buttons: 0, hidden: "true", disabled: null };
 
 function shapeOf(page: Element): Record<string, unknown> {
@@ -789,5 +798,30 @@ describe("the chrome looks its copy up by game (T-WEB-S486)", () => {
       "Jogo do arquivo",
     );
     expect(page.querySelectorAll(`.${cls("titleBlock")} > p`)).toHaveLength(3);
+  });
+});
+
+describe("the reset slot keeps its height from the skeleton to the board (T-WEB-S593)", () => {
+  function slotOf(variant: Parameters<typeof chrome>[0]): Element {
+    const slot = staticPage(chrome(variant)).querySelector(`.${cls("reset")}`);
+    if (slot === null) {
+      throw new Error("no reset slot");
+    }
+    return slot;
+  }
+
+  it("holds a child for each of the board's visible ones, the settings one included", () => {
+    expect(slotOf(DAILY_SKELETON).children).toHaveLength(
+      slotOf(DAILY_LIVE).querySelectorAll(":scope > :not(dialog)").length,
+    );
+  });
+
+  it("is inert and hidden in the skeleton, with no control in it", () => {
+    const slot = slotOf(DAILY_SKELETON);
+
+    expect(slot.querySelector("button, a, input")).toBeNull();
+    for (const child of slot.children) {
+      expect(child).toHaveAttribute("aria-hidden", "true");
+    }
   });
 });

@@ -52,11 +52,10 @@ export function PlayView({
         },
       }}
     >
-      <BoardCard
-        below={<Keypad onDigit={play.enterDigit} onClear={play.clearCell} />}
-      >
+      <BoardCard below={<Keypad lock={play.lock} />}>
         <Board
           givens={state.givens}
+          solution={play.solution}
           entries={state.entries}
           selected={state.selected}
           violating={state.violating}
@@ -66,6 +65,7 @@ export function PlayView({
           onMove={play.moveSelection}
           onDigit={play.enterDigit}
           onClear={play.clearCell}
+          onTapCell={play.lock.tapCell}
         />
       </BoardCard>
     </DailyPlayChrome>

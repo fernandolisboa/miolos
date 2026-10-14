@@ -58,6 +58,7 @@ export function PlayView({
         <Board
           size={state.size}
           clues={state.clues}
+          solution={state.solution}
           entries={state.entries}
           selected={state.selected}
           hintIndex={state.hint.lastIndex}

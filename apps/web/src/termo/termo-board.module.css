@@ -31,7 +31,7 @@
    are SEVEN and T-WEB-S102 counts them, so deleting one for tidiness reds
    rather than passing quietly:
      1. The board stops at a 360px ceiling, where the other games reach
-        580-600px, and its tile is a fluid square below it (ADR-0102): 49px at
+        580-600px, and its tile is a fluid square below it (ADR-0103): 49px at
         the 280px floor, about 62px at the ceiling. The keyboard stack under
         the board, not the width, binds it, and a taller board would push the
         keyboard off a 768px-tall desktop.

@@ -66,6 +66,7 @@
 }
 
 .cell {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -202,6 +203,7 @@
     calc(9 * var(--touch-target-min) + 2 * 2px + 10 * 4px)
   );
   margin-top: var(--space-6);
+  touch-action: manipulation;
 }
 
 .keypadDigit {
@@ -267,6 +269,11 @@
 .keypadDigit:active {
   transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.keypadDigit[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--ink-on-accent);
 }
 
 .keypadDigit:focus-visible {

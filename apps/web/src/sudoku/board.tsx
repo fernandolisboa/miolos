@@ -1,10 +1,14 @@
 import type { SudokuGrid } from "@miolos/games/sudoku";
-import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
+import { useLayoutEffect, useMemo, useRef, type KeyboardEvent } from "react";
 
 import { messages } from "../i18n";
 import { isShortcut, keyMove } from "../play/grid-selection";
+import { useWrongCells } from "../play/use-wrong-cells";
+import { WrongMark } from "../play/wrong-mark";
+import { useSettings } from "../settings/settings";
 import {
   mergedGrid,
+  playableGivens,
   selectionHighlights,
   spotlightHighlights,
   track,
@@ -17,8 +21,11 @@ const SIDE = 9;
 
 const EMPTY = 0;
 
+const NO_HIGHLIGHTS: ReadonlyMap<number, CellHighlight> = new Map();
+
 export function Board({
   givens,
+  solution,
   entries,
   selected,
   violating,
@@ -28,8 +35,10 @@ export function Board({
   onMove,
   onDigit,
   onClear,
+  onTapCell,
 }: {
   readonly givens: SudokuGrid;
+  readonly solution: readonly SudokuDigit[] | null;
   readonly entries: readonly SudokuCellValue[];
 
   readonly selected: number | null;
@@ -40,14 +49,20 @@ export function Board({
   readonly onMove: (rows: number, columns: number) => void;
   readonly onDigit: (digit: SudokuDigit) => void;
   readonly onClear: () => void;
+  readonly onTapCell: (index: number) => void;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
 
   const tabbable = selected ?? 0;
+  const { highlightSelection } = useSettings().games.sudoku;
+  const playable = useMemo(() => playableGivens(givens), [givens]);
+  const wrong = useWrongCells("sudoku", solution, playable, entries);
   const highlights =
     spotlight.length > 0
       ? spotlightHighlights(spotlight)
-      : selectionHighlights(mergedGrid(givens, entries), selected);
+      : highlightSelection
+        ? selectionHighlights(mergedGrid(givens, entries), selected)
+        : NO_HIGHLIGHTS;
 
   useLayoutEffect(() => {
     const board = boardRef.current;
@@ -110,6 +125,7 @@ export function Board({
         const column = index % SIDE;
         const value = given !== EMPTY ? given : (entries[index] ?? null);
         const invalid = violating.has(index);
+        const isWrong = wrong.has(index);
         return (
           <button
             key={index}
@@ -128,15 +144,26 @@ export function Board({
 
             aria-disabled={given !== EMPTY}
 
-            aria-label={cellAria(row + 1, column + 1, given, value, invalid)}
+            aria-label={cellAria(
+              row + 1,
+              column + 1,
+              given,
+              value,
+              invalid,
+              isWrong,
+            )}
 
             onFocus={() => onSelect(index)}
 
             onClick={(event) => {
               event.currentTarget.focus();
+              if (event.detail > 0) {
+                onTapCell(index);
+              }
             }}
           >
             {value}
+            {isWrong ? <WrongMark /> : null}
           </button>
         );
       })}
@@ -217,15 +244,15 @@ function cellAria(
   given: number | undefined,
   value: number | null,
   invalid: boolean,
+  wrong: boolean,
 ): string {
   const copy = messages.games.sudoku.play;
-  if (invalid) {
-    return copy.cellInvalidAria(row, column, value);
-  }
-  if (given !== undefined && given !== EMPTY) {
-    return copy.cellGivenAria(row, column, given);
-  }
-  return copy.cellAria(row, column, value);
+  const label = invalid
+    ? copy.cellInvalidAria(row, column, value)
+    : given !== undefined && given !== EMPTY
+      ? copy.cellGivenAria(row, column, given)
+      : copy.cellAria(row, column, value);
+  return wrong ? messages.play.wrongCell(label) : label;
 }
 
 function asDigit(key: string): SudokuDigit | null {
