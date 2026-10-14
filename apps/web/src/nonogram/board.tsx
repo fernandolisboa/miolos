@@ -193,7 +193,11 @@ const Cell = memo(function Cell({
     event: ReactMouseEvent<HTMLButtonElement>,
   ) => void;
 }) {
-  const copy = messages.games.nonogram.play;
+  const label = messages.games.nonogram.play.cellAria(
+    row + 1,
+    column + 1,
+    value,
+  );
   return (
     <button
       type="button"
@@ -210,11 +214,7 @@ const Cell = memo(function Cell({
       data-cell-index={index}
       tabIndex={tabbable ? 0 : -1}
 
-      aria-label={
-        wrong
-          ? messages.play.wrongCell(copy.cellAria(row + 1, column + 1, value))
-          : copy.cellAria(row + 1, column + 1, value)
-      }
+      aria-label={wrong ? messages.play.wrongCell(label) : label}
 
       aria-describedby={`${rowRailId(row)} ${columnRailId(column)}`}
 

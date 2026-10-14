@@ -226,6 +226,21 @@ describe("the Sudoku digit lock on the keypad (T-WEB-S592)", () => {
       expect(cell(FIRST)).toHaveTextContent("");
     });
 
+    it("a double tap on the locked digit releases it and keeps the last cell it wrote", () => {
+      render(<SudokuScreen daily={DAILY} />);
+      locked(7);
+      pointer(cell(SECOND));
+      expect(cell(SECOND)).toHaveTextContent("7");
+
+      wait(1000);
+      tap(7);
+      wait(80);
+      tap(7);
+
+      expect(cell(SECOND)).toHaveTextContent("7");
+      expect(pressed(7)).toBe("false");
+    });
+
     it("another digit writes as it always does, then unlocks", () => {
       render(<SudokuScreen daily={DAILY} />);
       select(FIRST);
@@ -363,12 +378,17 @@ describe("the Sudoku digit lock on the keypad (T-WEB-S592)", () => {
       expect(key(7)).not.toHaveAttribute("aria-pressed");
     });
 
-    it("a pointer tap on a cell only selects it", () => {
+    it("a pointer tap on a cell selects it and writes nothing", () => {
       render(<SudokuScreen daily={DAILY} />);
+      select(FIRST);
+      type(5);
 
       pointer(cell(SECOND));
 
+      expect(cell(SECOND)).toHaveAttribute("tabindex", "0");
+      expect(cell(FIRST)).toHaveAttribute("tabindex", "-1");
       expect(cell(SECOND)).toHaveTextContent("");
+      expect(cell(FIRST)).toHaveTextContent("5");
     });
   });
 

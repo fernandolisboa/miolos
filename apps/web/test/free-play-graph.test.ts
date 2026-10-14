@@ -50,9 +50,12 @@ function union(closures: readonly ReadonlySet<string>[]): readonly string[] {
   return [...new Set(closures.flatMap((closure) => [...closure]))].sort();
 }
 
+const SETTINGS_STORE = "apps/web/src/settings/settings.ts";
+
 function doesIo(module: string): boolean {
+  const source = withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
   return IO.test(
-    withoutComments(readFileSync(join(REPO_ROOT, module), "utf8")),
+    module === SETTINGS_STORE ? source.replaceAll("localStorage", "") : source,
   );
 }
 
@@ -119,10 +122,11 @@ vi.setConfig({ testTimeout: 40_000 });
 const entries = freePlayEntries();
 const valueGraph = union(entries.map(valueClosureOf));
 
-describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S374)", () => {
-  it("no module on it does network or storage I/O, or lives in packages/db/src or packages/games/src/termo", () => {
+describe("free play's runtime graph reaches no I/O but the settings key, and no walled source (T-WEB-S374)", () => {
+  it("no module on it does network or storage I/O beyond the settings store's localStorage, or lives in packages/db/src or packages/games/src/termo", () => {
     expect({
       io: valueGraph.filter(doesIo),
+      reachesSettingsStore: valueGraph.includes(SETTINGS_STORE),
       walled: valueGraph.filter((m) => WALLED_SOURCE.test(m)),
       reachesChrome: valueGraph.includes("apps/web/src/play/screen-chrome.tsx"),
       reachesBinairo: valueGraph.includes(
@@ -152,7 +156,8 @@ describe("free play's runtime graph reaches no I/O and no walled source (T-WEB-S
         .filter(doesIo)
         .sort(),
     }).toEqual({
-      io: ["apps/web/src/settings/settings.ts"],
+      io: [],
+      reachesSettingsStore: true,
       walled: [],
       reachesChrome: true,
       reachesBinairo: true,

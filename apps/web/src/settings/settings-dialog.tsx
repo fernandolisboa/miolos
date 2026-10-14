@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { messages } from "../i18n";
 import { GameSettings } from "./game-settings";
@@ -19,6 +19,11 @@ export function GameSettingsButton({
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (open) {
+      dialogRef.current?.showModal();
+    }
+  }, [open]);
 
   return (
     <>
@@ -28,7 +33,6 @@ export function GameSettingsButton({
         className={styles.trigger}
         onClick={() => {
           setOpen(true);
-          dialogRef.current?.showModal();
         }}
       >
         {copy.trigger}

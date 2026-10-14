@@ -14,6 +14,7 @@ interface Tap {
   readonly digit: SudokuDigit;
   readonly at: number;
   readonly undo: DigitLockUndo | null;
+  readonly release: boolean;
 }
 
 export interface DigitLock {
@@ -58,21 +59,28 @@ export function useDigitLock(
       const current = stateRef.current;
       const previous = lastTap.current;
       lastTap.current = null;
+      const now = performance.now();
 
       if (current.locked === digit) {
+        lastTap.current = { digit, at: now, undo: null, release: true };
         dispatch({ type: "unlock" });
         return;
       }
-      const now = performance.now();
-      if (
-        current.locked === null &&
-        previous?.digit === digit &&
-        now - previous.at <= DOUBLE_TAP_MS
-      ) {
-        dispatch({ type: "lock-digit", digit, undo: previous.undo });
-        return;
+      if (previous?.digit === digit && now - previous.at <= DOUBLE_TAP_MS) {
+        if (previous.release) {
+          return;
+        }
+        if (current.locked === null) {
+          dispatch({ type: "lock-digit", digit, undo: previous.undo });
+          return;
+        }
       }
-      lastTap.current = { digit, at: now, undo: undoOf(current) };
+      lastTap.current = {
+        digit,
+        at: now,
+        undo: undoOf(current),
+        release: false,
+      };
       dispatch({ type: "enter-digit", digit });
       dispatch({ type: "unlock" });
     },

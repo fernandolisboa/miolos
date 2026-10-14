@@ -34,8 +34,6 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 ## Next
 
-**Next:** file per-game time buckets as an issue.
-
-**Then:** #303 (better use of space), which touches every game screen; #317 (sync settings with the account, needs a migration).
+**Next:** file per-game time buckets as an issue. **Then:** #303 (better use of space), which touches every game screen; #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); moving the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`, today used by the push route, the three account routes and the two `/admin` writes); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; folding `T-WEB-S183`'s module walker in `archive-day.test.tsx` onto `module-graph.ts`.

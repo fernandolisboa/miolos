@@ -144,7 +144,7 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
     expect(play(FRESH, { type: "tap-cell", index: FIRST })).toBe(FRESH);
   });
 
-  it("is kept by Recomeçar, and never reaches a restored record", () => {
+  it("is kept by Recomeçar and by a restore with no record", () => {
     const written = play(lockedOn(6), { type: "tap-cell", index: FIRST });
 
     expect(play(written, { type: "reset" }).locked).toBe(6);

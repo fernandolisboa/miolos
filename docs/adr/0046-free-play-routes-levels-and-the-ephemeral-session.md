@@ -6,6 +6,7 @@
 **Amended by:** [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) (#255) — consequence 2's ESLint wall is no longer the enforcement on its own: the proof is the free-play runtime module graph (`T-WEB-S374`, `T-WEB-S375`); the name list stays as editor feedback.
 **Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — decision 1 gains `/modo-livre/cruzadinha`; decisions 2 and 3 give the crossword no level, so its state is `{seed}`; decision 7's card says "Mais uma" for it.
 **Superseded in part by:** [ADR-0095](./0095-three-free-hints-per-puzzle.md) (#295) — decision 5: free play gets `FREE_HINTS_PER_PUZZLE` (three) free hints per puzzle, not one.
+**Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 4: free play reads the one device settings key, `miolos-settings`, and writes it only from an *Ajustes* switch; the session itself still stores nothing.
 
 ## Context
 

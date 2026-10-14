@@ -9,28 +9,28 @@ import {
   readSettings,
   useSettings,
   writeSettings,
+  type Settings,
   type SettingsGame,
 } from "./settings";
 
 const copy = messages.settings.games;
 
-const FLAGS: Readonly<Record<string, { label: string; hint: string }>> =
-  copy.flags;
+type GameFlag = {
+  [G in SettingsGame]: keyof Settings["games"][G];
+}[SettingsGame];
+type Flag = GameFlag | "showClock";
 
 function SettingSwitch({
   flag,
   checked,
   onChange,
 }: {
-  readonly flag: string;
+  readonly flag: Flag;
   readonly checked: boolean;
   readonly onChange: (value: boolean) => void;
 }) {
   const id = useId();
-  const text = FLAGS[flag];
-  if (text === undefined) {
-    return null;
-  }
+  const text = copy.flags[flag];
   return (
     <div className={switchStyles.switchRow}>
       <span className={switchStyles.switchText}>
@@ -56,7 +56,7 @@ function SettingSwitch({
   );
 }
 
-function setGameFlag(game: SettingsGame, flag: string, value: boolean): void {
+function setGameFlag(game: SettingsGame, flag: GameFlag, value: boolean): void {
   const current = readSettings();
   writeSettings({
     ...current,
@@ -92,16 +92,18 @@ export function GameSettings({
       {games.map((game) => (
         <fieldset key={game} className={styles.group}>
           <legend className={styles.legend}>{messages.games[game].name}</legend>
-          {Object.entries(settings.games[game]).map(([flag, checked]) => (
-            <SettingSwitch
-              key={flag}
-              flag={flag}
-              checked={checked}
-              onChange={(value) => {
-                setGameFlag(game, flag, value);
-              }}
-            />
-          ))}
+          {(Object.entries(settings.games[game]) as [GameFlag, boolean][]).map(
+            ([flag, checked]) => (
+              <SettingSwitch
+                key={flag}
+                flag={flag}
+                checked={checked}
+                onChange={(value) => {
+                  setGameFlag(game, flag, value);
+                }}
+              />
+            ),
+          )}
         </fieldset>
       ))}
     </div>

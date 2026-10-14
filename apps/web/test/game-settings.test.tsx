@@ -271,6 +271,7 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
   beforeEach(() => {
     HTMLDialogElement.prototype.showModal = function showModal() {
       this.setAttribute("open", "");
+      this.querySelector<HTMLElement>("button")?.focus();
     };
     HTMLDialogElement.prototype.close = function close() {
       this.removeAttribute("open");
@@ -287,7 +288,7 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
     expect(within(dialog).getByText(copy.dialog.note)).toBeInTheDocument();
     expect(
       within(dialog).getByRole("switch", { name: copy.flags.showClock.label }),
-    ).toBeInTheDocument();
+    ).toHaveFocus();
     for (const label of [
       copy.flags.showErrors.label,
       copy.flags.lockDigit.label,
@@ -329,10 +330,16 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
     fireEvent.click(screen.getByRole("button", { name: copy.dialog.trigger }));
     const dialog = screen.getByRole("dialog", { name: copy.dialog.title });
 
+    const clock = within(dialog).getByRole("switch", {
+      name: copy.flags.showClock.label,
+    });
+    fireEvent.click(clock);
+    expect(screen.queryByRole("timer")).toBeNull();
+
     fireEvent.click(
       within(dialog).getByRole("switch", { name: copy.flags.showClock.label }),
     );
-    expect(screen.queryByRole("timer")).toBeNull();
+    expect(screen.getAllByRole("timer").length).toBeGreaterThan(0);
   });
 
   it("does not render the chrome's button on a loading skeleton", () => {

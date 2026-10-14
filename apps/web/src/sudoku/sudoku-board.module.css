@@ -242,10 +242,7 @@
 
 /* ── keypad ──────────────────────────────────────────────────────────── */
 
-/* A digit carries `aria-pressed` only while the digit-lock setting is on; the
-   locked one is filled with the accent.
-
-   The digit row shares the BOARD's exact track template, so digit n sits
+/* The digit row shares the BOARD's exact track template, so digit n sits
    directly under column n and the box rhythm is legible twice. 512px is the
    board's inner grid width (9×52 + 10×4 + 2×2), i.e. a 17px inset inside the
    546px card. */
