@@ -10,14 +10,15 @@ Fernando asked (#324) for a Nonogram row or column number to be struck once it i
 
 ## Decision
 
-1. **The rule reads the marks and the public clue, never the solution** (`placedClues` and `placedRuns` in `packages/games/src/nonogram/placed.ts`). Walking in from each end, skipping crosses, every filled block closed on both sides by an edge or a cross whose length is the next clue number strikes that number; the walk stops at the first undecided cell, an unclosed block or a mismatch. If the line's filled blocks equal its clue exactly, every number is struck.
-2. **A contradiction strikes nothing.** A fully decided line strikes all its numbers iff its blocks equal the clue, else none. A line with an undecided cell strikes none when the two walks together see more blocks than the clue has numbers.
-3. **The setting is `strikePlacedRuns`, *Riscar números resolvidos*, on by default** (`apps/web/src/settings/settings.ts`).
-4. **A struck number is drawn in `--ink-2` with a line-through** (`.clueNumberPlaced`), and the rail's label says "N feito". An empty line's "0" is never struck.
+1. **A number is struck only from the marks and the public clue, never the solution** (`placedRuns` and `placedClues`, `packages/games/src/nonogram/placed.ts`). A closed block (edge or cross on both sides) reached from either end of the line through decided cells, in clue order, strikes its number; a line whose filled blocks equal its clue strikes every number.
+2. **A line the decided cells alone contradict strikes nothing**: more filled cells than the clue's sum, a block longer than any number, more cross-separated groups of fills than numbers, or a fully decided line that is not its clue. None of these reads an undecided cell, so the rule never says what an undecided cell must be.
+3. **It is the setting *Riscar números resolvidos* (`strikePlacedRuns`), on by default.**
 
 ## Consequences
 
-- A closed block in the middle of a line, not reached by either walk, stays unstruck until the walks or the whole-line match reach it.
+- A closed block in the middle of a line, not reached from either end, stays unstruck.
+- The whole-line match strikes blocks that are not closed, which tells the player the rest of the line is crossed. That is the one deduction it shares with the hint (ADR-0101 decision 4), accepted because the player can count it off the visible marks.
+- A contradiction that only the undecided cells reveal (where nothing fits) can still leave a strike; finding it is a line solver's job.
 - Marking toward the answer never unstrikes a number. A wrong mark can strike a number; the strike says the marks place it, not that they are right.
 - It is not a hint: never recorded, never counted, no effect on the streak, the stats or the medals.
 

@@ -22,8 +22,14 @@ export function toggled(
   return current === value ? null : value;
 }
 
-export function cycled(current: BinaryCellValue): BinaryCellValue {
-  return current === null ? 0 : current === 0 ? 1 : null;
+export function cycled(
+  current: BinaryCellValue,
+  first: BinaryMark,
+): BinaryCellValue {
+  if (current === null) {
+    return first;
+  }
+  return current === first ? otherMark(first) : null;
 }
 
 export function strokeEffect(

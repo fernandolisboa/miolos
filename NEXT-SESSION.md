@@ -1,14 +1,12 @@
 # Do I need to do anything?
 
-Nothing new from #303. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new from #324. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
 Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0101). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
 
-**Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`apps/web/src/settings/settings.ts`); shown in Ajustes' *Jogos* card and each grid game's *Ajustes* dialog (`settings/settings-dialog.tsx`, in `PlayScreenChrome`). *Mostrar erros* is `wrongCells` in `play/grid-hint.ts` (the hint's correction uses the same predicate) drawn as `WrongMark`; the Sudoku *Número fixo* lives in the reducer (`locked`) with its 300 ms gesture in `sudoku/use-digit-lock.ts`, on a keypad digit or on a board cell showing a digit (#323). A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Account sync is #317.
-
-**Struck clue numbers** (#324, ADR-0104): `placedClues` (`packages/games/src/nonogram/placed.ts`) strikes a Nonogram number its marks already place, never reading the solution; the board shows it behind the `strikePlacedRuns` setting (on by default).
+**Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`apps/web/src/settings/settings.ts`); shown in Ajustes' *Jogos* card and each grid game's *Ajustes* dialog (`settings/settings-dialog.tsx`, in `PlayScreenChrome`). *Mostrar erros* is `wrongCells` in `play/grid-hint.ts` (the hint's correction uses the same predicate) drawn as `WrongMark`; the Sudoku *Número fixo* lives in the reducer (`locked`) with its 300 ms gesture in `sudoku/use-digit-lock.ts`, on a keypad digit or on a board cell showing a digit (#323). The Nonogram's struck clue numbers are `placedClues` (`packages/games/src/nonogram/placed.ts`, ADR-0104) behind `strikePlacedRuns`. A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Account sync is #317.
 
 **`/admin`** (#304, #314, ADR-0097, ADR-0100): an admin edits each `remote_config` key within its bounds, no deploy. Admins and superusers are verified attached emails in `admin_users` (migration 0016, `packages/db/src/admin-users.ts`); a superuser manages them on the page, and one locking statement keeps the last superuser. `ADMIN_USER_IDS` is gone.
 
@@ -16,9 +14,11 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
 
+**Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
+
 **Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
 
-**Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
+**Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`. Binairo's tap cycle and left click start from the *Primeiro valor* setting (#325, default 1), carried on the `tap` action; it is the first setting that is not a switch (two radios, `FirstValueChoice` in `settings/game-settings.tsx`).
 
 **Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds. Test ids `T-WEB-S514…S517`.
 

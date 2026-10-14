@@ -195,7 +195,7 @@
     grid-template-areas:
       "well clues"
       "row  clues"
-      "keys keys";
+      "keys clues";
     gap: var(--space-4) var(--space-6);
   }
 

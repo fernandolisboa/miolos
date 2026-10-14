@@ -146,6 +146,29 @@ describe("placedRuns", () => {
     );
   });
 
+  it("strikes nothing when the decided cells alone hold more than the clue allows", () => {
+    fc.assert(
+      fc.property(statesArb, runsArb, (states, runs) => {
+        const blocks = blocksOf(states);
+        const groups = states
+          .map((state) =>
+            state === "empty" ? "x" : state === "filled" ? "#" : "?",
+          )
+          .join("")
+          .split("x")
+          .filter((segment) => segment.includes("#")).length;
+        const tooMuch =
+          blocks.reduce((sum, block) => sum + block, 0) >
+            runs.reduce((sum, run) => sum + run, 0) ||
+          blocks.some((block) => runs.every((run) => run < block)) ||
+          groups > runs.length;
+        fc.pre(tooMuch);
+        expect(placedRuns(states, runs)).toEqual(runs.map(() => false));
+      }),
+      RUNS,
+    );
+  });
+
   it("is mirror-symmetric", () => {
     fc.assert(
       fc.property(statesArb, runsArb, (states, runs) => {
@@ -202,7 +225,16 @@ describe("placedRuns", () => {
   it.each([
     { runs: [3], line: "?###?", placed: [true] },
     { runs: [1, 3], line: "?x###x?", placed: [false, false] },
-    { runs: [2, 1], line: "##x##x?", placed: [true, false] },
+    { runs: [2, 1], line: "##x##x?", placed: [false, false] },
+    { runs: [2, 1], line: "##x#x#?", placed: [false, false] },
+    { runs: [1], line: "#x#??", placed: [false] },
+    { runs: [1, 1], line: "#x#?x#", placed: [false, false] },
+    { runs: [1, 1], line: "#x#x#?????", placed: [false, false] },
+    {
+      runs: [1, 1, 1, 3],
+      line: "#x####????????",
+      placed: [false, false, false, false],
+    },
     { runs: [2, 1], line: "##???", placed: [false, false] },
     { runs: [1, 1], line: "#?#??", placed: [true, true] },
     { runs: [1], line: "#x#", placed: [false] },

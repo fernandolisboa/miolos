@@ -1061,3 +1061,21 @@ describe("the board and keypad arithmetic (T-WEB-S34)", () => {
     }
   });
 });
+
+describe("the keypad's apagar is the ⌫ key (T-WEB-S623)", () => {
+  it("draws the glyph, keeps its name, and the skeleton draws the same", () => {
+    const skeleton = parsed(
+      renderToStaticMarkup(<SudokuScreen daily={DAILY} />),
+    ).querySelector(`.${className("keypadErase")}`);
+    render(<SudokuScreen daily={DAILY} />);
+    const erase = screen.getByRole("button", {
+      name: messages.games.sudoku.play.keypad.eraseAria,
+    });
+
+    expect(erase.textContent).toBe("");
+    expect(erase.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
+    expect(skeleton?.innerHTML).toBe(erase.innerHTML);
+  });
+});

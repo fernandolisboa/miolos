@@ -23,7 +23,8 @@ function bruteForceStep(
   states: readonly NonogramCellState[],
 ): NonogramStep | null {
   let cross: NonogramStep | null = null;
-  for (const spec of nonogramLines(clues)) {
+  for (const { line, runs, cells } of nonogramLines(clues, states)) {
+    const spec = { line, runs, cells };
     const options = consistent(spec, states);
     if (options.length === 0) {
       return null;

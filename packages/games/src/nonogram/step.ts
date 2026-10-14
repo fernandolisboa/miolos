@@ -1,5 +1,5 @@
 import { nonogramLines, type NonogramLineSpec } from "./lines";
-import { isWellFormedClues, solveLine } from "./solve";
+import { solveLine } from "./solve";
 import type { NonogramCellState, NonogramClues } from "./types";
 
 export interface NonogramStep extends NonogramLineSpec {
@@ -11,20 +11,13 @@ export function nextNonogramStep(
   clues: NonogramClues,
   states: readonly NonogramCellState[],
 ): NonogramStep | null {
-  const n = clues.size;
-  if (!isWellFormedClues(clues) || states.length !== n * n) {
-    throw new RangeError(
-      "nextNonogramStep needs well-formed clues and a size × size board",
-    );
-  }
   let cross: NonogramStep | null = null;
-  for (const { line, runs, cells } of nonogramLines(clues)) {
-    const current = cells.map((cell) => states[cell] ?? "unknown");
+  for (const { line, runs, cells, current } of nonogramLines(clues, states)) {
     const solved = solveLine(current, runs);
     if (solved.contradiction) {
       return null;
     }
-    for (let k = 0; k < n; k += 1) {
+    for (let k = 0; k < cells.length; k += 1) {
       const fixed = solved.states[k];
       if (current[k] !== "unknown" || fixed === "unknown") {
         continue;
