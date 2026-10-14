@@ -277,11 +277,11 @@
   color: var(--ink-on-accent);
 }
 
-/* Nine copies placed: flattened into the paper, `--ink-2` keeps the glyph
-   above 3:1 in both themes, and the ✓ means the state is never colour-only. */
+/* Nine copies placed: flatter and dimmer than an open key, still above 3:1;
+   the ✓ keeps the state from being colour-only. */
 .keypadComplete {
   border-color: var(--line);
-  color: var(--ink-2);
+  color: color-mix(in srgb, var(--ink-2) 75%, var(--paper-card));
   box-shadow: none;
 }
 
@@ -301,6 +301,10 @@
   color: var(--accent-app);
   box-shadow: var(--shadow-sm)
     color-mix(in srgb, var(--accent-app) 22%, transparent);
+}
+
+.keypadOver:active {
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent-app) 22%, transparent);
 }
 
 .keypadOver[aria-pressed="true"] {
