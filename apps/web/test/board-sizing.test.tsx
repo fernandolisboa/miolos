@@ -2,8 +2,15 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { fireEvent, render, screen as dom } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { BinairoFreeScreen } from "../src/free-play/binairo-free-screen";
+import { CrosswordFreeScreen } from "../src/free-play/crossword-free-screen";
+import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
+import { QueensFreeScreen } from "../src/free-play/queens-free-screen";
+import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
+import { messages } from "../src/i18n";
 import { BoardCard } from "../src/play/board-card";
 import { ResetControl } from "../src/play/reset-control";
 import shared from "../src/play/screen.module.css";
@@ -33,6 +40,7 @@ const GAME_SHEETS = {
   queens: stylesheet("src/queens/queens-board.module.css"),
   nonogram: stylesheet("src/nonogram/nonogram-board.module.css"),
   termo: stylesheet("src/termo/termo-board.module.css"),
+  crossword: stylesheet("src/crossword/crossword-board.module.css"),
 } as const;
 
 function sourcesUnder(directory: string, extension: string): string[] {
@@ -98,6 +106,7 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S597
       sudoku: [GAME_SHEETS.sudoku, ".cell"],
       binairo: [GAME_SHEETS.binairo, ".cell"],
       termo: [GAME_SHEETS.termo, ".tile"],
+      crossword: [GAME_SHEETS.crossword, ".cell"],
     } as const;
     for (const [game, [sheet, selector]] of Object.entries(fonts)) {
       const size = decl(bodyOf(sheet, selector), "font-size") ?? "";
@@ -114,6 +123,7 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S597
       [GAME_SHEETS.binairo, [".grid"]],
       [GAME_SHEETS.queens, [".size7", ".size8", ".size9"]],
       [GAME_SHEETS.nonogram, [".size5", ".size8", ".size10", ".size15"]],
+      [GAME_SHEETS.crossword, [".grid"]],
     ] as const;
 
     for (const [sheet, selectors] of boards) {
@@ -130,6 +140,18 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S597
         }
       }
     }
+  });
+
+  it("counts the Rainhas affordance, margin and line, in --board-below", () => {
+    const below = /^calc\((.+) \+ (\d+px)\)$/.exec(
+      decl(bodyOf(GAME_SHEETS.queens, ".pageQueens"), "--board-below") ?? "",
+    );
+    const affordance = bodyOf(GAME_SHEETS.queens, ".affordance");
+
+    expect(decl(affordance, "margin")).toBe(`${below?.[1] ?? ""} 0 0`);
+    expect(pixels(below?.[2])).toBeGreaterThanOrEqual(
+      1.5 * pixels(decl(affordance, "font-size")),
+    );
   });
 });
 
@@ -167,19 +189,34 @@ describe("every board keeps a usable cell at the floor (T-WEB-S598)", () => {
       WCAG_TARGET_FLOOR,
     );
   });
+
+  it("keeps Cruzadinha cells at 24px or more at its own, lower floor", () => {
+    const floor = pixels(
+      decl(bodyOf(GAME_SHEETS.crossword, ".pageCrossword"), "--board-min"),
+    );
+    const gap = pixels(
+      decl(
+        bodyOf(
+          bodyOf(GAME_SHEETS.crossword, "@media (max-width: 768px)"),
+          ".grid",
+        ),
+        "gap",
+      ),
+    );
+    const cells = (floor - 2 * mobilePadding() - 2 * CARD_BORDER - 4 * gap) / 5;
+
+    expect(floor).toBeLessThanOrEqual(boardFloor());
+    expect(cells).toBeGreaterThanOrEqual(WCAG_TARGET_FLOOR);
+  });
 });
 
 describe("every gridCard sits inside a boardWell (T-WEB-S599)", () => {
-  const PENDING_CRUZADINHA = ["crossword/board-view.tsx"];
-
-  it("is rendered only by BoardCard, outside the Cruzadinha", () => {
+  it("is rendered only by BoardCard", () => {
     const users = sourcesUnder(SRC, ".tsx")
       .filter((file) => readFileSync(file, "utf8").includes("gridCard"))
       .map((file) => path.relative(SRC, file));
 
-    expect(users.sort()).toEqual(
-      ["play/board-card.tsx", ...PENDING_CRUZADINHA].sort(),
-    );
+    expect(users).toEqual(["play/board-card.tsx"]);
   });
 
   it("renders the card and what sits under it inside one well", () => {
@@ -229,7 +266,7 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
   it("takes what it covers, Ajustes and the hint, out of the tab order and the accessibility tree", () => {
     const covered = bodyOf(
       SHARED_CSS,
-      '.reset:has([role="group"]) > :not(:first-child),\n.reset:has([role="group"]) + .hint',
+      '.reset:has([role="group"]) > :not(:has([role="group"])),\n.reset:has([role="group"]) + .hint',
     );
     expect(decl(covered, "visibility")).toBe("hidden");
   });
@@ -347,5 +384,27 @@ describe("the hint explanation keeps a reserved slot where the height allows (T-
     expect(
       reservedLines("@media (max-width: 1023px) and (min-height: 800px)"),
     ).toBe(3);
+  });
+});
+
+describe("free play's generating note sits on the well, outside the hidden card (T-WEB-S603)", () => {
+  const screens = {
+    sudoku: <SudokuFreeScreen />,
+    binairo: <BinairoFreeScreen />,
+    nonogram: <NonogramFreeScreen />,
+    queens: <QueensFreeScreen />,
+    crossword: <CrosswordFreeScreen />,
+  };
+
+  it.each(Object.entries(screens))("%s", (_, element) => {
+    const host = document.createElement("div");
+    host.innerHTML = renderToStaticMarkup(element);
+    const note = [...host.querySelectorAll("p")].find(
+      (p) => p.textContent === messages.freePlay.generating,
+    );
+
+    expect(note?.closest(`.${shared.boardWell ?? ""}`)).not.toBeNull();
+    expect(note?.closest(`.${shared.gridCard ?? ""}`)).toBeNull();
+    expect(note?.closest("[aria-hidden]")).toBeNull();
   });
 });

@@ -63,10 +63,6 @@
   text-align: center;
 }
 
-.generatingAfter {
-  margin-top: var(--space-4);
-}
-
 /* ── error card ──────────────────────────────────────────────────────── */
 
 .errorCard {

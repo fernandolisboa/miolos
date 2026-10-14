@@ -23,7 +23,7 @@ import { useDigitLock } from "../sudoku/use-digit-lock";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
-import styles from "./free-play.module.css";
+import { GeneratingNote } from "./generating-note";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeSudoku,
@@ -178,9 +178,7 @@ function GeneratingBoard() {
       <BoardCard
         placeholder
         below={<KeypadSkeleton />}
-        overlay={
-          <p className={styles.generating}>{messages.freePlay.generating}</p>
-        }
+        overlay={<GeneratingNote />}
       >
         <BoardSkeleton />
       </BoardCard>

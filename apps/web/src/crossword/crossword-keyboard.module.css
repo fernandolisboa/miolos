@@ -60,12 +60,21 @@
   .keyboard {
     width: 100%;
     max-width: 350px;
-    grid-template-rows: repeat(3, 48px);
+    grid-template-rows: repeat(3, var(--touch-target-min));
     grid-template-columns: none;
+    gap: var(--space-1);
+    margin-top: var(--space-3);
   }
 
   .keyCommand {
     font-size: 11px;
     padding-inline: 2px;
+  }
+}
+
+@container crossword (min-width: 640px) {
+  .keyboard {
+    grid-area: keys;
+    justify-self: center;
   }
 }

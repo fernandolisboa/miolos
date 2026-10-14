@@ -1,11 +1,12 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
-import screen from "../play/screen.module.css";
-import { ActiveClueBar, ClueLists } from "./clues";
+import { ClueRow, ClueRowSkeleton, ClueLists } from "./clues";
 import { Board, BoardSkeleton, focusBoard } from "./board";
+import styles from "./crossword-board.module.css";
 import { Keyboard, KeyboardSkeleton } from "./keyboard";
 import type { CrosswordDirection } from "./grid";
 import { crosswordHintExplanation } from "./hint";
@@ -57,14 +58,17 @@ export function CrosswordBoardView({
     reclaimFocus();
     backspace();
   }, [reclaimFocus, backspace]);
+  const listsId = useId();
+  const [cluesOpen, setCluesOpen] = useState(false);
   const selectFromClue = (index: number, direction: CrosswordDirection) => {
+    setCluesOpen(false);
     focusBoard(boardRef.current);
     selectEntry(index, direction);
   };
 
   return (
-    <>
-      <div className={screen.gridCard}>
+    <CrosswordLayout>
+      <BoardCard>
         <Board
           boardRef={boardRef}
           solution={state.solution}
@@ -79,12 +83,26 @@ export function CrosswordBoardView({
           onLetter={typeLetter}
           onBackspace={backspace}
         />
-      </div>
+      </BoardCard>
 
-      <ActiveClueBar
+      <ClueRow
         clues={state.clues}
         selected={state.selected}
         direction={state.direction}
+        listsId={listsId}
+        open={cluesOpen}
+        onToggle={() => {
+          setCluesOpen((open) => !open);
+        }}
+      />
+
+      <ClueLists
+        id={listsId}
+        collapsed={!cluesOpen}
+        clues={state.clues}
+        selected={state.selected}
+        direction={state.direction}
+        onSelect={selectFromClue}
       />
 
       <Keyboard
@@ -92,24 +110,30 @@ export function CrosswordBoardView({
         onErase={eraseFromKey}
         activeKeyRef={activeKeyRef}
       />
-
-      <ClueLists
-        clues={state.clues}
-        selected={state.selected}
-        direction={state.direction}
-        onSelect={selectFromClue}
-      />
-    </>
+    </CrosswordLayout>
   );
 }
 
-export function CrosswordSkeletonBody() {
+export function CrosswordSkeletonBody({
+  overlay,
+}: {
+  readonly overlay?: ReactNode;
+}) {
   return (
-    <>
-      <div aria-hidden className={screen.gridCard}>
+    <CrosswordLayout>
+      <BoardCard placeholder overlay={overlay}>
         <BoardSkeleton />
-      </div>
+      </BoardCard>
+      <ClueRowSkeleton />
       <KeyboardSkeleton />
-    </>
+    </CrosswordLayout>
+  );
+}
+
+function CrosswordLayout({ children }: { readonly children: ReactNode }) {
+  return (
+    <div className={styles.layout}>
+      <div className={styles.columns}>{children}</div>
+    </div>
   );
 }

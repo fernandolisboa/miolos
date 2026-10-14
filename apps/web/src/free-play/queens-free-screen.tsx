@@ -4,7 +4,6 @@ import type { QueensSize } from "@miolos/core";
 import { QUEENS_WEEKDAY_CRITERIA } from "@miolos/games/queens";
 import { useState } from "react";
 
-import { messages } from "../i18n";
 import {
   BoardPanel,
   BoardPanelSkeleton,
@@ -19,7 +18,7 @@ import {
 } from "./catalog";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
-import freePlay from "./free-play.module.css";
+import { GeneratingNote } from "./generating-note";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeQueens,
@@ -95,9 +94,7 @@ function GeneratingBoard({ size }: { readonly size: QueensSize }) {
     <BoardPanelSkeleton
       size={size}
       regions={Array.from({ length: size * size }, () => 0)}
-      overlay={
-        <p className={freePlay.generating}>{messages.freePlay.generating}</p>
-      }
+      overlay={<GeneratingNote />}
     />
   );
 }

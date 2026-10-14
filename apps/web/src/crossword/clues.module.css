@@ -1,4 +1,15 @@
+.clueRow {
+  display: flex;
+  gap: var(--space-2);
+  width: min(100%, 552px);
+  margin-top: var(--space-4);
+}
+
 .activeBar {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--touch-target-min);
+  box-sizing: border-box;
   margin: 0;
   padding: var(--space-2) var(--space-3);
   background: var(--paper-tint);
@@ -10,10 +21,43 @@
   font-weight: 600;
 }
 
+.toggle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  box-sizing: border-box;
+  padding: 0 var(--space-3);
+  background: var(--paper-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-button);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toggle[aria-expanded="true"] {
+  background: var(--paper-tint);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.placeholder {
+  cursor: default;
+  pointer-events: none;
+}
+
 .lists {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-content: start;
   gap: var(--space-4);
+  width: min(100%, 552px);
   margin-top: var(--space-4);
 }
 
@@ -90,8 +134,46 @@
   }
 }
 
+@container crossword (max-width: 639.98px) {
+  .listsCollapsed {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
+  .clueRow,
+  .lists {
+    width: min(100%, 350px);
+  }
+
+  .clueRow {
+    margin-top: var(--space-2);
+  }
+
   .lists {
     grid-template-columns: 1fr;
+  }
+}
+
+/* The list is as tall as the well and the row beside it, never taller: a
+   zero height keeps it out of the row sizing, and it scrolls inside. */
+@container crossword (min-width: 640px) {
+  .clueRow {
+    grid-area: row;
+    width: auto;
+  }
+
+  .toggle {
+    display: none;
+  }
+
+  .lists {
+    grid-area: clues;
+    grid-template-columns: 1fr;
+    width: auto;
+    height: 0;
+    min-height: 100%;
+    margin-top: 0;
+    overflow-y: auto;
   }
 }

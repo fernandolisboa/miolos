@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-**No.** Rainhas (migration 0015) and `/admin` (migration 0016, superuser seed) are in the ledger's Done table. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new from #303. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -18,8 +18,8 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds. Test ids `T-WEB-S514…S517`.
 
-**Boards size from the space they have** (#303 part 1, ADR-0103): `BoardCard` (`play/board-card.tsx`) wraps every board but the Cruzadinha in a size container; `--board-side` is the largest square the column and viewport allow, up to the page class's `--board-max`. `--board-below` is a hand-kept mirror of the rows under the card.
-The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, `.hintSlot` reserves the explanation, and free play's "Preparando o puzzle…" is `BoardCard`'s `overlay`. Pinned by `T-WEB-S596…S602`; jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
+**Boards size from the space they have** (#303, ADR-0103): `BoardCard` (`play/board-card.tsx`) wraps every board in a size container; `--board-side` is the largest square the column and viewport allow, up to the page class's `--board-max`. `--board-below` is a hand-kept mirror of the rows under the card.
+The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, `.hintSlot` reserves the explanation, and free play's `GeneratingNote` is `BoardCard`'s `overlay`. The Cruzadinha's clues sit beside the grid from a 640px column (`crossword` container) and fold behind *Pistas* below it. Pinned by `T-WEB-S596…S604`; jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
 ## Traps
 
@@ -35,6 +35,6 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 ## Next
 
-**Next:** #303 part 2, the Cruzadinha: its clue list beside the grid at 640px and up, behind a **Pistas** disclosure below that. Then wrap its grid in `BoardCard` and delete the `--board-side` rule in `crossword-board.module.css`, the `.gridCard` fallback `auto` in `screen.module.css`, `PENDING_CRUZADINHA` in `T-WEB-S599` and `.generatingAfter` in `free-play.module.css`. **Then:** file per-game time buckets as an issue; #317 (sync settings with the account, needs a migration).
+**Next:** file per-game time buckets as an issue; then #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.

@@ -18,11 +18,11 @@ Every board had fixed desktop cells (52px; Nonogram 52/52/48/32) and a ~350px ph
 5. **The page measures `100svh`,** so a collapsing mobile URL bar never resizes a board.
 6. **Recomeçar reserves one 44px target.** The confirm opens downward over the hint, inside the space the two rows already take, and the hint is `visibility: hidden` while it is open. ADR-0096's behaviour and DOM order are unchanged.
 7. **The hint explanation has a reserved slot** on the `aria-live` wrapper (`.hintSlot`): three lines up to 1023px wide when the viewport is 800px tall or more, two lines from 1024px. From 390×844 up, revealing a hint neither moves nor resizes a board. On shorter screens it may push the page to scroll a little.
+8. **The Cruzadinha's clue list sits beside its grid when the board column is 640px or wider, and folds behind a *Pistas* button below that** (a `crossword` container query, `crossword/board-view.tsx`). Its clue row and keyboard sit under the well, outside `--board-below`; its floor is 200px (5×5 cells stay above 33px), so the phone keyboard fits under it. Opening the list shrinks the board to that floor and may scroll; choosing a clue folds it again.
 
 ## Consequences
 
 - Sudoku at 1280×800 goes from 550 to about 490px so its keypad and hint fit; Termo at 1024×768 is bound by the keyboard stack under it, not by the width.
-- Cruzadinha keeps its fixed cells and clue list until the second part of #303.
 - jsdom has no layout, so the rules are pinned as stylesheet text (`T-WEB-S596…S602`, `apps/web/test/board-sizing.test.tsx`, plus each game's geometry suite). The real geometry is not a CI gate.
 - `--board-below` is a maintained mirror of the rows each game draws under its card. It drifts when a row changes; a well whose content overflows it is how to catch that.
 - Sudoku's desktop keypad mirrors the board's columns but is never narrower than nine 44px targets, so under a 474px board the digits no longer sit under their columns.
@@ -33,3 +33,4 @@ Every board had fixed desktop cells (52px; Nonogram 52/52/48/32) and a ~350px ph
 - **Moving the fold to 1421px** (ADR-0035) to keep 52px cells: three games re-laid out for one weekday, in a band no gate visits. Cells that shrink make it unnecessary.
 - **Sizing the board with JavaScript** (a resize observer): a flash of unsized board, and layout logic the stylesheet already expresses.
 - **A constant for the rest of the page** (header, hint, padding): it drifts the first time any of them changes. The flex space left over is exact; only the rows under the card are mirrored.
+- **The Cruzadinha's clue list always open under the keyboard:** it pinned the board to its floor and pushed *Usar dica* off every phone (1372px tall at 390×844).

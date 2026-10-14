@@ -2,13 +2,35 @@
   --grid-card-rot: 0.6deg;
   --stats-card-rot: -0.4deg;
   --tape-rot: 2deg;
+  --board-max: 420px;
+  --board-min: 200px;
+  --board-aspect: 0.98;
+}
+
+/* The clue row, the open clue list and the keyboard sit under the well, not in
+   it: they are outside --board-below, so the well takes what they leave.
+   --board-aspect under 1 keeps the rotated card inside a height-bound well. */
+.layout {
+  container: crossword / inline-size;
+  flex: 1 1 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.columns {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, 52px);
-  grid-template-rows: repeat(5, 52px);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
   gap: 4px;
+  aspect-ratio: 1;
   touch-action: manipulation;
 }
 
@@ -25,7 +47,7 @@
   border-radius: var(--radius-cell);
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: clamp(14px, calc(var(--board-side) * 0.09), 32px);
   font-weight: 500;
   text-transform: uppercase;
   cursor: pointer;
@@ -101,19 +123,25 @@
   }
 }
 
+@container crossword (min-width: 640px) {
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-rows: 1fr auto auto;
+    grid-template-areas:
+      "well clues"
+      "row  clues"
+      "keys keys";
+    column-gap: var(--space-6);
+  }
+
+  .columns > :first-child {
+    grid-area: well;
+  }
+}
+
 @media (max-width: 768px) {
-  .pageCrossword {
-    --board-side: min(100%, 346px);
-  }
-
   .grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-template-rows: repeat(5, minmax(0, 1fr));
     gap: 3px;
-    aspect-ratio: 1;
-  }
-
-  .cell {
-    font-size: 20px;
   }
 }

@@ -8,7 +8,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { messages } from "../src/i18n";
 import type { CrosswordPlayRecord } from "../src/play/play-record";
+import clueStyles from "../src/crossword/clues.module.css";
 import { CrosswordScreen } from "../src/crossword/crossword-screen";
+import { bodyOf, decl, stylesheet } from "./css-source";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -323,6 +325,59 @@ describe("the clue bar and lists (T-WEB-S438)", () => {
     );
     const tabbable = boardOf().querySelector('[data-cell-index][tabindex="0"]');
     expect(tabbable?.getAttribute("data-cell-index")).toBe("2");
+  });
+});
+
+describe("the clue list folds behind a Pistas button on a narrow board (T-WEB-S604)", () => {
+  const sheet = stylesheet("src/crossword/clues.module.css");
+
+  function toggle(): HTMLElement {
+    return screen.getByRole("button", { name: copy.cluesHeading });
+  }
+
+  function lists(): HTMLElement {
+    const id = toggle().getAttribute("aria-controls") ?? "";
+    const element = document.getElementById(id);
+    if (element === null) {
+      throw new Error("the Pistas button controls no element");
+    }
+    return element;
+  }
+
+  it("asks for a tap until a cell is selected, instead of a blank bar", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+
+    expect(screen.getByRole("status").textContent).toBe(copy.cluePrompt);
+  });
+
+  it("starts folded, opens on the button, and folds again once a clue is chosen", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    const folded = clueStyles.listsCollapsed ?? "";
+
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(lists().classList.contains(folded)).toBe(true);
+
+    fireEvent.click(toggle());
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    expect(lists().classList.contains(folded)).toBe(false);
+
+    fireEvent.click(
+      within(lists()).getByRole("button", {
+        name: `${copy.clueLabel(2, "down")} — verbo`,
+      }),
+    );
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(lists().classList.contains(folded)).toBe(true);
+    expect(document.activeElement).toBe(cellAt(2));
+  });
+
+  it("folds only below a 640px board column, where the button shows", () => {
+    const narrow = bodyOf(sheet, "@container crossword (max-width: 639.98px)");
+    const wide = bodyOf(sheet, "@container crossword (min-width: 640px)");
+
+    expect(decl(bodyOf(narrow, ".listsCollapsed"), "display")).toBe("none");
+    expect(wide).not.toContain(".listsCollapsed");
+    expect(decl(bodyOf(wide, ".toggle"), "display")).toBe("none");
   });
 });
 
