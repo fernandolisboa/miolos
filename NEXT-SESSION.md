@@ -16,6 +16,8 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Termo's current row is editable** (#327, ADR-0108): the draft is five slots and a cursor; a tap or the arrows move the cursor, typing goes to the next empty cell, wrapping, and a gapped Enter does nothing. One key map, `pressKey` (`termo/play-view.tsx`), serves the window listener and the row's own listener.
 
+**The Sudoku keypad tallies each digit** (#328): `placedCount` and `digitTally` (`sudoku/engine.ts`) count givens and entries on the public rules, never the solution; at nine the key fades with a ✓, above nine it takes the conflict red with the count. It stays pressable, so the *Número fixo* lock still works.
+
 **Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`. Binairo's tap cycle and left click start from the *Primeiro valor* setting (#325, default 1), carried on the `tap` action; it is the first setting that is not a switch (two radios, `FirstValueChoice` in `settings/game-settings.tsx`).

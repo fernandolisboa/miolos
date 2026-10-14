@@ -922,6 +922,10 @@ export const messages = {
           `${cellAriaSudoku(row, column, value)} — esta célula repete um número`,
         keypad: {
           digitAria: (digit: number) => `escrever ${digit}`,
+          digitCompleteAria: (digit: number) =>
+            `escrever ${digit} — os 9 já estão no tabuleiro`,
+          digitOverAria: (digit: number, count: number) =>
+            `escrever ${digit} — colocado ${count} vezes, mais que 9`,
           eraseAria: "apagar a célula selecionada",
           affordance:
             "ou use o teclado: 1–9 para escrever, Backspace para apagar",

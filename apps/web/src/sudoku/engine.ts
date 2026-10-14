@@ -10,6 +10,8 @@ const EMPTY = 0;
 
 const CELLS = 81;
 
+const COPIES = 9;
+
 export type CellHighlight = "unit" | "same-digit";
 
 export const track = (index: number): number =>
@@ -48,6 +50,19 @@ export function spotlightHighlights(
   cells: readonly number[],
 ): ReadonlyMap<number, CellHighlight> {
   return new Map(cells.map((index) => [index, "unit"]));
+}
+
+export type DigitTally = "open" | "complete" | "over";
+
+export function placedCount(grid: SudokuGrid, digit: SudokuDigit): number {
+  return grid.filter((cell) => cell === digit).length;
+}
+
+export function digitTally(count: number): DigitTally {
+  if (count === COPIES) {
+    return "complete";
+  }
+  return count > COPIES ? "over" : "open";
 }
 
 export function isPlayable(givens: SudokuGrid, index: number): boolean {

@@ -207,6 +207,7 @@
 }
 
 .keypadDigit {
+  position: relative;
   grid-row: 1;
   box-sizing: border-box;
   display: flex;
@@ -274,6 +275,51 @@
 .keypadDigit[aria-pressed="true"] {
   background: var(--accent);
   color: var(--ink-on-accent);
+}
+
+/* Nine copies placed: flatter and dimmer than an open key, still above 3:1;
+   the ✓ keeps the state from being colour-only. */
+.keypadComplete {
+  border-color: var(--line);
+  color: color-mix(in srgb, var(--ink-2) 75%, var(--paper-card));
+  box-shadow: none;
+}
+
+.keypadComplete:active {
+  box-shadow: none;
+}
+
+.keypadComplete[aria-pressed="true"] {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
+  color: var(--paper-card);
+}
+
+/* Over nine: the conflict ring's red, with the count as the second carrier. */
+.keypadOver {
+  border-color: var(--accent-app);
+  color: var(--accent-app);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent-app) 22%, transparent);
+}
+
+.keypadOver:active {
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent-app) 22%, transparent);
+}
+
+.keypadOver[aria-pressed="true"] {
+  background: var(--accent-app);
+  color: var(--paper-card);
+}
+
+.keypadMark {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .keypadDigit:focus-visible {
