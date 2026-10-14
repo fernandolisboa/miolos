@@ -1,14 +1,14 @@
 .mark {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: min(20px, 45%);
+  top: 3px;
+  right: 3px;
+  width: min(18px, 45%);
   aspect-ratio: 1;
   pointer-events: none;
   background: linear-gradient(
     to bottom left,
-    var(--accent-app) 27%,
-    var(--paper-card) 27% 45%,
-    transparent 45%
+    var(--accent-app) 46%,
+    var(--paper-card) 46% 66%,
+    transparent 66%
   );
 }
