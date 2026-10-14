@@ -20,3 +20,26 @@ export function isValidQueensSolution(
     queens.filter((cell) => cell === 1).length === board.size
   );
 }
+
+export function queensLineCells(
+  board: QueensBoard,
+  cell: number,
+): readonly number[] {
+  const { rows, cols, regions, regionOf, size } = geometryOf(board);
+  const lines = new Set([
+    ...rows[Math.floor(cell / size)]!,
+    ...cols[cell % size]!,
+    ...regions[regionOf[cell]!]!,
+  ]);
+  return [...lines].sort((a, b) => a - b);
+}
+
+export function queensAttackedCells(
+  board: QueensBoard,
+  cell: number,
+): readonly number[] {
+  const geometry = geometryOf(board);
+  return board.regions.flatMap((_region, other) =>
+    attacks(geometry, cell, other) ? [other] : [],
+  );
+}

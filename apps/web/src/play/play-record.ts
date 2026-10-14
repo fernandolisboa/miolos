@@ -125,10 +125,42 @@ export const nonogramPlayRecordSchema = sizedBinaryRecordSchema(
 
 export type NonogramPlayRecord = z.infer<typeof nonogramPlayRecordSchema>;
 
+const queensMaxSide = Math.max(
+  ...queensSizeSchema.options.map((option) => option.value),
+);
+const queensCellIndex = z
+  .int()
+  .min(0)
+  .max(queensMaxSide ** 2 - 1);
+
 export const queensPlayRecordSchema = sizedBinaryRecordSchema(
   "queens",
   queensSizeSchema,
-);
+)
+  .extend({
+    autoCrossed: z
+      .array(
+        z.strictObject({
+          cell: queensCellIndex,
+          by: z.array(queensCellIndex).min(1).max(queensMaxSide),
+        }),
+      )
+      .max(queensMaxSide ** 2)
+      .optional(),
+  })
+  .superRefine((record, ctx) => {
+    const cells = record.size ** 2;
+    const outside = (record.autoCrossed ?? []).some(
+      ({ cell, by }) => cell >= cells || by.some((queen) => queen >= cells),
+    );
+    if (outside) {
+      ctx.addIssue({
+        code: "custom",
+        message: `autoCrossed must index the ${String(cells)} cells of the board`,
+        path: ["autoCrossed"],
+      });
+    }
+  });
 
 export type QueensPlayRecord = z.infer<typeof queensPlayRecordSchema>;
 

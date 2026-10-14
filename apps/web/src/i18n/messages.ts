@@ -675,6 +675,18 @@ export const messages = {
           label: "Destacar linha, coluna e bloco",
           hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela.",
         },
+        highlightRegion: {
+          label: "Destacar linha, coluna e região",
+          hint: "Pinta a linha, a coluna e a região da célula selecionada.",
+        },
+        fadeQueenLines: {
+          label: "Esmaecer o que já tem rainha",
+          hint: "Apaga um pouco as células das linhas, colunas e regiões que já têm uma rainha.",
+        },
+        autoCross: {
+          label: "Marcar ✕ automático",
+          hint: "Ao pôr uma rainha, marca ✕ nas células vazias da linha, da coluna, da região e em volta dela. Tirar a rainha apaga só esses ✕.",
+        },
       },
       dialog: {
         trigger: "Ajustes",

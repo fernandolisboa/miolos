@@ -9,6 +9,7 @@ import {
   nextBinaryHint,
   nextLogicalHint,
   toRowColumn,
+  type Hint,
   type HintReason,
   type LogicalHint,
 } from "../play/grid-hint";
@@ -23,12 +24,24 @@ export function nextQueensHint(
   solution: readonly QueensMark[],
   entries: readonly QueensCellValue[],
 ): LogicalHint<QueensMark, QueensStep> | null {
-  return nextLogicalHint(solution, nextBinaryHint(solution, entries), () => {
+  const first =
+    wrongQueen(solution, entries) ?? nextBinaryHint(solution, entries);
+  return nextLogicalHint(solution, first, () => {
     const step = nextQueensStep(board, entries);
     return step === null
       ? null
       : { index: step.index, value: 1, step, cells: step.cells };
   });
+}
+
+function wrongQueen(
+  solution: readonly QueensMark[],
+  entries: readonly QueensCellValue[],
+): Hint<QueensMark> | null {
+  const index = entries.findIndex(
+    (entry, at) => entry === 1 && solution[at] === 0,
+  );
+  return index < 0 ? null : { index, value: 0, kind: "correction" };
 }
 
 export function queensHintExplanation(

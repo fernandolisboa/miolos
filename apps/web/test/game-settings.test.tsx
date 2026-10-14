@@ -216,7 +216,23 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         within(sudoku).getByRole("switch", { name: label }),
       ).toBeInTheDocument();
     }
-    for (const name of ["Binairo", "Nonogram", "Rainhas", "Cruzadinha"]) {
+    const queens = screen.getByRole("group", { name: "Rainhas" });
+    expect(
+      within(queens)
+        .getAllByRole("switch")
+        .map((s) => s.getAttribute("aria-checked")),
+    ).toEqual(["false", "true", "true", "false"]);
+    for (const label of [
+      copy.flags.showErrors.label,
+      copy.flags.highlightRegion.label,
+      copy.flags.fadeQueenLines.label,
+      copy.flags.autoCross.label,
+    ]) {
+      expect(
+        within(queens).getByRole("switch", { name: label }),
+      ).toBeInTheDocument();
+    }
+    for (const name of ["Binairo", "Nonogram", "Cruzadinha"]) {
       const group = screen.getByRole("group", { name });
       expect(within(group).getAllByRole("switch")).toHaveLength(1);
       expect(

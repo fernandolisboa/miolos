@@ -1,5 +1,5 @@
 import type { QueensSize } from "@miolos/core";
-import { memo, type MouseEvent as ReactMouseEvent } from "react";
+import { memo, useMemo, type MouseEvent as ReactMouseEvent } from "react";
 
 import { messages } from "../i18n";
 import type { Press } from "../play/brush";
@@ -7,7 +7,9 @@ import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
+import { useSettings } from "../settings/settings";
 import styles from "./queens-board.module.css";
+import { fadedCells, NO_CELLS, reachedCells } from "./shading";
 import type { QueensCellValue, QueensMark } from "./state";
 
 const SIZE_CLASS = {
@@ -48,6 +50,19 @@ export const Board = memo(function Board({
   readonly onClear: () => void;
 }) {
   const wrong = useWrongCells("queens", solution, null, entries);
+  const { highlightRegion, fadeQueenLines } = useSettings().games.queens;
+  const puzzle = useMemo(() => ({ size, regions }), [size, regions]);
+  const reach = useMemo(
+    () =>
+      highlightRegion && spotlight.length === 0
+        ? reachedCells(puzzle, selected, entries)
+        : NO_CELLS,
+    [highlightRegion, spotlight, puzzle, selected, entries],
+  );
+  const faded = useMemo(
+    () => (fadeQueenLines ? fadedCells(puzzle, entries) : NO_CELLS),
+    [fadeQueenLines, puzzle, entries],
+  );
   const board = useBinaryBoard({
     size,
     selected,
@@ -77,6 +92,8 @@ export const Board = memo(function Board({
           wrong={wrong.has(index)}
           hinted={hintIndex === index}
           spotlit={spotlight.includes(index)}
+          reached={reach.has(index)}
+          faded={faded.has(index)}
           selected={selected === index}
           tabbable={board.tabbable === index}
           onCellFocus={onSelect}
@@ -98,6 +115,8 @@ const Cell = memo(function Cell({
   wrong,
   hinted,
   spotlit,
+  reached,
+  faded,
   selected,
   tabbable,
   onCellFocus,
@@ -112,6 +131,8 @@ const Cell = memo(function Cell({
   readonly wrong: boolean;
   readonly hinted: boolean;
   readonly spotlit: boolean;
+  readonly reached: boolean;
+  readonly faded: boolean;
   readonly selected: boolean;
   readonly tabbable: boolean;
   readonly onCellFocus: (index: number) => void;
@@ -136,6 +157,8 @@ const Cell = memo(function Cell({
         styles.cell,
         edgeClasses(index, size, regions),
         value === 0 ? styles.cellMarked : "",
+        reached ? styles.cellReach : "",
+        faded ? styles.cellFaded : "",
         hinted ? styles.cellHinted : "",
         spotlit ? spotlightStyles.spotlit : "",
         conflict ? styles.cellConflict : "",

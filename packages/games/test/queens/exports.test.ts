@@ -14,6 +14,8 @@ describe("@miolos/games exports map", () => {
       "gradeQueens",
       "isValidQueensSolution",
       "nextQueensStep",
+      "queensAttackedCells",
+      "queensLineCells",
       "solveQueens",
       "validateQueens",
     ]);

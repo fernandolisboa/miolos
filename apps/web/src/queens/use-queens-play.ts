@@ -41,5 +41,9 @@ function buildRecord(
     size: state.size,
     entries: [...state.entries],
     grid: closed ? [...queensGrid(state.entries)] : undefined,
+    autoCrossed: [...state.autoCrossed].map(([cell, by]) => ({
+      cell,
+      by: [...by],
+    })),
   };
 }

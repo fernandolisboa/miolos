@@ -14,7 +14,12 @@ export {
   type QueensUnit,
   type QueensValidationResult,
 } from "./types";
-export { findQueensViolations, isValidQueensSolution } from "./rules";
+export {
+  findQueensViolations,
+  isValidQueensSolution,
+  queensAttackedCells,
+  queensLineCells,
+} from "./rules";
 export { countQueensSolutions, solveQueens } from "./solve";
 export { gradeQueens } from "./grade";
 export { nextQueensStep } from "./step";
