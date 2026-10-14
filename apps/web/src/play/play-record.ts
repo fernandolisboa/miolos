@@ -142,7 +142,10 @@ export const queensPlayRecordSchema = sizedBinaryRecordSchema(
       .array(
         z.strictObject({
           cell: queensCellIndex,
-          by: z.array(queensCellIndex).min(1).max(queensMaxSide),
+          by: z
+            .array(queensCellIndex)
+            .min(1)
+            .max(queensMaxSide ** 2),
         }),
       )
       .max(queensMaxSide ** 2)

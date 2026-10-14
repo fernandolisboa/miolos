@@ -1,4 +1,4 @@
-import { attacks, checkGrid, geometryOf } from "./internal";
+import { attacks, checkCell, checkGrid, geometryOf } from "./internal";
 import type { QueensBoard, QueensGrid } from "./types";
 
 export function findQueensViolations(
@@ -26,6 +26,7 @@ export function queensLineCells(
   cell: number,
 ): readonly number[] {
   const { rows, cols, regions, regionOf, size } = geometryOf(board);
+  checkCell(size, cell);
   return [
     ...new Set([
       ...rows[Math.floor(cell / size)]!,
@@ -40,6 +41,7 @@ export function queensAttackedCells(
   cell: number,
 ): readonly number[] {
   const geometry = geometryOf(board);
+  checkCell(board.size, cell);
   return board.regions.flatMap((_region, other) =>
     attacks(geometry, cell, other) ? [other] : [],
   );

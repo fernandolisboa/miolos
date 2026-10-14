@@ -4,12 +4,13 @@ import {
   type DailyQueensResponse,
 } from "@miolos/core";
 import { generateQueens, queensAttackedCells } from "@miolos/games/queens";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { messages } from "../src/i18n";
 import {
   queensPlayRecordSchema,
+  readPlayRecord,
   type QueensPlayRecord,
 } from "../src/play/play-record";
 import spotlightStyles from "../src/play/spotlight.module.css";
@@ -95,6 +96,31 @@ const crossed = (state: QueensPlayState) =>
   state.entries.flatMap((entry, index) => (entry === 0 ? [index] : []));
 const sorted = (cells: Iterable<number>) => [...cells].sort((a, b) => a - b);
 
+function cell(index: number, daily = STRIPES): HTMLElement {
+  const found = screen
+    .getByRole("group", {
+      name: messages.games.queens.play.boardAria(daily.size),
+    })
+    .querySelector<HTMLElement>(`[data-cell-index="${String(index)}"]`);
+  if (found === null) {
+    throw new Error(`no cell ${String(index)}`);
+  }
+  return found;
+}
+function setQueens(
+  flags: Partial<ReturnType<typeof readSettings>["games"]["queens"]>,
+) {
+  const current = readSettings();
+  act(() => {
+    writeSettings({
+      ...current,
+      games: {
+        ...current.games,
+        queens: { ...current.games.queens, ...flags },
+      },
+    });
+  });
+}
 describe("Marcar ✕ automático crosses for a queen and takes back only its own (T-WEB-S610)", () => {
   it("crosses a queen's undecided attacked cells and, when it leaves, clears only those, never a player ✕", () => {
     const mine = at(0, 3);
@@ -175,6 +201,53 @@ describe("Marcar ✕ automático crosses for a queen and takes back only its own
     const solved = run(true, allButLast, queen(last as number));
     expect(solved.status).toBe("solved");
     expect(crossed(solved)).toEqual([]);
+  });
+
+  it("saves its claims with the board, however many queens claim a ✕, and takes them back after a reload", () => {
+    localStorage.clear();
+    setQueens({ autoCross: true });
+    const place = (index: number) => {
+      act(() => {
+        cell(index).focus();
+      });
+      fireEvent.keyDown(cell(index), { key: "1" });
+    };
+    const first = render(<QueensScreen daily={STRIPES} />);
+    for (let line = 0; line < SIDE - 1; line += 1) {
+      place(at(SIDE - 1, line));
+      place(at(line, SIDE - 1));
+    }
+    const saved = readPlayRecord("queens", DATE);
+    const corner =
+      saved?.game === "queens"
+        ? saved.autoCrossed?.find(
+            (claim) => claim.cell === at(SIDE - 1, SIDE - 1),
+          )
+        : undefined;
+    expect(corner?.by).toHaveLength(2 * (SIDE - 1));
+    first.unmount();
+
+    localStorage.clear();
+    setQueens({ autoCross: true });
+    const second = render(<QueensScreen daily={STRIPES} />);
+    place(at(0, 0));
+    second.unmount();
+    render(<QueensScreen daily={STRIPES} />);
+    expect(cell(at(0, 1))).toHaveClass(styles.cellMarked ?? "missing");
+    place(at(0, 0));
+    expect(cell(at(0, 1))).not.toHaveClass(styles.cellMarked ?? "missing");
+  });
+
+  it("keeps the record's old shape while no ✕ is automatic", () => {
+    localStorage.clear();
+    render(<QueensScreen daily={STRIPES} />);
+    act(() => {
+      cell(at(0, 0)).focus();
+    });
+    fireEvent.keyDown(cell(at(0, 0)), { key: "1" });
+    const saved = readPlayRecord("queens", DATE);
+    expect(saved?.game).toBe("queens");
+    expect(saved).not.toHaveProperty("autoCrossed");
   });
 
   it("saves which ✕ are automatic and restores only the ones still standing", () => {
@@ -289,35 +362,8 @@ describe("the highlight and the fade follow the rules and the switches (T-WEB-S6
     expect(faded.has(at(5, 4))).toBe(false);
   });
 
-  function cell(index: number, daily = STRIPES): HTMLElement {
-    const found = screen
-      .getByRole("group", {
-        name: messages.games.queens.play.boardAria(daily.size),
-      })
-      .querySelector<HTMLElement>(`[data-cell-index="${String(index)}"]`);
-    if (found === null) {
-      throw new Error(`no cell ${String(index)}`);
-    }
-    return found;
-  }
-
   const marked = (name: string | undefined) =>
     document.querySelectorAll(`.${name ?? "missing"}`).length;
-
-  function set(
-    flags: Partial<ReturnType<typeof readSettings>["games"]["queens"]>,
-  ) {
-    const current = readSettings();
-    act(() => {
-      writeSettings({
-        ...current,
-        games: {
-          ...current.games,
-          queens: { ...current.games.queens, ...flags },
-        },
-      });
-    });
-  }
 
   it("paints the reach and the fade on the board only while each switch is on", () => {
     render(<QueensScreen daily={STRIPES} />);
@@ -339,7 +385,7 @@ describe("the highlight and the fade follow the rules and the switches (T-WEB-S6
     expect(cell(at(0, 6))).toHaveClass(styles.cellReach ?? "missing");
     expect(cell(at(0, 0))).not.toHaveClass(styles.cellReach ?? "missing");
 
-    set({ highlightRegion: false, fadeQueenLines: false });
+    setQueens({ highlightRegion: false, fadeQueenLines: false });
     expect(marked(styles.cellReach)).toBe(0);
     expect(marked(styles.cellFaded)).toBe(0);
   });
@@ -361,7 +407,7 @@ describe("the highlight and the fade follow the rules and the switches (T-WEB-S6
   });
 
   it("crosses for the player on the board once Marcar ✕ automático is on", () => {
-    set({ autoCross: true });
+    setQueens({ autoCross: true });
     render(<QueensScreen daily={STRIPES} />);
     act(() => {
       cell(at(0, 0)).click();

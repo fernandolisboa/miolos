@@ -67,6 +67,13 @@ describe("queensLineCells and queensAttackedCells", () => {
     ]);
   });
 
+  it("refuses a cell off the board", () => {
+    for (const cell of [-1, 25, 1.5]) {
+      expect(() => queensLineCells(FIVE, cell)).toThrow(RangeError);
+      expect(() => queensAttackedCells(FIVE, cell)).toThrow(RangeError);
+    }
+  });
+
   it("matches the rules on any board and cell", () => {
     fc.assert(
       fc.property(
