@@ -203,7 +203,11 @@ describe("every board keeps a usable cell at the floor (T-WEB-S598)", () => {
         "gap",
       ),
     );
-    const cells = (floor - 2 * mobilePadding() - 2 * CARD_BORDER - 4 * gap) / 5;
+    const aspect = Number(
+      decl(bodyOf(GAME_SHEETS.crossword, ".pageCrossword"), "--board-aspect"),
+    );
+    const cells =
+      (floor * aspect - 2 * mobilePadding() - 2 * CARD_BORDER - 4 * gap) / 5;
 
     expect(floor).toBeLessThanOrEqual(boardFloor());
     expect(cells).toBeGreaterThanOrEqual(WCAG_TARGET_FLOOR);
@@ -310,6 +314,15 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
       ),
     ).toBeGreaterThanOrEqual(minimum);
 
+    const ajustesPlaceholder = bodyOf(
+      stylesheet("src/settings/settings-dialog.module.css"),
+      ".placeholder",
+    );
+    expect(decl(ajustesPlaceholder, "composes")).toBe(
+      'cancel from "../components/confirm-action.module.css"',
+    );
+    expect(decl(ajustesPlaceholder, "box-sizing")).toBe("border-box");
+
     const keyboard = bodyOf(GAME_SHEETS.termo, ".keyboard");
     const rows = /repeat\(\d+,\s*(\d+px)\)/.exec(
       decl(keyboard, "grid-template-rows") ?? "",
@@ -403,6 +416,7 @@ describe("free play's generating note sits on the well, outside the hidden card 
       (p) => p.textContent === messages.freePlay.generating,
     );
 
+    expect(note).toBeDefined();
     expect(note?.closest(`.${shared.boardWell ?? ""}`)).not.toBeNull();
     expect(note?.closest(`.${shared.gridCard ?? ""}`)).toBeNull();
     expect(note?.closest("[aria-hidden]")).toBeNull();

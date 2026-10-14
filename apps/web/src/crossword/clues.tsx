@@ -50,23 +50,19 @@ export function ClueRowSkeleton() {
   return (
     <div aria-hidden className={styles.clueRow}>
       <p className={styles.activeBar}>{copy.cluePrompt}</p>
-      <span className={`${styles.toggle} ${styles.placeholder}`}>
-        {copy.cluesHeading}
-      </span>
+      <span className={styles.toggle}>{copy.cluesHeading}</span>
     </div>
   );
 }
 
 export function ClueLists({
   id,
-  collapsed,
   clues,
   selected,
   direction,
   onSelect,
 }: {
   readonly id: string;
-  readonly collapsed: boolean;
   readonly clues: readonly CrosswordClue[];
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
@@ -76,12 +72,7 @@ export function ClueLists({
     selected === null ? undefined : activeEntry(clues, selected, direction);
 
   return (
-    <div
-      id={id}
-      className={
-        collapsed ? `${styles.lists} ${styles.listsCollapsed}` : styles.lists
-      }
-    >
+    <div id={id} className={styles.lists}>
       <h2 className={styles.heading}>{copy.cluesHeading}</h2>
       {(["across", "down"] as const).map((dir) => (
         <div key={dir} className={styles.group}>

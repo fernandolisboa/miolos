@@ -3,7 +3,8 @@
 }
 
 .placeholder {
-  composes: trigger;
+  composes: cancel from "../components/confirm-action.module.css";
+  box-sizing: border-box;
   display: inline-block;
   visibility: hidden;
 }

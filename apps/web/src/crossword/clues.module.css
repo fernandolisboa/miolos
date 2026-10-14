@@ -1,14 +1,15 @@
 .clueRow {
   display: flex;
   gap: var(--space-2);
-  width: min(100%, 552px);
-  margin-top: var(--space-4);
+  width: min(100%, var(--crossword-col));
 }
 
+/* Two lines always, so a clue that wraps never takes height from the board:
+   the longest clue the lexicon allows wraps to two at a 360px phone. */
 .activeBar {
   flex: 1 1 0;
   min-width: 0;
-  min-height: var(--touch-target-min);
+  min-height: calc(2 * 1.3em + 2 * var(--space-2) + 3px);
   box-sizing: border-box;
   margin: 0;
   padding: var(--space-2) var(--space-3);
@@ -19,6 +20,7 @@
   font-family: var(--font-ui);
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .toggle {
@@ -47,18 +49,12 @@
   outline-offset: 2px;
 }
 
-.placeholder {
-  cursor: default;
-  pointer-events: none;
-}
-
 .lists {
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-content: start;
   gap: var(--space-4);
-  width: min(100%, 552px);
-  margin-top: var(--space-4);
+  width: min(100%, var(--crossword-col));
 }
 
 .heading {
@@ -134,46 +130,18 @@
   }
 }
 
-@container crossword (max-width: 639.98px) {
-  .listsCollapsed {
-    display: none;
-  }
-}
-
 @media (max-width: 768px) {
-  .clueRow,
-  .lists {
-    width: min(100%, 350px);
-  }
-
-  .clueRow {
-    margin-top: var(--space-2);
-  }
-
   .lists {
     grid-template-columns: 1fr;
   }
 }
 
-/* The list is as tall as the well and the row beside it, never taller: a
-   zero height keeps it out of the row sizing, and it scrolls inside. */
-@container crossword (min-width: 640px) {
-  .clueRow {
-    grid-area: row;
-    width: auto;
-  }
-
+@container crossword (width >= 640px) {
   .toggle {
     display: none;
   }
 
   .lists {
-    grid-area: clues;
     grid-template-columns: 1fr;
-    width: auto;
-    height: 0;
-    min-height: 100%;
-    margin-top: 0;
-    overflow-y: auto;
   }
 }

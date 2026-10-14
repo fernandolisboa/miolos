@@ -67,50 +67,55 @@ export function CrosswordBoardView({
   };
 
   return (
-    <CrosswordLayout>
-      <BoardCard>
-        <Board
-          boardRef={boardRef}
-          solution={state.solution}
+    <CrosswordLayout
+      board={
+        <BoardCard>
+          <Board
+            boardRef={boardRef}
+            solution={state.solution}
+            clues={state.clues}
+            entries={state.entries}
+            selected={state.selected}
+            direction={state.direction}
+            hintIndex={state.hint.lastIndex}
+            onSelect={board.selectCell}
+            onToggleDirection={board.toggleDirection}
+            onMove={board.moveSelection}
+            onLetter={typeLetter}
+            onBackspace={backspace}
+          />
+        </BoardCard>
+      }
+      clueRow={
+        <ClueRow
           clues={state.clues}
-          entries={state.entries}
           selected={state.selected}
           direction={state.direction}
-          hintIndex={state.hint.lastIndex}
-          onSelect={board.selectCell}
-          onToggleDirection={board.toggleDirection}
-          onMove={board.moveSelection}
-          onLetter={typeLetter}
-          onBackspace={backspace}
+          listsId={listsId}
+          open={cluesOpen}
+          onToggle={() => {
+            setCluesOpen((open) => !open);
+          }}
         />
-      </BoardCard>
-
-      <ClueRow
-        clues={state.clues}
-        selected={state.selected}
-        direction={state.direction}
-        listsId={listsId}
-        open={cluesOpen}
-        onToggle={() => {
-          setCluesOpen((open) => !open);
-        }}
-      />
-
-      <ClueLists
-        id={listsId}
-        collapsed={!cluesOpen}
-        clues={state.clues}
-        selected={state.selected}
-        direction={state.direction}
-        onSelect={selectFromClue}
-      />
-
-      <Keyboard
-        onLetter={typeFromKey}
-        onErase={eraseFromKey}
-        activeKeyRef={activeKeyRef}
-      />
-    </CrosswordLayout>
+      }
+      lists={
+        <ClueLists
+          id={listsId}
+          clues={state.clues}
+          selected={state.selected}
+          direction={state.direction}
+          onSelect={selectFromClue}
+        />
+      }
+      listsOpen={cluesOpen}
+      keyboard={
+        <Keyboard
+          onLetter={typeFromKey}
+          onErase={eraseFromKey}
+          activeKeyRef={activeKeyRef}
+        />
+      }
+    />
   );
 }
 
@@ -120,20 +125,49 @@ export function CrosswordSkeletonBody({
   readonly overlay?: ReactNode;
 }) {
   return (
-    <CrosswordLayout>
-      <BoardCard placeholder overlay={overlay}>
-        <BoardSkeleton />
-      </BoardCard>
-      <ClueRowSkeleton />
-      <KeyboardSkeleton />
-    </CrosswordLayout>
+    <CrosswordLayout
+      board={
+        <BoardCard placeholder overlay={overlay}>
+          <BoardSkeleton />
+        </BoardCard>
+      }
+      clueRow={<ClueRowSkeleton />}
+      keyboard={<KeyboardSkeleton />}
+    />
   );
 }
 
-function CrosswordLayout({ children }: { readonly children: ReactNode }) {
+function CrosswordLayout({
+  board,
+  clueRow,
+  lists,
+  listsOpen = false,
+  keyboard,
+}: {
+  readonly board: ReactNode;
+  readonly clueRow: ReactNode;
+  readonly lists?: ReactNode;
+  readonly listsOpen?: boolean;
+  readonly keyboard: ReactNode;
+}) {
   return (
     <div className={styles.layout}>
-      <div className={styles.columns}>{children}</div>
+      <div className={styles.columns}>
+        <div className={styles.wellSlot}>{board}</div>
+        <div className={styles.rowSlot}>{clueRow}</div>
+        {lists === undefined ? null : (
+          <div
+            className={
+              listsOpen
+                ? styles.listsSlot
+                : `${styles.listsSlot} ${styles.listsFolded}`
+            }
+          >
+            {lists}
+          </div>
+        )}
+        <div className={styles.keysSlot}>{keyboard}</div>
+      </div>
     </div>
   );
 }

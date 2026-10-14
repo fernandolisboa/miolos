@@ -4,12 +4,11 @@
   --tape-rot: 2deg;
   --board-max: 420px;
   --board-min: 200px;
+  /* Under 1, so the rotated card stays inside a height-bound well. */
   --board-aspect: 0.98;
+  --crossword-col: 552px;
 }
 
-/* The clue row, the open clue list and the keyboard sit under the well, not in
-   it: they are outside --board-below, so the well takes what they leave.
-   --board-aspect under 1 keeps the rotated card inside a height-bound well. */
 .layout {
   container: crossword / inline-size;
   flex: 1 1 0;
@@ -22,7 +21,20 @@
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: var(--space-4);
+}
+
+.wellSlot {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rowSlot,
+.listsSlot,
+.keysSlot {
+  display: flex;
+  justify-content: center;
 }
 
 .grid {
@@ -123,7 +135,29 @@
   }
 }
 
-@container crossword (min-width: 640px) {
+@media (max-width: 768px) {
+  .pageCrossword {
+    --crossword-col: 350px;
+  }
+
+  .columns {
+    gap: var(--space-2);
+  }
+
+  .grid {
+    gap: 3px;
+  }
+}
+
+@container crossword (width < 640px) {
+  .listsFolded {
+    display: none;
+  }
+}
+
+/* The list's zero height keeps it out of the row sizing: it is as tall as the
+   well and the clue row beside it, and scrolls inside. */
+@container crossword (width >= 640px) {
   .columns {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -132,16 +166,25 @@
       "well clues"
       "row  clues"
       "keys keys";
-    column-gap: var(--space-6);
+    gap: var(--space-4) var(--space-6);
   }
 
-  .columns > :first-child {
+  .wellSlot {
     grid-area: well;
   }
-}
 
-@media (max-width: 768px) {
-  .grid {
-    gap: 3px;
+  .rowSlot {
+    grid-area: row;
+  }
+
+  .listsSlot {
+    grid-area: clues;
+    height: 0;
+    min-height: 100%;
+    overflow-y: auto;
+  }
+
+  .keysSlot {
+    grid-area: keys;
   }
 }
