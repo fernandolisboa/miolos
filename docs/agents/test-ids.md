@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S323` | `S322` | `T-API-16` |
-| `T-WEB` | `S624` | `S623` | `T-WEB-23` |
+| `T-WEB` | `S655` | `S654` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
 #324 (struck Nonogram clue numbers, ADR-0104) spent **`T-WEB-S613…S614`** in `apps/web/test/nonogram-placed-clues.test.tsx`.
@@ -50,6 +50,8 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 #323 (a double tap on a board cell fixes its digit) spent **`T-WEB-S606`** in `apps/web/test/sudoku-digit-lock.test.tsx`.
 
 #322 (Cruzadinha *Pular letras já preenchidas*) spent **`T-WEB-S607`** in `crossword-grid.test.ts` (`nextEmptyCell`), `crossword-state.test.ts` (the reducer) and `crossword-screen.test.tsx` (the device setting reaches the board).
+
+#328 (the Sudoku keypad tallies each digit) spent **`T-WEB-S650`** (`sudoku-engine.test.ts`: `placedCount` and `digitTally`) and **`T-WEB-S651`** (`sudoku-screen.test.tsx`: the key fades at nine, turns red above nine, and returns as copies leave), **`T-WEB-S652`** (`wrong-mark-contrast.test.ts`: the complete key is dimmer than an open key and above 3:1, the over and pressed keys clear 3:1, both themes), **`T-WEB-S653`** (`free-play-sudoku.test.tsx`: free play tallies too) and **`T-WEB-S654`** (`sudoku-digit-lock.test.tsx`: a complete key still locks and writes a tenth copy), jumping `S624…S649` so wave-2 siblings can claim the space below without a collision.
 
 #321 (keyboard-like keys) spent **`T-WEB-S620…S623`**, jumping `S606…S619` because three sibling wave-1 branches (#322, #323, #325) claimed `S606`/`S607` at the same time: `S620` (Termo's `apagar` after P and `enviar` after L on 22 columns, drawn as glyphs), `S621` (the Termo keyboard skeleton equals the live one), `S622` (the Cruzadinha keyboard: `apagar` after P, skeleton equals live, in the board's column), `S623` (Sudoku's `apagar` is the ⌫ glyph, skeleton equals live). `T-WEB-S88`, `S94` and `S102` were rewritten in place.
 

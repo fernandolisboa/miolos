@@ -7,6 +7,7 @@ import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
+import { mergedGrid } from "./engine";
 import { sudokuHintExplanation } from "./hint";
 import { Keypad, KeypadSkeleton } from "./keypad";
 import styles from "./sudoku-board.module.css";
@@ -52,7 +53,14 @@ export function PlayView({
         },
       }}
     >
-      <BoardCard below={<Keypad lock={play.lock} />}>
+      <BoardCard
+        below={
+          <Keypad
+            lock={play.lock}
+            grid={mergedGrid(state.givens, state.entries)}
+          />
+        }
+      >
         <Board
           givens={state.givens}
           solution={play.solution}

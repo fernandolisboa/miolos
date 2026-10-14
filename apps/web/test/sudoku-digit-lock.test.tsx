@@ -727,3 +727,38 @@ describe("a double tap on a board cell fixes the digit it shows (T-WEB-S606)", (
     expect(pressed(GIVEN_DIGIT)).toBe("true");
   });
 });
+
+describe("a placed-out digit still locks and still writes (T-WEB-S654)", () => {
+  const DIGIT = ([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).reduce((best, digit) =>
+    PUZZLE.givens.filter((given) => given === digit).length >
+    PUZZLE.givens.filter((given) => given === best).length
+      ? digit
+      : best,
+  );
+  const MISSING = EMPTIES.filter((index) => SOLUTION[index] === DIGIT);
+  const ELSEWHERE = EMPTIES.find((index) => SOLUTION[index] !== DIGIT) ?? 0;
+
+  it("locks the faded key and writes a tenth copy with it", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    for (const index of MISSING) {
+      select(index);
+      type(DIGIT);
+    }
+    select(GIVEN);
+    const complete = () =>
+      screen.getByLabelText(keypad.digitCompleteAria(DIGIT));
+
+    pointer(complete());
+    wait(50);
+    pointer(complete());
+    wait(1000);
+    expect(complete()).toHaveAttribute("aria-pressed", "true");
+
+    pointer(cell(ELSEWHERE));
+
+    expect(cell(ELSEWHERE)).toHaveTextContent(String(DIGIT));
+    expect(
+      screen.getByLabelText(keypad.digitOverAria(DIGIT, 10)),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+});

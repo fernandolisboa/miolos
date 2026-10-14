@@ -178,3 +178,38 @@ describe("free-play Sudoku zero-fetch solve, no timer (T-WEB-S119)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("free play's keypad tallies the board too (T-WEB-S653)", () => {
+  it("fades the key of a digit placed nine times", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const { deps } = stableDeps({ seeds: [SEED, SEED] });
+    const { container } = render(<SudokuFreeScreen deps={deps} />);
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: messages.freePlay.level.aria("Leve"),
+      }),
+    );
+    const keypad = messages.games.sudoku.play.keypad;
+    const digit = LEVE_PUZZLE.solution[LEVE_PUZZLE.givens.indexOf(0)] ?? 1;
+
+    for (const [index, given] of LEVE_PUZZLE.givens.entries()) {
+      const cell = container.querySelector<HTMLElement>(
+        `[data-cell-index="${index}"]`,
+      );
+      if (given !== 0 || LEVE_PUZZLE.solution[index] !== digit || !cell) {
+        continue;
+      }
+      fireEvent.click(cell);
+      fireEvent.keyDown(
+        screen.getByRole("group", {
+          name: messages.games.sudoku.play.boardAria,
+        }),
+        { key: String(digit) },
+      );
+    }
+
+    expect(
+      screen.getByRole("button", { name: keypad.digitCompleteAria(digit) }),
+    ).toBeInTheDocument();
+  });
+});

@@ -9,7 +9,7 @@ import { countFilled } from "../play/progress";
 import { hasDecidedCell } from "../play/reset-board";
 import { useReset } from "../play/use-reset";
 import { Board, BoardSkeleton } from "../sudoku/board";
-import { playableGivens } from "../sudoku/engine";
+import { mergedGrid, playableGivens } from "../sudoku/engine";
 import { sudokuHintExplanation } from "../sudoku/hint";
 import { Keypad, KeypadSkeleton } from "../sudoku/keypad";
 import {
@@ -152,7 +152,11 @@ function SudokuFreeBoard({
         },
       }}
     >
-      <BoardCard below={<Keypad lock={lock} />}>
+      <BoardCard
+        below={
+          <Keypad lock={lock} grid={mergedGrid(state.givens, state.entries)} />
+        }
+      >
         <Board
           givens={state.givens}
           solution={puzzle.solution}
