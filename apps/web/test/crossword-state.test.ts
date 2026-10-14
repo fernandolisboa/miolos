@@ -180,6 +180,19 @@ describe("typing with Pular letras já preenchidas (T-WEB-S606)", () => {
     expect(state.selected).toBe(2);
   });
 
+  it("overwrites a filled cell it is typed on, then skips forward", () => {
+    const state = play(
+      fresh(),
+      { type: "select", index: 0 },
+      { type: "type-letter", letter: "x", skipFilled: false },
+      { type: "type-letter", letter: "a", skipFilled: false },
+      { type: "select", index: 0 },
+      { type: "type-letter", letter: "c", skipFilled: true },
+    );
+    expect(state.entries[0]).toBe("c");
+    expect(state.selected).toBe(2);
+  });
+
   it("lands on the filled cell when the setting is off", () => {
     const state = play(
       fresh(),

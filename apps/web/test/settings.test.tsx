@@ -72,6 +72,15 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
     expect(settings.games.queens).toEqual({ showErrors: true });
     expect(settings).not.toHaveProperty("extra");
 
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({ games: { crossword: { showErrors: true } } }),
+    );
+    expect(readSettings().games.crossword).toEqual({
+      showErrors: true,
+      skipFilled: true,
+    });
+
     window.localStorage.setItem(KEY, JSON.stringify({ games: "x" }));
     expect(readSettings().games.sudoku.highlightSelection).toBe(true);
     window.localStorage.setItem(KEY, "5");
