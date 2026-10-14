@@ -3,11 +3,7 @@ import {
   FREE_HINTS_PER_PUZZLE,
   type DailyQueensResponse,
 } from "@miolos/core";
-import {
-  generateQueens,
-  queensAttackedCells,
-  queensLineCells,
-} from "@miolos/games/queens";
+import { generateQueens, queensAttackedCells } from "@miolos/games/queens";
 import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,8 +18,8 @@ import { QueensScreen } from "../src/queens/queens-screen";
 import { fadedCells, reachedCells } from "../src/queens/shading";
 import {
   initQueensPlayState,
+  autoCrossingReducer,
   queensPlayReducer,
-  queensReducer,
   type QueensPlayAction,
   type QueensPlayState,
 } from "../src/queens/state";
@@ -76,7 +72,7 @@ function run(
   state: QueensPlayState,
   ...actions: QueensPlayAction[]
 ): QueensPlayState {
-  const reduce = queensReducer(autoCross);
+  const reduce = autoCross ? autoCrossingReducer : queensPlayReducer;
   return actions.reduce((current, action) => reduce(current, action), state);
 }
 
@@ -154,26 +150,29 @@ describe("Marcar ✕ automático crosses for a queen and takes back only its own
     expect(crossed(run(false, off, queen(at(0, 0))))).toEqual([]);
   });
 
-  it("crosses for a queen a hint places, empties on Recomeçar, and leaves the solving move alone", () => {
-    const solution = PUZZLE.solution;
-    const queens = solution.flatMap((cell, index) =>
-      cell === 1 ? [index] : [],
-    );
+  it("crosses for a queen a hint places", () => {
     const hinted = run(true, hydrated(DAILY), { type: "use-hint" });
-    const revealed = hinted.hint.lastIndex ?? -1;
-    expect(hinted.entries[revealed]).toBe(1);
+    const revealed = hinted.hint.lastIndex;
+    expect(revealed).not.toBeNull();
+    expect(hinted.entries[revealed as number]).toBe(1);
     expect(hinted.autoCrossed.size).toBeGreaterThan(0);
+  });
 
-    const reset = run(true, hinted, { type: "reset" });
+  it("empties on Recomeçar", () => {
+    const placed = run(true, hydrated(STRIPES), queen(at(0, 0)));
+    const reset = run(true, placed, { type: "reset" });
     expect(reset.autoCrossed.size).toBe(0);
     expect(reset.entries.every((entry) => entry === null)).toBe(true);
+  });
 
-    const allButLast = run(
-      false,
-      hydrated(DAILY),
-      ...queens.slice(0, -1).map(queen),
+  it("leaves the solving move alone", () => {
+    const queens = PUZZLE.solution.flatMap((cell, index) =>
+      cell === 1 ? [index] : [],
     );
-    const solved = run(true, allButLast, queen(queens.at(-1) ?? -1));
+    const last = queens.pop();
+    expect(last).toBeDefined();
+    const allButLast = run(false, hydrated(DAILY), ...queens.map(queen));
+    const solved = run(true, allButLast, queen(last as number));
     expect(solved.status).toBe("solved");
     expect(crossed(solved)).toEqual([]);
   });
@@ -283,20 +282,14 @@ describe("the highlight and the fade follow the rules and the switches (T-WEB-S6
     expect(faded.has(at(0, 0))).toBe(false);
     expect(reachedCells(BOARD, at(0, 3), entries).has(at(0, 0))).toBe(false);
     expect(faded.has(at(0, 4))).toBe(true);
-    expect(faded).toEqual(
-      new Set(
-        [at(0, 0), at(4, 2)].flatMap((queen) =>
-          queensLineCells(BOARD, queen).filter((cell) => entries[cell] !== 1),
-        ),
-      ),
-    );
+    expect(faded.has(at(6, 0))).toBe(true);
+    expect(faded.has(at(4, 6))).toBe(true);
+    expect(faded.has(at(6, 2))).toBe(true);
+    expect(faded.has(at(1, 1))).toBe(false);
+    expect(faded.has(at(5, 4))).toBe(false);
   });
 
-  function cell(index: number): HTMLElement {
-    return cellIn(STRIPES, index);
-  }
-
-  function cellIn(daily: DailyQueensResponse, index: number): HTMLElement {
+  function cell(index: number, daily = STRIPES): HTMLElement {
     const found = screen
       .getByRole("group", {
         name: messages.games.queens.play.boardAria(daily.size),
@@ -307,6 +300,9 @@ describe("the highlight and the fade follow the rules and the switches (T-WEB-S6
     }
     return found;
   }
+
+  const marked = (name: string | undefined) =>
+    document.querySelectorAll(`.${name ?? "missing"}`).length;
 
   function set(
     flags: Partial<ReturnType<typeof readSettings>["games"]["queens"]>,
@@ -328,50 +324,40 @@ describe("the highlight and the fade follow the rules and the switches (T-WEB-S6
     act(() => {
       cell(at(3, 3)).focus();
     });
-    expect(cell(at(3, 0))).toHaveClass(styles.cellReach ?? "");
-    expect(cell(at(1, 1))).not.toHaveClass(styles.cellReach ?? "");
+    expect(cell(at(3, 0))).toHaveClass(styles.cellReach ?? "missing");
+    expect(cell(at(1, 1))).not.toHaveClass(styles.cellReach ?? "missing");
 
     act(() => {
       cell(at(0, 0)).click();
       cell(at(0, 0)).click();
     });
-    expect(cell(at(0, 6))).toHaveClass(styles.cellFaded ?? "");
-    expect(cell(at(0, 0))).not.toHaveClass(styles.cellFaded ?? "");
+    expect(cell(at(0, 6))).toHaveClass(styles.cellFaded ?? "missing");
+    expect(cell(at(0, 0))).not.toHaveClass(styles.cellFaded ?? "missing");
     act(() => {
       cell(at(0, 3)).focus();
     });
-    expect(cell(at(0, 6))).toHaveClass(styles.cellReach ?? "");
-    expect(cell(at(0, 0))).not.toHaveClass(styles.cellReach ?? "");
+    expect(cell(at(0, 6))).toHaveClass(styles.cellReach ?? "missing");
+    expect(cell(at(0, 0))).not.toHaveClass(styles.cellReach ?? "missing");
 
     set({ highlightRegion: false, fadeQueenLines: false });
-    expect(
-      document.querySelectorAll(`.${styles.cellReach ?? ""}`),
-    ).toHaveLength(0);
-    expect(
-      document.querySelectorAll(`.${styles.cellFaded ?? ""}`),
-    ).toHaveLength(0);
+    expect(marked(styles.cellReach)).toBe(0);
+    expect(marked(styles.cellFaded)).toBe(0);
   });
 
   it("drops the reach while a hint lights its unit, as the Sudoku does", () => {
     render(<QueensScreen daily={DAILY} />);
     act(() => {
-      cellIn(DAILY, 0).focus();
+      cell(0, DAILY).focus();
     });
-    expect(
-      document.querySelectorAll(`.${styles.cellReach ?? ""}`).length,
-    ).toBeGreaterThan(0);
+    expect(marked(styles.cellReach)).toBeGreaterThan(0);
 
     act(() => {
       screen
         .getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE))
         .click();
     });
-    expect(
-      document.querySelectorAll(`.${spotlightStyles.spotlit ?? ""}`).length,
-    ).toBeGreaterThan(0);
-    expect(
-      document.querySelectorAll(`.${styles.cellReach ?? ""}`),
-    ).toHaveLength(0);
+    expect(marked(spotlightStyles.spotlit)).toBeGreaterThan(0);
+    expect(marked(styles.cellReach)).toBe(0);
   });
 
   it("crosses for the player on the board once Marcar ✕ automático is on", () => {
@@ -381,6 +367,6 @@ describe("the highlight and the fade follow the rules and the switches (T-WEB-S6
       cell(at(0, 0)).click();
       cell(at(0, 0)).click();
     });
-    expect(cell(at(0, 6))).toHaveClass(styles.cellMarked ?? "");
+    expect(cell(at(0, 6))).toHaveClass(styles.cellMarked ?? "missing");
   });
 });

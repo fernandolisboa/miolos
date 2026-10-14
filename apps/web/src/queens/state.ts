@@ -81,12 +81,9 @@ const QUEENS_RULES: BinaryGridRules<QueensPlayState, QueensHintReason> = {
   },
 };
 
-type QueensReducer = (
-  state: QueensPlayState,
-  action: QueensPlayAction,
-) => QueensPlayState;
-
-function reducerFor(autoCross: boolean): QueensReducer {
+function reducerFor(
+  autoCross: boolean,
+): (state: QueensPlayState, action: QueensPlayAction) => QueensPlayState {
   return (state, action) => {
     const next = played(state, action);
     if (action.type === "restore") {
@@ -98,13 +95,9 @@ function reducerFor(autoCross: boolean): QueensReducer {
   };
 }
 
-const AUTO_CROSSING = reducerFor(true);
-
 export const queensPlayReducer = reducerFor(false);
 
-export function queensReducer(autoCross: boolean): QueensReducer {
-  return autoCross ? AUTO_CROSSING : queensPlayReducer;
-}
+export const autoCrossingReducer = reducerFor(true);
 
 function played(
   state: QueensPlayState,
@@ -139,38 +132,59 @@ function withAutoCrosses(
   autoCross: boolean,
 ): QueensPlayState {
   const entries = [...next.entries];
+  const owners = released(previous.autoCrossed, entries);
+  if (autoCross && next.status === "playing") {
+    const placed = entries.flatMap((entry, at) =>
+      entry === 1 && previous.entries[at] !== 1 ? [at] : [],
+    );
+    claim(next, placed, entries, owners);
+  }
+  return { ...QUEENS_RULES.derive(next, entries), autoCrossed: owners };
+}
+
+function released(
+  claims: AutoCrosses,
+  entries: QueensCellValue[],
+): Map<number, Set<number>> {
   const owners = new Map<number, Set<number>>();
-  for (const [cell, queens] of previous.autoCrossed) {
+  for (const [cell, queens] of claims) {
     if (entries[cell] !== 0) {
       continue;
     }
-    const kept = new Set([...queens].filter((queen) => entries[queen] === 1));
+    const kept = standing(queens, entries);
     if (kept.size > 0) {
       owners.set(cell, kept);
     } else {
       entries[cell] = null;
     }
   }
+  return owners;
+}
 
-  if (autoCross && next.status === "playing") {
-    const board = { size: next.size, regions: next.regions };
-    const placed = entries.flatMap((entry, at) =>
-      entry === 1 && previous.entries[at] !== 1 ? [at] : [],
-    );
-    for (const queen of placed) {
-      for (const cell of queensAttackedCells(board, queen)) {
-        const claimed = owners.get(cell);
-        if (claimed !== undefined) {
-          claimed.add(queen);
-        } else if (entries[cell] === null) {
-          entries[cell] = 0;
-          owners.set(cell, new Set([queen]));
-        }
+function claim(
+  board: QueensBoard,
+  queens: readonly number[],
+  entries: QueensCellValue[],
+  owners: Map<number, Set<number>>,
+): void {
+  for (const queen of queens) {
+    for (const cell of queensAttackedCells(board, queen)) {
+      const claimed = owners.get(cell);
+      if (claimed !== undefined) {
+        claimed.add(queen);
+      } else if (entries[cell] === null) {
+        entries[cell] = 0;
+        owners.set(cell, new Set([queen]));
       }
     }
   }
+}
 
-  return { ...QUEENS_RULES.derive(next, entries), autoCrossed: owners };
+function standing(
+  queens: Iterable<number>,
+  entries: readonly QueensCellValue[],
+): Set<number> {
+  return new Set([...queens].filter((queen) => entries[queen] === 1));
 }
 
 function restoredAutoCrosses(
@@ -180,9 +194,9 @@ function restoredAutoCrosses(
   const saved = record?.game === "queens" ? record.autoCrossed : undefined;
   const owners = new Map<number, ReadonlySet<number>>();
   for (const { cell, by } of saved ?? []) {
-    const kept = by.filter((queen) => state.entries[queen] === 1);
-    if (state.entries[cell] === 0 && kept.length > 0) {
-      owners.set(cell, new Set(kept));
+    const kept = standing(by, state.entries);
+    if (state.entries[cell] === 0 && kept.size > 0) {
+      owners.set(cell, kept);
     }
   }
   return owners;

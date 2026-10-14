@@ -56,7 +56,7 @@ describe("isValidQueensSolution", () => {
 
 describe("queensLineCells and queensAttackedCells", () => {
   it("names the row, column and region of a cell, the cell included", () => {
-    expect(queensLineCells(FIVE, 13)).toEqual([
+    expect([...queensLineCells(FIVE, 13)].sort((a, b) => a - b)).toEqual([
       3, 8, 10, 11, 12, 13, 14, 18, 19, 23, 24,
     ]);
   });
@@ -87,7 +87,9 @@ describe("queensLineCells and queensAttackedCells", () => {
             Math.abs(column(other) - column(cell)) <= 1;
           const all = map.regions.map((_region, at) => at);
 
-          expect(queensLineCells(map, cell)).toEqual(all.filter(sharesLine));
+          expect(new Set(queensLineCells(map, cell))).toEqual(
+            new Set(all.filter(sharesLine)),
+          );
           expect(queensAttackedCells(map, cell)).toEqual(
             all.filter(
               (other) =>

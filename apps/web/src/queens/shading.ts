@@ -2,7 +2,12 @@ import { queensLineCells, type QueensBoard } from "@miolos/games/queens";
 
 import type { QueensCellValue } from "./state";
 
-const NO_CELLS: ReadonlySet<number> = new Set();
+export const NO_CELLS: ReadonlySet<number> = new Set();
+
+const withoutQueens = (
+  cells: readonly number[],
+  entries: readonly QueensCellValue[],
+) => cells.filter((cell) => entries[cell] !== 1);
 
 export function reachedCells(
   board: QueensBoard,
@@ -11,24 +16,16 @@ export function reachedCells(
 ): ReadonlySet<number> {
   return selected === null
     ? NO_CELLS
-    : new Set(
-        queensLineCells(board, selected).filter((cell) => entries[cell] !== 1),
-      );
+    : new Set(withoutQueens(queensLineCells(board, selected), entries));
 }
 
 export function fadedCells(
   board: QueensBoard,
   entries: readonly QueensCellValue[],
 ): ReadonlySet<number> {
-  const faded = new Set<number>();
-  for (const [queen, entry] of entries.entries()) {
-    if (entry === 1) {
-      for (const cell of reachedCells(board, queen, entries)) {
-        faded.add(cell);
-      }
-    }
-  }
-  return faded;
+  return new Set(
+    entries.flatMap((entry, queen) =>
+      entry === 1 ? withoutQueens(queensLineCells(board, queen), entries) : [],
+    ),
+  );
 }
-
-export { NO_CELLS };

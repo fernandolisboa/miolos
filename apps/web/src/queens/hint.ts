@@ -9,6 +9,7 @@ import {
   nextBinaryHint,
   nextLogicalHint,
   toRowColumn,
+  wrongCells,
   type Hint,
   type HintReason,
   type LogicalHint,
@@ -38,10 +39,10 @@ function wrongQueen(
   solution: readonly QueensMark[],
   entries: readonly QueensCellValue[],
 ): Hint<QueensMark> | null {
-  const index = entries.findIndex(
-    (entry, at) => entry === 1 && solution[at] === 0,
+  const index = [...wrongCells(solution, null, entries)].find(
+    (cell) => entries[cell] === 1,
   );
-  return index < 0 ? null : { index, value: 0, kind: "correction" };
+  return index === undefined ? null : { index, value: 0, kind: "correction" };
 }
 
 export function queensHintExplanation(

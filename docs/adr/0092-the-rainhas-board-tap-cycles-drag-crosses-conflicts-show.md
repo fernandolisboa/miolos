@@ -3,7 +3,8 @@
 **Status:** Accepted — 2026-10-11 (issue #285)
 **Depends on:** [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0091](./0091-rainhas-joins-the-catalogue-as-the-sixth-daily.md)
 **Amends:** ADR-0030 decision 3, for Rainhas only: `Enter`/`Space` activation cycles the cell instead of only selecting it.
-**Amended by:** [ADR-0094](./0094-the-secondary-mouse-button-writes-the-opposite-mark.md) (#299) — decision 1 for the secondary button: a right click places or removes a queen; tap and left click keep the cycle. [ADR-0104](./0104-rainhas-fades-what-holds-a-queen-and-auto-crosses-on-request.md) (#326) — decision 4: auto-X exists as an opt-in setting, off by default.
+**Amended by:** [ADR-0094](./0094-the-secondary-mouse-button-writes-the-opposite-mark.md) (#299) — decision 1 for the secondary button: a right click places or removes a queen; tap and left click keep the cycle.
+**Superseded in part by:** [ADR-0104](./0104-rainhas-fades-what-holds-a-queen-and-auto-crosses-on-request.md) (#326) — decision 4 and the Rejected bullet *"Auto-X around each queen"*: the automatic X exists as an opt-in setting, off by default; the hint now corrects a wrong queen first.
 
 ## Context
 

@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new from #303. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new from #326. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -35,6 +35,6 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 ## Next
 
-**Next:** the rest of the quality-of-life waves (#321–#333, wave 4's Termo free play waits on Fernando's call); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
+**Next:** the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.

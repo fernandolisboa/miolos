@@ -26,12 +26,13 @@ export function queensLineCells(
   cell: number,
 ): readonly number[] {
   const { rows, cols, regions, regionOf, size } = geometryOf(board);
-  const lines = new Set([
-    ...rows[Math.floor(cell / size)]!,
-    ...cols[cell % size]!,
-    ...regions[regionOf[cell]!]!,
-  ]);
-  return [...lines].sort((a, b) => a - b);
+  return [
+    ...new Set([
+      ...rows[Math.floor(cell / size)]!,
+      ...cols[cell % size]!,
+      ...regions[regionOf[cell]!]!,
+    ]),
+  ];
 }
 
 export function queensAttackedCells(
