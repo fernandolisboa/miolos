@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch } from "react";
 
 import type { Press } from "../play/brush";
+import { useSettings } from "../settings/settings";
 import {
   useStrokeControls,
   type StrokeControls,
@@ -16,12 +17,13 @@ export function useBinairoControls(
   dispatch: Dispatch<PlayAction>,
 ): BinairoControls {
   const strokes = useStrokeControls(dispatch);
+  const first = useSettings().games.binairo.firstValue;
 
   const tapCell = useCallback(
     (index: number, press: Press) => {
-      dispatch({ type: "tap", index, press });
+      dispatch({ type: "tap", index, press, first });
     },
-    [dispatch],
+    [dispatch, first],
   );
 
   const toggleMode = useCallback(

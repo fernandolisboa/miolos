@@ -148,12 +148,17 @@ function binairoCase(): BoardCase<PlayState> {
     { type: "resume", now: 1000 },
     { type: "tick", now: 5000 },
     { type: "set-mode", value: 1 },
-    { type: "tap", index: first, press: "tap" },
-    { type: "tap", index: second, press: "tap" },
+    { type: "tap", index: first, press: "tap", first: 1 },
+    { type: "tap", index: second, press: "tap", first: 1 },
     { type: "use-hint", solution: BINAIRO_SOLUTION },
     ...BINAIRO_PLAYABLE.filter(
       (index) => index < BINAIRO_SIDE && index !== first && index !== second,
-    ).map((index) => ({ type: "tap" as const, index, press: "tap" as const })),
+    ).map((index) => ({
+      type: "tap" as const,
+      index,
+      press: "tap" as const,
+      first: 1 as const,
+    })),
   ]);
   return {
     name: "binairo",

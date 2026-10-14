@@ -1,4 +1,5 @@
 import { messages } from "../i18n";
+import { useSettings } from "../settings/settings";
 import styles from "./binairo-screen.module.css";
 import type { PaintMode } from "./state";
 
@@ -8,6 +9,11 @@ const DIGITS = [
   { value: 0, label: copy.zero, aria: copy.zeroAria },
   { value: 1, label: copy.one, aria: copy.oneAria },
 ] as const;
+
+function Affordance() {
+  const first = useSettings().games.binairo.firstValue;
+  return <span className={styles.affordance}>{copy.affordance(first)}</span>;
+}
 
 export function Controls({
   paint,
@@ -33,7 +39,7 @@ export function Controls({
           </button>
         );
       })}
-      <span className={styles.affordance}>{copy.affordance}</span>
+      <Affordance />
     </div>
   );
 }
@@ -49,7 +55,7 @@ export function ControlsSkeleton() {
           {label}
         </div>
       ))}
-      <span className={styles.affordance}>{copy.affordance}</span>
+      <Affordance />
     </div>
   );
 }
