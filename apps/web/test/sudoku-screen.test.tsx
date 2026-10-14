@@ -993,7 +993,7 @@ describe("the board and keypad arithmetic (T-WEB-S34)", () => {
     const gap = token("--space-2");
 
     expect(decl(keypad, "gap")).toBe("var(--space-2)");
-    expect(decl(keypad, "width")).toBe("100cqi");
+    expect(decl(keypad, "width")).toBe("var(--board-side)");
     expect(Number(rows?.[1]) * slots).toBe(10);
     expect(pixels(rows?.[2])).toBeGreaterThanOrEqual(minimum);
     expect((boardFloor() - (slots - 1) * gap) / slots).toBeGreaterThanOrEqual(

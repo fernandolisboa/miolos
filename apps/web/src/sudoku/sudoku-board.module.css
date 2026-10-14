@@ -399,14 +399,14 @@
     gap: 3px;
   }
 
-  /* Ten slots, `1–5` over `6–9 apagar`: keys are 49.6px wide at 320px, so the
-     keypad takes the well's full width (`100cqi`), not the board's, and a
-     height-limited board never shrinks a key under the 44px touch target. */
+  /* Ten slots, `1–5` over `6–9 apagar`, as wide as the board: the well's
+     min-height keeps --board-side at or above the 280px floor, where a key is
+     49.6px, so the 44px touch target holds even on a height-limited board. */
   .keypad {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-template-rows: repeat(2, 48px);
     gap: var(--space-2);
-    width: 100cqi;
+    width: var(--board-side);
     margin-top: var(--space-4);
   }
 
