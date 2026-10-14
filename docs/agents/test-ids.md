@@ -43,6 +43,8 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-WEB` | `S655` | `S654` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
+#325 (Binairo *Primeiro valor*, ADR-0094 and ADR-0102 amended) spent **`T-WEB-S608`** (the reducer: a tap cycles from the first value, left writes it and right the other, a digit brush ignores it) and **`T-WEB-S609`** (Ajustes' two radios, the saved value, and a mounted board's tap, clicks and affordance following it). `T-WEB-S492`, `S506`, `S580`, `T-WEB-7` and `S499a` were updated in place. Nothing is burned.
+
 #323 (a double tap on a board cell fixes its digit) spent **`T-WEB-S606`** in `apps/web/test/sudoku-digit-lock.test.tsx`.
 
 #322 (Cruzadinha *Pular letras já preenchidas*) spent **`T-WEB-S607`** in `crossword-grid.test.ts` (`nextEmptyCell`), `crossword-state.test.ts` (the reducer) and `crossword-screen.test.tsx` (the device setting reaches the board).

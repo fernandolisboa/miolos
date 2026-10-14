@@ -675,6 +675,10 @@ export const messages = {
           label: "Destacar linha, coluna e bloco",
           hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela.",
         },
+        firstValue: {
+          label: "Primeiro valor",
+          hint: "O primeiro toque e o botão esquerdo do mouse põem este número; o segundo toque e o botão direito põem o outro.",
+        },
         skipFilled: {
           label: "Pular letras já preenchidas",
           hint: "Ao digitar, a seleção pula as células com letra e vai para a próxima vazia, seguindo para a próxima pista quando a palavra se completa.",
@@ -1052,8 +1056,8 @@ export const messages = {
           one: "1",
           zeroAria: "pintar zeros",
           oneAria: "pintar uns",
-          affordance:
-            "No mouse, um botão põe 1 e o outro põe 0; clicar de novo apaga.",
+          affordance: (first: 0 | 1) =>
+            `No mouse, o botão esquerdo põe ${first} e o direito põe ${1 - first}; clicar de novo apaga.`,
         },
         cellAria,
         cellGivenAria: (row: number, column: number, value: 0 | 1) =>

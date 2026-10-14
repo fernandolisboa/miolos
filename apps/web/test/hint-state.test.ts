@@ -210,7 +210,7 @@ describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
     const index = BINAIRO.givens.findIndex((given) => given === null);
     const tapped = playReducer(
       { ...binairo, hint: LIT },
-      { type: "tap", index, press: "tap" },
+      { type: "tap", index, press: "tap", first: 1 },
     );
     expect(tapped.hint.spotlight).toEqual([]);
   });
@@ -232,7 +232,7 @@ describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
     const given = BINAIRO.givens.findIndex((cell) => cell !== null);
     const brushed = playReducer(binairo, { type: "set-mode", value: 1 });
     for (const [state, action] of [
-      [binairo, { type: "tap", index: given, press: "tap" }],
+      [binairo, { type: "tap", index: given, press: "tap", first: 1 }],
       [brushed, { type: "stroke-start", index: given, press: "tap" }],
     ] as const) {
       expect(playReducer(state, action).hint.spotlight).toEqual([]);
