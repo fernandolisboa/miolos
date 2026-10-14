@@ -222,7 +222,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("judged and future rows are output; only the active row takes input (T-WEB-S86, re-aimed by #327 / ADR-0104)", () => {
+describe("judged and future rows are output; only the active row takes input (T-WEB-S86, re-aimed by #327 / ADR-0108)", () => {
   it("is a labelled group of six labelled row groups, every tile outside the active row hidden", () => {
     const { play } = playFixture({
       guesses: [{ guess: VALID, tiles: TILES }],
@@ -1389,13 +1389,18 @@ describe("the active row is a roving-focus input row (T-WEB-S641)", () => {
     expect(document.activeElement).toBe(cell(2));
   });
 
-  it("moves with the arrows, Home and End, focused or not", () => {
+  it("moves with the arrows focused or not, and with Home and End inside the row", () => {
     render(<TermoScreen daily={DAILY} />);
 
-    fireEvent.keyDown(document.body, { key: "End" });
-    expect(caretCell()).toBe(cell(WORD_LENGTH - 1));
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    expect(caretCell()).toBe(cell(2));
     fireEvent.keyDown(document.body, { key: "ArrowLeft" });
-    expect(caretCell()).toBe(cell(WORD_LENGTH - 2));
+    expect(caretCell()).toBe(cell(1));
+    const end = createEvent.keyDown(document.body, { key: "End" });
+    fireEvent(document.body, end);
+    expect(end.defaultPrevented).toBe(false);
+    expect(caretCell()).toBe(cell(1));
 
     fireEvent.click(cell(1));
     const home = createEvent.keyDown(cell(1), { key: "Home" });

@@ -126,13 +126,9 @@
    geometrically. ADR-0035's "never a wrapper element" rule protects a single
    flat grid whose TRACKS compute the geometry, and does not transfer.
 
-   NO `touch-action` here, and the absence is deliberate. Only the five cells
-   of the current row are tap targets (ADR-0104), a cursor move rather than a
-   rapid input, and `manipulation` would cost DOUBLE-TAP-TO-ZOOM on a surface
-   whose glyphs are 24px on a phone: a real magnification affordance on the one
-   element of this screen a low-vision player wants to enlarge.
-   `touch-action: manipulation` lives on `.keyboard` below, where the tap
-   delay is actually paid. */
+   NO `touch-action` here: `manipulation` would cost double-tap-to-zoom on
+   glyphs that are 24px on a phone, the one element a low-vision player wants
+   to enlarge. A tap on a cell only moves the cursor, so no tap delay is paid. */
 .grid {
   display: flex;
   flex-direction: column;
@@ -193,12 +189,9 @@
   border-style: dashed;
 }
 
-/* The repo's shipped inset-outline idiom (sudoku-board.module.css,
-   nonogram-board.module.css) as a STATE CLASS: the caret shows whether or not
-   the row holds focus, and focus only ever sits on the caret cell (ADR-0104),
-   so the focus ring below draws the same mark. STATIC — a blinking caret is
-   exactly `pulsing-dot`'s and `blinking-cursor`'s shape. --ink on
-   --paper-desk is 15.0124:1. */
+/* A state class, so the caret shows whether or not the row holds focus; focus
+   only ever sits on the caret cell (ADR-0108), so the focus ring is the same
+   mark. */
 .tileCaret {
   outline: 2px solid var(--ink);
   outline-offset: -2px;

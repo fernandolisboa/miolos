@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { formatLongDate, messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import { BoardCard } from "../play/board-card";
+import { isShortcut } from "../play/grid-selection";
 import screen from "../play/screen.module.css";
 import { typedLetter } from "../play/typed-letter";
 import type { ArchivePlayChrome } from "../play/types";
@@ -18,6 +19,8 @@ const ACCENT = accentVars("termo");
 const BLANK_READOUT = " ";
 
 const ZWSP = "​";
+
+const PAGE_KEYS = new Set(["Home", "End"]);
 
 const INTERACTIVE_TARGET =
   'button, a[href], [role="button"], [tabindex], input, textarea, select, [contenteditable]';
@@ -45,7 +48,7 @@ export function PlayView({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) {
+      if (isShortcut(event)) {
         return;
       }
       if (
@@ -54,7 +57,10 @@ export function PlayView({
       ) {
         return;
       }
-      if (onKey(event.key)) {
+      if (PAGE_KEYS.has(event.key)) {
+        return;
+      }
+      if (onKey(event.key) && event.key === "Backspace") {
         event.preventDefault();
       }
     };

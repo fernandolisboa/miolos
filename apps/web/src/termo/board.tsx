@@ -135,6 +135,8 @@ function ActiveRow({
     }
   }, [cursor, refocusRef]);
 
+  // A submit unmounts this row and drops its focus on <body>; the next
+  // editable row (or this one, after a refusal) takes it back on mount.
   useLayoutEffect(() => {
     const element = rowRef.current;
     return () => {
@@ -210,14 +212,9 @@ function tileClassName(
 }
 
 function editableClassName(letter: string, caret: boolean): string {
-  return [
-    styles.tile,
-    styles.tileEditable,
-    letter === "" ? "" : styles.tileTyped,
-    caret ? styles.tileCaret : "",
-  ]
-    .filter((name) => name !== "" && name !== undefined)
-    .join(" ");
+  const typed = letter === "" ? "" : ` ${styles.tileTyped ?? ""}`;
+  const caretClass = caret ? ` ${styles.tileCaret ?? ""}` : "";
+  return `${styles.tile ?? ""} ${styles.tileEditable ?? ""}${typed}${caretClass}`;
 }
 
 function letterAt(
