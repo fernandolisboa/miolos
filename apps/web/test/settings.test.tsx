@@ -40,7 +40,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
         binairo: { showErrors: false, firstValue: 1 },
         nonogram: { showErrors: false },
         queens: { showErrors: false },
-        crossword: { showErrors: false },
+        crossword: { showErrors: false, skipFilled: true },
       },
     });
   });
@@ -98,6 +98,15 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
     expect(readSettings().games.binairo).toEqual({
       showErrors: true,
       firstValue: 1,
+    });
+
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({ games: { crossword: { showErrors: true } } }),
+    );
+    expect(readSettings().games.crossword).toEqual({
+      showErrors: true,
+      skipFilled: true,
     });
 
     window.localStorage.setItem(KEY, JSON.stringify({ games: "x" }));

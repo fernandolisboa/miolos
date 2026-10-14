@@ -679,6 +679,10 @@ export const messages = {
           label: "Primeiro valor",
           hint: "O primeiro toque e o botão esquerdo do mouse põem este número; o segundo toque e o botão direito põem o outro.",
         },
+        skipFilled: {
+          label: "Pular letras já preenchidas",
+          hint: "Ao digitar, a seleção pula as células com letra e vai para a próxima vazia, seguindo para a próxima pista quando a palavra se completa.",
+        },
       },
       dialog: {
         trigger: "Ajustes",

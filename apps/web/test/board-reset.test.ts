@@ -289,7 +289,7 @@ function crosswordCase(): BoardCase<CrosswordPlayState> {
     { type: "resume", now: 1000 },
     { type: "tick", now: 5000 },
     { type: "select-entry", index: 0, direction: "down" },
-    { type: "type-letter", letter: "x" },
+    { type: "type-letter", letter: "x", skipFilled: false },
     { type: "select", index: 2 },
     { type: "use-hint" },
   ]);
