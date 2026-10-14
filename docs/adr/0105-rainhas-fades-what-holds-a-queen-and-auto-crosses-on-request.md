@@ -1,4 +1,4 @@
-# ADR-0104 — Rainhas fades what holds a queen, and crosses for the player on request
+# ADR-0105 — Rainhas fades what holds a queen, and crosses for the player on request
 
 **Status:** Accepted — 2026-10-14 (issue #326)
 **Depends on:** [ADR-0090](./0090-rainhas-is-a-planted-grown-region-map-graded-by-a-deduction-ladder.md), [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md)

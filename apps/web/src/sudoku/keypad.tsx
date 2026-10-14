@@ -1,4 +1,5 @@
 import { messages } from "../i18n";
+import { KeyGlyph } from "../play/key-glyph";
 import type { SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
 import type { DigitLock } from "./use-digit-lock";
@@ -33,7 +34,7 @@ export function Keypad({ lock }: { readonly lock: DigitLock }) {
           lock.pressErase(event.detail > 0);
         }}
       >
-        {copy.erase}
+        <KeyGlyph name="backspace" />
       </button>
     </div>
   );
@@ -54,7 +55,7 @@ export function KeypadSkeleton() {
       ))}
       <span className={styles.affordance}>{copy.affordance}</span>
       <div className={`${styles.keypadErase} ${styles.placeholder}`}>
-        {copy.erase}
+        <KeyGlyph name="backspace" />
       </div>
     </div>
   );

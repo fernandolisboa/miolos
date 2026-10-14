@@ -52,7 +52,7 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
     expect(markup).toContain('data-play-state="generating"');
     expect(markup).toContain(messages.freePlay.generating);
 
-    expect(markup).toContain(messages.games.sudoku.play.keypad.erase);
+    expect(markup).toContain(messages.games.sudoku.play.keypad.affordance);
   });
 
   it("retries with a fresh seed on SudokuGenerationError, up to three", () => {
