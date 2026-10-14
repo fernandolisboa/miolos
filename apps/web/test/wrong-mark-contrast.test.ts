@@ -93,6 +93,13 @@ describe("the locked Sudoku key reads against the unlocked ones, in both themes 
 
 describe("the tallied Sudoku keys read in both themes (T-WEB-S652)", () => {
   const SHEET = stylesheet("src/sudoku/sudoku-board.module.css");
+  it("declares both tallies after the base key, so their colours win", () => {
+    const base = SHEET.indexOf(".keypadDigit {");
+    expect(base).toBeGreaterThan(-1);
+    expect(SHEET.indexOf(".keypadComplete {")).toBeGreaterThan(base);
+    expect(SHEET.indexOf(".keypadOver {")).toBeGreaterThan(base);
+  });
+
   const MIX =
     /^color-mix\(in srgb, var\((--[\w-]+)\) (\d+)%, var\((--[\w-]+)\)\)$/;
 
