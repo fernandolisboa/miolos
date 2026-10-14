@@ -39,7 +39,7 @@
 }
 
 .keyCommand {
-  font-size: var(--text-button);
+  font: var(--text-button);
   color: var(--ink-2);
 }
 

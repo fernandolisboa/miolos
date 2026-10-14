@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../src/i18n";
 import type { CrosswordPlayRecord } from "../src/play/play-record";
 import boardStyles from "../src/crossword/crossword-board.module.css";
+import clueStyles from "../src/crossword/clues.module.css";
 import { CrosswordScreen } from "../src/crossword/crossword-screen";
 import { bodyOf, decl, stylesheet } from "./css-source";
 
@@ -352,6 +353,13 @@ describe("the clue list folds behind a Pistas button on a narrow board (T-WEB-S6
     expect(screen.getByRole("status").textContent).toBe(copy.cluePrompt);
   });
 
+  it("drops the prompt once a cell is selected, even a block", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    tap(cellAt(3));
+
+    expect(screen.getByRole("status").textContent).toBe("\u00a0");
+  });
+
   it("starts folded, opens on the button, and folds again once a clue is chosen", () => {
     render(<CrosswordScreen daily={DAILY} />);
 
@@ -377,8 +385,11 @@ describe("the clue list folds behind a Pistas button on a narrow board (T-WEB-S6
     const narrow = bodyOf(board, "@container crossword (width < 640px)");
     const wide = bodyOf(board, "@container crossword (width >= 640px)");
 
+    expect(decl(bodyOf(board, ".layout"), "container")).toBe(
+      "crossword / inline-size",
+    );
     expect(decl(bodyOf(narrow, ".listsFolded"), "display")).toBe("none");
-    expect(board.split(".listsFolded").length - 1).toBe(1);
+    expect(board.replace(narrow, "")).not.toContain(".listsFolded");
     expect(decl(bodyOf(wide, ".toggle"), "display")).toBe("none");
   });
 });
@@ -407,9 +418,9 @@ describe("the clue bar keeps one height for every clue (T-WEB-S605)", () => {
       }),
     );
 
-    expect(screen.getByRole("status").textContent).toBe(
-      `${copy.clueLabel(2, "down")} · verbo`,
-    );
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe(`${copy.clueLabel(2, "down")} · verbo`);
+    expect(status.firstElementChild?.className).toBe(clueStyles.activeText);
   });
 });
 

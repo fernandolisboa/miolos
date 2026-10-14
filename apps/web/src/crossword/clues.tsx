@@ -23,9 +23,11 @@ export function ClueBar({
   return (
     <p role="status" className={styles.activeBar}>
       <span className={styles.activeText}>
-        {clue === undefined
+        {selected === null
           ? copy.cluePrompt
-          : `${copy.clueLabel(clue.number, clue.direction)} · ${clue.clue}`}
+          : clue === undefined
+            ? "\u00a0"
+            : `${copy.clueLabel(clue.number, clue.direction)} · ${clue.clue}`}
       </span>
     </p>
   );
