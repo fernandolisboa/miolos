@@ -1048,4 +1048,18 @@ describe("Primeiro valor in Ajustes turns the board's order around (T-WEB-S607)"
     press(container, FIRST_EMPTY, { button: 2, pointerType: "mouse" });
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
   });
+
+  it("names the brush's order while a digit brush is on", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+    const { affordance, zeroAria } = messages.games.binairo.play.controls;
+
+    fireEvent.click(screen.getByLabelText(zeroAria));
+    expect(screen.getByText(affordance(0))).toBeInTheDocument();
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "mouse" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
+
+    fireEvent.click(screen.getByLabelText(zeroAria));
+    expect(screen.getByText(affordance(1))).toBeInTheDocument();
+  });
 });

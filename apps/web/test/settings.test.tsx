@@ -89,6 +89,17 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
       expect(readSettings().games.binairo.firstValue).toBe(read);
     }
 
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        games: { binairo: { showErrors: true, firstValue: 2 } },
+      }),
+    );
+    expect(readSettings().games.binairo).toEqual({
+      showErrors: true,
+      firstValue: 1,
+    });
+
     window.localStorage.setItem(KEY, JSON.stringify({ games: "x" }));
     expect(readSettings().games.sudoku.highlightSelection).toBe(true);
     window.localStorage.setItem(KEY, "5");

@@ -10,9 +10,12 @@ const DIGITS = [
   { value: 1, label: copy.one, aria: copy.oneAria },
 ] as const;
 
-function Affordance() {
+const CYCLE: PaintMode = { kind: "cycle" };
+
+function Affordance({ paint }: { readonly paint: PaintMode }) {
   const first = useSettings().games.binairo.firstValue;
-  return <span className={styles.affordance}>{copy.affordance(first)}</span>;
+  const left = paint.kind === "paint" ? paint.value : first;
+  return <span className={styles.affordance}>{copy.affordance(left)}</span>;
 }
 
 export function Controls({
@@ -39,7 +42,7 @@ export function Controls({
           </button>
         );
       })}
-      <Affordance />
+      <Affordance paint={paint} />
     </div>
   );
 }
@@ -55,7 +58,7 @@ export function ControlsSkeleton() {
           {label}
         </div>
       ))}
-      <Affordance />
+      <Affordance paint={CYCLE} />
     </div>
   );
 }
