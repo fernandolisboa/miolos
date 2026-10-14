@@ -675,6 +675,10 @@ export const messages = {
           label: "Destacar linha, coluna e bloco",
           hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela.",
         },
+        skipFilled: {
+          label: "Pular letras já preenchidas",
+          hint: "Ao digitar, a seleção pula as células com letra e vai para a próxima vazia, seguindo para a próxima pista quando a palavra se completa.",
+        },
       },
       dialog: {
         trigger: "Ajustes",

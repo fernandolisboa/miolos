@@ -16,6 +16,8 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
 
+**Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
+
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
 **Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds. Test ids `T-WEB-S514…S517`.
