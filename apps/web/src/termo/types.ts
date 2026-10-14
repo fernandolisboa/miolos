@@ -10,7 +10,8 @@ export interface TermoJudgedRow {
 
 export interface TermoPlayState extends PlayCore {
   readonly guesses: readonly TermoJudgedRow[];
-  readonly draft: string;
+  readonly draft: readonly string[];
+  readonly cursor: number;
   readonly pending: string | null;
   readonly notice: string | null;
   readonly noticeNonce: number;
@@ -24,6 +25,7 @@ export type TermoPlayAction =
   | LifecycleAction
   | { readonly type: "type"; readonly letter: string }
   | { readonly type: "erase" }
+  | { readonly type: "select"; readonly slot: number }
   | { readonly type: "submit" }
   | { readonly type: "retry" }
   | { readonly type: "held"; readonly reason: HeldReason }

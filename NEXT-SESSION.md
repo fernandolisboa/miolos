@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new from #303. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new from #327. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -15,6 +15,8 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 **One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
 
 **Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
+
+**Termo's current row is editable** (#327, ADR-0108): the draft is five slots and a cursor; a tap or the arrows move the cursor, typing goes to the next empty cell, wrapping, and a gapped Enter does nothing. One key map, `pressKey` (`termo/play-view.tsx`), serves the window listener and the row's own listener.
 
 **Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
 

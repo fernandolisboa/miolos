@@ -303,7 +303,7 @@ describe("an un-judged guess never reaches storage (T-WEB-S85)", () => {
       });
     }
 
-    expect(result.current.state.draft).toBe(GUESSES[1]);
+    expect(result.current.state.draft.join("")).toBe(GUESSES[1]);
     expect(JSON.stringify(storedRecord())).not.toContain(GUESSES[1]);
   });
 });
