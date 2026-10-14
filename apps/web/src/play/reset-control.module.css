@@ -1,7 +1,8 @@
 .control {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
-  min-height: calc(var(--touch-target-min) * 2 + var(--space-4));
+  min-height: var(--touch-target-min);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -23,7 +24,11 @@
   composes: confirmButton from "../components/confirm-action.module.css";
 }
 
+/* Opens downward over the hint, which is hidden while it is open, so the page
+   never grows. See ADR-0103. */
 .ask {
+  position: absolute;
+  inset: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

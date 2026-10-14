@@ -28,7 +28,14 @@ import { sudokuHintExplanation } from "../src/sudoku/hint";
 import type { SudokuDigit } from "../src/sudoku/state";
 import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
-import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
+import {
+  bodyOf,
+  boardFloor,
+  decl,
+  pixels,
+  stylesheet,
+  token,
+} from "./css-source";
 import { freeHintSteps, spendFreeHints } from "./free-hints";
 
 const sync = vi.hoisted(() => ({
@@ -935,101 +942,116 @@ describe("the board and keypad arithmetic (T-WEB-S34)", () => {
   const MOBILE = bodyOf(GAME_CSS, "@media (max-width: 768px)");
   const SHARED_MOBILE = bodyOf(SHARED_CSS, "@media (max-width: 768px)");
 
-  const PAGE_PADDING = 2 * token("--space-5");
-  const NARROWEST_VIEWPORT = 320;
-  const REFERENCE_VIEWPORT = 390;
-
   const CARD_BORDER = 1;
 
   const GAPS = 10;
   const GUTTERS = 2;
 
-  function boardInnerWidth(viewport: number): number {
-    const cap = pixels(
-      decl(bodyOf(GAME_CSS, ".pageSudoku"), "--board-mobile-max"),
-    );
+  function cellAtFloor(): number {
     const padding = pixels(decl(bodyOf(SHARED_MOBILE, ".gridCard"), "padding"));
-    const card = Math.min(cap, viewport - PAGE_PADDING);
-    return card - 2 * padding - 2 * CARD_BORDER;
-  }
-
-  function mobileCell(viewport: number): number {
     const gap = pixels(decl(bodyOf(MOBILE, ".grid"), "gap"));
     const gutter = 2;
-    return (boardInnerWidth(viewport) - GAPS * gap - GUTTERS * gutter) / SIDE;
-  }
-
-  function mobileKeypadButton(viewport: number): number {
-    const keypad = bodyOf(MOBILE, ".keypad");
-    const gap = pixels(decl(keypad, "gap"));
-    const cap = pixels(
-      decl(bodyOf(GAME_CSS, ".pageSudoku"), "--board-mobile-max"),
+    return (
+      (boardFloor() -
+        2 * padding -
+        2 * CARD_BORDER -
+        GAPS * gap -
+        GUTTERS * gutter) /
+      SIDE
     );
-    const row = Math.min(cap, viewport - PAGE_PADDING);
-    return (row - 3 * gap) / 4;
   }
 
-  it("sizes the board fluidly, with the gutter tracks fixed", () => {
-    const grid = bodyOf(MOBILE, ".grid");
-    const card = bodyOf(SHARED_MOBILE, ".gridCard");
+  it("sizes the board fluidly at every width, with the gutter tracks fixed", () => {
+    const grid = bodyOf(GAME_CSS, ".grid");
 
     expect(decl(grid, "grid-template-columns")).toContain("minmax(0, 1fr)");
+    expect(decl(grid, "grid-template-columns")).not.toMatch(/\d+px\)/);
     expect(decl(grid, "grid-template-columns")).toBe(
       decl(grid, "grid-template-rows"),
     );
 
     expect(decl(grid, "grid-template-columns")).toContain("2px");
     expect(decl(grid, "aspect-ratio")).toBe("1");
-
-    expect(decl(card, "box-sizing")).toBe("border-box");
-    expect(decl(card, "width")).toBe("100%");
-    expect(decl(card, "max-width")).toBe("var(--board-mobile-max)");
-  });
-
-  it("keeps every cell clear of WCAG 2.5.8's 24px floor down to 320px", () => {
-    expect(mobileCell(REFERENCE_VIEWPORT)).toBeGreaterThanOrEqual(24);
-    expect(mobileCell(NARROWEST_VIEWPORT)).toBeGreaterThanOrEqual(24);
-    expect(mobileCell(REFERENCE_VIEWPORT)).toBeGreaterThan(
-      mobileCell(NARROWEST_VIEWPORT),
+    expect(decl(bodyOf(GAME_CSS, ".pageSudoku"), "--board-max")).toMatch(
+      /^\d+px$/,
     );
   });
 
-  it("keeps every keypad key clear of the 44px touch target down to 320px", () => {
+  it("keeps every cell clear of WCAG 2.5.8's 24px floor at the board floor", () => {
+    expect(cellAtFloor()).toBeGreaterThanOrEqual(24);
+  });
+
+  it("keeps every keypad key clear of the 44px touch target at the board floor", () => {
     const keypad = bodyOf(MOBILE, ".keypad");
     const minimum = token("--touch-target-min");
-    const rows = decl(keypad, "grid-template-rows")?.split(/\s+/) ?? [];
+    const rows = /repeat\((\d+),\s*(\d+px)\)/.exec(
+      decl(keypad, "grid-template-rows") ?? "",
+    );
+    const slots = Number(
+      /repeat\((\d+),/.exec(decl(keypad, "grid-template-columns") ?? "")?.[1],
+    );
+    const gap = token("--space-2");
 
-    expect(decl(keypad, "width")).toBe("100%");
-    expect(decl(keypad, "max-width")).toBe("var(--board-mobile-max)");
-    expect(decl(keypad, "grid-template-columns")).toBe(
-      "repeat(4, minmax(0, 1fr))",
-    );
-    expect(rows).toHaveLength(3);
-    for (const row of rows) {
-      expect(pixels(row)).toBeGreaterThanOrEqual(minimum);
-    }
-    expect(mobileKeypadButton(REFERENCE_VIEWPORT)).toBeGreaterThanOrEqual(
-      minimum,
-    );
-    expect(mobileKeypadButton(NARROWEST_VIEWPORT)).toBeGreaterThanOrEqual(
+    expect(decl(keypad, "gap")).toBe("var(--space-2)");
+    expect(decl(keypad, "width")).toBe("var(--board-side)");
+    expect(Number(rows?.[1]) * slots).toBe(10);
+    expect(pixels(rows?.[2])).toBeGreaterThanOrEqual(minimum);
+    expect((boardFloor() - (slots - 1) * gap) / slots).toBeGreaterThanOrEqual(
       minimum,
     );
 
-    expect(decl(bodyOf(MOBILE, ".keypadErase"), "grid-column")).toBe("2 / -1");
+    const erase = bodyOf(MOBILE, ".keypadErase");
+    expect(decl(erase, "grid-row")).toBe("2");
+    expect(decl(erase, "grid-column")).toBe(String(slots));
   });
 
-  it("gives the desktop keypad the board's exact inner width and tracks", () => {
+  it("gives the desktop keypad the board's tracks, and never a digit under the 44px target", () => {
     const grid = bodyOf(GAME_CSS, ".grid");
     const keypad = bodyOf(GAME_CSS, ".keypad");
-    const template = decl(grid, "grid-template-columns") ?? "";
-    const cell = Number(/repeat\(3,\s*(\d+(?:\.\d+)?)px\)/.exec(template)?.[1]);
-    const gutter = Number(/\)\s+(\d+(?:\.\d+)?)px/.exec(template)?.[1]);
-    const gap = pixels(decl(grid, "gap"));
+    const minimum = token("--touch-target-min");
 
-    expect(decl(keypad, "grid-template-columns")).toBe(template);
-    expect(pixels(decl(keypad, "width"))).toBe(
-      SIDE * cell + GAPS * gap + GUTTERS * gutter,
+    expect(decl(keypad, "grid-template-columns")).toBe(
+      decl(grid, "grid-template-columns"),
     );
+    expect(decl(keypad, "gap")).toBe(decl(grid, "gap"));
+
+    const width = (decl(keypad, "width") ?? "").replace(/\s+/g, " ");
+    expect(width).toMatch(/^max\( ?calc\(var\(--board-side\) - /);
+
+    const floorWidth = [
+      ...width.matchAll(/(\d+) \* (var\(--touch-target-min\)|\d+px)/g),
+    ].reduce(
+      (total, [, count, unit]) =>
+        total +
+        Number(count) *
+          (unit === "var(--touch-target-min)" ? minimum : pixels(unit)),
+      0,
+    );
+    const gutters = 2 * 2;
+    const gaps = 10 * pixels(decl(grid, "gap"));
+    expect((floorWidth - gutters - gaps) / SIDE).toBeGreaterThanOrEqual(
+      minimum,
+    );
+  });
+
+  it("reserves the keypad under the card, desktop and phone", () => {
+    const rows = (body: string) =>
+      (decl(body, "grid-template-rows") ?? "")
+        .match(/\d+px/g)
+        ?.map((row) => pixels(row)) ?? [];
+    const desktop = bodyOf(GAME_CSS, ".keypad");
+    const phone = bodyOf(MOBILE, ".keypad");
+
+    expect(decl(bodyOf(GAME_CSS, ".pageSudoku"), "--board-below")).toBe(
+      `calc(var(--space-6) + ${String(rows(desktop)[0])}px + var(--space-2) + ${String(rows(desktop)[1])}px)`,
+    );
+    expect(decl(bodyOf(MOBILE, ".pageSudoku"), "--board-below")).toBe(
+      `calc(var(--space-4) + 2 * ${String(rows(phone)[0])}px + var(--space-2))`,
+    );
+    expect(decl(desktop, "margin-top")).toBe("var(--space-6)");
+    expect(decl(phone, "margin-top")).toBe("var(--space-4)");
+    expect(decl(desktop, "row-gap")).toBe("8px");
+    expect(decl(phone, "gap")).toBe("var(--space-2)");
   });
 
   it("places each digit on the column `track()` computes for that cell", () => {

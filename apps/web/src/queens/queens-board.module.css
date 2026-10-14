@@ -4,7 +4,8 @@
   --grid-card-rot: -0.5deg;
   --stats-card-rot: 0.7deg;
   --tape-rot: -2deg;
-  --board-mobile-max: 350px;
+  --board-max: 580px;
+  --board-below: calc(var(--space-6) + 20px);
 }
 
 /* `none`, not `manipulation`: a drag crosses cells, and a touch drag that
@@ -17,18 +18,18 @@
 }
 
 .size7 {
-  grid-template-columns: repeat(7, 52px);
-  grid-template-rows: repeat(7, 52px);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(7, auto);
 }
 
 .size8 {
-  grid-template-columns: repeat(8, 52px);
-  grid-template-rows: repeat(8, 52px);
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(8, auto);
 }
 
 .size9 {
-  grid-template-columns: repeat(9, 52px);
-  grid-template-rows: repeat(9, 52px);
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-rows: repeat(9, auto);
 }
 
 .sizeCard {
@@ -45,6 +46,7 @@
   justify-content: center;
   margin: 0;
   padding: 0;
+  aspect-ratio: 1;
   border: 0;
   border-top: 1px solid var(--line);
   border-left: 1px solid var(--line);
@@ -115,29 +117,14 @@
 }
 
 .affordance {
-  margin-top: 30px;
+  margin: var(--space-6) 0 0;
   font-size: 13px;
   color: var(--ink-2);
 }
 
 @media (max-width: 768px) {
-  .size7 {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-template-rows: repeat(7, auto);
-  }
-
-  .size8 {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    grid-template-rows: repeat(8, auto);
-  }
-
-  .size9 {
-    grid-template-columns: repeat(9, minmax(0, 1fr));
-    grid-template-rows: repeat(9, auto);
-  }
-
-  .cell {
-    aspect-ratio: 1;
+  .pageQueens {
+    --board-below: 0px;
   }
 
   .affordance {

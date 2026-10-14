@@ -84,7 +84,9 @@ function GeneratingBoard() {
   return (
     <>
       <CrosswordSkeletonBody />
-      <p className={styles.generating}>{messages.freePlay.generating}</p>
+      <p className={`${styles.generating} ${styles.generatingAfter}`}>
+        {messages.freePlay.generating}
+      </p>
     </>
   );
 }

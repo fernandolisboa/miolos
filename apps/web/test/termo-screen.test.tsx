@@ -49,7 +49,14 @@ import styles from "../src/termo/termo-board.module.css";
 import { TermoScreen } from "../src/termo/termo-screen";
 import type { TermoPlayAction, TermoPlayState } from "../src/termo/types";
 import type { TermoPlay } from "../src/termo/use-termo-play";
-import { bodyOf, decl, pixels, stylesheet } from "./css-source";
+import {
+  bodyOf,
+  boardFloor,
+  decl,
+  pixels,
+  stylesheet,
+  token,
+} from "./css-source";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -720,9 +727,13 @@ describe("the six tile states and the four key states, as stylesheet text (T-WEB
 describe("geometry, as stylesheet text (T-WEB-S91)", () => {
   const css = stylesheet("src/termo/termo-board.module.css");
 
-  it("declares --board-mobile-max UNCONDITIONALLY, or the ≤768px cap dies in silence", () => {
+  it("declares the board ceiling, aspect and floor on the page element, and no card cap", () => {
     const root = bodyOf(css, ".pageTermo");
-    expect(pixels(decl(root, "--board-mobile-max"))).toBe(254);
+    expect(pixels(decl(root, "--board-max"))).toBe(360);
+    expect(Number(decl(root, "--board-aspect"))).toBeGreaterThan(0.8);
+    expect(
+      pixels(decl(root, "--board-min")) * Number(decl(root, "--board-aspect")),
+    ).toBeGreaterThanOrEqual(boardFloor());
     expect(
       decl(
         bodyOf(stylesheet("src/play/screen.module.css"), ".gridCard"),
@@ -748,39 +759,74 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     }
   });
 
-  it("is 52/4 above 768px and 44/3 below — the desktop pair is DESIGN.md:50 verbatim", () => {
+  it("sizes the tile as a fluid square, with the gap 4px above 768px and 3px below", () => {
     const tile = bodyOf(css, ".tile");
-    expect(pixels(decl(tile, "width"))).toBe(52);
-    expect(pixels(decl(tile, "height"))).toBe(52);
-    expect(pixels(decl(tile, "font-size"))).toBe(28);
+    expect(decl(tile, "flex")).toBe("1 1 0");
+    expect(decl(tile, "aspect-ratio")).toBe("1");
+    expect(decl(tile, "width")).toBeUndefined();
+    expect(decl(tile, "height")).toBeUndefined();
+    expect(decl(tile, "font-size")).toMatch(/^clamp\(14px,/);
     expect(pixels(decl(bodyOf(css, ".grid"), "gap"))).toBe(4);
     expect(pixels(decl(bodyOf(css, ".row"), "gap"))).toBe(4);
 
     const geometry = bodyOf(css, "@media (max-width: 768px)");
-    expect(pixels(decl(bodyOf(geometry, ".tile"), "width"))).toBe(44);
-    expect(pixels(decl(bodyOf(geometry, ".tile"), "height"))).toBe(44);
-    expect(pixels(decl(bodyOf(geometry, ".tile"), "font-size"))).toBe(24);
+    expect(bodyOf(geometry, ".tilePresent")).toBeDefined();
     expect(pixels(decl(bodyOf(geometry, ".grid"), "gap"))).toBe(3);
     expect(pixels(decl(bodyOf(geometry, ".row"), "gap"))).toBe(3);
   });
 
-  it("agrees with the card cap: 5 tiles + 4 gaps + padding + border = 254 at ≤768px", () => {
-    const geometry = bodyOf(css, "@media (max-width: 768px)");
-    const tile = pixels(decl(bodyOf(geometry, ".tile"), "width"));
-    const gap = pixels(decl(bodyOf(geometry, ".row"), "gap"));
+  it("keeps the card's width over its height at or above --board-aspect, at every size", () => {
     const shared = stylesheet("src/play/screen.module.css");
-    const cardMobile = bodyOf(
-      bodyOf(shared, "@media (max-width: 768px)"),
-      ".gridCard",
-    );
-    const padding = pixels(decl(cardMobile, "padding"));
+    const aspect = Number(decl(bodyOf(css, ".pageTermo"), "--board-aspect"));
+    const ceiling = pixels(decl(bodyOf(css, ".pageTermo"), "--board-max"));
     const border = pixels(
       (decl(bodyOf(shared, ".gridCard"), "border") ?? "").split(" ")[0],
     );
+    const bands = [
+      {
+        padding: pixels(
+          decl(
+            bodyOf(bodyOf(shared, "@media (max-width: 768px)"), ".gridCard"),
+            "padding",
+          ),
+        ),
+        gap: pixels(
+          decl(bodyOf(bodyOf(css, "@media (max-width: 768px)"), ".row"), "gap"),
+        ),
+      },
+      {
+        padding: token("--space-4"),
+        gap: pixels(decl(bodyOf(css, ".row"), "gap")),
+      },
+    ];
 
-    expect(
-      WORD_LENGTH * tile + (WORD_LENGTH - 1) * gap + 2 * padding + 2 * border,
-    ).toBe(pixels(decl(bodyOf(css, ".pageTermo"), "--board-mobile-max")));
+    for (const { padding, gap } of bands) {
+      for (let side = boardFloor(); side <= ceiling; side += 10) {
+        const chrome = 2 * (padding + border);
+        const tile = (side - chrome - (WORD_LENGTH - 1) * gap) / WORD_LENGTH;
+        const height = MAX_GUESSES * tile + (MAX_GUESSES - 1) * gap + chrome;
+
+        expect(side / height).toBeGreaterThanOrEqual(aspect);
+      }
+    }
+  });
+
+  it("keeps every tile clear of WCAG 2.5.8's 24px floor at the board floor", () => {
+    const shared = stylesheet("src/play/screen.module.css");
+    const padding = pixels(
+      decl(
+        bodyOf(bodyOf(shared, "@media (max-width: 768px)"), ".gridCard"),
+        "padding",
+      ),
+    );
+    const gap = pixels(
+      decl(bodyOf(bodyOf(css, "@media (max-width: 768px)"), ".row"), "gap"),
+    );
+    const tile =
+      (boardFloor() - 2 * (padding + 1) - (WORD_LENGTH - 1) * gap) /
+      WORD_LENGTH;
+
+    expect(tile).toBeGreaterThanOrEqual(24);
   });
 
   it("is one 20-column grid at both viewports, 552px desktop and capped at 350px below", () => {
@@ -788,17 +834,17 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     expect(decl(keyboard, "grid-template-columns")).toBe(
       "repeat(20, minmax(0, 1fr))",
     );
-    expect(decl(keyboard, "grid-template-rows")).toBe("repeat(3, 52px)");
+    expect(decl(keyboard, "grid-template-rows")).toBe("repeat(3, 48px)");
     expect(pixels(decl(keyboard, "width"))).toBe(552);
 
     expect(decl(keyboard, "gap")).toBe("var(--space-2)");
-    expect(pixels(decl(keyboard, "margin-top"))).toBe(30);
+    expect(decl(keyboard, "margin-top")).toBe("var(--space-5)");
 
     const chrome = mobileChrome(css);
     const mobile = bodyOf(chrome, ".keyboard");
     expect(decl(mobile, "width")).toBe("100%");
     expect(pixels(decl(mobile, "max-width"))).toBe(350);
-    expect(decl(mobile, "grid-template-rows")).toBe("repeat(3, 48px)");
+    expect(decl(mobile, "grid-template-rows")).toBeUndefined();
     expect(decl(mobile, "grid-template-columns")).toBeUndefined();
   });
 
@@ -928,7 +974,7 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
     );
   });
 
-  it("keeps the top bar at THREE children below 1140px, with a blank progress slot", () => {
+  it("keeps the top bar at THREE children below 1024px, with a blank progress slot", () => {
     const { container } = render(<PlaySkeleton date={DATE} />);
 
     const slot = container.querySelector(`.${sharedStyles.progressBar ?? ""}`);
@@ -1005,13 +1051,13 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
     const items = (header ?? "").split(/^ {5}\d\. /gm).slice(1);
     expect(items).toHaveLength(7);
     const tokens = [
-      "44px",
+      "49px",
       "24 × 24",
       "text-decoration",
       "10 %",
       "600",
       "15.0124",
-      "30px",
+      "3px",
     ];
     for (const [index, tokenText] of tokens.entries()) {
       expect(items[index], `deviation ${String(index + 1)}`).toContain(
@@ -1036,7 +1082,7 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
     }
 
     expect(offScale.size).toBeGreaterThan(0);
-    expect([...offScale].sort()).toEqual(["2px", "30px", "3px"]);
+    expect([...offScale].sort()).toEqual(["2px", "3px"]);
 
     const deviation = (header ?? "").split(/^ {5}\d\. /gm)[7] ?? "";
     for (const length of offScale) {

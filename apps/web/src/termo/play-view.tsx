@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { formatLongDate, messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
+import { BoardCard } from "../play/board-card";
 import screen from "../play/screen.module.css";
 import { typedLetter } from "../play/typed-letter";
 import type { ArchivePlayChrome } from "../play/types";
@@ -121,7 +122,7 @@ export function PlayView({
       </div>
 
       <section className={screen.board}>
-        <div className={screen.gridCard}>
+        <BoardCard>
           <Board
             guesses={state.guesses}
             activeRow={play.activeRow}
@@ -129,7 +130,7 @@ export function PlayView({
             draft={state.draft}
             pending={state.pending}
           />
-        </div>
+        </BoardCard>
 
         <div className={styles.noticeRow}>
           <p role="status" className={styles.notice}>
@@ -229,9 +230,9 @@ export function PlaySkeleton({
       </div>
 
       <section className={screen.board}>
-        <div aria-hidden className={screen.gridCard}>
+        <BoardCard placeholder>
           <BoardSkeleton />
-        </div>
+        </BoardCard>
 
         <div aria-hidden className={styles.noticeRow}>
           <p className={styles.notice}>{BLANK_READOUT}</p>

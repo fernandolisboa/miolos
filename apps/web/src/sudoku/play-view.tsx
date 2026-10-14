@@ -1,9 +1,9 @@
 import type { SudokuTier } from "@miolos/games/sudoku";
 
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { DailyPlayChrome } from "../play/daily-chrome";
 import { hasDecidedCell } from "../play/reset-board";
-import screen from "../play/screen.module.css";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
@@ -52,7 +52,7 @@ export function PlayView({
         },
       }}
     >
-      <div className={screen.gridCard}>
+      <BoardCard below={<Keypad lock={play.lock} />}>
         <Board
           givens={state.givens}
           solution={play.solution}
@@ -67,8 +67,7 @@ export function PlayView({
           onClear={play.clearCell}
           onTapCell={play.lock.tapCell}
         />
-      </div>
-      <Keypad lock={play.lock} />
+      </BoardCard>
     </DailyPlayChrome>
   );
 }
@@ -92,10 +91,9 @@ export function PlaySkeleton({
       extraStat={levelStat(tier)}
       state={{ kind: "skeleton" }}
     >
-      <div aria-hidden className={screen.gridCard}>
+      <BoardCard placeholder below={<KeypadSkeleton />}>
         <BoardSkeleton />
-      </div>
-      <KeypadSkeleton />
+      </BoardCard>
     </DailyPlayChrome>
   );
 }

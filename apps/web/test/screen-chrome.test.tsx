@@ -563,6 +563,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "board",
         "hint",
         "hintExplain",
+        "hintSlot",
         "hintUsed",
         "page",
         "placeholder",

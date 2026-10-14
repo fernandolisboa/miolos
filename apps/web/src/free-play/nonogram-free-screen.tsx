@@ -5,8 +5,8 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import { useEffect, useReducer, useState } from "react";
 
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { hasDecidedCell } from "../play/reset-board";
-import screen from "../play/screen.module.css";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
 import { countFilledCells, filledTarget } from "../nonogram/engine";
@@ -141,7 +141,7 @@ function NonogramFreeBoard({
         },
       }}
     >
-      <div className={screen.gridCard}>
+      <BoardCard below={<Controls brush={state.brush} onSetBrush={setBrush} />}>
         <Board
           size={state.size}
           clues={state.clues}
@@ -158,8 +158,7 @@ function NonogramFreeBoard({
           onClear={clearCell}
           onPaintOver={paintOver}
         />
-      </div>
-      <Controls brush={state.brush} onSetBrush={setBrush} />
+      </BoardCard>
     </FreePlayChrome>
   );
 }
@@ -172,11 +171,15 @@ function GeneratingBoard({ size }: { readonly size: NonogramSize }) {
   };
   return (
     <>
-      <div aria-hidden className={screen.gridCard}>
+      <BoardCard
+        placeholder
+        below={<ControlsSkeleton />}
+        overlay={
+          <p className={styles.generating}>{messages.freePlay.generating}</p>
+        }
+      >
         <BoardSkeleton size={size} clues={emptyClues} />
-      </div>
-      <ControlsSkeleton />
-      <p className={styles.generating}>{messages.freePlay.generating}</p>
+      </BoardCard>
     </>
   );
 }

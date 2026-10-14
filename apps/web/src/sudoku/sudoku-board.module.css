@@ -1,81 +1,46 @@
 /* The /sudoku BOARD and KEYPAD — everything the shared play layout in
-   `../play/screen.module.css` deliberately does not own (ADR-0029, plan 018
-   §5.2). There is no Sudoku reference frame: this is §12.3/§12.5/§12.6's
-   just-in-time design, defensible as a sibling of f3-binairo-desktop and
-   f4-binairo-mobile within the recorded system.
+   `../play/screen.module.css` deliberately does not own (ADR-0029). Every
+   rule is anchored on a local class: Next compiles CSS Modules in
+   css-loader's `pure` mode, so a bare type selector either fails the build or
+   leaks globally. Every accent is `var(--accent)`, which the screen root sets
+   to `--accent-sudoku`. */
 
-   Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
-   either fails the build or leaks globally (plan 017 risk 15).
-
-   Every accent here is `var(--accent)`, which `sudoku-screen`'s root sets to
-   `--accent-sudoku` (ink-blue #2E4E7E) — the same mechanism the shared sheet
-   uses, so one screen never has two accent sources. */
-
-/* The per-game half of the shared layout, carried on the SAME element as
-   `screen.page` (plan 018 §12.2). Custom properties, never a redeclared
-   `.gridCard`: CSS Modules hash class names per file, so a same-name rule in
-   two modules resolves by stylesheet injection order, which Next does not
-   guarantee (landmine 24).
-
-   The three rotations MIRROR Binairo's signs rather than repeating them
-   (§12.4): F1:64 draws the Sudoku hub tile at +0.5deg/+3deg where Binairo's
-   screen uses +0.4/−0.5/−3, so the two screens read as different sheets from
-   the same pad instead of as a copy. */
+/* Custom properties only, never a redeclared `.gridCard` (ADR-0029).
+   --board-below mirrors the keypad's height under the card. */
 .pageSudoku {
   --grid-card-rot: -0.4deg;
   --stats-card-rot: 0.5deg;
   --tape-rot: 3deg;
-  /* 390 − 2×20 page padding: the widest board that fits the reference phone
-     without the document scrolling sideways. It is a CAP, not a width — the
-     tracks below are fractional, so a 320px phone gets ~24.9px cells rather
-     than a board wider than its viewport (finding
-     `board-overflows-horizontally-below-369px`, inherited from #18).
-     Declared unconditionally rather than inside the mobile query, because it
-     is only ever READ there and a per-game class cannot open a media query
-     the shared sheet owns. */
-  --board-mobile-max: 350px;
+  --board-max: 600px;
+  --board-below: calc(var(--space-6) + 52px + var(--space-2) + 44px);
 }
 
 /* ── board ───────────────────────────────────────────────────────────── */
 
 /* ONE flat 81-item grid with explicit 2px GUTTER TRACKS, never a wrapper per
-   3×3 box (plan 018 S23): a <div> per box would be a card inside a card —
-   DESIGN.md's anti-reference verbatim — and would fire impeccable's
-   `nested-cards` the moment it carried a shadow. The cells are placed
-   explicitly from `track()` in `engine.ts`; auto-placement would drop nine of
-   them into the gutter tracks.
+   3×3 box: a <div> per box would be a card inside a card. The cells are
+   placed explicitly from `track()` in `engine.ts`; auto-placement would drop
+   nine of them into the gutter tracks.
 
-   Desktop cells are DESIGN.md:50's 52px. Effective box separation is
-   gap + gutter + gap = 4 + 2 + 4 = 10px against a 4px intra-box gap, a 2.5×
-   ratio, plus the drawn rule below.
-
-   `manipulation`, not `none`: Sudoku has no drag (S3), and `none` would
+   `manipulation`, not `none`: Sudoku has no drag, and `none` would
    needlessly disable pinch-zoom over the board. */
 .grid {
   display: grid;
   grid-template-columns:
-    repeat(3, 52px) 2px repeat(3, 52px) 2px
-    repeat(3, 52px);
+    repeat(3, minmax(0, 1fr)) 2px repeat(3, minmax(0, 1fr)) 2px
+    repeat(3, minmax(0, 1fr));
   grid-template-rows:
-    repeat(3, 52px) 2px repeat(3, 52px) 2px
-    repeat(3, 52px);
+    repeat(3, minmax(0, 1fr)) 2px repeat(3, minmax(0, 1fr)) 2px
+    repeat(3, minmax(0, 1fr));
   gap: 4px;
+  aspect-ratio: 1;
   touch-action: manipulation;
 }
 
-/* The four box rules, drawn in the gutter tracks (deviation 4). They make the
-   3×3 structure a fact rather than something inferred from spacing, which
-   matters because the cells sit on --paper-desk inside a --paper-card card:
-   an undrawn gutter is LIGHTER than the cells it separates.
-
-   `--ink` at 50% over card paper resolves to ≈#8E8A84 — 3.21:1, clearing
-   WCAG 1.4.11's 3:1 floor for a meaningful non-text graphic — where a
-   --line rule would be 1.43:1, i.e. a third hairline between two hairlines
-   rather than a separator (§12.3).
-
-   No border, no radius and NO box-shadow, so `isCardLikeFromProps` returns
-   false on its first guard and `nested-cards` cannot fire (S23). */
+/* The four box rules, drawn in the gutter tracks: an undrawn gutter is lighter
+   than the desk-paper cells it separates. Ink at 50% clears WCAG 1.4.11's 3:1
+   where a --line rule would not. No border, radius or box-shadow, so
+   impeccable's `nested-cards` cannot fire on it. */
 .rule {
   background: color-mix(in srgb, var(--ink) 50%, transparent);
 }
@@ -113,15 +78,10 @@
   border-radius: var(--radius-cell);
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: 23px;
+  font-size: clamp(14px, calc(var(--board-side) * 0.051), 28px);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  /* Paint-only properties, never width/height/padding/margin (which fire
-     impeccable's `layout-transition`). The chromatic properties are in the
-     list because §12.5 promises the revealed hint "settles" over
-     --duration-fast, and a transition nothing declares is a promise the code
-     does not keep. */
   transition:
     transform var(--duration-fast) var(--ease-settle),
     background-color var(--duration-fast) var(--ease-settle),
@@ -136,10 +96,9 @@
 
 /* ── chromatic cell states ───────────────────────────────────────────── */
 
-/* Exactly ONE of these per cell, precedence
-   violating > hint-filled > entered > given > empty (§12.5). They answer
-   "what this cell IS"; the caret below answers "where the player is", and
-   the two compose rather than suppressing each other (ADR-0030 (d)). */
+/* Exactly one per cell, precedence
+   violating > hint-filled > entered > given > empty. The caret below composes
+   with them rather than suppressing them (ADR-0030 (d)). */
 
 .cellGiven {
   background: var(--paper-tint);
@@ -147,19 +106,16 @@
   cursor: default;
 }
 
-/* Weight 450, not the system's 500 (deviation 6): ink-blue against --ink is
-   only 2.00:1 — where Binairo's moss-green is 2.83:1 — so at grid scale an
-   entered digit reads almost as ink and the given/entered distinction has to
-   lean harder on its other two carriers, the tint above and this weight. */
+/* Weight 450, not 500: ink-blue sits close to --ink, so the given/entered
+   distinction leans on the tint above and on this weight. */
 .cellEntered {
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   color: var(--accent);
   font-weight: 450;
 }
 
-/* The free hint's whole visual payload. It stays legible whether or not the
-   caret is on it, which is only true because `use-hint` no longer moves the
-   selection (§8.3, review finding D3). */
+/* The free hint's whole visual payload; `use-hint` never moves the selection,
+   so it stays legible with or without the caret. */
 .cellHinted {
   background: color-mix(in srgb, var(--accent) 10%, var(--paper-desk));
   border-color: var(--accent);
@@ -205,16 +161,9 @@
 
 /* ── the caret ───────────────────────────────────────────────────────── */
 
-/* ONE declaration block for the selection AND the focus ring, so ADR-0030's
-   consequence (c) — they can never disagree — holds mechanically rather than
-   by discipline. The roving tabindex already guarantees the focused cell is
-   the selected one.
-
-   Drawn INSIDE the 1.5px border: Binairo's `outline-offset: 2px`
-   (binairo-screen.module.css:71) would extend 4px beyond the cell box and
-   paint over both the 3px grid gap and the 2px box rule. An outline is also
-   what keeps this ADDITIVE — the chromatic states above use background,
-   border, color and an inset shadow, so a violating cell keeps saying so
+/* One block for the selection and the focus ring, so they can never disagree
+   (ADR-0030 (c)). Drawn inside the border so it cannot paint over the grid gap
+   or the box rule, and as an outline so a violating cell keeps saying so
    while it is the caret. */
 .cellSelected,
 .cell:focus-visible {
@@ -229,11 +178,8 @@
   outline-color: var(--ink-on-accent);
 }
 
-/* The pre-hydration placeholder cell (finding
-   `binairo-reload-flashes-a-blank-board-over-a-finished-day`). Colour only:
-   every dimension still comes from .cell and .grid above, so the placeholder
-   board is the real board's size on every viewport by construction. Static —
-   DESIGN.md has no shimmer. */
+/* The pre-hydration placeholder cell: colour only, so it is the real board's
+   size by construction. */
 .cellSkeleton {
   background: var(--paper-tint);
   border-color: color-mix(in srgb, var(--line) 55%, transparent);
@@ -242,29 +188,24 @@
 
 /* ── keypad ──────────────────────────────────────────────────────────── */
 
-/* The digit row shares the BOARD's exact track template, so digit n sits
-   directly under column n and the box rhythm is legible twice. 512px is the
-   board's inner grid width (9×52 + 10×4 + 2×2), i.e. a 17px inset inside the
-   546px card. */
+/* The digit row mirrors the board's tracks, so digit n sits under column n.
+   Never narrower than nine touch targets: below that the mirror yields. */
 .keypad {
   display: grid;
   grid-template-columns:
-    repeat(3, 52px) 2px repeat(3, 52px) 2px
-    repeat(3, 52px);
+    repeat(3, minmax(0, 1fr)) 2px repeat(3, minmax(0, 1fr)) 2px
+    repeat(3, minmax(0, 1fr));
   grid-template-rows: 52px 44px;
   gap: 4px;
   row-gap: 8px;
-  width: 512px;
-  margin-top: 30px;
+  width: max(
+    calc(var(--board-side) - 2 * (var(--space-4) + 1px)),
+    calc(9 * var(--touch-target-min) + 2 * 2px + 10 * 4px)
+  );
+  margin-top: var(--space-6);
   touch-action: manipulation;
 }
 
-/* Row 2 has TWO explicit occupants and no auto-placement: the first two box
-   blocks carry the affordance (6×52 + 2 + 6×4 = 338px), the last one carries
-   `apagar` (3×52 + 2×4 = 164px), so the command sits on a box boundary. A
-   full-bleed 512px `apagar` was rejected on its own terms — it would give the
-   lowest-priority control ten times the width of each primary digit key,
-   which is the archetypal generic form footer, not Ateliê (deviation 13). */
 .keypadDigit {
   grid-row: 1;
   box-sizing: border-box;
@@ -287,15 +228,8 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* The column each digit occupies, skipping the two gutter tracks — the same
-   1,2,3,5,6,7,9,10,11 sequence `track()` computes for the cells, and pinned
-   to it by a test rather than by a comment (T-WEB-S34).
-
-   Declared here rather than inline from `track()` because an inline style
-   would also apply at ≤768px, where the keypad is four fluid columns and
-   these track numbers do not exist — a media query cannot override a style
-   attribute. `:nth-child` is exact here because the keypad's children are
-   the nine digits, then the affordance, then `apagar`, in that order. */
+/* The column each digit occupies, skipping the gutters: the sequence `track()`
+   computes for the cells, pinned by T-WEB-S34. */
 .keypadDigit:nth-child(1) {
   grid-column: 1;
 }
@@ -332,8 +266,6 @@
   grid-column: 11;
 }
 
-/* Pressed = the element slides 1px toward its shadow and the shadow shrinks
-   by the same 1px (DESIGN.md, verbatim). --shadow-sm is 3px, hence 2px. */
 .keypadDigit:active {
   transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
@@ -349,9 +281,6 @@
   outline-offset: 2px;
 }
 
-/* The discoverability carrier for the whole keyboard model (S4), which is
-   why it is PLACED rather than left to auto-placement into an implicit third
-   row — the same fragility the board rejects. */
 .affordance {
   grid-row: 2;
   grid-column: 1 / 8;
@@ -376,10 +305,6 @@
   font-family: var(--font-ui);
   font-size: 14px;
   cursor: pointer;
-  /* Ink-tinted, NOT accent-tinted: a recorded exception to DESIGN.md's
-     "hard shadow rgba(accent, .2–.3)". It is the one shadow in the whole
-     frame set that is neutral (F3:51, F4:37), because `apagar` is a neutral
-     control rather than a game-accent one. */
   box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 10%, transparent);
   transition:
     transform var(--duration-fast) var(--ease-settle),
@@ -398,11 +323,7 @@
 
 /* ── the Nível readout ───────────────────────────────────────────────── */
 
-/* Sudoku's third `.statRow` value, in the same treatment as the shared
-   `.progressCard` (§12.5). It lives here rather than in the shared sheet
-   because no other game has a difficulty on the wire; `.statsCard` itself is
-   hidden ≤1140px by the shared sheet, and the mobile home for this value is
-   the `.progressBar` slot, which carries "Médio · 24 de 81". */
+/* Sudoku's third `.statRow` value; no other game has a difficulty. */
 .levelCard {
   font-size: 14px;
   color: var(--ink-2);
@@ -411,21 +332,14 @@
 
 /* ── pre-hydration placeholders ──────────────────────────────────────── */
 
-/* This module's own copy of the shared sheet's `.placeholder` (plan 018
-   §12.2): the skeleton's keypad borrows `.keypadDigit` and `.keypadErase`,
-   and a class hashed in `../play/screen.module.css` cannot override one
-   hashed here — the two would resolve by injection order (landmine 24). It
-   has to sit AFTER them: same specificity, later wins (finding
-   `play-skeleton-is-not-at-final-dimensions`). */
+/* Must sit after `.keypadDigit` and `.keypadErase`, which the skeleton keypad
+   borrows: same specificity, later wins. A class hashed in the shared sheet
+   cannot override these. */
 .placeholder {
   cursor: default;
   pointer-events: none;
 }
 
-/* This module's own reduced-motion block, for the same hashing reason: the
-   shared sheet's block covers `.hint` and cannot reach these classes.
-   DESIGN.md makes a reduced-motion alternative law, so leaving it implicit
-   would silently drop it. */
 @media (prefers-reduced-motion: reduce) {
   .cell,
   .keypadDigit,
@@ -434,61 +348,24 @@
   }
 }
 
-/* ≤768px — the phone board. `.page`'s padding, `.title`, `.rules` and
-   `.gridCard` are the shared sheet's in this band. */
 @media (max-width: 768px) {
-  /* Fractional tracks with a square board rather than fixed cells: the cap on
-     `.pageSudoku` pins ~32.7px cells at 390 and a 320px phone gets ~24.9px —
-     both clear of WCAG 2.5.8's 24px floor — instead of a board wider than the
-     viewport. The two 2px gutter tracks stay fixed, so the box rule keeps its
-     hierarchy step at every width. Effective box separation is 3 + 2 + 3 =
-     8px against the 3px intra-box gap, a 2.67× ratio.
+  .pageSudoku {
+    --board-below: calc(var(--space-4) + 2 * 48px + var(--space-2));
+  }
 
-     ≥44px touch targets are arithmetically impossible on a nine-column phone
-     board — 9 × 44 = 396px exceeds the 350px available BEFORE any gap, gutter,
-     padding or border — so PRODUCT.md:39's rule is honoured where it governs,
-     on the chrome controls: the keypad buttons below are 54px tall and ≥64px
-     wide down to 320px (deviation 1, §12.3). */
   .grid {
-    grid-template-columns:
-      repeat(3, minmax(0, 1fr)) 2px repeat(3, minmax(0, 1fr)) 2px
-      repeat(3, minmax(0, 1fr));
-    grid-template-rows:
-      repeat(3, minmax(0, 1fr)) 2px repeat(3, minmax(0, 1fr)) 2px
-      repeat(3, minmax(0, 1fr));
     gap: 3px;
-    aspect-ratio: 1;
   }
 
-  .cell {
-    font-size: 18px;
-  }
-
-  /* Four columns × three rows: `1 2 3 4 / 5 6 7 8 / 9 apagar`. A ten-slot 5×2
-     grid gives `apagar` one equal slot — 63.6px at 390, 57.6px at 360 and
-     49.6px at 320 — and the label alone is ≈45px of advance, so it overflows
-     at every one of them with any inline padding at all. This layout has no
-     empty slot and clears the label by a wide margin: (350 − 3×8)/4 = 81.5px
-     at 390 and (280 − 3×8)/4 = 64px at 320, with `apagar` spanning three of
-     them (§12.6).
-
-     The `width: 100%` + cap pair is the shipped `.controls` mechanism and
-     exists for the shipped reason: shrink-to-fit inside `.board` resolves the
-     ratios against a max-content row and produced sub-44px buttons on Binairo
-     (finding `mobile-controls-shrink-to-fit-and-sub-44px-targets`). */
+  /* Ten slots as wide as the board: at the 280px floor a key is 49.6px. */
   .keypad {
-    box-sizing: border-box;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: 54px 54px 54px;
-    gap: 8px;
-    width: 100%;
-    max-width: var(--board-mobile-max);
-    margin-top: var(--space-5);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 48px);
+    gap: var(--space-2);
+    width: var(--board-side);
+    margin-top: var(--space-4);
   }
 
-  /* Auto-placement, on a template where the desktop track numbers do not
-     exist. The `:nth-child` specificity above is 0,2,0, so this selector
-     matches it and wins on order — a bare `.keypadDigit` would lose. */
   .keypadDigit:nth-child(n) {
     grid-row: auto;
     grid-column: auto;
@@ -496,11 +373,11 @@
   }
 
   .keypadErase {
-    grid-row: 3;
-    grid-column: 2 / -1;
+    grid-row: 2;
+    grid-column: 5;
+    padding-inline: 0;
   }
 
-  /* A phone has no keyboard to advertise. */
   .affordance {
     display: none;
   }

@@ -2,11 +2,9 @@ import type { QueensSize } from "@miolos/core";
 
 import { messages } from "../i18n";
 import { DailyPlayChrome } from "../play/daily-chrome";
-import screen from "../play/screen.module.css";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
-import { BoardSkeleton } from "./board";
-import { BoardPanel, queensReadouts } from "./board-panel";
+import { BoardPanel, BoardPanelSkeleton, queensReadouts } from "./board-panel";
 import styles from "./queens-board.module.css";
 import type { QueensPlay } from "./use-queens-play";
 
@@ -60,12 +58,7 @@ export function PlaySkeleton({
       extraStat={sizeStat(size)}
       state={{ kind: "skeleton" }}
     >
-      <div aria-hidden className={screen.gridCard}>
-        <BoardSkeleton size={size} regions={regions} />
-      </div>
-      <p aria-hidden className={styles.affordance}>
-        {copy.affordance}
-      </p>
+      <BoardPanelSkeleton size={size} regions={regions} />
     </DailyPlayChrome>
   );
 }

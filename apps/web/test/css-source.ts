@@ -48,6 +48,17 @@ export function pixels(value: string | undefined): number {
   return Number(match[1]);
 }
 
+export function boardFloor(): number {
+  const well = bodyOf(stylesheet("src/play/screen.module.css"), ".boardWell");
+  const floor = /var\(--board-min,\s*(\d+)px\)/.exec(
+    decl(well, "min-height") ?? "",
+  );
+  if (floor === null) {
+    throw new Error("`.boardWell` declares no `--board-min` default");
+  }
+  return Number(floor[1]);
+}
+
 export function token(name: string): number {
   const tokens = readFileSync(
     path.join(here, "..", "..", "..", "packages", "ui", "tokens.css"),

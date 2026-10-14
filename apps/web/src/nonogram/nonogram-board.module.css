@@ -1,97 +1,59 @@
 /* The /nonogram BOARD and BRUSH CONTROLS — everything the shared play layout
-   in `../play/screen.module.css` deliberately does not own (ADR-0029, plan
-   020 §12). There is no reference frame for this screen: §12 is its
-   just-in-time design, defensible as a sibling of f3-binairo-desktop and
-   f4-binairo-mobile within the recorded system.
+   in `../play/screen.module.css` deliberately does not own (ADR-0029). Every
+   rule is anchored on a local class: Next compiles CSS Modules in
+   css-loader's `pure` mode, so a bare type selector either fails the build or
+   leaks globally. Every accent is `var(--accent)`, which the screen root sets
+   to `--accent-nonogram`.
 
-   Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
-   either fails the build or leaks globally (plan 017 risk 15).
+   FILE ORDER IS LOAD-BEARING, because `test/css-source.ts`'s `bodyOf` is
+   first-match and throws on a miss: every top-level rule first, then
+   `@media (max-width: 768px)`, then `@media (prefers-reduced-motion:
+   reduce)`. There is exactly ONE top-level `.cell` rule.
 
-   Every accent here is `var(--accent)`, which `nonogram-screen`'s root sets
-   to `--accent-nonogram` (terracotta #B5563C) — the same mechanism the shared
-   sheet uses, so one screen never has two accent sources.
-
-   FILE ORDER IS LOAD-BEARING (§12.4), because `test/css-source.ts`'s `bodyOf`
-   is first-match and throws on a miss: every top-level rule first, then the
-   geometry `@media (max-width: 768px)`, then the chrome one, then
-   `@media (prefers-reduced-motion: reduce)`. There is exactly ONE top-level
-   `.cell` rule. Reordering makes an assertion read the wrong block and pass
-   vacuously.
-
-   RECORDED DESIGN-SYSTEM DEVIATIONS (§12.9), each with its arithmetic:
-     1. Cell gap 0 instead of DESIGN.md's 4px/3px — a gapped 15-class board
-        gives a 12.33px cell at 320px against a 13.34px two-digit column-clue
-        floor (measured); at gap 0 it is 14.20px and clears. The floor is the
-        RENDERED `.clueNumber` flex item — 13.336525px in the built artifact —
-        not the bare glyph advance: 2 × 6.609375px of tabular advance is
-        13.203125px, and flex-item rounding adds the other ~0.13px. The bare
-        advance was what this line quoted (step-6 round-4 finding ISS-R4-5);
-        the conclusion is unchanged, and the number is now the one the build
-        produces.
-     2. No --radius-cell on cells — at gap 0 a 5px radius notches all four
-        corners of every interior junction.
-     3. 48px and 32px cells instead of 52px at sizes 10 and 15 — 15 × 52 = 780
-        against the 544px the shared 1140px fold leaves: the board column is
-        1140 − 2×80 page padding − 330 sidebar − 72 column-gap = 578px
-        (ADR-0035 decision 6), and .gridCard takes 2×16 padding + 2×1 border
-        off that. 545 was a second rounding of the same figure and is
-        corrected rather than left (step-6 round-4 finding
-        ADR-0035-ARITHMETIC-DRIFT); the ADR's own 559.05-vs-578 framing
-        corroborates 544.
-     4. Clue numerals in var(--font-ui), not Fraunces — Fraunces has NO
-        tabular figures at all (ADR-0036, measured in Chrome 151).
-     5. Board touch targets below 44px at sizes 10 and 15, and below WCAG
-        2.5.8's 24px floor at size 10 below ~369px (21.30px at 320, 28.30px
-        at 390) and at size 15 at every mobile width (18.86px at 390, 14.20px
-        at 320) — the figures are ADR-0035 decision 7's, quoted rather than
-        recomputed, because consequence (a) makes this comment and that
-        decision ONE record and two roundings of the same measurement is how
-        a reader loses which side to trust. (They read 21.28 / 28.28 / 14.19
-        here until step-6 round 3; (258 − 45.046875)/10 = 21.295 and
-        (258 − 45.046875)/15 = 14.197, so the ADR's rounding was the correct
-        one — and deviation 1 above already said 14.20.) §12.8's arithmetic
-        and ADR-0035's
-        essential-presentation exception: the grid IS the content. The 44px
-        rule is honoured where it governs, on the chrome controls below.
-     6. No press affordance on a board cell — DESIGN.md's press is "slides 1px
-        toward its shadow"; a ruled-field cell HAS no shadow, and at gap 0 a
-        1px translate paints over its neighbour. */
+   Recorded design-system deviations (ADR-0035, amended by ADR-0103):
+     1. Cell gap 0 instead of 4px/3px: a gapped 15-class board falls below the
+        13.203px two-digit column-clue floor at the narrowest board.
+     2. No --radius-cell on cells: at gap 0 a radius notches every junction.
+     3. Clue numerals in var(--font-ui), not Fraunces, which has no tabular
+        figures (ADR-0036).
+     4. Board touch targets below 44px at sizes 10 and 15, and below 24px at
+        size 15 on a phone: the grid is the content (ADR-0035 decision 7).
+     5. No press affordance on a board cell: a ruled-field cell has no shadow,
+        and at gap 0 a 1px translate paints over its neighbour. */
 
 /* The per-game half of the shared layout, carried on the SAME element as
-   `screen.page`. Custom properties, never a redeclared `.gridCard`: CSS
-   Modules hash class names per file, so a same-name rule in two modules
-   resolves by stylesheet injection order, which Next does not guarantee
-   (landmine 24).
-
-   The three rotations are a DISTINCT signature from Binairo's (0.4/−0.5/−3)
-   and Sudoku's (−0.4/0.5/3), so three screens read as different sheets from
-   the same pad rather than as copies.
-
-   `--board-mobile-max` is declared UNCONDITIONALLY and is not optional:
-   `screen.module.css`'s `.gridCard` reads it with NO FALLBACK, so omitting it
-   here deletes the ≤768px cap in silence (N12/N34). */
+   `screen.page`: custom properties only, never a redeclared `.gridCard`
+   (ADR-0029). Each size class adds its --board-max and --board-overhang, the
+   worst-case amount by which the clue rail above the cells is taller than the
+   one beside them is wide. The card is that much taller than it is wide, so
+   --board-below reserves it with the brush row. */
 .pageNonogram {
   --grid-card-rot: -0.7deg;
   --stats-card-rot: 0.9deg;
   --tape-rot: -4deg;
-  --board-mobile-max: 350px;
+  --board-below: calc(
+    var(--space-6) + 52px + 2 * var(--space-1) + 3px + var(--board-overhang)
+  );
 }
 
-/* The mobile cap is per SIZE, not per game — carried on the SAME element as
-   `.pageNonogram` when `size === 5`, declared after it so it wins at equal
-   specificity within this one file. `.gridCard` is `width: 100%; max-width:
-   var(--board-mobile-max)` in the SHARED sheet, so a single 350px value would
-   render a 350px card around a 288px board at 390px — ~31px of dead paper
-   each side, on the one screen whose whole argument is paper that hugs its
-   board. 310 = 288 board + 2×10 padding + 2×1 border; at 320px
-   `min(310, 280)` still resolves to 280, so the 46.03px cell is unchanged.
+.pageSize5 {
+  --board-max: 420px;
+  --board-overhang: 32px;
+}
 
-   Custom properties inherit, so on a size-5 day `.controls` below resolves
-   310px too — deliberate, and A10 checks the touch-target arithmetic for both
-   caps the page root can resolve. */
-.mobileCap5 {
-  --board-mobile-max: 310px;
+.pageSize8 {
+  --board-max: 480px;
+  --board-overhang: 44px;
+}
+
+.pageSize10 {
+  --board-max: 620px;
+  --board-overhang: 32px;
+}
+
+.pageSize15 {
+  --board-max: 620px;
+  --board-overhang: 32px;
 }
 
 /* ── board ───────────────────────────────────────────────────────────── */
@@ -104,8 +66,8 @@
 
    `gap: 0` is load-bearing, not tidiness: with any gap at all a 15×15 board at
    320px gives a 12.33px cell against a 13.34px two-digit column clue — the
-   rendered `.clueNumber` flex item, measured in the built artifact, not the
-   13.203125px bare glyph advance (ISS-R4-5). The rules are per-cell borders below.
+   rendered `.clueNumber` flex item, not the 13.203125px bare glyph advance.
+   The rules are per-cell borders below.
 
    `none`, not `manipulation`: this board DRAGS, and a touch drag that scrolls
    the page instead of painting is the whole gesture lost. */
@@ -127,35 +89,28 @@
 }
 
 /* Four explicit size classes with LITERAL templates, never
-   `repeat(var(--n), var(--cell))`: the custom-property form is legal by
-   substitution but unassertable — `decl()` would hand a test the unparsed
-   string and `pixels()` would throw, and these literals are the entire
-   mechanism by which §12's geometry is enforceable (A1, A3, A6, A7).
-
-   Fixed integral px above 768px is forced, not stylistic: `.board` is a
-   centred flex column, so `.gridCard` is shrink-to-fit, and a percentage
-   width inside a shrink-to-fit parent resolves against a max-content that a
-   grid of empty cells collapses to (the recorded failure at
-   sudoku-board.module.css:440-445). Sizes 10 and 15 share a 480px cell field
-   (10×48 = 15×32), so the two hard weekdays are physically the same sheet. */
+   `repeat(var(--n), 1fr)`: the custom-property form is unassertable, and these
+   literals are what the geometry tests read. The rows are `auto` and the
+   square comes from the cell's own aspect-ratio, so the fluid columns drive
+   both axes. */
 .size5 {
-  grid-template-columns: max-content repeat(5, 52px);
-  grid-template-rows: max-content repeat(5, 52px);
+  grid-template-columns: max-content repeat(5, minmax(0, 1fr));
+  grid-template-rows: max-content repeat(5, auto);
 }
 
 .size8 {
-  grid-template-columns: max-content repeat(8, 52px);
-  grid-template-rows: max-content repeat(8, 52px);
+  grid-template-columns: max-content repeat(8, minmax(0, 1fr));
+  grid-template-rows: max-content repeat(8, auto);
 }
 
 .size10 {
-  grid-template-columns: max-content repeat(10, 48px);
-  grid-template-rows: max-content repeat(10, 48px);
+  grid-template-columns: max-content repeat(10, minmax(0, 1fr));
+  grid-template-rows: max-content repeat(10, auto);
 }
 
 .size15 {
-  grid-template-columns: max-content repeat(15, 32px);
-  grid-template-rows: max-content repeat(15, 32px);
+  grid-template-columns: max-content repeat(15, minmax(0, 1fr));
+  grid-template-rows: max-content repeat(15, auto);
 }
 
 /* The module's ONE top-level `.cell` rule (§12.4 rule iii) — the ruled field
@@ -184,6 +139,7 @@
   justify-content: center;
   margin: 0;
   padding: 0;
+  aspect-ratio: 1;
   border-top: 1px solid color-mix(in srgb, var(--ink) 50%, transparent);
   border-left: 1px solid color-mix(in srgb, var(--ink) 50%, transparent);
   background: var(--paper-desk);
@@ -406,10 +362,12 @@
 /* ── brush controls ──────────────────────────────────────────────────── */
 
 .controls {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-top: 30px;
+  width: var(--board-side);
+  margin-top: var(--space-6);
 }
 
 /* `aria-pressed` carries the state to AT; the shadow is for sight only. */
@@ -481,61 +439,20 @@
   pointer-events: none;
 }
 
-/* ≤768px, BLOCK 1 of 2 — the GEOMETRY block (§12.4 rule ii). It must come
-   before the chrome block below: `bodyOf` is first-match and throws on a miss,
-   so the assertions reach the second one only by slicing past this one, and a
-   swap would make each read the other's body. */
 @media (max-width: 768px) {
-  /* The desktop px tracks MUST be overridden here or the board is 525px wide
-     inside a 328px card.
-
-     No `max-width`/`margin-inline` here: the Monday cap is the CARD's, set by
-     `.mobileCap5` above, so the board fills its card at every size the way
-     both shipped games' boards do. */
-  .size5 {
-    grid-template-columns: max-content repeat(5, minmax(0, 1fr));
-    grid-template-rows: max-content repeat(5, auto);
+  .pageNonogram {
+    --board-below: calc(
+      var(--space-4) + 48px + 2 * var(--space-1) + 3px + var(--board-overhang)
+    );
   }
 
-  .size8 {
-    grid-template-columns: max-content repeat(8, minmax(0, 1fr));
-    grid-template-rows: max-content repeat(8, auto);
-  }
-
-  .size10 {
-    grid-template-columns: max-content repeat(10, minmax(0, 1fr));
-    grid-template-rows: max-content repeat(10, auto);
-  }
-
-  .size15 {
-    grid-template-columns: max-content repeat(15, minmax(0, 1fr));
-    grid-template-rows: max-content repeat(15, auto);
-  }
-
-  /* Binairo's shipped mechanism: the rows are `auto` and the square comes from
-     the cell itself, so the fluid columns drive both axes. */
-  .cell {
-    aspect-ratio: 1;
-  }
-}
-
-/* ≤768px, BLOCK 2 of 2 — the CHROME block (§12.4 rule ii).
-
-   Two 64 × 60px segments clear the 44px token at every width down to 320px.
-   The `width: 100%` + cap pair keeps `.board`'s column-flex cross axis from
-   resolving the row against a max-content width. */
-@media (max-width: 768px) {
   .controls {
-    box-sizing: border-box;
-    display: flex;
-    width: 100%;
-    max-width: var(--board-mobile-max);
-    margin-top: var(--space-5);
+    margin-top: var(--space-4);
   }
 
   .control {
     width: 64px;
-    height: 60px;
+    height: 48px;
   }
 
   .affordance {

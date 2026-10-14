@@ -1,7 +1,7 @@
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { DailyPlayChrome } from "../play/daily-chrome";
 import { hasDecidedCell } from "../play/reset-board";
-import screen from "../play/screen.module.css";
 import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
 import { Controls, ControlsSkeleton } from "./controls";
@@ -45,7 +45,9 @@ export function PlayView({
         },
       }}
     >
-      <div className={screen.gridCard}>
+      <BoardCard
+        below={<Controls paint={state.paint} onToggleMode={play.toggleMode} />}
+      >
         <Grid
           givens={state.givens}
           solution={play.solution}
@@ -58,8 +60,7 @@ export function PlayView({
           onStrokeStart={play.strokeStart}
           onPaintOver={play.paintOver}
         />
-      </div>
-      <Controls paint={state.paint} onToggleMode={play.toggleMode} />
+      </BoardCard>
     </DailyPlayChrome>
   );
 }
@@ -81,7 +82,7 @@ export function PlaySkeleton({
       extraStat={null}
       state={{ kind: "skeleton" }}
     >
-      <div aria-hidden className={screen.gridCard}>
+      <BoardCard placeholder below={<ControlsSkeleton />}>
         <div className={styles.grid}>
           {Array.from({ length: TOTAL_CELLS }, (_unused, index) => (
             <div
@@ -90,9 +91,7 @@ export function PlaySkeleton({
             />
           ))}
         </div>
-      </div>
-
-      <ControlsSkeleton />
+      </BoardCard>
     </DailyPlayChrome>
   );
 }

@@ -2,9 +2,9 @@ import type { NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
 
 import { messages } from "../i18n";
+import { BoardCard } from "../play/board-card";
 import { DailyPlayChrome } from "../play/daily-chrome";
 import { hasDecidedCell } from "../play/reset-board";
-import screen from "../play/screen.module.css";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
@@ -52,7 +52,9 @@ export function PlayView({
         },
       }}
     >
-      <div className={screen.gridCard}>
+      <BoardCard
+        below={<Controls brush={state.brush} onSetBrush={play.setBrush} />}
+      >
         <Board
           size={state.size}
           clues={state.clues}
@@ -69,8 +71,7 @@ export function PlayView({
           onClear={play.clearCell}
           onPaintOver={play.paintOver}
         />
-      </div>
-      <Controls brush={state.brush} onSetBrush={play.setBrush} />
+      </BoardCard>
     </DailyPlayChrome>
   );
 }
@@ -96,10 +97,9 @@ export function PlaySkeleton({
       extraStat={sizeStat(size)}
       state={{ kind: "skeleton" }}
     >
-      <div aria-hidden className={screen.gridCard}>
+      <BoardCard placeholder below={<ControlsSkeleton />}>
         <BoardSkeleton size={size} clues={clues} />
-      </div>
-      <ControlsSkeleton />
+      </BoardCard>
     </DailyPlayChrome>
   );
 }
