@@ -255,6 +255,7 @@ describe("use-hint records the reason and the spotlight (T-WEB-S565)", () => {
       type: "tap",
       index: wrong,
       press: PUZZLE.solution[wrong] === 1 ? "right" : "left",
+      first: 1,
     });
     const corrected = hinted(mistaken);
 
@@ -263,7 +264,7 @@ describe("use-hint records the reason and the spotlight (T-WEB-S565)", () => {
   });
 
   it.each<[string, PlayAction]>([
-    ["tapping a cell", { type: "tap", index: other, press: "tap" }],
+    ["tapping a cell", { type: "tap", index: other, press: "tap", first: 1 }],
     ["starting a stroke", { type: "stroke-start", index: other, press: "tap" }],
   ])("puts the spotlight out on %s, and keeps the reason", (_name, action) => {
     const painting = playReducer(hinted(), { type: "set-mode", value: 1 });

@@ -164,6 +164,10 @@ describe("Marcar ✕ automático crosses for a queen and takes back only its own
     const gone = run(true, recrossed, queen(later));
     expect(gone.entries[cell]).toBeNull();
     expect(run(true, gone, queen(owner)).entries[cell]).toBeNull();
+
+    const mine = run(true, cleared, cross(cell), queen(owner));
+    expect(mine.entries[cell]).toBe(0);
+    expect(mine.autoCrossed.has(cell)).toBe(false);
   });
 
   it("crosses nothing when off, and still takes back what it crossed while on", () => {

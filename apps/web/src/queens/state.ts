@@ -111,7 +111,7 @@ function played(
         : withBinaryEntry(
             state,
             action.index,
-            action.press === "right" ? toggled(current, 1) : cycled(current),
+            action.press === "right" ? toggled(current, 1) : cycled(current, 0),
             QUEENS_RULES,
           );
     }

@@ -37,7 +37,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           lockDigit: false,
           highlightSelection: true,
         },
-        binairo: { showErrors: false },
+        binairo: { showErrors: false, firstValue: 1 },
         nonogram: { showErrors: false },
         queens: {
           showErrors: false,
@@ -73,7 +73,10 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
       lockDigit: false,
       highlightSelection: false,
     });
-    expect(settings.games.binairo).toEqual({ showErrors: false });
+    expect(settings.games.binairo).toEqual({
+      showErrors: false,
+      firstValue: 1,
+    });
     expect(settings.games.queens).toEqual({
       showErrors: true,
       highlightRegion: true,
@@ -81,6 +84,31 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
       autoCross: false,
     });
     expect(settings).not.toHaveProperty("extra");
+
+    for (const [stored, read] of [
+      [0, 0],
+      [1, 1],
+      [2, 1],
+      ["0", 1],
+      [null, 1],
+    ] as const) {
+      window.localStorage.setItem(
+        KEY,
+        JSON.stringify({ games: { binairo: { firstValue: stored } } }),
+      );
+      expect(readSettings().games.binairo.firstValue).toBe(read);
+    }
+
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        games: { binairo: { showErrors: true, firstValue: 2 } },
+      }),
+    );
+    expect(readSettings().games.binairo).toEqual({
+      showErrors: true,
+      firstValue: 1,
+    });
 
     window.localStorage.setItem(
       KEY,

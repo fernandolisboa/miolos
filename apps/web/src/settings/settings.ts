@@ -7,6 +7,13 @@ const flag = (fallback: boolean) => z.boolean().catch(fallback);
 
 const errorsOnly = z.object({ showErrors: flag(false) });
 
+export const BINAIRO_FIRST_VALUES = [1, 0] as const;
+
+const binairo = z.object({
+  showErrors: flag(false),
+  firstValue: z.literal(BINAIRO_FIRST_VALUES).catch(1),
+});
+
 const sudoku = z.object({
   showErrors: flag(false),
   lockDigit: flag(false),
@@ -27,7 +34,7 @@ const crossword = z.object({
 
 const games = z.object({
   sudoku: sudoku.catch(sudoku.parse({})),
-  binairo: errorsOnly.catch(errorsOnly.parse({})),
+  binairo: binairo.catch(binairo.parse({})),
   nonogram: errorsOnly.catch(errorsOnly.parse({})),
   queens: queens.catch(queens.parse({})),
   crossword: crossword.catch(crossword.parse({})),

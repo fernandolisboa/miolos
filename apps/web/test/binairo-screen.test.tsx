@@ -1,9 +1,10 @@
 import { FREE_HINTS_PER_PUZZLE, type DailyBinairoResponse } from "@miolos/core";
 import { generateBinairo, nextBinairoStep } from "@miolos/games/binairo";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { GamesSection } from "../app/ajustes/games-section";
 import { BinairoScreen } from "../src/binairo/binairo-screen";
 import styles from "../src/binairo/binairo-screen.module.css";
 import { binairoHintExplanation } from "../src/binairo/hint";
@@ -110,7 +111,7 @@ function solveByClicking(container: HTMLElement): void {
       continue;
     }
     fireEvent.click(cellAt(container, index));
-    if (PUZZLE.solution[index] === 1) {
+    if (PUZZLE.solution[index] === 0) {
       fireEvent.click(cellAt(container, index));
     }
   }
@@ -266,14 +267,14 @@ describe("the board and its readouts (T-WEB-6)", () => {
 });
 
 describe("tap-to-cycle (T-WEB-7)", () => {
-  it("cycles a playable cell empty → 0 → 1 → empty", () => {
+  it("cycles a playable cell empty → 1 → 0 → empty", () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
 
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
     fireEvent.click(cellAt(container, FIRST_EMPTY));
-    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
-    fireEvent.click(cellAt(container, FIRST_EMPTY));
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
+    fireEvent.click(cellAt(container, FIRST_EMPTY));
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
     fireEvent.click(cellAt(container, FIRST_EMPTY));
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
   });
@@ -291,7 +292,7 @@ describe("tap-to-cycle (T-WEB-7)", () => {
       messages.games.binairo.play.cellInvalidAria(
         Math.floor(second / 8) + 1,
         (second % 8) + 1,
-        0,
+        1,
       ),
     );
   });
@@ -414,10 +415,10 @@ describe("the mouse buttons write the two values (T-WEB-S499)", () => {
 
     press(container, FIRST_EMPTY, { button: 0, pointerType: "touch" });
     fireEvent.click(cellAt(container, FIRST_EMPTY), { detail: 1 });
-    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
 
     press(container, FIRST_EMPTY, { button: 0, pointerType: "touch" });
-    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
   });
 
   it("blocks the context menu on the grid", () => {
@@ -979,6 +980,86 @@ describe("the mouse affordance (T-WEB-S499a)", () => {
   it("is reserved by the skeleton as well", () => {
     const html = renderToStaticMarkup(<BinairoScreen daily={DAILY} />);
 
-    expect(html).toContain(messages.games.binairo.play.controls.affordance);
+    expect(html).toContain(messages.games.binairo.play.controls.affordance(1));
+  });
+});
+
+describe("Primeiro valor in Ajustes turns the board's order around (T-WEB-S609)", () => {
+  const copy = messages.settings.games;
+
+  function press(
+    container: HTMLElement,
+    index: number,
+    init: { readonly button: number; readonly pointerType: string },
+  ): void {
+    const grid = gridOf(container);
+    const at = { clientX: index, clientY: 0, pointerId: 1, ...init };
+    fireEvent.pointerDown(grid, at);
+    fireEvent.pointerUp(grid, at);
+  }
+
+  it("offers 1 and 0 under Binairo, with 1 checked by default", () => {
+    render(<GamesSection />);
+    const binairo = screen.getByRole("group", { name: "Binairo" });
+    const choice = within(binairo).getByRole("radiogroup", {
+      name: copy.flags.firstValue.label,
+    });
+
+    expect(choice).toHaveAccessibleDescription(copy.flags.firstValue.hint);
+    expect(
+      within(choice)
+        .getAllByRole("radio")
+        .map((radio) => radio.getAttribute("value")),
+    ).toEqual(["1", "0"]);
+    expect(within(choice).getByRole("radio", { name: "1" })).toBeChecked();
+  });
+
+  it("saves 0 on this device and a mounted board taps, clicks and reads 0 first", () => {
+    const { container } = render(
+      <>
+        <BinairoScreen daily={DAILY} />
+        <GamesSection />
+      </>,
+    );
+    stubElementFromPoint(container);
+    expect(
+      screen.getByText(messages.games.binairo.play.controls.affordance(1)),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "0" }));
+
+    expect(
+      JSON.parse(localStorage.getItem("miolos-settings") ?? "{}"),
+    ).toMatchObject({ games: { binairo: { firstValue: 0 } } });
+    expect(screen.getByRole("radio", { name: "0" })).toBeChecked();
+    expect(
+      screen.getByText(messages.games.binairo.play.controls.affordance(0)),
+    ).toBeInTheDocument();
+
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "touch" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "touch" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "touch" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
+
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "mouse" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
+    press(container, FIRST_EMPTY, { button: 2, pointerType: "mouse" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("1");
+  });
+
+  it("names the brush's order while a digit brush is on", () => {
+    const { container } = render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(container);
+    const { affordance, zeroAria } = messages.games.binairo.play.controls;
+
+    fireEvent.click(screen.getByLabelText(zeroAria));
+    expect(screen.getByText(affordance(0))).toBeInTheDocument();
+    press(container, FIRST_EMPTY, { button: 0, pointerType: "mouse" });
+    expect(cellAt(container, FIRST_EMPTY).textContent).toBe("0");
+
+    fireEvent.click(screen.getByLabelText(zeroAria));
+    expect(screen.getByText(affordance(1))).toBeInTheDocument();
   });
 });
