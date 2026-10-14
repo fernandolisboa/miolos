@@ -68,6 +68,7 @@ export function useDigitLock(
       }
       if (previous?.digit === digit && now - previous.at <= DOUBLE_TAP_MS) {
         if (previous.release) {
+          lastTap.current = { ...previous, at: now };
           return;
         }
         if (current.locked === null) {

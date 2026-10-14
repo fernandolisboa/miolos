@@ -122,7 +122,7 @@ vi.setConfig({ testTimeout: 40_000 });
 const entries = freePlayEntries();
 const valueGraph = union(entries.map(valueClosureOf));
 
-describe("free play's runtime graph reaches no I/O but the settings key, and no walled source (T-WEB-S374)", () => {
+describe("free play's runtime graph reaches no I/O beyond the settings store's localStorage, and no walled source (T-WEB-S374)", () => {
   it("no module on it does network or storage I/O beyond the settings store's localStorage, or lives in packages/db/src or packages/games/src/termo", () => {
     expect({
       io: valueGraph.filter(doesIo),

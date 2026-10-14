@@ -241,6 +241,22 @@ describe("the Sudoku digit lock on the keypad (T-WEB-S592)", () => {
       expect(pressed(7)).toBe("false");
     });
 
+    it("a triple tap on the locked digit releases it and still keeps the cell", () => {
+      render(<SudokuScreen daily={DAILY} />);
+      locked(7);
+      pointer(cell(SECOND));
+
+      wait(1000);
+      tap(7);
+      wait(80);
+      tap(7);
+      wait(80);
+      tap(7);
+
+      expect(cell(SECOND)).toHaveTextContent("7");
+      expect(pressed(7)).toBe("false");
+    });
+
     it("another digit writes as it always does, then unlocks", () => {
       render(<SudokuScreen daily={DAILY} />);
       select(FIRST);
