@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 
+import choiceStyles from "../../src/components/choice.module.css";
 import { messages } from "../../src/i18n";
 import {
   applyThemeChoice,
@@ -36,9 +37,9 @@ export function ThemeSection() {
       </h2>
       <fieldset className={styles.fieldset}>
         <legend className={styles.legend}>{copy.legend}</legend>
-        <div className={styles.choices}>
+        <div className={`${choiceStyles.choices} ${styles.choices}`}>
           {THEME_CHOICES.map((option) => (
-            <label key={option} className={styles.choice}>
+            <label key={option} className={choiceStyles.choice}>
               <input
                 type="radio"
                 name="theme"

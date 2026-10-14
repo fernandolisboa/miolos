@@ -32,10 +32,14 @@ describe("the mark a press writes (T-WEB-S492)", () => {
     expect(toggled(1, 0)).toBe(0);
   });
 
-  it("cycles empty, 0, 1, empty", () => {
-    expect(cycled(null)).toBe(0);
-    expect(cycled(0)).toBe(1);
-    expect(cycled(1)).toBeNull();
+  it("cycles empty, the first value, the other, empty", () => {
+    expect(cycled(null, 1)).toBe(1);
+    expect(cycled(1, 1)).toBe(0);
+    expect(cycled(0, 1)).toBeNull();
+
+    expect(cycled(null, 0)).toBe(0);
+    expect(cycled(0, 0)).toBe(1);
+    expect(cycled(1, 0)).toBeNull();
   });
 });
 

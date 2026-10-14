@@ -49,7 +49,12 @@ export interface PlayState extends PlayCore {
 export type PlayAction =
   | LifecycleAction
   | ResetAction
-  | { readonly type: "tap"; readonly index: number; readonly press: Press }
+  | {
+      readonly type: "tap";
+      readonly index: number;
+      readonly press: Press;
+      readonly first: 0 | 1;
+    }
   | {
       readonly type: "stroke-start";
       readonly index: number;
@@ -93,7 +98,7 @@ export function playReducer(state: PlayState, action: PlayAction): PlayState {
       return withEntry(
         state,
         action.index,
-        tapped(state.paint, current, action.press),
+        tapped(state.paint, current, action.press, action.first),
       );
     }
 
@@ -185,13 +190,18 @@ function playableValue(state: PlayState, index: number): CellValue | undefined {
   return state.entries[index] ?? null;
 }
 
-function tapped(mode: PaintMode, current: CellValue, press: Press): CellValue {
+function tapped(
+  mode: PaintMode,
+  current: CellValue,
+  press: Press,
+  first: 0 | 1,
+): CellValue {
   if (mode.kind === "cycle" && press === "tap") {
-    return cycled(current);
+    return cycled(current, first);
   }
   return toggled(
     current,
-    pressedMark(mode.kind === "paint" ? mode.value : 1, press),
+    pressedMark(mode.kind === "paint" ? mode.value : first, press),
   );
 }
 
