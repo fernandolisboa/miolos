@@ -183,6 +183,31 @@ describe("physical keys (T-WEB-S436)", () => {
   });
 });
 
+describe("Pular letras já preenchidas follows the device setting (T-WEB-S606)", () => {
+  function typeAround(): void {
+    tap(cellAt(1));
+    fireEvent.keyDown(boardOf(), { key: "a" });
+    tap(cellAt(0));
+    fireEvent.keyDown(boardOf(), { key: "c" });
+  }
+
+  it("steps over a filled cell by default", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    typeAround();
+    expect(document.activeElement).toBe(cellAt(2));
+  });
+
+  it("lands on the filled cell once the setting is off", () => {
+    localStorage.setItem(
+      "miolos-settings",
+      JSON.stringify({ games: { crossword: { skipFilled: false } } }),
+    );
+    render(<CrosswordScreen daily={DAILY} />);
+    typeAround();
+    expect(document.activeElement).toBe(cellAt(1));
+  });
+});
+
 const LEADING_BLOCK: DailyCrosswordResponse =
   dailyCrosswordResponseSchema.parse({
     game: "crossword",

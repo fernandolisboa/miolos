@@ -40,7 +40,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
         binairo: { showErrors: false },
         nonogram: { showErrors: false },
         queens: { showErrors: false },
-        crossword: { showErrors: false },
+        crossword: { showErrors: false, skipFilled: true },
       },
     });
   });

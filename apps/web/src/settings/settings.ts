@@ -13,12 +13,17 @@ const sudoku = z.object({
   highlightSelection: flag(true),
 });
 
+const crossword = z.object({
+  showErrors: flag(false),
+  skipFilled: flag(true),
+});
+
 const games = z.object({
   sudoku: sudoku.catch(sudoku.parse({})),
   binairo: errorsOnly.catch(errorsOnly.parse({})),
   nonogram: errorsOnly.catch(errorsOnly.parse({})),
   queens: errorsOnly.catch(errorsOnly.parse({})),
-  crossword: errorsOnly.catch(errorsOnly.parse({})),
+  crossword: crossword.catch(crossword.parse({})),
 });
 
 const base = z.object({

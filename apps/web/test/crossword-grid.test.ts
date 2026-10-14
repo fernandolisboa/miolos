@@ -13,6 +13,7 @@ import {
   isBlock,
   isSolved,
   nextCellInEntry,
+  nextEmptyCell,
   prevCellInEntry,
   rowOf,
   type CrosswordClue,
@@ -157,5 +158,67 @@ describe("blocks and completion (T-WEB-S425)", () => {
     const leadingBlocks = [null, null, "a", null, null] as const;
     expect(firstPlayableIndex(leadingBlocks)).toBe(2);
     expect(firstPlayableIndex([null, null])).toBe(0);
+  });
+});
+
+describe("nextEmptyCell skips filled cells, then moves on to the next open pista (T-WEB-S606)", () => {
+  const across = (number: number, row: number): CrosswordClue => ({
+    number,
+    direction: "across",
+    row,
+    col: 0,
+    length: 3,
+    clue: `horizontal ${String(number)}`,
+  });
+  const ACROSS_3 = across(3, 2);
+  const ACROSS_4 = across(4, 4);
+  const DOWN_2_LONG: CrosswordClue = { ...DOWN_2, length: 3 };
+  const SKIP_CLUES = [ACROSS_1, ACROSS_4, ACROSS_3, DOWN_2_LONG];
+
+  function filled(...cells: readonly number[]): readonly (string | null)[] {
+    return Array.from({ length: CELL_COUNT }, (_unused, index) =>
+      cells.includes(index) ? "x" : null,
+    );
+  }
+
+  it("steps over a filled cell of the same entry", () => {
+    expect(nextEmptyCell(SKIP_CLUES, filled(0, 1), 0, "across")).toBe(2);
+  });
+
+  it("goes back to an earlier empty cell of the entry before leaving it", () => {
+    expect(nextEmptyCell(SKIP_CLUES, filled(1, 2), 1, "across")).toBe(0);
+  });
+
+  it("jumps to the first empty cell of the next pista by number, not by list order", () => {
+    expect(nextEmptyCell(SKIP_CLUES, filled(0, 1, 2, 10), 2, "across")).toBe(
+      11,
+    );
+  });
+
+  it("wraps from the last pista to the first open one", () => {
+    expect(
+      nextEmptyCell(
+        SKIP_CLUES,
+        filled(0, 2, 10, 11, 12, 20, 21, 22),
+        22,
+        "across",
+      ),
+    ).toBe(1);
+  });
+
+  it("follows the direction it was given", () => {
+    expect(nextEmptyCell(SKIP_CLUES, filled(2, 7), 2, "down")).toBe(12);
+  });
+
+  it("stays put when nothing is left to fill, or the cell has no entry that way", () => {
+    expect(
+      nextEmptyCell(
+        SKIP_CLUES,
+        filled(0, 1, 2, 10, 11, 12, 20, 21, 22),
+        2,
+        "across",
+      ),
+    ).toBeUndefined();
+    expect(nextEmptyCell(SKIP_CLUES, filled(), 0, "down")).toBeUndefined();
   });
 });

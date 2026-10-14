@@ -128,7 +128,7 @@ describe("typing a letter (T-WEB-S426)", () => {
     const state = play(
       fresh(),
       { type: "select", index: 0 },
-      { type: "type-letter", letter: "c" },
+      { type: "type-letter", letter: "c", skipFilled: false },
     );
     expect(state.entries[0]).toBe("c");
     expect(state.selected).toBe(1);
@@ -136,7 +136,11 @@ describe("typing a letter (T-WEB-S426)", () => {
 
   it("is a no-op while nothing is selected", () => {
     const state = fresh();
-    const typed = play(state, { type: "type-letter", letter: "c" });
+    const typed = play(state, {
+      type: "type-letter",
+      letter: "c",
+      skipFilled: false,
+    });
     expect(typed).toBe(state);
   });
 
@@ -144,7 +148,7 @@ describe("typing a letter (T-WEB-S426)", () => {
     const state = play(
       fresh(),
       { type: "select", index: 2 },
-      { type: "type-letter", letter: "t" },
+      { type: "type-letter", letter: "t", skipFilled: false },
     );
     expect(state.entries[2]).toBe("t");
     expect(state.selected).toBe(2);
@@ -155,8 +159,36 @@ describe("typing a letter (T-WEB-S426)", () => {
       type: "select",
       index: 3,
     });
-    const typed = play(state, { type: "type-letter", letter: "x" });
+    const typed = play(state, {
+      type: "type-letter",
+      letter: "x",
+      skipFilled: false,
+    });
     expect(typed).toBe(state);
+  });
+});
+
+describe("typing with Pular letras já preenchidas (T-WEB-S606)", () => {
+  it("moves to the next empty cell, stepping over a filled one", () => {
+    const state = play(
+      fresh(),
+      { type: "select", index: 1 },
+      { type: "type-letter", letter: "a", skipFilled: false },
+      { type: "select", index: 0 },
+      { type: "type-letter", letter: "c", skipFilled: true },
+    );
+    expect(state.selected).toBe(2);
+  });
+
+  it("lands on the filled cell when the setting is off", () => {
+    const state = play(
+      fresh(),
+      { type: "select", index: 1 },
+      { type: "type-letter", letter: "a", skipFilled: false },
+      { type: "select", index: 0 },
+      { type: "type-letter", letter: "c", skipFilled: false },
+    );
+    expect(state.selected).toBe(1);
   });
 });
 
@@ -165,7 +197,7 @@ describe("backspace (T-WEB-S426)", () => {
     const filled = play(
       fresh(),
       { type: "select", index: 0 },
-      { type: "type-letter", letter: "c" },
+      { type: "type-letter", letter: "c", skipFilled: false },
     );
     const cleared = play(
       filled,
@@ -180,7 +212,7 @@ describe("backspace (T-WEB-S426)", () => {
     const state = play(
       fresh(),
       { type: "select", index: 0 },
-      { type: "type-letter", letter: "c" },
+      { type: "type-letter", letter: "c", skipFilled: false },
       { type: "select", index: 1 },
     );
     expect(state.entries[0]).toBe("c");
@@ -232,20 +264,24 @@ describe("completion (T-WEB-S426)", () => {
     const solved = play(
       fresh(),
       { type: "select", index: 0 },
-      { type: "type-letter", letter: "c" },
-      { type: "type-letter", letter: "a" },
-      { type: "type-letter", letter: "t" },
+      { type: "type-letter", letter: "c", skipFilled: false },
+      { type: "type-letter", letter: "a", skipFilled: false },
+      { type: "type-letter", letter: "t", skipFilled: false },
       { type: "select", index: 5 },
-      { type: "type-letter", letter: "a" },
+      { type: "type-letter", letter: "a", skipFilled: false },
       { type: "select", index: 7 },
-      { type: "type-letter", letter: "o" },
+      { type: "type-letter", letter: "o", skipFilled: false },
     );
     expect(solved.status).toBe("solved");
     expect(solved.pendingSync).toBe(true);
   });
 
   it("stays playing with a wrong letter", () => {
-    const state = play(fresh(), { type: "type-letter", letter: "x" });
+    const state = play(fresh(), {
+      type: "type-letter",
+      letter: "x",
+      skipFilled: false,
+    });
     expect(state.status).toBe("playing");
   });
 });
@@ -289,7 +325,11 @@ describe("hint (T-WEB-S427)", () => {
   });
 
   it("corrects a wrong letter before filling further", () => {
-    const state = play(fresh(), { type: "type-letter", letter: "x" });
+    const state = play(fresh(), {
+      type: "type-letter",
+      letter: "x",
+      skipFilled: false,
+    });
     const hinted = play(
       state,
       { type: "select", index: 0 },
