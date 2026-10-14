@@ -1,0 +1,5 @@
+/* A flex item inside a key whose content box can be narrower than the glyph
+   (21.8px keys at 320px): without `flex: none` the SVG shrinks to nothing. */
+.glyph {
+  flex: none;
+}

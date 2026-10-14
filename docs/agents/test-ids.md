@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S323` | `S322` | `T-API-16` |
-| `T-WEB` | `S610` | `S609` | `T-WEB-23` |
+| `T-WEB` | `S624` | `S623` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
 #325 (Binairo *Primeiro valor*, ADR-0094 and ADR-0102 amended) spent **`T-WEB-S608`** (the reducer: a tap cycles from the first value, left writes it and right the other, a digit brush ignores it) and **`T-WEB-S609`** (Ajustes' two radios, the saved value, and a mounted board's tap, clicks and affordance following it). `T-WEB-S492`, `S506`, `S580`, `T-WEB-7` and `S499a` were updated in place. Nothing is burned.
@@ -48,6 +48,8 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 #323 (a double tap on a board cell fixes its digit) spent **`T-WEB-S606`** in `apps/web/test/sudoku-digit-lock.test.tsx`.
 
 #322 (Cruzadinha *Pular letras já preenchidas*) spent **`T-WEB-S607`** in `crossword-grid.test.ts` (`nextEmptyCell`), `crossword-state.test.ts` (the reducer) and `crossword-screen.test.tsx` (the device setting reaches the board).
+
+#321 (keyboard-like keys) spent **`T-WEB-S620…S623`**, jumping `S606…S619` because three sibling wave-1 branches (#322, #323, #325) claimed `S606`/`S607` at the same time: `S620` (Termo's `apagar` after P and `enviar` after L on 22 columns, drawn as glyphs), `S621` (the Termo keyboard skeleton equals the live one), `S622` (the Cruzadinha keyboard: `apagar` after P, skeleton equals live, in the board's column), `S623` (Sudoku's `apagar` is the ⌫ glyph, skeleton equals live). `T-WEB-S88`, `S94` and `S102` were rewritten in place.
 
 #303 (boards size from the space they have, ADR-0103) spent **`T-WEB-S596…S602`** in `apps/web/test/board-sizing.test.tsx`: `S596` the shared well and `--board-side`, `S597` each game's ceiling, font floor and fluid tracks, `S598` the floor (fits 320px, cells at or above 24px), `S599` every `gridCard` inside a `boardWell`, `S600` the reset overlay and the 44px targets, `S601` the one fold at 1023px, `S602` the reserved explanation slot. `T-WEB-S34`, `S48` (A1–A3, A6, A7, A10; A12 retired), `S91` and `S102` and the Binairo layout tripwires were rewritten in place. `T-WEB-S367`'s class list gained `hintSlot`. `packages/games/test/nonogram/clue-bounds.test.ts` carries no id and gained the column-run bound `WORST_COLUMN_RUNS`. Part 2 (the Cruzadinha) spent `S603` (free play's generating note on the well, outside the hidden card), `S604` (`crossword-screen.test.tsx`: the *Pistas* disclosure and the empty clue-bar prompt) and `S605` (the clue bar is a fixed two lines that clamps), and widened `S597`–`S600` in place.
 
