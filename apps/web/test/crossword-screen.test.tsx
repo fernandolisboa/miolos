@@ -11,6 +11,8 @@ import type { CrosswordPlayRecord } from "../src/play/play-record";
 import boardStyles from "../src/crossword/crossword-board.module.css";
 import clueStyles from "../src/crossword/clues.module.css";
 import { CrosswordScreen } from "../src/crossword/crossword-screen";
+import keyStyles from "../src/crossword/crossword-keyboard.module.css";
+import { Keyboard, KeyboardSkeleton } from "../src/crossword/keyboard";
 import { bodyOf, decl, stylesheet } from "./css-source";
 
 const sync = vi.hoisted(() => ({
@@ -391,6 +393,67 @@ describe("the clue list folds behind a Pistas button on a narrow board (T-WEB-S6
     expect(decl(bodyOf(narrow, ".listsFolded"), "display")).toBe("none");
     expect(board.replace(narrow, "")).not.toContain(".listsFolded");
     expect(decl(bodyOf(wide, ".toggle"), "display")).toBe("none");
+  });
+});
+
+describe("the keyboard: apagar after P, under the board's column (T-WEB-S622)", () => {
+  function liveKeyboard(): HTMLElement {
+    return render(
+      <Keyboard
+        onLetter={vi.fn()}
+        onErase={vi.fn()}
+        activeKeyRef={{ current: null }}
+      />,
+    ).container;
+  }
+
+  it("ends row 1 with an apagar glyph and keeps row 3 letters only", () => {
+    const keys = within(liveKeyboard()).getAllByRole("button");
+    const erase = screen.getByRole("button", { name: copy.keyboard.eraseAria });
+
+    expect(keys).toHaveLength(27);
+    expect(keys[10]).toBe(erase);
+    expect(erase.style.gridColumn).toBe("21 / span 2");
+    expect(erase.textContent).toBe("");
+    expect(erase.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
+    expect(keys[26]?.getAttribute("aria-label")).toBe(
+      copy.keyboard.letterAria("m"),
+    );
+  });
+
+  it("draws the skeleton's key boxes where and as the live keyboard does", () => {
+    const boxes = (root: HTMLElement) =>
+      [...root.querySelectorAll<HTMLElement>(`.${keyStyles.key ?? ""}`)].map(
+        (key) => [key.style.gridColumn, key.innerHTML],
+      );
+    const live = boxes(liveKeyboard());
+
+    expect(live).toHaveLength(27);
+    expect(boxes(render(<KeyboardSkeleton />).container)).toEqual(live);
+  });
+
+  it("puts the keyboard in the board's column beside the clue list, never across both", () => {
+    const board = stylesheet("src/crossword/crossword-board.module.css");
+    const wide = bodyOf(board, "@container crossword (width >= 640px)");
+    const areas = decl(bodyOf(wide, ".columns"), "grid-template-areas") ?? "";
+
+    expect(areas.split(/\s*"\s*/).filter(Boolean)).toEqual([
+      "well clues",
+      "row  clues",
+      "keys clues",
+    ]);
+    expect(decl(bodyOf(wide, ".keysSlot"), "grid-area")).toBe("keys");
+    expect(
+      decl(
+        bodyOf(
+          stylesheet("src/crossword/crossword-keyboard.module.css"),
+          ".keyboard",
+        ),
+        "grid-template-columns",
+      ),
+    ).toBe("repeat(22, minmax(0, 1fr))");
   });
 });
 

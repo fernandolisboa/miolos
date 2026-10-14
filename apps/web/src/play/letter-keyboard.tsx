@@ -9,6 +9,41 @@ import {
 
 const ROW_END = Number.MAX_SAFE_INTEGER;
 
+const KEYBOARD_COLUMNS = 22;
+const LETTER_SPAN = 2;
+const QWERTY = [
+  { letters: "qwertyuiop", start: 1 },
+  { letters: "asdfghjkl", start: 2 },
+  { letters: "zxcvbnm", start: 5 },
+] as const;
+
+export interface KeySlot {
+  readonly id: string;
+  readonly column: number;
+  readonly span: number;
+}
+
+export function qwertySlots(
+  rowEnds: readonly [string, string?],
+): readonly (readonly KeySlot[])[] {
+  return QWERTY.map(({ letters, start }, row) => {
+    const slots: KeySlot[] = [...letters].map((id, index) => ({
+      id,
+      column: start + LETTER_SPAN * index,
+      span: LETTER_SPAN,
+    }));
+    const command = rowEnds[row];
+    if (command === undefined) {
+      return slots;
+    }
+    const column = start + LETTER_SPAN * letters.length;
+    return [
+      ...slots,
+      { id: command, column, span: KEYBOARD_COLUMNS + 1 - column },
+    ];
+  });
+}
+
 export interface LetterKeyboardKey {
   readonly id: string;
   readonly column: number;

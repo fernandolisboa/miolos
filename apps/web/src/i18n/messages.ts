@@ -843,8 +843,6 @@ export const messages = {
 
         keyboard: {
           label: "teclado",
-          enter: "enviar",
-          erase: "apagar",
           enterAria: "enviar a tentativa",
           eraseAria: "apagar a última letra",
 
@@ -915,7 +913,6 @@ export const messages = {
         cellInvalidAria: (row: number, column: number, value: number | null) =>
           `${cellAriaSudoku(row, column, value)} — esta célula repete um número`,
         keypad: {
-          erase: "apagar",
           digitAria: (digit: number) => `escrever ${digit}`,
           eraseAria: "apagar a célula selecionada",
           affordance:
@@ -1105,7 +1102,6 @@ export const messages = {
 
         keyboard: {
           label: "teclado",
-          erase: "apagar",
           eraseAria: "apagar a letra selecionada",
           letterAria,
         },

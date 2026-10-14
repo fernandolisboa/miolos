@@ -42,7 +42,7 @@ import {
 } from "../src/play/play-record";
 import sharedStyles from "../src/play/screen.module.css";
 import { Board } from "../src/termo/board";
-import { Keyboard } from "../src/termo/keyboard";
+import { Keyboard, KeyboardSkeleton } from "../src/termo/keyboard";
 import { PlaySkeleton, PlayView } from "../src/termo/play-view";
 import { initTermoPlayState, termoPlayReducer } from "../src/termo/state";
 import styles from "../src/termo/termo-board.module.css";
@@ -414,23 +414,11 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
       .getAllByRole("button")
       .map((key) => key.getAttribute("aria-label"));
     expect(names[0]).toBe(copy.keyboard.letterAria("q"));
-    expect(names[10]).toBe(copy.keyboard.letterAria("a"));
-    expect(names[19]).toBe(copy.keyboard.enterAria);
-    expect(names[27]).toBe(copy.keyboard.eraseAria);
-  });
-
-  it("places all 28 keys on the 20-column grid, letters spanning 2 and commands 3", () => {
-    const { play } = playFixture();
-
-    render(<PlayView play={play} />);
-
-    const keys = within(keyboardOf()).getAllByRole("button");
-    expect(keys[0]?.style.gridColumn).toBe("1 / span 2");
-    expect(keys[9]?.style.gridColumn).toBe("19 / span 2");
-
-    expect(keys[10]?.style.gridColumn).toBe("2 / span 2");
-    expect(keys[19]?.style.gridColumn).toBe("1 / span 3");
-    expect(keys[27]?.style.gridColumn).toBe("18 / span 3");
+    expect(names[10]).toBe(copy.keyboard.eraseAria);
+    expect(names[11]).toBe(copy.keyboard.letterAria("a"));
+    expect(names[20]).toBe(copy.keyboard.enterAria);
+    expect(names[21]).toBe(copy.keyboard.letterAria("z"));
+    expect(names[27]).toBe(copy.keyboard.letterAria("m"));
   });
 
   it("moves the CARET with the arrows, clamping at every edge", () => {
@@ -452,28 +440,29 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     press("ArrowUp");
     expect(document.activeElement).toBe(letterKey("q"));
     press("End");
-    expect(document.activeElement).toBe(letterKey("p"));
+    expect(document.activeElement).toBe(commandKey("erase"));
     press("ArrowRight");
-    expect(document.activeElement).toBe(letterKey("p"));
+    expect(document.activeElement).toBe(commandKey("erase"));
     press("Home");
     expect(document.activeElement).toBe(letterKey("q"));
   });
 
-  it("clamps the column into the shorter row, and Home/End on row 3 are the commands", () => {
+  it("clamps the column into the shorter row, and End on rows 1 and 2 is the command", () => {
     const { play } = playFixture();
 
     render(<PlayView play={play} />);
 
-    focusKey(letterKey("p"));
-    press("ArrowDown");
-    expect(document.activeElement).toBe(letterKey("l"));
-
-    press("ArrowDown");
-    expect(document.activeElement).toBe(commandKey("erase"));
-    press("Home");
-    expect(document.activeElement).toBe(commandKey("enter"));
+    focusKey(letterKey("q"));
     press("End");
     expect(document.activeElement).toBe(commandKey("erase"));
+    press("ArrowDown");
+    expect(document.activeElement).toBe(commandKey("enter"));
+    press("ArrowDown");
+    expect(document.activeElement).toBe(letterKey("m"));
+    press("Home");
+    expect(document.activeElement).toBe(letterKey("z"));
+    press("ArrowUp");
+    expect(document.activeElement).toBe(letterKey("a"));
   });
 
   it("keeps the caret and the single tab stop across a judged re-render", () => {
@@ -829,13 +818,14 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     expect(tile).toBeGreaterThanOrEqual(24);
   });
 
-  it("is one 20-column grid at both viewports, 552px desktop and capped at 350px below", () => {
+  it("is one 22-column grid at both viewports, 608px desktop and capped at 350px below", () => {
     const keyboard = bodyOf(css, ".keyboard");
     expect(decl(keyboard, "grid-template-columns")).toBe(
-      "repeat(20, minmax(0, 1fr))",
+      "repeat(22, minmax(0, 1fr))",
     );
     expect(decl(keyboard, "grid-template-rows")).toBe("repeat(3, 48px)");
-    expect(pixels(decl(keyboard, "width"))).toBe(552);
+    expect(pixels(decl(keyboard, "width"))).toBe(608);
+    expect(decl(keyboard, "max-width")).toBe("100%");
 
     expect(decl(keyboard, "gap")).toBe("var(--space-2)");
     expect(decl(keyboard, "margin-top")).toBe("var(--space-5)");
@@ -846,13 +836,6 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     expect(pixels(decl(mobile, "max-width"))).toBe(350);
     expect(decl(mobile, "grid-template-rows")).toBeUndefined();
     expect(decl(mobile, "grid-template-columns")).toBeUndefined();
-  });
-
-  it("holds the command label at `undersized-ui-text`'s 11px floor exactly", () => {
-    expect(decl(bodyOf(css, ".keyCommand"), "font")).toBe("var(--text-button)");
-    const command = bodyOf(mobileChrome(css), ".keyCommand");
-    expect(pixels(decl(command, "font-size"))).toBe(11);
-    expect(pixels(decl(command, "padding-inline"))).toBe(2);
   });
 
   it("keeps the notice row reserved at its tallest state, so the retry button is a paint", () => {
@@ -947,6 +930,65 @@ describe("the <h1> guard, which is TWO mechanisms and not one (T-WEB-S93)", () =
   });
 });
 
+describe("apagar and enviar sit where a physical keyboard has them (T-WEB-S620)", () => {
+  it("places apagar after P and enviar after L on the 22-column grid, as on a physical keyboard", () => {
+    const { play } = playFixture();
+
+    render(<PlayView play={play} />);
+
+    const keys = within(keyboardOf()).getAllByRole("button");
+    expect(keys[0]?.style.gridColumn).toBe("1 / span 2");
+    expect(keys[9]?.style.gridColumn).toBe("19 / span 2");
+    expect(keys[10]?.style.gridColumn).toBe("21 / span 2");
+
+    expect(keys[11]?.style.gridColumn).toBe("2 / span 2");
+    expect(keys[19]?.style.gridColumn).toBe("18 / span 2");
+    expect(keys[20]?.style.gridColumn).toBe("20 / span 3");
+
+    expect(keys[21]?.style.gridColumn).toBe("5 / span 2");
+    expect(keys[27]?.style.gridColumn).toBe("17 / span 2");
+  });
+
+  it("draws the commands as glyphs, never as words, and keeps their names", () => {
+    const { play } = playFixture();
+
+    render(<PlayView play={play} />);
+
+    for (const id of ["enter", "erase"] as const) {
+      const key = commandKey(id);
+      expect(key.textContent).toBe("");
+      expect(key.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+        "true",
+      );
+    }
+    expect(commandKey("enter").innerHTML).not.toBe(
+      commandKey("erase").innerHTML,
+    );
+  });
+});
+
+describe("the keyboard skeleton equals the live keyboard (T-WEB-S621)", () => {
+  it("draws every key box where and as the live keyboard does", () => {
+    const live = render(
+      <Keyboard
+        state={{}}
+        onLetter={vi.fn()}
+        onEnter={vi.fn()}
+        onErase={vi.fn()}
+        activeKeyRef={{ current: null }}
+      />,
+    ).container;
+    const skeleton = render(<KeyboardSkeleton />).container;
+
+    const boxes = (root: HTMLElement) =>
+      [...root.querySelectorAll<HTMLElement>(`.${styles.key ?? ""}`)].map(
+        (key) => [key.style.gridColumn, key.innerHTML],
+      );
+    expect(boxes(skeleton)).toHaveLength(28);
+    expect(boxes(skeleton)).toEqual(boxes(live));
+  });
+});
+
 describe("the pre-hydration skeleton (T-WEB-S94)", () => {
   it("reserves 30 tiles, all 28 key boxes with their real labels, and the one-row stats card", () => {
     const { container } = render(<PlaySkeleton date={DATE} />);
@@ -956,8 +998,9 @@ describe("the pre-hydration skeleton (T-WEB-S94)", () => {
     );
     expect(container.querySelectorAll(`.${styles.key ?? ""}`)).toHaveLength(28);
 
-    expect(container.textContent).toContain(copy.keyboard.enter);
-    expect(container.textContent).toContain(copy.keyboard.erase);
+    expect(
+      container.querySelectorAll(`.${styles.keyboard ?? ""} svg`),
+    ).toHaveLength(2);
     expect(
       container.querySelectorAll(`.${sharedStyles.statRow ?? ""}`),
     ).toHaveLength(1);
@@ -1066,7 +1109,7 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
     }
   });
 
-  it("names every off-4pt length the STYLESHEET actually ships, not only the two the prose used to", () => {
+  it("names every off-4pt length the STYLESHEET actually ships", () => {
     const sheet = stylesheet("src/termo/termo-board.module.css");
     const declarations =
       /(?:^|[\s;{])(?:gap|row-gap|column-gap|margin(?:-[a-z]+)?|padding(?:-[a-z-]+)?|text-underline-offset)\s*:\s*([^;{}]+)/g;
@@ -1082,7 +1125,7 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
     }
 
     expect(offScale.size).toBeGreaterThan(0);
-    expect([...offScale].sort()).toEqual(["2px", "3px"]);
+    expect([...offScale].sort()).toEqual(["3px"]);
 
     const deviation = (header ?? "").split(/^ {5}\d\. /gm)[7] ?? "";
     for (const length of offScale) {

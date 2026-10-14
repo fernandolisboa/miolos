@@ -2,8 +2,9 @@
 
 **Status:** Accepted — 2026-08-02
 **Depends on:** [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md)
-**Superseded in part by:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md) (#303) — decision 6's board geometry: tiles are fluid squares, the card cap and `--board-mobile-max` are gone, and the keyboard rows are 48px at both widths (desktop `margin-top` 20px, not 30px). The 552px/350px keyboard widths stand.
+**Superseded in part by:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md) (#303) — decision 6's board geometry: tiles are fluid squares, the card cap and `--board-mobile-max` are gone, and the keyboard rows are 48px at both widths (desktop `margin-top` 20px, not 30px). The 350px mobile keyboard width stands.
 **Amended by:** [ADR-0067](./0067-termo-accent-deepens-to-carry-a-light-label.md) (#161) — `--accent-termo` deepened `#C08A1E` → `#8D6212`, so the state table's `correct` row reads `var(--ink-on-accent, var(--paper-desk))` at **4.8433:1** (the mustard figures 2.7311 / 2.8501 / 5.4968 in this file are the old value's). Everything this ADR decides survives: the board stays read-only, the accent still does exactly one job (the `correct` fill), the typographic marks still carry every distinction, and the chroma argument holds at the new value (chroma 123 ≥ 30).
+**Amended in place:** #321 — decisions 6, 7 and 8's keyboard: 22 columns, `apagar` after P and `enviar` after L as on a physical keyboard, both drawn as glyphs (⌫, ↵) from `play/key-glyph.tsx`; desktop width 608px.
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 3's premise that Sudoku's keypad is commands holds only while *Número fixo com toque duplo* is off; then a double-tapped digit is a mode with `aria-pressed`. Termo's keys are unchanged.
 
 ## Context
@@ -200,15 +201,15 @@ for recording its deviations with their arithmetic.
    in `termo-board.module.css`. The `accent.ts` copy went with #205's sweep;
    of the rest, `screen.module.css` is part 2's, `ink-on-accent.test.ts`
    belongs to the `apps/web/test` tranche and `termo-board.module.css` to the
-   `apps/web/src` remainder.) Keyboard: one 20-column
-   grid, letter keys span 2 and command keys span 3, `width: 552px` / `gap:
-   8px` / rows 52px on desktop → `C = (552 − 19×8)/20 = 20px`, a 48px letter
-   key and a 76px command key; `max-width: 350px` / `gap: 4px` / rows 48px
-   below 768px → `C = 13.7px`, a 31.4px letter key at 390 and **24.4px at
-   320**. The
-   keyboard, not the board, is the widest thing in `.board`: 552px against
-   the 578px the shared 1140px fold leaves (`1140 − 2×80 − 330 − 72`),
-   **26px of margin**. Every number here is computed from the shipped
+   `apps/web/src` remainder.) Keyboard (#321): one 22-column
+   grid laid out by `qwertySlots` (`play/letter-keyboard.tsx`). Letter keys
+   span 2; `apagar` closes row 1 (span 2) and `enviar` closes row 2 (span 3),
+   where a physical keyboard has them; row 3 is the seven letters, centred.
+   `width: 608px` / `max-width: 100%` / `gap: 8px` on desktop → `C = (608 −
+   21×8)/22 = 20px`, a 48px letter key and a 76px `enviar`; at 1024px the
+   board column is 570px and the keys shrink to 44.5px. `max-width: 350px` /
+   `gap: 4px` below 768px → `C = 12.1px`, a 28.2px letter key at 390 and
+   **21.8px at 320**. Every number here is computed from the shipped
    stylesheets, not measured in a browser; jsdom implements no layout.
 
 7. **Board and keyboard touch targets fall below 44px, this is conscious,
@@ -216,9 +217,11 @@ for recording its deviations with their arithmetic.
    `10 × 44 = 440px` exceeds the 350px available at the reference phone
    **before any gap**, so `PRODUCT.md:39` / `DESIGN.md:40`'s ≥44px is
    arithmetically unreachable on the horizontal axis for a 26-letter
-   keyboard. WCAG 2.5.8's 24×24 floor is cleared at every width the repo
-   designs for — 31.4 × 48 at 390px, **24.4 × 48 at 320px** — and the
-   vertical axis is held above 44px because it is free. **WCAG
+   keyboard. Since #321 the top row is eleven keys (ten letters and
+   `apagar`): a key is 28.2 × 48 at 390px and **21.8 × 48 at 320px**, so
+   WCAG 2.5.8's 24×24 floor is met at 320px through its spacing exception
+   (a 25.8px key pitch, so a 24px circle on each key reaches no neighbour).
+   The vertical axis is held above 44px because it is free. **WCAG
    2.5.5/2.5.8's essential-presentation exception applies: an alphabet is
    26 keys, and a keyboard whose keys are 44px wide is not a keyboard on a
    phone.** This is ADR-0035 decision 7's argument, inherited rather than
@@ -231,7 +234,7 @@ for recording its deviations with their arithmetic.
    (`packages/games/src/termo/keyboard.ts:23`) — which keys on the
    normalized letter — could never colour it differently. A key that
    duplicates another and can never carry its own state is a trap, not an
-   affordance. The rows are 10 / 9 / 7 + 2 commands.
+   affordance. The rows are 10 + `apagar` / 9 + `enviar` / 7 (#321).
 
 9. **Nothing on this screen is a `@keyframes` animation.** The row reveal
    is a `transition` on paint properties over `var(--duration-fast)`,
