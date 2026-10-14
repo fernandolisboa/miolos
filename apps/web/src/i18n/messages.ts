@@ -669,7 +669,7 @@ export const messages = {
         },
         lockDigit: {
           label: "Número fixo com toque duplo",
-          hint: "Toque duas vezes num número para fixá-lo e depois toque nas células para escrevê-lo. Toque no número de novo para soltar.",
+          hint: "Toque duas vezes num número, no teclado ou no tabuleiro, para fixá-lo e depois toque nas células para escrevê-lo. Toque no número de novo para soltar.",
         },
         highlightSelection: {
           label: "Destacar linha, coluna e bloco",
