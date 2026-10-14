@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, type Dispatch } from "react";
 
 import { useSettings } from "../settings/settings";
+import { asDigit } from "./engine";
 import type {
   DigitLockUndo,
   SudokuDigit,
@@ -17,6 +18,14 @@ interface Tap {
   readonly release: boolean;
 }
 
+interface CellTap {
+  readonly index: number;
+  readonly at: number;
+  readonly shown: SudokuDigit | null;
+  readonly undo: DigitLockUndo | null;
+  readonly settled: boolean;
+}
+
 export interface DigitLock {
   readonly enabled: boolean;
   readonly locked: SudokuDigit | null;
@@ -25,12 +34,18 @@ export interface DigitLock {
   readonly tapCell: (index: number) => void;
 }
 
-function undoOf(state: SudokuPlayState): DigitLockUndo | null {
-  const { selected } = state;
-  if (selected === null || state.givens[selected] !== 0) {
+function undoAt(
+  state: SudokuPlayState,
+  index: number | null,
+): DigitLockUndo | null {
+  if (index === null || state.givens[index] !== 0) {
     return null;
   }
-  return { index: selected, value: state.entries[selected] ?? null };
+  return { index, value: state.entries[index] ?? null };
+}
+
+function shownAt(state: SudokuPlayState, index: number): SudokuDigit | null {
+  return asDigit(state.givens[index]) ?? state.entries[index] ?? null;
 }
 
 export function useDigitLock(
@@ -40,6 +55,7 @@ export function useDigitLock(
   const enabled = useSettings().games.sudoku.lockDigit;
   const stateRef = useRef(state);
   const lastTap = useRef<Tap | null>(null);
+  const lastCellTap = useRef<CellTap | null>(null);
   useEffect(() => {
     stateRef.current = state;
   });
@@ -59,6 +75,7 @@ export function useDigitLock(
       const current = stateRef.current;
       const previous = lastTap.current;
       lastTap.current = null;
+      lastCellTap.current = null;
       const now = performance.now();
 
       if (current.locked === digit) {
@@ -79,7 +96,7 @@ export function useDigitLock(
       lastTap.current = {
         digit,
         at: now,
-        undo: undoOf(current),
+        undo: undoAt(current, current.selected),
         release: false,
       };
       dispatch({ type: "enter-digit", digit });
@@ -91,6 +108,7 @@ export function useDigitLock(
   const pressErase = useCallback(
     (pointer: boolean) => {
       lastTap.current = null;
+      lastCellTap.current = null;
       dispatch({ type: "clear-cell" });
       if (enabled && pointer) {
         dispatch({ type: "unlock" });
@@ -102,9 +120,41 @@ export function useDigitLock(
   const tapCell = useCallback(
     (index: number) => {
       lastTap.current = null;
-      if (enabled) {
-        dispatch({ type: "tap-cell", index });
+      if (!enabled) {
+        return;
       }
+      const current = stateRef.current;
+      const previous = lastCellTap.current;
+      const now = performance.now();
+
+      const paired =
+        previous?.index === index && now - previous.at <= DOUBLE_TAP_MS;
+      if (paired) {
+        if (previous.settled) {
+          lastCellTap.current = { ...previous, at: now };
+          return;
+        }
+        if (previous.shown !== null) {
+          lastCellTap.current = { ...previous, at: now, settled: true };
+          dispatch({
+            type: "lock-digit",
+            digit: previous.shown,
+            undo: previous.undo,
+          });
+          if (previous.shown === current.locked) {
+            dispatch({ type: "unlock" });
+          }
+          return;
+        }
+      }
+      lastCellTap.current = {
+        index,
+        at: now,
+        shown: paired ? null : shownAt(current, index),
+        undo: undoAt(current, index),
+        settled: false,
+      };
+      dispatch({ type: "tap-cell", index });
     },
     [enabled, dispatch],
   );

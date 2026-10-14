@@ -168,7 +168,7 @@ describe("typing a letter (T-WEB-S426)", () => {
   });
 });
 
-describe("typing with Pular letras já preenchidas (T-WEB-S606)", () => {
+describe("typing with Pular letras já preenchidas (T-WEB-S607)", () => {
   it("moves to the next empty cell, stepping over a filled one", () => {
     const state = play(
       fresh(),

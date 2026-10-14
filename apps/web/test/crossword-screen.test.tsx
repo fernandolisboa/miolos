@@ -183,7 +183,7 @@ describe("physical keys (T-WEB-S436)", () => {
   });
 });
 
-describe("Pular letras já preenchidas follows the device setting (T-WEB-S606)", () => {
+describe("Pular letras já preenchidas follows the device setting (T-WEB-S607)", () => {
   function typeAround(): void {
     tap(cellAt(1));
     fireEvent.keyDown(boardOf(), { key: "a" });

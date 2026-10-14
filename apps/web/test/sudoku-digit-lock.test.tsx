@@ -513,3 +513,217 @@ describe("a lock tap cannot un-solve the board (T-WEB-S592)", () => {
     expect(result.current.state.entries[FIRST]).toBe(digit);
   });
 });
+
+describe("a double tap on a board cell fixes the digit it shows (T-WEB-S606)", () => {
+  const GIVEN_DIGIT = PUZZLE.givens[GIVEN] ?? 1;
+  const OTHER = (GIVEN_DIGIT % 9) + 1;
+
+  function doubleTap(index: number): void {
+    pointer(cell(index));
+    wait(120);
+    pointer(cell(index));
+  }
+
+  function lockFromKeypad(digit: number): void {
+    tap(digit);
+    wait(50);
+    tap(digit);
+    wait(1000);
+  }
+
+  function fillFirst(digit: number): void {
+    select(FIRST);
+    type(digit);
+  }
+
+  it("locks a given's digit, selects the cell and writes nothing", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    const before = boardValues();
+
+    doubleTap(GIVEN);
+
+    expect(pressed(GIVEN_DIGIT)).toBe("true");
+    expect(cell(GIVEN)).toHaveAttribute("tabindex", "0");
+    expect(boardValues()).toEqual(before);
+  });
+
+  it("locks a player entry's digit and leaves the entry in place", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    fillFirst(3);
+
+    doubleTap(FIRST);
+
+    expect(pressed(3)).toBe("true");
+    expect(cell(FIRST)).toHaveTextContent("3");
+  });
+
+  it("then fills empty cells with that digit", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    doubleTap(GIVEN);
+    wait(1000);
+
+    pointer(cell(SECOND));
+
+    expect(cell(SECOND)).toHaveTextContent(String(GIVEN_DIGIT));
+  });
+
+  describe("while another digit is locked", () => {
+    it("switches the lock to a given's digit", () => {
+      render(<SudokuScreen daily={DAILY} />);
+      lockFromKeypad(OTHER);
+      const before = boardValues();
+
+      doubleTap(GIVEN);
+
+      expect(pressed(GIVEN_DIGIT)).toBe("true");
+      expect(pressed(OTHER)).toBe("false");
+      expect(boardValues()).toEqual(before);
+    });
+
+    it("switches the lock to an entry's digit and gives the entry back", () => {
+      render(<SudokuScreen daily={DAILY} />);
+      fillFirst(3);
+      lockFromKeypad(8);
+      const before = boardValues();
+
+      doubleTap(FIRST);
+
+      expect(pressed(3)).toBe("true");
+      expect(pressed(8)).toBe("false");
+      expect(boardValues()).toEqual(before);
+    });
+  });
+
+  describe("on a cell showing the locked digit", () => {
+    it("an entry releases the lock and keeps the entry", () => {
+      render(<SudokuScreen daily={DAILY} />);
+      fillFirst(3);
+      lockFromKeypad(3);
+      const before = boardValues();
+
+      doubleTap(FIRST);
+
+      expect(pressed(3)).toBe("false");
+      expect(boardValues()).toEqual(before);
+    });
+
+    it("a given releases the lock", () => {
+      render(<SudokuScreen daily={DAILY} />);
+      lockFromKeypad(GIVEN_DIGIT);
+      const before = boardValues();
+
+      doubleTap(GIVEN);
+
+      expect(pressed(GIVEN_DIGIT)).toBe("false");
+      expect(boardValues()).toEqual(before);
+    });
+  });
+
+  it.each([
+    ["no lock", null, "true"],
+    ["the same digit locked", 3, "false"],
+    ["another digit locked", 8, "true"],
+  ] as const)(
+    "a triple tap on an entry with %s ends as the double tap did and changes no entry",
+    (_name, lockedDigit, threeLocked) => {
+      render(<SudokuScreen daily={DAILY} />);
+      fillFirst(3);
+      if (lockedDigit !== null) {
+        lockFromKeypad(lockedDigit);
+      }
+      const before = boardValues();
+
+      doubleTap(FIRST);
+      wait(120);
+      pointer(cell(FIRST));
+
+      expect(pressed(3)).toBe(threeLocked);
+      expect(boardValues()).toEqual(before);
+    },
+  );
+
+  it("treats taps 301 ms apart as two single taps", () => {
+    render(<SudokuScreen daily={DAILY} />);
+
+    pointer(cell(GIVEN));
+    wait(301);
+    pointer(cell(GIVEN));
+
+    expect(pressed(GIVEN_DIGIT)).toBe("false");
+  });
+
+  it("does not pair taps on two different cells", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    fillFirst(GIVEN_DIGIT);
+
+    pointer(cell(GIVEN));
+    wait(50);
+    pointer(cell(FIRST));
+
+    expect(pressed(GIVEN_DIGIT)).toBe("false");
+  });
+
+  it("a keypad tap between the two cell taps breaks the pair", () => {
+    render(<SudokuScreen daily={DAILY} />);
+
+    pointer(cell(GIVEN));
+    tap(OTHER);
+    pointer(cell(GIVEN));
+
+    expect(pressed(GIVEN_DIGIT)).toBe("false");
+  });
+
+  it("a double tap on an empty cell never locks", () => {
+    render(<SudokuScreen daily={DAILY} />);
+
+    doubleTap(FIRST);
+
+    expect(cell(FIRST)).toHaveTextContent("");
+    for (const digit of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+      expect(pressed(digit)).toBe("false");
+    }
+  });
+
+  it("a quick triple tap on an empty cell keeps the lock and toggles as before", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    lockFromKeypad(7);
+
+    doubleTap(FIRST);
+    wait(120);
+    pointer(cell(FIRST));
+
+    expect(pressed(7)).toBe("true");
+    expect(cell(FIRST)).toHaveTextContent("7");
+  });
+
+  it("a keyboard activation of a cell never locks", () => {
+    render(<SudokuScreen daily={DAILY} />);
+
+    fireEvent.click(cell(GIVEN));
+    fireEvent.click(cell(GIVEN));
+
+    expect(pressed(GIVEN_DIGIT)).toBe("false");
+  });
+
+  it("does nothing with the setting off", () => {
+    setLockDigit(false);
+    render(<SudokuScreen daily={DAILY} />);
+    fillFirst(3);
+    const before = boardValues();
+
+    doubleTap(FIRST);
+    doubleTap(GIVEN);
+
+    expect(key(3)).not.toHaveAttribute("aria-pressed");
+    expect(key(GIVEN_DIGIT)).not.toHaveAttribute("aria-pressed");
+    expect(boardValues()).toEqual(before);
+  });
+
+  it("is on the free-play board too", () => {
+    render(<SudokuFreeScreen deps={FREE_DEPS} />);
+
+    doubleTap(GIVEN);
+
+    expect(pressed(GIVEN_DIGIT)).toBe("true");
+  });
+});

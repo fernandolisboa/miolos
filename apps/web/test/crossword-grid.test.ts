@@ -161,7 +161,7 @@ describe("blocks and completion (T-WEB-S425)", () => {
   });
 });
 
-describe("nextEmptyCell skips filled cells, then moves on to the next open pista (T-WEB-S606)", () => {
+describe("nextEmptyCell skips filled cells, then moves on to the next open pista (T-WEB-S607)", () => {
   const across = (number: number, row: number): CrosswordClue => ({
     number,
     direction: "across",
