@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0079](./0079-the-theme-is-a-device-preference-applied-before-paint.md), [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md)
 **Supersedes in part:** [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md) decision 5, consequence (e) and its Rejected bullet *"A per-cell 'this is wrong' state, in any colour"*; [ADR-0032](./0032-a-nonogram-is-finished-when-the-picture-is-painted.md) decision 5's clause *"forbidden under any framing that arrives at it"*. Both for the opt-in case only.
 **Amends:** [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decision 4 and [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) decision 2 (free play reads and writes the settings key, and nothing else); [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) decision 1 (`T-WEB-S374` allows `localStorage` in `settings.ts` only); [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 3 (its Sudoku premise holds only with *Número fixo* off); [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (a second stateful child in the reset area, and the clock gated by a setting).
+**Amended by:** [ADR-0104](./0104-a-nonogram-clue-number-is-struck-when-the-marks-place-it.md) (#324) — decision 2: the Nonogram also has *Riscar números resolvidos* (on).
 
 ## Context
 

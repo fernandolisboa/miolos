@@ -216,7 +216,7 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         within(sudoku).getByRole("switch", { name: label }),
       ).toBeInTheDocument();
     }
-    for (const name of ["Binairo", "Nonogram", "Rainhas", "Cruzadinha"]) {
+    for (const name of ["Binairo", "Rainhas", "Cruzadinha"]) {
       const group = screen.getByRole("group", { name });
       expect(within(group).getAllByRole("switch")).toHaveLength(1);
       expect(
@@ -225,6 +225,13 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         }),
       ).toBeInTheDocument();
     }
+    const nonogram = screen.getByRole("group", { name: "Nonogram" });
+    expect(within(nonogram).getAllByRole("switch")).toHaveLength(2);
+    expect(
+      within(nonogram).getByRole("switch", {
+        name: copy.flags.strikePlacedRuns.label,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("describes each switch and can turn every one off and on again", () => {

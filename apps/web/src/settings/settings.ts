@@ -13,10 +13,15 @@ const sudoku = z.object({
   highlightSelection: flag(true),
 });
 
+const nonogram = z.object({
+  showErrors: flag(false),
+  strikePlacedRuns: flag(true),
+});
+
 const games = z.object({
   sudoku: sudoku.catch(sudoku.parse({})),
   binairo: errorsOnly.catch(errorsOnly.parse({})),
-  nonogram: errorsOnly.catch(errorsOnly.parse({})),
+  nonogram: nonogram.catch(nonogram.parse({})),
   queens: errorsOnly.catch(errorsOnly.parse({})),
   crossword: errorsOnly.catch(errorsOnly.parse({})),
 });

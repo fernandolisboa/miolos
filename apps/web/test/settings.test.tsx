@@ -38,7 +38,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           highlightSelection: true,
         },
         binairo: { showErrors: false },
-        nonogram: { showErrors: false },
+        nonogram: { showErrors: false, strikePlacedRuns: true },
         queens: { showErrors: false },
         crossword: { showErrors: false },
       },
@@ -58,6 +58,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           sudoku: { showErrors: true, lockDigit: 3, highlightSelection: false },
           binairo: "x",
           queens: { showErrors: true, nope: true },
+          nonogram: { showErrors: true, strikePlacedRuns: "no" },
         },
       }),
     );
@@ -70,6 +71,10 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
     });
     expect(settings.games.binairo).toEqual({ showErrors: false });
     expect(settings.games.queens).toEqual({ showErrors: true });
+    expect(settings.games.nonogram).toEqual({
+      showErrors: true,
+      strikePlacedRuns: true,
+    });
     expect(settings).not.toHaveProperty("extra");
 
     window.localStorage.setItem(KEY, JSON.stringify({ games: "x" }));

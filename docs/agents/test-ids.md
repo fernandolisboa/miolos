@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S323` | `S322` | `T-API-16` |
-| `T-WEB` | `S606` | `S605` | `T-WEB-23` |
+| `T-WEB` | `S609` | `S607` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#324 (struck Nonogram clue numbers, ADR-0104) spent **`T-WEB-S606…S607`** in `apps/web/test/nonogram-placed-clues.test.tsx`: `S606` (a row whose marks are its clue is struck and named "feito", nothing struck with the setting off, the empty line's "0" never "feito") and `S607` (`.clueNumberPlaced`'s ink, line-through and unchanged glyph box, and `--ink-2` on `--paper-card` in both themes). `S608`, its headroom, is **burned**. `T-WEB-S43`, `S66`, `S68`, `S580` and `S593` were widened in place. `packages/games/test/nonogram/placed.test.ts` carries no ids.
 
 #303 (boards size from the space they have, ADR-0103) spent **`T-WEB-S596…S602`** in `apps/web/test/board-sizing.test.tsx`: `S596` the shared well and `--board-side`, `S597` each game's ceiling, font floor and fluid tracks, `S598` the floor (fits 320px, cells at or above 24px), `S599` every `gridCard` inside a `boardWell`, `S600` the reset overlay and the 44px targets, `S601` the one fold at 1023px, `S602` the reserved explanation slot. `T-WEB-S34`, `S48` (A1–A3, A6, A7, A10; A12 retired), `S91` and `S102` and the Binairo layout tripwires were rewritten in place. `T-WEB-S367`'s class list gained `hintSlot`. `packages/games/test/nonogram/clue-bounds.test.ts` carries no id and gained the column-run bound `WORST_COLUMN_RUNS`. Part 2 (the Cruzadinha) spent `S603` (free play's generating note on the well, outside the hidden card), `S604` (`crossword-screen.test.tsx`: the *Pistas* disclosure and the empty clue-bar prompt) and `S605` (the clue bar is a fixed two lines that clamps), and widened `S597`–`S600` in place.
 

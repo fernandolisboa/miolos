@@ -362,12 +362,24 @@ describe("the clue rails (T-WEB-S43)", () => {
 
     for (const [row, runs] of BIG.clues.rows.entries()) {
       expect(
-        screen.getByLabelText(copy.rowCluesAria(row + 1, runs)),
+        screen.getByLabelText(
+          copy.rowCluesAria(
+            row + 1,
+            runs,
+            runs.map(() => false),
+          ),
+        ),
       ).toBeInTheDocument();
     }
     for (const [column, runs] of BIG.clues.cols.entries()) {
       expect(
-        screen.getByLabelText(copy.columnCluesAria(column + 1, runs)),
+        screen.getByLabelText(
+          copy.columnCluesAria(
+            column + 1,
+            runs,
+            runs.map(() => false),
+          ),
+        ),
       ).toBeInTheDocument();
     }
     expect(container.querySelectorAll('[id^="nonogram-clue-"]')).toHaveLength(
@@ -390,7 +402,9 @@ describe("the clue rails (T-WEB-S43)", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
     const empty = BIG.clues.rows.findIndex((runs) => runs.length === 0);
     if (empty === -1) {
-      expect(messages.games.nonogram.play.rowCluesAria(1, [])).toContain("0");
+      expect(messages.games.nonogram.play.rowCluesAria(1, [], [])).toContain(
+        "0",
+      );
       return;
     }
 
@@ -398,7 +412,7 @@ describe("the clue rails (T-WEB-S43)", () => {
     expect(rail?.textContent).toBe("0");
     expect(rail).toHaveAttribute(
       "aria-label",
-      messages.games.nonogram.play.rowCluesAria(empty + 1, []),
+      messages.games.nonogram.play.rowCluesAria(empty + 1, [], []),
     );
   });
 
@@ -454,10 +468,15 @@ describe("the clue rails (T-WEB-S43)", () => {
       expect(numeral.textContent).toMatch(/^\d+$/);
     }
 
+    const runs = BIG.clues.rows[0] ?? [];
     const rail = container.querySelector("#nonogram-clue-row-0");
     expect(rail).toHaveAttribute(
       "aria-label",
-      messages.games.nonogram.play.rowCluesAria(1, BIG.clues.rows[0] ?? []),
+      messages.games.nonogram.play.rowCluesAria(
+        1,
+        runs,
+        runs.map(() => false),
+      ),
     );
   });
 });
@@ -754,7 +773,7 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
     expect(Board).toHaveProperty("type", expect.any(Function));
   });
 
-  it("composes ONE label per painted cell during a drag — cells AND rails, not size² + 2·size (T-WEB-S66)", () => {
+  it("composes ONE label per painted cell during a drag, and a rail's only when its struck numbers change — not size² + 2·size (T-WEB-S66)", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
     stubElementFromPoint(container);
     const board = boardOf(BIG);
@@ -788,8 +807,9 @@ describe("the board's re-render budget (T-WEB-S57)", () => {
 
     expect(cellAria.mock.calls.length).toBeLessThan(cells);
 
+    expect(BIG.clues.cols[1]).toEqual([1]);
     expect(rowCluesAria.mock.calls.length).toBe(0);
-    expect(columnCluesAria.mock.calls.length).toBe(0);
+    expect(columnCluesAria.mock.calls).toEqual([[2, [1], [true]]]);
     cellAria.mockRestore();
     rowCluesAria.mockRestore();
     columnCluesAria.mockRestore();

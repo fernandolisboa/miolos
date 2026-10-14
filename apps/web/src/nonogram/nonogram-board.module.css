@@ -324,6 +324,11 @@
   color: var(--ink);
 }
 
+.clueNumberPlaced {
+  color: var(--ink-2);
+  text-decoration-line: line-through;
+}
+
 /* ── the caret ───────────────────────────────────────────────────────── */
 
 /* ONE declaration block for selection AND focus, so ADR-0030 consequence (c)

@@ -2,14 +2,15 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
-  deriveClues,
   generateNonogram,
   nextNonogramStep,
   type NonogramCellState,
   type NonogramClues,
   type NonogramStep,
 } from "../../src/nonogram/index";
+import { nonogramLines } from "../../src/nonogram/lines";
 import { FC_SEED, seedArb, weekdayArb } from "../daily-arbitraries";
+import { board, cluesOf, consistent } from "./fixtures";
 
 const densityArb = fc.integer({ min: 0, max: 100 });
 const maskArb = fc.array(fc.integer({ min: 0, max: 99 }), {
@@ -17,81 +18,12 @@ const maskArb = fc.array(fc.integer({ min: 0, max: 99 }), {
   maxLength: 225,
 });
 
-function cluesOf(rows: readonly string[]): NonogramClues {
-  return deriveClues(rows.map((row) => [...row].map((ch) => ch === "#")));
-}
-
-function board(rows: readonly string[]): NonogramCellState[] {
-  return rows.flatMap((row) =>
-    [...row].map((ch) =>
-      ch === "#" ? "filled" : ch === "x" ? "empty" : "unknown",
-    ),
-  );
-}
-
-function arrangements(length: number, runs: readonly number[]): boolean[][] {
-  if (runs.length === 0) {
-    return [new Array<boolean>(length).fill(false)];
-  }
-  const [first = 0, ...rest] = runs;
-  const restMin = rest.reduce((sum, run) => sum + run + 1, 0);
-  const found: boolean[][] = [];
-  for (let start = 0; start + first + restMin <= length; start += 1) {
-    const head = [
-      ...new Array<boolean>(start).fill(false),
-      ...new Array<boolean>(first).fill(true),
-    ];
-    if (rest.length === 0) {
-      found.push([
-        ...head,
-        ...new Array<boolean>(length - head.length).fill(false),
-      ]);
-      continue;
-    }
-    for (const tail of arrangements(length - head.length - 1, rest)) {
-      found.push([...head, false, ...tail]);
-    }
-  }
-  return found;
-}
-
-type LineSpec = Omit<NonogramStep, "index" | "value">;
-
-function linesOf(clues: NonogramClues): LineSpec[] {
-  const n = clues.size;
-  const span = Array.from({ length: n }, (_, k) => k);
-  return [
-    ...clues.rows.map((runs, r) => ({
-      line: { kind: "row" as const, index: r },
-      runs,
-      cells: span.map((k) => r * n + k),
-    })),
-    ...clues.cols.map((runs, c) => ({
-      line: { kind: "column" as const, index: c },
-      runs,
-      cells: span.map((k) => k * n + c),
-    })),
-  ];
-}
-
-function consistent(
-  spec: LineSpec,
-  states: readonly NonogramCellState[],
-): boolean[][] {
-  return arrangements(spec.cells.length, spec.runs).filter((arrangement) =>
-    spec.cells.every((cell, k) => {
-      const state = states[cell];
-      return state === "unknown" || (state === "filled") === arrangement[k];
-    }),
-  );
-}
-
 function bruteForceStep(
   clues: NonogramClues,
   states: readonly NonogramCellState[],
 ): NonogramStep | null {
   let cross: NonogramStep | null = null;
-  for (const spec of linesOf(clues)) {
+  for (const spec of nonogramLines(clues)) {
     const options = consistent(spec, states);
     if (options.length === 0) {
       return null;

@@ -1,6 +1,11 @@
 import type { NonogramSize } from "@miolos/core";
-import type { NonogramClues } from "@miolos/games/nonogram";
-import { Fragment, memo, type MouseEvent as ReactMouseEvent } from "react";
+import { placedClues, type NonogramClues } from "@miolos/games/nonogram";
+import {
+  Fragment,
+  memo,
+  useMemo,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 
 import { messages } from "../i18n";
 import type { Press } from "../play/brush";
@@ -8,12 +13,16 @@ import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
+import { useSettings } from "../settings/settings";
+import { cellStateOf } from "./engine";
 import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
 
 const GROUP = 5;
 
 const EMPTY_LINE: readonly number[] = [0];
+
+const NONE_PLACED: readonly boolean[] = Object.freeze([]);
 
 const SIZE_CLASS = {
   5: styles.size5,
@@ -59,6 +68,11 @@ export const Board = memo(function Board({
 }) {
   const copy = messages.games.nonogram.play;
   const wrong = useWrongCells("nonogram", solution, null, entries);
+  const strike = useSettings().games.nonogram.strikePlacedRuns;
+  const placed = useMemo(
+    () => (strike ? placedClues(clues, entries.map(cellStateOf)) : null),
+    [strike, clues, entries],
+  );
   const board = useBinaryBoard({
     size,
     selected,
@@ -78,12 +92,23 @@ export const Board = memo(function Board({
       aria-label={copy.boardAria(size)}
     >
       {clues.cols.map((runs, column) => (
-        <ColRail key={column} column={column} runs={runs} />
+        <ClueRail
+          key={column}
+          kind="column"
+          index={column}
+          runs={runs}
+          placed={placed?.cols[column] ?? NONE_PLACED}
+        />
       ))}
 
       {clues.rows.map((runs, row) => (
         <Fragment key={row}>
-          <RowRail row={row} runs={runs} />
+          <ClueRail
+            kind="row"
+            index={row}
+            runs={runs}
+            placed={placed?.rows[row] ?? NONE_PLACED}
+          />
           {Array.from({ length: size }, (_unused, column) => {
             const index = row * size + column;
             return (
@@ -110,56 +135,63 @@ export const Board = memo(function Board({
   );
 });
 
-const ColRail = memo(function ColRail({
-  column,
-  runs,
-}: {
-  readonly column: number;
+interface ClueRailProps {
+  readonly kind: "row" | "column";
+  readonly index: number;
   readonly runs: readonly number[];
-}) {
-  return (
-    <div
-      id={columnRailId(column)}
-      role="group"
-      aria-label={messages.games.nonogram.play.columnCluesAria(
-        column + 1,
-        runs,
-      )}
-      className={styles.clueCol}
-      style={{ gridColumn: column + 2, gridRow: 1 }}
-    >
-      {numbersOf(runs).map((run, at) => (
-        <span aria-hidden key={at} className={styles.clueNumber}>
-          {run}
-        </span>
-      ))}
-    </div>
-  );
-});
+  readonly placed: readonly boolean[];
+}
 
-const RowRail = memo(function RowRail({
-  row,
+const ClueRail = memo(function ClueRail({
+  kind,
+  index,
   runs,
-}: {
-  readonly row: number;
-  readonly runs: readonly number[];
-}) {
+  placed,
+}: ClueRailProps) {
+  const copy = messages.games.nonogram.play;
+  const row = kind === "row";
   return (
     <div
-      id={rowRailId(row)}
+      id={row ? rowRailId(index) : columnRailId(index)}
       role="group"
-      aria-label={messages.games.nonogram.play.rowCluesAria(row + 1, runs)}
-      className={styles.clueRow}
-      style={{ gridColumn: 1, gridRow: row + 2 }}
+      aria-label={
+        row
+          ? copy.rowCluesAria(index + 1, runs, placed)
+          : copy.columnCluesAria(index + 1, runs, placed)
+      }
+      className={row ? styles.clueRow : styles.clueCol}
+      style={
+        row
+          ? { gridColumn: 1, gridRow: index + 2 }
+          : { gridColumn: index + 2, gridRow: 1 }
+      }
     >
       {numbersOf(runs).map((run, at) => (
-        <span aria-hidden key={at} className={styles.clueNumber}>
+        <span
+          aria-hidden
+          key={at}
+          className={
+            placed[at] === true
+              ? `${styles.clueNumber} ${styles.clueNumberPlaced}`
+              : styles.clueNumber
+          }
+        >
           {run}
         </span>
       ))}
     </div>
   );
-});
+}, sameRail);
+
+function sameRail(before: ClueRailProps, after: ClueRailProps): boolean {
+  return (
+    before.kind === after.kind &&
+    before.index === after.index &&
+    before.runs === after.runs &&
+    before.placed.length === after.placed.length &&
+    before.placed.every((struck, at) => struck === after.placed[at])
+  );
+}
 
 const Cell = memo(function Cell({
   index,

@@ -1,13 +1,10 @@
-import type { GridLine } from "../line";
+import { nonogramLines, type NonogramLineSpec } from "./lines";
 import { isWellFormedClues, solveLine } from "./solve";
 import type { NonogramCellState, NonogramClues } from "./types";
 
-export interface NonogramStep {
+export interface NonogramStep extends NonogramLineSpec {
   readonly index: number;
   readonly value: 0 | 1;
-  readonly line: GridLine;
-  readonly runs: readonly number[];
-  readonly cells: readonly number[];
 }
 
 export function nextNonogramStep(
@@ -20,21 +17,8 @@ export function nextNonogramStep(
       "nextNonogramStep needs well-formed clues and a size × size board",
     );
   }
-  const span = Array.from({ length: n }, (_, k) => k);
-  const lines = [
-    ...clues.rows.map((runs, r) => ({
-      line: { kind: "row" as const, index: r },
-      runs,
-      cells: span.map((k) => r * n + k),
-    })),
-    ...clues.cols.map((runs, c) => ({
-      line: { kind: "column" as const, index: c },
-      runs,
-      cells: span.map((k) => k * n + c),
-    })),
-  ];
   let cross: NonogramStep | null = null;
-  for (const { line, runs, cells } of lines) {
+  for (const { line, runs, cells } of nonogramLines(clues)) {
     const current = cells.map((cell) => states[cell] ?? "unknown");
     const solved = solveLine(current, runs);
     if (solved.contradiction) {
