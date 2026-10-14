@@ -239,6 +239,7 @@ describe("placedRuns", () => {
     { runs: [1, 1], line: "#?#??", placed: [true, true] },
     { runs: [1], line: "#x#", placed: [false] },
     { runs: [1], line: "#x?x#", placed: [false] },
+    { runs: [3, 1], line: "?x#x#", placed: [false, true] },
     { runs: [], line: "??x", placed: [] },
   ])("strikes $placed for $runs on $line", ({ runs, line, placed }) => {
     expect(placedRuns(board([line]), runs)).toEqual(placed);

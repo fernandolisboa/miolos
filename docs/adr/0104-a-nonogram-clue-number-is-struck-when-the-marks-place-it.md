@@ -11,14 +11,14 @@ Fernando asked (#324) for a Nonogram row or column number to be struck once it i
 ## Decision
 
 1. **A number is struck only from the marks and the public clue, never the solution** (`placedRuns` and `placedClues`, `packages/games/src/nonogram/placed.ts`). A closed block (edge or cross on both sides) reached from either end of the line through decided cells, in clue order, strikes its number; a line whose filled blocks equal its clue strikes every number.
-2. **A line the decided cells alone contradict strikes nothing**: more filled cells than the clue's sum, a block longer than any number, more cross-separated groups of fills than numbers, or a fully decided line that is not its clue. None of these reads an undecided cell, so the rule never says what an undecided cell must be.
+2. **A line the decided cells alone contradict strikes nothing**: more filled cells than the clue's sum, a block longer than any number, more cross-separated groups of fills than numbers, or a fully decided line that is not its clue. None of these reads an undecided cell, so these checks never say what an undecided cell must be.
 3. **It is the setting *Riscar números resolvidos* (`strikePlacedRuns`), on by default.**
 
 ## Consequences
 
 - A closed block in the middle of a line, not reached from either end, stays unstruck.
 - The whole-line match strikes blocks that are not closed, which tells the player the rest of the line is crossed. That is the one deduction it shares with the hint (ADR-0101 decision 4), accepted because the player can count it off the visible marks.
-- A contradiction that only the undecided cells reveal (where nothing fits) can still leave a strike; finding it is a line solver's job.
+- A line no arrangement fits can still strike a number when none of decision 2's counts catches it: `?x#x#` with `[3, 1]` strikes the 1. A fully decided line never does. Catching every such line is a line solver's job.
 - Marking toward the answer never unstrikes a number. A wrong mark can strike a number; the strike says the marks place it, not that they are right.
 - It is not a hint: never recorded, never counted, no effect on the streak, the stats or the medals.
 
