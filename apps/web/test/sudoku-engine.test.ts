@@ -7,8 +7,10 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
+  digitTally,
   isPlayable,
   mergedGrid,
+  placedCount,
   playableGivens,
   selectionHighlights,
   solutionDigits,
@@ -219,5 +221,30 @@ describe("the selection's reach (T-WEB-S495)", () => {
         expect(grid[index]).not.toBe(digit);
       }
     }
+  });
+});
+
+describe("the keypad's digit tally (T-WEB-S650)", () => {
+  it("counts givens and entries alike", () => {
+    const solution = solutionOf();
+    const index = firstPlayable();
+    const digit = solution[index] ?? 1;
+    const before = placedCount(PUZZLE.givens, digit);
+
+    const after = placedCount(
+      mergedGrid(PUZZLE.givens, entriesWith(index, digit)),
+      digit,
+    );
+
+    expect(after).toBe(before + 1);
+    expect(placedCount(solution, digit)).toBe(9);
+  });
+
+  it("is open below nine, complete at nine, over above nine", () => {
+    expect(digitTally(0)).toBe("open");
+    expect(digitTally(8)).toBe("open");
+    expect(digitTally(9)).toBe("complete");
+    expect(digitTally(10)).toBe("over");
+    expect(digitTally(81)).toBe("over");
   });
 });

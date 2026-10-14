@@ -1079,3 +1079,67 @@ describe("the keypad's apagar is the ⌫ key (T-WEB-S623)", () => {
     expect(skeleton?.innerHTML).toBe(erase.innerHTML);
   });
 });
+
+describe("the keypad tells a placed-out digit (T-WEB-S651)", () => {
+  const keypad = messages.games.sudoku.play.keypad;
+
+  const DIGIT = ([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).reduce((best, digit) =>
+    PUZZLE.givens.filter((cell) => cell === digit).length >
+    PUZZLE.givens.filter((cell) => cell === best).length
+      ? digit
+      : best,
+  );
+
+  const MISSING = PUZZLE.givens.flatMap((given, index) =>
+    given === 0 && SOLUTION[index] === DIGIT ? [index] : [],
+  );
+
+  const ELSEWHERE = PUZZLE.givens.findIndex(
+    (given, index) => given === 0 && SOLUTION[index] !== DIGIT,
+  );
+
+  it("fades at nine, turns red above nine, and returns as copies leave", () => {
+    const { container } = render(<SudokuScreen daily={DAILY} />);
+    const key = () => {
+      const keys = container.querySelectorAll<HTMLElement>(
+        `.${className("keypadDigit")}`,
+      );
+      const found = keys[DIGIT - 1];
+      if (found === undefined) {
+        throw new Error(`no keypad key for ${DIGIT}`);
+      }
+      return found;
+    };
+
+    expect(key()).toHaveAttribute("aria-label", keypad.digitAria(DIGIT));
+    expect(key().className).toBe(className("keypadDigit"));
+
+    for (const index of MISSING) {
+      type(container, index, String(DIGIT));
+    }
+    expect(key()).toHaveAttribute(
+      "aria-label",
+      keypad.digitCompleteAria(DIGIT),
+    );
+    expect(key()).toHaveClass(className("keypadComplete"));
+    expect(key().textContent).toBe(`${DIGIT}✓`);
+    expect(key()).toBeEnabled();
+
+    type(container, ELSEWHERE, String(DIGIT));
+    expect(key()).toHaveAttribute(
+      "aria-label",
+      keypad.digitOverAria(DIGIT, 10),
+    );
+    expect(key()).toHaveClass(className("keypadOver"));
+    expect(key()).not.toHaveClass(className("keypadComplete"));
+    expect(key().textContent).toBe(`${DIGIT}10`);
+
+    type(container, ELSEWHERE, "Backspace");
+    expect(key()).toHaveClass(className("keypadComplete"));
+
+    type(container, MISSING[0] ?? FIRST_EMPTY, "Backspace");
+    expect(key()).toHaveAttribute("aria-label", keypad.digitAria(DIGIT));
+    expect(key().className).toBe(className("keypadDigit"));
+    expect(key().textContent).toBe(String(DIGIT));
+  });
+});

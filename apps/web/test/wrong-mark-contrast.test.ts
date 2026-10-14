@@ -90,3 +90,70 @@ describe("the locked Sudoku key reads against the unlocked ones, in both themes 
     });
   }
 });
+
+describe("the tallied Sudoku keys read in both themes (T-WEB-S652)", () => {
+  const SHEET = stylesheet("src/sudoku/sudoku-board.module.css");
+  it("declares both tallies after the base key, so their colours win", () => {
+    const base = SHEET.indexOf(".keypadDigit {");
+    expect(base).toBeGreaterThan(-1);
+    expect(SHEET.indexOf(".keypadComplete {")).toBeGreaterThan(base);
+    expect(SHEET.indexOf(".keypadOver {")).toBeGreaterThan(base);
+  });
+
+  const MIX =
+    /^color-mix\(in srgb, var\((--[\w-]+)\) (\d+)%, var\((--[\w-]+)\)\)$/;
+
+  for (const theme of ["light", "dark"] as const) {
+    it(`${theme}: the complete key is dimmer than an open key and above 3:1; the over key and both pressed keys clear 3:1`, () => {
+      const tokens = colorTokens(theme);
+      const hex = (name: string): string => {
+        const value = tokens.get(name);
+        if (value === undefined) {
+          throw new Error(`${name} missing in ${theme}`);
+        }
+        return value;
+      };
+      const paint = (value: string): string => {
+        const mixed = MIX.exec(value);
+        if (mixed === null) {
+          return hex(/^var\((--[\w-]+)\)$/.exec(value)?.[1] ?? value);
+        }
+        const [, top = "", share = "0", base = ""] = mixed;
+        const weight = Number(share) / 100;
+        return `#${[1, 3, 5]
+          .map((at) =>
+            Math.round(
+              parseInt(hex(top).slice(at, at + 2), 16) * weight +
+                parseInt(hex(base).slice(at, at + 2), 16) * (1 - weight),
+            )
+              .toString(16)
+              .padStart(2, "0"),
+          )
+          .join("")}`;
+      };
+      const rule = (selector: string, property: string): string => {
+        const value = decl(bodyOf(SHEET, selector), property);
+        if (value === undefined) {
+          throw new Error(`${selector} sets no ${property}`);
+        }
+        return paint(value);
+      };
+      const card = hex("--paper-card");
+      const open = contrast(hex("--accent-sudoku"), card);
+      const complete = contrast(rule(".keypadComplete", "color"), card);
+
+      expect(complete).toBeGreaterThanOrEqual(3);
+      expect(complete).toBeLessThan(open);
+      expect(
+        contrast(rule(".keypadOver", "color"), card),
+      ).toBeGreaterThanOrEqual(3);
+      for (const pressed of [".keypadComplete", ".keypadOver"]) {
+        const selector = `${pressed}[aria-pressed="true"]`;
+        expect(
+          contrast(rule(selector, "color"), rule(selector, "background")),
+          selector,
+        ).toBeGreaterThanOrEqual(3);
+      }
+    });
+  }
+});
