@@ -447,7 +447,7 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     expect(document.activeElement).toBe(letterKey("q"));
   });
 
-  it("clamps the column into the shorter row, and End on rows 1 and 2 is the command", () => {
+  it("stays inside the keyboard, and End on rows 1 and 2 is the command", () => {
     const { play } = playFixture();
 
     render(<PlayView play={play} />);
@@ -462,7 +462,23 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     press("Home");
     expect(document.activeElement).toBe(letterKey("z"));
     press("ArrowUp");
-    expect(document.activeElement).toBe(letterKey("a"));
+    expect(document.activeElement).toBe(letterKey("s"));
+  });
+
+  it("moves up and down to the key drawn nearest, not to the same index", () => {
+    const { play } = playFixture();
+
+    render(<PlayView play={play} />);
+
+    focusKey(letterKey("h"));
+    press("ArrowDown");
+    expect(document.activeElement).toBe(letterKey("b"));
+    press("ArrowUp");
+    expect(document.activeElement).toBe(letterKey("h"));
+    press("ArrowUp");
+    expect(document.activeElement).toBe(letterKey("y"));
+    press("ArrowDown");
+    expect(document.activeElement).toBe(letterKey("h"));
   });
 
   it("keeps the caret and the single tab stop across a judged re-render", () => {

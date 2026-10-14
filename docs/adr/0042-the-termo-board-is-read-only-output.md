@@ -4,7 +4,7 @@
 **Depends on:** [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md)
 **Superseded in part by:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md) (#303) — decision 6's board geometry: tiles are fluid squares, the card cap and `--board-mobile-max` are gone, and the keyboard rows are 48px at both widths (desktop `margin-top` 20px, not 30px). The 350px mobile keyboard width stands.
 **Amended by:** [ADR-0067](./0067-termo-accent-deepens-to-carry-a-light-label.md) (#161) — `--accent-termo` deepened `#C08A1E` → `#8D6212`, so the state table's `correct` row reads `var(--ink-on-accent, var(--paper-desk))` at **4.8433:1** (the mustard figures 2.7311 / 2.8501 / 5.4968 in this file are the old value's). Everything this ADR decides survives: the board stays read-only, the accent still does exactly one job (the `correct` fill), the typographic marks still carry every distinction, and the chroma argument holds at the new value (chroma 123 ≥ 30).
-**Amended in place:** #321 — decisions 6, 7 and 8's keyboard: 22 columns, `apagar` after P and `enviar` after L as on a physical keyboard, both drawn as glyphs (⌫, ↵) from `play/key-glyph.tsx`; desktop width 608px.
+**Amended in place:** #321 — decision 2's `↑`/`↓`, and decisions 6, 7 and 8's keyboard: 22 columns, `apagar` after P and `enviar` after L as on a physical keyboard, both drawn as glyphs (⌫, ↵) from `play/key-glyph.tsx`; desktop width 608px.
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 3's premise that Sudoku's keypad is commands holds only while *Número fixo com toque duplo* is off; then a double-tapped digit is a mode with `aria-pressed`. Termo's keys are unchanged.
 
 ## Context
@@ -76,8 +76,9 @@ for recording its deviations with their arithmetic.
    the whole keyboard is **one tab stop** rather than 28. This is
    ADR-0030's model **narrowed**: there is no selection, so `onFocus`
    writes only a remembered focus and no layout effect closes any loop. Key
-   table: `←`/`→` move within the row and **clamp**; `↑`/`↓` move between
-   rows, clamping the column index into the shorter row; `Home`/`End` go to
+   table: `←`/`→` move within the row and **clamp**; `↑`/`↓` move to the
+   key drawn nearest in the next row (#321: on the half-key stagger's tie,
+   down takes the right key and up the left, so a round trip returns); `Home`/`End` go to
    the row's first/last key; `Enter`/`Space` are native button activation.
    Arrows `preventDefault`.
 

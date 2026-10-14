@@ -91,6 +91,31 @@ function keyAt(
   return keys[clamp(column, keys.length)];
 }
 
+function nearestKey(
+  rows: readonly LetterKeyboardRow[],
+  row: number,
+  column: number,
+  down: boolean,
+): LetterKeyboardKey | undefined {
+  const from = rows[row]?.keys[column];
+  const keys = rows[clamp(down ? row + 1 : row - 1, rows.length)]?.keys ?? [];
+  if (from === undefined) {
+    return undefined;
+  }
+  const centre = (key: LetterKeyboardKey) => key.column + key.span / 2;
+  const distance = (key: LetterKeyboardKey) =>
+    Math.abs(centre(key) - centre(from));
+  // The rows are staggered half a key, so two keys often tie: going down
+  // takes the right one and going up the left one, as on a real keyboard.
+  return keys.reduce<LetterKeyboardKey | undefined>((best, key) => {
+    if (best === undefined) {
+      return key;
+    }
+    const gap = distance(key) - distance(best);
+    return gap < 0 || (down && gap === 0) ? key : best;
+  }, undefined);
+}
+
 function clamp(index: number, length: number): number {
   return Math.min(Math.max(index, 0), length - 1);
 }
@@ -118,7 +143,10 @@ export function LetterKeyboard({
       return;
     }
     event.preventDefault();
-    const target = keyAt(rows, next[0], next[1]);
+    const target =
+      event.key === "ArrowUp" || event.key === "ArrowDown"
+        ? nearestKey(rows, row, column, event.key === "ArrowDown")
+        : keyAt(rows, next[0], next[1]);
     if (target !== undefined) {
       nodes.current.get(target.id)?.focus();
     }
