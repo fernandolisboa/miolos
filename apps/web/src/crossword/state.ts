@@ -17,6 +17,7 @@ import {
   isBlock,
   isSolved,
   nextCellInEntry,
+  nextEmptyCell,
   prevCellInEntry,
   type CrosswordClue,
   type CrosswordDirection,
@@ -54,7 +55,11 @@ export type CrosswordPlayAction =
       readonly rows: number;
       readonly columns: number;
     }
-  | { readonly type: "type-letter"; readonly letter: string }
+  | {
+      readonly type: "type-letter";
+      readonly letter: string;
+      readonly skipFilled: boolean;
+    }
   | { readonly type: "backspace" }
   | { readonly type: "use-hint" }
   | { readonly type: "mark-synced" };
@@ -117,9 +122,14 @@ export function crosswordPlayReducer(
         return state;
       }
       const entered = withEntry(state, state.selected, action.letter);
-      const clue = entryAt(state.clues, state.selected, state.direction);
-      const next =
-        clue === undefined ? undefined : nextCellInEntry(clue, state.selected);
+      const next = action.skipFilled
+        ? nextEmptyCell(
+            state.clues,
+            entered.entries,
+            state.selected,
+            state.direction,
+          )
+        : nextInEntry(state, state.selected);
       return next === undefined ? entered : { ...entered, selected: next };
     }
 
@@ -171,6 +181,14 @@ export function crosswordPlayReducer(
     case "mark-synced":
       return state.pendingSync ? { ...state, pendingSync: false } : state;
   }
+}
+
+function nextInEntry(
+  state: CrosswordPlayState,
+  index: number,
+): number | undefined {
+  const clue = entryAt(state.clues, index, state.direction);
+  return clue === undefined ? undefined : nextCellInEntry(clue, index);
 }
 
 function withEntry(
