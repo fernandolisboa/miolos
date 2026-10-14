@@ -6,8 +6,10 @@ import {
   useBinaryGridControls,
   type BinaryGridControls,
 } from "../play/use-binary-grid-controls";
+import { useSettings } from "../settings/settings";
 import {
   countQueens,
+  autoCrossingReducer,
   initQueensPlayState,
   queensPlayReducer,
   type QueensPlayAction,
@@ -23,8 +25,9 @@ export interface QueensBoardState extends BinaryGridControls {
 }
 
 export function useQueensBoard(daily: DailyQueensResponse): QueensBoardState {
+  const { autoCross } = useSettings().games.queens;
   const [state, dispatch] = useReducer(
-    queensPlayReducer,
+    autoCross ? autoCrossingReducer : queensPlayReducer,
     daily,
     initQueensPlayState,
   );

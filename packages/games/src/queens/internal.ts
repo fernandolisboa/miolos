@@ -39,6 +39,14 @@ export function checkGrid(size: number, grid: QueensGrid): void {
   }
 }
 
+export function checkCell(size: number, cell: number): void {
+  if (!Number.isInteger(cell) || cell < 0 || cell >= size * size) {
+    throw new RangeError(
+      `cell must be an integer in 0..${size * size - 1}, got ${String(cell)}`,
+    );
+  }
+}
+
 export function checkEntries(
   size: number,
   entries: readonly QueensEntry[],

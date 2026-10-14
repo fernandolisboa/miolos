@@ -20,6 +20,13 @@ const sudoku = z.object({
   highlightSelection: flag(true),
 });
 
+const queens = z.object({
+  showErrors: flag(false),
+  highlightRegion: flag(true),
+  fadeQueenLines: flag(true),
+  autoCross: flag(false),
+});
+
 const crossword = z.object({
   showErrors: flag(false),
   skipFilled: flag(true),
@@ -29,7 +36,7 @@ const games = z.object({
   sudoku: sudoku.catch(sudoku.parse({})),
   binairo: binairo.catch(binairo.parse({})),
   nonogram: errorsOnly.catch(errorsOnly.parse({})),
-  queens: errorsOnly.catch(errorsOnly.parse({})),
+  queens: queens.catch(queens.parse({})),
   crossword: crossword.catch(crossword.parse({})),
 });
 
