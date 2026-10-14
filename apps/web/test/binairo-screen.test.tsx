@@ -984,7 +984,7 @@ describe("the mouse affordance (T-WEB-S499a)", () => {
   });
 });
 
-describe("Primeiro valor in Ajustes turns the board's order around (T-WEB-S607)", () => {
+describe("Primeiro valor in Ajustes turns the board's order around (T-WEB-S608)", () => {
   const copy = messages.settings.games;
 
   function press(

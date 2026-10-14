@@ -169,7 +169,7 @@ describe("a mouse press writes a value (T-WEB-S506)", () => {
   });
 });
 
-describe("Primeiro valor drives the tap and the mouse alike (T-WEB-S606)", () => {
+describe("Primeiro valor drives the tap and the mouse alike (T-WEB-S607)", () => {
   function pressWith(
     state: PlayState,
     kind: Press,
