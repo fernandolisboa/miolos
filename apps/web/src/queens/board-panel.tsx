@@ -32,6 +32,7 @@ export function BoardPanel({ board }: { readonly board: QueensBoardState }) {
         <Board
           size={state.size}
           regions={state.regions}
+          solution={state.solution}
           entries={state.entries}
           conflicts={state.conflicts}
           selected={state.selected}

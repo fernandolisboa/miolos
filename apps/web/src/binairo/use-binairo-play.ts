@@ -1,5 +1,5 @@
 import type { DailyBinairoResponse } from "@miolos/core";
-import { solveBinairo } from "@miolos/games/binairo";
+import { solveBinairo, type BinairoSolvedGrid } from "@miolos/games/binairo";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
@@ -23,6 +23,7 @@ import {
 
 export interface BinairoPlay extends BinairoControls {
   readonly state: PlayState;
+  readonly solution: BinairoSolvedGrid | null;
 
   readonly elapsed: number;
 
@@ -75,6 +76,7 @@ export function useBinairoPlay(
   return {
     ...controls,
     state,
+    solution,
     elapsed,
     filled,
     hintReady: solution !== null && canHint(state, allowance),

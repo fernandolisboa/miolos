@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S323` | `S322` | `T-API-16` |
-| `T-WEB` | `S580` | `S579` | `T-WEB-23` |
+| `T-WEB` | `S596` | `S594` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#300 (player settings, ADR-0102) spent **`T-WEB-S580…S594`**: `S580` (the settings store: defaults, per-field fallback, notify, stable snapshot), `S581` (server defaults, no hydration warning), `S582` (`wrongCells` and its agreement with the hint's correction), `S583…S587` (the wrong mark on Sudoku, Binairo, Nonogram, Rainhas and the Cruzadinha, daily and free play), `S588` (*Mostrar erros* never changes the record, the completion or the hint count), `S589` (the hidden clock), `S590` (the Sudoku highlight switch), `S591` (the digit-lock reducer), `S592` (the digit-lock gesture and keypad), `S593` (Ajustes' *Jogos*, the in-game dialog, the reset slot's placeholder) and `S594` (wrong-mark and locked-key contrast). `S595`, its headroom, is **burned**. `T-WEB-S374` was widened in place: it allows `localStorage` in `apps/web/src/settings/settings.ts` only, and every other I/O stays forbidden.
 
 #297 (the grid-game hints reveal the next logical step, ADR-0101) spent **`T-WEB-S562…S579`**: `S562` (the shared hint state: `idleHint`, `unlit`, `spentHint`, and every reducer's reset clearing the reason and the spotlight), `S563` (`nextLogicalHint`'s order), `S564…S567` Binairo, `S568…S571` Nonogram, `S572…S575` Rainhas and `S576…S579` the Cruzadinha (each: the hint's order on generated boards, the reducer, every sentence, the daily and free-play screens). `T-WEB-9`, `S122`, `S122a`, `S427`, `S437`, `S453`, `S457`, `S476`, `S480` and the Sudoku ids were updated in place. packages/games tests carry no ids.
 
@@ -112,7 +114,8 @@ relative path into `packages/games/src` is now banned across `apps/web`.
 the free-play Termo group alone.
 
 - **`T-WEB-S374`** (`free-play-graph.test.ts`) — the value graph of every
-  free-play file reaches no I/O module and nothing in `packages/db/src` or
+  free-play file reaches no I/O module (beyond `localStorage` in
+  `apps/web/src/settings/settings.ts`, ADR-0102) and nothing in `packages/db/src` or
   `packages/games/src/termo`; `termo-screen`'s graph lists exactly the five I/O
   modules, which pins the token list to the tree.
 - **`T-WEB-S375`** — every bare specifier any graph member writes, and the

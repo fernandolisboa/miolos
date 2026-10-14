@@ -132,6 +132,7 @@ function BinairoFreeBoard({
       <div className={screen.gridCard}>
         <Grid
           givens={state.givens}
+          solution={puzzle.solution}
           entries={state.entries}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}

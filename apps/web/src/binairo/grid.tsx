@@ -4,6 +4,8 @@ import { messages } from "../i18n";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
 import { usePointerStroke } from "../play/use-pointer-stroke";
+import { useWrongCells } from "../play/use-wrong-cells";
+import { WrongMark } from "../play/wrong-mark";
 import styles from "./binairo-screen.module.css";
 import type { CellValue } from "./state";
 
@@ -11,6 +13,7 @@ const COLUMNS = 8;
 
 export function Grid({
   givens,
+  solution,
   entries,
   violating,
   hintIndex,
@@ -21,6 +24,7 @@ export function Grid({
   onPaintOver,
 }: {
   readonly givens: BinairoGrid;
+  readonly solution: readonly (0 | 1)[] | null;
   readonly entries: readonly CellValue[];
   readonly violating: ReadonlySet<number>;
   readonly hintIndex: number | null;
@@ -37,6 +41,8 @@ export function Grid({
     onStrokeStart,
     onPaintOver,
   });
+
+  const wrong = useWrongCells("binairo", solution, givens, entries);
 
   return (
     <div className={styles.grid} {...stroke.handlers}>
@@ -63,6 +69,10 @@ export function Grid({
         }
         const value = entries[index] ?? null;
         const invalid = violating.has(index);
+        const isWrong = wrong.has(index);
+        const label = invalid
+          ? messages.games.binairo.play.cellInvalidAria(row, column, value)
+          : messages.games.binairo.play.cellAria(row, column, value);
         return (
           <button
             key={index}
@@ -75,15 +85,7 @@ export function Grid({
             )}
             data-cell-index={index}
 
-            aria-label={
-              invalid
-                ? messages.games.binairo.play.cellInvalidAria(
-                    row,
-                    column,
-                    value,
-                  )
-                : messages.games.binairo.play.cellAria(row, column, value)
-            }
+            aria-label={isWrong ? messages.play.wrongCell(label) : label}
             onClick={(event) => {
               const press = stroke.clickPress(event);
               if (press !== null) {
@@ -92,6 +94,7 @@ export function Grid({
             }}
           >
             {value}
+            {isWrong ? <WrongMark /> : null}
           </button>
         );
       })}

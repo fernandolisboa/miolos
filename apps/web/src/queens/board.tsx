@@ -5,6 +5,8 @@ import { messages } from "../i18n";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
+import { useWrongCells } from "../play/use-wrong-cells";
+import { WrongMark } from "../play/wrong-mark";
 import styles from "./queens-board.module.css";
 import type { QueensCellValue, QueensMark } from "./state";
 
@@ -17,6 +19,7 @@ const SIZE_CLASS = {
 export const Board = memo(function Board({
   size,
   regions,
+  solution,
   entries,
   conflicts,
   selected,
@@ -31,6 +34,7 @@ export const Board = memo(function Board({
 }: {
   readonly size: QueensSize;
   readonly regions: readonly number[];
+  readonly solution: readonly QueensMark[] | null;
   readonly entries: readonly QueensCellValue[];
   readonly conflicts: ReadonlySet<number>;
   readonly selected: number | null;
@@ -43,6 +47,7 @@ export const Board = memo(function Board({
   readonly onEnterValue: (value: QueensMark) => void;
   readonly onClear: () => void;
 }) {
+  const wrong = useWrongCells("queens", solution, null, entries);
   const board = useBinaryBoard({
     size,
     selected,
@@ -69,6 +74,7 @@ export const Board = memo(function Board({
           regions={regions}
           value={entries[index] ?? null}
           conflict={conflicts.has(index)}
+          wrong={wrong.has(index)}
           hinted={hintIndex === index}
           spotlit={spotlight.includes(index)}
           selected={selected === index}
@@ -89,6 +95,7 @@ const Cell = memo(function Cell({
   region,
   value,
   conflict,
+  wrong,
   hinted,
   spotlit,
   selected,
@@ -102,6 +109,7 @@ const Cell = memo(function Cell({
   readonly region: number;
   readonly value: QueensCellValue;
   readonly conflict: boolean;
+  readonly wrong: boolean;
   readonly hinted: boolean;
   readonly spotlit: boolean;
   readonly selected: boolean;
@@ -114,6 +122,13 @@ const Cell = memo(function Cell({
 }) {
   const row = Math.floor(index / size);
   const column = index % size;
+  const label = messages.games.queens.play.cellAria(
+    row + 1,
+    column + 1,
+    region + 1,
+    value,
+    conflict,
+  );
   return (
     <button
       type="button"
@@ -131,17 +146,12 @@ const Cell = memo(function Cell({
       style={regionFill(region)}
       data-cell-index={index}
       tabIndex={tabbable ? 0 : -1}
-      aria-label={messages.games.queens.play.cellAria(
-        row + 1,
-        column + 1,
-        region + 1,
-        value,
-        conflict,
-      )}
+      aria-label={wrong ? messages.play.wrongCell(label) : label}
       onFocus={() => onCellFocus(index)}
       onClick={(event) => onCellClick(index, event)}
     >
       {value === 1 ? <QueenGlyph /> : null}
+      {wrong ? <WrongMark /> : null}
     </button>
   );
 });

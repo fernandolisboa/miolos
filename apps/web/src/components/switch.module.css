@@ -1,0 +1,66 @@
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.switch {
+  flex-shrink: 0;
+  min-width: 112px;
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) var(--space-5);
+  background: var(--paper-card);
+  color: var(--ink);
+  font: var(--text-button);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-settle),
+    color var(--duration-fast) var(--ease-settle);
+}
+
+.switch[aria-checked="true"] {
+  background: var(--ink);
+  color: var(--paper-card);
+}
+
+.switch:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.switchText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 44ch;
+}
+
+.switchHint {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .switchRow {
+    flex-wrap: wrap;
+  }
+}

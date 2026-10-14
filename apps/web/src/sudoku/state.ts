@@ -32,11 +32,18 @@ export interface SudokuPlayState extends PlayCore {
 
   readonly selected: number | null;
 
+  readonly locked: SudokuDigit | null;
+
   readonly tier: SudokuTier;
   readonly hint: HintState<SudokuHintReason>;
 
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
+}
+
+export interface DigitLockUndo {
+  readonly index: number;
+  readonly value: SudokuCellValue;
 }
 
 export type SudokuPlayAction =
@@ -50,6 +57,13 @@ export type SudokuPlayAction =
     }
   | { readonly type: "enter-digit"; readonly digit: SudokuDigit }
   | { readonly type: "clear-cell" }
+  | {
+      readonly type: "lock-digit";
+      readonly digit: SudokuDigit;
+      readonly undo: DigitLockUndo | null;
+    }
+  | { readonly type: "unlock" }
+  | { readonly type: "tap-cell"; readonly index: number }
   | { readonly type: "use-hint"; readonly solution: readonly SudokuDigit[] }
   | { readonly type: "mark-synced" };
 
@@ -64,6 +78,7 @@ export function initSudokuPlayState(
     givens,
     entries: derived.entries,
     selected: null,
+    locked: null,
     tier: daily.tier,
     timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
@@ -117,6 +132,36 @@ export function sudokuPlayReducer(
         return unlit(state);
       }
       return withEntry(unlit(state), state.selected, null);
+    }
+
+    case "lock-digit": {
+      if (state.status !== "playing") {
+        return state;
+      }
+      const { undo } = action;
+      const restored =
+        undo === null || playableValue(state, undo.index) === undefined
+          ? state
+          : withEntry(state, undo.index, undo.value);
+      return { ...restored, locked: action.digit };
+    }
+
+    case "unlock":
+      return state.locked === null ? state : { ...state, locked: null };
+
+    case "tap-cell": {
+      if (state.status !== "playing" || state.locked === null) {
+        return state;
+      }
+      const tapped = unlit({ ...state, selected: action.index });
+      const current = playableValue(state, action.index);
+      return current === undefined
+        ? tapped
+        : withEntry(
+            tapped,
+            action.index,
+            current === state.locked ? null : state.locked,
+          );
     }
 
     case "use-hint": {

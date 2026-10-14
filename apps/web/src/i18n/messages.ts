@@ -223,6 +223,7 @@ export const messages = {
       question: "Recomeçar o puzzle? Suas jogadas serão apagadas.",
       cancel: "Cancelar",
     },
+    wrongCell: (label: string) => `${label}, não bate com a solução`,
   },
   conclusion: {
     back,
@@ -650,6 +651,37 @@ export const messages = {
       system: "Sistema",
       light: "Claro",
       dark: "Escuro",
+    },
+    games: {
+      heading: "Jogos",
+      lead: "Como os jogos aparecem neste aparelho.",
+      general: "Em todos os jogos",
+      on: "Ligado",
+      off: "Desligado",
+      flags: {
+        showClock: {
+          label: "Mostrar cronômetro",
+          hint: "Escondido, o tempo continua contando e aparece no fim do puzzle.",
+        },
+        showErrors: {
+          label: "Mostrar erros",
+          hint: "Marca na hora o que não bate com a solução. Não gasta dica e não mexe na sequência.",
+        },
+        lockDigit: {
+          label: "Número fixo com toque duplo",
+          hint: "Toque duas vezes num número para fixá-lo e depois toque nas células para escrevê-lo. Toque no número de novo para soltar.",
+        },
+        highlightSelection: {
+          label: "Destacar linha, coluna e bloco",
+          hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela.",
+        },
+      },
+      dialog: {
+        trigger: "Ajustes",
+        title: "Ajustes do jogo",
+        note: "Valem para este aparelho.",
+        close: "Fechar",
+      },
     },
     push: {
       heading: "Lembretes neste aparelho",
