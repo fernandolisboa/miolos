@@ -673,7 +673,7 @@ export const messages = {
         },
         lockDigit: {
           label: "Número fixo com toque duplo",
-          hint: "Toque duas vezes num número para fixá-lo e depois toque nas células para escrevê-lo. Toque no número de novo para soltar.",
+          hint: "Toque duas vezes num número, no teclado ou no tabuleiro, para fixá-lo e depois toque nas células para escrevê-lo. Toque no número de novo para soltar.",
         },
         highlightSelection: {
           label: "Destacar linha, coluna e bloco",
@@ -682,6 +682,10 @@ export const messages = {
         strikePlacedRuns: {
           label: "Riscar números resolvidos",
           hint: "Risca o número de uma linha ou coluna quando suas marcas já mostram o bloco inteiro. Não consulta a solução.",
+        },
+        skipFilled: {
+          label: "Pular letras já preenchidas",
+          hint: "Ao digitar, a seleção pula as células com letra e vai para a próxima vazia, seguindo para a próxima pista quando a palavra se completa.",
         },
       },
       dialog: {

@@ -10,6 +10,7 @@ import {
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { useReset } from "../play/use-reset";
+import { useSettings } from "../settings/settings";
 import { countAnswered } from "./grid";
 import {
   canHint,
@@ -48,6 +49,7 @@ export function useCrosswordBoard(
     initCrosswordPlayState,
   );
   const allowance = useFreeHintsPerPuzzle();
+  const { skipFilled } = useSettings().games.crossword;
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -81,9 +83,12 @@ export function useCrosswordBoard(
     dispatch({ type: "move-selection", rows, columns });
   }, []);
 
-  const typeLetter = useCallback((letter: string) => {
-    dispatch({ type: "type-letter", letter });
-  }, []);
+  const typeLetter = useCallback(
+    (letter: string) => {
+      dispatch({ type: "type-letter", letter, skipFilled });
+    },
+    [skipFilled],
+  );
 
   const backspace = useCallback(() => {
     dispatch({ type: "backspace" });

@@ -18,12 +18,17 @@ const nonogram = z.object({
   strikePlacedRuns: flag(true),
 });
 
+const crossword = z.object({
+  showErrors: flag(false),
+  skipFilled: flag(true),
+});
+
 const games = z.object({
   sudoku: sudoku.catch(sudoku.parse({})),
   binairo: errorsOnly.catch(errorsOnly.parse({})),
   nonogram: nonogram.catch(nonogram.parse({})),
   queens: errorsOnly.catch(errorsOnly.parse({})),
-  crossword: errorsOnly.catch(errorsOnly.parse({})),
+  crossword: crossword.catch(crossword.parse({})),
 });
 
 const base = z.object({

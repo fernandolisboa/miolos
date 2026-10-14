@@ -61,7 +61,7 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-describe("a clue number its marks already place is struck, and named done (T-WEB-S606)", () => {
+describe("a clue number its marks already place is struck, and named done (T-WEB-S608)", () => {
   const runs = CLUES.rows[0] ?? [];
   const placedClass = styles.clueNumberPlaced ?? "";
 
@@ -105,7 +105,7 @@ describe("a clue number its marks already place is struck, and named done (T-WEB
   });
 });
 
-describe("the struck clue number reads in both themes and keeps its box (T-WEB-S607)", () => {
+describe("the struck clue number reads in both themes and keeps its box (T-WEB-S609)", () => {
   const PLACED = bodyOf(
     stylesheet("src/nonogram/nonogram-board.module.css"),
     ".clueNumberPlaced",

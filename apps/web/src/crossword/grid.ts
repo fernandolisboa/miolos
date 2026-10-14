@@ -63,6 +63,33 @@ export function nextCellInEntry(
   return at === -1 ? undefined : cells[at + 1];
 }
 
+export function nextEmptyCell(
+  clues: readonly CrosswordClue[],
+  entries: readonly CrosswordCell[],
+  index: number,
+  direction: CrosswordDirection,
+): number | undefined {
+  const clue = entryAt(clues, index, direction);
+  if (clue === undefined) {
+    return undefined;
+  }
+  const cells = entryCells(clue);
+  const at = cells.indexOf(index);
+  const sameDirection = clues
+    .filter((other) => other.direction === direction)
+    .sort((a, b) => a.number - b.number);
+  const from = sameDirection.indexOf(clue);
+  const following = [
+    ...sameDirection.slice(from + 1),
+    ...sameDirection.slice(0, from),
+  ];
+  return [
+    ...cells.slice(at + 1),
+    ...cells.slice(0, at),
+    ...following.flatMap(entryCells),
+  ].find((cell) => entries[cell] === null);
+}
+
 export function prevCellInEntry(
   clue: CrosswordClue,
   index: number,
