@@ -14,6 +14,8 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
 
+**Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
+
 **Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.

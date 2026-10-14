@@ -36,17 +36,17 @@
         the board, not the width, binds it, and a taller board would push the
         keyboard off a 768px-tall desktop.
      2. Touch targets fall below 44px on the HORIZONTAL axis, consciously.
-        10 x 44 = 440px exceeds the 350px available at the reference phone
+        11 x 44 = 484px exceeds the 350px available at the reference phone
         BEFORE any gap, so PRODUCT.md:39 / DESIGN.md:40's >=44px is
-        arithmetically unreachable for a 26-letter keyboard. WCAG 2.5.8's
-        24 × 24 floor is cleared at every width the repo designs for — 31.4 x
-        48 at 390px, 24.4 x 48 at 320px — and the vertical axis is held above
-        44px because rows are 48px and it is free. WCAG 2.5.5/2.5.8's
-        essential-presentation exception applies: an alphabet is 26 keys, and
-        a keyboard whose keys are 44px wide is not a keyboard on a phone.
-        ADR-0035 decision 7's argument, inherited rather than re-derived. The
-        44px rule is honoured where it governs — the command keys are
-        49.1 x 48 at 390px.
+        arithmetically unreachable for a keyboard whose top row is ten letters
+        and apagar. A key is 28.2 x 48 at 390px and 21.8 x 48 at 320px, so
+        WCAG 2.5.8's 24 × 24 floor is met at 320px through its spacing
+        exception: the key pitch is 25.8px, and a 24px circle on each key
+        reaches no neighbour. The vertical axis is held above 44px because
+        rows are 48px and it is free. WCAG 2.5.5/2.5.8's essential-
+        presentation exception applies: a keyboard whose keys are 44px wide
+        is not a keyboard on a phone. ADR-0035 decision 7's argument,
+        inherited rather than re-derived; ADR-0042 decisions 6 and 7.
      3. text-decoration is a state carrier, and DESIGN.md:22's list does not
         contain one. That line reads "every state they mark is also carried by
         a chip, border, or label" — three carrier kinds. Termo adds a FOURTH:
@@ -58,7 +58,7 @@
      4. The key shadow is --ink at 10 %, not DESIGN.md:36's
         rgba(accent, 0.2-0.3). Inherited, not invented: Sudoku's `apagar`
         key ships this exact colour as a neutral control. A letter key is likewise neutral until it is judged,
-        and 28 mustard shadows under a 552px keyboard would make the accent
+        and 28 mustard shadows under a 608px keyboard would make the accent
         the loudest thing on a screen whose accent has exactly one job. The
         blur is 0 and N is 3, 2 or 1, so the rest of the token's shape holds.
      5. Tile glyphs are --ink at weight 600, where DESIGN.md:50 says "player
@@ -85,8 +85,8 @@
         15.0124:1 on desk and 15.6663:1 on card as a kept judgement, matching
         the shared `.hint` ring on this same screen so one screen never shows
         two focus treatments. nonogram-board.module.css ships the same ring.
-     7. Off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale". TWO
-        VALUES, and `T-WEB-S102` reads them off the stylesheet rather than out
+     7. Off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale". ONE
+        VALUE, and `T-WEB-S102` reads it off the stylesheet rather than out
         of this prose, so the count cannot drift.
         - `text-underline-offset: 3px`, on `.keyPresent` and on
           `.noticeRetry`. A decoration offset on a 17px glyph, not spacing
@@ -95,11 +95,7 @@
         - `gap: 3px` on `.grid` and `.row` at <=768px. This IS spacing between
           boxes and it is the honest half of the item. The VALUE is inherited
           rather than invented — sudoku-board.module.css and
-          binairo-screen.module.css already ship a 3px mobile grid gap.
-        - `padding-inline: 2px` on `.keyCommand` at <=768px, argued in full at
-          the rule itself: 11px is `undersized-ui-text`'s floor exactly, so
-          the 320px fit for `enviar`/`apagar` is bought with padding instead
-          of type size. */
+          binairo-screen.module.css already ship a 3px mobile grid gap. */
 
 /* ── page root ───────────────────────────────────────────────────────── */
 
@@ -380,11 +376,12 @@
 
 /* ── keyboard ────────────────────────────────────────────────────────── */
 
-/* ONE flat grid of 20 equal columns; letter keys span 2 and command keys span
-   3, so row 1 is 10 keys starting at 1,3,...,19 (exactly 20 columns), row 2 is
-   9 keys inset one column each side (the QWERTY half-key stagger, drawn by
-   the grid rather than by spacers — 20 + 8 = 28px at desktop), and row 3 is
-   3 + 14 + 3.
+/* ONE flat grid of 22 equal columns, laid out by `qwertySlots` in
+   ../play/letter-keyboard.tsx: letter keys span 2, and each command runs from
+   its row's last letter to the right edge, where a physical keyboard has it.
+   Row 1 is 10 letters + apagar (span 2), row 2 is 9 letters inset one column
+   (the half-key stagger) + enviar (span 3), and row 3 is 7 letters centred,
+   4 + 14 + 4.
 
    Inline `grid-column` placement is legal HERE and the distinction from
    Sudoku is recorded rather than assumed: sudoku-board.module.css:265-269
@@ -406,10 +403,11 @@
    guard. */
 .keyboard {
   display: grid;
-  grid-template-columns: repeat(20, minmax(0, 1fr));
+  grid-template-columns: repeat(22, minmax(0, 1fr));
   grid-template-rows: repeat(3, 48px);
   gap: var(--space-2);
-  width: 552px;
+  width: 608px;
+  max-width: 100%;
   margin-top: var(--space-5);
   touch-action: manipulation;
 }
@@ -463,15 +461,6 @@
   outline-offset: 2px;
 }
 
-/* NO `font-family` line: the `font:` shorthand resets it, and --text-button
-   already carries var(--font-ui). A preceding font-family declaration would
-   be dead bytes that read to the next contributor as a rule. Sudoku's shipped
-   split — Fraunces digits, Instrument Sans `apagar`. */
-.keyCommand {
-  font: var(--text-button);
-  text-transform: none;
-}
-
 .keyCorrect {
   background: var(--accent);
   border-color: var(--ink);
@@ -518,7 +507,7 @@
   text-decoration-thickness: 2px;
 }
 
-/* A SIBLING of `.keyboard`, never a child. `.keyboard` is a 20-column grid
+/* A SIBLING of `.keyboard`, never a child. `.keyboard` is a 22-column grid
    with all 28 keys explicitly placed across rows 1-3, so an unplaced span
    auto-places into an IMPLICIT fourth row one column wide — ~20px holding a
    63-character sentence — and `margin-top` on a grid item is inert against
@@ -604,21 +593,6 @@
 
   .key:not(.keyAbsent):active {
     box-shadow: 1px 1px 0 color-mix(in srgb, var(--ink) 10%, transparent);
-  }
-
-  /* 11px is `undersized-ui-text`'s floor EXACTLY (checks.mjs:3439 needs
-     fontSize < 11 && dtLen >= 2, and `enviar`/`apagar` are six characters
-     inside a button) and cannot go lower, so the fit at 320px is bought with
-     padding instead: 2px, not --space-2's 8px, takes the command key's
-     content box from 38.6 - 16 - 3 = 19.6px to 38.6 - 4 - 3 = 31.6px.
-     Shipped UNCONDITIONALLY rather than left as a conditional item, because
-     `text-overflow` needs delta >= 16 (checks.mjs:4782) and 320 is not a
-     scanned viewport — CI is structurally blind to a 3px clip and always
-     will be. A LETTER key's direct text is one character, so `dtLen === 1`
-     puts it out of the same rule's reach at any size. */
-  .keyCommand {
-    font-size: 11px;
-    padding-inline: 2px;
   }
 
   /* A phone has no keyboard to advertise. */
