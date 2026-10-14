@@ -683,6 +683,18 @@ export const messages = {
           label: "Riscar números resolvidos",
           hint: "Risca o número de uma linha ou coluna quando suas marcas já mostram o bloco inteiro. Não consulta a solução.",
         },
+        highlightRegion: {
+          label: "Destacar linha, coluna e região",
+          hint: "Pinta a linha, a coluna e a região da célula selecionada.",
+        },
+        fadeQueenLines: {
+          label: "Esmaecer o que já tem rainha",
+          hint: "Apaga um pouco as células das linhas, colunas e regiões que já têm uma rainha.",
+        },
+        autoCross: {
+          label: "Marcar ✕ automático",
+          hint: "Ao pôr uma rainha, marca ✕ nas células vazias da linha, da coluna, da região e em volta dela. Tirar a rainha apaga só esses ✕.",
+        },
         firstValue: {
           label: "Primeiro valor",
           hint: "O primeiro toque e o botão esquerdo do mouse põem este número; o segundo toque e o botão direito põem o outro.",

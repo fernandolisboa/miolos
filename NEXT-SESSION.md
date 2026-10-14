@@ -6,7 +6,7 @@ Nothing new from #324. Open, low urgency: NOW §1 (#200), and NOW §2, the Googl
 
 Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0101). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
 
-**Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`apps/web/src/settings/settings.ts`); shown in Ajustes' *Jogos* card and each grid game's *Ajustes* dialog (`settings/settings-dialog.tsx`, in `PlayScreenChrome`). *Mostrar erros* is `wrongCells` in `play/grid-hint.ts` (the hint's correction uses the same predicate) drawn as `WrongMark`; the Sudoku *Número fixo* lives in the reducer (`locked`) with its 300 ms gesture in `sudoku/use-digit-lock.ts`, on a keypad digit or on a board cell showing a digit (#323). The Nonogram's struck clue numbers are `placedClues` (`packages/games/src/nonogram/placed.ts`, ADR-0104) behind `strikePlacedRuns`. A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Account sync is #317.
+**Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`apps/web/src/settings/settings.ts`); shown in Ajustes' *Jogos* card and each grid game's *Ajustes* dialog (`settings/settings-dialog.tsx`, in `PlayScreenChrome`). *Mostrar erros* is `wrongCells` in `play/grid-hint.ts` (the hint's correction uses the same predicate) drawn as `WrongMark`; the Sudoku *Número fixo* lives in the reducer (`locked`) with its 300 ms gesture in `sudoku/use-digit-lock.ts`, on a keypad digit or on a board cell showing a digit (#323). The Nonogram's struck clue numbers are `placedClues` (`packages/games/src/nonogram/placed.ts`, ADR-0104) behind `strikePlacedRuns`. A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Account sync is #317. Rainhas has three more (#326, ADR-0105): the reach, the fade and an opt-in auto-✕ whose ✕ belong to the queens that made them (`autoCrossed`, kept in the play record).
 
 **`/admin`** (#304, #314, ADR-0097, ADR-0100): an admin edits each `remote_config` key within its bounds, no deploy. Admins and superusers are verified attached emails in `admin_users` (migration 0016, `packages/db/src/admin-users.ts`); a superuser manages them on the page, and one locking statement keeps the last superuser. `ADMIN_USER_IDS` is gone.
 
@@ -39,8 +39,10 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 **The crossword lexicon is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` and `pnpm test --force`.
 
+**A Rainhas record with `autoCrossed` fails the pre-#326 schema.** Rolling `apps/web` back past #326 drops a pending Rainhas completion saved with *Marcar ✕ automático* on; sync it first.
+
 ## Next
 
-**Next:** file per-game time buckets as an issue; then #317 (sync settings with the account, needs a migration).
+**Next:** the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.
