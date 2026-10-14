@@ -33,8 +33,38 @@
 .rowSlot,
 .listsSlot,
 .keysSlot {
+  box-sizing: border-box;
+  width: min(100%, var(--crossword-col));
+  margin-inline: auto;
+}
+
+.rowSlot {
   display: flex;
-  justify-content: center;
+  gap: var(--space-2);
+}
+
+.toggle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  box-sizing: border-box;
+  padding: 0 var(--space-3);
+  background: var(--paper-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: var(--text-button);
+  cursor: pointer;
+}
+
+.toggle[aria-expanded="true"] {
+  background: var(--paper-tint);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .grid {
@@ -186,5 +216,9 @@
 
   .keysSlot {
     grid-area: keys;
+  }
+
+  .toggle {
+    display: none;
   }
 }

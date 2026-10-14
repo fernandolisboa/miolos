@@ -19,7 +19,7 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 **Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds. Test ids `T-WEB-S514…S517`.
 
 **Boards size from the space they have** (#303, ADR-0103): `BoardCard` (`play/board-card.tsx`) wraps every board in a size container; `--board-side` is the largest square the column and viewport allow, up to the page class's `--board-max`. `--board-below` is a hand-kept mirror of the rows under the card.
-The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, `.hintSlot` reserves the explanation, and free play's `GeneratingNote` is `BoardCard`'s `overlay`. The Cruzadinha's clues sit beside the grid from a 640px column (`crossword` container) and fold behind *Pistas* below it. Pinned by `T-WEB-S596…S604`; jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
+The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, `.hintSlot` reserves the explanation, and free play's `GeneratingNote` is `BoardCard`'s `overlay`. The Cruzadinha's clues sit beside the grid from a 640px column (`crossword` container) and fold behind *Pistas* below it. Pinned by `T-WEB-S596…S605`; jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
 ## Traps
 

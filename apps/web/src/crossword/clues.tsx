@@ -9,60 +9,42 @@ import styles from "./clues.module.css";
 
 const copy = messages.games.crossword.play;
 
-export function ClueRow({
+export function ClueBar({
   clues,
   selected,
   direction,
-  listsId,
-  open,
-  onToggle,
 }: {
   readonly clues: readonly CrosswordClue[];
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
-  readonly listsId: string;
-  readonly open: boolean;
-  readonly onToggle: () => void;
 }) {
   const clue =
     selected === null ? undefined : activeEntry(clues, selected, direction);
   return (
-    <div className={styles.clueRow}>
-      <p role="status" className={styles.activeBar}>
+    <p role="status" className={styles.activeBar}>
+      <span className={styles.activeText}>
         {clue === undefined
           ? copy.cluePrompt
           : `${copy.clueLabel(clue.number, clue.direction)} · ${clue.clue}`}
-      </p>
-      <button
-        type="button"
-        className={styles.toggle}
-        aria-expanded={open}
-        aria-controls={listsId}
-        onClick={onToggle}
-      >
-        {copy.cluesHeading}
-      </button>
-    </div>
+      </span>
+    </p>
   );
 }
 
-export function ClueRowSkeleton() {
+export function ClueBarSkeleton() {
   return (
-    <div aria-hidden className={styles.clueRow}>
-      <p className={styles.activeBar}>{copy.cluePrompt}</p>
-      <span className={styles.toggle}>{copy.cluesHeading}</span>
-    </div>
+    <p aria-hidden className={styles.activeBar}>
+      <span className={styles.activeText}>{copy.cluePrompt}</span>
+    </p>
   );
 }
 
 export function ClueLists({
-  id,
   clues,
   selected,
   direction,
   onSelect,
 }: {
-  readonly id: string;
   readonly clues: readonly CrosswordClue[];
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
@@ -72,7 +54,7 @@ export function ClueLists({
     selected === null ? undefined : activeEntry(clues, selected, direction);
 
   return (
-    <div id={id} className={styles.lists}>
+    <div className={styles.lists}>
       <h2 className={styles.heading}>{copy.cluesHeading}</h2>
       {(["across", "down"] as const).map((dir) => (
         <div key={dir} className={styles.group}>

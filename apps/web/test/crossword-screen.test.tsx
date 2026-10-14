@@ -343,11 +343,7 @@ describe("the clue list folds behind a Pistas button on a narrow board (T-WEB-S6
   }
 
   function folded(): boolean {
-    return (
-      lists().parentElement?.classList.contains(
-        boardStyles.listsFolded ?? "",
-      ) ?? false
-    );
+    return lists().classList.contains(boardStyles.listsFolded ?? "");
   }
 
   it("asks for a tap until a cell is selected, instead of a blank bar", () => {
@@ -378,13 +374,42 @@ describe("the clue list folds behind a Pistas button on a narrow board (T-WEB-S6
 
   it("folds only below a 640px board column, where the button shows", () => {
     const board = stylesheet("src/crossword/crossword-board.module.css");
-    const clues = stylesheet("src/crossword/clues.module.css");
     const narrow = bodyOf(board, "@container crossword (width < 640px)");
-    const wide = bodyOf(clues, "@container crossword (width >= 640px)");
+    const wide = bodyOf(board, "@container crossword (width >= 640px)");
 
     expect(decl(bodyOf(narrow, ".listsFolded"), "display")).toBe("none");
     expect(board.split(".listsFolded").length - 1).toBe(1);
     expect(decl(bodyOf(wide, ".toggle"), "display")).toBe("none");
+  });
+});
+
+describe("the clue bar keeps one height for every clue (T-WEB-S605)", () => {
+  it("is a fixed two lines, and a longer clue ends in an ellipsis there", () => {
+    const clues = stylesheet("src/crossword/clues.module.css");
+    const bar = bodyOf(clues, ".activeBar");
+    const text = bodyOf(clues, ".activeText");
+
+    expect(decl(bar, "height")).toBe(
+      "calc(2 * 1.3em + 2 * var(--space-2) + 3px)",
+    );
+    expect(decl(bar, "line-height")).toBe("1.3");
+    expect(decl(bar, "box-sizing")).toBe("border-box");
+    expect(decl(text, "-webkit-line-clamp")).toBe("2");
+    expect(decl(text, "overflow")).toBe("hidden");
+    expect(clues).not.toMatch(/@container|@media \(max-width/);
+  });
+
+  it("keeps the whole clue in the status text a screen reader hears", () => {
+    render(<CrosswordScreen daily={DAILY} />);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `${copy.clueLabel(2, "down")} — verbo`,
+      }),
+    );
+
+    expect(screen.getByRole("status").textContent).toBe(
+      `${copy.clueLabel(2, "down")} · verbo`,
+    );
   });
 });
 

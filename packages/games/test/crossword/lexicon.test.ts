@@ -31,7 +31,7 @@ const generatedPath = join(
 );
 
 const NORMALIZED_SHAPE = /^[a-z]{3,5}$/;
-const MAX_CLUE_LENGTH = 44; // see ADR-0103 decision 8
+const MAX_CLUE_LENGTH = 48;
 const LENGTH_FLOORS: ReadonlyMap<number, number> = new Map([
   [3, 220],
   [4, 1050],

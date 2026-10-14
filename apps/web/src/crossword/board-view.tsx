@@ -4,7 +4,7 @@ import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
-import { ClueRow, ClueRowSkeleton, ClueLists } from "./clues";
+import { ClueBar, ClueBarSkeleton, ClueLists } from "./clues";
 import { Board, BoardSkeleton, focusBoard } from "./board";
 import styles from "./crossword-board.module.css";
 import { Keyboard, KeyboardSkeleton } from "./keyboard";
@@ -58,7 +58,6 @@ export function CrosswordBoardView({
     reclaimFocus();
     backspace();
   }, [reclaimFocus, backspace]);
-  const listsId = useId();
   const [cluesOpen, setCluesOpen] = useState(false);
   const selectFromClue = (index: number, direction: CrosswordDirection) => {
     setCluesOpen(false);
@@ -86,28 +85,27 @@ export function CrosswordBoardView({
           />
         </BoardCard>
       }
-      clueRow={
-        <ClueRow
+      clueBar={
+        <ClueBar
           clues={state.clues}
           selected={state.selected}
           direction={state.direction}
-          listsId={listsId}
-          open={cluesOpen}
-          onToggle={() => {
-            setCluesOpen((open) => !open);
-          }}
         />
       }
-      lists={
-        <ClueLists
-          id={listsId}
-          clues={state.clues}
-          selected={state.selected}
-          direction={state.direction}
-          onSelect={selectFromClue}
-        />
-      }
-      listsOpen={cluesOpen}
+      clues={{
+        list: (
+          <ClueLists
+            clues={state.clues}
+            selected={state.selected}
+            direction={state.direction}
+            onSelect={selectFromClue}
+          />
+        ),
+        open: cluesOpen,
+        onToggle: () => {
+          setCluesOpen((open) => !open);
+        },
+      }}
       keyboard={
         <Keyboard
           onLetter={typeFromKey}
@@ -131,7 +129,8 @@ export function CrosswordSkeletonBody({
           <BoardSkeleton />
         </BoardCard>
       }
-      clueRow={<ClueRowSkeleton />}
+      clueBar={<ClueBarSkeleton />}
+      clues={null}
       keyboard={<KeyboardSkeleton />}
     />
   );
@@ -139,31 +138,52 @@ export function CrosswordSkeletonBody({
 
 function CrosswordLayout({
   board,
-  clueRow,
-  lists,
-  listsOpen = false,
+  clueBar,
+  clues,
   keyboard,
 }: {
   readonly board: ReactNode;
-  readonly clueRow: ReactNode;
-  readonly lists?: ReactNode;
-  readonly listsOpen?: boolean;
+  readonly clueBar: ReactNode;
+  readonly clues: {
+    readonly list: ReactNode;
+    readonly open: boolean;
+    readonly onToggle: () => void;
+  } | null;
   readonly keyboard: ReactNode;
 }) {
+  const listsId = useId();
   return (
     <div className={styles.layout}>
       <div className={styles.columns}>
         <div className={styles.wellSlot}>{board}</div>
-        <div className={styles.rowSlot}>{clueRow}</div>
-        {lists === undefined ? null : (
+        <div className={styles.rowSlot}>
+          {clueBar}
+          {clues === null ? (
+            <span aria-hidden className={styles.toggle}>
+              {copy.cluesHeading}
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={styles.toggle}
+              aria-expanded={clues.open}
+              aria-controls={listsId}
+              onClick={clues.onToggle}
+            >
+              {copy.cluesHeading}
+            </button>
+          )}
+        </div>
+        {clues === null ? null : (
           <div
+            id={listsId}
             className={
-              listsOpen
+              clues.open
                 ? styles.listsSlot
                 : `${styles.listsSlot} ${styles.listsFolded}`
             }
           >
-            {lists}
+            {clues.list}
           </div>
         )}
         <div className={styles.keysSlot}>{keyboard}</div>
