@@ -20,12 +20,17 @@ const queens = z.object({
   autoCross: flag(false),
 });
 
+const crossword = z.object({
+  showErrors: flag(false),
+  skipFilled: flag(true),
+});
+
 const games = z.object({
   sudoku: sudoku.catch(sudoku.parse({})),
   binairo: errorsOnly.catch(errorsOnly.parse({})),
   nonogram: errorsOnly.catch(errorsOnly.parse({})),
   queens: queens.catch(queens.parse({})),
-  crossword: errorsOnly.catch(errorsOnly.parse({})),
+  crossword: crossword.catch(crossword.parse({})),
 });
 
 const base = z.object({

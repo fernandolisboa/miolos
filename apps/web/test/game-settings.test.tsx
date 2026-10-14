@@ -232,7 +232,17 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         within(queens).getByRole("switch", { name: label }),
       ).toBeInTheDocument();
     }
-    for (const name of ["Binairo", "Nonogram", "Cruzadinha"]) {
+    const crossword = screen.getByRole("group", { name: "Cruzadinha" });
+    expect(within(crossword).getAllByRole("switch")).toHaveLength(2);
+    for (const label of [
+      copy.flags.showErrors.label,
+      copy.flags.skipFilled.label,
+    ]) {
+      expect(
+        within(crossword).getByRole("switch", { name: label }),
+      ).toBeInTheDocument();
+    }
+    for (const name of ["Binairo", "Nonogram"]) {
       const group = screen.getByRole("group", { name });
       expect(within(group).getAllByRole("switch")).toHaveLength(1);
       expect(
