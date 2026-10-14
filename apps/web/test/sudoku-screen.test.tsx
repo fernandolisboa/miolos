@@ -359,6 +359,21 @@ describe("writing with the keypad (T-WEB-S27)", () => {
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
   });
 
+  it("carries no pressed state: the keypad writes, it does not switch modes", () => {
+    render(<SudokuScreen daily={DAILY} />);
+
+    for (const key of [
+      ...Array.from({ length: SIDE }, (_, index) =>
+        messages.games.sudoku.play.keypad.digitAria(index + 1),
+      ),
+      messages.games.sudoku.play.keypad.eraseAria,
+    ]) {
+      expect(screen.getByLabelText(key).hasAttribute("aria-pressed")).toBe(
+        false,
+      );
+    }
+  });
+
   it("clears the selected cell with apagar", () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
 
@@ -1005,20 +1020,32 @@ describe("the board and keypad arithmetic (T-WEB-S34)", () => {
     expect(decl(erase, "grid-column")).toBe(String(slots));
   });
 
-  it("gives the desktop keypad the board's inner width and its exact tracks", () => {
+  it("gives the desktop keypad the board's tracks, and never a digit under the 44px target", () => {
     const grid = bodyOf(GAME_CSS, ".grid");
     const keypad = bodyOf(GAME_CSS, ".keypad");
-    const card = bodyOf(SHARED_CSS, ".gridCard");
+    const minimum = token("--touch-target-min");
 
     expect(decl(keypad, "grid-template-columns")).toBe(
       decl(grid, "grid-template-columns"),
     );
     expect(decl(keypad, "gap")).toBe(decl(grid, "gap"));
 
-    const border = pixels((decl(card, "border") ?? "").split(" ")[0]);
-    expect(decl(card, "padding")).toBe("var(--space-4)");
-    expect(decl(keypad, "width")).toBe(
-      `calc(var(--board-side) - 2 * (var(--space-4) + ${String(border)}px))`,
+    const width = (decl(keypad, "width") ?? "").replace(/\s+/g, " ");
+    expect(width).toMatch(/^max\( ?calc\(var\(--board-side\) - /);
+
+    const floorWidth = [
+      ...width.matchAll(/(\d+) \* (var\(--touch-target-min\)|\d+px)/g),
+    ].reduce(
+      (total, [, count, unit]) =>
+        total +
+        Number(count) *
+          (unit === "var(--touch-target-min)" ? minimum : pixels(unit)),
+      0,
+    );
+    const gutters = 2 * 2;
+    const gaps = 10 * pixels(decl(grid, "gap"));
+    expect((floorWidth - gutters - gaps) / SIDE).toBeGreaterThanOrEqual(
+      minimum,
     );
   });
 

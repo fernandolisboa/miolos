@@ -1,16 +1,8 @@
 /* Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
-   either fails the build or leaks globally.
-
-   What differs per game is never a cascade override: CSS Modules hash class
-   names per file, so a `.gridCard` declared in a game's module would resolve
-   against this one by stylesheet injection order, which Next does not
-   guarantee. Games set custom properties on the page element instead.
-
-   Named areas rather than `display: contents`: the reflow has to move the
-   timer and the progress readout ACROSS subtrees (.statsCard is a child of
-   the sidebar column, .topBar its sibling), which `display: contents`
-   cannot do. See ADR-0102 for the board sizing and the fold. */
+   css-loader's `pure` mode, so a bare type selector fails the build or leaks.
+   Games set custom properties on the page element, never redeclare a class
+   here: hashed names resolve by injection order, which Next does not
+   guarantee. Board sizing and the fold: ADR-0102. */
 .page {
   box-sizing: border-box;
   min-height: 100svh;
@@ -210,9 +202,6 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  /* Horizontal padding is visually inert on a full-width, centre-aligned
-     button — but impeccable's `cramped-padding` reads computed padding, and
-     a 14px label flush against a filled boundary is exactly its shape. */
   padding: 14px var(--space-5);
   background: var(--accent);
   color: var(--ink-on-accent, var(--paper-desk));
@@ -232,8 +221,7 @@
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-/* Three carriers —
-   fill, border and label — so the state survives grayscale. */
+/* Fill, border and label all change, so the state survives grayscale. */
 .hintUsed {
   background: var(--paper-card);
   border: 1.5px solid var(--line);
@@ -264,13 +252,10 @@
   padding-top: 32px;
 }
 
-/* The size container every board is measured against. It takes the height
-   the rest of the section leaves over, so the board is the largest square the
-   column and the viewport allow, up to the game's --board-max. --board-below
-   is the height of whatever the game draws under the card inside the well, and
-   --board-aspect the card's width over its height where it is not square.
-   --board-side stays unregistered on purpose: the cq units must resolve where
-   it is read, inside the container, not on the container itself. */
+/* --board-below is the height of what the game draws under the card inside the
+   well, --board-aspect the card's width over its height where it is not
+   square. --board-side is not registered: its cq units must resolve where it
+   is read, inside the container, not on the container itself. */
 .boardWell {
   --board-side: min(
     100cqi,
@@ -278,6 +263,7 @@
     var(--board-max)
   );
 
+  position: relative;
   flex: 1 1 0;
   align-self: stretch;
   min-height: calc(var(--board-min, 280px) + var(--board-below, 0px));
@@ -300,7 +286,24 @@
   transform: rotate(var(--grid-card-rot, 0.4deg));
 }
 
+/* Centred on the card, outside it so it is not aria-hidden: the card and its
+   controls are centred in the well, so the card's centre is (height - below)
+   / 2 whatever the board side. */
+.boardOverlay {
+  position: absolute;
+  top: calc((100cqb - var(--board-below, 0px)) / 2);
+  left: 50%;
+  width: max-content;
+  max-width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-card);
+  border-radius: var(--radius);
+  transform: translate(-50%, -50%);
+}
+
 .hintSlot {
+  --hint-line: 19.5px;
+
   display: flow-root;
   align-self: stretch;
 }
@@ -308,20 +311,15 @@
 .hintExplain {
   margin: var(--space-3) 0 0;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: var(--hint-line);
   color: var(--ink-2);
   text-align: center;
 }
 
 /* ── pre-hydration placeholders ──────────────────────────────────────── */
 
-/* The skeleton's hint bar borrows .hint so its box is the shipped size by
-   construction — but that rule also carries `cursor: pointer` and a 1px
-   press, and an inert box that presses is a lie the player can see.
-   `pointer-events: none` retires both at once, and it has to sit AFTER
-   .hint here: same specificity, later wins. Each game's module carries
-   its own copy for its own input row, because a class hashed in this file
-   cannot reach one hashed in that one. */
+/* The skeleton's hint bar borrows .hint for its size; this retires the cursor
+   and the press. It must sit after .hint: same specificity, later wins. */
 .placeholder {
   cursor: default;
   pointer-events: none;
@@ -335,7 +333,7 @@
 
 @media (min-width: 1024px) {
   .hintSlot {
-    min-height: calc(var(--space-3) + 2 * 19.5px);
+    min-height: calc(var(--space-3) + 2 * var(--hint-line));
   }
 }
 
@@ -395,13 +393,11 @@
 
 @media (max-width: 1023px) and (min-height: 800px) {
   .hintSlot {
-    min-height: calc(var(--space-3) + 3 * 19.5px);
+    min-height: calc(var(--space-3) + 3 * var(--hint-line));
   }
 }
 
-/* Page padding is 20px, not 16px: impeccable's body-text-viewport-edge fires
-   on a >40-char <p> whose rect.left < 16, and the rules paragraph lands
-   exactly on 16.0 — one sub-pixel of layout rounding tips it red. */
+/* 20px, not 16px: impeccable's body-text-viewport-edge fires on text at 16.0. */
 @media (max-width: 768px) {
   .page {
     padding: var(--space-3) var(--space-5) var(--space-5);
@@ -431,8 +427,6 @@
 
   .gridCard {
     padding: 10px;
-    /* 5px 5px 0 is intentional: F4 draws the mobile board shadow between
-       --shadow-md and --shadow-lg; no token carries that value. */
     box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 20%, transparent);
   }
 }

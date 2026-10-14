@@ -66,8 +66,8 @@
 
    `gap: 0` is load-bearing, not tidiness: with any gap at all a 15×15 board at
    320px gives a 12.33px cell against a 13.34px two-digit column clue — the
-   rendered `.clueNumber` flex item, measured in the built artifact, not the
-   13.203125px bare glyph advance (ISS-R4-5). The rules are per-cell borders below.
+   rendered `.clueNumber` flex item, not the 13.203125px bare glyph advance.
+   The rules are per-cell borders below.
 
    `none`, not `manipulation`: this board DRAGS, and a touch drag that scrolls
    the page instead of painting is the whole gesture lost. */

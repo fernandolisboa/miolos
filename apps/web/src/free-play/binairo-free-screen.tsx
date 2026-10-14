@@ -151,7 +151,13 @@ function BinairoFreeBoard({
 function GeneratingBoard() {
   return (
     <>
-      <BoardCard placeholder below={<ControlsSkeleton />}>
+      <BoardCard
+        placeholder
+        below={<ControlsSkeleton />}
+        overlay={
+          <p className={styles.generating}>{messages.freePlay.generating}</p>
+        }
+      >
         <div className={boardStyles.grid}>
           {Array.from({ length: TOTAL_CELLS }, (_unused, index) => (
             <div
@@ -161,7 +167,6 @@ function GeneratingBoard() {
           ))}
         </div>
       </BoardCard>
-      <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
   );
 }

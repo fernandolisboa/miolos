@@ -117,7 +117,7 @@
 }
 
 .affordance {
-  margin-top: var(--space-6);
+  margin: var(--space-6) 0 0;
   font-size: 13px;
   color: var(--ink-2);
 }

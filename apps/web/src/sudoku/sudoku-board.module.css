@@ -5,9 +5,8 @@
    leaks globally. Every accent is `var(--accent)`, which the screen root sets
    to `--accent-sudoku`. */
 
-/* The per-game half of the shared layout, carried on the SAME element as
-   `screen.page`: custom properties only, never a redeclared `.gridCard`
-   (ADR-0029). --board-below is the keypad's height under the card. */
+/* Custom properties only, never a redeclared `.gridCard` (ADR-0029).
+   --board-below mirrors the keypad's height under the card. */
 .pageSudoku {
   --grid-card-rot: -0.4deg;
   --stats-card-rot: 0.5deg;
@@ -38,18 +37,10 @@
   touch-action: manipulation;
 }
 
-/* The four box rules, drawn in the gutter tracks (deviation 4). They make the
-   3×3 structure a fact rather than something inferred from spacing, which
-   matters because the cells sit on --paper-desk inside a --paper-card card:
-   an undrawn gutter is LIGHTER than the cells it separates.
-
-   `--ink` at 50% over card paper resolves to ≈#8E8A84 — 3.21:1, clearing
-   WCAG 1.4.11's 3:1 floor for a meaningful non-text graphic — where a
-   --line rule would be 1.43:1, i.e. a third hairline between two hairlines
-   rather than a separator (§12.3).
-
-   No border, no radius and NO box-shadow, so `isCardLikeFromProps` returns
-   false on its first guard and `nested-cards` cannot fire (S23). */
+/* The four box rules, drawn in the gutter tracks: an undrawn gutter is lighter
+   than the desk-paper cells it separates. Ink at 50% clears WCAG 1.4.11's 3:1
+   where a --line rule would not. No border, radius or box-shadow, so
+   impeccable's `nested-cards` cannot fire on it. */
 .rule {
   background: color-mix(in srgb, var(--ink) 50%, transparent);
 }
@@ -90,11 +81,6 @@
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  /* Paint-only properties, never width/height/padding/margin (which fire
-     impeccable's `layout-transition`). The chromatic properties are in the
-     list because §12.5 promises the revealed hint "settles" over
-     --duration-fast, and a transition nothing declares is a promise the code
-     does not keep. */
   transition:
     transform var(--duration-fast) var(--ease-settle),
     background-color var(--duration-fast) var(--ease-settle),
@@ -109,10 +95,9 @@
 
 /* ── chromatic cell states ───────────────────────────────────────────── */
 
-/* Exactly ONE of these per cell, precedence
-   violating > hint-filled > entered > given > empty (§12.5). They answer
-   "what this cell IS"; the caret below answers "where the player is", and
-   the two compose rather than suppressing each other (ADR-0030 (d)). */
+/* Exactly one per cell, precedence
+   violating > hint-filled > entered > given > empty. The caret below composes
+   with them rather than suppressing them (ADR-0030 (d)). */
 
 .cellGiven {
   background: var(--paper-tint);
@@ -120,19 +105,16 @@
   cursor: default;
 }
 
-/* Weight 450, not the system's 500 (deviation 6): ink-blue against --ink is
-   only 2.00:1 — where Binairo's moss-green is 2.83:1 — so at grid scale an
-   entered digit reads almost as ink and the given/entered distinction has to
-   lean harder on its other two carriers, the tint above and this weight. */
+/* Weight 450, not 500: ink-blue sits close to --ink, so the given/entered
+   distinction leans on the tint above and on this weight. */
 .cellEntered {
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   color: var(--accent);
   font-weight: 450;
 }
 
-/* The free hint's whole visual payload. It stays legible whether or not the
-   caret is on it, which is only true because `use-hint` no longer moves the
-   selection (§8.3, review finding D3). */
+/* The free hint's whole visual payload; `use-hint` never moves the selection,
+   so it stays legible with or without the caret. */
 .cellHinted {
   background: color-mix(in srgb, var(--accent) 10%, var(--paper-desk));
   border-color: var(--accent);
@@ -178,16 +160,9 @@
 
 /* ── the caret ───────────────────────────────────────────────────────── */
 
-/* ONE declaration block for the selection AND the focus ring, so ADR-0030's
-   consequence (c) — they can never disagree — holds mechanically rather than
-   by discipline. The roving tabindex already guarantees the focused cell is
-   the selected one.
-
-   Drawn INSIDE the 1.5px border: Binairo's `outline-offset: 2px`
-   (binairo-screen.module.css:71) would extend 4px beyond the cell box and
-   paint over both the 3px grid gap and the 2px box rule. An outline is also
-   what keeps this ADDITIVE — the chromatic states above use background,
-   border, color and an inset shadow, so a violating cell keeps saying so
+/* One block for the selection and the focus ring, so they can never disagree
+   (ADR-0030 (c)). Drawn inside the border so it cannot paint over the grid gap
+   or the box rule, and as an outline so a violating cell keeps saying so
    while it is the caret. */
 .cellSelected,
 .cell:focus-visible {
@@ -202,11 +177,8 @@
   outline-color: var(--ink-on-accent);
 }
 
-/* The pre-hydration placeholder cell (finding
-   `binairo-reload-flashes-a-blank-board-over-a-finished-day`). Colour only:
-   every dimension still comes from .cell and .grid above, so the placeholder
-   board is the real board's size on every viewport by construction. Static —
-   DESIGN.md has no shimmer. */
+/* The pre-hydration placeholder cell: colour only, so it is the real board's
+   size by construction. */
 .cellSkeleton {
   background: var(--paper-tint);
   border-color: color-mix(in srgb, var(--line) 55%, transparent);
@@ -215,11 +187,8 @@
 
 /* ── keypad ──────────────────────────────────────────────────────────── */
 
-/* Commands, not modes: `apagar` and the digits carry no `aria-pressed`,
-   because there is no plausible "paint 7s by dragging" for Sudoku.
-
-   The digit row shares the BOARD's track template and the width of its inner
-   grid, so digit n sits directly under column n. */
+/* The digit row mirrors the board's tracks, so digit n sits under column n.
+   Never narrower than nine touch targets: below that the mirror yields. */
 .keypad {
   display: grid;
   grid-template-columns:
@@ -228,13 +197,13 @@
   grid-template-rows: 52px 44px;
   gap: 4px;
   row-gap: 8px;
-  width: calc(var(--board-side) - 2 * (var(--space-4) + 1px));
+  width: max(
+    calc(var(--board-side) - 2 * (var(--space-4) + 1px)),
+    calc(9 * var(--touch-target-min) + 2 * 2px + 10 * 4px)
+  );
   margin-top: var(--space-6);
 }
 
-/* Row 2 has two explicit occupants and no auto-placement: the first two box
-   blocks carry the affordance, the last one carries `apagar`, so the command
-   sits on a box boundary. */
 .keypadDigit {
   grid-row: 1;
   box-sizing: border-box;
@@ -257,10 +226,8 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* The column each digit occupies, skipping the two gutter tracks — the same
-   1,2,3,5,6,7,9,10,11 sequence `track()` computes for the cells, pinned to it
-   by T-WEB-S34. A media query cannot override an inline style, so the
-   placement lives here and the phone keypad resets it. */
+/* The column each digit occupies, skipping the gutters: the sequence `track()`
+   computes for the cells, pinned by T-WEB-S34. */
 .keypadDigit:nth-child(1) {
   grid-column: 1;
 }
@@ -297,8 +264,6 @@
   grid-column: 11;
 }
 
-/* Pressed = the element slides 1px toward its shadow and the shadow shrinks
-   by the same 1px (DESIGN.md, verbatim). --shadow-sm is 3px, hence 2px. */
 .keypadDigit:active {
   transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
@@ -309,8 +274,6 @@
   outline-offset: 2px;
 }
 
-/* The discoverability carrier for the whole keyboard model, placed rather
-   than left to auto-placement into an implicit third row. */
 .affordance {
   grid-row: 2;
   grid-column: 1 / 8;
@@ -335,7 +298,6 @@
   font-family: var(--font-ui);
   font-size: 14px;
   cursor: pointer;
-  /* Ink-tinted, not accent-tinted: `apagar` is a neutral control. */
   box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 10%, transparent);
   transition:
     transform var(--duration-fast) var(--ease-settle),
@@ -354,11 +316,7 @@
 
 /* ── the Nível readout ───────────────────────────────────────────────── */
 
-/* Sudoku's third `.statRow` value, in the same treatment as the shared
-   `.progressCard`. It lives here rather than in the shared sheet
-   because no other game has a difficulty on the wire; `.statsCard` itself is
-   hidden ≤1023px by the shared sheet, and the mobile home for this value is
-   the `.progressBar` slot, which carries "Médio · 24 de 81". */
+/* Sudoku's third `.statRow` value; no other game has a difficulty. */
 .levelCard {
   font-size: 14px;
   color: var(--ink-2);
@@ -367,21 +325,14 @@
 
 /* ── pre-hydration placeholders ──────────────────────────────────────── */
 
-/* This module's own copy of the shared sheet's `.placeholder` (plan 018
-   §12.2): the skeleton's keypad borrows `.keypadDigit` and `.keypadErase`,
-   and a class hashed in `../play/screen.module.css` cannot override one
-   hashed here — the two would resolve by injection order (landmine 24). It
-   has to sit AFTER them: same specificity, later wins (finding
-   `play-skeleton-is-not-at-final-dimensions`). */
+/* Must sit after `.keypadDigit` and `.keypadErase`, which the skeleton keypad
+   borrows: same specificity, later wins. A class hashed in the shared sheet
+   cannot override these. */
 .placeholder {
   cursor: default;
   pointer-events: none;
 }
 
-/* This module's own reduced-motion block, for the same hashing reason: the
-   shared sheet's block covers `.hint` and cannot reach these classes.
-   DESIGN.md makes a reduced-motion alternative law, so leaving it implicit
-   would silently drop it. */
 @media (prefers-reduced-motion: reduce) {
   .cell,
   .keypadDigit,
@@ -399,9 +350,7 @@
     gap: 3px;
   }
 
-  /* Ten slots, `1–5` over `6–9 apagar`, as wide as the board: the well's
-     min-height keeps --board-side at or above the 280px floor, where a key is
-     49.6px, so the 44px touch target holds even on a height-limited board. */
+  /* Ten slots as wide as the board: at the 280px floor a key is 49.6px. */
   .keypad {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-template-rows: repeat(2, 48px);

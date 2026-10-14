@@ -92,12 +92,12 @@ function QueensFreeBoard({
 
 function GeneratingBoard({ size }: { readonly size: QueensSize }) {
   return (
-    <>
-      <BoardPanelSkeleton
-        size={size}
-        regions={Array.from({ length: size * size }, () => 0)}
-      />
-      <p className={freePlay.generating}>{messages.freePlay.generating}</p>
-    </>
+    <BoardPanelSkeleton
+      size={size}
+      regions={Array.from({ length: size * size }, () => 0)}
+      overlay={
+        <p className={freePlay.generating}>{messages.freePlay.generating}</p>
+      }
+    />
   );
 }

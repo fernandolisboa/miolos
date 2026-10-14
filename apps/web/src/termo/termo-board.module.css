@@ -30,11 +30,11 @@
    RECORDED DESIGN-SYSTEM DEVIATIONS (§12.1), each with its arithmetic. There
    are SEVEN and T-WEB-S102 counts them, so deleting one for tidiness reds
    rather than passing quietly:
-     1. The tile is a fluid square, not DESIGN.md:50's 52px desktop / 38px
-        mobile. It grows with the space the well leaves (ADR-0102): 49px at the
-        280px floor, about 62px at the 360px ceiling. A five-column board
-        capped at 38px would leave dead paper each side of the card, on a
-        screen whose argument is paper that hugs its board.
+     1. The board stops at a 360px ceiling, where the other games reach
+        580-600px, and its tile is a fluid square below it (ADR-0102): 49px at
+        the 280px floor, about 62px at the ceiling. The keyboard stack under
+        the board, not the width, binds it, and a taller board would push the
+        keyboard off a 768px-tall desktop.
      2. Touch targets fall below 44px on the HORIZONTAL axis, consciously.
         10 x 44 = 440px exceeds the 350px available at the reference phone
         BEFORE any gap, so PRODUCT.md:39 / DESIGN.md:40's >=44px is
@@ -56,11 +56,8 @@
         they are drawn on by 15.0124:1 and 13.9929:1 — and they are the reason
         --accent never has to become a boundary.
      4. The key shadow is --ink at 10 %, not DESIGN.md:36's
-        rgba(accent, 0.2-0.3). Inherited, not invented:
-        sudoku-board.module.css:345-349 already ships this exact colour with
-        the reason in the file — "the one shadow in the whole frame set that
-        is neutral... because `apagar` is a neutral control rather than a
-        game-accent one". A letter key is likewise neutral until it is judged,
+        rgba(accent, 0.2-0.3). Inherited, not invented: Sudoku's `apagar`
+        key ships this exact colour as a neutral control. A letter key is likewise neutral until it is judged,
         and 28 mustard shadows under a 552px keyboard would make the accent
         the loudest thing on a screen whose accent has exactly one job. The
         blur is 0 and N is 3, 2 or 1, so the rest of the token's shape holds.
@@ -87,8 +84,7 @@
         5.3066:1 / 5.5377:1 are the shipped precedents) — it stays --ink at
         15.0124:1 on desk and 15.6663:1 on card as a kept judgement, matching
         the shared `.hint` ring on this same screen so one screen never shows
-        two focus treatments. nonogram-board.module.css:400 and :445 were the
-        precedent.
+        two focus treatments. nonogram-board.module.css ships the same ring.
      7. Off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale". TWO
         VALUES, and `T-WEB-S102` reads them off the stylesheet rather than out
         of this prose, so the count cannot drift.
@@ -239,11 +235,8 @@
   text-decoration-thickness: 2px;
 }
 
-/* offset 4px, not 6: `text-underline-offset` is measured from the alphabetic
-   baseline, and at offset 6 / thickness 3 the mark ended about 3px above the
-   1.5px ink border of the SAME colour on the smallest tile, so the pair read
-   as one doubled edge. At offset 4 it clears the border by at least 6px at
-   every tile size, and 4px is on the 4pt scale. */
+/* Offset 4px keeps the mark clear of the same-colour tile border on the
+   smallest tile, where a larger offset read as one doubled edge. */
 .tilePresent {
   border-color: var(--ink);
   text-decoration: underline;
@@ -415,10 +408,6 @@
   display: grid;
   grid-template-columns: repeat(20, minmax(0, 1fr));
   grid-template-rows: repeat(3, 48px);
-  /* The TOKEN, not the literal 8px it resolves to: the same file's mobile
-     `.keyboard` already reaches for `var(--space-1)`, and two idioms for one
-     kind of length in one stylesheet is how a token stops being the source of
-     truth (step-6 finding B-13). */
   gap: var(--space-2);
   width: 552px;
   margin-top: var(--space-5);
@@ -494,10 +483,7 @@
   text-decoration: underline;
   text-decoration-color: var(--ink);
   text-decoration-thickness: 2px;
-  /* offset 3px on a 17px glyph: the key's content box is
-     52 - 2 x 1.5 - 2 x 4 = 41px and the baseline is (41-17)/2 + 0.85 x 17 =
-     26.45px, so the mark ends 9.55px above the content edge and nothing
-     merges. Deviation 7's second off-4pt length. */
+  /* Deviation 7's second off-4pt length. */
   text-underline-offset: 3px;
 }
 

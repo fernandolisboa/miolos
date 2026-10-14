@@ -170,10 +170,15 @@ function GeneratingBoard({ size }: { readonly size: NonogramSize }) {
   };
   return (
     <>
-      <BoardCard placeholder below={<ControlsSkeleton />}>
+      <BoardCard
+        placeholder
+        below={<ControlsSkeleton />}
+        overlay={
+          <p className={styles.generating}>{messages.freePlay.generating}</p>
+        }
+      >
         <BoardSkeleton size={size} clues={emptyClues} />
       </BoardCard>
-      <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
   );
 }

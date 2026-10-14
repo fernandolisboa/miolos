@@ -1,4 +1,5 @@
 import type { QueensSize } from "@miolos/core";
+import type { ReactNode } from "react";
 
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
@@ -52,13 +53,16 @@ export function BoardPanel({ board }: { readonly board: QueensBoardState }) {
 export function BoardPanelSkeleton({
   size,
   regions,
+  overlay,
 }: {
   readonly size: QueensSize;
   readonly regions: readonly number[];
+  readonly overlay?: ReactNode;
 }) {
   return (
     <BoardCard
       placeholder
+      overlay={overlay}
       below={
         <p aria-hidden className={styles.affordance}>
           {copy.affordance}

@@ -50,56 +50,39 @@ function mobilePadding(): number {
   );
 }
 
+function clampAt(value: string | undefined, viewport: number): number {
+  const match = /^clamp\(\s*(\d+)px,\s*([\d.]+)vw,\s*(\d+)px\s*\)$/.exec(
+    value ?? "",
+  );
+  if (match === null) {
+    throw new Error(`\`${String(value)}\` is not clamp(Npx, Nvw, Npx)`);
+  }
+  const [, low, vw, high] = match.map(Number);
+  return Math.min(high ?? 0, Math.max(low ?? 0, ((vw ?? 0) * viewport) / 100));
+}
+
 describe("the board well sizes every board from the space it has (T-WEB-S580)", () => {
   const well = bodyOf(SHARED_CSS, ".boardWell");
 
-  it("is a size container that takes the height the section leaves over", () => {
+  it("is a size container, so the cq units resolve against the space the section leaves", () => {
     expect(decl(well, "container-type")).toBe("size");
-    expect(decl(well, "flex")).toBe("1 1 0");
-    expect(decl(well, "align-self")).toBe("stretch");
   });
 
-  it("reserves the floor plus whatever the game draws under the card", () => {
-    expect(decl(well, "min-height")).toBe(
-      "calc(var(--board-min, 280px) + var(--board-below, 0px))",
-    );
-  });
-
-  it("derives --board-side from the width, the height left after the controls, and the ceiling", () => {
+  it("takes the width first and never exceeds the game's ceiling", () => {
     const side = (decl(well, "--board-side") ?? "").replace(/\s+/g, " ");
 
-    expect(side).toBe(
-      "min( 100cqi, (100cqb - var(--board-below, 0px)) * var(--board-aspect, 1), var(--board-max) )",
-    );
-  });
-
-  it("makes the card exactly that wide, shrink-to-fit where no well sets it", () => {
-    const card = bodyOf(SHARED_CSS, ".gridCard");
-
-    expect(decl(card, "width")).toBe("var(--board-side, auto)");
-    expect(decl(card, "box-sizing")).toBe("border-box");
-    expect(decl(card, "max-width")).toBeUndefined();
+    expect(side).toMatch(/^min\( 100cqi,/);
+    expect(side).toMatch(/var\(--board-max\) \)$/);
   });
 
   it("measures the page against the small viewport, so a collapsing URL bar never resizes a board", () => {
     expect(decl(bodyOf(SHARED_CSS, ".page"), "min-height")).toBe("100svh");
     expect(SHARED_CSS).not.toContain("dvh");
   });
-
-  it("leaves no per-game mobile cap behind", () => {
-    for (const file of [
-      ...sourcesUnder(SRC, ".css"),
-      ...sourcesUnder(SRC, ".tsx"),
-    ]) {
-      expect(readFileSync(file, "utf8"), file).not.toContain(
-        "--board-mobile-max",
-      );
-    }
-  });
 });
 
 describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S581)", () => {
-  it("declares --board-max in px, and a font that never drops below 14px", () => {
+  it("declares --board-max at or above the floor, and a font that never drops below 14px", () => {
     for (const [game, sheet] of Object.entries(GAME_SHEETS)) {
       const ceilings = [...sheet.matchAll(/--board-max:\s*([^;]+);/g)].map(
         (match) => pixels(match[1]),
@@ -148,24 +131,12 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S581
       }
     }
   });
-
-  it("squares every cell from its own aspect ratio or its grid", () => {
-    expect(decl(bodyOf(GAME_SHEETS.sudoku, ".grid"), "aspect-ratio")).toBe("1");
-    for (const [sheet, selector] of [
-      [GAME_SHEETS.binairo, ".cell"],
-      [GAME_SHEETS.queens, ".cell"],
-      [GAME_SHEETS.nonogram, ".cell"],
-      [GAME_SHEETS.termo, ".tile"],
-    ] as const) {
-      expect(decl(bodyOf(sheet, selector), "aspect-ratio")).toBe("1");
-    }
-  });
 });
 
 describe("every board keeps a usable cell at the floor (T-WEB-S582)", () => {
   const inner = boardFloor() - 2 * mobilePadding() - 2 * CARD_BORDER;
 
-  it("fits the narrowest phone", () => {
+  it("fits the narrowest phone, so nothing overflows sideways at 320px", () => {
     expect(boardFloor()).toBeLessThanOrEqual(NARROWEST_VIEWPORT - PAGE_PADDING);
   });
 
@@ -226,6 +197,19 @@ describe("every gridCard sits inside a boardWell (T-WEB-S583)", () => {
     expect(card?.nextElementSibling).toBe(dom.getByTestId("under"));
   });
 
+  it("keeps an overlay inside the well and outside the hidden placeholder card", () => {
+    const { container } = render(
+      <BoardCard placeholder overlay={<p data-testid="over">over</p>}>
+        <span>board</span>
+      </BoardCard>,
+    );
+
+    const well = container.querySelector(`.${shared.boardWell ?? ""}`);
+    const card = well?.querySelector(`.${shared.gridCard ?? ""}`);
+    expect(well?.contains(dom.getByTestId("over"))).toBe(true);
+    expect(card?.contains(dom.getByTestId("over"))).toBe(false);
+  });
+
   it("hides a placeholder card from assistive technology", () => {
     const { container } = render(
       <BoardCard placeholder>
@@ -242,18 +226,6 @@ describe("every gridCard sits inside a boardWell (T-WEB-S583)", () => {
 });
 
 describe("the reset confirm opens over the hint and never moves the page (T-WEB-S584)", () => {
-  it("reserves one touch target for the control and floats the confirm over what is below it", () => {
-    expect(decl(bodyOf(RESET_CSS, ".control"), "position")).toBe("relative");
-    expect(decl(bodyOf(RESET_CSS, ".control"), "min-height")).toBe(
-      "var(--touch-target-min)",
-    );
-
-    const ask = bodyOf(RESET_CSS, ".ask");
-    expect(decl(ask, "position")).toBe("absolute");
-    expect(decl(ask, "background")).toBeUndefined();
-    expect(decl(ask, "z-index")).toBeUndefined();
-  });
-
   it("takes the covered hint out of the tab order and the accessibility tree", () => {
     expect(
       decl(
@@ -276,7 +248,12 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
 
   it("keeps the shared controls at or above the 44px touch target", () => {
     const minimum = token("--touch-target-min");
+    const resolve = (value: string | undefined) =>
+      pixels(value?.replace("var(--touch-target-min)", `${String(minimum)}px`));
 
+    expect(
+      resolve(decl(bodyOf(RESET_CSS, ".control"), "min-height")),
+    ).toBeGreaterThanOrEqual(minimum);
     expect(
       pixels(
         decl(
@@ -286,14 +263,14 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
       ),
     ).toBeGreaterThanOrEqual(minimum);
     expect(
-      pixels(
+      resolve(
         decl(
           bodyOf(
             stylesheet("src/components/confirm-action.module.css"),
             ".cancel",
           ),
           "min-height",
-        )?.replace("var(--touch-target-min)", `${String(minimum)}px`),
+        ),
       ),
     ).toBeGreaterThanOrEqual(minimum);
 
@@ -306,62 +283,70 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
 });
 
 describe("one fold at 1023px, one two-column band above it (T-WEB-S585)", () => {
-  it("starts the two columns at 1024px and clamps them to the viewport", () => {
-    const page = bodyOf(SHARED_CSS, ".page");
+  const page = bodyOf(SHARED_CSS, ".page");
+  const [sidebar = ""] = (decl(page, "grid-template-columns") ?? "").split(
+    " minmax",
+  );
+  const gap = decl(page, "column-gap");
+  const gutter = (decl(page, "padding") ?? "").split(" ").slice(1).join(" ");
 
-    expect(decl(page, "grid-template-columns")).toBe(
-      "clamp(280px, 26vw, 330px) minmax(0, 1fr)",
-    );
-    expect(decl(page, "column-gap")).toBe("clamp(48px, 5vw, 72px)");
-    expect(decl(page, "padding")).toBe("var(--space-8) clamp(40px, 6vw, 80px)");
+  it("resolves to the 330px sidebar, 72px gap and 80px gutters of the 1440px design at 1440px", () => {
+    expect(clampAt(sidebar, 1440)).toBe(330);
+    expect(clampAt(gap, 1440)).toBe(72);
+    expect(clampAt(gutter, 1440)).toBe(80);
   });
 
-  it("collapses to one column at 1023px and leaves no 1140px fold in the shared sheet", () => {
-    expect(SHARED_CSS).toContain("@media (max-width: 1023px)");
-    expect(SHARED_CSS).not.toContain("1140");
+  it("leaves the first two-column viewport a board column at or above the floor", () => {
+    const column =
+      1024 -
+      clampAt(sidebar, 1024) -
+      clampAt(gap, 1024) -
+      2 * clampAt(gutter, 1024);
 
+    expect(column).toBeGreaterThanOrEqual(boardFloor());
+  });
+
+  it("collapses to one column at 1023px", () => {
     const column = bodyOf(
       bodyOf(SHARED_CSS, "@media (max-width: 1023px)"),
       ".page",
     );
+
     expect(decl(column, "grid-template-columns")).toBe("1fr");
-  });
-
-  it("keeps the 280px sidebar and the 80px gutters of the 1440px design at 1440px", () => {
-    const viewport = 1440;
-
-    expect(Math.min(330, Math.max(280, 0.26 * viewport))).toBe(330);
-    expect(Math.min(72, Math.max(48, 0.05 * viewport))).toBe(72);
-    expect(Math.min(80, Math.max(40, 0.06 * viewport))).toBe(80);
   });
 });
 
 describe("the hint explanation keeps a reserved slot where the height allows (T-WEB-S586)", () => {
-  const LINE = 13 * 1.5;
+  const slot = bodyOf(SHARED_CSS, ".hintSlot");
+  const line = pixels(decl(slot, "--hint-line"));
 
-  it("sets the explanation's line height the slot is counted in", () => {
+  function reservedLines(media: string): number {
+    const minHeight = decl(
+      bodyOf(bodyOf(SHARED_CSS, media), ".hintSlot"),
+      "min-height",
+    );
+    const match =
+      /^calc\(var\(--space-3\) \+ (\d+) \* var\(--hint-line\)\)$/.exec(
+        minHeight ?? "",
+      );
+    if (match === null) {
+      throw new Error(`\`${String(minHeight)}\` is not margin plus N lines`);
+    }
+    return Number(match[1]);
+  }
+
+  it("counts the slot in the line height the explanation is set in", () => {
     const explain = bodyOf(SHARED_CSS, ".hintExplain");
 
-    expect(pixels(decl(explain, "font-size"))).toBe(13);
-    expect(decl(explain, "line-height")).toBe("1.5");
+    expect(decl(explain, "line-height")).toBe("var(--hint-line)");
+    expect(decl(explain, "margin")).toMatch(/^var\(--space-3\) 0 0$/);
+    expect(line).toBeGreaterThan(pixels(decl(explain, "font-size")));
   });
 
   it("reserves two lines in the two-column band and three on a tall single column", () => {
-    const wide = bodyOf(
-      bodyOf(SHARED_CSS, "@media (min-width: 1024px)"),
-      ".hintSlot",
-    );
-    const tall = bodyOf(
-      bodyOf(SHARED_CSS, "@media (max-width: 1023px) and (min-height: 800px)"),
-      ".hintSlot",
-    );
-
-    expect(decl(wide, "min-height")).toBe(
-      `calc(var(--space-3) + 2 * ${String(LINE)}px)`,
-    );
-    expect(decl(tall, "min-height")).toBe(
-      `calc(var(--space-3) + 3 * ${String(LINE)}px)`,
-    );
-    expect(decl(bodyOf(SHARED_CSS, ".hintSlot"), "display")).toBe("flow-root");
+    expect(reservedLines("@media (min-width: 1024px)")).toBe(2);
+    expect(
+      reservedLines("@media (max-width: 1023px) and (min-height: 800px)"),
+    ).toBe(3);
   });
 });

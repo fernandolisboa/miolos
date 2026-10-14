@@ -170,10 +170,15 @@ function SudokuFreeBoard({
 function GeneratingBoard() {
   return (
     <>
-      <BoardCard placeholder below={<KeypadSkeleton />}>
+      <BoardCard
+        placeholder
+        below={<KeypadSkeleton />}
+        overlay={
+          <p className={styles.generating}>{messages.freePlay.generating}</p>
+        }
+      >
         <BoardSkeleton />
       </BoardCard>
-      <p className={styles.generating}>{messages.freePlay.generating}</p>
     </>
   );
 }

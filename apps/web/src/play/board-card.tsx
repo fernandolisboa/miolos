@@ -5,10 +5,12 @@ import screen from "./screen.module.css";
 export function BoardCard({
   placeholder = false,
   below,
+  overlay,
   children,
 }: {
   readonly placeholder?: boolean;
   readonly below?: ReactNode;
+  readonly overlay?: ReactNode;
   readonly children: ReactNode;
 }) {
   return (
@@ -17,6 +19,9 @@ export function BoardCard({
         {children}
       </div>
       {below}
+      {overlay === undefined ? null : (
+        <div className={screen.boardOverlay}>{overlay}</div>
+      )}
     </div>
   );
 }
