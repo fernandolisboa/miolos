@@ -12,6 +12,7 @@ import {
   messages,
 } from "../i18n";
 import { accentVars } from "../play/accent";
+import { EndingFlourish } from "../play/ending-flourish";
 import { ShareButton } from "../play/share-button";
 import {
   useRecordSnapshot,
@@ -69,11 +70,13 @@ export function LateResult({
         {outcome === "won" ? copy.result.wonTitle : copy.result.lostTitle}
       </h1>
 
-      <div aria-hidden className={styles.stamp}>
-        <span className={styles.stampLabel}>{copy.result.stampLabel}</span>
-        <span className={styles.stampDay}>{formatDayNumber(date)}</span>
-        <span className={styles.stampMonth}>{monthName}</span>
-      </div>
+      <EndingFlourish outcome={outcome}>
+        <div aria-hidden className={styles.stamp}>
+          <span className={styles.stampLabel}>{copy.result.stampLabel}</span>
+          <span className={styles.stampDay}>{formatDayNumber(date)}</span>
+          <span className={styles.stampMonth}>{monthName}</span>
+        </div>
+      </EndingFlourish>
 
       <p className={styles.note}>{note(snapshot, alreadyConcluded)}</p>
 

@@ -11,6 +11,7 @@ import {
   RemoteConclusionView,
 } from "./conclusion-lazy";
 import type { ConclusionResult } from "./conclusion-view";
+import { JustEnded, useSawPlay } from "./just-ended";
 import type { PlayCore } from "./types";
 import { isClosedAndFrozen } from "./use-play-lifecycle";
 
@@ -42,6 +43,10 @@ export function DailyScreen(props: DailyScreenProps) {
   }, []);
 
   const copy = messages.games[game];
+  const closed = isClosedAndFrozen(state);
+  const ended = useSawPlay(
+    !unavailable && state.hydrated && !closed && claim === undefined,
+  );
 
   if (unavailable) {
     return <DailyUnavailable copy={copy.play.unavailable} />;
@@ -51,16 +56,20 @@ export function DailyScreen(props: DailyScreenProps) {
     return skeleton;
   }
 
-  if (isClosedAndFrozen(state)) {
-    return props.conclusion === undefined ? (
-      <ConclusionView
-        game={game}
-        date={state.date}
-        copy={copy.conclusion}
-        result={props.result}
-      />
-    ) : (
-      props.conclusion.render()
+  if (closed) {
+    return (
+      <JustEnded value={ended}>
+        {props.conclusion === undefined ? (
+          <ConclusionView
+            game={game}
+            date={state.date}
+            copy={copy.conclusion}
+            result={props.result}
+          />
+        ) : (
+          props.conclusion.render()
+        )}
+      </JustEnded>
     );
   }
 

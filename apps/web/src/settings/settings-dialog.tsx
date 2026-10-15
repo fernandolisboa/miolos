@@ -11,10 +11,10 @@ const copy = messages.settings.games.dialog;
 
 export function GameSettingsButton({
   game,
-  general,
+  clock,
 }: {
   readonly game: SettingsGame;
-  readonly general: boolean;
+  readonly clock: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -48,7 +48,7 @@ export function GameSettingsButton({
       >
         <h2 className={styles.title}>{copy.title}</h2>
         <p className={styles.note}>{copy.note}</p>
-        {open ? <GameSettings games={[game]} general={general} /> : null}
+        {open ? <GameSettings games={[game]} clock={clock} /> : null}
         <button
           type="button"
           className={styles.close}

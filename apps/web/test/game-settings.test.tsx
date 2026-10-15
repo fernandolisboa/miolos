@@ -53,6 +53,7 @@ function patch(next: {
   act(() => {
     writeSettings({
       showClock: next.showClock ?? current.showClock,
+      endAnimation: current.endAnimation,
       games: {
         ...current.games,
         sudoku: { ...current.games.sudoku, ...next.sudoku },
@@ -189,7 +190,7 @@ describe("Destacar linha, coluna e bloco paints the selection's reach only when 
 });
 
 describe("Ajustes lists every setting, saves it on this device and updates open boards (T-WEB-S593)", () => {
-  it("groups the switches: the clock under Em todos os jogos, then each game's own", () => {
+  it("groups the switches: the clock and the end animation under Em todos os jogos, then each game's own", () => {
     render(<GamesSection />);
 
     const general = screen.getByRole("group", { name: copy.general });
@@ -197,9 +198,14 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
       within(general)
         .getAllByRole("switch")
         .map((s) => s.textContent),
-    ).toEqual([copy.on]);
+    ).toEqual([copy.on, copy.on]);
     expect(
       within(general).getByRole("switch", { name: copy.flags.showClock.label }),
+    ).toBeInTheDocument();
+    expect(
+      within(general).getByRole("switch", {
+        name: copy.flags.endAnimation.label,
+      }),
     ).toBeInTheDocument();
 
     const sudoku = screen.getByRole("group", { name: "Sudoku" });
@@ -346,13 +352,23 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
     ).toHaveLength(0);
   });
 
-  it("free play has no clock, so its dialog leaves the general group out", async () => {
+  it("free play has no clock, so its general group holds only the end animation", async () => {
     render(<SudokuFreeScreen deps={FREE_DEPS} />);
     await flushGeneration();
 
     fireEvent.click(screen.getByRole("button", { name: copy.dialog.trigger }));
     const dialog = screen.getByRole("dialog", { name: copy.dialog.title });
-    expect(within(dialog).queryByText(copy.general)).toBeNull();
+    const general = within(dialog).getByRole("group", { name: copy.general });
+    expect(
+      within(general)
+        .getAllByRole("switch")
+        .map((s) => s.getAttribute("aria-labelledby")),
+    ).toHaveLength(1);
+    expect(
+      within(general).getByRole("switch", {
+        name: copy.flags.endAnimation.label,
+      }),
+    ).toBeInTheDocument();
     expect(
       within(dialog).queryByRole("switch", {
         name: copy.flags.showClock.label,
