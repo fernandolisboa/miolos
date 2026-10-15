@@ -8,7 +8,7 @@
 
 ## Decision
 
-1. **E.** Fernando found C the fastest to read as a brain and liked B's grid, but rejected "one lobe per game": games may be added or switched off. E keeps C's lobes and B's cells. Its colours are the palette, not a game count. A was dropped because the jigsaw brain is the commonest stock image for the idea and the puzzle piece is a contested autism-awareness symbol; D because its folds read slower than coloured lobes.
+1. **E**, Fernando's pick on 2026-10-15. He found C the fastest to read as a brain and liked B's grid, but rejected "one lobe per game": games may be added or switched off. E keeps C's lobes and B's cells. Its colours are the palette, not a game count. A was dropped because the jigsaw brain is the commonest stock image for the idea and the puzzle piece is a contested autism-awareness symbol; D because its folds read slower than coloured lobes.
 2. **One drawing, two cuts.** `BrandMark` (`apps/web/src/components/brand-mark.tsx`) draws the detailed cut (4-unit cells) on the hub masthead and on a loading board, and the small cut (6-unit cells) beside every top-bar wordmark, at the hub sign-off and in the favicon. The cells are an encoded table, so the mark needs no clip path and costs little client JS.
 3. **The mark is inline SVG coloured by tokens** through CSS-module classes, so it follows the in-app theme and holds no colour literal. It is `aria-hidden`; the wordmark text stays the accessible name.
 4. **A loading board shows the mark shuffling** (`BoardCard` with `placeholder` and no overlay): CSS keyframes cycle each cell through the accents and blank paper on staggered durations, so it looks random with no JavaScript. Under reduced motion it stands still.
