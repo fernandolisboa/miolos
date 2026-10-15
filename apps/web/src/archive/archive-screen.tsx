@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
+import { JustEnded, useSawPlay } from "../play/just-ended";
 import type { PlayCore } from "../play/types";
 import { isClosedAndFrozen } from "../play/use-play-lifecycle";
 import { LateResult } from "./late-result";
@@ -24,6 +25,8 @@ export function ArchiveScreen({
   readonly view: ReactNode;
 }) {
   const alreadyConcluded = usePriorConclusion(game, state.date);
+  const closed = isClosedAndFrozen(state);
+  const ended = useSawPlay(!unavailable && state.hydrated && !closed);
 
   if (unavailable) {
     return <DailyUnavailable copy={messages.games[game].play.unavailable} />;
@@ -33,14 +36,16 @@ export function ArchiveScreen({
     return skeleton;
   }
 
-  if (isClosedAndFrozen(state)) {
+  if (closed) {
     return (
-      <LateResult
-        game={game}
-        date={state.date}
-        outcome={state.status === "solved" ? "won" : "lost"}
-        alreadyConcluded={alreadyConcluded}
-      />
+      <JustEnded value={ended}>
+        <LateResult
+          game={game}
+          date={state.date}
+          outcome={state.status === "solved" ? "won" : "lost"}
+          alreadyConcluded={alreadyConcluded}
+        />
+      </JustEnded>
     );
   }
 

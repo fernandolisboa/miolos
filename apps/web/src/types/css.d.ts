@@ -8,5 +8,7 @@ declare module "csstype" {
     "--accent"?: string;
     "--ink-on-accent"?: string;
     "--crossword-size"?: number;
+    "--angle"?: string;
+    "--drip-delay"?: string;
   }
 }

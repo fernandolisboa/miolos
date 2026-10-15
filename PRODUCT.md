@@ -30,7 +30,7 @@ In English: purple/blue gradients; glassmorphism; card-inside-card; grey text on
 
 1. **Typography is the protagonist.** Hierarchy, warmth and identity come from Fraunces + Instrument Sans, not from ornament. Numerals that must align in a column use Instrument Sans with `tabular-nums`; Fraunces numerals are the single, non-aligning kind, and `tabular-nums` on that face is a measured no-op ([ADR-0036](./docs/adr/0036-aligning-numerals-use-instrument-sans-not-fraunces.md)).
 2. **Depth is paper, not blur.** Layers read as sheets of paper: hard single-color offset shadows, hairline borders, subtle static rotations. Never a diffuse shadow.
-3. **Celebration is contained.** The reward is a rubber stamp settling into place — tactile, adult, quiet. Never confetti, never a modal takeover.
+3. **Celebration is contained.** The reward is a rubber stamp settling into place — tactile, adult, quiet. A game that just ended presses the stamp and splashes a little accent ink around it; a lost one lets grey ink run ([ADR-0118](./docs/adr/0118-a-game-that-just-ended-presses-or-runs-the-stamps-ink.md)). Never confetti, never a modal takeover.
 4. **The ritual is calm.** One screen, one task; timers are discreet; nothing nags. The daily visit should feel like opening a notebook, not entering a casino.
 5. **Desktop is not stretched mobile.** Each viewport gets its own composition from the same system — columns and generous margins at 1440, redesigned hierarchy at 390.
 

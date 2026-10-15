@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 
 import { messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
+import { EndingFlourish } from "../play/ending-flourish";
+import { JustEnded } from "../play/just-ended";
 import { picturePath } from "../play/picture-path";
 import type { ConclusionPicture } from "../play/types";
 import type { FreePlayGame } from "./catalog";
@@ -37,7 +39,15 @@ export function FreePlaySolvedCard<T extends string | number>({
     >
       <article className={styles.solvedCard}>
         <div aria-hidden className={styles.tape} />
-        <p className={styles.stamp}>{lost ? copy.lostStamp : copy.stamp}</p>
+        <div className={styles.stampSlot}>
+          <JustEnded value>
+            <EndingFlourish outcome={lost ? "lost" : "won"}>
+              <p className={styles.stamp}>
+                {lost ? copy.lostStamp : copy.stamp}
+              </p>
+            </EndingFlourish>
+          </JustEnded>
+        </div>
         <p className={styles.modeLine}>
           {copy.modeLine(
             messages.freePlay.modeTag,

@@ -1202,7 +1202,11 @@ describe("the picture reveal (T-WEB-S51)", () => {
         ),
       ),
     ).toBeInTheDocument();
-    expect(container.querySelector("svg")).toBeNull();
+    expect(
+      [...container.querySelectorAll("svg")].filter(
+        (svg) => !svg.closest("header"),
+      ),
+    ).toEqual([]);
   });
 
   it("reveals the picture in place even where localStorage throws", () => {

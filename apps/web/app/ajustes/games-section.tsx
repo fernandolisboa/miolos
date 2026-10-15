@@ -12,7 +12,7 @@ export function GamesSection() {
         {copy.heading}
       </h2>
       <p className={styles.body}>{copy.lead}</p>
-      <GameSettings games={GAMES} general />
+      <GameSettings games={GAMES} clock />
     </section>
   );
 }

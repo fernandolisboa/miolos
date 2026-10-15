@@ -19,6 +19,7 @@ import {
   routes,
   type Route,
 } from "../i18n";
+import { Wordmark } from "../components/brand-mark";
 import { useStats } from "../stats/use-stats";
 import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
@@ -32,6 +33,7 @@ import {
   type DayEntry,
 } from "./day-state";
 import { DAY_GAMES } from "./day-games";
+import { EndingFlourish } from "./ending-flourish";
 import { picturePath } from "./picture-path";
 import { BLANK_VALUE, ShareButton } from "./share-button";
 import { startCompletionSync } from "./sync";
@@ -168,13 +170,15 @@ export function ConclusionView({
       <article className={styles.resultCard}>
         <ConclusionCardHead copy={copy} />
         <div className={styles.stampRow}>
-          {outcome === undefined ? (
-            stamp === undefined ? null : (
-              <ShippedStamp title={copy.title} stamp={stamp} />
-            )
-          ) : (
-            <OutcomeStamp outcome={outcome} />
-          )}
+          <EndingFlourish outcome={lost ? "lost" : "won"}>
+            {outcome === undefined ? (
+              stamp === undefined ? null : (
+                <ShippedStamp title={copy.title} stamp={stamp} />
+              )
+            ) : (
+              <OutcomeStamp outcome={outcome} />
+            )}
+          </EndingFlourish>
         </div>
         {outcome !== undefined && (
           <p role="status" className={styles.announcer}>
@@ -590,7 +594,7 @@ function ConclusionTopBar({
         {messages.conclusion.back}
       </Link>
 
-      <span className={styles.wordmark}>{messages.brand.wordmark}</span>
+      <Wordmark className={styles.wordmark} />
       <span className={styles.barKicker}>{kicker}</span>
       <span className={styles.topDateLong}>{formatLongDate(date)}</span>
       <span className={styles.topDateShort}>{formatShortDate(date)}</span>
