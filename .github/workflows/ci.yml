@@ -114,8 +114,8 @@ jobs:
       - run: nproc && free -m
       - run: MIOLOS_TEST_DB_TIMING=1 pnpm test --concurrency=10
       - run: pnpm build
-      # Route budgets and leak markers, read from the .next just built (ADR-0115).
-      - run: pnpm --filter @miolos/web bundle-check
+      # see ADR-0115
+      - run: pnpm --filter @miolos/web --fail-if-no-match bundle-check
       # Split restore/save rather than the unified `actions/cache`, matching
       # the puppeteer cache in impeccable.yml. The unified action saves in a
       # post step that is skipped when the job fails; `save-always` existed to

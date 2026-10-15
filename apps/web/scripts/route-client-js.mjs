@@ -295,7 +295,7 @@ for (const marker of EXPECTED_DAILY_SCOPE) {
   if (hits === 0) {
     fail(
       `\`${marker}\` appears in 0 daily-scope chunks — either its source ` +
-        "text changed (product copy is in apps/web/src/i18n/messages.ts), so " +
+        "text changed (apps/web/src/i18n/messages.ts or packages/games), so " +
         "update the marker, or the scan is looking at the wrong files, so its " +
         "negatives prove nothing.",
     );
