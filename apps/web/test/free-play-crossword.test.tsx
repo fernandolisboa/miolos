@@ -253,7 +253,7 @@ describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB
     await flushGeneration();
     const page = () => container.querySelector("main");
     const sevenTracks = () =>
-      container.querySelector(`.${boardStyles.size7 ?? ""}`);
+      container.querySelector<HTMLElement>(`.${boardStyles.size7 ?? ""}`);
     expect(page()).not.toHaveClass(boardStyles.pageSize7 ?? "");
     expect(sevenTracks()).toBeNull();
 
@@ -261,7 +261,7 @@ describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB
 
     expect(page()).toHaveClass(boardStyles.pageCrossword ?? "");
     expect(page()).toHaveClass(boardStyles.pageSize7 ?? "");
-    expect(sevenTracks()).not.toBeNull();
+    expect(sevenTracks()?.style.getPropertyValue("--crossword-size")).toBe("7");
 
     await flushGeneration();
 

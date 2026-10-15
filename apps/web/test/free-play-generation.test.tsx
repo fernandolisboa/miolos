@@ -228,4 +228,19 @@ describe("a switch paints generating before it builds (T-WEB-S674)", () => {
 
     expect(generate).not.toHaveBeenCalled();
   });
+
+  it("builds nothing when the screen leaves after the frame, before the build", () => {
+    vi.useFakeTimers();
+    const generate = vi.fn(STUB_GAME.generate);
+    const { unmount } = renderLogged("leve", {
+      pickSeed: seedCounter(),
+      generate,
+    });
+
+    vi.advanceTimersToNextFrame();
+    unmount();
+    vi.runAllTimers();
+
+    expect(generate).not.toHaveBeenCalled();
+  });
 });
