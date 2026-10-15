@@ -26,9 +26,7 @@ Nothing required. The logo is in (#354, option E, chosen by Fernando: a brain wh
 
 **Dependabot npm PRs cannot be merged as opened** (no lockfile change). Land one hand-made bump, outside `minimumReleaseAge` (7 days).
 
-**A perfect day needs a lineup buffered before midnight (ADR-0087).** The buffer alert exists to prevent that.
-
-**Six per-game medals is T-CORE-S70's maximum.** A seventh game needs that cap raised first.
+**A perfect day needs a lineup buffered before midnight (ADR-0087).** The buffer alert exists to prevent that. **Six per-game medals is T-CORE-S70's maximum.** A seventh game needs that cap raised first.
 
 **Content is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, `content/termo/answers.csv` or `content/termo/reserve.txt`, run `generate:crossword`, `generate:termo` and `pnpm test --force`. Re-curation moves a published answer to `reserve.txt`, never deletes it (ADR-0114).
 

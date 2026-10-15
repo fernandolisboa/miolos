@@ -9,7 +9,7 @@
 ## Decision
 
 1. **E**, Fernando's pick on 2026-10-15. He found C the fastest to read as a brain and liked B's grid, but rejected "one lobe per game": games may be added or switched off. E keeps C's lobes and B's cells. Its colours are the palette, not a game count. A was dropped because the jigsaw brain is the commonest stock image for the idea and the puzzle piece is a contested autism-awareness symbol; D because its folds read slower than coloured lobes.
-2. **One drawing, two cuts.** `BrandMark` (`apps/web/src/components/brand-mark.tsx`) draws the detailed cut (4-unit cells) on the hub masthead and on a loading board, and the small cut (6-unit cells) beside every top-bar wordmark, at the hub sign-off and in the favicon. The cells are an encoded table, so the mark needs no clip path and costs little client JS.
+2. **One drawing, two cuts.** `BrandMark` (`apps/web/src/components/brand-mark.tsx`) draws the detailed cut (4-unit cells) on the hub masthead and on a loading board, and the small cut (6-unit cells) beside the top-bar wordmarks, at the hub sign-off and in the favicon. The cells are an encoded table, so the mark needs no clip path and costs little client JS.
 3. **The mark is inline SVG coloured by tokens** through CSS-module classes, so it follows the in-app theme and holds no colour literal. It is `aria-hidden`; the wordmark text stays the accessible name.
 4. **A loading board shows the mark shuffling** (`BoardCard` with `placeholder` and no overlay): CSS keyframes cycle each cell through the accents and blank paper on staggered durations, so it looks random with no JavaScript. Under reduced motion it stands still.
 5. **Two static masters, both on token literals.** `apps/web/app/icon.svg` is the favicon, with an inline `prefers-color-scheme: dark` block; `apps/web/scripts/app-icon.svg` is the master `render-icons.mjs` turns into the PWA and apple PNGs. `T-WEB-S753` ties both to `BRAIN` and to `tokens.css`.
@@ -19,4 +19,5 @@
 
 - Another concept later swaps the drawing inside `BrandMark` and the two masters; no caller changes.
 - The favicon follows the OS scheme, not the in-app theme override, the limit ADR-0079 already accepts for `theme-color`.
-- Play screens hide the top-bar wordmark at 768 px and below, so on phones the mark shows on the hub, the secondary pages and the loading board.
+- The `max-width: 1023px` block of `play/screen.module.css` hides `.wordmark`, so on phones and tablets play screens show the mark only on the loading board.
+- The conclusion top bar (`play/conclusion-view.tsx`) still shows the bare wordmark; it takes `<Wordmark>` once the end-screen animation work has landed.

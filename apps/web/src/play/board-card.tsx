@@ -24,11 +24,12 @@ export function BoardCard({
         {children}
       </div>
       {below}
-      {overlay !== undefined ? (
+      {overlay !== undefined && (
         <div className={screen.boardOverlay}>{overlay}</div>
-      ) : placeholder ? (
+      )}
+      {overlay === undefined && placeholder && (
         <BrandMark detailed shuffling className={screen.boardLoading} />
-      ) : null}
+      )}
     </div>
   );
 }

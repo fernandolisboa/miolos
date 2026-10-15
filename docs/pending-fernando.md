@@ -35,6 +35,8 @@
 - **Blocks:** Sign in with Google only. Until then the feature is dormant: no sign-in in Ajustes, and both `/auth/google/*` routes answer 503.
 - **Source:** #280, ADR-0089 decision 6. The same steps with copy buttons: https://claude.ai/artifact/3cN7aBhzQxyzyg5xuWGwKe (private to Fernando).
 
+---
+
 ## SOON — decided or queued, agent-driven, nothing for you unless asked
 
 - **#146** streak-at-risk dispatcher — SHIPPED (plan 063, ADR-0068) **and green as of 2026-08-21**: the hourly tick reaches the API and returns a real body (run 32477211453, the first `success` the workflow has ever had) after the CRON_SECRET rotation in the Done table. The phone ritual in ANY TIME is now the only thing between this and a real nudge. Email-hedge slice (slice C) is **filed as #199** as of 2026-08-22 — it had been unblocked and *unfiled* for two days, which is the same rot this section's #64 row below is about. Resend went live 2026-08-21 (Done table) and Fernando's Q1/Q2 were answered 2026-08-20, so nothing had blocked it since; the filing step simply never happened, and the row said *"it remains ordinary agent work on #146"* while no ticket existed. Ordinary agent work on **#199**, nothing for Fernando. **#199 shipped** (PR #268, ADR-0083) on 2026-09-25, ahead of #36's second PR by Fernando's call while he is the only recipient. #36's second PR shipped the Ajustes checkbox that stops the email.
