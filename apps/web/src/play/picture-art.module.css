@@ -6,7 +6,7 @@
 }
 
 .wipe {
-  animation: tone-wipe 900ms ease-in-out both;
+  animation: tone-wipe calc(var(--duration-slow) * 3.6) ease-in-out both;
   animation-delay: var(--duration-slow);
 }
 

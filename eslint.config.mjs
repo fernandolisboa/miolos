@@ -59,6 +59,13 @@ const webDynamicTermoAnswersImport = {
     "apps/web never imports the Termo answer list, dynamically either: no client chunk may carry it (ADR-0045 decision 5, ADR-0114).",
 };
 
+const webDynamicNonogramColorsImport = {
+  selector:
+    "ImportExpression > Literal[value=/^@miolos\\/games\\/nonogram-colors(\\/|$)/i]",
+  message:
+    "apps/web never imports the Nonogram tones table dynamically: it ships on /modo-livre/nonogram alone (ADR-0121).",
+};
+
 const webComputedDynamicImport = {
   selector: 'ImportExpression[source.type!="Literal"]',
   message:
@@ -97,7 +104,7 @@ const crosswordEngineGroup = {
 const nonogramColorsGroup = {
   group: ["@miolos/games/nonogram-colors", "@miolos/games/nonogram-colors/*"],
   message:
-    "@miolos/games/nonogram-colors carries every motif's colored picture: only apps/web/src/free-play/use-free-nonogram.ts imports it, so the table ships on /modo-livre/nonogram alone and a daily gets its colors from its own completed /day claim (ADR-0121, ADR-0004). Tests may import it.",
+    "@miolos/games/nonogram-colors carries every motif's tones: only apps/web/src/free-play/use-free-nonogram.ts imports it, so the table ships on /modo-livre/nonogram alone and a daily gets its tones from its own completed /day claim (ADR-0121, ADR-0004). Tests may import it.",
 };
 
 const webWallImportPatterns = [
@@ -488,6 +495,7 @@ export default tseslint.config(
         webDynamicPackageSource,
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
+        webDynamicNonogramColorsImport,
         webComputedDynamicImport,
         webRequireCall,
         webNormalForm,
@@ -511,6 +519,7 @@ export default tseslint.config(
         webDynamicPackageSource,
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
+        webDynamicNonogramColorsImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -539,6 +548,7 @@ export default tseslint.config(
         webDynamicPackageSource,
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
+        webDynamicNonogramColorsImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -607,6 +617,7 @@ export default tseslint.config(
         webDynamicPackageSource,
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
+        webDynamicNonogramColorsImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -640,6 +651,7 @@ export default tseslint.config(
         webDynamicPackageSource,
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
+        webDynamicNonogramColorsImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,

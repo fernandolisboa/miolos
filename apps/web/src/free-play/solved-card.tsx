@@ -37,56 +37,54 @@ export function FreePlaySolvedCard<T extends string | number>({
       style={accentVars(game)}
       data-play-state={lost ? "lost" : "solved"}
     >
-      <article className={styles.solvedCard}>
-        <div aria-hidden className={styles.tape} />
-        <div className={styles.stampSlot}>
-          <JustEnded value>
+      <JustEnded value>
+        <article className={styles.solvedCard}>
+          <div aria-hidden className={styles.tape} />
+          <div className={styles.stampSlot}>
             <EndingFlourish outcome={lost ? "lost" : "won"}>
               <p className={styles.stamp}>
                 {lost ? copy.lostStamp : copy.stamp}
               </p>
             </EndingFlourish>
-          </JustEnded>
-        </div>
-        <p className={styles.modeLine}>
-          {copy.modeLine(
-            messages.freePlay.modeTag,
-            messages.games[game].name,
-            choice?.optionLabel(choice.value),
-          )}
-        </p>
-        {children !== undefined && (
-          <div className={styles.boardRow}>{children}</div>
-        )}
-        {word !== undefined && (
-          <p className={styles.wordLine}>
-            <span className={styles.wordLead}>{copy.wordLead}</span>
-            <span className={styles.word}>{word.canonical}</span>
-          </p>
-        )}
-        {picture !== undefined && (
-          <div className={styles.pictureRow}>
-            <JustEnded value>
-              <PictureArt picture={picture} className={styles.picture} />
-            </JustEnded>
           </div>
-        )}
-        <div className={styles.actions}>
-          <button type="button" className={styles.again} onClick={onAgain}>
-            {copy.again[game]}
-          </button>
-          <Link
-            className={styles.backToIndex}
-            href={routes.freePlay}
-            aria-label={messages.freePlay.backToIndexAria}
-          >
-            {copy.backToIndex}
-          </Link>
-          <Link className={styles.quietLink} href={routes.home}>
-            {copy.backHome}
-          </Link>
-        </div>
-      </article>
+          <p className={styles.modeLine}>
+            {copy.modeLine(
+              messages.freePlay.modeTag,
+              messages.games[game].name,
+              choice?.optionLabel(choice.value),
+            )}
+          </p>
+          {children !== undefined && (
+            <div className={styles.boardRow}>{children}</div>
+          )}
+          {word !== undefined && (
+            <p className={styles.wordLine}>
+              <span className={styles.wordLead}>{copy.wordLead}</span>
+              <span className={styles.word}>{word.canonical}</span>
+            </p>
+          )}
+          {picture !== undefined && (
+            <div className={styles.pictureRow}>
+              <PictureArt picture={picture} className={styles.picture} />
+            </div>
+          )}
+          <div className={styles.actions}>
+            <button type="button" className={styles.again} onClick={onAgain}>
+              {copy.again[game]}
+            </button>
+            <Link
+              className={styles.backToIndex}
+              href={routes.freePlay}
+              aria-label={messages.freePlay.backToIndexAria}
+            >
+              {copy.backToIndex}
+            </Link>
+            <Link className={styles.quietLink} href={routes.home}>
+              {copy.backHome}
+            </Link>
+          </div>
+        </article>
+      </JustEnded>
     </main>
   );
 }

@@ -28,14 +28,10 @@ export function PictureArt({
       viewBox={`0 0 ${String(size)} ${String(size)}`}
       shapeRendering="crispEdges"
     >
-      <path d={picturePath(size, cells)} />
+      <path d={picturePath(size, cells, 1)} />
       {painted !== undefined && (
         <g
-          className={
-            justEnded && endAnimation
-              ? `${styles.tones} ${styles.wipe}`
-              : styles.tones
-          }
+          className={justEnded && endAnimation ? styles.wipe : undefined}
           data-toned=""
         >
           {[...new Set(painted.replaceAll(".", ""))].map((tone) => (

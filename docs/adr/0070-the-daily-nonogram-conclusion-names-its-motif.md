@@ -7,6 +7,7 @@
 **Amends:** [ADR-0047](./0047-bundle-markers-are-route-scoped.md) — its *"to generate, never to name"* clause stays true **of the bundle**, which is the only thing it was ever about. The daily name is wire-delivered and no motif table is bundled.
 **Amends:** [ADR-0060](./0060-the-day-payload-is-server-truth-and-the-device-may-only-add-to-it.md) — annotation **(i)**, at two loci: decision 2's *"no puzzle content of any kind"*, and decision 3's not-merged list.
 **Amends:** [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md) — decision 1's honest-absence table gains the motif NAME as a second recorded absence on the remote completed view; decision 2's *"one wire field"* template is the one `motifName` is built to.
+**Amended by:** [ADR-0121](./0121-the-solved-nonogram-picture-is-painted-in-its-motifs-tones.md) (#366) — decision 4's read is renamed `getPublishedNonogramMotif` and returns `{name, motifId, mirrored}`; `apps/api` keeps the identity and sends only the name and the tones string. `motifId` and `mirrored` still never reach a client.
 
 ## Context
 

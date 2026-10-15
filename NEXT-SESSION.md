@@ -1,10 +1,8 @@
 # Do I need to do anything?
 
-Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E (#354, a brain whose lobes are grid cells); both shipped and are in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
+One ⚡ item: NOW §3, the free-play Nonogram budget for the picture tones (#366), one tap on the card in its thread. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
 
 ## Start here
-
-**Calendars** (the calendars thread): the Estatísticas months sit side by side in an auto-fill grid (`app/estatisticas/stats-calendar.tsx`, its own sheet), every day shows its numeral, and a missed day wears a hairline ring so it differs from an untracked one. The Arquivo index and month pages share one layout (`ArchiveBody` in `app/arquivo/archive-body.tsx`): previous / month / next on a larger card (`adjacentMonths`), then the month chips with the current one marked. Ajustes uses the width too (T-WEB-S800): `GameSettings` is a size container, so its groups split into two columns only above 50rem and the in-game dialog stays one column.
 
 **Termo free play** (#333, ADR-0114): `free-play/termo-free-screen.tsx` plays through `useFreeTermoBoard` (`free-play/use-free-termo.ts`), which judges on the device and shares `termo/use-termo-board.ts` with the daily. The pool is `@miolos/games/termo-free`; the answer list is `@miolos/games/termo-answers`, banned in `apps/web` source.
 
@@ -24,13 +22,9 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E 
 
 **Cruzadinha 7×7** (#330, ADR-0108, ADR-0111, ADR-0117): new dailies are generated at 7×7 (`attemptCrossword`); stored 5×5 days stay as they are, so every crossword schema takes either side and a day's size is its `grid.length`. The first 7×7 daily is due about 2026-10-22, once the 5×5 buffer runs out. Free play offers both through `ChoicePicker`; its builds wait a paint (`useFreeGeneration`), and tests await `flushGeneration()`.
 
-**Brand mark** (#354, ADR-0119): `BrandMark` and `Wordmark` (`components/brand-mark.tsx`) sit in every top bar (the conclusion's included) and on the hub, which also shows `messages.brand.tagline` and `signOff`; a placeholder `BoardCard` shows the mark shuffling. The favicon is `app/icon.svg`; the PWA and apple PNGs come from `scripts/app-icon.svg` through `node scripts/render-icons.mjs`.
-
 ## Traps
 
 **Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** Run `pnpm test --force` before trusting a green gate after an `apps/api` change.
-
-**Dependabot npm PRs cannot be merged as opened** (no lockfile change). Land one hand-made bump, outside `minimumReleaseAge` (7 days).
 
 **A perfect day needs a lineup buffered before midnight (ADR-0087).** The buffer alert exists to prevent that. **Six per-game medals is T-CORE-S70's maximum.** A seventh game needs that cap raised first.
 

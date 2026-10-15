@@ -135,20 +135,15 @@ function claimForGame(
     }
   }
 
-  const motifName =
-    game === "nonogram" && extras?.nonogramMotifName
-      ? extras.nonogramMotifName
-      : undefined;
-  const motifTones =
-    game === "nonogram" && extras?.nonogramMotifTones
-      ? extras.nonogramMotifTones
-      : undefined;
+  const motif = game === "nonogram" ? extras : undefined;
   return {
     status,
     ...(elapsedMs === undefined ? {} : { elapsedMs }),
     ...(hintsUsed === undefined ? {} : { hintsUsed }),
-    ...(motifName === undefined ? {} : { motifName }),
-    ...(motifTones === undefined ? {} : { motifTones }),
+    ...(motif?.nonogramMotifName ? { motifName: motif.nonogramMotifName } : {}),
+    ...(motif?.nonogramMotifTones
+      ? { motifTones: motif.nonogramMotifTones }
+      : {}),
   };
 }
 

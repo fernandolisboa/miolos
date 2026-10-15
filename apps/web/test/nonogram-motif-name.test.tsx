@@ -186,7 +186,7 @@ describe("the named reveal on the daily conclusion (T-WEB-S323)", () => {
 });
 
 describe("the daily conclusion paints the tones its completed claim carries (T-WEB-S903)", () => {
-  it("colors the picture once the claim lands, and only the claimed tones", async () => {
+  it("paints the picture in tones once the claim lands, and only the claimed tones", async () => {
     const tones = motifTones(
       SMALL_PUZZLE.reveal.motifId,
       SMALL_PUZZLE.reveal.mirrored,
@@ -222,7 +222,7 @@ describe("the daily conclusion paints the tones its completed claim carries (T-W
     );
   });
 
-  it("stays one color while the claim carries no tones", async () => {
+  it("stays in ink while the claim carries no tones", async () => {
     stubApi(() => jsonResponse(200, dayBody(completedClaim(MOTIF))));
     window.localStorage.setItem(
       playRecordKey("nonogram", DATE),

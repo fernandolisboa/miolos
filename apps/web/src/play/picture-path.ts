@@ -1,14 +1,12 @@
-export function picturePath(
+export function picturePath<T>(
   size: number,
-  cells: ArrayLike<unknown>,
-  on: unknown = 1,
+  cells: ArrayLike<T>,
+  on: T,
 ): string {
   let path = "";
   for (let index = 0; index < cells.length; index++) {
     if (cells[index] === on) {
-      const row = Math.floor(index / size);
-      const column = index % size;
-      path += `M${String(column)} ${String(row)}h1v1h-1z`;
+      path += `${at(index % size, Math.floor(index / size))}h1v1h-1z`;
     }
   }
   return path;
@@ -25,17 +23,20 @@ export function pictureOutline(
     column < size &&
     cells[row * size + column] === 1;
   let path = "";
-  cells.forEach((cell, index) => {
-    if (cell !== 1) {
-      return;
+  for (let index = 0; index < cells.length; index++) {
+    if (cells[index] !== 1) {
+      continue;
     }
     const row = Math.floor(index / size);
     const column = index % size;
-    const at = (x: number, y: number) => `M${String(x)} ${String(y)}`;
     if (!filled(row - 1, column)) path += `${at(column, row)}h1`;
     if (!filled(row + 1, column)) path += `${at(column, row + 1)}h1`;
     if (!filled(row, column - 1)) path += `${at(column, row)}v1`;
     if (!filled(row, column + 1)) path += `${at(column + 1, row)}v1`;
-  });
+  }
   return path;
+}
+
+function at(x: number, y: number): string {
+  return `M${String(x)} ${String(y)}`;
 }

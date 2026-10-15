@@ -79,12 +79,8 @@ describe("the picture paints its tones over the ink silhouette (T-WEB-S900)", ()
 });
 
 describe("the tones wipe in only on a game that just ended, with the animation on (T-WEB-S901)", () => {
-  function wiping(): boolean {
-    return (
-      figure()
-        .querySelector("[data-toned]")
-        ?.classList.contains(String(styles.wipe)) ?? false
-    );
+  function toneClass(): string | null | undefined {
+    return figure().querySelector("[data-toned]")?.getAttribute("class");
   }
 
   it("wipes under JustEnded with the setting on, and paints still otherwise", () => {
@@ -94,11 +90,11 @@ describe("the tones wipe in only on a game that just ended, with the animation o
         <PictureArt picture={toned} className="x" />
       </JustEnded>,
     );
-    expect(wiping()).toBe(true);
+    expect(toneClass()).toBe(String(styles.wipe));
     unmount();
 
     const revisit = render(<PictureArt picture={toned} className="x" />);
-    expect(wiping()).toBe(false);
+    expect(toneClass()).toBeNull();
     revisit.unmount();
 
     writeSettings({ ...readSettings(), endAnimation: false });
@@ -107,7 +103,7 @@ describe("the tones wipe in only on a game that just ended, with the animation o
         <PictureArt picture={toned} className="x" />
       </JustEnded>,
     );
-    expect(wiping()).toBe(false);
+    expect(toneClass()).toBeNull();
   });
 
   it("stands the wipe down under reduced motion", () => {
