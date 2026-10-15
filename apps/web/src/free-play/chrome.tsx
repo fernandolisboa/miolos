@@ -1,22 +1,15 @@
 import type { ReactElement, ReactNode } from "react";
 
-import { messages, routes } from "../i18n";
+import { messages } from "../i18n";
 import {
   PlayScreenChrome,
   type ChromeGame,
-  type PlayChromeBack,
   type PlayChromeStat,
   type PlayChromeState,
 } from "../play/screen-chrome";
 import screen from "../play/screen.module.css";
-import type { FreePlayLevel } from "./catalog";
+import { FREE_PLAY_BACK, type FreePlayLevel } from "./catalog";
 import { LevelPicker } from "./level-picker";
-
-const BACK: PlayChromeBack = {
-  href: routes.freePlay,
-  label: messages.freePlay.back,
-  ariaLabel: messages.freePlay.backToIndexAria,
-};
 
 function levelStat(level: FreePlayLevel): PlayChromeStat {
   return {
@@ -47,7 +40,7 @@ export function FreePlayChrome({
       game={game}
       pageModifier={pageModifier}
       state={state}
-      back={BACK}
+      back={FREE_PLAY_BACK}
       topDate={messages.freePlay.modeTag}
       note={null}
       clock="none"

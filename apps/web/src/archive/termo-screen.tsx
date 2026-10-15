@@ -20,8 +20,8 @@ export function ArchiveTermoScreen({
       game="termo"
       state={play.state}
       unavailable={play.unavailable}
-      skeleton={<PlaySkeleton date={daily.date} archive={archive} />}
-      view={<PlayView play={play} archive={archive} />}
+      skeleton={<PlaySkeleton date={daily.date} chrome={archive} />}
+      view={<PlayView play={play} chrome={archive} />}
     />
   );
 }

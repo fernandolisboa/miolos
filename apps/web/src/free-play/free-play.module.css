@@ -180,6 +180,29 @@
   color: var(--ink-2);
 }
 
+/* The word (Termo only): the accented spelling, revealed once the board
+   closes, set in the display face so it reads as the answer. */
+.wordLine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-6) 0 0;
+}
+
+.wordLead {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.word {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 34px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
 /* The painted picture (Nonogram only). One <svg>, one <path> — the
    conclusion's own recorded argument: no background, no border, no radius,
    no box-shadow, so nested-cards cannot fire. Terracotta on card paper is

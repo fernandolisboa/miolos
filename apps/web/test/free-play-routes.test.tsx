@@ -22,6 +22,9 @@ describe("the free-play route literals (T-WEB-S111)", () => {
     expect(routes.freePlayNonogram).toBe(
       `/${routeSlugs.freePlay}/${routeSlugs.nonogram}`,
     );
+    expect(routes.freePlayTermo).toBe(
+      `/${routeSlugs.freePlay}/${routeSlugs.termo}`,
+    );
     expect(routes.freePlayCrossword).toBe(
       `/${routeSlugs.freePlay}/${routeSlugs.crossword}`,
     );
@@ -30,11 +33,10 @@ describe("the free-play route literals (T-WEB-S111)", () => {
     );
   });
 
-  it("freePlayRoutes covers exactly the five free-play games", () => {
+  it("freePlayRoutes covers exactly the six free-play games", () => {
     expect(Object.keys(freePlayRoutes).sort()).toEqual(
       [...FREE_PLAY_GAMES].sort(),
     );
-    expect(Object.keys(freePlayRoutes)).not.toContain("termo");
     for (const game of FREE_PLAY_GAMES) {
       expect(freePlayRoutes[game]).toBe(
         `/${routeSlugs.freePlay}/${routeSlugs[game]}`,
@@ -44,7 +46,7 @@ describe("the free-play route literals (T-WEB-S111)", () => {
 });
 
 describe("the app/modo-livre segment (T-WEB-S112)", () => {
-  it("holds exactly the index and the five game segments — no termo", () => {
+  it("holds exactly the index and the six game segments", () => {
     const segment = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       "..",
@@ -60,12 +62,13 @@ describe("the app/modo-livre segment (T-WEB-S112)", () => {
       "page.tsx",
       "rainhas",
       "sudoku",
+      "termo",
     ]);
   });
 });
 
 describe("the Modo livre index (T-WEB-S113)", () => {
-  it("renders five card links, its marker, and no occurrence of Termo", () => {
+  it("renders six card links and its marker; the Termo card does not promise the word of the day", () => {
     const { container } = render(<FreePlayIndexPage />);
 
     const main = container.querySelector("main");
@@ -81,9 +84,14 @@ describe("the Modo livre index (T-WEB-S113)", () => {
     const cardAnchors = anchors.filter((anchor) =>
       anchor.getAttribute("href")?.startsWith(routes.freePlay),
     );
-    expect(cardAnchors).toHaveLength(5);
+    expect(cardAnchors).toHaveLength(6);
 
-    expect(container.textContent).not.toContain("Termo");
+    expect(
+      screen.getByText(messages.freePlay.termoDescription),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.games.termo.description),
+    ).not.toBeInTheDocument();
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       messages.freePlay.title,

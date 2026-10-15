@@ -213,39 +213,35 @@ describe("a failed free Rainhas offers a retry that recovers (T-WEB-S481)", () =
   });
 });
 
-describe("the fifth free-play card is one column wide at both breakpoints (T-WEB-S482)", () => {
+describe("the six free-play cards lay out without an orphan (T-WEB-S482)", () => {
   const index = stylesheet("app/modo-livre/page.module.css");
   const mobile = bodyOf(index, "@media (max-width: 768px)");
   const ROTATION = /^rotate\(-?\d+(\.\d+)?deg\)$/;
   const TAPE = /^(translateX\(-50%\) )?rotate\(-?[3-5]deg\)$/;
 
-  it("centres the fifth card under the pair rows on desktop", () => {
-    const body = bodyOf(index, ".card:nth-child(5)");
-
+  it("puts them two rows of three on desktop: every card spans two of six tracks", () => {
     expect(decl(bodyOf(index, ".games"), "grid-template-columns")).toBe(
-      "repeat(4, 1fr)",
+      "repeat(6, 1fr)",
     );
     expect(decl(bodyOf(index, ".card"), "grid-column")).toBe("span 2");
-    expect(decl(body, "grid-column")).toBe("2 / 4");
-    expect(body).not.toMatch(/\b(width|justify-self)\s*:/);
+    expect(index).not.toMatch(/\.card:nth-child\([^)]*\)\s*\{[^}]*grid-column/);
   });
 
   it("fills the single column on a phone", () => {
     expect(decl(bodyOf(mobile, ".games"), "display")).toBe("flex");
     expect(decl(bodyOf(mobile, ".games"), "flex-direction")).toBe("column");
-    expect(bodyOf(mobile, ".card:nth-child(5)")).not.toMatch(/\bwidth\s*:/);
+    expect(mobile).not.toMatch(/\.card:nth-child\([^)]*\)\s*\{[^}]*width\s*:/);
   });
 
   it.each([
-    ["desktop", index],
-    ["≤ 768px", mobile],
-  ])("rotates the fifth card and its tape (%s)", (_label, css) => {
-    expect(decl(bodyOf(css, ".card:nth-child(5)"), "transform")).toMatch(
-      ROTATION,
-    );
-    expect(decl(bodyOf(css, ".card:nth-child(5) .tape"), "transform")).toMatch(
-      TAPE,
-    );
+    ["desktop", index, 5],
+    ["desktop", index, 6],
+    ["≤ 768px", mobile, 5],
+    ["≤ 768px", mobile, 6],
+  ])("rotates a late card and its tape (%s, card %i)", (_label, css, child) => {
+    const card = `.card:nth-child(${String(child)})`;
+    expect(decl(bodyOf(css, card), "transform")).toMatch(ROTATION);
+    expect(decl(bodyOf(css, `${card} .tape`), "transform")).toMatch(TAPE);
   });
 });
 

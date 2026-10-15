@@ -48,7 +48,7 @@ import { initTermoPlayState, termoPlayReducer } from "../src/termo/state";
 import styles from "../src/termo/termo-board.module.css";
 import { TermoScreen } from "../src/termo/termo-screen";
 import type { TermoPlayAction, TermoPlayState } from "../src/termo/types";
-import type { TermoPlay } from "../src/termo/use-termo-play";
+import type { TermoPlay } from "../src/termo/types";
 import {
   bodyOf,
   boardFloor,

@@ -432,6 +432,7 @@ export const messages = {
   freePlay: {
     title: "Modo livre",
     lead: "Puzzles infinitos, gerados aqui no seu aparelho. Nada daqui conta para a sequência nem para as estatísticas.",
+    termoDescription: "Seis tentativas e uma palavra nova a cada partida.",
 
     back: "← Modo livre",
     backToIndexAria: "Voltar ao Modo livre",
@@ -451,12 +452,15 @@ export const messages = {
     },
     solved: {
       stamp: "Resolvido!",
+      lostStamp: "Não deu!",
+      wordLead: "A palavra era",
       modeLine: (mode: string, game: string, level?: string) =>
         [mode, game, level].filter((part) => part !== undefined).join(" · "),
       again: {
         binairo: "Mais um",
         sudoku: "Mais um",
         nonogram: "Mais um",
+        termo: "Mais uma",
         crossword: "Mais uma",
         queens: "Mais uma",
       },

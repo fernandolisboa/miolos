@@ -9,11 +9,10 @@ import { isShortcut } from "../play/grid-selection";
 import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import screen from "../play/screen.module.css";
 import { typedLetter } from "../play/typed-letter";
-import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
 import { Keyboard, KeyboardSkeleton } from "./keyboard";
 import styles from "./termo-board.module.css";
-import type { TermoPlay } from "./use-termo-play";
+import type { TermoChrome, TermoPlay } from "./types";
 
 const ACCENT = accentVars("termo");
 
@@ -28,10 +27,10 @@ const INTERACTIVE_TARGET =
 
 export function PlayView({
   play,
-  archive,
+  chrome,
 }: {
   readonly play: TermoPlay;
-  readonly archive?: ArchivePlayChrome;
+  readonly chrome?: TermoChrome;
 }) {
   const { state } = play;
   const copy = messages.games.termo.play;
@@ -80,14 +79,16 @@ export function PlayView({
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={archive?.back.href ?? routes.home}
-          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
+          href={chrome?.back.href ?? routes.home}
+          aria-label={chrome?.back.ariaLabel ?? messages.play.backAria}
         >
-          {archive?.back.label ?? messages.play.back}
+          {chrome?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
-        <span className={screen.topDate}>{formatLongDate(state.date)}</span>
+        <span className={screen.topDate}>
+          {chrome?.topTag ?? formatLongDate(state.date)}
+        </span>
 
         <span className={screen.progressBar}>
           {copy.progressShort(play.used, MAX_GUESSES)}
@@ -101,8 +102,8 @@ export function PlayView({
           <h1 className={screen.title}>{copy.title}</h1>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
-        {archive === undefined ? null : (
-          <p className={archive.note.className}>{archive.note.text}</p>
+        {chrome?.note === undefined ? null : (
+          <p className={chrome.note.className}>{chrome.note.text}</p>
         )}
       </div>
 
@@ -211,10 +212,10 @@ function pressKey(key: string, play: TermoPlay): boolean {
 
 export function PlaySkeleton({
   date,
-  archive,
+  chrome,
 }: {
   readonly date: string;
-  readonly archive?: ArchivePlayChrome;
+  readonly chrome?: TermoChrome;
 }) {
   const copy = messages.games.termo.play;
 
@@ -227,14 +228,16 @@ export function PlaySkeleton({
       <header className={screen.topBar}>
         <Link
           className={screen.back}
-          href={archive?.back.href ?? routes.home}
-          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
+          href={chrome?.back.href ?? routes.home}
+          aria-label={chrome?.back.ariaLabel ?? messages.play.backAria}
         >
-          {archive?.back.label ?? messages.play.back}
+          {chrome?.back.label ?? messages.play.back}
         </Link>
         <span className={screen.wordmark}>{messages.brand.wordmark}</span>
         <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
-        <span className={screen.topDate}>{formatLongDate(date)}</span>
+        <span className={screen.topDate}>
+          {chrome?.topTag ?? formatLongDate(date)}
+        </span>
         <span aria-hidden className={screen.progressBar}>
           {BLANK_READOUT}
         </span>
@@ -247,8 +250,8 @@ export function PlaySkeleton({
           <h1 className={screen.title}>{copy.title}</h1>
         </div>
         <p className={screen.rules}>{copy.rules}</p>
-        {archive === undefined ? null : (
-          <p className={archive.note.className}>{archive.note.text}</p>
+        {chrome?.note === undefined ? null : (
+          <p className={chrome.note.className}>{chrome.note.text}</p>
         )}
       </div>
 
