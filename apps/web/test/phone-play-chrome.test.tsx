@@ -25,6 +25,7 @@ function playing(used: number, ready = used < 3): PlayChromeState {
       progressLong: "1 de 81",
       hint: { ready, used, explain: null, cell: null, onReveal: () => {} },
       onReset: null,
+      onUndo: null,
     },
   };
 }

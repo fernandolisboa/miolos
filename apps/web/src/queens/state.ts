@@ -22,6 +22,7 @@ import {
   type BinaryMark,
 } from "../play/binary-grid";
 import { idleHint } from "../play/hint-state";
+import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
 import { nextQueensHint, type QueensHintReason } from "./hint";
 
 export type QueensMark = BinaryMark;
@@ -35,12 +36,23 @@ export interface QueensPlayState extends BinaryGridState<QueensHintReason> {
   readonly regions: readonly number[];
   readonly conflicts: ReadonlySet<number>;
   readonly autoCrossed: AutoCrosses;
+  readonly history: UndoHistory<QueensSnapshot>;
 }
+
+type QueensSnapshot = Pick<
+  QueensPlayState,
+  "entries" | "conflicts" | "autoCrossed" | "selected" | "hint"
+>;
 
 export type QueensPlayAction =
   | BinaryGridAction
   | { readonly type: "tap"; readonly index: number; readonly press: Press }
-  | { readonly type: "cross-over"; readonly index: number };
+  | {
+      readonly type: "stroke-start";
+      readonly index: number;
+      readonly press: Press;
+    }
+  | { readonly type: "paint-over"; readonly index: number };
 
 export function initQueensPlayState(
   daily: DailyQueensResponse,
@@ -60,6 +72,7 @@ export function initQueensPlayState(
     pendingSync: false,
     now: 0,
     hydrated: false,
+    history: NO_HISTORY,
   };
 }
 
@@ -81,18 +94,28 @@ const QUEENS_RULES: BinaryGridRules<QueensPlayState, QueensHintReason> = {
   },
 };
 
-function reducerFor(
-  autoCross: boolean,
-): (state: QueensPlayState, action: QueensPlayAction) => QueensPlayState {
-  return (state, action) => {
-    const next = played(state, action);
-    if (action.type === "restore") {
-      return { ...next, autoCrossed: restoredAutoCrosses(next, action.record) };
-    }
-    return next.entries === state.entries
-      ? next
-      : withAutoCrosses(state, next, autoCross);
-  };
+function reducerFor(autoCross: boolean) {
+  return undoable(
+    (state: QueensPlayState, action: QueensPlayAction): QueensPlayState => {
+      const next = played(state, action);
+      if (action.type === "restore") {
+        return {
+          ...next,
+          autoCrossed: restoredAutoCrosses(next, action.record),
+        };
+      }
+      return next.entries === state.entries
+        ? next
+        : withAutoCrosses(state, next, autoCross);
+    },
+    ({ entries, conflicts, autoCrossed, selected, hint }): QueensSnapshot => ({
+      entries,
+      conflicts,
+      autoCrossed,
+      selected,
+      hint,
+    }),
+  );
 }
 
 export const queensPlayReducer = reducerFor(false);
@@ -116,7 +139,8 @@ function played(
           );
     }
 
-    case "cross-over":
+    case "stroke-start":
+    case "paint-over":
       return binaryCellValue(state, action.index) === null
         ? withBinaryEntry(state, action.index, 0, QUEENS_RULES)
         : state;

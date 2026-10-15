@@ -2,7 +2,6 @@ import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { DailyPlayChrome } from "../play/daily-chrome";
 import { hintReadout } from "../play/hint-readout";
-import { hasDecidedCell } from "../play/reset-board";
 import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
 import { Controls, ControlsSkeleton } from "./controls";
@@ -44,7 +43,7 @@ export function PlayView({
             ready: play.hintReady,
             onReveal: play.revealHint,
           },
-          onReset: hasDecidedCell(state.entries) ? play.reset : null,
+          ...play.edits,
         },
       }}
     >

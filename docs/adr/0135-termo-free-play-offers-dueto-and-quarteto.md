@@ -20,7 +20,7 @@ Fernando asked for more ways to play the other games. Termo's are the well-known
 
 ## Consequences
 
-- `/modo-livre/termo` first load went from 64.2 to 66.4 KB, mostly the board taking 7 and 9 rows, the trigger and the multi-word draw; its budget is 67 KB. The daily `/termo` carries the board change inside its margin.
+- `/modo-livre/termo` first load went from 63.5 to 66.4 KB, mostly the board taking 7 and 9 rows, the trigger and the multi-word draw; its budget is 67 KB. The daily `/termo` carries the board change inside its margin.
 - The pool still never reaches a variant chunk (`T-WEB-S895`); pinned by `T-WEB-S890…S898`.
 
 ## Rejected

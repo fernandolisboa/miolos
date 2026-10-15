@@ -7,7 +7,13 @@ import {
   type BinaryMark,
 } from "./binary-grid";
 import { useFreeHintsPerPuzzle } from "./free-hints";
-import { useReset } from "./use-reset";
+import type { ResetAction } from "./reset-board";
+import {
+  useBoardEdits,
+  type BoardEdits,
+  type Undoable,
+  type UndoAction,
+} from "./undo";
 
 export interface BinaryGridControls {
   readonly hintReady: boolean;
@@ -16,12 +22,12 @@ export interface BinaryGridControls {
   readonly enterValue: (value: BinaryMark) => void;
   readonly clearCell: () => void;
   readonly revealHint: () => void;
-  readonly reset: () => void;
+  readonly edits: BoardEdits;
 }
 
 export function useBinaryGridControls(
-  state: BinaryGridState,
-  dispatch: Dispatch<BinaryGridAction>,
+  state: BinaryGridState & Undoable<unknown>,
+  dispatch: Dispatch<BinaryGridAction | ResetAction | UndoAction>,
 ): BinaryGridControls {
   const allowance = useFreeHintsPerPuzzle();
 
@@ -61,7 +67,7 @@ export function useBinaryGridControls(
     }
   }, [dispatch, allowance]);
 
-  const reset = useReset(dispatch);
+  const edits = useBoardEdits(state, dispatch);
 
   return {
     hintReady: canHint(state, allowance),
@@ -70,6 +76,6 @@ export function useBinaryGridControls(
     enterValue,
     clearCell,
     revealHint,
-    reset,
+    edits,
   };
 }

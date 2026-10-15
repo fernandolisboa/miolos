@@ -30,7 +30,8 @@ export const Board = memo(function Board({
   onSelect,
   onMove,
   onTap,
-  onCrossOver,
+  onStrokeStart,
+  onPaintOver,
   onEnterValue,
   onClear,
 }: {
@@ -45,7 +46,8 @@ export const Board = memo(function Board({
   readonly onSelect: (index: number) => void;
   readonly onMove: (rows: number, columns: number) => void;
   readonly onTap: (index: number, press: Press) => void;
-  readonly onCrossOver: (index: number) => void;
+  readonly onStrokeStart: (index: number, press: Press) => void;
+  readonly onPaintOver: (index: number) => void;
   readonly onEnterValue: (value: QueensMark) => void;
   readonly onClear: () => void;
 }) {
@@ -67,8 +69,8 @@ export const Board = memo(function Board({
     size,
     selected,
     onTap,
-    onStrokeStart: onCrossOver,
-    onPaintOver: onCrossOver,
+    onStrokeStart,
+    onPaintOver,
     onMove,
     onEnterValue,
     onClear,
