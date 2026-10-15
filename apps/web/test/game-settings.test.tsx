@@ -216,6 +216,22 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         within(sudoku).getByRole("switch", { name: label }),
       ).toBeInTheDocument();
     }
+    const queens = screen.getByRole("group", { name: "Rainhas" });
+    expect(
+      within(queens)
+        .getAllByRole("switch")
+        .map((s) => s.getAttribute("aria-checked")),
+    ).toEqual(["false", "true", "true", "false"]);
+    for (const label of [
+      copy.flags.showErrors.label,
+      copy.flags.highlightRegion.label,
+      copy.flags.fadeQueenLines.label,
+      copy.flags.autoCross.label,
+    ]) {
+      expect(
+        within(queens).getByRole("switch", { name: label }),
+      ).toBeInTheDocument();
+    }
     const crossword = screen.getByRole("group", { name: "Cruzadinha" });
     expect(within(crossword).getAllByRole("switch")).toHaveLength(2);
     for (const label of [
@@ -226,7 +242,7 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         within(crossword).getByRole("switch", { name: label }),
       ).toBeInTheDocument();
     }
-    for (const name of ["Binairo", "Nonogram", "Rainhas"]) {
+    for (const name of ["Binairo"]) {
       const group = screen.getByRole("group", { name });
       expect(within(group).getAllByRole("switch")).toHaveLength(1);
       expect(
@@ -235,6 +251,13 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         }),
       ).toBeInTheDocument();
     }
+    const nonogram = screen.getByRole("group", { name: "Nonogram" });
+    expect(within(nonogram).getAllByRole("switch")).toHaveLength(2);
+    expect(
+      within(nonogram).getByRole("switch", {
+        name: copy.flags.strikePlacedRuns.label,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("describes each switch and can turn every one off and on again", () => {

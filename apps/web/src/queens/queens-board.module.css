@@ -15,6 +15,8 @@
   gap: 0;
   touch-action: none;
   --spotlight-strength: 16%;
+  --reach-strength: 8%;
+  --wash-strength: 40%;
 }
 
 .size7 {
@@ -53,6 +55,23 @@
   color: var(--ink);
   cursor: pointer;
   transition: box-shadow var(--duration-fast) var(--ease-settle);
+  --reach: transparent;
+  --wash: transparent;
+  background-image:
+    linear-gradient(var(--reach), var(--reach)),
+    linear-gradient(var(--wash), var(--wash));
+}
+
+.cellReach {
+  --reach: color-mix(in srgb, var(--accent) var(--reach-strength), transparent);
+}
+
+.cellFaded {
+  --wash: color-mix(
+    in srgb,
+    var(--paper-card) var(--wash-strength),
+    transparent
+  );
 }
 
 .edgeTop {

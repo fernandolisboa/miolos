@@ -32,7 +32,7 @@ function daily(
 function tap(state: PlayState, ...indices: number[]): PlayState {
   return indices.reduce(
     (current, index) =>
-      playReducer(current, { type: "tap", index, press: "tap" }),
+      playReducer(current, { type: "tap", index, press: "tap", first: 1 }),
     state,
   );
 }
@@ -40,7 +40,7 @@ function tap(state: PlayState, ...indices: number[]): PlayState {
 function press(state: PlayState, kind: Press, ...indices: number[]): PlayState {
   return indices.reduce(
     (current, index) =>
-      playReducer(current, { type: "tap", index, press: kind }),
+      playReducer(current, { type: "tap", index, press: kind, first: 1 }),
     state,
   );
 }
@@ -93,13 +93,13 @@ describe("initPlayState", () => {
 });
 
 describe("tap — the cell state machine (D7)", () => {
-  it("cycles empty → 0 → 1 → empty in cycle mode", () => {
+  it("cycles empty → 1 → 0 → empty in cycle mode, by default", () => {
     let state = initPlayState(daily());
 
     state = tap(state, 5);
-    expect(state.entries[5]).toBe(0);
-    state = tap(state, 5);
     expect(state.entries[5]).toBe(1);
+    state = tap(state, 5);
+    expect(state.entries[5]).toBe(0);
     state = tap(state, 5);
     expect(state.entries[5]).toBeNull();
   });
@@ -142,7 +142,7 @@ describe("a mouse press writes a value (T-WEB-S506)", () => {
   });
 
   it("a tap still cycles in cycle mode", () => {
-    expect(tap(initPlayState(daily()), 5).entries[5]).toBe(0);
+    expect(tap(initPlayState(daily()), 5, 5).entries[5]).toBe(0);
   });
 
   it("left and a tap use the brush, right the other value", () => {
@@ -165,6 +165,57 @@ describe("a mouse press writes a value (T-WEB-S506)", () => {
 
     for (const kind of ["tap", "left", "right"] as const) {
       expect(press(state, kind, 0).entries[0]).toBeNull();
+    }
+  });
+});
+
+describe("Primeiro valor drives the tap and the mouse alike (T-WEB-S608)", () => {
+  function pressWith(
+    state: PlayState,
+    kind: Press,
+    first: 0 | 1,
+    ...indices: number[]
+  ): PlayState {
+    return indices.reduce(
+      (current, index) =>
+        playReducer(current, { type: "tap", index, press: kind, first }),
+      state,
+    );
+  }
+
+  it.each([
+    [1, 0],
+    [0, 1],
+  ] as const)(
+    "with %i first, a tap cycles to it, then to %i, then clears",
+    (first, other) => {
+      const start = initPlayState(daily());
+
+      expect(pressWith(start, "tap", first, 5).entries[5]).toBe(first);
+      expect(pressWith(start, "tap", first, 5, 5).entries[5]).toBe(other);
+      expect(pressWith(start, "tap", first, 5, 5, 5).entries[5]).toBeNull();
+    },
+  );
+
+  it.each([
+    [1, 0],
+    [0, 1],
+  ] as const)(
+    "with %i first, left writes it and right writes %i",
+    (first, other) => {
+      const start = initPlayState(daily());
+
+      expect(pressWith(start, "left", first, 5).entries[5]).toBe(first);
+      expect(pressWith(start, "right", first, 5).entries[5]).toBe(other);
+      expect(pressWith(start, "left", first, 5, 5).entries[5]).toBeNull();
+    },
+  );
+
+  it("leaves a digit brush alone", () => {
+    for (const first of [0, 1] as const) {
+      expect(pressWith(brushed(1), "tap", first, 3).entries[3]).toBe(1);
+      expect(pressWith(brushed(1), "left", first, 3).entries[3]).toBe(1);
+      expect(pressWith(brushed(0), "right", first, 3).entries[3]).toBe(1);
     }
   });
 });
@@ -292,7 +343,7 @@ describe("local validation (D11, T-WEB-12)", () => {
     expect(state.violating.size).toBeGreaterThan(0);
 
     state = tap(state, 3);
-    expect(state.entries[3]).toBe(0);
+    expect(state.entries[3]).toBe(1);
   });
 });
 
@@ -307,7 +358,7 @@ describe("completion detection (D12, T-WEB-13)", () => {
       }
 
       state = tap(state, index);
-      if (target === 1) {
+      if (target === 0) {
         state = tap(state, index);
       }
     }
@@ -329,7 +380,7 @@ describe("completion detection (D12, T-WEB-13)", () => {
 
     const flipped = allIndices.find(
       (index) =>
-        REAL_PUZZLE.givens[index] === null && REAL_PUZZLE.solution[index] === 0,
+        REAL_PUZZLE.givens[index] === null && REAL_PUZZLE.solution[index] === 1,
     );
     expect(flipped).toBeDefined();
     const wrong = tap(solved, flipped ?? 0);

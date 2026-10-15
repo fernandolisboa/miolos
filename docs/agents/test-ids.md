@@ -39,19 +39,27 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
-| `T-API` | `S323` | `S322` | `T-API-16` |
-| `T-WEB` | `S624` | `S623` | `T-WEB-23` |
+| `T-API` | `S331` | `S330` | `T-API-16` |
+| `T-WEB` | `S655` | `S654` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
 #330 part 1 (the Cruzadinha size parameter, ADR-0108) spent **`T-API-S330`** in `apps/api/test/publishing-service.test.ts` (the stored daily contract refuses a 7×7 puzzle), leaving `S323…S329` to sibling branches.
+
+#324 (struck Nonogram clue numbers, ADR-0104) spent **`T-WEB-S613…S614`** in `apps/web/test/nonogram-placed-clues.test.tsx`.
+
+#325 (Binairo *Primeiro valor*, ADR-0094 and ADR-0102 amended) spent **`T-WEB-S608`** (the reducer: a tap cycles from the first value, left writes it and right the other, a digit brush ignores it) and **`T-WEB-S609`** (Ajustes' two radios, the saved value, and a mounted board's tap, clicks and affordance following it). `T-WEB-S492`, `S506`, `S580`, `T-WEB-7` and `S499a` were updated in place. Nothing is burned.
 
 #323 (a double tap on a board cell fixes its digit) spent **`T-WEB-S606`** in `apps/web/test/sudoku-digit-lock.test.tsx`.
 
 #322 (Cruzadinha *Pular letras já preenchidas*) spent **`T-WEB-S607`** in `crossword-grid.test.ts` (`nextEmptyCell`), `crossword-state.test.ts` (the reducer) and `crossword-screen.test.tsx` (the device setting reaches the board).
 
+#328 (the Sudoku keypad tallies each digit) spent **`T-WEB-S650`** (`sudoku-engine.test.ts`: `placedCount` and `digitTally`) and **`T-WEB-S651`** (`sudoku-screen.test.tsx`: the key fades at nine, turns red above nine, and returns as copies leave), **`T-WEB-S652`** (`wrong-mark-contrast.test.ts`: the complete key is dimmer than an open key and above 3:1, the over and pressed keys clear 3:1, both themes), **`T-WEB-S653`** (`free-play-sudoku.test.tsx`: free play tallies too) and **`T-WEB-S654`** (`sudoku-digit-lock.test.tsx`: a complete key still locks and writes a tenth copy), jumping `S624…S649` so wave-2 siblings can claim the space below without a collision.
+
 #321 (keyboard-like keys) spent **`T-WEB-S620…S623`**, jumping `S606…S619` because three sibling wave-1 branches (#322, #323, #325) claimed `S606`/`S607` at the same time: `S620` (Termo's `apagar` after P and `enviar` after L on 22 columns, drawn as glyphs), `S621` (the Termo keyboard skeleton equals the live one), `S622` (the Cruzadinha keyboard: `apagar` after P, skeleton equals live, in the board's column), `S623` (Sudoku's `apagar` is the ⌫ glyph, skeleton equals live). `T-WEB-S88`, `S94` and `S102` were rewritten in place.
 
 #303 (boards size from the space they have, ADR-0103) spent **`T-WEB-S596…S602`** in `apps/web/test/board-sizing.test.tsx`: `S596` the shared well and `--board-side`, `S597` each game's ceiling, font floor and fluid tracks, `S598` the floor (fits 320px, cells at or above 24px), `S599` every `gridCard` inside a `boardWell`, `S600` the reset overlay and the 44px targets, `S601` the one fold at 1023px, `S602` the reserved explanation slot. `T-WEB-S34`, `S48` (A1–A3, A6, A7, A10; A12 retired), `S91` and `S102` and the Binairo layout tripwires were rewritten in place. `T-WEB-S367`'s class list gained `hintSlot`. `packages/games/test/nonogram/clue-bounds.test.ts` carries no id and gained the column-run bound `WORST_COLUMN_RUNS`. Part 2 (the Cruzadinha) spent `S603` (free play's generating note on the well, outside the hidden card), `S604` (`crossword-screen.test.tsx`: the *Pistas* disclosure and the empty clue-bar prompt) and `S605` (the clue bar is a fixed two lines that clamps), and widened `S597`–`S600` in place.
+
+#326 (Rainhas reach, fade and auto-✕, ADR-0105) spent **`T-WEB-S610…S612`** in `apps/web/test/queens-assists.test.tsx`: `S610` (auto-✕ ownership: a queen's claims, shared claims, a ✕ the player changed, the switch off, the hint, Recomeçar, the solving move, the record), `S611` (the hint corrects a wrong queen before its ✕) and `S612` (the reach and the fade on the board, per switch, hidden under the hint's spotlight). `S606…S609` went to its wave-1 siblings, and `S613…S619` stay in #321's jump; whatever none of them spends is burned. `T-WEB-S457` (the composites and the wash's visibility), `S580` and `S593` (the three Rainhas switches) were widened in place.
 
 #300 (player settings, ADR-0102) spent **`T-WEB-S580…S594`**: `S580` (the settings store: defaults, per-field fallback, notify, stable snapshot), `S581` (server defaults, no hydration warning), `S582` (`wrongCells` and its agreement with the hint's correction), `S583…S587` (the wrong mark on Sudoku, Binairo, Nonogram, Rainhas and the Cruzadinha, daily and free play), `S588` (*Mostrar erros* never changes the record, the completion or the hint count), `S589` (the hidden clock), `S590` (the Sudoku highlight switch), `S591` (the digit-lock reducer), `S592` (the digit-lock gesture and keypad), `S593` (Ajustes' *Jogos*, the in-game dialog, the reset slot's placeholder) and `S594` (wrong-mark and locked-key contrast). `S595`, its headroom, is **burned**. `T-WEB-S374` was widened in place: it allows `localStorage` in `apps/web/src/settings/settings.ts` only, and every other I/O stays forbidden.
 

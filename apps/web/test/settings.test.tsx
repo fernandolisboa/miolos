@@ -37,9 +37,14 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           lockDigit: false,
           highlightSelection: true,
         },
-        binairo: { showErrors: false },
-        nonogram: { showErrors: false },
-        queens: { showErrors: false },
+        binairo: { showErrors: false, firstValue: 1 },
+        nonogram: { showErrors: false, strikePlacedRuns: true },
+        queens: {
+          showErrors: false,
+          highlightRegion: true,
+          fadeQueenLines: true,
+          autoCross: false,
+        },
         crossword: { showErrors: false, skipFilled: true },
       },
     });
@@ -57,7 +62,8 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
         games: {
           sudoku: { showErrors: true, lockDigit: 3, highlightSelection: false },
           binairo: "x",
-          queens: { showErrors: true, nope: true },
+          queens: { showErrors: true, nope: true, autoCross: "yes" },
+          nonogram: { showErrors: true, strikePlacedRuns: "no" },
         },
       }),
     );
@@ -68,9 +74,46 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
       lockDigit: false,
       highlightSelection: false,
     });
-    expect(settings.games.binairo).toEqual({ showErrors: false });
-    expect(settings.games.queens).toEqual({ showErrors: true });
+    expect(settings.games.binairo).toEqual({
+      showErrors: false,
+      firstValue: 1,
+    });
+    expect(settings.games.queens).toEqual({
+      showErrors: true,
+      highlightRegion: true,
+      fadeQueenLines: true,
+      autoCross: false,
+    });
+    expect(settings.games.nonogram).toEqual({
+      showErrors: true,
+      strikePlacedRuns: true,
+    });
     expect(settings).not.toHaveProperty("extra");
+
+    for (const [stored, read] of [
+      [0, 0],
+      [1, 1],
+      [2, 1],
+      ["0", 1],
+      [null, 1],
+    ] as const) {
+      window.localStorage.setItem(
+        KEY,
+        JSON.stringify({ games: { binairo: { firstValue: stored } } }),
+      );
+      expect(readSettings().games.binairo.firstValue).toBe(read);
+    }
+
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        games: { binairo: { showErrors: true, firstValue: 2 } },
+      }),
+    );
+    expect(readSettings().games.binairo).toEqual({
+      showErrors: true,
+      firstValue: 1,
+    });
 
     window.localStorage.setItem(
       KEY,

@@ -52,8 +52,12 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
     value === null ? "vazia" : value === 1 ? "preenchida" : "marcada"
   }`;
 
-const runsText = (runs: readonly number[]) =>
-  runs.length === 0 ? "0" : runs.join(", ");
+const runsText = (runs: readonly number[], placed: readonly boolean[]) =>
+  runs.length === 0
+    ? "0"
+    : runs
+        .map((run, i) => (placed[i] === true ? `${run} feito` : run))
+        .join(", ");
 
 type LineKind = "row" | "column";
 
@@ -675,6 +679,26 @@ export const messages = {
           label: "Destacar linha, coluna e bloco",
           hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela.",
         },
+        strikePlacedRuns: {
+          label: "Riscar números resolvidos",
+          hint: "Risca o número de uma linha ou coluna quando suas marcas já mostram o bloco inteiro. Não consulta a solução.",
+        },
+        highlightRegion: {
+          label: "Destacar linha, coluna e região",
+          hint: "Pinta a linha, a coluna e a região da célula selecionada.",
+        },
+        fadeQueenLines: {
+          label: "Esmaecer o que já tem rainha",
+          hint: "Apaga um pouco as células das linhas, colunas e regiões que já têm uma rainha.",
+        },
+        autoCross: {
+          label: "Marcar ✕ automático",
+          hint: "Ao pôr uma rainha, marca ✕ nas células vazias da linha, da coluna, da região e em volta dela. Tirar a rainha apaga só esses ✕.",
+        },
+        firstValue: {
+          label: "Primeiro valor",
+          hint: "O primeiro toque e o botão esquerdo do mouse põem este número; o segundo toque e o botão direito põem o outro.",
+        },
         skipFilled: {
           label: "Pular letras já preenchidas",
           hint: "Ao digitar, a seleção pula as células com letra e vai para a próxima vazia, seguindo para a próxima pista quando a palavra se completa.",
@@ -918,6 +942,10 @@ export const messages = {
           `${cellAriaSudoku(row, column, value)} — esta célula repete um número`,
         keypad: {
           digitAria: (digit: number) => `escrever ${digit}`,
+          digitCompleteAria: (digit: number) =>
+            `escrever ${digit} — os 9 já estão no tabuleiro`,
+          digitOverAria: (digit: number, count: number) =>
+            `escrever ${digit} — colocado ${count} vezes, mais que 9`,
           eraseAria: "apagar a célula selecionada",
           affordance:
             "ou use o teclado: 1–9 para escrever, Backspace para apagar",
@@ -991,10 +1019,16 @@ export const messages = {
         boardAria: (size: number) => `grade do Nonogram, ${size} por ${size}`,
         cellAria: cellAriaNonogram,
 
-        rowCluesAria: (row: number, runs: readonly number[]) =>
-          `números da linha ${row}: ${runsText(runs)}`,
-        columnCluesAria: (column: number, runs: readonly number[]) =>
-          `números da coluna ${column}: ${runsText(runs)}`,
+        rowCluesAria: (
+          row: number,
+          runs: readonly number[],
+          placed: readonly boolean[],
+        ) => `números da linha ${row}: ${runsText(runs, placed)}`,
+        columnCluesAria: (
+          column: number,
+          runs: readonly number[],
+          placed: readonly boolean[],
+        ) => `números da coluna ${column}: ${runsText(runs, placed)}`,
         controls: {
           fillAria: "preencher células",
           crossAria: "marcar células fora da figura",
@@ -1048,8 +1082,8 @@ export const messages = {
           one: "1",
           zeroAria: "pintar zeros",
           oneAria: "pintar uns",
-          affordance:
-            "No mouse, um botão põe 1 e o outro põe 0; clicar de novo apaga.",
+          affordance: (first: 0 | 1) =>
+            `No mouse, o botão esquerdo põe ${first} e o direito põe ${1 - first}; clicar de novo apaga.`,
         },
         cellAria,
         cellGivenAria: (row: number, column: number, value: 0 | 1) =>

@@ -1,10 +1,13 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
   findQueensViolations,
   isValidQueensSolution,
+  queensAttackedCells,
+  queensLineCells,
 } from "../../src/queens/index";
-import { board, queens } from "./fixtures";
+import { board, queens, randomContiguousMap } from "./fixtures";
 
 const FIVE = board("00111 00111 22233 24433 44433");
 const SOLVED = queens("...Q. Q.... ..Q.. ....Q .Q...");
@@ -48,5 +51,61 @@ describe("isValidQueensSolution", () => {
     expect(
       isValidQueensSolution(FIVE, queens("Q.... ..Q.. ....Q .Q... ...Q.")),
     ).toBe(false);
+  });
+});
+
+describe("queensLineCells and queensAttackedCells", () => {
+  it("names the row, column and region of a cell, the cell included", () => {
+    expect([...queensLineCells(FIVE, 13)].sort((a, b) => a - b)).toEqual([
+      3, 8, 10, 11, 12, 13, 14, 18, 19, 23, 24,
+    ]);
+  });
+
+  it("adds the touching cells and leaves the cell out", () => {
+    expect(queensAttackedCells(FIVE, 0)).toEqual([
+      1, 2, 3, 4, 5, 6, 10, 15, 20,
+    ]);
+  });
+
+  it("refuses a cell off the board", () => {
+    for (const cell of [-1, 25, 1.5]) {
+      expect(() => queensLineCells(FIVE, cell)).toThrow(RangeError);
+      expect(() => queensAttackedCells(FIVE, cell)).toThrow(RangeError);
+    }
+  });
+
+  it("matches the rules on any board and cell", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(7, 8, 9),
+        fc.integer({ min: 0, max: 0xffffffff }),
+        fc.nat(),
+        (size, seed, pick) => {
+          const map = randomContiguousMap(size, seed);
+          const cell = pick % (size * size);
+          const row = (at: number) => Math.floor(at / size);
+          const column = (at: number) => at % size;
+          const sharesLine = (other: number) =>
+            row(other) === row(cell) ||
+            column(other) === column(cell) ||
+            map.regions[other] === map.regions[cell];
+          const touches = (other: number) =>
+            Math.abs(row(other) - row(cell)) <= 1 &&
+            Math.abs(column(other) - column(cell)) <= 1;
+          const all = map.regions.map((_region, at) => at);
+
+          expect(new Set(queensLineCells(map, cell))).toEqual(
+            new Set(all.filter(sharesLine)),
+          );
+          expect(queensAttackedCells(map, cell)).toEqual(
+            all.filter(
+              (other) =>
+                other !== cell && (sharesLine(other) || touches(other)),
+            ),
+          );
+        },
+      ),
+      { numRuns: 200 },
+    );
   });
 });

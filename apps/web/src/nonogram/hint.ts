@@ -1,6 +1,5 @@
 import {
   nextNonogramStep,
-  type NonogramCellState,
   type NonogramClues,
   type NonogramStep,
 } from "@miolos/games/nonogram";
@@ -13,16 +12,13 @@ import {
   type HintReason,
   type Revealed,
 } from "../play/grid-hint";
+import { cellStateOf } from "./engine";
 import type { NonogramCellValue, NonogramMark } from "./state";
 
 export type NonogramHintReason =
   HintReason<NonogramStep> | { readonly kind: "cross" };
 
 const copy = messages.games.nonogram.play.hint.explain;
-
-function stateOf(entry: NonogramCellValue): NonogramCellState {
-  return entry === null ? "unknown" : entry === 1 ? "filled" : "empty";
-}
 
 export function nextNonogramHint(
   clues: NonogramClues,
@@ -33,7 +29,7 @@ export function nextNonogramHint(
     solution,
     nextBinaryHint(solution, entries),
     () => {
-      const step = nextNonogramStep(clues, entries.map(stateOf));
+      const step = nextNonogramStep(clues, entries.map(cellStateOf));
       return step === null
         ? null
         : { index: step.index, value: step.value, step, cells: step.cells };

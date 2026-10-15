@@ -2,12 +2,14 @@ import type { DailyQueensResponse, QueensSize } from "@miolos/core";
 import {
   findQueensViolations,
   isValidQueensSolution,
+  queensAttackedCells,
   solveQueens,
   type QueensBoard,
   type QueensGrid,
 } from "@miolos/games/queens";
 
 import { cycled, toggled, type Press } from "../play/brush";
+import type { PlayRecord } from "../play/play-record";
 import {
   binaryCellValue,
   binaryGridReducer,
@@ -26,10 +28,13 @@ export type QueensMark = BinaryMark;
 
 export type QueensCellValue = BinaryCellValue;
 
+export type AutoCrosses = ReadonlyMap<number, ReadonlySet<number>>;
+
 export interface QueensPlayState extends BinaryGridState<QueensHintReason> {
   readonly size: QueensSize;
   readonly regions: readonly number[];
   readonly conflicts: ReadonlySet<number>;
+  readonly autoCrossed: AutoCrosses;
 }
 
 export type QueensPlayAction =
@@ -47,6 +52,7 @@ export function initQueensPlayState(
     solution: solveQueens({ size: daily.size, regions: daily.regions }),
     entries: daily.regions.map(() => null),
     conflicts: new Set(),
+    autoCrossed: new Map(),
     selected: null,
     timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
@@ -75,7 +81,25 @@ const QUEENS_RULES: BinaryGridRules<QueensPlayState, QueensHintReason> = {
   },
 };
 
-export function queensPlayReducer(
+function reducerFor(
+  autoCross: boolean,
+): (state: QueensPlayState, action: QueensPlayAction) => QueensPlayState {
+  return (state, action) => {
+    const next = played(state, action);
+    if (action.type === "restore") {
+      return { ...next, autoCrossed: restoredAutoCrosses(next, action.record) };
+    }
+    return next.entries === state.entries
+      ? next
+      : withAutoCrosses(state, next, autoCross);
+  };
+}
+
+export const queensPlayReducer = reducerFor(false);
+
+export const autoCrossingReducer = reducerFor(true);
+
+function played(
   state: QueensPlayState,
   action: QueensPlayAction,
 ): QueensPlayState {
@@ -87,7 +111,7 @@ export function queensPlayReducer(
         : withBinaryEntry(
             state,
             action.index,
-            action.press === "right" ? toggled(current, 1) : cycled(current),
+            action.press === "right" ? toggled(current, 1) : cycled(current, 0),
             QUEENS_RULES,
           );
     }
@@ -100,6 +124,82 @@ export function queensPlayReducer(
     default:
       return binaryGridReducer(state, action, QUEENS_RULES);
   }
+}
+
+function withAutoCrosses(
+  previous: QueensPlayState,
+  next: QueensPlayState,
+  autoCross: boolean,
+): QueensPlayState {
+  const entries = [...next.entries];
+  const owners = released(previous.autoCrossed, entries);
+  if (autoCross && next.status === "playing") {
+    const placed = entries.flatMap((entry, at) =>
+      entry === 1 && previous.entries[at] !== 1 ? [at] : [],
+    );
+    claim(next, placed, entries, owners);
+  }
+  return { ...QUEENS_RULES.derive(next, entries), autoCrossed: owners };
+}
+
+function released(
+  claims: AutoCrosses,
+  entries: QueensCellValue[],
+): Map<number, Set<number>> {
+  const owners = new Map<number, Set<number>>();
+  for (const [cell, queens] of claims) {
+    if (entries[cell] !== 0) {
+      continue;
+    }
+    const kept = standing(queens, entries);
+    if (kept.size > 0) {
+      owners.set(cell, kept);
+    } else {
+      entries[cell] = null;
+    }
+  }
+  return owners;
+}
+
+function claim(
+  board: QueensBoard,
+  queens: readonly number[],
+  entries: QueensCellValue[],
+  owners: Map<number, Set<number>>,
+): void {
+  for (const queen of queens) {
+    for (const cell of queensAttackedCells(board, queen)) {
+      const claimed = owners.get(cell);
+      if (claimed !== undefined) {
+        claimed.add(queen);
+      } else if (entries[cell] === null) {
+        entries[cell] = 0;
+        owners.set(cell, new Set([queen]));
+      }
+    }
+  }
+}
+
+function standing(
+  queens: Iterable<number>,
+  entries: readonly QueensCellValue[],
+): Set<number> {
+  return new Set([...queens].filter((queen) => entries[queen] === 1));
+}
+
+function restoredAutoCrosses(
+  state: QueensPlayState,
+  record: PlayRecord | undefined,
+): AutoCrosses {
+  const saved = record?.game === "queens" ? record.autoCrossed : undefined;
+  const owners = new Map<number, ReadonlySet<number>>();
+  for (const { cell, by } of saved ?? []) {
+    const kept = standing(by, state.entries);
+    if (state.entries[cell] === 0 && kept.size > 0) {
+      owners.set(cell, kept);
+    }
+  }
+  return owners;
 }
 
 export function queensGrid(entries: readonly QueensCellValue[]): QueensGrid {

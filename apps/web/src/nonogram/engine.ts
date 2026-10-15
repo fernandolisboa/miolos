@@ -1,6 +1,14 @@
-import { solveNonogram, type NonogramClues } from "@miolos/games/nonogram";
+import {
+  solveNonogram,
+  type NonogramCellState,
+  type NonogramClues,
+} from "@miolos/games/nonogram";
 
 import type { NonogramCellValue, NonogramMark } from "./state";
+
+export function cellStateOf(entry: NonogramCellValue): NonogramCellState {
+  return entry === null ? "unknown" : entry === 1 ? "filled" : "empty";
+}
 
 export function solutionMarks(
   clues: NonogramClues,
