@@ -979,6 +979,8 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     }
     doors.push(
       [FREE_PATH, 'import "../termo";\n'],
+      [FREE_PATH, 'import "../termo/";\n'],
+      [FREE_PATH, 'export const load = () => import("../termo/");\n'],
       [
         FREE_PATH,
         'export const load = () => import("../Termo/termo-screen");\n',
