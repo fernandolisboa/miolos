@@ -10,12 +10,8 @@ import {
 } from "react";
 
 import { messages, routes } from "../src/i18n";
-import { useDismiss } from "../src/play/use-dismiss";
+import { closesOnEscape, useDismiss } from "../src/play/use-dismiss";
 import styles from "./hub-menu.module.css";
-
-function isEscape(event: globalThis.KeyboardEvent): boolean {
-  return event.key === "Escape";
-}
 
 export function HubMenu() {
   const [open, setOpen] = useState(false);
@@ -23,7 +19,7 @@ export function HubMenu() {
   const rootRef = useRef<HTMLElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  useDismiss(open, rootRef, setOpen, isEscape);
+  useDismiss(open, rootRef, setOpen, closesOnEscape);
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (open && event.key === "Escape") buttonRef.current?.focus();
@@ -40,6 +36,9 @@ export function HubMenu() {
       aria-label={messages.hoje.menu.label}
       onKeyDown={onKeyDown}
       onBlur={onBlur}
+      onMouseDown={(event) => {
+        event.preventDefault();
+      }}
     >
       <button
         ref={buttonRef}
@@ -47,11 +46,9 @@ export function HubMenu() {
         className={styles.button}
         aria-expanded={open}
         aria-controls={panelId}
-        onMouseDown={(event) => {
-          event.preventDefault();
-        }}
         onClick={() => {
-          setOpen((was) => !was);
+          if (open) buttonRef.current?.focus();
+          setOpen(!open);
         }}
       >
         <svg aria-hidden viewBox="0 0 20 20" className={styles.icon}>

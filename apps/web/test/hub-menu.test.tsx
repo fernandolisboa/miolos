@@ -115,6 +115,30 @@ describe("the hub menu closes like a disclosure (T-WEB-S772)", () => {
     expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("keeps focus where it is on a mouse press, so a click on a link is never lost to a blur", () => {
+    render(<HubMenu />);
+    fireEvent.click(menuButton());
+
+    for (const target of [
+      menuButton(),
+      screen.getByRole("link", { name: messages.hoje.menu.settings }),
+    ]) {
+      expect(fireEvent.mouseDown(target)).toBe(false);
+    }
+  });
+
+  it("hands focus back to the button when a click closes it from inside", () => {
+    render(<HubMenu />);
+    const button = menuButton();
+    fireEvent.click(button);
+    screen.getByRole("link", { name: messages.hoje.menu.stats }).focus();
+
+    fireEvent.click(button);
+
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveFocus();
+  });
+
   it("closes when focus leaves the menu, and not when it moves within", () => {
     render(
       <>
