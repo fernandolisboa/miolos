@@ -23,6 +23,7 @@ ADR-0034 kept the board still for two reasons: holding the view would fork each 
 - The `endAnimation` switch and reduced motion cover the glow too. Its hint copy now names both parts.
 - The win glow adds about 1.2 s before the result, or about 1.6 s on Termo with the reveal. The time and the record are written before it starts.
 - `DailyScreen`, `ArchiveScreen` and the six free-play boards import `ending-stage.tsx`, which reads the settings.
+- That import costs about 1–2 KB per free-play route. Measured over the hub with #359 merged, three routes keep under 1 KB of their budgets: `/modo-livre/nonogram` 65.8 of 66, `/modo-livre/termo` 61.2 of 62, `/modo-livre/cruzadinha` 663.0 of 664 KB.
 
 ## Rejected
 

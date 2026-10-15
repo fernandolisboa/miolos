@@ -208,10 +208,16 @@ export const messages = {
 
     completedAria: (game: string) => `${game} concluído`,
     links: {
-      archive: "Arquivo",
+      aria: "Mais puzzles",
       freePlay: "Modo livre",
+      archive: "Arquivo",
+    },
+    menu: {
+      label: "Menu",
       stats: "Estatísticas",
       settings: "Ajustes",
+    },
+    footer: {
       privacy: "Política de Privacidade",
       terms: "Termos de Uso",
     },
@@ -335,6 +341,7 @@ export const messages = {
     },
     calendar: {
       title: "Calendário",
+      weekdays: ["D", "S", "T", "Q", "Q", "S", "S"],
 
       legend: { onTime: "no dia", late: "mais tarde", missed: "sem conclusão" },
       dayAria: {
@@ -381,9 +388,7 @@ export const messages = {
     },
 
     month: {
-      previous: "Mês anterior",
       previousAria: (month: string) => `Mês anterior · ${month}`,
-      next: "Próximo mês",
       nextAria: (month: string) => `Próximo mês · ${month}`,
     },
 

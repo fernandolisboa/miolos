@@ -1,5 +1,9 @@
 import { useEffect, type RefObject } from "react";
 
+export function closesOnEscape(event: KeyboardEvent): boolean {
+  return event.key === "Escape";
+}
+
 export function useDismiss(
   open: boolean,
   rootRef: RefObject<Element | null>,

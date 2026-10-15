@@ -4,6 +4,7 @@ import { PageTopBar } from "../../src/components/page-top-bar";
 import { messages } from "../../src/i18n";
 import settings from "../ajustes/page.module.css";
 import { AdminConfigSection } from "./admin-config-section";
+import styles from "./admin.module.css";
 
 export const metadata: Metadata = {
   title: `${messages.admin.title} — ${messages.brand.wordmark}`,
@@ -21,7 +22,9 @@ export default function AdminPage() {
         <p className={settings.lead}>{copy.lead}</p>
       </div>
 
-      <AdminConfigSection />
+      <div className={`${settings.sections} ${styles.sections}`}>
+        <AdminConfigSection />
+      </div>
     </main>
   );
 }
