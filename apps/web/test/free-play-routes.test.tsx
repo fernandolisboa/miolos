@@ -31,9 +31,12 @@ describe("the free-play route literals (T-WEB-S111)", () => {
     expect(routes.freePlayQueens).toBe(
       `/${routeSlugs.freePlay}/${routeSlugs.queens}`,
     );
+    expect(routes.freePlayMinesweeper).toBe(
+      `/${routeSlugs.freePlay}/${routeSlugs.minesweeper}`,
+    );
   });
 
-  it("freePlayRoutes covers exactly the six free-play games", () => {
+  it("freePlayRoutes covers exactly the seven free-play games", () => {
     expect(Object.keys(freePlayRoutes).sort()).toEqual(
       [...FREE_PLAY_GAMES].sort(),
     );
@@ -46,7 +49,7 @@ describe("the free-play route literals (T-WEB-S111)", () => {
 });
 
 describe("the app/modo-livre segment (T-WEB-S112)", () => {
-  it("holds exactly the index and the six game segments", () => {
+  it("holds exactly the index and the seven game segments", () => {
     const segment = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       "..",
@@ -56,6 +59,7 @@ describe("the app/modo-livre segment (T-WEB-S112)", () => {
 
     expect(readdirSync(segment).sort()).toEqual([
       "binairo",
+      "campo-minado",
       "cruzadinha",
       "nonogram",
       "page.module.css",
@@ -68,7 +72,7 @@ describe("the app/modo-livre segment (T-WEB-S112)", () => {
 });
 
 describe("the Modo livre index (T-WEB-S113)", () => {
-  it("renders six card links and its marker; the Termo card does not promise the word of the day", () => {
+  it("renders seven card links and its marker; the Termo card does not promise the word of the day", () => {
     const { container } = render(<FreePlayIndexPage />);
 
     const main = container.querySelector("main");
@@ -84,7 +88,7 @@ describe("the Modo livre index (T-WEB-S113)", () => {
     const cardAnchors = anchors.filter((anchor) =>
       anchor.getAttribute("href")?.startsWith(routes.freePlay),
     );
-    expect(cardAnchors).toHaveLength(6);
+    expect(cardAnchors).toHaveLength(7);
 
     expect(
       screen.getByText(String(messages.freePlay.descriptions.termo)),

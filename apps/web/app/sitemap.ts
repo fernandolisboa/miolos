@@ -28,6 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     routes.freePlayTermo,
     routes.freePlayCrossword,
     routes.freePlayQueens,
+    routes.freePlayMinesweeper,
     routes.privacy,
     routes.terms,
     routes.archive,

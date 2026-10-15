@@ -36,12 +36,17 @@ const crossword = z.object({
   skipFilled: flag(true),
 });
 
+const minesweeper = z.object({
+  questionMarks: flag(false),
+});
+
 const games = z.object({
   sudoku: sudoku.catch(sudoku.parse({})),
   binairo: binairo.catch(binairo.parse({})),
   nonogram: nonogram.catch(nonogram.parse({})),
   queens: queens.catch(queens.parse({})),
   crossword: crossword.catch(crossword.parse({})),
+  minesweeper: minesweeper.catch(minesweeper.parse({})),
 });
 
 const base = z.object({

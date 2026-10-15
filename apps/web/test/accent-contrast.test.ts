@@ -1,19 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { Game } from "@miolos/core";
-
+import { FREE_PLAY_GAMES, type FreePlayGame } from "../src/free-play/catalog";
 import { accentVars } from "../src/play/accent";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
 import { contrast, deltaE76, luminance } from "./contrast";
 
-const GAMES: readonly Game[] = [
-  "termo",
-  "sudoku",
-  "nonogram",
-  "binairo",
-  "crossword",
-  "queens",
-];
+const GAMES = FREE_PLAY_GAMES;
 
 function contrastTools(theme: "light" | "dark") {
   const tokens = colorTokens(theme);
@@ -34,7 +26,7 @@ function contrastTools(theme: "light" | "dark") {
     return hexOf(match[1]);
   }
 
-  function pair(game: Game): { accent: string; ink: string } {
+  function pair(game: FreePlayGame): { accent: string; ink: string } {
     const vars = accentVars(game);
     return {
       accent: resolveVar(String(vars["--accent"])),
@@ -60,13 +52,14 @@ describe("every game's filled-surface label clears AA on its own fill (T-WEB-S29
   });
 
   it("reproduces the recorded figures, as its own control", () => {
-    const recorded: Readonly<Record<Game, number>> = {
+    const recorded: Readonly<Record<FreePlayGame, number>> = {
       sudoku: 7.5113,
       binairo: 5.3066,
       nonogram: 4.5063,
       termo: 4.8433,
       crossword: 7.1191,
       queens: 5.1756,
+      minesweeper: 5.2023,
     };
     for (const game of GAMES) {
       const { accent, ink } = LIGHT.pair(game);

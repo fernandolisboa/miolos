@@ -67,7 +67,8 @@ function TermoFreeBoard({
       ending={() => (
         <FreePlaySolvedCard
           game="termo"
-          word={{ canonical: puzzle.canonical, won: status === "solved" }}
+          word={puzzle.canonical}
+          won={status === "solved"}
           onAgain={onNext}
         >
           <FinishedBoard guesses={play.state.guesses} />

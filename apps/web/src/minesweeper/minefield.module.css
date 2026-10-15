@@ -1,0 +1,225 @@
+/* Page modifiers set custom properties only, on the element that carries
+   screen.page; the well, the card and the floor are the shared sheet's.
+   A cell never goes below 24px: the board keeps that size and scrolls inside
+   the well (ADR-0136). */
+.pageMinefield {
+  --board-overflow-x: auto;
+  --board-shadow-slack: 6px;
+  --board-below: 6px;
+  --grid-card-rot: 0deg;
+}
+
+.pageBeginner {
+  --board-max: 420px;
+  --board-floor-side: calc(9 * 24px + 2 * var(--space-4) + 2px);
+  --board-min: calc(9 * 24px + 2 * var(--space-4) + 2px);
+}
+
+.pageIntermediate {
+  --board-max: 620px;
+  --board-floor-side: calc(16 * 24px + 2 * var(--space-4) + 2px);
+  --board-min: calc(16 * 24px + 2 * var(--space-4) + 2px);
+}
+
+/* Especialista is 24px cells in both views, so its card is its floor. Turned
+   (below), it is 30 rows tall, which is what the well must hold. */
+.pageExpert {
+  --board-max: calc(30 * 24px + 2 * var(--space-4) + 2px);
+  --board-floor-side: calc(30 * 24px + 2 * var(--space-4) + 2px);
+  --board-min: calc(30 * 24px + 2 * var(--space-4) + 2px);
+}
+
+.field {
+  --cell: calc(100cqi / var(--columns));
+
+  display: grid;
+  gap: 1px;
+  padding: 1px;
+  background: var(--line);
+  container-type: inline-size;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.beginner {
+  --columns: 9;
+
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+}
+
+.intermediate {
+  --columns: 16;
+
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+}
+
+.expert {
+  --columns: 30;
+
+  grid-template-columns: repeat(30, minmax(0, 1fr));
+}
+
+/* The well is the container. Under 30 cells of 24px plus the card, the board
+   turns: 16 columns by 30 rows. The cells keep their order in the markup. */
+@container (max-width: 753px) {
+  .expert {
+    --columns: 16;
+
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+    grid-template-rows: repeat(30, auto);
+    grid-auto-flow: column;
+  }
+
+  .pageExpert [data-board-card] {
+    width: calc(16 * 24px + 2 * var(--space-4) + 2px);
+  }
+}
+
+.finished {
+  width: min(100%, calc(var(--columns) * 16px));
+  margin-inline: auto;
+}
+
+.finished .cell {
+  font-size: calc(var(--cell) * 0.6);
+}
+
+.cell {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 0;
+  background: var(--paper-card);
+  box-shadow: inset -3px -3px 0 color-mix(in srgb, var(--ink) 14%, transparent);
+  color: var(--ink-2);
+  font: 700 clamp(14px, calc(var(--cell) * 0.6), 24px) / 1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.open {
+  background: var(--paper-tint);
+  box-shadow: none;
+  cursor: default;
+}
+
+.hit {
+  background: color-mix(in srgb, var(--accent-app) 30%, var(--paper-tint));
+}
+
+.glyph {
+  display: block;
+  width: 72%;
+  height: 72%;
+  color: var(--ink);
+}
+
+.count1 {
+  color: var(--mine-1);
+}
+
+.count2 {
+  color: var(--mine-2);
+}
+
+.count3 {
+  color: var(--mine-3);
+}
+
+.count4 {
+  color: var(--mine-4);
+}
+
+.count5 {
+  color: var(--mine-5);
+}
+
+.count6 {
+  color: var(--mine-6);
+}
+
+.count7 {
+  color: var(--mine-7);
+}
+
+.count8 {
+  color: var(--mine-8);
+}
+
+.tapMode {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+  padding: var(--space-1);
+  background: var(--paper-tint);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.tapButton {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: var(--touch-target-min);
+  padding: 0;
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.tapButton:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tapButtonOn {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.tapIcon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.tapIcon .glyph {
+  width: 100%;
+  height: 100%;
+  color: inherit;
+}
+
+.finishedField {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.finishedTime {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}

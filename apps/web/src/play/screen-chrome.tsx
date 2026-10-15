@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { type ReactElement, type ReactNode } from "react";
 import Link from "next/link";
 
 import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
@@ -20,15 +20,8 @@ import { TimerReadout } from "./timer-readout";
 import { UndoControl, UndoPlaceholder } from "./undo-control";
 import type { BoardEdits } from "./undo";
 
-export type ChromeGame = Exclude<Game, "termo">;
-
-const ACCENTS: Readonly<Record<ChromeGame, CSSProperties>> = {
-  sudoku: accentVars("sudoku"),
-  nonogram: accentVars("nonogram"),
-  binairo: accentVars("binairo"),
-  crossword: accentVars("crossword"),
-  queens: accentVars("queens"),
-};
+export type DailyChromeGame = Exclude<Game, "termo">;
+export type PlayChromeGame = DailyChromeGame | "minesweeper";
 
 const BLANK_READOUT = "\u00a0";
 
@@ -44,16 +37,18 @@ export interface PlayChromeStat {
   readonly className: string;
 }
 
-export interface PlayChromeReadouts extends BoardEdits {
+export interface PlayChromeReadouts {
   readonly progressShort: string;
   readonly progressLong: string;
+  readonly onReset: BoardEdits["onReset"];
+  readonly onUndo?: BoardEdits["onUndo"];
   readonly hint: {
     readonly ready: boolean;
     readonly used: number;
     readonly explain: string | null;
     readonly cell: number | null;
     readonly onReveal: () => void;
-  };
+  } | null;
 }
 
 export type PlayChromeState =
@@ -122,7 +117,7 @@ export function PlayScreenChrome({
   extraStat,
   children,
 }: {
-  readonly game: ChromeGame;
+  readonly game: PlayChromeGame;
   readonly pageModifier: string;
   readonly state: PlayChromeState;
   readonly back: PlayChromeBack;
@@ -136,7 +131,7 @@ export function PlayScreenChrome({
   const clock = useSettings().showClock ? clockSetting : "none";
   const skeleton = state.kind === "skeleton";
   const readouts = state.kind === "playing" ? state.readouts : null;
-  const hint = readouts?.hint;
+  const hint = readouts?.hint ?? null;
   const reason = hint?.explain ?? null;
   const cardLoaded = useHintCardLoaded();
   const left = Math.max(allowance - (hint?.used ?? 0), 0);
@@ -146,7 +141,7 @@ export function PlayScreenChrome({
   return (
     <main
       className={`${screen.page} ${pageModifier}`}
-      style={ACCENTS[game]}
+      style={accentVars(game)}
       data-play-state={state.kind}
     >
       <header className={screen.topBar}>
@@ -230,8 +225,13 @@ export function PlayScreenChrome({
           </>
         ) : (
           <>
-            <UndoControl onUndo={readouts.onUndo} />
-            <ResetControl onReset={readouts.onReset} />
+            {readouts.onUndo !== undefined && (
+              <UndoControl onUndo={readouts.onUndo} />
+            )}
+            <ResetControl
+              onReset={readouts.onReset}
+              copy={"reset" in play ? play.reset : messages.play.reset}
+            />
             <GameSettingsButton game={game} clock={clockSetting !== "none"} />
           </>
         )}
@@ -247,17 +247,19 @@ export function PlayScreenChrome({
           <span className={screen.hintLong}>{BLANK_READOUT}</span>
         </div>
       ) : (
-        <button
-          type="button"
-          className={`${screen.hint}${readouts.hint.ready ? "" : ` ${screen.hintUsed}`}`}
-          aria-disabled={!readouts.hint.ready}
-          aria-label={label}
-          data-short={messages.play.hint.short}
-          data-left={left}
-          onClick={readouts.hint.onReveal}
-        >
-          <span className={screen.hintLong}>{label}</span>
-        </button>
+        hint !== null && (
+          <button
+            type="button"
+            className={`${screen.hint}${hint.ready ? "" : ` ${screen.hintUsed}`}`}
+            aria-disabled={!hint.ready}
+            aria-label={label}
+            data-short={messages.play.hint.short}
+            data-left={left}
+            onClick={hint.onReveal}
+          >
+            <span className={screen.hintLong}>{label}</span>
+          </button>
+        )
       )}
     </main>
   );

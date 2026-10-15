@@ -85,6 +85,10 @@
 .card:nth-child(6) {
   transform: rotate(0.4deg);
 }
+.card:nth-child(7) {
+  grid-column: 3 / span 2;
+  transform: rotate(-0.3deg);
+}
 
 /* see ADR-0041 */
 .card:focus-visible {
@@ -127,6 +131,9 @@
 }
 .card:nth-child(6) .tape {
   transform: translateX(-50%) rotate(3deg);
+}
+.card:nth-child(7) .tape {
+  transform: translateX(-50%) rotate(-3deg);
 }
 
 .cardBody {
@@ -206,6 +213,9 @@
   .card:nth-child(6) {
     transform: rotate(0.3deg);
   }
+  .card:nth-child(7) {
+    transform: rotate(-0.3deg);
+  }
 
   .tape {
     top: -9px;
@@ -231,6 +241,9 @@
   }
   .card:nth-child(6) .tape {
     transform: rotate(3deg);
+  }
+  .card:nth-child(7) .tape {
+    transform: rotate(-3deg);
   }
 
   .kicker {

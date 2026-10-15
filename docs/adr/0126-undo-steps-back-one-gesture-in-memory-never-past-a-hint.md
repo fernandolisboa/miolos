@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-15 (issue #367)
 **Amends:** [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (the reset row holds a third stateful child, `UndoControl`); [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (Recomeçar also clears the undo history).
 **Depends on:** [ADR-0106](./0106-the-termo-current-row-is-editable.md), [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md)
+**Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — Campo Minado has no undo and takes no Ctrl/⌘+Z.
 
 ## Context
 

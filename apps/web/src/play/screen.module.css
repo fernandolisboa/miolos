@@ -294,12 +294,18 @@
 /* --board-below is the height of what the game draws under the card inside the
    well, --board-aspect the card's width over its height where it is not
    square. --board-side is not registered: its cq units must resolve where it
-   is read, inside the container, not on the container itself. */
+   is read, inside the container, not on the container itself. A game that
+   keeps a floor on its cells sets --board-floor-side and --board-overflow-x:
+   the card then outgrows the well and the well scrolls, and
+   --board-shadow-slack keeps the card's hard shadow inside the scroll box. */
 .boardWell {
-  --board-side: min(
-    100cqi,
-    (100cqb - var(--board-below, 0px)) * var(--board-aspect, 1),
-    var(--board-max)
+  --board-side: max(
+    min(
+      100cqi,
+      (100cqb - var(--board-below, 0px)) * var(--board-aspect, 1),
+      var(--board-max)
+    ),
+    var(--board-floor-side, 0px)
   );
 
   position: relative;
@@ -310,7 +316,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  align-items: safe center;
   justify-content: center;
+  overflow-x: var(--board-overflow-x, visible);
+  padding-inline-end: var(--board-shadow-slack, 0px);
 }
 
 .gridCard {

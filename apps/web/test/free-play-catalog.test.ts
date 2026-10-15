@@ -14,9 +14,9 @@ afterEach(() => {
 });
 
 describe("the free-play game set and level mapping (T-WEB-S109)", () => {
-  it("FREE_PLAY_GAMES is every game, in the hub's order (ADR-0114)", () => {
+  it("FREE_PLAY_GAMES is every game, in the hub's order, then Campo Minado (ADR-0114, ADR-0136)", () => {
     expect(GAMES).toHaveLength(6);
-    expect(FREE_PLAY_GAMES).toEqual(GAMES);
+    expect(FREE_PLAY_GAMES).toEqual([...GAMES, "minesweeper"]);
   });
 
   it("maps the three levels onto the ramp's endpoints and middle (D2)", () => {

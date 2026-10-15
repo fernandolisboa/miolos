@@ -38,6 +38,7 @@ const BUDGETED = [
   "/modo-livre/termo",
   "/modo-livre/cruzadinha",
   "/modo-livre/rainhas",
+  "/modo-livre/campo-minado",
 
   "/estatisticas",
 
@@ -68,6 +69,7 @@ const FREE_PLAY_ROUTES = [
   "/modo-livre/sudoku",
   "/modo-livre/cruzadinha",
   "/modo-livre/rainhas",
+  "/modo-livre/campo-minado",
 ];
 
 const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;

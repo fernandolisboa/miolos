@@ -2,15 +2,20 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { messages } from "../i18n";
 import styles from "./reset-control.module.css";
 
-const copy = messages.play.reset;
+interface ResetCopy {
+  readonly label: string;
+  readonly question: string;
+  readonly cancel: string;
+}
 
 export function ResetControl({
   onReset,
+  copy,
 }: {
   readonly onReset: (() => void) | null;
+  readonly copy: ResetCopy;
 }) {
   const [confirming, setConfirming] = useState(false);
   const questionId = useId();

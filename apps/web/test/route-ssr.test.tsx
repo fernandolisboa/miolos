@@ -295,6 +295,12 @@ const ROUTES: readonly RouteCase[] = [
     load: () => import("../app/modo-livre/rainhas/page"),
     daily: undefined,
   },
+  {
+    path: "/modo-livre/campo-minado",
+    marker: "data-play-state=",
+    load: () => import("../app/modo-livre/campo-minado/page"),
+    daily: undefined,
+  },
 
   {
     path: "/privacidade",

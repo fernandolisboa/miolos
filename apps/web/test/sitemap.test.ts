@@ -51,6 +51,7 @@ describe("the sitemap (T-WEB-S174)", () => {
       "/modo-livre/termo",
       "/modo-livre/cruzadinha",
       "/modo-livre/rainhas",
+      "/modo-livre/campo-minado",
       "/privacidade",
       "/termos",
       "/arquivo",

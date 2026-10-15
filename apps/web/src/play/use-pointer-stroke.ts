@@ -5,7 +5,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import type { Press } from "./brush";
+import { pressOf, type Press } from "./brush";
+import { cellIndexAt } from "./cell-index-at";
 import {
   cellsAfter,
   projectOnLine,
@@ -232,25 +233,4 @@ export function usePointerStroke(input: {
       return consumed ? null : press.current;
     },
   };
-}
-
-function pressOf(event: ReactPointerEvent<HTMLDivElement>): Press | null {
-  if (event.button === 2) {
-    return "right";
-  }
-  if (event.button !== 0) {
-    return null;
-  }
-  return event.pointerType === "mouse" ? "left" : "tap";
-}
-
-function cellIndexAt(x: number, y: number): number | null {
-  const target = document.elementFromPoint(x, y);
-  const cell = target?.closest("[data-cell-index]");
-  const raw = cell?.getAttribute("data-cell-index");
-  if (raw === null || raw === undefined) {
-    return null;
-  }
-  const index = Number.parseInt(raw, 10);
-  return Number.isInteger(index) ? index : null;
 }

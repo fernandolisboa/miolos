@@ -8,7 +8,8 @@ export const FREE_PLAY_GAMES = [
   "termo",
   "crossword",
   "queens",
-] as const satisfies readonly Game[];
+  "minesweeper",
+] as const satisfies readonly (Game | "minesweeper")[];
 
 export type FreePlayGame = (typeof FREE_PLAY_GAMES)[number];
 

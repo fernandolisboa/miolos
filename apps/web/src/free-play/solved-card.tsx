@@ -16,17 +16,19 @@ export function FreePlaySolvedCard<T extends string | number>({
   choice,
   picture,
   word,
+  won = true,
   onAgain,
   children,
 }: {
   readonly game: FreePlayGame;
   readonly choice?: FreePlayChoice<T>;
   readonly picture?: ReactNode;
-  readonly word?: { readonly canonical: string; readonly won: boolean };
+  readonly word?: string;
+  readonly won?: boolean;
   readonly onAgain: () => void;
   readonly children?: ReactNode;
 }) {
-  const lost = word?.won === false;
+  const lost = !won;
   const copy = messages.freePlay.solved;
 
   return (
@@ -58,7 +60,7 @@ export function FreePlaySolvedCard<T extends string | number>({
           {word !== undefined && (
             <p className={styles.wordLine}>
               <span className={styles.wordLead}>{copy.wordLead}</span>
-              <span className={styles.word}>{word.canonical}</span>
+              <span className={styles.word}>{word}</span>
             </p>
           )}
           {picture !== undefined && (
