@@ -157,12 +157,10 @@ describe("Ctrl+Z and ⌘+Z undo, unless something else owns the keyboard (T-WEB-
     rerender(
       <div>
         <UndoControl onUndo={onUndo} />
-        <dialog open aria-label="Ajustes">
-          <button type="button">Fechar</button>
-        </dialog>
+        <dialog open aria-label="Ajustes" />
       </div>,
     );
-    chord(screen.getByRole("button", { name: "Fechar" }), { ctrlKey: true });
+    chord(document.body, { ctrlKey: true });
 
     rerender(
       <div>
@@ -186,12 +184,48 @@ describe("every grid game carries undo, and a daily undo is saved (T-WEB-S829)",
     ["Cruzadinha", <CrosswordFreeScreen key="c" deps={deps} />],
   ];
 
+  function cells(container: HTMLElement): readonly (string | null)[] {
+    return [...container.querySelectorAll("[data-cell-index]")].map(
+      (cell) => cell.getAttribute("aria-label") ?? cell.textContent,
+    );
+  }
+
+  function firstMove(container: HTMLElement): void {
+    const moved = () => undoButton().getAttribute("aria-disabled") === "false";
+    for (const cell of container.querySelectorAll<HTMLElement>(
+      "[data-cell-index]",
+    )) {
+      fireEvent.click(cell, { detail: 0 });
+      const board = cell.closest<HTMLElement>('[role="group"]');
+      for (const key of ["1", "a"]) {
+        if (moved()) {
+          return;
+        }
+        if (board !== null) {
+          fireEvent.keyDown(board, { key });
+        }
+      }
+      if (moved()) {
+        return;
+      }
+    }
+  }
+
   it.each(screens)(
-    "%s free play starts with undo idle",
+    "%s free play starts with undo idle, and undo takes back the first move",
     async (_name, element) => {
       vi.stubGlobal("fetch", vi.fn());
-      render(element);
+      const { container } = render(element);
       await flushGeneration();
+      const fresh = cells(container);
+      expect(undoButton()).toHaveAttribute("aria-disabled", "true");
+
+      firstMove(container);
+      expect(undoButton()).toHaveAttribute("aria-disabled", "false");
+      expect(cells(container)).not.toEqual(fresh);
+
+      fireEvent.click(undoButton());
+      expect(cells(container)).toEqual(fresh);
       expect(undoButton()).toHaveAttribute("aria-disabled", "true");
       vi.unstubAllGlobals();
     },

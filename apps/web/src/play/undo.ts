@@ -67,20 +67,19 @@ export function undoable<
     ) {
       return { ...next, history: NO_HISTORY };
     }
+    const { steps, open } = state.history;
     if (next.entries === state.entries) {
-      return action.type === "stroke-start" && state.history.open
-        ? { ...next, history: { steps: state.history.steps, open: false } }
+      return action.type === "stroke-start" && open
+        ? closed(next, steps)
         : next;
     }
-    const { steps, open } = state.history;
+    // An open step is one drag or digit lock still writing: later cells add to that
+    // step, and a gesture that ends where it began leaves none (ADR-0126).
     if (
       open &&
       (action.type === "paint-over" || action.type === "lock-digit")
     ) {
-      const opening = steps.at(-1);
-      return opening !== undefined && sameEntries(opening.entries, next.entries)
-        ? { ...next, history: { steps: steps.slice(0, -1), open: false } }
-        : next;
+      return continued(next, steps);
     }
     if (sameEntries(state.entries, next.entries)) {
       return next;
@@ -95,16 +94,27 @@ export function undoable<
   };
 }
 
+function continued<
+  S extends Undoable<T>,
+  T extends { readonly entries: S["entries"] },
+>(next: S, steps: readonly T[]): S {
+  const opening = steps.at(-1);
+  return opening !== undefined && sameEntries(opening.entries, next.entries)
+    ? closed(next, steps.slice(0, -1))
+    : next;
+}
+
 function undone<S extends Undoable<T>, T extends Partial<S>>(state: S): S {
-  const step = state.history.steps.at(-1);
+  const { steps } = state.history;
+  const step = steps.at(-1);
   if (state.status !== "playing" || step === undefined) {
     return state;
   }
-  return unlit({
-    ...state,
-    ...step,
-    history: { steps: state.history.steps.slice(0, -1), open: false },
-  });
+  return unlit(closed({ ...state, ...step }, steps.slice(0, -1)));
+}
+
+function closed<S extends Undoable<T>, T>(state: S, steps: readonly T[]): S {
+  return { ...state, history: { steps, open: false } };
 }
 
 function sameEntries(a: readonly unknown[], b: readonly unknown[]): boolean {

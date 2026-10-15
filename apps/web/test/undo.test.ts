@@ -372,7 +372,7 @@ describe("Rainhas undo brings the automatic crosses back (T-WEB-S824)", () => {
   });
 });
 
-describe("Cruzadinha undo restores the cursor (T-WEB-S825)", () => {
+describe("Cruzadinha undo restores the selection (T-WEB-S825)", () => {
   const daily = dailyCrosswordResponseSchema.parse({
     game: "crossword",
     date: DATE,
@@ -421,7 +421,7 @@ describe("Cruzadinha undo restores the cursor (T-WEB-S825)", () => {
     skipFilled: false,
   });
 
-  it("takes the letter back and puts the cursor where it was", () => {
+  it("takes the letter back and puts the selection back where it was", () => {
     const typed = crossword(board(), letter("c"), letter("a"));
     expect(typed.selected).toBe(2);
     const undone = crossword(typed, UNDO);

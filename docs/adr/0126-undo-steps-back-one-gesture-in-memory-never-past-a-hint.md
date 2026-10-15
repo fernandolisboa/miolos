@@ -15,10 +15,10 @@ Fernando asked for undo in every game, as something small and good-looking, not 
 3. **A snapshot is the board and what derives from it** (entries, conflicts, Rainhas `autoCrossed`, the selection, Cruzadinha's direction, the `hint` object). Clock, `hint.used`, sync state and tools are never touched.
 4. **Checkpoints.** `restore`, a Recomeçar that changed the board, and any change to `hint.used` clear the history, so undo never reaches past a hint or refunds it. A solved board has no undo.
 5. **In memory only, capped at 200 steps.** No `playRecordSchema` change, so no rollback trap.
-6. **The control** is a small paper tile with a curved arrow, first in the reset row, with no word on screen: `aria-label` and a CSS tooltip read "Desfazer". Ctrl/⌘+Z does the same, except in a text field, a dialog, or while the Recomeçar question is open.
+6. **The control** is a small paper tile with a curved arrow, first in the reset row, with no word on screen: `aria-label` and a CSS tooltip read "Desfazer". Ctrl/⌘+Z does the same, except in a text field, while a dialog is open, or while the Recomeçar question is open.
 7. **No redo, and no Termo:** a judged Termo guess is final, and its current row already has ⌫ (ADR-0106).
 
 ## Consequences
 
 - Every grid route carries about 2 KB more. `/nonogram` measured 49,146 of its 49,152-byte budget at merge; the next relief is still the `playRecordSchema` split (ADR-0112).
-- New per-game state that derives from `entries` must join that game's snapshot (#368's pencil notes will).
+- New per-game board state must join that game's snapshot. State that does not derive from `entries`, like #368's pencil notes, must also join the change check in `undoable`, or a notes-only move records no step.

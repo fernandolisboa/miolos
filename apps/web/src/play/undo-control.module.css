@@ -88,7 +88,7 @@
 }
 
 .control:focus-visible::after,
-.control:hover:not([aria-disabled="true"])::after {
+.control[aria-disabled="false"]:hover::after {
   opacity: 1;
   transform: translate(-50%, 0);
 }

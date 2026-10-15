@@ -58,8 +58,8 @@ export function UndoPlaceholder() {
 
 function isBusy(target: EventTarget | null, button: HTMLElement | null) {
   return (
-    (target instanceof Element &&
-      target.closest("input, textarea, dialog") !== null) ||
+    (target instanceof Element && target.closest("input, textarea") !== null) ||
+    document.querySelector("dialog[open]") !== null ||
     button?.parentElement?.querySelector('[role="group"]') != null
   );
 }
