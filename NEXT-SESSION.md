@@ -16,7 +16,7 @@ New, low urgency: NOW §3 ⚡, three yes/no questions on Campo Minado (a daily, 
 
 **`/admin`** (ADR-0097, ADR-0100): admins are verified attached emails in `admin_users`. The free hint allowance is the `freeHintsPerPuzzle` key (ADR-0098); before rolling either app back, set it to 3 or less and wait for the rollover.
 
-**Shared play chrome** (ADR-0077): `PlayScreenChrome` holds three stateful children, `ResetControl` (ADR-0096), `GameSettingsButton` and `HintCard`. Recomeçar and Ajustes share one row; `.reset` is the positioned box the confirm spans (T-WEB-S810). Control tips sit behind `InfoTip` (#331), whose open/close logic is `useTip` (`play/use-tip.ts`), shared with the earned medals that `artOf` (`medals/art.ts`) draws from their rule (ADR-0122); keyboards come from `qwertySlots` and `KeyGlyph` (#321); Termo's current row is editable (ADR-0106).
+**Shared play chrome** (ADR-0077): `PlayScreenChrome` holds three stateful children, `ResetControl` (ADR-0096), `GameSettingsButton` and `HintCard`. Recomeçar and Ajustes share one row; `.reset` is the positioned box the confirm spans (T-WEB-S810). Control tips sit behind `InfoTip` (#331), whose open/close logic is `useTip` (`play/use-tip.ts`), shared with the earned medals that `artOf` (`medals/art.ts`) draws from their rule (ADR-0122); keyboards come from `qwertySlots` and `KeyGlyph` (#321); Termo's current row is editable (ADR-0106). Up to 1023px (#375, ADR-0123) the rules sit behind an (i) beside the title (`PlayTitle`, `play/play-title.tsx`, shared with Termo; a native `popover`), and Recomeçar, Ajustes and the hint share the last row, the hint showing "Dica" and a ringed count; phones keep a 16px side margin (impeccable flags less). The Ajustes panel and `HintCard` load through `lazyChunk` (`components/lazy-chunk.ts`), outside first load.
 
 **Boards size from the space they have** (ADR-0103): `BoardCard` wraps every board in a size container; `--board-below` mirrors the rows under the card by hand. jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
@@ -28,9 +28,7 @@ New, low urgency: NOW §3 ⚡, three yes/no questions on Campo Minado (a daily, 
 
 ## Traps
 
-**Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** Run `pnpm test --force` before trusting a green gate after an `apps/api` change.
-
-**Dependabot npm PRs cannot be merged as opened** (no lockfile change). Land one hand-made bump, outside `minimumReleaseAge` (7 days).
+**Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** Run `pnpm test --force` before trusting a green gate after an `apps/api` change. **Dependabot npm PRs cannot be merged as opened** (no lockfile change). Land one hand-made bump, outside `minimumReleaseAge` (7 days).
 
 **A perfect day needs a lineup buffered before midnight (ADR-0087).** The buffer alert exists to prevent that. **Six per-game medals is T-CORE-S70's maximum.** A seventh game needs that cap raised first.
 
@@ -40,6 +38,4 @@ New, low urgency: NOW §3 ⚡, three yes/no questions on Campo Minado (a daily, 
 
 ## Next
 
-**Next:** the gameplay backlog #367–#374 (plans on each issue). The Campo Minado engine shipped (`@miolos/games/minesweeper`, ADR-0133: Windows rules, a field can force a guess); its screen is #373 PR 2, after #367; the plan and the list of ADRs its own screen ADR amends are on the issue. #371 part 2 starts once #368 (Sudoku notes) lands. After the backlog: file per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
-
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 665.3 of 667 KB, `/modo-livre/termo` at 63.5 of 65 and `/modo-livre/nonogram` at 68.1 of 69 KB (ADR-0119, after #354).
+**Next:** the gameplay backlog #367–#374 (plans on each issue). The Campo Minado engine shipped (`@miolos/games/minesweeper`, ADR-0133: Windows rules, a field can force a guess); its screen is #373 PR 2, after #367; the plan and the list of ADRs its own screen ADR amends are on the issue. #371 part 2 (Sudoku variants UI) starts once #368 lands. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration). **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. After #375: `/nonogram` 46.0 of 48 KB, `/modo-livre/cruzadinha` 664.0 of 667, `/modo-livre/termo` 64.2 of 65, `/modo-livre/nonogram` 66.6 of 69. ADR-0112's Ajustes relief is spent; the next one is the `playRecordSchema` split.

@@ -2,12 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { lazyChunk } from "../components/lazy-chunk";
 import { messages } from "../i18n";
-import { GameSettings } from "./game-settings";
 import styles from "./settings-dialog.module.css";
 import type { SettingsGame } from "./settings";
 
 const copy = messages.settings.games.dialog;
+
+// see ADR-0123; the dialog opens once the panel is here, so showModal focuses its first switch.
+let GameSettings: typeof import("./game-settings").GameSettings | null = null;
+const useGameSettingsLoaded = lazyChunk(() =>
+  import("./game-settings").then((module) => {
+    GameSettings = module.GameSettings;
+  }),
+);
 
 export function GameSettingsButton({
   game,
@@ -17,13 +25,15 @@ export function GameSettingsButton({
   readonly clock: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [asks, setAsks] = useState(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const ready = useGameSettingsLoaded(asks) && open;
   useEffect(() => {
-    if (open) {
+    if (ready) {
       dialogRef.current?.showModal();
     }
-  }, [open]);
+  }, [ready]);
 
   return (
     <>
@@ -33,6 +43,7 @@ export function GameSettingsButton({
         className={styles.trigger}
         onClick={() => {
           setOpen(true);
+          setAsks((n) => n + 1);
         }}
       >
         {copy.trigger}
@@ -48,7 +59,9 @@ export function GameSettingsButton({
       >
         <h2 className={styles.title}>{copy.title}</h2>
         <p className={styles.note}>{copy.note}</p>
-        {open ? <GameSettings games={[game]} clock={clock} /> : null}
+        {ready && GameSettings !== null ? (
+          <GameSettings games={[game]} clock={clock} />
+        ) : null}
         <button
           type="button"
           className={styles.close}

@@ -40,10 +40,12 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S193`    | `S192`         | never used            |
 | `T-DB`   | `S144`    | `S142`         | `T-DB-21`             |
 | `T-API`  | `S335`    | `S333`         | `T-API-16`            |
-| `T-WEB`  | `S820`    | `S810`         | `T-WEB-23`            |
+| `T-WEB`  | `S920`    | `S915`         | `T-WEB-23`            |
 | `T-LINT` | `S72`     | `S71`          | `T-LINT-10`           |
 
 #371 part 1 (the Sudoku variant engine, ADR-0130) spent **`T-WEB-S860`** in `sudoku-logical-hint.test.ts` (the hint names a diagonal, with and without an elimination). `S861…S869` stay reserved for #371 part 2.
+
+#375 (phone layout, ADR-0123) spent **`T-WEB-S910…S915`**. In `phone-play-chrome.test.tsx`: `S910` (the rules (i) is a disclosure the paragraph describes; the skeleton draws its ring with no control), `S911` (one column hides the paragraph and opens it out of flow), `S912` (the hint keeps its full name behind two silent faces, the skeleton included), `S913` (Recomeçar, Ajustes and the hint share the last row; the confirm rises), `S914` (16px phone margin) and, in `lazy-chunk.test.tsx`, `S915` (`lazyChunk` loads once and retries on a new key; the Ajustes dialog opens only once its panel lands). `S916…S919` are **burned**; `S820…S909` are reserved for the #367–#374 threads and the Nonogram color reveal. `T-WEB-S103`, `S367`, `S512`, `S538`, `S593` and `S601` were re-aimed in place (the (i) is a fifth Termo tab stop, the hint is read by its name, the dialog is awaited, the one-column grid has two tracks); `S289`'s wait now uses 15 s of its 20 s budget, as Termo's first import timed out at 5 s on the CI runner.
 
 The Recomeçar-and-Ajustes thread spent **`T-WEB-S810`** in `board-sizing.test.tsx` (the chrome's `.reset` row is a positioned flex row and `.control` is not positioned, so the confirm spans Recomeçar and Ajustes). `S811…S819` are **burned**.
 
