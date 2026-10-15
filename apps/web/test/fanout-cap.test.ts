@@ -159,6 +159,32 @@ describe("the CI gate is deliberately uncapped and instrumented (T-WEB-S226)", (
   });
 });
 
+describe("the CI gate runs the bundle check on the build it just made (T-WEB-S710)", () => {
+  const isBuild = (step: string) => /\brun: pnpm build$/m.test(step);
+  const isBundleCheck = (step: string) =>
+    /\bpnpm --filter @miolos\/web bundle-check\b/.test(step);
+  const steps = parseGateJob(ciWorkflow).steps;
+
+  it("runs bundle-check in exactly one gate step", () => {
+    expect(steps.filter(isBundleCheck)).toHaveLength(1);
+  });
+
+  it("runs it after pnpm build, which writes the .next it reads", () => {
+    const buildIndex = steps.findIndex(isBuild);
+    expect(buildIndex, "the gate runs `pnpm build`").toBeGreaterThanOrEqual(0);
+    expect(steps.findIndex(isBundleCheck)).toBeGreaterThan(buildIndex);
+  });
+
+  it("a commented-out step cannot satisfy it", () => {
+    const sabotaged = ciWorkflow.replace(
+      /^(\s*)(.*pnpm --filter @miolos\/web bundle-check.*)$/m,
+      "$1# $2",
+    );
+    expect(sabotaged).not.toEqual(ciWorkflow);
+    expect(parseGateJob(sabotaged).steps.filter(isBundleCheck)).toHaveLength(0);
+  });
+});
+
 describe("turbo.json carries no global concurrency key (T-WEB-S227)", () => {
   it("declares concurrency at no nesting level at all", () => {
     expect(keyPaths(turboConfig, "concurrency")).toEqual([]);

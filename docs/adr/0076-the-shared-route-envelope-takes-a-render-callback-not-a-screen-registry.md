@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-09-01
 **Depends on:** [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md)
 **Amended by:** [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) — the default per-route budget is 48 KB, not 40 KB.
+**Superseded in part by:** [ADR-0115](./0115-the-bundle-check-runs-in-the-ci-gate.md) — `pnpm bundle-check` is in CI now; the #155 gap is closed.
 
 ## Context
 

@@ -155,6 +155,7 @@ ADRs matter more now, not less: they are where the "why" goes when it leaves the
 - **Property-based tests for `packages/games`** — a generator ships with its invariants proved, not sampled. Every generated Sudoku has a unique solution; every generated puzzle is solvable; seed → puzzle is deterministic.
 - **Zod validation at every boundary** — API contracts and anything crossing the client/server line are parsed, never cast.
 - `pnpm comments` — the selftest harness, then the comment budget ([ADR-0075](./docs/adr/0075-the-comment-budget-is-a-tool-not-a-rule.md)). Generated files report as skipped; vendored skills under `.claude/skills/` are not ours.
+- `pnpm --filter @miolos/web bundle-check` — per-route client-JS budgets and the leak markers, on the build CI just made ([ADR-0115](./docs/adr/0115-the-bundle-check-runs-in-the-ci-gate.md)). CI only: it needs `next build`.
 - `npx impeccable detect` — required on any change that touches UI. Visual quality is a gate, not an aspiration.
 - Pre-commit (Husky + lint-staged + typecheck + comment budget + tests) must stay green. Never bypassed with `--no-verify`.
 
