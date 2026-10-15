@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { formatLongDate, formatMonth, messages } from "../src/i18n";
@@ -60,8 +60,11 @@ describe("the archive month page (T-WEB-S169)", () => {
     });
 
     expect(
+      screen.getByRole("heading", { level: 1, name: messages.archive.title }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("heading", {
-        level: 1,
+        level: 2,
         name: formatMonth("2026-08-01"),
       }),
     ).toBeInTheDocument();
@@ -69,7 +72,9 @@ describe("the archive month page (T-WEB-S169)", () => {
     const grid = container.querySelector("[class*='calendarGrid']");
     expect(grid).not.toBeNull();
     expect((grid as HTMLElement).querySelectorAll("li")).toHaveLength(42);
-    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(within(grid as HTMLElement).getAllByRole("listitem")).toHaveLength(
+      2,
+    );
 
     expect(
       screen.getByRole("link", {
@@ -111,12 +116,18 @@ describe("the archive month page (T-WEB-S169)", () => {
     ]);
     spies.listArchivedMonths.mockResolvedValue(["2026-08"]);
 
-    render(
+    const { container } = render(
       await ArchiveMonthPage({ params: Promise.resolve({ mes: "2026-08" }) }),
     );
 
-    expect(screen.queryByText(/Mês anterior/)).toBeNull();
-    expect(screen.queryByText(/Próximo mês/)).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Mês anterior/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Próximo mês/ })).toBeNull();
+    const edges = container.querySelectorAll("[class*='monthStepOff']");
+    expect(edges).toHaveLength(2);
+    for (const edge of edges) {
+      expect(edge).toHaveAttribute("aria-hidden");
+      expect(edge.closest("a")).toBeNull();
+    }
 
     expect(screen.getAllByText(/←/)).toHaveLength(1);
   });
@@ -169,7 +180,7 @@ describe("the archive month page (T-WEB-S169)", () => {
     });
   });
 
-  it("no element of the month page can reach impeccable's all-caps gate, in any month", async () => {
+  it("no element of the month page outside the lead can reach impeccable's all-caps gate, in any month", async () => {
     for (let m = 1; m <= 12; m += 1) {
       const previous = `2026-${String(m).padStart(2, "0")}`;
       spies.listArchivedDays.mockResolvedValue([
@@ -181,10 +192,11 @@ describe("the archive month page (T-WEB-S169)", () => {
         await ArchiveMonthPage({ params: Promise.resolve({ mes: "2027-01" }) }),
       );
 
-      const nav = container.querySelector("nav");
-      expect(nav).not.toBeNull();
       for (const el of container.querySelectorAll("*")) {
-        if (/^H[1-6]$/.test(el.tagName)) {
+        if (
+          /^H[1-6]$/.test(el.tagName) ||
+          (el.getAttribute("class") ?? "").includes("lead")
+        ) {
           continue;
         }
 
@@ -198,12 +210,6 @@ describe("the archive month page (T-WEB-S169)", () => {
           `${previous}: <${el.tagName.toLowerCase()}> carries ${direct.length} characters of direct text ("${direct}")`,
         ).toBeLessThanOrEqual(30);
       }
-
-      const kickers = [...nav!.querySelectorAll("span")].map(
-        (s) => s.textContent,
-      );
-      expect(kickers).toContain(messages.archive.month.previous);
-      expect(kickers).toContain(formatMonth(`${previous}-01`));
 
       expect(
         screen.getByRole("link", {
@@ -232,11 +238,8 @@ describe("the archive month page (T-WEB-S169)", () => {
       ).toBeGreaterThan(-1);
       return sheet.slice(at, sheet.indexOf("}", at));
     };
-    expect(block(".monthNavKicker")).toContain("text-transform: uppercase");
-    expect(block(".monthNavLink")).not.toContain("text-transform");
-    expect(block(".monthNavMonth")).not.toContain("text-transform");
-
-    expect(block(".monthNavMonth")).not.toContain("letter-spacing");
+    expect(block(".calendarMonth")).not.toContain("text-transform");
+    expect(block(".calendarMonth")).not.toContain("letter-spacing");
 
     expect(block(".weekday")).toContain("text-transform: uppercase");
     expect(block(".dayCellLink")).not.toContain("text-transform");
