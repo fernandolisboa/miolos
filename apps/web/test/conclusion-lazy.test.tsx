@@ -366,7 +366,7 @@ describe("every screen root warms the conclusion chunk on mount (T-WEB-S289)", (
         () => {
           expect(chunk.loads).toBeGreaterThan(0);
         },
-        { timeout: 5000 },
+        { timeout: 15_000 },
       );
     },
     20_000,

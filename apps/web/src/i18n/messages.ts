@@ -237,6 +237,7 @@ export const messages = {
       available: (left: number) =>
         `Usar dica — ${left} ${left === 1 ? "disponível" : "disponíveis"}`,
       used: "Dicas usadas",
+      short: "Dica",
     },
     reset: {
       label: "Recomeçar",
@@ -245,6 +246,7 @@ export const messages = {
     },
     wrongCell: (label: string) => `${label}, não bate com a solução`,
     tipAria: "Como usar os controles",
+    rulesAria: "Regras do jogo",
   },
   conclusion: {
     back,
