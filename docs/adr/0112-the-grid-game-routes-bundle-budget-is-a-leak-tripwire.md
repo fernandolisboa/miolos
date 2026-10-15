@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-10-15
 **Amends:** [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md) decision 7 (*"the shared `MAX_DELTA_BYTES` is not raised"*); [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)'s *"Not raising `MAX_DELTA_BYTES` is right"* (the `/nonogram` slack paragraph); the 40 KB figure in [ADR-0027](./0027-the-hint-is-computed-on-the-client.md)'s instrument paragraph, [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) and [ADR-0076](./0076-the-shared-route-envelope-takes-a-render-callback-not-a-screen-registry.md).
+**Superseded in part by:** [ADR-0115](./0115-the-bundle-check-runs-in-the-ci-gate.md) — the last consequence: the check runs in CI, so no PR runs it by hand.
 
 ## Context
 

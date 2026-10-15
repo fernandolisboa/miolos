@@ -40,10 +40,12 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S331` | `S330` | `T-API-16` |
-| `T-WEB` | `S707` | `S704` | `T-WEB-23` |
+| `T-WEB` | `S711` | `S710` | `T-WEB-23` |
 | `T-LINT` | `S72` | `S71` | `T-LINT-10` |
 
 #333 (Termo in free play, ADR-0114) spent **`T-WEB-S700…S704`** — `S700` (`judgeFreeGuess`), `S701` (the free board judges with zero fetch), `S702` (`TermoFreeScreen`: the tag, the back link, the won and lost cards, *Mais uma*), `S703` (the Termo view's `chrome`), `S704` (only `/modo-livre/termo` reaches the pool and, among free-play pages, the dictionary; no page reaches `termo-answers`) — and **`T-LINT-S70`** (`@miolos/games/termo-answers` red in all `apps/web` source, static and dynamic) and **`S71`** (the reused `termo/` modules clean in free play). `S705`, `S706` are **burned**. `S662…S699` are left to sibling branches; whatever none of them spends is burned. `T-WEB-S109`, `S111…S113`, `S174`, `S374`, `S482` and `T-LINT-S12`, `S64`, `S67` were re-aimed in place.
+
+#155 (the bundle check in CI) spent **`T-WEB-S710`** (`fanout-cap.test.ts`: exactly one gate step runs `pnpm --filter @miolos/web bundle-check`, after `pnpm build`, and a commented-out step does not count). `S670…S709` are other threads' live reservations, not free space.
 
 #331 (centred controls and the (i) tip) spent **`T-WEB-S660`** (`info-tip.test.tsx`: the tip opens on tap, hover and keyboard focus and closes on Escape, blur and an outside tap) and **`T-WEB-S661`** (same file: the Nonogram and Binairo controls sit in the middle of a `1fr auto 1fr` row, and no tip says Backspace). `T-WEB-S103`'s focus order and the Rainhas `--board-below` pin in `board-sizing.test.tsx` were widened in place.
 
