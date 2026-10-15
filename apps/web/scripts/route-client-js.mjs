@@ -13,7 +13,7 @@ const MAX_DELTA_BYTES = 48 * 1024;
 const PER_ROUTE_BUDGET = {
   "/termo": 76 * 1024,
 
-  "/modo-livre/nonogram": 69 * 1024,
+  "/modo-livre/nonogram": 76 * 1024,
 
   "/modo-livre/termo": 65 * 1024,
 
@@ -100,6 +100,7 @@ const FORBIDDEN_DAILY_SCOPE = [
   "givensCount",
   "clueCount",
   "advancedSteps",
+  "heart:mrmr13",
 ];
 
 const FORBIDDEN_FREE_PLAY_SCOPE = ["zurro"];
@@ -113,7 +114,12 @@ const EXPECTED_DAILY_SCOPE = [
   "zurre\\nzurro",
 ];
 
-const EXPECTED_FREE_PLAY_SCOPE = ["Escada", "givensCount", "advancedSteps"];
+const EXPECTED_FREE_PLAY_SCOPE = [
+  "Escada",
+  "givensCount",
+  "advancedSteps",
+  "heart:mrmr13",
+];
 
 function fail(message) {
   console.error(`FAIL  ${message}`);

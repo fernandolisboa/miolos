@@ -9,6 +9,7 @@
     "./binairo": "./src/binairo/index.ts",
     "./crossword": "./src/crossword/index.ts",
     "./nonogram": "./src/nonogram/index.ts",
+    "./nonogram-colors": "./src/nonogram-colors/index.ts",
     "./queens": "./src/queens/index.ts",
     "./sudoku": "./src/sudoku/index.ts",
     "./termo": "./src/termo/index.ts",
@@ -17,6 +18,7 @@
   },
   "scripts": {
     "generate:crossword": "node scripts/generate-crossword-lexicon.ts",
+    "generate:nonogram": "node scripts/generate-nonogram-tones.ts",
     "generate:termo": "node scripts/generate-termo-words.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json && tsc -p scripts/tsconfig.json",
     "test": "vitest run"

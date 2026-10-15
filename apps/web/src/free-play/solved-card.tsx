@@ -7,7 +7,7 @@ import { messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import { EndingFlourish } from "../play/ending-flourish";
 import { JustEnded } from "../play/just-ended";
-import { picturePath } from "../play/picture-path";
+import { PictureArt } from "../play/picture-art";
 import type { ConclusionPicture } from "../play/types";
 import type { FreePlayGame } from "./catalog";
 import type { FreePlayChoice } from "./choice-picker";
@@ -66,15 +66,9 @@ export function FreePlaySolvedCard<T extends string | number>({
         )}
         {picture !== undefined && (
           <div className={styles.pictureRow}>
-            <svg
-              className={styles.picture}
-              role="img"
-              aria-label={picture.label}
-              viewBox={`0 0 ${String(picture.size)} ${String(picture.size)}`}
-              shapeRendering="crispEdges"
-            >
-              <path d={picturePath(picture)} />
-            </svg>
+            <JustEnded value>
+              <PictureArt picture={picture} className={styles.picture} />
+            </JustEnded>
           </div>
         )}
         <div className={styles.actions}>

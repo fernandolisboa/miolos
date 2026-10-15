@@ -14,6 +14,8 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E 
 
 **End flourish** (#353 ADR-0118, #357 ADR-0120): a win that ended in front of the player first glows across the board from the last touched cell (`EndingStage`, `play/ending-stage.tsx`, wraps every daily, archive and free-play view), then presses its stamp; a Termo loss drops a heavy grey stamp. `useSawPlay`/`JustEnded` (`play/just-ended.ts`) decide "just ended"; `EndingFlourish` wraps the stamp. Setting `endAnimation`, on; reduced motion stands both down.
 
+**Picture tones** (#366, ADR-0121): a solved Nonogram's picture is painted in its motif's curated tones (`colors-*.ts` beside the library, shipped run-length in `tones.generated.ts`; run `generate:nonogram` after editing). The daily gets them on the completed `/day` claim (`motifTones`), free play from the device; `PictureArt` (`play/picture-art.tsx`) wipes them in on a game that just ended.
+
 **`/admin`** (ADR-0097, ADR-0100): admins are verified attached emails in `admin_users`. The free hint allowance is the `freeHintsPerPuzzle` key (ADR-0098); before rolling either app back, set it to 3 or less and wait for the rollover.
 
 **Shared play chrome** (ADR-0077): `PlayScreenChrome` holds three stateful children, `ResetControl` (ADR-0096), `GameSettingsButton` and `HintCard`. Recomeçar and Ajustes share one row; `.reset` is the positioned box the confirm spans (T-WEB-S810). Control tips sit behind `InfoTip` (#331), whose open/close logic is `useTip` (`play/use-tip.ts`), shared with the earned medals that `artOf` (`medals/art.ts`) draws from their rule (ADR-0122); keyboards come from `qwertySlots` and `KeyGlyph` (#321); Termo's current row is editable (ADR-0106).
@@ -40,4 +42,4 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E 
 
 **Next:** the #321–#333 waves are done. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 665.3 of 667 KB, `/modo-livre/termo` at 63.5 of 65 and `/modo-livre/nonogram` at 68.1 of 69 KB (ADR-0119, after #354).
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 665.3 of 667 KB, `/modo-livre/termo` at 63.5 of 65 and `/modo-livre/nonogram` at 74.9 of 76 KB (ADR-0121, after #366).

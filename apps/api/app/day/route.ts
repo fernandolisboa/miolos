@@ -4,9 +4,10 @@ import {
   dayStateFromRows,
 } from "@miolos/core";
 import {
-  getPublishedNonogramMotifName,
+  getPublishedNonogramMotif,
   todaySaoPaulo,
 } from "@miolos/db/publishing";
+import { motifTones } from "@miolos/games/nonogram-colors";
 import { listCompletionsForDay } from "@miolos/db/user";
 import type { NextRequest } from "next/server";
 
@@ -19,18 +20,17 @@ export function GET(request: NextRequest): Promise<Response> {
     const today = await todaySaoPaulo(db);
     const rows = await listCompletionsForDay(db, userId, today);
 
-    const motifName =
+    const motif =
       dayStateFromRows(rows).nonogram === "completed"
-        ? await getPublishedNonogramMotifName(db, today)
+        ? await getPublishedNonogramMotif(db, today)
         : undefined;
 
     return dayResponseSchema.parse({
       date: today,
-      games: dayGamesFromRows(
-        rows,
-
-        motifName ? { nonogramMotifName: motifName } : undefined,
-      ),
+      games: dayGamesFromRows(rows, {
+        nonogramMotifName: motif?.name,
+        nonogramMotifTones: motif && motifTones(motif.motifId, motif.mirrored),
+      }),
     });
   });
 }

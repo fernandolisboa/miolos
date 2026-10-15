@@ -18,6 +18,11 @@ export const dayGameStateSchema = z
     hintsUsed: hintsUsedSchema.optional(),
 
     motifName: z.string().min(1).optional(),
+
+    motifTones: z
+      .string()
+      .regex(/^[.kelntroygdsbpm]+$/)
+      .optional(),
   })
   .refine(
     (game) => game.elapsedMs === undefined || game.status === "completed",
@@ -35,6 +40,12 @@ export const dayGameStateSchema = z
     (game) => game.motifName === undefined || game.status === "completed",
     {
       message: "motifName is published only on a completed game",
+    },
+  )
+  .refine(
+    (game) => game.motifTones === undefined || game.status === "completed",
+    {
+      message: "motifTones is published only on a completed game",
     },
   );
 
@@ -96,6 +107,8 @@ export function dayGamesFromRows(
 
 export interface DayClaimExtras {
   readonly nonogramMotifName?: string;
+
+  readonly nonogramMotifTones?: string;
 }
 
 function claimForGame(
@@ -126,11 +139,16 @@ function claimForGame(
     game === "nonogram" && extras?.nonogramMotifName
       ? extras.nonogramMotifName
       : undefined;
+  const motifTones =
+    game === "nonogram" && extras?.nonogramMotifTones
+      ? extras.nonogramMotifTones
+      : undefined;
   return {
     status,
     ...(elapsedMs === undefined ? {} : { elapsedMs }),
     ...(hintsUsed === undefined ? {} : { hintsUsed }),
     ...(motifName === undefined ? {} : { motifName }),
+    ...(motifTones === undefined ? {} : { motifTones }),
   };
 }
 

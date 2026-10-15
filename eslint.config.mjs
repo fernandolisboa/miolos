@@ -94,6 +94,12 @@ const crosswordEngineGroup = {
     "@miolos/games/crossword carries the whole lexicon: only apps/web/src/free-play/use-free-crossword.ts imports it, statically, so the lexicon ships on /modo-livre/cruzadinha alone (ADR-0088).",
 };
 
+const nonogramColorsGroup = {
+  group: ["@miolos/games/nonogram-colors", "@miolos/games/nonogram-colors/*"],
+  message:
+    "@miolos/games/nonogram-colors carries every motif's colored picture: only apps/web/src/free-play/use-free-nonogram.ts imports it, so the table ships on /modo-livre/nonogram alone and a daily gets its colors from its own completed /day claim (ADR-0121, ADR-0004). Tests may import it.",
+};
+
 const webWallImportPatterns = [
   {
     group: [
@@ -148,7 +154,11 @@ const termoAnswersGroup = {
     "apps/web source never imports the Termo answer list: no client chunk may carry it, and a daily answer reaches the board from the server only once the board closes (ADR-0045 decision 5, ADR-0114). Tests may import it.",
 };
 
-const webClientImportPatterns = [...webWallImportPatterns, termoAnswersGroup];
+const webClientImportPatterns = [
+  ...webWallImportPatterns,
+  termoAnswersGroup,
+  nonogramColorsGroup,
+];
 
 const webWallImportPaths = [
   {
@@ -548,6 +558,23 @@ export default tseslint.config(
           patterns: [
             ...webClientImportPatterns.filter(
               (pattern) => pattern !== crosswordEngineGroup,
+            ),
+            ...freePlayBannedModuleGroups,
+          ],
+          paths: webWallImportPaths,
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/web/src/free-play/use-free-nonogram.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webClientImportPatterns.filter(
+              (pattern) => pattern !== nonogramColorsGroup,
             ),
             ...freePlayBannedModuleGroups,
           ],

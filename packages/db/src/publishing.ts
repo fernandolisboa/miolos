@@ -14,7 +14,7 @@ export {
 export { createPublishingDb } from "./client";
 export {
   getPublishedDailyWithSolution,
-  getPublishedNonogramMotifName,
+  getPublishedNonogramMotif,
   type DailyPuzzleRow,
 } from "./published";
 export { getRemoteConfig, setRemoteConfigValue } from "./remote-config";

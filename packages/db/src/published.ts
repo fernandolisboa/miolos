@@ -106,10 +106,16 @@ export async function getPublishedDailyWithSolution(
   return rows[0];
 }
 
-export async function getPublishedNonogramMotifName(
+export interface PublishedNonogramMotif {
+  readonly name: string | undefined;
+  readonly motifId: string;
+  readonly mirrored: boolean;
+}
+
+export async function getPublishedNonogramMotif(
   db: Db,
   date: string,
-): Promise<string | undefined> {
+): Promise<PublishedNonogramMotif | undefined> {
   try {
     const rows = await db
       .select({ content: dailyPuzzles.content })
@@ -120,12 +126,18 @@ export async function getPublishedNonogramMotifName(
     if (!row) {
       return undefined;
     }
-    const name = nonogramDailyContentSchema.parse(row.content).reveal.name;
+    const { name, motifId, mirrored } = nonogramDailyContentSchema.parse(
+      row.content,
+    ).reveal;
 
-    return /^[\s\p{Cf}]*$/u.test(name) ? undefined : name;
+    return {
+      name: /^[\s\p{Cf}]*$/u.test(name) ? undefined : name,
+      motifId,
+      mirrored,
+    };
   } catch (error) {
     console.error(
-      `getPublishedNonogramMotifName: could not read the motif name for ${date}`,
+      `getPublishedNonogramMotif: could not read the motif for ${date}`,
       error,
     );
     return undefined;

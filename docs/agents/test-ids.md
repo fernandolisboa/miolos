@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S193`    | `S192`         | never used            |
 | `T-DB`   | `S144`    | `S142`         | `T-DB-21`             |
 | `T-API`  | `S335`    | `S333`         | `T-API-16`            |
-| `T-WEB`  | `S820`    | `S810`         | `T-WEB-23`            |
+| `T-WEB`  | `S910`    | `S906`         | `T-WEB-23`            |
 | `T-LINT` | `S72`     | `S71`          | `T-LINT-10`           |
+
+The Nonogram tones thread (#366, ADR-0121) spent **`T-WEB-S900`…`S902`** in `picture-art.test.tsx` (tones paint per cell over the silhouette with an outline, unfit tones are ignored; the wipe only on a game that just ended with the setting on, never under reduced motion; every tone has a token in both themes and the `--ink` outline clears 3:1), **`S903`** in `nonogram-motif-name.test.tsx` (the daily conclusion paints the claim's `motifTones`), **`S904`** in `free-play-nonogram.test.tsx` (free play paints from the device with zero fetches) **`S905`** in `day-truth.test.tsx` (a tones-only refetch is a change) and **`S906`** in `free-play-graph.test.ts` (only `/modo-livre/nonogram` reaches the tones table). `S907…S909` are **burned**. `S820…S899` are reservations held by sibling threads, not free ids.
 
 The Recomeçar-and-Ajustes thread spent **`T-WEB-S810`** in `board-sizing.test.tsx` (the chrome's `.reset` row is a positioned flex row and `.control` is not positioned, so the confirm spans Recomeçar and Ajustes). `S811…S819` are **burned**.
 

@@ -124,6 +124,7 @@ function NonogramFreeBoard({
             size: state.size,
             cells: picture ?? [],
             label: messages.freePlay.solved.pictureAria,
+            tones: puzzle.tones,
           }}
         />
       )}
