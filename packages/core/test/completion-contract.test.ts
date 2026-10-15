@@ -730,6 +730,45 @@ describe("queensCompletionRequestSchema", () => {
   });
 });
 
+describe("squareGridSchema array cap", () => {
+  const cases = [
+    {
+      name: "nonogram",
+      schema: nonogramCompletionRequestSchema,
+      body: validNonogram,
+      makeGrid: nonogramGrid,
+      largest: 15,
+    },
+    {
+      name: "queens",
+      schema: queensCompletionRequestSchema,
+      body: validQueens,
+      makeGrid: queensGrid,
+      largest: 9,
+    },
+  ];
+
+  it.each(cases)(
+    "T-CORE-S192: $name refuses a grid past its largest size with a too_big issue and accepts the largest",
+    ({ schema, body, makeGrid, largest }) => {
+      const largestBody = { ...body, grid: makeGrid(largest) };
+      expect(schema.parse(largestBody)).toEqual(largestBody);
+
+      for (const length of [largest ** 2 + 1, (largest + 1) ** 2]) {
+        const result = schema.safeParse({
+          ...body,
+          grid: Array.from({ length }, () => 0),
+        });
+        expect(result.success, `${length}`).toBe(false);
+        expect(
+          result.error?.issues.map((issue) => issue.code),
+          `${length}`,
+        ).toContain("too_big");
+      }
+    },
+  );
+});
+
 describe("apiErrorResponseSchema", () => {
   it("parses the minimal envelope and rejects anything larger", () => {
     expect(apiErrorResponseSchema.parse({ error: "no-session" })).toEqual({

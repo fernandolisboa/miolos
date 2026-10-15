@@ -102,7 +102,7 @@ export const CROSSWORD_SIZES = [5, 7] as const;
 
 export type CrosswordSize = (typeof CROSSWORD_SIZES)[number];
 
-const MAX_CROSSWORD_SIZE = 7 satisfies CrosswordSize;
+const MAX_CROSSWORD_SIZE = Math.max(...CROSSWORD_SIZES);
 
 export const crosswordLetterSchema = z.string().regex(/^[a-z]$/);
 

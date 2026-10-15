@@ -1489,6 +1489,19 @@ describe("POST /completions — crossword (#276, ADR-0086)", () => {
     }
     expect(await completionRows()).toHaveLength(0);
 
+    const padded = await POST(
+      completionRequest({
+        token,
+        body: crosswordCompletionBody({
+          date: yesterday,
+          grid: [...five, ...Array.from({ length: 24 }, () => null)],
+        }),
+      }),
+    );
+    expect(padded.status).toBe(422);
+    expect(await errorOf(padded)).toEqual({ error: "grid-mismatch" });
+    expect(await completionRows()).toHaveLength(0);
+
     const response = await POST(
       completionRequest({
         token,

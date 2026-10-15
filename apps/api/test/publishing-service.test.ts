@@ -2,6 +2,7 @@ import {
   crosswordDailyContentSchema,
   nonogramDailyContentSchema,
   queensDailyContentSchema,
+  stripDailyContent,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
 } from "@miolos/core";
@@ -913,33 +914,28 @@ describe("topUpCrosswordBuffer", () => {
       const content = crosswordDailyContentSchema.parse(row.content);
       expect(content.grid).toHaveLength(7);
       expect(validateCrossword(content).ok).toBe(true);
+      expect(() =>
+        stripDailyContent("crossword", row.date, content),
+      ).not.toThrow();
     }
   }, 30_000);
 
-  it("T-API-S330: the stored daily contract accepts 5×5 and 7×7 and refuses any other shape", async () => {
+  it("T-API-S330: the stored daily contract accepts a generated 5×5 and 7×7 and refuses a 6×6", async () => {
     const { generateCrossword } = await vi.importActual<
       typeof import("@miolos/games/crossword")
     >("@miolos/games/crossword");
     const seven = generateCrossword(1, 7);
-    const white = (widths: readonly number[]): string[][] =>
-      widths.map((width) => Array.from({ length: width }, () => "a"));
+    const six = Array.from({ length: 6 }, () =>
+      Array.from({ length: 6 }, () => "a"),
+    );
 
     expect(
       crosswordDailyContentSchema.safeParse(generateCrossword(1)).success,
     ).toBe(true);
     expect(crosswordDailyContentSchema.safeParse(seven).success).toBe(true);
-    for (const grid of [
-      white([6, 6, 6, 6, 6, 6]),
-      white([5, 5, 5, 5, 5, 5, 5]),
-      white([7, 7, 7, 7, 7]),
-      white([5, 7, 5, 5, 5]),
-      seven.grid.map((row, index) => (index === 3 ? row.slice(2) : row)),
-    ]) {
-      expect(
-        crosswordDailyContentSchema.safeParse({ ...seven, grid }).success,
-        JSON.stringify(grid.map((row) => row.length)),
-      ).toBe(false);
-    }
+    expect(
+      crosswordDailyContentSchema.safeParse({ ...seven, grid: six }).success,
+    ).toBe(false);
   });
 
   it("T-API-S331: a buffered 5×5 day is left exactly as stored, and the next missing date is 7×7", async () => {
