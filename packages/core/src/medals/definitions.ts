@@ -16,6 +16,14 @@ export type MedalRule =
   | { readonly kind: "eachGameWon" }
   | { readonly kind: "curated" };
 
+// see ADR-0087
+export const ORIGINAL_GAMES = [
+  "binairo",
+  "sudoku",
+  "nonogram",
+  "termo",
+] as const satisfies readonly Game[];
+
 export interface MedalDefinition {
   readonly id: string;
   readonly rule: MedalRule;

@@ -3,7 +3,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import StatsPage from "../app/estatisticas/page";
-import styles from "../app/estatisticas/page.module.css";
+import styles from "../src/medals/medals-section.module.css";
 import { messages } from "../src/i18n";
 import { medalCopy } from "../src/medals/copy";
 
@@ -27,12 +27,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function medalRows(container: HTMLElement): Element[] {
-  return [...container.querySelectorAll(`.${styles.medalRow}`)];
+function medalItems(container: HTMLElement): Element[] {
+  return [...container.querySelectorAll(`.${styles.medal}`)];
 }
 
-describe("the earned medal list (T-WEB-S161)", () => {
-  it("renders LIST rows in catalog order whose visible name and description are the reachable accessible content, with the uniform stamp-ring — and silently drops an unknown id", async () => {
+describe("the earned medals (T-WEB-S161)", () => {
+  it("draws one medal per earned id in catalog order, each a button named by the medal whose description is its tip — and silently drops an unknown id", async () => {
     const payload: MedalsResponse = {
       medals: ["streak-7", "some-future-medal", "first-win"],
     };
@@ -41,36 +41,24 @@ describe("the earned medal list (T-WEB-S161)", () => {
     const { container } = render(<StatsPage />);
 
     expect(await screen.findByText(messages.medals.title)).toBeInTheDocument();
-    const list = container.querySelector(`.${styles.medalList}`);
+    const list = container.querySelector(`.${styles.list}`);
     expect(list?.tagName).toBe("UL");
     expect(list?.getAttribute("role")).toBe("list");
 
-    const rows = screen.getAllByRole("listitem");
+    const rows = within(list as HTMLElement).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
-    expect(medalRows(container)).toHaveLength(2);
+    expect(medalItems(container)).toHaveLength(2);
 
-    const [first, second] = rows as [HTMLElement, HTMLElement];
-    expect(
-      within(first).getByText(medalCopy["first-win"].name),
-    ).toBeInTheDocument();
-    expect(
-      within(first).getByText(medalCopy["first-win"].description),
-    ).toBeInTheDocument();
-    expect(
-      within(second).getByText(medalCopy["streak-7"].name),
-    ).toBeInTheDocument();
-    expect(
-      within(second).getByText(medalCopy["streak-7"].description),
-    ).toBeInTheDocument();
-    for (const row of rows) {
-      expect(
-        row.querySelector(`.${styles.medalWords}`)?.closest("[aria-hidden]"),
-      ).toBeNull();
-    }
-
-    for (const row of rows) {
-      expect(row.querySelectorAll(`.${styles.medalRing}`)).toHaveLength(1);
-    }
+    const expected = ["first-win", "streak-7"] as const;
+    rows.forEach((row, index) => {
+      const copy = medalCopy[expected[index] ?? "first-win"];
+      const button = within(row).getByRole("button", { name: copy.name });
+      expect(button).toHaveAccessibleDescription(copy.description);
+      expect(within(row).getByText(copy.name)).toBeVisible();
+      expect(within(row).getByText(copy.description)).not.toBeVisible();
+      expect(row.querySelectorAll("svg")).toHaveLength(1);
+      expect(row.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    });
   });
 });
 
@@ -81,7 +69,7 @@ describe("the medal section's nothings (T-WEB-S162)", () => {
     const { container } = render(<StatsPage />);
 
     expect(screen.queryByText(messages.medals.title)).not.toBeInTheDocument();
-    expect(medalRows(container)).toHaveLength(0);
+    expect(medalItems(container)).toHaveLength(0);
     expect(container.querySelector(`.${styles.medals}`)).toBeNull();
 
     expect(screen.getByText(messages.stats.title)).toBeInTheDocument();
@@ -110,7 +98,7 @@ describe("the medal section's nothings (T-WEB-S162)", () => {
       });
       expect(medalsClient.fetchMedals).toHaveBeenCalled();
       expect(screen.queryByText(messages.medals.title)).not.toBeInTheDocument();
-      expect(medalRows(container)).toHaveLength(0);
+      expect(medalItems(container)).toHaveLength(0);
       expect(container.querySelector(`.${styles.medals}`)).toBeNull();
 
       expect(screen.getByText(messages.stats.title)).toBeInTheDocument();

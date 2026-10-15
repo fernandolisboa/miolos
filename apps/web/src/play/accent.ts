@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 
 import type { Game } from "@miolos/core";
 
-const ACCENTS: Readonly<Record<Game, string>> = {
+export const ACCENTS: Readonly<Record<Game, string>> = {
   termo: "var(--accent-termo)",
   sudoku: "var(--accent-sudoku)",
   nonogram: "var(--accent-nonogram)",

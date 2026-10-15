@@ -11,10 +11,22 @@
   padding: var(--space-12) 80px 0;
 }
 
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+}
+
+.headerEnd {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
 }
 
 .wordmark {
@@ -294,15 +306,6 @@
   padding-bottom: var(--space-1);
 }
 
-/* A SHARED class over four links. All four carry an href since #31 landed
-   `/arquivo`, so this selector now matches every one of them — it is kept
-   rather than flattened to a bare `.secondaryLink` rule, because the
-   `.cta[href]` discipline above is what makes a future inert link inert by
-   construction instead of by review. */
-.secondaryLink[href] {
-  cursor: pointer;
-}
-
 .signOff {
   display: flex;
   align-items: center;
@@ -336,6 +339,23 @@
   display: none;
 }
 
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-6);
+  padding: 0 0 var(--space-3);
+}
+
+.footerLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  font-size: 13px;
+  color: var(--ink-2);
+  text-underline-offset: 3px;
+}
+
 @media (max-width: 768px) {
   .page {
     padding: 26px var(--space-5) 0;
@@ -367,6 +387,12 @@
   .metaLine {
     margin-top: 5px;
     font-size: 12px;
+  }
+
+  .headerEnd {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-3);
   }
 
   .streakStamp {
@@ -513,10 +539,6 @@
   }
 
   .secondaryLinks {
-    /* Five links (#158 added Termos de Uso) no longer fit one 390px row:
-       the unwrapped flex row clipped its first and last links at the
-       viewport edges (#169). Wrap instead, with an explicit row-gap so
-       the wrapped rows do not sit the 28px column gap apart. */
     flex-wrap: wrap;
     gap: var(--space-7);
     row-gap: var(--space-3);

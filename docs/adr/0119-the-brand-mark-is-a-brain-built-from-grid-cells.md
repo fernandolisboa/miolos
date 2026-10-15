@@ -1,6 +1,7 @@
 # ADR-0119 — The brand mark is a brain built from grid cells
 
 **Status:** Accepted — 2026-10-15
+**Amends:** [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) decision 2 — `/modo-livre/nonogram` re-sized to 67 KB (decision 7 below).
 
 ## Context
 
@@ -14,6 +15,7 @@
 4. **A loading board shows the mark shuffling** (`BoardCard` with `placeholder` and no overlay): CSS keyframes cycle each cell through the accents and blank paper on staggered durations, so it looks random with no JavaScript. Under reduced motion it stands still.
 5. **Two static masters, both on token literals.** `apps/web/app/icon.svg` is the favicon, with an inline `prefers-color-scheme: dark` block; `apps/web/scripts/app-icon.svg` is the master `render-icons.mjs` turns into the PWA and apple PNGs. `T-WEB-S753` ties both to `BRAIN` and to `tokens.css`.
 6. **The descriptor is copy.** The hub shows `messages.brand.tagline` under the wordmark and `messages.brand.signOff` at its foot; `meta.title`, `meta.description` and the OG site tagline are built from the same strings.
+7. **`/modo-livre/nonogram` is re-sized from 66 to 67 KB.** The mark in the play top bar and on the loading board took it to 66.2 KB over `/`, measured after #359–#364. Splitting the mark out with `React.lazy` broke the preload contract T-WEB-S289 pins, so Fernando approved the raise on 2026-10-15 (decision card in the logo thread: up to 2–3 KB on the three free-play routes). Only Nonogram needed it; Termo (61.5 of 62) and Cruzadinha (663.4 of 664) still fit.
 
 ## Consequences
 

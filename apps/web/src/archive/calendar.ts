@@ -51,3 +51,17 @@ export function archiveCalendarMonth(
     return { date, linked: publishedDates.has(date) };
   });
 }
+
+export function adjacentMonths(
+  months: readonly string[],
+  month: string,
+): {
+  readonly previous: string | undefined;
+  readonly next: string | undefined;
+} {
+  const index = months.indexOf(month);
+  return {
+    previous: index === -1 ? undefined : months[index + 1],
+    next: index <= 0 ? undefined : months[index - 1],
+  };
+}

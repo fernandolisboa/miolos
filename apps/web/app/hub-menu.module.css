@@ -1,0 +1,96 @@
+.root {
+  position: relative;
+}
+
+.button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  padding: 0;
+  background: var(--paper-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-settle);
+}
+
+.button:hover,
+.button[aria-expanded="true"] {
+  border-color: var(--ink);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.label {
+  composes: hidden from "../src/components/visually-hidden.module.css";
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 3;
+  box-sizing: border-box;
+  min-width: 200px;
+  margin: 0;
+  padding: var(--space-2) 0;
+  list-style: none;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent-app) 25%, transparent);
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-5);
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 19px;
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--paper-tint);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+@media (max-width: 768px) {
+  .link {
+    font-size: 17px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}

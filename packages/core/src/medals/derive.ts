@@ -1,6 +1,5 @@
 import { computeStreak } from "../streak";
 import { epochDay } from "../date";
-import type { Game } from "../game";
 import {
   countsLateWon,
   countsOnTimeWon,
@@ -9,19 +8,16 @@ import {
   type PublishedDaily,
   type StatsRow,
 } from "../stats";
-import { MEDAL_DEFINITIONS, type MedalId, type MedalRule } from "./definitions";
+import {
+  MEDAL_DEFINITIONS,
+  ORIGINAL_GAMES,
+  type MedalId,
+  type MedalRule,
+} from "./definitions";
 
 function countsAnyWon(row: StatsRow): boolean {
   return countsOnTimeWon(row) || countsLateWon(row);
 }
-
-// see ADR-0087
-const ORIGINAL_GAMES = [
-  "binairo",
-  "sudoku",
-  "nonogram",
-  "termo",
-] as const satisfies readonly Game[];
 
 type ComputableRule = Exclude<MedalRule, { readonly kind: "curated" }>;
 

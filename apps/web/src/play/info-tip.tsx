@@ -1,16 +1,10 @@
 "use client";
 
-import { useId, useRef, useState, type PointerEvent } from "react";
-
 import { messages } from "../i18n";
 import styles from "./info-tip.module.css";
-import { useDismiss } from "./use-dismiss";
+import { useTip } from "./use-tip";
 
 type Align = "start" | "center";
-
-function isEscape(event: KeyboardEvent): boolean {
-  return event.key === "Escape";
-}
 
 const ALIGN: Readonly<Record<Align, string | undefined>> = {
   start: styles.alignStart,
@@ -24,53 +18,15 @@ export function InfoTip({
   readonly text: string;
   readonly align: Align;
 }) {
-  const [open, setOpen] = useState(false);
-  const tipId = useId();
-  const rootRef = useRef<HTMLSpanElement>(null);
-  const pressedBy = useRef<string | null>(null);
-
-  useDismiss(open, rootRef, setOpen, isEscape);
-
-  const hover = (next: boolean) => (event: PointerEvent) => {
-    if (event.pointerType !== "mouse") return;
-    pressedBy.current = null;
-    setOpen(next);
-  };
+  const [open, tipId, rootProps, buttonProps] = useTip<HTMLSpanElement>();
 
   return (
-    <span
-      ref={rootRef}
-      className={`${styles.root} ${ALIGN[align] ?? ""}`}
-      onPointerEnter={hover(true)}
-      onPointerLeave={hover(false)}
-    >
+    <span className={`${styles.root} ${ALIGN[align] ?? ""}`} {...rootProps}>
       <button
         type="button"
         className={styles.button}
         aria-label={messages.play.tipAria}
-        aria-expanded={open}
-        aria-describedby={tipId}
-        onMouseDown={(event) => {
-          event.preventDefault();
-        }}
-        onPointerDown={(event) => {
-          pressedBy.current = event.pointerType;
-        }}
-        onPointerCancel={() => {
-          pressedBy.current = null;
-        }}
-        onFocus={() => {
-          if (pressedBy.current === null) setOpen(true);
-        }}
-        onBlur={() => {
-          pressedBy.current = null;
-          setOpen(false);
-        }}
-        onClick={() => {
-          const mouse = pressedBy.current === "mouse";
-          pressedBy.current = null;
-          setOpen((was) => mouse || !was);
-        }}
+        {...buttonProps}
       >
         <span aria-hidden>i</span>
       </button>

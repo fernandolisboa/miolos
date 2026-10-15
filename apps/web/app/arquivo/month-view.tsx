@@ -1,25 +1,16 @@
-import Link from "next/link";
-
-import {
-  archiveMonthRoute,
-  formatMonth,
-  messages,
-  routes,
-} from "../../src/i18n";
+import { messages, routes } from "../../src/i18n";
 import { PageTopBar } from "../../src/components/page-top-bar";
 import styles from "./arquivo.module.css";
-import { ArchiveCalendar } from "./calendar-grid";
+import { ArchiveBody } from "./archive-body";
 
 export function ArchiveMonthView({
   month,
   dates,
-  previous,
-  next,
+  months,
 }: {
   readonly month: string;
   readonly dates: ReadonlySet<string>;
-  readonly previous: string | undefined;
-  readonly next: string | undefined;
+  readonly months: readonly string[];
 }) {
   const copy = messages.archive;
 
@@ -34,42 +25,7 @@ export function ArchiveMonthView({
         kicker={copy.title}
       />
 
-      <div className={styles.titleBlock}>
-        <h1 className={styles.title}>{formatMonth(`${month}-01`)}</h1>
-      </div>
-
-      <section className={styles.section}>
-        <ArchiveCalendar month={month} publishedDates={dates} />
-      </section>
-
-      <nav className={styles.monthNav}>
-        {previous === undefined ? null : (
-          <Link
-            className={styles.monthNavLink}
-            href={archiveMonthRoute(previous)}
-            prefetch={false}
-            aria-label={copy.month.previousAria(formatMonth(`${previous}-01`))}
-          >
-            <span className={styles.monthNavKicker}>{copy.month.previous}</span>
-            <span className={styles.monthNavMonth}>
-              {formatMonth(`${previous}-01`)}
-            </span>
-          </Link>
-        )}
-        {next === undefined ? null : (
-          <Link
-            className={`${styles.monthNavLink} ${styles.monthNavNext}`}
-            href={archiveMonthRoute(next)}
-            prefetch={false}
-            aria-label={copy.month.nextAria(formatMonth(`${next}-01`))}
-          >
-            <span className={styles.monthNavKicker}>{copy.month.next}</span>
-            <span className={styles.monthNavMonth}>
-              {formatMonth(`${next}-01`)}
-            </span>
-          </Link>
-        )}
-      </nav>
+      <ArchiveBody month={month} dates={dates} months={months} />
     </main>
   );
 }

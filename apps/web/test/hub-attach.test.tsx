@@ -175,10 +175,10 @@ describe("HubAttach sent and error states (T-WEB-S138)", () => {
 });
 
 describe("the privacy links ride `routes`, never literals (T-WEB-S143)", () => {
-  it("the hub nav carries the real /privacidade link and the card's consent copy links it too", async () => {
+  it("the hub footer carries the real /privacidade link and the card's consent copy links it too", async () => {
     const hub = renderToStaticMarkup(<HojePage />);
     expect(hub).toContain(`href="${routes.privacy}"`);
-    expect(hub).toContain(messages.hoje.links.privacy);
+    expect(hub).toContain(messages.hoje.footer.privacy);
 
     await renderEligibleCard();
     const link = screen.getByRole("link", {
@@ -189,10 +189,10 @@ describe("the privacy links ride `routes`, never literals (T-WEB-S143)", () => {
 });
 
 describe("the terms link rides beside the policy at both legal link sites (T-WEB-S294)", () => {
-  it("the hub nav carries the real /termos link and the card's legal-links line links it too", async () => {
+  it("the hub footer carries the real /termos link and the card's legal-links line links it too", async () => {
     const hub = renderToStaticMarkup(<HojePage />);
     expect(hub).toContain(`href="${routes.terms}"`);
-    expect(hub).toContain(messages.hoje.links.terms);
+    expect(hub).toContain(messages.hoje.footer.terms);
 
     await renderEligibleCard();
     const link = screen.getByRole("link", {
