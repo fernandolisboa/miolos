@@ -145,6 +145,7 @@ function SudokuFreeBoard({
           hint: {
             ready: hintReady,
             used: state.hint.used,
+            cell: state.hint.lastIndex,
             explain: sudokuHintExplanation(state.hint.reason),
             onReveal: revealHint,
           },

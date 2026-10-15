@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new from #331. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new from #332. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -13,6 +13,8 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 **The free hint allowance is the `freeHintsPerPuzzle` key** (1 to 9, default 3, ADR-0098): daily and archive puzzles read it from `GET /hints` through `FetchedFreeHints`; free play stays at `FREE_HINTS_PER_PUZZLE`. `HINTS_PER_PUZZLE_CEILING` (9) is the only wire bound. Before rolling either app back, set the key to 3 or less and wait for the rollover.
 
 **Control tips** (#331): the keyboard and mouse tips of Termo, Sudoku, Nonogram, Binairo and Rainhas sit behind one circled-i button, `InfoTip` (`play/info-tip.tsx`): tap toggles it, hover and keyboard focus open it, Escape, blur and an outside tap close it. Each game keeps its own visibility rule on the `.affordance` wrapper (hidden on phones). The Nonogram toggle and the Binairo buttons are centred in a `1fr auto 1fr` row with the tip in the third column.
+
+**The hint's reason is a card on the hinted cell** (#332, ADR-0113): `HintCard` (`play/hint-card.tsx`) is drawn by the chrome from `readouts.hint.cell` (`lastIndex`), placed by the pure `placeHintCard` (`play/hint-card-place.ts`) and closed by the next press or key (`useDismiss`, shared with `InfoTip`). The live region stays, visually hidden; tests read the reason through `SPOKEN` (`test/hint-reason.ts`) because the sentence is in the DOM twice. `.hintSlot` is gone.
 
 **Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
 
@@ -29,7 +31,7 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 **Recomeçar** (#298, ADR-0096): every grid game resets through `resetBoard` (`apps/web/src/play/reset-board.ts`); `resetBoard` also clears the hint's reason and spotlight, and `ResetControl` (`play/reset-control.tsx`) is the chrome's one stateful child. The hint is never refunded and the clock never rewinds. Test ids `T-WEB-S514…S517`.
 
 **Boards size from the space they have** (#303, ADR-0103): `BoardCard` (`play/board-card.tsx`) wraps every board in a size container; `--board-side` is the largest square the column and viewport allow, up to the page class's `--board-max`. `--board-below` is a hand-kept mirror of the rows under the card.
-The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, `.hintSlot` reserves the explanation, and free play's `GeneratingNote` is `BoardCard`'s `overlay`. The Cruzadinha's clues sit beside the grid from a 640px column (`crossword` container) and fold behind *Pistas* below it. Pinned by `T-WEB-S596…S605`; jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
+The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hint, and free play's `GeneratingNote` is `BoardCard`'s `overlay`. The Cruzadinha's clues sit beside the grid from a 640px column (`crossword` container) and fold behind *Pistas* below it. Pinned by `T-WEB-S596…S605`; jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
 ## Traps
 

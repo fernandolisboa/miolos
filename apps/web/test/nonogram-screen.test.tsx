@@ -40,6 +40,7 @@ import {
 } from "./css-source";
 import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
+import { SPOKEN } from "./hint-reason";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -1054,7 +1055,7 @@ describe("the four branches (T-WEB-S47)", () => {
     expect(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE - 1)),
     ).toHaveAttribute("aria-disabled", "false");
-    expect(screen.getByText(FIRST_SENTENCE)).toBeInTheDocument();
+    expect(screen.getByText(FIRST_SENTENCE, SPOKEN)).toBeInTheDocument();
     expect(screen.getByText(copy.progressLong(1, TARGET))).toBeInTheDocument();
 
     const filled = container.querySelectorAll(
@@ -1105,13 +1106,13 @@ describe("the hint names its line and lights the cells it reasons about (T-WEB-S
     expect(cellAt(container, FIRST_STEP.index).classList).toContain(
       styles.cellHinted,
     );
-    expect(screen.getByText(FIRST_SENTENCE)).toBeInTheDocument();
+    expect(screen.getByText(FIRST_SENTENCE, SPOKEN)).toBeInTheDocument();
     expect(spotlit(container)).toEqual(FIRST_STEP.cells);
 
     fireEvent.click(cellAt(container, FIRST_STEP.cells.at(-1) ?? 0));
 
     expect(spotlit(container)).toEqual([]);
-    expect(screen.getByText(FIRST_SENTENCE)).toBeInTheDocument();
+    expect(screen.getByText(FIRST_SENTENCE, SPOKEN)).toBeInTheDocument();
   });
 
   it("reads out a correction and lights nothing", () => {
@@ -1124,7 +1125,10 @@ describe("the hint names its line and lights the cells it reasons about (T-WEB-S
     );
 
     expect(
-      screen.getByText(messages.games.nonogram.play.hint.explain.correction),
+      screen.getByText(
+        messages.games.nonogram.play.hint.explain.correction,
+        SPOKEN,
+      ),
     ).toBeInTheDocument();
     expect(spotlit(container)).toEqual([]);
   });

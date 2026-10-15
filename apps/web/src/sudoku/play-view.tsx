@@ -46,6 +46,7 @@ export function PlayView({
           hint: {
             ready: play.hintReady,
             used: state.hint.used,
+            cell: state.hint.lastIndex,
             explain: sudokuHintExplanation(state.hint.reason),
             onReveal: play.revealHint,
           },

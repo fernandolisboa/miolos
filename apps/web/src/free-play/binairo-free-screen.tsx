@@ -122,6 +122,7 @@ function BinairoFreeBoard({
           hint: {
             ready: hintReady,
             used: state.hint.used,
+            cell: state.hint.lastIndex,
             explain: binairoHintExplanation(state.hint.reason),
             onReveal: revealHint,
           },

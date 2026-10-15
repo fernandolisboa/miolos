@@ -21,6 +21,7 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
     hint: {
       ready: board.hintReady,
       used: state.hint.used,
+      cell: state.hint.lastIndex,
       explain: queensHintExplanation(state.size, state.hint.reason),
       onReveal: board.revealHint,
     },

@@ -21,6 +21,7 @@ export function crosswordReadouts(board: CrosswordBoard): PlayChromeReadouts {
     hint: {
       ready: board.hintReady,
       used: board.state.hint.used,
+      cell: board.state.hint.lastIndex,
       explain: crosswordHintExplanation(board.state.hint.reason),
       onReveal: board.revealHint,
     },

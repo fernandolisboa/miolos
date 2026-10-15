@@ -366,38 +366,25 @@ describe("one fold at 1023px, one two-column band above it (T-WEB-S601)", () => 
   });
 });
 
-describe("the hint explanation keeps a reserved slot where the height allows (T-WEB-S602)", () => {
-  const slot = bodyOf(SHARED_CSS, ".hintSlot");
-  const line = pixels(decl(slot, "--hint-line"));
-
-  function reservedLines(media: string): number {
-    const minHeight = decl(
-      bodyOf(bodyOf(SHARED_CSS, media), ".hintSlot"),
-      "min-height",
+describe("the hint's reason takes no room under the board (T-WEB-S602)", () => {
+  it("is read from a clipped live region and no rule reserves a slot for it", () => {
+    expect(decl(bodyOf(SHARED_CSS, ".hintLive"), "composes")).toBe(
+      'hidden from "../components/visually-hidden.module.css"',
     );
-    const match =
-      /^calc\(var\(--space-3\) \+ (\d+) \* var\(--hint-line\)\)$/.exec(
-        minHeight ?? "",
-      );
-    if (match === null) {
-      throw new Error(`\`${String(minHeight)}\` is not margin plus N lines`);
-    }
-    return Number(match[1]);
-  }
-
-  it("counts the slot in the line height the explanation is set in", () => {
-    const explain = bodyOf(SHARED_CSS, ".hintExplain");
-
-    expect(decl(explain, "line-height")).toBe("var(--hint-line)");
-    expect(decl(explain, "margin")).toMatch(/^var\(--space-3\) 0 0$/);
-    expect(line).toBeGreaterThan(pixels(decl(explain, "font-size")));
+    const hidden = bodyOf(
+      stylesheet("src/components/visually-hidden.module.css"),
+      ".hidden",
+    );
+    expect(decl(hidden, "position")).toBe("absolute");
+    expect(decl(hidden, "clip-path")).toBe("inset(50%)");
+    expect(SHARED_CSS).not.toMatch(/hintSlot|--hint-line/);
   });
 
-  it("reserves two lines in the two-column band and three on a tall single column", () => {
-    expect(reservedLines("@media (min-width: 1024px)")).toBe(2);
-    expect(
-      reservedLines("@media (max-width: 1023px) and (min-height: 800px)"),
-    ).toBe(3);
+  it("draws the visible card out of flow, so revealing a hint moves nothing", () => {
+    const card = bodyOf(stylesheet("src/play/hint-card.module.css"), ".card");
+
+    expect(decl(card, "position")).toBe("absolute");
+    expect(decl(card, "pointer-events")).toBe("none");
   });
 });
 

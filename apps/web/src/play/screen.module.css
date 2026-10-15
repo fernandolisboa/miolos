@@ -302,19 +302,8 @@
   transform: translate(-50%, -50%);
 }
 
-.hintSlot {
-  --hint-line: 19.5px;
-
-  display: flow-root;
-  align-self: stretch;
-}
-
-.hintExplain {
-  margin: var(--space-3) 0 0;
-  font-size: 13px;
-  line-height: var(--hint-line);
-  color: var(--ink-2);
-  text-align: center;
+.hintLive {
+  composes: hidden from "../components/visually-hidden.module.css";
 }
 
 /* ── pre-hydration placeholders ──────────────────────────────────────── */
@@ -329,12 +318,6 @@
 @media (prefers-reduced-motion: reduce) {
   .hint {
     transition: none;
-  }
-}
-
-@media (min-width: 1024px) {
-  .hintSlot {
-    min-height: calc(var(--space-3) + 2 * var(--hint-line));
   }
 }
 
@@ -389,12 +372,6 @@
     padding: var(--space-4) var(--space-5);
     min-height: 50px;
     height: auto;
-  }
-}
-
-@media (max-width: 1023px) and (min-height: 800px) {
-  .hintSlot {
-    min-height: calc(var(--space-3) + 3 * var(--hint-line));
   }
 }
 

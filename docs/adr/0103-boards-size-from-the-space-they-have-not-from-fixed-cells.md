@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-13 (issue #303)
 **Depends on:** [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md), [ADR-0042](./0042-the-termo-board-is-read-only-output.md), [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md), [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md)
 **Supersedes in part:** [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md) decisions 5 and 6, and [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 6 geometry: pixel cells, the 1140px fold, the Termo card cap and `--board-mobile-max`. Two values change with them: the Termo keyboard rows go 52px to 48px (desktop `margin-top` 30px to 20px), and the Nonogram mobile brush control 60px to 48px tall. The 350px mobile Termo keyboard width and the 13.203px clue floor stand; the desktop keyboard went 552px to 608px in #321 (ADR-0042 decision 6).
+**Amended by:** [ADR-0113](./0113-the-hint-reason-shows-in-a-card-on-the-hinted-cell.md) (#332) — decision 7: the reserved slot is gone; the reason shows in a card out of flow.
 **Amends:** ADR-0035 decision 7 (its exemption stands, the control height above changes); [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md) (`BoardCard` takes the controls as a node); [ADR-0041](./0041-accents-colour-shapes-never-words.md) consequence (d) (the kickers hide at 1023px on the play screen, 1140px on the conclusion).
 
 ## Context

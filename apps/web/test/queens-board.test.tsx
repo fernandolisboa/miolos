@@ -17,6 +17,7 @@ import { contrast, deltaE76 } from "./contrast";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
 import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
+import { SPOKEN } from "./hint-reason";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -547,13 +548,13 @@ describe("the Rainhas hint says why and tints its unit (T-WEB-S575)", () => {
     const sentence = queensHintExplanation(N, { kind: "step", step: STEP });
     expect(labelOf(STEP.index)).toBe(expectedLabel(STEP.index, 1));
     expect(cellAt(STEP.index).classList).toContain(styles.cellHinted);
-    expect(screen.getByText(sentence ?? "")).toBeInTheDocument();
+    expect(screen.getByText(sentence ?? "", SPOKEN)).toBeInTheDocument();
     expect(spotlit()).toEqual(STEP.cells);
 
     fireEvent.click(cellAt(STEP.cells[0] === 0 ? 1 : 0), { detail: 0 });
 
     expect(spotlit()).toEqual([]);
-    expect(screen.getByText(sentence ?? "")).toBeInTheDocument();
+    expect(screen.getByText(sentence ?? "", SPOKEN)).toBeInTheDocument();
   });
 
   it("reads out a correction and tints nothing", () => {
@@ -565,7 +566,9 @@ describe("the Rainhas hint says why and tints its unit (T-WEB-S575)", () => {
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
     );
 
-    expect(screen.getByText(copy.hint.explain.correction)).toBeInTheDocument();
+    expect(
+      screen.getByText(copy.hint.explain.correction, SPOKEN),
+    ).toBeInTheDocument();
     expect(spotlit()).toEqual([]);
   });
 });
@@ -580,7 +583,9 @@ describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB
       "aria-disabled",
       "true",
     );
-    expect(screen.getByText(/ainda pode ter rainha\.$/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/ainda pode ter rainha\.$/, SPOKEN),
+    ).toBeInTheDocument();
     const queens = QUEEN_CELLS.filter((index) =>
       labelOf(index).endsWith(": rainha"),
     );
@@ -598,7 +603,9 @@ describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB
     );
 
     expect(labelOf(wrong)).toBe(expectedLabel(wrong, 0));
-    expect(screen.getByText(copy.hint.explain.correction)).toBeInTheDocument();
+    expect(
+      screen.getByText(copy.hint.explain.correction, SPOKEN),
+    ).toBeInTheDocument();
   });
 
   it("swaps the conclusion in place on the last queen, with no navigation", async () => {
