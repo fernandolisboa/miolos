@@ -12,7 +12,8 @@ import { renderTermoFreePoolModule } from "../../scripts/render-termo-free-pool"
 import { normalizeWord } from "../../src/normalize";
 import { isValidGuess } from "../../src/termo/word-list";
 import { TERMO_ANSWERS } from "../../src/termo-answers";
-import { drawFreeTermoWord } from "../../src/termo-free";
+import { createSeededRandom } from "../../src/random";
+import { drawFreeTermoWords } from "../../src/termo-free";
 import { FREE_POOL_CANONICALS } from "../../src/termo-free/pool.generated";
 import { propertyRuns } from "../property-runs";
 
@@ -78,16 +79,46 @@ describe("the Termo free pool", () => {
   it("draws deterministically, for every uint32 seed, a pool word that is never an answer", () => {
     fc.assert(
       fc.property(uint32, (seed) => {
-        const word = drawFreeTermoWord(seed);
-        expect(drawFreeTermoWord(seed)).toBe(word);
+        const [word = ""] = drawFreeTermoWords(seed, 1);
+        expect(drawFreeTermoWords(seed, 1)).toEqual([word]);
         expect(POOL_SET.has(word)).toBe(true);
         expect(ANSWER_FORMS.has(normalizeWord(word))).toBe(false);
       }),
       { numRuns: propertyRuns(2000) },
     );
     for (const seed of [0, 0xffffffff]) {
-      expect(POOL_SET.has(drawFreeTermoWord(seed))).toBe(true);
+      expect(POOL_SET.has(drawFreeTermoWords(seed, 1)[0] ?? "")).toBe(true);
     }
+  });
+
+  it("draws a single word exactly as before the variants", () => {
+    fc.assert(
+      fc.property(uint32, (seed) => {
+        expect(drawFreeTermoWords(seed, 1)).toEqual([
+          POOL[createSeededRandom(seed).nextInt(POOL.length)],
+        ]);
+      }),
+      { numRuns: propertyRuns(2000) },
+    );
+  });
+
+  it("draws N distinct pool words, deterministically, whose first is the single draw (property)", () => {
+    fc.assert(
+      fc.property(uint32, fc.integer({ min: 1, max: 4 }), (seed, count) => {
+        const words = drawFreeTermoWords(seed, count);
+        expect(drawFreeTermoWords(seed, count)).toEqual(words);
+        expect(words).toHaveLength(count);
+        expect(new Set(words.map(normalizeWord)).size).toBe(count);
+        expect(words.every((word) => POOL_SET.has(word))).toBe(true);
+        expect(words[0]).toBe(drawFreeTermoWords(seed, 1)[0]);
+      }),
+      { numRuns: propertyRuns(2000) },
+    );
+  });
+
+  it("refuses a count the pool cannot fill", () => {
+    expect(() => drawFreeTermoWords(1, 0)).toThrow(RangeError);
+    expect(() => drawFreeTermoWords(1, POOL_COUNT + 1)).toThrow(RangeError);
   });
 });
 

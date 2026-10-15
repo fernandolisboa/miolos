@@ -15,18 +15,19 @@ export function FreePlaySolvedCard<T extends string | number>({
   game,
   choice,
   picture,
-  word,
+  words,
+  lost = false,
   onAgain,
   children,
 }: {
   readonly game: FreePlayGame;
   readonly choice?: FreePlayChoice<T>;
   readonly picture?: ReactNode;
-  readonly word?: { readonly canonical: string; readonly won: boolean };
+  readonly words?: readonly string[];
+  readonly lost?: boolean;
   readonly onAgain: () => void;
   readonly children?: ReactNode;
 }) {
-  const lost = word?.won === false;
   const copy = messages.freePlay.solved;
 
   return (
@@ -55,10 +56,16 @@ export function FreePlaySolvedCard<T extends string | number>({
           {children !== undefined && (
             <div className={styles.boardRow}>{children}</div>
           )}
-          {word !== undefined && (
+          {words !== undefined && (
             <p className={styles.wordLine}>
-              <span className={styles.wordLead}>{copy.wordLead}</span>
-              <span className={styles.word}>{word.canonical}</span>
+              <span className={styles.wordLead}>
+                {words.length === 1 ? copy.wordLead : copy.wordsLead}
+              </span>
+              {words.map((word) => (
+                <span key={word} className={styles.word}>
+                  {word}
+                </span>
+              ))}
             </p>
           )}
           {picture !== undefined && (

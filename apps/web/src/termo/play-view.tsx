@@ -1,6 +1,6 @@
 import { MAX_GUESSES, WORD_LENGTH } from "@miolos/games/termo";
 import Link from "next/link";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import { Wordmark } from "../components/brand-mark";
 import { formatLongDate, messages, routes } from "../i18n";
@@ -57,7 +57,11 @@ function TermoHeading({
           {chrome.back.label}
         </Link>
         <Wordmark className={screen.wordmark} />
-        <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
+        {chrome.picker ?? (
+          <span className={screen.barKicker}>
+            {messages.games.termo.kicker}
+          </span>
+        )}
         <span className={screen.topDate}>
           {chrome.topTag ?? formatLongDate(date)}
         </span>
@@ -73,7 +77,7 @@ function TermoHeading({
       <PlayTitle
         kicker={messages.games.termo.kicker}
         title={copy.title}
-        rules={copy.rules}
+        rules={chrome.rules ?? copy.rules}
         note={chrome.note ?? null}
         inert={progress === null}
       />
@@ -81,25 +85,103 @@ function TermoHeading({
   );
 }
 
-export function PlayView({
-  play,
-  chrome = DAILY_CHROME,
+export function TermoPage({
+  chrome,
+  date,
+  used,
+  maxGuesses = MAX_GUESSES,
+  announcement,
+  children,
 }: {
-  readonly play: TermoPlay;
-  readonly chrome?: TermoChrome;
+  readonly chrome: TermoChrome;
+  readonly date: string;
+  readonly used: number;
+  readonly maxGuesses?: number;
+  readonly announcement: string;
+  readonly children: ReactNode;
 }) {
-  const { state } = play;
   const copy = messages.games.termo.play;
-  const activeKeyRef = useRef<HTMLButtonElement | null>(null);
 
-  const playRef = useRef(play);
+  return (
+    <main
+      className={[screen.page, styles.pageTermo, chrome.pageClassName]
+        .filter(Boolean)
+        .join(" ")}
+      style={ACCENT}
+      data-play-state="playing"
+    >
+      <TermoHeading
+        chrome={chrome}
+        date={date}
+        progress={copy.progressShort(used, maxGuesses)}
+      />
+
+      <div className={screen.statsCard}>
+        <div aria-hidden className={screen.tape} />
+        <div className={screen.statRow}>
+          <span className={screen.statLabel}>
+            {messages.play.progressLabel}
+          </span>
+          <span className={screen.progressCard}>
+            {copy.progressLong(used, maxGuesses)}
+          </span>
+        </div>
+      </div>
+
+      <section className={screen.board}>
+        {children}
+
+        <span className={styles.affordance}>
+          <InfoTip text={copy.keyboard.affordance} align="center" />
+        </span>
+
+        <p role="status" className={styles.announcer}>
+          {announcement}
+        </p>
+      </section>
+    </main>
+  );
+}
+
+export function TermoNotice({
+  notice,
+  nonce,
+  children,
+}: {
+  readonly notice: string | null;
+  readonly nonce: number;
+  readonly children?: ReactNode;
+}) {
+  return (
+    <div className={styles.noticeRow}>
+      <p role="status" className={styles.notice}>
+        {notice ?? BLANK_READOUT}
+
+        <span className={styles.nonce}>{ZWSP.repeat(nonce % 2)}</span>
+      </p>
+
+      {children}
+    </div>
+  );
+}
+
+interface TermoKeys extends Pick<
+  TermoPlay,
+  "type" | "erase" | "select" | "submit"
+> {
+  readonly live: boolean;
+  readonly cursor: number;
+}
+
+export function useTermoKeys(keys: TermoKeys): (key: string) => boolean {
+  const keysRef = useRef(keys);
   useEffect(() => {
-    playRef.current = play;
+    keysRef.current = keys;
   });
 
   const onKey = useCallback((key: string) => {
-    const current = playRef.current;
-    return current.state.status === "playing" && pressKey(key, current);
+    const current = keysRef.current;
+    return current.live && pressKey(key, current);
   }, []);
 
   useEffect(() => {
@@ -126,118 +208,101 @@ export function PlayView({
     };
   }, [onKey]);
 
+  return onKey;
+}
+
+export function PlayView({
+  play,
+  chrome = DAILY_CHROME,
+}: {
+  readonly play: TermoPlay;
+  readonly chrome?: TermoChrome;
+}) {
+  const { state } = play;
+  const activeKeyRef = useRef<HTMLButtonElement | null>(null);
+  const onKey = useTermoKeys({
+    ...play,
+    live: state.status === "playing",
+    cursor: state.cursor,
+  });
+
   return (
-    <main
-      className={`${screen.page} ${styles.pageTermo}`}
-      style={ACCENT}
-      data-play-state="playing"
+    <TermoPage
+      chrome={chrome}
+      date={state.date}
+      used={play.used}
+      announcement={state.announcement}
     >
-      <TermoHeading
-        chrome={chrome}
-        date={state.date}
-        progress={copy.progressShort(play.used, MAX_GUESSES)}
-      />
-
-      <div className={screen.statsCard}>
-        <div aria-hidden className={screen.tape} />
-        <div className={screen.statRow}>
-          <span className={screen.statLabel}>
-            {messages.play.progressLabel}
-          </span>
-          <span className={screen.progressCard}>
-            {copy.progressLong(play.used, MAX_GUESSES)}
-          </span>
-        </div>
-      </div>
-
-      <section className={screen.board}>
-        <BoardCard>
-          <Board
-            guesses={state.guesses}
-            activeRow={play.activeRow}
-            heldRow={play.heldRow}
-            draft={state.draft}
-            cursor={state.cursor}
-            pending={state.pending}
-            onSelect={play.select}
-            onKey={onKey}
-          />
-        </BoardCard>
-
-        <div className={styles.noticeRow}>
-          <p role="status" className={styles.notice}>
-            {state.notice ?? BLANK_READOUT}
-
-            <span className={styles.nonce}>
-              {ZWSP.repeat(state.noticeNonce % 2)}
-            </span>
-          </p>
-
-          {state.held ? (
-            <button
-              type="button"
-              className={styles.noticeRetry}
-
-              onClick={(event) => {
-                play.retry();
-                if (event.detail === 0) {
-                  activeKeyRef.current?.focus();
-                }
-              }}
-            >
-              {copy.retry}
-            </button>
-          ) : null}
-        </div>
-
-        <Keyboard
-          state={play.keyboardState}
-          onLetter={play.type}
-          onEnter={play.submit}
-          onErase={play.erase}
-          activeKeyRef={activeKeyRef}
+      <BoardCard>
+        <Board
+          guesses={state.guesses}
+          activeRow={play.activeRow}
+          heldRow={play.heldRow}
+          draft={state.draft}
+          cursor={state.cursor}
+          pending={state.pending}
+          onSelect={play.select}
+          onKey={onKey}
         />
+      </BoardCard>
 
-        <span className={styles.affordance}>
-          <InfoTip text={copy.keyboard.affordance} align="center" />
-        </span>
+      <TermoNotice notice={state.notice} nonce={state.noticeNonce}>
+        {state.held ? (
+          <button
+            type="button"
+            className={styles.noticeRetry}
 
-        <p role="status" className={styles.announcer}>
-          {state.announcement}
-        </p>
-      </section>
-    </main>
+            onClick={(event) => {
+              play.retry();
+              if (event.detail === 0) {
+                activeKeyRef.current?.focus();
+              }
+            }}
+          >
+            {messages.games.termo.play.retry}
+          </button>
+        ) : null}
+      </TermoNotice>
+
+      <Keyboard
+        state={play.keyboardState}
+        onLetter={play.type}
+        onEnter={play.submit}
+        onErase={play.erase}
+        activeKeyRef={activeKeyRef}
+      />
+    </TermoPage>
   );
 }
 
-function pressKey(key: string, play: TermoPlay): boolean {
-  const { cursor } = play.state;
+function pressKey(key: string, keys: TermoKeys): boolean {
+  const { cursor } = keys;
   switch (key) {
     case "Enter":
-      play.submit();
+      keys.submit();
       return true;
     case "Backspace":
     case "Delete":
-      play.erase();
+      keys.erase();
       return true;
     case "ArrowLeft":
-      play.select(cursor - 1);
+      keys.select(cursor - 1);
       return true;
     case "ArrowRight":
-      play.select(cursor + 1);
+      keys.select(cursor + 1);
       return true;
     case "Home":
-      play.select(0);
+      keys.select(0);
       return true;
     case "End":
-      play.select(WORD_LENGTH - 1);
+      keys.select(WORD_LENGTH - 1);
       return true;
   }
   const letter = typedLetter(key);
   if (letter === null) {
     return false;
   }
-  play.type(letter);
+  keys.type(letter);
   return true;
 }
 
