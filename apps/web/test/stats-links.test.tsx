@@ -56,10 +56,10 @@ afterEach(() => {
 });
 
 describe("the two Estatísticas links carry routes.stats (T-WEB-S159)", () => {
-  it("gives the hub nav's Estatísticas a real href, where it had none", () => {
+  it("gives the hub menu's Estatísticas a real href", () => {
     render(<HojePage />);
 
-    const link = screen.getByText(messages.hoje.links.stats).closest("a");
+    const link = screen.getByText(messages.hoje.menu.stats).closest("a");
     expect(link).toHaveAttribute("href", routes.stats);
 
     expect(
