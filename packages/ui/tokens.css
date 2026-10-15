@@ -27,6 +27,21 @@
   --queens-region-8: #D8D6B0;
   --queens-region-9: #CDD4EC;
 
+  --tone-k: #2B2622;
+  --tone-e: #8C857C;
+  --tone-l: #D2CCC2;
+  --tone-n: #7A4B2C;
+  --tone-t: #D9AE7E;
+  --tone-r: #C8402F;
+  --tone-o: #E07A2C;
+  --tone-y: #E7B622;
+  --tone-g: #62A23D;
+  --tone-d: #2F6B3C;
+  --tone-s: #7DB5DA;
+  --tone-b: #2F5C9C;
+  --tone-p: #7B4BA0;
+  --tone-m: #E48BA6;
+
   --accent-sudoku-text: var(--accent-sudoku);
   --accent-binairo-text: var(--accent-binairo);
 
@@ -94,6 +109,21 @@
     --queens-region-8: #33341E;
     --queens-region-9: #2C3242;
 
+    --tone-k: #5C544B;
+    --tone-e: #9A938A;
+    --tone-l: #CFC8BC;
+    --tone-n: #9A6440;
+    --tone-t: #D9AE7E;
+    --tone-r: #D9594A;
+    --tone-o: #E8893F;
+    --tone-y: #E9BC38;
+    --tone-g: #74B04F;
+    --tone-d: #3F8A4E;
+    --tone-s: #86BDE0;
+    --tone-b: #4F7FC4;
+    --tone-p: #9A6CC2;
+    --tone-m: #E99AB2;
+
     --accent-sudoku-text: #5E87C4;
     --accent-binairo-text: #68906E;
 
@@ -128,6 +158,21 @@
   --queens-region-7: #1A3734;
   --queens-region-8: #33341E;
   --queens-region-9: #2C3242;
+
+  --tone-k: #5C544B;
+  --tone-e: #9A938A;
+  --tone-l: #CFC8BC;
+  --tone-n: #9A6440;
+  --tone-t: #D9AE7E;
+  --tone-r: #D9594A;
+  --tone-o: #E8893F;
+  --tone-y: #E9BC38;
+  --tone-g: #74B04F;
+  --tone-d: #3F8A4E;
+  --tone-s: #86BDE0;
+  --tone-b: #4F7FC4;
+  --tone-p: #9A6CC2;
+  --tone-m: #E99AB2;
 
   --accent-sudoku-text: #5E87C4;
   --accent-binairo-text: #68906E;

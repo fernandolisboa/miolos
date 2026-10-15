@@ -40,13 +40,16 @@ export function NonogramConclusion({
         }
       : resolved;
 
+  const toned =
+    named && claim?.motifTones ? { ...named, tones: claim.motifTones } : named;
+
   return (
     <ConclusionView
       game="nonogram"
       date={date}
       copy={messages.games.nonogram.conclusion}
       result={result}
-      picture={named}
+      picture={toned}
     />
   );
 }

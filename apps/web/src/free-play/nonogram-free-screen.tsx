@@ -16,10 +16,12 @@ import { nonogramPageModifier } from "../nonogram/page-class";
 import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
 import { EndingStage } from "../play/ending-stage";
+import { PictureArt } from "../play/picture-art";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
+import styles from "./free-play.module.css";
 import { GeneratingNote } from "./generating-note";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
@@ -120,11 +122,17 @@ function NonogramFreeBoard({
           game="nonogram"
           choice={choice}
           onAgain={onNext}
-          picture={{
-            size: state.size,
-            cells: picture ?? [],
-            label: messages.freePlay.solved.pictureAria,
-          }}
+          picture={
+            <PictureArt
+              picture={{
+                size: state.size,
+                cells: picture ?? [],
+                label: messages.freePlay.solved.pictureAria,
+                tones: puzzle.tones,
+              }}
+              className={styles.picture}
+            />
+          }
         />
       )}
     >

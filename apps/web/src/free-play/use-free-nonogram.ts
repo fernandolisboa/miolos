@@ -3,6 +3,7 @@
 import type { DailyNonogramResponse } from "@miolos/core";
 import { dailyNonogramResponseSchema } from "@miolos/core";
 import { generateNonogram } from "@miolos/games/nonogram";
+import { motifTones } from "@miolos/games/nonogram-colors";
 
 import { FREE_PLAY_DATE, LEVEL_WEEKDAYS, type FreePlayLevel } from "./catalog";
 import {
@@ -16,6 +17,8 @@ export interface FreeNonogramPuzzle {
   readonly seed: number;
 
   readonly daily: DailyNonogramResponse;
+
+  readonly tones: string | undefined;
 }
 
 export type FreeNonogramDeps = FreeGenerationDeps<typeof generateNonogram>;
@@ -31,7 +34,11 @@ const FREE_NONOGRAM: FreeGame<typeof generateNonogram, FreeNonogramPuzzle> = {
       clues: puzzle.clues,
     });
 
-    return { seed: puzzle.seed, daily };
+    return {
+      seed: puzzle.seed,
+      daily,
+      tones: motifTones(puzzle.reveal.motifId, puzzle.reveal.mirrored),
+    };
   },
 };
 

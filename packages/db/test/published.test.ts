@@ -11,7 +11,7 @@ import {
   getArchivedDaily,
   getPublishedDaily,
   getPublishedDailyWithSolution,
-  getPublishedNonogramMotifName,
+  getPublishedNonogramMotif,
   getTodayDaily,
   listArchivedDays,
   listArchivedMonths,
@@ -994,7 +994,7 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
   });
 });
 
-describe("the motif-name read (#64, ADR-0070)", () => {
+describe("the motif read (#64, ADR-0070, ADR-0121)", () => {
   async function insertNamed(options: {
     date: string;
     name: string;
@@ -1013,21 +1013,24 @@ describe("the motif-name read (#64, ADR-0070)", () => {
     });
   }
 
-  it("T-DB-S85: a published row yields its stored `reveal.name`, and nothing else from the row", async () => {
+  it("T-DB-S85: a published row yields its stored motif identity — name, id and mirror flag — and nothing else from the row", async () => {
     await insertNamed({
       date: "2026-08-01",
       name: "Âncora",
       publishedAt: sql`now() - interval '1 hour'`,
     });
-    expect(await getPublishedNonogramMotifName(ctx.db, "2026-08-01")).toBe(
-      "Âncora",
-    );
+    const reveal = nonogramContentFixture()["reveal"] as Record<
+      string,
+      unknown
+    >;
 
-    const value = await getPublishedNonogramMotifName(ctx.db, "2026-08-01");
-    expect(typeof value).toBe("string");
-    for (const forbidden of FORBIDDEN_DAILY_KEYS) {
-      expect([...collectKeys(value)], forbidden).not.toContain(forbidden);
-    }
+    const value = await getPublishedNonogramMotif(ctx.db, "2026-08-01");
+    expect(value).toStrictEqual({
+      name: "Âncora",
+      motifId: reveal["motifId"],
+      mirrored: reveal["mirrored"],
+    });
+    expect(typeof value?.motifId).toBe("string");
   });
 
   it("T-DB-S86: the wall holds — a future-dated row, a killed row and a missing date all yield `undefined`", async () => {
@@ -1038,7 +1041,7 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       name: "Amanhã",
       publishedAt: sql`now() + interval '1 day'`,
     });
-    expect(await getPublishedNonogramMotifName(ctx.db, today)).toBeUndefined();
+    expect(await getPublishedNonogramMotif(ctx.db, today)).toBeUndefined();
 
     await insertNamed({
       date: "2026-07-31",
@@ -1047,11 +1050,11 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       killedAt: sql`now()`,
     });
     expect(
-      await getPublishedNonogramMotifName(ctx.db, "2026-07-31"),
+      await getPublishedNonogramMotif(ctx.db, "2026-07-31"),
     ).toBeUndefined();
 
     expect(
-      await getPublishedNonogramMotifName(ctx.db, "2026-06-15"),
+      await getPublishedNonogramMotif(ctx.db, "2026-06-15"),
     ).toBeUndefined();
 
     await ctx.db.insert(dailyPuzzles).values({
@@ -1062,7 +1065,7 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       publishedAt: sql`now() - interval '1 hour'`,
     });
     expect(
-      await getPublishedNonogramMotifName(ctx.db, "2026-06-20"),
+      await getPublishedNonogramMotif(ctx.db, "2026-06-20"),
     ).toBeUndefined();
   });
 
@@ -1082,7 +1085,7 @@ describe("the motif-name read (#64, ADR-0070)", () => {
         publishedAt: sql`now() - interval '1 hour'`,
       });
       expect(
-        await getPublishedNonogramMotifName(ctx.db, date),
+        (await getPublishedNonogramMotif(ctx.db, date))?.name,
         JSON.stringify(name),
       ).toBeUndefined();
     }
@@ -1092,7 +1095,7 @@ describe("the motif-name read (#64, ADR-0070)", () => {
       name: " Âncora ",
       publishedAt: sql`now() - interval '1 hour'`,
     });
-    expect(await getPublishedNonogramMotifName(ctx.db, "2026-08-05")).toBe(
+    expect((await getPublishedNonogramMotif(ctx.db, "2026-08-05"))?.name).toBe(
       " Âncora ",
     );
   });
@@ -1108,7 +1111,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "getArchivedDaily",
       "getPublishedDaily",
       "getPublishedDailyWithSolution",
-      "getPublishedNonogramMotifName",
+      "getPublishedNonogramMotif",
       "getTodayDaily",
       "listArchivedDays",
       "listArchivedMonths",
@@ -1145,7 +1148,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "dailyPuzzles",
       "getPublishedDailyWithSolution",
 
-      "getPublishedNonogramMotifName",
+      "getPublishedNonogramMotif",
       "getRemoteConfig",
       "insertDailyPuzzle",
       "listAdminMembers",
@@ -1193,7 +1196,7 @@ describe("surface tripwires (ADR-0024, plan 014 D16 — the mechanical wall)", (
       "getPublishedDaily",
       "getPublishedDailyWithSolution",
 
-      "getPublishedNonogramMotifName",
+      "getPublishedNonogramMotif",
       "getRemoteConfig",
       "getTodayDaily",
       "getUserSince",
