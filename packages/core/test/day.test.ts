@@ -1,3 +1,4 @@
+import { PICTURE_TONES } from "@miolos/games/nonogram-colors";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
@@ -125,7 +126,13 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       expect(
         Object.keys(dayResponseSchema.shape.games.shape[game].shape).sort(),
         game,
-      ).toEqual(["elapsedMs", "hintsUsed", "motifName", "status"]);
+      ).toEqual([
+        "elapsedMs",
+        "hintsUsed",
+        "motifName",
+        "motifTones",
+        "status",
+      ]);
     }
 
     const keys = collectKeys(dayResponseSchema.parse(valid));
@@ -302,9 +309,11 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       rowOf("crossword", "won", true, 212_000, 1),
       rowOf("queens", "won", true, 150_000, 0),
     ];
-    expect(
-      dayGamesFromRows(rows, { nonogramMotifName: "Âncora" }),
-    ).toStrictEqual({
+    const extras = {
+      nonogramMotifName: "Âncora",
+      nonogramMotifTones: ".kr.",
+    };
+    expect(dayGamesFromRows(rows, extras)).toStrictEqual({
       termo: { status: "completed" },
       sudoku: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
       nonogram: {
@@ -312,13 +321,14 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
         elapsedMs: 512_000,
         hintsUsed: 1,
         motifName: "Âncora",
+        motifTones: ".kr.",
       },
       binairo: { status: "completed", elapsedMs: 99_000, hintsUsed: 0 },
       crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 1 },
       queens: { status: "completed", elapsedMs: 150_000, hintsUsed: 0 },
     });
 
-    const named = dayGamesFromRows(rows, { nonogramMotifName: "Âncora" });
+    const named = dayGamesFromRows(rows, extras);
     for (const game of [
       "termo",
       "sudoku",
@@ -327,6 +337,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       "queens",
     ] as const) {
       expect(Object.keys(named[game]), game).not.toContain("motifName");
+      expect(Object.keys(named[game]), game).not.toContain("motifTones");
     }
 
     expect(
@@ -335,7 +346,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
   });
 
   it("T-CORE-S113: no status but `completed` carries a name, and absent extras carry none — the publication rule at the producer (#64)", () => {
-    const extras = { nonogramMotifName: "Âncora" };
+    const extras = { nonogramMotifName: "Âncora", nonogramMotifTones: ".kr." };
 
     const cases: readonly [string, readonly DayRow[]][] = [
       ["no row at all", []],
@@ -353,6 +364,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       const claim = dayGamesFromRows(rows, extras).nonogram;
       expect(claim.status, label).not.toBe("completed");
       expect(Object.keys(claim), label).not.toContain("motifName");
+      expect(Object.keys(claim), label).not.toContain("motifTones");
       expect(claim.motifName, label).toBeUndefined();
     }
 
@@ -360,14 +372,17 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
     for (const extra of [
       undefined,
       {},
-      { nonogramMotifName: undefined },
+      { nonogramMotifName: undefined, nonogramMotifTones: undefined },
 
-      { nonogramMotifName: "" },
+      { nonogramMotifName: "", nonogramMotifTones: "" },
     ]) {
       const claim = dayGamesFromRows(completed, extra).nonogram;
       expect(claim.status, JSON.stringify(extra)).toBe("completed");
       expect(Object.keys(claim), JSON.stringify(extra)).not.toContain(
         "motifName",
+      );
+      expect(Object.keys(claim), JSON.stringify(extra)).not.toContain(
+        "motifTones",
       );
     }
   });
@@ -384,6 +399,12 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       withGame({ status: "completed", motifName: "" }),
       withGame({ status: "completed", motifName: 7 }),
       withGame({ status: "completed", motifName: null }),
+
+      withGame({ status: "pending", motifTones: ".kr." }),
+      withGame({ status: "played", motifTones: ".kr." }),
+      withGame({ status: "completed", motifTones: "" }),
+      withGame({ status: "completed", motifTones: ".kx." }),
+      withGame({ status: "completed", motifTones: ".KR." }),
     ]) {
       expect(
         dayResponseSchema.safeParse(body).success,
@@ -404,9 +425,18 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
           elapsedMs: 512_000,
           hintsUsed: 1,
           motifName: "Âncora",
+          motifTones: ".kelntroygdsbpm",
         }),
       ).success,
     ).toBe(true);
+    for (const tone of PICTURE_TONES) {
+      expect(
+        dayResponseSchema.safeParse(
+          withGame({ status: "completed", motifTones: `.${tone}` }),
+        ).success,
+        tone,
+      ).toBe(true);
+    }
 
     expect(
       dayResponseSchema.safeParse({

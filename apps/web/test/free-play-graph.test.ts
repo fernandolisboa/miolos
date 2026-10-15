@@ -17,6 +17,7 @@ import { webSources, withoutComments } from "./ts-source";
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
 const FREE_PLAY_PROBE = "apps/web/src/free-play/eslint-probe.ts";
 const CROSSWORD_IMPORTER = "apps/web/src/free-play/use-free-crossword.ts";
+const TONES_IMPORTER = "apps/web/src/free-play/use-free-nonogram.ts";
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
 const IO =
@@ -185,12 +186,13 @@ describe("free play's runtime graph reaches no I/O beyond the settings store's l
 });
 
 describe("every specifier free play's runtime graph writes passes the real wall (T-WEB-S375)", () => {
-  it("at a free-play path, through both wall rules, the crossword engine only at its one importer", async () => {
+  it("at a free-play path, through both wall rules, the crossword engine and the picture tones only at their one importer each", async () => {
     const specifiers = specifiersWrittenBy(valueGraph);
 
     expect({
       banned: await wallVerdictOn(FREE_PLAY_PROBE, specifiers),
       bannedAtImporter: await wallVerdictOn(CROSSWORD_IMPORTER, specifiers),
+      bannedAtTonesImporter: await wallVerdictOn(TONES_IMPORTER, specifiers),
       reachesStylesheet: specifiers.includes("../play/screen.module.css"),
       reachesCore: specifiers.includes("@miolos/core"),
       doorsAreCaught: await wallVerdictOn(CROSSWORD_IMPORTER, [
@@ -200,11 +202,18 @@ describe("every specifier free play's runtime graph writes passes the real wall 
         "daily_puzzles",
       ]),
     }).toEqual({
-      banned: ["no-restricted-imports: @miolos/games/crossword"],
-      bannedAtImporter: [],
+      banned: [
+        "no-restricted-imports: @miolos/games/crossword",
+        "no-restricted-imports: @miolos/games/nonogram-colors",
+      ],
+      bannedAtImporter: [
+        "no-restricted-imports: @miolos/games/nonogram-colors",
+      ],
+      bannedAtTonesImporter: ["no-restricted-imports: @miolos/games/crossword"],
       reachesStylesheet: true,
       reachesCore: true,
       doorsAreCaught: [
+        "no-restricted-imports: @miolos/games/nonogram-colors",
         "no-restricted-imports: ../termo/termo-screen",
         "no-restricted-imports: ../streak/streak-client",
         "no-restricted-syntax: daily_puzzles",
@@ -218,6 +227,14 @@ describe("of every page and layout, only /modo-livre/cruzadinha reaches the cros
     expect(
       routesReaching("packages/games/src/crossword/lexicon.generated.ts"),
     ).toEqual(["apps/web/app/modo-livre/cruzadinha/page.tsx"]);
+  });
+});
+
+describe("of every page and layout, only /modo-livre/nonogram reaches the picture tones (T-WEB-S906)", () => {
+  it("no daily route, archive route or shared layout pulls the tones table", () => {
+    expect(
+      routesReaching("packages/games/src/nonogram-colors/tones.generated.ts"),
+    ).toEqual(["apps/web/app/modo-livre/nonogram/page.tsx"]);
   });
 });
 
