@@ -11,8 +11,12 @@ export function hasNote(notes: readonly number[]): boolean {
   return notes.some((mask) => mask !== 0);
 }
 
+const NONE: readonly SudokuDigit[] = [];
+
 export function noteDigits(mask: number): readonly SudokuDigit[] {
-  return DIGITS.filter((digit) => (mask & bitOf(digit)) !== 0);
+  return mask === 0
+    ? NONE
+    : DIGITS.filter((digit) => (mask & bitOf(digit)) !== 0);
 }
 
 function withMask(

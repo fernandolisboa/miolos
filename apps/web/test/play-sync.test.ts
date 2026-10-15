@@ -230,7 +230,7 @@ describe("flushPendingCompletions", () => {
     });
   });
 
-  it("never sends a Sudoku record's notes: the body is the five completion fields (T-WEB-S836)", async () => {
+  it("never sends a Sudoku record's notes: the body is the five completion fields (T-WEB-S836a)", async () => {
     writePlayRecord({
       ...pendingSudokuRecord(),
       notes: Array.from({ length: 81 }, () => 511),

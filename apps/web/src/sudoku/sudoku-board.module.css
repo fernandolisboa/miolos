@@ -94,9 +94,6 @@
   transform: translate(1px, 1px);
 }
 
-/* The nine slots of a cell's notes: digit n always sits in the same spot, so
-   a note is found by position. The size follows the board like the cell font
-   (ADR-0103). */
 .notes {
   position: absolute;
   inset: 3px;
@@ -384,9 +381,11 @@
 }
 
 .keypadPencil[aria-pressed="true"] {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--paper-card));
   border-color: var(--accent);
-  color: var(--ink-on-accent);
+  color: var(--accent);
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .keypadTool:focus-visible {
@@ -430,9 +429,7 @@
     gap: 3px;
   }
 
-  /* Six columns as wide as the board: digits 1-5 and the pencil, then 6-9 and
-     a double-width erase. A 3px column gap, the board's own, keeps a key at
-     44px or more at the 280px board floor. */
+  /* A 3px column gap keeps six keys at 44px or more at the 280px board floor. */
   .keypad {
     grid-template-columns: repeat(6, minmax(0, 1fr));
     grid-template-rows: repeat(2, 48px);

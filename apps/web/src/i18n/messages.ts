@@ -1030,7 +1030,7 @@ export const messages = {
             `escrever ${digit} — colocado ${count} vezes, mais que 9`,
           eraseAria: "apagar a célula selecionada",
           affordance:
-            "No teclado: os números de 1 a 9 escrevem, Shift com um número anota, N liga o rascunho e a tecla de apagar (⌫) apaga.",
+            "No teclado: 1 a 9 escrevem, Shift + número anota, N liga o rascunho e a tecla de apagar (⌫) apaga.",
         },
         hint: {
           correction: "Corrigimos um número que não fecha com as regras.",

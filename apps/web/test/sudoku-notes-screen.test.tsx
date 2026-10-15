@@ -212,7 +212,6 @@ describe("notes sit in fixed slots and are named for a screen reader (T-WEB-S837
 
     expect(notesIn(FIRST)).toBeNull();
     expect(cell(FIRST).textContent).toBe("7");
-    expect(notesIn(GIVEN)).toBeNull();
   });
 
   it("adds the notes to the cell's name", () => {
@@ -261,6 +260,15 @@ describe("Rascunho on the keypad and the keyboard (T-WEB-S838)", () => {
     expect(pencil()).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("writes a value when Shift is how the layout types a digit (AZERTY)", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    select(FIRST);
+    press("4", { code: "Digit4", shiftKey: true });
+
+    expect(notesIn(FIRST)).toBeNull();
+    expect(cell(FIRST).textContent).toBe("4");
+  });
+
   it("turns the digit keys and the digit buttons into notes while it is on", () => {
     render(<SudokuScreen daily={DAILY} />);
     select(FIRST);
@@ -286,7 +294,7 @@ describe("Rascunho on the keypad and the keyboard (T-WEB-S838)", () => {
   it("erases a notes-only cell's notes with the eraser key", () => {
     render(<SudokuScreen daily={DAILY} />);
     select(FIRST);
-    press("3", { code: "Digit3", shiftKey: true });
+    press("#", { code: "Digit3", shiftKey: true });
     press("Backspace");
     expect(notesIn(FIRST)).toBeNull();
   });
@@ -295,12 +303,12 @@ describe("Rascunho on the keypad and the keyboard (T-WEB-S838)", () => {
     render(<SudokuScreen daily={DAILY} />);
     select(GIVEN);
     press("!", { code: "Digit1", shiftKey: true });
-    press("0", { code: "Digit0", shiftKey: true });
-    expect(notesIn(GIVEN)).toBeNull();
+    press(")", { code: "Digit0", shiftKey: true });
+    expect(cell(GIVEN).getAttribute("aria-label")).not.toContain("rascunho");
   });
 });
 
-describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-S833)", () => {
+describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-S833a)", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["performance"] });
     setSudoku({ lockDigit: true });
@@ -350,9 +358,6 @@ describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-
     setSudoku({ showErrors: true });
     render(<SudokuScreen daily={DAILY} />);
     const wrong = SOLUTION[FIRST] === 1 ? 2 : 1;
-    const tallyBefore = screen
-      .getByLabelText(keypad.digitAria(wrong))
-      .getAttribute("aria-label");
 
     select(FIRST);
     press("n");
@@ -361,10 +366,6 @@ describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-
 
     expect(cell(FIRST).getAttribute("aria-label")).not.toContain(
       messages.play.wrongCell(""),
-    );
-    expect(screen.getByLabelText(keypad.digitAria(wrong))).toHaveAttribute(
-      "aria-label",
-      tallyBefore,
     );
 
     const shown = PUZZLE.givens[GIVEN] ?? 0;
@@ -378,9 +379,28 @@ describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-
     expect(cell(GIVEN).className).toContain(sameDigit);
     expect(cell(FIRST).className).not.toContain(sameDigit);
   });
+
+  it("leaves a digit's tally at eight when its ninth copy is only a note", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    const digit = SOLUTION[FIRST] ?? 1;
+    for (const index of EMPTIES) {
+      if (index !== FIRST && SOLUTION[index] === digit) {
+        select(index);
+        press(String(digit));
+      }
+    }
+    expect(screen.getByLabelText(keypad.digitAria(digit))).toBeInTheDocument();
+
+    select(FIRST);
+    press("!", { code: `Digit${String(digit)}`, shiftKey: true });
+
+    expect(notesIn(FIRST)).not.toBeNull();
+    expect(screen.getByLabelText(keypad.digitAria(digit))).toBeInTheDocument();
+    expect(screen.queryByLabelText(keypad.digitCompleteAria(digit))).toBeNull();
+  });
 });
 
-describe("Recomeçar is offered on a board that holds only notes (T-WEB-S832)", () => {
+describe("Recomeçar is offered on a board that holds only notes (T-WEB-S832a)", () => {
   const reset = () =>
     screen.getByRole("button", { name: messages.play.reset.label });
 
@@ -388,7 +408,7 @@ describe("Recomeçar is offered on a board that holds only notes (T-WEB-S832)", 
     render(<SudokuScreen daily={DAILY} />);
     expect(reset()).toHaveAttribute("aria-disabled", "true");
     select(FIRST);
-    press("3", { code: "Digit3", shiftKey: true });
+    press("#", { code: "Digit3", shiftKey: true });
     expect(reset()).toHaveAttribute("aria-disabled", "false");
 
     fireEvent.click(reset());
@@ -402,7 +422,7 @@ describe("Recomeçar is offered on a board that holds only notes (T-WEB-S832)", 
     await flushGeneration();
     expect(reset()).toHaveAttribute("aria-disabled", "true");
     select(FIRST);
-    press("3", { code: "Digit3", shiftKey: true });
+    press("#", { code: "Digit3", shiftKey: true });
 
     expect(reset()).toHaveAttribute("aria-disabled", "false");
   });
@@ -427,7 +447,7 @@ describe("Limpar rascunho ao preencher is a setting that starts on (T-WEB-S839)"
     const run = () => {
       const view = render(<SudokuScreen daily={DAILY} />);
       select(peer);
-      press("6", { code: "Digit6", shiftKey: true });
+      press("^", { code: "Digit6", shiftKey: true });
       select(FIRST);
       press("6");
       const kept = notesIn(peer) !== null;

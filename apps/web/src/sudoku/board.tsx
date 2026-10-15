@@ -23,6 +23,8 @@ const SIDE = 9;
 
 const EMPTY = 0;
 
+const CODE_DIGIT = /^(?:Digit|Numpad)(\d)$/;
+
 const NO_HIGHLIGHTS: ReadonlyMap<number, CellHighlight> = new Map();
 
 export function Board({
@@ -101,7 +103,10 @@ export function Board({
       onToggleNoting();
       return;
     }
-    const noted = event.shiftKey ? asDigit(codeDigit(event.code)) : null;
+    const noted =
+      event.shiftKey && asDigit(event.key) === null
+        ? asDigit(codeDigit(event.code))
+        : null;
     if (noted !== null) {
       event.preventDefault();
       onNote(noted);
@@ -288,7 +293,7 @@ function cellAria(
 }
 
 function codeDigit(code: string): string {
-  return /^(?:Digit|Numpad)(\d)$/.exec(code)?.[1] ?? "";
+  return CODE_DIGIT.exec(code)?.[1] ?? "";
 }
 
 function asDigit(key: string): SudokuDigit | null {
