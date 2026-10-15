@@ -250,7 +250,7 @@ export function PlayScreenChrome({
         ) : (
           <>
             <ResetControl onReset={readouts.onReset} />
-            <GameSettingsButton game={game} general={clockSetting !== "none"} />
+            <GameSettingsButton game={game} clock={clockSetting !== "none"} />
           </>
         )}
       </div>

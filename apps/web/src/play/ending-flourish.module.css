@@ -1,0 +1,131 @@
+/* The end of a game (ADR-0118): a just-ended win presses the stamp and
+   splashes accent ink around it; a just-ended loss sags and lets grey ink
+   run. Both come back to the stamp's resting pose. */
+
+.anchor {
+  position: relative;
+  display: inline-block;
+}
+
+.flourish {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.press {
+  animation: ending-press calc(var(--duration-slow) * 1.6) var(--ease-settle)
+    both;
+}
+
+@keyframes ending-press {
+  from {
+    transform: translateY(-4px) scale(1.12);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border: 3px solid;
+  border-color: var(--accent);
+  border-radius: 999px;
+  opacity: 0;
+  animation: ending-ring calc(var(--duration-slow) * 2) ease-out
+    calc(var(--duration-slow) * 0.8) both;
+}
+
+@keyframes ending-ring {
+  from {
+    transform: rotate(-6deg) scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: rotate(-6deg) scale(1.35);
+    opacity: 0;
+  }
+}
+
+.flick {
+  position: absolute;
+  width: 18px;
+  height: 4px;
+  margin: -2px 0 0 -9px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0;
+  animation: ending-flick calc(var(--duration-slow) * 1.8) ease-out
+    calc(var(--duration-slow) * 0.8) both;
+}
+
+@keyframes ending-flick {
+  0% {
+    transform: rotate(var(--angle)) translateX(0) scaleX(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle)) translateX(18px) scaleX(0.4);
+    opacity: 0;
+  }
+}
+
+.sag {
+  animation: ending-sag calc(var(--duration-slow) * 5) ease-in-out;
+}
+
+@keyframes ending-sag {
+  0%,
+  100% {
+    transform: none;
+  }
+  45% {
+    transform: translateY(6px) rotate(5deg);
+  }
+}
+
+.drip {
+  position: absolute;
+  top: 92%;
+  width: 3px;
+  height: 26px;
+  margin-left: -1.5px;
+  border-radius: 0 0 2px 2px;
+  background: var(--ink-2);
+  transform-origin: top;
+  opacity: 0;
+  animation: ending-drip calc(var(--duration-slow) * 4) ease-in
+    calc(var(--duration-slow) * 1.2 + var(--drip-delay)) both;
+}
+
+@keyframes ending-drip {
+  0% {
+    transform: scaleY(0);
+    opacity: 0.9;
+  }
+  60% {
+    transform: scaleY(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(8px) scaleY(1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press,
+  .sag,
+  .ring,
+  .flick,
+  .drip {
+    animation: none;
+  }
+}

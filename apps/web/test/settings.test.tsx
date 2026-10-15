@@ -31,6 +31,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
   it("defaults when nothing is stored", () => {
     expect(readSettings()).toEqual({
       showClock: true,
+      endAnimation: true,
       games: {
         sudoku: {
           showErrors: false,

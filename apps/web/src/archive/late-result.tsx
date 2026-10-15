@@ -2,6 +2,7 @@
 
 import type { Game } from "@miolos/core";
 import Link from "next/link";
+import { useContext } from "react";
 
 import {
   archiveDayRoute,
@@ -12,6 +13,8 @@ import {
   messages,
 } from "../i18n";
 import { accentVars } from "../play/accent";
+import { EndingFlourish } from "../play/ending-flourish";
+import { JustEnded } from "../play/just-ended";
 import { ShareButton } from "../play/share-button";
 import {
   useRecordSnapshot,
@@ -48,6 +51,7 @@ export function LateResult({
   readonly alreadyConcluded: boolean;
 }) {
   const copy = messages.archive;
+  const justEnded = useContext(JustEnded);
 
   const snapshot = useRecordSnapshot(game, date);
   const record = snapshot.hydrated ? snapshot.record : undefined;
@@ -69,11 +73,13 @@ export function LateResult({
         {outcome === "won" ? copy.result.wonTitle : copy.result.lostTitle}
       </h1>
 
-      <div aria-hidden className={styles.stamp}>
-        <span className={styles.stampLabel}>{copy.result.stampLabel}</span>
-        <span className={styles.stampDay}>{formatDayNumber(date)}</span>
-        <span className={styles.stampMonth}>{monthName}</span>
-      </div>
+      <EndingFlourish outcome={outcome} play={justEnded}>
+        <div aria-hidden className={styles.stamp}>
+          <span className={styles.stampLabel}>{copy.result.stampLabel}</span>
+          <span className={styles.stampDay}>{formatDayNumber(date)}</span>
+          <span className={styles.stampMonth}>{monthName}</span>
+        </div>
+      </EndingFlourish>
 
       <p className={styles.note}>{note(snapshot, alreadyConcluded)}</p>
 

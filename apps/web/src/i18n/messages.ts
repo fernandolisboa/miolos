@@ -682,6 +682,10 @@ export const messages = {
           label: "Mostrar cronômetro",
           hint: "Escondido, o tempo continua contando e aparece no fim do puzzle.",
         },
+        endAnimation: {
+          label: "Animação no fim do jogo",
+          hint: "Ao vencer, o carimbo bate e espirra tinta; ao perder, a tinta escorre. Dura um instante.",
+        },
         showErrors: {
           label: "Mostrar erros",
           hint: "Marca na hora o que não bate com a solução. Não gasta dica e não mexe na sequência.",

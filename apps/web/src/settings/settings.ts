@@ -46,6 +46,7 @@ const games = z.object({
 
 const base = z.object({
   showClock: flag(true),
+  endAnimation: flag(true),
   games: games.catch(games.parse({})),
 });
 

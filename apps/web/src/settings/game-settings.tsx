@@ -20,7 +20,7 @@ const copy = messages.settings.games;
 type GameSetting = {
   [G in SettingsGame]: keyof Settings["games"][G];
 }[SettingsGame];
-type Setting = GameSetting | "showClock";
+type Setting = GameSetting | "showClock" | "endAnimation";
 type FirstValue = (typeof BINAIRO_FIRST_VALUES)[number];
 
 function SettingText({
@@ -124,17 +124,17 @@ function setGameSetting(
 
 export function GameSettings({
   games,
-  general,
+  clock,
 }: {
   readonly games: readonly SettingsGame[];
-  readonly general: boolean;
+  readonly clock: boolean;
 }) {
   const settings = useSettings();
   return (
     <div className={styles.groups}>
-      {general ? (
-        <fieldset className={styles.group}>
-          <legend className={styles.legend}>{copy.general}</legend>
+      <fieldset className={styles.group}>
+        <legend className={styles.legend}>{copy.general}</legend>
+        {clock ? (
           <SettingSwitch
             flag="showClock"
             checked={settings.showClock}
@@ -142,8 +142,15 @@ export function GameSettings({
               writeSettings({ ...readSettings(), showClock: value });
             }}
           />
-        </fieldset>
-      ) : null}
+        ) : null}
+        <SettingSwitch
+          flag="endAnimation"
+          checked={settings.endAnimation}
+          onChange={(value) => {
+            writeSettings({ ...readSettings(), endAnimation: value });
+          }}
+        />
+      </fieldset>
       {games.map((game) => (
         <fieldset key={game} className={styles.group}>
           <legend className={styles.legend}>{messages.games[game].name}</legend>
