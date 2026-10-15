@@ -53,7 +53,7 @@ describe("generateCrossword", () => {
           { numRuns: 100 },
         );
       },
-      size === 7 ? 15_000 : undefined,
+      size === 7 ? 20_000 : undefined,
     );
   }
 

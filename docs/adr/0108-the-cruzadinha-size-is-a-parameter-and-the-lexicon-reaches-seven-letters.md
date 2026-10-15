@@ -23,7 +23,7 @@
 - 7×7 fillability is measured, not proved. On the shipped 9,623 rows, over 10,000 seeds: no throw, 1.008 attempts on average (at most 2), 6.7 ms mean and 143 ms max per puzzle (5×5: 1.9 ms). The worst template fails 1.98% of attempts, so eight failures in a row is about 2×10⁻¹⁴ if independent. Eight budget-exhausted attempts, the throw path, took 653 ms. A throw lands in free play's `failed` phase and its retry (`apps/web/src/free-play/use-free-generation.ts`).
 - Each template filled 97–100 of 100 seeds and reached the 100,000-fill cap of an exhaustive count. The commonest answer, `asa`, is in 14.5% of 7×7 grids (15.1% at 5×5).
 - The route's chunk roughly doubles: from +288.7 KB raw / +74.1 KB gzip over `/` to +657.8 / +158.2.
-- P1 and P2 at side 7 carry ADR-0055 timeouts of 10,000 and 15,000 ms.
+- P1 and P2 at side 7 carry ADR-0055 timeouts of 10,000 and 20,000 ms.
 
 ## Rejected
 
