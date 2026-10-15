@@ -11,7 +11,7 @@ ADR-0045 and ADR-0054 kept the constant because raising it would un-arm the leak
 
 ## Decision
 
-1. **`MAX_DELTA_BYTES` is 48 KB**, about 4 KB over the largest default-budget route measured with #344 (`/nonogram`, 43.8 KB). The tripwire stays armed for the two large leaks it guards: the Nonogram motif tables (~35 KB) and the Termo validation dictionary (~36 KB) both still clear 48 KB on every covered route, the tightest being a conclusion route at ~51 KB. The motifs are also caught by name (`FORBIDDEN_DAILY_SCOPE`); on the daily routes the dictionary is caught by size alone. The Termo answer list (~2.8 KB) was never caught by size and is caught by name (`FORBIDDEN_EVERYWHERE`).
+1. **`MAX_DELTA_BYTES` is 48 KB**, about 4 KB over the largest default-budget route measured with #344 (`/nonogram`, 43.8 KB). The tripwire stays armed for the two large leaks it guards: the Nonogram motif tables (~35 KB) and the Termo validation dictionary (~36 KB) both still clear 48 KB on every play and conclusion route, the tightest being a conclusion route at ~51 KB. The motifs are also caught by name (`FORBIDDEN_DAILY_SCOPE`); on the daily routes the dictionary is caught by size alone. The Termo answer list (~2.8 KB) was never caught by size and is caught by name (`FORBIDDEN_EVERYWHERE`). Routes that sit below `/` (`/estatisticas`, the archive index, month and day pages, `/modo-livre`) were never guarded by size: the motifs are caught there by name, and the dictionary by nothing, at 40 KB as at 48.
 2. **`/modo-livre/nonogram` is 66 KB**: 61.9 KB measured with #344, plus the same ~4 KB.
 3. `/termo`, `/arquivo/[data]/termo`, `/modo-livre/cruzadinha` and every marker are unchanged.
 
