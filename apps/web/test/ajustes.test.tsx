@@ -211,6 +211,12 @@ describe("a wide screen lays Ajustes out in paired rows around a full-width Jogo
     expect(parent("settings-games-heading")).not.toBe(
       parent("settings-theme-heading"),
     );
+    expect(parent("settings-account-heading")?.className).toBe(
+      parent("settings-theme-heading")?.className,
+    );
+    expect(parent("settings-account-heading")).not.toBe(
+      parent("settings-games-heading"),
+    );
     document.body.innerHTML = "";
   });
 
@@ -230,6 +236,14 @@ describe("a wide screen lays Ajustes out in paired rows around a full-width Jogo
     const wide = bodyOf(css, "@container (min-width: 50rem)");
     expect(decl(bodyOf(wide, ".groups"), "columns")).toBe("2");
     expect(decl(bodyOf(wide, ".group + .group"), "break-inside")).toBe("avoid");
+    expect(wide).toMatch(/\.group,\s*\.group \+ \.group\s*\{/);
+    const dialog = bodyOf(
+      stylesheet("src/settings/settings-dialog.module.css"),
+      ".dialog",
+    );
+    expect(decl(dialog, "width")).toBe(
+      "min(480px, calc(100vw - 2 * var(--space-5)))",
+    );
   });
 });
 

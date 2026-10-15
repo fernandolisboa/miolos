@@ -5,6 +5,7 @@
 .groups {
   display: flex;
   flex-direction: column;
+  max-width: 40rem;
 }
 
 .group {
@@ -29,6 +30,7 @@
 @container (min-width: 50rem) {
   .groups {
     display: block;
+    max-width: none;
     margin-top: var(--space-5);
     columns: 2;
     column-gap: var(--space-8);
