@@ -1,12 +1,14 @@
-import { epochDay, type CalendarDay } from "@miolos/core";
+import { dateFromEpochDay, epochDay, type CalendarDay } from "@miolos/core";
 
-import { buildMonthCells } from "../calendar/month-grid";
+import { buildMonthCells, type MonthCells } from "../calendar/month-grid";
 
-export interface CalendarMonth {
-  readonly month: string;
+export interface CalendarCell {
+  readonly date: string;
 
-  readonly cells: readonly (CalendarDay | null)[];
+  readonly day: CalendarDay | undefined;
 }
+
+export type CalendarMonth = MonthCells<CalendarCell>;
 
 export function calendarMonths(
   days: readonly CalendarDay[],
@@ -23,19 +25,20 @@ export function calendarMonths(
       monthKeys.push(key);
     }
   }
-  const months = monthKeys.map((key) =>
-    buildMonth(key, (day) => byDay.get(day) ?? null),
-  );
+  const months = monthKeys.map((key) => buildMonth(key, byDay));
   return months.reverse();
 }
 
 export function neutralMonth(date: string): CalendarMonth {
-  return buildMonth(date.slice(0, 7), () => null);
+  return buildMonth(date.slice(0, 7), new Map());
 }
 
 function buildMonth(
   monthKey: string,
-  cellAt: (day: number) => CalendarDay | null,
+  byDay: ReadonlyMap<number, CalendarDay>,
 ): CalendarMonth {
-  return buildMonthCells(monthKey, cellAt);
+  return buildMonthCells(monthKey, (day) => ({
+    date: dateFromEpochDay(day),
+    day: byDay.get(day),
+  }));
 }

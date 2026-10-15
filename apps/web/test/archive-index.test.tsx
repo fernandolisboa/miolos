@@ -65,7 +65,7 @@ describe("the archive index (T-WEB-S167)", () => {
     expect(newest).toHaveAttribute("href", "/arquivo/2026-08-13");
     expect(newest).toHaveTextContent("13");
 
-    const months = screen.getAllByRole("link", { name: /de 2026$/ });
+    const months = screen.getAllByRole("link", { name: /^\w+ de 2026$/ });
     expect(months.map((link) => link.getAttribute("href"))).toEqual([
       "/arquivo/mes/2026-08",
       "/arquivo/mes/2026-07",
@@ -168,9 +168,11 @@ describe("the ragged archive, which is the real one (T-WEB-S182)", () => {
       />,
     );
 
-    expect(container.querySelectorAll("a")).toHaveLength(34);
+    expect(container.querySelectorAll("a")).toHaveLength(35);
 
-    expect(screen.getAllByRole("link", { name: /de 2026$/ })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /^\w+ de 2026$/ })).toHaveLength(
+      2,
+    );
 
     const grid = container.querySelector("[class*='calendarGrid']");
     expect(within(grid as HTMLElement).getAllByRole("listitem")).toHaveLength(

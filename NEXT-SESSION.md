@@ -1,8 +1,10 @@
 # Do I need to do anything?
 
-Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
 
 ## Start here
+
+**Calendars** (the calendars thread): the Estatísticas months sit side by side in an auto-fill grid (`app/estatisticas/stats-calendar.tsx`, its own sheet), every day shows its numeral, and a missed day wears a hairline ring so it differs from an untracked one. The Arquivo index and month pages share one layout (`ArchiveBody` in `app/arquivo/archive-body.tsx`): previous / month / next on a larger card (`adjacentMonths`), then the month chips with the current one marked.
 
 **Termo free play** (#333, ADR-0114): `free-play/termo-free-screen.tsx` plays through `useFreeTermoBoard` (`free-play/use-free-termo.ts`), which judges on the device and shares `termo/use-termo-board.ts` with the daily. The pool is `@miolos/games/termo-free`; the answer list is `@miolos/games/termo-answers`, banned in `apps/web` source.
 
