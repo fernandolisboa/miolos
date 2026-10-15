@@ -318,6 +318,12 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
     expect(decl(slot, "display")).toBe("flex");
     expect(decl(slot, "flex-direction") ?? "row").toBe("row");
     expect(decl(slot, "position")).toBe("relative");
+    const phone = bodyOf(
+      bodyOf(SHARED_CSS, "@media (max-width: 1023px)"),
+      ".reset",
+    );
+    expect(decl(phone, "display")).toBeUndefined();
+    expect(decl(phone, "flex-direction")).toBeUndefined();
 
     const control = bodyOf(RESET_CSS, ".control");
     expect(decl(control, "position")).toBeUndefined();
