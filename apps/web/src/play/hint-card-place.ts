@@ -23,12 +23,11 @@ function clamp(value: number, low: number, high: number): number {
 export function hintArea(
   frame: Box,
   fieldTop: number,
-  cell: Box,
   viewportWidth: number,
 ): Box {
   return {
     left: Math.max(frame.left, 0),
-    top: cell.top >= 0 ? Math.max(fieldTop, 0) : fieldTop,
+    top: fieldTop,
     right: Math.min(frame.right, viewportWidth),
     bottom: frame.bottom,
   };
@@ -56,11 +55,22 @@ export function placeHintCard(
         ? runsLeft
         : clamp(centre - card.width / 2, area.left, area.right - card.width);
   const above = cell.top - GAP - card.height;
-  const below = above < area.top;
+  const below =
+    above < area.top && area.bottom - cell.bottom > cell.top - area.top;
   return {
     left,
     top: below ? cell.bottom + GAP : above,
     tail: clamp(centre - left, TAIL_INSET, card.width - TAIL_INSET),
     below,
   };
+}
+
+export function revealScroll(
+  top: number,
+  height: number,
+  viewportHeight: number,
+): number {
+  return top < 0
+    ? top
+    : Math.min(Math.max(top + height - viewportHeight, 0), top);
 }

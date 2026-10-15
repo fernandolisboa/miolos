@@ -2,10 +2,6 @@ import type { ReactNode } from "react";
 
 import screen from "./screen.module.css";
 
-export function boardCardOf(element: Element): Element | null {
-  return element.closest(`.${screen.gridCard ?? ""}`);
-}
-
 export function BoardCard({
   placeholder = false,
   below,
@@ -19,7 +15,11 @@ export function BoardCard({
 }) {
   return (
     <div className={screen.boardWell}>
-      <div aria-hidden={placeholder || undefined} className={screen.gridCard}>
+      <div
+        aria-hidden={placeholder || undefined}
+        className={screen.gridCard}
+        data-board-card
+      >
         {children}
       </div>
       {below}

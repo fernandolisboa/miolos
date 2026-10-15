@@ -15,10 +15,12 @@ import {
   hintArea,
   hintCardWidth,
   placeHintCard,
+  revealScroll,
   type Box,
 } from "../src/play/hint-card-place";
 import { PlayScreenChrome } from "../src/play/screen-chrome";
 import screenStyles from "../src/play/screen.module.css";
+import { hintCardLoaded } from "./hint-reason";
 
 const REASON = "O 7 só cabe aqui na linha.";
 
@@ -73,16 +75,35 @@ describe("the hint card sits on the hinted cell and stays inside the board (T-WE
     expect(hintCardWidth(box(0, 0, 70), { ...AREA, right: 150 })).toBe(150);
   });
 
-  it("bounds by the field's top and the viewport, and by the board alone once the cell scrolled off", () => {
+  it("goes below only when above crosses the field and below has more room", () => {
+    expect(
+      placeHintCard(box(100, 40), CARD, { ...AREA, bottom: 120 }),
+    ).toMatchObject({
+      below: false,
+    });
+    expect(
+      placeHintCard(box(100, 20), CARD, { ...AREA, bottom: 120 }),
+    ).toMatchObject({
+      below: true,
+    });
+  });
+
+  it("bounds by the board card, the field's top and the viewport's width", () => {
     const frame: Box = { left: -10, top: -300, right: 900, bottom: 200 };
 
-    expect(hintArea(frame, -280, box(0, 20), 800)).toEqual({
+    expect(hintArea(frame, -280, 800)).toEqual({
       left: 0,
-      top: 0,
+      top: -280,
       right: 800,
       bottom: 200,
     });
-    expect(hintArea(frame, -280, box(0, -60), 800).top).toBe(-280);
+  });
+
+  it("scrolls just enough to show a card placed off screen, never past its top", () => {
+    expect(revealScroll(-40, 60, 800)).toBe(-40);
+    expect(revealScroll(100, 60, 800)).toBe(0);
+    expect(revealScroll(780, 60, 800)).toBe(40);
+    expect(revealScroll(30, 900, 800)).toBe(30);
   });
 });
 
@@ -141,7 +162,7 @@ function spoken(): string {
 }
 
 describe("the chrome shows the reason on the hinted cell until the next press (T-WEB-S691)", () => {
-  it("opens on a pointer reveal, hidden from screen readers, and the live region speaks", () => {
+  it("opens on a pointer reveal, hidden from screen readers, and the live region speaks", async () => {
     render(<Harness />);
     expect(card()).toBeNull();
 
@@ -150,18 +171,20 @@ describe("the chrome shows the reason on the hinted cell until the next press (T
     fireEvent.mouseDown(button);
     fireEvent.pointerUp(button);
     fireEvent.click(button);
+    await hintCardLoaded();
 
     expect(card()?.textContent).toBe(REASON);
     expect(card()).toHaveAttribute("aria-hidden", "true");
     expect(spoken()).toBe(REASON);
   });
 
-  it("survives the Enter that revealed it, Tab, modifiers and key repeat", () => {
+  it("survives the Enter that revealed it, Tab, modifiers and key repeat", async () => {
     render(<Harness />);
     const button = hintButton();
 
     fireEvent.keyDown(button, { key: "Enter" });
     fireEvent.click(button);
+    await hintCardLoaded();
     fireEvent.keyUp(button, { key: "Enter" });
     fireEvent.keyDown(document.body, { key: "Tab" });
     fireEvent.keyDown(document.body, { key: "Shift" });
@@ -174,19 +197,24 @@ describe("the chrome shows the reason on the hinted cell until the next press (T
     ["a press anywhere", () => fireEvent.pointerDown(document.body)],
     ["a key", () => fireEvent.keyDown(document.body, { key: "ArrowRight" })],
     ["Escape", () => fireEvent.keyDown(document.body, { key: "Escape" })],
-  ])("closes on %s, and the reason stays in the live region", (_, act) => {
+  ])(
+    "closes on %s, and the reason stays in the live region",
+    async (_, act) => {
+      render(<Harness />);
+      fireEvent.click(hintButton());
+      await hintCardLoaded();
+
+      act();
+
+      expect(card()).toBeNull();
+      expect(spoken()).toBe(REASON);
+    },
+  );
+
+  it("opens a fresh card for the next hint", async () => {
     render(<Harness />);
     fireEvent.click(hintButton());
-
-    act();
-
-    expect(card()).toBeNull();
-    expect(spoken()).toBe(REASON);
-  });
-
-  it("opens a fresh card for the next hint", () => {
-    render(<Harness />);
-    fireEvent.click(hintButton());
+    await hintCardLoaded();
     fireEvent.pointerDown(document.body);
 
     fireEvent.click(
@@ -194,39 +222,42 @@ describe("the chrome shows the reason on the hinted cell until the next press (T
         name: messages.play.hint.available(FREE_HINTS_PER_PUZZLE - 1),
       }),
     );
+    await hintCardLoaded();
 
     expect(card()?.textContent).toBe(REASON);
   });
 
-  it("draws nothing without a hinted cell, and hides itself when the cell is gone", () => {
+  it("draws nothing without a hinted cell, and hides itself when the cell is gone", async () => {
     const { unmount } = render(<Harness cell={null} />);
     fireEvent.click(hintButton());
+    await hintCardLoaded();
     expect(card()).toBeNull();
     expect(spoken()).toBe(REASON);
     unmount();
 
     render(<Harness cell={9} />);
     fireEvent.click(hintButton());
+    await hintCardLoaded();
     expect(card()).toHaveAttribute("hidden");
   });
 });
 
 const CELL_LEFT = 1000;
+const BOARD_ORIGIN = { x: 7, y: 3 };
 
 function stubLayout() {
   vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
     function (this: Element) {
       const index = this.getAttribute("data-cell-index");
-      const left = index === null ? 0 : CELL_LEFT + Number(index);
-      const side = index === null ? 5000 : 20;
-      const top = index === null ? 0 : 500;
-      return DOMRect.fromRect({ x: left, y: top, width: side, height: side });
+      if (index !== null) {
+        const x = CELL_LEFT + Number(index);
+        return DOMRect.fromRect({ x, y: 500, width: 20, height: 20 });
+      }
+      const origin = this.tagName === "SECTION" ? BOARD_ORIGIN : { x: 0, y: 0 };
+      return DOMRect.fromRect({ ...origin, width: 5000, height: 5000 });
     },
   );
-  Object.defineProperty(document.documentElement, "clientWidth", {
-    configurable: true,
-    value: 5000,
-  });
+  vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(5000);
 }
 
 const SCREENS: readonly (readonly [string, () => ReactElement])[] = [
@@ -248,7 +279,7 @@ describe("every grid game anchors the card on the cell its hint wrote (T-WEB-S69
     vi.restoreAllMocks();
   });
 
-  it.each(SCREENS)("%s", (_, element) => {
+  it.each(SCREENS)("%s", async (_, element) => {
     const { container } = render(element());
     const before = new Map(
       [...container.querySelectorAll("[data-cell-index]")].map((cell) => [
@@ -260,13 +291,17 @@ describe("every grid game anchors the card on the cell its hint wrote (T-WEB-S69
     fireEvent.click(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
     );
+    await hintCardLoaded();
 
     const placed = card() as HTMLElement | null;
-    const anchor = Number.parseFloat(placed?.style.left ?? "") + 16 - 10;
+    const anchor =
+      Number.parseFloat(placed?.style.left ?? "") + BOARD_ORIGIN.x + 16 - 10;
     const index = String(anchor - CELL_LEFT);
     const cell = container.querySelector(`[data-cell-index="${index}"]`);
     expect(cell).not.toBeNull();
     expect(cell?.outerHTML).not.toBe(before.get(index));
     expect(placed?.dataset.side).toBe("below");
+    expect(placed?.style.top).toBe(`${String(528 - BOARD_ORIGIN.y)}px`);
+    expect(placed?.style.maxWidth).toBe("180px");
   });
 });

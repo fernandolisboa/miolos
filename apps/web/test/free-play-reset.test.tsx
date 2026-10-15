@@ -12,6 +12,7 @@ import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
 import hintCardStyles from "../src/play/hint-card.module.css";
 import screenStyles from "../src/play/screen.module.css";
+import { hintCardLoaded } from "./hint-reason";
 
 const SEED = 20_261_013;
 const DEPS = { pickSeed: () => SEED };
@@ -66,7 +67,7 @@ afterEach(() => {
 describe("Recomeçar in free play clears the board and keeps the hint spent (T-WEB-S517)", () => {
   it.each(SCREENS)(
     "$name: the board, the hinted cell, the explanation and its card go; the spent hint stays; nothing is written",
-    ({ screen: element }) => {
+    async ({ screen: element }) => {
       vi.stubGlobal(
         "fetch",
         vi.fn(() => {
@@ -82,6 +83,7 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
       );
 
       fireEvent.click(screen.getByText(hint.available(FREE_HINTS_PER_PUZZLE)));
+      await hintCardLoaded();
       expect(cells(container)).not.toEqual(fresh);
       expect(explanation(container)).not.toBeNull();
       expect(hintCard(container)).not.toBeNull();
