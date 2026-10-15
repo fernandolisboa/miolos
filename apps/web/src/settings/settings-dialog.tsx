@@ -9,7 +9,7 @@ import type { SettingsGame } from "./settings";
 
 const copy = messages.settings.games.dialog;
 
-// see ADR-0112; the dialog opens once the panel is here, so showModal focuses its first switch.
+// see ADR-0123; the dialog opens once the panel is here, so showModal focuses its first switch.
 let GameSettings: typeof import("./game-settings").GameSettings | null = null;
 const useGameSettingsLoaded = lazyChunk(() =>
   import("./game-settings").then((module) => {

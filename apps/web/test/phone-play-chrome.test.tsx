@@ -110,7 +110,10 @@ describe("in two columns the rules read inline; in one they open as a card (T-WE
   it("keeps the open card's box at every width, so one left open across the fold never covers the page", () => {
     const open = bodyOf(SHARED_CSS, ".rules:popover-open");
 
-    expect(SHARED_CSS.indexOf(".rules:popover-open")).toBeLessThan(
+    expect(SHARED_CSS.search(/^\.rules:popover-open\s*\{/m)).toBeGreaterThan(
+      -1,
+    );
+    expect(SHARED_CSS.search(/^\.rules:popover-open\s*\{/m)).toBeLessThan(
       SHARED_CSS.indexOf("@media (max-width: 1023px)"),
     );
     expect(decl(open, "position")).toBe("fixed");
