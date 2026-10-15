@@ -21,31 +21,41 @@ function shapeOf(puzzle: CrosswordPuzzle): string {
 }
 
 describe("generateCrossword", () => {
-  it.each(SIZES)("P1 — every generated puzzle of side %i validates", (size) => {
-    fc.assert(
-      fc.property(seedArb, (seed) => {
-        const puzzle = generateCrossword(seed, size);
-        expect(puzzle.seed).toBe(seed);
-        expect(puzzle.grid).toHaveLength(size);
-        expect(validateCrossword(puzzle)).toEqual({ ok: true, failures: [] });
-      }),
-      { numRuns: 100 },
+  for (const size of SIZES) {
+    it(
+      `P1 — every generated puzzle of side ${String(size)} validates`,
+      () => {
+        fc.assert(
+          fc.property(seedArb, (seed) => {
+            const puzzle = generateCrossword(seed, size);
+            expect(puzzle.seed).toBe(seed);
+            expect(puzzle.grid).toHaveLength(size);
+            expect(validateCrossword(puzzle)).toEqual({
+              ok: true,
+              failures: [],
+            });
+          }),
+          { numRuns: 100 },
+        );
+      },
+      size === 7 ? 10_000 : undefined,
     );
-  });
 
-  it.each(SIZES)(
-    "P2 — determinism: the same seed yields a deep-equal puzzle of side %i",
-    (size) => {
-      fc.assert(
-        fc.property(seedArb, (seed) => {
-          expect(generateCrossword(seed, size)).toEqual(
-            generateCrossword(seed, size),
-          );
-        }),
-        { numRuns: 100 },
-      );
-    },
-  );
+    it(
+      `P2 — determinism: the same seed yields a deep-equal puzzle of side ${String(size)}`,
+      () => {
+        fc.assert(
+          fc.property(seedArb, (seed) => {
+            expect(generateCrossword(seed, size)).toEqual(
+              generateCrossword(seed, size),
+            );
+          }),
+          { numRuns: 100 },
+        );
+      },
+      size === 7 ? 15_000 : undefined,
+    );
+  }
 
   it("P3 — seeds alias modulo 2^32", () => {
     fc.assert(

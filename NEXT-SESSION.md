@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new from #303. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new from #330 part 1. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -17,6 +17,8 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 **Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
 
 **Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
+
+**Cruzadinha 7×7 engine** (#330 part 1, ADR-0108): `generateCrossword(seed, size = 5)` builds a 7×7 from `CROSSWORD_TEMPLATES[7]` and the lexicon now has 6- and 7-letter answers. Nothing a player sees changed; the daily stays 5×5 (`crosswordDailyContentSchema`, `T-API-S330`). `packages/games/test/crossword/golden.test.ts` pins every 5×5 puzzle for seeds 0–199.
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`.
 
@@ -39,6 +41,6 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 ## Next
 
-**Next:** file per-game time buckets as an issue; then #317 (sync settings with the account, needs a migration).
+**Next:** #330 part 2, the 7×7 picker in Cruzadinha free play. It must split `crosswordDailyContentSchema` into a daily and a free-play shape, never widen it. Then file per-game time buckets as an issue; then #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.
