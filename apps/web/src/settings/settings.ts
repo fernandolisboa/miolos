@@ -21,6 +21,7 @@ const sudoku = z.object({
 const nonogram = z.object({
   showErrors: flag(false),
   strikePlacedRuns: flag(true),
+  straightDrag: flag(false),
 });
 
 const queens = z.object({

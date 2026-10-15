@@ -68,7 +68,8 @@ export const Board = memo(function Board({
 }) {
   const copy = messages.games.nonogram.play;
   const wrong = useWrongCells("nonogram", solution, null, entries);
-  const strike = useSettings().games.nonogram.strikePlacedRuns;
+  const { strikePlacedRuns: strike, straightDrag } =
+    useSettings().games.nonogram;
   const placed = useMemo(
     () => (strike ? placedClues(clues, entries.map(cellStateOf)) : null),
     [strike, clues, entries],
@@ -82,6 +83,7 @@ export const Board = memo(function Board({
     onMove,
     onEnterValue,
     onClear,
+    straight: straightDrag,
   });
 
   return (
