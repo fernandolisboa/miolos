@@ -4,13 +4,9 @@ import { useId, useRef, useState, type PointerEvent } from "react";
 
 import { messages } from "../i18n";
 import styles from "./info-tip.module.css";
-import { useDismiss } from "./use-dismiss";
+import { closesOnEscape, useDismiss } from "./use-dismiss";
 
 type Align = "start" | "center";
-
-function isEscape(event: KeyboardEvent): boolean {
-  return event.key === "Escape";
-}
 
 const ALIGN: Readonly<Record<Align, string | undefined>> = {
   start: styles.alignStart,
@@ -29,7 +25,7 @@ export function InfoTip({
   const rootRef = useRef<HTMLSpanElement>(null);
   const pressedBy = useRef<string | null>(null);
 
-  useDismiss(open, rootRef, setOpen, isEscape);
+  useDismiss(open, rootRef, setOpen, closesOnEscape);
 
   const hover = (next: boolean) => (event: PointerEvent) => {
     if (event.pointerType !== "mouse") return;

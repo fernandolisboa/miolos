@@ -409,11 +409,11 @@ describe("the account section and the way to deletion (T-WEB-S403)", () => {
 });
 
 describe("the hub and the policy point at Ajustes (T-WEB-S404)", () => {
-  it("the hub nav links /ajustes and the policy names Ajustes as where the reminder is turned off", () => {
+  it("the hub menu links /ajustes and the policy names Ajustes as where the reminder is turned off", () => {
     const hub = renderToStaticMarkup(<HojePage />);
     expect(routes.settings).toBe("/ajustes");
     expect(hub).toContain(`href="${routes.settings}"`);
-    expect(hub).toContain(messages.hoje.links.settings);
+    expect(hub).toContain(messages.hoje.menu.settings);
     expect(messages.privacy.collected.push).toContain(messages.settings.title);
   });
 });
