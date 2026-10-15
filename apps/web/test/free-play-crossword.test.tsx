@@ -1,4 +1,4 @@
-import type { DailyCrosswordResponse } from "@miolos/core";
+import type { CrosswordSize, DailyCrosswordResponse } from "@miolos/core";
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -8,15 +8,21 @@ import {
   useFreeCrossword,
   type FreeCrosswordDeps,
 } from "../src/free-play/use-free-crossword";
+import boardStyles from "../src/crossword/crossword-board.module.css";
 import { messages } from "../src/i18n";
+import { flushGeneration } from "./free-generation";
 
 const SEED = 20_260_928;
 const NEXT_SEED = 20_260_929;
 const copy = messages.games.crossword.play;
 
-function generated(seed: number): DailyCrosswordResponse {
+async function generated(
+  seed: number,
+  size: CrosswordSize = 5,
+): Promise<DailyCrosswordResponse> {
   const deps = { pickSeed: () => seed };
-  const { result } = renderHook(() => useFreeCrossword(deps));
+  const { result } = renderHook(() => useFreeCrossword(size, deps));
+  await flushGeneration();
   const { phase } = result.current;
   if (phase.kind !== "ready") {
     throw new Error(`seed ${String(seed)} did not generate`);
@@ -24,12 +30,12 @@ function generated(seed: number): DailyCrosswordResponse {
   return phase.puzzle.daily;
 }
 
-function boardOf(): HTMLElement {
-  return screen.getByRole("group", { name: copy.boardAria });
+function boardOf(size = 5): HTMLElement {
+  return screen.getByRole("group", { name: copy.boardAria(size) });
 }
 
-function cellAt(index: number): HTMLElement {
-  const cell = boardOf().querySelector<HTMLElement>(
+function cellAt(index: number, size = 5): HTMLElement {
+  const cell = boardOf(size).querySelector<HTMLElement>(
     `[data-cell-index="${String(index)}"]`,
   );
   if (cell === null) {
@@ -46,10 +52,10 @@ function solve(daily: DailyCrosswordResponse): void {
     if (screen.queryByText(messages.freePlay.solved.stamp) !== null) {
       return;
     }
-    const cell = cellAt(index);
+    const cell = cellAt(index, daily.grid.length);
     fireEvent.pointerDown(cell);
     fireEvent.click(cell);
-    fireEvent.keyDown(boardOf(), { key: letter });
+    fireEvent.keyDown(boardOf(daily.grid.length), { key: letter });
   }
 }
 
@@ -59,32 +65,39 @@ afterEach(() => {
 });
 
 describe("a free crossword is today's wire shape, dated nowhere, one per seed (T-WEB-S445)", () => {
-  it("carries FREE_PLAY_DATE and regenerates identically from the same seed", () => {
-    for (const seed of [1, 42, SEED, 0xffff_ffff]) {
-      const daily = generated(seed);
+  it.each([5, 7] as const)(
+    "carries FREE_PLAY_DATE and regenerates identically from the same seed at %i",
+    async (size) => {
+      for (const seed of [1, 42, SEED, 0xffff_ffff]) {
+        const daily = await generated(seed, size);
 
-      expect(daily.date).toBe(FREE_PLAY_DATE);
-      expect(generated(seed)).toEqual(daily);
-    }
-  });
+        expect(daily.date).toBe(FREE_PLAY_DATE);
+        expect(daily.grid).toHaveLength(size);
+        expect(await generated(seed, size)).toEqual(daily);
+      }
+    },
+  );
 });
 
 describe("a free crossword plays, solves and goes again with nothing recorded (T-WEB-S446)", () => {
-  it("has no clock and no level, solves to its own card, and 'Mais uma' draws a fresh board — zero fetch, zero writes", () => {
+  it("has no clock and no level, offers a size at 5x5, solves to its own card, and 'Mais uma' draws a fresh board — zero fetch, zero writes", async () => {
     const fetchMock = vi.fn(() => {
       throw new Error("free play must not fetch");
     });
     vi.stubGlobal("fetch", fetchMock);
     const setItem = vi.spyOn(Storage.prototype, "setItem");
-    const first = generated(SEED);
-    const next = generated(NEXT_SEED);
+    const first = await generated(SEED);
+    const next = await generated(NEXT_SEED);
     const seeds = [SEED, NEXT_SEED];
     const pickSeed = vi.fn(() => seeds.shift() ?? 0);
 
     render(<CrosswordFreeScreen deps={{ pickSeed }} />);
+    await flushGeneration();
 
     expect(screen.queryByText(messages.play.timerLabel)).toBeNull();
-    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(
+      screen.getByRole("radiogroup", { name: messages.freePlay.size.label }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(messages.freePlay.level.label)).toBeNull();
 
     solve(first);
@@ -92,9 +105,12 @@ describe("a free crossword plays, solves and goes again with nothing recorded (T
     expect(
       screen.getByText(messages.freePlay.solved.stamp),
     ).toBeInTheDocument();
-    expect(screen.getByText("Modo livre · Cruzadinha")).toBeInTheDocument();
+    expect(
+      screen.getByText("Modo livre · Cruzadinha · 5×5"),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Mais uma"));
+    await flushGeneration();
 
     expect(pickSeed).toHaveBeenCalledTimes(2);
     const blocks = next.grid.flat().map((cell) => cell === null);
@@ -109,8 +125,8 @@ describe("a free crossword plays, solves and goes again with nothing recorded (T
 });
 
 describe("a failed free crossword offers a retry that recovers (T-WEB-S447)", () => {
-  it("shows the shared error card, then a board once retry generates", () => {
-    const real = generated(SEED);
+  it("shows the shared error card, then a board once retry generates", async () => {
+    const real = await generated(SEED);
     let throws = true;
     const generate: NonNullable<FreeCrosswordDeps["generate"]> = (seed) => {
       if (throws) {
@@ -133,12 +149,178 @@ describe("a failed free crossword offers a retry that recovers (T-WEB-S447)", ()
     };
 
     render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED, generate }} />);
+    await flushGeneration();
 
     expect(screen.getByText(messages.freePlay.error.title)).toBeInTheDocument();
 
     fireEvent.click(screen.getByText(messages.freePlay.error.retry));
+    await flushGeneration();
 
     expect(screen.queryByText(messages.freePlay.error.title)).toBeNull();
     expect(boardOf()).toBeInTheDocument();
+  });
+});
+
+describe("the size picker is a Tamanho radiogroup (T-WEB-S672)", () => {
+  const radio = (size: CrosswordSize) =>
+    screen.getByRole("radio", { name: messages.freePlay.size.aria(size) });
+
+  it("offers 5x5 checked and 7x7, with one tab stop, in the generating state too", async () => {
+    render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED }} />);
+
+    expect(radio(5)).toHaveAttribute("aria-checked", "true");
+    expect(radio(5)).toHaveAttribute("tabindex", "0");
+    expect(radio(7)).toHaveAttribute("aria-checked", "false");
+    expect(radio(7)).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByText(messages.freePlay.generating)).toBeInTheDocument();
+
+    await flushGeneration();
+
+    expect(radio(5)).toHaveAttribute("aria-checked", "true");
+    expect(radio(7)).toHaveTextContent("7×7");
+  });
+
+  it("moves with the arrows, wrapping at both ends", async () => {
+    render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED }} />);
+    await flushGeneration();
+
+    fireEvent.keyDown(radio(5), { key: "ArrowRight" });
+    await flushGeneration();
+    expect(radio(7)).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.keyDown(radio(7), { key: "ArrowRight" });
+    await flushGeneration();
+    expect(radio(5)).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.keyDown(radio(5), { key: "ArrowLeft" });
+    await flushGeneration();
+    expect(radio(7)).toHaveAttribute("aria-checked", "true");
+  });
+});
+
+describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB-S673)", () => {
+  async function chooseSeven() {
+    await flushGeneration();
+    fireEvent.click(
+      screen.getByRole("radio", { name: messages.freePlay.size.aria(7) }),
+    );
+    await flushGeneration();
+  }
+
+  it("draws a 7x7 board, names the size, solves to its mode line and goes again at 7 — zero fetch, zero writes", async () => {
+    const fetchMock = vi.fn(() => {
+      throw new Error("free play must not fetch");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const seven = await generated(SEED, 7);
+
+    render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED }} />);
+    await chooseSeven();
+
+    expect(boardOf(7).querySelectorAll("[data-cell-index]")).toHaveLength(49);
+    expect(
+      screen.getByText(messages.freePlay.size.label).nextElementSibling,
+    ).toHaveTextContent("7×7");
+
+    solve(seven);
+
+    expect(
+      screen.getByText(messages.freePlay.solved.stamp),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Modo livre · Cruzadinha · 7×7"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Mais uma"));
+    await flushGeneration();
+
+    expect(boardOf(7).querySelectorAll("[data-cell-index]")).toHaveLength(49);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("keeps the 7x7 floor on the page and the seven tracks on the grid, while generating and once ready", async () => {
+    const { container } = render(
+      <CrosswordFreeScreen deps={{ pickSeed: () => SEED }} />,
+    );
+    await flushGeneration();
+    const page = () => container.querySelector("main");
+    const sevenTracks = () =>
+      container.querySelector(`.${boardStyles.size7 ?? ""}`);
+    expect(page()).not.toHaveClass(boardStyles.pageSize7 ?? "");
+    expect(sevenTracks()).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: messages.freePlay.size.aria(7) }),
+    );
+
+    expect(page()).toHaveClass(boardStyles.pageCrossword ?? "");
+    expect(page()).toHaveClass(boardStyles.pageSize7 ?? "");
+    expect(sevenTracks()).not.toBeNull();
+
+    await flushGeneration();
+
+    expect(page()).toHaveClass(boardStyles.pageSize7 ?? "");
+    expect(sevenTracks()).toBe(boardOf(7));
+  });
+
+  it("goes back to 5x5 when asked", async () => {
+    render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED }} />);
+    await chooseSeven();
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: messages.freePlay.size.aria(5) }),
+    );
+    await flushGeneration();
+
+    expect(boardOf(5).querySelectorAll("[data-cell-index]")).toHaveLength(25);
+  });
+
+  it("lands a failed 7x7 on the error card and retries at 7", async () => {
+    const real = await generated(SEED, 7);
+    let throws = false;
+    const sizes: number[] = [];
+    const generate: NonNullable<FreeCrosswordDeps["generate"]> = (
+      seed,
+      size,
+    ) => {
+      sizes.push(size ?? 5);
+      if (throws) {
+        throws = false;
+        throw new Error("generation failed");
+      }
+      return {
+        seed,
+        grid: real.grid,
+        entries: real.clues.map((clue) => ({
+          number: clue.number,
+          direction: clue.direction,
+          row: clue.row,
+          col: clue.col,
+          normalized: "x".repeat(clue.length),
+          canonical: "x".repeat(clue.length),
+          clue: clue.clue,
+        })),
+      };
+    };
+    render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED, generate }} />);
+    await flushGeneration();
+    throws = true;
+    fireEvent.click(
+      screen.getByRole("radio", { name: messages.freePlay.size.aria(7) }),
+    );
+    await flushGeneration();
+
+    expect(screen.getByText(messages.freePlay.error.title)).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", { name: messages.freePlay.size.aria(7) }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(screen.getByText(messages.freePlay.error.retry));
+    await flushGeneration();
+
+    expect(boardOf(7)).toBeInTheDocument();
+    expect(sizes).toEqual([5, 7, 7]);
   });
 });

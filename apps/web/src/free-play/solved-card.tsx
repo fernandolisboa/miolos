@@ -6,17 +6,17 @@ import { messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import { picturePath } from "../play/picture-path";
 import type { ConclusionPicture } from "../play/types";
-import type { FreePlayGame, FreePlayLevel } from "./catalog";
+import type { FreePlayGame } from "./catalog";
 import styles from "./free-play.module.css";
 
 export function FreePlaySolvedCard({
   game,
-  level,
+  choice,
   picture,
   onAgain,
 }: {
   readonly game: FreePlayGame;
-  readonly level?: FreePlayLevel;
+  readonly choice?: string;
 
   readonly picture?: ConclusionPicture;
   readonly onAgain: () => void;
@@ -34,7 +34,7 @@ export function FreePlaySolvedCard({
           {messages.freePlay.solved.modeLine(
             messages.freePlay.modeTag,
             messages.games[game].name,
-            level === undefined ? undefined : messages.freePlay.level[level],
+            choice,
           )}
         </p>
         {picture !== undefined && (

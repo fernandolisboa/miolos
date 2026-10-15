@@ -4,6 +4,7 @@ import type { QueensSize } from "@miolos/core";
 import { QUEENS_WEEKDAY_CRITERIA } from "@miolos/games/queens";
 import { useState } from "react";
 
+import { messages } from "../i18n";
 import {
   BoardPanel,
   BoardPanelSkeleton,
@@ -16,6 +17,7 @@ import {
   LEVEL_WEEKDAYS,
   type FreePlayLevel,
 } from "./catalog";
+import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import { GeneratingNote } from "./generating-note";
@@ -45,7 +47,7 @@ export function QueensFreeScreen({ deps }: { readonly deps?: FreeQueensDeps }) {
   return (
     <FreePlayChrome
       game="queens"
-      level={{ value: level, onChange: setLevel }}
+      choice={levelChoice(level, setLevel)}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
       pageModifier={styles.pageQueens ?? ""}
     >
@@ -74,13 +76,19 @@ function QueensFreeBoard({
   const board = useQueensBoard(puzzle.daily);
 
   if (board.state.status === "solved") {
-    return <FreePlaySolvedCard game="queens" level={level} onAgain={onNext} />;
+    return (
+      <FreePlaySolvedCard
+        game="queens"
+        choice={messages.freePlay.level[level]}
+        onAgain={onNext}
+      />
+    );
   }
 
   return (
     <FreePlayChrome
       game="queens"
-      level={{ value: level, onChange: onLevelChange }}
+      choice={levelChoice(level, onLevelChange)}
       pageModifier={styles.pageQueens ?? ""}
       state={{ kind: "playing", readouts: queensReadouts(board) }}
     >

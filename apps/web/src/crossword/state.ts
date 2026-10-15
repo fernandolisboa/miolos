@@ -13,7 +13,6 @@ import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 import {
   entryAt,
   flattenGrid,
-  GRID_SIZE,
   isBlock,
   isSolved,
   nextCellInEntry,
@@ -29,6 +28,7 @@ export type { CrosswordDirection } from "./grid";
 export type CrosswordCellValue = string | null;
 
 export interface CrosswordPlayState extends PlayCore {
+  readonly size: number;
   readonly solution: readonly CrosswordCellValue[];
   readonly clues: readonly CrosswordClue[];
 
@@ -71,6 +71,7 @@ export function initCrosswordPlayState(
   const entries: readonly CrosswordCellValue[] = solution.map(() => null);
   return {
     date: daily.date,
+    size: daily.grid.length,
     solution,
     clues: daily.clues,
     entries,
@@ -106,7 +107,8 @@ export function crosswordPlayReducer(
         return state;
       }
       const other = state.direction === "across" ? "down" : "across";
-      return entryAt(state.clues, state.selected, other) === undefined
+      return entryAt(state.clues, state.selected, other, state.size) ===
+        undefined
         ? state
         : { ...state, direction: other };
     }
@@ -114,7 +116,7 @@ export function crosswordPlayReducer(
     case "move-selection":
       return {
         ...state,
-        selected: movedSelection(state.selected, action, GRID_SIZE),
+        selected: movedSelection(state.selected, action, state.size),
       };
 
     case "type-letter": {
@@ -128,6 +130,7 @@ export function crosswordPlayReducer(
             entered.entries,
             state.selected,
             state.direction,
+            state.size,
           )
         : nextInEntry(state, state.selected);
       return next === undefined ? entered : { ...entered, selected: next };
@@ -140,9 +143,16 @@ export function crosswordPlayReducer(
       if (state.entries[state.selected] !== null) {
         return withEntry(state, state.selected, null);
       }
-      const clue = entryAt(state.clues, state.selected, state.direction);
+      const clue = entryAt(
+        state.clues,
+        state.selected,
+        state.direction,
+        state.size,
+      );
       const prev =
-        clue === undefined ? undefined : prevCellInEntry(clue, state.selected);
+        clue === undefined
+          ? undefined
+          : prevCellInEntry(clue, state.selected, state.size);
       return prev === undefined
         ? state
         : withEntry({ ...state, selected: prev }, prev, null);
@@ -158,6 +168,7 @@ export function crosswordPlayReducer(
         state.entries,
         state.selected,
         state.direction,
+        state.size,
       );
       if (hint === null) {
         return state;
@@ -187,8 +198,10 @@ function nextInEntry(
   state: CrosswordPlayState,
   index: number,
 ): number | undefined {
-  const clue = entryAt(state.clues, index, state.direction);
-  return clue === undefined ? undefined : nextCellInEntry(clue, index);
+  const clue = entryAt(state.clues, index, state.direction, state.size);
+  return clue === undefined
+    ? undefined
+    : nextCellInEntry(clue, index, state.size);
 }
 
 function withEntry(

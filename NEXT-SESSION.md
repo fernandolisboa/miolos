@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new from #330 part 1. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+New, low urgency: NOW §3, whether the daily Cruzadinha ever becomes 7×7 (#330); play 7×7 in free play first. Also open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -20,7 +20,7 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
 
-**Cruzadinha 7×7 engine** (#330 part 1, ADR-0108): `generateCrossword(seed, 7)` works and the lexicon has 6- and 7-letter answers; players see nothing yet. `golden.test.ts` pins 5×5 output.
+**Cruzadinha 7×7 in free play** (#330, ADR-0108, ADR-0111): a *Tamanho* 5×5/7×7 choice through `ChoicePicker` (`free-play/choice-picker.tsx`, which the level picker now is too); `projectCrossword(date, puzzle, size)` parses at the asked side and the daily stays 5×5. The board reads its side from the grid. Every free-play build now waits a paint (`useFreeGeneration`); tests await `flushGeneration()` (`apps/web/test/free-generation.ts`).
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`. Binairo's tap cycle and left click start from the *Primeiro valor* setting (#325, default 1), carried on the `tap` action; it is the first setting that is not a switch (two radios, `FirstValueChoice` in `settings/game-settings.tsx`).
 
@@ -45,6 +45,6 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 ## Next
 
-**Next:** #330 part 2, the 7×7 picker in Cruzadinha free play. It must split `crosswordDailyContentSchema` into a daily and a free-play shape, never widen it, Zod-parse the size, and paint `generating` before the synchronous 7×7 generation (up to ~650 ms). Alongside, the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
+**Next:** the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.

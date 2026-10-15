@@ -435,6 +435,11 @@ export const messages = {
     back: "← Modo livre",
     backToIndexAria: "Voltar ao Modo livre",
     modeTag: "Modo livre",
+    size: {
+      label: "Tamanho",
+      option: (size: number) => `${size}×${size}`,
+      aria: (size: number) => `Tamanho: ${size} por ${size}`,
+    },
     level: {
       label: "Nível",
       leve: "Leve",
@@ -1130,7 +1135,7 @@ export const messages = {
           `${filled} de ${total} letras`,
         progressShort: (filled: number, total: number) =>
           `${filled} de ${total}`,
-        boardAria: "grade da Cruzadinha, 5 por 5",
+        boardAria: (size: number) => `grade da Cruzadinha, ${size} por ${size}`,
 
         direction: { across: "Horizontal", down: "Vertical" },
         cluesHeading: "Pistas",

@@ -65,7 +65,7 @@ const DAILY: DailyCrosswordResponse = dailyCrosswordResponseSchema.parse({
 });
 
 function boardOf(): HTMLElement {
-  return screen.getByRole("group", { name: copy.boardAria });
+  return screen.getByRole("group", { name: copy.boardAria(5) });
 }
 
 function cellAt(index: number): HTMLElement {
@@ -549,7 +549,7 @@ describe("daily rendering (T-WEB-S439)", () => {
       JSON.stringify(record),
     );
     render(<CrosswordScreen daily={DAILY} />);
-    expect(screen.queryByRole("group", { name: copy.boardAria })).toBeNull();
+    expect(screen.queryByRole("group", { name: copy.boardAria(5) })).toBeNull();
   });
 });
 

@@ -1,7 +1,10 @@
 "use client";
 
-import type { DailyCrosswordResponse } from "@miolos/core";
-import { projectCrosswordDaily } from "@miolos/core";
+import {
+  projectCrossword,
+  type CrosswordSize,
+  type DailyCrosswordResponse,
+} from "@miolos/core";
 import { generateCrossword } from "@miolos/games/crossword";
 
 import { FREE_PLAY_DATE } from "./catalog";
@@ -22,21 +25,22 @@ export type FreeCrosswordDeps = FreeGenerationDeps<typeof generateCrossword>;
 const FREE_CROSSWORD: FreeGame<
   typeof generateCrossword,
   FreeCrosswordPuzzle,
-  null
+  CrosswordSize
 > = {
   generate: generateCrossword,
-  build: (generate, draw) => {
-    const puzzle = generate(draw());
+  build: (generate, draw, size) => {
+    const puzzle = generate(draw(), size);
 
     return {
       seed: puzzle.seed,
-      daily: projectCrosswordDaily(FREE_PLAY_DATE, puzzle),
+      daily: projectCrossword(FREE_PLAY_DATE, puzzle, size),
     };
   },
 };
 
 export function useFreeCrossword(
+  size: CrosswordSize,
   deps?: FreeCrosswordDeps,
 ): FreeGeneration<FreeCrosswordPuzzle> {
-  return useFreeGeneration(null, FREE_CROSSWORD, deps);
+  return useFreeGeneration(size, FREE_CROSSWORD, deps);
 }

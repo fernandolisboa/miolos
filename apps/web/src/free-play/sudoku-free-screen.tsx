@@ -21,6 +21,7 @@ import {
 import boardStyles from "../sudoku/sudoku-board.module.css";
 import { useDigitLock } from "../sudoku/use-digit-lock";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
+import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import { GeneratingNote } from "./generating-note";
@@ -55,7 +56,7 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
     <FreePlayChrome
       game="sudoku"
       pageModifier={boardStyles.pageSudoku ?? ""}
-      level={{ value: level, onChange: setLevel }}
+      choice={levelChoice(level, setLevel)}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
@@ -125,14 +126,20 @@ function SudokuFreeBoard({
   const reset = useReset(dispatch);
 
   if (state.status === "solved") {
-    return <FreePlaySolvedCard game="sudoku" level={level} onAgain={onNext} />;
+    return (
+      <FreePlaySolvedCard
+        game="sudoku"
+        choice={messages.freePlay.level[level]}
+        onAgain={onNext}
+      />
+    );
   }
 
   return (
     <FreePlayChrome
       game="sudoku"
       pageModifier={boardStyles.pageSudoku ?? ""}
-      level={{ value: level, onChange: onLevelChange }}
+      choice={levelChoice(level, onLevelChange)}
       state={{
         kind: "playing",
         readouts: {

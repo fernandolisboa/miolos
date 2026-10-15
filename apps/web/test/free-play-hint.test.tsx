@@ -25,6 +25,7 @@ import spotlightStyles from "../src/play/spotlight.module.css";
 import { queensHintExplanation } from "../src/queens/hint";
 import { sudokuHintExplanation } from "../src/sudoku/hint";
 import sudokuBoardStyles from "../src/sudoku/sudoku-board.module.css";
+import { flushGeneration } from "./free-generation";
 import { freeHintSteps, spendFreeHints } from "./free-hints";
 
 const SEED = 20_260_812;
@@ -70,10 +71,11 @@ afterEach(() => {
 });
 
 describe("three free hints per free-play puzzle, the next press inert (T-WEB-S122)", () => {
-  it("Binairo: the hint writes the generator solution's cell, then stops", () => {
+  it("Binairo: the hint writes the generator solution's cell, then stops", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateBinairo({ seed: SEED, weekday: WEEKDAY });
     const { container } = render(<BinairoFreeScreen deps={stableDeps(SEED)} />);
+    await flushGeneration();
 
     const button = screen
       .getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE))
@@ -93,10 +95,11 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
     expect(boardText(container)).toEqual(spent);
   });
 
-  it("Sudoku: the hint writes the narrowed solution digit, then stops", () => {
+  it("Sudoku: the hint writes the narrowed solution digit, then stops", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateDailySudoku({ seed: SEED, weekday: WEEKDAY });
     const { container } = render(<SudokuFreeScreen deps={stableDeps(SEED)} />);
+    await flushGeneration();
 
     spendFreeHints();
 
@@ -112,12 +115,13 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
     expect(boardText(container)).toEqual(spent);
   });
 
-  it("Nonogram: the bare use-hint verb fires against the clue-derived solution", () => {
+  it("Nonogram: the bare use-hint verb fires against the clue-derived solution", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateNonogram(SEED, WEEKDAY);
     const { container } = render(
       <NonogramFreeScreen deps={stableDeps(SEED)} />,
     );
+    await flushGeneration();
 
     const marked = () =>
       container.querySelectorAll(
@@ -135,7 +139,7 @@ describe("three free hints per free-play puzzle, the next press inert (T-WEB-S12
 });
 
 describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S554)", () => {
-  it("writes the step's digit, reads out why and tints the step's cells", () => {
+  it("writes the step's digit, reads out why and tints the step's cells", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateDailySudoku({ seed: SEED, weekday: WEEKDAY });
     const [step] = freeHintSteps(
@@ -147,6 +151,7 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
       throw new Error("no first step");
     }
     const { container } = render(<SudokuFreeScreen deps={stableDeps(SEED)} />);
+    await flushGeneration();
 
     fireEvent.click(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
@@ -168,7 +173,7 @@ describe("free-play Sudoku reveals and explains the next logical step (T-WEB-S55
 });
 
 describe("free-play Binairo reveals and explains the next logical step (T-WEB-S567)", () => {
-  it("writes the step's value, reads out why and tints the rule's cells until a board action", () => {
+  it("writes the step's value, reads out why and tints the rule's cells until a board action", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateBinairo({ seed: SEED, weekday: WEEKDAY });
     const [step] = freeHintSteps(
@@ -180,6 +185,7 @@ describe("free-play Binairo reveals and explains the next logical step (T-WEB-S5
       throw new Error("no first step");
     }
     const { container } = render(<BinairoFreeScreen deps={stableDeps(SEED)} />);
+    await flushGeneration();
     const tinted = () =>
       [
         ...container.querySelectorAll<HTMLElement>(
@@ -206,7 +212,7 @@ describe("free-play Binairo reveals and explains the next logical step (T-WEB-S5
 });
 
 describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S571)", () => {
-  it("writes the step's cell, reads out why and tints the step's line", () => {
+  it("writes the step's cell, reads out why and tints the step's line", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const { clues } = generateNonogram(SEED, WEEKDAY);
     const step = nextNonogramStep(
@@ -219,6 +225,7 @@ describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S
     const { container } = render(
       <NonogramFreeScreen deps={stableDeps(SEED)} />,
     );
+    await flushGeneration();
 
     fireEvent.click(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
@@ -244,7 +251,7 @@ describe("free-play Nonogram reveals and explains the next logical step (T-WEB-S
 });
 
 describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S575)", () => {
-  it("places the step's queen, reads out why and tints the step's unit", () => {
+  it("places the step's queen, reads out why and tints the step's unit", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const puzzle = generateQueens({ seed: SEED, weekday: WEEKDAY });
     const step = nextQueensStep(
@@ -255,6 +262,7 @@ describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S5
       throw new Error("no first step");
     }
     const { container } = render(<QueensFreeScreen deps={stableDeps(SEED)} />);
+    await flushGeneration();
 
     fireEvent.click(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
@@ -285,10 +293,11 @@ describe("free-play Rainhas reveals and explains the next logical step (T-WEB-S5
 });
 
 describe("the free crossword's free hints (T-WEB-S122a)", () => {
-  it("reveals a letter of the first open pista, and the press after the last does nothing", () => {
+  it("reveals a letter of the first open pista, and the press after the last does nothing", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const deps = stableDeps(SEED);
-    const { result } = renderHook(() => useFreeCrossword(deps));
+    const { result } = renderHook(() => useFreeCrossword(5, deps));
+    await flushGeneration();
     const { phase } = result.current;
     if (phase.kind !== "ready") {
       throw new Error("the crossword did not generate");
@@ -302,6 +311,7 @@ describe("the free crossword's free hints (T-WEB-S122a)", () => {
         cells.map(() => null),
         null,
         "across",
+        5,
       )?.index ?? -1;
     const copy = messages.games.crossword.play;
     const aria = (letter: string | null) =>
@@ -309,6 +319,7 @@ describe("the free crossword's free hints (T-WEB-S122a)", () => {
     const { container } = render(
       <CrosswordFreeScreen deps={stableDeps(SEED)} />,
     );
+    await flushGeneration();
     const cell = () =>
       container.querySelector(`[data-cell-index="${String(first)}"]`);
 
@@ -332,10 +343,11 @@ describe("the free crossword's free hints (T-WEB-S122a)", () => {
 });
 
 describe("the free crossword's hint names its pista (T-WEB-S579)", () => {
-  it("reads out the sentence for the pista it wrote a letter in", () => {
+  it("reads out the sentence for the pista it wrote a letter in", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const deps = stableDeps(SEED);
-    const { result } = renderHook(() => useFreeCrossword(deps));
+    const { result } = renderHook(() => useFreeCrossword(5, deps));
+    await flushGeneration();
     const { phase } = result.current;
     if (phase.kind !== "ready") {
       throw new Error("the crossword did not generate");
@@ -347,10 +359,12 @@ describe("the free crossword's hint names its pista (T-WEB-S579)", () => {
       grid.flat().map(() => null),
       null,
       "across",
+      5,
     );
     const { container } = render(
       <CrosswordFreeScreen deps={stableDeps(SEED)} />,
     );
+    await flushGeneration();
 
     fireEvent.click(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
@@ -358,7 +372,7 @@ describe("the free crossword's hint names its pista (T-WEB-S579)", () => {
 
     expect(hint?.reason.kind).toBe("step");
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
-      crosswordHintExplanation(hint?.reason ?? null),
+      crosswordHintExplanation(hint?.reason ?? null, 5),
     );
   });
 });

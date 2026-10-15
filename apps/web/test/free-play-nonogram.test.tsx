@@ -6,6 +6,7 @@ import { LEVEL_WEEKDAYS } from "../src/free-play/catalog";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
 import { messages } from "../src/i18n";
 import boardStyles from "../src/nonogram/nonogram-board.module.css";
+import { flushGeneration } from "./free-generation";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 const SEED = 20_260_812;
@@ -37,16 +38,18 @@ afterEach(() => {
 });
 
 describe("free-play Nonogram zero-fetch solve and the nameless picture (T-WEB-S120)", () => {
-  it("paints the picture from the clues alone and shows it unnamed on the solved card", () => {
+  it("paints the picture from the clues alone and shows it unnamed on the solved card", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     const { container } = render(
       <NonogramFreeScreen deps={stableDeps([SEED, SEED])} />,
     );
+    await flushGeneration();
 
     fireEvent.click(
       screen.getByRole("radio", { name: messages.freePlay.level.aria("Leve") }),
     );
+    await flushGeneration();
 
     const size = LEVE_PUZZLE.size;
     for (let row = 0; row < size; row += 1) {
@@ -85,12 +88,13 @@ describe("free-play Nonogram zero-fetch solve and the nameless picture (T-WEB-S1
 });
 
 describe("level switch remounts the board (T-WEB-S121)", () => {
-  it("resets the entries and regenerates at LEVEL_WEEKDAYS[level]'s size", () => {
+  it("resets the entries and regenerates at LEVEL_WEEKDAYS[level]'s size", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const seeds = [SEED, SEED + 1, SEED + 2];
     const { container } = render(
       <NonogramFreeScreen deps={stableDeps(seeds)} />,
     );
+    await flushGeneration();
 
     const medio = generateNonogram(SEED, LEVEL_WEEKDAYS.medio);
     expect(medio.size).toBe(10);
@@ -106,6 +110,7 @@ describe("level switch remounts the board (T-WEB-S121)", () => {
     fireEvent.click(
       screen.getByRole("radio", { name: messages.freePlay.level.aria("Leve") }),
     );
+    await flushGeneration();
     const leve = generateNonogram(SEED + 1, LEVEL_WEEKDAYS.leve);
     expect(leve.size).toBe(5);
     expect(cells(container)).toHaveLength(25);
@@ -119,6 +124,7 @@ describe("level switch remounts the board (T-WEB-S121)", () => {
         name: messages.freePlay.level.aria("Difícil"),
       }),
     );
+    await flushGeneration();
     const dificil = generateNonogram(SEED + 2, LEVEL_WEEKDAYS.dificil);
     expect(dificil.size).toBe(15);
     expect(cells(container)).toHaveLength(225);
@@ -126,15 +132,17 @@ describe("level switch remounts the board (T-WEB-S121)", () => {
 });
 
 describe("free-play Nonogram right click (T-WEB-S500a)", () => {
-  it("crosses with the right button and fills with the left, through the shared board", () => {
+  it("crosses with the right button and fills with the left, through the shared board", async () => {
     installPointerStubs();
     vi.stubGlobal("fetch", vi.fn());
     const { container } = render(
       <NonogramFreeScreen deps={stableDeps([SEED, SEED + 1])} />,
     );
+    await flushGeneration();
     fireEvent.click(
       screen.getByRole("radio", { name: messages.freePlay.level.aria("Leve") }),
     );
+    await flushGeneration();
     stubElementFromPoint(container);
     const board = screen.getByRole("group", {
       name: messages.games.nonogram.play.boardAria(5),

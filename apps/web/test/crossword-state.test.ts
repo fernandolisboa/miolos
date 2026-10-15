@@ -17,6 +17,8 @@ import {
   type CrosswordPlayState,
 } from "../src/crossword/state";
 
+import { SEVEN_DAILY } from "./crossword-seven";
+
 const DATE = "2026-08-01";
 
 // row0: c a t # #
@@ -449,5 +451,41 @@ describe("restore (T-WEB-S428)", () => {
     expect(otherGame.timer.accumulatedMs).toBe(0);
     expect(otherGame.hint.used).toBe(0);
     expect(otherGame.pendingSync).toBe(false);
+  });
+});
+
+describe("a 7x7 puzzle plays on its own side (T-WEB-S670)", () => {
+  const seven = () => initCrosswordPlayState(SEVEN_DAILY);
+
+  it("takes the side from the grid it was given", () => {
+    expect(fresh().size).toBe(5);
+    expect(seven().size).toBe(7);
+    expect(seven().solution).toHaveLength(49);
+  });
+
+  it("moves to row 6 and column 6 and clamps at the 7x7 edge", () => {
+    const corner = play(
+      seven(),
+      { type: "select", index: 0 },
+      { type: "move-selection", rows: 6, columns: 6 },
+    );
+    expect(corner.selected).toBe(48);
+
+    expect(
+      play(corner, { type: "move-selection", rows: 1, columns: 1 }).selected,
+    ).toBe(48);
+    expect(
+      play(corner, { type: "move-selection", rows: -6, columns: -6 }).selected,
+    ).toBe(0);
+  });
+
+  it("types down a 7-long entry, a row of 7 cells at a time", () => {
+    const typed = play(
+      seven(),
+      { type: "select-entry", index: 6, direction: "down" },
+      { type: "type-letter", letter: "s", skipFilled: false },
+    );
+    expect(typed.entries[6]).toBe("s");
+    expect(typed.selected).toBe(13);
   });
 });

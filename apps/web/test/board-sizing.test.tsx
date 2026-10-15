@@ -107,6 +107,7 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S597
       binairo: [GAME_SHEETS.binairo, ".cell"],
       termo: [GAME_SHEETS.termo, ".tile"],
       crossword: [GAME_SHEETS.crossword, ".cell"],
+      crossword7: [GAME_SHEETS.crossword, ".size7 .cell"],
     } as const;
     for (const [game, [sheet, selector]] of Object.entries(fonts)) {
       const size = decl(bodyOf(sheet, selector), "font-size") ?? "";
@@ -123,7 +124,7 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S597
       [GAME_SHEETS.binairo, [".grid"]],
       [GAME_SHEETS.queens, [".size7", ".size8", ".size9"]],
       [GAME_SHEETS.nonogram, [".size5", ".size8", ".size10", ".size15"]],
-      [GAME_SHEETS.crossword, [".grid"]],
+      [GAME_SHEETS.crossword, [".grid", ".size7"]],
     ] as const;
 
     for (const [sheet, selectors] of boards) {
@@ -211,6 +212,40 @@ describe("every board keeps a usable cell at the floor (T-WEB-S598)", () => {
 
     expect(floor).toBeLessThanOrEqual(boardFloor());
     expect(cells).toBeGreaterThanOrEqual(WCAG_TARGET_FLOOR);
+  });
+});
+
+describe("a 7x7 Cruzadinha keeps a usable cell at its own floor (T-WEB-S598)", () => {
+  const sheet = GAME_SHEETS.crossword;
+  const floor = pixels(decl(bodyOf(sheet, ".pageSize7"), "--board-min"));
+  const aspect = Number(
+    decl(bodyOf(sheet, ".pageCrossword"), "--board-aspect"),
+  );
+  const cellAt = (padding: number, gap: number) =>
+    (floor * aspect - 2 * padding - 2 * CARD_BORDER - 6 * gap) / 7;
+
+  it("lays out seven tracks and sets the floor on the page modifier, under the shared floor and the narrowest phone", () => {
+    const grid = bodyOf(sheet, ".size7");
+
+    expect(decl(grid, "grid-template-columns")).toBe(
+      "repeat(7, minmax(0, 1fr))",
+    );
+    expect(decl(grid, "grid-template-rows")).toBe("repeat(7, minmax(0, 1fr))");
+    expect(floor).toBeLessThanOrEqual(boardFloor());
+    expect(floor).toBeLessThanOrEqual(NARROWEST_VIEWPORT - PAGE_PADDING);
+  });
+
+  it("keeps cells at 24px or more in the desktop and the phone band", () => {
+    const phoneGap = pixels(
+      decl(bodyOf(bodyOf(sheet, "@media (max-width: 768px)"), ".grid"), "gap"),
+    );
+
+    expect(
+      cellAt(token("--space-4"), pixels(decl(bodyOf(sheet, ".grid"), "gap"))),
+    ).toBeGreaterThanOrEqual(WCAG_TARGET_FLOOR);
+    expect(cellAt(mobilePadding(), phoneGap)).toBeGreaterThanOrEqual(
+      WCAG_TARGET_FLOOR,
+    );
   });
 });
 

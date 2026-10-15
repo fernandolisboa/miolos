@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LEVEL_WEEKDAYS } from "../src/free-play/catalog";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
+import { flushGeneration } from "./free-generation";
 
 const SEED = 20_260_812;
 
@@ -55,7 +56,7 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
     expect(markup).toContain(messages.games.sudoku.play.keypad.affordance);
   });
 
-  it("retries with a fresh seed on SudokuGenerationError, up to three", () => {
+  it("retries with a fresh seed on SudokuGenerationError, up to three", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const failures = new SudokuGenerationError(
       1,
@@ -76,6 +77,7 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
     });
 
     const { container } = render(<SudokuFreeScreen deps={deps} />);
+    await flushGeneration();
 
     expect(
       container.querySelector("main")?.getAttribute("data-play-state"),
@@ -83,7 +85,7 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
     expect(pickSeed).toHaveBeenCalledTimes(3);
   });
 
-  it("shows the error card after three throws, and its retry regenerates", () => {
+  it("shows the error card after three throws, and its retry regenerates", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const failure = new SudokuGenerationError(
       1,
@@ -104,6 +106,7 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
     });
 
     const { container } = render(<SudokuFreeScreen deps={deps} />);
+    await flushGeneration();
 
     expect(
       container.querySelector("main")?.getAttribute("data-play-state"),
@@ -112,6 +115,7 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
     expect(pickSeed).toHaveBeenCalledTimes(3);
 
     fireEvent.click(screen.getByText(messages.freePlay.error.retry));
+    await flushGeneration();
 
     expect(
       container.querySelector("main")?.getAttribute("data-play-state"),
@@ -124,13 +128,14 @@ describe("free-play Sudoku zero-fetch solve, no timer (T-WEB-S119)", () => {
   it(
     "solves a pinned Leve puzzle into the solved card with zero fetch calls",
     { timeout: 20_000 },
-    () => {
+    async () => {
       const fetchMock = vi.fn();
       vi.stubGlobal("fetch", fetchMock);
 
       const { deps } = stableDeps({ seeds: [SEED, SEED] });
 
       const { container } = render(<SudokuFreeScreen deps={deps} />);
+      await flushGeneration();
 
       expect(
         screen.queryByText(messages.play.timerLabel),
@@ -142,6 +147,7 @@ describe("free-play Sudoku zero-fetch solve, no timer (T-WEB-S119)", () => {
           name: messages.freePlay.level.aria("Leve"),
         }),
       );
+      await flushGeneration();
 
       for (const [index, given] of LEVE_PUZZLE.givens.entries()) {
         if (given !== 0) {
@@ -180,15 +186,17 @@ describe("free-play Sudoku zero-fetch solve, no timer (T-WEB-S119)", () => {
 });
 
 describe("free play's keypad tallies the board too (T-WEB-S653)", () => {
-  it("fades the key of a digit placed nine times", () => {
+  it("fades the key of a digit placed nine times", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const { deps } = stableDeps({ seeds: [SEED, SEED] });
     const { container } = render(<SudokuFreeScreen deps={deps} />);
+    await flushGeneration();
     fireEvent.click(
       screen.getByRole("radio", {
         name: messages.freePlay.level.aria("Leve"),
       }),
     );
+    await flushGeneration();
     const keypad = messages.games.sudoku.play.keypad;
     const digit = LEVE_PUZZLE.solution[LEVE_PUZZLE.givens.indexOf(0)] ?? 1;
 

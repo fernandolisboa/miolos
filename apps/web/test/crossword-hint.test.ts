@@ -20,6 +20,7 @@ import {
   type CrosswordPlayState,
 } from "../src/crossword/state";
 import { messages } from "../src/i18n";
+import { SEVEN_DAILY } from "./crossword-seven";
 
 const copy = messages.games.crossword.play;
 
@@ -48,7 +49,7 @@ function hintFor(
   selected: number | null = null,
   direction: CrosswordDirection = "across",
 ) {
-  return nextCrosswordHint(GRID, CLUES, board(filled), selected, direction);
+  return nextCrosswordHint(GRID, CLUES, board(filled), selected, direction, 5);
 }
 
 describe("nextCrosswordHint reveals a letter of the current pista (T-WEB-S576)", () => {
@@ -175,7 +176,8 @@ const dailyShaped = fc
   .filter(({ solution, clues }) =>
     solution.every(
       (cell, index) =>
-        cell === null || clues.some((clue) => entryCells(clue).includes(index)),
+        cell === null ||
+        clues.some((clue) => entryCells(clue, 5).includes(index)),
     ),
   );
 
@@ -191,6 +193,7 @@ describe("a Cruzadinha hint reveals an empty letter of the target pista (T-WEB-S
             entries,
             selected,
             direction,
+            5,
           );
           const wrong = entries.some(
             (entry, index) => entry !== null && entry !== solution[index],
@@ -216,20 +219,20 @@ describe("a Cruzadinha hint reveals an empty letter of the target pista (T-WEB-S
             throw new Error("a daily-shaped board fell back to a plain fill");
           }
           const { step } = hint.reason;
-          expect(entryCells(step.clue)).toContain(hint.index);
+          expect(entryCells(step.clue, 5)).toContain(hint.index);
           const active =
             selected === null
               ? undefined
-              : activeEntry(clues, selected, direction);
+              : activeEntry(clues, selected, direction, 5);
           if (
             active !== undefined &&
-            entryCells(active).some((at) => entries[at] === null)
+            entryCells(active, 5).some((at) => entries[at] === null)
           ) {
             expect(step.clue).toBe(active);
           }
           if (step.crossing !== null) {
             expect(
-              entryCells(step.crossing).some(
+              entryCells(step.crossing, 5).some(
                 (at) => at !== hint.index && entries[at] === null,
               ),
             ).toBe(true);
@@ -284,28 +287,84 @@ describe("the Cruzadinha reducer records the hint's reason (T-WEB-S577)", () => 
 describe("the Cruzadinha hint sentences (T-WEB-S578)", () => {
   it("names the pista and the cell, and the crossing pista when there is one", () => {
     expect(
-      crosswordHintExplanation({
-        kind: "step",
-        step: { clue: ACROSS_1!, crossing: null, index: 7 },
-      }),
+      crosswordHintExplanation(
+        {
+          kind: "step",
+          step: { clue: ACROSS_1!, crossing: null, index: 7 },
+        },
+        5,
+      ),
     ).toBe("Uma letra da pista 1 horizontal: linha 2, coluna 3.");
     expect(
-      crosswordHintExplanation({
-        kind: "step",
-        step: { clue: ACROSS_1!, crossing: DOWN_2!, index: 2 },
-      }),
+      crosswordHintExplanation(
+        {
+          kind: "step",
+          step: { clue: ACROSS_1!, crossing: DOWN_2!, index: 2 },
+        },
+        5,
+      ),
     ).toBe(
       "Uma letra da pista 1 horizontal, que também ajuda na 2 vertical: linha 1, coluna 3.",
     );
   });
 
   it("keeps the correction copy, words the plain fill and says nothing before a hint", () => {
-    expect(crosswordHintExplanation({ kind: "correction" })).toBe(
+    expect(crosswordHintExplanation({ kind: "correction" }, 5)).toBe(
       "Corrigimos uma letra errada.",
     );
-    expect(crosswordHintExplanation({ kind: "fill" })).toBe(
+    expect(crosswordHintExplanation({ kind: "fill" }, 5)).toBe(
       copy.hint.explain.fill,
     );
-    expect(crosswordHintExplanation(null)).toBeNull();
+    expect(crosswordHintExplanation(null, 5)).toBeNull();
+  });
+});
+
+describe("the Cruzadinha hint reads a 7x7 grid by its own side (T-WEB-S671)", () => {
+  const [, , down2, across3] = SEVEN_DAILY.clues as [
+    CrosswordClue,
+    CrosswordClue,
+    CrosswordClue,
+    CrosswordClue,
+  ];
+  const solution = SEVEN_DAILY.grid.flat();
+
+  it("names the row and column of a cell in row 6 and column 6", () => {
+    expect(
+      crosswordHintExplanation(
+        { kind: "step", step: { clue: down2, crossing: null, index: 48 } },
+        7,
+      ),
+    ).toBe("Uma letra da pista 2 vertical: linha 7, coluna 7.");
+  });
+
+  it("reveals a cell of the active down entry 7 apart, through the reducer", () => {
+    const filled = solution.map((cell, index) =>
+      [6, 13, 20, 27, 34, 41].includes(index) ? cell : null,
+    );
+    const hint = nextCrosswordHint(
+      solution,
+      SEVEN_DAILY.clues,
+      filled,
+      6,
+      "down",
+      7,
+    );
+    expect(hint?.index).toBe(48);
+    expect(hint?.value).toBe("e");
+
+    const state = {
+      ...initCrosswordPlayState(SEVEN_DAILY),
+      entries: filled,
+      selected: 6,
+      direction: "down" as const,
+    };
+    const hinted = crosswordPlayReducer(state, { type: "use-hint" });
+    expect(state.size).toBe(7);
+    expect(hinted.entries[48]).toBe("e");
+    expect(hinted.hint.lastIndex).toBe(48);
+    expect(hinted.hint.reason).toEqual({
+      kind: "step",
+      step: { clue: down2, crossing: across3, index: 48 },
+    });
   });
 });

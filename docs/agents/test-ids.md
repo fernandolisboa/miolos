@@ -37,13 +37,15 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area | Next free | Highest in use | Bare series closed at |
 |---|---|---|---|
-| `T-CORE` | `S187` | `S185` | never used |
+| `T-CORE` | `S190` | `S188` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S331` | `S330` | `T-API-16` |
-| `T-WEB` | `S657` | `S656` | `T-WEB-23` |
+| `T-WEB` | `S680` | `S674` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
 #329 (Nonogram *Arrastar só em linha reta*) spent **`T-WEB-S655`** (`straight-stroke.test.tsx`: `strokeAxis`, `projectOnLine`, `cellsAfter`) and **`T-WEB-S656`** (same file: the board keeps a stroke on its row or column, fills a jump, and paints freely with the switch off). `T-WEB-S580` and `S593` were widened in place.
+
+#330 part 2 (the Cruzadinha *Tamanho* choice in free play, ADR-0111) spent **`T-CORE-S187…S188`** in `packages/core/test/daily-contract.test.ts` (the projection sized by its caller; every daily shape still refuses 7×7) and **`T-WEB-S670…S674`**: `S670` (`crossword-grid`/`crossword-state` at side 7), `S671` (`crossword-hint`: the sentence and `nextCrosswordHint` at 7), `S672` and `S673` (`free-play-crossword`: the *Tamanho* radiogroup; a 7×7 played, solved and retried), `S674` (`free-play-generation`: the build waits a frame). `T-CORE-S189` and `T-WEB-S675…S679` are **burned**. `T-WEB-S425`, `S445`, `S446`, `S447`, `S405`, `S415`, `S416`, `S597` and `S598` were widened in place.
 
 #330 part 1 (the Cruzadinha size parameter, ADR-0108) spent **`T-API-S330`** in `apps/api/test/publishing-service.test.ts` (the stored daily contract refuses a 7×7 puzzle), leaving `S323…S329` to sibling branches.
 

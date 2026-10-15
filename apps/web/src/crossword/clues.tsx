@@ -13,13 +13,17 @@ export function ClueBar({
   clues,
   selected,
   direction,
+  size,
 }: {
   readonly clues: readonly CrosswordClue[];
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
+  readonly size: number;
 }) {
   const clue =
-    selected === null ? undefined : activeEntry(clues, selected, direction);
+    selected === null
+      ? undefined
+      : activeEntry(clues, selected, direction, size);
   return (
     <p role="status" className={styles.activeBar}>
       <span className={styles.activeText}>
@@ -45,15 +49,19 @@ export function ClueLists({
   clues,
   selected,
   direction,
+  size,
   onSelect,
 }: {
   readonly clues: readonly CrosswordClue[];
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
+  readonly size: number;
   readonly onSelect: (index: number, direction: CrosswordDirection) => void;
 }) {
   const active =
-    selected === null ? undefined : activeEntry(clues, selected, direction);
+    selected === null
+      ? undefined
+      : activeEntry(clues, selected, direction, size);
 
   return (
     <div className={styles.lists}>
@@ -74,7 +82,10 @@ export function ClueLists({
                         : styles.item
                     }
                     onClick={() => {
-                      onSelect(indexOf(clue.row, clue.col), clue.direction);
+                      onSelect(
+                        indexOf(clue.row, clue.col, size),
+                        clue.direction,
+                      );
                     }}
                   >
                     {copy.clueLabel(clue.number, clue.direction)} — {clue.clue}
