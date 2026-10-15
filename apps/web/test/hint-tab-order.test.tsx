@@ -21,6 +21,7 @@ import { NonogramScreen } from "../src/nonogram/nonogram-screen";
 import sharedStyles from "../src/play/screen.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 import { TermoScreen } from "../src/termo/termo-screen";
+import { flushGeneration } from "./free-generation";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -107,8 +108,9 @@ afterEach(() => {
 describe("the hint button is the last tab stop, not the second (T-WEB-S232)", () => {
   it.each(SCREENS)(
     "$route puts its hint after its board in the tab sequence",
-    ({ route, mount }) => {
+    async ({ route, mount }) => {
       const { container } = render(mount());
+      await flushGeneration();
       const page = container.querySelector<HTMLElement>(
         `.${sharedStyles.page ?? "page"}`,
       );
@@ -135,11 +137,12 @@ describe("the hint button is the last tab stop, not the second (T-WEB-S232)", ()
     },
   );
 
-  it("holds for six hint-bearing screens, with /termo the only screen exempt", () => {
+  it("holds for six hint-bearing screens, with /termo the only screen exempt", async () => {
     const withHint: string[] = [];
     const withoutHint: string[] = [];
     for (const { route, mount } of SCREENS) {
       const { container, unmount } = render(mount());
+      await flushGeneration();
       const found = container.querySelector(
         `button.${sharedStyles.hint ?? "hint"}`,
       );
@@ -160,8 +163,9 @@ describe("the hint button is the last tab stop, not the second (T-WEB-S232)", ()
 
   it.each(SCREENS.filter(({ route }) => route !== "/termo"))(
     "$route puts the hint's node after the whole board section",
-    ({ route, mount }) => {
+    async ({ route, mount }) => {
       const { container } = render(mount());
+      await flushGeneration();
       const board = container.querySelector<HTMLElement>(
         `.${sharedStyles.board ?? "board"}`,
       );

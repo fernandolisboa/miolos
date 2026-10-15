@@ -98,40 +98,50 @@ export const dailyTermoResponseSchema = z.strictObject({
 
 export type DailyTermoResponse = z.infer<typeof dailyTermoResponseSchema>;
 
-const CROSSWORD_SIZE = 5;
+export const CROSSWORD_SIZES = [5, 7] as const;
+
+export type CrosswordSize = (typeof CROSSWORD_SIZES)[number];
+
+export const DAILY_CROSSWORD_SIZE = 5 satisfies CrosswordSize;
 
 export const crosswordLetterSchema = z.string().regex(/^[a-z]$/);
 
-export const crosswordGridSchema = z
-  .array(z.array(crosswordLetterSchema.nullable()).length(CROSSWORD_SIZE))
-  .length(CROSSWORD_SIZE);
+function crosswordGridOf(size: CrosswordSize) {
+  return z
+    .array(z.array(crosswordLetterSchema.nullable()).length(size))
+    .length(size);
+}
+
+export const crosswordGridSchema = crosswordGridOf(DAILY_CROSSWORD_SIZE);
 
 export const crosswordDirectionSchema = z.enum(["across", "down"]);
 
-const crosswordIndexSchema = z
-  .number()
-  .int()
-  .min(0)
-  .max(CROSSWORD_SIZE - 1);
+function crosswordClueOf(size: CrosswordSize) {
+  const index = z
+    .number()
+    .int()
+    .min(0)
+    .max(size - 1);
+  return z.strictObject({
+    number: z.number().int().positive(),
+    direction: crosswordDirectionSchema,
+    row: index,
+    col: index,
+    length: z.number().int().min(1).max(size),
+    clue: z.string().min(1),
+  });
+}
 
-const crosswordClueSchema = z.strictObject({
-  number: z.number().int().positive(),
-  direction: crosswordDirectionSchema,
-  row: crosswordIndexSchema,
-  col: crosswordIndexSchema,
-  length: z.number().int().min(1).max(CROSSWORD_SIZE),
-  clue: z.string().min(1),
-});
-
-type CrosswordClue = z.infer<typeof crosswordClueSchema>;
+type CrosswordClue = z.infer<ReturnType<typeof crosswordClueOf>>;
 
 type CrosswordGrid = z.infer<typeof crosswordGridSchema>;
 
 function clueCellsAreWhite(
   grid: CrosswordGrid,
   { direction, row, col, length }: CrosswordClue,
+  size: CrosswordSize,
 ): boolean {
-  if (length > CROSSWORD_SIZE) {
+  if (length > size) {
     return false;
   }
   return Array.from({ length }, (_, k) =>
@@ -139,16 +149,39 @@ function clueCellsAreWhite(
   ).every((cell) => typeof cell === "string");
 }
 
-export const dailyCrosswordResponseSchema = z
-  .strictObject({
-    game: z.literal("crossword"),
-    date: isoDateString,
-    grid: crosswordGridSchema,
-    clues: z.array(crosswordClueSchema).min(1),
-  })
-  .refine((d) => d.clues.every((clue) => clueCellsAreWhite(d.grid, clue)), {
-    message: "every clue cell must be in bounds and white",
-  });
+function crosswordResponseSchema(size: CrosswordSize) {
+  return z
+    .strictObject({
+      game: z.literal("crossword"),
+      date: isoDateString,
+      grid: crosswordGridOf(size),
+      clues: z.array(crosswordClueOf(size)).min(1),
+    })
+    .refine(
+      (d) => d.clues.every((clue) => clueCellsAreWhite(d.grid, clue, size)),
+      {
+        message: "every clue cell must be in bounds and white",
+      },
+    );
+}
+
+export const dailyCrosswordResponseSchema =
+  crosswordResponseSchema(DAILY_CROSSWORD_SIZE);
+
+const crosswordResponseSchemas = new Map<
+  CrosswordSize,
+  typeof dailyCrosswordResponseSchema
+>([[DAILY_CROSSWORD_SIZE, dailyCrosswordResponseSchema]]);
+
+function crosswordResponseSchemaFor(size: CrosswordSize) {
+  const cached = crosswordResponseSchemas.get(size);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const schema = crosswordResponseSchema(size);
+  crosswordResponseSchemas.set(size, schema);
+  return schema;
+}
 
 export type DailyCrosswordResponse = z.infer<
   typeof dailyCrosswordResponseSchema
@@ -158,7 +191,7 @@ type CrosswordEntrySource = Omit<CrosswordClue, "length"> & {
   readonly normalized: string;
 };
 
-export function projectCrosswordDaily(
+export function projectCrossword(
   date: string,
   {
     grid,
@@ -167,8 +200,9 @@ export function projectCrosswordDaily(
     readonly grid: ReadonlyArray<Readonly<CrosswordGrid[number]>>;
     readonly entries: ReadonlyArray<Readonly<CrosswordEntrySource>>;
   },
+  size: CrosswordSize,
 ): DailyCrosswordResponse {
-  return dailyCrosswordResponseSchema.parse({
+  return crosswordResponseSchemaFor(size).parse({
     game: "crossword",
     date,
     grid,

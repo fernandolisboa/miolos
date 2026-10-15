@@ -21,7 +21,10 @@ export function crosswordReadouts(board: CrosswordBoard): PlayChromeReadouts {
     hint: {
       ready: board.hintReady,
       used: board.state.hint.used,
-      explain: crosswordHintExplanation(board.state.hint.reason),
+      explain: crosswordHintExplanation(
+        board.state.hint.reason,
+        board.state.size,
+      ),
       onReveal: board.revealHint,
     },
     onReset: hasDecidedCell(board.state.entries) ? board.reset : null,
@@ -71,6 +74,7 @@ export function CrosswordBoardView({
         <BoardCard>
           <Board
             boardRef={boardRef}
+            size={state.size}
             solution={state.solution}
             clues={state.clues}
             entries={state.entries}
@@ -90,6 +94,7 @@ export function CrosswordBoardView({
           clues={state.clues}
           selected={state.selected}
           direction={state.direction}
+          size={state.size}
         />
       }
       clues={{
@@ -98,6 +103,7 @@ export function CrosswordBoardView({
             clues={state.clues}
             selected={state.selected}
             direction={state.direction}
+            size={state.size}
             onSelect={selectFromClue}
           />
         ),
@@ -118,15 +124,17 @@ export function CrosswordBoardView({
 }
 
 export function CrosswordSkeletonBody({
+  size,
   overlay,
 }: {
+  readonly size: number;
   readonly overlay?: ReactNode;
 }) {
   return (
     <CrosswordLayout
       board={
         <BoardCard placeholder overlay={overlay}>
-          <BoardSkeleton />
+          <BoardSkeleton size={size} />
         </BoardCard>
       }
       clueBar={<ClueBarSkeleton />}

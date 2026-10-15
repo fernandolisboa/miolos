@@ -9,6 +9,7 @@ import {
   writePlayRecord,
   type BinairoPlayRecord,
 } from "../src/play/play-record";
+import { flushGeneration } from "./free-generation";
 import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
@@ -65,7 +66,7 @@ function solveRemaining(container: HTMLElement): void {
   }
 }
 
-function driveFullSession(container: HTMLElement): void {
+async function driveFullSession(container: HTMLElement): Promise<void> {
   const firstEmpty = PUZZLE.givens.findIndex((cell) => cell === null);
   fireEvent.click(cellAt(container, firstEmpty));
 
@@ -77,6 +78,7 @@ function driveFullSession(container: HTMLElement): void {
   expect(screen.getByText(messages.freePlay.solved.stamp)).toBeInTheDocument();
 
   fireEvent.click(screen.getByText(messages.freePlay.solved.again.binairo));
+  await flushGeneration();
   const nextFirstGiven = NEXT_PUZZLE.givens.findIndex((cell) => cell !== null);
   expect(cellAt(container, nextFirstGiven).textContent).toBe(
     String(NEXT_PUZZLE.givens[nextFirstGiven]),
@@ -93,20 +95,21 @@ afterEach(() => {
 });
 
 describe("free-play Binairo is a zero-fetch session (T-WEB-S115)", () => {
-  it("generates, plays, hints, solves and regenerates without one fetch call", () => {
+  it("generates, plays, hints, solves and regenerates without one fetch call", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     const { container } = render(
       <BinairoFreeScreen deps={pinnedDeps([SEED, NEXT_SEED])} />,
     );
+    await flushGeneration();
 
     const firstGiven = PUZZLE.givens.findIndex((cell) => cell !== null);
     expect(cellAt(container, firstGiven).textContent).toBe(
       String(PUZZLE.givens[firstGiven]),
     );
 
-    driveFullSession(container);
+    await driveFullSession(container);
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -122,7 +125,7 @@ describe("free-play Binairo is a zero-fetch session (T-WEB-S115)", () => {
 });
 
 describe("free-play Binairo keeps working with the network cut (T-WEB-S116)", () => {
-  it("completes the identical session against a rejecting fetch", () => {
+  it("completes the identical session against a rejecting fetch", async () => {
     const fetchMock = vi
       .fn()
       .mockRejectedValue(new TypeError("Failed to fetch"));
@@ -131,8 +134,9 @@ describe("free-play Binairo keeps working with the network cut (T-WEB-S116)", ()
     const { container } = render(
       <BinairoFreeScreen deps={pinnedDeps([SEED, NEXT_SEED])} />,
     );
+    await flushGeneration();
 
-    driveFullSession(container);
+    await driveFullSession(container);
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -172,7 +176,7 @@ describe("free play writes nothing to localStorage (T-WEB-S117)", () => {
     return all;
   }
 
-  it("leaves the keyspace byte-identical across a full session (D6)", () => {
+  it("leaves the keyspace byte-identical across a full session (D6)", async () => {
     vi.stubGlobal("fetch", vi.fn());
 
     writePlayRecord(dailyRecord);
@@ -183,7 +187,8 @@ describe("free play writes nothing to localStorage (T-WEB-S117)", () => {
     const { container } = render(
       <BinairoFreeScreen deps={pinnedDeps([SEED, NEXT_SEED])} />,
     );
-    driveFullSession(container);
+    await flushGeneration();
+    await driveFullSession(container);
 
     expect(keyspace()).toEqual(before);
   });
@@ -199,10 +204,11 @@ describe("free play writes nothing to localStorage (T-WEB-S117)", () => {
 });
 
 describe("free-play Binairo mouse buttons (T-WEB-S500b)", () => {
-  it("writes 0 on a right click and 1 on a left click, and has no erase control", () => {
+  it("writes 0 on a right click and 1 on a left click, and has no erase control", async () => {
     const { container } = render(
       <BinairoFreeScreen deps={pinnedDeps([SEED])} />,
     );
+    await flushGeneration();
     stubElementFromPoint(container);
     const grid =
       container.querySelector<HTMLElement>("[data-cell-index]")?.parentElement;

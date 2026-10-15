@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { CROSSWORD_SIZES, type CrosswordSize } from "@miolos/core";
+import { useEffect, useState } from "react";
 
 import {
   CrosswordBoardView,
   CrosswordSkeletonBody,
   crosswordReadouts,
 } from "../crossword/board-view";
-import boardStyles from "../crossword/crossword-board.module.css";
+import { pageClassName } from "../crossword/size-classes";
 import { useCrosswordBoard } from "../crossword/use-crossword-board";
+import { messages } from "../i18n";
+import type { FreePlayChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import { GeneratingNote } from "./generating-note";
@@ -19,17 +22,34 @@ import {
   type FreeCrosswordPuzzle,
 } from "./use-free-crossword";
 
+function sizeChoice(
+  size: CrosswordSize,
+  onChange: (size: CrosswordSize) => void,
+): FreePlayChoice<CrosswordSize> {
+  return {
+    label: messages.freePlay.size.label,
+    options: CROSSWORD_SIZES,
+    value: size,
+    optionLabel: messages.freePlay.size.option,
+    optionAria: messages.freePlay.size.aria,
+    onChange,
+  };
+}
+
 export function CrosswordFreeScreen({
   deps,
 }: {
   readonly deps?: FreeCrosswordDeps;
 }) {
-  const { phase, regenerate } = useFreeCrossword(deps);
+  const [size, setSize] = useState<CrosswordSize>(5);
+  const { phase, regenerate } = useFreeCrossword(size, deps);
 
   if (phase.kind === "ready") {
     return (
       <CrosswordFreeBoard
-        key={`${String(phase.puzzle.seed)}:${String(phase.run)}`}
+        key={`${String(phase.puzzle.seed)}:${String(size)}:${String(phase.run)}`}
+        size={size}
+        onSizeChange={setSize}
         puzzle={phase.puzzle}
         onNext={regenerate}
       />
@@ -39,22 +59,27 @@ export function CrosswordFreeScreen({
   return (
     <FreePlayChrome
       game="crossword"
-      pageModifier={boardStyles.pageCrossword ?? ""}
+      pageModifier={pageClassName(size)}
+      choice={sizeChoice(size, setSize)}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
         <FreePlayErrorCard onRetry={regenerate} />
       ) : (
-        <GeneratingBoard />
+        <GeneratingBoard size={size} />
       )}
     </FreePlayChrome>
   );
 }
 
 function CrosswordFreeBoard({
+  size,
+  onSizeChange,
   puzzle,
   onNext,
 }: {
+  readonly size: CrosswordSize;
+  readonly onSizeChange: (size: CrosswordSize) => void;
   readonly puzzle: FreeCrosswordPuzzle;
   readonly onNext: () => void;
 }) {
@@ -64,14 +89,19 @@ function CrosswordFreeBoard({
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, [dispatch]);
 
+  const choice = sizeChoice(size, onSizeChange);
+
   if (board.state.status === "solved") {
-    return <FreePlaySolvedCard game="crossword" onAgain={onNext} />;
+    return (
+      <FreePlaySolvedCard game="crossword" choice={choice} onAgain={onNext} />
+    );
   }
 
   return (
     <FreePlayChrome
       game="crossword"
-      pageModifier={boardStyles.pageCrossword ?? ""}
+      pageModifier={pageClassName(size)}
+      choice={choice}
       state={{ kind: "playing", readouts: crosswordReadouts(board) }}
     >
       <CrosswordBoardView board={board} />
@@ -79,6 +109,6 @@ function CrosswordFreeBoard({
   );
 }
 
-function GeneratingBoard() {
-  return <CrosswordSkeletonBody overlay={<GeneratingNote />} />;
+function GeneratingBoard({ size }: { readonly size: CrosswordSize }) {
+  return <CrosswordSkeletonBody size={size} overlay={<GeneratingNote />} />;
 }

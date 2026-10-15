@@ -9,6 +9,10 @@
   --crossword-col: 552px;
 }
 
+.pageSize7 {
+  --board-min: 232px;
+}
+
 .layout {
   container: crossword / inline-size;
   flex: 1 1 0;
@@ -69,8 +73,8 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-template-rows: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--crossword-size), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--crossword-size), minmax(0, 1fr));
   gap: 4px;
   aspect-ratio: 1;
   touch-action: manipulation;
@@ -99,6 +103,18 @@
     border-color var(--duration-fast) var(--ease-settle),
     color var(--duration-fast) var(--ease-settle),
     box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+.size7 .cell {
+  align-items: flex-end;
+  padding-bottom: 1px;
+  font-size: clamp(14px, calc(var(--board-side) * 0.064), 23px);
+}
+
+.size7 .number {
+  top: 1px;
+  left: 3px;
+  font-size: 9px;
 }
 
 .cell:active {

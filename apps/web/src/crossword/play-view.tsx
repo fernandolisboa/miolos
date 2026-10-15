@@ -1,3 +1,5 @@
+import { DAILY_CROSSWORD_SIZE } from "@miolos/core";
+
 import { DailyPlayChrome } from "../play/daily-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import {
@@ -47,7 +49,7 @@ export function PlaySkeleton({
       extraStat={null}
       state={{ kind: "skeleton" }}
     >
-      <CrosswordSkeletonBody />
+      <CrosswordSkeletonBody size={DAILY_CROSSWORD_SIZE} />
     </DailyPlayChrome>
   );
 }

@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new from #155. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+New, low urgency: NOW §3, whether the daily Cruzadinha ever becomes 7×7 (#330); play 7×7 in free play first. Also open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -14,15 +14,9 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Control tips** (#331): the keyboard and mouse tips of Termo, Sudoku, Nonogram, Binairo and Rainhas sit behind one circled-i button, `InfoTip` (`play/info-tip.tsx`): tap toggles it, hover and keyboard focus open it, Escape, blur and an outside tap close it. Each game keeps its own visibility rule on the `.affordance` wrapper (hidden on phones). The Nonogram toggle and the Binairo buttons are centred in a `1fr auto 1fr` row with the tip in the third column.
 
-**Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
+**Keys and typing** (#321, #322, #327, #328): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L, glyphs from `play/key-glyph.tsx`. Termo's current row is editable (ADR-0106): five slots and a cursor, one key map `pressKey` (`termo/play-view.tsx`), and a gapped Enter does nothing. Cruzadinha typing skips filled cells with *Pular letras já preenchidas* on (`nextEmptyCell`, `crossword/grid.ts`). The Sudoku keypad tallies each digit (`placedCount`/`digitTally`, `sudoku/engine.ts`) on the public rules, fading at nine and red above it, still pressable.
 
-**Termo's current row is editable** (#327, ADR-0106): the draft is five slots and a cursor; a tap or the arrows move the cursor, typing goes to the next empty cell, wrapping, and a gapped Enter does nothing. One key map, `pressKey` (`termo/play-view.tsx`), serves the window listener and the row's own listener.
-
-**The Sudoku keypad tallies each digit** (#328): `placedCount` and `digitTally` (`sudoku/engine.ts`) count givens and entries on the public rules, never the solution; at nine the key fades with a ✓, above nine it takes the conflict red with the count. It stays pressable, so the *Número fixo* lock still works.
-
-**Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
-
-**Cruzadinha 7×7 engine** (#330 part 1, ADR-0108): `generateCrossword(seed, 7)` works and the lexicon has 6- and 7-letter answers; players see nothing yet. `golden.test.ts` pins 5×5 output.
+**Cruzadinha 7×7 in free play** (#330, ADR-0108, ADR-0111): a *Tamanho* 5×5/7×7 choice through `ChoicePicker` (`free-play/choice-picker.tsx`, which the level picker now is too); `projectCrossword(date, puzzle, size)` parses at the asked side and the daily stays 5×5. The board reads its side from the grid. Every free-play build now waits a paint (`useFreeGeneration`); tests await `flushGeneration()` (`apps/web/test/free-generation.ts`).
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`. Binairo's tap cycle and left click start from the *Primeiro valor* setting (#325, default 1), carried on the `tap` action; it is the first setting that is not a switch (two radios, `FirstValueChoice` in `settings/game-settings.tsx`).
 
@@ -33,20 +27,16 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 ## Traps
 
-**Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** `users-updated-at.test.ts` scans `apps/api/src`, but the db test task's cache key does not include that folder, so pre-commit can replay a stale pass. Run `pnpm test --force` before trusting a green gate after an `apps/api` change.
+**Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** `users-updated-at.test.ts` scans `apps/api/src`, but the db test task's cache key does not include that folder, so pre-commit can replay a stale pass. Run `pnpm test --force` before trusting a green gate after an `apps/api` change. The same holds for the crossword lexicon: after editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` first.
 
 **Dependabot npm PRs cannot be merged as opened.** They change one `package.json` and never `pnpm-lock.yaml`, so `--frozen-lockfile` fails. Land them as one hand-made bump across every pin, outside `minimumReleaseAge` (7 days).
 
-**A perfect day needs a lineup buffered before midnight (ADR-0087).** If every buffer ran dry and all of a day's rows were inserted after `published_at`, that day cannot be perfect. The buffer alert exists to prevent that.
-
-**Six per-game medals is T-CORE-S70's maximum.** `queens-30` reached it. A seventh game needs that cap raised, with a reason, first.
-
-**The crossword lexicon is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` and `pnpm test --force`.
+**A perfect day needs a lineup buffered before midnight (ADR-0087).** If every buffer ran dry and all of a day's rows were inserted after `published_at`, that day cannot be perfect. The buffer alert exists to prevent that. **Six per-game medals is T-CORE-S70's maximum.** `queens-30` reached it. A seventh game needs that cap raised, with a reason, first.
 
 **A Rainhas record with `autoCrossed` fails the pre-#326 schema.** Rolling `apps/web` back past #326 drops a pending Rainhas completion saved with *Marcar ✕ automático* on; sync it first.
 
 ## Next
 
-**Next:** #330 part 2, the 7×7 picker in Cruzadinha free play. It must split `crosswordDailyContentSchema` into a daily and a free-play shape, never widen it, Zod-parse the size, and paint `generating` before the synchronous 7×7 generation (up to ~650 ms). Alongside, the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
+**Next:** the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 659.6 of 660 KB and CI's `bundle-check` fails a route over budget, so client code added there re-sizes that budget with a reason.

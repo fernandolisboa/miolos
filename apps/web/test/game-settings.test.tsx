@@ -19,6 +19,7 @@ import { solutionDigits } from "../src/sudoku/engine";
 import { PlaySkeleton } from "../src/sudoku/play-view";
 import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
+import { flushGeneration } from "./free-generation";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -345,8 +346,9 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
     ).toHaveLength(0);
   });
 
-  it("free play has no clock, so its dialog leaves the general group out", () => {
+  it("free play has no clock, so its dialog leaves the general group out", async () => {
     render(<SudokuFreeScreen deps={FREE_DEPS} />);
+    await flushGeneration();
 
     fireEvent.click(screen.getByRole("button", { name: copy.dialog.trigger }));
     const dialog = screen.getByRole("dialog", { name: copy.dialog.title });

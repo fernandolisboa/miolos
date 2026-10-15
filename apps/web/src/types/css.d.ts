@@ -7,5 +7,6 @@ declare module "csstype" {
   interface Properties<TLength, TTime> {
     "--accent"?: string;
     "--ink-on-accent"?: string;
+    "--crossword-size"?: number;
   }
 }

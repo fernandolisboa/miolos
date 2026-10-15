@@ -44,14 +44,22 @@ export function useFreeGeneration<TInput, TGenerate, TPuzzle>(
   const generate = deps?.generate ?? defaultGenerate;
 
   useEffect(() => {
-    try {
-      const puzzle = build(generate, draw, input);
-
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSettled({ input, run, phase: { kind: "ready", run, puzzle } });
-    } catch {
-      setSettled({ input, run, phase: { kind: "failed" } });
-    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // see ADR-0111
+    const frame = requestAnimationFrame(() => {
+      timer = setTimeout(() => {
+        try {
+          const puzzle = build(generate, draw, input);
+          setSettled({ input, run, phase: { kind: "ready", run, puzzle } });
+        } catch {
+          setSettled({ input, run, phase: { kind: "failed" } });
+        }
+      }, 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
   }, [input, run, build, generate, draw]);
 
   const regenerate = useCallback(() => {

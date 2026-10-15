@@ -19,6 +19,7 @@ import { readSettings, writeSettings } from "../src/settings/settings";
 import { solutionDigits } from "../src/sudoku/engine";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 import { useSudokuPlay } from "../src/sudoku/use-sudoku-play";
+import { flushGeneration } from "./free-generation";
 
 vi.mock("../src/play/sync", () => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -442,8 +443,9 @@ describe("the Sudoku digit lock on the keypad (T-WEB-S592)", () => {
     expect(saved).not.toContain("lock");
   });
 
-  it("is on the free-play board too", () => {
+  it("is on the free-play board too", async () => {
     render(<SudokuFreeScreen deps={FREE_DEPS} />);
+    await flushGeneration();
     select(FIRST);
 
     tap(7);
@@ -719,8 +721,9 @@ describe("a double tap on a board cell fixes the digit it shows (T-WEB-S606)", (
     expect(boardValues()).toEqual(before);
   });
 
-  it("is on the free-play board too", () => {
+  it("is on the free-play board too", async () => {
     render(<SudokuFreeScreen deps={FREE_DEPS} />);
+    await flushGeneration();
 
     doubleTap(GIVEN);
 

@@ -2,6 +2,7 @@ import { generateBinairo } from "@miolos/games/binairo";
 import {
   generateCrossword,
   type CrosswordPuzzle,
+  type CrosswordSize as GamesCrosswordSize,
 } from "@miolos/games/crossword";
 import {
   generateNonogram,
@@ -24,10 +25,11 @@ import {
   TERMO_ANSWERS,
   WORD_LENGTH,
 } from "@miolos/games/termo";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   binairoDailyContentSchema,
+  CROSSWORD_SIZES,
   crosswordDailyContentSchema,
   DailyProjectionUnsupportedError,
   dailyBinairoResponseSchema,
@@ -38,11 +40,13 @@ import {
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
   nonogramDailyContentSchema,
+  projectCrossword,
   queensDailyContentSchema,
   stripDailyContent,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
   type CrosswordDailyContent,
+  type CrosswordSize,
   type QueensDailyContent,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
@@ -823,6 +827,62 @@ describe("dailyCrosswordResponseSchema", () => {
         dailyCrosswordResponseSchema.safeParse({ ...valid, grid }).success,
       ).toBe(false);
     }
+  });
+});
+
+describe("projectCrossword (sized)", () => {
+  const SEVEN = generateCrossword(CROSSWORD_SEEDS[0] ?? 0, 7);
+
+  it("T-CORE-S187: projects a 7x7 puzzle by allowlist at size 7, and refuses it at any other size", () => {
+    const projected = projectCrossword("1970-01-01", SEVEN, 7);
+
+    expect(Object.keys(projected).sort()).toEqual([
+      "clues",
+      "date",
+      "game",
+      "grid",
+    ]);
+    expect(projected.grid).toEqual(SEVEN.grid);
+    expect(projected.grid).toHaveLength(7);
+    expect(projected.clues).toEqual(
+      SEVEN.entries.map((entry) => ({
+        number: entry.number,
+        direction: entry.direction,
+        row: entry.row,
+        col: entry.col,
+        length: entry.normalized.length,
+        clue: entry.clue,
+      })),
+    );
+    const keys = collectKeys(projected);
+    for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+      expect(keys.has(forbidden), forbidden).toBe(false);
+    }
+
+    expect(() => projectCrossword("1970-01-01", SEVEN, 5)).toThrow();
+    expect(() => projectCrossword("1970-01-01", crosswordDaily(), 7)).toThrow();
+  });
+
+  it("T-CORE-S187: size 5 projects exactly what the daily strip does, and 5 and 7 are the sizes", () => {
+    for (const seed of CROSSWORD_SEEDS) {
+      const puzzle = crosswordDaily(seed);
+      expect(projectCrossword("2026-09-28", puzzle, 5)).toEqual(
+        stripDailyContent("crossword", "2026-09-28", puzzle),
+      );
+    }
+    expect(CROSSWORD_SIZES).toEqual([5, 7]);
+    expectTypeOf<CrosswordSize>().toEqualTypeOf<GamesCrosswordSize>();
+  });
+
+  it("T-CORE-S188: the daily response and content schemas still refuse a 7x7 puzzle", () => {
+    const projected = projectCrossword("1970-01-01", SEVEN, 7);
+
+    expect(dailyCrosswordResponseSchema.safeParse(projected).success).toBe(
+      false,
+    );
+    expect(dailyPuzzleResponseSchema.safeParse(projected).success).toBe(false);
+    expect(crosswordDailyContentSchema.safeParse(SEVEN).success).toBe(false);
+    expect(() => stripDailyContent("crossword", "2026-09-28", SEVEN)).toThrow();
   });
 });
 
