@@ -22,3 +22,17 @@ export interface SudokuApprovalCriteria {
   readonly minClues: number;
   readonly maxClues: number;
 }
+
+export const SUDOKU_VARIANTS = ["classic", "diagonal", "irregular"] as const;
+
+export type SudokuVariant = (typeof SUDOKU_VARIANTS)[number];
+
+export interface SudokuLayout {
+  readonly regions: readonly number[];
+
+  readonly extraUnits: readonly (readonly number[])[];
+}
+
+export type SudokuVariantPuzzle = SudokuPuzzle & {
+  readonly layout: SudokuLayout;
+};
