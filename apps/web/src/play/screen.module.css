@@ -80,6 +80,7 @@
 /* ── title block ─────────────────────────────────────────────────────── */
 
 .titleBlock {
+  display: var(--title-display, block);
   grid-area: title;
   padding-top: 32px;
 }
@@ -497,7 +498,7 @@
   }
 
   .gridCard {
-    padding: 10px;
+    padding: var(--grid-card-pad, 10px);
     box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 20%, transparent);
   }
 }

@@ -10,10 +10,11 @@ function isWinningRow(row: TileStates): boolean {
 
 export function deriveBoardStatus(
   rows: readonly TileStates[],
+  maxGuesses = MAX_GUESSES,
 ): TermoBoardStatus {
-  if (rows.length > MAX_GUESSES) {
+  if (rows.length > maxGuesses) {
     throw new RangeError(
-      `a board has at most ${String(MAX_GUESSES)} rows, got ${String(rows.length)}`,
+      `a board has at most ${String(maxGuesses)} rows, got ${String(rows.length)}`,
     );
   }
   const winIndex = rows.findIndex(isWinningRow);
@@ -25,5 +26,5 @@ export function deriveBoardStatus(
     }
     return "won";
   }
-  return rows.length === MAX_GUESSES ? "lost" : "playing";
+  return rows.length === maxGuesses ? "lost" : "playing";
 }
