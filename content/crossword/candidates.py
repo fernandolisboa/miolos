@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Build the Cruzadinha candidate pool: frequent, correctly spelled pt-BR words of 3-5 letters.
+"""Build the Cruzadinha candidate pool: frequent, correctly spelled pt-BR words of 3-7 letters.
 
 Run from anywhere: paths resolve relative to this file. Needs `pip install spylls==0.1.7`
 (a pure-Python Hunspell). Sources are fetched into sources/ on first run and checked
 against pinned sha256 digests, so an upstream change fails loudly instead of silently
-shifting the pool. Output: candidates.tsv (normalized, canonical, frequency rank), the
-input to the curation pass.
+shifting the pool. Lengths 6 and 7 keep only their LONG_WORD_TOP most frequent words.
+Output: candidates.tsv (normalized, canonical, frequency rank), the input to the
+curation pass.
 """
+import collections
 import hashlib
 import os
 import re
@@ -31,7 +33,8 @@ SOURCES = {
     ),
 }
 FREQUENCY_TOP = 60_000
-NORM_RE = re.compile(r"^[a-z]{3,5}$")
+NORM_RE = re.compile(r"^[a-z]{3,7}$")
+LONG_WORD_TOP = 3_000
 
 
 def fetch(name):
@@ -52,6 +55,14 @@ def normalize(word):
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
+def capped(ranked):
+    seen = collections.Counter()
+    for normalized, entry in ranked:
+        seen[len(normalized)] += 1
+        if len(normalized) < 6 or seen[len(normalized)] <= LONG_WORD_TOP:
+            yield normalized, entry
+
+
 def main():
     fetch("pt_BR.aff")
     dictionary = Dictionary.from_files(fetch("pt_BR.dic")[: -len(".dic")])
@@ -66,10 +77,11 @@ def main():
                 continue
             if dictionary.lookup(word):
                 pool[normalized] = (word, rank)
+    rows = list(capped(sorted(pool.items(), key=lambda kv: kv[1][1])))
     with open(os.path.join(BASE, "candidates.tsv"), "w", encoding="utf-8") as out:
-        for normalized, (canonical, rank) in sorted(pool.items(), key=lambda kv: kv[1][1]):
+        for normalized, (canonical, rank) in rows:
             out.write(f"{normalized}\t{canonical}\t{rank}\n")
-    print(f"{len(pool)} candidates")
+    print(f"{len(rows)} candidates")
 
 
 if __name__ == "__main__":

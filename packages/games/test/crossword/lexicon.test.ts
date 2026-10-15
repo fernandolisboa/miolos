@@ -30,12 +30,14 @@ const generatedPath = join(
   "lexicon.generated.ts",
 );
 
-const NORMALIZED_SHAPE = /^[a-z]{3,5}$/;
+const NORMALIZED_SHAPE = /^[a-z]{3,7}$/;
 const MAX_CLUE_LENGTH = 48;
 const LENGTH_FLOORS: ReadonlyMap<number, number> = new Map([
   [3, 220],
   [4, 1050],
   [5, 2850],
+  [6, 2700],
+  [7, 2700],
 ]);
 const REJECTION_REASONS: ReadonlySet<string> = new Set([
   "proper-noun",
@@ -106,7 +108,7 @@ function clueKey(clue: string): string {
 }
 
 describe("crossword lexicon harness", () => {
-  it("every answer is 3-5 letters a-z and its canonical normalizes to it", () => {
+  it("every answer is 3-7 letters a-z and its canonical normalizes to it", () => {
     for (const { normalized, canonical } of lexicon) {
       expect(normalized).toMatch(NORMALIZED_SHAPE);
       expect(normalizeWord(canonical), canonical).toBe(normalized);
