@@ -13,6 +13,13 @@ import { validateCrossword } from "../../src/crossword/validate";
 
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const SIZES: readonly CrosswordSize[] = [5, 7];
+// ADR-0055: CI gate ms × 4, next 5_000 — P1 side 7 3822 → 20_000; P2 side 5 2284 → 10_000, side 7 6222 → 25_000.
+const TIMEOUT_MS: Readonly<
+  Record<CrosswordSize, { p1: number | undefined; p2: number }>
+> = {
+  5: { p1: undefined, p2: 10_000 },
+  7: { p1: 20_000, p2: 25_000 },
+};
 
 function shapeOf(puzzle: CrosswordPuzzle): string {
   return puzzle.grid
@@ -38,7 +45,7 @@ describe("generateCrossword", () => {
           { numRuns: 100 },
         );
       },
-      size === 7 ? 10_000 : undefined,
+      TIMEOUT_MS[size].p1,
     );
 
     it(
@@ -53,7 +60,7 @@ describe("generateCrossword", () => {
           { numRuns: 100 },
         );
       },
-      size === 7 ? 20_000 : undefined,
+      TIMEOUT_MS[size].p2,
     );
   }
 

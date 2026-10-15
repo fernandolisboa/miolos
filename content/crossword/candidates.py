@@ -34,6 +34,7 @@ SOURCES = {
 }
 FREQUENCY_TOP = 60_000
 NORM_RE = re.compile(r"^[a-z]{3,7}$")
+LONG_WORD_MIN = 6
 LONG_WORD_TOP = 3_000
 
 
@@ -59,7 +60,7 @@ def capped(ranked):
     seen = collections.Counter()
     for normalized, entry in ranked:
         seen[len(normalized)] += 1
-        if len(normalized) < 6 or seen[len(normalized)] <= LONG_WORD_TOP:
+        if len(normalized) < LONG_WORD_MIN or seen[len(normalized)] <= LONG_WORD_TOP:
             yield normalized, entry
 
 

@@ -103,16 +103,23 @@ function clueTokens(clue: string): string[] {
     .filter((token) => token !== "");
 }
 
+function isShapedAnswer(row: {
+  normalized: string;
+  canonical: string;
+}): boolean {
+  return (
+    NORMALIZED_SHAPE.test(row.normalized) &&
+    normalizeWord(row.canonical) === row.normalized
+  );
+}
+
 function clueKey(clue: string): string {
   return clueTokens(clue).sort().join(" ");
 }
 
 describe("crossword lexicon harness", () => {
   it("every answer is 3-7 letters a-z and its canonical normalizes to it", () => {
-    for (const { normalized, canonical } of lexicon) {
-      expect(normalized).toMatch(NORMALIZED_SHAPE);
-      expect(normalizeWord(canonical), canonical).toBe(normalized);
-    }
+    expect(lexicon.filter((row) => !isShapedAnswer(row))).toEqual([]);
   });
 
   it("answers are sorted and unique", () => {
@@ -120,11 +127,13 @@ describe("crossword lexicon harness", () => {
   });
 
   it("clues are short, capitalized or blank-led, and carry no terminal period", () => {
-    for (const { clue } of lexicon) {
-      expect(clue.length, clue).toBeLessThanOrEqual(MAX_CLUE_LENGTH);
-      expect(clue, clue).toMatch(/^(\p{Lu}|___)/u);
-      expect(clue.endsWith("."), clue).toBe(false);
-    }
+    const misshapen = lexicon.filter(
+      ({ clue }) =>
+        clue.length > MAX_CLUE_LENGTH ||
+        !/^(\p{Lu}|___)/u.test(clue) ||
+        clue.endsWith("."),
+    );
+    expect(misshapen).toEqual([]);
   });
 
   it("clues are unique across the lexicon, ignoring case, accents, punctuation and word order", () => {
@@ -132,21 +141,15 @@ describe("crossword lexicon harness", () => {
   });
 
   it("no clue gives its answer away", () => {
-    for (const { normalized, clue } of lexicon) {
-      for (const token of clueTokens(clue)) {
-        expect(token, `${normalized}: ${clue}`).not.toBe(normalized);
-        if (normalized.length >= 4) {
-          expect(token.startsWith(normalized), `${normalized}: ${clue}`).toBe(
-            false,
-          );
-        }
-        if (token.length >= 3) {
-          expect(normalized.startsWith(token), `${normalized}: ${clue}`).toBe(
-            false,
-          );
-        }
-      }
-    }
+    const givesAway = lexicon.filter(({ normalized, clue }) =>
+      clueTokens(clue).some(
+        (token) =>
+          token === normalized ||
+          (normalized.length >= 4 && token.startsWith(normalized)) ||
+          (token.length >= 3 && normalized.startsWith(token)),
+      ),
+    );
+    expect(givesAway).toEqual([]);
   });
 
   it("the give-away rule catches a token and a prefix, and spares a substring", () => {
@@ -172,12 +175,13 @@ describe("crossword lexicon harness", () => {
     expect(rejected.length).toBeGreaterThan(0);
     expect(isSortedStrictly(rejected.map((row) => row.normalized))).toBe(true);
     const answers = new Set(lexicon.map((row) => row.normalized));
-    for (const { normalized, canonical, reason } of rejected) {
-      expect(normalized).toMatch(NORMALIZED_SHAPE);
-      expect(normalizeWord(canonical), canonical).toBe(normalized);
-      expect(REJECTION_REASONS.has(reason), reason).toBe(true);
-      expect(answers.has(normalized), normalized).toBe(false);
-    }
+    const offenders = rejected.filter(
+      (row) =>
+        !isShapedAnswer(row) ||
+        !REJECTION_REASONS.has(row.reason) ||
+        answers.has(row.normalized),
+    );
+    expect(offenders).toEqual([]);
   });
 
   it("lexicon.generated.ts is byte-identical to the renderer output", () => {
