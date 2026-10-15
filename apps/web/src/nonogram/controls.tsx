@@ -1,4 +1,5 @@
 import { messages } from "../i18n";
+import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import styles from "./nonogram-board.module.css";
 import type { NonogramBrush } from "./state";
 
@@ -32,7 +33,9 @@ export function Controls({
           </button>
         ))}
       </div>
-      <span className={styles.affordance}>{copy.affordance}</span>
+      <span className={styles.affordance}>
+        <InfoTip text={copy.affordance} align="center" />
+      </span>
     </div>
   );
 }
@@ -51,7 +54,7 @@ export function ControlsSkeleton() {
         ))}
       </div>
       <span className={styles.affordance}>
-        {messages.games.nonogram.play.controls.affordance}
+        <InfoTipSkeleton />
       </span>
     </div>
   );

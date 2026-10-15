@@ -507,18 +507,11 @@
   text-decoration-thickness: 2px;
 }
 
-/* A SIBLING of `.keyboard`, never a child. `.keyboard` is a 22-column grid
-   with all 28 keys explicitly placed across rows 1-3, so an unplaced span
-   auto-places into an IMPLICIT fourth row one column wide — ~20px holding a
-   63-character sentence — and `margin-top` on a grid item is inert against
-   `gap` besides. sudoku-board.module.css:318-323 places its identical
-   affordance and says so in the file. Moving it out is the cleaner of the two
-   fixes and buys a second thing: it keeps a decorative sentence out of the
-   `role="group"` labelled `teclado`. */
+/* A sibling of `.keyboard`, never a child: the keyboard's grid places all
+   its keys explicitly, so an unplaced child would fall into an implicit row. */
 .affordance {
+  display: flex;
   margin-top: var(--space-3);
-  font-size: 13px;
-  color: var(--ink-2);
 }
 
 /* THIS module's copy of `.placeholder`, and it must sit AFTER `.key` and

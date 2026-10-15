@@ -1422,16 +1422,14 @@ describe("the board geometry (T-WEB-S48)", () => {
     expect(decl(active, "background")).toBe("var(--accent)");
   });
 
-  it("A10b — places the keyboard affordance the way a flex ROW allows", () => {
+  it("A10b — centres the toggle on the board's axis, the (i) tip beside it", () => {
     const affordance = bodyOf(GAME_CSS, ".affordance");
     const controls = bodyOf(GAME_CSS, ".controls");
 
-    expect(decl(controls, "display")).toBe("flex");
-    expect(decl(controls, "align-items")).toBe("center");
-    expect(decl(affordance, "margin-top")).toBeUndefined();
-    expect(decl(affordance, "margin-left")).toBe("var(--space-3)");
-
-    expect(pixels(decl(affordance, "font-size"))).toBe(13);
+    expect(decl(controls, "display")).toBe("grid");
+    expect(decl(controls, "grid-template-columns")).toBe("1fr auto 1fr");
+    expect(decl(bodyOf(GAME_CSS, ".brushToggle"), "grid-column")).toBe("2");
+    expect(decl(affordance, "justify-self")).toBe("start");
   });
 
   it("A11 — carries a rotation signature no other game's board declares", () => {
