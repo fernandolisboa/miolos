@@ -9,6 +9,7 @@ import Link from "next/link";
 
 import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 
+import { Wordmark } from "../components/brand-mark";
 import { messages } from "../i18n";
 import { useSettings } from "../settings/settings";
 import {
@@ -176,7 +177,7 @@ export function PlayScreenChrome({
         >
           {back.label}
         </Link>
-        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
+        <Wordmark className={screen.wordmark} />
         <span className={screen.barKicker}>{kicker}</span>
         <span className={screen.topDate}>{topDate}</span>
         {clockBar(clock)}

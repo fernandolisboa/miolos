@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BrandMark } from "../components/brand-mark";
 import screen from "./screen.module.css";
 
 export function BoardCard({
@@ -23,8 +24,11 @@ export function BoardCard({
         {children}
       </div>
       {below}
-      {overlay === undefined ? null : (
+      {overlay !== undefined && (
         <div className={screen.boardOverlay}>{overlay}</div>
+      )}
+      {overlay === undefined && placeholder && (
+        <BrandMark detailed shuffling className={screen.boardLoading} />
       )}
     </div>
   );

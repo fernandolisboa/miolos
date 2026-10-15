@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const master = join(webRoot, "app", "icon.svg");
+const master = join(webRoot, "scripts", "app-icon.svg");
 const iconsDir = join(webRoot, "public", "icons");
 
 const PAPER_DESK = "#F7F2E9";

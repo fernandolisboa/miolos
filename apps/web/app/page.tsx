@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AdSlot } from "../src/components/ad-slot";
+import { BrandMark, Wordmark } from "../src/components/brand-mark";
 import {
   locale,
   messages,
@@ -56,7 +57,10 @@ export default function HojePage() {
       <main className={styles.main}>
         <header className={styles.header}>
           <div>
-            <h1 className={styles.wordmark}>{messages.brand.wordmark}</h1>
+            <h1 className={styles.wordmark}>
+              <Wordmark detailed />
+            </h1>
+            <p className={styles.tagline}>{messages.brand.tagline}</p>
             <p className={styles.date}>
               {date.weekday}{" "}
               <span className={styles.dateRest}>{date.rest}</span>
@@ -108,6 +112,11 @@ export default function HojePage() {
             {messages.hoje.links.archive}
           </Link>
         </nav>
+
+        <p className={styles.signOff}>
+          <BrandMark className={styles.signOffMark} />
+          {messages.brand.signOff}
+        </p>
 
         <div className={styles.spacer} />
 

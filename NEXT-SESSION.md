@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
+Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E (#354, a brain whose lobes are grid cells); both shipped and are in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
 
 ## Start here
 
@@ -22,15 +22,15 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is
 
 **Cruzadinha 7×7** (#330, ADR-0108, ADR-0111, ADR-0117): new dailies are generated at 7×7 (`attemptCrossword`); stored 5×5 days stay as they are, so every crossword schema takes either side and a day's size is its `grid.length`. The first 7×7 daily is due about 2026-10-22, once the 5×5 buffer runs out. Free play offers both through `ChoicePicker`; its builds wait a paint (`useFreeGeneration`), and tests await `flushGeneration()`.
 
+**Brand mark** (#354, ADR-0119): `BrandMark` and `Wordmark` (`components/brand-mark.tsx`) sit in every top bar (the conclusion's included) and on the hub, which also shows `messages.brand.tagline` and `signOff`; a placeholder `BoardCard` shows the mark shuffling. The favicon is `app/icon.svg`; the PWA and apple PNGs come from `scripts/app-icon.svg` through `node scripts/render-icons.mjs`.
+
 ## Traps
 
 **Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** Run `pnpm test --force` before trusting a green gate after an `apps/api` change.
 
 **Dependabot npm PRs cannot be merged as opened** (no lockfile change). Land one hand-made bump, outside `minimumReleaseAge` (7 days).
 
-**A perfect day needs a lineup buffered before midnight (ADR-0087).** The buffer alert exists to prevent that.
-
-**Six per-game medals is T-CORE-S70's maximum.** A seventh game needs that cap raised first.
+**A perfect day needs a lineup buffered before midnight (ADR-0087).** The buffer alert exists to prevent that. **Six per-game medals is T-CORE-S70's maximum.** A seventh game needs that cap raised first.
 
 **Content is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, `content/termo/answers.csv` or `content/termo/reserve.txt`, run `generate:crossword`, `generate:termo` and `pnpm test --force`. Re-curation moves a published answer to `reserve.txt`, never deletes it (ADR-0114).
 
@@ -40,4 +40,4 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is
 
 **Next:** the #321–#333 waves are done. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 661.1 of 664 KB and `/modo-livre/nonogram` at 63.9 of 66 KB (ADR-0113, after #360).
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 665.3 of 667 KB, `/modo-livre/termo` at 63.5 of 65 and `/modo-livre/nonogram` at 68.1 of 69 KB (ADR-0119, after #354).

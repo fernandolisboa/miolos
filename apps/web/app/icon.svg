@@ -1,21 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- The Miolos mark (#19, plan 027 D12) — the Ateliê language in geometry
-       only, no text (font-dependent text renders differently per platform):
-       desk paper ground, a slightly rotated paper card with the hard
-       single-color offset shadow in sealing-wax, the four games as a 2x2
-       grid of accent squares, and a translucent tape scrap. Every color is
-       a recorded token from packages/ui/tokens.css. Committed master; the
-       PNG set is rendered from this file by scripts/render-icons.mjs.
-       A Nano Banana replacement is a re-render away (swap this file, run
-       the script, commit). -->
-  <rect width="512" height="512" fill="#F7F2E9"/>
-  <g transform="rotate(2 256 256)">
-    <rect x="128" y="128" width="288" height="288" rx="24" fill="#9E3B2F"/>
-    <rect x="112" y="112" width="288" height="288" rx="24" fill="#FBF7EF" stroke="#9E3B2F" stroke-width="6"/>
-    <rect x="164" y="164" width="80" height="80" rx="12" fill="#8D6212"/>
-    <rect x="268" y="164" width="80" height="80" rx="12" fill="#2E4E7E"/>
-    <rect x="164" y="268" width="80" height="80" rx="12" fill="#B5563C"/>
-    <rect x="268" y="268" width="80" height="80" rx="12" fill="#4E6B52"/>
-    <rect x="216" y="94" width="96" height="30" rx="4" fill="#9E3B2F" opacity="0.3" transform="rotate(-4 264 109)"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3 4 58 52">
+  <style>
+    .paper { fill: #FBF7EF; }
+    .ink { fill: none; stroke: #211D19; stroke-linejoin: round; }
+    .termo { fill: #8D6212; }
+    .sudoku { fill: #2E4E7E; }
+    .nonogram { fill: #B5563C; }
+    .binairo { fill: #4E6B52; }
+    .crossword { fill: #6B4560; }
+    .queens { fill: #7A569C; }
+    @media (prefers-color-scheme: dark) {
+      .paper { fill: #1D1914; }
+      .ink { stroke: #EAE3D5; }
+      .termo { fill: #AC7816; }
+      .sudoku { fill: #5883C2; }
+      .nonogram { fill: #C4684E; }
+      .binairo { fill: #658B6A; }
+      .crossword { fill: #BD7F9D; }
+      .queens { fill: #B48AD8; }
+    }
+  </style>
+  <defs><path id="outline" d="M18 36C14 37 9 36 7 32C4 27 5 19 10 15C15 10 24 8 33 8C43 8 52 11 56 17C60 23 60 31 56 35C55 36 53 36.5 52 36.5C55 38 55 43 50 44C47 45 44.5 44.5 42.6 43.6L41.5 51.5C41 53.5 38.5 53.5 38 51.5L37.4 44.7C32 45.8 27 45.8 22 44C18 43 15 40 17 38C17.5 37 17.8 36.4 18 36Z"/></defs>
+  <use class="paper" href="#outline"/>
+  <rect class="termo" x="15.6" y="10.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="21.6" y="10.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="27.6" y="10.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="sudoku" x="33.6" y="10.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="sudoku" x="39.6" y="10.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="9.6" y="16.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="15.6" y="16.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="21.6" y="16.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="sudoku" x="33.6" y="16.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="sudoku" x="39.6" y="16.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="nonogram" x="51.6" y="16.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="3.6" y="22.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="9.6" y="22.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="15.6" y="22.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="21.6" y="22.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="sudoku" x="33.6" y="22.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="sudoku" x="39.6" y="22.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="nonogram" x="51.6" y="22.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="9.6" y="28.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="termo" x="15.6" y="28.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="nonogram" x="51.6" y="28.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="binairo" x="21.6" y="34.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="binairo" x="27.6" y="34.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="binairo" x="33.6" y="34.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="binairo" x="39.6" y="34.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="binairo" x="21.6" y="40.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="binairo" x="27.6" y="40.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="binairo" x="33.6" y="40.6" width="4.8" height="4.8" rx="1.08"/>
+  <rect class="crossword" x="45.6" y="40.6" width="4.8" height="4.8" rx="1.08"/>
+  <use class="ink" stroke-width="3.6" href="#outline"/>
 </svg>

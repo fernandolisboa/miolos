@@ -68,3 +68,16 @@ describe("one back-link and wordmark bar for every secondary page (T-WEB-S396)",
     expect(screen.getByText(messages.archive.title)).toBeInTheDocument();
   });
 });
+
+describe("the secondary-page bar carries the brand mark beside the wordmark (T-WEB-S752)", () => {
+  it("draws the decorative mark inside the wordmark and keeps its text", () => {
+    render(<PageTopBar />);
+
+    const wordmark = screen.getByText(messages.brand.wordmark);
+    expect(wordmark.textContent).toBe(messages.brand.wordmark);
+    expect(wordmark.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+});

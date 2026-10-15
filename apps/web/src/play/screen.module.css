@@ -290,16 +290,25 @@
 
 /* Outside the card so it is not aria-hidden; centred on the well's height
    above --board-below, which always falls on the card. */
-.boardOverlay {
+.boardOverlay,
+.boardLoading {
   position: absolute;
   top: calc((100cqb - var(--board-below, 0px)) / 2);
   left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.boardOverlay {
   width: max-content;
   max-width: 100%;
   padding: var(--space-2) var(--space-3);
   background: var(--paper-card);
   border-radius: var(--radius);
-  transform: translate(-50%, -50%);
+}
+
+.boardLoading {
+  width: min(40%, 160px);
+  aspect-ratio: 58 / 52;
 }
 
 .hintLive {

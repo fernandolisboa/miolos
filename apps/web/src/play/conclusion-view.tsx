@@ -19,6 +19,7 @@ import {
   routes,
   type Route,
 } from "../i18n";
+import { Wordmark } from "../components/brand-mark";
 import { useStats } from "../stats/use-stats";
 import { useStreak } from "../streak/use-streak";
 import { accentVars } from "./accent";
@@ -593,7 +594,7 @@ function ConclusionTopBar({
         {messages.conclusion.back}
       </Link>
 
-      <span className={styles.wordmark}>{messages.brand.wordmark}</span>
+      <Wordmark className={styles.wordmark} />
       <span className={styles.barKicker}>{kicker}</span>
       <span className={styles.topDateLong}>{formatLongDate(date)}</span>
       <span className={styles.topDateShort}>{formatShortDate(date)}</span>
