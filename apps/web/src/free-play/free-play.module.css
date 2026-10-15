@@ -15,6 +15,12 @@
   margin-bottom: var(--space-4);
 }
 
+@media (max-width: 768px) {
+  .choicePicker {
+    margin-bottom: var(--space-2);
+  }
+}
+
 .choiceChip {
   box-sizing: border-box;
   display: inline-flex;

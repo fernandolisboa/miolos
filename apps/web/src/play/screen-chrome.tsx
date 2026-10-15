@@ -1,15 +1,10 @@
-import {
-  useEffect,
-  useState,
-  type CSSProperties,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { type CSSProperties, type ReactElement, type ReactNode } from "react";
 import Link from "next/link";
 
 import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 
 import { Wordmark } from "../components/brand-mark";
+import { lazyChunk } from "../components/lazy-chunk";
 import { messages } from "../i18n";
 import { useSettings } from "../settings/settings";
 import {
@@ -18,6 +13,7 @@ import {
 } from "../settings/settings-dialog";
 import { accentVars } from "./accent";
 import { useFreeHintsPerPuzzle } from "./free-hints";
+import { PlayTitle, type PlayTitleNote } from "./play-title";
 import { ResetControl, ResetPlaceholder } from "./reset-control";
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
@@ -38,11 +34,6 @@ export interface PlayChromeBack {
   readonly href: string;
   readonly label: string;
   readonly ariaLabel: string;
-}
-
-export interface PlayChromeNote {
-  readonly text: string;
-  readonly className: string;
 }
 
 export interface PlayChromeStat {
@@ -86,9 +77,9 @@ function clockBar(clock: PlayChromeClock): ReactNode {
   );
 }
 
-function hintLabel(used: number, allowance: number): string {
-  return used < allowance
-    ? messages.play.hint.available(allowance - used)
+function hintLabel(left: number): string {
+  return left > 0
+    ? messages.play.hint.available(left)
     : messages.play.hint.used;
 }
 
@@ -113,25 +104,11 @@ function clockRow(clock: PlayChromeClock): ReactNode {
 
 // Outside every route's first load; a failed chunk leaves the live region alone (ADR-0113).
 let LoadedHintCard: typeof import("./hint-card").HintCard | null = null;
-
-function useHintCardLoaded(): boolean {
-  const [loaded, setLoaded] = useState(LoadedHintCard !== null);
-  useEffect(() => {
-    if (loaded) return;
-    let live = true;
-    import("./hint-card").then(
-      (module) => {
-        LoadedHintCard = module.HintCard;
-        if (live) setLoaded(true);
-      },
-      () => undefined,
-    );
-    return () => {
-      live = false;
-    };
-  }, [loaded]);
-  return loaded;
-}
+const useHintCardLoaded = lazyChunk(() =>
+  import("./hint-card").then((module) => {
+    LoadedHintCard = module.HintCard;
+  }),
+);
 
 export function PlayScreenChrome({
   game,
@@ -149,7 +126,7 @@ export function PlayScreenChrome({
   readonly state: PlayChromeState;
   readonly back: PlayChromeBack;
   readonly topDate: string;
-  readonly note: PlayChromeNote | null;
+  readonly note: PlayTitleNote | null;
   readonly clock: PlayChromeClock;
   readonly extraStat: PlayChromeStat | null;
   readonly children: ReactNode;
@@ -161,6 +138,8 @@ export function PlayScreenChrome({
   const hint = readouts?.hint;
   const reason = hint?.explain ?? null;
   const cardLoaded = useHintCardLoaded();
+  const left = Math.max(allowance - (hint?.used ?? 0), 0);
+  const label = hintLabel(left);
   const { kicker, play } = messages.games[game];
 
   return (
@@ -183,21 +162,20 @@ export function PlayScreenChrome({
         {clockBar(clock)}
       </header>
 
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{kicker}</p>
-
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{play.title}</h1>
-          <span
-            aria-hidden={readouts === null ? true : undefined}
-            className={screen.progressBar}
-          >
-            {readouts === null ? BLANK_READOUT : readouts.progressShort}
-          </span>
-        </div>
-        <p className={screen.rules}>{play.rules}</p>
-        {note === null ? null : <p className={note.className}>{note.text}</p>}
-      </div>
+      <PlayTitle
+        kicker={kicker}
+        title={play.title}
+        rules={play.rules}
+        note={note}
+        inert={skeleton}
+      >
+        <span
+          aria-hidden={readouts === null ? true : undefined}
+          className={screen.progressBar}
+        >
+          {readouts === null ? BLANK_READOUT : readouts.progressShort}
+        </span>
+      </PlayTitle>
 
       {/* The daily skeleton hides the whole stats card; free play leaves it
           exposed and hides each blank readout instead — see ADR-0077. */}
@@ -260,17 +238,22 @@ export function PlayScreenChrome({
         <div
           aria-hidden
           className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}
+          data-short={messages.play.hint.short}
+          data-left={BLANK_READOUT}
         >
-          {BLANK_READOUT}
+          <span className={screen.hintLong}>{BLANK_READOUT}</span>
         </div>
       ) : (
         <button
           type="button"
           className={`${screen.hint}${readouts.hint.ready ? "" : ` ${screen.hintUsed}`}`}
           aria-disabled={!readouts.hint.ready}
+          aria-label={label}
+          data-short={messages.play.hint.short}
+          data-left={left}
           onClick={readouts.hint.onReveal}
         >
-          {hintLabel(readouts.hint.used, allowance)}
+          <span className={screen.hintLong}>{label}</span>
         </button>
       )}
     </main>

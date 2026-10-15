@@ -579,10 +579,9 @@ describe("the Rainhas screen wires the hint, the conclusion and the saves (T-WEB
 
     spendFreeHints();
 
-    expect(screen.getByText(messages.play.hint.used)).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    expect(
+      screen.getByRole("button", { name: messages.play.hint.used }),
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByText(/ainda pode ter rainha\.$/, SPOKEN),
     ).toBeInTheDocument();
