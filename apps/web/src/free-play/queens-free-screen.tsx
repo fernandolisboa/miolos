@@ -16,6 +16,7 @@ import {
   LEVEL_WEEKDAYS,
   type FreePlayLevel,
 } from "./catalog";
+import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import { GeneratingNote } from "./generating-note";
@@ -45,7 +46,7 @@ export function QueensFreeScreen({ deps }: { readonly deps?: FreeQueensDeps }) {
   return (
     <FreePlayChrome
       game="queens"
-      level={{ value: level, onChange: setLevel }}
+      choice={levelChoice(level, setLevel)}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
       pageModifier={styles.pageQueens ?? ""}
     >
@@ -73,14 +74,17 @@ function QueensFreeBoard({
 }) {
   const board = useQueensBoard(puzzle.daily);
 
+  const choice = levelChoice(level, onLevelChange);
   if (board.state.status === "solved") {
-    return <FreePlaySolvedCard game="queens" level={level} onAgain={onNext} />;
+    return (
+      <FreePlaySolvedCard game="queens" choice={choice} onAgain={onNext} />
+    );
   }
 
   return (
     <FreePlayChrome
       game="queens"
-      level={{ value: level, onChange: onLevelChange }}
+      choice={choice}
       pageModifier={styles.pageQueens ?? ""}
       state={{ kind: "playing", readouts: queensReadouts(board) }}
     >

@@ -13,6 +13,7 @@ import clueStyles from "../src/crossword/clues.module.css";
 import { CrosswordScreen } from "../src/crossword/crossword-screen";
 import keyStyles from "../src/crossword/crossword-keyboard.module.css";
 import { Keyboard, KeyboardSkeleton } from "../src/crossword/keyboard";
+import { PlaySkeleton } from "../src/crossword/play-view";
 import { bodyOf, decl, stylesheet } from "./css-source";
 
 const sync = vi.hoisted(() => ({
@@ -65,7 +66,7 @@ const DAILY: DailyCrosswordResponse = dailyCrosswordResponseSchema.parse({
 });
 
 function boardOf(): HTMLElement {
-  return screen.getByRole("group", { name: copy.boardAria });
+  return screen.getByRole("group", { name: copy.boardAria(5) });
 }
 
 function cellAt(index: number): HTMLElement {
@@ -513,6 +514,19 @@ describe("the clue bar keeps one height for every clue (T-WEB-S605)", () => {
 });
 
 describe("daily rendering (T-WEB-S439)", () => {
+  it("lays the loading and the live grid on five tracks", () => {
+    const fiveTracks = (container: HTMLElement) =>
+      container
+        .querySelector<HTMLElement>(`.${boardStyles.grid ?? ""}`)
+        ?.style.getPropertyValue("--crossword-size");
+    expect(fiveTracks(render(<PlaySkeleton date={DATE} />).container)).toBe(
+      "5",
+    );
+    expect(
+      fiveTracks(render(<CrosswordScreen daily={DAILY} />).container),
+    ).toBe("5");
+  });
+
   it("shows the play view once hydrated, with the shipped clue count", () => {
     render(<CrosswordScreen daily={DAILY} />);
     expect(
@@ -549,7 +563,7 @@ describe("daily rendering (T-WEB-S439)", () => {
       JSON.stringify(record),
     );
     render(<CrosswordScreen daily={DAILY} />);
-    expect(screen.queryByRole("group", { name: copy.boardAria })).toBeNull();
+    expect(screen.queryByRole("group", { name: copy.boardAria(5) })).toBeNull();
   });
 });
 

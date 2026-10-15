@@ -11,6 +11,7 @@ import { QueensFreeScreen } from "../src/free-play/queens-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
 import screenStyles from "../src/play/screen.module.css";
+import { flushGeneration } from "./free-generation";
 
 const SEED = 20_261_013;
 const DEPS = { pickSeed: () => SEED };
@@ -61,7 +62,7 @@ afterEach(() => {
 describe("Recomeçar in free play clears the board and keeps the hint spent (T-WEB-S517)", () => {
   it.each(SCREENS)(
     "$name: the board, the hinted cell and the explanation go; the spent hint stays; nothing is written",
-    ({ screen: element }) => {
+    async ({ screen: element }) => {
       vi.stubGlobal(
         "fetch",
         vi.fn(() => {
@@ -70,6 +71,7 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
       );
       const setItem = vi.spyOn(Storage.prototype, "setItem");
       const { container } = render(element);
+      await flushGeneration();
       const fresh = cells(container);
       expect(screen.getByRole("button", { name: reset.label })).toHaveAttribute(
         "aria-disabled",

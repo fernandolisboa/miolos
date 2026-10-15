@@ -15,13 +15,14 @@ import {
   colOf,
   entryCells,
   firstPlayableIndex,
-  GRID_SIZE,
+  indexOf,
   isBlock,
   rowOf,
   type CrosswordClue,
   type CrosswordDirection,
 } from "./grid";
 import styles from "./crossword-board.module.css";
+import { gridClassName, gridStyle } from "./size-classes";
 
 const copy = messages.games.crossword.play;
 
@@ -33,10 +34,11 @@ export function focusBoard(board: HTMLElement | null): void {
 
 function numbering(
   clues: readonly CrosswordClue[],
+  size: number,
 ): ReadonlyMap<number, number> {
   const map = new Map<number, number>();
   for (const clue of clues) {
-    const index = clue.row * GRID_SIZE + clue.col;
+    const index = indexOf(clue.row, clue.col, size);
     if (!map.has(index)) {
       map.set(index, clue.number);
     }
@@ -46,6 +48,7 @@ function numbering(
 
 export function Board({
   boardRef,
+  size,
   solution,
   clues,
   entries,
@@ -59,6 +62,7 @@ export function Board({
   onBackspace,
 }: {
   readonly boardRef: RefObject<HTMLDivElement | null>;
+  readonly size: number;
   readonly solution: readonly (string | null)[];
   readonly clues: readonly CrosswordClue[];
   readonly entries: readonly (string | null)[];
@@ -74,11 +78,13 @@ export function Board({
 }) {
   const wasSelectedRef = useRef(false);
   const wrong = useWrongCells("crossword", solution, null, entries);
-  const numbers = numbering(clues);
+  const numbers = numbering(clues, size);
   const tabbable = selected ?? firstPlayableIndex(solution);
   const clue =
-    selected === null ? undefined : activeEntry(clues, selected, direction);
-  const activeCells = new Set(clue === undefined ? [] : entryCells(clue));
+    selected === null
+      ? undefined
+      : activeEntry(clues, selected, direction, size);
+  const activeCells = new Set(clue === undefined ? [] : entryCells(clue, size));
 
   useLayoutEffect(() => {
     const board = boardRef.current;
@@ -91,7 +97,7 @@ export function Board({
     if (isShortcut(event)) {
       return;
     }
-    const move = keyMove(event.key, GRID_SIZE);
+    const move = keyMove(event.key, size);
     if (move !== null) {
       event.preventDefault();
       onMove(move.rows, move.columns);
@@ -117,14 +123,15 @@ export function Board({
   return (
     <div
       ref={boardRef}
-      className={styles.grid}
+      className={gridClassName(size)}
+      style={gridStyle(size)}
       role="group"
-      aria-label={copy.boardAria}
+      aria-label={copy.boardAria(size)}
       onKeyDown={onKeyDown}
     >
       {solution.map((cell, index) => {
-        const row = rowOf(index);
-        const column = colOf(index);
+        const row = rowOf(index, size);
+        const column = colOf(index, size);
         const blocked = isBlock(solution, index);
         const value = entries[index] ?? null;
         const number = numbers.get(index);
@@ -175,10 +182,10 @@ export function Board({
   );
 }
 
-export function BoardSkeleton() {
+export function BoardSkeleton({ size }: { readonly size: number }) {
   return (
-    <div aria-hidden className={styles.grid}>
-      {Array.from({ length: GRID_SIZE * GRID_SIZE }, (_unused, index) => (
+    <div aria-hidden className={gridClassName(size)} style={gridStyle(size)}>
+      {Array.from({ length: size * size }, (_unused, index) => (
         <div key={index} className={`${styles.cell} ${styles.cellSkeleton}`} />
       ))}
     </div>

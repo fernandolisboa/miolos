@@ -15,6 +15,7 @@ import { nonogramPageModifier } from "../nonogram/page-class";
 import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
+import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import { GeneratingNote } from "./generating-note";
@@ -56,7 +57,7 @@ export function NonogramFreeScreen({
   return (
     <FreePlayChrome
       game="nonogram"
-      level={{ value: level, onChange: setLevel }}
+      choice={levelChoice(level, setLevel)}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
       pageModifier={nonogramPageModifier(LEVEL_SIZES[level])}
     >
@@ -106,11 +107,12 @@ function NonogramFreeBoard({
   const target = filledTarget(state.clues);
   const filled = countFilledCells(state.entries);
 
+  const choice = levelChoice(level, onLevelChange);
   if (state.status === "solved" && state.solution !== null) {
     return (
       <FreePlaySolvedCard
         game="nonogram"
-        level={level}
+        choice={choice}
         onAgain={onNext}
         picture={{
           size: state.size,
@@ -124,7 +126,7 @@ function NonogramFreeBoard({
   return (
     <FreePlayChrome
       game="nonogram"
-      level={{ value: level, onChange: onLevelChange }}
+      choice={choice}
       pageModifier={nonogramPageModifier(state.size)}
       state={{
         kind: "playing",

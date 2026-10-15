@@ -12,7 +12,8 @@ import {
   dailyTermoResponseSchema,
   nonogramCluesSchema,
   nonogramSizeSchema,
-  projectCrosswordDaily,
+  DAILY_CROSSWORD_SIZE,
+  projectCrossword,
   queensRegionsSchema,
   queensSizeSchema,
   sudokuDigitSchema,
@@ -170,9 +171,10 @@ export function stripDailyContent(
       return dailyTermoResponseSchema.parse({ game: "termo", date });
     }
     case "crossword":
-      return projectCrosswordDaily(
+      return projectCrossword(
         date,
         crosswordDailyContentSchema.parse(content),
+        DAILY_CROSSWORD_SIZE,
       );
     case "queens": {
       const parsed = queensDailyContentSchema.parse(content);

@@ -24,6 +24,7 @@ import { formatLongDate, messages, routes } from "../src/i18n";
 import { PlaySkeleton, PlayView } from "../src/termo/play-view";
 import { initTermoPlayState } from "../src/termo/state";
 import type { TermoJudgedRow } from "../src/termo/types";
+import { flushGeneration } from "./free-generation";
 
 const SEED = 20_261_015;
 const NEXT_SEED = 20_261_016;
@@ -130,6 +131,7 @@ describe("the free Termo screen plays to its card and goes again (T-WEB-S702)", 
     const pickSeed = vi.fn(() => seeds.shift() ?? 0);
 
     const { container } = render(<TermoFreeScreen deps={{ pickSeed }} />);
+    await flushGeneration();
 
     const back = screen.getByRole("link", {
       name: messages.freePlay.backToIndexAria,
@@ -151,6 +153,7 @@ describe("the free Termo screen plays to its card and goes again (T-WEB-S702)", 
     expect(screen.getByText(WORD)).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Mais uma"));
+    await flushGeneration();
 
     expect(pickSeed).toHaveBeenCalledTimes(2);
     expect(container.querySelector("main")).toHaveAttribute(
@@ -167,6 +170,7 @@ describe("the free Termo screen plays to its card and goes again (T-WEB-S702)", 
     const { container } = render(
       <TermoFreeScreen deps={{ pickSeed: () => SEED }} />,
     );
+    await flushGeneration();
 
     for (const word of misses(WORD)) {
       await guess(word);

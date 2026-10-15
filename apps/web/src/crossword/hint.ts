@@ -10,7 +10,6 @@ import {
   activeEntry,
   entryAt,
   entryCells,
-  GRID_SIZE,
   hintGivens,
   type CrosswordClue,
   type CrosswordDirection,
@@ -35,14 +34,18 @@ export function nextCrosswordHint(
   entries: readonly CrosswordCellValue[],
   selected: number | null,
   direction: CrosswordDirection,
+  size: number,
 ): CrosswordHint | null {
   const first = nextHint(solution, hintGivens(solution), entries);
   return nextLogicalHint(solution, first, () => {
     const isOpen = (index: number) =>
       (solution[index] ?? null) !== null && entries[index] === null;
-    const hasOpen = (clue: CrosswordClue) => entryCells(clue).some(isOpen);
+    const hasOpen = (clue: CrosswordClue) =>
+      entryCells(clue, size).some(isOpen);
     const active =
-      selected === null ? undefined : activeEntry(clues, selected, direction);
+      selected === null
+        ? undefined
+        : activeEntry(clues, selected, direction, size);
     const clue =
       active !== undefined && hasOpen(active) ? active : clues.find(hasOpen);
     if (clue === undefined) {
@@ -53,13 +56,14 @@ export function nextCrosswordHint(
         clues,
         index,
         clue.direction === "across" ? "down" : "across",
+        size,
       );
       return other !== undefined &&
-        entryCells(other).some((at) => at !== index && isOpen(at))
+        entryCells(other, size).some((at) => at !== index && isOpen(at))
         ? other
         : null;
     };
-    const open = entryCells(clue).filter(isOpen);
+    const open = entryCells(clue, size).filter(isOpen);
     const index = open.find((at) => crossingOf(at) !== null) ?? open[0];
     const value = index === undefined ? undefined : solution[index];
     return index === undefined || value === undefined
@@ -75,6 +79,7 @@ export function nextCrosswordHint(
 
 export function crosswordHintExplanation(
   reason: CrosswordHintReason | null,
+  size: number,
 ): string | null {
   if (reason === null) {
     return null;
@@ -83,7 +88,7 @@ export function crosswordHintExplanation(
     return copy.hint.explain[reason.kind];
   }
   const { clue, crossing, index } = reason.step;
-  const { row, column } = toRowColumn(index, GRID_SIZE);
+  const { row, column } = toRowColumn(index, size);
   return copy.hint.explain.step(
     copy.clueLabel(clue.number, clue.direction),
     crossing === null

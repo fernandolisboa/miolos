@@ -29,6 +29,7 @@ import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 import binairoStyles from "../src/binairo/binairo-screen.module.css";
 import queensStyles from "../src/queens/queens-board.module.css";
 import sudokuStyles from "../src/sudoku/sudoku-board.module.css";
+import { flushGeneration } from "./free-generation";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -95,15 +96,17 @@ function otherThan(digit: number): number {
   return (digit % 9) + 1;
 }
 
-const sudoku = renderHook(() => useFreeSudoku("medio", DEPS)).result.current
-  .phase;
-const binairo = renderHook(() => useFreeBinairo("medio", DEPS)).result.current
-  .phase;
-const nonogram = renderHook(() => useFreeNonogram("medio", DEPS)).result.current
-  .phase;
-const queens = renderHook(() => useFreeQueens("medio", DEPS)).result.current
-  .phase;
-const crossword = renderHook(() => useFreeCrossword(DEPS)).result.current.phase;
+async function settled<TPhase>(useGeneration: () => { phase: TPhase }) {
+  const { result } = renderHook(useGeneration);
+  await flushGeneration();
+  return result.current.phase;
+}
+
+const sudoku = await settled(() => useFreeSudoku("medio", DEPS));
+const binairo = await settled(() => useFreeBinairo("medio", DEPS));
+const nonogram = await settled(() => useFreeNonogram("medio", DEPS));
+const queens = await settled(() => useFreeQueens("medio", DEPS));
+const crossword = await settled(() => useFreeCrossword(5, DEPS));
 
 function ready<T>(phase: { kind: string; puzzle?: T }): T {
   if (phase.kind !== "ready" || phase.puzzle === undefined) {
@@ -331,8 +334,11 @@ for (const [name, make] of SPECS) {
   const spec = make();
   describe(`${name} marks a cell that contradicts the solution only when asked (${spec.id})`, () => {
     for (const mode of ["daily", "free"] as const) {
-      it(`${mode}: nothing by default, a mark and its name with the setting on, gone when corrected or turned off`, () => {
+      it(`${mode}: nothing by default, a mark and its name with the setting on, gone when corrected or turned off`, async () => {
         render(mode === "daily" ? spec.daily() : spec.free());
+        if (mode === "free") {
+          await flushGeneration();
+        }
         const at = spec.playable[0] ?? 0;
         spec.enter(at, false);
         const plain = labelOf(at);
@@ -398,7 +404,7 @@ for (const [name, make] of SPECS) {
       },
     );
 
-    it("free play writes nothing and fetches nothing, with the setting on", () => {
+    it("free play writes nothing and fetches nothing, with the setting on", async () => {
       const fetchMock = vi.fn();
       vi.stubGlobal("fetch", fetchMock);
       const setItem = vi.spyOn(Storage.prototype, "setItem");
@@ -406,6 +412,7 @@ for (const [name, make] of SPECS) {
       setItem.mockClear();
 
       render(spec.free());
+      await flushGeneration();
       spec.enter(spec.playable[0] ?? 0, false);
 
       expect(marked(spec.playable[0] ?? 0)).toBe(true);

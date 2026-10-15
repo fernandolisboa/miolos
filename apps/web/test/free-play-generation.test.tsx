@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FreePlayLevel } from "../src/free-play/catalog";
 import {
@@ -7,6 +7,7 @@ import {
   type FreeGame,
   type FreePhase,
 } from "../src/free-play/use-free-generation";
+import { flushGeneration } from "./free-generation";
 
 interface StubPuzzle {
   readonly seed: number;
@@ -45,11 +46,12 @@ function seedCounter() {
 }
 
 describe("useFreeGeneration runs one build per {level, run} and masks stale results (T-WEB-S415)", () => {
-  it("starts generating, then settles ready at run 0 with the build's puzzle", () => {
+  it("starts generating, then settles ready at run 0 with the build's puzzle", async () => {
     const pickSeed = seedCounter();
     const { phases, result } = renderLogged("leve", { pickSeed });
 
     expect(phases[0]).toEqual({ kind: "generating" });
+    await flushGeneration();
     expect(result.current.phase).toEqual({
       kind: "ready",
       run: 0,
@@ -58,7 +60,7 @@ describe("useFreeGeneration runs one build per {level, run} and masks stale resu
     expect(pickSeed).toHaveBeenCalledTimes(1);
   });
 
-  it("reports failed when the build throws, and regenerate retries it at run 1", () => {
+  it("reports failed when the build throws, and regenerate retries it at run 1", async () => {
     const pickSeed = seedCounter();
     let throws = true;
     const generate: StubGenerate = (seed, level) => {
@@ -66,11 +68,13 @@ describe("useFreeGeneration runs one build per {level, run} and masks stale resu
       return { seed, level };
     };
     const { result } = renderLogged("leve", { pickSeed, generate });
+    await flushGeneration();
 
     expect(result.current.phase).toEqual({ kind: "failed" });
 
     throws = false;
     act(() => result.current.regenerate());
+    await flushGeneration();
 
     expect(result.current.phase).toEqual({
       kind: "ready",
@@ -79,13 +83,15 @@ describe("useFreeGeneration runs one build per {level, run} and masks stale resu
     });
   });
 
-  it("never shows the previous puzzle after regenerate or a level change", () => {
+  it("never shows the previous puzzle after regenerate or a level change", async () => {
     const pickSeed = seedCounter();
     const { phases, result, rerender } = renderLogged("leve", { pickSeed });
+    await flushGeneration();
     const first = result.current.phase;
 
     const beforeRegenerate = phases.length;
     act(() => result.current.regenerate());
+    await flushGeneration();
     const afterRegenerate = phases.slice(beforeRegenerate);
     expect(afterRegenerate).not.toContainEqual(first);
     expect(afterRegenerate[0]).toEqual({ kind: "generating" });
@@ -98,6 +104,7 @@ describe("useFreeGeneration runs one build per {level, run} and masks stale resu
 
     const beforeLevel = phases.length;
     rerender({ level: "dificil" });
+    await flushGeneration();
     const afterLevel = phases.slice(beforeLevel);
     expect(afterLevel).not.toContainEqual(second);
     expect(afterLevel[0]).toEqual({ kind: "generating" });
@@ -109,13 +116,15 @@ describe("useFreeGeneration runs one build per {level, run} and masks stale resu
     expect(pickSeed).toHaveBeenCalledTimes(3);
   });
 
-  it("keeps regenerate's identity and does not rebuild on a plain rerender", () => {
+  it("keeps regenerate's identity and does not rebuild on a plain rerender", async () => {
     const pickSeed = seedCounter();
     const { result, rerender } = renderLogged("leve", { pickSeed });
+    await flushGeneration();
     const regenerate = result.current.regenerate;
 
     rerender({ level: "leve" });
     rerender({ level: "leve" });
+    await flushGeneration();
 
     expect(result.current.regenerate).toBe(regenerate);
     expect(pickSeed).toHaveBeenCalledTimes(1);
@@ -123,7 +132,7 @@ describe("useFreeGeneration runs one build per {level, run} and masks stale resu
 });
 
 describe("an inline game object cannot loop the build (T-WEB-S416)", () => {
-  it("freezes the game at mount, so a fresh descriptor each render buys one build", () => {
+  it("freezes the game at mount, so a fresh descriptor each render buys one build", async () => {
     const pickSeed = seedCounter();
     const deps = { pickSeed };
     let renders = 0;
@@ -144,7 +153,94 @@ describe("an inline game object cannot loop the build (T-WEB-S416)", () => {
     );
 
     rerender({ level: "leve" });
+    await flushGeneration();
 
     expect(pickSeed).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("a switch paints generating before it builds (T-WEB-S674)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("holds every build back until a frame and a timeout after the render, and builds only the last input once", () => {
+    vi.useFakeTimers();
+    const pickSeed = seedCounter();
+    const generate = vi.fn(STUB_GAME.generate);
+    const { phases, result, rerender } = renderLogged("leve", {
+      pickSeed,
+      generate,
+    });
+
+    expect(result.current.phase).toEqual({ kind: "generating" });
+    expect(generate).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(generate).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersToNextFrame();
+    });
+    expect(generate).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(result.current.phase).toMatchObject({ kind: "ready" });
+
+    const shown = phases.length;
+    rerender({ level: "medio" });
+    rerender({ level: "dificil" });
+
+    expect(phases.slice(shown).every((p) => p.kind === "generating")).toBe(
+      true,
+    );
+    expect(generate).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersToNextFrame();
+      vi.advanceTimersByTime(1);
+    });
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate).toHaveBeenLastCalledWith(2, "dificil");
+    expect(result.current.phase).toEqual({
+      kind: "ready",
+      run: 0,
+      puzzle: { seed: 2, level: "dificil" },
+    });
+  });
+
+  it("builds nothing when the screen leaves before the frame", () => {
+    vi.useFakeTimers();
+    const generate = vi.fn(STUB_GAME.generate);
+    const { unmount } = renderLogged("leve", {
+      pickSeed: seedCounter(),
+      generate,
+    });
+
+    unmount();
+    vi.advanceTimersToNextFrame();
+    vi.runAllTimers();
+
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it("builds nothing when the screen leaves after the frame, before the build", () => {
+    vi.useFakeTimers();
+    const generate = vi.fn(STUB_GAME.generate);
+    const { unmount } = renderLogged("leve", {
+      pickSeed: seedCounter(),
+      generate,
+    });
+
+    vi.advanceTimersToNextFrame();
+    unmount();
+    vi.runAllTimers();
+
+    expect(generate).not.toHaveBeenCalled();
   });
 });

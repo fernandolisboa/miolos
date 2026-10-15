@@ -1,22 +1,19 @@
 import type { DailyCrosswordResponse } from "@miolos/core";
 
-export const GRID_SIZE = 5;
-export const CELL_COUNT = GRID_SIZE * GRID_SIZE;
-
 export type CrosswordDirection = "across" | "down";
 export type CrosswordClue = DailyCrosswordResponse["clues"][number];
 export type CrosswordCell = string | null;
 
-export function indexOf(row: number, col: number): number {
-  return row * GRID_SIZE + col;
+export function indexOf(row: number, col: number, size: number): number {
+  return row * size + col;
 }
 
-export function rowOf(index: number): number {
-  return Math.floor(index / GRID_SIZE);
+export function rowOf(index: number, size: number): number {
+  return Math.floor(index / size);
 }
 
-export function colOf(index: number): number {
-  return index % GRID_SIZE;
+export function colOf(index: number, size: number): number {
+  return index % size;
 }
 
 export function flattenGrid(
@@ -25,11 +22,14 @@ export function flattenGrid(
   return grid.flat();
 }
 
-export function entryCells(clue: CrosswordClue): readonly number[] {
+export function entryCells(
+  clue: CrosswordClue,
+  size: number,
+): readonly number[] {
   return Array.from({ length: clue.length }, (_unused, step) =>
     clue.direction === "across"
-      ? indexOf(clue.row, clue.col + step)
-      : indexOf(clue.row + step, clue.col),
+      ? indexOf(clue.row, clue.col + step, size)
+      : indexOf(clue.row + step, clue.col, size),
   );
 }
 
@@ -37,9 +37,11 @@ export function entryAt(
   clues: readonly CrosswordClue[],
   index: number,
   direction: CrosswordDirection,
+  size: number,
 ): CrosswordClue | undefined {
   return clues.find(
-    (clue) => clue.direction === direction && entryCells(clue).includes(index),
+    (clue) =>
+      clue.direction === direction && entryCells(clue, size).includes(index),
   );
 }
 
@@ -47,18 +49,20 @@ export function activeEntry(
   clues: readonly CrosswordClue[],
   index: number,
   direction: CrosswordDirection,
+  size: number,
 ): CrosswordClue | undefined {
   return (
-    entryAt(clues, index, direction) ??
-    entryAt(clues, index, direction === "across" ? "down" : "across")
+    entryAt(clues, index, direction, size) ??
+    entryAt(clues, index, direction === "across" ? "down" : "across", size)
   );
 }
 
 export function nextCellInEntry(
   clue: CrosswordClue,
   index: number,
+  size: number,
 ): number | undefined {
-  const cells = entryCells(clue);
+  const cells = entryCells(clue, size);
   const at = cells.indexOf(index);
   return at === -1 ? undefined : cells[at + 1];
 }
@@ -68,12 +72,13 @@ export function nextEmptyCell(
   entries: readonly CrosswordCell[],
   index: number,
   direction: CrosswordDirection,
+  size: number,
 ): number | undefined {
-  const clue = entryAt(clues, index, direction);
+  const clue = entryAt(clues, index, direction, size);
   if (clue === undefined) {
     return undefined;
   }
-  const cells = entryCells(clue);
+  const cells = entryCells(clue, size);
   const at = cells.indexOf(index);
   const sameDirection = clues
     .filter((other) => other.direction === direction)
@@ -86,15 +91,16 @@ export function nextEmptyCell(
   return [
     ...cells.slice(at + 1),
     ...cells.slice(0, at),
-    ...following.flatMap(entryCells),
+    ...following.flatMap((other) => entryCells(other, size)),
   ].find((cell) => entries[cell] === null);
 }
 
 export function prevCellInEntry(
   clue: CrosswordClue,
   index: number,
+  size: number,
 ): number | undefined {
-  const cells = entryCells(clue);
+  const cells = entryCells(clue, size);
   const at = cells.indexOf(index);
   return at <= 0 ? undefined : cells[at - 1];
 }

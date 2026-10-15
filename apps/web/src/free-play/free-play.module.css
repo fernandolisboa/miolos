@@ -1,4 +1,4 @@
-/* Free-play chrome (#28, ADR-0046): the level picker, the generating and
+/* Free-play chrome (#28, ADR-0046): the choice pickers, the generating and
    error states, and the solved card. Everything else the free screens paint
    comes from the shared play/screen.module.css and each game's own board
    module — this file holds only what the daily screens do not have.
@@ -8,15 +8,15 @@
    shadows, tape — never words (ADR-0041). Rotations are static transforms,
    never animation. */
 
-/* ── level picker ────────────────────────────────────────────────────── */
+/* ── choice picker ───────────────────────────────────────────────────── */
 
-.levelPicker {
+.choicePicker {
   display: flex;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
 }
 
-.levelChip {
+.choiceChip {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -35,7 +35,7 @@
 /* The active chip is carried by GEOMETRY and INK, never by accent-as-text
    (ADR-0041): the ink border doubles, the accent hard shadow appears, and
    the chip sits slightly crooked — a stamp, pressed. */
-.levelChipActive {
+.choiceChipActive {
   border: 1.5px solid var(--ink);
   color: var(--ink);
   box-shadow: var(--shadow-sm)
@@ -46,7 +46,7 @@
 /* Ink, not the accent — the shared play layer's focus arithmetic
    (screen.module.css `.hint:focus-visible`), applied to every free-play
    control at once. */
-.levelChip:focus-visible,
+.choiceChip:focus-visible,
 .retry:focus-visible,
 .again:focus-visible,
 .backToIndex:focus-visible {

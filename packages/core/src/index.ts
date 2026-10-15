@@ -86,7 +86,9 @@ export {
 } from "./contracts/session";
 export {
   calendarDateString,
+  CROSSWORD_SIZES,
   crosswordLetterSchema,
+  DAILY_CROSSWORD_SIZE,
   dailyBinairoResponseSchema,
   dailyCrosswordResponseSchema,
   dailyNonogramResponseSchema,
@@ -96,9 +98,10 @@ export {
   dailyTermoResponseSchema,
   isoDateString,
   nonogramSizeSchema,
-  projectCrosswordDaily,
+  projectCrossword,
   queensSizeSchema,
   sudokuDigitSchema,
+  type CrosswordSize,
   type DailyBinairoResponse,
   type DailyCrosswordResponse,
   type DailyNonogramResponse,
