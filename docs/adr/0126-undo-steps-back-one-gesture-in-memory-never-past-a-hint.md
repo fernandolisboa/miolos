@@ -20,5 +20,5 @@ Fernando asked for undo in every game, as something small and good-looking, not 
 
 ## Consequences
 
-- Every grid route carries about 2 KB more. `/nonogram` measured 49,146 of its 49,152-byte budget at merge; the next relief is still the `playRecordSchema` split (ADR-0112).
+- Every grid route carries about 2 KB more. After #376 the two Nonogram routes went over, and Fernando approved raising them on 2026-10-15: `/nonogram` gets its own 49 KB budget (48.1 KB measured) and `/modo-livre/nonogram` rises 74 → 76 KB (75.4 KB measured). The next relief is still the `playRecordSchema` split (ADR-0112), and it does not reach free play.
 - New per-game board state must join that game's snapshot. State that does not derive from `entries`, like #368's pencil notes, must also join the change check in `undoable`, or a notes-only move records no step.
