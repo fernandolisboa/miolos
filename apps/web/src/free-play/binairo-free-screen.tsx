@@ -14,8 +14,7 @@ import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { hintReadout } from "../play/hint-readout";
 import { countFilled } from "../play/progress";
-import { hasDecidedCell } from "../play/reset-board";
-import { useReset } from "../play/use-reset";
+import { useBoardEdits } from "../play/undo";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
@@ -106,7 +105,7 @@ function BinairoFreeBoard({
     }
   }, [puzzle.solution, allowance]);
 
-  const reset = useReset(dispatch);
+  const edits = useBoardEdits(state, dispatch);
 
   const choice = levelChoice(level, onLevelChange);
   return (
@@ -134,7 +133,7 @@ function BinairoFreeBoard({
               ready: hintReady,
               onReveal: revealHint,
             },
-            onReset: hasDecidedCell(state.entries) ? reset : null,
+            ...edits,
           },
         }}
       >

@@ -25,6 +25,7 @@ import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
+import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
 import { mergeGrid } from "./engine";
 import { nextBinairoHint, type BinairoHintReason } from "./hint";
 
@@ -44,7 +45,10 @@ export interface PlayState extends PlayCore {
 
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
+  readonly history: UndoHistory<BinairoSnapshot>;
 }
+
+type BinairoSnapshot = Pick<PlayState, "entries" | "violating" | "hint">;
 
 export type PlayAction =
   | LifecycleAction
@@ -82,10 +86,20 @@ export function initPlayState(daily: DailyBinairoResponse): PlayState {
     pendingSync: false,
     now: 0,
     hydrated: false,
+    history: NO_HISTORY,
   };
 }
 
-export function playReducer(state: PlayState, action: PlayAction): PlayState {
+export const playReducer = undoable(
+  playBinairo,
+  ({ entries, violating, hint }): BinairoSnapshot => ({
+    entries,
+    violating,
+    hint,
+  }),
+);
+
+function playBinairo(state: PlayState, action: PlayAction): PlayState {
   switch (action.type) {
     case "restore":
       return restore(state, action.record, action.now);

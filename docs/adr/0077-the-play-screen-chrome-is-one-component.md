@@ -10,6 +10,7 @@
 **Amended by:** [ADR-0113](./0113-the-hint-reason-shows-in-a-card-on-the-hinted-cell.md) (#332) — the board area gains a third stateful child, the lazily loaded `HintCard`, which finds the hinted cell in `children` by `data-cell-index`; the reason's live region is visually hidden.
 **Amended by:** [ADR-0123](./0123-on-a-phone-the-rules-sit-behind-an-i-and-the-hint-shares-the-reset-row.md) (#375) — the title block is `PlayTitle`, shared with Termo, which still takes nothing else from the chrome; `PlayChromeNote` became `PlayTitleNote` in `play/play-title.tsx`.
 **Superseded in part by:** [ADR-0115](./0115-the-bundle-check-runs-in-the-ci-gate.md) — the attribution check is in CI now, so it no longer has to be run by hand around edits to this module.
+**Amended by:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (#367) — the reset row holds a third stateful child, `UndoControl`, first in the row; `PlayChromeReadouts` carries `onUndo` beside `onReset`.
 
 ## Context
 

@@ -7,7 +7,6 @@ import { useEffect, useReducer, useState } from "react";
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { hintReadout } from "../play/hint-readout";
-import { hasDecidedCell } from "../play/reset-board";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
 import { countFilledCells, filledTarget } from "../nonogram/engine";
@@ -97,7 +96,7 @@ function NonogramFreeBoard({
     enterValue,
     clearCell,
     revealHint,
-    reset,
+    edits,
     setBrush,
     markCell,
     strokeStart,
@@ -153,7 +152,7 @@ function NonogramFreeBoard({
               ready: hintReady,
               onReveal: revealHint,
             },
-            onReset: hasDecidedCell(state.entries) ? reset : null,
+            ...edits,
           },
         }}
       >

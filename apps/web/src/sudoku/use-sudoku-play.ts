@@ -6,7 +6,7 @@ import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
-import { useReset } from "../play/use-reset";
+import { useBoardEdits, type BoardEdits } from "../play/undo";
 import {
   mergedGrid,
   playableGivens,
@@ -39,7 +39,7 @@ export interface SudokuPlay {
   readonly clearCell: () => void;
   readonly lock: DigitLock;
   readonly revealHint: () => void;
-  readonly reset: () => void;
+  readonly edits: BoardEdits;
 }
 
 export function useSudokuPlay(
@@ -102,7 +102,7 @@ export function useSudokuPlay(
 
   const lock = useDigitLock(state, dispatch);
 
-  const reset = useReset(dispatch);
+  const edits = useBoardEdits(state, dispatch);
 
   return {
     state,
@@ -116,7 +116,7 @@ export function useSudokuPlay(
     clearCell,
     lock,
     revealHint,
-    reset,
+    edits,
   };
 }
 

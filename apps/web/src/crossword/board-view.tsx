@@ -3,7 +3,6 @@ import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { hintReadout } from "../play/hint-readout";
-import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
 import { ClueBar, ClueBarSkeleton, ClueLists } from "./clues";
 import { Board, BoardSkeleton, focusBoard } from "./board";
@@ -27,7 +26,7 @@ export function crosswordReadouts(board: CrosswordBoard): PlayChromeReadouts {
       ready: board.hintReady,
       onReveal: board.revealHint,
     },
-    onReset: hasDecidedCell(board.state.entries) ? board.reset : null,
+    ...board.edits,
   };
 }
 

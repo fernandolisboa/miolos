@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
-import { useReset } from "../play/use-reset";
+import { useBoardEdits, type BoardEdits } from "../play/undo";
 import { useSettings } from "../settings/settings";
 import { countAnswered } from "./grid";
 import {
@@ -37,7 +37,7 @@ export interface CrosswordBoard {
   readonly typeLetter: (letter: string) => void;
   readonly backspace: () => void;
   readonly revealHint: () => void;
-  readonly reset: () => void;
+  readonly edits: BoardEdits;
 }
 
 export function useCrosswordBoard(
@@ -100,7 +100,7 @@ export function useCrosswordBoard(
     }
   }, [allowance]);
 
-  const reset = useReset(dispatch);
+  const edits = useBoardEdits(state, dispatch);
 
   return {
     state,
@@ -115,6 +115,6 @@ export function useCrosswordBoard(
     typeLetter,
     backspace,
     revealHint,
-    reset,
+    edits,
   };
 }

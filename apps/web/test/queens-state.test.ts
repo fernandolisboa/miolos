@@ -103,9 +103,9 @@ describe("the Rainhas reducer (T-WEB-S451)", () => {
     });
     const dragged = run(
       start,
-      { type: "cross-over", index: 4 },
-      { type: "cross-over", index: 5 },
-      { type: "cross-over", index: 6 },
+      { type: "stroke-start", index: 4, press: "tap" },
+      { type: "paint-over", index: 5 },
+      { type: "paint-over", index: 6 },
     );
     expect(dragged.entries[4]).toBe(1);
     expect(dragged.entries[5]).toBe(0);
